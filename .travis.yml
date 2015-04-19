@@ -4,6 +4,8 @@ addons:
   apt:
     packages:
     - rpm
+    - createrepo
+    - dpkg-sig
 go:
 - '1.4'
 env:
@@ -18,7 +20,6 @@ before_deploy:
 - make toolchain
 - make build
 - make package
-- '[[ -z "$TRAVIS_TAG" ]] || make packagecloud'
 deploy:
 - provider: releases
   api_key:

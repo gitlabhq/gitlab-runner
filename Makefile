@@ -69,14 +69,30 @@ package-deb:
 	# Building Debian compatible packages...
 	make package-deb-fpm ARCH=amd64
 	make package-deb-fpm ARCH=386
+	# Building Debian compatible repository...	
+	rm -f out/deb/{InRelease,Release.gpg}
+	cd out/deb && apt-ftparchive packages . > Packages
+	cd out/deb && apt-ftparchive release . > Release
+	gzip out/deb/Packages > Packages.gz
+ifneq (,$(GPG_KEY))
+	gpg --clearsign -o out/deb/{InRelease,Release}
+	gpg -abs -o out/deb/{Release.gpg,Release}
+endif
 
 package-rpm:
 	# Building RedHat compatible packages...
 	make package-rpm-fpm ARCH=amd64
+	make package-rpm-fpm ARCH=i386
+	createrepo out/rpm
 
 package-deps:
 	# Installing packaging dependencies...
 	gem install fpm
+
+ifneq (,$(GPG_KEY))
+	# Importing GPG key
+	@echo "$(GPG_KEY)" | base64 -d | gpg --allow-secret-key-import --import -
+endif
 
 package-deb-fpm:
 	@mkdir -p out/deb/
@@ -94,6 +110,9 @@ package-deb-fpm:
 		--vendor "ayufan.eu" \
 		-a $(ARCH) \
 		out/binaries/gitlab-ci-multi-runner-linux-$(ARCH)=/usr/bin/gitlab-ci-multi-runner
+ifneq (,$(GPG_KEY))
+	dpkg-sig --sign builder out/deb/$(NAME)_$(ARCH).deb
+endif
 
 package-rpm-fpm:
 	@mkdir -p out/rpm/
@@ -108,6 +127,9 @@ package-rpm-fpm:
 		-m "Kamil Trzciński <ayufan@ayufan.eu>" \
 		--license "MIT" \
 		--vendor "ayufan.eu" \
+ifneq (,$(GPG_KEY))
+		--rpm-sign \
+endif
 		-a $(ARCH) \
 		out/binaries/gitlab-ci-multi-runner-linux-$(ARCH)=/usr/bin/gitlab-ci-multi-runner
 
