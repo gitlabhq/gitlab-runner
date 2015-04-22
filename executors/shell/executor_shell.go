@@ -8,15 +8,19 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	krpty "github.com/kr/pty"
+
 	"github.com/ayufan/gitlab-ci-multi-runner/common"
 	"github.com/ayufan/gitlab-ci-multi-runner/executors"
 	"github.com/ayufan/gitlab-ci-multi-runner/helpers"
+	"io"
 )
 
 type ShellExecutor struct {
 	executors.AbstractExecutor
 	cmd       *exec.Cmd
 	scriptDir string
+	pty       *os.File
 }
 
 func (s *ShellExecutor) Prepare(config *common.RunnerConfig, build *common.Build) error {
@@ -51,6 +55,21 @@ func (s *ShellExecutor) Start() error {
 	s.cmd.Stdout = s.BuildLog
 	s.cmd.Stderr = s.BuildLog
 
+	// Open PTY if available
+	if s.Config.IsPTYEnabled() {
+		pty, tty, err := krpty.Open()
+		if err == nil {
+			go io.Copy(s.BuildLog, pty)
+			defer tty.Close()
+			s.cmd.Stdout = tty
+			s.cmd.Stderr = tty
+			s.pty = pty
+		} else if err != krpty.ErrUnsupported {
+			s.Errorln("Failed to open pty", err)
+		}
+	}
+
+	// Save shell script as file
 	if s.ShellScript.PassFile {
 		scriptDir, err := ioutil.TempDir("", "build_script")
 		if err != nil {
@@ -87,6 +106,10 @@ func (s *ShellExecutor) Cleanup() {
 
 	if s.scriptDir != "" {
 		os.RemoveAll(s.scriptDir)
+	}
+
+	if s.pty != nil {
+		s.pty.Close()
 	}
 
 	s.AbstractExecutor.Cleanup()

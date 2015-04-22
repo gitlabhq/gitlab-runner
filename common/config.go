@@ -48,6 +48,7 @@ type RunnerConfig struct {
 
 	Shell          string `toml:"shell" json:"shell"`
 	DisableVerbose bool   `toml:"disable_verbose" json:"disable_verbose"`
+	DisablePTY     *bool  `toml:"disable_pty" json:"disable_pty"`
 
 	SSH       *ssh.Config      `toml:"ssh" json:"ssh"`
 	Docker    *DockerConfig    `toml:"docker" json:"docker"`
@@ -70,6 +71,10 @@ func (c *RunnerConfig) ShortDescription() string {
 
 func (c *RunnerConfig) UniqueID() string {
 	return c.URL + c.Token
+}
+
+func (c *RunnerConfig) IsPTYEnabled() bool {
+	return c.DisablePTY == nil || !*c.DisablePTY
 }
 
 func (c *Config) LoadConfig(configFile string) error {
