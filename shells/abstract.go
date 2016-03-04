@@ -163,6 +163,10 @@ func (b *AbstractShell) GeneratePreBuild(w ShellWriter, info common.ShellScriptI
 	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
+	if info.InitScript != "" {
+		b.writeCommands(w, info.InitScript)
+	}
+
 	if build.AllowGitFetch {
 		b.writeFetchCmd(w, build, projectDir, gitDir)
 	} else {
@@ -185,11 +189,7 @@ func (b *AbstractShell) GeneratePreBuild(w ShellWriter, info common.ShellScriptI
 	}
 }
 
-func (b *AbstractShell) GenerateCommands(w ShellWriter, info common.ShellScriptInfo) {
-	b.writeExports(w, info)
-	b.writeCdBuildDir(w, info)
-
-	commands := info.Build.Commands
+func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
 	commands = strings.TrimSpace(commands)
 	for _, command := range strings.Split(commands, "\n") {
 		command = strings.TrimSpace(command)
@@ -200,6 +200,13 @@ func (b *AbstractShell) GenerateCommands(w ShellWriter, info common.ShellScriptI
 		}
 		w.Line(command)
 	}
+}
+
+func (b *AbstractShell) GenerateCommands(w ShellWriter, info common.ShellScriptInfo) {
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+
+	b.writeCommands(w, info.Build.Commands)
 }
 
 func (b *AbstractShell) cacheArchiver(w ShellWriter, list interface{}, info common.ShellScriptInfo, cacheKey string) {
