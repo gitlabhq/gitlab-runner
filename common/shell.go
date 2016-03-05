@@ -55,7 +55,8 @@ type ShellScriptInfo struct {
 	Type          ShellType
 	User          string
 	RunnerCommand string
-	InitScript    string
+	PreCloneScript    string
+    PreBuildScript string
 }
 
 type Shell interface {

@@ -37,7 +37,8 @@ func (e *AbstractExecutor) updateShell() error {
 }
 
 func (e *AbstractExecutor) generateShellScript() error {
-	e.Shell.InitScript = e.Config.InitScript
+	e.Shell.PreCloneScript = e.Config.PreCloneScript
+	e.Shell.PreBuildScript = e.Config.PreBuildScript
 	shellScript, err := common.GenerateShellScript(e.Shell)
 	if err != nil {
 		return err

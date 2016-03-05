@@ -163,8 +163,8 @@ func (b *AbstractShell) GeneratePreBuild(w ShellWriter, info common.ShellScriptI
 	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
-	if info.InitScript != "" {
-		b.writeCommands(w, info.InitScript)
+	if info.PreCloneScript != "" {
+		b.writeCommands(w, info.PreCloneScript)
 	}
 
 	if build.AllowGitFetch {
@@ -205,6 +205,10 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
 func (b *AbstractShell) GenerateCommands(w ShellWriter, info common.ShellScriptInfo) {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
+
+	if info.PreBuildScript != "" {
+		b.writeCommands(w, info.PreBuildScript)
+	}
 
 	b.writeCommands(w, info.Build.Commands)
 }
