@@ -233,8 +233,8 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, options *archivingOptions, 
 	if options == nil {
 		return
 	}
-	
-    if info.RunnerCommand == "" {
+
+	if info.RunnerCommand == "" {
 		w.Warning("The cache is not supported in this executor.")
 		return
 	}

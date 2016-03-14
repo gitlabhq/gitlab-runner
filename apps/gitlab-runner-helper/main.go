@@ -42,7 +42,7 @@ func main() {
 	app.Usage = "a GitLab Runner Helper"
 	app.Version = fmt.Sprintf("%s (%s)", common.VERSION, common.REVISION)
 	app.Authors = []cli.Author{
-		cli.Author{
+		{
 			Name:  "Kamil Trzciński",
 			Email: "ayufan@ayufan.eu",
 		},
