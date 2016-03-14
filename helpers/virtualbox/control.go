@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"net"
+	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -53,11 +54,19 @@ func Version() (string, error) {
 	return strings.TrimSpace(version), nil
 }
 
-func FindSSHPort(vmName string) (string, error) {
+func FindSSHPort(vmName string) (port string, err error) {
 	info, err := VBoxManage("showvminfo", vmName)
+	if err != nil {
+		return
+	}
 	portRe := regexp.MustCompile(`guestssh.*host port = (\d+)`)
 	sshPort := portRe.FindStringSubmatch(info)
-	return sshPort[1], err
+	if len(sshPort) >= 2 {
+		port = sshPort[1]
+	} else {
+		err = errors.New("failed to find guestssh port")
+	}
+	return
 }
 
 func Exist(vmName string) bool {
@@ -73,35 +82,63 @@ func CreateOsVM(vmName string, templateName string) error {
 	return err
 }
 
-func FindNextPort(highport string, usedPorts [][]string) string {
+func isPortUnassigned(testPort string, usedPorts [][]string) bool {
 	for _, port := range usedPorts {
-		if highport == port[1] {
-			var temp int
-			temp, _ = strconv.Atoi(highport)
-			temp = temp + 1
-			highport = strconv.Itoa(temp)
-			highport = FindNextPort(highport, usedPorts)
+		if testPort == port[1] {
+			return false
 		}
 	}
-	return highport
+	return true
 }
 
-func ConfigureSSH(vmName string, vmSSHPort string) error {
-	var localport string
+func getUsedVirtualBoxPorts() (usedPorts [][]string, err error) {
 	output, err := VBoxManage("list", "vms", "-l")
+	if err != nil {
+		return
+	}
 	allPortsRe := regexp.MustCompile(`host port = (\d+)`)
-	usedPorts := allPortsRe.FindAllStringSubmatch(output, -1)
-	log.Debugln(usedPorts)
-	if usedPorts == nil {
-		localport = "2222"
-	} else {
-		highport := "2222"
-		localport = FindNextPort(highport, usedPorts)
+	usedPorts = allPortsRe.FindAllStringSubmatch(output, -1)
+	return
+}
+
+func allocatePort(handler func(port string) error) (port string, err error) {
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		log.Debugln("VirtualBox ConfigureSSH:", err)
+		return
+	}
+	defer ln.Close()
+
+	usedPorts, err := getUsedVirtualBoxPorts()
+	if err != nil {
+		log.Debugln("VirtualBox ConfigureSSH:", err)
+		return
 	}
 
-	rule := fmt.Sprintf("guestssh,tcp,127.0.0.1,%s,,%s", localport, vmSSHPort)
-	_, err = VBoxManage("modifyvm", vmName, "--natpf1", rule)
-	return err
+	addressElements := strings.Split(ln.Addr().String(), ":")
+	port = addressElements[len(addressElements)-1]
+
+	if isPortUnassigned(port, usedPorts) {
+		err = handler(port)
+	} else {
+		err = os.ErrExist
+	}
+	return
+}
+
+func ConfigureSSH(vmName string, vmSSHPort string) (port string, err error) {
+	for {
+		port, err = allocatePort(
+			func(port string) error {
+				rule := fmt.Sprintf("guestssh,tcp,127.0.0.1,%s,,%s", port, vmSSHPort)
+				_, err = VBoxManage("modifyvm", vmName, "--natpf1", rule)
+				return err
+			},
+		)
+		if err == nil || err != os.ErrExist {
+			return
+		}
+	}
 }
 
 func CreateSnapshot(vmName string, snapshotName string) error {
