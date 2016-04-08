@@ -27,8 +27,8 @@ func httpTransportFix(host string, client Client) {
 	dockerClient, ok := client.(*docker.Client)
 
 	logrus.WithFields(logrus.Fields{
-		"dockerClient":     client,
-		"dockerClientType": reflect.TypeOf(client),
+		"dockerClient":     dockerClient,
+		"dockerClientType": reflect.TypeOf(dockerClient),
 		"is_ok":            ok,
 	}).Debugln("[httpTransportFix] Client type asserting:")
 
