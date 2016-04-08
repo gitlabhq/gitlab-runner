@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -18,7 +19,19 @@ var dockerDialer = &net.Dialer{
 }
 
 func httpTransportFix(host string, client Client) {
+	logrus.WithFields(logrus.Fields{
+		"client": client,
+		"type":   reflect.TypeOf(client),
+	}).Debugln("[httpTransportFix] Received client:")
+
 	dockerClient, ok := client.(*docker.Client)
+
+	logrus.WithFields(logrus.Fields{
+		"dockerClient":     client,
+		"dockerClientType": reflect.TypeOf(client),
+		"is_ok":            ok,
+	}).Debugln("[httpTransportFix] Client type asserting:")
+
 	if !ok {
 		return
 	}
