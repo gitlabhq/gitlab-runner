@@ -7,14 +7,15 @@ import (
 )
 
 type ShellScript struct {
-	Environment []string
-	PreScript   string
-	BuildScript string
-	PostScript  string
-	Command     string
-	Arguments   []string
-	PassFile    bool
-	Extension   string
+	Environment   []string
+	DockerCommand []string
+	PreScript     string
+	BuildScript   string
+	PostScript    string
+	Command       string
+	Arguments     []string
+	PassFile      bool
+	Extension     string
 }
 
 type ShellType int

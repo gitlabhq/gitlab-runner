@@ -2,6 +2,8 @@ package docker
 
 import (
 	"bytes"
+	"errors"
+
 	"github.com/fsouza/go-dockerclient"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
@@ -69,8 +71,12 @@ func (s *commandExecutor) Start() error {
 		return err
 	}
 
+	if len(s.BuildScript.DockerCommand) == 0 {
+		return errors.New("Script is not compatible with Docker")
+	}
+
 	// Start build container which will run actual build
-	buildContainer, err := s.createContainer("build", imageName, s.BuildScript.GetCommandWithArguments(), *options)
+	buildContainer, err := s.createContainer("build", imageName, s.BuildScript.DockerCommand, *options)
 	if err != nil {
 		return err
 	}

@@ -14,6 +14,25 @@ import (
 	"strings"
 )
 
+const bashDetectShell = `if [ -x /usr/local/bin/bash ]; then
+	exec /usr/local/bin/bash $@
+elif [ -x /usr/bin/bash ]; then
+	exec /usr/bin/bash $@
+elif [ -x /bin/bash ]; then
+	exec /bin/bash $@
+elif [ -x /usr/local/bin/sh ]; then
+	exec /usr/local/bin/sh $@
+elif [ -x /usr/bin/sh ]; then
+	exec /usr/bin/sh $@
+elif [ -x /bin/sh ]; then
+	exec /bin/sh $@
+else
+	echo shell not found
+	exit 1
+fi
+
+`
+
 type BashShell struct {
 	AbstractShell
 	Shell string
@@ -27,6 +46,9 @@ type BashWriter struct {
 
 func (b *BashWriter) Line(text string) {
 	b.WriteString(strings.Repeat("  ", b.indent) + text + "\n")
+}
+
+func (b *BashWriter) CheckForErrors() {
 }
 
 func (b *BashWriter) Indent() {
@@ -155,42 +177,37 @@ func (b *BashShell) GenerateScript(info common.ShellScriptInfo) (*common.ShellSc
 	postScript := &BashWriter{TemporaryPath: temporaryPath}
 	b.GeneratePostBuild(postScript, info)
 
+	var detectScript string
+	var shellCommand string
+	if info.Type == common.LoginShell {
+		detectScript = strings.Replace(bashDetectShell, "$@", "--login", -1)
+		shellCommand = b.Shell + " --login"
+	} else {
+		detectScript = strings.Replace(bashDetectShell, "$@", "", -1)
+		shellCommand = b.Shell
+	}
+
 	script := common.ShellScript{
-		PreScript:   preScript.Finish(),
-		BuildScript: buildScript.Finish(),
-		PostScript:  postScript.Finish(),
+		PreScript:     preScript.Finish(),
+		BuildScript:   buildScript.Finish(),
+		PostScript:    postScript.Finish(),
+		DockerCommand: []string{"sh", "-c", detectScript},
 	}
 
 	// su
 	if info.User != "" {
 		script.Command = "su"
-		script.Arguments = []string{"--shell", "/bin/sh", info.User}
+		if runtime.GOOS == "linux" {
+			script.Arguments = append(script.Arguments, "-s", "/bin/"+b.Shell)
+		}
+		script.Arguments = append(script.Arguments, info.User)
+		script.Arguments = append(script.Arguments, "-c", shellCommand)
 	} else {
-		script.Command = "sh"
+		script.Command = b.Shell
+		if info.Type == common.LoginShell {
+			script.Arguments = append(script.Arguments, "--login")
+		}
 	}
-
-	detectShell := `if [ -x /usr/local/bin/bash ]; then
-	exec /usr/local/bin/bash $@
-elif [ -x /usr/bin/bash ]; then
-	exec /usr/bin/bash $@
-elif [ -x /bin/bash ]; then
-	exec /bin/bash $@
-elif [ -x /usr/local/bin/sh ]; then
-	exec /usr/local/bin/sh $@
-elif [ -x /usr/bin/sh ]; then
-	exec /usr/bin/sh $@
-elif [ -x /bin/sh ]; then
-	exec /bin/sh $@
-else
-	echo shell not found
-	exit 1
-fi`
-
-	script.Arguments = append(script.Arguments, "-c", detectShell, "--")
-	if info.Type == common.LoginShell {
-		script.Arguments = append(script.Arguments, "-l")
-	}
-
 	return &script, nil
 }
 

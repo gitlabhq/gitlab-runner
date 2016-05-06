@@ -1,4 +1,4 @@
-image: golang:1.5
+image: golang:1.6
 
 stages:
 - build
@@ -12,6 +12,7 @@ Bleeding Edge:
   script:
   - source ci/build
   - '[[ -z "$AWS_SECRET_ACCESS_KEY" ]] || make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"'
+  - '[[ "$CI_BUILD_REF_NAME" != "master" ]] || [[ -z "$PACKAGECLOUD_TOKEN" ]] || make packagecloud "PACKAGE_CLOUD=runner/unstable" DEB_PLATFORMS="debian/jessie ubuntu/trusty" RPM_PLATFORMS="el/7 fedora/23"'
   only:
   - branches
 
@@ -35,7 +36,7 @@ Mirror:
   - chmod -R 0600 ~/.ssh/
   - git remote add github git@github.com:ayufan/gitlab-ci-multi-runner.git
   - git fetch github
-  - git push github --mirror
+  - git push github "$CI_BUILD_REF_NAME" -f
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
   - tags@gitlab-org/gitlab-ci-multi-runner

@@ -91,3 +91,82 @@ them to win32 calls when running on a Windows system (example: [Colorama](https:
 If you're program is doing the above, then you need to disable that conversion for the CI builds so that the ANSI codes remain in the string.
 
 See issue [#332](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/332) for more information.
+
+## 10. "warning: You appear to have cloned an empty repository."
+
+When running `git clone` using HTTP(s) (with GitLab Runner or manually for
+tests) you have received an output:
+
+```bash
+$ git clone https://git.example.com/user/repo.git
+
+Cloning into 'repo'...
+warning: You appear to have cloned an empty repository.
+```
+
+Make sure, that configuration of the HTTP Proxy in your GitLab server
+installation is done properly. Especially if you are using some HTTP Proxy with
+its own configuration, make sure that GitLab requests are proxied to the
+**GitLab Workhorse socket**, not to the **GitLab unicorn socket**.
+
+Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
+**main entrypoint** of GitLab.
+
+If you are using Omnibus GitLab, but don't want to use the bundled Nginx
+server, please read [using a non-bundled web-server][omnibus-ext-nginx].
+
+In gitlab-recipes repository there are [web-server configuration
+examples][recipes] for Apache and Nginx.
+
+If you are using GitLab installed from source, also please read the above
+documentation and examples, and make sure that all HTTP(S) traffic is going
+trough the **GitLab Workhorse**.
+
+See [an example of a user issue][1105].
+
+[omnibus-ext-nginx]: http://doc.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server
+[recipes]: https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server
+[1105]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1105
+
+## 11. `"launchctl" failed: exit status 112, Could not find domain for`
+
+This message may occur when you try to install GitLab Runner on OSX. Make sure
+that you manage GitLab Runner service from the GUI Terminal application, not
+the SSH connection.
+
+## 12. `Failed to authorize rights (0x1) with status: -60007.`
+
+If your Runner is stuck on the above message when using OSX, there are two
+problems why this happens:
+
+1. Make sure that your user can perform UI interactions:
+
+    ```bash
+    DevToolsSecurity -enable
+    sudo security authorizationdb remove system.privilege.taskport is-developer
+    ```
+
+    The first command enables access to developer tools for your user.
+    The second command allows the user who is member of the developer group to
+    do UI interactions, e.g., run the iOS simulator.
+
+    ---
+
+2. Make sure that your Runner service doesn't use `SessionCreate = true`.
+   Previously, when running GitLab Runner as a service, we were creating
+   `LaunchAgents` with `SessionCreate`. At that point (**Mavericks**), this was
+   the only solution to make Code Signing work. That changed recently with
+   **OSX El Capitan** which introduced a lot of new security features that
+   altered this behavior.
+   Since GitLab Runner 1.1, when creating a `LaunchAgent`, we don't set
+   `SessionCreate`. However, in order to upgrade, you need to manually
+   reinstall the `LaunchAgent` script:
+
+    ```
+    gitlab-ci-multi-runner uninstall
+    gitlab-ci-multi-runner install
+    gitlab-ci-multi-runner start
+    ```
+
+    Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
+    `SessionCreate` set to `false`.
