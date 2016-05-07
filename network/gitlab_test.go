@@ -42,12 +42,26 @@ func TestClients(t *testing.T) {
 		URL:       "http://test/",
 		TLSCAFile: "ca_file",
 	})
-	c6, c6err := c.getClient(&brokenCredentials)
+	c6, _ := c.getClient(&RunnerCredentials{
+		URL:         "http://test/",
+		TLSCAFile:   "ca_file",
+		TLSCertFile: "cert_file",
+		TLSKeyFile:  "key_file",
+	})
+	c7, _ := c.getClient(&RunnerCredentials{
+		URL:         "http://test/",
+		TLSCAFile:   "ca_file",
+		TLSCertFile: "cert_file",
+		TLSKeyFile:  "key_file2",
+	})
+	c8, c8err := c.getClient(&brokenCredentials)
 	assert.NotEqual(t, c1, c2)
 	assert.NotEqual(t, c1, c4)
 	assert.Equal(t, c4, c5)
-	assert.Nil(t, c6)
-	assert.Error(t, c6err)
+	assert.NotEqual(t, c5, c6)
+	assert.Equal(t, c6, c7)
+	assert.Nil(t, c8)
+	assert.Error(t, c8err)
 }
 
 func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {

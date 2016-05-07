@@ -1,18 +1,24 @@
 package network
 
 import (
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
@@ -54,6 +60,33 @@ func writeTLSCertificate(s *httptest.Server, file string) error {
 	})
 
 	return ioutil.WriteFile(file, encoded, 0600)
+}
+
+func writeTLSKeyPair(s *httptest.Server, certFile string, keyFile string) error {
+	c := s.TLS.Certificates[0]
+	if c.Certificate == nil || c.Certificate[0] == nil {
+		return errors.New("no predefined certificate")
+	}
+
+	encodedCert := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: c.Certificate[0],
+	})
+
+	if err := ioutil.WriteFile(certFile, encodedCert, 0600); err != nil {
+		return err
+	}
+
+	switch k := c.PrivateKey.(type) {
+	case *rsa.PrivateKey:
+		encodedKey := pem.EncodeToMemory(&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(k),
+		})
+		return ioutil.WriteFile(keyFile, encodedKey, 0600)
+	default:
+		return errors.New("unexpected private key type")
+	}
 }
 
 func TestNewClient(t *testing.T) {
@@ -137,13 +170,106 @@ func TestClientTLSCAFile(t *testing.T) {
 		URL:       s.URL,
 		TLSCAFile: file.Name(),
 	})
-	statusCode, statusText, certificates := c.doJSON("test/ok", "GET", 200, nil, nil)
+	statusCode, statusText, tlsData := c.doJSON("test/ok", "GET", 200, nil, nil)
 	assert.Equal(t, 200, statusCode, statusText)
-	assert.NotEmpty(t, certificates)
+	assert.NotEmpty(t, tlsData.CAChain)
 }
 
 func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 	s := httptest.NewTLSServer(http.HandlerFunc(clientHandler))
+	defer s.Close()
+
+	serverURL, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	hostname, _, err := net.SplitHostPort(serverURL.Host)
+	require.NoError(t, err)
+
+	tempDir, err := ioutil.TempDir("", "certs")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	CertificateDirectory = tempDir
+
+	err = writeTLSCertificate(s, filepath.Join(tempDir, hostname+".crt"))
+	assert.NoError(t, err)
+
+	c, _ := newClient(&RunnerCredentials{
+		URL: s.URL,
+	})
+	statusCode, statusText, tlsData := c.doJSON("test/ok", "GET", 200, nil, nil)
+	assert.Equal(t, 200, statusCode, statusText)
+	assert.NotEmpty(t, tlsData.CAChain)
+}
+
+func TestClientInvalidTLSAuth(t *testing.T) {
+	s := httptest.NewUnstartedServer(http.HandlerFunc(clientHandler))
+	s.TLS = new(tls.Config)
+	s.TLS.ClientAuth = tls.RequireAnyClientCert
+	s.StartTLS()
+	defer s.Close()
+
+	ca, err := ioutil.TempFile("", "cert_")
+	assert.NoError(t, err)
+	ca.Close()
+	defer os.Remove(ca.Name())
+
+	err = writeTLSCertificate(s, ca.Name())
+	assert.NoError(t, err)
+
+	c, _ := newClient(&RunnerCredentials{
+		URL:       s.URL,
+		TLSCAFile: ca.Name(),
+	})
+	statusCode, statusText, _ := c.doJSON("test/ok", "GET", 200, nil, nil)
+	assert.Equal(t, -1, statusCode, statusText)
+	assert.Contains(t, statusText, "tls: bad certificate")
+}
+
+func TestClientTLSAuth(t *testing.T) {
+	s := httptest.NewUnstartedServer(http.HandlerFunc(clientHandler))
+	s.TLS = new(tls.Config)
+	s.TLS.ClientAuth = tls.RequireAnyClientCert
+	s.StartTLS()
+	defer s.Close()
+
+	ca, err := ioutil.TempFile("", "cert_")
+	assert.NoError(t, err)
+	ca.Close()
+	defer os.Remove(ca.Name())
+
+	err = writeTLSCertificate(s, ca.Name())
+	assert.NoError(t, err)
+
+	cert, err := ioutil.TempFile("", "cert_")
+	assert.NoError(t, err)
+	cert.Close()
+	defer os.Remove(cert.Name())
+
+	key, err := ioutil.TempFile("", "key_")
+	assert.NoError(t, err)
+	key.Close()
+	defer os.Remove(key.Name())
+
+	err = writeTLSKeyPair(s, cert.Name(), key.Name())
+	assert.NoError(t, err)
+
+	c, _ := newClient(&RunnerCredentials{
+		URL:         s.URL,
+		TLSCAFile:   ca.Name(),
+		TLSCertFile: cert.Name(),
+		TLSKeyFile:  key.Name(),
+	})
+	statusCode, statusText, tlsData := c.doJSON("test/ok", "GET", 200, nil, nil)
+	assert.Equal(t, 200, statusCode, statusText)
+	assert.NotEmpty(t, tlsData.CAChain)
+	assert.Equal(t, cert.Name(), tlsData.CertFile)
+	assert.Equal(t, key.Name(), tlsData.KeyFile)
+}
+
+func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
+	s := httptest.NewUnstartedServer(http.HandlerFunc(clientHandler))
+	s.TLS = new(tls.Config)
+	s.TLS.ClientAuth = tls.RequireAnyClientCert
+	s.StartTLS()
 	defer s.Close()
 
 	tempDir, err := ioutil.TempDir("", "certs")
@@ -151,15 +277,27 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 	CertificateDirectory = tempDir
 
-	err = writeTLSCertificate(s, filepath.Join(tempDir, "127.0.0.1.crt"))
+	serverURL, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	hostname, _, err := net.SplitHostPort(serverURL.Host)
+	require.NoError(t, err)
+
+	err = writeTLSCertificate(s, filepath.Join(tempDir, hostname+".crt"))
+	assert.NoError(t, err)
+
+	err = writeTLSKeyPair(s,
+		filepath.Join(tempDir, hostname+".auth.crt"),
+		filepath.Join(tempDir, hostname+".auth.key"))
 	assert.NoError(t, err)
 
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
-	statusCode, statusText, certificates := c.doJSON("test/ok", "GET", 200, nil, nil)
+	statusCode, statusText, tlsData := c.doJSON("test/ok", "GET", 200, nil, nil)
 	assert.Equal(t, 200, statusCode, statusText)
-	assert.NotEmpty(t, certificates)
+	assert.NotEmpty(t, tlsData.CAChain)
+	assert.NotEmpty(t, tlsData.CertFile)
+	assert.NotEmpty(t, tlsData.KeyFile)
 }
 
 func TestUrlFixing(t *testing.T) {
