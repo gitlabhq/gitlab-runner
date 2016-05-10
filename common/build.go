@@ -38,6 +38,9 @@ type Build struct {
 
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
+
+	ProjectName      string
+	ProjectNamespace string
 }
 
 func (b *Build) ProjectUniqueName() string {
@@ -63,7 +66,25 @@ func (b *Build) ProjectSlug() (string, error) {
 	if strings.Contains(slug, "..") {
 		return "", errors.New("it doesn't look like a valid path")
 	}
+
 	return slug, nil
+}
+
+func (b *Build) GetNamespaceAndName() (string, string) {
+	if b.ProjectNamespace != "" || b.ProjectName != "" {
+		return b.ProjectNamespace, b.ProjectName
+	}
+
+	slug, err := b.ProjectSlug()
+	if err != nil {
+		return "", ""
+	}
+
+	namespaceAndName := strings.Split(strings.TrimPrefix(slug, "/"), "/")
+	b.ProjectNamespace = namespaceAndName[0]
+	b.ProjectName = namespaceAndName[1]
+
+	return b.ProjectNamespace, b.ProjectName
 }
 
 func (b *Build) ProjectUniqueDir(sharedDir bool) string {
@@ -128,6 +149,8 @@ func (b *Build) String() string {
 }
 
 func (b *Build) GetDefaultVariables() BuildVariables {
+	namespace, name := b.GetNamespaceAndName()
+
 	return BuildVariables{
 		{"CI", "true", true, true, false},
 		{"CI_BUILD_REF", b.Sha, true, true, false},
@@ -142,6 +165,8 @@ func (b *Build) GetDefaultVariables() BuildVariables {
 		{"CI_SERVER_VERSION", "", true, true, false},
 		{"CI_SERVER_REVISION", "", true, true, false},
 		{"GITLAB_CI", "true", true, true, false},
+		{"PROJECT_NAMESPACE", namespace, true, true, false},
+		{"PROJECT_NAME", name, true, true, false},
 	}
 }
 
