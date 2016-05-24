@@ -47,12 +47,16 @@ func main() {
 		}
 	}()
 
-	app := cli.NewApp()
-	formatter.SetRunnerFormatter(app)
-
 	// Start background reaping of orphaned child processes.
 	// It allows the gitlab-runner to act as `init` process
 	go helpers.Reap()
+
+	app := cli.NewApp()
+	cli_helpers.LogRuntimePlatform(app)
+	cli_helpers.SetupLogLevelOptions(app)
+	cli_helpers.SetupCPUProfile(app)
+	cli_helpers.FixHOME(app)
+	formatter.SetRunnerFormatter(app)
 
 	app.Name = path.Base(os.Args[0])
 	app.Usage = "a GitLab Runner"
@@ -63,10 +67,6 @@ func main() {
 			Email: "ayufan@ayufan.eu",
 		},
 	}
-	cli_helpers.LogRuntimePlatform(app)
-	cli_helpers.SetupLogLevelOptions(app)
-	cli_helpers.SetupCPUProfile(app)
-	cli_helpers.FixHOME(app)
 	app.Commands = common.GetCommands()
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		logrus.Fatalln("Command", command, "not found.")

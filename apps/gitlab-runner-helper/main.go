@@ -39,6 +39,8 @@ func main() {
 	}()
 
 	app := cli.NewApp()
+	cli_helpers.LogRuntimePlatform(app)
+	cli_helpers.SetupLogLevelOptions(app)
 	formatter.SetRunnerFormatter(app)
 
 	app.Name = path.Base(os.Args[0])
@@ -50,7 +52,6 @@ func main() {
 			Email: "ayufan@ayufan.eu",
 		},
 	}
-	cli_helpers.SetupLogLevelOptions(app)
 	app.Commands = common.GetCommands()
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		logrus.Fatalln("Command", command, "not found")
