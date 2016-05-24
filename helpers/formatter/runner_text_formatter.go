@@ -3,15 +3,19 @@ package formatter
 import (
 	"bytes"
 	"fmt"
+	"runtime"
 	"sort"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/codegangsta/cli"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 type RunnerTextFormatter struct {
 	// Force disabling colors.
 	DisableColors bool
+	// Force coloring output.
+	ForceColors bool
 
 	// The fields are sorted by default for a consistent output. For applications
 	// that log extremely frequently and don't use the JSON formatter this may not
@@ -57,7 +61,7 @@ func (f *RunnerTextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry,
 
 	resetColor := helpers.ANSI_RESET
 
-	if f.DisableColors {
+	if f.DisableColors == true && f.ForceColors != true {
 		levelColor = ""
 		resetColor = ""
 	}
@@ -71,6 +75,31 @@ func (f *RunnerTextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry,
 	}
 }
 
-func SetRunnerFormatter() {
-	logrus.SetFormatter(&RunnerTextFormatter{})
+func SetRunnerFormatter(app *cli.App) {
+	newFlags := []cli.Flag{
+		cli.BoolFlag{
+			Name:   "no-color",
+			Usage:  "Run in no-color mode",
+			EnvVar: "NO_COLOR",
+		},
+		cli.BoolFlag{
+			Name:   "force-color",
+			Usage:  "Run in force-color mode",
+			EnvVar: "FORCE_COLOR",
+		},
+	}
+	app.Flags = append(app.Flags, newFlags...)
+
+	appBefore := app.Before
+	app.Before = func(c *cli.Context) error {
+		logrus.SetFormatter(&RunnerTextFormatter{
+			DisableColors: c.Bool("no-color") || runtime.GOOS == "windows",
+			ForceColors:   c.Bool("force-color"),
+		})
+
+		if appBefore != nil {
+			return appBefore(c)
+		}
+		return nil
+	}
 }

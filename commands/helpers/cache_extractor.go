@@ -14,7 +14,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/archives"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/formatter"
 )
 
 type CacheExtractorCommand struct {
@@ -69,8 +68,6 @@ func (c *CacheExtractorCommand) download() (bool, error) {
 }
 
 func (c *CacheExtractorCommand) Execute(context *cli.Context) {
-	formatter.SetRunnerFormatter()
-
 	if len(c.File) == 0 {
 		logrus.Fatalln("Missing cache file")
 	}

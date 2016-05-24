@@ -12,7 +12,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/archives"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/formatter"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
 
@@ -53,8 +52,6 @@ func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
 }
 
 func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
-	formatter.SetRunnerFormatter()
-
 	if len(c.URL) == 0 || len(c.Token) == 0 {
 		logrus.Fatalln("Missing runner credentials")
 	}

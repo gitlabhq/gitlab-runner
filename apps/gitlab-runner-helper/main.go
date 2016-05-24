@@ -38,9 +38,9 @@ func main() {
 		}
 	}()
 
-	formatter.SetRunnerFormatter()
-
 	app := cli.NewApp()
+	formatter.SetRunnerFormatter(app)
+
 	app.Name = path.Base(os.Args[0])
 	app.Usage = "a GitLab Runner Helper"
 	cli.VersionPrinter = common.VersionPrinter

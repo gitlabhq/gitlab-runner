@@ -47,13 +47,13 @@ func main() {
 		}
 	}()
 
-	formatter.SetRunnerFormatter()
+	app := cli.NewApp()
+	formatter.SetRunnerFormatter(app)
 
 	// Start background reaping of orphaned child processes.
 	// It allows the gitlab-runner to act as `init` process
 	go helpers.Reap()
 
-	app := cli.NewApp()
 	app.Name = path.Base(os.Args[0])
 	app.Usage = "a GitLab Runner"
 	cli.VersionPrinter = common.VersionPrinter

@@ -10,7 +10,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/archives"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/formatter"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
 
@@ -36,8 +35,6 @@ func (c *ArtifactsDownloaderCommand) download(file string) (bool, error) {
 }
 
 func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
-	formatter.SetRunnerFormatter()
-
 	if len(c.URL) == 0 || len(c.Token) == 0 {
 		logrus.Fatalln("Missing runner credentials")
 	}
