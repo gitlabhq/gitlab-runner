@@ -51,6 +51,19 @@ func (f *RunnerTextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry,
 }
 
 func (f *RunnerTextFormatter) getLevelColorAndText(level logrus.Level) (lvlColor, lvlText, resetColor string) {
+	text := map[logrus.Level]string{
+		logrus.WarnLevel:  "WARNING: ",
+		logrus.ErrorLevel: "ERROR: ",
+		logrus.FatalLevel: "FATAL: ",
+		logrus.PanicLevel: "PANIC: ",
+	}
+
+	lvlText = text[level]
+
+	if f.DisableColors == true && f.ForceColors != true {
+		return
+	}
+
 	color := map[logrus.Level]string{
 		logrus.DebugLevel: helpers.ANSI_BOLD_WHITE,
 		logrus.WarnLevel:  helpers.ANSI_YELLOW,
@@ -59,19 +72,6 @@ func (f *RunnerTextFormatter) getLevelColorAndText(level logrus.Level) (lvlColor
 		logrus.PanicLevel: helpers.ANSI_BOLD_RED,
 	}
 
-	text := map[logrus.Level]string{
-		logrus.DebugLevel: "",
-		logrus.WarnLevel:  "WARNING: ",
-		logrus.ErrorLevel: "ERROR: ",
-		logrus.FatalLevel: "FATAL: ",
-		logrus.PanicLevel: "PANIC: ",
-	}
-
-	if f.DisableColors == true && f.ForceColors != true {
-		return
-	}
-
-	lvlText = text[level]
 	lvlColor = color[level]
 	resetColor = helpers.ANSI_RESET
 	return
