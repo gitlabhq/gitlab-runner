@@ -132,6 +132,7 @@ type Client struct {
 	HTTPClient             *http.Client
 	TLSConfig              *tls.Config
 	Dialer                 *net.Dialer
+	UnixHTTPClient         *http.Client
 
 	endpoint            string
 	endpointURL         *url.URL
@@ -139,7 +140,6 @@ type Client struct {
 	requestedAPIVersion APIVersion
 	serverAPIVersion    APIVersion
 	expectedAPIVersion  APIVersion
-	unixHTTPClient      *http.Client
 }
 
 // NewClient returns a Client instance ready for communication with the given
@@ -727,8 +727,8 @@ func (c *Client) getFakeUnixURL(path string) string {
 }
 
 func (c *Client) unixClient() *http.Client {
-	if c.unixHTTPClient != nil {
-		return c.unixHTTPClient
+	if c.UnixHTTPClient != nil {
+		return c.UnixHTTPClient
 	}
 	socketPath := c.endpointURL.Path
 	tr := &http.Transport{
@@ -737,8 +737,8 @@ func (c *Client) unixClient() *http.Client {
 		},
 	}
 	cleanhttp.SetTransportFinalizer(tr)
-	c.unixHTTPClient = &http.Client{Transport: tr}
-	return c.unixHTTPClient
+	c.UnixHTTPClient = &http.Client{Transport: tr}
+	return c.UnixHTTPClient
 }
 
 type jsonMessage struct {

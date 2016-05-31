@@ -89,9 +89,19 @@ func Close(client Client) {
 	}
 
 	// Nuke all connections
-	if transport, ok := dockerClient.HTTPClient.Transport.(*http.Transport); ok && transport != http.DefaultTransport {
+	closeHTTPClient("HTTPClient", dockerClient.HTTPClient)
+	closeHTTPClient("UnixClient", dockerClient.UnixHTTPClient)
+}
+
+func closeHTTPClient(name string, client *http.Client) {
+	if client == nil {
+		return
+	}
+
+	if transport, ok := client.Transport.(*http.Transport); ok && transport != nil {
 		transport.DisableKeepAlives = true
 		transport.CloseIdleConnections()
-		logrus.Debugln("Closed all idle connections for docker.Client:", dockerClient)
+		logrus.Debugln("Closed all idle connections for docker.Client", name, client)
 	}
+
 }
