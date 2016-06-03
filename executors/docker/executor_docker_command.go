@@ -11,8 +11,16 @@ import (
 
 type commandExecutor struct {
 	executor
+
+	containerOptions    *docker.CreateContainerOptions
+
 	predefinedContainer *docker.Container
+	predefinedImage     *docker.Image
+
 	buildContainer      *docker.Container
+	buildImage          string
+
+	preparedServices    servicesLinks
 }
 
 func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
@@ -27,42 +35,70 @@ func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.Ru
 		return errors.New("Script is not compatible with Docker")
 	}
 
-	imageName, err := s.getImageName()
+	s.buildImage, err = s.getImageName()
 	if err != nil {
 		return err
 	}
 
-	options, err := s.prepareBuildContainer()
+	s.containerOptions, err = s.prepareBuildContainer()
 	if err != nil {
 		return err
 	}
 
-	buildImage, err := s.getPrebuiltImage("build")
+	s.preparedServices, err = s.startServices()
 	if err != nil {
 		return err
 	}
 
-	// Start pre-build container which will git clone changes
-	s.predefinedContainer, err = s.createContainer("predefined", buildImage.ID, nil, *options)
-	if err != nil {
-		return err
-	}
-
-	// Start build container which will run actual build
-	s.buildContainer, err = s.createContainer("build", imageName, s.BuildScript.DockerCommand, *options)
+	s.predefinedImage, err = s.getPrebuiltImage("build")
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
+func (s *commandExecutor) getOrCreatePredefinedContainer() (container *docker.Container, err error) {
+	if s.predefinedContainer == nil {
+		// Create pre-build container which will git clone changes
+		s.predefinedContainer, err = s.createContainer("predefined", s.predefinedImage.ID, nil, *s.containerOptions)
+		if err != nil {
+			return
+		}
+	}
+
+	return s.predefinedContainer, nil
+}
+
+func (s *commandExecutor) getOrCreateBuildContainer() (container *docker.Container, err error) {
+	if s.predefinedContainer == nil {
+		// Verify the state of services
+		links, err := s.finishServices(s.preparedServices)
+		if err != nil {
+			return nil, err
+		}
+		s.containerOptions.HostConfig.Links = append(s.containerOptions.HostConfig.Links, links...)
+
+		// Create build container which will run actual builds
+		s.buildContainer, err = s.createContainer("build", s.buildImage, s.BuildScript.DockerCommand, *s.containerOptions)
+		if err != nil {
+			return err
+		}
+	}
+
+	return s.predefinedContainer, nil
+}
+
+func (s *commandExecutor) Run(cmd common.ExecutorCommand) (err error) {
 	var container *docker.Container
 
 	if cmd.Predefined {
-		container = s.predefinedContainer
+		container, err = s.getOrCreatePredefinedContainer()
 	} else {
-		container = s.buildContainer
+		container, err = s.getOrCreateBuildContainer()
+	}
+
+	if err != nil {
+		return
 	}
 
 	s.Debugln("Executing on", container.Name, "the", cmd.Script)

@@ -38,6 +38,8 @@ type executor struct {
 	options  dockerOptions
 }
 
+type servicesLinks map[string]*docker.Container
+
 const PrebuiltArchive = "prebuilt.tar.gz"
 
 func (s *executor) getServiceVariables() []string {
@@ -489,17 +491,17 @@ func (s *executor) getServiceNames() ([]string, error) {
 	return services, nil
 }
 
-func (s *executor) waitForServices() {
+func (s *executor) waitForServices(services servicesLinks) {
 	waitForServicesTimeout := s.Config.Docker.WaitForServicesTimeout
 	if waitForServicesTimeout == 0 {
 		waitForServicesTimeout = common.DefaultWaitForServicesTimeout
 	}
 
 	// wait for all services to came up
-	if waitForServicesTimeout > 0 && len(s.services) > 0 {
+	if waitForServicesTimeout > 0 && len(servicesLinks) > 0 {
 		s.Println("Waiting for services to be up and running...")
 		wg := sync.WaitGroup{}
-		for _, service := range s.services {
+		for _, service := range servicesLinks {
 			wg.Add(1)
 			go func(service *docker.Container) {
 				s.waitForServiceContainer(service, time.Duration(waitForServicesTimeout)*time.Second)
@@ -548,25 +550,38 @@ func (s *executor) createFromServiceDescription(description string, linksMap map
 	return
 }
 
-func (s *executor) createServices() ([]string, error) {
+func (s *executor) startServices() (services servicesLinks, error) {
 	serviceNames, err := s.getServiceNames()
 	if err != nil {
 		return nil, err
 	}
 
-	linksMap := make(map[string]*docker.Container)
+	services = make(servicesLinks)
 
 	for _, serviceDescription := range serviceNames {
-		err = s.createFromServiceDescription(serviceDescription, linksMap)
+		err = s.createFromServiceDescription(serviceDescription, services)
 		if err != nil {
 			return nil, err
 		}
 	}
+	return
+}
 
-	s.waitForServices()
+func (s *executor) finishServices(services servicesLinks) (links []string) {
+	s.waitForServices(services)
+	links = s.buildServiceLinks(services)
+	return
+}
 
-	links := s.buildServiceLinks(linksMap)
-	return links, nil
+func (s *executor) createServices() (links []string, err error) {
+	s.Debugln("Creating services...")
+	services, err := s.startServices()
+	if err != nil {
+		return
+	}
+
+	links = s.finishServices(services)
+	return
 }
 
 func (s *executor) prepareBuildContainer() (options *docker.CreateContainerOptions, err error) {
@@ -599,13 +614,6 @@ func (s *executor) prepareBuildContainer() (options *docker.CreateContainerOptio
 		return options, err
 	}
 	options.HostConfig.Devices = devices
-
-	s.Debugln("Creating services...")
-	links, err := s.createServices()
-	if err != nil {
-		return options, err
-	}
-	options.HostConfig.Links = append(options.HostConfig.Links, links...)
 
 	s.Debugln("Creating cache directories...")
 	binds, volumesFrom, err := s.createVolumes()

@@ -35,6 +35,12 @@ func (s *sshExecutor) Prepare(globalConfig *common.Config, config *common.Runner
 		return err
 	}
 
+	links, err := s.createServices()
+	if err != nil {
+		return err
+	}
+	options.HostConfig.Links = append(options.HostConfig.Links, links...)
+
 	// Start build container which will run actual build
 	container, err := s.createContainer("build", imageName, []string{}, *options)
 	if err != nil {
