@@ -550,7 +550,7 @@ func (s *executor) createFromServiceDescription(description string, linksMap map
 	return
 }
 
-func (s *executor) startServices() (services servicesLinks, error) {
+func (s *executor) startServices() (services servicesLinks, err error) {
 	serviceNames, err := s.getServiceNames()
 	if err != nil {
 		return nil, err

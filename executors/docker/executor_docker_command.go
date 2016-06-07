@@ -12,15 +12,15 @@ import (
 type commandExecutor struct {
 	executor
 
-	containerOptions    *docker.CreateContainerOptions
+	containerOptions *docker.CreateContainerOptions
 
 	predefinedContainer *docker.Container
 	predefinedImage     *docker.Image
 
-	buildContainer      *docker.Container
-	buildImage          string
+	buildContainer *docker.Container
+	buildImage     string
 
-	preparedServices    servicesLinks
+	preparedServices servicesLinks
 }
 
 func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
