@@ -1,4 +1,7 @@
-v 1.2.0 (unreleased)
+v 1.2.1 (unreleased)
+- Restore version info in `--help` message
+
+v 1.2.0
 - Use Go 1.6
 - Add `timeout` option for the `exec` command
 - Add runtime platform informations to debug log
