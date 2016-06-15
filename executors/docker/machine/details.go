@@ -8,15 +8,17 @@ import (
 	"github.com/Sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 )
 
 type machineDetails struct {
-	Name      string
-	Created   time.Time `yaml:"-"`
-	Used      time.Time `yaml:"-"`
-	UsedCount int
-	State     machineState
-	Reason    string
+	Name        string
+	Created     time.Time `yaml:"-"`
+	Used        time.Time `yaml:"-"`
+	UsedCount   int
+	State       machineState
+	Reason      string
+	Credentials *docker_helpers.DockerCredentials
 }
 
 func (m *machineDetails) isUsed() bool {

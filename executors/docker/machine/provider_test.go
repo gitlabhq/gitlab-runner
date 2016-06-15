@@ -106,6 +106,9 @@ func (m *testMachine) Remove(name string) error {
 }
 
 func (m *testMachine) Exist(name string) bool {
+	if strings.Contains(name, "no-can-connect") {
+		return false
+	}
 	for _, machine := range m.machines {
 		if machine == name {
 			return true
@@ -190,9 +193,9 @@ func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndA
 	return false
 }
 
-func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
+func testMachineProvider(machines ...string) (*machineProvider, *testMachine) {
 	t := &testMachine{
-		machines: machine,
+		machines: machines,
 	}
 	p := &machineProvider{
 		details: make(machinesDetails),
@@ -222,7 +225,7 @@ func TestMachineDetails(t *testing.T) {
 }
 
 func TestMachineFindFree(t *testing.T) {
-	p, tm := testMachineProvider("no-can-connect")
+	p, _ := testMachineProvider("no-can-connect", "machine1", "machine2")
 	d1 := p.findFreeMachine()
 	assert.Nil(t, d1, "no machines, return nil")
 
@@ -236,7 +239,6 @@ func TestMachineFindFree(t *testing.T) {
 	assert.NotNil(t, d4, "acquire a new machine")
 	assert.NotEqual(t, d2, d4, "and it's a different machine")
 
-	assert.Len(t, tm.machines, 1, "has one machine")
 	d5 := p.findFreeMachine("machine1", "no-can-connect")
 	assert.Nil(t, d5, "fails to acquire machine to which he can't connect")
 }
@@ -270,33 +272,62 @@ func TestMachineUse(t *testing.T) {
 
 	p, _ := testMachineProvider("machine1")
 
-	d1, err := p.useMachine(machineDefaultConfig)
+	_, d1, err := p.findAndUseMachine(machineDefaultConfig)
 	assert.NotNil(t, d1)
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateAcquired, d1.State)
 	assert.Equal(t, "machine1", d1.Name, "finds a free machine1")
 
-	d2, err := p.useMachine(machineDefaultConfig)
-	assert.NotNil(t, d2)
-	assert.NoError(t, err)
-	assert.Equal(t, machineStateAcquired, d2.State)
-	assert.NotEqual(t, "machine1", d2.Name, "creates a new machine")
-
-	_, err = p.useMachine(machineProvisionFail)
-	assert.Error(t, err, "fails to create a new machine")
+	_, d2, err := p.findAndUseMachine(machineProvisionFail)
+	assert.Nil(t, d2, "fails to find a machine")
+	assert.NoError(t, err, "this is not an error")
 }
 
 func TestMachineTestRetry(t *testing.T) {
 	provisionRetryInterval = 0
+	useMachineRetryInterval = 0
+	useMachineRetries = 3
 
 	p, _ := testMachineProvider()
-	_, err := p.useMachine(machineSecondFail)
-	assert.Error(t, err, "fails to create a new machine")
+	_, d, err := p.retryFindAndUseMachine(machineSecondFail)
+	assert.Nil(t, d, "fails to find a free machine")
+	assert.NoError(t, err, "this is not an error")
+}
 
-	p, _ = testMachineProvider()
-	d1, err := p.retryUseMachine(machineSecondFail)
-	assert.NoError(t, err, "after replying the same test scenario and using retry it succeeds")
-	assert.Equal(t, machineStateAcquired, d1.State)
+func TestUseCredentials(t *testing.T) {
+	p, _ := testMachineProvider()
+
+	details := p.machineDetails("machine1", true)
+	_, err := p.useCredentials(nil, details)
+	assert.NoError(t, err, "successfully gets credentials")
+
+	_, err = p.useCredentials(nil, details)
+	assert.NoError(t, err, "successfully gets credentials for second time")
+
+	details = p.machineDetails("no-connect", true)
+	_, err = p.useCredentials(nil, details)
+	assert.Error(t, err, "fails to get credentials when can connect to machine")
+	assert.Equal(t, machineStateIdle, details.State, "machine should be released")
+
+	details = p.machineDetails("no-can-connect", true)
+	_, err = p.useCredentials(nil, details)
+	assert.NoError(t, err, "successfully gets credentials for the first time")
+	assert.Equal(t, machineStateAcquired, details.State, "machine should be acquired")
+
+	_, err = p.useCredentials(nil, details)
+	assert.Error(t, err, "fails to get credentials when cannnot connect")
+	assert.Equal(t, machineStateIdle, details.State, "machine should be released")
+}
+
+func TestCreateAndUseMachine(t *testing.T) {
+	p, _ := testMachineProvider()
+
+	_, d, err := p.createAndUseMachine(machineDefaultConfig)
+	assert.NoError(t, err, "succesfully creates machine")
+	assert.Equal(t, machineStateAcquired, d.State, "machine should be acquired")
+
+	_, d, err = p.createAndUseMachine(machineNoConnect)
+	assert.Error(t, err, "fails to create a machine")
 }
 
 func TestMachineAcquireAndRelease(t *testing.T) {
@@ -396,7 +427,7 @@ func TestMachineMaxBuilds(t *testing.T) {
 
 	_, nd, err := p.Use(config, d)
 	assert.NoError(t, err)
-	assert.Nil(t, nd, "we passed the data, we should not get the data now")
+	assert.Equal(t, d, nd, "we passed the data, we should get the same data now")
 
 	p.Release(config, d)
 
@@ -456,4 +487,45 @@ func TestMachineUseOnDemand(t *testing.T) {
 	_, _, err = p.Use(machineNoConnect, nil)
 	assert.Error(t, err, "fail to create a new machine on connect")
 	assertTotalMachines(t, p, 3, "it fails on no-connect, but we leave the machine created")
+}
+
+func TestMachineCanConnectFailed(t *testing.T) {
+	provisionRetryInterval = 0
+	removalRetryInterval = 0
+	useMachineRetryInterval = 0
+
+	p, _ := testMachineProvider()
+	d := p.machineDetails("no-connect", true)
+	_, nd, err := p.Use(machineProvisionFail, d)
+	assert.Error(t, err, "it fails to assign a machine")
+	assert.Nil(t, nd)
+	assert.Equal(t, machineStateIdle, d.State, "releases invalid machine")
+}
+
+func TestMachineUseCreatesMachine(t *testing.T) {
+	provisionRetryInterval = 0
+	removalRetryInterval = 0
+	useMachineRetryInterval = 0
+
+	p, _ := testMachineProvider()
+	d := p.machineDetails("no-connect", true)
+	_, nd, err := p.Use(machineDefaultConfig, d)
+	assert.NoError(t, err, "it creates a new machine")
+	assert.NotNil(t, nd)
+	assert.Equal(t, machineStateIdle, d.State, "releases invalid machine")
+}
+
+func TestMachineUseFindsANewMachine(t *testing.T) {
+	provisionRetryInterval = 0
+	removalRetryInterval = 0
+	useMachineRetryInterval = 0
+
+	p, _ := testMachineProvider("machine2")
+	d := p.machineDetails("no-connect", true)
+	_, nd, err := p.Use(machineDefaultConfig, d)
+	assert.NoError(t, err, "it find an existing machine")
+	assert.NotNil(t, nd)
+	d2 := p.machineDetails("machine2", false)
+	assert.Equal(t, nd, d2, "it should be machine2")
+	assert.Equal(t, machineStateIdle, d.State, "releases invalid machine")
 }

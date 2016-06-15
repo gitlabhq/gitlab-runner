@@ -85,10 +85,8 @@ func (m *machineProvider) findFreeMachine(machines ...string) (details *machineD
 			continue
 		}
 
-		// Check if node is running
-		canConnect := m.machine.CanConnect(name)
-		if !canConnect {
-			m.remove(name, "machine is unavailable")
+		if !m.machine.Exist(name) {
+			m.remove(name, "machine does not exists")
 			continue
 		}
 		return details
@@ -97,28 +95,29 @@ func (m *machineProvider) findFreeMachine(machines ...string) (details *machineD
 	return nil
 }
 
-func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
+func (m *machineProvider) findAndUseMachine(config *common.RunnerConfig) (dc docker_helpers.DockerCredentials, details *machineDetails, err error) {
 	machines, err := m.loadMachines(config)
 	if err != nil {
 		return
 	}
 	details = m.findFreeMachine(machines...)
-	if details == nil {
-		var errCh chan error
-		details, errCh = m.create(config, machineStateAcquired)
-		err = <-errCh
+	if details != nil {
+		dc, err = m.useCredentials(config, details)
+		if err != nil {
+			details = nil
+		}
 	}
 	return
 }
 
-func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
+func (m *machineProvider) retryFindAndUseMachine(config *common.RunnerConfig) (dc docker_helpers.DockerCredentials, details *machineDetails, err error) {
 	// Try to find a machine
-	for i := 0; i < 3; i++ {
-		details, err = m.useMachine(config)
+	for i := 0; i < useMachineRetries; i++ {
+		dc, details, err = m.findAndUseMachine(config)
 		if err == nil {
 			break
 		}
-		time.Sleep(provisionRetryInterval)
+		time.Sleep(useMachineRetryInterval)
 	}
 	return
 }
@@ -138,7 +137,7 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 		if err == nil {
 			break
 		}
-		time.Sleep(30 * time.Second)
+		time.Sleep(removalRetryInterval)
 		logrus.WithField("name", details.Name).
 			WithField("created", time.Since(details.Created)).
 			WithField("used", time.Since(details.Used)).
@@ -174,6 +173,9 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) {
 }
 
 func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machinesData, details *machineDetails) error {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	if details.State != machineStateIdle {
 		return nil
 	}
@@ -233,6 +235,26 @@ func (m *machineProvider) loadMachines(config *common.RunnerConfig) ([]string, e
 	return m.machine.List(machineFilter(config))
 }
 
+func (m *machineProvider) useCredentials(config *common.RunnerConfig, details *machineDetails) (dc docker_helpers.DockerCredentials, err error) {
+	if details.Credentials != nil {
+		if m.machine.CanConnect(details.Name) {
+			dc = *details.Credentials
+		} else {
+			err = fmt.Errorf("can't connect to: %s", details.Name)
+			m.Release(config, details)
+		}
+		return
+	}
+
+	dc, err = m.machine.Credentials(details.Name)
+	if err == nil {
+		details.Credentials = &dc
+	} else {
+		m.Release(config, details)
+	}
+	return
+}
+
 func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.ExecutorData, err error) {
 	if config.Machine == nil || config.Machine.MachineName == "" {
 		err = fmt.Errorf("Missing Machine options")
@@ -253,15 +275,16 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 	// Pre-create machines
 	m.createMachines(config, &machinesData)
 
-	m.acquireLock.Unlock()
-
 	logrus.WithFields(machinesData.Fields()).
 		WithField("runner", config.ShortDescription()).
 		WithField("minIdleCount", config.Machine.IdleCount).
 		WithField("maxMachines", config.Limit).
 		WithField("time", time.Now()).
 		Debugln("Docker Machine Details")
+
 	machinesData.writeDebugInformation()
+
+	m.acquireLock.Unlock()
 
 	// Try to find a free machine
 	details := m.findFreeMachine(machines...)
@@ -271,32 +294,55 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 	}
 
 	// If we have a free machines we can process a build
-	if config.Machine.IdleCount != 0 && machinesData.Idle == 0 {
+	if config.Machine.IdleCount != 0 {
 		err = errors.New("No free machines that can process builds")
 	}
 	return
 }
 
+func (m *machineProvider) createAndUseMachine(config *common.RunnerConfig) (dc docker_helpers.DockerCredentials, details *machineDetails, err error) {
+	var errCh chan error
+	details, errCh = m.create(config, machineStateAcquired)
+	err = <-errCh
+	if err != nil {
+		return
+	}
+
+	dc, err = m.useCredentials(config, details)
+	if err != nil {
+		details = nil
+	}
+	return
+}
+
 func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorData) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
+	var dc docker_helpers.DockerCredentials
+
 	// Find a new machine
 	details, _ := data.(*machineDetails)
+
+	// Get machine credentials
+	if details != nil {
+		dc, err = m.useCredentials(config, details)
+		if err != nil {
+			details = nil
+		}
+	}
+
+	// Try to find an existing machine
 	if details == nil {
-		details, err = m.retryUseMachine(config)
+		dc, details, err = m.retryFindAndUseMachine(config)
 		if err != nil {
 			return
 		}
-
-		// Return details only if this is a new instance
-		newData = details
 	}
 
-	// Get machine credentials
-	dc, err := m.machine.Credentials(details.Name)
-	if err != nil {
-		if newData != nil {
-			m.Release(config, newData)
+	// Try to create a new machine
+	if details == nil {
+		dc, details, err = m.createAndUseMachine(config)
+		if err != nil {
+			return
 		}
-		return
 	}
 
 	// Create shallow copy of config and store in it docker credentials
@@ -306,6 +352,7 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 		*newConfig.Docker = *config.Docker
 	}
 	newConfig.Docker.DockerCredentials = dc
+	newData = details
 
 	// Mark machine as used
 	details.State = machineStateUsed

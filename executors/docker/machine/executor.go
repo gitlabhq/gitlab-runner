@@ -12,6 +12,7 @@ import (
 type machineExecutor struct {
 	provider *machineProvider
 	executor common.Executor
+	build    *common.Build
 	data     common.ExecutorData
 	config   common.RunnerConfig
 }
@@ -24,6 +25,8 @@ func (e *machineExecutor) Shell() *common.ShellScriptInfo {
 }
 
 func (e *machineExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) (err error) {
+	e.build = build
+
 	// Use the machine
 	e.config, e.data, err = e.provider.Use(config, build.ExecutorData)
 	if err != nil {
@@ -32,9 +35,7 @@ func (e *machineExecutor) Prepare(globalConfig *common.Config, config *common.Ru
 
 	// TODO: Currently the docker-machine doesn't support multiple builds
 	build.ProjectRunnerID = 0
-	if details, _ := build.ExecutorData.(*machineDetails); details != nil {
-		build.Hostname = details.Name
-	} else if details, _ := e.data.(*machineDetails); details != nil {
+	if details, _ := e.data.(*machineDetails); details != nil {
 		build.Hostname = details.Name
 	}
 
@@ -66,7 +67,7 @@ func (e *machineExecutor) Cleanup() {
 	}
 
 	// Release allocated machine
-	if e.data != "" {
+	if e.data != nil && e.data != e.build.ExecutorData {
 		e.provider.Release(&e.config, e.data)
 		e.data = nil
 	}
