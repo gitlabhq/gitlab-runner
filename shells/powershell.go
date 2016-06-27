@@ -182,49 +182,34 @@ func (b *PowerShell) GetName() string {
 	return "powershell"
 }
 
-func (b *PowerShell) GenerateScript(info common.ShellScriptInfo) (*common.ShellScript, error) {
+func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
+	script = &common.ShellConfiguration{
+		Command:   "powershell",
+		Arguments: []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
+		PassFile:  true,
+		Extension: "ps1",
+	}
+	return
+}
+
+func (b *PowerShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
 	w := &PsWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
 	w.Line("$ErrorActionPreference = \"Stop\"")
 	w.Line("")
 
-	if len(info.Build.Hostname) != 0 {
-		w.Line("echo \"Running on $env:computername via " + psQuoteVariable(info.Build.Hostname) + "...\"")
-	} else {
-		w.Line("echo \"Running on $env:computername...\"")
+	if scriptType == common.ShellPrepareScript {
+		if len(info.Build.Hostname) != 0 {
+			w.Line("echo \"Running on $env:computername via " + psQuoteVariable(info.Build.Hostname) + "...\"")
+		} else {
+			w.Line("echo \"Running on $env:computername...\"")
+		}
 	}
-	w.Line("")
 
-	w.Line("& {")
-	w.Indent()
-	b.GeneratePreBuild(w, info)
-	w.Unindent()
-	w.Line("}")
-	w.checkErrorLevel()
-
-	w.Line("& {")
-	w.Indent()
-	b.GenerateCommands(w, info)
-	w.Unindent()
-	w.Line("}")
-	w.checkErrorLevel()
-
-	w.Line("& {")
-	w.Indent()
-	b.GeneratePostBuild(w, info)
-	w.Unindent()
-	w.Line("}")
-	w.checkErrorLevel()
-
-	script := common.ShellScript{
-		BuildScript: w.String(),
-		Command:     "powershell",
-		Arguments:   []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
-		PassFile:    true,
-		Extension:   "ps1",
-	}
-	return &script, nil
+	err = b.writeScript(w, scriptType, info)
+	script = w.String()
+	return
 }
 
 func (b *PowerShell) IsDefault() bool {

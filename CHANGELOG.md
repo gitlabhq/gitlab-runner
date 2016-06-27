@@ -1,5 +1,51 @@
-v 1.2.0 (unreleased)
+v 1.3.1
+- Detect architecture if not given by Docker Engine (versions before 1.9.0)
+
+v 1.3.0
+- Add incremental build trace update
+- Add posibility to specify CpusetCpus, Dns and DnsSearch for docker containers created by runners
+- Add a custom `User-Agent` header with version number and runtime information (go version, platform, os)
+- Add artifacts expiration handling
+- Add artifacts handling for failed builds
+- Add customizable `check_interval` to set how often to check GitLab for a new builds
+- Add docker Machine IP address logging
+- Make Docker Executor ARM compatible
+- Refactor script generation to make it fully on-demand
+- Refactor runnsers Acquire method to improve performance
+- Fix branch name setting at compile time
+- Fix panic when generating log message if provision of node fails
+- Fix docker host logging
+- Prevent leaking of goroutines when aborting builds
+- Restore valid version info in --help message
+- [Experimental] Add `GIT_STRATEGY` handling - clone/fetch strategy configurable per job
+- [Experimental] Add `GIT_DEPTH` handling - `--depth` parameter for `git fetch` and `git clone`
+
+v 1.2.0
+- Use Go 1.6
+- Add `timeout` option for the `exec` command
+- Add runtime platform information to debug log
+- Add `docker-machine` binary to Runner's official docker images
+- Add `build_current` target to Makefile - to build only a binary for used architecture
+- Add support for `after_script`
+- Extend version information when using `--version` flag
+- Extend artifacts download/upload logs with more response data
+- Extend unregister command to accept runner name
+- Update shell detection mechanism
+- Update the github.com/ayufan/golag-kardianos-service dependency
+- Replace ANSI_BOLD_YELLOW with ANSI_YELLOW color for logging
+- Reconcile VirtualBox status constants with VBoxManage output values
 - Make checkout quiet
+- Make variables to work at job level in exec mode
+- Remove "user mode" warning when running in a system mode
+- Create `gitlab-runner` user as a system account
+- Properly create `/etc/gitlab-runner/certs` in Runner's official docker images
+- Disable recursive submodule fetchin on fetching changes
+- Fix nil casting issue on docker client creation
+- Fix used build platforms for `gox`
+- Fix a limit problems when trying to remove a non-existing machines
+- Fix S3 caching issues
+- Fix logging messages on artifacts dowloading
+- Fix binary panic while using VirtualBox executor with no `vboxmanage` binary available
 
 v 1.1.0
 - Use Go 1.5
@@ -24,7 +70,7 @@ v 1.1.0
 - Fix: Don't restore cache if not defined in gitlab-ci.yml
 - Fix: Always use `json-file` when starting docker containers
 - Fix: Error level checking for Windows Batch and PowerShell
- 
+
 v 1.0.4
 - Fix support for Windows PowerShell
 

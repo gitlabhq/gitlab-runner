@@ -159,7 +159,17 @@ func (b *CmdWriter) Absolute(dir string) string {
 	return filepath.Join("%CD%", dir)
 }
 
-func (b *CmdShell) GenerateScript(info common.ShellScriptInfo) (*common.ShellScript, error) {
+func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
+	script = &common.ShellConfiguration{
+		Command:   "cmd",
+		Arguments: []string{"/Q", "/C"},
+		PassFile:  true,
+		Extension: "cmd",
+	}
+	return
+}
+
+func (b *CmdShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
 	w := &CmdWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
@@ -168,44 +178,17 @@ func (b *CmdShell) GenerateScript(info common.ShellScriptInfo) (*common.ShellScr
 	w.Line("setlocal enableDelayedExpansion")
 	w.Line("set nl=^\r\n\r\n")
 
-	if len(info.Build.Hostname) != 0 {
-		w.Line("echo Running on %COMPUTERNAME% via " + batchEscape(info.Build.Hostname) + "...")
-	} else {
-		w.Line("echo Running on %COMPUTERNAME%...")
+	if scriptType == common.ShellPrepareScript {
+		if len(info.Build.Hostname) != 0 {
+			w.Line("echo Running on %COMPUTERNAME% via " + batchEscape(info.Build.Hostname) + "...")
+		} else {
+			w.Line("echo Running on %COMPUTERNAME%...")
+		}
 	}
-	w.Line("")
 
-	w.Line("call :prescript")
-	w.checkErrorLevel()
-	w.Line("call :buildscript")
-	w.checkErrorLevel()
-	w.Line("call :postscript")
-	w.checkErrorLevel()
-	w.Line("goto :EOF")
-
-	w.Line(":prescript")
-	b.GeneratePreBuild(w, info)
-	w.Line("goto :EOF")
-	w.Line("")
-
-	w.Line(":buildscript")
-	b.GenerateCommands(w, info)
-	w.Line("goto :EOF")
-	w.Line("")
-
-	w.Line(":postscript")
-	b.GeneratePostBuild(w, info)
-	w.Line("goto :EOF")
-	w.Line("")
-
-	script := common.ShellScript{
-		BuildScript: w.String(),
-		Command:     "cmd",
-		Arguments:   []string{"/Q", "/C"},
-		PassFile:    true,
-		Extension:   "cmd",
-	}
-	return &script, nil
+	err = b.writeScript(w, scriptType, info)
+	script = w.String()
+	return
 }
 
 func (b *CmdShell) IsDefault() bool {

@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
@@ -9,9 +10,12 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 )
 
 const clientError = -100
@@ -180,7 +184,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 	}
 }
 
-func (n *GitLabClient) UpdateBuild(config common.RunnerConfig, id int, state common.BuildState, trace string) common.UpdateState {
+func (n *GitLabClient) UpdateBuild(config common.RunnerConfig, id int, state common.BuildState, trace *string) common.UpdateState {
 	request := common.UpdateBuildRequest{
 		Info:  n.getRunnerVersion(config),
 		Token: config.Token,
@@ -208,6 +212,67 @@ func (n *GitLabClient) UpdateBuild(config common.RunnerConfig, id int, state com
 	}
 }
 
+func (n *GitLabClient) PatchTrace(config common.RunnerConfig, buildCredentials *common.BuildCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
+	id := buildCredentials.ID
+
+	contentRange := fmt.Sprintf("%d-%d", tracePatch.Offset(), tracePatch.Limit())
+	headers := make(http.Header)
+	headers.Set("Content-Range", contentRange)
+	headers.Set("BUILD-TOKEN", buildCredentials.Token)
+	uri := fmt.Sprintf("builds/%d/trace.txt", id)
+	request := bytes.NewReader(tracePatch.Patch())
+
+	response, err := n.doRaw(config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
+	if err != nil {
+		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
+		return common.UpdateFailed
+	}
+
+	defer response.Body.Close()
+	defer io.Copy(ioutil.Discard, response.Body)
+
+	remoteState := response.Header.Get("Build-Status")
+	remoteRange := response.Header.Get("Range")
+	log := config.Log().WithFields(logrus.Fields{
+		"SentRange":          contentRange,
+		"RemoteRange":        remoteRange,
+		"RemoteState":        remoteState,
+		"ResponseStatusCode": response.StatusCode,
+		"ResponseMessage":    response.Status,
+	})
+
+	if remoteState == "canceled" {
+		log.Warningln(id, "Appending trace to coordinator", "aborted")
+		return common.UpdateAbort
+	}
+
+	switch response.StatusCode {
+	case 202:
+		log.Println(id, "Appending trace to coordinator...", "ok")
+		return common.UpdateSucceeded
+	case 404:
+		log.Warningln(id, "Appending trace to coordinator...", "not-found")
+		return common.UpdateNotFound
+	case 406:
+		log.Errorln(id, "Appending trace to coordinator...", "forbidden")
+		return common.UpdateAbort
+	case 416:
+		log.Warningln(id, "Appending trace to coordinator...", "range missmatch")
+
+		remoteRange := strings.Split(remoteRange, "-")
+		newOffset, _ := strconv.Atoi(remoteRange[1])
+		tracePatch.SetNewOffset(newOffset)
+
+		return common.UpdateRangeMissmatch
+	case clientError:
+		log.Errorln(id, "Appending trace to coordinator...", "error")
+		return common.UpdateAbort
+	default:
+		log.Warningln(id, "Appending trace to coordinator...", "failed")
+		return common.UpdateFailed
+	}
+}
+
 func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Reader, baseName string) error {
 	wr, err := mpw.CreateFormFile("file", baseName)
 	if err != nil {
@@ -221,7 +286,7 @@ func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Read
 	return nil
 }
 
-func (n *GitLabClient) UploadRawArtifacts(config common.BuildCredentials, reader io.Reader, baseName string) common.UploadState {
+func (n *GitLabClient) UploadRawArtifacts(config common.BuildCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
@@ -243,13 +308,19 @@ func (n *GitLabClient) UploadRawArtifacts(config common.BuildCredentials, reader
 		TLSCAFile: config.TLSCAFile,
 	}
 
+	query := url.Values{}
+	if expireIn != "" {
+		query.Set("expire_in", expireIn)
+	}
+
 	headers := make(http.Header)
 	headers.Set("BUILD-TOKEN", config.Token)
-	res, err := n.doRaw(mappedConfig, "POST", fmt.Sprintf("builds/%d/artifacts", config.ID), pr, mpw.FormDataContentType(), headers)
+	res, err := n.doRaw(mappedConfig, "POST", fmt.Sprintf("builds/%d/artifacts?%s", config.ID, query.Encode()), pr, mpw.FormDataContentType(), headers)
 
 	log := logrus.WithFields(logrus.Fields{
-		"id":    config.ID,
-		"token": helpers.ShortenToken(config.Token),
+		"id":             config.ID,
+		"token":          helpers.ShortenToken(config.Token),
+		"responseStatus": res.Status,
 	})
 
 	if err != nil {
@@ -299,7 +370,7 @@ func (n *GitLabClient) UploadArtifacts(config common.BuildCredentials, artifacts
 	}
 
 	baseName := filepath.Base(artifactsFile)
-	return n.UploadRawArtifacts(config, file, baseName)
+	return n.UploadRawArtifacts(config, file, baseName, "")
 }
 
 func (n *GitLabClient) DownloadArtifacts(config common.BuildCredentials, artifactsFile string) common.DownloadState {
@@ -315,12 +386,13 @@ func (n *GitLabClient) DownloadArtifacts(config common.BuildCredentials, artifac
 	res, err := n.doRaw(mappedConfig, "GET", fmt.Sprintf("builds/%d/artifacts", config.ID), nil, "", headers)
 
 	log := logrus.WithFields(logrus.Fields{
-		"id":    config.ID,
-		"token": helpers.ShortenToken(config.Token),
+		"id":             config.ID,
+		"token":          helpers.ShortenToken(config.Token),
+		"responseStatus": res.Status,
 	})
 
 	if err != nil {
-		log.Errorln("Uploading artifacts from coordinator...", "error", err.Error())
+		log.Errorln("Downloading artifacts from coordinator...", "error", err.Error())
 		return common.DownloadFailed
 	}
 	defer res.Body.Close()
@@ -336,7 +408,7 @@ func (n *GitLabClient) DownloadArtifacts(config common.BuildCredentials, artifac
 		if err != nil {
 			file.Close()
 			os.Remove(file.Name())
-			log.Errorln("Uploading artifacts from coordinator...", "error", err.Error())
+			log.Errorln("Downloading artifacts from coordinator...", "error", err.Error())
 			return common.DownloadFailed
 		}
 		log.Println("Downloading artifacts from coordinator...", "ok")
@@ -353,8 +425,8 @@ func (n *GitLabClient) DownloadArtifacts(config common.BuildCredentials, artifac
 	}
 }
 
-func (n *GitLabClient) ProcessBuild(config common.RunnerConfig, id int) common.BuildTrace {
-	trace := newBuildTrace(n, config, id)
+func (n *GitLabClient) ProcessBuild(config common.RunnerConfig, buildCredentials *common.BuildCredentials) common.BuildTrace {
+	trace := newBuildTrace(n, config, buildCredentials)
 	trace.start()
 	return trace
 }

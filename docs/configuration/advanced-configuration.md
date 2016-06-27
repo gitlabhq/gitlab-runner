@@ -16,7 +16,8 @@ This defines global settings of multi-runner.
 
 | Setting | Description |
 | ------- | ----------- |
-| `concurrent` | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners |
+| `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners |
+| `check_interval` | defines in seconds how often to check GitLab for a new builds |
 
 Example:
 
@@ -95,6 +96,9 @@ This defines the Docker Container parameters.
 | `hostname`                  | specify custom hostname for Docker container |
 | `tls_cert_path`             | when set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
 | `image`                     | use this image to run builds |
+| `cpuset_cpus`               | string value containing the cgroups CpusetCpus to use |
+| `dns`                       | a list of DNS servers for the container to use |
+| `dns_search`                | a list of DNS search domains |
 | `privileged`                | make container run in Privileged mode (insecure) |
 | `cap_add`                   | add additional Linux capabilities to the container |
 | `cap_drop`                  | drop additional Linux capabilities from the container |
@@ -106,8 +110,8 @@ This defines the Docker Container parameters.
 | `extra_hosts`               | specify hosts that should be defined in container environment |
 | `links`                     | specify containers which should be linked with building container |
 | `services`                  | specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
-| `allowed_images`            | specify wildcard list of images that can be specified in .gitlab-ci.yml |
-| `allowed_services`          | specify wildcard list of services that can be specified in .gitlab-ci.yml |
+| `allowed_images`            | specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
+| `allowed_services`          | specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `pull_policy`               | specify the image pull policy: never, if-not-present or always (default) |
 
 Example:
@@ -118,6 +122,9 @@ Example:
   hostname = ""
   tls_cert_path = "/Users/ayufan/.boot2docker/certs"
   image = "ruby:2.1"
+  cpuset_cpus = "0,1"
+  dns = ["8.8.8.8"]
+  dns_search = [""]
   privileged = false
   cap_add = ["NET_ADMIN"]
   cap_drop = ["DAC_OVERRIDE"]
@@ -238,6 +245,16 @@ the `docker` group use: `sudo usermod -aG user docker`.
 For reference, if you want to set up your own personal registry you might want
 to have a look at <https://docs.docker.com/registry/deploying/>.
 
+### Restrict `allowed_images` to private registry
+For certain setups you will restrict access of the build jobs to docker images
+which comes from your private docker registry. In that case set
+
+```bash
+[runners.docker]
+  …
+  allowed_images = ["my.registry.tld:5000/*:*"]
+```
+
 ## The [runners.parallels] section
 
 This defines the Parallels parameters.
@@ -352,6 +369,7 @@ in the [runners autoscale documentation](autoscale.md#distributed-runners-cachin
 | `AccessKey`      | string           | The access key specified for your S3 instance. |
 | `SecretKey`      | string           | The secret key specified for your S3 instance. |
 | `BucketName`     | string           | Name of the bucket where cache will be stored. |
+| `BucketLocation` | string           | Name of S3 region. |
 | `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Is set to `false` by default. |
 
 Example:
@@ -363,6 +381,7 @@ Example:
   AccessKey = "AMAZON_S3_ACCESS_KEY"
   SecretKey = "AMAZON_S3_SECRET_KEY"
   BucketName = "runners"
+  BucketLocation = "eu-west-1"
   Insecure = false
 ```
 

@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,8 +37,10 @@ type executor struct {
 	services []*docker.Container
 	caches   []*docker.Container
 	options  dockerOptions
+	info     *docker.Env
 }
 
+const prebuiltImageName = "gitlab-runner-prebuilt"
 const PrebuiltArchive = "prebuilt.tar.gz"
 
 func (s *executor) getServiceVariables() []string {
@@ -46,8 +49,8 @@ func (s *executor) getServiceVariables() []string {
 
 func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, error) {
 	homeDir := homedir.Get()
-	if s.Shell.User != "" {
-		u, err := user.Lookup(s.Shell.User)
+	if s.Shell().User != "" {
+		u, err := user.Lookup(s.Shell().User)
 		if err != nil {
 			return docker.AuthConfiguration{}, err
 		}
@@ -140,17 +143,43 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 	return newImage, nil
 }
 
-func (s *executor) getPrebuiltImage(imageType string) (image *docker.Image, err error) {
-	imageName := "gitlab-runner-" + imageType + ":" + common.REVISION
+func (s *executor) getArchitecture() string {
+	architecture := s.info.Get("Architecture")
+	switch architecture {
+	case "armv7l", "aarch64":
+		architecture = "arm"
+	case "amd64":
+		architecture = "x86_64"
+	}
+
+	if architecture != "" {
+		return architecture
+	}
+
+	switch runtime.GOARCH {
+	case "amd64":
+		return "x86_64"
+	default:
+		return runtime.GOARCH
+	}
+}
+
+func (s *executor) getPrebuiltImage() (image *docker.Image, err error) {
+	architecture := s.getArchitecture()
+	if architecture == "" {
+		return nil, errors.New("unsupported docker architecture")
+	}
+
+	imageName := prebuiltImageName + "-" + architecture + ":" + common.REVISION
 	s.Debugln("Looking for prebuilt image", imageName, "...")
 	image, err = s.client.InspectImage(imageName)
 	if err == nil {
 		return
 	}
 
-	data, err := Asset(PrebuiltArchive)
+	data, err := Asset("prebuilt-" + architecture + ".tar.gz")
 	if err != nil {
-		return
+		return nil, fmt.Errorf("Unsupported architecture: %s: %q", architecture, err.Error())
 	}
 
 	gz, err := gzip.NewReader(bytes.NewReader(data))
@@ -160,7 +189,10 @@ func (s *executor) getPrebuiltImage(imageType string) (image *docker.Image, err 
 	defer gz.Close()
 
 	s.Debugln("Loading prebuilt image...")
-	err = s.client.LoadImage(docker.LoadImageOptions{
+	err = s.client.ImportImage(docker.ImportImageOptions{
+		Repository:  prebuiltImageName + "-" + architecture,
+		Tag:         common.REVISION,
+		Source:      "-",
 		InputStream: gz,
 	})
 	if err != nil {
@@ -205,7 +237,7 @@ func (s *executor) getLabels(containerType string, otherLabels ...string) map[st
 
 func (s *executor) createCacheVolume(containerName, containerPath string) (*docker.Container, error) {
 	// get busybox image
-	cacheImage, err := s.getPrebuiltImage("cache")
+	cacheImage, err := s.getPrebuiltImage()
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +247,7 @@ func (s *executor) createCacheVolume(containerName, containerPath string) (*dock
 		Config: &docker.Config{
 			Image: cacheImage.ID,
 			Cmd: []string{
-				containerPath,
+				"gitlab-runner-cache", containerPath,
 			},
 			Volumes: map[string]struct{}{
 				containerPath: {},
@@ -338,7 +370,7 @@ func (s *executor) createVolumes() ([]string, []string, error) {
 
 	// Caching is supported only for absolute and non-root paths
 	if path.IsAbs(parentDir) && parentDir != "/" {
-		if s.Build.AllowGitFetch && !s.Config.Docker.DisableCache {
+		if s.Build.GetGitStrategy() == common.GitFetch && !s.Config.Docker.DisableCache {
 			// create persistent cache container
 			s.addVolume(&binds, &volumesFrom, parentDir)
 		} else {
@@ -578,9 +610,12 @@ func (s *executor) prepareBuildContainer() (options *docker.CreateContainerOptio
 			AttachStderr: true,
 			OpenStdin:    true,
 			StdinOnce:    true,
-			Env:          append(s.Build.GetAllVariables().StringList(), s.BuildScript.Environment...),
+			Env:          append(s.Build.GetAllVariables().StringList(), s.BuildShell.Environment...),
 		},
 		HostConfig: &docker.HostConfig{
+			CPUSetCPUs:    s.Config.Docker.CPUSetCPUs,
+			DNS:           s.Config.Docker.DNS,
+			DNSSearch:     s.Config.Docker.DNSSearch,
 			Privileged:    s.Config.Docker.Privileged,
 			CapAdd:        s.Config.Docker.CapAdd,
 			CapDrop:       s.Config.Docker.CapDrop,
@@ -654,7 +689,25 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 	return
 }
 
-func (s *executor) watchContainer(container *docker.Container, input io.Reader) (err error) {
+func (s *executor) killContainer(container *docker.Container, waitCh chan error) (err error) {
+	for {
+		s.Debugln("Killing container", container.ID, "...")
+		s.client.KillContainer(docker.KillContainerOptions{
+			ID: container.ID,
+		})
+
+		// Wait for signal that container were killed
+		// or retry after some time
+		select {
+		case err = <-waitCh:
+			return
+
+		case <-time.After(time.Second):
+		}
+	}
+}
+
+func (s *executor) watchContainer(container *docker.Container, input io.Reader, abort chan interface{}) (err error) {
 	s.Debugln("Starting container", container.ID, "...")
 	err = s.client.StartContainer(container.ID, nil)
 	if err != nil {
@@ -666,7 +719,7 @@ func (s *executor) watchContainer(container *docker.Container, input io.Reader) 
 		InputStream:  input,
 		OutputStream: s.BuildLog,
 		ErrorStream:  s.BuildLog,
-		Logs:         true,
+		Logs:         false,
 		Stream:       true,
 		Stdin:        true,
 		Stdout:       true,
@@ -674,20 +727,32 @@ func (s *executor) watchContainer(container *docker.Container, input io.Reader) 
 		RawTerminal:  false,
 	}
 
-	s.Debugln("Attaching to container...")
-	err = s.client.AttachToContainer(options)
-	if err != nil {
-		return
-	}
+	waitCh := make(chan error, 1)
+	go func() {
+		s.Debugln("Attaching to container", container.ID, "...")
+		err = s.client.AttachToContainer(options)
+		if err != nil {
+			waitCh <- err
+			return
+		}
 
-	s.Debugln("Waiting for container...")
-	exitCode, err := s.client.WaitContainer(container.ID)
-	if err != nil {
-		return
-	}
+		s.Debugln("Waiting for container", container.ID, "...")
+		exitCode, err := s.client.WaitContainer(container.ID)
+		if err == nil {
+			if exitCode != 0 {
+				err = fmt.Errorf("exit code %d", exitCode)
+			}
+		}
+		waitCh <- err
+	}()
 
-	if exitCode != 0 {
-		err = fmt.Errorf("exit code %d", exitCode)
+	select {
+	case <-abort:
+		s.killContainer(container, waitCh)
+		err = errors.New("Aborted")
+
+	case err = <-waitCh:
+		s.Debugln("Container", container.ID, "finished with", err)
 	}
 	return
 }
@@ -756,7 +821,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 
-	if s.BuildScript.PassFile {
+	if s.BuildShell.PassFile {
 		return errors.New("Docker doesn't support shells that require script file")
 	}
 
@@ -781,6 +846,11 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 	s.client = client
+
+	s.info, err = client.Info()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -817,7 +887,7 @@ func (s *executor) Cleanup() {
 }
 
 func (s *executor) runServiceHealthCheckContainer(container *docker.Container, timeout time.Duration) error {
-	waitImage, err := s.getPrebuiltImage("service")
+	waitImage, err := s.getPrebuiltImage()
 	if err != nil {
 		return err
 	}
@@ -825,6 +895,7 @@ func (s *executor) runServiceHealthCheckContainer(container *docker.Container, t
 	waitContainerOpts := docker.CreateContainerOptions{
 		Name: container.Name + "-wait-for-service",
 		Config: &docker.Config{
+			Cmd:    []string{"gitlab-runner-service"},
 			Image:  waitImage.ID,
 			Labels: s.getLabels("wait", "wait="+container.ID),
 		},
@@ -874,7 +945,7 @@ func (s *executor) waitForServiceContainer(container *docker.Container, timeout 
 
 	var buffer bytes.Buffer
 	buffer.WriteString("\n")
-	buffer.WriteString(helpers.ANSI_BOLD_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + container.Name + " probably didn't start properly.\n")
+	buffer.WriteString(helpers.ANSI_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + container.Name + " probably didn't start properly.\n")
 	buffer.WriteString("\n")
 	buffer.WriteString(strings.TrimSpace(err.Error()) + "\n")
 
@@ -899,7 +970,7 @@ func (s *executor) waitForServiceContainer(container *docker.Container, timeout 
 	}
 
 	buffer.WriteString("\n")
-	buffer.WriteString(helpers.ANSI_BOLD_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
+	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
 	buffer.WriteString("\n")
 	io.Copy(s.BuildLog, &buffer)
 	return err

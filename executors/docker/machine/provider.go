@@ -13,9 +13,10 @@ import (
 )
 
 type machineProvider struct {
-	machine docker_helpers.Machine
-	details machinesDetails
-	lock    sync.RWMutex
+	machine     docker_helpers.Machine
+	details     machinesDetails
+	lock        sync.RWMutex
+	acquireLock sync.Mutex
 	// provider stores a real executor that is used to start run the builds
 	provider common.ExecutorProvider
 }
@@ -124,6 +125,15 @@ func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details 
 
 func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 	for {
+		if !m.machine.Exist(details.Name) {
+			logrus.WithField("name", details.Name).
+				WithField("created", time.Since(details.Created)).
+				WithField("used", time.Since(details.Used)).
+				WithField("reason", details.Reason).
+				Warningln("Skipping machine removal, because it doesn't exist")
+			break
+		}
+
 		err := m.machine.Remove(details.Name)
 		if err == nil {
 			break
@@ -234,11 +244,16 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 		return
 	}
 
+	// Lock updating machines, because two Acquires can be run at the same time
+	m.acquireLock.Lock()
+
 	// Update a list of currently configured machines
 	machinesData := m.updateMachines(machines, config)
 
 	// Pre-create machines
 	m.createMachines(config, &machinesData)
+
+	m.acquireLock.Unlock()
 
 	logrus.WithFields(machinesData.Fields()).
 		WithField("runner", config.ShortDescription()).

@@ -5,9 +5,11 @@ REVISION := $(shell git rev-parse --short HEAD || echo unknown)
 LAST_TAG := $(shell git describe --tags --abbrev=0)
 COMMITS := $(shell echo `git log --oneline $(LAST_TAG)..HEAD | wc -l`)
 VERSION := $(shell (cat VERSION || echo dev) | sed -e 's/^v//g')
+BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
 ifneq ($(RELEASE),true)
     VERSION := $(shell echo $(VERSION)~beta.$(COMMITS).g$(REVISION))
 endif
+BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
 ITTERATION := $(shell date +%s)
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
@@ -22,7 +24,7 @@ RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
     fedora/20 fedora/21 fedora/22 fedora/23
 RPM_ARCHS ?= x86_64 i686 arm armhf
-GO_LDFLAGS ?= -X main.NAME $(PACKAGE_NAME) -X main.VERSION $(VERSION) -X main.REVISION $(REVISION)
+GO_LDFLAGS ?= -X main.NAME=$(PACKAGE_NAME) -X main.VERSION=$(VERSION) -X main.REVISION=$(REVISION) -X main.BUILT=$(BUILT) -X main.BRANCH=$(BRANCH)
 GO_FILES ?= $(shell find . -name '*.go')
 export GO15VENDOREXPERIMENT := 1
 export CGO_ENABLED := 0
@@ -31,7 +33,7 @@ all: deps verify build
 
 help:
 	# Commands:
-	# make all => deps verify toolchain build
+	# make all => deps verify build
 	# make version - show information about current version
 	#
 	# Development commands:
@@ -57,6 +59,8 @@ version: FORCE
 	@echo Current version: $(VERSION)
 	@echo Current iteration: $(ITTERATION)
 	@echo Current revision: $(REVISION)
+	@echo Current branch: $(BRANCH)
+	@echo Build platforms: $(BUILD_PLATFORMS)
 	@echo DEB platforms: $(DEB_PLATFORMS)
 	@echo RPM platforms: $(RPM_PLATFORMS)
 	bash -c 'echo TEST: ${GO15VENDOREXPERIMENT}'
@@ -72,7 +76,7 @@ deps:
 	go get -u github.com/jteeuwen/go-bindata/...
 	go install cmd/vet
 
-out/docker/prebuilt.tar.gz: $(GO_FILES)
+out/docker/prebuilt-x86_64.tar.gz: $(GO_FILES)
 	# Create directory
 	mkdir -p out/docker
 
@@ -84,25 +88,51 @@ ifneq (, $(shell docker info))
 		./apps/gitlab-runner-helper
 
 	# Build docker images
-	docker build -t gitlab-runner-build:$(REVISION) dockerfiles/build
-	docker build -t gitlab-runner-cache:$(REVISION) dockerfiles/cache
-	docker build -t gitlab-runner-service:$(REVISION) dockerfiles/service
-	docker save -o out/docker/prebuilt.tar \
-		gitlab-runner-build:$(REVISION) \
-		gitlab-runner-service:$(REVISION) \
-		gitlab-runner-cache:$(REVISION)
-	gzip -f -9 out/docker/prebuilt.tar
+	docker build -t gitlab-runner-prebuilt-x86_64:$(REVISION) -f dockerfiles/build/Dockerfile.x86_64 dockerfiles/build
+	-docker rm -f gitlab-runner-prebuilt-x86_64-$(REVISION)
+	docker create --name=gitlab-runner-prebuilt-x86_64-$(REVISION) gitlab-runner-prebuilt-x86_64:$(REVISION) /bin/sh
+	docker export -o out/docker/prebuilt-x86_64.tar gitlab-runner-prebuilt-x86_64-$(REVISION)
+	docker rm -f gitlab-runner-prebuilt-x86_64-$(REVISION)
+	gzip -f -9 out/docker/prebuilt-x86_64.tar
 else
 	$(warning =============================================)
 	$(warning WARNING: downloading prebuilt docker images that will be embedded in gitlab-runner)
 	$(warning WARNING: to use images compiled from your code install Docker Engine)
-	$(warning WARNING: and remove out/docker/prebuilt.tar.gz)
+	$(warning WARNING: and remove out/docker/prebuilt-x86_64.tar.gz)
 	$(warning =============================================)
-	curl -o out/docker/prebuilt.tar.gz \
-		https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt.tar.gz
+	curl -o out/docker/prebuilt-x86_64.tar.gz \
+		https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.gz
 endif
 
-executors/docker/bindata.go: out/docker/prebuilt.tar.gz
+out/docker/prebuilt-arm.tar.gz: $(GO_FILES)
+	# Create directory
+	mkdir -p out/docker
+
+ifneq (, $(shell docker info))
+	# Building gitlab-runner-helper
+	gox -osarch=linux/arm \
+		-ldflags "$(GO_LDFLAGS)" \
+		-output="dockerfiles/build/gitlab-runner-helper" \
+		./apps/gitlab-runner-helper
+
+	# Build docker images
+	docker build -t gitlab-runner-prebuilt-arm:$(REVISION) -f dockerfiles/build/Dockerfile.arm dockerfiles/build
+	-docker rm -f gitlab-runner-prebuilt-arm-$(REVISION)
+	docker create --name=gitlab-runner-prebuilt-arm-$(REVISION) gitlab-runner-prebuilt-arm:$(REVISION) /bin/sh
+	docker export -o out/docker/prebuilt-arm.tar gitlab-runner-prebuilt-arm-$(REVISION)
+	docker rm -f gitlab-runner-prebuilt-arm-$(REVISION)
+	gzip -f -9 out/docker/prebuilt-arm.tar
+else
+	$(warning =============================================)
+	$(warning WARNING: downloading prebuilt docker images that will be embedded in gitlab-runner)
+	$(warning WARNING: to use images compiled from your code install Docker Engine)
+	$(warning WARNING: and remove out/docker/prebuilt-arm.tar.gz)
+	$(warning =============================================)
+	curl -o out/docker/prebuilt-arm.tar.gz \
+		https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.gz
+endif
+
+executors/docker/bindata.go: out/docker/prebuilt-x86_64.tar.gz out/docker/prebuilt-arm.tar.gz
 	# Generating embedded data
 	go-bindata \
 		-pkg docker \
@@ -111,15 +141,22 @@ executors/docker/bindata.go: out/docker/prebuilt.tar.gz
 		-nometadata \
 		-prefix out/docker/ \
 		-o executors/docker/bindata.go \
-		out/docker/prebuilt.tar.gz
+		out/docker/prebuilt-x86_64.tar.gz \
+		out/docker/prebuilt-arm.tar.gz
 
 docker: executors/docker/bindata.go
 
 build: executors/docker/bindata.go
-	# Building gitlab-ci-multi-runner for $(BUILD_PLATFORMS)
+	# Building $(NAME) in version $(VERSION) for $(BUILD_PLATFORMS)
 	gox $(BUILD_PLATFORMS) \
 		-ldflags "$(GO_LDFLAGS)" \
 		-output="out/binaries/$(NAME)-{{.OS}}-{{.Arch}}"
+
+build_current: executors/docker/bindata.go
+	# Building $(NAME) in version $(VERSION) for current platform
+	go build \
+		-ldflags "$(GO_LDFLAGS)" \
+		-o "out/binaries/$(NAME)"
 
 fmt:
 	# Checking project code formatting...

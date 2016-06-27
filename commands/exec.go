@@ -23,7 +23,8 @@ import (
 
 type ExecCommand struct {
 	common.RunnerSettings
-	Job string
+	Job     string
+	Timeout int `long:"timeout" description:"Job execution timeout (in seconds)"`
 }
 
 func (c *ExecCommand) runCommand(name string, arg ...string) (string, error) {
@@ -55,7 +56,7 @@ func (c *ExecCommand) getCommands(commands interface{}) (string, error) {
 
 func (c *ExecCommand) supportedOption(key string, _ interface{}) bool {
 	switch key {
-	case "image", "services", "artifacts", "cache":
+	case "image", "services", "artifacts", "cache", "after_script":
 		return true
 	default:
 		return false
@@ -98,6 +99,21 @@ func (c *ExecCommand) buildVariables(configVariables interface{}) (buildVariable
 	} else if configVariables != nil {
 		err = errors.New("unsupported variables")
 	}
+	return
+}
+
+func (c *ExecCommand) buildGlobalAndJobVariables(global, job interface{}) (buildVariables common.BuildVariables, err error) {
+	buildVariables, err = c.buildVariables(global)
+	if err != nil {
+		return
+	}
+
+	jobVariables, err := c.buildVariables(job)
+	if err != nil {
+		return
+	}
+
+	buildVariables = append(buildVariables, jobVariables...)
 	return
 }
 
@@ -151,7 +167,7 @@ func (c *ExecCommand) parseYaml(job string, build *common.GetBuildResponse) erro
 		return err
 	}
 
-	build.Variables, err = c.buildVariables(config["variables"])
+	build.Variables, err = c.buildGlobalAndJobVariables(config["variables"], jobConfig["variables"])
 	if err != nil {
 		return err
 	}
@@ -203,7 +219,7 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 			RefName:       strings.TrimSpace(refName),
 			BeforeSha:     strings.TrimSpace(beforeSha),
 			AllowGitFetch: false,
-			Timeout:       30 * 60,
+			Timeout:       c.getTimeout(),
 			Token:         "",
 			Name:          "",
 			Stage:         "",
@@ -215,6 +231,14 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 		BuildAbort: abortSignal,
 	}
 	return
+}
+
+func (c *ExecCommand) getTimeout() int {
+	if c.Timeout > 0 {
+		return c.Timeout
+	}
+
+	return common.DefaultExecTimeout
 }
 
 func (c *ExecCommand) Execute(context *cli.Context) {

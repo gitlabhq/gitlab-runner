@@ -63,7 +63,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 
 	if buildData == nil {
 		select {
-		case <-time.After(common.CheckInterval * time.Second):
+		case <-time.After(common.CheckInterval):
 		case <-abortSignal:
 		}
 		return
@@ -78,7 +78,11 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		ExecutorData:     data,
 	}
 
-	trace := r.network.ProcessBuild(r.RunnerConfig, buildData.ID)
+	buildCredentials := &common.BuildCredentials{
+		ID:    buildData.ID,
+		Token: buildData.Token,
+	}
+	trace := r.network.ProcessBuild(r.RunnerConfig, buildCredentials)
 	defer trace.Fail(err)
 
 	err = newBuild.Run(config, trace)

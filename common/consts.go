@@ -3,7 +3,8 @@ package common
 import "time"
 
 const DefaultTimeout = 7200
-const CheckInterval = 3
+const DefaultExecTimeout = 1800
+const CheckInterval = 3 * time.Second
 const NotHealthyCheckInterval = 300
 const UpdateInterval = 3 * time.Second
 const UpdateRetryInterval = 3 * time.Second

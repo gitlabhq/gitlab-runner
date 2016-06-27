@@ -1,12 +1,8 @@
 package executors
 
 import (
-	"errors"
-	"fmt"
-	"os"
-	"time"
-
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"os"
 )
 
 type ExecutorOptions struct {
@@ -20,15 +16,14 @@ type ExecutorOptions struct {
 
 type AbstractExecutor struct {
 	ExecutorOptions
-	Config      common.RunnerConfig
-	Build       *common.Build
-	BuildLog    common.BuildTrace
-	BuildFinish chan error
-	BuildScript *common.ShellScript
+	Config     common.RunnerConfig
+	Build      *common.Build
+	BuildLog   common.BuildTrace
+	BuildShell *common.ShellConfiguration
 }
 
 func (e *AbstractExecutor) updateShell() error {
-	script := &e.Shell
+	script := e.Shell()
 	script.Build = e.Build
 	if e.Config.Shell != "" {
 		script.Shell = e.Config.Shell
@@ -36,15 +31,16 @@ func (e *AbstractExecutor) updateShell() error {
 	return nil
 }
 
-func (e *AbstractExecutor) generateShellScript() error {
-	e.Shell.PreCloneScript = e.Config.PreCloneScript
-	e.Shell.PreBuildScript = e.Config.PreBuildScript
-	shellScript, err := common.GenerateShellScript(e.Shell)
+func (e *AbstractExecutor) generateShellConfiguration() error {
+	info := e.Shell()
+	info.PreCloneScript = e.Config.PreCloneScript
+	info.PreBuildScript = e.Config.PreBuildScript
+	shellConfiguration, err := common.GetShellConfiguration(*info)
 	if err != nil {
 		return err
 	}
-	e.BuildScript = shellScript
-	e.Debugln("Shell script:", shellScript)
+	e.BuildShell = shellConfiguration
+	e.Debugln("Shell configuration:", shellConfiguration)
 	return nil
 }
 
@@ -69,7 +65,7 @@ func (e *AbstractExecutor) startBuild() error {
 
 func (e *AbstractExecutor) verifyOptions() error {
 	supportedOptions := e.SupportedOptions
-	if shell := common.GetShell(e.Shell.Shell); shell != nil {
+	if shell := common.GetShell(e.Shell().Shell); shell != nil {
 		supportedOptions = append(supportedOptions, shell.GetSupportedOptions()...)
 	}
 
@@ -92,10 +88,13 @@ func (e *AbstractExecutor) verifyOptions() error {
 	return nil
 }
 
+func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
+	return &e.ExecutorOptions.Shell
+}
+
 func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
 	e.Config = *config
 	e.Build = build
-	e.BuildFinish = make(chan error, 1)
 	e.BuildLog = build.Trace
 
 	err := e.startBuild()
@@ -103,7 +102,7 @@ func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.R
 		return err
 	}
 
-	e.Infoln(fmt.Sprintf("%s %s (%s)", common.NAME, common.VERSION, common.REVISION))
+	e.Infoln(common.VersionLine())
 
 	err = e.updateShell()
 	if err != nil {
@@ -115,39 +114,11 @@ func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.R
 		return err
 	}
 
-	err = e.generateShellScript()
+	err = e.generateShellConfiguration()
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func (e *AbstractExecutor) Wait() error {
-	buildTimeout := e.Build.Timeout
-	if buildTimeout <= 0 {
-		buildTimeout = common.DefaultTimeout
-	}
-
-	buildCanceled := make(chan bool)
-	e.Build.Trace.Notify(func() {
-		buildCanceled <- true
-	})
-
-	// Wait for signals: cancel, timeout, abort or finish
-	e.Debugln("Waiting for signals...")
-	select {
-	case <-buildCanceled:
-		return errors.New("canceled")
-
-	case <-time.After(time.Duration(buildTimeout) * time.Second):
-		return fmt.Errorf("execution took longer than %v seconds", buildTimeout)
-
-	case signal := <-e.Build.BuildAbort:
-		return fmt.Errorf("aborted: %v", signal)
-
-	case err := <-e.BuildFinish:
-		return err
-	}
 }
 
 func (e *AbstractExecutor) Finish(err error) {

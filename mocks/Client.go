@@ -26,7 +26,7 @@ func (m *Client) PullImage(opts docker.PullImageOptions, auth docker.AuthConfigu
 
 	return r0
 }
-func (m *Client) LoadImage(opts docker.LoadImageOptions) error {
+func (m *Client) ImportImage(opts docker.ImportImageOptions) error {
 	ret := m.Called(opts)
 
 	r0 := ret.Error(0)
@@ -59,6 +59,13 @@ func (m *Client) WaitContainer(id string) (int, error) {
 
 	return r0, r1
 }
+func (m *Client) KillContainer(opts docker.KillContainerOptions) error {
+	ret := m.Called(opts)
+
+	r0 := ret.Error(0)
+
+	return r0
+}
 func (m *Client) InspectContainer(id string) (*docker.Container, error) {
 	ret := m.Called(id)
 
@@ -90,4 +97,15 @@ func (m *Client) Logs(opts docker.LogsOptions) error {
 	r0 := ret.Error(0)
 
 	return r0
+}
+func (m *Client) Info() (*docker.Env, error) {
+	ret := m.Called()
+
+	var r0 *docker.Env
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).(*docker.Env)
+	}
+	r1 := ret.Error(1)
+
+	return r0, r1
 }

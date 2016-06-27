@@ -133,7 +133,7 @@ func (b *BashWriter) Notice(format string, arguments ...interface{}) {
 }
 
 func (b *BashWriter) Warning(format string, arguments ...interface{}) {
-	coloredText := helpers.ANSI_BOLD_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
+	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
 
@@ -160,23 +160,7 @@ func (b *BashShell) GetName() string {
 	return b.Shell
 }
 
-func (b *BashShell) GenerateScript(info common.ShellScriptInfo) (*common.ShellScript, error) {
-	temporaryPath := info.Build.FullProjectDir() + ".tmp"
-
-	preScript := &BashWriter{TemporaryPath: temporaryPath}
-	if len(info.Build.Hostname) != 0 {
-		preScript.Line("echo " + strconv.Quote("Running on $(hostname) via "+info.Build.Hostname+"..."))
-	} else {
-		preScript.Line("echo " + strconv.Quote("Running on $(hostname)..."))
-	}
-	b.GeneratePreBuild(preScript, info)
-
-	buildScript := &BashWriter{TemporaryPath: temporaryPath}
-	b.GenerateCommands(buildScript, info)
-
-	postScript := &BashWriter{TemporaryPath: temporaryPath}
-	b.GeneratePostBuild(postScript, info)
-
+func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
 	var detectScript string
 	var shellCommand string
 	if info.Type == common.LoginShell {
@@ -187,12 +171,8 @@ func (b *BashShell) GenerateScript(info common.ShellScriptInfo) (*common.ShellSc
 		shellCommand = b.Shell
 	}
 
-	script := common.ShellScript{
-		PreScript:     preScript.Finish(),
-		BuildScript:   buildScript.Finish(),
-		PostScript:    postScript.Finish(),
-		DockerCommand: []string{"sh", "-c", detectScript},
-	}
+	script = &common.ShellConfiguration{}
+	script.DockerCommand = []string{"sh", "-c", detectScript}
 
 	// su
 	if info.User != "" {
@@ -208,7 +188,26 @@ func (b *BashShell) GenerateScript(info common.ShellScriptInfo) (*common.ShellSc
 			script.Arguments = append(script.Arguments, "--login")
 		}
 	}
-	return &script, nil
+
+	return
+}
+
+func (b *BashShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
+	w := &BashWriter{
+		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
+	}
+
+	if scriptType == common.ShellPrepareScript {
+		if len(info.Build.Hostname) != 0 {
+			w.Line("echo " + strconv.Quote("Running on $(hostname) via "+info.Build.Hostname+"..."))
+		} else {
+			w.Line("echo " + strconv.Quote("Running on $(hostname)..."))
+		}
+	}
+
+	err = b.writeScript(w, scriptType, info)
+	script = w.Finish()
+	return
 }
 
 func (b *BashShell) IsDefault() bool {
