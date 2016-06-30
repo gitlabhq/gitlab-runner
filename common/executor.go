@@ -28,6 +28,18 @@ type ExecutorProvider interface {
 	GetFeatures(features *FeaturesInfo)
 }
 
+type BuildError struct {
+	Error error
+}
+
+func (b *BuildError) Error() string {
+	if b.Error == nil {
+		return "error"
+	}
+
+	return b.Error()
+}
+
 var executors map[string]ExecutorProvider
 
 func RegisterExecutor(executor string, provider ExecutorProvider) {

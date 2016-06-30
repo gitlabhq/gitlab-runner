@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"io/ioutil"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
-	"io/ioutil"
-	"strings"
 )
 
 type Client struct {
@@ -29,6 +29,8 @@ type Command struct {
 	Stdin       string
 	Abort       chan interface{}
 }
+
+type ExitError ssh.ExitError
 
 func (s *Client) getSSHKey(identityFile string) (key ssh.Signer, err error) {
 	buf, err := ioutil.ReadFile(identityFile)
