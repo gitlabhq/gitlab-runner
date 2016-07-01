@@ -19,6 +19,7 @@ This defines global settings of multi-runner.
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners |
 | `check_interval` | defines in seconds how often to check GitLab for a new builds |
 | `sentry_dsn`     | enable tracking of all system level errors to sentry |
+| `stats_server`   | address where embedded Statistics Server will be listening. Can be a `tcp://` or `unix://` socket address |
 
 Example:
 

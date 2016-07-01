@@ -395,6 +395,7 @@ It accepts the following parameters.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `--config`  | See [#configuration-file](#configuration-file) | Specify a custom configuration file to be used |
+| `--stats-server`      | empty | address where embedded Statistics Server will be listening. Can be a `tcp://` or `unix://` socket address |
 | `--working-directory` | the current directory | Specify the root directory where all data will be stored when builds will be run with the **shell** executor |
 | `--user`    | the current user | Specify the user that will be used to execute builds |
 | `--syslog`  | `false` | Send all logs to SysLog (Unix) or EventLog (Windows) |
