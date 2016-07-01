@@ -91,3 +91,7 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	}
 	return false
 }
+
+func (b *buildsHelper) buildsCount() int {
+	return len(b.builds)
+}

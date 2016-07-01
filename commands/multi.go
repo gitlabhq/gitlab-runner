@@ -60,18 +60,15 @@ type RunCommand struct {
 }
 
 func (mr *RunCommand) log() *log.Entry {
-	return log.WithField("builds", mr.buildsCount())
-}
-
-func (mr *RunCommand) buildsCount() int {
-	return len(mr.buildsHelper.builds)
+	return log.WithField("builds", mr.buildsHelper.buildsCount())
 }
 
 func (mr *RunCommand) StatsData() stats_server.StatsData {
 	return stats_server.StatsData{
-		StartedAt:        mr.startedAt,
-		ConfigReloadedAt: mr.configReloadedAt,
-		BuildsCount:      mr.buildsCount(),
+		StartedAt:           mr.startedAt,
+		ConfigReloadedAt:    mr.configReloadedAt,
+		BuildsCount:         mr.buildsHelper.buildsCount(),
+		RunnersBuildsCounts: mr.buildsHelper.counts,
 	}
 }
 

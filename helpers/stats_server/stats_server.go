@@ -14,12 +14,15 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 type StatsData struct {
 	StartedAt        time.Time `json:"started_at"`
 	ConfigReloadedAt time.Time `json:"config_reloaded_at"`
 	BuildsCount      int       `json:"builds_count"`
+
+	RunnersBuildsCounts map[string]int `json:"runners_builds_counts"`
 
 	Uptime      float64               `json:"uptime"`
 	VersionInfo common.AppVersionInfo `json:"version_info"`
@@ -30,6 +33,12 @@ func (data *StatsData) Prepare() {
 	data.ConfigReloadedAt = data.ConfigReloadedAt.Round(time.Second)
 	data.Uptime, _ = strconv.ParseFloat(fmt.Sprintf("%.4f", time.Since(data.StartedAt).Hours()), 64)
 	data.VersionInfo = common.AppVersion
+
+	runnersBuildsCounts := map[string]int{}
+	for token, count := range data.RunnersBuildsCounts {
+		runnersBuildsCounts[helpers.ShortenToken(token)] = count
+	}
+	data.RunnersBuildsCounts = runnersBuildsCounts
 }
 
 type RunCommand interface {

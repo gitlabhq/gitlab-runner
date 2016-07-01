@@ -79,33 +79,38 @@ You can see an example below:
 
 ```json
 {
-  "started_at": "2016-07-01T22:45:49+02:00",
-  "config_reloaded_at": "2016-07-01T22:45:49+02:00",
-  "builds_count": 0,
-  "uptime": 0.0038,
-  "version_info": {
-    "name": "gitlab-ci-multi-runner",
-    "version": "1.3.0~beta.24.g9dc0351",
-    "revision": "9dc0351",
-    "branch": "feature/stats-server",
-    "go_version": "go1.6.2",
-    "built_at": "2016-07-01T22:42:22+02:00",
-    "os": "linux",
-    "architecture": "amd64"
-  }
+    "started_at": "2016-07-01T23:26:58+02:00",
+    "config_reloaded_at": "2016-07-01T23:26:58+02:00",
+    "builds_count": 0,
+    "runners_builds_counts": {
+        "abc1234": 0,
+        "def5678": 0
+    },
+    "uptime": 0.0517,
+    "version_info": {
+        "name": "gitlab-ci-multi-runner",
+        "version": "1.3.0~beta.25.g9a1953d",
+        "revision": "9a1953d",
+        "branch": "feature/stats-server",
+        "go_version": "go1.6.2",
+        "built_at": "2016-07-01T23:26:43+02:00",
+        "os": "linux",
+        "architecture": "amd64"
+    }
 }
 ```
 
 In the table below you can find a description of some parameters from
 above example.
 
-| Value                | Type    | Description |
-|----------------------|---------|-------------|
-| `builds_count`       | integer | Number of builds processed currently by the runner |
-| `config_reloaded_at` | string  | Last config reload timestamp in RFC3339 format |
-| `started_at`         | string  | Process start timestamp in RFC3339 format |
-| `uptime`             | float   | Process uptime in hours |
-| `version_info`       | hash    | Hash with version and runtime related information |
+| Value                   | Type    | Description |
+|-------------------------|---------|-------------|
+| `builds_count`          | integer | Number of builds processed currently by the runner |
+| `config_reloaded_at`    | string  | Last config reload timestamp in RFC3339 format |
+| `started_at`            | string  | Process start timestamp in RFC3339 format |
+| `runners_builds_counts` | hash    | Hash with build count for each runner. The runner is represented by first 8 chars of the runner's token |
+| `uptime`                | float   | Process uptime in hours |
+| `version_info`          | hash    | Hash with version and runtime related information |
 
 ### Usage example
 
