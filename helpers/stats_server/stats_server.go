@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,9 +15,32 @@ import (
 )
 
 type StatsData struct {
-	StartedAt        time.Time `json:"started_at"`
-	ConfigReloadedAt time.Time `json:"config_reloaded_at"`
-	BuildsCount      int       `json:"builds_count"`
+	StartedAt        time.Time
+	ConfigReloadedAt time.Time
+	BuildsCount      int
+
+	Uptime time.Duration
+}
+
+func (data *StatsData) Prepare() {
+	data.Uptime = time.Since(data.StartedAt)
+}
+
+func (data StatsData) MarshalJSON() (marshalled []byte, err error) {
+	duration, err := strconv.ParseFloat(fmt.Sprintf("%.4f", data.Uptime.Hours()), 64)
+	if err != nil {
+		return
+	}
+
+	d := map[string]interface{}{
+		"started_at": data.StartedAt.Format(time.RFC3339),
+		"config_reloaded_at": data.ConfigReloadedAt.Format(time.RFC3339),
+		"duration": duration,
+		"builds_count": data.BuildsCount,
+	}
+
+	marshalled, err = json.Marshal(d)
+	return
 }
 
 type RunCommand interface {
@@ -28,7 +52,9 @@ type StatsHandler struct {
 }
 
 func (h *StatsHandler) data() StatsData {
-	return h.command.StatsData()
+	data := h.command.StatsData()
+	data.Prepare()
+	return data
 }
 
 func (h *StatsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

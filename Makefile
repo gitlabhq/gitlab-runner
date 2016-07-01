@@ -152,11 +152,13 @@ build: executors/docker/bindata.go
 		-ldflags "$(GO_LDFLAGS)" \
 		-output="out/binaries/$(NAME)-{{.OS}}-{{.Arch}}"
 
-build_current: executors/docker/bindata.go
+build_simple:
 	# Building $(NAME) in version $(VERSION) for current platform
 	go build \
 		-ldflags "$(GO_LDFLAGS)" \
 		-o "out/binaries/$(NAME)"
+
+build_current: executors/docker/bindata.go build_simple
 
 fmt:
 	# Checking project code formatting...
