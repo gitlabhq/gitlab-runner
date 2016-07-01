@@ -127,13 +127,14 @@ type RunnerConfig struct {
 }
 
 type Config struct {
-	Concurrent    int             `toml:"concurrent" json:"concurrent"`
-	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
-	User          string          `toml:"user,omitempty" json:"user"`
-	Runners       []*RunnerConfig `toml:"runners" json:"runners"`
-	SentryDSN     *string         `toml:"sentry_dsn"`
-	ModTime       time.Time       `toml:"-"`
-	Loaded        bool            `toml:"-"`
+	StatsServerAddress string          `toml:"stats_server" json:"stats_server"`
+	Concurrent         int             `toml:"concurrent" json:"concurrent"`
+	CheckInterval      int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
+	User               string          `toml:"user,omitempty" json:"user"`
+	Runners            []*RunnerConfig `toml:"runners" json:"runners"`
+	SentryDSN          *string         `toml:"sentry_dsn"`
+	ModTime            time.Time       `toml:"-"`
+	Loaded             bool            `toml:"-"`
 }
 
 func (c *RunnerCredentials) ShortDescription() string {

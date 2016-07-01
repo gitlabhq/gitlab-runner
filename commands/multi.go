@@ -35,6 +35,9 @@ type RunCommand struct {
 
 	sentryLogHook sentry.LogHook
 
+	startedAt        time.Time
+	configReloadedAt time.Time
+
 	// abortBuilds is used to abort running builds
 	abortBuilds chan os.Signal
 
@@ -56,7 +59,19 @@ type RunCommand struct {
 }
 
 func (mr *RunCommand) log() *log.Entry {
-	return log.WithField("builds", len(mr.buildsHelper.builds))
+	return log.WithField("builds", mr.buildsCount())
+}
+
+func (mr *RunCommand) buildsCount() int {
+	return len(mr.buildsHelper.builds)
+}
+
+func (mr *RunCommand) StatsData() helpers.StatsData {
+	return helpers.StatsData{
+		StartedAt:        mr.startedAt,
+		ConfigReloadedAt: mr.configReloadedAt,
+		BuildsCount:      mr.buildsCount(),
+	}
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
@@ -198,6 +213,7 @@ func (mr *RunCommand) loadConfig() error {
 		mr.sentryLogHook = sentry.LogHook{}
 	}
 
+	mr.configReloadedAt = time.Now()
 	return nil
 }
 
@@ -227,6 +243,7 @@ func (mr *RunCommand) Start(s service.Service) error {
 	mr.reloadSignal = make(chan os.Signal, 1)
 	mr.runFinished = make(chan bool, 1)
 	mr.stopSignals = make(chan os.Signal)
+	mr.startedAt = time.Now()
 	mr.log().Println("Starting multi-runner from", mr.ConfigFile, "...")
 
 	userModeWarning(false)
@@ -307,6 +324,9 @@ func (mr *RunCommand) Run() {
 
 	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
+
+	statsServer := helpers.NewStatsServer(mr.statsServerAddress(), mr, mr.runFinished)
+	go statsServer.Start()
 
 	startWorker := make(chan int)
 	stopWorker := make(chan bool)
