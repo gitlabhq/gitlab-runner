@@ -19,8 +19,7 @@ func getDefaultCertificateDirectory() string {
 type configOptions struct {
 	config *common.Config
 
-	ConfigFile         string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
-	StatsServerAddress string `long:"stats-server" env:"STATS_SERVER" description:"Stats server listening address"`
+	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 }
 
 func (c *configOptions) saveConfig() error {
@@ -65,7 +64,13 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 	return nil, fmt.Errorf("Could not find a runner with the name '%s'", name)
 }
 
-func (c *configOptions) statsServerAddress() string {
+type configOptionsWithStatsServer struct {
+	configOptions
+
+	StatsServerAddress string `long:"stats-server" env:"STATS_SERVER" description:"Stats server listening address"`
+}
+
+func (c *configOptionsWithStatsServer) statsServerAddress() string {
 	if c.StatsServerAddress != "" {
 		return c.StatsServerAddress
 	}

@@ -23,7 +23,7 @@ import (
 )
 
 type RunCommand struct {
-	configOptions
+	configOptionsWithStatsServer
 	network common.Network
 	healthHelper
 
