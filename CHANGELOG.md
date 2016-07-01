@@ -1,3 +1,6 @@
+v 1.4.0 (unreleased)
+- Add HTTP StatsServer with debbuging and statistic data
+
 v 1.3.2
 - Fix architecture detection bug introduced in 1.3.1
 
