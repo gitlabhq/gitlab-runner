@@ -27,7 +27,7 @@ func (data *StatsData) Prepare() {
 }
 
 func (data StatsData) MarshalJSON() (marshalled []byte, err error) {
-	duration, err := strconv.ParseFloat(fmt.Sprintf("%.4f", data.Uptime.Hours()), 64)
+	uptime, err := strconv.ParseFloat(fmt.Sprintf("%.4f", data.Uptime.Hours()), 64)
 	if err != nil {
 		return
 	}
@@ -35,7 +35,7 @@ func (data StatsData) MarshalJSON() (marshalled []byte, err error) {
 	d := map[string]interface{}{
 		"started_at": data.StartedAt.Format(time.RFC3339),
 		"config_reloaded_at": data.ConfigReloadedAt.Format(time.RFC3339),
-		"duration": duration,
+		"uptime": uptime,
 		"builds_count": data.BuildsCount,
 	}
 
@@ -74,10 +74,25 @@ type StatsServer struct {
 	runFinished chan bool
 }
 
+type StatsServerNotEnabledError struct {
+	Inner error
+}
+
+func (e *StatsServerNotEnabledError) Error() string {
+	if e.Inner == nil {
+		return "StatsServer not enabled"
+	}
+	return e.Inner.Error()
+}
+
 func (server *StatsServer) Start() {
 	socketNet, socketAddress, err := server.parseAddress()
 	if err != nil {
-		log.WithError(err).Warningln("Can't start StatsServer")
+		if _, ok := err.(*StatsServerNotEnabledError); ok {
+			log.Infoln("StatsServer disabled")
+		} else {
+			log.WithError(err).Warningln("Can't start StatsServer")
+		}
 		return
 	}
 
@@ -107,13 +122,13 @@ func (server *StatsServer) Start() {
 
 func (server *StatsServer) parseAddress() (net, address string, err error) {
 	if server.address == "" {
-		err = errors.New("ParseSocketPath not set")
+		err = &StatsServerNotEnabledError{}
 		return
 	}
 
 	parts := strings.SplitN(server.address, "://", 2)
 	if len(parts) < 2 {
-		err = errors.New("Invalid ParseSocketPath format")
+		err = errors.New("Invalid StatsServer socket address format")
 		return
 	}
 

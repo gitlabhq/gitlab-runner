@@ -127,7 +127,7 @@ type RunnerConfig struct {
 }
 
 type Config struct {
-	StatsServerAddress string          `toml:"stats_server" json:"stats_server"`
+	StatsServerAddress string          `toml:"stats_server,omitempty" json:"stats_server"`
 	Concurrent         int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval      int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
 	User               string          `toml:"user,omitempty" json:"user"`
