@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/sentry"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/service"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/stats_server"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
 
@@ -66,8 +67,8 @@ func (mr *RunCommand) buildsCount() int {
 	return len(mr.buildsHelper.builds)
 }
 
-func (mr *RunCommand) StatsData() helpers.StatsData {
-	return helpers.StatsData{
+func (mr *RunCommand) StatsData() stats_server.StatsData {
+	return stats_server.StatsData{
 		StartedAt:        mr.startedAt,
 		ConfigReloadedAt: mr.configReloadedAt,
 		BuildsCount:      mr.buildsCount(),
@@ -325,7 +326,7 @@ func (mr *RunCommand) Run() {
 	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
 
-	statsServer := helpers.NewStatsServer(mr.statsServerAddress(), mr, mr.runFinished)
+	statsServer := stats_server.NewStatsServer(mr.statsServerAddress(), mr, mr.runFinished)
 	go statsServer.Start()
 
 	startWorker := make(chan int)

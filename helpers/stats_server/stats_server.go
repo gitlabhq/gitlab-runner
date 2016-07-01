@@ -1,4 +1,4 @@
-package helpers
+package stats_server
 
 import (
 	"encoding/json"
@@ -65,30 +65,21 @@ func (server *StatsServer) Start() {
 		defer os.Remove(socketAddress)
 	}
 
-	handler := &StatsHandler{
-		command: server.command,
-	}
 	srv := &http.Server{
-		Handler: handler,
+		Handler: &StatsHandler{
+			command: server.command,
+		},
 	}
 
 	log.WithField("socket", listener.Addr()).Infoln("Starting StatsServer...")
 	go srv.Serve(listener)
 
-	done := make(chan bool, 1)
-	go func() {
-		for {
-			<-server.runFinished
-			done <- true
-		}
-	}()
-
-	<-done
+	<-server.runFinished
 	log.Infoln("Stopping StatsServer...")
 	server.runFinished <- true
 }
 
-func (server *StatsServer) parseAddress() (net, addr string, err error) {
+func (server *StatsServer) parseAddress() (net, address string, err error) {
 	if server.address == "" {
 		err = errors.New("ParseSocketPath not set")
 		return
@@ -109,15 +100,15 @@ func (server *StatsServer) parseAddress() (net, addr string, err error) {
 	}
 
 	net = parts[0]
-	addr = parts[1]
+	address = parts[1]
 
 	return
 }
 
-func NewStatsServer(address string, rc RunCommand, runFinished chan bool) *StatsServer {
+func NewStatsServer(address string, runCommand RunCommand, runFinished chan bool) *StatsServer {
 	return &StatsServer{
 		address:     address,
-		command:     rc,
+		command:     runCommand,
 		runFinished: runFinished,
 	}
 }
