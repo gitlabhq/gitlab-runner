@@ -57,6 +57,9 @@ type RunCommand struct {
 
 	// runFinished is used to notify that Run() did finish
 	runFinished chan bool
+
+	// statsServingStarted is used to notify that HTTP Statistics Server started serving statistics
+	statsServingStarted chan bool
 }
 
 func (mr *RunCommand) log() *log.Entry {
@@ -240,6 +243,7 @@ func (mr *RunCommand) Start(s service.Service) error {
 	mr.runSignal = make(chan os.Signal, 1)
 	mr.reloadSignal = make(chan os.Signal, 1)
 	mr.runFinished = make(chan bool, 1)
+	mr.statsServingStarted = make(chan bool, 1)
 	mr.stopSignals = make(chan os.Signal)
 	mr.startedAt = time.Now()
 	mr.log().Println("Starting multi-runner from", mr.ConfigFile, "...")
@@ -323,7 +327,7 @@ func (mr *RunCommand) Run() {
 	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
 
-	statsServer := stats_server.NewStatsServer(mr.statsServerAddress(), mr, mr.runFinished)
+	statsServer := stats_server.NewStatsServer(mr.statsServerAddress(), mr, mr.runFinished, mr.statsServingStarted)
 	go statsServer.Start()
 
 	startWorker := make(chan int)

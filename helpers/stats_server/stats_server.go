@@ -67,9 +67,10 @@ func (h *StatsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 type StatsServer struct {
-	address     string
-	command     RunCommand
-	runFinished chan bool
+	address        string
+	command        RunCommand
+	runFinished    chan bool
+	servingStarted chan bool
 }
 
 type StatsServerNotEnabledError struct {
@@ -113,6 +114,8 @@ func (server *StatsServer) Start() {
 	log.WithField("socket", listener.Addr()).Infoln("Starting StatsServer...")
 	go srv.Serve(listener)
 
+	server.servingStarted <- true
+
 	<-server.runFinished
 	log.Infoln("Stopping StatsServer...")
 	server.runFinished <- true
@@ -144,10 +147,11 @@ func (server *StatsServer) parseAddress() (net, address string, err error) {
 	return
 }
 
-func NewStatsServer(address string, runCommand RunCommand, runFinished chan bool) *StatsServer {
+func NewStatsServer(address string, runCommand RunCommand, runFinished chan bool, servingStarted chan bool) *StatsServer {
 	return &StatsServer{
-		address:     address,
-		command:     runCommand,
-		runFinished: runFinished,
+		address:        address,
+		command:        runCommand,
+		runFinished:    runFinished,
+		servingStarted: servingStarted,
 	}
 }
