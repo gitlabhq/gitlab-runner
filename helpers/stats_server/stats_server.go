@@ -12,35 +12,24 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 type StatsData struct {
-	StartedAt        time.Time
-	ConfigReloadedAt time.Time
-	BuildsCount      int
+	StartedAt        time.Time `json:"started_at"`
+	ConfigReloadedAt time.Time `json:"config_reloaded_at"`
+	BuildsCount      int       `json:"builds_count"`
 
-	Uptime time.Duration
+	Uptime      float64               `json:"uptime"`
+	VersionInfo common.AppVersionInfo `json:"version_info"`
 }
 
 func (data *StatsData) Prepare() {
-	data.Uptime = time.Since(data.StartedAt)
-}
-
-func (data StatsData) MarshalJSON() (marshalled []byte, err error) {
-	uptime, err := strconv.ParseFloat(fmt.Sprintf("%.4f", data.Uptime.Hours()), 64)
-	if err != nil {
-		return
-	}
-
-	d := map[string]interface{}{
-		"started_at": data.StartedAt.Format(time.RFC3339),
-		"config_reloaded_at": data.ConfigReloadedAt.Format(time.RFC3339),
-		"uptime": uptime,
-		"builds_count": data.BuildsCount,
-	}
-
-	marshalled, err = json.Marshal(d)
-	return
+	data.StartedAt = data.StartedAt.Round(time.Second)
+	data.ConfigReloadedAt = data.ConfigReloadedAt.Round(time.Second)
+	data.Uptime, _ = strconv.ParseFloat(fmt.Sprintf("%.4f", time.Since(data.StartedAt).Hours()), 64)
+	data.VersionInfo = common.AppVersion
 }
 
 type RunCommand interface {
