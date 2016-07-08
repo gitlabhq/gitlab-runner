@@ -70,23 +70,24 @@ type BuildInfo struct {
 }
 
 type GetBuildResponse struct {
-	ID              int            `json:"id,omitempty"`
-	ProjectID       int            `json:"project_id,omitempty"`
-	Commands        string         `json:"commands,omitempty"`
-	RepoURL         string         `json:"repo_url,omitempty"`
-	Sha             string         `json:"sha,omitempty"`
-	RefName         string         `json:"ref,omitempty"`
-	BeforeSha       string         `json:"before_sha,omitempty"`
-	AllowGitFetch   bool           `json:"allow_git_fetch,omitempty"`
-	Timeout         int            `json:"timeout,omitempty"`
-	Variables       BuildVariables `json:"variables"`
-	Options         BuildOptions   `json:"options"`
-	Token           string         `json:"token"`
-	Name            string         `json:"name"`
-	Stage           string         `json:"stage"`
-	Tag             bool           `json:"tag"`
-	DependsOnBuilds []BuildInfo    `json:"depends_on_builds"`
-	TLSCAChain      string         `json:"-"`
+	ID              int              `json:"id,omitempty"`
+	ProjectID       int              `json:"project_id,omitempty"`
+	Commands        string           `json:"commands,omitempty"`
+	RepoURL         string           `json:"repo_url,omitempty"`
+	Sha             string           `json:"sha,omitempty"`
+	RefName         string           `json:"ref,omitempty"`
+	BeforeSha       string           `json:"before_sha,omitempty"`
+	AllowGitFetch   bool             `json:"allow_git_fetch,omitempty"`
+	Timeout         int              `json:"timeout,omitempty"`
+	Variables       BuildVariables   `json:"variables"`
+	Options         BuildOptions     `json:"options"`
+	Token           string           `json:"token"`
+	Name            string           `json:"name"`
+	Stage           string           `json:"stage"`
+	Tag             bool             `json:"tag"`
+	DependsOnBuilds []BuildInfo      `json:"depends_on_builds"`
+	Credentials     BuildCredentials `json:"credentials"`
+	TLSCAChain      string           `json:"-"`
 }
 
 type RegisterRunnerRequest struct {

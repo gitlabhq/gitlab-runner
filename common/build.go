@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"strings"
 
+	"encoding/base64"
 	"github.com/Sirupsen/logrus"
+	"github.com/dustin/gojson"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"time"
 )
@@ -271,6 +273,28 @@ func (b *Build) String() string {
 	return helpers.ToYAML(b)
 }
 
+func (b *Build) GetDockerConfig() string {
+	config := &struct {
+		Authorizations map[string]interface{} `json:"auths"`
+	}{
+		Authorizations: make(map[string]interface{}),
+	}
+
+	for _, credential := range b.Credentials.GetByType(CredentialContainerRegistry) {
+		config.Authorizations[credential.ServerURL] = &struct {
+			Auth string `json:"auth"`
+		}{
+			Auth: credential.EncodeUserAndPassword(),
+		}
+	}
+
+	data, err := json.Marshal(config)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
 func (b *Build) GetDefaultVariables() BuildVariables {
 	return BuildVariables{
 		{"CI", "true", true, true, false},
@@ -286,6 +310,7 @@ func (b *Build) GetDefaultVariables() BuildVariables {
 		{"CI_SERVER_NAME", "GitLab CI", true, true, false},
 		{"CI_SERVER_VERSION", "", true, true, false},
 		{"CI_SERVER_REVISION", "", true, true, false},
+		{"DOCKER_CONFIG", b.GetDockerConfig(), false, true, true},
 		{"GITLAB_CI", "true", true, true, false},
 	}
 }
