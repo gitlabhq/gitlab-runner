@@ -94,27 +94,18 @@ func (n *client) getCAChain(tls *tls.ConnectionState) (certificates string) {
 	list := make(map[string]*x509.Certificate)
 
 	for _, verifiedChain := range tls.VerifiedChains {
-	nextInChain:
-		for _, certificate := range verifiedChain {
-			signature := hex.EncodeToString(certificate.Signature)
-			if list[signature] != nil {
-				continue
-			}
-
-			// Always add signed by yourself
-			if certificate.CheckSignatureFrom(certificate) == nil {
-				list[signature] = certificate
-				continue
-			}
-
-			// We don't need to add certificates that are returned by server
-			for _, peerCertificate := range tls.PeerCertificates {
-				if peerCertificate == certificate {
-					continue nextInChain
-				}
-			}
-			list[signature] = certificate
+		if len(verifiedChain) == 0 {
+			continue
 		}
+
+		certificate := verifiedChain[0]
+		signature := hex.EncodeToString(certificate.Signature)
+		if list[signature] != nil {
+			continue
+		}
+
+		println(certificate.Subject.CommonName)
+		list[signature] = certificate
 	}
 
 	for _, certificate := range list {
