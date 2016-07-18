@@ -14,6 +14,30 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
+type logWriter struct {
+	log     *logrus.Entry
+	isError bool
+}
+
+func (l *logWriter) Write(data []byte) (int, error) {
+	row := strings.TrimRight(string(data), "\n")
+
+	if l.isError {
+		l.log.Error(row)
+	} else {
+		l.log.Info(row)
+	}
+
+	return len(data), nil
+}
+
+func newLogWriter(isError bool, fields logrus.Fields) *logWriter {
+	return &logWriter{
+		log: logrus.WithFields(fields),
+		isError: isError,
+	}
+}
+
 type machineCommand struct {
 	lsCmd   *exec.Cmd
 	lsLock  sync.Mutex
@@ -57,8 +81,15 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 
 	cmd := exec.Command("docker-machine", args...)
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	fields := logrus.Fields{
+		"operation": "create",
+		"driver": driver,
+		"name": name,
+	}
+	cmd.Stdout = newLogWriter(false, fields)
+	cmd.Stderr = newLogWriter(true, fields)
+
 	logrus.Debugln("Executing", cmd.Path, cmd.Args)
 	return cmd.Run()
 }
@@ -66,16 +97,28 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 func (m *machineCommand) Provision(name string) error {
 	cmd := exec.Command("docker-machine", "provision", name)
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	fields := logrus.Fields{
+		"operation": "provision",
+		"name": name,
+	}
+	cmd.Stdout = newLogWriter(false, fields)
+	cmd.Stderr = newLogWriter(true, fields)
+
 	return cmd.Run()
 }
 
 func (m *machineCommand) Remove(name string) error {
 	cmd := exec.Command("docker-machine", "rm", "-y", name)
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	fields := logrus.Fields{
+		"operation": "remove",
+		"name": name,
+	}
+	cmd.Stdout = newLogWriter(false, fields)
+	cmd.Stderr = newLogWriter(true, fields)
+
 	return cmd.Run()
 }
 
@@ -147,7 +190,13 @@ func (m *machineCommand) Status(name string) (string, error) {
 func (m *machineCommand) Exist(name string) bool {
 	cmd := exec.Command("docker-machine", "inspect", name)
 	cmd.Env = os.Environ()
-	cmd.Stderr = os.Stderr
+
+	fields := logrus.Fields{
+		"operation": "exists",
+		"name": name,
+	}
+	cmd.Stderr = newLogWriter(true, fields)
+
 	return cmd.Run() == nil
 }
 
