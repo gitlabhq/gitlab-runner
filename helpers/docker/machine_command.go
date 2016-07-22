@@ -15,27 +15,55 @@ import (
 )
 
 type logWriter struct {
-	log     *logrus.Entry
-	isError bool
+	log    func(args ...interface{})
+	reader *bufio.Reader
 }
 
-func (l *logWriter) Write(data []byte) (int, error) {
-	row := strings.TrimRight(string(data), "\n")
+func (l *logWriter) write(line string) {
+	line = strings.TrimRight(line, "\n")
 
-	if l.isError {
-		l.log.Error(row)
-	} else {
-		l.log.Info(row)
+	if len(line) <= 0 {
+		return
 	}
 
-	return len(data), nil
+	l.log(line)
 }
 
-func newLogWriter(isError bool, fields logrus.Fields) *logWriter {
-	return &logWriter{
-		log: logrus.WithFields(fields),
-		isError: isError,
+func (l *logWriter) watch() {
+	for {
+		line, err := l.reader.ReadString('\n')
+		if err == nil || err == io.EOF {
+			l.write(line)
+			if err == io.EOF {
+				return
+			}
+		} else {
+			logrus.WithError(err).Errorln("Problem while reading command output")
+		}
 	}
+}
+
+func newLogWriter(logFunction func(args ...interface{}), reader io.Reader) {
+	writer := &logWriter{
+		log:    logFunction,
+		reader: bufio.NewReader(reader),
+	}
+
+	go writer.watch()
+}
+
+func stdoutLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
+	log := logrus.WithFields(fields)
+	reader, _ := cmd.StdoutPipe()
+
+	newLogWriter(log.Infoln, reader)
+}
+
+func stderrLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
+	log := logrus.WithFields(fields)
+	reader, _ := cmd.StderrPipe()
+
+	newLogWriter(log.Errorln, reader)
 }
 
 type machineCommand struct {
@@ -84,11 +112,11 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 
 	fields := logrus.Fields{
 		"operation": "create",
-		"driver": driver,
-		"name": name,
+		"driver":    driver,
+		"name":      name,
 	}
-	cmd.Stdout = newLogWriter(false, fields)
-	cmd.Stderr = newLogWriter(true, fields)
+	stdoutLogWriter(cmd, fields)
+	stderrLogWriter(cmd, fields)
 
 	logrus.Debugln("Executing", cmd.Path, cmd.Args)
 	return cmd.Run()
@@ -100,10 +128,10 @@ func (m *machineCommand) Provision(name string) error {
 
 	fields := logrus.Fields{
 		"operation": "provision",
-		"name": name,
+		"name":      name,
 	}
-	cmd.Stdout = newLogWriter(false, fields)
-	cmd.Stderr = newLogWriter(true, fields)
+	stdoutLogWriter(cmd, fields)
+	stderrLogWriter(cmd, fields)
 
 	return cmd.Run()
 }
@@ -114,10 +142,10 @@ func (m *machineCommand) Remove(name string) error {
 
 	fields := logrus.Fields{
 		"operation": "remove",
-		"name": name,
+		"name":      name,
 	}
-	cmd.Stdout = newLogWriter(false, fields)
-	cmd.Stderr = newLogWriter(true, fields)
+	stdoutLogWriter(cmd, fields)
+	stderrLogWriter(cmd, fields)
 
 	return cmd.Run()
 }
@@ -193,9 +221,9 @@ func (m *machineCommand) Exist(name string) bool {
 
 	fields := logrus.Fields{
 		"operation": "exists",
-		"name": name,
+		"name":      name,
 	}
-	cmd.Stderr = newLogWriter(true, fields)
+	stderrLogWriter(cmd, fields)
 
 	return cmd.Run() == nil
 }
