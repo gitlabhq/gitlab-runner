@@ -456,7 +456,7 @@ func (s *executor) splitServiceAndVersion(serviceDescription string) (service st
 	return
 }
 
-func (s *executor) createService(service, version string) (*docker.Container, error) {
+func (s *executor) createService(service, version string, binds, volumesFrom []string) (*docker.Container, error) {
 	if len(service) == 0 {
 		return nil, errors.New("invalid service name")
 	}
@@ -490,11 +490,8 @@ func (s *executor) createService(service, version string) (*docker.Container, er
 	}
 
 	if s.Build.GetMountVolumesToServices() {
-		binds, volumesFrom, err := s.createVolumes()
-		if err == nil {
-			createContainerOpts.HostConfig.Binds = binds
-			createContainerOpts.HostConfig.VolumesFrom = volumesFrom
-		}
+		createContainerOpts.HostConfig.Binds = binds
+		createContainerOpts.HostConfig.VolumesFrom = volumesFrom
 	}
 
 	s.Debugln("Creating service container", createContainerOpts.Name, "...")
@@ -563,7 +560,7 @@ func (s *executor) buildServiceLinks(linksMap map[string]*docker.Container) (lin
 	return
 }
 
-func (s *executor) createFromServiceDescription(description string, linksMap map[string]*docker.Container) (err error) {
+func (s *executor) createFromServiceDescription(description string, linksMap map[string]*docker.Container, binds, volumesFrom []string) (err error) {
 	var container *docker.Container
 
 	service, version, linkNames := s.splitServiceAndVersion(description)
@@ -576,7 +573,7 @@ func (s *executor) createFromServiceDescription(description string, linksMap map
 
 		// Create service if not yet created
 		if container == nil {
-			container, err = s.createService(service, version)
+			container, err = s.createService(service, version, binds, volumesFrom)
 			if err != nil {
 				return
 			}
@@ -588,7 +585,7 @@ func (s *executor) createFromServiceDescription(description string, linksMap map
 	return
 }
 
-func (s *executor) createServices() ([]string, error) {
+func (s *executor) createServices(binds, volumesFrom []string) ([]string, error) {
 	serviceNames, err := s.getServiceNames()
 	if err != nil {
 		return nil, err
@@ -597,7 +594,7 @@ func (s *executor) createServices() ([]string, error) {
 	linksMap := make(map[string]*docker.Container)
 
 	for _, serviceDescription := range serviceNames {
-		err = s.createFromServiceDescription(serviceDescription, linksMap)
+		err = s.createFromServiceDescription(serviceDescription, linksMap, binds, volumesFrom)
 		if err != nil {
 			return nil, err
 		}
@@ -652,7 +649,7 @@ func (s *executor) prepareBuildContainer() (options *docker.CreateContainerOptio
 	}
 
 	s.Debugln("Creating services...")
-	links, err := s.createServices()
+	links, err := s.createServices(binds, volumesFrom)
 	if err != nil {
 		return options, err
 	}
