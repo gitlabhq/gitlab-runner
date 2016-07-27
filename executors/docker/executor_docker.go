@@ -489,6 +489,14 @@ func (s *executor) createService(service, version string) (*docker.Container, er
 		},
 	}
 
+	if s.Build.GetMountVolumesToServices() {
+		binds, volumesFrom, err := s.createVolumes()
+		if err == nil {
+			createContainerOpts.HostConfig.Binds = binds
+			createContainerOpts.HostConfig.VolumesFrom = volumesFrom
+		}
+	}
+
 	s.Debugln("Creating service container", createContainerOpts.Name, "...")
 	container, err := s.client.CreateContainer(createContainerOpts)
 	if err != nil {
@@ -636,20 +644,19 @@ func (s *executor) prepareBuildContainer() (options *docker.CreateContainerOptio
 	}
 	options.HostConfig.Devices = devices
 
+	s.Debugln("Creating cache directories...")
+	binds, volumesFrom, err := s.createVolumes()
+	if err == nil {
+		options.HostConfig.Binds = binds
+		options.HostConfig.VolumesFrom = volumesFrom
+	}
+
 	s.Debugln("Creating services...")
 	links, err := s.createServices()
 	if err != nil {
 		return options, err
 	}
 	options.HostConfig.Links = append(options.HostConfig.Links, links...)
-
-	s.Debugln("Creating cache directories...")
-	binds, volumesFrom, err := s.createVolumes()
-	if err != nil {
-		return options, err
-	}
-	options.HostConfig.Binds = binds
-	options.HostConfig.VolumesFrom = volumesFrom
 	return
 }
 

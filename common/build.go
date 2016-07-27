@@ -314,3 +314,12 @@ func (b *Build) GetGitStrategy() GitStrategy {
 		return GitClone
 	}
 }
+
+func (b *Build) GetMountVolumesToServices() bool {
+	switch b.GetAllVariables().Get("MOUNT_VOLUMES_TO_SERVICES") {
+	case "true":
+		return true
+	default:
+		return false
+	}
+}
