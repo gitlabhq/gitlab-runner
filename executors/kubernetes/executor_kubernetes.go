@@ -12,6 +12,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
 )
 
+const (
+	defaultHelperImage = "jaymedh/gitlab-ci-runner-prebuild-x86_64:latest"
+)
+
 var (
 	executorOptions = executors.ExecutorOptions{
 		SharedBuildsDir: false,
@@ -185,7 +189,7 @@ func (s *executor) setupBuildPod() error {
 			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("predefined", "jaymedh/gitlab-ci-runner-prebuild-x86_64:latest", s.buildLimits, []string{"gitlab-runner-build"}...),
+				s.buildContainer("predefined", s.Config.Kubernetes.HelperImage, s.buildLimits, []string{"gitlab-runner-build"}...),
 			}, services...),
 		},
 	})
@@ -253,6 +257,10 @@ func (s *executor) checkDefaults() error {
 
 	if s.Config.Kubernetes.Namespace == "" {
 		s.Config.Kubernetes.Namespace = "default"
+	}
+
+	if len(s.Config.Kubernetes.HelperImage) == 0 {
+		s.Config.Kubernetes.HelperImage = defaultHelperImage
 	}
 
 	return nil
