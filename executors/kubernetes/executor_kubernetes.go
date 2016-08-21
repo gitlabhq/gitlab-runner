@@ -89,7 +89,6 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	var containerName string
 	s.Debugln("Starting Kubernetes command...")
 
 	if s.pod == nil {
@@ -100,10 +99,9 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		}
 	}
 
+	containerName := "build"
 	if cmd.Predefined {
 		containerName = "predefined"
-	} else {
-		containerName = "build"
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
