@@ -95,9 +95,9 @@ ifneq (, $(shell docker info))
 		./apps/gitlab-runner-helper
 
 	# Build docker images
-	docker build -t gitlab-runner-prebuilt-x86_64:$(REVISION) -f dockerfiles/build/Dockerfile.x86_64 dockerfiles/build
+	docker build -t gitlab/gitlab-runner-helper:x86_64-$(REVISION) -f dockerfiles/build/Dockerfile.x86_64 dockerfiles/build
 	-docker rm -f gitlab-runner-prebuilt-x86_64-$(REVISION)
-	docker create --name=gitlab-runner-prebuilt-x86_64-$(REVISION) gitlab-runner-prebuilt-x86_64:$(REVISION) /bin/sh
+	docker create --name=gitlab-runner-prebuilt-x86_64-$(REVISION) gitlab/gitlab-runner-helper:x86_64-$(REVISION) /bin/sh
 	docker export -o out/docker/prebuilt-x86_64.tar gitlab-runner-prebuilt-x86_64-$(REVISION)
 	docker rm -f gitlab-runner-prebuilt-x86_64-$(REVISION)
 	xz -f -9 out/docker/prebuilt-x86_64.tar
@@ -123,9 +123,9 @@ ifneq (, $(shell docker info))
 		./apps/gitlab-runner-helper
 
 	# Build docker images
-	docker build -t gitlab-runner-prebuilt-arm:$(REVISION) -f dockerfiles/build/Dockerfile.arm dockerfiles/build
+	docker build -t gitlab/gitlab-runner-helper:arm-$(REVISION) -f dockerfiles/build/Dockerfile.arm dockerfiles/build
 	-docker rm -f gitlab-runner-prebuilt-arm-$(REVISION)
-	docker create --name=gitlab-runner-prebuilt-arm-$(REVISION) gitlab-runner-prebuilt-arm:$(REVISION) /bin/sh
+	docker create --name=gitlab-runner-prebuilt-arm-$(REVISION) gitlab/gitlab-runner-helper:arm-$(REVISION) /bin/sh
 	docker export -o out/docker/prebuilt-arm.tar gitlab-runner-prebuilt-arm-$(REVISION)
 	docker rm -f gitlab-runner-prebuilt-arm-$(REVISION)
 	xz -f -9 out/docker/prebuilt-arm.tar
@@ -336,6 +336,28 @@ else
 	# No version specified in YANK
 	@exit 1
 endif
+
+dockerhub: dockerhub-x86_64 dockerhub-arm
+
+dockerhub-x86_64: out/docker/prebuilt-x86_64.tar.xz
+ifneq (, $(shell docker info))
+	docker login -e "$DOCKER_EMAIL" -u "$DOCKER_USER" -p "$DOCKER_PASS"
+	docker push gitlab/gitlab-runner-helper:x86_64-$(REVISION)
+else
+	$(warning =============================================)
+	$(warning WARNING: skipping pushing x86_64 helper image to Dockerhub)
+	$(warning WARNING: to build and push images, install Docker Engine)
+fi
+
+dockerhub-arm: out/docker/prebuilt-arm.tar.xz
+ifneq (, $(shell docker info))
+	docker login -e "$DOCKER_EMAIL" -u "$DOCKER_USER" -p "$DOCKER_PASS"
+	docker push gitlab/gitlab-runner-helper:arm-$(REVISION)
+else
+	$(warning =============================================)
+	$(warning WARNING: skipping pushing arm helper image to Dockerhub)
+	$(warning WARNING: to build and push images, install Docker Engine)
+fi
 
 s3-upload:
 	export ARTIFACTS_DEST=artifacts; curl -sL https://raw.githubusercontent.com/travis-ci/artifacts/master/install | bash
