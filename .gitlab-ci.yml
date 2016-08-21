@@ -1,57 +1,118 @@
 image: golang:1.6
 
-services:
-- docker:dind
-
-variables:
-  DOCKER_DRIVER: overlay
-  DOCKER_HOST: tcp://docker:2375
-
 stages:
+- prebuild
+- test
 - build
-- mirror
+- package
+- deploy
 
 before_script:
 - source ci/prepare
 
-.build: &build-template
+.docker: &docker
+  before_script:
+  - source ci/prepare
+  - wget -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
+  - chmod +x /usr/bin/docker
+  services: ["docker:dind"]
+  variables:
+    DOCKER_DRIVER: overlay
+    DOCKER_HOST: tcp://docker:2375
+
+bindata:
+  <<: *docker
+  stage: prebuild
+  script:
+  - make deps
+  - make docker
+  artifacts:
+    paths:
+    - out/docker/prebuilt-x86_64.tar.xz
+    - out/docker/prebuilt-arm.tar.xz
+    - executors/docker/bindata.go
+    expire_in: 7d
+
+code style:
+  stage: test
+  script:
+  - make deps
+  - make fmt
+  - make lint 
+  - make complexity
+
+unit tests:
+  stage: test
+  script:
+  - make deps
+  - make test
+
+docker executor:
+  <<: *docker
+  stage: test
+  script:
+  - go test -cover ./executor/docker/
+
+binaries:
   stage: build
   script:
-  - source ci/build
-  - source ci/deploy "$CI_BUILD_NAME"
+  - make build
+  artifacts:
+    paths:
+    - out/binaries/
+    expire_in: 7d
 
-Development:
-  <<: *build-template
-  only:
-  - branches
+packages:
+  stage: package
+  before_script:
+  - source ci/prepare
+  - apt-get update -yqqq
+  - apt-get install -yqqq ruby ruby-dev python-pip dpkg-sig createrepo rpm locales
+  script:
+  - make package
+  artifacts:
+    paths:
+    - out/deb/
+    - out/rpm/
+    expire_in: 7d
+
+development:
+  stage: deploy
+  script:
+  - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
   except:
   - master@gitlab-org/gitlab-ci-multi-runner
-  - tags@gitlab-org/gitlab-ci-multi-runner
-
-Bleeding Edge:
-  <<: *build-template
   only:
-  - master@gitlab-org/gitlab-ci-multi-runner
+  - branches@gitlab-org/gitlab-ci-multi-runner
+  tags:
+  - deploy
   environment: bleeding_edge
 
-Stable Release:
-  <<: *build-template
-  variables:
-    RELEASE: "true"
-  only:
-  - tags@gitlab-org/gitlab-ci-multi-runner
-  environment: stable_release
-
-Mirror:
-  stage: mirror
+bleeding:
+  stage: deploy
+  before_script:
+  - source ci/prepare
+  - apt-get update -yqqq
+  - apt-get install -yqqq ruby-dev
   script:
-  - mkdir -p ~/.ssh
-  - echo "$GITHUB_SSH_KEY" > ~/.ssh/id_rsa
-  - ssh-keyscan -H github.com > ~/.ssh/known_hosts
-  - chmod -R 0600 ~/.ssh/
-  - git remote add github git@github.com:ayufan/gitlab-ci-multi-runner.git
-  - git fetch github
-  - git push github "$CI_BUILD_REF_NAME" -f
+  - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
+  - make packagecloud "PACKAGE_CLOUD=runner/unstable" DEB_PLATFORMS="debian/jessie ubuntu/trusty" RPM_PLATFORMS="el/7 fedora/23"
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
+  tags:
+  - deploy
+  environment: bleeding_edge
+
+stable:
+  stage: deploy
+  script:
+  - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
+  - make s3-upload "S3_UPLOAD_PATH=latest"
+  - apt-get update -yqqq
+  - apt-get install -yqqq ruby-dev
+  - make packagecloud
+  only:
   - tags@gitlab-org/gitlab-ci-multi-runner
+  tags:
+  - deploy
+  environment: stable_release
