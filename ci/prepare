@@ -4,6 +4,9 @@ mkdir -p "$(dirname "$GODIR")"
 ln -sfv "$(pwd -P)" "$GODIR"
 cd "$GODIR"
 
+apt-get update -yqqq >/dev/null
+apt-get install -yqqq locales >/dev/null
+
 # Set default locale for the environment
 echo "en_US UTF-8" > /etc/locale.gen
 locale-gen en_US.UTF-8

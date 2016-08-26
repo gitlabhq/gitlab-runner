@@ -64,11 +64,8 @@ binaries:
 
 packages:
   stage: package
-  before_script:
-  - source ci/prepare
-  - apt-get update -yqqq
-  - apt-get install -yqqq ruby ruby-dev python-pip dpkg-sig createrepo rpm locales
   script:
+  - apt-get install -yqqq ruby ruby-dev python-pip dpkg-sig createrepo rpm
   - make package
   artifacts:
     paths:
@@ -80,21 +77,18 @@ development:
   stage: deploy
   script:
   - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
-  except:
-  - master@gitlab-org/gitlab-ci-multi-runner
   only:
   - branches@gitlab-org/gitlab-ci-multi-runner
+  except:
+  - master@gitlab-org/gitlab-ci-multi-runner
   tags:
   - deploy
   environment: bleeding_edge
 
 bleeding:
   stage: deploy
-  before_script:
-  - source ci/prepare
-  - apt-get update -yqqq
-  - apt-get install -yqqq ruby-dev
   script:
+  - apt-get install -yqqq ruby-dev
   - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
   - make packagecloud "PACKAGE_CLOUD=runner/unstable" DEB_PLATFORMS="debian/jessie ubuntu/trusty" RPM_PLATFORMS="el/7 fedora/23"
   only:
@@ -108,7 +102,6 @@ stable:
   script:
   - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
   - make s3-upload "S3_UPLOAD_PATH=latest"
-  - apt-get update -yqqq
   - apt-get install -yqqq ruby-dev
   - make packagecloud
   only:
