@@ -1,0 +1,8 @@
+for file in $(find out/* -type f); do
+    touch $file
+done
+
+test -f out/docker/prebuilt-x86_64.tar.xz
+test -f out/docker/prebuilt-arm.tar.xz
+
+test -f executors/docker/bindata.go && touch executors/docker/bindata.go

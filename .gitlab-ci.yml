@@ -37,6 +37,7 @@ bindata:
 code style:
   stage: test
   script:
+  - source ci/touch_make_dependencies
   - make deps
   - make fmt
   - make lint
@@ -45,6 +46,7 @@ code style:
 unit tests:
   stage: test
   script:
+  - source ci/touch_make_dependencies
   - make deps
   - make test
 
@@ -52,14 +54,13 @@ docker executor:
   <<: *docker
   stage: test
   script:
+  - source ci/touch_make_dependencies
   - go test -cover ./executors/docker/
 
 binaries:
   stage: build
   script:
-  - '[[ ! -f out/docker/prebuilt-x86_64.tar.xz ]] || touch out/docker/prebuilt-x86_64.tar.xz'
-  - '[[ ! -f out/docker/prebuilt-arm.tar.xz ]] || touch out/docker/prebuilt-arm.tar.xz'
-  - '[[ ! -f executors/docker/bindata.go ]] || touch executors/docker/bindata.go'
+  - source ci/touch_make_dependencies
   - make deps
   - make build
   artifacts:
@@ -70,6 +71,7 @@ binaries:
 packages:
   stage: package
   script:
+  - source ci/touch_make_dependencies
   - apt-get install -yqqq ruby ruby-dev python-pip dpkg-sig createrepo rpm
   - make package
   artifacts:
@@ -78,39 +80,30 @@ packages:
     - out/rpm/
     expire_in: 7d
 
-development:
+.release: &release
   stage: release
   script:
-  - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
+  - source ci/touch_make_dependencies
+  - source ci/release "$CI_BUILD_NAME"
+  tags:
+  - release
+
+development:
+  <<: *release
   only:
   - branches@gitlab-org/gitlab-ci-multi-runner
   except:
   - master@gitlab-org/gitlab-ci-multi-runner
-  tags:
-  - release
   environment: bleeding_edge
 
 bleeding:
-  stage: release
-  script:
-  - apt-get install -yqqq ruby-dev
-  - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
-  - make packagecloud "PACKAGE_CLOUD=runner/unstable" DEB_PLATFORMS="debian/jessie ubuntu/trusty" RPM_PLATFORMS="el/7 fedora/23"
+  <<: *release
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
-  tags:
-  - release
   environment: bleeding_edge
 
 stable:
-  stage: release
-  script:
-  - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
-  - make s3-upload "S3_UPLOAD_PATH=latest"
-  - apt-get install -yqqq ruby-dev
-  - make packagecloud
+  <<: *release
   only:
   - tags@gitlab-org/gitlab-ci-multi-runner
-  tags:
-  - release
   environment: stable_release
