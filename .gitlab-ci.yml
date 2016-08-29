@@ -5,7 +5,7 @@ stages:
 - test
 - build
 - package
-- deploy
+- release
 
 before_script:
 - source ci/prepare
@@ -79,7 +79,7 @@ packages:
     expire_in: 7d
 
 development:
-  stage: deploy
+  stage: release
   script:
   - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
   only:
@@ -87,11 +87,11 @@ development:
   except:
   - master@gitlab-org/gitlab-ci-multi-runner
   tags:
-  - deploy
+  - release
   environment: bleeding_edge
 
 bleeding:
-  stage: deploy
+  stage: release
   script:
   - apt-get install -yqqq ruby-dev
   - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
@@ -99,11 +99,11 @@ bleeding:
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
   tags:
-  - deploy
+  - release
   environment: bleeding_edge
 
 stable:
-  stage: deploy
+  stage: release
   script:
   - make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
   - make s3-upload "S3_UPLOAD_PATH=latest"
@@ -112,5 +112,5 @@ stable:
   only:
   - tags@gitlab-org/gitlab-ci-multi-runner
   tags:
-  - deploy
+  - release
   environment: stable_release
