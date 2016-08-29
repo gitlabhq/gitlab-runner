@@ -24,6 +24,7 @@ bindata:
   <<: *docker
   stage: prebuild
   script:
+  - apt-get install -yqqq xz-utils
   - make deps
   - make docker
   artifacts:
