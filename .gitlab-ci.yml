@@ -13,7 +13,7 @@ before_script:
 .docker: &docker
   before_script:
   - source ci/prepare
-  - wget -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
+  - wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
   - chmod +x /usr/bin/docker
   services: ["docker:dind"]
   variables:
@@ -39,7 +39,7 @@ code style:
   script:
   - make deps
   - make fmt
-  - make lint 
+  - make lint
   - make complexity
 
 unit tests:
@@ -52,11 +52,15 @@ docker executor:
   <<: *docker
   stage: test
   script:
-  - go test -cover ./executor/docker/
+  - go test -cover ./executors/docker/
 
 binaries:
   stage: build
   script:
+  - '[[ ! -f out/docker/prebuilt-x86_64.tar.xz ]] || touch out/docker/prebuilt-x86_64.tar.xz'
+  - '[[ ! -f out/docker/prebuilt-arm.tar.xz ]] || touch out/docker/prebuilt-arm.tar.xz'
+  - '[[ ! -f executors/docker/bindata.go ]] || touch executors/docker/bindata.go'
+  - make deps
   - make build
   artifacts:
     paths:
