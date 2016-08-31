@@ -1,13 +1,13 @@
 # FAQ
 
-## 1. Where are logs stored for service?
+## 1. Where are logs stored when run as a service?
 
 + If the GitLab Runner is run as service on Linux/OSX  the daemon logs to syslog.
 + If the GitLab Runner is run as service on Windows it logs to System's Event Log.
 
 ## 2. Run in `--debug` mode
 
-Is it possible to run GitLab Runner in debug/verbose mode. Do it from terminal:
+Is it possible to run GitLab Runner in debug/verbose mode. From a terminal, do:
 
 ```
 gitlab-runner --debug run
@@ -71,7 +71,7 @@ before_script:
 
 Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1025).
 
-## 9. My gitlab runner is on Windows. How can I get colored ouptut on the web terminal?
+## 9. My gitlab runner is on Windows. How can I get colored output on the web terminal?
 
 **Short answer:**
 
@@ -88,14 +88,14 @@ does not support ANSI color codes - it uses win32 ([`ANSI.SYS`](https://en.wikip
 the string to be displayed. When writing cross-platform programs, a developer will typically use ANSI color codes by default and convert
 them to win32 calls when running on a Windows system (example: [Colorama](https://pypi.python.org/pypi/colorama)).
 
-If you're program is doing the above, then you need to disable that conversion for the CI builds so that the ANSI codes remain in the string.
+If your program is doing the above, then you need to disable that conversion for the CI builds so that the ANSI codes remain in the string.
 
 See issue [#332](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/332) for more information.
 
 ## 10. "warning: You appear to have cloned an empty repository."
 
 When running `git clone` using HTTP(s) (with GitLab Runner or manually for
-tests) you have received an output:
+tests) and you see the following output:
 
 ```bash
 $ git clone https://git.example.com/user/repo.git
@@ -104,7 +104,7 @@ Cloning into 'repo'...
 warning: You appear to have cloned an empty repository.
 ```
 
-Make sure, that configuration of the HTTP Proxy in your GitLab server
+Make sure, that the configuration of the HTTP Proxy in your GitLab server
 installation is done properly. Especially if you are using some HTTP Proxy with
 its own configuration, make sure that GitLab requests are proxied to the
 **GitLab Workhorse socket**, not to the **GitLab unicorn socket**.
@@ -118,9 +118,9 @@ server, please read [using a non-bundled web-server][omnibus-ext-nginx].
 In gitlab-recipes repository there are [web-server configuration
 examples][recipes] for Apache and Nginx.
 
-If you are using GitLab installed from source, also please read the above
+If you are using GitLab installed from source, please also read the above
 documentation and examples, and make sure that all HTTP(S) traffic is going
-trough the **GitLab Workhorse**.
+through the **GitLab Workhorse**.
 
 See [an example of a user issue][1105].
 
@@ -137,7 +137,7 @@ the SSH connection.
 ## 12. `Failed to authorize rights (0x1) with status: -60007.`
 
 If your Runner is stuck on the above message when using OSX, there are two
-problems why this happens:
+causes to why this happens:
 
 1. Make sure that your user can perform UI interactions:
 
