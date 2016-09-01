@@ -1,5 +1,0 @@
-# Compiling project
-make
-
-# Creating packages
-make package

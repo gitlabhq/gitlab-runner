@@ -1,57 +1,109 @@
 image: golang:1.6
 
-services:
-- docker:dind
-
-variables:
-  DOCKER_DRIVER: overlay
-  DOCKER_HOST: tcp://docker:2375
-
 stages:
+- prebuild
+- test
 - build
-- mirror
+- package
+- release
 
 before_script:
 - source ci/prepare
 
-.build: &build-template
+.docker: &docker
+  before_script:
+  - source ci/prepare
+  - wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
+  - chmod +x /usr/bin/docker
+  services: ["docker:dind"]
+  variables:
+    DOCKER_DRIVER: overlay
+    DOCKER_HOST: tcp://docker:2375
+
+bindata:
+  <<: *docker
+  stage: prebuild
+  script:
+  - apt-get install -yqqq xz-utils
+  - make deps
+  - make docker
+  artifacts:
+    paths:
+    - out/docker/prebuilt-x86_64.tar.xz
+    - out/docker/prebuilt-arm.tar.xz
+    - executors/docker/bindata.go
+    expire_in: 7d
+
+code style:
+  stage: test
+  script:
+  - source ci/touch_make_dependencies
+  - make deps
+  - make fmt
+  - make lint
+  - make complexity
+
+unit tests:
+  stage: test
+  script:
+  - source ci/touch_make_dependencies
+  - make deps
+  - make test
+
+docker executor:
+  <<: *docker
+  stage: test
+  script:
+  - source ci/touch_make_dependencies
+  - go test -cover ./executors/docker/
+
+binaries:
   stage: build
   script:
-  - source ci/build
-  - source ci/deploy "$CI_BUILD_NAME"
+  - source ci/touch_make_dependencies
+  - make deps
+  - make build
+  artifacts:
+    paths:
+    - out/binaries/
+    expire_in: 7d
 
-Development:
-  <<: *build-template
+packages:
+  stage: package
+  script:
+  - source ci/touch_make_dependencies
+  - apt-get install -yqqq ruby ruby-dev python-pip dpkg-sig createrepo rpm
+  - make package
+  artifacts:
+    paths:
+    - out/deb/
+    - out/rpm/
+    expire_in: 7d
+
+.release: &release
+  stage: release
+  script:
+  - source ci/touch_make_dependencies
+  - source ci/release "$CI_BUILD_NAME"
+  tags:
+  - release
+
+development:
+  <<: *release
   only:
-  - branches
+  - branches@gitlab-org/gitlab-ci-multi-runner
   except:
   - master@gitlab-org/gitlab-ci-multi-runner
-  - tags@gitlab-org/gitlab-ci-multi-runner
+  environment: bleeding_edge
 
-Bleeding Edge:
-  <<: *build-template
+bleeding:
+  <<: *release
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
   environment: bleeding_edge
 
-Stable Release:
-  <<: *build-template
-  variables:
-    RELEASE: "true"
+stable:
+  <<: *release
   only:
   - tags@gitlab-org/gitlab-ci-multi-runner
   environment: stable_release
-
-Mirror:
-  stage: mirror
-  script:
-  - mkdir -p ~/.ssh
-  - echo "$GITHUB_SSH_KEY" > ~/.ssh/id_rsa
-  - ssh-keyscan -H github.com > ~/.ssh/known_hosts
-  - chmod -R 0600 ~/.ssh/
-  - git remote add github git@github.com:ayufan/gitlab-ci-multi-runner.git
-  - git fetch github
-  - git push github "$CI_BUILD_REF_NAME" -f
-  only:
-  - master@gitlab-org/gitlab-ci-multi-runner
-  - tags@gitlab-org/gitlab-ci-multi-runner
