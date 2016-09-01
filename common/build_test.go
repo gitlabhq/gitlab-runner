@@ -119,6 +119,35 @@ func TestPrepareFailure(t *testing.T) {
 	assert.EqualError(t, err, "prepare failed")
 }
 
+func TestPrepareFailureOnBuildError(t *testing.T) {
+	e := MockExecutor{}
+	defer e.AssertExpectations(t)
+
+	p := MockExecutorProvider{}
+	defer p.AssertExpectations(t)
+
+	// Create executor
+	p.On("Create").Return(&e).Times(1)
+
+	// Prepare plan
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(&BuildError{}).Times(1)
+	e.On("Cleanup").Return().Times(1)
+
+	RegisterExecutor("build-run-prepare-failure-on-build-error", &p)
+
+	build := &Build{
+		GetBuildResponse: SuccessfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-prepare-failure-on-build-error",
+			},
+		},
+	}
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.IsType(t, err, &BuildError{})
+}
+
 func TestRunFailure(t *testing.T) {
 	e := MockExecutor{}
 	defer e.AssertExpectations(t)
