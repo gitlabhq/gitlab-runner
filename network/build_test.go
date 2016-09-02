@@ -3,11 +3,12 @@ package network
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/mocks"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 const successID = 4
@@ -18,7 +19,7 @@ var buildConfig = common.RunnerConfig{}
 var buildOutputLimit = common.RunnerConfig{OutputLimit: 1}
 
 type updateTraceNetwork struct {
-	mocks.Network
+	common.MockNetwork
 	state common.BuildState
 	trace *string
 	count int
@@ -97,18 +98,13 @@ func TestIgnoreStatusChange(t *testing.T) {
 func TestBuildAbort(t *testing.T) {
 	traceUpdateInterval = 0
 
-	abort := make(chan bool)
-
 	u := &updateTraceNetwork{}
 	buildCredentials := &common.BuildCredentials{
 		ID: cancelID,
 	}
 	b := newBuildTrace(u, buildConfig, buildCredentials)
 	b.start()
-	b.Notify(func() {
-		abort <- true
-	})
-	assert.True(t, <-abort, "should abort the build")
+	assert.NotNil(t, <-b.Aborted(), "should abort the build")
 	b.Success()
 }
 

@@ -16,8 +16,8 @@ Register the runner:
 cd C:\Multi-Runner
 gitlab-ci-multi-runner register
 
-Please enter the gitlab-ci coordinator URL (e.g. http://gitlab-ci.org:3000/ )
-https://ci.gitlab.com
+Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
+https://gitlab.com
 Please enter the gitlab-ci token for this runner
 xxx
 Please enter the gitlab-ci description for this runner
@@ -38,6 +38,12 @@ for the current user account, because it's required to start the service by Wind
 gitlab-ci-multi-runner install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
 gitlab-ci-multi-runner start
 ```
+
+> `Important` If you encounter an error like '*The account name is invalid*' try to add `.\` before the username.
+> ```shell
+> gitlab-ci-multi-runner install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASSWORD"
+> ```
+
 
 > **Notice:** If you don't have a Windows Password, Runner's service won't start. To
 > fix this please read [How to Configure the Service to Start Up with the Built-in System Account](https://support.microsoft.com/en-us/kb/327545#bookmark-6)

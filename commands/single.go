@@ -74,7 +74,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 	newBuild := common.Build{
 		GetBuildResponse: *buildData,
 		Runner:           &r.RunnerConfig,
-		BuildAbort:       abortSignal,
+		SystemInterrupt:  abortSignal,
 		ExecutorData:     data,
 	}
 
@@ -102,7 +102,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 	executorProvider := common.GetExecutor(r.Executor)
 	if executorProvider == nil {
-		log.Fatalln("Uknown executor:", r.Executor)
+		log.Fatalln("Unknown executor:", r.Executor)
 	}
 
 	log.Println("Starting runner for", r.URL, "with token", r.ShortDescription(), "...")

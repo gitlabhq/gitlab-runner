@@ -3,15 +3,16 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"gitlab.com/ayufan/golang-cli-helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gopkg.in/yaml.v1"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"strings"
 
 	// Force to load all executors, executes init() on them
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
@@ -228,7 +229,7 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 		Runner: &common.RunnerConfig{
 			RunnerSettings: c.RunnerSettings,
 		},
-		BuildAbort: abortSignal,
+		SystemInterrupt: abortSignal,
 	}
 	return
 }
@@ -280,7 +281,7 @@ func (c *ExecCommand) Execute(context *cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	err = build.Run(&common.Config{}, &stdoutTrace{})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	if err != nil {
 		logrus.Fatalln(err)
 	}

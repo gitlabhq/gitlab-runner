@@ -18,6 +18,7 @@ This defines global settings of multi-runner.
 | ------- | ----------- |
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners |
 | `check_interval` | defines in seconds how often to check GitLab for a new builds |
+| `sentry_dsn`     | enable tracking of all system level errors to sentry |
 
 Example:
 
@@ -102,6 +103,7 @@ This defines the Docker Container parameters.
 | `privileged`                | make container run in Privileged mode (insecure) |
 | `cap_add`                   | add additional Linux capabilities to the container |
 | `cap_drop`                  | drop additional Linux capabilities from the container |
+| `security_opt`              | set security options (--security-opt in docker run), takes a list of ':' separated key/values |
 | `devices`                   | share additional host devices with the container |
 | `disable_cache`             | disable automatic |
 | `wait_for_services_timeout` | specify how long to wait for docker services, set to 0 to disable, default: 30 |
@@ -284,6 +286,7 @@ your `PATH` environment variable on Windows hosts:
 | Parameter | Explanation |
 | --------- | ----------- |
 | `base_name`         | name of VirtualBox VM which will be cloned |
+| `base_snapshot`     | name or UUID of a specific snapshot of the VM from which to create a linked clone. If this is empty or omitted, the current snapshot will be used. If there is no current snapshot, one will be created unless `disable_snapshots` is true, in which case a full clone of the base VM will be made. |
 | `disable_snapshots` | if disabled the VMs will be destroyed after build |
 
 Example:
@@ -291,6 +294,7 @@ Example:
 ```bash
 [runners.virtualbox]
   base_name = "my-virtualbox-image"
+  base_snapshot = "my-image-snapshot"
   disable_snapshots = false
 ```
 

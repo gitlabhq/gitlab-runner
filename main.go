@@ -7,7 +7,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/formatter"
 
@@ -15,26 +14,13 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/commands/helpers"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker/machine"
+	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/kubernetes"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/parallels"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/shell"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/ssh"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/virtualbox"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/shells"
 )
-
-var NAME = "gitlab-ci-multi-runner"
-var VERSION = "dev"
-var REVISION = "HEAD"
-var BUILT = "now"
-var BRANCH = "HEAD"
-
-func init() {
-	common.NAME = NAME
-	common.VERSION = VERSION
-	common.REVISION = REVISION
-	common.BUILT = BUILT
-	common.BRANCH = BRANCH
-}
 
 func main() {
 	defer func() {
@@ -49,15 +35,11 @@ func main() {
 
 	formatter.SetRunnerFormatter()
 
-	// Start background reaping of orphaned child processes.
-	// It allows the gitlab-runner to act as `init` process
-	go helpers.Reap()
-
 	app := cli.NewApp()
 	app.Name = path.Base(os.Args[0])
 	app.Usage = "a GitLab Runner"
-	app.Version = common.VersionShortLine()
-	cli.VersionPrinter = common.VersionPrinter
+	app.Version = common.AppVersion.ShortLine()
+	cli.VersionPrinter = common.AppVersion.Printer
 	app.Authors = []cli.Author{
 		{
 			Name:  "Kamil Trzciński",

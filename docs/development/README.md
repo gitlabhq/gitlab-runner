@@ -5,13 +5,13 @@
 ### For Debian/Ubuntu
 ```bash
 apt-get install -y mercurial git-core wget make
-wget https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.6.2.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 ### For OSX using binary package
 ```bash
-wget https://storage.googleapis.com/golang/go1.4.2.darwin-amd64-osx10.8.tar.gz
+wget https://storage.googleapis.com/golang/go1.6.2.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
@@ -22,13 +22,13 @@ brew install go
 
 ### For OSX using installation package
 ```
-wget https://storage.googleapis.com/golang/go1.4.2.darwin-amd64-osx10.8.pkg
+wget https://storage.googleapis.com/golang/go1.6.2.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
 ### For FreeBSD
 ```
-pkg install go-1.4.2 gmake git mercurial
+pkg install go-1.6.2 gmake git mercurial
 ```
 
 ## 2. Install Docker Engine
@@ -130,5 +130,6 @@ Which is especially tricky on Windows.
 
 Try to execute: `make deps docker`, if it doesn't help you can do that in steps:
 1. Execute `go get -u github.com/jteeuwen/go-bindata/...`
-2. Download https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt.tar.gz and save to out/docker/prebuilt.tar.gz
-3. Execute `make docker` or check the Makefile how this command looks like
+2. Download https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz and save to out/docker/prebuilt-x86_64.tar.xz
+3. Download https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz and save to out/docker/prebuilt-arm.tar.xz
+4. Execute `make docker` or check the Makefile how this command looks like

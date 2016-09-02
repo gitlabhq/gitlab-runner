@@ -63,8 +63,8 @@ func (s *executor) verifyMachine(vmName string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		Config:         *s.Config.SSH,
-		Stdout:         s.BuildLog,
-		Stderr:         s.BuildLog,
+		Stdout:         s.BuildTrace,
+		Stderr:         s.BuildTrace,
 		ConnectRetries: 30,
 	}
 	sshCommand.Host = ipAddr
@@ -136,6 +136,9 @@ func (s *executor) createVM() error {
 		return err
 	}
 
+	// TODO: integration tests do fail on this due
+	// Unable to open new session in this virtual machine.
+	// Make sure the latest version of Parallels Tools is installed in this virtual machine and it has finished bootingg
 	s.Debugln("Waiting for VM to start...")
 	err = prl.TryExec(s.vmName, 120, "exit", "0")
 	if err != nil {
@@ -258,6 +261,9 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 
 	s.provisioned = true
 
+	// TODO: integration tests do fail on this due
+	// Unable to open new session in this virtual machine.
+	// Make sure the latest version of Parallels Tools is installed in this virtual machine and it has finished booting
 	s.Debugln("Updating VM date...")
 	err = prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", "time.apple.com")
 	if err != nil {
@@ -272,8 +278,8 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 	s.Debugln("Starting SSH command...")
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.BuildLog,
-		Stderr: s.BuildLog,
+		Stdout: s.BuildTrace,
+		Stderr: s.BuildTrace,
 	}
 	s.sshCommand.Host = ipAddr
 
@@ -286,12 +292,16 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	return s.sshCommand.Run(ssh.Command{
+	err := s.sshCommand.Run(ssh.Command{
 		Environment: s.BuildShell.Environment,
 		Command:     s.BuildShell.GetCommandWithArguments(),
 		Stdin:       cmd.Script,
 		Abort:       cmd.Abort,
 	})
+	if _, ok := err.(*ssh.ExitError); ok {
+		err = &common.BuildError{Inner: err}
+	}
+	return err
 }
 
 func (s *executor) Cleanup() {
@@ -313,8 +323,9 @@ func init() {
 		DefaultBuildsDir: "builds",
 		SharedBuildsDir:  false,
 		Shell: common.ShellScriptInfo{
-			Shell: "bash",
-			Type:  common.LoginShell,
+			Shell:         "bash",
+			Type:          common.LoginShell,
+			RunnerCommand: "gitlab-runner",
 		},
 		ShowHostname: true,
 	}

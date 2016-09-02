@@ -27,8 +27,8 @@ func (s *executor) verifyMachine(vmName string, sshPort string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		Config:         *s.Config.SSH,
-		Stdout:         s.BuildLog,
-		Stderr:         s.BuildLog,
+		Stdout:         s.BuildTrace,
+		Stderr:         s.BuildTrace,
 		ConnectRetries: 30,
 	}
 	sshCommand.Port = sshPort
@@ -58,6 +58,38 @@ func (s *executor) restoreFromSnapshot() error {
 	return nil
 }
 
+func (s *executor) determineBaseSnapshot(baseImage string) string {
+	var err error
+	baseSnapshot := s.Config.VirtualBox.BaseSnapshot
+	if baseSnapshot == "" {
+		baseSnapshot, err = vbox.GetCurrentSnapshot(baseImage)
+		if err != nil {
+			if s.Config.VirtualBox.DisableSnapshots {
+				s.Debugln("No snapshots found for base VM", baseImage)
+				return ""
+			}
+
+			baseSnapshot = "Base State"
+		}
+	}
+
+	if baseSnapshot != "" && !vbox.HasSnapshot(baseImage, baseSnapshot) {
+		if s.Config.VirtualBox.DisableSnapshots {
+			s.Warningln("Snapshot", baseSnapshot, "not found in base VM", baseImage)
+			return ""
+		}
+
+		s.Debugln("Creating snapshot", baseSnapshot, "from current base VM", baseImage, "state...")
+		err = vbox.CreateSnapshot(baseImage, baseSnapshot)
+		if err != nil {
+			s.Warningln("Failed to create snapshot", baseSnapshot, "from base VM", baseImage)
+			return ""
+		}
+	}
+
+	return baseSnapshot
+}
+
 // virtualbox doesn't support templates
 func (s *executor) createVM(vmName string) (err error) {
 	baseImage := s.Config.VirtualBox.BaseName
@@ -71,8 +103,14 @@ func (s *executor) createVM(vmName string) (err error) {
 	}
 
 	if !vbox.Exist(vmName) {
-		s.Debugln("Creating testing VM from VM", baseImage, "...")
-		err := vbox.CreateOsVM(baseImage, vmName)
+		baseSnapshot := s.determineBaseSnapshot(baseImage)
+		if baseSnapshot == "" {
+			s.Debugln("Creating testing VM from VM", baseImage, "...")
+		} else {
+			s.Debugln("Creating testing VM from VM", baseImage, "snapshot", baseSnapshot, "...")
+		}
+
+		err = vbox.CreateOsVM(baseImage, vmName, baseSnapshot)
 		if err != nil {
 			return err
 		}
@@ -220,8 +258,8 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 	s.Println("Starting SSH command...")
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.BuildLog,
-		Stderr: s.BuildLog,
+		Stdout: s.BuildTrace,
+		Stderr: s.BuildTrace,
 	}
 	s.sshCommand.Port = s.sshPort
 	s.sshCommand.Host = "localhost"
@@ -235,12 +273,16 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	return s.sshCommand.Run(ssh.Command{
+	err := s.sshCommand.Run(ssh.Command{
 		Environment: s.BuildShell.Environment,
 		Command:     s.BuildShell.GetCommandWithArguments(),
 		Stdin:       cmd.Script,
 		Abort:       cmd.Abort,
 	})
+	if _, ok := err.(*ssh.ExitError); ok {
+		err = &common.BuildError{Inner: err}
+	}
+	return err
 }
 
 func (s *executor) Cleanup() {
@@ -260,8 +302,9 @@ func init() {
 		DefaultBuildsDir: "builds",
 		SharedBuildsDir:  false,
 		Shell: common.ShellScriptInfo{
-			Shell: "bash",
-			Type:  common.LoginShell,
+			Shell:         "bash",
+			Type:          common.LoginShell,
+			RunnerCommand: "gitlab-runner",
 		},
 		ShowHostname: true,
 	}

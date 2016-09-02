@@ -1,3 +1,50 @@
+v 1.6.0 (unreleased)
+
+v 1.5.0
+- Update vendored toml !258
+- Release armel instead arm for Debian packages !264
+- Improve concurrency of docker+machine executor !254 
+- Use .xz for prebuilt docker images to reduce binary size and provisioning speed of Docker Engines !249
+- Remove vendored test files !271
+- Update gitlab-runner-service to return 1 when no Host or PORT is defined !253
+- Log caching URL address
+- Retry executor preparation to reduce system failures !244
+- Fix missing entrypoint script in alpine Dockerfile !248
+- Suppress all but the first warning of a given type when extracting a ZIP file !261
+- Mount /builds folder to all services when used with Docker Executor !272
+- Cache docker client instances to avoid a file descriptor leak !260
+- Support bind mount of `/builds` folder !193
+
+v 1.4.2
+- Fix abort mechanism when patching trace
+
+v 1.4.1
+- Fix panic while artifacts handling errors
+
+v 1.4.0
+- Add sentry support
+- Add support for cloning VirtualBox VM snapshots as linked clones
+- Add support for `security_opt` docker configuration parameter in docker executor
+- Add first integration tests for executors
+- Add many logging improvements (add more details to some logs, move some logs to Debug level, refactorize logger etc.)
+- Make final build trace upload be done before cleanup
+- Extend support for caching and artifacts to all executors
+- Improve support for Docker Machine
+- Improve build aborting
+- Refactor common/version
+- Use `environment` feature in `.gitlab-ci.yml` to track latest versions for Bleeding Edge and Stable
+- Fix Absolute method for absolute path discovering for bash
+- Fix zombie issues by using dumb-init instead of github.com/ramr/go-reaper
+
+v 1.3.4
+- Fix panic while artifacts handling errors
+
+v 1.3.3
+- Fix zombie issue by using dumb-init
+
+v 1.3.2
+- Fix architecture detection bug introduced in 1.3.1
+
 v 1.3.1
 - Detect architecture if not given by Docker Engine (versions before 1.9.0)
 

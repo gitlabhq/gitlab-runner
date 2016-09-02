@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"fmt"
+	"path/filepath"
+
 	"github.com/BurntSushi/toml"
 	log "github.com/Sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/ssh"
-	"path/filepath"
 )
 
 type DockerPullPolicy string
@@ -50,6 +51,7 @@ type DockerConfig struct {
 	Privileged             bool             `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"DOCKER_PRIVILEGED" description:"Give extended privileges to container"`
 	CapAdd                 []string         `toml:"cap_add" json:"cap_add" long:"cap-add" env:"DOCKER_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                []string         `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"DOCKER_CAP_DROP" description:"Drop Linux capabilities"`
+	SecurityOpt            []string         `toml:"security_opt" json:"security_opt" long:"security-opt" env:"DOCKER_SECURITY_OPT" description:"Security Options"`
 	Devices                []string         `toml:"devices" json:"devices" long:"devices" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
 	DisableCache           bool             `toml:"disable_cache,omitzero" json:"disable_cache" long:"disable-cache" env:"DOCKER_DISABLE_CACHE" description:"Disable all container caching"`
 	Volumes                []string         `toml:"volumes,omitempty" json:"volumes" long:"volumes" env:"DOCKER_VOLUMES" description:"Bind mount a volumes"`
@@ -81,7 +83,22 @@ type ParallelsConfig struct {
 
 type VirtualBoxConfig struct {
 	BaseName         string `toml:"base_name" json:"base_name" long:"base-name" env:"VIRTUALBOX_BASE_NAME" description:"VM name to be used"`
+	BaseSnapshot     string `toml:"base_snapshot,omitempty" json:"base_snapshot" long:"base-snapshot" env:"VIRTUALBOX_BASE_SNAPSHOT" description:"Name or UUID of a specific VM snapshot to clone"`
 	DisableSnapshots bool   `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
+}
+
+type KubernetesConfig struct {
+	Host          string `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
+	CertFile      string `toml:"cert_file" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
+	KeyFile       string `toml:"key_file" json:"key_file" long:"key-file" env:"KUBERNETES_KEY_FILE" description:"Optional Kubernetes master auth private key"`
+	CAFile        string `toml:"ca_file" json:"ca_file" long:"ca-file" env:"KUBERNETES_CA_FILE" description:"Optional Kubernetes master auth ca certificate"`
+	Image         string `toml:"image" json:"image" long:"image" env:"KUBERNETES_IMAGE" description:"Default docker image to use for builds when none is specified"`
+	Namespace     string `toml:"namespace" json:"namespace" long:"namespace" env:"KUBERNETES_NAMESPACE" description:"Namespace to run Kubernetes jobs in"`
+	Privileged    bool   `toml:"privileged" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
+	CPUs          string `toml:"cpus" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"The CPU allocation given to build containers"`
+	Memory        string `toml:"memory" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"The amount of memory allocated to build containers"`
+	ServiceCPUs   string `toml:"service_cpus" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
+	ServiceMemory string `toml:"service_memory" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
 }
 
 type RunnerCredentials struct {
@@ -117,6 +134,7 @@ type RunnerSettings struct {
 	VirtualBox *VirtualBoxConfig `toml:"virtualbox" json:"virtualbox" group:"virtualbox executor" namespace:"virtualbox"`
 	Cache      *CacheConfig      `toml:"cache" json:"cache" group:"cache configuration" namespace:"cache"`
 	Machine    *DockerMachine    `toml:"machine" json:"machine" group:"docker machine provider" namespace:"machine"`
+	Kubernetes *KubernetesConfig `toml:"kubernetes" json:"kubernetes" group:"kubernetes executor" namespace:"kubernetes"`
 }
 
 type RunnerConfig struct {
@@ -133,6 +151,7 @@ type Config struct {
 	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
 	User          string          `toml:"user,omitempty" json:"user"`
 	Runners       []*RunnerConfig `toml:"runners" json:"runners"`
+	SentryDSN     *string         `toml:"sentry_dsn"`
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
 }

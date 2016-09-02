@@ -33,14 +33,14 @@ const (
 type Build struct {
 	GetBuildResponse `yaml:",inline"`
 
-	Trace        BuildTrace
-	BuildAbort   chan os.Signal `json:"-" yaml:"-"`
-	RootDir      string         `json:"-" yaml:"-"`
-	BuildDir     string         `json:"-" yaml:"-"`
-	CacheDir     string         `json:"-" yaml:"-"`
-	Hostname     string         `json:"-" yaml:"-"`
-	Runner       *RunnerConfig  `json:"runner"`
-	ExecutorData ExecutorData
+	Trace           BuildTrace
+	SystemInterrupt chan os.Signal `json:"-" yaml:"-"`
+	RootDir         string         `json:"-" yaml:"-"`
+	BuildDir        string         `json:"-" yaml:"-"`
+	CacheDir        string         `json:"-" yaml:"-"`
+	Hostname        string         `json:"-" yaml:"-"`
+	Runner          *RunnerConfig  `json:"runner"`
+	ExecutorData    ExecutorData
 
 	// Unique ID for all running builds on this runner
 	RunnerID int `json:"runner_id"`
@@ -192,14 +192,8 @@ func (b *Build) run(executor Executor) (err error) {
 		buildTimeout = DefaultTimeout
 	}
 
-	buildCanceled := make(chan bool)
-	buildFinish := make(chan error)
+	buildFinish := make(chan error, 1)
 	buildAbort := make(chan interface{})
-
-	// Wait for cancel notification
-	b.Trace.Notify(func() {
-		buildCanceled <- true
-	})
 
 	// Run build script
 	go func() {
@@ -209,20 +203,20 @@ func (b *Build) run(executor Executor) (err error) {
 	// Wait for signals: cancel, timeout, abort or finish
 	b.Log().Debugln("Waiting for signals...")
 	select {
-	case <-buildCanceled:
-		err = errors.New("canceled")
+	case <-b.Trace.Aborted():
+		err = &BuildError{Inner: errors.New("canceled")}
 
 	case <-time.After(time.Duration(buildTimeout) * time.Second):
-		err = fmt.Errorf("execution took longer than %v seconds", buildTimeout)
+		err = &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", buildTimeout)}
 
-	case signal := <-b.BuildAbort:
+	case signal := <-b.SystemInterrupt:
 		err = fmt.Errorf("aborted: %v", signal)
 
 	case err = <-buildFinish:
 		return err
 	}
 
-	b.Log().Debugln("Waiting for build to finish...", err)
+	b.Log().WithError(err).Debugln("Waiting for build to finish...")
 
 	// Wait till we receive that build did finish
 	for {
@@ -234,28 +228,66 @@ func (b *Build) run(executor Executor) (err error) {
 	}
 }
 
+func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvider, logger BuildLogger) (executor Executor, err error) {
+	for tries := 0; tries < PreparationRetries; tries++ {
+		executor = provider.Create()
+		if executor == nil {
+			err = errors.New("failed to create executor")
+			return
+		}
+
+		err = executor.Prepare(globalConfig, b.Runner, b)
+		if err == nil {
+			break
+		}
+		if executor != nil {
+			executor.Cleanup()
+			executor = nil
+		}
+
+		logger.SoftErrorln("Preparation failed:", err)
+		logger.Infoln("Will be retried in", PreparationRetryInterval, "...")
+		time.Sleep(PreparationRetryInterval)
+	}
+	return
+}
+
 func (b *Build) Run(globalConfig *Config, trace BuildTrace) (err error) {
+	var executor Executor
+
+	logger := NewBuildLogger(trace, b.Log())
+	logger.Println("Running with " + AppVersion.Line() + helpers.ANSI_RESET)
+
 	defer func() {
-		if err != nil {
+		if _, ok := err.(*BuildError); ok {
+			logger.SoftErrorln("Build failed:", err)
+			trace.Fail(err)
+		} else if err != nil {
+			logger.Errorln("Build failed (system failure):", err)
 			trace.Fail(err)
 		} else {
+			logger.Infoln("Build succeeded")
 			trace.Success()
 		}
+		if executor != nil {
+			executor.Cleanup()
+		}
 	}()
+
 	b.Trace = trace
 
-	executor := NewExecutor(b.Runner.Executor)
-	if executor == nil {
-		fmt.Fprint(trace, "Executor not found:", b.Runner.Executor)
+	provider := GetExecutor(b.Runner.Executor)
+	if provider == nil {
 		return errors.New("executor not found")
 	}
-	defer executor.Cleanup()
 
-	err = executor.Prepare(globalConfig, b.Runner, b)
+	executor, err = b.retryCreateExecutor(globalConfig, provider, logger)
 	if err == nil {
 		err = b.run(executor)
 	}
-	executor.Finish(err)
+	if executor != nil {
+		executor.Finish(err)
+	}
 	return err
 }
 

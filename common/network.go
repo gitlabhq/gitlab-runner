@@ -2,6 +2,8 @@ package common
 
 import (
 	"io"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/url"
 )
 
 type UpdateState int
@@ -89,6 +91,10 @@ type GetBuildResponse struct {
 	TLSCAChain      string         `json:"-"`
 }
 
+func (b *GetBuildResponse) RepoCleanURL() (ret string) {
+	return url_helpers.CleanURL(b.RepoURL)
+}
+
 type RegisterRunnerRequest struct {
 	Info        VersionInfo `json:"info,omitempty"`
 	Token       string      `json:"token,omitempty"`
@@ -126,7 +132,7 @@ type BuildTrace interface {
 	io.Writer
 	Success()
 	Fail(err error)
-	Notify(abort func())
+	Aborted() chan interface{}
 	IsStdout() bool
 }
 

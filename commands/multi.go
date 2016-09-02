@@ -16,6 +16,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/sentry"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
@@ -31,6 +32,8 @@ type RunCommand struct {
 	WorkingDirectory string `short:"d" long:"working-directory" description:"Specify custom working directory"`
 	User             string `short:"u" long:"user" description:"Use specific user to execute shell scripts"`
 	Syslog           bool   `long:"syslog" description:"Log to syslog"`
+
+	sentryLogHook sentry.LogHook
 
 	// abortBuilds is used to abort running builds
 	abortBuilds chan os.Signal
@@ -124,7 +127,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		GetBuildResponse: *buildData,
 		Runner:           runner,
 		ExecutorData:     context,
-		BuildAbort:       mr.abortBuilds,
+		SystemInterrupt:  mr.abortBuilds,
 	}
 
 	// Add build to list of builds to assign numbers
@@ -135,10 +138,10 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	// to speed up taking the builds
 	select {
 	case runners <- runner:
-		mr.log().Debugln("Requeued the runner: ", runner.ShortDescription())
+		mr.log().WithField("runner", runner.ShortDescription()).Debugln("Requeued the runner")
 
 	default:
-		mr.log().Debugln("Failed to requeue the runner: ", runner.ShortDescription())
+		mr.log().WithField("runner", runner.ShortDescription()).Debugln("Failed to requeue the runner: ")
 	}
 
 	// Process a build
@@ -146,7 +149,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 }
 
 func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan *common.RunnerConfig) {
-	mr.log().Debugln("Starting worker", id)
+	mr.log().WithField("worker", id).Debugln("Starting worker")
 	for mr.stopSignal == nil {
 		select {
 		case runner := <-runners:
@@ -156,7 +159,7 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 			runtime.GC()
 
 		case <-stopWorker:
-			mr.log().Debugln("Stopping worker", id)
+			mr.log().WithField("worker", id).Debugln("Stopping worker")
 			return
 		}
 	}
@@ -182,7 +185,20 @@ func (mr *RunCommand) loadConfig() error {
 	}
 
 	mr.healthy = nil
-	mr.log().Println("Config loaded:", helpers.ToYAML(mr.config))
+	mr.log().Println("Configuration loaded")
+	mr.log().Debugln(helpers.ToYAML(mr.config))
+
+	// initialize sentry
+	if mr.config.SentryDSN != nil {
+		var err error
+		mr.sentryLogHook, err = sentry.NewLogHook(*mr.config.SentryDSN)
+		if err != nil {
+			mr.log().WithError(err).Errorln("Sentry failure")
+		}
+	} else {
+		mr.sentryLogHook = sentry.LogHook{}
+	}
+
 	return nil
 }
 
@@ -405,11 +421,13 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 		log.SetFormatter(new(log.TextFormatter))
 		logger, err := service.SystemLogger(nil)
 		if err == nil {
-			log.AddHook(&ServiceLogHook{logger})
+			log.AddHook(&ServiceLogHook{logger, log.InfoLevel})
 		} else {
 			log.Errorln(err)
 		}
 	}
+
+	log.AddHook(&mr.sentryLogHook)
 
 	err = service.Run()
 	if err != nil {

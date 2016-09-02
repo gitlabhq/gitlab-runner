@@ -28,10 +28,11 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 	details, ok := m.details[name]
 	if !ok {
 		details = &machineDetails{
-			Name:    name,
-			Created: time.Now(),
-			Used:    time.Now(),
-			State:   machineStateIdle,
+			Name:      name,
+			Created:   time.Now(),
+			Used:      time.Now(),
+			UsedCount: 1, // any machine that we find we mark as already used
+			State:     machineStateIdle,
 		}
 		m.details[name] = details
 	}
@@ -50,6 +51,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	name := newMachineName(machineFilter(config))
 	details = m.machineDetails(name, true)
 	details.State = machineStateCreating
+	details.UsedCount = 0
 	errCh = make(chan error, 1)
 
 	// Create machine asynchronously
@@ -57,19 +59,24 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 		started := time.Now()
 		err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 		for i := 0; i < 3 && err != nil; i++ {
-			logrus.WithField("name", details.Name).
-				Warningln("Machine creation failed, trying to provision", err)
+			logrus.WithField("name", details.Name).WithError(err).
+				Warningln("Machine creation failed, trying to provision")
 			time.Sleep(provisionRetryInterval)
 			err = m.machine.Provision(details.Name)
 		}
 
 		if err != nil {
+			logrus.WithField("name", details.Name).
+				WithField("time", time.Since(started)).
+				WithError(err).
+				Errorln("Machine creation failed")
 			m.remove(details.Name, "Failed to create")
 		} else {
 			details.State = state
 			details.Used = time.Now()
 			logrus.WithField("time", time.Since(started)).
 				WithField("name", details.Name).
+				WithField("now", time.Now()).
 				Infoln("Machine created")
 		}
 		errCh <- err
@@ -78,8 +85,9 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 }
 
 func (m *machineProvider) findFreeMachine(machines ...string) (details *machineDetails) {
-	// Enumerate all machines
-	for _, name := range machines {
+	// Enumerate all machines in reverse order, to always take the newest machines first
+	for idx := range machines {
+		name := machines[len(machines)-idx-1]
 		details := m.machineDetails(name, true)
 		if details == nil {
 			continue
@@ -149,15 +157,22 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	delete(m.details, details.Name)
+
+	logrus.WithField("name", details.Name).
+		WithField("created", time.Since(details.Created)).
+		WithField("used", time.Since(details.Used)).
+		WithField("reason", details.Reason).
+		WithField("now", time.Now()).
+		Infoln("Machine removed")
 }
 
-func (m *machineProvider) remove(machineName string, reason ...interface{}) {
+func (m *machineProvider) remove(machineName string, reason ...interface{}) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	details, _ := m.details[machineName]
 	if details == nil {
-		return
+		return errors.New("Machine not found")
 	}
 
 	details.Reason = fmt.Sprint(reason...)
@@ -166,11 +181,13 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) {
 		WithField("created", time.Since(details.Created)).
 		WithField("used", time.Since(details.Used)).
 		WithField("reason", details.Reason).
+		WithField("now", time.Now()).
 		Warningln("Removing machine")
 	details.Used = time.Now()
 	details.writeDebugInformation()
 
 	go m.finalizeRemoval(details)
+	return nil
 }
 
 func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machinesData, details *machineDetails) error {
@@ -197,13 +214,16 @@ func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machi
 	return nil
 }
 
-func (m *machineProvider) updateMachines(machines []string, config *common.RunnerConfig) (data machinesData) {
+func (m *machineProvider) updateMachines(machines []string, config *common.RunnerConfig) (data machinesData, validMachines []string) {
 	data.Runner = config.ShortDescription()
+	validMachines = make([]string, 0, len(machines))
 
 	for _, name := range machines {
 		details := m.machineDetails(name, false)
 		err := m.updateMachine(config, &data, details)
-		if err != nil {
+		if err == nil {
+			validMachines = append(validMachines, name)
+		} else {
 			m.remove(details.Name, err)
 		}
 
@@ -248,7 +268,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 	m.acquireLock.Lock()
 
 	// Update a list of currently configured machines
-	machinesData := m.updateMachines(machines, config)
+	machinesData, validMachines := m.updateMachines(machines, config)
 
 	// Pre-create machines
 	m.createMachines(config, &machinesData)
@@ -264,7 +284,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 	machinesData.writeDebugInformation()
 
 	// Try to find a free machine
-	details := m.findFreeMachine(machines...)
+	details := m.findFreeMachine(validMachines...)
 	if details != nil {
 		data = details
 		return
@@ -280,7 +300,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorData) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
 	// Find a new machine
 	details, _ := data.(*machineDetails)
-	if details == nil {
+	if details == nil || !details.canBeUsed() || !m.machine.CanConnect(details.Name) {
 		details, err = m.retryUseMachine(config)
 		if err != nil {
 			return
@@ -309,6 +329,8 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 
 	// Mark machine as used
 	details.State = machineStateUsed
+	details.Used = time.Now()
+	details.UsedCount++
 	return
 }
 
@@ -319,7 +341,14 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 		// Mark last used time when is Used
 		if details.State == machineStateUsed {
 			details.Used = time.Now()
-			details.UsedCount++
+		}
+
+		// Remove machine if we already used it
+		if config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
+			err := m.remove(details.Name, "Too many builds")
+			if err == nil {
+				return nil
+			}
 		}
 		details.State = machineStateIdle
 	}

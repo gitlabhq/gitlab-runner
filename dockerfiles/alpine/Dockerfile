@@ -1,5 +1,8 @@
 FROM alpine
 
+ADD https://github.com/Yelp/dumb-init/releases/download/v1.0.2/dumb-init_1.0.2_amd64 /usr/bin/dumb-init
+RUN chmod +x /usr/bin/dumb-init
+
 RUN apk add --update \
 		bash \
 		ca-certificates \
@@ -15,6 +18,9 @@ RUN wget -O /usr/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downl
 	mkdir -p /etc/gitlab-runner/certs && \
 	chmod -R 700 /etc/gitlab-runner
 
-VOLUME ["/etc/gitlab-runner"]
-ENTRYPOINT ["gitlab-ci-multi-runner"]
-CMD ["run"]
+ADD entrypoint /
+RUN chmod +x /entrypoint
+
+VOLUME ["/etc/gitlab-runner", "/home/gitlab-runner"]
+ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]
+CMD ["run", "--user=gitlab-runner", "--working-directory=/home/gitlab-runner"]

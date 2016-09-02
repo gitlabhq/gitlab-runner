@@ -8,7 +8,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"io"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -92,6 +91,11 @@ func (b *BashWriter) IfFile(path string) {
 	b.Indent()
 }
 
+func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
+	b.Line(fmt.Sprintf("if %q %s >/dev/null 2>/dev/null; then", cmd, strings.Join(arguments, " ")))
+	b.Indent()
+}
+
 func (b *BashWriter) Else() {
 	b.Unindent()
 	b.Line("else")
@@ -116,7 +120,7 @@ func (b *BashWriter) RmFile(path string) {
 }
 
 func (b *BashWriter) Absolute(dir string) string {
-	if filepath.IsAbs(dir) {
+	if path.IsAbs(dir) {
 		return dir
 	}
 	return path.Join("$PWD", dir)
