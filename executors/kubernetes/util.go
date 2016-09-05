@@ -119,7 +119,9 @@ func getPodPhase(c *client.Client, pod *api.Pod, out io.Writer) podPhaseResponse
 
 		switch container.State.Waiting.Reason {
 		case "ErrImagePull", "ImagePullBackOff":
-			return podPhaseResponse{true, api.PodUnknown, errors.New(container.State.Waiting.Message)}
+			err = errors.New(container.State.Waiting.Message)
+			err = &common.BuildError{Inner: err}
+			return podPhaseResponse{true, api.PodUnknown, err}
 		}
 	}
 

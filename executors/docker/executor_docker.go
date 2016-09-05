@@ -99,6 +99,9 @@ func (s *executor) pullDockerImage(imageName string) (*docker.Image, error) {
 
 	err = s.client.PullImage(pullImageOptions, authConfig)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil, &common.BuildError{Inner: err}
+		}
 		return nil, err
 	}
 

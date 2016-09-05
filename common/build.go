@@ -244,6 +244,9 @@ func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvi
 			executor.Cleanup()
 			executor = nil
 		}
+		if _, ok := err.(*BuildError); ok {
+			break
+		}
 
 		logger.SoftErrorln("Preparation failed:", err)
 		logger.Infoln("Will be retried in", PreparationRetryInterval, "...")

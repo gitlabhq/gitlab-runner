@@ -79,6 +79,29 @@ func TestDockerCommandMissingImage(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
+	assert.IsType(t, err, &common.BuildError{})
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestDockerCommandMissingTag(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	build := &common.Build{
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "docker:missing-tag",
+				},
+			},
+		},
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "not found")
 }
 
