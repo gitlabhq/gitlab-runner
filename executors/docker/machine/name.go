@@ -4,12 +4,13 @@ import (
 	"crypto/rand"
 	"fmt"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"strings"
 	"time"
 )
 
 func machineFormat(runner string, template string) string {
 	if runner != "" {
-		return "runner-" + runner + "-" + template
+		return "runner-" + strings.ToLower(runner) + "-" + template
 	}
 	return template
 }
