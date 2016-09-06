@@ -14,6 +14,8 @@ type Client interface {
 	InspectContainer(id string) (*docker.Container, error)
 	AttachToContainer(opts docker.AttachToContainerOptions) error
 	RemoveContainer(opts docker.RemoveContainerOptions) error
+	DisconnectNetwork(id string, opts docker.NetworkConnectionOptions) error
+	ListNetworks() ([]docker.Network, error)
 	Logs(opts docker.LogsOptions) error
 
 	Info() (*docker.Env, error)
