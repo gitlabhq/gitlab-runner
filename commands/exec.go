@@ -70,15 +70,19 @@ func (c *ExecCommand) buildCommands(configBeforeScript, jobConfigBeforeScript, j
 	if err != nil {
 		return
 	}
-	commands += beforeScript
-	
+
 	// get job before_script
 	jobBeforeScript, err := c.getCommands(jobConfigBeforeScript)
 	if err != nil {
 		return
 	}
-	commands += jobBeforeScript
-	
+
+	if jobBeforeScript == "" {
+		commands += beforeScript
+	} else {
+		commands += jobBeforeScript
+	}
+
 	// get script
 	script, err := c.getCommands(jobScript)
 	if err != nil {
