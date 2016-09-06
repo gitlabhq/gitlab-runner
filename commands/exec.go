@@ -64,7 +64,7 @@ func (c *ExecCommand) supportedOption(key string, _ interface{}) bool {
 	}
 }
 
-func (c *ExecCommand) buildCommands(configBeforeScript, jobScript interface{}) (commands string, err error) {
+func (c *ExecCommand) buildCommands(configBeforeScript, jobConfigBeforeScript, jobScript interface{}) (commands string, err error) {
 	// get before_script
 	beforeScript, err := c.getCommands(configBeforeScript)
 	if err != nil {
@@ -163,7 +163,7 @@ func (c *ExecCommand) parseYaml(job string, build *common.GetBuildResponse) erro
 		return fmt.Errorf("no job named %q", job)
 	}
 
-	build.Commands, err = c.buildCommands(config["before_script"], jobConfig["script"])
+	build.Commands, err = c.buildCommands(config["before_script"], jobConfig["before_script"], jobConfig["script"])
 	if err != nil {
 		return err
 	}
