@@ -72,7 +72,7 @@ version: FORCE
 	@echo RPM platforms: $(RPM_PLATFORMS)
 	@echo IS_LATEST: $(IS_LATEST)
 
-verify: fmt vet lint complexity test
+verify: license fmt vet lint complexity test
 
 deps:
 	# Installing dependencies...
@@ -80,6 +80,7 @@ deps:
 	go get github.com/mitchellh/gox
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/fzipp/gocyclo
+	go get gitlab.com/tmaczukin/goliscan
 	go get -u github.com/jteeuwen/go-bindata/...
 	go install cmd/vet
 
@@ -119,7 +120,7 @@ ifneq (, $(shell docker info))
 	# Building gitlab-runner-helper
 	gox -osarch=linux/arm \
 		-ldflags "$(GO_LDFLAGS)" \
-		-output="dockerfiles/build/gitlab-runner-helper" \
+	-output="dockerfiles/build/gitlab-runner-helper" \
 		./apps/gitlab-runner-helper
 
 	# Build docker images
@@ -167,6 +168,13 @@ build_simple:
 		-o "out/binaries/$(NAME)"
 
 build_current: executors/docker/bindata.go build_simple
+
+license:
+	# Checking project dependencies licenses...
+	# - direct dependencies:
+	@goliscan check --direct-only
+	# - indirect dependencies:
+	@goliscan check --indirect-only
 
 fmt:
 	# Checking project code formatting...

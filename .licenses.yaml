@@ -1,0 +1,13 @@
+accepted:
+- MIT
+- Apache-2.0
+- NewBSD
+
+unaccepted:
+- GPL-2.0
+- GPL-3.0
+
+exceptions:
+- github.com/BurntSushi/toml # uses WTFPL license (http://www.wtfpl.net/)
+- github.com/ayufan/golang-kardianos-service # uses Zlib license (https://opensource.org/licenses/Zlib)
+- github.com/davecgh/go-spew # Uses ISC license (https://opensource.org/licenses/ISC)
