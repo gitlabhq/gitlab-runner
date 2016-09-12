@@ -11,9 +11,8 @@ import (
 
 type Client interface {
 	ImageInspectWithRaw(ctx context.Context, imageID string) (types.ImageInspect, []byte, error)
-	ImagePull(ctx context.Context, ref string, options types.ImagePullOptions) (io.ReadCloser, error)
 
-	// Like ImageImport in the official docker client, but handles the ReadCloser it returns
+	ImagePullBlocking(ctx context.Context, ref string, options types.ImagePullOptions) error
 	ImageImportBlocking(ctx context.Context, source types.ImageImportSource, ref string, options types.ImageImportOptions) error
 
 	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error)

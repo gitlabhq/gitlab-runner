@@ -219,27 +219,18 @@ func (_m *MockClient) ImageInspectWithRaw(ctx context.Context, imageID string) (
 	return r0, r1, r2
 }
 
-// ImagePull provides a mock function with given fields: ctx, ref, options
-func (_m *MockClient) ImagePull(ctx context.Context, ref string, options types.ImagePullOptions) (io.ReadCloser, error) {
+// ImagePullBlocking provides a mock function with given fields: ctx, ref, options
+func (_m *MockClient) ImagePullBlocking(ctx context.Context, ref string, options types.ImagePullOptions) error {
 	ret := _m.Called(ctx, ref, options)
 
-	var r0 io.ReadCloser
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.ImagePullOptions) io.ReadCloser); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.ImagePullOptions) error); ok {
 		r0 = rf(ctx, ref, options)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.ReadCloser)
-		}
+		r0 = ret.Error(0)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, types.ImagePullOptions) error); ok {
-		r1 = rf(ctx, ref, options)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // Info provides a mock function with given fields: ctx

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -134,18 +133,11 @@ func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 		options.RegistryAuth, _ = docker_helpers.EncodeAuthConfig(ac)
 	}
 
-	readCloser, err := s.client.ImagePull(context.TODO(), ref, options)
-	if err != nil {
+	if err := s.client.ImagePullBlocking(context.TODO(), ref, options); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return nil, &common.BuildError{Inner: err}
 		}
 		return nil, err
-	}
-	defer readCloser.Close()
-
-	// FIXME: do I need to do anything with the data?
-	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {
-		return nil, fmt.Errorf("Failed to pull image: %s: %s", ref, err)
 	}
 
 	image, _, err := s.client.ImageInspectWithRaw(context.TODO(), imageName)
@@ -1154,7 +1146,6 @@ func (s *executor) waitForServiceContainer(service *types.Container, timeout tim
 		Timestamps: true,
 	}
 
-	// FIXME: need to wire the response up to the buffer
 	hijacked, err := s.client.ContainerLogs(context.TODO(), service.ID, options)
 	if err == nil {
 		defer hijacked.Close()

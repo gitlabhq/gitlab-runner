@@ -55,10 +55,24 @@ func (c *officialDockerClient) ImageImportBlocking(ctx context.Context, source t
 	}
 	defer readCloser.Close()
 
-	// FIXME: do I need to do anything with the data?
 	// TODO: respect the context here
 	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {
 		return fmt.Errorf("Failed to import image: %s", err)
+	}
+
+	return nil
+}
+
+func (c *officialDockerClient) ImagePullBlocking(ctx context.Context, ref string, options types.ImagePullOptions) error {
+	readCloser, err := c.ImagePull(ctx, ref, options)
+	if err != nil {
+		return err
+	}
+	defer readCloser.Close()
+
+	// TODO: respect the context here
+	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {
+		return fmt.Errorf("Failed to pull image: %s: %s", ref, err)
 	}
 
 	return nil

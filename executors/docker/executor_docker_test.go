@@ -3,7 +3,6 @@ package docker
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -28,10 +27,6 @@ import (
 // configuration for the user, so just mock it out here.
 func buildImagePullOptions(e executor, configName string) mock.AnythingOfTypeArgument {
 	return mock.AnythingOfType("ImagePullOptions")
-}
-
-func fakeBody(buf []byte) io.ReadCloser {
-	return ioutil.NopCloser(bytes.NewBuffer(buf))
 }
 
 func TestParseDeviceStringOne(t *testing.T) {
@@ -145,8 +140,8 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.Build.ProjectID = 0
 	e.Build.Runner.Token = "abcdef1234567890"
 
-	c.On("ImagePull", context.TODO(),  imageName, options).
-		Return(fakeBody(nil), nil).
+	c.On("ImagePullBlocking", context.TODO(), imageName, options).
+		Return(nil).
 		Once()
 
 	c.On("ImageInspectWithRaw", context.TODO(), imageName).
@@ -198,16 +193,16 @@ func TestDockerForNamedImage(t *testing.T) {
 	e := executor{client: &c}
 	options := buildImagePullOptions(e, "test")
 
-	c.On("ImagePull", context.TODO(), "test:latest", options).
-		Return(nil, os.ErrNotExist).
+	c.On("ImagePullBlocking", context.TODO(), "test:latest", options).
+		Return(os.ErrNotExist).
 		Once()
 
-	c.On("ImagePull", context.TODO(), "tagged:tag", options).
-		Return(nil, os.ErrNotExist).
+	c.On("ImagePullBlocking", context.TODO(), "tagged:tag", options).
+		Return(os.ErrNotExist).
 		Once()
 
-	c.On("ImagePull", context.TODO(), validSHA, options).
-		Return(nil, os.ErrNotExist).
+	c.On("ImagePullBlocking", context.TODO(), validSHA, options).
+		Return(os.ErrNotExist).
 		Once()
 
 	image, err := e.pullDockerImage("test", nil)
@@ -230,8 +225,8 @@ func TestDockerForExistingImage(t *testing.T) {
 	e := executor{client: &c}
 	options := buildImagePullOptions(e, "existing")
 
-	c.On("ImagePull", context.TODO(), "existing:latest", options).
-		Return(fakeBody(nil), nil).
+	c.On("ImagePullBlocking", context.TODO(), "existing:latest", options).
+		Return(nil).
 		Once()
 
 	c.On("ImageInspectWithRaw", context.TODO(), "existing").
@@ -333,8 +328,8 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Once()
 
 	options := buildImagePullOptions(e, "not-existing")
-	c.On("ImagePull", context.TODO(),  "not-existing:latest", options).
-		Return(fakeBody(nil), nil).
+	c.On("ImagePullBlocking", context.TODO(), "not-existing:latest", options).
+		Return(nil).
 		Once()
 
 	c.On("ImageInspectWithRaw", context.TODO(), "not-existing").
@@ -366,9 +361,9 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 		Return(types.ImageInspect{}, nil, nil).
 		Once()
 
-	options := buildImagePullOptions(e, "existing:lastest")
-	c.On("ImagePull", context.TODO(), "existing:latest", options).
-		Return(fakeBody(nil), nil).
+	options := buildImagePullOptions(e, "existing:latest")
+	c.On("ImagePullBlocking", context.TODO(), "existing:latest", options).
+		Return(nil).
 		Once()
 
 	c.On("ImageInspectWithRaw", context.TODO(), "existing").
@@ -392,8 +387,8 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 		Once()
 
 	options := buildImagePullOptions(e, "existing:lastest")
-	c.On("ImagePull", context.TODO(),  "existing:latest", options).
-		Return(nil, fmt.Errorf("not found")).
+	c.On("ImagePullBlocking", context.TODO(), "existing:latest", options).
+		Return(fmt.Errorf("not found")).
 		Once()
 
 	image, err := e.getDockerImage("existing")
@@ -413,8 +408,8 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Once()
 
 	options := buildImagePullOptions(e, "to-pull")
-	c.On("ImagePull", context.TODO(), "to-pull:latest", options).
-		Return(nil, os.ErrNotExist).
+	c.On("ImagePullBlocking", context.TODO(), "to-pull:latest", options).
+		Return(os.ErrNotExist).
 		Once()
 
 	image, err := e.getDockerImage("to-pull")
@@ -425,8 +420,8 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Return(types.ImageInspect{}, nil, os.ErrNotExist).
 		Once()
 
-	c.On("ImagePull", context.TODO(), "not-existing:latest", options).
-		Return(nil, os.ErrNotExist).
+	c.On("ImagePullBlocking", context.TODO(), "not-existing:latest", options).
+		Return(os.ErrNotExist).
 		Once()
 
 	image, err = e.getDockerImage("not-existing")
@@ -714,8 +709,8 @@ func addPullsRemoteImageExpectations(c *docker_helpers.MockClient, imageName str
 		Return(types.ImageInspect{ID: "not-this-image"}, nil, nil).
 		Once()
 
-	c.On("ImagePull", context.TODO(), imageName, mock.AnythingOfType("types.ImagePullOptions")).
-		Return(fakeBody(nil), nil).
+	c.On("ImagePullBlocking", context.TODO(), imageName, mock.AnythingOfType("types.ImagePullOptions")).
+		Return(nil).
 		Once()
 
 	c.On("ImageInspectWithRaw", context.TODO(), imageName).
@@ -728,8 +723,8 @@ func addDeniesPullExpectations(c *docker_helpers.MockClient, imageName string) {
 		Return(types.ImageInspect{ID: "image"}, nil, nil).
 		Once()
 
-	c.On("ImagePull", context.TODO(), imageName, mock.AnythingOfType("types.ImagePullOptions")).
-		Return(nil, fmt.Errorf("deny pulling")).
+	c.On("ImagePullBlocking", context.TODO(), imageName, mock.AnythingOfType("types.ImagePullOptions")).
+		Return(fmt.Errorf("deny pulling")).
 		Once()
 }
 
