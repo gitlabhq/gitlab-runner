@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/BurntSushi/toml"
-	"gopkg.in/yaml.v1"
+	"gopkg.in/yaml.v2"
 )
 
 func ToYAML(src interface{}) string {
