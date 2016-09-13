@@ -1,4 +1,5 @@
 v 1.6.0 (unreleased)
+- Update YAML parser library !307
 
 v 1.5.3
 - Fix Caret-escape parentheses when not inside double quotes for Windows cmd

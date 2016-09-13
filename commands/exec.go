@@ -12,7 +12,7 @@ import (
 	"github.com/codegangsta/cli"
 	"gitlab.com/ayufan/golang-cli-helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gopkg.in/yaml.v1"
+	"gopkg.in/yaml.v2"
 
 	// Force to load all executors, executes init() on them
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
