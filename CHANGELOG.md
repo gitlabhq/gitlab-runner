@@ -1,4 +1,5 @@
 v 1.6.0 (unreleased)
+- Update YAML parser library !307
 
 v 1.5.0
 - Update vendored toml !258
