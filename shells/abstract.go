@@ -10,6 +10,16 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
+// Ignore user and system gitconfig files and set fetch.recurseSubmodules=false
+//
+// Versions of git >= 1.7.5 could use git clone --no-recurse-submodules, but
+// we need to support 1.7.1+
+var gitDisableRecurseSubmodules = common.BuildVariable{
+	Key:   "GIT_CONFIG",
+	File:  true,
+	Value: "[fetch]\n    recurseSubmodules = false\n",
+}
+
 type AbstractShell struct {
 }
 
@@ -223,8 +233,8 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 
 	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
+	w.Variable(gitDisableRecurseSubmodules)
 
-	w.Command("git", "config", "--global", "fetch.recurseSubmodules", "false")
 	switch info.Build.GetGitStrategy() {
 	case common.GitFetch:
 		b.writeFetchCmd(w, build, projectDir, gitDir)
