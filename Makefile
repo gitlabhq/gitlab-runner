@@ -346,4 +346,14 @@ s3-upload:
 		--target-paths "$(S3_UPLOAD_PATH)/" \
 		$(shell cd out/; find . -type f)
 
+check-tags-in-changelog:
+	# Looking for tags in CHANGELOG
+	@git status | grep "On branch master" 2>&1 >/dev/null || echo "Check should be done on master branch only. Skipping."
+	@for tag in $$(git tag | grep "v[0-9]*\.[0-9]*\.[0-9]*" | sed 's|v||' | sort -g); do \
+		state="MISSING"; \
+		grep "^v $$tag" CHANGELOG.md 2>&1 >/dev/null; \
+		[ "$$?" -eq 1 ] || state="OK"; \
+		echo "$$tag:   \t $$state"; \
+	done
+
 FORCE:
