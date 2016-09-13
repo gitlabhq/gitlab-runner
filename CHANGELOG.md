@@ -1,9 +1,19 @@
 v 1.6.0 (unreleased)
 
+v 1.5.3
+- Fix Caret-escape parentheses when not inside double quotes for Windows cmd
+- Remove LFS from prebuilt images
+
+v 1.5.2
+(no changes)
+
+v 1.5.1
+- Fix file mode of gitlab-runner-service script !283
+
 v 1.5.0
 - Update vendored toml !258
 - Release armel instead arm for Debian packages !264
-- Improve concurrency of docker+machine executor !254 
+- Improve concurrency of docker+machine executor !254
 - Use .xz for prebuilt docker images to reduce binary size and provisioning speed of Docker Engines !249
 - Remove vendored test files !271
 - Update gitlab-runner-service to return 1 when no Host or PORT is defined !253
@@ -14,6 +24,10 @@ v 1.5.0
 - Mount /builds folder to all services when used with Docker Executor !272
 - Cache docker client instances to avoid a file descriptor leak !260
 - Support bind mount of `/builds` folder !193
+
+v 1.4.3
+- Fix Caret-escape parentheses when not inside double quotes for Windows cmd
+- Remove LFS from prebuilt images
 
 v 1.4.2
 - Fix abort mechanism when patching trace
@@ -35,6 +49,9 @@ v 1.4.0
 - Use `environment` feature in `.gitlab-ci.yml` to track latest versions for Bleeding Edge and Stable
 - Fix Absolute method for absolute path discovering for bash
 - Fix zombie issues by using dumb-init instead of github.com/ramr/go-reaper
+
+v 1.3.5
+- Fix Caret-escape parentheses when not inside double quotes for Windows cmd
 
 v 1.3.4
 - Fix panic while artifacts handling errors
@@ -93,6 +110,28 @@ v 1.2.0
 - Fix S3 caching issues
 - Fix logging messages on artifacts dowloading
 - Fix binary panic while using VirtualBox executor with no `vboxmanage` binary available
+
+v 1.1.4
+- Create /etc/gitlab-runner/certs
+- Exclude architectures from GOX, rather then including
+- Update mimio-go to a newest version
+- Regression: Implement CancelRequest to fix S3 caching support
+- Fix: Skip removal of machine that doesn't exist (autoscaling)
+
+v 1.1.3
+- Regression: On Linux use `sh -s /bin/bash user -c` instead of `sh user -c`. This fixes non-login for user.
+- Regression: Fix user mode warning
+- Fix: vet installation
+- Fix: nil casting issue on docker client creation
+- Fix: docker client download issue
+
+v 1.1.2
+- Regression: revert shell detection mechanism and limit it only to Docker
+
+v 1.1.1
+- Fix: use different shell detection mechanism
+- Regression: support for `gitlab-runner exec`
+- Regression: support for login/non-login shell for Bash
 
 v 1.1.0
 - Use Go 1.5
@@ -183,6 +222,11 @@ v 0.7.0
 - Automatically load TLS certificates stored in /etc/gitlab-runner/certs/<hostname>.crt
 - Allow to specify tls-ca-file during registration
 - Allow to disable tls verification during registration
+
+v 0.6.2
+- Fix PowerShell support
+- Make more descriptive pulling message
+- Add version check to Makefile
 
 v 0.6.1
 - Revert: Fix tags handling when using git fetch: fetch all tags and prune the old ones
