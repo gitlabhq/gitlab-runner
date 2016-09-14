@@ -18,6 +18,28 @@ curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-
 curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.rpm.sh | sudo bash
 ```
 
+---
+**APT pinning - Debian only**
+
+Since Debian Stretch, Debian maintainers added their native package
+with the same name as is used by our package. And by default the official
+repositories will have a priority.
+
+If you want to use our package you should manually set the source of
+the package. The best would be to add the pinning configuration file.
+Thanks to this every next update of the Runner's package - whether it will
+be done manually or automatically - will be done using the same source:
+
+```bash
+cat > /etc/apt/preferences.d/pin-gitlab-runner.pref <<EOF
+Explanation: Prefer GitLab provided packages over the Debian native ones
+Package: gitlab-ci-multi-runner
+Pin: origin packages.gitlab.com
+Pin-Priority: 1001
+EOF
+```
+---
+
 Install `gitlab-ci-multi-runner`:
 
 ```bash

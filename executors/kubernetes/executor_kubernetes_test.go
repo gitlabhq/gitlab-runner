@@ -340,6 +340,31 @@ func TestKubernetesMissingImage(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
+	assert.IsType(t, err, &common.BuildError{})
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestKubernetesMissingTag(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	build := &common.Build{
+		GetBuildResponse: common.FailedBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor:   "kubernetes",
+				Kubernetes: &common.KubernetesConfig{},
+			},
+		},
+	}
+	build.Options = map[string]interface{}{
+		"image": "docker:missing-tag",
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "not found")
 }
 
