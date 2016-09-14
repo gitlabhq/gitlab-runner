@@ -1,16 +1,10 @@
 NAME ?= gitlab-ci-multi-runner
 PACKAGE_NAME ?= $(NAME)
 PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
+VERSION := $(shell ci/version)
 REVISION := $(shell git rev-parse --short HEAD || echo unknown)
-LAST_TAG := $(shell git describe --tags --abbrev=0)
-COMMITS := $(shell echo `git log --oneline $(LAST_TAG)..HEAD | wc -l`)
-VERSION := $(shell (cat VERSION || echo dev) | sed -e 's/^v//g')
-BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
-ifneq ($(RELEASE),true)
-    VERSION := $(shell echo $(VERSION)~beta.$(COMMITS).g$(REVISION))
-endif
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
-ITTERATION := $(shell date +%s)
+BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd'
@@ -65,7 +59,6 @@ help:
 
 version: FORCE
 	@echo Current version: $(VERSION)
-	@echo Current iteration: $(ITTERATION)
 	@echo Current revision: $(REVISION)
 	@echo Current branch: $(BRANCH)
 	@echo Build platforms: $(BUILD_PLATFORMS)
