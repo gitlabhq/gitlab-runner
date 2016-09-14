@@ -1,4 +1,5 @@
 v 1.6.0 (unreleased)
+- Add `pre_clone_script` and `pre_build_script` options to runner configuration
 
 v 1.5.0
 - Update vendored toml !258
