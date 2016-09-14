@@ -41,7 +41,7 @@ func main() {
 	app.Version = common.AppVersion.ShortLine()
 	cli.VersionPrinter = common.AppVersion.Printer
 	app.Authors = []cli.Author{
-		{
+		cli.Author{
 			Name:  "Kamil Trzciński",
 			Email: "ayufan@ayufan.eu",
 		},
