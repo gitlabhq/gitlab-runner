@@ -235,6 +235,10 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 	w.Variable(gitDisableRecurseSubmodules)
 
+	if info.PreCloneScript != "" {
+		b.writeCommands(w, info.PreCloneScript)
+	}
+
 	switch info.Build.GetGitStrategy() {
 	case common.GitFetch:
 		b.writeFetchCmd(w, build, projectDir, gitDir)
@@ -263,11 +267,8 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	return nil
 }
 
-func (b *AbstractShell) writeBuildScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeExports(w, info)
-	b.writeCdBuildDir(w, info)
-
-	commands := info.Build.Commands
+// Write the given string of commands using the provided ShellWriter object.
+func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
 	commands = strings.TrimSpace(commands)
 	for _, command := range strings.Split(commands, "\n") {
 		command = strings.TrimSpace(command)
@@ -279,6 +280,18 @@ func (b *AbstractShell) writeBuildScript(w ShellWriter, info common.ShellScriptI
 		w.Line(command)
 		w.CheckForErrors()
 	}
+}
+
+func (b *AbstractShell) writeBuildScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+
+	if info.PreBuildScript != "" {
+		b.writeCommands(w, info.PreBuildScript)
+	}
+
+	commands := info.Build.Commands
+	b.writeCommands(w, commands)
 
 	return nil
 }

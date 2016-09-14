@@ -34,7 +34,10 @@ func (e *AbstractExecutor) updateShell() error {
 }
 
 func (e *AbstractExecutor) generateShellConfiguration() error {
-	shellConfiguration, err := common.GetShellConfiguration(*e.Shell())
+	info := e.Shell()
+	info.PreCloneScript = e.Config.PreCloneScript
+	info.PreBuildScript = e.Config.PreBuildScript
+	shellConfiguration, err := common.GetShellConfiguration(*info)
 	if err != nil {
 		return err
 	}
