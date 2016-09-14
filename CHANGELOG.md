@@ -1,6 +1,7 @@
 v 1.6.0 (unreleased)
 - Add `pre_clone_script` and `pre_build_script` options to runner configuration !106
 - Update YAML parser library !307
+- Add RC tags support in CI configuration !312
 
 v 1.5.3
 - Fix Caret-escape parentheses when not inside double quotes for Windows cmd
