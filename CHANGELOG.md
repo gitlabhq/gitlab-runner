@@ -1,5 +1,5 @@
 v 1.6.0 (unreleased)
-- Add `pre_clone_script` and `pre_build_script` options to runner configuration
+- Add `pre_clone_script` and `pre_build_script` options to runner configuration !106
 - Update YAML parser library !307
 
 v 1.5.3
@@ -11,7 +11,6 @@ v 1.5.2
 
 v 1.5.1
 - Fix file mode of gitlab-runner-service script !283
->>>>>>> master
 
 v 1.5.0
 - Update vendored toml !258
