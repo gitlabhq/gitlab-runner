@@ -45,14 +45,20 @@ func (b *AbstractShell) writeTLSCAInfo(w ShellWriter, build *common.Build, key s
 }
 
 func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
+	templateDir := w.MkTmpDir("git-template")
+	args := []string{"clone", build.RepoURL, projectDir, "--template", templateDir}
+
 	w.RmDir(projectDir)
+	w.Command("git", "config", "-f", path.Join(templateDir, "config"), "fetch.recurseSubmodules", "false")
+
 	if depth := build.GetGitDepth(); depth != "" {
 		w.Notice("Cloning repository for %s with git depth set to %s...", build.RefName, depth)
-		w.Command("git", "clone", build.RepoURL, projectDir, "--depth", depth, "--branch", build.RefName)
+		args = append(args, "--depth", depth, "--branch", build.RefName)
 	} else {
 		w.Notice("Cloning repository...")
-		w.Command("git", "clone", build.RepoURL, projectDir)
 	}
+
+	w.Command("git", args...)
 	w.Cd(projectDir)
 }
 
@@ -66,6 +72,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 		w.Notice("Fetching changes...")
 	}
 	w.Cd(projectDir)
+	w.Command("git", "config", "fetch.recurseSubmodules", "false")
 	w.Command("git", "clean", "-ffdx")
 	w.Command("git", "reset", "--hard")
 	w.Command("git", "remote", "set-url", "origin", build.RepoURL)
@@ -227,8 +234,6 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	if info.PreCloneScript != "" {
 		b.writeCommands(w, info.PreCloneScript)
 	}
-
-	w.Command("git", "config", "--global", "fetch.recurseSubmodules", "false")
 
 	switch info.Build.GetGitStrategy() {
 	case common.GitFetch:

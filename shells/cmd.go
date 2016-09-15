@@ -134,6 +134,13 @@ func (b *CmdWriter) Cd(path string) {
 	b.checkErrorLevel()
 }
 
+func (b *CmdWriter) MkTmpDir(name string) string {
+	path := helpers.ToBackslash(path.Join(b.TemporaryPath, name))
+	b.Line("md " + batchQuote(path) + " 2>NUL 1>NUL")
+
+	return path
+}
+
 func (b *CmdWriter) RmDir(path string) {
 	b.Line("rd /s /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
 }
