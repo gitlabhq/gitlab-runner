@@ -17,6 +17,7 @@ type ShellWriter interface {
 	Cd(path string)
 	RmDir(path string)
 	RmFile(path string)
+	RmFileWithinDirectory(path, filename string)
 	Absolute(path string) string
 
 	MkTmpDir(name string) string

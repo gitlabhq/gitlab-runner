@@ -126,6 +126,10 @@ func (b *BashWriter) RmFile(path string) {
 	b.Command("rm", "-f", path)
 }
 
+func (b *BashWriter) RmFileWithinDirectory(path, filename string) {
+	b.Command("find", path, "-type", "f", "-name", filename, "-delete")
+}
+
 func (b *BashWriter) Absolute(dir string) string {
 	if path.IsAbs(dir) {
 		return dir

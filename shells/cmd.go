@@ -149,6 +149,13 @@ func (b *CmdWriter) RmFile(path string) {
 	b.Line("rd /s /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
 }
 
+func (b *CmdWriter) RmFileWithinDirectory(path, filename string) {
+	b.Line("set currentDirectory=%CD%")
+	b.Line("cd " + batchQuote(helpers.ToBackslash(path)))
+	b.Line("del " + batchQuote(helpers.ToBackslash(filename)) + " /s /q /f 2>NUL 1>NUL")
+	b.Line("cd %currentDirectory%")
+}
+
 func (b *CmdWriter) Print(format string, arguments ...interface{}) {
 	coloredText := fmt.Sprintf(format, arguments...)
 	b.Line("echo " + batchEscapeVariable(coloredText))

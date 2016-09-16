@@ -158,6 +158,18 @@ func (b *PsWriter) RmFile(path string) {
 	b.Line("")
 }
 
+func (b *PsWriter) RmFileWithinDirectory(path, filename string) {
+	path = psQuote(helpers.ToBackslash(path))
+	filename = psQuote(helpers.ToBackslash(filename))
+
+	b.Line("dir -Path " + path + " -Recurse -Filter " + filename + " | ForEach-Object {")
+	b.Indent()
+	b.RmFile("$_.FullName")
+	b.Unindent()
+	b.Line("}")
+	b.Line("")
+}
+
 func (b *PsWriter) Print(format string, arguments ...interface{}) {
 	coloredText := fmt.Sprintf(format, arguments...)
 	b.Line("echo " + psQuoteVariable(coloredText))
