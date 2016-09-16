@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	shellHelper "gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/shell"
 	"io"
 	"path"
 	"runtime"
@@ -198,7 +199,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 
 func (b *BashShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
 	w := &BashWriter{
-		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
+		TemporaryPath: shellHelper.RewriteBashPath(info.Build.FullProjectDir() + ".tmp"),
 	}
 
 	if scriptType == common.ShellPrepareScript {
