@@ -73,6 +73,11 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	}
 	w.Cd(projectDir)
 	w.Command("git", "config", "fetch.recurseSubmodules", "false")
+
+	// Remove existing .git/index.lock file which can fail the fetch command
+	// The file can be left if previous build was terminated during git operation
+	w.RmFile(".git/index.lock")
+
 	w.Command("git", "clean", "-ffdx")
 	w.Command("git", "reset", "--hard")
 	w.Command("git", "remote", "set-url", "origin", build.RepoURL)
@@ -94,8 +99,6 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Notice("Checking out %s as %s...", build.Sha[0:8], build.RefName)
-	// We remove a git index file, this is required if `git checkout` is terminated
-	w.RmFile(".git/index.lock")
 	w.Command("git", "checkout", "-q", build.Sha)
 }
 
