@@ -100,10 +100,11 @@ bleeding:
   <<: *release
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
   environment: bleeding_edge
 
 stable:
   <<: *release
   only:
-  - tags@gitlab-org/gitlab-ci-multi-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
   environment: stable_release
