@@ -19,6 +19,8 @@ type ShellWriter interface {
 	RmFile(path string)
 	Absolute(path string) string
 
+	MkTmpDir(name string) string
+
 	Print(fmt string, arguments ...interface{})
 	Notice(fmt string, arguments ...interface{})
 	Warning(fmt string, arguments ...interface{})

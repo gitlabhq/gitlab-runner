@@ -111,6 +111,13 @@ func (b *BashWriter) Cd(path string) {
 	b.Command("cd", path)
 }
 
+func (b *BashWriter) MkTmpDir(name string) string {
+	dir := path.Join(b.TemporaryPath, name)
+	b.Command("mkdir", "-p", dir)
+
+	return dir
+}
+
 func (b *BashWriter) RmDir(path string) {
 	b.Command("rm", "-r", "-f", path)
 }

@@ -123,6 +123,13 @@ func (b *PsWriter) Cd(path string) {
 	b.checkErrorLevel()
 }
 
+func (b *PsWriter) MkTmpDir(name string) string {
+	path := helpers.ToBackslash(path.Join(b.TemporaryPath, name))
+	b.Line(fmt.Sprintf("md %s -Force | out-null", psQuote(path)))
+
+	return path
+}
+
 func (b *PsWriter) RmDir(path string) {
 	path = psQuote(helpers.ToBackslash(path))
 	b.Line("if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path " + path + " -PathType Container) ) {")
