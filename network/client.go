@@ -31,6 +31,7 @@ type client struct {
 	http.Client
 	url        *url.URL
 	caFile     string
+	caData     []byte
 	skipVerify bool
 	updateTime time.Time
 }
@@ -64,6 +65,7 @@ func (n *client) createTransport() {
 			pool := x509.NewCertPool()
 			if pool.AppendCertsFromPEM(data) {
 				tlsConfig.RootCAs = pool
+				n.caData = data
 			} else {
 				logrus.Errorln("Failed to parse PEM in", n.caFile)
 			}
@@ -86,44 +88,40 @@ func (n *client) createTransport() {
 	}
 }
 
-func (n *client) getCAChain(tls *tls.ConnectionState) (certificates string) {
-	if tls == nil {
-		return
+func (n *client) getCAChain(tls *tls.ConnectionState) string {
+	if len(n.caData) != 0 {
+		return string(n.caData)
 	}
 
-	list := make(map[string]*x509.Certificate)
+	if tls == nil {
+		logrus.Warn("No TLS connection state")
+		return ""
+	}
+
+	// Don't reorder certificates by putting them directly into the map
+	var certificates []*x509.Certificate
+	seenCertificates := make(map[string]bool, 0)
 
 	for _, verifiedChain := range tls.VerifiedChains {
-	nextInChain:
 		for _, certificate := range verifiedChain {
 			signature := hex.EncodeToString(certificate.Signature)
-			if list[signature] != nil {
+			if seenCertificates[signature] {
 				continue
 			}
 
-			// Always add signed by yourself
-			if certificate.CheckSignatureFrom(certificate) == nil {
-				list[signature] = certificate
-				continue
-			}
-
-			// We don't need to add certificates that are returned by server
-			for _, peerCertificate := range tls.PeerCertificates {
-				if peerCertificate == certificate {
-					continue nextInChain
-				}
-			}
-			list[signature] = certificate
+			seenCertificates[signature] = true
+			certificates = append(certificates, certificate)
 		}
 	}
 
-	for _, certificate := range list {
-		certificates += string(pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: certificate.Raw,
-		}))
+	out := bytes.NewBuffer(nil)
+	for _, certificate := range certificates {
+		if err := pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: certificate.Raw}); err != nil {
+			logrus.Warn("Failed to encode certificate from chain:", err)
+		}
 	}
-	return
+
+	return out.String()
 }
 
 func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
