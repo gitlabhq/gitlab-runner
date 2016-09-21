@@ -1,6 +1,7 @@
 v 1.6.0 (unreleased)
 - Add `pre_clone_script` and `pre_build_script` options to runner configuration !106
 - Update YAML parser library !307
+- Add parameter `volumes_from` for docker containers created by runners !236
 - Add RC tags support in CI configuration !312
 
 v 1.5.3
