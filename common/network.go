@@ -141,6 +141,7 @@ type BuildTracePatch interface {
 	Offset() int
 	Limit() int
 	SetNewOffset(newOffset int)
+	ValidateRange() bool
 }
 
 type Network interface {

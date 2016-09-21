@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -523,7 +523,7 @@ func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Re
 
 	config := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
-			URL:   server.URL,
+			URL: server.URL,
 		},
 	}
 
@@ -546,7 +546,6 @@ func TestUnknownPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-
 	tracePatch := getTracePatch(patchTraceString, 0)
 	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateNotFound, state)
@@ -559,7 +558,6 @@ func TestForbiddenPatchTrace(t *testing.T) {
 
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
-
 
 	tracePatch := getTracePatch(patchTraceString, 0)
 	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
@@ -591,7 +589,7 @@ func TestPatchTrace(t *testing.T) {
 
 func TestRangeMismatchPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		if (offset > 10) {
+		if offset > 10 {
 			w.Header().Set("Range", "0-10")
 			w.WriteHeader(416)
 		}
@@ -617,7 +615,7 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 
 func TestResendPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		if (offset > 10) {
+		if offset > 10 {
 			w.Header().Set("Range", "0-10")
 			w.WriteHeader(416)
 		}
@@ -643,7 +641,7 @@ func TestResendPatchTrace(t *testing.T) {
 // value bigger than trace's length. This test simulates such situation.
 func TestResendDoubledBuildPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		if (offset > 10) {
+		if offset > 10 {
 			w.Header().Set("Range", "0-100")
 			w.WriteHeader(416)
 		}
@@ -657,7 +655,5 @@ func TestResendDoubledBuildPatchTrace(t *testing.T) {
 	tracePatch := getTracePatch(patchTraceString, 11)
 	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateRangeMismatch, state)
-
-	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
-	assert.Equal(t, UpdateRangeMismatch, state)
+	assert.False(t, tracePatch.ValidateRange())
 }
