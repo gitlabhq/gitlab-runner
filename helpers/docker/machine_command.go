@@ -14,6 +14,58 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
+type logWriter struct {
+	log    func(args ...interface{})
+	reader *bufio.Reader
+}
+
+func (l *logWriter) write(line string) {
+	line = strings.TrimRight(line, "\n")
+
+	if len(line) <= 0 {
+		return
+	}
+
+	l.log(line)
+}
+
+func (l *logWriter) watch() {
+	for {
+		line, err := l.reader.ReadString('\n')
+		if err == nil || err == io.EOF {
+			l.write(line)
+			if err == io.EOF {
+				return
+			}
+		} else {
+			logrus.WithError(err).Errorln("Problem while reading command output")
+		}
+	}
+}
+
+func newLogWriter(logFunction func(args ...interface{}), reader io.Reader) {
+	writer := &logWriter{
+		log:    logFunction,
+		reader: bufio.NewReader(reader),
+	}
+
+	go writer.watch()
+}
+
+func stdoutLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
+	log := logrus.WithFields(fields)
+	reader, _ := cmd.StdoutPipe()
+
+	newLogWriter(log.Infoln, reader)
+}
+
+func stderrLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
+	log := logrus.WithFields(fields)
+	reader, _ := cmd.StderrPipe()
+
+	newLogWriter(log.Errorln, reader)
+}
+
 type machineCommand struct {
 	lsCmd   *exec.Cmd
 	lsLock  sync.Mutex
@@ -57,8 +109,15 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 
 	cmd := exec.Command("docker-machine", args...)
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	fields := logrus.Fields{
+		"operation": "create",
+		"driver":    driver,
+		"name":      name,
+	}
+	stdoutLogWriter(cmd, fields)
+	stderrLogWriter(cmd, fields)
+
 	logrus.Debugln("Executing", cmd.Path, cmd.Args)
 	return cmd.Run()
 }
@@ -66,16 +125,28 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 func (m *machineCommand) Provision(name string) error {
 	cmd := exec.Command("docker-machine", "provision", name)
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	fields := logrus.Fields{
+		"operation": "provision",
+		"name":      name,
+	}
+	stdoutLogWriter(cmd, fields)
+	stderrLogWriter(cmd, fields)
+
 	return cmd.Run()
 }
 
 func (m *machineCommand) Remove(name string) error {
 	cmd := exec.Command("docker-machine", "rm", "-y", name)
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	fields := logrus.Fields{
+		"operation": "remove",
+		"name":      name,
+	}
+	stdoutLogWriter(cmd, fields)
+	stderrLogWriter(cmd, fields)
+
 	return cmd.Run()
 }
 
@@ -147,7 +218,13 @@ func (m *machineCommand) Status(name string) (string, error) {
 func (m *machineCommand) Exist(name string) bool {
 	cmd := exec.Command("docker-machine", "inspect", name)
 	cmd.Env = os.Environ()
-	cmd.Stderr = os.Stderr
+
+	fields := logrus.Fields{
+		"operation": "exists",
+		"name":      name,
+	}
+	stderrLogWriter(cmd, fields)
+
 	return cmd.Run() == nil
 }
 
