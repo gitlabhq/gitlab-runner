@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
+	"strconv"
 	"testing"
 )
 
@@ -487,4 +490,174 @@ func TestArtifactsUpload(t *testing.T) {
 
 	state = c.UploadArtifacts(invalidToken, tempFile.Name())
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
+}
+
+var patchToken = "token"
+var patchTraceString = "trace trace trace"
+
+func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body string, offset, limit int)) (*httptest.Server, GitLabClient, RunnerConfig) {
+	patchHandler := func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" {
+			w.WriteHeader(406)
+			return
+		}
+
+		assert.Equal(t, patchToken, r.Header.Get("BUILD-TOKEN"))
+
+		body, err := ioutil.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		contentRange := r.Header.Get("Content-Range")
+		ranges := strings.Split(contentRange, "-")
+
+		offset, err := strconv.Atoi(ranges[0])
+		assert.NoError(t, err)
+
+		limit, err := strconv.Atoi(ranges[1])
+		assert.NoError(t, err)
+
+		handler(w, r, string(body), offset, limit)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(patchHandler))
+
+	config := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   server.URL,
+		},
+	}
+
+	return server, GitLabClient{}, config
+}
+
+func getTracePatch(traceString string, offset int) *tracePatch {
+	trace := bytes.Buffer{}
+	trace.WriteString(traceString)
+	tracePatch, _ := newTracePatch(trace, offset)
+
+	return tracePatch
+}
+
+func TestUnknownPatchTrace(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		w.WriteHeader(404)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+
+	tracePatch := getTracePatch(patchTraceString, 0)
+	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateNotFound, state)
+}
+
+func TestForbiddenPatchTrace(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		w.WriteHeader(403)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+
+	tracePatch := getTracePatch(patchTraceString, 0)
+	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateAbort, state)
+}
+
+func TestPatchTrace(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		assert.Equal(t, patchTraceString[offset:limit], body)
+
+		w.WriteHeader(202)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	tracePatch := getTracePatch(patchTraceString, 0)
+	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateSucceeded, state)
+
+	tracePatch = getTracePatch(patchTraceString, 3)
+	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateSucceeded, state)
+
+	tracePatch = getTracePatch(patchTraceString[:10], 3)
+	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateSucceeded, state)
+}
+
+func TestRangeMismatchPatchTrace(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		if (offset > 10) {
+			w.Header().Set("Range", "0-10")
+			w.WriteHeader(416)
+		}
+
+		w.WriteHeader(202)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	tracePatch := getTracePatch(patchTraceString, 11)
+	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateRangeMismatch, state)
+
+	tracePatch = getTracePatch(patchTraceString, 15)
+	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateRangeMismatch, state)
+
+	tracePatch = getTracePatch(patchTraceString, 5)
+	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateSucceeded, state)
+}
+
+func TestResendPatchTrace(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		if (offset > 10) {
+			w.Header().Set("Range", "0-10")
+			w.WriteHeader(416)
+		}
+
+		w.WriteHeader(202)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	tracePatch := getTracePatch(patchTraceString, 11)
+	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateRangeMismatch, state)
+
+	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateSucceeded, state)
+}
+
+// We've had a situation where the same build was triggered second time by GItLab. In GitLab the build trace
+// was 17041 bytes long while the repeated build trace was only 66 bytes long. We've had a `RangeMismatch`
+// response, so the offset was updated (to 17041) and `client.PatchTrace` was repeated, at it was planned.
+// Unfortunately the `tracePatch` struct was  not resistant to a situation when the offset is set to a
+// value bigger than trace's length. This test simulates such situation.
+func TestResendDoubledBuildPatchTrace(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		if (offset > 10) {
+			w.Header().Set("Range", "0-100")
+			w.WriteHeader(416)
+		}
+
+		w.WriteHeader(202)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	tracePatch := getTracePatch(patchTraceString, 11)
+	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateRangeMismatch, state)
+
+	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateRangeMismatch, state)
 }

@@ -35,6 +35,10 @@ func (tp *tracePatch) Limit() int {
 }
 
 func (tp *tracePatch) SetNewOffset(newOffset int) {
+	if (newOffset > tp.limit) {
+		newOffset = tp.limit
+	}
+
 	tp.offset = newOffset
 }
 
@@ -228,7 +232,7 @@ func (c *clientBuildTrace) incrementalUpdate() common.UpdateState {
 		return update
 	}
 
-	if update == common.UpdateRangeMissmatch {
+	if update == common.UpdateRangeMismatch {
 		update = c.resendPatch(c.buildCredentials.ID, c.config, c.buildCredentials, tracePatch)
 	}
 
@@ -244,7 +248,7 @@ func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, build
 	config.Log().Warningln(id, "Resending trace patch due to range mismatch")
 
 	update = c.client.PatchTrace(config, buildCredentials, tracePatch)
-	if update == common.UpdateRangeMissmatch {
+	if update == common.UpdateRangeMismatch {
 		config.Log().Errorln(id, "Appending trace to coordinator...", "failed due to range mismatch")
 		update = common.UpdateFailed
 	}

@@ -3,6 +3,7 @@ v 1.6.0 (unreleased)
 - Update YAML parser library !307
 - Add parameter `volumes_from` for docker containers created by runners !236
 - Add RC tags support in CI configuration !312
+- Fix range mismatch handling error while patch tracing !319
 
 v 1.5.3
 - Fix Caret-escape parentheses when not inside double quotes for Windows cmd
