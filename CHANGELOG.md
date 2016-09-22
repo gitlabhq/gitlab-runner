@@ -1,9 +1,30 @@
-v 1.6.0 (unreleased)
-- Add `pre_clone_script` and `pre_build_script` options to runner configuration !106
-- Update YAML parser library !307
-- Add parameter `volumes_from` for docker containers created by runners !236
-- Add RC tags support in CI configuration !312
+v 1.6.0
+- Remove an unused method from the Docker executor !280
+- Add note about certificate concatenation !278
+- Restore 755 mode for gitlab-runner-service script !283
+- Remove git-lfs from docker helper images !288
+- Improve Kubernetes support !277
+- docs: update troubleshooting section in development. !286
+- Windows installation, added a precision on the install command (issue related #1265) !223
+- Autodetect "/ci" in URL !289
+- Defer removing failed containers until Cleanup() !281
+- fix typo in tls-self-signed.md !294
+- Improve CI tests !276
+- Generate a BuildError when Docker/Kubernetes image is missing !295
+- cmd.exe: Caret-escape parentheses when not inside double quotes !284
+- Fixed some spelling/grammar mistakes. !291
+- Update Go instructions in README !175
+- Add APT pinning configuration for debian in installation docs !303
+- Remove yaml v1 !307
+- Add options to runner configuration to specify commands executed before code clone and build !106
+- Add RC tag support and fix version discovering !312
+- Pass all configured CA certificates to builds !299
+- Use git-init templates (clone) and git config without --global (fetch) to disable recurseSubmodules !314
+- Improve docker machine logging !234
+- Add posibility to specify a list of volumes to inherit from another container !236
 - Fix range mismatch handling error while patch tracing !319
+- Add docker+machine and kubernetes executors to "I'm not sure" part of executors README.md !320
+- Remove ./git/index.lock before fetching !316
 
 v 1.5.3
 - Fix Caret-escape parentheses when not inside double quotes for Windows cmd
