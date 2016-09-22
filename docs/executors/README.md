@@ -49,6 +49,16 @@ management system (`init`), exposes the SSH daemon, and contains already
 installed services. These kind of images are fat images, and are not generally
 advised to be used by the Docker community.
 
+The **Docker Machine** and **Docker Machine SSH** are also a special versions
+of the **Docker** executor with support for auto-scaling. It works like the
+normal **Docker** executor but with build hosts created on demand by
+_Docker Machine_.
+
+The **Kubernetes**  executor allows you to use an existing Kubernetes cluster
+for your builds. The executor will call the Kubernetes cluster API
+and create a new Pod (with build container and services containers) for
+each GitLab CI job.
+
 We also offer two full system virtualization options: **VirtualBox** and
 **Parallels**. This type of executor allows you to use an already created
 virtual machine, which will be cloned and used to run your build. It can prove
