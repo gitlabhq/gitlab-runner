@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"io/ioutil"
 	"os"
 	"time"
 )
@@ -129,4 +130,40 @@ func TestShellBuildCancel(t *testing.T) {
 	err := build.Run(&common.Config{}, trace)
 	assert.EqualError(t, err, "canceled")
 	assert.IsType(t, err, &common.BuildError{})
+}
+
+func runBuildWithIndexLockForShell(t *testing.T, shell string) {
+	if helpers.SkipIntegrationTests(t, shell) {
+		return
+	}
+
+	build := &common.Build{
+		GetBuildResponse: common.SuccessfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "shell",
+				Shell:    shell,
+			},
+		},
+	}
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+
+	build.GetBuildResponse.AllowGitFetch = true
+	ioutil.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
+func TestShellBuildWithIndexLockBash(t *testing.T) {
+	runBuildWithIndexLockForShell(t, "bash")
+}
+
+func TestShellBuildWithIndexLockCmd(t *testing.T) {
+	runBuildWithIndexLockForShell(t, "cmd")
+}
+
+func TestShellBuildWithIndexLockPowershell(t *testing.T) {
+	runBuildWithIndexLockForShell(t, "powershell")
 }
