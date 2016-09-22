@@ -39,6 +39,7 @@ func (l *logWriter) watch() {
 			}
 		} else {
 			logrus.WithError(err).Errorln("Problem while reading command output")
+			return
 		}
 	}
 }
