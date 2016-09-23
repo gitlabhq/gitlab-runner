@@ -108,3 +108,17 @@ stable:
   only:
   - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
   environment: stable_release
+
+mirror:
+  stage: release
+  script:
+  - mkdir -p ~/.ssh
+  - echo "$GITHUB_SSH_KEY" > ~/.ssh/id_rsa
+  - ssh-keyscan -H github.com > ~/.ssh/known_hosts
+  - chmod -R 0600 ~/.ssh/
+  - git remote add github git@github.com:ayufan/gitlab-ci-multi-runner.git
+  - git fetch github
+  - git push github "$CI_BUILD_REF_NAME" -f
+  only:
+  - master@gitlab-org/gitlab-ci-multi-runner
+  - tags@gitlab-org/gitlab-ci-multi-runner
