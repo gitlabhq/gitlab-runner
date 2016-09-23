@@ -31,7 +31,7 @@ The Kubernetes executor divides the build into multiple steps:
 1. **Build**: User build.
 1. **Post-build**: Create cache, upload artifacts to GitLab.
 
-All stages are run on user provided image. 
+All stages are run on user provided image.
 This image needs to have `git` installed and optionally
 GitLab Runner binary installed for supporting artifacts and caching.
 
@@ -66,6 +66,7 @@ The following keywords help to define the behaviour of the Runner within kuberne
 - `service_cpus`: The CPU allocation given to build service containers
 - `service_memory`: The amount of memory allocated to build service containers
 - `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
+- `node_selector`: A `table` of key=value pairs matching labels on the kubernetes nodes
 
 ## Define keywords in the config toml
 
@@ -92,6 +93,8 @@ concurrent = 4
     memory = "250m"
     service_cpus = "1000m"
     service_memory = "450m"
+    [runners.kubernetes.node_selector]
+      gitlab = "true"
 ```
 
 ## Using Docker in your builds
