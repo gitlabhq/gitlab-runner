@@ -116,10 +116,49 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) buildContainer(name, image string, limits api.ResourceList, command ...string) api.Container {
+func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
 	path := strings.Split(s.Build.BuildDir, "/")
 	path = path[:len(path)-1]
 
+	mounts = append(mounts, api.VolumeMount{
+		Name:      "repo",
+		MountPath: strings.Join(path, "/"),
+	})
+
+	for _, mount := range s.Config.Kubernetes.VolumeMounts {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			ReadOnly:  mount.Readonly,
+		})
+	}
+
+	return
+}
+
+func (s *executor) getVolumes() (volumes []api.Volume) {
+	volumes = append(volumes, api.Volume{
+		Name: "repo",
+		VolumeSource: api.VolumeSource{
+			EmptyDir: &api.EmptyDirVolumeSource{},
+		},
+	})
+
+	for _, volume := range s.Config.Kubernetes.HostPathVolumes {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				HostPath: &api.HostPathVolumeSource{
+					Path: volume.Path,
+				},
+			},
+		})
+	}
+
+	return
+}
+
+func (s *executor) buildContainer(name, image string, limits api.ResourceList, command ...string) api.Container {
 	privileged := false
 	if s.Config.Kubernetes != nil {
 		privileged = s.Config.Kubernetes.Privileged
@@ -133,12 +172,7 @@ func (s *executor) buildContainer(name, image string, limits api.ResourceList, c
 		Resources: api.ResourceRequirements{
 			Limits: limits,
 		},
-		VolumeMounts: []api.VolumeMount{
-			api.VolumeMount{
-				Name:      "repo",
-				MountPath: strings.Join(path, "/"),
-			},
-		},
+		VolumeMounts: s.getVolumeMounts(),
 		SecurityContext: &api.SecurityContext{
 			Privileged: &privileged,
 		},
@@ -160,14 +194,7 @@ func (s *executor) setupBuildPod() error {
 			Namespace:    s.Config.Kubernetes.Namespace,
 		},
 		Spec: api.PodSpec{
-			Volumes: []api.Volume{
-				api.Volume{
-					Name: "repo",
-					VolumeSource: api.VolumeSource{
-						EmptyDir: &api.EmptyDirVolumeSource{},
-					},
-				},
-			},
+			Volumes:       s.getVolumes(),
 			RestartPolicy: api.RestartPolicyNever,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),

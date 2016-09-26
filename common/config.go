@@ -96,6 +96,17 @@ type VirtualBoxConfig struct {
 	DisableSnapshots bool   `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
 }
 
+type KubernetesVolumeMount struct {
+	Name      string `toml:"name" json:"name" long:"name" description:"The name of the volume mount, must have a matching source volume"`
+	MountPath string `toml:"mount_path" json:"mount_path" long:"mount_path" description:"The path in the container to mount the volume"`
+	Readonly  bool   `toml:"readonly" json:"readonly" long:"readonly" description:"Mount the volume as readonly"`
+}
+
+type KubernetesHostPathVolumeSource struct {
+	Name string `toml:"name" json:"name" long:"name" description:"The name of the volume"`
+	Path string `toml:"path" json:"path" long:"path" description:"The path of the directory on the host"`
+}
+
 type KubernetesConfig struct {
 	Host          string `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
 	CertFile      string `toml:"cert_file,omitempty" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
@@ -108,6 +119,9 @@ type KubernetesConfig struct {
 	Memory        string `toml:"memory,omitempty" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"The amount of memory allocated to build containers"`
 	ServiceCPUs   string `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
 	ServiceMemory string `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
+
+	VolumeMounts    []*KubernetesVolumeMount          `toml:"mounts" json:"mounts" description:"Defines where to mount volumes within the container"`
+	HostPathVolumes []*KubernetesHostPathVolumeSource `toml:"host_path" json:"host_path" description:"Defines pre-existing files or directories to expose to a container"`
 }
 
 type RunnerCredentials struct {
