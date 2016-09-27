@@ -230,26 +230,32 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	build := info.Build
 	projectDir := build.FullProjectDir()
 	gitDir := path.Join(build.FullProjectDir(), ".git")
+	strategy := info.Build.GetGitStrategy()
 
 	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
-	if info.PreCloneScript != "" {
+	if info.PreCloneScript != "" && strategy != common.GitNone {
 		b.writeCommands(w, info.PreCloneScript)
 	}
 
-	switch info.Build.GetGitStrategy() {
+	switch strategy {
 	case common.GitFetch:
 		b.writeFetchCmd(w, build, projectDir, gitDir)
+		b.writeCheckoutCmd(w, build)
 
 	case common.GitClone:
 		b.writeCloneCmd(w, build, projectDir)
+		b.writeCheckoutCmd(w, build)
+
+	case common.GitNone:
+		w.Notice("Skipping Git repository setup")
+		w.MkDir(projectDir)
+		w.Cd(projectDir)
 
 	default:
 		return errors.New("unknown GIT_STRATEGY")
 	}
-
-	b.writeCheckoutCmd(w, build)
 
 	// Parse options
 	var options shellOptions

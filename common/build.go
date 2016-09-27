@@ -21,6 +21,7 @@ type GitStrategy int
 const (
 	GitClone GitStrategy = iota
 	GitFetch
+	GitNone
 )
 
 const (
@@ -335,6 +336,9 @@ func (b *Build) GetGitStrategy() GitStrategy {
 
 	case "fetch":
 		return GitFetch
+
+	case "none":
+		return GitNone
 
 	default:
 		if b.AllowGitFetch {
