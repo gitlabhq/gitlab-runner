@@ -5,6 +5,13 @@ VERSION := $(shell ci/version)
 REVISION := $(shell git rev-parse --short HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
 BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
+
+LATEST_STABLE_TAG := $(shell git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" --sort=-v:refname | awk '!/rc/' | head -n 1)
+export IS_LATEST :=
+ifeq ($(shell git describe --exact-match --match $(LATEST_STABLE_TAG) >/dev/null 2>&1; echo $$?), 0)
+export IS_LATEST := true
+endif
+
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd'
@@ -28,7 +35,6 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PA
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH)
 GO_FILES ?= $(shell find . -name '*.go')
-export GO15VENDOREXPERIMENT := 1
 export CGO_ENABLED := 0
 
 all: deps verify build
@@ -64,7 +70,7 @@ version: FORCE
 	@echo Build platforms: $(BUILD_PLATFORMS)
 	@echo DEB platforms: $(DEB_PLATFORMS)
 	@echo RPM platforms: $(RPM_PLATFORMS)
-	bash -c 'echo TEST: ${GO15VENDOREXPERIMENT}'
+	@echo IS_LATEST: $(IS_LATEST)
 
 verify: fmt vet lint complexity test
 
@@ -338,6 +344,12 @@ s3-upload:
 		--working-dir out \
 		--target-paths "$(S3_UPLOAD_PATH)/" \
 		$(shell cd out/; find . -type f)
+
+release:
+	@ci/release "$$CI_BUILD_NAME"
+
+release_docker_images:
+	@ci/release_docker_images
 
 check-tags-in-changelog:
 	# Looking for tags in CHANGELOG
