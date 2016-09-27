@@ -1,169 +1,150 @@
 package shell_test
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"bytes"
 	"io/ioutil"
 	"os"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
-func TestBashShellSuccessRun(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "bash") {
-		return
-	}
+func onEachShell(t *testing.T, f func(t *testing.T, shell string)) {
+	t.Run("bash", func(t *testing.T) {
+		if helpers.SkipIntegrationTests(t, "bash") {
+			t.Skip()
+		}
 
-	build := &common.Build{
-		GetBuildResponse: common.SuccessfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "shell",
-				Shell:    "bash",
-			},
-		},
-	}
+		f(t, "bash")
+	})
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
+	t.Run("cmd.exe", func(t *testing.T) {
+		if helpers.SkipIntegrationTests(t, "cmd.exe") {
+			t.Skip()
+		}
+
+		f(t, "cmd")
+	})
+
+	t.Run("powershell.exe", func(t *testing.T) {
+		if helpers.SkipIntegrationTests(t, "powershell.exe") {
+			t.Skip()
+		}
+
+		f(t, "powershell")
+	})
 }
 
-func TestWindowsBatchSuccessRun(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "cmd.exe") {
-		return
-	}
+func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) error {
+	timeoutTimer := time.AfterFunc(10*time.Second, func() {
+		t.Log("Timed out")
+		t.FailNow()
+	})
+	defer timeoutTimer.Stop()
 
-	build := &common.Build{
-		GetBuildResponse: common.SuccessfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "shell",
-				Shell:    "cmd",
-			},
-		},
-	}
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
+	return build.Run(&common.Config{}, trace)
 }
 
-func TestPowerShellSuccessRun(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "powershell.exe") {
-		return
-	}
-
-	build := &common.Build{
-		GetBuildResponse: common.SuccessfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "shell",
-				Shell:    "powershell",
-			},
-		},
-	}
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
+func runBuild(t *testing.T, build *common.Build) error {
+	return runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
 }
 
-func TestShellBuildAbort(t *testing.T) {
-	if helpers.SkipIntegrationTests(t) {
-		return
+func runBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {
+	buf := bytes.NewBuffer(nil)
+	err := runBuildWithTrace(t, build, &common.Trace{Writer: buf})
+	output := buf.String()
+	t.Log(output)
+
+	return output, err
+}
+
+func newBuild(t *testing.T, getBuildResponse common.GetBuildResponse, shell string) (*common.Build, func()) {
+	dir, err := ioutil.TempDir("", "gitlab-runner-shell-executor-test")
+	if err != nil {
+		t.Fatal(err)
 	}
 
+	t.Log("Build directory:", dir)
+
 	build := &common.Build{
-		GetBuildResponse: common.LongRunningBuild,
+		GetBuildResponse: getBuildResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor: "shell",
+				BuildsDir: dir,
+				Executor:  "shell",
+				Shell:     shell,
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
 
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		build.SystemInterrupt <- os.Interrupt
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Second*3, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "aborted: interrupt")
-}
-
-func TestShellBuildCancel(t *testing.T) {
-	if helpers.SkipIntegrationTests(t) {
-		return
+	cleanup := func() {
+		os.RemoveAll(dir)
 	}
 
-	build := &common.Build{
-		GetBuildResponse: common.LongRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "shell",
-			},
-		},
-	}
+	return build, cleanup
+}
 
-	trace := &common.Trace{Writer: os.Stdout, Abort: make(chan interface{}, 1)}
+func TestBuildSuccess(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		defer cleanup()
 
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		trace.Abort <- true
+		err := runBuild(t, build)
+		assert.NoError(t, err)
 	})
-	defer abortTimer.Stop()
+}
 
-	timeoutTimer := time.AfterFunc(time.Second*3, func() {
-		t.Log("Timedout")
-		t.FailNow()
+func TestBuildAbort(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.LongRunningBuild, shell)
+		defer cleanup()
+
+		abortTimer := time.AfterFunc(time.Second, func() {
+			t.Log("Interrupt")
+			build.SystemInterrupt <- os.Interrupt
+		})
+		defer abortTimer.Stop()
+
+		err := runBuild(t, build)
+		assert.EqualError(t, err, "aborted: interrupt")
 	})
-	defer timeoutTimer.Stop()
-
-	err := build.Run(&common.Config{}, trace)
-	assert.EqualError(t, err, "canceled")
-	assert.IsType(t, err, &common.BuildError{})
 }
 
-func runBuildWithIndexLockForShell(t *testing.T, shell string) {
-	if helpers.SkipIntegrationTests(t, shell) {
-		return
-	}
+func TestBuildCancel(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.LongRunningBuild, shell)
+		defer cleanup()
 
-	build := &common.Build{
-		GetBuildResponse: common.SuccessfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "shell",
-				Shell:    shell,
-			},
-		},
-	}
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
+		cancelChan := make(chan interface{}, 1)
+		cancelTimer := time.AfterFunc(time.Second, func() {
+			t.Log("Cancel")
+			cancelChan <- true
+		})
+		defer cancelTimer.Stop()
 
-	build.GetBuildResponse.AllowGitFetch = true
-	ioutil.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
+		err := runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout, Abort: cancelChan})
+		assert.EqualError(t, err, "canceled")
+		assert.IsType(t, err, &common.BuildError{})
+	})
 }
 
-func TestShellBuildWithIndexLockBash(t *testing.T) {
-	runBuildWithIndexLockForShell(t, "bash")
-}
+func TestBuildWithIndexLock(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		defer cleanup()
 
-func TestShellBuildWithIndexLockCmd(t *testing.T) {
-	runBuildWithIndexLockForShell(t, "cmd")
-}
+		err := runBuild(t, build)
+		assert.NoError(t, err)
 
-func TestShellBuildWithIndexLockPowershell(t *testing.T) {
-	runBuildWithIndexLockForShell(t, "powershell")
+		build.GetBuildResponse.AllowGitFetch = true
+		ioutil.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+	})
 }
