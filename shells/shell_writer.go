@@ -15,6 +15,7 @@ type ShellWriter interface {
 	EndIf()
 
 	Cd(path string)
+	MkDir(path string)
 	RmDir(path string)
 	RmFile(path string)
 	Absolute(path string) string
