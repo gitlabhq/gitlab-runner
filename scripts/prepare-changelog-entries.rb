@@ -14,9 +14,7 @@ end
 
 starting_point = ENV['STARTING_POINT']
 if !starting_point || starting_point.empty?
-  refs_search_cmd = 'git log --pretty="%D" --first-parent | grep "tag:"'
-  refs = `#{refs_search_cmd}`.split("\n").map{|r| r.split(',').map(&:strip).reject{|r| !r.match(/\Atag: v\d+\.\d+\.\d+\Z/)}}.reject(&:empty?)
-  starting_point = refs.first.first.match(/v\d+\.\d+\.\d+/)[0]
+  starting_point = `git describe --tags --abbrev=0 --match "v[0-9].[0-9].[0-9]"`.strip
 
   STDERR.puts "STARTING_POINT variable not set, using autodiscovered: #{starting_point}"
 end
