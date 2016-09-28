@@ -5,6 +5,7 @@ package helpers
 import (
 	"os/exec"
 	"syscall"
+	"time"
 )
 
 func SetProcessGroup(cmd *exec.Cmd) {
@@ -19,10 +20,21 @@ func KillProcessGroup(cmd *exec.Cmd) {
 		return
 	}
 
+	waitCh := make(chan error)
+	go func() {
+		waitCh <- cmd.Wait()
+	}()
+
 	process := cmd.Process
 	if process != nil {
 		if process.Pid > 0 {
-			syscall.Kill(-process.Pid, syscall.SIGKILL)
+			syscall.Kill(-process.Pid, syscall.SIGTERM)
+			select {
+			case <-waitCh:
+				return
+			case <-time.After(time.Second * 15):
+				syscall.Kill(-process.Pid, syscall.SIGKILL)
+			}
 		} else {
 			// doing normal kill
 			process.Kill()
