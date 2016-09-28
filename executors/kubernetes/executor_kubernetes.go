@@ -34,7 +34,6 @@ type executor struct {
 	executors.AbstractExecutor
 
 	kubeClient *client.Client
-	prepod     *api.Pod
 	pod        *api.Pod
 	options    *kubernetesOptions
 
