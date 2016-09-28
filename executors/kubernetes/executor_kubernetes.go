@@ -85,6 +85,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
+	var containerName string
 	s.Debugln("Starting Kubernetes command...")
 
 	if s.pod == nil {
@@ -95,7 +96,11 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		}
 	}
 
-	containerName := "build"
+	if cmd.Predefined {
+		containerName = "predefined"
+	} else {
+		containerName = "build"
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	select {
@@ -160,6 +165,8 @@ func (s *executor) setupBuildPod() error {
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
+
+	//FIXME: Where to get the image for predefined container?
 	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
@@ -178,10 +185,10 @@ func (s *executor) setupBuildPod() error {
 			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("predefined", "jaymedh/gitlab-ci-runner-prebuild-x86_64:latest", s.buildLimits, []string{"gitlab-runner-build"}...),
 			}, services...),
 		},
 	})
-
 	if err != nil {
 		return err
 	}
