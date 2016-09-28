@@ -148,3 +148,43 @@ func TestBuildWithIndexLock(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestBuildWithGitStrategyFetch(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		defer cleanup()
+
+		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Cloning repository")
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Fetching changes")
+
+		assert.Contains(t, out, "pre-clone-script")
+	})
+}
+
+func TestBuildWithGitStrategyClone(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		defer cleanup()
+
+		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_STRATEGY", Value: "clone"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Cloning repository")
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Cloning repository")
+
+		assert.Contains(t, out, "pre-clone-script")
+	})
+}
