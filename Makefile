@@ -164,7 +164,7 @@ build_current: executors/docker/bindata.go build_simple
 
 fmt:
 	# Checking project code formatting...
-	@go fmt $(OUR_PACKAGES) | awk '{ print "Please run go fmt"; exit 1 }'
+	@go fmt $(OUR_PACKAGES) | awk '{if (NF > 0) {if (NR == 1) print "Please run go fmt for:"; print "- "$$1}} END {if (NF > 0) {if (NR > 0) exit 1}}'
 
 vet:
 	# Checking for suspicious constructs...
