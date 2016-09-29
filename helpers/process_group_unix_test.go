@@ -108,7 +108,7 @@ func testKillProcessGroup(t *testing.T, script string) {
 }
 
 var simpleScript = "sleep 300"
-var nonTermableScript = `
+var nonTerminatableScript = `
 trap "sleep 350" SIGTERM
 sleep 300
 `
@@ -118,5 +118,5 @@ func TestKillProcessGroupForSimpleScript(t *testing.T) {
 }
 
 func TestKillProcessGroupForNonTermableScript(t *testing.T) {
-	testKillProcessGroup(t, nonTermableScript)
+	testKillProcessGroup(t, nonTerminatableScript)
 }

@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const ProcessKillWaitTime = 15 * time.Second
+
 func SetProcessGroup(cmd *exec.Cmd) {
 	// Create process group
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -23,6 +25,7 @@ func KillProcessGroup(cmd *exec.Cmd) {
 	waitCh := make(chan error)
 	go func() {
 		waitCh <- cmd.Wait()
+		close(waitCh)
 	}()
 
 	process := cmd.Process
@@ -32,7 +35,7 @@ func KillProcessGroup(cmd *exec.Cmd) {
 			select {
 			case <-waitCh:
 				return
-			case <-time.After(time.Second * 15):
+			case <-time.After(ProcessKillWaitTime):
 				syscall.Kill(-process.Pid, syscall.SIGKILL)
 			}
 		} else {
