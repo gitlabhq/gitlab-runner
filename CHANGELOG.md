@@ -1,3 +1,7 @@
+v 1.6.1
+- Add changelog entries generation script !322
+- Add docker_images release step to CI pipeline !333
+
 v 1.6.0
 - Remove an unused method from the Docker executor !280
 - Add note about certificate concatenation !278
