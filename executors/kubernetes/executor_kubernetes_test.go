@@ -430,7 +430,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
-	assert.Contains(t, err.Error(), "not found")
+	assert.Contains(t, err.Error(), "Back-off pulling image")
 }
 
 func TestKubernetesMissingTag(t *testing.T) {
@@ -456,7 +456,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
-	assert.Contains(t, err.Error(), "not found")
+	assert.Contains(t, err.Error(), "Back-off pulling image")
 }
 
 func TestKubernetesBuildAbort(t *testing.T) {
