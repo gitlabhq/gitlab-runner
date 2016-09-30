@@ -81,10 +81,12 @@ packages:
     expire_in: 7d
 
 docker_images:
+  <<: *docker
   stage: release
   image: docker:1.12
-  script:
+  before_script:
   - source ci/touch_make_dependencies
+  script:
   - make release_docker_images
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
