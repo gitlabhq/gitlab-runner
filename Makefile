@@ -1,7 +1,7 @@
 NAME ?= gitlab-ci-multi-runner
 PACKAGE_NAME ?= $(NAME)
 PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
-VERSION := $(shell ci/version)
+VERSION := $(shell ./ci/version)
 REVISION := $(shell git rev-parse --short HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
 BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
@@ -346,10 +346,10 @@ s3-upload:
 		$(shell cd out/; find . -type f)
 
 release:
-	@ci/release "$$CI_BUILD_NAME"
+	@./ci/release "$$CI_BUILD_NAME"
 
 release_docker_images:
-	@ci/release_docker_images
+	@./ci/release_docker_images
 
 check-tags-in-changelog:
 	# Looking for tags in CHANGELOG

@@ -83,9 +83,10 @@ packages:
 docker_images:
   <<: *docker
   stage: release
-  image: docker:1.12
+  image: docker:1.12-git
   before_script:
   - source ci/touch_make_dependencies
+  - apk -U add make bash
   script:
   - make release_docker_images
   only:
