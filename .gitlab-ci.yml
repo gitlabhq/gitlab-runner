@@ -80,11 +80,24 @@ packages:
     - out/rpm/
     expire_in: 7d
 
+docker_images:
+  stage: release
+  image: docker:1.12
+  script:
+  - source ci/touch_make_dependencies
+  - make release_docker_images
+  only:
+  - master@gitlab-org/gitlab-ci-multi-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
+  tags:
+  - release
+
 .release: &release
   stage: release
   script:
   - source ci/touch_make_dependencies
-  - source ci/release "$CI_BUILD_NAME"
+  - make release
   tags:
   - release
 

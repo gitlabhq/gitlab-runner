@@ -9,18 +9,20 @@ RUN apt-get update -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN echo "deb https://packages.gitlab.com/runner/gitlab-ci-multi-runner/ubuntu/ `lsb_release -cs` main" > /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list && \
-    wget -q -O - https://packages.gitlab.com/gpg.key | apt-key add - && \
-    apt-get update -y && \
-    apt-get install -y gitlab-ci-multi-runner && \
+COPY gitlab-ci-multi-runner_amd64.deb /tmp/
+RUN dpkg -i /tmp/gitlab-ci-multi-runner_amd64.deb; \
+    apt-get update &&  \
+    apt-get -f install -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm /tmp/gitlab-ci-multi-runner_amd64.deb && \
+    gitlab-runner --version && \
     wget -q https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-Linux-x86_64 -O /usr/bin/docker-machine && \
     chmod +x /usr/bin/docker-machine && \
-    apt-get clean && \
     mkdir -p /etc/gitlab-runner/certs && \
-    chmod -R 700 /etc/gitlab-runner && \
-    rm -rf /var/lib/apt/lists/*
+    chmod -R 700 /etc/gitlab-runner
 
-ADD entrypoint /
+COPY entrypoint /
 RUN chmod +x /entrypoint
 
 VOLUME ["/etc/gitlab-runner", "/home/gitlab-runner"]

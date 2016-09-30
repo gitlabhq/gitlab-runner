@@ -1,0 +1,98 @@
+#!/bin/bash
+
+set -eo pipefail
+
+IS_LATEST=${IS_LATEST:-}
+ref_tag=${CI_BUILD_REF_NAME:-master}
+
+if [[ "${ref_tag}" = "master" ]]; then
+    ref_tag=bleeding
+fi
+
+build() {
+    echo -e "\033[1mBuilding image: \033[32m${1}\033[0m"
+    docker build -t "${1}" "${2}"
+}
+
+tag() {
+    echo -e "\033[1mTagging image: \033[32m${2}\033[0m"
+    docker tag "${1}" "${2}"
+}
+
+tag_latest() {
+    if [[ -z "${IS_LATEST}" ]]; then
+        return
+    fi
+
+    tag "${@}"
+}
+
+push() {
+    docker push "${1}"
+}
+
+push_latest() {
+    if [[ -z "${IS_LATEST}" ]]; then
+        return
+    fi
+
+    push "${@}"
+}
+
+login() {
+    docker login --username "${1}" --password "${2}" "${3}"
+}
+
+logout() {
+    docker logout "${1}"
+}
+
+cp out/deb/gitlab-ci-multi-runner_amd64.deb dockerfiles/ubuntu/
+cp out/binaries/gitlab-ci-multi-runner-linux-amd64 dockerfiles/alpine
+
+build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu
+build "gitlab/gitlab-runner:alpine-${ref_tag}" dockerfiles/alpine
+
+tag "gitlab/gitlab-runner:ubuntu-${ref_tag}" "gitlab/gitlab-runner:${ref_tag}"
+
+tag_latest "gitlab/gitlab-runner:ubuntu-${ref_tag}" gitlab/gitlab-runner:ubuntu
+tag_latest "gitlab/gitlab-runner:ubuntu-${ref_tag}" gitlab/gitlab-runner:latest
+tag_latest "gitlab/gitlab-runner:alpine-${ref_tag}" gitlab/gitlab-runner:alpine
+
+if [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
+    tag "gitlab/gitlab-runner:ubuntu-${ref_tag}" "${CI_REGISTRY_IMAGE}:ubuntu-${ref_tag}"
+    tag "gitlab/gitlab-runner:alpine-${ref_tag}" "${CI_REGISTRY_IMAGE}:alpine-${ref_tag}"
+    tag "gitlab/gitlab-runner:${ref_tag}" "${CI_REGISTRY_IMAGE}:${ref_tag}"
+
+    tag_latest gitlab/gitlab-runner:ubuntu "${CI_REGISTRY_IMAGE}:ubuntu"
+    tag_latest gitlab/gitlab-runner:latest "${CI_REGISTRY_IMAGE}:latest"
+    tag_latest gitlab/gitlab-runner:alpine "${CI_REGISTRY_IMAGE}:alpine"
+
+    if [[ -n "${CI_BUILD_TOKEN}" ]]; then
+        login gitlab-ci-token "${CI_BUILD_TOKEN}" "${CI_REGISTRY}"
+
+        push "${CI_REGISTRY_IMAGE}:ubuntu-${ref_tag}"
+        push "${CI_REGISTRY_IMAGE}:alpine-${ref_tag}"
+        push "${CI_REGISTRY_IMAGE}:${ref_tag}"
+
+        push_latest "${CI_REGISTRY_IMAGE}:ubuntu"
+        push_latest "${CI_REGISTRY_IMAGE}:latest"
+        push_latest "${CI_REGISTRY_IMAGE}:alpine"
+
+        logout "${CI_REGISTRY}"
+    fi
+fi
+
+if [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
+    login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
+
+    push "gitlab/gitlab-runner:ubuntu-${ref_tag}"
+    push "gitlab/gitlab-runner:alpine-${ref_tag}"
+    push "gitlab/gitlab-runner:${ref_tag}"
+
+    push_latest gitlab/gitlab-runner:ubuntu
+    push_latest gitlab/gitlab-runner:latest
+    push_latest gitlab/gitlab-runner:alpine
+
+    logout
+fi

@@ -1,3 +1,7 @@
+#!/bin/bash
+
+set -eo pipefail
+
 make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
 
 case "$1" in
@@ -10,7 +14,9 @@ case "$1" in
                           RPM_PLATFORMS="el/7 fedora/23"
         ;;
     stable)
-        make s3-upload "S3_UPLOAD_PATH=latest"
+        if [[ -n "${IS_LATEST}" ]]; then
+            make s3-upload "S3_UPLOAD_PATH=latest"
+        fi
 
         apt-get install -yqqq ruby ruby-dev
         make packagecloud
