@@ -301,6 +301,7 @@ func (b *Build) String() string {
 func (b *Build) GetDefaultVariables() BuildVariables {
 	return BuildVariables{
 		{"CI", "true", true, true, false},
+		{"CI_DEBUG_TRACE", "false", true, true, false},
 		{"CI_BUILD_REF", b.Sha, true, true, false},
 		{"CI_BUILD_BEFORE_SHA", b.BeforeSha, true, true, false},
 		{"CI_BUILD_REF_NAME", b.RefName, true, true, false},
@@ -343,4 +344,13 @@ func (b *Build) GetGitStrategy() GitStrategy {
 
 		return GitClone
 	}
+}
+
+func (b *Build) IsDebugTraceEnabled() bool {
+	trace, err := strconv.ParseBool(b.GetAllVariables().Get("CI_DEBUG_TRACE"))
+	if err != nil {
+		return false
+	}
+
+	return trace
 }

@@ -210,6 +210,10 @@ func (b *PowerShell) GenerateScript(scriptType common.ShellScriptType, info comm
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
 
+	if info.Build.IsDebugTraceEnabled() {
+		w.Line("Set-PSDebug -Trace 2")
+	}
+
 	if scriptType == common.ShellPrepareScript {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo \"Running on $env:computername via " + psQuoteVariable(info.Build.Hostname) + "...\"")

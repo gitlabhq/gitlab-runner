@@ -188,3 +188,21 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 		assert.Contains(t, out, "pre-clone-script")
 	})
 }
+
+func TestBuildWithDebugTrace(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		defer cleanup()
+
+		// The default build shouldn't have debug tracing enabled
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotRegexp(t, `[^$] echo Hello World`, out)
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "CI_DEBUG_TRACE", Value: "true"})
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Regexp(t, `[^$] echo Hello World`, out)
+	})
+}

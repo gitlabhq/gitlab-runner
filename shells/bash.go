@@ -157,9 +157,14 @@ func (b *BashWriter) EmptyLine() {
 	b.Line("echo")
 }
 
-func (b *BashWriter) Finish() string {
+func (b *BashWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
+
+	if trace {
+		io.WriteString(w, "set -o xtrace\n")
+	}
+
 	io.WriteString(w, "set -eo pipefail\n")
 	io.WriteString(w, "set +o noclobber\n")
 	io.WriteString(w, ": | eval "+helpers.ShellEscape(b.String())+"\n")
@@ -217,7 +222,7 @@ func (b *BashShell) GenerateScript(scriptType common.ShellScriptType, info commo
 	}
 
 	err = b.writeScript(w, scriptType, info)
-	script = w.Finish()
+	script = w.Finish(info.Build.IsDebugTraceEnabled())
 	return
 }
 
