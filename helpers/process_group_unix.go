@@ -43,4 +43,11 @@ func KillProcessGroup(cmd *exec.Cmd) {
 			process.Kill()
 		}
 	}
+
+	select {
+	case <-waitCh:
+		return
+	case <-time.After(ProcessKillWaitTime):
+		panic("Process couldn't be killed!")
+	}
 }
