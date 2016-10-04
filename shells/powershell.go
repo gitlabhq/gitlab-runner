@@ -123,9 +123,13 @@ func (b *PsWriter) Cd(path string) {
 	b.checkErrorLevel()
 }
 
+func (b *PsWriter) MkDir(path string) {
+	b.Line(fmt.Sprintf("md %s -Force | out-null", psQuote(helpers.ToBackslash(path))))
+}
+
 func (b *PsWriter) MkTmpDir(name string) string {
 	path := helpers.ToBackslash(path.Join(b.TemporaryPath, name))
-	b.Line(fmt.Sprintf("md %s -Force | out-null", psQuote(path)))
+	b.MkDir(path)
 
 	return path
 }

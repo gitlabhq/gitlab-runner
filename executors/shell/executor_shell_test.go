@@ -149,6 +149,23 @@ func TestBuildWithIndexLock(t *testing.T) {
 	})
 }
 
+func TestBuildWithGitStrategyNone(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		defer cleanup()
+
+		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_STRATEGY", Value: "none"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "pre-clone-script")
+		assert.NotContains(t, out, "Cloning repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git repository setup")
+	})
+}
+
 func TestBuildWithGitStrategyFetch(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
 		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
