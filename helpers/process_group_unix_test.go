@@ -15,7 +15,7 @@ import (
 )
 
 func findChild(ppid int) int {
-	lines, _ := exec.Command("ps", "ax", "-o", "%P %p").CombinedOutput()
+	lines, _ := exec.Command("ps", "axo", "ppid,pid").CombinedOutput()
 
 	for _, line := range strings.Split(string(lines), "\n") {
 		row := strings.Split(strings.TrimRight(line, "\n"), " ")
