@@ -46,7 +46,7 @@ func (b *AbstractShell) writeTLSCAInfo(w ShellWriter, build *common.Build, key s
 
 func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
 	templateDir := w.MkTmpDir("git-template")
-	args := []string{"clone", build.RepoURL, projectDir, "--template", templateDir}
+	args := []string{"clone", "--no-checkout", build.RepoURL, projectDir, "--template", templateDir}
 
 	w.RmDir(projectDir)
 	w.Command("git", "config", "-f", path.Join(templateDir, "config"), "fetch.recurseSubmodules", "false")
@@ -99,7 +99,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Notice("Checking out %s as %s...", build.Sha[0:8], build.RefName)
-	w.Command("git", "checkout", "-q", build.Sha)
+	w.Command("git", "checkout", "-f", "-q", build.Sha)
 }
 
 func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, file string) {
