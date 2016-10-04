@@ -94,7 +94,6 @@ func (n *client) getCAChain(tls *tls.ConnectionState) string {
 	}
 
 	if tls == nil {
-		logrus.Warn("No TLS connection state")
 		return ""
 	}
 
