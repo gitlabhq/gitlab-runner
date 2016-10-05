@@ -23,8 +23,8 @@
 		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.8.7",
-			"Rev": "418b41d23a1bf978c06faea5313ba194650ac088"
+			"Comment": "v0.10.0",
+			"Rev": "4b6ea7319e214d98c938f12692336f7ca9348d6b"
 		},
 		{
 			"ImportPath": "github.com/ayufan/golang-kardianos-service",
@@ -415,6 +415,10 @@
 		{
 			"ImportPath": "golang.org/x/oauth2/jwt",
 			"Rev": "3b966c7f301c0c71c53d94dc632a62df0a682cd7"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "98fc11432b951eb53c62602ba4ae99d03c1fb7e2"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/windows",
