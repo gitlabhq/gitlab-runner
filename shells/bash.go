@@ -7,7 +7,9 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"io"
+	"os/exec"
 	"path"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -192,32 +194,69 @@ func (b *BashShell) GetName() string {
 
 func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
 	var detectScript string
-	var shellCommand string
 	if info.Type == common.LoginShell {
 		detectScript = strings.Replace(bashDetectShell, "$@", "--login", -1)
-		shellCommand = b.Shell + " --login"
 	} else {
 		detectScript = strings.Replace(bashDetectShell, "$@", "", -1)
-		shellCommand = b.Shell
 	}
 
 	script = &common.ShellConfiguration{}
 	script.DockerCommand = []string{"sh", "-c", detectScript}
 
-	// su
-	if info.User != "" {
-		script.Command = "su"
-		if runtime.GOOS == "linux" {
-			script.Arguments = append(script.Arguments, "-s", "/bin/"+b.Shell)
-		}
-		script.Arguments = append(script.Arguments, info.User)
-		script.Arguments = append(script.Arguments, "-c", shellCommand)
-	} else {
-		script.Command = b.Shell
-		if info.Type == common.LoginShell {
-			script.Arguments = append(script.Arguments, "--login")
-		}
+	script.Command = b.Shell
+	if info.Type == common.LoginShell {
+		script.Arguments = append(script.Arguments, "--login")
 	}
+
+	if info.User != "" {
+		credential, err := getCredentialsForUser(info.User)
+		if err != nil {
+			return nil, err
+		}
+
+		script.CommandCredential = credential
+	}
+
+	return
+}
+
+func getCredentialsForUser(user string) (credential *common.CommandCredential, err error) {
+	findUIDCmd := exec.Command("id", user)
+
+	outputBuffer := &bytes.Buffer{}
+	findUIDCmd.Stdout = bufio.NewWriter(outputBuffer)
+
+	err = findUIDCmd.Run()
+	if err != nil {
+		return
+	}
+
+	uidRegexp, err := regexp.Compile("uid=[0-9]+")
+	if err != nil {
+		return
+	}
+
+	gidRegexp, err := regexp.Compile("gid=[0-9]+")
+	if err != nil {
+		return
+	}
+
+	idRegexp, err := regexp.Compile("([0-9]+)")
+	if err != nil {
+		return
+	}
+
+	uid, err := strconv.ParseUint(idRegexp.FindString(uidRegexp.FindString(outputBuffer.String())), 10, 32)
+	if err != nil {
+		return
+	}
+
+	gid, err := strconv.ParseUint(idRegexp.FindString(gidRegexp.FindString(outputBuffer.String())), 10, 32)
+	if err != nil {
+		return
+	}
+
+	credential = &common.CommandCredential{UID: uint32(uid), GID: uint32(gid)}
 
 	return
 }

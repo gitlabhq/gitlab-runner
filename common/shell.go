@@ -6,13 +6,19 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
+type CommandCredential struct {
+	UID uint32
+	GID uint32
+}
+
 type ShellConfiguration struct {
-	Environment   []string
-	DockerCommand []string
-	Command       string
-	Arguments     []string
-	PassFile      bool
-	Extension     string
+	Environment       []string
+	DockerCommand     []string
+	Command           string
+	Arguments         []string
+	PassFile          bool
+	Extension         string
+	CommandCredential *CommandCredential
 }
 
 type ShellType int

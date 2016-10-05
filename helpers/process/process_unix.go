@@ -1,19 +1,41 @@
 // +build darwin dragonfly freebsd linux netbsd openbsd
 
-package helpers
+package process
 
 import (
 	"os/exec"
 	"syscall"
 	"time"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
-const ProcessKillWaitTime = 15 * time.Second
+const ProcessKillWaitTime = 10 * time.Second
 
 func SetProcessGroup(cmd *exec.Cmd) {
+	prepareSysProcAttr(cmd)
+
 	// Create process group
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+	cmd.SysProcAttr.Setpgid = true
+}
+
+func SetCredential(cmd *exec.Cmd, shell *common.ShellConfiguration) {
+	prepareSysProcAttr(cmd)
+
+	if shell.CommandCredential == nil {
+		return
+	}
+
+	// Set Credential - run the command in context of UID and GID
+	cmd.SysProcAttr.Credential = &syscall.Credential{
+		Uid: shell.CommandCredential.UID,
+		Gid: shell.CommandCredential.GID,
+	}
+}
+
+func prepareSysProcAttr(cmd *exec.Cmd) {
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 }
 

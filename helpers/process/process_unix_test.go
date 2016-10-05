@@ -1,4 +1,4 @@
-package helpers
+package process
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 func findChild(ppid int) int {
@@ -58,8 +59,8 @@ func checkProcess(pid int) (err error) {
 }
 
 func createTestProcess(script string) *exec.Cmd {
-	command := "su"
-	arguments := []string{"-s", "/bin/bash", "test-user", "-c", "bash --login"}
+	command := "bash"
+	arguments := []string{"--login"}
 
 	cmd := exec.Command(command, arguments...)
 	SetProcessGroup(cmd)
@@ -73,7 +74,7 @@ func createTestProcess(script string) *exec.Cmd {
 }
 
 func testKillProcessGroup(t *testing.T, script string) {
-	if SkipIntegrationTests(t, "su") {
+	if SkipIntegrationTests(t, "bash") {
 		return
 	}
 
@@ -107,10 +108,10 @@ func testKillProcessGroup(t *testing.T, script string) {
 	}
 }
 
-var simpleScript = "sleep 300"
+var simpleScript = "sleep 60"
 var nonTerminatableScript = `
-trap "sleep 350" SIGTERM
-sleep 300
+trap "sleep 70" SIGTERM
+sleep 60
 `
 
 func TestKillProcessGroupForSimpleScript(t *testing.T) {

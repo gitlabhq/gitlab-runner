@@ -13,7 +13,7 @@ import (
 	"github.com/kardianos/osext"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/process"
 	"time"
 )
 
@@ -57,7 +57,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 func (s *executor) killAndWait(cmd *exec.Cmd, waitCh chan error) error {
 	for {
 		s.Debugln("Aborting command...")
-		helpers.KillProcessGroup(cmd)
+		process.KillProcessGroup(cmd)
 		select {
 		case <-time.After(time.Second):
 		case err := <-waitCh:
@@ -73,8 +73,9 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		return errors.New("Failed to generate execution command")
 	}
 
-	helpers.SetProcessGroup(c)
-	defer helpers.KillProcessGroup(c)
+	process.SetProcessGroup(c)
+	process.SetCredential(c, s.BuildShell)
+	defer process.KillProcessGroup(c)
 
 	// Fill process environment variables
 	c.Env = append(os.Environ(), s.BuildShell.Environment...)

@@ -1,11 +1,16 @@
-package helpers
+package process
 
 import (
 	"os/exec"
 	"strconv"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 func SetProcessGroup(cmd *exec.Cmd) {
+}
+
+func SetCredential(cmd *exec.Cmd, shell *common.ShellConfiguration) {
 }
 
 func KillProcessGroup(cmd *exec.Cmd) {
