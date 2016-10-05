@@ -198,7 +198,11 @@ func (b *CmdShell) GenerateScript(scriptType common.ShellScriptType, info common
 	w := &CmdWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
-	w.Line("@echo off")
+
+	if !info.Build.IsDebugTraceEnabled() {
+		w.Line("@echo off")
+	}
+
 	w.Line("setlocal enableextensions")
 	w.Line("setlocal enableDelayedExpansion")
 	w.Line("set nl=^\r\n\r\n")
