@@ -469,7 +469,7 @@ This defines the Kubernetes parameters.
 | `memory`         | string  | The amount of memory allocated to build containers |
 | `service_cpus`   | string  | The CPU allocation given to build service containers |
 | `service_memory` | string  | The amount of memory allocated to build service containers |
-| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string` |
+| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to k8s nodes matching all the `key=value` pairs |
 
 
 Example:
