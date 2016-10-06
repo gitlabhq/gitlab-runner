@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/ssh"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/timeperiod"
 )
 
 type DockerPullPolicy string
@@ -74,6 +75,11 @@ type DockerMachine struct {
 	MachineDriver  string   `long:"machine-driver" env:"MACHINE_DRIVER" description:"The driver to use when creating machine"`
 	MachineName    string   `long:"machine-name" env:"MACHINE_NAME" description:"The template for machine name (needs to include %s)"`
 	MachineOptions []string `long:"machine-options" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
+
+	OffPeakHours      []int    `long:"off-peak-hours" env:"MACHINE_OFF_PEAK_HOURS" description:"Hours when the scheduler is in the OffPeak mode"`
+	OffPeakDaysOfWeek []string `long:"off-peak-days-of-week" env:"MACHINE_OFF_PEAK_DAYS_OF_WEEK" description:"Days of week when the scheduler is in the OffPeak mode"`
+	OffPeakIdleCount  int      `long:"off-peak-idle-count" env:"MACHINE_OFF_PEAK_IDLE_COUNT" description:"Maximum idle machines when the scheduler is in the OffPeak mode"`
+	OffPeakIdleTime   int      `long:"off-peak-idle-time" env:"MACHINE_OFF_PEAK_IDLE_TIME" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode"`
 }
 
 type ParallelsConfig struct {
@@ -155,6 +161,26 @@ type Config struct {
 	SentryDSN     *string         `toml:"sentry_dsn"`
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
+}
+
+func (c *DockerMachine) GetIdleCount() int {
+	if c.isOffPeak() {
+		return c.OffPeakIdleCount
+	}
+
+	return c.IdleCount
+}
+
+func (c *DockerMachine) GetIdleTime() int {
+	if c.isOffPeak() {
+		return c.OffPeakIdleTime
+	}
+
+	return c.IdleTime
+}
+
+func (c *DockerMachine) isOffPeak() bool {
+	return timeperiod.TimePeriods(c.OffPeakDaysOfWeek, c.OffPeakHours).InPeriod()
 }
 
 func (c *RunnerCredentials) ShortDescription() string {
