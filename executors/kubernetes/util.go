@@ -43,6 +43,10 @@ func getKubeClientConfig(config *common.KubernetesConfig) (*restclient.Config, e
 		}, nil
 
 	default:
+		// Try in cluster config first
+		if inClusterCfg, err := restclient.InClusterConfig(); err == nil {
+			return inClusterCfg, nil
+		}
 		config, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 		if err != nil {
 			return nil, err
