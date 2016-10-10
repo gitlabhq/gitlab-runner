@@ -125,7 +125,7 @@ type KubernetesConfig struct {
 	Memory        string               `toml:"memory" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"The amount of memory allocated to build containers"`
 	ServiceCPUs   string               `toml:"service_cpus" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
 	ServiceMemory string               `toml:"service_memory" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
-	PullPolicy    KubernetesPullPolicy `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (IfNotPresent, Never or Always which is the default)"`
+	PullPolicy    KubernetesPullPolicy `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 }
 
 type RunnerCredentials struct {
