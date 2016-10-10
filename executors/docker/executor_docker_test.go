@@ -186,7 +186,7 @@ func TestDockerPolicyModeNever(t *testing.T) {
 		Once()
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyNever)
+	e.setPolicyMode(common.PullPolicyNever)
 
 	image, err := e.getDockerImage("existing")
 	assert.NoError(t, err)
@@ -202,7 +202,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyIfNotPresent)
+	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("InspectImage", "existing").
 		Return(&docker.Image{}, nil).
@@ -218,7 +218,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyIfNotPresent)
+	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("InspectImage", "not-existing").
 		Return(nil, os.ErrNotExist).
@@ -252,7 +252,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyAlways)
+	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("InspectImage", "existing").
 		Return(&docker.Image{}, nil).
@@ -277,7 +277,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyAlways)
+	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("InspectImage", "to-pull").
 		Return(&docker.Image{}, nil).

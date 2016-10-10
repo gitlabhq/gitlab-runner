@@ -40,7 +40,7 @@ type executor struct {
 
 	buildLimits   api.ResourceList
 	serviceLimits api.ResourceList
-	pullPolicy    api.PullPolicy
+	pullPolicy    common.KubernetesPullPolicy
 }
 
 func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
@@ -71,10 +71,8 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 
-	pullPolicy, err := s.Config.Kubernetes.PullPolicy.Get()
-	if err == nil {
-		s.pullPolicy = api.PullPolicy(pullPolicy)
-	} else {
+	s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get()
+	if err != nil {
 		return err
 	}
 
@@ -136,7 +134,7 @@ func (s *executor) buildContainer(name, image string, limits api.ResourceList, c
 	return api.Container{
 		Name:            name,
 		Image:           image,
-		ImagePullPolicy: s.pullPolicy,
+		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
 		Command:         command,
 		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
 		Resources: api.ResourceRequirements{

@@ -22,22 +22,22 @@ import (
 type DockerPullPolicy string
 
 const (
-	DockerPullPolicyAlways       DockerPullPolicy = "always"
-	DockerPullPolicyNever                         = "never"
-	DockerPullPolicyIfNotPresent                  = "if-not-present"
+	PullPolicyAlways       = "always"
+	PullPolicyNever        = "never"
+	PullPolicyIfNotPresent = "if-not-present"
 )
 
 // Get returns one of the predefined values or returns an error if the value can't match the predefined
 func (p DockerPullPolicy) Get() (DockerPullPolicy, error) {
 	// Default policy is always
 	if p == "" {
-		return DockerPullPolicyAlways, nil
+		return PullPolicyAlways, nil
 	}
 
 	// Verify pull policy
-	if p != DockerPullPolicyNever &&
-		p != DockerPullPolicyIfNotPresent &&
-		p != DockerPullPolicyAlways {
+	if p != PullPolicyNever &&
+		p != PullPolicyIfNotPresent &&
+		p != PullPolicyAlways {
 		return "", fmt.Errorf("unsupported docker-pull-policy: %v", p)
 	}
 	return p, nil
@@ -98,26 +98,19 @@ type VirtualBoxConfig struct {
 
 type KubernetesPullPolicy string
 
-const (
-	KubernetesPullPolicyAlways       KubernetesPullPolicy = "Always"
-	KubernetesPullPolicyNever                             = "Never"
-	KubernetesPullPolicyIfNotPresent                      = "IfNotPresent"
-)
-
-// Get returns one of the predefined values or returns an error if the value can't match the predefined
+// Get returns one of the predefined values in kubernetes notation or returns an error if the value can't match the predefined
 func (p KubernetesPullPolicy) Get() (KubernetesPullPolicy, error) {
-	// Default policy is always
-	if p == "" {
-		return KubernetesPullPolicyAlways, nil
+	switch {
+	case p == "":
+		return "", nil
+	case p == PullPolicyAlways:
+		return "Always", nil
+	case p == PullPolicyNever:
+		return "Never", nil
+	case p == PullPolicyIfNotPresent:
+		return "IfNotPresent", nil
 	}
-
-	// Verify pull policy
-	if p != KubernetesPullPolicyNever &&
-		p != KubernetesPullPolicyIfNotPresent &&
-		p != KubernetesPullPolicyAlways {
-		return "", fmt.Errorf("unsupported kubernetes-pull-policy: %v", p)
-	}
-	return p, nil
+	return "", fmt.Errorf("unsupported kubernetes-pull-policy: %v", p)
 }
 
 type KubernetesConfig struct {
