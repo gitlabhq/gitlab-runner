@@ -21,6 +21,10 @@ func TestPeriodIn(t *testing.T) {
 	hour := now.Hour()
 
 	periods := newTimePeriods(day, hour)
+	periods.GetCurrentTime = func() time.Time {
+		return now
+	}
+
 	assert.True(t, periods.InPeriod())
 }
 
@@ -29,7 +33,11 @@ func TestPeriodOut(t *testing.T) {
 	day := now.Weekday()
 	hour := now.Hour()
 
-	periods := newTimePeriods(day+1, hour+1)
+	periods := newTimePeriods(day, hour)
+	periods.GetCurrentTime = func() time.Time {
+		return now.Add(time.Hour * 27)
+	}
+
 	assert.False(t, periods.InPeriod())
 }
 

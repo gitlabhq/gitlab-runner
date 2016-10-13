@@ -15,46 +15,33 @@ var daysOfWeek = map[string]time.Weekday{
 }
 
 type TimePeriod struct {
-	DaysOfWeek []time.Weekday
-	Hours      []int
+	DaysOfWeek     map[time.Weekday]bool
+	Hours          map[int]bool
+	GetCurrentTime func() time.Time
 }
 
 func (t *TimePeriod) InPeriod() bool {
-	now := time.Now()
+	now := t.GetCurrentTime()
 
-	return containsDay(now.Weekday(), t.DaysOfWeek) && containsHour(now.Hour(), t.Hours)
+	return t.DaysOfWeek[now.Weekday()] && t.Hours[now.Hour()]
 }
 
-func containsDay(needle time.Weekday, haystack []time.Weekday) bool {
-	for _, val := range haystack {
-		if needle == val {
-			return true
-		}
-	}
-
-	return false
-}
-
-func containsHour(needle int, haystack []int) bool {
-	for _, val := range haystack {
-		if needle == val {
-			return true
-		}
-	}
-
-	return false
-}
-
-func TimePeriods(dow []string, hours []int) *TimePeriod {
-	var days []time.Weekday
+func TimePeriods(dow []string, h []int) *TimePeriod {
+	days := make(map[time.Weekday]bool)
 	for _, day := range dow {
 		if val, ok := daysOfWeek[day]; ok {
-			days = append(days, val)
+			days[val] = true
 		}
+	}
+
+	hours := make(map[int]bool)
+	for _, hour := range h {
+		hours[hour] = true
 	}
 
 	return &TimePeriod{
-		DaysOfWeek: days,
-		Hours:      hours,
+		DaysOfWeek:     days,
+		Hours:          hours,
+		GetCurrentTime: func() time.Time { return time.Now() },
 	}
 }
