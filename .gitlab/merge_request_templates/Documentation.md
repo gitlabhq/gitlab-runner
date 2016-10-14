@@ -1,5 +1,7 @@
 ## What does this MR do?
 
+See the general guidelines: http://docs.gitlab.com/ce/development/doc_styleguide.html
+
 ## Moving docs to a new location?
 
 See the guidelines: http://docs.gitlab.com/ce/development/doc_styleguide.html#changing-document-location

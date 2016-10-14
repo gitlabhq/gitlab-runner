@@ -8,4 +8,4 @@
 
 ## Connected issues and merge requests
 
-> Please link to the issues using markdown references for issues and merge requests
+> Please paste a link of the related issues or/and merge requests
