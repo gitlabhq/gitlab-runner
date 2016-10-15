@@ -171,6 +171,9 @@ more in [Distributed runners caching][caching].
 
 ## Upgrading the Runner
 
+1. Ensure your operating system isn't configured to automatically restart the
+   runner if it exits (which is the default configuration on some platforms).
+
 1. Stop the runner:
 
     ```bash
@@ -181,10 +184,22 @@ more in [Distributed runners caching][caching].
     gracefully. It will stop accepting new jobs, and will exit as soon as the
     current builds are finished.
 
-1. Wait until the Runner exits. You can check its status with: `gitlab-runner status`
+1. Wait until the Runner exits. You can check its status with `gitlab-runner status` 
+   or await a graceful shutdown for up to 30 minutes with:
+
+   ```bash
+   for i in `seq 1 180`; do # 1800 seconds = 30 minutes
+       gitlab-runner status || break;
+       sleep 10;
+   done
+   ````
+
 1. You can now safely upgrade the Runner without interrupting any builds
 
 ## Manage the Docker Machines
+
+1. Ensure your operating system isn't configured to automatically restart the
+   runner if it exits (which is the default configuration on some platforms).
 
 1. Stop the Runner:
 
@@ -193,6 +208,15 @@ more in [Distributed runners caching][caching].
     ```
 
 1. Wait until the Runner exits. You can check its status with: `gitlab-runner status`
+   or await a graceful shutdown for up to 30 minutes with:
+
+   ```bash
+   for i in `seq 1 180`; do # 1800 seconds = 30 minutes
+       gitlab-runner status || break;
+       sleep 10;
+   done
+   ````
+
 1. You can now manage (upgrade or remove) any Docker Machines with the
    [`docker-machine` command][docker-machine]
 
