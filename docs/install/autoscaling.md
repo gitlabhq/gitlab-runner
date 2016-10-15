@@ -185,14 +185,14 @@ more in [Distributed runners caching][caching].
     current builds are finished.
 
 1. Wait until the Runner exits. You can check its status with `gitlab-runner status` 
-   or await a graceful shutdown for up to 30 minutes with:
+    or await a graceful shutdown for up to 30 minutes with:
 
-   ```bash
-   for i in `seq 1 180`; do # 1800 seconds = 30 minutes
-       gitlab-runner status || break;
-       sleep 10;
-   done
-   ````
+    ```bash
+    for i in `seq 1 180`; do # 1800 seconds = 30 minutes
+        gitlab-runner status || break;
+        sleep 10;
+    done
+    ```
 
 1. You can now safely upgrade the Runner without interrupting any builds
 
@@ -208,14 +208,14 @@ more in [Distributed runners caching][caching].
     ```
 
 1. Wait until the Runner exits. You can check its status with: `gitlab-runner status`
-   or await a graceful shutdown for up to 30 minutes with:
+    or await a graceful shutdown for up to 30 minutes with:
 
-   ```bash
-   for i in `seq 1 180`; do # 1800 seconds = 30 minutes
-       gitlab-runner status || break;
-       sleep 10;
-   done
-   ````
+    ```bash
+    for i in `seq 1 180`; do # 1800 seconds = 30 minutes
+        gitlab-runner status || break;
+        sleep 10;
+    done
+    ```
 
 1. You can now manage (upgrade or remove) any Docker Machines with the
    [`docker-machine` command][docker-machine]
