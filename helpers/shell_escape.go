@@ -3,7 +3,8 @@ package helpers
 // https://github.com/zimbatm/direnv/blob/master/shell.go
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/hex"
 	"strings"
 )
 
@@ -46,33 +47,36 @@ func ShellEscape(str string) string {
 		return "''"
 	}
 	in := []byte(str)
-	out := ""
+	out := bytes.NewBuffer(make([]byte, 0, len(str)*2))
 	i := 0
 	l := len(in)
 	escape := false
 
 	hex := func(char byte) {
 		escape = true
-		out += fmt.Sprintf("\\x%02x", char)
+
+		data := []byte{BACKSLASH, 'x', 0, 0}
+		hex.Encode(data[2:], []byte{char})
+		out.Write(data)
 	}
 
 	backslash := func(char byte) {
 		escape = true
-		out += string([]byte{BACKSLASH, char})
+		out.Write([]byte{BACKSLASH, char})
 	}
 
 	escaped := func(str string) {
 		escape = true
-		out += str
+		out.WriteString(str)
 	}
 
 	quoted := func(char byte) {
 		escape = true
-		out += string([]byte{char})
+		out.WriteByte(char)
 	}
 
 	literal := func(char byte) {
-		out += string([]byte{char})
+		out.WriteByte(char)
 	}
 
 	for i < l {
@@ -120,11 +124,13 @@ func ShellEscape(str string) string {
 		i++
 	}
 
+	outStr := out.String()
+
 	if escape {
-		out = "$'" + out + "'"
+		outStr = "$'" + outStr + "'"
 	}
 
-	return out
+	return outStr
 }
 
 func ToBackslash(path string) string {

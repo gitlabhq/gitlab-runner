@@ -1,9 +1,23 @@
 package helpers
 
 import (
-	"github.com/stretchr/testify/assert"
+	"crypto/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func BenchmarkShellEscape(b *testing.B) {
+	data := make([]byte, 1024*1024)
+	if _, err := rand.Read(data); err != nil {
+		panic(err)
+	}
+	dataStr := string(data)
+
+	for i := 0; i < b.N; i++ {
+		ShellEscape(dataStr)
+	}
+}
 
 func TestShellEscape(t *testing.T) {
 	var tests = []struct {
