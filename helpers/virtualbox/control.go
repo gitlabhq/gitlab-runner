@@ -230,11 +230,6 @@ func Start(vmName string) error {
 }
 
 func Stop(vmName string) error {
-	_, err := VBoxManage("controlvm", vmName, "acpipowerbutton")
-	return err
-}
-
-func Kill(vmName string) error {
 	_, err := VBoxManage("controlvm", vmName, "poweroff")
 	return err
 }

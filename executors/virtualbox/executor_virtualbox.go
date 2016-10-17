@@ -289,7 +289,7 @@ func (s *executor) Cleanup() {
 	s.sshCommand.Cleanup()
 
 	if s.vmName != "" {
-		vbox.Kill(s.vmName)
+		vbox.Stop(s.vmName)
 
 		if s.Config.VirtualBox.DisableSnapshots || !s.provisioned {
 			vbox.Delete(s.vmName)
