@@ -19,9 +19,6 @@ type healthHelper struct {
 }
 
 func (mr *healthHelper) getHealth(id string) *healthData {
-	mr.healthyLock.Lock()
-	defer mr.healthyLock.Unlock()
-
 	if mr.healthy == nil {
 		mr.healthy = map[string]*healthData{}
 	}
@@ -36,6 +33,9 @@ func (mr *healthHelper) getHealth(id string) *healthData {
 }
 
 func (mr *healthHelper) isHealthy(id string) bool {
+	mr.healthyLock.Lock()
+	defer mr.healthyLock.Unlock()
+
 	health := mr.getHealth(id)
 	if health.failures < common.HealthyChecks {
 		return true
@@ -52,6 +52,9 @@ func (mr *healthHelper) isHealthy(id string) bool {
 }
 
 func (mr *healthHelper) makeHealthy(id string, healthy bool) {
+	mr.healthyLock.Lock()
+	defer mr.healthyLock.Unlock()
+
 	health := mr.getHealth(id)
 	if healthy {
 		health.failures = 0
