@@ -229,7 +229,7 @@ func Start(vmName string) error {
 	return err
 }
 
-func Stop(vmName string) error {
+func Kill(vmName string) error {
 	_, err := VBoxManage("controlvm", vmName, "poweroff")
 	return err
 }
