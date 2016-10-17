@@ -1,48 +1,62 @@
 package timeperiod
 
 import (
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var daysOfWeekInv = make(map[time.Weekday]string, len(daysOfWeek))
-
-func newTimePeriods(day time.Weekday, hour int) *TimePeriod {
-	days := []string{daysOfWeekInv[day]}
-	hours := []int{hour}
-
-	return TimePeriods(days, hours)
+var daysOfWeek = map[time.Weekday]string{
+	time.Monday:    "mon",
+	time.Tuesday:   "tue",
+	time.Wednesday: "wed",
+	time.Thursday:  "thu",
+	time.Friday:    "fri",
+	time.Saturday:  "sat",
+	time.Sunday:    "sun",
 }
 
-func TestPeriodIn(t *testing.T) {
+func newTimePeriods(t *testing.T) (time.Time, *TimePeriod) {
 	now := time.Now()
-	day := now.Weekday()
+	minute := now.Minute()
 	hour := now.Hour()
+	day := now.Weekday()
+	dayName := daysOfWeek[day]
 
-	periods := newTimePeriods(day, hour)
-	periods.GetCurrentTime = func() time.Time {
+	periodPattern := fmt.Sprintf("* %d %d * * %s *", minute, hour, dayName)
+	timePeriods, err := TimePeriods([]string{periodPattern})
+	assert.NoError(t, err)
+
+	return now, timePeriods
+}
+
+func TestInPeriod(t *testing.T) {
+	now, timePeriods := newTimePeriods(t)
+	timePeriods.GetCurrentTime = func() time.Time {
 		return now
 	}
 
-	assert.True(t, periods.InPeriod())
+	assert.True(t, timePeriods.InPeriod())
 }
 
 func TestPeriodOut(t *testing.T) {
-	now := time.Now()
-	day := now.Weekday()
-	hour := now.Hour()
-
-	periods := newTimePeriods(day, hour)
-	periods.GetCurrentTime = func() time.Time {
-		return now.Add(time.Hour * 27)
+	now, timePeriods := newTimePeriods(t)
+	timePeriods.GetCurrentTime = func() time.Time {
+		return now.Add(time.Hour * 48)
 	}
+	assert.False(t, timePeriods.InPeriod())
 
-	assert.False(t, periods.InPeriod())
-}
-
-func init() {
-	for name, value := range daysOfWeek {
-		daysOfWeekInv[value] = name
+	now, timePeriods = newTimePeriods(t)
+	timePeriods.GetCurrentTime = func() time.Time {
+		return now.Add(time.Hour * 4)
 	}
+	assert.False(t, timePeriods.InPeriod())
+
+	now, timePeriods = newTimePeriods(t)
+	timePeriods.GetCurrentTime = func() time.Time {
+		return now.Add(time.Minute * 4)
+	}
+	assert.False(t, timePeriods.InPeriod())
 }

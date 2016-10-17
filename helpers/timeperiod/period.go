@@ -2,46 +2,43 @@ package timeperiod
 
 import (
 	"time"
+
+	"github.com/gorhill/cronexpr"
 )
 
-var daysOfWeek = map[string]time.Weekday{
-	"mon": time.Monday,
-	"tue": time.Tuesday,
-	"wed": time.Wednesday,
-	"thu": time.Thursday,
-	"fri": time.Friday,
-	"sat": time.Saturday,
-	"sun": time.Sunday,
-}
-
 type TimePeriod struct {
-	DaysOfWeek     map[time.Weekday]bool
-	Hours          map[int]bool
+	expressions    []*cronexpr.Expression
 	GetCurrentTime func() time.Time
 }
 
 func (t *TimePeriod) InPeriod() bool {
-	now := t.GetCurrentTime()
-
-	return t.DaysOfWeek[now.Weekday()] && t.Hours[now.Hour()]
-}
-
-func TimePeriods(dow []string, h []int) *TimePeriod {
-	days := make(map[time.Weekday]bool)
-	for _, day := range dow {
-		if val, ok := daysOfWeek[day]; ok {
-			days[val] = true
+	for _, expression := range t.expressions {
+		nextIn := expression.Next(t.GetCurrentTime())
+		timeSince := time.Since(nextIn)
+		if timeSince < time.Second && timeSince > -time.Second {
+			return true
 		}
 	}
 
-	hours := make(map[int]bool)
-	for _, hour := range h {
-		hours[hour] = true
+	return false
+}
+
+func TimePeriods(periods []string) (*TimePeriod, error) {
+	var expressions []*cronexpr.Expression
+
+	for _, period := range periods {
+		expression, err := cronexpr.Parse(period)
+		if err != nil {
+			return nil, err
+		}
+
+		expressions = append(expressions, expression)
 	}
 
-	return &TimePeriod{
-		DaysOfWeek:     days,
-		Hours:          hours,
+	timePeriod := &TimePeriod{
+		expressions:    expressions,
 		GetCurrentTime: func() time.Time { return time.Now() },
 	}
+
+	return timePeriod, nil
 }

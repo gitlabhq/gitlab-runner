@@ -3,6 +3,7 @@ package common
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"os"
 	"time"
@@ -76,10 +77,11 @@ type DockerMachine struct {
 	MachineName    string   `long:"machine-name" env:"MACHINE_NAME" description:"The template for machine name (needs to include %s)"`
 	MachineOptions []string `long:"machine-options" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
 
-	OffPeakHours      []int    `long:"off-peak-hours" env:"MACHINE_OFF_PEAK_HOURS" description:"Hours when the scheduler is in the OffPeak mode"`
-	OffPeakDaysOfWeek []string `long:"off-peak-days-of-week" env:"MACHINE_OFF_PEAK_DAYS_OF_WEEK" description:"Days of week when the scheduler is in the OffPeak mode"`
-	OffPeakIdleCount  int      `long:"off-peak-idle-count" env:"MACHINE_OFF_PEAK_IDLE_COUNT" description:"Maximum idle machines when the scheduler is in the OffPeak mode"`
-	OffPeakIdleTime   int      `long:"off-peak-idle-time" env:"MACHINE_OFF_PEAK_IDLE_TIME" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode"`
+	OffPeakPeriods   []string `long:"off-peak-periods" env:"MACHINE_OFF_PEAK_PERIODS" description:"Periods when the scheduler is in the OffPeak mode"`
+	OffPeakIdleCount int      `long:"off-peak-idle-count" env:"MACHINE_OFF_PEAK_IDLE_COUNT" description:"Maximum idle machines when the scheduler is in the OffPeak mode"`
+	OffPeakIdleTime  int      `long:"off-peak-idle-time" env:"MACHINE_OFF_PEAK_IDLE_TIME" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode"`
+
+	offPeakTimePeriods *timeperiod.TimePeriod
 }
 
 type ParallelsConfig struct {
@@ -180,7 +182,20 @@ func (c *DockerMachine) GetIdleTime() int {
 }
 
 func (c *DockerMachine) isOffPeak() bool {
-	return timeperiod.TimePeriods(c.OffPeakDaysOfWeek, c.OffPeakHours).InPeriod()
+	if c.offPeakTimePeriods == nil {
+		c.CompileOffPeakPeriods()
+	}
+
+	return c.offPeakTimePeriods != nil && c.offPeakTimePeriods.InPeriod()
+}
+
+func (c *DockerMachine) CompileOffPeakPeriods() (err error) {
+	c.offPeakTimePeriods, err = timeperiod.TimePeriods(c.OffPeakPeriods)
+	if err != nil {
+		err = errors.New(fmt.Sprint("Invalid OffPeakPeriods value: ", err))
+	}
+
+	return
 }
 
 func (c *RunnerCredentials) ShortDescription() string {
@@ -241,6 +256,17 @@ func (c *Config) LoadConfig(configFile string) error {
 
 	if _, err = toml.DecodeFile(configFile, c); err != nil {
 		return err
+	}
+
+	for _, runner := range c.Runners {
+		if runner.Machine == nil {
+			continue
+		}
+
+		err := runner.Machine.CompileOffPeakPeriods()
+		if err != nil {
+			return err
+		}
 	}
 
 	c.ModTime = info.ModTime()

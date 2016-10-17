@@ -253,6 +253,11 @@
 			"Rev": "fd52762d25a41827db7ef64c43756fd4b9f7e382"
 		},
 		{
+			"ImportPath": "github.com/gorhill/cronexpr",
+			"Comment": "1.0.0-3-gf098431",
+			"Rev": "f0984319b44273e83de132089ae42b1810f4933b"
+		},
+		{
 			"ImportPath": "github.com/imdario/mergo",
 			"Comment": "0.2.2-6-g50d4dbd",
 			"Rev": "50d4dbd4eb0e84778abe37cefef140271d96fade"
