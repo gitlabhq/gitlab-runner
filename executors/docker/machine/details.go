@@ -41,15 +41,15 @@ func (m *machineDetails) writeDebugInformation() {
 	}
 
 	var details struct {
-		machineDetails
+		Details    machineDetails
 		Time       string
 		CreatedAgo time.Duration
 	}
-	details.machineDetails = *m
+	details.Details = *m
 	details.Time = time.Now().String()
 	details.CreatedAgo = time.Since(m.Created)
 	data := helpers.ToYAML(&details)
-	ioutil.WriteFile("machines/"+details.Name+".yml", []byte(data), 0600)
+	ioutil.WriteFile("machines/"+details.Details.Name+".yml", []byte(data), 0600)
 }
 
 type machinesDetails map[string]*machineDetails
