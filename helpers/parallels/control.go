@@ -173,10 +173,6 @@ func Kill(vmName string) error {
 	return Prlctl("stop", vmName, "--kill")
 }
 
-func Stop(vmName string) error {
-	return Prlctl("stop", vmName)
-}
-
 func Delete(vmName string) error {
 	return Prlctl("delete", vmName)
 }
