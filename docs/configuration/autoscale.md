@@ -11,16 +11,17 @@
 - [Overview](#overview)
 - [System requirements](#system-requirements)
 - [Runner configuration](#runner-configuration)
-    - [Runner global options](#runner-global-options)
-    - [`[[runners]]` options](#runners-options)
-    - [`[runners.machine]` options](#runners-machine-options)
-    - [`[runners.cache]` options](#runners-cache-options)
-    - [Additional configuration information](#additional-configuration-information)
+  - [Runner global options](#runner-global-options)
+  - [`[[runners]]` options](#runners-options)
+  - [`[runners.machine]` options](#runnersmachine-options)
+  - [`[runners.cache]` options](#runnerscache-options)
+  - [Additional configuration information](#additional-configuration-information)
 - [Autoscaling algorithm and parameters](#autoscaling-algorithm-and-parameters)
 - [How `current`, `limit` and `IdleCount` generate the upper limit of running machines](#how-current-limit-and-idlecount-generate-the-upper-limit-of-running-machines)
+- [Off Peak time mode configuration](#off-peak-time-mode-configuration)
 - [Distributed runners caching](#distributed-runners-caching)
 - [Distributed Docker registry mirroring](#distributed-docker-registry-mirroring)
-- [A complete example of `config.toml`](#a-complete-example-of-config-toml)
+- [A complete example of `config.toml`](#a-complete-example-of-configtoml)
 - [What are the supported cloud providers](#what-are-the-supported-cloud-providers)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -250,6 +251,59 @@ In this example we will have at most 20 concurrent builds, and at most 25
 machines created. In the worst case scenario regarding idle machines, we will
 not be able to have 10 idle machines, but only 5, because the `limit` is 25.
 
+## Off Peak time mode configuration
+
+> Introduced in GitLab Runner v1.7
+
+Autoscale can be configured with the support for _Off Peak_ time mode periods.
+
+**What is _Off Peak_ time mode period?**
+
+Some organizations can select a regular time periods when no work is done.
+For example most of commercial companies are working from Monday to
+Friday in a fixed hours, eg. from 10am to 6pm. In the rest of the week -
+from Monday to Friday at 12am-9am and 6pm-11pm and whole Saturday and Sunday -
+no one is working. These time periods we're naming here as _Off Peak_.
+
+Organizations where _Off Peak_ time periods occurs probably don't want
+to pay for the _Idle_ machines when it's certain that no builds will be
+executed in this time. Especially when `IdleCount` is set to a big number.
+
+In the `v1.7` version of the Runner we've added the support for _Off Peak_
+configuration. With parameters described in configuration file you can now
+change the `IdleCount` and `IdleTime` values for the _Off Peak_ time mode
+periods.
+
+**How it is working?**
+
+Configuration of _Off Peak_ is done by three parameters: `OffPeakPeriods`,
+`OffPeakIdleCount` and `OffPeakIdleTime`. The `OffPeakPeriods` setting
+contains an array of cron-style patterns defining when the _Off Peak_ time
+mode should be set on. For example:
+
+```toml
+[runners.machine]
+  OffPeakPeriods = [
+    "* * 0-9,18-23 * * mon-fri *",
+    "* * * * * sat,sun *"
+  ]
+```
+
+will enable the _Off Peak_ periods described above, so the _working_ days
+from 12am to 9am and from 6pm to 11pm and whole weekend days. Machines
+scheduler is checking all patterns from the array and if at least one of
+them describes current time, then the _Off Peak_ time mode is enabled.
+
+When the _Off Peak_ time mode is enabled machines scheduler use
+`OffPeakIdleCount` instead of `IdleCount` setting and `OffPeakIdleTime`
+instead of `IdleTime` setting. The autoscaling algorithm is not changed,
+only the parameters. When machines scheduler discovers that none from
+the `OffPeakPeriods` pattern is fulfilled then it switches back to
+`IdleCount` and `IdleTime` settings.
+
+More information about syntax of `OffPeakPeriods` patterns can be found
+in [GitLab Runner - Advanced Configuration - The runners.machine section](advanced-configuration.md#the-runnersmachine-section).
+
 ## Distributed runners caching
 
 To speed up your builds, GitLab Runner provides a [cache mechanism][cache]
@@ -328,18 +382,24 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent builds
 
 [[runners]]
   url = "https://gitlab.com"
-  token = "RUNNER_TOKEN"            # Note this is different from the registration token used by `gitlab-runner register`
+  token = "RUNNER_TOKEN"             # Note this is different from the registration token used by `gitlab-runner register`
   name = "autoscale-runner"
-  executor = "docker+machine"       # This Runner is using the 'docker+machine' executor
-  limit = 10                        # This Runner can execute up to 10 builds (created machines)
+  executor = "docker+machine"        # This Runner is using the 'docker+machine' executor
+  limit = 10                         # This Runner can execute up to 10 builds (created machines)
   [runners.docker]
-    image = "ruby:2.1"              # The default image used for builds is 'ruby:2.1'
+    image = "ruby:2.1"               # The default image used for builds is 'ruby:2.1'
   [runners.machine]
-    IdleCount = 5                   # There must be 5 machines in Idle state
-    IdleTime = 600                  # Each machine can be in Idle state up to 600 seconds (after this it will be removed)
-    MaxBuilds = 100                 # Each machine can handle up to 100 builds in a row (after this it will be removed)
-    MachineName = "auto-scale-%s"   # Each machine will have a unique name ('%s' is required)
-    MachineDriver = "digitalocean"  # Docker Machine is using the 'digitalocean' driver
+    OffPeakPeriods = [               # Set the Off Peak time mode on for:
+      "* * 0-9,18-23 * * mon-fri *", # - Monday to Friday for 12am to 9am and 6pm to 11pm
+      "* * * * * sat,sun *"          # - whole Saturday and Sunday
+    ]
+    OffPeakIdleCount = 1             # There must be 1 machine in Idle state - when Off Peak time mode is on
+    OffPeakIdleTime = 1200           # Each machine can be in Idle state up to 1200 seconds (after this it will be removed) - when Off Peak time mode is on
+    IdleCount = 5                    # There must be 5 machines in Idle state - when Off Peak time mode is off
+    IdleTime = 600                   # Each machine can be in Idle state up to 600 seconds (after this it will be removed) - when Off Peak time mode is off
+    MaxBuilds = 100                  # Each machine can handle up to 100 builds in a row (after this it will be removed)
+    MachineName = "auto-scale-%s"    # Each machine will have a unique name ('%s' is required)
+    MachineDriver = "digitalocean"   # Docker Machine is using the 'digitalocean' driver
     MachineOptions = [
         "digitalocean-image=coreos-beta",
         "digitalocean-ssh-user=core",
