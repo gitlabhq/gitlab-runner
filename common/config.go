@@ -98,16 +98,16 @@ type VirtualBoxConfig struct {
 
 type KubernetesConfig struct {
 	Host          string `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
-	CertFile      string `toml:"cert_file" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
-	KeyFile       string `toml:"key_file" json:"key_file" long:"key-file" env:"KUBERNETES_KEY_FILE" description:"Optional Kubernetes master auth private key"`
-	CAFile        string `toml:"ca_file" json:"ca_file" long:"ca-file" env:"KUBERNETES_CA_FILE" description:"Optional Kubernetes master auth ca certificate"`
+	CertFile      string `toml:"cert_file,omitempty" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
+	KeyFile       string `toml:"key_file,omitempty" json:"key_file" long:"key-file" env:"KUBERNETES_KEY_FILE" description:"Optional Kubernetes master auth private key"`
+	CAFile        string `toml:"ca_file,omitempty" json:"ca_file" long:"ca-file" env:"KUBERNETES_CA_FILE" description:"Optional Kubernetes master auth ca certificate"`
 	Image         string `toml:"image" json:"image" long:"image" env:"KUBERNETES_IMAGE" description:"Default docker image to use for builds when none is specified"`
 	Namespace     string `toml:"namespace" json:"namespace" long:"namespace" env:"KUBERNETES_NAMESPACE" description:"Namespace to run Kubernetes jobs in"`
-	Privileged    bool   `toml:"privileged" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
-	CPUs          string `toml:"cpus" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"The CPU allocation given to build containers"`
-	Memory        string `toml:"memory" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"The amount of memory allocated to build containers"`
-	ServiceCPUs   string `toml:"service_cpus" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
-	ServiceMemory string `toml:"service_memory" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
+	Privileged    bool   `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
+	CPUs          string `toml:"cpus,omitempty" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"The CPU allocation given to build containers"`
+	Memory        string `toml:"memory,omitempty" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"The amount of memory allocated to build containers"`
+	ServiceCPUs   string `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
+	ServiceMemory string `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
 }
 
 type RunnerCredentials struct {
@@ -137,13 +137,13 @@ type RunnerSettings struct {
 
 	Shell string `toml:"shell,omitempty" json:"shell" long:"shell" env:"RUNNER_SHELL" description:"Select bash, cmd or powershell"`
 
-	SSH        *ssh.Config       `toml:"ssh" json:"ssh" group:"ssh executor" namespace:"ssh"`
-	Docker     *DockerConfig     `toml:"docker" json:"docker" group:"docker executor" namespace:"docker"`
-	Parallels  *ParallelsConfig  `toml:"parallels" json:"parallels" group:"parallels executor" namespace:"parallels"`
-	VirtualBox *VirtualBoxConfig `toml:"virtualbox" json:"virtualbox" group:"virtualbox executor" namespace:"virtualbox"`
-	Cache      *CacheConfig      `toml:"cache" json:"cache" group:"cache configuration" namespace:"cache"`
-	Machine    *DockerMachine    `toml:"machine" json:"machine" group:"docker machine provider" namespace:"machine"`
-	Kubernetes *KubernetesConfig `toml:"kubernetes" json:"kubernetes" group:"kubernetes executor" namespace:"kubernetes"`
+	SSH        *ssh.Config       `toml:"ssh,omitempty" json:"ssh" group:"ssh executor" namespace:"ssh"`
+	Docker     *DockerConfig     `toml:"docker,omitempty" json:"docker" group:"docker executor" namespace:"docker"`
+	Parallels  *ParallelsConfig  `toml:"parallels,omitempty" json:"parallels" group:"parallels executor" namespace:"parallels"`
+	VirtualBox *VirtualBoxConfig `toml:"virtualbox,omitempty" json:"virtualbox" group:"virtualbox executor" namespace:"virtualbox"`
+	Cache      *CacheConfig      `toml:"cache,omitempty" json:"cache" group:"cache configuration" namespace:"cache"`
+	Machine    *DockerMachine    `toml:"machine,omitempty" json:"machine" group:"docker machine provider" namespace:"machine"`
+	Kubernetes *KubernetesConfig `toml:"kubernetes,omitempty" json:"kubernetes" group:"kubernetes executor" namespace:"kubernetes"`
 }
 
 type RunnerConfig struct {
