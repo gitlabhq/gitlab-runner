@@ -205,8 +205,8 @@ func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machi
 		return errors.New("Too many machines")
 	}
 
-	if time.Since(details.Used) > time.Second*time.Duration(config.Machine.IdleTime) {
-		if data.Idle >= config.Machine.IdleCount {
+	if time.Since(details.Used) > time.Second*time.Duration(config.Machine.GetIdleTime()) {
+		if data.Idle >= config.Machine.GetIdleCount() {
 			// Remove machine that are way over the idle time
 			return errors.New("Too many idle machines")
 		}
@@ -235,7 +235,7 @@ func (m *machineProvider) updateMachines(machines []string, config *common.Runne
 func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
 	// Create a new machines and mark them as Idle
 	for {
-		if data.Available() >= config.Machine.IdleCount {
+		if data.Available() >= config.Machine.GetIdleCount() {
 			// Limit maximum number of idle machines
 			break
 		}
@@ -277,7 +277,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 
 	logrus.WithFields(machinesData.Fields()).
 		WithField("runner", config.ShortDescription()).
-		WithField("minIdleCount", config.Machine.IdleCount).
+		WithField("minIdleCount", config.Machine.GetIdleCount()).
 		WithField("maxMachines", config.Limit).
 		WithField("time", time.Now()).
 		Debugln("Docker Machine Details")
@@ -291,7 +291,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 	}
 
 	// If we have a free machines we can process a build
-	if config.Machine.IdleCount != 0 && machinesData.Idle == 0 {
+	if config.Machine.GetIdleCount() != 0 && machinesData.Idle == 0 {
 		err = errors.New("No free machines that can process builds")
 	}
 	return
