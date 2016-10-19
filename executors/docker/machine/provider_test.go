@@ -68,6 +68,21 @@ func createMachineConfig(idleCount int, idleTime int) *common.RunnerConfig {
 	}
 }
 
+func createMachineOffPeakIdleConfig(offPeakPeriod string) *common.RunnerConfig {
+	return &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:      "test-machine-%s",
+				IdleCount:        2,
+				IdleTime:         0,
+				OffPeakIdleCount: 0,
+				OffPeakIdleTime:  0,
+				OffPeakPeriods:   []string{offPeakPeriod},
+			},
+		},
+	}
+}
+
 type testMachine struct {
 	machines []string
 	second   bool
@@ -442,6 +457,38 @@ func TestMachineIdleLimits(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateRemoving, d.State, "machine should not be removed, because no more than two idle")
 	assert.Equal(t, "Too many idle machines", d.Reason)
+}
+
+func TestMachineOffPeakIdleLimits(t *testing.T) {
+	daysOfWeek := map[time.Weekday]string{
+		time.Monday:    "mon",
+		time.Tuesday:   "tue",
+		time.Wednesday: "wed",
+		time.Thursday:  "thu",
+		time.Friday:    "fri",
+		time.Saturday:  "sat",
+		time.Sunday:    "sun",
+	}
+	now := time.Now()
+	offPeakEnabledPeriod := fmt.Sprintf("* * * * * %s *", daysOfWeek[now.Weekday()])
+	offPeakDisabledPeriod := fmt.Sprintf("* * * * * %s *", daysOfWeek[now.Add(time.Hour*48).Weekday()])
+
+	p, _ := testMachineProvider()
+
+	config := createMachineOffPeakIdleConfig(offPeakDisabledPeriod)
+	d, errCh := p.create(config, machineStateIdle)
+	assert.NoError(t, <-errCh, "machine creation should not fail")
+
+	d2, err := p.Acquire(config)
+	assert.NoError(t, err)
+	p.Release(config, d2)
+	assert.Equal(t, machineStateIdle, d.State, "machine should not be removed, because not in OffPeak time mode")
+
+	config = createMachineOffPeakIdleConfig(offPeakEnabledPeriod)
+	d3, err := p.Acquire(config)
+	p.Release(config, d3)
+	assert.NoError(t, err)
+	assert.Equal(t, machineStateRemoving, d.State, "machine should be removed, because in OffPeak time mode")
 }
 
 func TestMachineUseOnDemand(t *testing.T) {
