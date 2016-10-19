@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var NAME = "gitlab-ci-multi-runner"
@@ -52,6 +53,34 @@ func (v *AppVersionInfo) Extended() string {
 	version += fmt.Sprintf("OS/Arch:      %s/%s\n", v.OS, v.Architecture)
 
 	return version
+}
+
+// NewMetricsCollector returns a prometheus.Collector which represents current build information.
+func (v *AppVersionInfo) NewMetricsCollector() *prometheus.GaugeVec {
+	labels := map[string]string{
+		"name":         v.Name,
+		"version":      v.Version,
+		"revision":     v.Revision,
+		"branch":       v.Branch,
+		"go_version":   v.GOVersion,
+		"built_at":     v.BuiltAt.String(),
+		"os":           v.OS,
+		"architecture": v.Architecture,
+	}
+	labelNames := make([]string, 0, len(labels))
+	for n := range labels {
+		labelNames = append(labelNames, n)
+	}
+
+	buildInfo := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "ci_runner_version_info",
+			Help: "A metric with a constant '1' value labeled by different build stats fields.",
+		},
+		labelNames,
+	)
+	buildInfo.With(labels).Set(1)
+	return buildInfo
 }
 
 func init() {
