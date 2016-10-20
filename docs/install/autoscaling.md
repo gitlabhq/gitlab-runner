@@ -85,7 +85,7 @@ more in [Distributed runners caching][caching].
     docker run -it --restart always -p 9005:9000 \
             -v /.minio:/root/.minio -v /export:/export \
             --name minio \
-            minio/minio:latest /export
+            minio/minio:latest server /export
     ```
 
     You can modify the port `9005` to expose the cache server on different port.
