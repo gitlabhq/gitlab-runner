@@ -176,10 +176,14 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, options *archivingOptions,
 		args = append(args, "--url", url.String())
 	}
 
-	// Execute archive command
+	// Execute cache-extractor command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
 		w.Notice("Checking cache for %s...", cacheKey)
-		w.Command(info.RunnerCommand, args...)
+		w.IfCmd(info.RunnerCommand, args...)
+		w.Notice("Successfully extracted cache")
+		w.Else()
+		w.Warning("Failed to extract cache")
+		w.EndIf()
 	})
 }
 
@@ -330,10 +334,14 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, options *archivingOptions, 
 		args = append(args, "--url", url.String())
 	}
 
+	// Execute cache-archiver command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
-		// Execute archive command
 		w.Notice("Creating cache %s...", cacheKey)
-		w.Command(info.RunnerCommand, args...)
+		w.IfCmd(info.RunnerCommand, args...)
+		w.Notice("Created cache")
+		w.Else()
+		w.Warning("Failed to create cache")
+		w.EndIf()
 	})
 }
 
