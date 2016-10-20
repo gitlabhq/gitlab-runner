@@ -28,7 +28,7 @@ Create a GitLab CI user (on Linux):
 sudo useradd --comment 'GitLab Runner' --create-home gitlab-runner --shell /bin/bash
 ```
 
-Register the runner:
+Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
 
 ```bash
 sudo gitlab-ci-multi-runner register

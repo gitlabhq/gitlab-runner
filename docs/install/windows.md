@@ -10,7 +10,7 @@ write `Command Prompt` in Windows search field, right click and select
 `Run as administrator`. You will be asked to confirm that you want to execute
 the elevated command prompt.
 
-Register the runner:
+Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
 
 ```bash
 cd C:\Multi-Runner

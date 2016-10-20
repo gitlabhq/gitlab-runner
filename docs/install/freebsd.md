@@ -91,7 +91,7 @@ sudo chmod +x /etc/rc.d/gitlab_runner
 ```
 
 
-Register the runner:
+Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
 
 ```bash
 sudo -u gitlab-runner -H /usr/local/bin/gitlab-ci-multi-runner register

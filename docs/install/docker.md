@@ -40,7 +40,7 @@ docker run -d --name gitlab-runner --restart always \
   gitlab/gitlab-runner:latest
 ```
 
-Register the runner:
+Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
 
 ```bash
 docker exec -it gitlab-runner gitlab-runner register

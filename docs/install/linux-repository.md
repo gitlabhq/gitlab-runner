@@ -50,7 +50,7 @@ sudo apt-get install gitlab-ci-multi-runner
 sudo yum install gitlab-ci-multi-runner
 ```
 
-Register the runner:
+Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
 
 ```bash
 sudo gitlab-ci-multi-runner register
