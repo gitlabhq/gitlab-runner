@@ -16,7 +16,7 @@ sudo chmod +x /usr/local/bin/gitlab-ci-multi-runner
 
 **The rest of commands execute as the user who will run the runner.**
 
-Register the runner:
+Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
 ```bash
 gitlab-ci-multi-runner register
 
