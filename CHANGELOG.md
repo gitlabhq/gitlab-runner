@@ -1,3 +1,29 @@
+v 1.7.0
+- Improve description of --s3-bucket-location option !325
+- Use Go 1.7 !323
+- Add changelog entries generation script !322
+- Add docker_images release step to CI pipeline !333
+- Refactor shell executor tests !334
+- Introduce GIT_STRATEGY=none !332
+- Introduce a variable to enable shell tracing on bash, cmd.exe and powershell.exe !339
+- Try to load the InCluster config first, if that fails load kubectl config !327
+- Squash the "No TLS connection state" warning !343
+- Add a benchmark for helpers.ShellEscape and optimise it !351
+- Godep: update github.com/Sirupsen/logrus to v0.10.0 !344
+- Use git clone --no-checkout and git checkout --force !341
+- Change machine.machineDetails to machine.Details !353
+- Make runner name lowercase to work with GCE restrictions !297
+- Add per job before_script handling for exec command !355
+- Add OffPeak support for autoscaling !345
+- Prevent caching failures from marking a build as failed !359
+- Add missed "server" command for minio in autoscaled S3 cache tutorial !361
+- Add a section for Godep in CONTRIBUTING.md !302
+- Add a link to all install documentation files describing how to obtain a registration token !362
+- Improve registration behavior !356
+- Add the release process description !176
+- Fix documentation typo in docs/configuration/advanced-configuration.md !354
+- Fix data races around runner health and build stats !352
+
 v 1.6.1
 - Add changelog entries generation script !322
 - Add docker_images release step to CI pipeline !333
