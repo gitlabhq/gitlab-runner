@@ -56,7 +56,7 @@ type RunCommand struct {
 }
 
 func (mr *RunCommand) log() *log.Entry {
-	return log.WithField("builds", len(mr.buildsHelper.builds))
+	return log.WithField("builds", mr.buildsHelper.buildsCount())
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
