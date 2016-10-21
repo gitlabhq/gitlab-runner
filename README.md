@@ -8,6 +8,10 @@ The old name of this project was GitLab CI Multi Runner but please use "GitLab R
 
 ![Build Status](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/badges/master/build.svg)
 
+### Release process
+
+The description of release process of GitLab Runner project can be found in the [release documentation](docs/release_process/README.md).
+
 ### Contributing
 
 Contributions are welcome, see [`CONTRIBUTING.md`](CONTRIBUTING.md) for more details.
