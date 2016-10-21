@@ -246,7 +246,7 @@ registry.
 If you are running `gitlab-runner` with a non-root user, you must use that user
 to login to the private docker registry. This user will also need to be in the
 `docker` group in order to be able to run any docker commands. To add a user to
-the `docker` group use: `sudo usermod -aG user docker`.
+the `docker` group use: `sudo usermod -aG docker user`.
 
 For reference, if you want to set up your own personal registry you might want
 to have a look at <https://docs.docker.com/registry/deploying/>.
