@@ -154,33 +154,55 @@ func (s *RegisterCommand) askRunner() {
 }
 
 func (s *RegisterCommand) askExecutorOptions() {
+	kubernetes := s.Kubernetes
+	machine := s.Machine
+	docker := s.Docker
+	ssh := s.SSH
+	parallels := s.Parallels
+	virtualbox := s.VirtualBox
+
+	s.Kubernetes = nil
+	s.Machine = nil
+	s.Docker = nil
+	s.SSH = nil
+	s.Parallels = nil
+	s.VirtualBox = nil
+
 	switch s.Executor {
-	case "docker":
+	case "kubernetes":
+		s.Kubernetes = kubernetes
+	case "docker+machine":
+		s.Machine = machine
+		s.Docker = docker
 		s.askDocker()
-		s.SSH = nil
-		s.Parallels = nil
-		s.VirtualBox = nil
-	case "docker-ssh":
+	case "docker-ssh+machine":
+		s.Machine = machine
+		s.Docker = docker
+		s.SSH = ssh
 		s.askDocker()
 		s.askSSHLogin()
-		s.Parallels = nil
-		s.VirtualBox = nil
+	case "docker":
+		s.Docker = docker
+		s.askDocker()
+	case "docker-ssh":
+		s.Docker = docker
+		s.SSH = ssh
+		s.askDocker()
+		s.askSSHLogin()
 	case "ssh":
+		s.SSH = ssh
 		s.askSSHServer()
 		s.askSSHLogin()
-		s.Docker = nil
-		s.Parallels = nil
-		s.VirtualBox = nil
 	case "parallels":
+		s.SSH = ssh
+		s.Parallels = parallels
 		s.askParallels()
 		s.askSSHServer()
-		s.Docker = nil
-		s.VirtualBox = nil
 	case "VirtualBox":
+		s.SSH = ssh
+		s.VirtualBox = virtualbox
 		s.askVirtualBox()
 		s.askSSHLogin()
-		s.Docker = nil
-		s.Parallels = nil
 	}
 }
 
@@ -217,13 +239,11 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 		}()
 	}
 
-	s.askExecutor()
-
 	if s.config.Concurrent < s.Limit {
 		log.Warningf("Specified limit (%d) larger then current concurrent limit (%d). Concurrent limit will not be enlarged.", s.Limit, s.config.Concurrent)
 	}
-	s.Machine = nil
 
+	s.askExecutor()
 	s.askExecutorOptions()
 	s.addRunner(&s.RunnerConfig)
 	s.saveConfig()
@@ -241,9 +261,12 @@ func init() {
 		RunnerConfig: common.RunnerConfig{
 			Name: getHostname(),
 			RunnerSettings: common.RunnerSettings{
-				Parallels:  &common.ParallelsConfig{},
-				SSH:        &ssh.Config{},
+				Kubernetes: &common.KubernetesConfig{},
+				Cache:      &common.CacheConfig{},
+				Machine:    &common.DockerMachine{},
 				Docker:     &common.DockerConfig{},
+				SSH:        &ssh.Config{},
+				Parallels:  &common.ParallelsConfig{},
 				VirtualBox: &common.VirtualBoxConfig{},
 			},
 		},
