@@ -113,6 +113,7 @@ This defines the Docker Container parameters.
 | `volumes`                   | specify additional volumes that should be mounted (same syntax as Docker -v option) |
 | `extra_hosts`               | specify hosts that should be defined in container environment |
 | `volumes_from`              | specify a list of volumes to inherit from another container in the form <code>\<container name\>[:\<ro&#124;rw\>]</code> |
+| `volume_driver`             | specify the volume driver to use for the container |
 | `links`                     | specify containers which should be linked with building container |
 | `services`                  | specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
 | `allowed_images`            | specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
