@@ -59,6 +59,10 @@ func (b *BashWriter) Unindent() {
 }
 
 func (b *BashWriter) Command(command string, arguments ...string) {
+	b.Line(b.buildCommand(command, arguments...))
+}
+
+func (b *BashWriter) buildCommand(command string, arguments ...string) string {
 	list := []string{
 		helpers.ShellEscape(command),
 	}
@@ -67,7 +71,7 @@ func (b *BashWriter) Command(command string, arguments ...string) {
 		list = append(list, strconv.Quote(argument))
 	}
 
-	b.Line(strings.Join(list, " "))
+	return strings.Join(list, " ")
 }
 
 func (b *BashWriter) Variable(variable common.BuildVariable) {
@@ -92,7 +96,8 @@ func (b *BashWriter) IfFile(path string) {
 }
 
 func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
-	b.Line(fmt.Sprintf("if %q %s >/dev/null 2>/dev/null; then", cmd, strings.Join(arguments, " ")))
+	cmdline := b.buildCommand(cmd, arguments...)
+	b.Line(fmt.Sprintf("if %s >/dev/null 2>/dev/null; then", cmdline))
 	b.Indent()
 }
 

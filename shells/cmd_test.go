@@ -2,8 +2,9 @@ package shells
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type testCase struct {
@@ -11,7 +12,7 @@ type testCase struct {
 	out string
 }
 
-func TestEchoShellEscapes(t *testing.T) {
+func TestCMD_EchoShellEscapes(t *testing.T) {
 	for i, tc := range []testCase{
 		{`abcdefghijklmnopqrstuvwxyz`, `abcdefghijklmnopqrstuvwxyz`},
 		{`^ & < > |`, `^^ ^& ^< ^> ^|`},
@@ -35,7 +36,7 @@ func TestEchoShellEscapes(t *testing.T) {
 	}
 }
 
-func TestCDShellEscapes(t *testing.T) {
+func TestCMD_CDShellEscapes(t *testing.T) {
 	for i, tc := range []testCase{
 		{`c:\`, `c:\`},
 		{`c:/`, `c:\`},
@@ -48,4 +49,18 @@ func TestCDShellEscapes(t *testing.T) {
 		expected := fmt.Sprintf("cd /D \"%s\"\r\nIF %%errorlevel%% NEQ 0 exit /b %%errorlevel%%\r\n\r\n", tc.out)
 		assert.Equal(t, expected, writer.String(), "case %d", i)
 	}
+}
+
+func TestCMD_CommandShellEscapes(t *testing.T) {
+	writer := &CmdWriter{}
+	writer.Command("foo", "x&(y)")
+
+	assert.Equal(t, "\"foo\" \"x^&(y)\"\r\nIF %errorlevel% NEQ 0 exit /b %errorlevel%\r\n\r\n", writer.String())
+}
+
+func TestCMD_IfCmdShellEscapes(t *testing.T) {
+	writer := &CmdWriter{}
+	writer.IfCmd("foo", "x&(y)")
+
+	assert.Equal(t, "\"foo\" \"x^&(y)\" 2>NUL 1>NUL\r\nIF %errorlevel% EQU 0 (\r\n", writer.String())
 }

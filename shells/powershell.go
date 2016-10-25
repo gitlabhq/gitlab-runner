@@ -65,6 +65,11 @@ func (b *PsWriter) checkErrorLevel() {
 }
 
 func (b *PsWriter) Command(command string, arguments ...string) {
+	b.Line(b.buildCommand(command, arguments...))
+	b.checkErrorLevel()
+}
+
+func (b *PsWriter) buildCommand(command string, arguments ...string) string {
 	list := []string{
 		psQuote(command),
 	}
@@ -73,8 +78,7 @@ func (b *PsWriter) Command(command string, arguments ...string) {
 		list = append(list, psQuote(argument))
 	}
 
-	b.Line("& " + strings.Join(list, " "))
-	b.checkErrorLevel()
+	return "& " + strings.Join(list, " ")
 }
 
 func (b *PsWriter) Variable(variable common.BuildVariable) {
@@ -102,8 +106,8 @@ func (b *PsWriter) IfFile(path string) {
 }
 
 func (b *PsWriter) IfCmd(cmd string, arguments ...string) {
-	cmd = cmd + " " + strings.Join(arguments, " ")
-	b.Line(fmt.Sprintf("if(iex %s 2>$null) {", psQuote(cmd)))
+	b.Line(b.buildCommand(cmd, arguments...) + " 2>$null")
+	b.Line("if($?) {")
 	b.Indent()
 }
 

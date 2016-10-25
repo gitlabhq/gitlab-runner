@@ -78,6 +78,11 @@ func (b *CmdWriter) checkErrorLevel() {
 }
 
 func (b *CmdWriter) Command(command string, arguments ...string) {
+	b.Line(b.buildCommand(command, arguments...))
+	b.checkErrorLevel()
+}
+
+func (b *CmdWriter) buildCommand(command string, arguments ...string) string {
 	list := []string{
 		batchQuote(command),
 	}
@@ -86,8 +91,7 @@ func (b *CmdWriter) Command(command string, arguments ...string) {
 		list = append(list, batchQuote(argument))
 	}
 
-	b.Line(strings.Join(list, " "))
-	b.checkErrorLevel()
+	return strings.Join(list, " ")
 }
 
 func (b *CmdWriter) Variable(variable common.BuildVariable) {
@@ -113,7 +117,8 @@ func (b *CmdWriter) IfFile(path string) {
 }
 
 func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
-	b.Line(fmt.Sprintf("%q %s 2>NUL 1>NUL", cmd, strings.Join(arguments, " ")))
+	cmdline := b.buildCommand(cmd, arguments...)
+	b.Line(fmt.Sprintf("%s 2>NUL 1>NUL", cmdline))
 	b.Line("IF %errorlevel% EQU 0 (")
 	b.Indent()
 }
