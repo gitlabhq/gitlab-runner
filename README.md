@@ -64,6 +64,7 @@ If you want to use **Docker** make sure that you have **1.5.0** at least install
 * Easy to use setup with support for docker, docker-ssh, parallels or ssh running environments
 * Enables caching of Docker containers
 * Easy installation as service for Linux, OSX and Windows
+* Embedded Prometheus metrics HTTP server
 
 ### Compatibility chart
 
@@ -125,6 +126,7 @@ Supported systems by different shells:
 * [See details about the shells](docs/shells/README.md)
 * [See advanced configuration options](docs/configuration/advanced-configuration.md)
 * [See security considerations](docs/security/index.md)
+* [See how to use the Prometheus metrics HTTP server](docs/monitoring/README.md)
 
 ### Extra projects?
 
