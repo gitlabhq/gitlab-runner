@@ -154,7 +154,7 @@ func (s *executor) setupBuildPod() error {
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
-	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
+	p := &api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
 			Namespace:    s.Config.Kubernetes.Namespace,
@@ -173,7 +173,8 @@ func (s *executor) setupBuildPod() error {
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 		},
-	})
+	}
+	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(p)
 
 	if err != nil {
 		return err
