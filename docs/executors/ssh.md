@@ -59,5 +59,5 @@ The SSH executor is susceptible to MITM attacks (man-in-the-middle), because of
 the missing `StrictHostKeyChecking` option. This will be fixed in one of the
 future releases.
 
-[runners-ssh]: ..//configuration/advanced-configuration.md#the-runnersssh-section
+[runners-ssh]: ../configuration/advanced-configuration.md#the-runnersssh-section
 [toml]: ../configuration/advanced-configuration.md
