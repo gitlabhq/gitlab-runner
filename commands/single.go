@@ -15,7 +15,12 @@ import (
 
 type RunSingleCommand struct {
 	common.RunnerConfig
-	network common.Network
+	network     common.Network
+	WaitTimeout int `long:"wait-timeout" description:"How long to wait in seconds before receiving the first job"`
+	lastBuild   time.Time
+	runForever  bool
+	MaxBuilds   int `long:"max-builds" description:"How many builds to process before exiting"`
+	finished    bool
 }
 
 func waitForInterrupts(finished *bool, abortSignal chan os.Signal, doneSignal chan int) {
@@ -48,6 +53,14 @@ func waitForInterrupts(finished *bool, abortSignal chan os.Signal, doneSignal ch
 		log.Fatalln("shutdown timedout")
 	case <-doneSignal:
 	}
+}
+
+// Things to do after a build
+func (r *RunSingleCommand) postBuild() {
+	if r.MaxBuilds > 0 {
+		r.MaxBuilds--
+	}
+	r.lastBuild = time.Now()
 }
 
 func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) (err error) {
@@ -86,6 +99,21 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 	defer trace.Fail(err)
 
 	err = newBuild.Run(config, trace)
+
+	r.postBuild()
+
+	return
+}
+
+func (r *RunSingleCommand) checkFinishedConditions() {
+	if r.MaxBuilds < 1 && !r.runForever {
+		log.Println("This runner has processed its build limit, so now exiting")
+		r.finished = true
+	}
+	if r.WaitTimeout > 0 && int(time.Since(r.lastBuild).Seconds()) > r.WaitTimeout {
+		log.Println("This runner has not received a job in", r.WaitTimeout, "seconds, so now exiting")
+		r.finished = true
+	}
 	return
 }
 
@@ -107,19 +135,23 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 	log.Println("Starting runner for", r.URL, "with token", r.ShortDescription(), "...")
 
-	finished := false
+	r.finished = false
 	abortSignal := make(chan os.Signal)
 	doneSignal := make(chan int, 1)
+	r.runForever = r.MaxBuilds == 0
 
-	go waitForInterrupts(&finished, abortSignal, doneSignal)
+	go waitForInterrupts(&r.finished, abortSignal, doneSignal)
 
-	for !finished {
+	r.lastBuild = time.Now()
+
+	for !r.finished {
 		data, err := executorProvider.Acquire(&r.RunnerConfig)
 		if err != nil {
 			log.Warningln("Executor update:", err)
 		}
 
 		r.processBuild(data, abortSignal)
+		r.checkFinishedConditions()
 		executorProvider.Release(&r.RunnerConfig, data)
 	}
 
