@@ -38,15 +38,17 @@ func TestBuildRun(t *testing.T) {
 
 	RegisterExecutor("build-run-test", &p)
 
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: SuccessfulBuild,
+		GetBuildResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-test",
 			},
 		},
 	}
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -76,15 +78,17 @@ func TestRetryPrepare(t *testing.T) {
 
 	RegisterExecutor("build-run-retry-prepare", &p)
 
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: SuccessfulBuild,
+		GetBuildResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-retry-prepare",
 			},
 		},
 	}
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -107,15 +111,17 @@ func TestPrepareFailure(t *testing.T) {
 
 	RegisterExecutor("build-run-prepare-failure", &p)
 
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: SuccessfulBuild,
+		GetBuildResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-failure",
 			},
 		},
 	}
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "prepare failed")
 }
 
@@ -136,15 +142,17 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 
 	RegisterExecutor("build-run-prepare-failure-on-build-error", &p)
 
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: SuccessfulBuild,
+		GetBuildResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-failure-on-build-error",
 			},
 		},
 	}
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.IsType(t, err, &BuildError{})
 }
 
@@ -169,14 +177,16 @@ func TestRunFailure(t *testing.T) {
 
 	RegisterExecutor("build-run-run-failure", &p)
 
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: SuccessfulBuild,
+		GetBuildResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-run-failure",
 			},
 		},
 	}
-	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
