@@ -3,6 +3,8 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -11,6 +13,8 @@ import (
 
 	service "github.com/ayufan/golang-kardianos-service"
 	"github.com/codegangsta/cli"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -21,8 +25,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
 
+var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", nil, nil)
+
 type RunCommand struct {
-	configOptions
+	configOptionsWithMetricsServer
 	network common.Network
 	healthHelper
 
@@ -57,6 +63,16 @@ type RunCommand struct {
 
 func (mr *RunCommand) log() *log.Entry {
 	return log.WithField("builds", mr.buildsHelper.buildsCount())
+}
+
+// Describe implements prometheus.Collector.
+func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
+	ch <- numBuildsDesc
+}
+
+// Collect implements prometheus.Collector.
+func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
+	ch <- prometheus.MustNewConstMetric(numBuildsDesc, prometheus.GaugeValue, float64(mr.buildsHelper.buildsCount()))
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
@@ -302,7 +318,42 @@ func (mr *RunCommand) runWait() {
 	mr.stopSignal = <-mr.stopSignals
 }
 
+func (mr *RunCommand) serveMetrics() error {
+	// We separate out the listener creation here so that we can return an error if
+	// the provided address is invalid or there is some other listener error.
+	listener, err := net.Listen("tcp", mr.metricsServerAddress())
+	if err != nil {
+		return err
+	}
+
+	registry := prometheus.NewRegistry()
+	// Metrics about the runner's business logic.
+	registry.MustRegister(mr)
+	// Metrics about the program's build version.
+	registry.MustRegister(common.AppVersion.NewMetricsCollector())
+	// Go-specific metrics about the process (GC stats, goroutines, etc.).
+	registry.MustRegister(prometheus.NewGoCollector())
+	// Go-unrelated process metrics (memory usage, file descriptors, etc.).
+	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+
+	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	go func() {
+		log.Fatalln(http.Serve(listener, nil))
+	}()
+
+	return nil
+}
+
 func (mr *RunCommand) Run() {
+	if mr.metricsServerAddress() != "" {
+		if err := mr.serveMetrics(); err != nil {
+			log.Fatalln(err)
+		}
+		log.Infoln("Metrics server listening at", mr.metricsServerAddress())
+	} else {
+		log.Infoln("Metrics server disabled")
+	}
+
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
 

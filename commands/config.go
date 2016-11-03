@@ -64,6 +64,20 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 	return nil, fmt.Errorf("Could not find a runner with the name '%s'", name)
 }
 
+type configOptionsWithMetricsServer struct {
+	configOptions
+
+	MetricsServerAddress string `long:"metrics-server" env:"METRICS_SERVER" description:"Metrics server listening address"`
+}
+
+func (c *configOptionsWithMetricsServer) metricsServerAddress() string {
+	if c.MetricsServerAddress != "" {
+		return c.MetricsServerAddress
+	}
+
+	return c.config.MetricsServerAddress
+}
+
 func init() {
 	configFile := os.Getenv("CONFIG_FILE")
 	if configFile == "" {
