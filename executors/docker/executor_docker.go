@@ -10,12 +10,14 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/fsouza/go-dockerclient"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
@@ -463,17 +465,17 @@ func (s *executor) bindDevices() (err error) {
 }
 
 func (s *executor) splitServiceAndVersion(serviceDescription string) (service string, version string, linkNames []string) {
-	splits := strings.SplitN(serviceDescription, ":", 2)
+	ReferenceRegexpNoPort := regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
 	version = "latest"
-	switch len(splits) {
-	case 1:
-		service = splits[0]
 
-	case 2:
-		service = splits[0]
-		version = splits[1]
+	if match := reference.ReferenceRegexp.FindStringSubmatch(serviceDescription); match != nil {
+		matchService := ReferenceRegexpNoPort.FindStringSubmatch(match[1])
+		service = matchService[1] + matchService[3]
 
-	default:
+		if len(match[2]) > 0 {
+			version = match[2]
+		}
+	} else {
 		return
 	}
 
