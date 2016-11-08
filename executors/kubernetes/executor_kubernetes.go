@@ -47,6 +47,22 @@ type executor struct {
 	pullPolicy       common.KubernetesPullPolicy
 }
 
+func (s *executor) setupLimits() error {
+	var err error
+	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPUs, s.Config.Kubernetes.ServiceMemory); err != nil {
+		return err
+	}
+
+	if s.buildLimits, err = limits(s.Config.Kubernetes.CPUs, s.Config.Kubernetes.Memory); err != nil {
+		return err
+	}
+
+	if s.predefinedLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
 	err := s.AbstractExecutor.Prepare(globalConfig, config, build)
 	if err != nil {
@@ -57,8 +73,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	err = build.Options.Decode(&s.options)
-	if err != nil {
+	if err = build.Options.Decode(&s.options); err != nil {
 		return err
 	}
 
@@ -67,15 +82,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
-	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPUs, s.Config.Kubernetes.ServiceMemory); err != nil {
-		return err
-	}
-
-	if s.buildLimits, err = limits(s.Config.Kubernetes.CPUs, s.Config.Kubernetes.Memory); err != nil {
-		return err
-	}
-
-	if s.predefinedLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
+	if err = s.setupLimits(); err != nil {
 		return err
 	}
 
