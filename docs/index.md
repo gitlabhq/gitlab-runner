@@ -44,8 +44,8 @@ installed.
 ## Install GitLab Runner
 
 GitLab Runner can be installed and used on GNU/Linux, macOS, FreeBSD and Windows.
-There are three ways to install it. Using Docker, download the binary manually or
-use the repository for rpm/deb packages that GitLab offers. Below you can find
+You can install it Using Docker, download the binary manually or use the
+repository for rpm/deb packages that GitLab offers. Below you can find
 information on the different installation methods:
 
 - [Install using GitLab's repository for Debian/Ubuntu/CentOS/RedHat (preferred)](install/linux-repository.md)
