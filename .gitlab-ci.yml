@@ -19,6 +19,8 @@ before_script:
   variables:
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
+  tags:
+  - docker
 
 bindata:
   <<: *docker
@@ -42,6 +44,8 @@ code style:
   - make fmt
   - make lint
   - make complexity
+  tags:
+  - docker
 
 unit tests:
   stage: test
@@ -49,6 +53,8 @@ unit tests:
   - source ci/touch_make_dependencies
   - make deps
   - make test
+  tags:
+  - docker
 
 docker executor:
   <<: *docker
@@ -67,6 +73,8 @@ binaries:
     paths:
     - out/binaries/
     expire_in: 7d
+  tags:
+  - docker
 
 packages:
   stage: package
@@ -79,6 +87,8 @@ packages:
     - out/deb/
     - out/rpm/
     expire_in: 7d
+  tags:
+  - docker
 
 docker_images:
   <<: *docker
