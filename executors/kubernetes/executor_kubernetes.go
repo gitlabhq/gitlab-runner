@@ -41,9 +41,10 @@ type executor struct {
 	pod        *api.Pod
 	options    *kubernetesOptions
 
-	buildLimits   api.ResourceList
-	serviceLimits api.ResourceList
-	pullPolicy    common.KubernetesPullPolicy
+	buildLimits      api.ResourceList
+	serviceLimits    api.ResourceList
+	predefinedLimits api.ResourceList
+	pullPolicy       common.KubernetesPullPolicy
 }
 
 func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
@@ -74,8 +75,11 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 
-	s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get()
-	if err != nil {
+	if s.predefinedLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
+		return err
+	}
+
+	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
 		return err
 	}
 
@@ -187,7 +191,7 @@ func (s *executor) setupBuildPod() error {
 			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("predefined", s.Config.Kubernetes.HelperImage, s.buildLimits, []string{"gitlab-runner-build"}...),
+				s.buildContainer("predefined", s.Config.Kubernetes.HelperImage, s.predefinedLimits, []string{"gitlab-runner-build"}...),
 			}, services...),
 		},
 	})

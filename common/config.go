@@ -128,6 +128,8 @@ type KubernetesConfig struct {
 	ServiceMemory string               `toml:"service_memory" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
 	PullPolicy    KubernetesPullPolicy `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 	NodeSelector  map[string]string    `toml:"node_selector,omitempty" json:"node_selector" long:"node-selector" description:"A toml table/json object of key=value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key=value pairs."`
+	HelperCPUs    string               `toml:"helper_cpus" json:"helper_cpus" long:"helper-cpus" env:"KUBERNETES_HELPER_CPUS" description:"The CPU allocation given to build helper containers"`
+	HelperMemory  string               `toml:"helper_memory" json:"helper_memory" long:"helper-memory" env:"KUBERNETES_HELPER_MEMORY" description:"The amount of memory allocated to build helper containers"`
 	HelperImage   string               `toml:"helper_image" json:"helper-image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 }
 
