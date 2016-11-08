@@ -9,13 +9,15 @@ coordinates the jobs.
 
 ## Requirements
 
-> **None:**
-GitLab Runner is run as a single binary.
+GitLab Runner is written in [Go][golang] and can be run as a single binary, no
+language specific requirements are needed.
 
-GitLab Runner is designed to run on the GNU/Linux, macOS, and Windows operating systems.
-Other operating systems will probably work as long as you can compile a Go binary on them.
+It is designed to run on the GNU/Linux, macOS, and Windows operating systems.
+Other operating systems will probably work as long as you can compile a Go
+binary on them.
 
-If you want to use Docker make sure that you have version `v1.5.0` at least installed.
+If you want to use Docker make sure that you have version `v1.5.0` at least
+installed.
 
 ## Features
 
@@ -109,7 +111,8 @@ Visit [Changelog] to view recent changes.
 
 This code is distributed under the MIT license, see the [LICENSE][] file.
 
-[LICENSE]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/LICENSE
-[contribute]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/CONTRIBUTING.md
-[Changelog]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/CHANGELOG.md
 [ci]: https://about.gitlab.com/gitlab-ci
+[Changelog]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/CHANGELOG.md
+[contribute]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/CONTRIBUTING.md
+[golang]: https://golang.org/
+[LICENSE]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/LICENSE
