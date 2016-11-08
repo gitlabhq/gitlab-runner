@@ -67,7 +67,7 @@ information on the different installation methods:
 GitLab Runner implements a number of executors that can be used to run your
 builds in different scenarios. If you are not sure what to select, read the
 [I'm not sure](executors/README.md#imnotsure) section.
-Visit the [compatibility chart][executors/README.md#compatibility-chart] to find
+Visit the [compatibility chart](executors/README.md#compatibility-chart) to find
 out what features each executor supports and what not.
 
 To jump into the specific documentation of each executor, visit:
@@ -116,3 +116,4 @@ This code is distributed under the MIT license, see the [LICENSE][] file.
 [contribute]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/CONTRIBUTING.md
 [golang]: https://golang.org/
 [LICENSE]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/LICENSE
+[TOML]: https://github.com/toml-lang/toml
