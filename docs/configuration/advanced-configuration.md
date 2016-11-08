@@ -428,4 +428,4 @@ It depends on what you'd like to do.
 
 [TOML]: https://github.com/toml-lang/toml
 [Docker Engine]: https://www.docker.com/docker-engine
-[yaml-priv-reg]: http://doc.gitlab.com/ce/ci/yaml/README.html#using-a-private-docker-registry
+[yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#using-a-private-docker-registry
