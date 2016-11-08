@@ -1,4 +1,4 @@
-# The Shells
+# Shells supported by GitLab Runner
 
 GitLab Runner implements a few shell script generators that allow to execute
 builds on different systems.

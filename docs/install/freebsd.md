@@ -1,4 +1,4 @@
-### Install on FreeBSD
+# Install on FreeBSD
 
 Create gitlab-runner user and group:
 
@@ -113,7 +113,7 @@ Runner registered successfully. Feel free to start it, but if it\'s running alre
 Enable gitlab-runner service and start it:
 
 ```bash
-sudo sysrc -f /etc/rc.conf "gitlab_runner_enable=YES" 
+sudo sysrc -f /etc/rc.conf "gitlab_runner_enable=YES"
 sudo service gitlab_runner start
 ```
 
