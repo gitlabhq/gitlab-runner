@@ -66,6 +66,9 @@ func TestSplitService(t *testing.T) {
 		{"service:version", "service", "version", "service", ""},
 		{"namespace/service", "namespace/service", "latest", "namespace__service", "namespace-service"},
 		{"namespace/service:version", "namespace/service", "version", "namespace__service", "namespace-service"},
+		{"hostname/namespace/service", "hostname/namespace/service", "latest", "hostname__namespace__service", "hostname-namespace-service"},
+		{"hostname/namespace/service:version", "hostname/namespace/service", "version", "hostname__namespace__service", "hostname-namespace-service"},
+		{"hostname:4567/namespace/service:version", "hostname:4567/namespace/service", "version", "hostname__4567__namespace__service", "hostname-4567-namespace-service"},
 	}
 
 	for _, test := range tests {

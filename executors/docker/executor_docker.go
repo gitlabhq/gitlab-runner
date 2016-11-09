@@ -462,8 +462,24 @@ func (s *executor) bindDevices() (err error) {
 	return nil
 }
 
+func splitHostname(name string) (hostname, remoteName string) {
+	i := strings.IndexRune(name, '/')
+
+	afterSlash := name[i+1:]
+
+	if i >= 0 && strings.IndexRune(afterSlash, '/') >= 0 {
+		hostname, remoteName = name[:i], afterSlash
+	} else {
+		hostname, remoteName = "", name
+	}
+
+	return
+}
+
 func (s *executor) splitServiceAndVersion(serviceDescription string) (service string, version string, linkNames []string) {
-	splits := strings.SplitN(serviceDescription, ":", 2)
+	hostname, remoteName := splitHostname(serviceDescription)
+
+	splits := strings.SplitN(remoteName, ":", 2)
 	version = "latest"
 	switch len(splits) {
 	case 1:
@@ -477,12 +493,20 @@ func (s *executor) splitServiceAndVersion(serviceDescription string) (service st
 		return
 	}
 
+	if len(hostname) > 0 {
+		service = hostname + "/" + service
+	}
+
 	linkName := strings.Replace(service, "/", "__", -1)
+	linkName = strings.Replace(linkName, ":", "__", -1)
 	linkNames = append(linkNames, linkName)
 
 	// Create alternative link name according to RFC 1123
 	// Where you can use only `a-zA-Z0-9-`
-	if alternativeName := strings.Replace(service, "/", "-", -1); linkName != alternativeName {
+	alternativeName := strings.Replace(service, "/", "-", -1)
+	alternativeName = strings.Replace(alternativeName, ":", "-", -1)
+
+	if linkName != alternativeName {
 		linkNames = append(linkNames, alternativeName)
 	}
 	return
