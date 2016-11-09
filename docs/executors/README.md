@@ -16,7 +16,7 @@ To jump into the specific documentation of each executor, visit:
 - [SSH](ssh.md)
 - [Kubernetes](kubernetes.md)
 
-## Select the executor
+## Selecting the executor
 
 The executors support different platforms and methodologies for building a
 project. The table below shows the key facts for each executor which will help

@@ -57,7 +57,7 @@ Visit the [installation documentaion](https://docs.gitlab.com/runner/install/).
 
 ## Use GitLab Runner
 
-See [https://docs.gitlab.com/runner/#use-gitlab-runner](https://docs.gitlab.com/runner/#use-gitlab-runner).
+See [https://docs.gitlab.com/runner/#use-gitlab-runner](https://docs.gitlab.com/runner/#using-gitlab-runner).
 
 ## Select executor
 
