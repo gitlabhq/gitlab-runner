@@ -101,27 +101,27 @@ func (s *RegisterCommand) askDocker() {
 	if s.Docker == nil {
 		s.Docker = &common.DockerConfig{}
 	}
-	s.Docker.Image = s.ask("docker-image", "Please enter the default Docker image (eg. ruby:2.1):")
+	s.Docker.Image = s.ask("docker-image", "Please enter the default Docker image (e.g. ruby:2.1):")
 	s.Docker.Volumes = append(s.Docker.Volumes, "/cache")
 }
 
 func (s *RegisterCommand) askParallels() {
-	s.Parallels.BaseName = s.ask("parallels-vm", "Please enter the Parallels VM (eg. my-vm):")
+	s.Parallels.BaseName = s.ask("parallels-vm", "Please enter the Parallels VM (e.g. my-vm):")
 }
 
 func (s *RegisterCommand) askVirtualBox() {
-	s.VirtualBox.BaseName = s.ask("virtualbox-vm", "Please enter the VirtualBox VM (eg. my-vm):")
+	s.VirtualBox.BaseName = s.ask("virtualbox-vm", "Please enter the VirtualBox VM (e.g. my-vm):")
 }
 
 func (s *RegisterCommand) askSSHServer() {
-	s.SSH.Host = s.ask("ssh-host", "Please enter the SSH server address (eg. my.server.com):")
-	s.SSH.Port = s.ask("ssh-port", "Please enter the SSH server port (eg. 22):", true)
+	s.SSH.Host = s.ask("ssh-host", "Please enter the SSH server address (e.g. my.server.com):")
+	s.SSH.Port = s.ask("ssh-port", "Please enter the SSH server port (e.g. 22):", true)
 }
 
 func (s *RegisterCommand) askSSHLogin() {
-	s.SSH.User = s.ask("ssh-user", "Please enter the SSH user (eg. root):")
-	s.SSH.Password = s.ask("ssh-password", "Please enter the SSH password (eg. docker.io):", true)
-	s.SSH.IdentityFile = s.ask("ssh-identity-file", "Please enter path to SSH identity file (eg. /home/user/.ssh/id_rsa):", true)
+	s.SSH.User = s.ask("ssh-user", "Please enter the SSH user (e.g. root):")
+	s.SSH.Password = s.ask("ssh-password", "Please enter the SSH password (e.g. docker.io):", true)
+	s.SSH.IdentityFile = s.ask("ssh-identity-file", "Please enter path to SSH identity file (e.g. /home/user/.ssh/id_rsa):", true)
 }
 
 func (s *RegisterCommand) addRunner(runner *common.RunnerConfig) {
