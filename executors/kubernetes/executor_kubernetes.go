@@ -129,7 +129,7 @@ func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
-			ReadOnly:  mount.Readonly,
+			ReadOnly:  mount.ReadOnly,
 		})
 	}
 
@@ -144,12 +144,23 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 		},
 	})
 
-	for _, volume := range s.Config.Kubernetes.HostPathVolumes {
+	for _, volume := range s.Config.Kubernetes.VolumeSources.HostPaths {
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
 				HostPath: &api.HostPathVolumeSource{
 					Path: volume.Path,
+				},
+			},
+		})
+	}
+
+	for _, volume := range s.Config.Kubernetes.VolumeSources.Secrets {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				Secret: &api.SecretVolumeSource{
+					SecretName: volume.SecretName,
 				},
 			},
 		})

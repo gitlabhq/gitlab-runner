@@ -97,14 +97,24 @@ type VirtualBoxConfig struct {
 }
 
 type KubernetesVolumeMount struct {
-	Name      string `toml:"name" json:"name" long:"name" description:"The name of the volume mount, must have a matching source volume"`
-	MountPath string `toml:"mount_path" json:"mount_path" long:"mount_path" description:"The path in the container to mount the volume"`
-	Readonly  bool   `toml:"readonly" json:"readonly" long:"readonly" description:"Mount the volume as readonly"`
+	Name      string `toml:"name" json:"name" description:"The name of the volume mount, must have a matching source volume"`
+	MountPath string `toml:"mount_path" json:"mount_path" description:"The path in the container to mount the volume"`
+	ReadOnly  bool   `toml:"read_only" json:"read_only" description:"Mount the volume as readonly"`
 }
 
 type KubernetesHostPathVolumeSource struct {
-	Name string `toml:"name" json:"name" long:"name" description:"The name of the volume"`
-	Path string `toml:"path" json:"path" long:"path" description:"The path of the directory on the host"`
+	Name string `toml:"name" json:"name" description:"The name of the volume"`
+	Path string `toml:"path" json:"path" description:"The path of the directory on the host"`
+}
+
+type KubernetesSecretVolumeSource struct {
+	Name       string `toml:"name" json:"name" description:"The name of the volume"`
+	SecretName string `toml:"path" json:"path" description:"The name of the secret to use"`
+}
+
+type KubernetesVolumeSources struct {
+	HostPaths []KubernetesHostPathVolumeSource	`toml:"host_paths,omitempty" json:"host_paths,omitempty"`
+	Secrets   []KubernetesSecretVolumeSource	`toml:"secrets,omitempty" json:"secrets,omitempty"`
 }
 
 type KubernetesConfig struct {
@@ -120,8 +130,8 @@ type KubernetesConfig struct {
 	ServiceCPUs   string `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
 	ServiceMemory string `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
 
-	VolumeMounts    []*KubernetesVolumeMount          `toml:"mounts" json:"mounts" description:"Defines where to mount volumes within the container"`
-	HostPathVolumes []*KubernetesHostPathVolumeSource `toml:"host_path" json:"host_path" description:"Defines pre-existing files or directories to expose to a container"`
+	VolumeMounts  []*KubernetesVolumeMount `toml:"mounts" json:"mounts" description:"Defines where to mount volumes within the container"`
+	VolumeSources KubernetesVolumeSources `toml:"volumes" json:"volumes" description:"Defines the volume sources to mount into the container"`
 }
 
 type RunnerCredentials struct {

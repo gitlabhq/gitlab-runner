@@ -123,7 +123,7 @@ func TestVolumeMounts(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						VolumeMounts: []*common.KubernetesVolumeMount{
-							&common.KubernetesVolumeMount{Name: "test", MountPath: "/opt/test/readonly", Readonly: true},
+							&common.KubernetesVolumeMount{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
 						},
 					},
 				},
@@ -181,8 +181,10 @@ func TestVolumes(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						HostPathVolumes: []*common.KubernetesHostPathVolumeSource{
-							&common.KubernetesHostPathVolumeSource{Name: "docker", Path: "/var/run/docker.sock"},
+						VolumeSources: common.KubernetesVolumeSources{
+							HostPaths: []common.KubernetesHostPathVolumeSource{
+								common.KubernetesHostPathVolumeSource{Name: "docker", Path: "/var/run/docker.sock"},
+							},
 						},
 					},
 				},
