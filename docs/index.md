@@ -84,7 +84,7 @@ To jump into the specific documentation of each executor, visit:
 
 - [Advanced configuration options](configuration/advanced-configuration.md) Learn how to use the [TOML][] configuration file that GitLab Runner uses.
 - [Use self-signed certificates](configuration/tls-self-signed.md) Configure certificates that are used to verify TLS peer when connecting to the GitLab server.
-- [Auto-scaling using Docker machine](configuration/autoscaling.md) Execute jobs on machines that are created on demand using Docker machine.
+- [Auto-scaling using Docker machine](configuration/autoscale.md) Execute jobs on machines that are created on demand using Docker machine.
 - [Supported shells](shells/README.md) Learn what shell script generators are supported that allow to execute builds on different systems.
 - [Security considerations](security/index.md) Be aware of potential security implications when running your jobs with GitLab Runner.
 - [Prometheus monitoring](monitoring/README.md) Learn how to use the Prometheus metrics HTTP server.
