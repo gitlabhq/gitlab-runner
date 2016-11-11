@@ -147,12 +147,12 @@ func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan 
 }
 
 // waitForPodRunning will use client c to detect when pod reaches the PodRunning
-// state. It returns the final PodPhase once either PodRunning, PodSucceeded or 
+// state. It returns the final PodPhase once either PodRunning, PodSucceeded or
 // PodFailed has been reached. In the case of PodRunning, it will also wait until
-// all containers within the pod are also Ready. 
+// all containers within the pod are also Ready.
 // It returns error if the call to retrieve pod details fails or the timeout is
 // reached.
-// The timeout and polling values are configurable through KubernetesConfig 
+// The timeout and polling values are configurable through KubernetesConfig
 // parameters.
 
 func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
@@ -162,7 +162,7 @@ func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out 
 	if config.PollTimeout <= 0 {
 		config.PollTimeout = KubernetesPollTimeout
 	}
-	for i := 0; i < config.PollTimeout / config.PollInterval; i++ {
+	for i := 0; i < config.PollTimeout/config.PollInterval; i++ {
 		select {
 		case r := <-triggerPodPhaseCheck(c, pod, out):
 			if !r.done {
