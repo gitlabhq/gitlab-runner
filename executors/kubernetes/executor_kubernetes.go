@@ -189,7 +189,7 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	go func() {
 		defer close(errc)
 
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace)
+		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace, s.Config.Kubernetes)
 
 		if err != nil {
 			errc <- err

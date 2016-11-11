@@ -62,6 +62,8 @@ The following keywords help to define the behaviour of the Runner within kuberne
 - `memory`: The amount of memory allocated to build containers
 - `service_cpus`: The CPU allocation given to build service containers
 - `service_memory`: The amount of memory allocated to build service containers
+- `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes container it has just created to check its status. [Default: 3]
+- `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the conainer it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 3]
 
 ## Define keywords in the config toml
 
@@ -88,4 +90,6 @@ concurrent = 4
     memory = "250m"
     service_cpus = "1000m"
     service_memory = "450m"
+    poll_interval = 5
+    poll_timeout = 3600
 ```

@@ -18,6 +18,9 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
+const KubernetesPollInterval = 3
+const KubernetesPollTimeout = 180
+
 func init() {
 	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
 }
@@ -144,16 +147,26 @@ func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan 
 }
 
 // waitForPodRunning will use client c to detect when pod reaches the PodRunning
-// state. It will check every second, and will return the final PodPhase once
-// either PodRunning, PodSucceeded or PodFailed has been reached. In the case of
-// PodRunning, it will also wait until all containers within the pod are also Ready
-// Returns error if the call to retrieve pod details fails
-func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer) (api.PodPhase, error) {
-	for i := 0; i < 60; i++ {
+// state. It returns the final PodPhase once either PodRunning, PodSucceeded or 
+// PodFailed has been reached. In the case of PodRunning, it will also wait until
+// all containers within the pod are also Ready. 
+// It returns error if the call to retrieve pod details fails or the timeout is
+// reached.
+// The timeout and polling values are configurable through KubernetesConfig 
+// parameters.
+
+func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
+	if config.PollInterval <= 0 {
+		config.PollInterval = KubernetesPollInterval
+	}
+	if config.PollTimeout <= 0 {
+		config.PollTimeout = KubernetesPollTimeout
+	}
+	for i := 0; i < config.PollTimeout / config.PollInterval; i++ {
 		select {
 		case r := <-triggerPodPhaseCheck(c, pod, out):
 			if !r.done {
-				time.Sleep(3 * time.Second)
+				time.Sleep(time.Duration(config.PollInterval) * time.Second)
 				continue
 			}
 
