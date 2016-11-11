@@ -39,20 +39,20 @@ func TestLimits(t *testing.T) {
 			CPU:    "100m",
 			Memory: "100Mi",
 			Expected: api.ResourceList{
-				api.ResourceLimitsCPU:    resource.MustParse("100m"),
-				api.ResourceLimitsMemory: resource.MustParse("100Mi"),
+				api.ResourceCPU:    resource.MustParse("100m"),
+				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
 		},
 		{
 			CPU: "100m",
 			Expected: api.ResourceList{
-				api.ResourceLimitsCPU: resource.MustParse("100m"),
+				api.ResourceCPU: resource.MustParse("100m"),
 			},
 		},
 		{
 			Memory: "100Mi",
 			Expected: api.ResourceList{
-				api.ResourceLimitsMemory: resource.MustParse("100Mi"),
+				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
 		},
 		{
@@ -166,7 +166,7 @@ func TestPrepare(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Host:          "test-server",
-						ServiceCPUs:   "0.5",
+						ServiceCPUs:   "100m",
 						ServiceMemory: "200Mi",
 						CPUs:          "1.5",
 						Memory:        "4Gi",
@@ -191,12 +191,12 @@ func TestPrepare(t *testing.T) {
 					Image: "test-image",
 				},
 				serviceLimits: api.ResourceList{
-					api.ResourceLimitsCPU:    resource.MustParse("0.5"),
-					api.ResourceLimitsMemory: resource.MustParse("200Mi"),
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
 				},
 				buildLimits: api.ResourceList{
-					api.ResourceLimitsCPU:    resource.MustParse("1.5"),
-					api.ResourceLimitsMemory: resource.MustParse("4Gi"),
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
 			},
 		},
@@ -206,7 +206,7 @@ func TestPrepare(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Host:          "test-server",
-						ServiceCPUs:   "0.5",
+						ServiceCPUs:   "100m",
 						ServiceMemory: "200Mi",
 						CPUs:          "1.5",
 						Memory:        "4Gi",
@@ -228,12 +228,12 @@ func TestPrepare(t *testing.T) {
 					Image: "test-image",
 				},
 				serviceLimits: api.ResourceList{
-					api.ResourceLimitsCPU:    resource.MustParse("0.5"),
-					api.ResourceLimitsMemory: resource.MustParse("200Mi"),
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
 				},
 				buildLimits: api.ResourceList{
-					api.ResourceLimitsCPU:    resource.MustParse("1.5"),
-					api.ResourceLimitsMemory: resource.MustParse("4Gi"),
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
 			},
 			Error: true,
