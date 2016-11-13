@@ -109,7 +109,7 @@ type KubernetesConfig struct {
 	ServiceCPUs   string `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
 	ServiceMemory string `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
 	PollInterval  int    `toml:"poll_interval,omitempty" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes container it has just created to check its status. [Default: 3]"`
-	PollTimeout   int    `toml:"poll_timeout,omitempty" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the conainer it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 3]"`
+	PollTimeout   int    `toml:"poll_timeout,omitempty" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the conainer it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]"`
 }
 
 type RunnerCredentials struct {
