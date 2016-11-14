@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -18,7 +16,6 @@ import (
 	"time"
 
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/pkg/homedir"
 	"github.com/fsouza/go-dockerclient"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
@@ -44,72 +41,26 @@ type executor struct {
 	volumesFrom []string
 	devices     []docker.Device
 	links       []string
-
-	getHomeDir func() (string, error)
 }
 
 func (s *executor) getServiceVariables() []string {
 	return s.Build.GetAllVariables().PublicOrInternal().StringList()
 }
 
-func (s *executor) getRemoteAuthConfigs(authConfigsString string) (*docker.AuthConfigurations, error) {
-	return docker_helpers.ReadDockerAuthConfigsFromString(authConfigsString)
-}
-
-func (s *executor) getDefaultHomeDir() (string, error) {
-	homeDir := homedir.Get()
-	if s.Shell().User != "" {
-		u, err := user.Lookup(s.Shell().User)
-		if err != nil {
-			return "", err
-		}
-		homeDir = u.HomeDir
-	}
-	if homeDir == "" {
-		return "", fmt.Errorf("Failed to get home directory")
-	}
-
-	return homeDir, nil
-}
-
-func (s *executor) getDefaultAuthConfigs() (*docker.AuthConfigurations, error) {
-	var homeDir string
-	var err error
-
-	if s.getHomeDir == nil {
-		homeDir, err = s.getDefaultHomeDir()
-	} else {
-		homeDir, err = s.getHomeDir()
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return docker_helpers.ReadDockerAuthConfigs(homeDir)
-}
-
 func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, error) {
-	var authConfigs *docker.AuthConfigurations
-	var err error
+	authConfigResolver := docker_helpers.NewAuthConfigResolver()
 
-	authConfigStrings := s.Build.GetDockerAuthConfigs()
-	if authConfigStrings != "" {
-		authConfigs, err = s.getRemoteAuthConfigs(authConfigStrings)
-	} else {
-		authConfigs, err = s.getDefaultAuthConfigs()
-	}
-
+	err := authConfigResolver.ReadHomeDirectoryAuthConfig(s.Shell().User)
 	if err != nil {
-		// ignore doesn't exist errors
-		if os.IsNotExist(err) {
-			err = nil
-		}
 		return docker.AuthConfiguration{}, err
 	}
 
-	indexName, _ := docker_helpers.SplitDockerImageName(imageName)
-	authConfig := docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+	err = authConfigResolver.ReadStringAuthConfig(s.Build.GetDockerAuthConfigs())
+	if err != nil {
+		return docker.AuthConfiguration{}, err
+	}
+
+	authConfig, indexName := authConfigResolver.ResolveAuthConfig(imageName)
 	if authConfig != nil {
 		s.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress, "in order to resolve", imageName, "...")
 		return *authConfig, nil

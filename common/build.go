@@ -360,5 +360,5 @@ func (b *Build) IsDebugTraceEnabled() bool {
 }
 
 func (b *Build) GetDockerAuthConfigs() string {
-	return b.GetAllVariables().Get("DOCKER_AUTH_CONFIGS")
+	return b.GetAllVariables().Get("DOCKER_AUTH_CONFIG")
 }

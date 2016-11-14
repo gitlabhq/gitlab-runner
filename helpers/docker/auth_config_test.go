@@ -6,7 +6,7 @@ import (
 
 func TestSplitDockerImageName(t *testing.T) {
 
-	remote, image := SplitDockerImageName("tutum.co/user/ubuntu")
+	remote, image := splitDockerImageName("tutum.co/user/ubuntu")
 	expectedRemote := "tutum.co"
 	expectedImage := "user/ubuntu"
 
@@ -21,7 +21,7 @@ func TestSplitDockerImageName(t *testing.T) {
 
 func TestSplitDefaultDockerImageName(t *testing.T) {
 
-	remote, image := SplitDockerImageName("user/ubuntu")
+	remote, image := splitDockerImageName("user/ubuntu")
 	expectedRemote := "docker.io"
 	expectedImage := "user/ubuntu"
 
@@ -36,7 +36,7 @@ func TestSplitDefaultDockerImageName(t *testing.T) {
 
 func TestSplitDefaultIndexDockerImageName(t *testing.T) {
 
-	remote, image := SplitDockerImageName("index.docker.io/user/ubuntu")
+	remote, image := splitDockerImageName("index.docker.io/user/ubuntu")
 	expectedRemote := "docker.io"
 	expectedImage := "user/ubuntu"
 
