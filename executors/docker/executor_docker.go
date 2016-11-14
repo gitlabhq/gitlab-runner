@@ -464,8 +464,9 @@ func (s *executor) bindDevices() (err error) {
 	return nil
 }
 
-func (s *executor) splitServiceAndVersion(serviceDescription string) (service string, version string, linkNames []string) {
+func (s *executor) splitServiceAndVersion(serviceDescription string) (service string, version string, imageName string, linkNames []string) {
 	ReferenceRegexpNoPort := regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
+	imageName = serviceDescription
 	version = "latest"
 
 	if match := reference.ReferenceRegexp.FindStringSubmatch(serviceDescription); match != nil {
@@ -474,6 +475,8 @@ func (s *executor) splitServiceAndVersion(serviceDescription string) (service st
 
 		if len(match[2]) > 0 {
 			version = match[2]
+		} else {
+			imageName = match[1] + ":" + version
 		}
 	} else {
 		return
@@ -490,12 +493,12 @@ func (s *executor) splitServiceAndVersion(serviceDescription string) (service st
 	return
 }
 
-func (s *executor) createService(service, version string) (*docker.Container, error) {
+func (s *executor) createService(service, version, image string) (*docker.Container, error) {
 	if len(service) == 0 {
 		return nil, errors.New("invalid service name")
 	}
 
-	serviceImage, err := s.getDockerImage(service + ":" + version)
+	serviceImage, err := s.getDockerImage(image)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +597,7 @@ func (s *executor) buildServiceLinks(linksMap map[string]*docker.Container) (lin
 func (s *executor) createFromServiceDescription(description string, linksMap map[string]*docker.Container) (err error) {
 	var container *docker.Container
 
-	service, version, linkNames := s.splitServiceAndVersion(description)
+	service, version, imageName, linkNames := s.splitServiceAndVersion(description)
 
 	for _, linkName := range linkNames {
 		if linksMap[linkName] != nil {
@@ -604,7 +607,7 @@ func (s *executor) createFromServiceDescription(description string, linksMap map
 
 		// Create service if not yet created
 		if container == nil {
-			container, err = s.createService(service, version)
+			container, err = s.createService(service, version, imageName)
 			if err != nil {
 				return
 			}
