@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -424,4 +425,76 @@ func TestHostMountedBuildsDirectory(t *testing.T) {
 		e.prepareBuildsDir(&c)
 		assert.Equal(t, i.result, e.SharedBuildsDir)
 	}
+}
+
+var testAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
+
+func getAuthConfigTestExecutor() executor {
+	e := executor{
+		getHomeDir: func() (string, error) {
+			return ioutil.TempDir("", "docker-auth-configs-test")
+		},
+	}
+	e.Build = &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
+
+	return e
+}
+
+func TestGetDefaultAuthConfig(t *testing.T) {
+	e := getAuthConfigTestExecutor()
+
+	ac, err := e.getAuthConfig("registry.domain.tld:5005/image/name:version")
+	assert.NoError(t, err)
+	assert.Empty(t, ac.ServerAddress, "Docker auth server address")
+	assert.Empty(t, ac.Username, "Docker auth username")
+	assert.Empty(t, ac.Password, "Docker auth password")
+
+	ac, err = e.getAuthConfig("docker:dind")
+	assert.NoError(t, err)
+	assert.Empty(t, ac.ServerAddress, "Docker auth server address")
+	assert.Empty(t, ac.Username, "Docker auth username")
+	assert.Empty(t, ac.Password, "Docker auth password")
+}
+
+func TestGetRemoteVariableAuthConfig(t *testing.T) {
+	e := getAuthConfigTestExecutor()
+	e.Build.Variables = common.BuildVariables{
+		common.BuildVariable{
+			Key:   "DOCKER_AUTH_CONFIGS",
+			Value: testAuthConfigs,
+		},
+	}
+
+	ac, err := e.getAuthConfig("registry.domain.tld:5005/image/name:version")
+	assert.NoError(t, err)
+	assert.Equal(t, "https://registry.domain.tld:5005/v1/", ac.ServerAddress, "Docker auth server address")
+	assert.Equal(t, "test_user", ac.Username, "Docker auth username")
+	assert.Equal(t, "test_password", ac.Password, "Docker auth password")
+
+	ac, err = e.getAuthConfig("docker:dind")
+	assert.Error(t, err)
+	assert.Empty(t, ac.ServerAddress, "Docker auth server address")
+	assert.Empty(t, ac.Username, "Docker auth username")
+	assert.Empty(t, ac.Password, "Docker auth password")
+}
+
+func TestGetLocalVariableAuthConfig(t *testing.T) {
+	e := getAuthConfigTestExecutor()
+	e.Build.Runner.Environment = []string{
+		"DOCKER_AUTH_CONFIGS=" + testAuthConfigs,
+	}
+
+	ac, err := e.getAuthConfig("registry.domain.tld:5005/image/name:version")
+	assert.NoError(t, err)
+	assert.Equal(t, "https://registry.domain.tld:5005/v1/", ac.ServerAddress, "Docker auth server address")
+	assert.Equal(t, "test_user", ac.Username, "Docker auth username")
+	assert.Equal(t, "test_password", ac.Password, "Docker auth password")
+
+	ac, err = e.getAuthConfig("docker:dind")
+	assert.Error(t, err)
+	assert.Empty(t, ac.ServerAddress, "Docker auth server address")
+	assert.Empty(t, ac.Username, "Docker auth username")
+	assert.Empty(t, ac.Password, "Docker auth password")
 }

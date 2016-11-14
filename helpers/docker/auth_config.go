@@ -47,6 +47,10 @@ func ReadDockerAuthConfigs(homeDir string) (*docker.AuthConfigurations, error) {
 	return docker.NewAuthConfigurations(r)
 }
 
+func ReadDockerAuthConfigsFromString(authConfigs string) (*docker.AuthConfigurations, error) {
+	return docker.NewAuthConfigurations(strings.NewReader(authConfigs))
+}
+
 // ResolveDockerAuthConfig taken from: https://github.com/docker/docker/blob/master/registry/auth.go
 func ResolveDockerAuthConfig(indexName string, configs *docker.AuthConfigurations) *docker.AuthConfiguration {
 	if configs == nil {
