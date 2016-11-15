@@ -91,17 +91,21 @@ func newBuild(t *testing.T, getBuildResponse common.GetBuildResponse, shell stri
 
 func TestBuildSuccess(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		err := runBuild(t, build)
+		err = runBuild(t, build)
 		assert.NoError(t, err)
 	})
 }
 
 func TestBuildAbort(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.LongRunningBuild, shell)
+		longRunningBuild, err := common.GetLongRunningBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, longRunningBuild, shell)
 		defer cleanup()
 
 		abortTimer := time.AfterFunc(time.Second, func() {
@@ -110,14 +114,16 @@ func TestBuildAbort(t *testing.T) {
 		})
 		defer abortTimer.Stop()
 
-		err := runBuild(t, build)
+		err = runBuild(t, build)
 		assert.EqualError(t, err, "aborted: interrupt")
 	})
 }
 
 func TestBuildCancel(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.LongRunningBuild, shell)
+		longRunningBuild, err := common.GetLongRunningBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, longRunningBuild, shell)
 		defer cleanup()
 
 		cancelChan := make(chan interface{}, 1)
@@ -127,7 +133,7 @@ func TestBuildCancel(t *testing.T) {
 		})
 		defer cancelTimer.Stop()
 
-		err := runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout, Abort: cancelChan})
+		err = runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout, Abort: cancelChan})
 		assert.EqualError(t, err, "canceled")
 		assert.IsType(t, err, &common.BuildError{})
 	})
@@ -135,10 +141,12 @@ func TestBuildCancel(t *testing.T) {
 
 func TestBuildWithIndexLock(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		err := runBuild(t, build)
+		err = runBuild(t, build)
 		assert.NoError(t, err)
 
 		build.GetBuildResponse.AllowGitFetch = true
@@ -151,7 +159,9 @@ func TestBuildWithIndexLock(t *testing.T) {
 
 func TestBuildWithGitStrategyNone(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
@@ -168,7 +178,9 @@ func TestBuildWithGitStrategyNone(t *testing.T) {
 
 func TestBuildWithGitStrategyFetch(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
@@ -188,7 +200,9 @@ func TestBuildWithGitStrategyFetch(t *testing.T) {
 
 func TestBuildWithGitStrategyClone(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
@@ -208,7 +222,9 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 
 func TestBuildWithDebugTrace(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
 		// The default build shouldn't have debug tracing enabled

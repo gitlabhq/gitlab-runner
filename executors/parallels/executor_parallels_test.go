@@ -36,8 +36,10 @@ func TestParallelsSuccessRun(t *testing.T) {
 		return
 	}
 
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.SuccessfulBuild,
+		GetBuildResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "parallels",
@@ -50,7 +52,7 @@ func TestParallelsSuccessRun(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err, "Make sure that you have done 'make -C tests/ubuntu parallels'")
 }
 
@@ -59,8 +61,10 @@ func TestParallelsBuildFail(t *testing.T) {
 		return
 	}
 
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.FailedBuild,
+		GetBuildResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "parallels",
@@ -73,7 +77,7 @@ func TestParallelsBuildFail(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "Process exited with: 1")
@@ -129,8 +133,10 @@ func TestParallelsBuildAbort(t *testing.T) {
 		return
 	}
 
+	longRunningBuild, err := common.GetRemoteLongRunningBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.LongRunningBuild,
+		GetBuildResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "parallels",
@@ -156,7 +162,7 @@ func TestParallelsBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -165,8 +171,10 @@ func TestParallelsBuildCancel(t *testing.T) {
 		return
 	}
 
+	longRunningBuild, err := common.GetRemoteLongRunningBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.LongRunningBuild,
+		GetBuildResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "parallels",
@@ -193,7 +201,7 @@ func TestParallelsBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err := build.Run(&common.Config{}, trace)
+	err = build.Run(&common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
 }

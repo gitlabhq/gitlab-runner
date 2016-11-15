@@ -86,6 +86,9 @@ func createMachineOffPeakIdleConfig(offPeakPeriod string) *common.RunnerConfig {
 type testMachine struct {
 	machines []string
 	second   bool
+
+	Created chan bool
+	Removed chan bool
 }
 
 func (m *testMachine) Create(driver, name string, opts ...string) error {
@@ -98,6 +101,8 @@ func (m *testMachine) Create(driver, name string, opts ...string) error {
 		return errors.New("Failed to create")
 	}
 	m.machines = append(m.machines, name)
+	m.Created <- true
+
 	return nil
 }
 
@@ -120,6 +125,8 @@ func (m *testMachine) Remove(name string) error {
 		}
 	}
 	m.machines = machines
+	m.Removed <- true
+
 	return nil
 }
 
@@ -211,6 +218,8 @@ func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndA
 func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
 	t := &testMachine{
 		machines: machine,
+		Created:  make(chan bool, 10),
+		Removed:  make(chan bool, 10),
 	}
 	p := &machineProvider{
 		details: make(machinesDetails),
@@ -345,12 +354,14 @@ func TestMachineOnDemandMode(t *testing.T) {
 }
 
 func TestMachinePreCreateMode(t *testing.T) {
-	p, _ := testMachineProvider()
+	p, m := testMachineProvider()
 
 	config := createMachineConfig(1, 5)
 	d, err := p.Acquire(config)
 	assert.Error(t, err, "it should fail with message that currently there's no free machines")
 	assert.Nil(t, d)
+
+	<-m.Created
 	assertIdleMachines(t, p, 1, "it should contain exactly one machine")
 
 	d, err = p.Acquire(config)
@@ -363,6 +374,8 @@ func TestMachinePreCreateMode(t *testing.T) {
 	d, err = p.Acquire(config)
 	assert.NoError(t, err)
 	p.Release(config, d)
+
+	<-m.Created
 	assertIdleMachines(t, p, 2, "it should start creating a second machine")
 
 	config = createMachineConfig(1, 0)
@@ -370,6 +383,8 @@ func TestMachinePreCreateMode(t *testing.T) {
 	d, err = p.Acquire(config)
 	assert.NoError(t, err)
 	p.Release(config, d)
+
+	<-m.Removed
 	assertIdleMachines(t, p, 1, "it should downscale to single machine")
 
 	d, err = p.Acquire(config)
