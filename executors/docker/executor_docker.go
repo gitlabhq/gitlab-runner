@@ -55,9 +55,13 @@ func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, er
 		return docker.AuthConfiguration{}, err
 	}
 
-	err = authConfigResolver.ReadStringAuthConfig(s.Build.GetDockerAuthConfigs())
-	if err != nil {
-		return docker.AuthConfiguration{}, err
+	if s.Build != nil {
+		err = authConfigResolver.ReadStringAuthConfig(s.Build.GetDockerAuthConfigs())
+		if err != nil {
+			return docker.AuthConfiguration{}, err
+		}
+
+		authConfigResolver.AddConfiguration(s.Build.RegistryURL, "gitlab-ci-token", s.Build.Token)
 	}
 
 	authConfig, indexName := authConfigResolver.ResolveAuthConfig(imageName)

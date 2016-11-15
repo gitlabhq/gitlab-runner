@@ -55,25 +55,25 @@ func readDockerAuthConfigsFromString(authConfigs string) (*docker.AuthConfigurat
 	return docker.NewAuthConfigurations(strings.NewReader(authConfigs))
 }
 
+func convertToHostname(url string) string {
+	stripped := url
+	if strings.HasPrefix(url, "http://") {
+		stripped = strings.Replace(url, "http://", "", 1)
+	} else if strings.HasPrefix(url, "https://") {
+		stripped = strings.Replace(url, "https://", "", 1)
+	}
+
+	nameParts := strings.SplitN(stripped, "/", 2)
+	if nameParts[0] == "index."+DefaultDockerRegistry {
+		return DefaultDockerRegistry
+	}
+	return nameParts[0]
+}
+
 // ResolveDockerAuthConfig taken from: https://github.com/docker/docker/blob/master/registry/auth.go
 func resolveDockerAuthConfig(indexName string, configs *docker.AuthConfigurations) *docker.AuthConfiguration {
 	if configs == nil {
 		return nil
-	}
-
-	convertToHostname := func(url string) string {
-		stripped := url
-		if strings.HasPrefix(url, "http://") {
-			stripped = strings.Replace(url, "http://", "", 1)
-		} else if strings.HasPrefix(url, "https://") {
-			stripped = strings.Replace(url, "https://", "", 1)
-		}
-
-		nameParts := strings.SplitN(stripped, "/", 2)
-		if nameParts[0] == "index."+DefaultDockerRegistry {
-			return DefaultDockerRegistry
-		}
-		return nameParts[0]
 	}
 
 	// Maybe they have a legacy config file, we will iterate the keys converting
@@ -86,6 +86,14 @@ func resolveDockerAuthConfig(indexName string, configs *docker.AuthConfiguration
 
 	// When all else fails, return an empty auth config
 	return nil
+}
+
+func getFirstAuthConfig(configs *docker.AuthConfigurations) (string, *docker.AuthConfiguration) {
+	for registry, authConfig := range configs.Configs {
+		return convertToHostname(registry), &authConfig
+	}
+
+	return "", nil
 }
 
 var ResolveHomeDir = func(userName string) (string, error) {
@@ -110,7 +118,7 @@ type AuthConfigResolver struct {
 
 func (r *AuthConfigResolver) ReadHomeDirectoryAuthConfig(userName string) error {
 	path, err := ResolveHomeDir(userName)
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 
@@ -144,8 +152,12 @@ func (r *AuthConfigResolver) ReadStringAuthConfig(authConfigString string) error
 
 func (r *AuthConfigResolver) appendAuthConfigs(authConfigs *docker.AuthConfigurations) {
 	for key, value := range authConfigs.Configs {
-		r.authConfigs.Configs[key] = value
+		r.addAuthConfig(key, value)
 	}
+}
+
+func (r *AuthConfigResolver) addAuthConfig(key string, authConfig docker.AuthConfiguration) {
+	r.authConfigs.Configs[key] = authConfig
 }
 
 func (r *AuthConfigResolver) ResolveAuthConfig(imageName string) (*docker.AuthConfiguration, string) {
@@ -157,7 +169,27 @@ func (r *AuthConfigResolver) ResolveAuthConfig(imageName string) (*docker.AuthCo
 
 	authConfig := resolveDockerAuthConfig(indexName, r.authConfigs)
 
+	if authConfig == nil {
+		registryIndexName, firstAuthConfig := getFirstAuthConfig(r.authConfigs)
+
+		if indexName != registryIndexName && firstAuthConfig != nil && firstAuthConfig.Username == "gitlab-ci-token" {
+			return &docker.AuthConfiguration{}, indexName
+		}
+	}
+
 	return authConfig, indexName
+}
+
+func (r *AuthConfigResolver) AddConfiguration(serverAddress, username, password string) {
+	if serverAddress == "" || username == "" || password == "" {
+		return
+	}
+
+	r.addAuthConfig(serverAddress, docker.AuthConfiguration{
+		ServerAddress: serverAddress,
+		Username:      username,
+		Password:      password,
+	})
 }
 
 func NewAuthConfigResolver() *AuthConfigResolver {

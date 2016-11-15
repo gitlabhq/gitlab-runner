@@ -76,6 +76,7 @@ type GetBuildResponse struct {
 	ProjectID       int            `json:"project_id,omitempty"`
 	Commands        string         `json:"commands,omitempty"`
 	RepoURL         string         `json:"repo_url,omitempty"`
+	RegistryURL     string         `json:"registry_url,omitempty"`
 	Sha             string         `json:"sha,omitempty"`
 	RefName         string         `json:"ref,omitempty"`
 	BeforeSha       string         `json:"before_sha,omitempty"`
