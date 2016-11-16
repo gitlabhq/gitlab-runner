@@ -192,6 +192,18 @@ func (r *AuthConfigResolver) AddConfiguration(serverAddress, username, password 
 	})
 }
 
+func (r *AuthConfigResolver) String() string {
+	output := fmt.Sprintf("%p { ", &r)
+
+	for _, config := range r.authConfigs.Configs {
+		output += fmt.Sprintf("[s=%s u=%s p=%s] ", config.ServerAddress, config.Username, config.Password)
+	}
+
+	output += "}"
+
+	return output
+}
+
 func NewAuthConfigResolver() *AuthConfigResolver {
 	return &AuthConfigResolver{
 		authConfigs: &docker.AuthConfigurations{

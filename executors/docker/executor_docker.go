@@ -73,12 +73,8 @@ func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, er
 	return docker.AuthConfiguration{}, fmt.Errorf("No credentials found for %v", indexName)
 }
 
-func (s *executor) pullDockerImage(imageName string) (*docker.Image, error) {
+func (s *executor) pullDockerImage(imageName string, authConfig docker.AuthConfiguration) (*docker.Image, error) {
 	s.Println("Pulling docker image", imageName, "...")
-	authConfig, err := s.getAuthConfig(imageName)
-	if err != nil {
-		s.Debugln(err)
-	}
 
 	pullImageOptions := docker.PullImageOptions{
 		Repository: imageName,
@@ -89,7 +85,7 @@ func (s *executor) pullDockerImage(imageName string) (*docker.Image, error) {
 		pullImageOptions.Repository += ":latest"
 	}
 
-	err = s.client.PullImage(pullImageOptions, authConfig)
+	err := s.client.PullImage(pullImageOptions, authConfig)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return nil, &common.BuildError{Inner: err}
@@ -107,27 +103,20 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 		return nil, err
 	}
 
+	authConfig, err := s.getAuthConfig(imageName)
+	if err != nil {
+		s.Debugln(err)
+	}
+
 	s.Debugln("Looking for image", imageName, "...")
 	image, err := s.client.InspectImage(imageName)
 
-	// If never is specified then we return what inspect did return
-	if pullPolicy == common.PullPolicyNever {
+	shouldReturn, image, err := s.returnExistingIfPolicyMatch(pullPolicy, imageName, image, err, authConfig)
+	if shouldReturn {
 		return image, err
 	}
 
-	if err == nil {
-		// Don't pull image that is passed by ID
-		if image.ID == imageName {
-			return image, nil
-		}
-
-		// If not-present is specified
-		if pullPolicy == common.PullPolicyIfNotPresent {
-			return image, err
-		}
-	}
-
-	newImage, err := s.pullDockerImage(imageName)
+	newImage, err := s.pullDockerImage(imageName, authConfig)
 	if err != nil {
 		if image != nil {
 			s.Warningln("Cannot pull the latest version of image", imageName, ":", err)
@@ -137,6 +126,31 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 		return nil, err
 	}
 	return newImage, nil
+}
+
+func (s *executor) returnExistingIfPolicyMatch(pullPolicy common.DockerPullPolicy, imageName string, image *docker.Image, err error, authConfig docker.AuthConfiguration) (bool, *docker.Image, error) {
+	// If never is specified then we return what inspect did return
+	if pullPolicy == common.PullPolicyNever {
+		return true, image, err
+	}
+
+	if authConfig.ServerAddress != "" {
+		pullPolicy = common.PullPolicyAlways
+	}
+
+	if err == nil {
+		// Don't pull image that is passed by ID
+		if image.ID == imageName {
+			return true, image, nil
+		}
+
+		// If not-present is specified
+		if pullPolicy == common.PullPolicyIfNotPresent {
+			return true, image, err
+		}
+	}
+
+	return false, image, nil
 }
 
 func (s *executor) getArchitecture() string {
