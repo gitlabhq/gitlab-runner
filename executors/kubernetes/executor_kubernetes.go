@@ -114,7 +114,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 
-	if err = s.checkDefaults(); err != nil {
+	if err = s.checkDefaults(build); err != nil {
 		return err
 	}
 
@@ -280,18 +280,28 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	return errc
 }
 
-func (s *executor) checkDefaults() error {
-	if s.options.Image == "" {
-		if s.Config.Kubernetes.Image == "" {
+// checkDefaults Defines the configuration for the Pod on Kubernetes
+func (s *executor) checkDefaults(build *common.Build) error {
+	if len(s.options.Image) == 0 {
+		if len(s.Config.Kubernetes.Image) == 0 {
 			return fmt.Errorf("no image specified and no default set in config")
 		}
 
 		s.options.Image = s.Config.Kubernetes.Image
 	}
 
-	if s.Config.Kubernetes.Namespace == "" {
+	// when namespace is not found, using "default"
+	if len(s.Config.Kubernetes.Namespace) == 0 {
 		s.Config.Kubernetes.Namespace = "default"
 	}
+
+	// checking local configuration for overwrite variable
+	podNamespace := build.Variables.Get("KUBERNETES_NAMESPACE_OVERWRITE")
+	if len(podNamespace) >= 1 {
+		s.Config.Kubernetes.Namespace = podNamespace
+	}
+
+	fmt.Printf("Using Kubernetes namespace: '%s'", s.Config.Kubernetes.Namespace)
 
 	return nil
 }
