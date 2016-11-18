@@ -18,9 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
-const KubernetesPollInterval = 3
-const KubernetesPollTimeout = 180
-
 func init() {
 	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
 }
@@ -155,18 +152,12 @@ func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan 
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
 
-func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
-	if config.PollInterval <= 0 {
-		config.PollInterval = KubernetesPollInterval
-	}
-	if config.PollTimeout <= 0 {
-		config.PollTimeout = KubernetesPollTimeout
-	}
-	for i := 0; i < config.PollTimeout/config.PollInterval; i++ {
+func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, pollInterval int, pollTimeout int) (api.PodPhase, error) {
+	for i := 0; i < pollTimeout/pollInterval; i++ {
 		select {
 		case r := <-triggerPodPhaseCheck(c, pod, out):
 			if !r.done {
-				time.Sleep(time.Duration(config.PollInterval) * time.Second)
+				time.Sleep(time.Duration(pollInterval) * time.Second)
 				continue
 			}
 

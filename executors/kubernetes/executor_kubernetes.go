@@ -188,8 +188,17 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
-
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace, s.Config.Kubernetes)
+		pollInterval := 3
+		pollTimeout := 180
+		if s.Config.Kubernetes != nil {
+			if s.Config.Kubernetes.PollInterval > 0 {
+				pollInterval = s.Config.Kubernetes.PollInterval
+			}
+			if s.Config.Kubernetes.PollTimeout > 0 {
+				pollTimeout = s.Config.Kubernetes.PollTimeout
+			}
+		}
+		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace, pollInterval, pollTimeout)
 
 		if err != nil {
 			errc <- err

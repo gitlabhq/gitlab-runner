@@ -199,10 +199,7 @@ func TestWaitForPodRunning(t *testing.T) {
 				return len(b), nil
 			},
 		}
-		phase, err := waitForPodRunning(context.Background(), c, test.Pod, fw, &common.KubernetesConfig{
-			PollInterval: 5,
-			PollTimeout:  600,
-		})
+		phase, err := waitForPodRunning(context.Background(), c, test.Pod, fw, 5, 600)
 
 		if err != nil && !test.Error {
 			t.Errorf("[%s] Expected success. Got: %s", test.Name, err.Error())
