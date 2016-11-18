@@ -36,6 +36,18 @@ bindata:
     - executors/docker/bindata.go
     expire_in: 7d
 
+clone test repo:
+  stage: prebuild
+  script:
+  - mkdir tmp
+  - succeed=0
+  - for i in {1..3}; do git clone https://gitlab.com/gitlab-org/gitlab-test.git tmp/gitlab-test && succeed=1 && break; echo "retrying"; done
+  - '[[ "$succeed" -eq 1 ]]'
+  artifacts:
+    paths:
+    - tmp/gitlab-test
+    expire_in: 7d
+
 code style:
   stage: test
   script:

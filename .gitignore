@@ -10,3 +10,4 @@ dockerfiles/ubuntu/gitlab-ci-multi-runner_amd64.deb
 .idea/
 tests/ubuntu/.vagrant
 artifacts
+tmp/gitlab-test

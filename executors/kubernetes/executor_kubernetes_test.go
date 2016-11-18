@@ -278,12 +278,13 @@ func TestKubernetesSuccessRun(t *testing.T) {
 		return
 	}
 
-	buildResponse := common.SuccessfulBuild
-	buildResponse.Options = map[string]interface{}{
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+	successfulBuild.Options = map[string]interface{}{
 		"image": "docker:git",
 	}
 	build := &common.Build{
-		GetBuildResponse: buildResponse,
+		GetBuildResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -292,7 +293,7 @@ func TestKubernetesSuccessRun(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -301,8 +302,10 @@ func TestKubernetesBuildFail(t *testing.T) {
 		return
 	}
 
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.FailedBuild,
+		GetBuildResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -314,7 +317,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 		"image": "docker:git",
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "Error executing in Docker Container: 1")
@@ -325,8 +328,10 @@ func TestKubernetesMissingImage(t *testing.T) {
 		return
 	}
 
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.FailedBuild,
+		GetBuildResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -338,7 +343,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 		"image": "some/non-existing/image",
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "not found")
@@ -349,8 +354,10 @@ func TestKubernetesMissingTag(t *testing.T) {
 		return
 	}
 
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.FailedBuild,
+		GetBuildResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -362,7 +369,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 		"image": "docker:missing-tag",
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "not found")
@@ -373,8 +380,10 @@ func TestKubernetesBuildAbort(t *testing.T) {
 		return
 	}
 
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.FailedBuild,
+		GetBuildResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -399,7 +408,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -408,8 +417,10 @@ func TestKubernetesBuildCancel(t *testing.T) {
 		return
 	}
 
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.FailedBuild,
+		GetBuildResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -436,7 +447,7 @@ func TestKubernetesBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err := build.Run(&common.Config{}, trace)
+	err = build.Run(&common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
 }

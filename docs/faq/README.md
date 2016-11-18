@@ -1,5 +1,24 @@
 # FAQ
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [1. Where are logs stored when run as a service?](#1-where-are-logs-stored-when-run-as-a-service)
+- [2. Run in `--debug` mode](#2-run-in---debug-mode)
+- [3. I get a PathTooLongException during my builds on Windows](#3-i-get-a-pathtoolongexception-during-my-builds-on-windows)
+- [4. I'm seeing `x509: certificate signed by unknown authority`](#4-im-seeing-x509-certificate-signed-by-unknown-authority)
+- [5. I get `Permission Denied` when accessing the `/var/run/docker.sock`](#5-i-get-permission-denied-when-accessing-the-varrundockersock)
+- [6. The Docker executor gets timeout when building Java project.](#6-the-docker-executor-gets-timeout-when-building-java-project)
+- [7. I get 411 when uploading artifacts.](#7-i-get-411-when-uploading-artifacts)
+- [8. I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`.](#8-i-cant-run-windows-bash-scripts-im-getting-the-system-cannot-find-the-batch-label-specified---buildscript)
+- [9. My gitlab runner is on Windows. How can I get colored output on the web terminal?](#9-my-gitlab-runner-is-on-windows-how-can-i-get-colored-output-on-the-web-terminal)
+- [10. "warning: You appear to have cloned an empty repository."](#10-warning-you-appear-to-have-cloned-an-empty-repository)
+- [11. `"launchctl" failed: exit status 112, Could not find domain for`](#11-launchctl-failed-exit-status-112-could-not-find-domain-for)
+- [12. `Failed to authorize rights (0x1) with status: -60007.`](#12-failed-to-authorize-rights-0x1-with-status--60007)
+- [13. `The service did not start due to a logon failure` error when starting service on Windows](#13-the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service-on-windows)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## 1. Where are logs stored when run as a service?
 
 + If the GitLab Runner is run as service on Linux/OSX  the daemon logs to syslog.
@@ -170,3 +189,58 @@ causes to why this happens:
 
     Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
     `SessionCreate` set to `false`.
+
+## 13. `The service did not start due to a logon failure` error when starting service on Windows
+
+When installing and starting the GitLab Runner service on Windows you can
+meet with such error:
+
+```
+$ gitlab-ci-multi-runner.exe install --password WINDOWS_MACHINE_PASSWORD
+$ gitlab-ci-multi-runner.exe start
+$ FATA[0000] Failed to start GitLab Runner: The service did not start due to a logon failure.
+```
+
+This error can occur when the user used to execut the service doesn't have
+the `SeServiceLogonRight` permission. In such case you need to add this
+permission for the chosen user and then try to start the service again.
+
+You can add `SeServiceLogonRight` in two ways:
+
+1. Manually using Administrative Tools:
+
+   - Go to _Control Panel > System and Security > Administrative Tools_,
+   - open the _Local Security Policy_ tool,
+   - chose the _Security Settings > Local Policies > User RIghts Assigment_ on the
+     list on the left,
+   - open the _Log on as a service_ on the list on the right,
+   - click on the _Add User or Group..._ button,
+   - add the user ("by hand" or using _Advanced..._ button) and apply the settings.
+
+   > **Notice:** According to [Microsoft's documentation][microsoft-manually-set-seservicelogonright]
+   > this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
+   > Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, Windows 8
+
+   > **Notice:** The _Local Security Policy_ tool may be not available in some
+   > Windows versions - for example in "Home Edition" variant of each version.
+
+2. From command line, using the `Ntrights.exe` tool:
+
+   - Download tools from [Microsoft's download site][microsoft-ntrights-download],
+   - execute `ntrights.exe ntrights +r SeServiceLogonRight -u USER_NAME_HERE` (remember,
+     that you should provide a full path for `ntrights.exe` executable **or** add that
+     path to system's `$Path` environment variable).
+
+   > **Notice:** The tool was created in 2003 and was initially designed to use
+   > with Windows XP and Windows Server 2003. On [Microsoft sites][microsoft-ntrights-usage-on-win7]
+   > you can find an example of usage `Ntrights.exe` that applies to Windows 7 and Windows Server 2008 R2.
+   > This solution is not tested and because of the age of the software **it may not work
+   > on newest Windows versions**.
+
+After adding the `SeServiceLogonRight` for the user used in service configuration,
+the command `gitlab-ci-multi-runner.exe start` should finish without failures
+and the service should be started properly.
+
+[microsoft-manually-set-seservicelogonright]: https://technet.microsoft.com/en-us/library/dn221981
+[microsoft-ntrights-download]: https://www.microsoft.com/en-us/download/details.aspx?id=17657
+[microsoft-ntrights-usage-on-win7]: https://technet.microsoft.com/en-us/library/dd548356(WS.10).aspx
