@@ -188,15 +188,12 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
-		pollInterval := 3
-		pollTimeout := 180
+		// If left 0, values will be set to default constant values in the waitForPodRunning function
+		pollInterval := 0
+		pollTimeout := 0
 		if s.Config.Kubernetes != nil {
-			if s.Config.Kubernetes.PollInterval > 0 {
-				pollInterval = s.Config.Kubernetes.PollInterval
-			}
-			if s.Config.Kubernetes.PollTimeout > 0 {
-				pollTimeout = s.Config.Kubernetes.PollTimeout
-			}
+			pollInterval = s.Config.Kubernetes.PollInterval
+			pollTimeout = s.Config.Kubernetes.PollTimeout
 		}
 		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace, pollInterval, pollTimeout)
 
