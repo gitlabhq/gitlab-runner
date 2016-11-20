@@ -76,7 +76,6 @@ type GetBuildResponse struct {
 	ProjectID       int            `json:"project_id,omitempty"`
 	Commands        string         `json:"commands,omitempty"`
 	RepoURL         string         `json:"repo_url,omitempty"`
-	RegistryURL     string         `json:"registry_url,omitempty"`
 	Sha             string         `json:"sha,omitempty"`
 	RefName         string         `json:"ref,omitempty"`
 	BeforeSha       string         `json:"before_sha,omitempty"`
@@ -90,6 +89,15 @@ type GetBuildResponse struct {
 	Tag             bool           `json:"tag"`
 	DependsOnBuilds []BuildInfo    `json:"depends_on_builds"`
 	TLSCAChain      string         `json:"-"`
+
+	Credentials []BuildResponseCredentials `json:"credentials,omitempty"`
+}
+
+type BuildResponseCredentials struct {
+	Type     string `json:"type"`
+	URL      string `json:"url"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (b *GetBuildResponse) RepoCleanURL() (ret string) {

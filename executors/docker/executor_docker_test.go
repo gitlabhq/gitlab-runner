@@ -457,7 +457,14 @@ func getAuthConfigTestExecutor(precreateConfigFile bool) executor {
 }
 
 func addGitLabRegistryCredentials(e *executor) {
-	e.Build.RegistryURL = "registry.gitlab.tld:1234"
+	e.Build.Credentials = []common.BuildResponseCredentials{
+		common.BuildResponseCredentials{
+			Type:     "registry",
+			URL:      "registry.gitlab.tld:1234",
+			Username: "gitlab-ci-token",
+			Password: e.Build.Token,
+		},
+	}
 }
 
 func addRemoteVariableCredentials(e *executor) {

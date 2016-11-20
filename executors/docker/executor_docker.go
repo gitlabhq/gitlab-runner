@@ -61,7 +61,13 @@ func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, er
 			return docker.AuthConfiguration{}, err
 		}
 
-		authConfigResolver.AddConfiguration(s.Build.RegistryURL, "gitlab-ci-token", s.Build.Token)
+		for _, credentials := range s.Build.Credentials {
+			if credentials.Type != "registry" {
+				continue
+			}
+
+			authConfigResolver.AddConfiguration(credentials.URL, credentials.Username, credentials.Password)
+		}
 	}
 
 	authConfig, indexName := authConfigResolver.ResolveAuthConfig(imageName)
