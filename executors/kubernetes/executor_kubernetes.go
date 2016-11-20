@@ -37,6 +37,8 @@ type executor struct {
 	pod        *api.Pod
 	options    *kubernetesOptions
 
+	namespaceOverwrite string
+
 	buildLimits     api.ResourceList
 	serviceLimits   api.ResourceList
 	helperLimits    api.ResourceList
@@ -290,19 +292,20 @@ func (s *executor) checkDefaults(build *common.Build) error {
 		s.options.Image = s.Config.Kubernetes.Image
 	}
 
-	// when namespace is not found, using "default"
-	if len(s.Config.Kubernetes.Namespace) == 0 {
+	// looking for namespace overwrite variable, and expanding for interpolation
+	s.namespaceOverwrite = build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
+
+	if s.namespaceOverwrite != "" {
+		s.Debugln("Overwritting configured namespace:" +
+			s.Config.Kubernetes.Namespace + "->" + s.namespaceOverwrite)
+		s.Config.Kubernetes.Namespace = s.namespaceOverwrite
+	}
+
+	if s.Config.Kubernetes.Namespace != "" {
 		s.Config.Kubernetes.Namespace = "default"
 	}
 
-	// checking local configuration for overwrite variable, expanding for
-	// interpolating inner variables
-	podNamespace := build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
-	if len(podNamespace) >= 1 {
-		s.Config.Kubernetes.Namespace = podNamespace
-	}
-
-	fmt.Printf("Using Kubernetes namespace: '%s'", s.Config.Kubernetes.Namespace)
+	s.Println("Using Kubernetes namespace:" + s.Config.Kubernetes.Namespace)
 
 	return nil
 }

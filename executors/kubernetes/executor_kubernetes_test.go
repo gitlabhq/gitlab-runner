@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -196,6 +197,7 @@ func TestPrepare(t *testing.T) {
 				options: &kubernetesOptions{
 					Image: "test-image",
 				},
+				namespaceOverwrite: "",
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -249,6 +251,7 @@ func TestPrepare(t *testing.T) {
 				options: &kubernetesOptions{
 					Image: "test-image",
 				},
+				namespaceOverwrite: "",
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -310,6 +313,7 @@ func TestPrepare(t *testing.T) {
 				options: &kubernetesOptions{
 					Image: "test-image",
 				},
+				namespaceOverwrite: "",
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("202Mi"),
@@ -327,38 +331,75 @@ func TestPrepare(t *testing.T) {
 				helperRequests:  api.ResourceList{},
 			},
 		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "namespace",
+						Host:      "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				GetBuildResponse: common.GetBuildResponse{
+					Sha: "1234567890",
+					Options: common.BuildOptions{
+						"image": "test-image",
+					},
+					Variables: []common.BuildVariable{
+						common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				namespaceOverwrite: "namespace",
+				serviceLimits:      api.ResourceList{},
+				buildLimits:        api.ResourceList{},
+				helperLimits:       api.ResourceList{},
+				serviceRequests:    api.ResourceList{},
+				buildRequests:      api.ResourceList{},
+				helperRequests:     api.ResourceList{},
+			},
+		},
 	}
 
-	for _, test := range tests {
-		e := &executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				ExecutorOptions: executorOptions,
-			},
-		}
-
-		err := e.Prepare(test.GlobalConfig, test.RunnerConfig, test.Build)
-
-		if err != nil {
-			if test.Error {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
+	for index, test := range tests {
+		t.Run(strconv.Itoa(index), func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+				},
 			}
-			if !test.Error {
-				t.Errorf("Got error. Expected: %v", test.Expected)
+
+			err := e.Prepare(test.GlobalConfig, test.RunnerConfig, test.Build)
+
+			if err != nil {
+				if test.Error {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+				if !test.Error {
+					t.Errorf("Got error. Expected: %v", test.Expected)
+				}
+				return
 			}
-			continue
-		}
 
-		// Set this to nil so we aren't testing the functionality of the
-		// base AbstractExecutor's Prepare method
-		e.AbstractExecutor = executors.AbstractExecutor{}
+			// Set this to nil so we aren't testing the functionality of the
+			// base AbstractExecutor's Prepare method
+			e.AbstractExecutor = executors.AbstractExecutor{}
 
-		// TODO: Improve this so we don't have to nil-ify the kubeClient.
-		// It currently contains some moving parts that are failing, meaning
-		// we'll need to mock _something_
-		e.kubeClient = nil
-		assert.Equal(t, test.Expected, e)
+			// TODO: Improve this so we don't have to nil-ify the kubeClient.
+			// It currently contains some moving parts that are failing, meaning
+			// we'll need to mock _something_
+			e.kubeClient = nil
+			assert.Equal(t, test.Expected, e)
+		})
 	}
 }
 
