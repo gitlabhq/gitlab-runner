@@ -295,8 +295,9 @@ func (s *executor) checkDefaults(build *common.Build) error {
 		s.Config.Kubernetes.Namespace = "default"
 	}
 
-	// checking local configuration for overwrite variable
-	podNamespace := build.Variables.Get("KUBERNETES_NAMESPACE_OVERWRITE")
+	// checking local configuration for overwrite variable, expanding for
+	// interpolating inner variables
+	podNamespace := build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
 	if len(podNamespace) >= 1 {
 		s.Config.Kubernetes.Namespace = podNamespace
 	}
