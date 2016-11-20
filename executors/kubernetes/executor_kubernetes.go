@@ -284,8 +284,8 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 
 // checkDefaults Defines the configuration for the Pod on Kubernetes
 func (s *executor) checkDefaults(build *common.Build) error {
-	if len(s.options.Image) == 0 {
-		if len(s.Config.Kubernetes.Image) == 0 {
+	if s.options.Image == "" {
+		if s.Config.Kubernetes.Image == "" {
 			return fmt.Errorf("no image specified and no default set in config")
 		}
 
