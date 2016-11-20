@@ -85,6 +85,16 @@ The following keywords for resource limits are deprecated, please use the new on
 - `helper_cpus`: The CPU allocation given to build helper containers
 - `helper_memory`: The amount of memory allocated to build helper containers
 
+### Overwritting Kubernetes Namespace
+
+Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, by
+using the variable `KUBERNETES_NAMESPACE_OVERWRITE`, for instance:
+
+``` yaml
+variables:
+  KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_BUILD_REF_NAME}
+```
+
 ## Define keywords in the config toml
 
 Each of the keywords can be defined in the `config.toml` for the gitlab runner.
