@@ -66,18 +66,20 @@ type ExecOptions struct {
 
 // Run executes a validated remote execution against a pod.
 func (p *ExecOptions) Run() error {
-	pod, err := p.Client.Pods(p.Namespace).Get(p.PodName)
+	podNamespace := getNamespace(p.Namespace)
+	pod, err := p.Client.Pods(podNamespace).Get(p.PodName)
 	if err != nil {
 		return err
 	}
 
 	if pod.Status.Phase != api.PodRunning {
-		return fmt.Errorf("pod %s is not running and cannot execute commands; current phase is %s", p.PodName, pod.Status.Phase)
+		return fmt.Errorf("Pod '%s' (on namespace '%s') is not running and cannot execute commands; current phase is '%s'",
+			p.PodName, podNamespace, pod.Status.Phase)
 	}
 
 	containerName := p.ContainerName
 	if len(containerName) == 0 {
-		log.Infof("defaulting container name to %s", pod.Spec.Containers[0].Name)
+		log.Infof("defaulting container name to '%s'", pod.Spec.Containers[0].Name)
 		containerName = pod.Spec.Containers[0].Name
 	}
 
