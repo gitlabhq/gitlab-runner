@@ -296,16 +296,15 @@ func (s *executor) checkDefaults(build *common.Build) error {
 	s.namespaceOverwrite = build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
 
 	if s.namespaceOverwrite != "" {
-		s.Debugln("Overwritting configured namespace:" +
-			s.Config.Kubernetes.Namespace + "->" + s.namespaceOverwrite)
+		s.Debugln("Overwritting configured namespace:", s.Config.Kubernetes.Namespace, "->", s.namespaceOverwrite)
 		s.Config.Kubernetes.Namespace = s.namespaceOverwrite
 	}
 
-	if s.Config.Kubernetes.Namespace != "" {
+	if s.Config.Kubernetes.Namespace == "" {
 		s.Config.Kubernetes.Namespace = "default"
 	}
 
-	s.Println("Using Kubernetes namespace:" + s.Config.Kubernetes.Namespace)
+	s.Println("Using Kubernetes namespace:", s.Config.Kubernetes.Namespace)
 
 	return nil
 }
