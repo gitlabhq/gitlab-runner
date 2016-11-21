@@ -196,10 +196,10 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 
 	q := resource.Quantity{}
 	if rCPU != q {
-		l[api.ResourceLimitsCPU] = rCPU
+		l[api.ResourceCPU] = rCPU
 	}
 	if rMem != q {
-		l[api.ResourceLimitsMemory] = rMem
+		l[api.ResourceMemory] = rMem
 	}
 
 	return l, nil
