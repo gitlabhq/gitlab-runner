@@ -1,3 +1,6 @@
+v 1.7.1
+- Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364
+
 v 1.7.0
 - Improve description of --s3-bucket-location option !325
 - Use Go 1.7 !323
