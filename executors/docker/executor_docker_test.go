@@ -1,7 +1,9 @@
 package docker
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/fsouza/go-dockerclient"
@@ -105,7 +107,7 @@ func TestSplitService(t *testing.T) {
 	}
 }
 
-func testServiceFromNamedImage(t *testing.T, description, imageName string) {
+func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string) {
 	var c docker_helpers.MockClient
 	defer c.AssertExpectations(t)
 
@@ -133,6 +135,20 @@ func testServiceFromNamedImage(t *testing.T, description, imageName string) {
 		Return(nil).
 		Once()
 
+	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s", strings.Replace(serviceName, "/", "__", -1))
+	networkID := "network-id"
+
+	networkContainersMap := make(map[string]docker.Endpoint)
+	networkContainersMap["1"] = docker.Endpoint{Name: containerName}
+
+	c.On("ListNetworks").
+		Return([]docker.Network{docker.Network{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
+		Once()
+
+	c.On("DisconnectNetwork", networkID, docker.NetworkConnectionOptions{Container: containerName}).
+		Return(nil).
+		Once()
+
 	c.On("CreateContainer", mock.Anything).
 		Return(&docker.Container{}, nil).
 		Once()
@@ -149,7 +165,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName string) {
 func TestServiceFromNamedImage(t *testing.T) {
 	for _, test := range testServices {
 		t.Run(test.description, func(t *testing.T) {
-			testServiceFromNamedImage(t, test.description, test.image)
+			testServiceFromNamedImage(t, test.description, test.image, test.service)
 		})
 	}
 }

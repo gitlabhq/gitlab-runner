@@ -708,6 +708,7 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 
 func (s *executor) killContainer(container *docker.Container, waitCh chan error) (err error) {
 	for {
+		s.disconnectNetwork(container.ID)
 		s.Debugln("Killing container", container.ID, "...")
 		s.client.KillContainer(docker.KillContainerOptions{
 			ID: container.ID,
@@ -777,6 +778,7 @@ func (s *executor) watchContainer(container *docker.Container, input io.Reader, 
 }
 
 func (s *executor) removeContainer(id string) error {
+	s.disconnectNetwork(id)
 	removeContainerOptions := docker.RemoveContainerOptions{
 		ID:            id,
 		RemoveVolumes: true,
@@ -784,6 +786,32 @@ func (s *executor) removeContainer(id string) error {
 	}
 	err := s.client.RemoveContainer(removeContainerOptions)
 	s.Debugln("Removed container", id, "with", err)
+	return err
+}
+
+func (s *executor) disconnectNetwork(id string) error {
+	netList, err := s.client.ListNetworks()
+	if err != nil {
+		s.Debugln("Can't get network list. ListNetworks exited with", err)
+		return err
+	}
+	disconnectNetworkOptions := docker.NetworkConnectionOptions{
+		Container: id,
+	}
+	for _, network := range netList {
+		for _, pluggedContainer := range network.Containers {
+			if id == pluggedContainer.Name {
+				networkID := network.ID
+				err = s.client.DisconnectNetwork(networkID, disconnectNetworkOptions)
+				if err != nil {
+					s.Warningln("Can't disconnect possibly zombie container", pluggedContainer.Name, "from network", network.Name, "->", err)
+				} else {
+					s.Warningln("Possibly zombie container", pluggedContainer.Name, "is disconnected from network", network.Name)
+				}
+				break
+			}
+		}
+	}
 	return err
 }
 

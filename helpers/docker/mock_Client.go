@@ -91,6 +91,24 @@ func (m *MockClient) RemoveContainer(opts docker.RemoveContainerOptions) error {
 
 	return r0
 }
+func (m *MockClient) DisconnectNetwork(id string, opts docker.NetworkConnectionOptions) error {
+	ret := m.Called(id, opts)
+
+	r0 := ret.Error(0)
+
+	return r0
+}
+func (m *MockClient) ListNetworks() ([]docker.Network, error) {
+	ret := m.Called()
+
+	var r0 []docker.Network
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).([]docker.Network)
+	}
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
 func (m *MockClient) Logs(opts docker.LogsOptions) error {
 	ret := m.Called(opts)
 
