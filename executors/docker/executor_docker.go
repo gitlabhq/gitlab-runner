@@ -121,7 +121,7 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 	image, err := s.client.InspectImage(imageName)
 
 	// If never is specified then we return what inspect did return
-	if pullPolicy == common.DockerPullPolicyNever {
+	if pullPolicy == common.PullPolicyNever {
 		return image, err
 	}
 
@@ -132,7 +132,7 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 		}
 
 		// If not-present is specified
-		if pullPolicy == common.DockerPullPolicyIfNotPresent {
+		if pullPolicy == common.PullPolicyIfNotPresent {
 			return image, err
 		}
 	}

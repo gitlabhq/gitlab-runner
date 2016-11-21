@@ -62,6 +62,7 @@ The following keywords help to define the behaviour of the Runner within kuberne
 - `memory`: The amount of memory allocated to build containers
 - `service_cpus`: The CPU allocation given to build service containers
 - `service_memory`: The amount of memory allocated to build service containers
+- `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
 
 ## Define keywords in the config toml
 
