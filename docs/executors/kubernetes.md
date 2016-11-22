@@ -87,7 +87,7 @@ The following keywords for resource limits are deprecated, please use the new on
 - `helper_cpus`: The CPU allocation given to build helper containers
 - `helper_memory`: The amount of memory allocated to build helper containers
 
-### Overwritting Kubernetes Namespace
+### Overwriting Kubernetes Namespace
 
 Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, by
 using the variable `KUBERNETES_NAMESPACE_OVERWRITE`, for instance:
@@ -97,7 +97,7 @@ variables:
   KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_BUILD_REF_NAME}
 ```
 
-Furthrmore, to ensure only desiginated namespaces will be used during CI runs,
+Furthermore, to ensure only designated namespaces will be used during CI runs,
 inform the configuration `namespace_overwrite_allowed` with proper regular
 expression, when empty it's not allowed to overwrite configured `namespace`.
 
