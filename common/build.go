@@ -319,8 +319,10 @@ func (b *Build) GetDefaultVariables() BuildVariables {
 	}
 }
 
-func (b *Build) GetAllVariables() BuildVariables {
-	variables := b.Runner.GetVariables()
+func (b *Build) GetAllVariables() (variables BuildVariables) {
+	if b.Runner != nil {
+		variables = append(variables, b.Runner.GetVariables()...)
+	}
 	variables = append(variables, b.GetDefaultVariables()...)
 	variables = append(variables, b.Variables...)
 	return variables.Expand()

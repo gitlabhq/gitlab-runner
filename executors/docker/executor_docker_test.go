@@ -14,6 +14,8 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
+	"github.com/stretchr/testify/require"
+	"errors"
 )
 
 func TestParseDeviceStringOne(t *testing.T) {
@@ -109,15 +111,12 @@ func TestSplitService(t *testing.T) {
 	}
 }
 
-var tempHomeDir string
-
 func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string) {
 	var c docker_helpers.MockClient
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
 	ac, _ := e.getAuthConfig(imageName)
-
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{}
 	e.Build = &common.Build{
@@ -380,8 +379,8 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Once()
 
 	image, err := e.getDockerImage("to-pull")
-	assert.NoError(t, err)
-	assert.NotNil(t, image, "Returns existing image")
+	assert.Error(t, err)
+	assert.Nil(t, image, "Forces to authorize pulling")
 
 	c.On("InspectImage", "not-existing").
 		Return(nil, os.ErrNotExist).
@@ -433,12 +432,16 @@ func TestHostMountedBuildsDirectory(t *testing.T) {
 var testFileAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"aW52YWxpZF91c2VyOmludmFsaWRfcGFzc3dvcmQ="},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
 var testVariableAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
 
-func getAuthConfigTestExecutor(precreateConfigFile bool) executor {
-	overwriteHomeDir()
+func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) executor {
+	tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
+	require.NoError(t, err)
 
 	if precreateConfigFile {
 		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
 		ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
+		docker_helpers.HomeDirectory = tempHomeDir
+	} else {
+		docker_helpers.HomeDirectory = ""
 	}
 
 	e := executor{}
@@ -450,7 +453,7 @@ func getAuthConfigTestExecutor(precreateConfigFile bool) executor {
 
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{
-		PullPolicy: common.PullPolicyIfNotPresent,
+		PullPolicy: common.PullPolicyAlways,
 	}
 
 	return e
@@ -458,7 +461,7 @@ func getAuthConfigTestExecutor(precreateConfigFile bool) executor {
 
 func addGitLabRegistryCredentials(e *executor) {
 	e.Build.Credentials = []common.BuildResponseCredentials{
-		common.BuildResponseCredentials{
+		{
 			Type:     "registry",
 			URL:      "registry.gitlab.tld:1234",
 			Username: "gitlab-ci-token",
@@ -535,14 +538,14 @@ func testVariableAuthConfig(t *testing.T, e executor) {
 }
 
 func TestGetRemoteVariableAuthConfig(t *testing.T) {
-	e := getAuthConfigTestExecutor(true)
+	e := getAuthConfigTestExecutor(t, true)
 	addRemoteVariableCredentials(&e)
 
 	testVariableAuthConfig(t, e)
 }
 
 func TestGetLocalVariableAuthConfig(t *testing.T) {
-	e := getAuthConfigTestExecutor(true)
+	e := getAuthConfigTestExecutor(t, true)
 	addLocalVariableCredentials(&e)
 
 	testVariableAuthConfig(t, e)
@@ -550,26 +553,26 @@ func TestGetLocalVariableAuthConfig(t *testing.T) {
 
 func TestGetDefaultAuthConfig(t *testing.T) {
 	t.Run("withoutGitLabRegistry", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(false)
+		e := getAuthConfigTestExecutor(t, false)
 
-		ac := getTestAuthConfig(t, e, "docker:dind")
+		ac := getTestAuthConfigWithError(t, e, "docker:dind")
 		assertEmptyCredentials(t, ac, "docker:dind")
 
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
+		ac = getTestAuthConfigWithError(t, e, "registry.gitlab.tld:1234/image/name:version")
 		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
 
-		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
+		ac = getTestAuthConfigWithError(t, e, "registry.domain.tld:5005/image/name:version")
 		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
 	})
 
 	t.Run("withGitLabRegistry", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(false)
+		e := getAuthConfigTestExecutor(t, false)
 		addGitLabRegistryCredentials(&e)
 
-		ac := getTestAuthConfig(t, e, "docker:dind")
+		ac := getTestAuthConfigWithError(t, e, "docker:dind")
 		assertEmptyCredentials(t, ac, "docker:dind")
 
-		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
+		ac = getTestAuthConfigWithError(t, e, "registry.domain.tld:5005/image/name:version")
 		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
 
 		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
@@ -578,7 +581,7 @@ func TestGetDefaultAuthConfig(t *testing.T) {
 }
 
 func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker_helpers.MockClient, imageName string)) {
-	t.Run(imageName, func(t *testing.T) {
+	t.Run("get:" + imageName, func(t *testing.T) {
 		var c docker_helpers.MockClient
 		defer c.AssertExpectations(t)
 
@@ -592,13 +595,27 @@ func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExp
 	})
 }
 
-func addUseIfNotPresentPullPolicyExpectations(c *docker_helpers.MockClient, imageName string) {
+func testDeniesDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker_helpers.MockClient, imageName string)) {
+	t.Run("deny:" + imageName, func(t *testing.T) {
+		var c docker_helpers.MockClient
+		defer c.AssertExpectations(t)
+
+		e.client = &c
+
+		setClientExpectations(&c, imageName)
+
+		_, err := e.getDockerImage(imageName)
+		assert.Error(t, err, "Should generate error")
+	})
+}
+
+func addFindsLocalImageExpectations(c *docker_helpers.MockClient, imageName string) {
 	c.On("InspectImage", imageName).
 		Return(&docker.Image{ID: "this-image"}, nil).
 		Once()
 }
 
-func addUseAlwaysPullPolicyExpectations(c *docker_helpers.MockClient, imageName string) {
+func addPullsRemoteImageExpectations(c *docker_helpers.MockClient, imageName string) {
 	c.On("InspectImage", imageName).
 		Return(&docker.Image{ID: "not-this-image"}, nil).
 		Once()
@@ -612,54 +629,41 @@ func addUseAlwaysPullPolicyExpectations(c *docker_helpers.MockClient, imageName 
 		Once()
 }
 
-func TestPullPolicyPullIsForcedWhenAuthIsDefined(t *testing.T) {
-	imageName := "registry.domain.tld:5005/image/name:version"
-	gitlabImageName := "registry.gitlab.tld:1234/image/name:version"
+func addDeniesPullExpectations(c *docker_helpers.MockClient, imageName string) {
+	c.On("InspectImage", imageName).
+		Return(&docker.Image{ID: "image"}, nil).
+		Once()
 
-	t.Run("withoutGitLabRegistry", func(t *testing.T) {
-		t.Run("withoutRemoteCredentials", func(t *testing.T) {
-			e := getAuthConfigTestExecutor(false)
-
-			testGetDockerImage(t, e, imageName, addUseIfNotPresentPullPolicyExpectations)
-			testGetDockerImage(t, e, gitlabImageName, addUseIfNotPresentPullPolicyExpectations)
-		})
-
-		t.Run("withRemoteCredentials", func(t *testing.T) {
-			e := getAuthConfigTestExecutor(false)
-			addRemoteVariableCredentials(&e)
-
-			testGetDockerImage(t, e, imageName, addUseAlwaysPullPolicyExpectations)
-			testGetDockerImage(t, e, gitlabImageName, addUseIfNotPresentPullPolicyExpectations)
-		})
-	})
-
-	t.Run("withGitLabRegistry", func(t *testing.T) {
-		t.Run("withoutRemoteCredentials", func(t *testing.T) {
-			e := getAuthConfigTestExecutor(false)
-			addGitLabRegistryCredentials(&e)
-
-			testGetDockerImage(t, e, imageName, addUseIfNotPresentPullPolicyExpectations)
-			testGetDockerImage(t, e, gitlabImageName, addUseAlwaysPullPolicyExpectations)
-		})
-
-		t.Run("withRemoteCredentials", func(t *testing.T) {
-			e := getAuthConfigTestExecutor(false)
-			addGitLabRegistryCredentials(&e)
-			addRemoteVariableCredentials(&e)
-
-			testGetDockerImage(t, e, imageName, addUseAlwaysPullPolicyExpectations)
-			testGetDockerImage(t, e, gitlabImageName, addUseAlwaysPullPolicyExpectations)
-		})
-	})
+	c.On("PullImage", docker.PullImageOptions{Repository: imageName}, mock.AnythingOfType("docker.AuthConfiguration")).
+		Return(errors.New("deny pulling")).
+		Once()
 }
 
-func overwriteHomeDir() {
-	tempHomeDir, _ = ioutil.TempDir("", "docker-auth-configs-test")
-	docker_helpers.ResolveHomeDir = func(userName string) (string, error) {
-		return tempHomeDir, nil
-	}
+func TestPullPolicyWhenAlwaysIsSet(t *testing.T) {
+	remoteImage := "registry.domain.tld:5005/image/name:version"
+	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
+
+	e := getAuthConfigTestExecutor(t, false)
+	e.Config.Docker.PullPolicy = common.PullPolicyAlways
+
+	testGetDockerImage(t, e, remoteImage, addPullsRemoteImageExpectations)
+	testDeniesDockerImage(t, e, remoteImage, addDeniesPullExpectations)
+
+	testGetDockerImage(t, e, gitlabImage, addPullsRemoteImageExpectations)
+	testDeniesDockerImage(t, e, gitlabImage, addDeniesPullExpectations)
+}
+
+func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
+	remoteImage := "registry.domain.tld:5005/image/name:version"
+	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
+
+	e := getAuthConfigTestExecutor(t, false)
+	e.Config.Docker.PullPolicy = common.PullPolicyIfNotPresent
+
+	testGetDockerImage(t, e, remoteImage, addFindsLocalImageExpectations)
+	testGetDockerImage(t, e, gitlabImage, addFindsLocalImageExpectations)
 }
 
 func init() {
-	overwriteHomeDir()
+	docker_helpers.HomeDirectory = ""
 }
