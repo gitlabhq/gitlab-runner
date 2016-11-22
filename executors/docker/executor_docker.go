@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"os/user"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -16,6 +18,7 @@ import (
 	"time"
 
 	"github.com/docker/distribution/reference"
+	"github.com/docker/docker/pkg/homedir"
 	"github.com/fsouza/go-dockerclient"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
@@ -48,29 +51,30 @@ func (s *executor) getServiceVariables() []string {
 }
 
 func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, error) {
-	authConfigResolver := docker_helpers.NewAuthConfigResolver()
-
-	err := authConfigResolver.ReadHomeDirectoryAuthConfig(s.Shell().User)
-	if err != nil {
-		return docker.AuthConfiguration{}, err
-	}
-
-	if s.Build != nil {
-		err = authConfigResolver.ReadStringAuthConfig(s.Build.GetDockerAuthConfigs())
+	homeDir := homedir.Get()
+	if s.Shell().User != "" {
+		u, err := user.Lookup(s.Shell().User)
 		if err != nil {
 			return docker.AuthConfiguration{}, err
 		}
-
-		for _, credentials := range s.Build.Credentials {
-			if credentials.Type != "registry" {
-				continue
-			}
-
-			authConfigResolver.AddConfiguration(credentials.URL, credentials.Username, credentials.Password)
-		}
+		homeDir = u.HomeDir
+	}
+	if homeDir == "" {
+		return docker.AuthConfiguration{}, fmt.Errorf("Failed to get home directory")
 	}
 
-	authConfig, indexName := authConfigResolver.ResolveAuthConfig(imageName)
+	indexName, _ := docker_helpers.SplitDockerImageName(imageName)
+
+	authConfigs, err := docker_helpers.ReadDockerAuthConfigs(homeDir)
+	if err != nil {
+		// ignore doesn't exist errors
+		if os.IsNotExist(err) {
+			err = nil
+		}
+		return docker.AuthConfiguration{}, err
+	}
+
+	authConfig := docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
 	if authConfig != nil {
 		s.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress, "in order to resolve", imageName, "...")
 		return *authConfig, nil
@@ -79,8 +83,12 @@ func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, er
 	return docker.AuthConfiguration{}, fmt.Errorf("No credentials found for %v", indexName)
 }
 
-func (s *executor) pullDockerImage(imageName string, authConfig docker.AuthConfiguration) (*docker.Image, error) {
+func (s *executor) pullDockerImage(imageName string) (*docker.Image, error) {
 	s.Println("Pulling docker image", imageName, "...")
+	authConfig, err := s.getAuthConfig(imageName)
+	if err != nil {
+		s.Debugln(err)
+	}
 
 	pullImageOptions := docker.PullImageOptions{
 		Repository: imageName,
@@ -91,7 +99,7 @@ func (s *executor) pullDockerImage(imageName string, authConfig docker.AuthConfi
 		pullImageOptions.Repository += ":latest"
 	}
 
-	err := s.client.PullImage(pullImageOptions, authConfig)
+	err = s.client.PullImage(pullImageOptions, authConfig)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return nil, &common.BuildError{Inner: err}
@@ -109,20 +117,27 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 		return nil, err
 	}
 
-	authConfig, err := s.getAuthConfig(imageName)
-	if err != nil {
-		s.Debugln(err)
-	}
-
 	s.Debugln("Looking for image", imageName, "...")
 	image, err := s.client.InspectImage(imageName)
 
-	shouldReturn, image, err := s.returnExistingIfPolicyMatch(pullPolicy, imageName, image, err, authConfig)
-	if shouldReturn {
+	// If never is specified then we return what inspect did return
+	if pullPolicy == common.PullPolicyNever {
 		return image, err
 	}
 
-	newImage, err := s.pullDockerImage(imageName, authConfig)
+	if err == nil {
+		// Don't pull image that is passed by ID
+		if image.ID == imageName {
+			return image, nil
+		}
+
+		// If not-present is specified
+		if pullPolicy == common.PullPolicyIfNotPresent {
+			return image, err
+		}
+	}
+
+	newImage, err := s.pullDockerImage(imageName)
 	if err != nil {
 		if image != nil {
 			s.Warningln("Cannot pull the latest version of image", imageName, ":", err)
@@ -132,31 +147,6 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 		return nil, err
 	}
 	return newImage, nil
-}
-
-func (s *executor) returnExistingIfPolicyMatch(pullPolicy common.DockerPullPolicy, imageName string, image *docker.Image, err error, authConfig docker.AuthConfiguration) (bool, *docker.Image, error) {
-	// If never is specified then we return what inspect did return
-	if pullPolicy == common.PullPolicyNever {
-		return true, image, err
-	}
-
-	if authConfig.ServerAddress != "" {
-		pullPolicy = common.PullPolicyAlways
-	}
-
-	if err == nil {
-		// Don't pull image that is passed by ID
-		if image.ID == imageName {
-			return true, image, nil
-		}
-
-		// If not-present is specified
-		if pullPolicy == common.PullPolicyIfNotPresent {
-			return true, image, err
-		}
-	}
-
-	return false, image, nil
 }
 
 func (s *executor) getArchitecture() string {
