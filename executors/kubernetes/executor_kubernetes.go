@@ -37,25 +37,39 @@ type executor struct {
 	pod        *api.Pod
 	options    *kubernetesOptions
 
-	buildLimits   api.ResourceList
-	serviceLimits api.ResourceList
-	helperLimits  api.ResourceList
-	pullPolicy    common.KubernetesPullPolicy
+	buildLimits     api.ResourceList
+	serviceLimits   api.ResourceList
+	helperLimits    api.ResourceList
+	buildRequests   api.ResourceList
+	serviceRequests api.ResourceList
+	pullPolicy      common.KubernetesPullPolicy
 }
 
-func (s *executor) setupLimits() error {
+func (s *executor) setupResources() error {
 	var err error
-	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPUs, s.Config.Kubernetes.ServiceMemory); err != nil {
-		return fmt.Errorf("invalid service limits specified: %s", err.Error())
+
+	// Limits
+	if s.buildLimits, err = limits(s.Config.Kubernetes.CPULimit, s.Config.Kubernetes.MemoryLimit); err != nil {
+		return fmt.Errorf("invalid build limits specified: %s", err.Error())
 	}
 
-	if s.buildLimits, err = limits(s.Config.Kubernetes.CPUs, s.Config.Kubernetes.Memory); err != nil {
-		return fmt.Errorf("invalid build limits specified: %s", err.Error())
+	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit); err != nil {
+		return fmt.Errorf("invalid service limits specified: %s", err.Error())
 	}
 
 	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
 		return fmt.Errorf("invalid helper limits specified: %s", err.Error())
 	}
+
+	// Requests
+	if s.buildRequests, err = limits(s.Config.Kubernetes.CPURequest, s.Config.Kubernetes.MemoryRequest); err != nil {
+		return fmt.Errorf("invalid build requests specified: %s", err.Error())
+	}
+
+	if s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest); err != nil {
+		return fmt.Errorf("invalid service requests specified: %s", err.Error())
+	}
+
 	return nil
 }
 
@@ -78,7 +92,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
-	if err = s.setupLimits(); err != nil {
+	if err = s.setupResources(); err != nil {
 		return err
 	}
 
@@ -135,7 +149,7 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) buildContainer(name, image string, limits api.ResourceList, command ...string) api.Container {
+func (s *executor) buildContainer(name, image string, requests api.ResourceList, limits api.ResourceList, command ...string) api.Container {
 	path := strings.Split(s.Build.BuildDir, "/")
 	path = path[:len(path)-1]
 
@@ -151,7 +165,8 @@ func (s *executor) buildContainer(name, image string, limits api.ResourceList, c
 		Command:         command,
 		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
 		Resources: api.ResourceRequirements{
-			Limits: limits,
+			Limits:   limits,
+			Requests: requests,
 		},
 		VolumeMounts: []api.VolumeMount{
 			api.VolumeMount{
@@ -170,7 +185,7 @@ func (s *executor) setupBuildPod() error {
 	services := make([]api.Container, len(s.options.Services))
 	for i, image := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(image)
-		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, s.serviceLimits)
+		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, s.serviceRequests, s.serviceLimits)
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
@@ -192,7 +207,7 @@ func (s *executor) setupBuildPod() error {
 			RestartPolicy: api.RestartPolicyNever,
 			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
-				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("build", buildImage, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
 				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
