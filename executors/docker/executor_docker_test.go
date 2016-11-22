@@ -116,7 +116,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	ac, _ := e.getAuthConfig(imageName)
+	ac := e.getAuthConfig(imageName)
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{}
 	e.Build = &common.Build{
@@ -178,7 +178,7 @@ func TestDockerForNamedImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	ac, _ := e.getAuthConfig("test")
+	ac := e.getAuthConfig("test")
 
 	c.On("PullImage", docker.PullImageOptions{Repository: "test:latest"}, ac).
 		Return(os.ErrNotExist).
@@ -210,7 +210,7 @@ func TestDockerForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	ac, _ := e.getAuthConfig("existing")
+	ac := e.getAuthConfig("existing")
 
 	c.On("PullImage", docker.PullImageOptions{Repository: "existing:latest"}, ac).
 		Return(nil).
@@ -314,7 +314,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Return(nil, os.ErrNotExist).
 		Once()
 
-	ac, _ := e.getAuthConfig("not-existing")
+	ac := e.getAuthConfig("not-existing")
 	c.On("PullImage", docker.PullImageOptions{Repository: "not-existing:latest"}, ac).
 		Return(nil).
 		Once()
@@ -348,7 +348,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 		Return(&docker.Image{}, nil).
 		Once()
 
-	ac, _ := e.getAuthConfig("existing")
+	ac := e.getAuthConfig("existing")
 	c.On("PullImage", docker.PullImageOptions{Repository: "existing:latest"}, ac).
 		Return(nil).
 		Once()
@@ -373,7 +373,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Return(&docker.Image{}, nil).
 		Once()
 
-	ac, _ := e.getAuthConfig("to-pull")
+	ac := e.getAuthConfig("to-pull")
 	c.On("PullImage", docker.PullImageOptions{Repository: "to-pull:latest"}, ac).
 		Return(os.ErrNotExist).
 		Once()
@@ -498,15 +498,7 @@ func assertCredentials(t *testing.T, serverAddress, username, password string, a
 }
 
 func getTestAuthConfig(t *testing.T, e executor, imageName string) docker.AuthConfiguration {
-	ac, err := e.getAuthConfig(imageName)
-	assert.NoError(t, err, "Error for "+imageName)
-
-	return ac
-}
-
-func getTestAuthConfigWithError(t *testing.T, e executor, imageName string) docker.AuthConfiguration {
-	ac, err := e.getAuthConfig(imageName)
-	assert.Error(t, err, "Error for "+imageName)
+	ac := e.getAuthConfig(imageName)
 
 	return ac
 }
@@ -519,7 +511,7 @@ func testVariableAuthConfig(t *testing.T, e executor) {
 		ac = getTestAuthConfig(t, e, "registry2.domain.tld:5005/image/name:version")
 		assertCredentials(t, "registry2.domain.tld:5005", "test_user", "test_password", ac, "registry2.domain.tld:5005/image/name:version")
 
-		ac = getTestAuthConfigWithError(t, e, "registry.gitlab.tld:1234/image/name:version")
+		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
 		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
 	})
 
@@ -555,13 +547,13 @@ func TestGetDefaultAuthConfig(t *testing.T) {
 	t.Run("withoutGitLabRegistry", func(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, false)
 
-		ac := getTestAuthConfigWithError(t, e, "docker:dind")
+		ac := getTestAuthConfig(t, e, "docker:dind")
 		assertEmptyCredentials(t, ac, "docker:dind")
 
-		ac = getTestAuthConfigWithError(t, e, "registry.gitlab.tld:1234/image/name:version")
+		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
 		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
 
-		ac = getTestAuthConfigWithError(t, e, "registry.domain.tld:5005/image/name:version")
+		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
 		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
 	})
 
@@ -569,10 +561,10 @@ func TestGetDefaultAuthConfig(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, false)
 		addGitLabRegistryCredentials(&e)
 
-		ac := getTestAuthConfigWithError(t, e, "docker:dind")
+		ac := getTestAuthConfig(t, e, "docker:dind")
 		assertEmptyCredentials(t, ac, "docker:dind")
 
-		ac = getTestAuthConfigWithError(t, e, "registry.domain.tld:5005/image/name:version")
+		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
 		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
 
 		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")

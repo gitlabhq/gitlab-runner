@@ -95,7 +95,7 @@ func (s *executor) getHomeDirAuthConfiguration(indexName string) *docker.AuthCon
 	return nil
 }
 
-func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, error) {
+func (s *executor) getAuthConfig(imageName string) docker.AuthConfiguration {
 	indexName, _ := docker_helpers.SplitDockerImageName(imageName)
 
 	authConfig := s.getUserAuthConfiguration(indexName)
@@ -109,10 +109,11 @@ func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, er
 	if authConfig != nil {
 		s.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
 			"in order to resolve", imageName, "...")
-		return *authConfig, nil
+		return *authConfig
 	}
 
-	return docker.AuthConfiguration{}, fmt.Errorf("No credentials found for %v", indexName)
+	s.Debugln(fmt.Sprintf("No credentials found for %v", indexName))
+	return docker.AuthConfiguration{}
 }
 
 func (s *executor) pullDockerImage(imageName string, authConfig docker.AuthConfiguration) (image *docker.Image, err error) {
@@ -143,10 +144,7 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 		return nil, err
 	}
 
-	authConfig, err := s.getAuthConfig(imageName)
-	if err != nil {
-		s.Debugln(err)
-	}
+	authConfig := s.getAuthConfig(imageName)
 
 	s.Debugln("Looking for image", imageName, "...")
 	image, err := s.client.InspectImage(imageName)
