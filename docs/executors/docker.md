@@ -13,33 +13,6 @@ run on your workstation. The added benefit is that you can test all the
 commands that we will explore later from your shell, rather than having to test
 them on a dedicated CI server.
 
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Workflow](#workflow)
-- [The `image` keyword](#the-image-keyword)
-- [The `services` keyword](#the-services-keyword)
-    - [How is service linked to the build](#how-is-service-linked-to-the-build)
-- [Define image and services from `.gitlab-ci.yml`](#define-image-and-services-from-gitlab-ci-yml)
-- [Define image and services in `config.toml`](#define-image-and-services-in-config-toml)
-- [Define an image from a private Docker registry](#define-an-image-from-a-private-docker-registry)
-- [Accessing the services](#accessing-the-services)
-- [Configuring services](#configuring-services)
-    - [PostgreSQL service example](#postgresql-service-example)
-    - [MySQL service example](#mysql-service-example)
-    - [The services health check](#the-services-health-check)
-- [The builds and cache storage](#the-builds-and-cache-storage)
-- [The persistent storage](#the-persistent-storage)
-- [The privileged mode](#the-privileged-mode)
-    - [Use docker-in-docker with privileged mode](#use-docker-in-docker-with-privileged-mode)
-- [The ENTRYPOINT](#the-entrypoint)
-- [Docker vs Docker-SSH](#docker-vs-docker-ssh)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 ## Workflow
 
 The Docker executor divides the build into multiple steps:
@@ -398,7 +371,7 @@ using its internal IP.
 [tutum/wordpress]: https://registry.hub.docker.com/u/tutum/wordpress/
 [postgres-hub]: https://registry.hub.docker.com/u/library/postgres/
 [mysql-hub]: https://registry.hub.docker.com/u/library/mysql/
-[runner-priv-reg]: ../configuration/advanced-configuration.md#using-a-private-docker-registry
+[runner-priv-reg]: ../configuration/advanced-configuration.md#using-a-private-container-registry
 [yaml]: http://doc.gitlab.com/ce/ci/yaml/README.html
 [toml]: ../commands/README.md#configuration-file
 [alpine linux]: https://alpinelinux.org/
