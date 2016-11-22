@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -18,7 +16,6 @@ import (
 	"time"
 
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/pkg/homedir"
 	"github.com/fsouza/go-dockerclient"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
@@ -50,46 +47,77 @@ func (s *executor) getServiceVariables() []string {
 	return s.Build.GetAllVariables().PublicOrInternal().StringList()
 }
 
-func (s *executor) getAuthConfig(imageName string) (docker.AuthConfiguration, error) {
-	homeDir := homedir.Get()
-	if s.Shell().User != "" {
-		u, err := user.Lookup(s.Shell().User)
-		if err != nil {
-			return docker.AuthConfiguration{}, err
-		}
-		homeDir = u.HomeDir
-	}
-	if homeDir == "" {
-		return docker.AuthConfiguration{}, fmt.Errorf("Failed to get home directory")
+func (s *executor) getUserAuthConfiguration(indexName string) *docker.AuthConfiguration {
+	if s.Build == nil {
+		return nil
 	}
 
-	indexName, _ := docker_helpers.SplitDockerImageName(imageName)
-
-	authConfigs, err := docker_helpers.ReadDockerAuthConfigs(homeDir)
-	if err != nil {
-		// ignore doesn't exist errors
-		if os.IsNotExist(err) {
-			err = nil
-		}
-		return docker.AuthConfiguration{}, err
+	authConfigString := s.Build.GetDockerAuthConfig()
+	authConfigs, _ := docker.NewAuthConfigurations(bytes.NewBufferString(authConfigString))
+	if authConfigs != nil {
+		return docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
 	}
-
-	authConfig := docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
-	if authConfig != nil {
-		s.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress, "in order to resolve", imageName, "...")
-		return *authConfig, nil
-	}
-
-	return docker.AuthConfiguration{}, fmt.Errorf("No credentials found for %v", indexName)
+	return nil
 }
 
-func (s *executor) pullDockerImage(imageName string) (*docker.Image, error) {
-	s.Println("Pulling docker image", imageName, "...")
-	authConfig, err := s.getAuthConfig(imageName)
-	if err != nil {
-		s.Debugln(err)
+func (s *executor) getBuildAuthConfiguration(indexName string) *docker.AuthConfiguration {
+	if s.Build == nil {
+		return nil
 	}
 
+	authConfigs := &docker.AuthConfigurations{
+		Configs: make(map[string]docker.AuthConfiguration),
+	}
+
+	for _, credentials := range s.Build.Credentials {
+		if credentials.Type != "registry" {
+			continue
+		}
+
+		authConfigs.Configs[credentials.URL] = docker.AuthConfiguration{
+			Username:      credentials.Username,
+			Password:      credentials.Password,
+			ServerAddress: credentials.URL,
+		}
+	}
+
+	if authConfigs != nil {
+		return docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+	}
+	return nil
+}
+
+func (s *executor) getHomeDirAuthConfiguration(indexName string) *docker.AuthConfiguration {
+	authConfigs, _ := docker_helpers.ReadDockerAuthConfigsFromHomeDir(s.Shell().User)
+	if authConfigs != nil {
+		return docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+	}
+	return nil
+}
+
+func (s *executor) getAuthConfig(imageName string) docker.AuthConfiguration {
+	indexName, _ := docker_helpers.SplitDockerImageName(imageName)
+
+	authConfig := s.getUserAuthConfiguration(indexName)
+	if authConfig == nil {
+		authConfig = s.getHomeDirAuthConfiguration(indexName)
+	}
+	if authConfig == nil {
+		authConfig = s.getBuildAuthConfiguration(indexName)
+	}
+
+	if authConfig != nil {
+		s.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
+			"in order to resolve", imageName, "...")
+		return *authConfig
+	}
+
+	s.Debugln(fmt.Sprintf("No credentials found for %v", indexName))
+	return docker.AuthConfiguration{}
+}
+
+func (s *executor) pullDockerImage(imageName string, authConfig docker.AuthConfiguration) (image *docker.Image, err error) {
+	s.Println("Pulling docker image", imageName, "...")
 	pullImageOptions := docker.PullImageOptions{
 		Repository: imageName,
 	}
@@ -107,8 +135,7 @@ func (s *executor) pullDockerImage(imageName string) (*docker.Image, error) {
 		return nil, err
 	}
 
-	image, err := s.client.InspectImage(imageName)
-	return image, err
+	return s.client.InspectImage(imageName)
 }
 
 func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
@@ -116,6 +143,8 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	authConfig := s.getAuthConfig(imageName)
 
 	s.Debugln("Looking for image", imageName, "...")
 	image, err := s.client.InspectImage(imageName)
@@ -137,9 +166,10 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 		}
 	}
 
-	newImage, err := s.pullDockerImage(imageName)
+	newImage, err := s.pullDockerImage(imageName, authConfig)
 	if err != nil {
-		if image != nil {
+		// We only allow to return existing image if this is anonymous authorization
+		if pullPolicy != common.PullPolicyAlways && image != nil {
 			s.Warningln("Cannot pull the latest version of image", imageName, ":", err)
 			s.Warningln("Locally found image will be used instead.")
 			return image, nil

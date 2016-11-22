@@ -1,11 +1,15 @@
 package docker_helpers
 
 import (
-	"github.com/fsouza/go-dockerclient"
+	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path"
 	"strings"
+
+	"github.com/docker/docker/pkg/homedir"
+	"github.com/fsouza/go-dockerclient"
 )
 
 // DefaultDockerRegistry is the name of the index
@@ -32,18 +36,41 @@ func SplitDockerImageName(reposName string) (string, string) {
 	return indexName, remoteName
 }
 
-func ReadDockerAuthConfigs(homeDir string) (*docker.AuthConfigurations, error) {
-	var r io.Reader
-	var err error
+var HomeDirectory = homedir.Get()
+
+func ReadDockerAuthConfigsFromHomeDir(userName string) (_ *docker.AuthConfigurations, err error) {
+	var r io.ReadCloser
+
+	homeDir := HomeDirectory
+	if userName != "" {
+		u, err := user.Lookup(userName)
+		if err != nil {
+			return nil, err
+		}
+		homeDir = u.HomeDir
+	}
+	if homeDir == "" {
+		err = fmt.Errorf("Failed to get home directory")
+		return
+	}
+
 	p := path.Join(homeDir, ".docker", "config.json")
 	r, err = os.Open(p)
 	if err != nil {
 		p := path.Join(homeDir, ".dockercfg")
 		r, err = os.Open(p)
+		if os.IsNotExist(err) {
+			// Ignore does not exist errors
+			err = nil
+		}
 		if err != nil {
 			return nil, err
 		}
 	}
+	if r != nil {
+		defer r.Close()
+	}
+
 	return docker.NewAuthConfigurations(r)
 }
 
