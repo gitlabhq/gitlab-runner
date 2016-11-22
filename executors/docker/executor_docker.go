@@ -47,12 +47,12 @@ func (s *executor) getServiceVariables() []string {
 	return s.Build.GetAllVariables().PublicOrInternal().StringList()
 }
 
-func (s *executor) getUserAuthConfiguration(indexName string) (*docker.AuthConfiguration) {
+func (s *executor) getUserAuthConfiguration(indexName string) *docker.AuthConfiguration {
 	if s.Build == nil {
 		return nil
 	}
 
-	authConfigString := s.Build.GetDockerAuthConfigs()
+	authConfigString := s.Build.GetDockerAuthConfig()
 	authConfigs, _ := docker.NewAuthConfigurations(bytes.NewBufferString(authConfigString))
 	if authConfigs != nil {
 		return docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
@@ -60,7 +60,7 @@ func (s *executor) getUserAuthConfiguration(indexName string) (*docker.AuthConfi
 	return nil
 }
 
-func (s *executor) getBuildAuthConfiguration(indexName string) (*docker.AuthConfiguration) {
+func (s *executor) getBuildAuthConfiguration(indexName string) *docker.AuthConfiguration {
 	if s.Build == nil {
 		return nil
 	}
@@ -75,8 +75,8 @@ func (s *executor) getBuildAuthConfiguration(indexName string) (*docker.AuthConf
 		}
 
 		authConfigs.Configs[credentials.URL] = docker.AuthConfiguration{
-			Username: credentials.Username,
-			Password: credentials.Password,
+			Username:      credentials.Username,
+			Password:      credentials.Password,
 			ServerAddress: credentials.URL,
 		}
 	}
@@ -87,7 +87,7 @@ func (s *executor) getBuildAuthConfiguration(indexName string) (*docker.AuthConf
 	return nil
 }
 
-func (s *executor) getHomeDirAuthConfiguration(indexName string) (*docker.AuthConfiguration) {
+func (s *executor) getHomeDirAuthConfiguration(indexName string) *docker.AuthConfiguration {
 	authConfigs, _ := docker_helpers.ReadDockerAuthConfigsFromHomeDir(s.Shell().User)
 	if authConfigs != nil {
 		return docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)

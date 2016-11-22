@@ -1,14 +1,15 @@
 package docker_helpers
 
 import (
-	"github.com/fsouza/go-dockerclient"
+	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path"
 	"strings"
+
 	"github.com/docker/docker/pkg/homedir"
-	"fmt"
-	"os/user"
+	"github.com/fsouza/go-dockerclient"
 )
 
 // DefaultDockerRegistry is the name of the index

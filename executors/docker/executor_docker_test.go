@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,10 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
-	"github.com/stretchr/testify/require"
-	"errors"
 )
 
 func TestParseDeviceStringOne(t *testing.T) {
@@ -580,8 +580,69 @@ func TestGetDefaultAuthConfig(t *testing.T) {
 	})
 }
 
+func TestAuthConfigOverwritingOrder(t *testing.T) {
+	testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV92YXJpYWJsZTpwYXNzd29yZA=="}}}`
+	testFileAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9maWxlOnBhc3N3b3Jk"}}}`
+
+	imageName := "registry.gitlab.tld:1234/image/name:latest"
+
+	t.Run("gitlabRegistryOnly", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, false)
+		addGitLabRegistryCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", e.Build.Token, ac, imageName)
+	})
+
+	t.Run("withConfigFromRemoteVariable", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, false)
+		addGitLabRegistryCredentials(&e)
+		addRemoteVariableCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
+	})
+
+	t.Run("withConfigFromLocalVariable", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, false)
+		addGitLabRegistryCredentials(&e)
+		addLocalVariableCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
+	})
+
+	t.Run("withConfigFromFile", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, true)
+		addGitLabRegistryCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_file", "password", ac, imageName)
+	})
+
+	t.Run("withConfigFromVariableAndFromFile", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, true)
+		addGitLabRegistryCredentials(&e)
+		addRemoteVariableCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
+	})
+
+	t.Run("withConfigFromLocalAndRemoteVariable", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, true)
+		addGitLabRegistryCredentials(&e)
+		addRemoteVariableCredentials(&e)
+		testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9sb2NhbF92YXJpYWJsZTpwYXNzd29yZA=="}}}`
+		addLocalVariableCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
+	})
+}
+
 func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker_helpers.MockClient, imageName string)) {
-	t.Run("get:" + imageName, func(t *testing.T) {
+	t.Run("get:"+imageName, func(t *testing.T) {
 		var c docker_helpers.MockClient
 		defer c.AssertExpectations(t)
 
@@ -596,7 +657,7 @@ func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExp
 }
 
 func testDeniesDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker_helpers.MockClient, imageName string)) {
-	t.Run("deny:" + imageName, func(t *testing.T) {
+	t.Run("deny:"+imageName, func(t *testing.T) {
 		var c docker_helpers.MockClient
 		defer c.AssertExpectations(t)
 

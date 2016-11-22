@@ -361,6 +361,6 @@ func (b *Build) IsDebugTraceEnabled() bool {
 	return trace
 }
 
-func (b *Build) GetDockerAuthConfigs() string {
+func (b *Build) GetDockerAuthConfig() string {
 	return b.GetAllVariables().Get("DOCKER_AUTH_CONFIG")
 }
