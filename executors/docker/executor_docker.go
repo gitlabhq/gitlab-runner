@@ -168,12 +168,6 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 
 	newImage, err := s.pullDockerImage(imageName, authConfig)
 	if err != nil {
-		// We only allow to return existing image if this is anonymous authorization
-		if pullPolicy != common.PullPolicyAlways && image != nil {
-			s.Warningln("Cannot pull the latest version of image", imageName, ":", err)
-			s.Warningln("Locally found image will be used instead.")
-			return image, nil
-		}
 		return nil, err
 	}
 	return newImage, nil
