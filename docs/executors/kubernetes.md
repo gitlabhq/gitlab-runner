@@ -55,9 +55,10 @@ on the cluster.
 
 The following keywords help to define the behaviour of the Runner within kubernetes:
 
-- `namespace`: Namespace to run Kubernetes Pods in
+- `namespace`: Namespace to run Kubernetes Pods in.
 - `namespace_overwrite_allowed`: Regular expression to validate the contents of
-  `KUBERNETES_NAMESPACE_OVERWRITE`, when empty it disables the namespace overwrite;
+  the namespace overwrite environment variable (documented following). When empty,
+  it disables the namespace overwrite feature.
 - `privileged`: Run containers with the privileged flag
 - `cpu_limit`: The CPU allocation given to build containers
 - `memory_limit`: The amount of memory allocated to build containers
