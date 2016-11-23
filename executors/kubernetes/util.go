@@ -225,17 +225,12 @@ func buildVariables(bv common.BuildVariables) []api.EnvVar {
 
 // getNamespace returns the namespace after checking on variables if there's an
 // overwrite, by using `KUBERNETES_NAMESPACE_OVERWRITE`, otherwise uses the
-// default described on runner configuration.
+// default (described on runner configuration).
 func getNamespace(defaultNamespace string) string {
-	var namespaceOverwrite = os.Getenv("KUBERNETES_NAMESPACE_OVERWRITE")
-
-	if len(namespaceOverwrite) == 0 {
-		fmt.Printf("Targeting default namespace '%s'.", defaultNamespace)
+	namespaceOverwrite := os.Getenv("KUBERNETES_NAMESPACE_OVERWRITE")
+	if namespaceOverwrite == "" {
 		return defaultNamespace
 	}
-
-	fmt.Printf("Targeting alternative namespace '%s' (defined by KUBERNETES_NAMESPACE_OVERWRITE).",
-		namespaceOverwrite)
 	return namespaceOverwrite
 }
 
