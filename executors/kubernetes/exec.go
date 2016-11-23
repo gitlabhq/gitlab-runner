@@ -66,7 +66,7 @@ type ExecOptions struct {
 
 // Run executes a validated remote execution against a pod.
 func (p *ExecOptions) Run() error {
-	podNamespace := getNamespaceOverwrite(p.Namespace)
+	podNamespace := getNamespace(p.Namespace)
 	pod, err := p.Client.Pods(podNamespace).Get(p.PodName)
 	if err != nil {
 		return err
