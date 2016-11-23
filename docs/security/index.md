@@ -51,6 +51,8 @@ never youse `if-not-present` as the pull policy value, but:
 The `if-not-present` pull policy should be used **only** for specific runners
 used by trusted builds and users.
 
+Also please read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
+
 ## Systems with Docker installed
 
 >**Note:**

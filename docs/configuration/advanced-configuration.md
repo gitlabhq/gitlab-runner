@@ -118,7 +118,7 @@ This defines the Docker Container parameters.
 | `services`                  | specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
 | `allowed_images`            | specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `allowed_services`          | specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `pull_policy`               | specify the image pull policy: never, if-not-present or always (default) |
+| `pull_policy`               | specify the image pull policy: `never`, `if-not-present` or `always` (default); please read [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 
 Example:
 
@@ -261,6 +261,8 @@ registry.
 Also please notice, that using private registries with `if-not-present`
 pull policy may introduce security implications. Please read [the security
 documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) for more details.
+
+For fully understand how pull policies work please read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
 ### Support for GitLab integrated registry
 

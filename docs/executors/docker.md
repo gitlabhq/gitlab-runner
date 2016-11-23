@@ -352,6 +352,134 @@ Consider the following example:
 This is just one of the examples. With this approach the possibilities are
 limitless.
 
+## How pull policies work
+
+When using `docker`, `docker-ssh`, `docker+machine` or `docker-ssh+machine`
+executors you can set the `pull_policy` parameter which is defining how
+Runner will work with docker images pulling (for both `image` and `services`
+keywords).
+
+> **Notice:** If you don't set any value for the `pull_policy` parameter, then
+> Runner will use the `always` pull policy as the default value.
+
+How those policies work?
+
+1. `never` pull policy
+
+    The `never` pull policy disables images pulling at all. If you set the
+    `pull_policy` parameter of a Runner to `never` then users will be able
+    to use only images manually pulled on used docker host.
+
+    If the image can't be found locally, then Runner will fail the build
+    with error similar to:
+
+    ```
+    Pulling docker image local_image:latest ...
+    ERROR: Build failed: Error: image local_image:latest not found
+    ```
+
+    **When to use this pull policy?**
+
+    This pull policy should be used if you want or need to have a full
+    control on which images are used by Runner's users. It is a good choice
+    for private runners, dedicated to a project where only specific, not
+    publicly available on any registries images can be used.
+
+    **When not to use this pull policy?**
+
+    This pull policy will not work properly with most of [auto-scaled](../configuration/autoscale.md)
+    docker executor use cases. Because of how auto-scaling works the `never`
+    pull policy may be usable only when using a pre-defined cloud instance
+    images for chosen cloud provider. The image needs to contain installed
+    Docker Engine and local copy of used images.
+
+1. `if-not-present` pull policy
+
+    When the `if-not-present` pull policy is used, Runner will first check
+    if image is present locally. If it is, then the local version if
+    image will be used.
+
+    If the image doesn't exists locally, then Runner will try to pull the image.
+
+    **When to use this pull policy?**
+
+    This pull policy is a good choice if you want to use images pulled from
+    remote registries but you want to reduce networking load generated
+    by pulling over and over images which are heavy and rarely updated.
+    Then only from time to time you will need to manually remove the image
+    from local Docker Engine store to force the update of image.
+
+    It is also the good choice if you need to use images, that are build
+    and available only locally but you also need to allow to pull images
+    from remote registries.
+
+    **When not to use this pull policy?**
+
+    This pull policy should not be used if your builds use images, that
+    are updated frequently and need to be used in most recent versions.
+    In such situation network load reduction created by this policy may
+    be less worth than necessity of very frequent deletion of local copies
+    of image.
+
+    This pull policy should also not be used if your Runner can be use by
+    different users which should not have access to private images used
+    by each other. Especially this pull policy should not be used by
+    runners, that are configured to be Shared Runner in your GitLab policy.
+
+    To understand why `if-not-present` pull policy creates a security problems
+    when using with private images, please read the [security considerations documentation](../security/index.md##usage-of-private-docker-images-with-if-not-present-pull-policy).
+
+1. `always` pull policy
+
+    The `always` pull policy will ensure, that the image is pulled **always**.
+
+    When `always` is used, Runner will try to pull image even if local
+    copy is available. If the image will be not found, then the build will
+    fail with error similar to:
+
+    ```
+    Pulling docker image registry.tld/my/image:latest ...
+    ERROR: Build failed: Error: image registry.tld/my/image:latest not found
+    ```
+
+    > Notice however, that for versions prior to `v1.8` it could fall back
+    > to local copy of an image and print a warning that this happen:
+    >
+    > ```
+    > Pulling docker image registry.tld/my/image:latest ...
+    > WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
+    > WARNING: Locally found image will be used instead.
+    > ```
+    >
+    > We've changed that in version `v1.8`. To understand why we changed this and
+    > how incorrect usage of may be revealed please look into [#1905](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1905).
+
+    **When to use this pull policy?**
+
+    This pull policy should be used if your Runner is public available
+    and configured as Shared Runner in your GitLab instance. This pull policy
+    is the only one that can be found as secure when the Runner may be
+    used with private images.
+
+    This is also a good choice if you want to force users to always use
+    the newest images.
+
+    Also, this will be the best solution for [auto-scaled](../configuration/autoscale.md)
+    configuration of the Runner.
+
+    **When not to use this pull policy?**
+
+    This pull policy will definitely not work if you need to use locally
+    stored images. In such case Runner will skip the local copy of image
+    and try to pull it from remote registry. If the images was build locally
+    and doesn't exists in any public registry (and especially in the default
+    Docker registry), the build will fail with:
+
+    ```
+    Pulling docker image local_image:latest ...
+    ERROR: Build failed: Error: image local_image:latest not found
+    ```
+
 ## Docker vs Docker-SSH
 
 >**Note**:
