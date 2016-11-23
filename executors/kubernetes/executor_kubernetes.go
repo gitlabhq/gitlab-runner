@@ -323,8 +323,7 @@ func (s *executor) overwriteNamespace(build *common.Build) error {
 	}
 
 	if s.namespaceOverwrite == "" {
-		s.Debugln("Namespace overwrite expression informed, but 'KUBERNETES_NAMESPACE_OVERWRITE' is not set!")
-		return nil
+		return fmt.Errorf("namespace overwrite expression informed, but 'KUBERNETES_NAMESPACE_OVERWRITE' is not set")
 	}
 
 	if r, err = regexp.Compile(s.Config.Kubernetes.NamespaceOverwriteAllowed); err != nil {
@@ -336,7 +335,7 @@ func (s *executor) overwriteNamespace(build *common.Build) error {
 			s.namespaceOverwrite, s.Config.Kubernetes.NamespaceOverwriteAllowed)
 	}
 
-	s.Println("Overwritting configured namespace:", s.Config.Kubernetes.Namespace, "->", s.namespaceOverwrite)
+	s.Println("Overwritting configured namespace, from", s.Config.Kubernetes.Namespace, "to", s.namespaceOverwrite)
 	s.Config.Kubernetes.Namespace = s.namespaceOverwrite
 
 	return nil
