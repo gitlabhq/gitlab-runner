@@ -1,13 +1,19 @@
 package docker
 
 import (
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
+	"strings"
 	"testing"
 
 	"github.com/fsouza/go-dockerclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 )
@@ -105,13 +111,12 @@ func TestSplitService(t *testing.T) {
 	}
 }
 
-func testServiceFromNamedImage(t *testing.T, description, imageName string) {
+func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string) {
 	var c docker_helpers.MockClient
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	ac, _ := e.getAuthConfig(imageName)
-
+	ac := e.getAuthConfig(imageName)
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{}
 	e.Build = &common.Build{
@@ -133,6 +138,20 @@ func testServiceFromNamedImage(t *testing.T, description, imageName string) {
 		Return(nil).
 		Once()
 
+	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s", strings.Replace(serviceName, "/", "__", -1))
+	networkID := "network-id"
+
+	networkContainersMap := make(map[string]docker.Endpoint)
+	networkContainersMap["1"] = docker.Endpoint{Name: containerName}
+
+	c.On("ListNetworks").
+		Return([]docker.Network{docker.Network{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
+		Once()
+
+	c.On("DisconnectNetwork", networkID, docker.NetworkConnectionOptions{Container: containerName}).
+		Return(nil).
+		Once()
+
 	c.On("CreateContainer", mock.Anything).
 		Return(&docker.Container{}, nil).
 		Once()
@@ -149,7 +168,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName string) {
 func TestServiceFromNamedImage(t *testing.T) {
 	for _, test := range testServices {
 		t.Run(test.description, func(t *testing.T) {
-			testServiceFromNamedImage(t, test.description, test.image)
+			testServiceFromNamedImage(t, test.description, test.image, test.service)
 		})
 	}
 }
@@ -159,7 +178,7 @@ func TestDockerForNamedImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	ac, _ := e.getAuthConfig("test")
+	ac := e.getAuthConfig("test")
 
 	c.On("PullImage", docker.PullImageOptions{Repository: "test:latest"}, ac).
 		Return(os.ErrNotExist).
@@ -173,15 +192,15 @@ func TestDockerForNamedImage(t *testing.T) {
 		Return(os.ErrNotExist).
 		Once()
 
-	image, err := e.pullDockerImage("test")
+	image, err := e.pullDockerImage("test", ac)
 	assert.Error(t, err)
 	assert.Nil(t, image)
 
-	image, err = e.pullDockerImage("tagged:tag")
+	image, err = e.pullDockerImage("tagged:tag", ac)
 	assert.Error(t, err)
 	assert.Nil(t, image)
 
-	image, err = e.pullDockerImage("real@sha")
+	image, err = e.pullDockerImage("real@sha", ac)
 	assert.Error(t, err)
 	assert.Nil(t, image)
 }
@@ -191,7 +210,7 @@ func TestDockerForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	ac, _ := e.getAuthConfig("existing")
+	ac := e.getAuthConfig("existing")
 
 	c.On("PullImage", docker.PullImageOptions{Repository: "existing:latest"}, ac).
 		Return(nil).
@@ -200,7 +219,7 @@ func TestDockerForExistingImage(t *testing.T) {
 		Return(&docker.Image{}, nil).
 		Once()
 
-	image, err := e.pullDockerImage("existing")
+	image, err := e.pullDockerImage("existing", ac)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 }
@@ -257,7 +276,7 @@ func TestDockerPolicyModeNever(t *testing.T) {
 		Once()
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyNever)
+	e.setPolicyMode(common.PullPolicyNever)
 
 	image, err := e.getDockerImage("existing")
 	assert.NoError(t, err)
@@ -273,7 +292,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyIfNotPresent)
+	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("InspectImage", "existing").
 		Return(&docker.Image{}, nil).
@@ -289,13 +308,13 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyIfNotPresent)
+	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("InspectImage", "not-existing").
 		Return(nil, os.ErrNotExist).
 		Once()
 
-	ac, _ := e.getAuthConfig("not-existing")
+	ac := e.getAuthConfig("not-existing")
 	c.On("PullImage", docker.PullImageOptions{Repository: "not-existing:latest"}, ac).
 		Return(nil).
 		Once()
@@ -323,13 +342,13 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyAlways)
+	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("InspectImage", "existing").
 		Return(&docker.Image{}, nil).
 		Once()
 
-	ac, _ := e.getAuthConfig("existing")
+	ac := e.getAuthConfig("existing")
 	c.On("PullImage", docker.PullImageOptions{Repository: "existing:latest"}, ac).
 		Return(nil).
 		Once()
@@ -348,20 +367,20 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.setPolicyMode(common.DockerPullPolicyAlways)
+	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("InspectImage", "to-pull").
 		Return(&docker.Image{}, nil).
 		Once()
 
-	ac, _ := e.getAuthConfig("to-pull")
+	ac := e.getAuthConfig("to-pull")
 	c.On("PullImage", docker.PullImageOptions{Repository: "to-pull:latest"}, ac).
 		Return(os.ErrNotExist).
 		Once()
 
 	image, err := e.getDockerImage("to-pull")
-	assert.NoError(t, err)
-	assert.NotNil(t, image, "Returns existing image")
+	assert.Error(t, err)
+	assert.Nil(t, image, "Forces to authorize pulling")
 
 	c.On("InspectImage", "not-existing").
 		Return(nil, os.ErrNotExist).
@@ -408,4 +427,296 @@ func TestHostMountedBuildsDirectory(t *testing.T) {
 		e.prepareBuildsDir(&c)
 		assert.Equal(t, i.result, e.SharedBuildsDir)
 	}
+}
+
+var testFileAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"aW52YWxpZF91c2VyOmludmFsaWRfcGFzc3dvcmQ="},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
+var testVariableAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
+
+func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) executor {
+	tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
+	require.NoError(t, err)
+
+	if precreateConfigFile {
+		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
+		ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
+		docker_helpers.HomeDirectory = tempHomeDir
+	} else {
+		docker_helpers.HomeDirectory = ""
+	}
+
+	e := executor{}
+	e.Build = &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
+
+	e.Build.Token = "abcd123456"
+
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{
+		PullPolicy: common.PullPolicyAlways,
+	}
+
+	return e
+}
+
+func addGitLabRegistryCredentials(e *executor) {
+	e.Build.Credentials = []common.BuildResponseCredentials{
+		{
+			Type:     "registry",
+			URL:      "registry.gitlab.tld:1234",
+			Username: "gitlab-ci-token",
+			Password: e.Build.Token,
+		},
+	}
+}
+
+func addRemoteVariableCredentials(e *executor) {
+	e.Build.Variables = common.BuildVariables{
+		common.BuildVariable{
+			Key:   "DOCKER_AUTH_CONFIG",
+			Value: testVariableAuthConfigs,
+		},
+	}
+}
+
+func addLocalVariableCredentials(e *executor) {
+	e.Build.Runner.Environment = []string{
+		"DOCKER_AUTH_CONFIG=" + testVariableAuthConfigs,
+	}
+}
+
+func assertEmptyCredentials(t *testing.T, ac docker.AuthConfiguration, messageElements ...string) {
+	assert.Empty(t, ac.ServerAddress, "ServerAddress for %v", messageElements)
+	assert.Empty(t, ac.Username, "Username for %v", messageElements)
+	assert.Empty(t, ac.Password, "Password for %v", messageElements)
+}
+
+func assertCredentials(t *testing.T, serverAddress, username, password string, ac docker.AuthConfiguration, messageElements ...string) {
+	assert.Equal(t, serverAddress, ac.ServerAddress, "ServerAddress for %v", messageElements)
+	assert.Equal(t, username, ac.Username, "Username for %v", messageElements)
+	assert.Equal(t, password, ac.Password, "Password for %v", messageElements)
+}
+
+func getTestAuthConfig(t *testing.T, e executor, imageName string) docker.AuthConfiguration {
+	ac := e.getAuthConfig(imageName)
+
+	return ac
+}
+
+func testVariableAuthConfig(t *testing.T, e executor) {
+	t.Run("withoutGitLabRegistry", func(t *testing.T) {
+		ac := getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
+		assertCredentials(t, "https://registry.domain.tld:5005/v1/", "test_user", "test_password", ac, "registry.domain.tld:5005/image/name:version")
+
+		ac = getTestAuthConfig(t, e, "registry2.domain.tld:5005/image/name:version")
+		assertCredentials(t, "registry2.domain.tld:5005", "test_user", "test_password", ac, "registry2.domain.tld:5005/image/name:version")
+
+		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
+		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
+	})
+
+	t.Run("withGitLabRegistry", func(t *testing.T) {
+		addGitLabRegistryCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
+		assertCredentials(t, "https://registry.domain.tld:5005/v1/", "test_user", "test_password", ac, "registry.domain.tld:5005/image/name:version")
+
+		ac = getTestAuthConfig(t, e, "registry2.domain.tld:5005/image/name:version")
+		assertCredentials(t, "registry2.domain.tld:5005", "test_user", "test_password", ac, "registry2.domain.tld:5005/image/name:version")
+
+		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
+		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", "abcd123456", ac, "registry.gitlab.tld:1234")
+	})
+}
+
+func TestGetRemoteVariableAuthConfig(t *testing.T) {
+	e := getAuthConfigTestExecutor(t, true)
+	addRemoteVariableCredentials(&e)
+
+	testVariableAuthConfig(t, e)
+}
+
+func TestGetLocalVariableAuthConfig(t *testing.T) {
+	e := getAuthConfigTestExecutor(t, true)
+	addLocalVariableCredentials(&e)
+
+	testVariableAuthConfig(t, e)
+}
+
+func TestGetDefaultAuthConfig(t *testing.T) {
+	t.Run("withoutGitLabRegistry", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, false)
+
+		ac := getTestAuthConfig(t, e, "docker:dind")
+		assertEmptyCredentials(t, ac, "docker:dind")
+
+		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
+		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
+
+		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
+		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
+	})
+
+	t.Run("withGitLabRegistry", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, false)
+		addGitLabRegistryCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, "docker:dind")
+		assertEmptyCredentials(t, ac, "docker:dind")
+
+		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
+		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
+
+		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
+		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", "abcd123456", ac, "registry.gitlab.tld:1234")
+	})
+}
+
+func TestAuthConfigOverwritingOrder(t *testing.T) {
+	testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV92YXJpYWJsZTpwYXNzd29yZA=="}}}`
+	testFileAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9maWxlOnBhc3N3b3Jk"}}}`
+
+	imageName := "registry.gitlab.tld:1234/image/name:latest"
+
+	t.Run("gitlabRegistryOnly", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, false)
+		addGitLabRegistryCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", e.Build.Token, ac, imageName)
+	})
+
+	t.Run("withConfigFromRemoteVariable", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, false)
+		addGitLabRegistryCredentials(&e)
+		addRemoteVariableCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
+	})
+
+	t.Run("withConfigFromLocalVariable", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, false)
+		addGitLabRegistryCredentials(&e)
+		addLocalVariableCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
+	})
+
+	t.Run("withConfigFromFile", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, true)
+		addGitLabRegistryCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_file", "password", ac, imageName)
+	})
+
+	t.Run("withConfigFromVariableAndFromFile", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, true)
+		addGitLabRegistryCredentials(&e)
+		addRemoteVariableCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
+	})
+
+	t.Run("withConfigFromLocalAndRemoteVariable", func(t *testing.T) {
+		e := getAuthConfigTestExecutor(t, true)
+		addGitLabRegistryCredentials(&e)
+		addRemoteVariableCredentials(&e)
+		testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9sb2NhbF92YXJpYWJsZTpwYXNzd29yZA=="}}}`
+		addLocalVariableCredentials(&e)
+
+		ac := getTestAuthConfig(t, e, imageName)
+		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
+	})
+}
+
+func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker_helpers.MockClient, imageName string)) {
+	t.Run("get:"+imageName, func(t *testing.T) {
+		var c docker_helpers.MockClient
+		defer c.AssertExpectations(t)
+
+		e.client = &c
+
+		setClientExpectations(&c, imageName)
+
+		image, err := e.getDockerImage(imageName)
+		assert.NoError(t, err, "Should not generate error")
+		assert.Equal(t, "this-image", image.ID, "Image ID")
+	})
+}
+
+func testDeniesDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker_helpers.MockClient, imageName string)) {
+	t.Run("deny:"+imageName, func(t *testing.T) {
+		var c docker_helpers.MockClient
+		defer c.AssertExpectations(t)
+
+		e.client = &c
+
+		setClientExpectations(&c, imageName)
+
+		_, err := e.getDockerImage(imageName)
+		assert.Error(t, err, "Should generate error")
+	})
+}
+
+func addFindsLocalImageExpectations(c *docker_helpers.MockClient, imageName string) {
+	c.On("InspectImage", imageName).
+		Return(&docker.Image{ID: "this-image"}, nil).
+		Once()
+}
+
+func addPullsRemoteImageExpectations(c *docker_helpers.MockClient, imageName string) {
+	c.On("InspectImage", imageName).
+		Return(&docker.Image{ID: "not-this-image"}, nil).
+		Once()
+
+	c.On("PullImage", docker.PullImageOptions{Repository: imageName}, mock.AnythingOfType("docker.AuthConfiguration")).
+		Return(nil).
+		Once()
+
+	c.On("InspectImage", imageName).
+		Return(&docker.Image{ID: "this-image"}, nil).
+		Once()
+}
+
+func addDeniesPullExpectations(c *docker_helpers.MockClient, imageName string) {
+	c.On("InspectImage", imageName).
+		Return(&docker.Image{ID: "image"}, nil).
+		Once()
+
+	c.On("PullImage", docker.PullImageOptions{Repository: imageName}, mock.AnythingOfType("docker.AuthConfiguration")).
+		Return(errors.New("deny pulling")).
+		Once()
+}
+
+func TestPullPolicyWhenAlwaysIsSet(t *testing.T) {
+	remoteImage := "registry.domain.tld:5005/image/name:version"
+	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
+
+	e := getAuthConfigTestExecutor(t, false)
+	e.Config.Docker.PullPolicy = common.PullPolicyAlways
+
+	testGetDockerImage(t, e, remoteImage, addPullsRemoteImageExpectations)
+	testDeniesDockerImage(t, e, remoteImage, addDeniesPullExpectations)
+
+	testGetDockerImage(t, e, gitlabImage, addPullsRemoteImageExpectations)
+	testDeniesDockerImage(t, e, gitlabImage, addDeniesPullExpectations)
+}
+
+func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
+	remoteImage := "registry.domain.tld:5005/image/name:version"
+	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
+
+	e := getAuthConfigTestExecutor(t, false)
+	e.Config.Docker.PullPolicy = common.PullPolicyIfNotPresent
+
+	testGetDockerImage(t, e, remoteImage, addFindsLocalImageExpectations)
+	testGetDockerImage(t, e, gitlabImage, addFindsLocalImageExpectations)
+}
+
+func init() {
+	docker_helpers.HomeDirectory = ""
 }

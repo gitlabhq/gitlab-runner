@@ -194,63 +194,91 @@ builds outside the container.
 This will use `/path/to/bind/from/host` of the CI host inside the container at
 `/path/to/bind/in/container`.
 
-### Using a private Docker registry
+### Using a private container registry
 
-_This feature requires GitLab Runner v0.6.0 or higher_
+> **Notes:**
+- This feature requires GitLab Runner **1.8** or higher
+- For GitLab Runner versions **>= 0.6, <1.8** there was a partial
+  support for using private registries, which required manual configuration
+  of credentials on runner's host. We recommend to upgrade your Runner to
+  at least version **1.8** if you want to use private registries.
+- Private registries are currently not supported by Kubernetes executor.
 
-In order to use a docker image from a private registry which needs
-authentication, you must first authenticate against the docker registry in
-question.
+If you want to use private registries as a source of images for your builds,
+you can set the authorization configuration in the `DOCKER_AUTH_CONFIG` [secret
+variable][secret-variables]. It can be set in both GitLab Variables section of
+a project and in the `config.toml` file.
 
-If you are using our Linux packages, then `gitlab-runner` is run by the user
-root (for non-root users, see the **Notes** section below).
+As an example, let's assume that you want to use the `registry.example.com/private/image:latest`
+image which is private and requires you to login into a private container registry.
+To configure access for `registry.example.com`, follow these steps:
 
-As root run:
+1. Do a `docker login` on your computer:
 
-```bash
-docker login <registry>
-```
+     ```bash
+     docker login registry.example.com --username my_username --password my_password
+     ```
 
-Replace `<registry>` with the Fully Qualified Domain Name of the registry and
-optionally a port, for example:
+1. Copy the content of `~/.docker/config.json`
+1. Create a [secret variable] `DOCKER_AUTH_CONFIG` with the content of the
+   Docker configuration file as the value:
 
-```bash
-docker login my.registry.tld:5000
-```
+     ```json
+     {
+         "auths": {
+             "registry.example.com": {
+                 "auth": "bXlfdXNlcm5hbWU6bXlfcGFzc3dvcmQ="
+             }
+         }
+     }
+     ```
 
-The default value is `docker.io` which is the official registry Docker Inc.
-provides. If you omit the registry name, `docker.io` will be implied.
+1. Do a `docker logout` on your computer if you don't need access to the
+   registry from it:
 
-After you enter the needed credentials, docker will inform you that the
-credentials are saved in `/root/.docker/config.json`.
+     ```bash
+     docker logout registry.example.com
+     ```
 
-In case you are running an older Docker Engine (< 1.7.0), then the credentials
-will be stored in `/root/.dockercfg`. GitLab Runner supports both locations for
-backwards compatibility.
+1. You can now use any private image from `registry.example.com` defined in
+   `image` and/or `services` in your [`.gitlab-ci.yml` file][yaml-priv-reg].
+
+You can add configuration for as many registries as you want, adding more
+registries to the `"auth"` hash as described above.
 
 The steps performed by the Runner can be summed up to:
 
-1. The registry name is found from the image name
-1. If the value is not empty, the executor will try to look at `~/.dockercfg`
-   (Using `NewAuthConfigurationsFromDockerCfg()` method in go-dockerclient)
-1. If that fails for some reason, the executor will then look at
-   `~/.docker/config.json` (Which should be the new default from Docker 1.7.0)
-1. Finally, if an Authentication corresponding to the specified registry is
-   found, subsequent Pull will make use of it
+1. The registry name is found from the image name.
+1. If the value is not empty, the executor will search for the authentication
+   configuration for this registry.
+1. Finally, if an authentication corresponding to the specified registry is
+   found, subsequent pulls will make use of it.
 
 Now that the Runner is set up to authenticate against your private registry,
 learn [how to configure .gitlab-ci.yml][yaml-priv-reg] in order to use that
 registry.
 
-**Notes**
+Also please notice, that using private registries with `if-not-present`
+pull policy may introduce security implications. Please read [the security
+documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) for more details.
 
-If you are running `gitlab-runner` with a non-root user, you must use that user
-to login to the private docker registry. This user will also need to be in the
-`docker` group in order to be able to run any docker commands. To add a user to
-the `docker` group use: `sudo usermod -aG docker user`.
+### Support for GitLab integrated registry
 
-For reference, if you want to set up your own personal registry you might want
-to have a look at <https://docs.docker.com/registry/deploying/>.
+> **Note:**
+To work automatically with private/protected images from
+GitLab integrated registry it needs at least GitLab CE/EE **8.14**.
+
+Starting with GitLab CE/EE 8.14, GitLab will send credentials for its integrated
+registry along with the build data. These credentials will be automatically
+added to registries authorization parameters list.
+
+After this authorization against the registry will be proceed like for
+configuration added with `DOCKER_AUTH_CONFIG` variable.
+
+Thanks to this, in your builds you can use any image from you GitLab integrated
+registry, even if the image is private/protected. To fully understand for
+which images the builds will have access, read the
+[New CI build permissions model][ci-build-permissions-model] documentation.
 
 ### Restrict `allowed_images` to private registry
 For certain setups you will restrict access of the build jobs to docker images
@@ -428,4 +456,5 @@ It depends on what you'd like to do.
 
 [TOML]: https://github.com/toml-lang/toml
 [Docker Engine]: https://www.docker.com/docker-engine
-[yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#using-a-private-docker-registry
+[yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#image-and-services
+[ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html

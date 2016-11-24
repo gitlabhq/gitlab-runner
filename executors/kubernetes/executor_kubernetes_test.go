@@ -171,6 +171,7 @@ func TestPrepare(t *testing.T) {
 						CPUs:          "1.5",
 						Memory:        "4Gi",
 						Privileged:    true,
+						PullPolicy:    "if-not-present",
 					},
 				},
 			},
@@ -198,6 +199,7 @@ func TestPrepare(t *testing.T) {
 					api.ResourceCPU:    resource.MustParse("1.5"),
 					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
+				pullPolicy: "IfNotPresent",
 			},
 		},
 		{

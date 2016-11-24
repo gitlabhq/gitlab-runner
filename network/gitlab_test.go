@@ -657,3 +657,17 @@ func TestResendDoubledBuildPatchTrace(t *testing.T) {
 	assert.Equal(t, UpdateRangeMismatch, state)
 	assert.False(t, tracePatch.ValidateRange())
 }
+
+func TestBuildFailedStatePatchTrace(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		w.Header().Set("Build-Status", "failed")
+		w.WriteHeader(202)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	tracePatch := getTracePatch(patchTraceString, 0)
+	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateAbort, state)
+}

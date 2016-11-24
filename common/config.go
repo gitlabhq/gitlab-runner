@@ -22,22 +22,22 @@ import (
 type DockerPullPolicy string
 
 const (
-	DockerPullPolicyAlways       DockerPullPolicy = "always"
-	DockerPullPolicyNever                         = "never"
-	DockerPullPolicyIfNotPresent                  = "if-not-present"
+	PullPolicyAlways       = "always"
+	PullPolicyNever        = "never"
+	PullPolicyIfNotPresent = "if-not-present"
 )
 
 // Get returns one of the predefined values or returns an error if the value can't match the predefined
 func (p DockerPullPolicy) Get() (DockerPullPolicy, error) {
 	// Default policy is always
 	if p == "" {
-		return DockerPullPolicyAlways, nil
+		return PullPolicyAlways, nil
 	}
 
 	// Verify pull policy
-	if p != DockerPullPolicyNever &&
-		p != DockerPullPolicyIfNotPresent &&
-		p != DockerPullPolicyAlways {
+	if p != PullPolicyNever &&
+		p != PullPolicyIfNotPresent &&
+		p != PullPolicyAlways {
 		return "", fmt.Errorf("unsupported docker-pull-policy: %v", p)
 	}
 	return p, nil
@@ -96,6 +96,23 @@ type VirtualBoxConfig struct {
 	DisableSnapshots bool   `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
 }
 
+type KubernetesPullPolicy string
+
+// Get returns one of the predefined values in kubernetes notation or returns an error if the value can't match the predefined
+func (p KubernetesPullPolicy) Get() (KubernetesPullPolicy, error) {
+	switch {
+	case p == "":
+		return "", nil
+	case p == PullPolicyAlways:
+		return "Always", nil
+	case p == PullPolicyNever:
+		return "Never", nil
+	case p == PullPolicyIfNotPresent:
+		return "IfNotPresent", nil
+	}
+	return "", fmt.Errorf("unsupported kubernetes-pull-policy: %v", p)
+}
+
 type KubernetesConfig struct {
 	Host          string `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
 	CertFile      string `toml:"cert_file,omitempty" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
@@ -108,6 +125,7 @@ type KubernetesConfig struct {
 	Memory        string `toml:"memory,omitempty" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"The amount of memory allocated to build containers"`
 	ServiceCPUs   string `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
 	ServiceMemory string `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
+	PullPolicy    KubernetesPullPolicy `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 	PollInterval  int    `toml:"poll_interval,omitempty" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes container it has just created to check its status. [Default: 3]"`
 	PollTimeout   int    `toml:"poll_timeout,omitempty" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the conainer it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]"`
 }

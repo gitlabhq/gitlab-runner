@@ -22,6 +22,35 @@ to run containers in privileged mode.
 More granular permissions can be configured in non-privileged mode via the
 `cap_add`/`cap_drop` settings.
 
+## Usage of private Docker images with `if-not-present` pull policy
+
+When using private docker images support described in
+[advanced configuration: using a private container registry](../configuration/advanced-configuration.md#using-a-private-container-registry)
+you should use `always` as the `pull_policy` value. Especially you should
+use `always` pull policy if you are hosting a public, shared runner with
+docker executor.
+
+Let's consider such example, when pull policy is set to `if-not-present`:
+
+1. User A has a private image at registry.example.com/image/name.
+1. User A starts a build on a shared runner: The build receives registry
+   credentials and pulls the image after authorization in registry.
+1. Image is stored on shared runner's host.
+1. User B doesn't have access to the private image at registry.example.com/image/name.
+1. User B starts a build which is using this image on the same shared runner
+   as User A: Runner find a local version of the image and uses it **even if
+   the image could not be pulled because of missing credentials**.
+
+Therefor if you host a Runner that can be used by different users and
+different projects (with mixed private, and public access levels) you should
+never youse `if-not-present` as the pull policy value, but:
+- `never` - if you want to limit users to use only image pre-downloaded by you,
+- `always` - if you want to give users possibility to download any image from
+  any registry.
+
+The `if-not-present` pull policy should be used **only** for specific runners
+used by trusted builds and users.
+
 ## Systems with Docker installed
 
 >**Note:**

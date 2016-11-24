@@ -8,10 +8,10 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
-	"time"
 )
 
 type BuildState string
@@ -319,8 +319,10 @@ func (b *Build) GetDefaultVariables() BuildVariables {
 	}
 }
 
-func (b *Build) GetAllVariables() BuildVariables {
-	variables := b.Runner.GetVariables()
+func (b *Build) GetAllVariables() (variables BuildVariables) {
+	if b.Runner != nil {
+		variables = append(variables, b.Runner.GetVariables()...)
+	}
 	variables = append(variables, b.GetDefaultVariables()...)
 	variables = append(variables, b.Variables...)
 	return variables.Expand()
@@ -357,4 +359,8 @@ func (b *Build) IsDebugTraceEnabled() bool {
 	}
 
 	return trace
+}
+
+func (b *Build) GetDockerAuthConfig() string {
+	return b.GetAllVariables().Get("DOCKER_AUTH_CONFIG")
 }

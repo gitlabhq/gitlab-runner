@@ -1,3 +1,22 @@
+v 1.8.0
+- Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364
+- Fix path to runners-ssh page !368
+- Add initial Prometheus metrics server to runner manager !358
+- Add a global index.md for docs !371
+- Ensure that all builds are executed on tagged runners !374
+- Fix broken documentation links !382
+- Bug Fix: use a regex to pull out the service and version in the splitServiceAndVersion method !376
+- Add FAQ entry about handling the service logon failure on Windows !385
+- Fix "unit tests" random failures !370
+- Use correct constant for kubernetes ressource limits. !367
+- Unplug stalled endpoints !390
+- Add PullPolicy config option for kubernetes !335
+- Handle received 'failed' build state while patching the trace !366
+- Add support for using private docker registries !386
+
+v 1.7.1
+- Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364
+
 v 1.7.0
 - Improve description of --s3-bucket-location option !325
 - Use Go 1.7 !323
