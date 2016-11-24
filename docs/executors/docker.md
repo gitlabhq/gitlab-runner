@@ -398,14 +398,14 @@ Docker Engine and local copy of used images.
 ### Using the `if-not-present` pull policy
 
 When the `if-not-present` pull policy is used, the Runner will first check
-if the image is present locally. If it is, then the local version if
+if the image is present locally. If it is, then the local version of
 image will be used. Otherwise, the Runner will try to pull the image.
 
 **When to use this pull policy?**
 
 This pull policy is a good choice if you want to use images pulled from
-remote registries but you want to reduce the networking load generated
-by pulling over and over images which are heavy and rarely updated.
+remote registries but you want to reduce time spent on analyzing image
+layers difference, when using heavy and rarely updated images.
 In that case, you will need once in a while to manually remove the image
 from the local Docker Engine store to force the update of the image.
 
