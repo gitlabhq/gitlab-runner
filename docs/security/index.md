@@ -16,7 +16,7 @@ setup more secure it's advised to run jobs as user (non-root) in Docker containe
 with disabled sudo or dropped `SETUID` and `SETGID` capabilities.
 
 On the other hand there's privileged mode which enables full access to host system,
-permission to mount and umount volumes and run nested containers. It's not advised
+permission to mount and unmount volumes and run nested containers. It's not advised
 to run containers in privileged mode.
 
 More granular permissions can be configured in non-privileged mode via the
@@ -24,15 +24,15 @@ More granular permissions can be configured in non-privileged mode via the
 
 ## Usage of private Docker images with `if-not-present` pull policy
 
-When using private docker images support described in
+When using the private Docker images support described in
 [advanced configuration: using a private container registry](../configuration/advanced-configuration.md#using-a-private-container-registry)
 you should use `always` as the `pull_policy` value. Especially you should
-use `always` pull policy if you are hosting a public, shared runner with
-docker executor.
+use `always` pull policy if you are hosting a public, shared Runner with the
+Docker executor.
 
 Let's consider such example, when pull policy is set to `if-not-present`:
 
-1. User A has a private image at registry.example.com/image/name.
+1. User A has a private image at `registry.example.com/image/name`.
 1. User A starts a build on a shared runner: The build receives registry
    credentials and pulls the image after authorization in registry.
 1. Image is stored on shared runner's host.
@@ -41,15 +41,19 @@ Let's consider such example, when pull policy is set to `if-not-present`:
    as User A: Runner find a local version of the image and uses it **even if
    the image could not be pulled because of missing credentials**.
 
-Therefor if you host a Runner that can be used by different users and
+Therefore, if you host a Runner that can be used by different users and
 different projects (with mixed private, and public access levels) you should
-never youse `if-not-present` as the pull policy value, but:
+never use `if-not-present` as the pull policy value, but use:
+
 - `never` - if you want to limit users to use only image pre-downloaded by you,
 - `always` - if you want to give users possibility to download any image from
   any registry.
 
-The `if-not-present` pull policy should be used **only** for specific runners
+The `if-not-present` pull policy should be used **only** for specific Runners
 used by trusted builds and users.
+
+Read the [pull policies documentation](../executors/docker.md#how-pull-policies-work)
+for more information.
 
 ## Systems with Docker installed
 
@@ -57,9 +61,9 @@ used by trusted builds and users.
 This applies to installations below 0.5.0 or one's that were upgraded to newer version.
 
 When installing package on Linux systems with Docker installed, `gitlab-ci-multi-runner`
-will create user that will have permisssion to access `Docker` daemon. This makes
+will create user that will have permission to access `Docker` daemon. This makes
 the jobs run with `shell` executor able to access `docker` with full permissions
-and potenially allows root access to the server.
+and potentially allows root access to the server.
 
 ## Usage of SSH executor
 
