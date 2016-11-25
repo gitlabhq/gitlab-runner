@@ -362,6 +362,27 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	assert.NotNil(t, image)
 }
 
+func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
+	var c docker_helpers.MockClient
+	defer c.AssertExpectations(t)
+
+	e := executor{client: &c}
+	e.setPolicyMode(common.PullPolicyAlways)
+
+	c.On("InspectImage", "existing").
+		Return(&docker.Image{}, nil).
+		Once()
+
+	ac := e.getAuthConfig("existing")
+	c.On("PullImage", docker.PullImageOptions{Repository: "existing:latest"}, ac).
+		Return(fmt.Errorf("not found")).
+		Once()
+
+	image, err := e.getDockerImage("existing")
+	assert.Error(t, err)
+	assert.Nil(t, image)
+}
+
 func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	var c docker_helpers.MockClient
 	defer c.AssertExpectations(t)

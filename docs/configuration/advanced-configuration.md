@@ -118,7 +118,7 @@ This defines the Docker Container parameters.
 | `services`                  | specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
 | `allowed_images`            | specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `allowed_services`          | specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `pull_policy`               | specify the image pull policy: never, if-not-present or always (default) |
+| `pull_policy`               | specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 
 Example:
 
@@ -202,7 +202,10 @@ This will use `/path/to/bind/from/host` of the CI host inside the container at
   support for using private registries, which required manual configuration
   of credentials on runner's host. We recommend to upgrade your Runner to
   at least version **1.8** if you want to use private registries.
-- Private registries are currently not supported by Kubernetes executor.
+- Private registries are currently not supported by the Kubernetes executor.
+- Using private registries with the `if-not-present` pull policy may introduce
+  [security implications][secpull]. To fully understand how pull policies work,
+  read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
 If you want to use private registries as a source of images for your builds,
 you can set the authorization configuration in the `DOCKER_AUTH_CONFIG` [secret
@@ -257,10 +260,6 @@ The steps performed by the Runner can be summed up to:
 Now that the Runner is set up to authenticate against your private registry,
 learn [how to configure .gitlab-ci.yml][yaml-priv-reg] in order to use that
 registry.
-
-Also please notice, that using private registries with `if-not-present`
-pull policy may introduce security implications. Please read [the security
-documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) for more details.
 
 ### Support for GitLab integrated registry
 
@@ -458,3 +457,4 @@ It depends on what you'd like to do.
 [Docker Engine]: https://www.docker.com/docker-engine
 [yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#image-and-services
 [ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
+[secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
