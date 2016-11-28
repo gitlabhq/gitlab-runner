@@ -87,7 +87,7 @@ To jump into the specific documentation of each executor, visit:
 - [Auto-scaling using Docker machine](configuration/autoscale.md) Execute jobs on machines that are created on demand using Docker machine.
 - [Supported shells](shells/README.md) Learn what shell script generators are supported that allow to execute builds on different systems.
 - [Security considerations](security/index.md) Be aware of potential security implications when running your jobs with GitLab Runner.
-- [Prometheus monitoring](monitoring/README.md) Learn how to use the Prometheus metrics HTTP server.
+- [Runner monitoring](monitoring/README.md) Learn how to monitor Runner's behavior.
 - [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup) A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
 
 ## Troubleshooting
