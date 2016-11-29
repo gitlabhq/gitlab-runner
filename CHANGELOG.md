@@ -1,3 +1,7 @@
+v 1.8.1
+- Rrefactor the private container registry docs !392
+- Make pull policies usage clear !393
+
 v 1.8.0
 - Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364
 - Fix path to runners-ssh page !368
