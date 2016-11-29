@@ -230,7 +230,7 @@ func (b *Build) run(executor Executor) (err error) {
 
 	// Run build script
 	go func() {
-		buildFinish <- b.retryExecuteScript(executor, buildAbort)
+		buildFinish <- b.executeScript(executor, buildAbort)
 	}()
 
 	// Wait for signals: cancel, timeout, abort or finish
