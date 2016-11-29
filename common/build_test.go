@@ -172,8 +172,8 @@ func TestRunFailure(t *testing.T) {
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(errors.New("build fail"))
-	e.On("Finish", errors.New("build fail")).Return().Times(3)
+	e.On("Run", mock.Anything).Return(errors.New("build fail")).Times(3)
+	e.On("Finish", errors.New("build fail")).Return().Once()
 
 	RegisterExecutor("build-run-run-failure", &p)
 
@@ -190,4 +190,3 @@ func TestRunFailure(t *testing.T) {
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
-
