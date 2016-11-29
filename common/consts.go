@@ -16,5 +16,6 @@ const ShutdownTimeout = 30
 const DefaultOutputLimit = 4096 // 4MB in kilobytes
 const ForceTraceSentInterval = 30 * time.Second
 const PreparationRetries = 3
+const PreBuildRetries = 3
 
 var PreparationRetryInterval = 3 * time.Second
