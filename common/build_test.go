@@ -187,6 +187,8 @@ func TestRunFailure(t *testing.T) {
 			},
 		},
 	}
+
+	build.Variables = append(build.Variables, BuildVariable{Key: "PRE_BUILD_RETRIES", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
