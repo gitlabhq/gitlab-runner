@@ -53,7 +53,7 @@ on the cluster.
 
 ## The keywords
 
-The following keywords help to define the behaviour of the Runner within kubernetes:
+The following keywords help to define the behaviour of the Runner within Kubernetes:
 
 - `namespace`: Namespace to run Kubernetes Pods in.
 - `namespace_overwrite_allowed`: Regular expression to validate the contents of
@@ -90,17 +90,21 @@ The following keywords for resource limits are deprecated, please use the new on
 
 ### Overwriting Kubernetes Namespace
 
-Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, by
-using the variable `KUBERNETES_NAMESPACE_OVERWRITE`, for instance:
+Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, by using the variable
+`KUBERNETES_NAMESPACE_OVERWRITE`.
+
+This approach allow you to create an new isolated namespace dedicated for CI purposes, and deploy a custom
+set of pods. The `Pods` spawned by the runner will take place on the overwritten namespace, for simple
+and straight forward access between container during the CI stages.
 
 ``` yaml
 variables:
   KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_BUILD_REF_NAME}
 ```
 
-Furthermore, to ensure only designated namespaces will be used during CI runs,
-inform the configuration `namespace_overwrite_allowed` with proper regular
-expression, when empty it's not allowed to overwrite configured `namespace`.
+Furthermore, to ensure only designated namespaces will be used during CI runs, inform the configuration
+`namespace_overwrite_allowed` with proper regular expression, when empty the overwrite behaviour is
+disabled.
 
 ## Define keywords in the config toml
 
