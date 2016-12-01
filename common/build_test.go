@@ -188,7 +188,43 @@ func TestRunFailure(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "PRE_BUILD_RETRIES", Value: "3"})
+	build.Variables = append(build.Variables, BuildVariable{Key: "PRE_BUILD_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
+}
+
+func TestRunWrongAttempts(t *testing.T) {
+	e := MockExecutor{}
+
+	p := MockExecutorProvider{}
+	defer p.AssertExpectations(t)
+
+	// Create executor
+	p.On("Create").Return(&e)
+
+	// Prepare plan
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	e.On("Cleanup").Return()
+
+	// Fail a build script
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", mock.Anything).Return(errors.New("Number of attempts out of the range [1, 10]"))
+	e.On("Finish", errors.New("Number of attempts out of the range [1, 10]")).Return()
+
+	RegisterExecutor("build-run-attempt-failure", &p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		GetBuildResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-attempt-failure",
+			},
+		},
+	}
+
+	build.Variables = append(build.Variables, BuildVariable{Key: "PRE_BUILD_ATTEMPTS", Value: "0"})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.EqualError(t, err, "Number of attempts out of the range [1, 10]")
 }
