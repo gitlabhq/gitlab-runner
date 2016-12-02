@@ -208,8 +208,8 @@ func TestRunWrongAttempts(t *testing.T) {
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(errors.New("Number of attempts specified in PRE_BUILD_ATTEMPTS out of the range [1, 10]"))
-	e.On("Finish", errors.New("Number of attempts specified in PRE_BUILD_ATTEMPTS out of the range [1, 10]")).Return()
+	e.On("Run", mock.Anything).Return(errors.New("Number of attempts out of the range [1, 10]"))
+	e.On("Finish", errors.New("Number of attempts out of the range [1, 10]")).Return()
 
 	RegisterExecutor("build-run-attempt-failure", &p)
 
@@ -226,5 +226,41 @@ func TestRunWrongAttempts(t *testing.T) {
 
 	build.Variables = append(build.Variables, BuildVariable{Key: "PRE_BUILD_ATTEMPTS", Value: "0"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "Number of attempts specified in PRE_BUILD_ATTEMPTS out of the range [1, 10]")
+	assert.EqualError(t, err, "Number of attempts out of the range [1, 10]")
+}
+
+func TestRunSuccessOnSecondAttempt(t *testing.T) {
+	e := MockExecutor{}
+	p := MockExecutorProvider{}
+
+	// Create executor only once
+	p.On("Create").Return(&e).Once()
+
+	// We run everything once
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	e.On("Finish", mock.Anything).Return().Twice()
+	e.On("Cleanup").Return().Twice()
+
+	// Run script successfully
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+
+	e.On("Run", mock.Anything).Return(errors.New("build fail")).Once()
+	e.On("Run", mock.Anything).Return(nil)
+
+	RegisterExecutor("build-run-success-second-attempt", &p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		GetBuildResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-success-second-attempt",
+			},
+		},
+	}
+
+	build.Variables = append(build.Variables, BuildVariable{Key: "PRE_BUILD_ATTEMPTS", Value: "3"})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
 }
