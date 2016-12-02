@@ -159,7 +159,7 @@ func (b *CmdWriter) RmFile(path string) {
 }
 
 func (b *CmdWriter) Print(format string, arguments ...interface{}) {
-	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
+	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
