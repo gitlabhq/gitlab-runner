@@ -14,7 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
-type BuildState string
+type BuildRuntimeState string
 
 type GitStrategy int
 
@@ -25,10 +25,12 @@ const (
 )
 
 const (
-	Pending BuildState = "pending"
-	Running            = "running"
-	Failed             = "failed"
-	Success            = "success"
+	RuntimePending    BuildRuntimeState = "pending"
+	RuntimeRunning                      = "running"
+	RuntimeFinished                     = "finished"
+	RuntimeCanceled                     = "canceled"
+	RuntimeTerminated                   = "terminated"
+	RuntimeTimedout                     = "timedout"
 )
 
 type Build struct {
@@ -44,10 +46,13 @@ type Build struct {
 	ExecutorData    ExecutorData
 
 	// Unique ID for all running builds on this runner
-	RunnerID int `json:"runner_id"`
+	RunnerID        int `json:"runner_id"`
 
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
+
+	CurrentStage    ShellScriptStage
+	CurrentState    BuildRuntimeState
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -109,7 +114,9 @@ func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
 }
 
-func (b *Build) executeShellScript(scriptType ShellScriptType, executor Executor, abort chan interface{}) error {
+func (b *Build) executeShellScript(scriptType ShellScriptStage, executor Executor, abort chan interface{}) error {
+	b.CurrentStage = scriptType
+
 	shell := executor.Shell()
 	if shell == nil {
 		return errors.New("No shell defined")
@@ -188,6 +195,8 @@ func (b *Build) executeScript(executor Executor, abort chan interface{}) error {
 }
 
 func (b *Build) run(executor Executor) (err error) {
+	b.CurrentState = RuntimeRunning
+
 	buildTimeout := b.Timeout
 	if buildTimeout <= 0 {
 		buildTimeout = DefaultTimeout
@@ -206,14 +215,18 @@ func (b *Build) run(executor Executor) (err error) {
 	select {
 	case <-b.Trace.Aborted():
 		err = &BuildError{Inner: errors.New("canceled")}
+		b.CurrentStage = RuntimeCanceled
 
 	case <-time.After(time.Duration(buildTimeout) * time.Second):
 		err = &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", buildTimeout)}
+		b.CurrentStage = RuntimeTimedout
 
 	case signal := <-b.SystemInterrupt:
 		err = fmt.Errorf("aborted: %v", signal)
+		b.CurrentStage = RuntimeTerminated
 
 	case err = <-buildFinish:
+		b.CurrentState = RuntimeFinished
 		return err
 	}
 
@@ -261,6 +274,8 @@ func (b *Build) Run(globalConfig *Config, trace BuildTrace) (err error) {
 
 	logger := NewBuildLogger(trace, b.Log())
 	logger.Println("Running with " + AppVersion.Line() + helpers.ANSI_RESET)
+
+	b.CurrentState = RuntimePending
 
 	defer func() {
 		if _, ok := err.(*BuildError); ok {

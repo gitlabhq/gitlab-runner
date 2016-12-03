@@ -9,6 +9,14 @@ import (
 type UpdateState int
 type UploadState int
 type DownloadState int
+type BuildState string
+
+const (
+	Pending BuildState = "pending"
+	Running            = "running"
+	Failed             = "failed"
+	Success            = "success"
+)
 
 const (
 	UpdateSucceeded UpdateState = iota

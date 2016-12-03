@@ -44,7 +44,7 @@ func (m *MockShell) GetConfiguration(info ShellScriptInfo) (*ShellConfiguration,
 
 	return r0, r1
 }
-func (m *MockShell) GenerateScript(scriptType ShellScriptType, info ShellScriptInfo) (string, error) {
+func (m *MockShell) GenerateScript(scriptType ShellScriptStage, info ShellScriptInfo) (string, error) {
 	ret := m.Called(scriptType, info)
 
 	r0 := ret.Get(0).(string)

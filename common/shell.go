@@ -22,14 +22,14 @@ const (
 	LoginShell
 )
 
-type ShellScriptType string
+type ShellScriptStage string
 
 const (
-	ShellPrepareScript   ShellScriptType = "prepare_script"
-	ShellBuildScript                     = "build_script"
-	ShellAfterScript                     = "after_script"
-	ShellArchiveCache                    = "archive_cache"
-	ShellUploadArtifacts                 = "upload_artifacts"
+	ShellPrepareScript   ShellScriptStage = "prepare_script"
+	ShellBuildScript                      = "build_script"
+	ShellAfterScript                      = "after_script"
+	ShellArchiveCache                     = "archive_cache"
+	ShellUploadArtifacts                  = "upload_artifacts"
 )
 
 func (s *ShellConfiguration) GetCommandWithArguments() []string {
@@ -61,7 +61,7 @@ type Shell interface {
 	IsDefault() bool
 
 	GetConfiguration(info ShellScriptInfo) (*ShellConfiguration, error)
-	GenerateScript(scriptType ShellScriptType, info ShellScriptInfo) (string, error)
+	GenerateScript(scriptType ShellScriptStage, info ShellScriptInfo) (string, error)
 }
 
 var shells map[string]Shell
@@ -105,7 +105,7 @@ func GetShellConfiguration(info ShellScriptInfo) (*ShellConfiguration, error) {
 	return shell.GetConfiguration(info)
 }
 
-func GenerateShellScript(scriptType ShellScriptType, info ShellScriptInfo) (string, error) {
+func GenerateShellScript(scriptType ShellScriptStage, info ShellScriptInfo) (string, error) {
 	shell := GetShell(info.Shell)
 	if shell == nil {
 		return "", fmt.Errorf("shell %s not found", info.Shell)

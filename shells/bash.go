@@ -217,7 +217,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 	return
 }
 
-func (b *BashShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
+func (b *BashShell) GenerateScript(scriptType common.ShellScriptStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &BashWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}

@@ -453,7 +453,7 @@ func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.Sh
 	return
 }
 
-func (b *AbstractShell) writeScript(w ShellWriter, scriptType common.ShellScriptType, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeScript(w ShellWriter, scriptType common.ShellScriptStage, info common.ShellScriptInfo) (err error) {
 	switch scriptType {
 	case common.ShellPrepareScript:
 		return b.writePrepareScript(w, info)

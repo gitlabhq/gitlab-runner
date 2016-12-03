@@ -1,9 +1,14 @@
 package commands
 
 import (
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"sync"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage"}, nil)
 
 type buildsHelper struct {
 	counts map[string]int
@@ -97,4 +102,35 @@ func (b *buildsHelper) buildsCount() int {
 	defer b.lock.Unlock()
 
 	return len(b.builds)
+}
+
+func (b *buildsHelper) statesAndStages() (map[common.BuildRuntimeState]map[common.ShellScriptStage]int) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	data := make(map[common.BuildRuntimeState]map[common.ShellScriptStage]int)
+	for _, build := range b.builds {
+		if data[build.CurrentState] == nil {
+			data[build.CurrentState] = make(map[common.ShellScriptStage]int)
+		}
+		data[build.CurrentState][build.CurrentStage]++
+	}
+	return data
+}
+
+// Describe implements prometheus.Collector.
+func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
+	ch <- numBuildsDesc
+}
+
+// Collect implements prometheus.Collector.
+func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
+	data := b.statesAndStages()
+
+	for state, scripts := range data {
+		for stage, count := range scripts {
+			ch <- prometheus.MustNewConstMetric(numBuildsDesc, prometheus.GaugeValue, float64(count),
+				"state="+string(state), "stage="+string(stage))
+		}
+	}
 }

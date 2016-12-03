@@ -25,8 +25,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
 
-var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", nil, nil)
-
 type RunCommand struct {
 	configOptionsWithMetricsServer
 	network common.Network
@@ -59,20 +57,12 @@ type RunCommand struct {
 
 	// runFinished is used to notify that Run() did finish
 	runFinished chan bool
+
+	currentWorkers int
 }
 
 func (mr *RunCommand) log() *log.Entry {
 	return log.WithField("builds", mr.buildsHelper.buildsCount())
-}
-
-// Describe implements prometheus.Collector.
-func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
-	ch <- numBuildsDesc
-}
-
-// Collect implements prometheus.Collector.
-func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(numBuildsDesc, prometheus.GaugeValue, float64(mr.buildsHelper.buildsCount()))
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
@@ -266,25 +256,25 @@ func (mr *RunCommand) Start(s service.Service) error {
 	return nil
 }
 
-func (mr *RunCommand) updateWorkers(currentWorkers, workerIndex *int, startWorker chan int, stopWorker chan bool) os.Signal {
+func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stopWorker chan bool) os.Signal {
 	buildLimit := mr.config.Concurrent
 
-	for *currentWorkers > buildLimit {
+	for mr.currentWorkers > buildLimit {
 		select {
 		case stopWorker <- true:
 		case signaled := <-mr.runSignal:
 			return signaled
 		}
-		*currentWorkers--
+		mr.currentWorkers--
 	}
 
-	for *currentWorkers < buildLimit {
+	for mr.currentWorkers < buildLimit {
 		select {
 		case startWorker <- *workerIndex:
 		case signaled := <-mr.runSignal:
 			return signaled
 		}
-		*currentWorkers++
+		mr.currentWorkers++
 		*workerIndex++
 	}
 
@@ -328,13 +318,20 @@ func (mr *RunCommand) serveMetrics() error {
 
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
-	registry.MustRegister(mr)
+	registry.MustRegister(&mr.buildsHelper)
 	// Metrics about the program's build version.
 	registry.MustRegister(common.AppVersion.NewMetricsCollector())
 	// Go-specific metrics about the process (GC stats, goroutines, etc.).
 	registry.MustRegister(prometheus.NewGoCollector())
 	// Go-unrelated process metrics (memory usage, file descriptors, etc.).
 	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+
+	// Register all executor provider collectors
+	for _, provider := range common.GetExecutorProviders() {
+		if collector, ok := provider.(prometheus.Collector); ok && collector != nil {
+			registry.MustRegister(collector)
+		}
+	}
 
 	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	go func() {
@@ -364,11 +361,10 @@ func (mr *RunCommand) Run() {
 	stopWorker := make(chan bool)
 	go mr.startWorkers(startWorker, stopWorker, runners)
 
-	currentWorkers := 0
 	workerIndex := 0
 
 	for mr.stopSignal == nil {
-		signaled := mr.updateWorkers(&currentWorkers, &workerIndex, startWorker, stopWorker)
+		signaled := mr.updateWorkers(&workerIndex, startWorker, stopWorker)
 		if signaled != nil {
 			break
 		}
@@ -380,9 +376,9 @@ func (mr *RunCommand) Run() {
 	}
 
 	// Wait for workers to shutdown
-	for currentWorkers > 0 {
+	for mr.currentWorkers > 0 {
 		stopWorker <- true
-		currentWorkers--
+		mr.currentWorkers--
 	}
 	mr.log().Println("All workers stopped. Can exit now")
 	mr.runFinished <- true

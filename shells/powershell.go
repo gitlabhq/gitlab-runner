@@ -213,7 +213,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (script *comm
 	return
 }
 
-func (b *PowerShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
+func (b *PowerShell) GenerateScript(scriptType common.ShellScriptStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &PsWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}

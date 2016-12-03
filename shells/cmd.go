@@ -199,7 +199,7 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 	return
 }
 
-func (b *CmdShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
+func (b *CmdShell) GenerateScript(scriptType common.ShellScriptStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &CmdWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
