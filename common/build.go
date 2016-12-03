@@ -46,13 +46,13 @@ type Build struct {
 	ExecutorData    ExecutorData
 
 	// Unique ID for all running builds on this runner
-	RunnerID        int `json:"runner_id"`
+	RunnerID int `json:"runner_id"`
 
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
 
-	CurrentStage    ShellScriptStage
-	CurrentState    BuildRuntimeState
+	CurrentStage ShellScriptStage
+	CurrentState BuildRuntimeState
 }
 
 func (b *Build) Log() *logrus.Entry {

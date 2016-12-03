@@ -28,5 +28,5 @@ func TestMachineProviderCollect(t *testing.T) {
 	ch := make(chan prometheus.Metric, 50)
 	provider := &machineProvider{}
 	provider.Collect(ch)
-	assert.Len(t, ch, 9)
+	assert.Len(t, ch, 8)
 }

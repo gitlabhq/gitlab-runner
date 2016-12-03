@@ -104,7 +104,7 @@ func (b *buildsHelper) buildsCount() int {
 	return len(b.builds)
 }
 
-func (b *buildsHelper) statesAndStages() (map[common.BuildRuntimeState]map[common.ShellScriptStage]int) {
+func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common.ShellScriptStage]int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

@@ -5,7 +5,7 @@ import (
 )
 
 var machinesDataDesc = prometheus.NewDesc("ci_machines_provider", "The current number of machines in given state.", []string{"state"}, nil)
-var providerStatisticsDesc = prometheus.NewDesc("ci_machines_provided", "The total number of machines created.", []string{"type"}, nil)
+var providerStatisticsDesc = prometheus.NewDesc("ci_machines", "The total number of machines created.", []string{"type"}, nil)
 
 func (m *machineProvider) collectDetails() (data machinesData) {
 	m.lock.RLock()
@@ -32,7 +32,7 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Used), "state=used")
 	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Removing), "state=removing")
 
-	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.CounterValue, float64(m.statistics.Created), "type=created")
-	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.CounterValue, float64(m.statistics.Used), "type=used")
-	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.CounterValue, float64(m.statistics.Removed), "type=removed")
+	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Created), "type=created")
+	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Used), "type=used")
+	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Removed), "type=removed")
 }
