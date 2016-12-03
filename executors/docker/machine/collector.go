@@ -26,13 +26,13 @@ func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements prometheus.Collector.
 func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	data := m.collectDetails()
-	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Acquired), "state=acquired")
-	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Creating), "state=creating")
-	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Idle), "state=idle")
-	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Used), "state=used")
-	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Removing), "state=removing")
+	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Acquired), "acquired")
+	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Creating), "creating")
+	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Idle), "idle")
+	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Used), "used")
+	ch <- prometheus.MustNewConstMetric(machinesDataDesc, prometheus.GaugeValue, float64(data.Removing), "removing")
 
-	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Created), "type=created")
-	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Used), "type=used")
-	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Removed), "type=removed")
+	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Created), "created")
+	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Used), "used")
+	ch <- prometheus.MustNewConstMetric(providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Removed), "removed")
 }

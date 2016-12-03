@@ -130,7 +130,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	for state, scripts := range data {
 		for stage, count := range scripts {
 			ch <- prometheus.MustNewConstMetric(numBuildsDesc, prometheus.GaugeValue, float64(count),
-				"state="+string(state), "stage="+string(stage))
+				string(state), string(stage))
 		}
 	}
 }
