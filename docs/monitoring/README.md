@@ -1,18 +1,9 @@
 # GitLab Runner Monitoring
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+## Embedded Prometheus metrics
 
-- [Embedded Prometheus HTTP Server](#embedded-prometheus-http-server)
-  - [Configuration of the Prometheus metrics HTTP server](#configuration-of-the-prometheus-metrics-http-server)
-- [Learning more about Prometheus](#learning-more-about-prometheus)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-## Embedded Prometheus HTTP Server
-
-> The embedded HTTP Statistics Server was introduced in GitLab Runner 1.8.0.
+> The embedded HTTP Statistics Server with Prometheus metrics was
+introduced in GitLab Runner 1.8.0.
 
 The GitLab Runner is instrumented with native [Prometheus](https://prometheus.io/)
 metrics, which can be exposed via an embedded HTTP server on the `/metrics`
@@ -148,9 +139,34 @@ on your runner's host is related to an increase of processed builds or not. Or
 you are running a cluster of machines to be used for the builds and you want to
 track build trends to plan changes in your infrastructure.
 
-### Configuration of the Prometheus metrics HTTP server
+### Learning more about Prometheus
 
-The Prometheus metrics HTTP server can be configured in two ways:
+To learn how to set up a Prometheus server to scrape this HTTP endpoint and
+make use of the collected metrics, see Prometheus's [Getting
+started](https://prometheus.io/docs/introduction/getting_started/) guide. Also
+see the [Configuration](https://prometheus.io/docs/operating/configuration/)
+section for more details on how to configure Prometheus, as well as the section
+on [Alerting rules](https://prometheus.io/docs/alerting/rules/) and setting up
+an [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) to
+dispatch alert notifications.
+
+## `pprof` HTTP endpoints
+
+> `pprof` integration was introduced in GitLab Runner 1.9.0.
+
+While having metrics about internal state of Runner process is useful
+we've found that in some cases it would be good to check what is happening
+inside of the Running process in real time. That's why we've introduced
+the `pprof` HTTP endpoints.
+
+`pprof` endpoints will be available via an embedded HTTP server on `/debug/pprof/`
+path.
+
+You can read more about using `pprof` in it's [documentation][go-pprof].
+
+## Configuration of the metrics HTTP server
+
+The metrics HTTP server can be configured in two ways:
 
 - with a `metrics_server` global configuration option in `config.toml` file,
 - with a `--metrics-server` command line option for the `run` command.
@@ -172,13 +188,13 @@ Examples of addresses:
 Remember that for listening on ports below `1024` - at least on Linux/Unix
 systems - you need to have root/administrator rights.
 
-## Learning more about Prometheus
+Also please notice, that HTTP server is opened on selected `host:port`
+**without any authorization**. If you plan to bind the metrics server
+to a public interface then you should consider to use your firewall to
+limit access to this server or add a HTTP proxy which will add the
+authorization and access control layer.
 
-To learn how to set up a Prometheus server to scrape this HTTP endpoint and
-make use of the collected metrics, see Prometheus's [Getting
-started](https://prometheus.io/docs/introduction/getting_started/) guide. Also
-see the [Configuration](https://prometheus.io/docs/operating/configuration/)
-section for more details on how to configure Prometheus, as well as the section
-on [Alerting rules](https://prometheus.io/docs/alerting/rules/) and setting up
-an [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) to
-dispatch alert notifications.
+> **Notice:** Metrics server exports data about internal state of the
+GitLab Runner process and should not be publicly available!
+
+[go-pprof]: https://golang.org/pkg/net/http/pprof/
