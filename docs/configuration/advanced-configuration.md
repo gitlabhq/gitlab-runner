@@ -208,8 +208,8 @@ This will use `/path/to/bind/from/host` of the CI host inside the container at
   read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
 If you want to use private registries as a source of images for your builds,
-you can set the authorization configuration in the `DOCKER_AUTH_CONFIG` [secret
-variable][secret-variables]. It can be set in both GitLab Variables section of
+you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
+[secret variable]. It can be set in both GitLab Variables section of
 a project and in the `config.toml` file.
 
 As an example, let's assume that you want to use the `registry.example.com/private/image:latest`
@@ -458,3 +458,4 @@ It depends on what you'd like to do.
 [yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#image-and-services
 [ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
+[secret variable]: https://docs.gitlab.com/ce/ci/variables/#secret-variables
