@@ -124,7 +124,7 @@ func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
 }
 
-func (b *Build) executeShellScript(buildStage BuildStage, executor Executor, abort chan interface{}) error {
+func (b *Build) executeStage(buildStage BuildStage, executor Executor, abort chan interface{}) error {
 	b.CurrentStage = buildStage
 
 	shell := executor.Shell()
@@ -163,12 +163,12 @@ func (b *Build) executeUploadArtifacts(state error, executor Executor, abort cha
 	if state == nil {
 		// Previous stages were successful
 		if when == "" || when == "on_success" || when == "always" {
-			err = b.executeShellScript(BuildStageUploadArtifacts, executor, abort)
+			err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
 		}
 	} else {
 		// Previous stage did fail
 		if when == "on_failure" || when == "always" {
-			err = b.executeShellScript(BuildStageUploadArtifacts, executor, abort)
+			err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
 		}
 	}
 
@@ -181,24 +181,24 @@ func (b *Build) executeUploadArtifacts(state error, executor Executor, abort cha
 
 func (b *Build) executeScript(executor Executor, abort chan interface{}) error {
 	// Execute pre script (git clone, cache restore, artifacts download)
-	err := b.executeShellScript(BuildStagePrepare, executor, abort)
+	err := b.executeStage(BuildStagePrepare, executor, abort)
 
 	if err == nil {
 		// Execute user build script (before_script + script)
-		err = b.executeShellScript(BuildStageUserScript, executor, abort)
+		err = b.executeStage(BuildStageUserScript, executor, abort)
 
 		// Execute after script (after_script)
 		timeoutCh := make(chan interface{}, 1)
 		timeout := time.AfterFunc(time.Minute*5, func() {
 			close(timeoutCh)
 		})
-		b.executeShellScript(BuildStageAfterScript, executor, timeoutCh)
+		b.executeStage(BuildStageAfterScript, executor, timeoutCh)
 		timeout.Stop()
 	}
 
 	// Execute post script (cache store, artifacts upload)
 	if err == nil {
-		err = b.executeShellScript(BuildStageArchiveCache, executor, abort)
+		err = b.executeStage(BuildStageArchiveCache, executor, abort)
 	}
 	err = b.executeUploadArtifacts(err, executor, abort)
 	return err

@@ -17,16 +17,14 @@ func TestIfMachineProviderExposesCollectInterface(t *testing.T) {
 	assert.NotNil(t, collector)
 }
 
-func TestMachineProviderDescribe(t *testing.T) {
-	ch := make(chan *prometheus.Desc, 10)
+func TestMachineProviderDescribeAndCollect(t *testing.T) {
 	provider := &machineProvider{}
-	provider.Describe(ch)
-	assert.Len(t, ch, 2)
-}
 
-func TestMachineProviderCollect(t *testing.T) {
-	ch := make(chan prometheus.Metric, 50)
-	provider := &machineProvider{}
-	provider.Collect(ch)
-	assert.Len(t, ch, 8)
+	descCh := make(chan *prometheus.Desc, 10)
+	provider.Describe(descCh)
+	assert.Len(t, descCh, 2)
+
+	metricCh := make(chan prometheus.Metric, 50)
+	provider.Collect(metricCh)
+	assert.Len(t, metricCh, 8)
 }
