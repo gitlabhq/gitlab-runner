@@ -217,12 +217,12 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 	return
 }
 
-func (b *BashShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
+func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &BashWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
 
-	if scriptType == common.ShellPrepareScript {
+	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo " + strconv.Quote("Running on $(hostname) via "+info.Build.Hostname+"..."))
 		} else {
@@ -230,7 +230,7 @@ func (b *BashShell) GenerateScript(scriptType common.ShellScriptType, info commo
 		}
 	}
 
-	err = b.writeScript(w, scriptType, info)
+	err = b.writeScript(w, buildStage, info)
 	script = w.Finish(info.Build.IsDebugTraceEnabled())
 	return
 }

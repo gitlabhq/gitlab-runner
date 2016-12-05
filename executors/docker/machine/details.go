@@ -11,12 +11,13 @@ import (
 )
 
 type machineDetails struct {
-	Name      string
-	Created   time.Time `yaml:"-"`
-	Used      time.Time `yaml:"-"`
-	UsedCount int
-	State     machineState
-	Reason    string
+	Name       string
+	Created    time.Time `yaml:"-"`
+	Used       time.Time `yaml:"-"`
+	UsedCount  int
+	State      machineState
+	Reason     string
+	RetryCount int
 }
 
 func (m *machineDetails) isUsed() bool {

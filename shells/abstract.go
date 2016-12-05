@@ -453,24 +453,24 @@ func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.Sh
 	return
 }
 
-func (b *AbstractShell) writeScript(w ShellWriter, scriptType common.ShellScriptType, info common.ShellScriptInfo) (err error) {
-	switch scriptType {
-	case common.ShellPrepareScript:
+func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) (err error) {
+	switch buildStage {
+	case common.BuildStagePrepare:
 		return b.writePrepareScript(w, info)
 
-	case common.ShellBuildScript:
+	case common.BuildStageUserScript:
 		return b.writeBuildScript(w, info)
 
-	case common.ShellAfterScript:
+	case common.BuildStageAfterScript:
 		return b.writeAfterScript(w, info)
 
-	case common.ShellArchiveCache:
+	case common.BuildStageArchiveCache:
 		return b.writeArchiveCacheScript(w, info)
 
-	case common.ShellUploadArtifacts:
+	case common.BuildStageUploadArtifacts:
 		return b.writeUploadArtifactsScript(w, info)
 
 	default:
-		return errors.New("Not supported script type: " + string(scriptType))
+		return errors.New("Not supported script type: " + string(buildStage))
 	}
 }

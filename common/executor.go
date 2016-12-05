@@ -73,6 +73,15 @@ func GetExecutors() []string {
 	return names
 }
 
+func GetExecutorProviders() (providers []ExecutorProvider) {
+	if executors != nil {
+		for _, executorProvider := range executors {
+			providers = append(providers, executorProvider)
+		}
+	}
+	return
+}
+
 func NewExecutor(executor string) Executor {
 	provider := GetExecutor(executor)
 	if provider != nil {

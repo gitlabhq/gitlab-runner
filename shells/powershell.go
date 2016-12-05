@@ -213,7 +213,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (script *comm
 	return
 }
 
-func (b *PowerShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
+func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &PsWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
@@ -222,7 +222,7 @@ func (b *PowerShell) GenerateScript(scriptType common.ShellScriptType, info comm
 		w.Line("Set-PSDebug -Trace 2")
 	}
 
-	if scriptType == common.ShellPrepareScript {
+	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo \"Running on $env:computername via " + psQuoteVariable(info.Build.Hostname) + "...\"")
 		} else {
@@ -230,7 +230,7 @@ func (b *PowerShell) GenerateScript(scriptType common.ShellScriptType, info comm
 		}
 	}
 
-	err = b.writeScript(w, scriptType, info)
+	err = b.writeScript(w, buildStage, info)
 	script = w.String()
 	return
 }

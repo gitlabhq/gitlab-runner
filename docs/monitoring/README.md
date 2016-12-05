@@ -17,16 +17,40 @@ The exposed information includes:
 - general process metrics (memory usage, cpu usage, file descriptor usage, etc.)
 - build version information
 
-The following is a full example of the metrics output in Prometheus's
+The following is an example of the metrics output in Prometheus's
 text-based metrics exposition format:
 
 ```
+# HELP ci_docker_machines The total number of machines created.
+# TYPE ci_docker_machines counter
+ci_docker_machines{type="created"} 0
+ci_docker_machines{type="removed"} 0
+ci_docker_machines{type="used"} 0
+# HELP ci_docker_machines_provider The current number of machines in given state.
+# TYPE ci_docker_machines_provider gauge
+ci_docker_machines_provider{state="acquired"} 0
+ci_docker_machines_provider{state="creating"} 0
+ci_docker_machines_provider{state="idle"} 0
+ci_docker_machines_provider{state="removing"} 0
+ci_docker_machines_provider{state="used"} 0
 # HELP ci_runner_builds The current number of running builds.
 # TYPE ci_runner_builds gauge
-ci_runner_builds 0
+ci_runner_builds{stage="prepare_script",state="running"} 1
 # HELP ci_runner_version_info A metric with a constant '1' value labeled by different build stats fields.
 # TYPE ci_runner_version_info gauge
-ci_runner_version_info{architecture="amd64",branch="HEAD",built_at="2016-10-19 19:28:58.820157327 +0200 CEST",go_version="go1.7.1",name="gitlab-ci-multi-runner",os="linux",revision="HEAD",version="dev"} 1
+ci_runner_version_info{architecture="amd64",branch="add-prometheus-metrics",built_at="2016-12-05 12:37:55 +0100 CET",go_version="go1.7.1",name="gitlab-ci-multi-runner",os="linux",revision="05c35a8",version="1.9.0~beta.19.g05c35a8"} 1
+# HELP ci_ssh_docker_machines The total number of machines created.
+# TYPE ci_ssh_docker_machines counter
+ci_ssh_docker_machines{type="created"} 0
+ci_ssh_docker_machines{type="removed"} 0
+ci_ssh_docker_machines{type="used"} 0
+# HELP ci_ssh_docker_machines_provider The current number of machines in given state.
+# TYPE ci_ssh_docker_machines_provider gauge
+ci_ssh_docker_machines_provider{state="acquired"} 0
+ci_ssh_docker_machines_provider{state="creating"} 0
+ci_ssh_docker_machines_provider{state="idle"} 0
+ci_ssh_docker_machines_provider{state="removing"} 0
+ci_ssh_docker_machines_provider{state="used"} 0
 # HELP go_gc_duration_seconds A summary of the GC invocation durations.
 # TYPE go_gc_duration_seconds summary
 go_gc_duration_seconds{quantile="0"} 0.00030304800000000004

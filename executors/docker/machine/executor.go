@@ -104,6 +104,6 @@ func (e *machineExecutor) Cleanup() {
 }
 
 func init() {
-	common.RegisterExecutor("docker+machine", newMachineProvider("docker"))
-	common.RegisterExecutor("docker-ssh+machine", newMachineProvider("docker-ssh"))
+	common.RegisterExecutor("docker+machine", newMachineProvider("docker_machines", "docker"))
+	common.RegisterExecutor("docker-ssh+machine", newMachineProvider("ssh_docker_machines", "docker-ssh"))
 }

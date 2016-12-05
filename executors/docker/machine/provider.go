@@ -7,18 +7,30 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 )
 
+type machineProviderStatistics struct {
+	Created int
+	Used    int
+	Removed int
+}
+
 type machineProvider struct {
+	name        string
 	machine     docker_helpers.Machine
 	details     machinesDetails
 	lock        sync.RWMutex
 	acquireLock sync.Mutex
+	statistics  machineProviderStatistics
 	// provider stores a real executor that is used to start run the builds
 	provider common.ExecutorProvider
+
+	machinesDataDesc       *prometheus.Desc
+	providerStatisticsDesc *prometheus.Desc
 }
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
@@ -52,6 +64,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	details = m.machineDetails(name, true)
 	details.State = machineStateCreating
 	details.UsedCount = 0
+	details.RetryCount = 0
 	errCh = make(chan error, 1)
 
 	// Create machine asynchronously
@@ -59,6 +72,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 		started := time.Now()
 		err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 		for i := 0; i < 3 && err != nil; i++ {
+			details.RetryCount++
 			logrus.WithField("name", details.Name).WithError(err).
 				Warningln("Machine creation failed, trying to provision")
 			time.Sleep(provisionRetryInterval)
@@ -77,7 +91,9 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 			logrus.WithField("time", time.Since(started)).
 				WithField("name", details.Name).
 				WithField("now", time.Now()).
+				WithField("retries", details.RetryCount).
 				Infoln("Machine created")
+			m.statistics.Created++
 		}
 		errCh <- err
 	}()
@@ -152,6 +168,7 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 			WithField("used", time.Since(details.Used)).
 			WithField("reason", details.Reason).
 			Warningln("Retrying removal")
+		details.RetryCount++
 	}
 
 	m.lock.Lock()
@@ -163,7 +180,10 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 		WithField("used", time.Since(details.Used)).
 		WithField("reason", details.Reason).
 		WithField("now", time.Now()).
+		WithField("retries", details.RetryCount).
 		Infoln("Machine removed")
+
+	m.statistics.Removed++
 }
 
 func (m *machineProvider) remove(machineName string, reason ...interface{}) error {
@@ -177,6 +197,7 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 
 	details.Reason = fmt.Sprint(reason...)
 	details.State = machineStateRemoving
+	details.RetryCount = 0
 	logrus.WithField("name", machineName).
 		WithField("created", time.Since(details.Created)).
 		WithField("used", time.Since(details.Used)).
@@ -331,6 +352,7 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 	details.State = machineStateUsed
 	details.Used = time.Now()
 	details.UsedCount++
+	m.statistics.Used++
 	return
 }
 
@@ -369,13 +391,14 @@ func (m *machineProvider) Create() common.Executor {
 	}
 }
 
-func newMachineProvider(executor string) *machineProvider {
+func newMachineProvider(name, executor string) *machineProvider {
 	provider := common.GetExecutor(executor)
 	if provider == nil {
 		logrus.Panicln("Missing", executor)
 	}
 
 	return &machineProvider{
+		name:     name,
 		details:  make(machinesDetails),
 		machine:  docker_helpers.NewMachineCommand(),
 		provider: provider,
