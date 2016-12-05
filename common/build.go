@@ -14,8 +14,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
-type BuildRuntimeState string
-
 type GitStrategy int
 
 const (
@@ -24,13 +22,25 @@ const (
 	GitNone
 )
 
+type BuildRuntimeState string
+
 const (
-	RuntimePending    BuildRuntimeState = "pending"
-	RuntimeRunning                      = "running"
-	RuntimeFinished                     = "finished"
-	RuntimeCanceled                     = "canceled"
-	RuntimeTerminated                   = "terminated"
-	RuntimeTimedout                     = "timedout"
+	BuildRunStatePending      BuildRuntimeState = "pending"
+	BuildRunRuntimeRunning                      = "running"
+	BuildRunRuntimeFinished                     = "finished"
+	BuildRunRuntimeCanceled                     = "canceled"
+	BuildRunRuntimeTerminated                   = "terminated"
+	BuildRunRuntimeTimedout                     = "timedout"
+)
+
+type BuildStage string
+
+const (
+	BuildStagePrepare         BuildStage = "prepare_script"
+	BuildStageUserScript                 = "build_script"
+	BuildStageAfterScript                = "after_script"
+	BuildStageArchiveCache               = "archive_cache"
+	BuildStageUploadArtifacts            = "upload_artifacts"
 )
 
 type Build struct {
@@ -51,7 +61,7 @@ type Build struct {
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
 
-	CurrentStage ShellScriptStage
+	CurrentStage BuildStage
 	CurrentState BuildRuntimeState
 }
 
@@ -114,15 +124,15 @@ func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
 }
 
-func (b *Build) executeShellScript(scriptType ShellScriptStage, executor Executor, abort chan interface{}) error {
-	b.CurrentStage = scriptType
+func (b *Build) executeShellScript(buildStage BuildStage, executor Executor, abort chan interface{}) error {
+	b.CurrentStage = buildStage
 
 	shell := executor.Shell()
 	if shell == nil {
 		return errors.New("No shell defined")
 	}
 
-	script, err := GenerateShellScript(scriptType, *shell)
+	script, err := GenerateShellScript(buildStage, *shell)
 	if err != nil {
 		return err
 	}
@@ -137,8 +147,8 @@ func (b *Build) executeShellScript(scriptType ShellScriptStage, executor Executo
 		Abort:  abort,
 	}
 
-	switch scriptType {
-	case ShellBuildScript, ShellAfterScript: // use custom build environment
+	switch buildStage {
+	case BuildStageUserScript, BuildStageAfterScript: // use custom build environment
 		cmd.Predefined = false
 	default: // all other stages use a predefined build environment
 		cmd.Predefined = true
@@ -153,12 +163,12 @@ func (b *Build) executeUploadArtifacts(state error, executor Executor, abort cha
 	if state == nil {
 		// Previous stages were successful
 		if when == "" || when == "on_success" || when == "always" {
-			err = b.executeShellScript(ShellUploadArtifacts, executor, abort)
+			err = b.executeShellScript(BuildStageUploadArtifacts, executor, abort)
 		}
 	} else {
 		// Previous stage did fail
 		if when == "on_failure" || when == "always" {
-			err = b.executeShellScript(ShellUploadArtifacts, executor, abort)
+			err = b.executeShellScript(BuildStageUploadArtifacts, executor, abort)
 		}
 	}
 
@@ -171,31 +181,31 @@ func (b *Build) executeUploadArtifacts(state error, executor Executor, abort cha
 
 func (b *Build) executeScript(executor Executor, abort chan interface{}) error {
 	// Execute pre script (git clone, cache restore, artifacts download)
-	err := b.executeShellScript(ShellPrepareScript, executor, abort)
+	err := b.executeShellScript(BuildStagePrepare, executor, abort)
 
 	if err == nil {
 		// Execute user build script (before_script + script)
-		err = b.executeShellScript(ShellBuildScript, executor, abort)
+		err = b.executeShellScript(BuildStageUserScript, executor, abort)
 
 		// Execute after script (after_script)
 		timeoutCh := make(chan interface{}, 1)
 		timeout := time.AfterFunc(time.Minute*5, func() {
 			close(timeoutCh)
 		})
-		b.executeShellScript(ShellAfterScript, executor, timeoutCh)
+		b.executeShellScript(BuildStageAfterScript, executor, timeoutCh)
 		timeout.Stop()
 	}
 
 	// Execute post script (cache store, artifacts upload)
 	if err == nil {
-		err = b.executeShellScript(ShellArchiveCache, executor, abort)
+		err = b.executeShellScript(BuildStageArchiveCache, executor, abort)
 	}
 	err = b.executeUploadArtifacts(err, executor, abort)
 	return err
 }
 
 func (b *Build) run(executor Executor) (err error) {
-	b.CurrentState = RuntimeRunning
+	b.CurrentState = BuildRunRuntimeRunning
 
 	buildTimeout := b.Timeout
 	if buildTimeout <= 0 {
@@ -215,18 +225,18 @@ func (b *Build) run(executor Executor) (err error) {
 	select {
 	case <-b.Trace.Aborted():
 		err = &BuildError{Inner: errors.New("canceled")}
-		b.CurrentStage = RuntimeCanceled
+		b.CurrentStage = BuildRunRuntimeCanceled
 
 	case <-time.After(time.Duration(buildTimeout) * time.Second):
 		err = &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", buildTimeout)}
-		b.CurrentStage = RuntimeTimedout
+		b.CurrentStage = BuildRunRuntimeTimedout
 
 	case signal := <-b.SystemInterrupt:
 		err = fmt.Errorf("aborted: %v", signal)
-		b.CurrentStage = RuntimeTerminated
+		b.CurrentStage = BuildRunRuntimeTerminated
 
 	case err = <-buildFinish:
-		b.CurrentState = RuntimeFinished
+		b.CurrentState = BuildRunRuntimeFinished
 		return err
 	}
 
@@ -275,7 +285,7 @@ func (b *Build) Run(globalConfig *Config, trace BuildTrace) (err error) {
 	logger := NewBuildLogger(trace, b.Log())
 	logger.Println("Running with " + AppVersion.Line() + helpers.ANSI_RESET)
 
-	b.CurrentState = RuntimePending
+	b.CurrentState = BuildRunStatePending
 
 	defer func() {
 		if _, ok := err.(*BuildError); ok {

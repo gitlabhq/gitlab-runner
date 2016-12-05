@@ -104,14 +104,14 @@ func (b *buildsHelper) buildsCount() int {
 	return len(b.builds)
 }
 
-func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common.ShellScriptStage]int {
+func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common.BuildStage]int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	data := make(map[common.BuildRuntimeState]map[common.ShellScriptStage]int)
+	data := make(map[common.BuildRuntimeState]map[common.BuildStage]int)
 	for _, build := range b.builds {
 		if data[build.CurrentState] == nil {
-			data[build.CurrentState] = make(map[common.ShellScriptStage]int)
+			data[build.CurrentState] = make(map[common.BuildStage]int)
 		}
 		data[build.CurrentState][build.CurrentStage]++
 	}

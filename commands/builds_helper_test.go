@@ -13,8 +13,8 @@ func TestBuildsHelperCollect(t *testing.T) {
 	ch := make(chan prometheus.Metric, 50)
 	b := &buildsHelper{}
 	b.builds = append(b.builds, &common.Build{
-		CurrentState: common.RuntimePending,
-		CurrentStage: common.ShellPrepareScript,
+		CurrentState: common.BuildRunStatePending,
+		CurrentStage: common.BuildStagePrepare,
 	})
 	b.Collect(ch)
 	assert.Len(t, ch, 1)

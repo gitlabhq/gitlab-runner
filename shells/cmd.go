@@ -199,7 +199,7 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 	return
 }
 
-func (b *CmdShell) GenerateScript(scriptType common.ShellScriptStage, info common.ShellScriptInfo) (script string, err error) {
+func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &CmdWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
@@ -212,7 +212,7 @@ func (b *CmdShell) GenerateScript(scriptType common.ShellScriptStage, info commo
 	w.Line("setlocal enableDelayedExpansion")
 	w.Line("set nl=^\r\n\r\n")
 
-	if scriptType == common.ShellPrepareScript {
+	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo Running on %COMPUTERNAME% via " + batchEscape(info.Build.Hostname) + "...")
 		} else {
@@ -220,7 +220,7 @@ func (b *CmdShell) GenerateScript(scriptType common.ShellScriptStage, info commo
 		}
 	}
 
-	err = b.writeScript(w, scriptType, info)
+	err = b.writeScript(w, buildStage, info)
 	script = w.String()
 	return
 }
