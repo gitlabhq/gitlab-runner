@@ -26,6 +26,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
 
+var uptimeDesc = prometheus.NewDesc("ci_runner_uptime", "Uptime of Runner's process.", nil, nil)
+
 type RunCommand struct {
 	configOptionsWithMetricsServer
 	network common.Network
@@ -60,6 +62,21 @@ type RunCommand struct {
 	runFinished chan bool
 
 	currentWorkers int
+	startedAt      time.Time
+}
+
+// Describe implements prometheus.Collector.
+func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
+	ch <- uptimeDesc
+}
+
+// Collect implements prometheus.Collector.
+func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
+	ch <- prometheus.MustNewConstMetric(uptimeDesc, prometheus.CounterValue, mr.uptime().Seconds())
+}
+
+func (mr *RunCommand) uptime() time.Duration {
+	return time.Now().Sub(mr.startedAt)
 }
 
 func (mr *RunCommand) log() *log.Entry {
@@ -320,6 +337,7 @@ func (mr *RunCommand) serveMetrics() error {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
+	registry.MustRegister(mr)
 	// Metrics about the program's build version.
 	registry.MustRegister(common.AppVersion.NewMetricsCollector())
 	// Go-specific metrics about the process (GC stats, goroutines, etc.).
@@ -343,6 +361,8 @@ func (mr *RunCommand) serveMetrics() error {
 }
 
 func (mr *RunCommand) Run() {
+	mr.startedAt = time.Now()
+
 	if mr.metricsServerAddress() != "" {
 		if err := mr.serveMetrics(); err != nil {
 			log.Fatalln(err)
