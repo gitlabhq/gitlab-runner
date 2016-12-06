@@ -41,7 +41,7 @@ create a container on which your build will run.
 
 If you don't specify the namespace, Docker implies `library` which includes all
 [official images](https://hub.docker.com/u/library/). That's why you'll see
-many times the `library` part omitted in `.gitlab-ci.myl` and `config.toml`.
+many times the `library` part omitted in `.gitlab-ci.yml` and `config.toml`.
 For example you can define an image like `image: ruby:2.1`, which is a shortcut
 for `image: library/ruby:2.1`.
 
