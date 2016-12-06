@@ -229,6 +229,10 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, dependencies *depend
 }
 
 func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	return nil
+}
+
+func (b *AbstractShell) writeGitCloneScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 
 	build := info.Build
@@ -237,7 +241,6 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	strategy := info.Build.GetGitStrategy()
 
 	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
-	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	if info.PreCloneScript != "" && strategy != common.GitNone {
 		b.writeCommands(w, info.PreCloneScript)
@@ -255,12 +258,14 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	case common.GitNone:
 		w.Notice("Skipping Git repository setup")
 		w.MkDir(projectDir)
-		w.Cd(projectDir)
 
 	default:
 		return errors.New("unknown GIT_STRATEGY")
 	}
+	return nil
+}
 
+func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	// Parse options
 	var options shellOptions
 	err = info.Build.Options.Decode(&options)
@@ -268,8 +273,26 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 		return
 	}
 
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
+
 	// Try to restore from main cache, if not found cache for master
 	b.cacheExtractor(w, options.Cache, info)
+	return nil
+}
+
+func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	// Parse options
+	var options shellOptions
+	err = info.Build.Options.Decode(&options)
+	if err != nil {
+		return
+	}
+
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Process all artifacts
 	b.downloadAllArtifacts(w, options.Dependencies, info)
@@ -457,6 +480,15 @@ func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage,
 	switch buildStage {
 	case common.BuildStagePrepare:
 		return b.writePrepareScript(w, info)
+
+	case common.BuildStageGitClone:
+		return b.writeGitCloneScript(w, info)
+
+	case common.BuildStageRestoreCache:
+		return b.writeRestoreCacheScript(w, info)
+
+	case common.BuildStageDownloadArtifacts:
+		return b.writeDownloadArtifactsScript(w, info)
 
 	case common.BuildStageUserScript:
 		return b.writeBuildScript(w, info)

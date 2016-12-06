@@ -36,11 +36,14 @@ const (
 type BuildStage string
 
 const (
-	BuildStagePrepare         BuildStage = "prepare_script"
-	BuildStageUserScript                 = "build_script"
-	BuildStageAfterScript                = "after_script"
-	BuildStageArchiveCache               = "archive_cache"
-	BuildStageUploadArtifacts            = "upload_artifacts"
+	BuildStagePrepare           BuildStage = "prepare_script"
+	BuildStageGitClone                     = "git_clone"
+	BuildStageRestoreCache                 = "restore_cache"
+	BuildStageDownloadArtifacts            = "download_artifacts"
+	BuildStageUserScript                   = "build_script"
+	BuildStageAfterScript                  = "after_script"
+	BuildStageArchiveCache                 = "archive_cache"
+	BuildStageUploadArtifacts              = "upload_artifacts"
 )
 
 type Build struct {
@@ -180,8 +183,18 @@ func (b *Build) executeUploadArtifacts(state error, executor Executor, abort cha
 }
 
 func (b *Build) executeScript(executor Executor, abort chan interface{}) error {
-	// Execute pre script (git clone, cache restore, artifacts download)
+	// Prepare stage
 	err := b.executeStage(BuildStagePrepare, executor, abort)
+
+	if err == nil {
+		err = b.executeStage(BuildStageGitClone, executor, abort)
+	}
+	if err == nil {
+		err = b.executeStage(BuildStageDownloadArtifacts, executor, abort)
+	}
+	if err == nil {
+		err = b.executeStage(BuildStageRestoreCache, executor, abort)
+	}
 
 	if err == nil {
 		// Execute user build script (before_script + script)
