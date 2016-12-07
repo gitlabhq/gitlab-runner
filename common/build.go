@@ -37,7 +37,7 @@ type BuildStage string
 
 const (
 	BuildStagePrepare           BuildStage = "prepare_script"
-	BuildStageGitClone                     = "git_clone"
+	BuildStageGetSources                   = "get_sources"
 	BuildStageRestoreCache                 = "restore_cache"
 	BuildStageDownloadArtifacts            = "download_artifacts"
 	BuildStageUserScript                   = "build_script"
@@ -187,7 +187,7 @@ func (b *Build) executeScript(executor Executor, abort chan interface{}) error {
 	err := b.executeStage(BuildStagePrepare, executor, abort)
 
 	if err == nil {
-		err = b.executeStage(BuildStageGitClone, executor, abort)
+		err = b.executeStage(BuildStageGetSources, executor, abort)
 	}
 	if err == nil {
 		err = b.executeStage(BuildStageDownloadArtifacts, executor, abort)

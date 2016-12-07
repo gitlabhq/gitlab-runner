@@ -232,7 +232,7 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	return nil
 }
 
-func (b *AbstractShell) writeGitCloneScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 
 	build := info.Build
@@ -314,7 +314,7 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
 	}
 }
 
-func (b *AbstractShell) writeBuildScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
@@ -479,10 +479,10 @@ func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.Sh
 func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {
 	methods := map[common.BuildStage]func(ShellWriter, common.ShellScriptInfo) error{
 		common.BuildStagePrepare:           b.writePrepareScript,
-		common.BuildStageGitClone:          b.writeGitCloneScript,
+		common.BuildStageGetSources:        b.writeGetSourcesScript,
 		common.BuildStageRestoreCache:      b.writeRestoreCacheScript,
 		common.BuildStageDownloadArtifacts: b.writeDownloadArtifactsScript,
-		common.BuildStageUserScript:        b.writeBuildScript,
+		common.BuildStageUserScript:        b.writeUserScript,
 		common.BuildStageAfterScript:       b.writeAfterScript,
 		common.BuildStageArchiveCache:      b.writeArchiveCacheScript,
 		common.BuildStageUploadArtifacts:   b.writeUploadArtifactsScript,
