@@ -476,33 +476,22 @@ func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.Sh
 	return
 }
 
-func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) (err error) {
-	switch buildStage {
-	case common.BuildStagePrepare:
-		return b.writePrepareScript(w, info)
+func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {
+	methods := map[common.BuildStage]func(ShellWriter, common.ShellScriptInfo) error{
+		common.BuildStagePrepare:           b.writePrepareScript,
+		common.BuildStageGitClone:          b.writeGitCloneScript,
+		common.BuildStageRestoreCache:      b.writeRestoreCacheScript,
+		common.BuildStageDownloadArtifacts: b.writeDownloadArtifactsScript,
+		common.BuildStageUserScript:        b.writeBuildScript,
+		common.BuildStageAfterScript:       b.writeAfterScript,
+		common.BuildStageArchiveCache:      b.writeArchiveCacheScript,
+		common.BuildStageUploadArtifacts:   b.writeUploadArtifactsScript,
+	}
 
-	case common.BuildStageGitClone:
-		return b.writeGitCloneScript(w, info)
-
-	case common.BuildStageRestoreCache:
-		return b.writeRestoreCacheScript(w, info)
-
-	case common.BuildStageDownloadArtifacts:
-		return b.writeDownloadArtifactsScript(w, info)
-
-	case common.BuildStageUserScript:
-		return b.writeBuildScript(w, info)
-
-	case common.BuildStageAfterScript:
-		return b.writeAfterScript(w, info)
-
-	case common.BuildStageArchiveCache:
-		return b.writeArchiveCacheScript(w, info)
-
-	case common.BuildStageUploadArtifacts:
-		return b.writeUploadArtifactsScript(w, info)
-
-	default:
+	fn := methods[buildStage]
+	if fn == nil {
 		return errors.New("Not supported script type: " + string(buildStage))
 	}
+
+	return fn(w, info)
 }
