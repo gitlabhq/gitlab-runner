@@ -11,7 +11,6 @@ v 1.8.0
 - Fix broken documentation links !382
 - Bug Fix: use a regex to pull out the service and version in the splitServiceAndVersion method !376
 - Add FAQ entry about handling the service logon failure on Windows !385
-- Add a retry mechanism to prevent failed clones in builds !399
 - Fix "unit tests" random failures !370
 - Use correct constant for kubernetes ressource limits. !367
 - Unplug stalled endpoints !390
