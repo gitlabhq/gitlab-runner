@@ -74,9 +74,10 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	w.Cd(projectDir)
 	w.Command("git", "config", "fetch.recurseSubmodules", "false")
 
-	// Remove existing .git/index.lock file which can fail the fetch command
+	// Remove .git/{index,shallow}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
 	w.RmFile(".git/index.lock")
+	w.RmFile(".git/shallow.lock")
 
 	w.Command("git", "clean", "-ffdx")
 	w.Command("git", "reset", "--hard")
