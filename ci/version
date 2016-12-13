@@ -15,7 +15,7 @@ if [[ $(echo ${exact_tag} | grep -E "^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$") ]]; t
     exit 0
 fi
 
-last_tag=$(git describe --tags --abbrev=0 --match 'v[0-9].[0-9].[0-9]')
+last_tag=$(git log --first-parent --pretty="%d" | grep -E "tag: v[0-9]+\.[0-9]+\.[0-9]+(\)|,)" -o | grep "v[0-9]*\.[0-9]*\.[0-9]*" -o | head -n 1)
 commits=$(git log --oneline ${last_tag}..HEAD | wc -l | sed -r 's/[ ]+//')
 revision=$(git rev-parse --short HEAD || echo unknown)
 
