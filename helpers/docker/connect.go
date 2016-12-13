@@ -31,10 +31,13 @@ func httpTransportFix(host string, client Client) {
 	dockerClient.Dialer = dockerDialer
 	dockerClient.HTTPClient = &http.Client{
 		Transport: &http.Transport{
-			Proxy:               http.ProxyFromEnvironment,
-			Dial:                dockerDialer.Dial,
-			TLSHandshakeTimeout: 10 * time.Second,
-			TLSClientConfig:     dockerClient.TLSConfig,
+			Proxy:                 http.ProxyFromEnvironment,
+			Dial:                  dockerDialer.Dial,
+			TLSHandshakeTimeout:   10 * time.Second,
+			TLSClientConfig:       dockerClient.TLSConfig,
+			IdleConnTimeout:       5 * time.Minute,
+			ResponseHeaderTimeout: 30 * time.Second,
+			ExpectContinueTimeout: 30 * time.Second,
 		},
 	}
 }
