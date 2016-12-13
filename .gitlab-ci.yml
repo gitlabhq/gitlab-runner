@@ -91,6 +91,8 @@ integration windows:
   - Invoke-Expression $testCommand
   - if ( $LASTEXITCODE -ne 0 ) { exit $LASTEXITCODE }
   allow_failure: true
+  only:
+  - /.*/@gitlab-org/gitlab-ci-multi-runner
   tags:
   - integration
   - windows
