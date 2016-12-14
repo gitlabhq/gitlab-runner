@@ -1,9 +1,24 @@
 package common
 
 import (
-	"github.com/stretchr/testify/assert"
+	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func TestVariablesJSON(t *testing.T) {
+	var x BuildVariable
+	data := []byte(`{"key": "FOO", "value": "bar", "public": true, "internal": true, "file": true}`)
+
+	err := json.Unmarshal(data, &x)
+	assert.NoError(t, err)
+	assert.Equal(t, x.Key, "FOO")
+	assert.Equal(t, x.Value, "bar")
+	assert.Equal(t, x.Public, true)
+	assert.Equal(t, x.Internal, false) // cannot be set from the network
+	assert.Equal(t, x.File, true)
+}
 
 func TestVariableString(t *testing.T) {
 	v := BuildVariable{"key", "value", false, false, false}
