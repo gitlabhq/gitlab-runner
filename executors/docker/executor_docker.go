@@ -755,6 +755,10 @@ func (s *executor) waitForContainer(id string) error {
 	for {
 		container, err := s.client.InspectContainer(id)
 		if err != nil {
+			if _, ok := err.(*docker.NoSuchContainer); ok {
+				return err
+			}
+
 			if retries > 3 {
 				return err
 			}
