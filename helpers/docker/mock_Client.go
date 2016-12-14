@@ -84,6 +84,17 @@ func (m *MockClient) AttachToContainer(opts docker.AttachToContainerOptions) err
 
 	return r0
 }
+func (m *MockClient) AttachToContainerNonBlocking(opts docker.AttachToContainerOptions) (docker.CloseWaiter, error) {
+	ret := m.Called(opts)
+
+	var r0 docker.CloseWaiter
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).(docker.CloseWaiter)
+	}
+	r1 := ret.Error(0)
+
+	return r0, r1
+}
 func (m *MockClient) RemoveContainer(opts docker.RemoveContainerOptions) error {
 	ret := m.Called(opts)
 

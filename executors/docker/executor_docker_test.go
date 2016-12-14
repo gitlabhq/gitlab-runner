@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -8,13 +9,15 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fsouza/go-dockerclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 )
 
@@ -736,6 +739,55 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 
 	testGetDockerImage(t, e, remoteImage, addFindsLocalImageExpectations)
 	testGetDockerImage(t, e, gitlabImage, addFindsLocalImageExpectations)
+}
+
+func TestDockerWatchOn_1_12_4(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	e := executor{}
+	e.Build = &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
+	e.Build.Token = "abcd123456"
+	e.BuildShell = &common.ShellConfiguration{
+		Environment: []string{},
+	}
+
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{
+		PullPolicy: common.PullPolicyAlways,
+	}
+
+	e.BuildTrace = &common.Trace{Writer: os.Stdout}
+
+	err := e.connectDocker()
+	assert.NoError(t, err)
+
+	container, err := e.createContainer("build", "alpine", []string{"/bin/sh"})
+	assert.NoError(t, err)
+	assert.NotNil(t, container)
+
+	abort := make(chan interface{})
+	input := bytes.NewBufferString("echo 'script'")
+
+	finished := make(chan bool, 1)
+	go func() {
+		err = e.watchContainer(container, input, abort)
+		assert.NoError(t, err)
+		t.Log(err)
+		finished <- true
+	}()
+
+	select {
+	case <-finished:
+	case <-time.After(15 * time.Second):
+		t.Error("Container script not finished")
+	}
+
+	err = e.removeContainer(container.ID)
+	assert.NoError(t, err)
 }
 
 func init() {
