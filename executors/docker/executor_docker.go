@@ -303,15 +303,10 @@ func (s *executor) createCacheVolume(containerName, containerPath string) (*dock
 	}
 
 	s.Debugln("Waiting for cache container", container.ID, "...")
-	errorCode, err := s.client.WaitContainer(container.ID)
+	err = s.waitForContainer(container.ID)
 	if err != nil {
 		s.failures = append(s.failures, container)
 		return nil, err
-	}
-
-	if errorCode != 0 {
-		s.failures = append(s.failures, container)
-		return nil, fmt.Errorf("cache container for %s returned %d", containerPath, errorCode)
 	}
 
 	return container, nil
@@ -751,6 +746,42 @@ func (s *executor) killContainer(container *docker.Container, waitCh chan error)
 	}
 }
 
+func (s *executor) waitForContainer(id string) error {
+	s.Debugln("Waiting for container", id, "...")
+
+	retries := 0
+
+	// Use active wait
+	for {
+		container, err := s.client.InspectContainer(id)
+		if err != nil {
+			if retries > 3 {
+				return err
+			}
+
+			retries++
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// Reset retry timer
+		retries = 0
+
+		if container.State.Running {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		if container.State.ExitCode != 0 {
+			return &common.BuildError{
+				Inner: fmt.Errorf("exit code %d", container.State.ExitCode),
+			}
+		} else {
+			return nil
+		}
+	}
+}
+
 func (s *executor) watchContainer(container *docker.Container, input io.Reader, abort chan interface{}) (err error) {
 	options := docker.AttachToContainerOptions{
 		Container:    container.ID,
@@ -778,33 +809,25 @@ func (s *executor) watchContainer(container *docker.Container, input io.Reader, 
 		return
 	}
 
-	waitCh := make(chan error, 2)
+	attachCh := make(chan error, 1)
 	go func() {
 		s.Debugln("Waiting for attach to finish", container.ID, "...")
-		err = cw.Wait()
-		if err != nil {
-			waitCh <- err
-			return
-		}
+		attachCh <- cw.Wait()
 	}()
 
+	waitCh := make(chan error, 1)
 	go func() {
-		s.Debugln("Waiting for container", container.ID, "...")
-		exitCode, err := s.client.WaitContainer(container.ID)
-		if err == nil {
-			if exitCode != 0 {
-				err = &common.BuildError{
-					Inner: fmt.Errorf("exit code %d", exitCode),
-				}
-			}
-		}
-		waitCh <- err
+		waitCh <- s.waitForContainer(container.ID)
 	}()
 
 	select {
 	case <-abort:
 		s.killContainer(container, waitCh)
 		err = errors.New("Aborted")
+
+	case err = <-attachCh:
+		s.killContainer(container, waitCh)
+		s.Debugln("Container", container.ID, "finished with", err)
 
 	case err = <-waitCh:
 		s.Debugln("Container", container.ID, "finished with", err)
@@ -1064,11 +1087,7 @@ func (s *executor) runServiceHealthCheckContainer(container *docker.Container, t
 
 	waitResult := make(chan error, 1)
 	go func() {
-		statusCode, err := s.client.WaitContainer(waitContainer.ID)
-		if err == nil && statusCode != 0 {
-			err = fmt.Errorf("Status code: %d", statusCode)
-		}
-		waitResult <- err
+		waitResult <- s.waitForContainer(waitContainer.ID)
 	}()
 
 	// these are warnings and they don't make the build fail

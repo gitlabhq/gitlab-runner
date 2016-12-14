@@ -33,3 +33,10 @@ func (m *MockBuildTracePatch) Limit() int {
 func (m *MockBuildTracePatch) SetNewOffset(newOffset int) {
 	m.Called(newOffset)
 }
+func (m *MockBuildTracePatch) ValidateRange() bool {
+	ret := m.Called()
+
+	r0 := ret.Get(0).(bool)
+
+	return r0
+}
