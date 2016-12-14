@@ -752,7 +752,6 @@ func (s *executor) killContainer(container *docker.Container, waitCh chan error)
 }
 
 func (s *executor) watchContainer(container *docker.Container, input io.Reader, abort chan interface{}) (err error) {
-	waitCh := make(chan error, 1)
 	options := docker.AttachToContainerOptions{
 		Container:    container.ID,
 		InputStream:  input,
@@ -766,26 +765,30 @@ func (s *executor) watchContainer(container *docker.Container, input io.Reader, 
 		RawTerminal:  false,
 	}
 
+	s.Debugln("Attaching to container", container.ID, "...")
+	cw, err := s.client.AttachToContainerNonBlocking(options)
+	if err != nil {
+		return
+	}
+	defer cw.Close()
+
+	s.Debugln("Starting container", container.ID, "...")
+	err = s.client.StartContainer(container.ID, nil)
+	if err != nil {
+		return
+	}
+
+	waitCh := make(chan error, 2)
 	go func() {
-		s.Debugln("Attaching to container", container.ID, "...")
-		cw, err := s.client.AttachToContainerNonBlocking(options)
-		if err != nil {
-			return
-		}
-
-		s.Debugln("Starting container", container.ID, "...")
-		err = s.client.StartContainer(container.ID, nil)
-		if err != nil {
-			s.killContainer(container, waitCh)
-			return
-		}
-
+		s.Debugln("Waiting for attach to finish", container.ID, "...")
 		err = cw.Wait()
 		if err != nil {
 			waitCh <- err
 			return
 		}
+	}()
 
+	go func() {
 		s.Debugln("Waiting for container", container.ID, "...")
 		exitCode, err := s.client.WaitContainer(container.ID)
 		if err == nil {
