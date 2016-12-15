@@ -816,7 +816,10 @@ func (s *executor) watchContainer(container *docker.Container, input io.Reader, 
 	attachCh := make(chan error, 1)
 	go func() {
 		s.Debugln("Waiting for attach to finish", container.ID, "...")
-		attachCh <- cw.Wait()
+		err := cw.Wait()
+		if err != nil {
+			attachCh <- err
+		}
 	}()
 
 	waitCh := make(chan error, 1)
