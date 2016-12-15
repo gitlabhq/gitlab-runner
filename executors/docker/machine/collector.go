@@ -1,8 +1,6 @@
 package machine
 
 import (
-	"time"
-	
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -11,10 +9,9 @@ func (m *machineProvider) collectDetails() (data machinesData) {
 	defer m.lock.RUnlock()
 
 	for _, details := range m.details {
-		if time.Since(details.LastSeen) > machineDeadInterval {
-			continue
+		if !details.isDead() {
+			data.Add(details.State)
 		}
-		data.Add(details.State)
 	}
 	return
 }

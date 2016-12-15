@@ -20,7 +20,7 @@ func machineFilter(config *common.RunnerConfig) string {
 	return machineFormat(config.ShortDescription(), config.Machine.MachineName)
 }
 
-func matchesMachineFIlter(name, filter string) bool {
+func matchesMachineFilter(name, filter string) bool {
 	var query string
 	if n, _ := fmt.Sscanf(name, filter, &query); n == 1 {
 		return true
@@ -31,7 +31,7 @@ func matchesMachineFIlter(name, filter string) bool {
 func filterMachineList(machines []string, filter string) (newMachines []string) {
 	newMachines = make([]string, 0, len(machines))
 	for _, machine := range machines {
-		if matchesMachineFIlter(machine, filter) {
+		if matchesMachineFilter(machine, filter) {
 			newMachines = append(newMachines, machine)
 		}
 	}

@@ -25,6 +25,11 @@ func (m *machineDetails) isUsed() bool {
 	return m.State != machineStateIdle
 }
 
+func (m *machineDetails) isDead() bool {
+	return m.State == machineStateIdle &&
+		time.Since(m.LastSeen) > machineDeadInterval
+}
+
 func (m *machineDetails) canBeUsed() bool {
 	return m.State == machineStateAcquired
 }
