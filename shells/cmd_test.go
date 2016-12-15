@@ -12,6 +12,11 @@ type testCase struct {
 	out string
 }
 
+type outputColor struct {
+	fn    func(string, ...interface{})
+	color string
+}
+
 func TestCMD_EchoShellEscapes(t *testing.T) {
 	for i, tc := range []testCase{
 		{`abcdefghijklmnopqrstuvwxyz`, `abcdefghijklmnopqrstuvwxyz`},
@@ -21,18 +26,17 @@ func TestCMD_EchoShellEscapes(t *testing.T) {
 		{`( )`, `^( ^)`},
 	} {
 		writer := &CmdWriter{}
-		for j, fn := range []func(string, ...interface{}){
-			writer.Notice,
-			writer.Warning,
-			writer.Error,
-			writer.Print,
+		for j, functionsToTest := range []outputColor{
+			{writer.Notice, "\x1b[32;1m"},
+			{writer.Warning, "\x1b[0;33m"},
+			{writer.Error, "\x1b[31;1m"},
+			{writer.Print, "\x1b[0;m"},
 		} {
-			fn(tc.in)
-			expected := fmt.Sprintf("echo %s\r\n", tc.out)
+			functionsToTest.fn(tc.in)
+			expected := fmt.Sprintf("echo %s%s\x1b[0;m\r\n", functionsToTest.color, tc.out)
 			assert.Equal(t, expected, writer.String(), "case %d : %d", i, j)
 			writer.Reset()
 		}
-
 	}
 }
 
