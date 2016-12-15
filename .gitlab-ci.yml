@@ -15,7 +15,7 @@ before_script:
   - source ci/prepare
   - wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
   - chmod +x /usr/bin/docker
-  services: ["docker:dind"]
+  services: ["docker:1.12.4-dind"]
   variables:
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375

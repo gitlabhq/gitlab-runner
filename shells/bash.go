@@ -177,6 +177,7 @@ func (b *BashWriter) Finish(trace bool) string {
 	io.WriteString(w, "set -eo pipefail\n")
 	io.WriteString(w, "set +o noclobber\n")
 	io.WriteString(w, ": | eval "+helpers.ShellEscape(b.String())+"\n")
+	io.WriteString(w, "exit 0\n")
 	w.Flush()
 	return buffer.String()
 }
