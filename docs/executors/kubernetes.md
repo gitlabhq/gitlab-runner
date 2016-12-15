@@ -39,10 +39,13 @@ GitLab Runner binary installed for supporting artifacts and caching.
 
 The following options are provided, which allow you to connect to the Kubernetes API:
 
-- `host`: Optional Kubernetes master host URL (auto-discovery attempted if not specified)
-- `cert_file`: Optional Kubernetes master auth certificate
-- `key_file`: Optional Kubernetes master auth private key
-- `ca_file`: Optional Kubernetes master auth ca certificate
+- `host`: Optional Kubernetes apiserver host URL (auto-discovery attempted if not specified)
+- `cert_file`: Optional Kubernetes apiserver user auth certificate
+- `key_file`: Optional Kubernetes apiserver user auth private key
+- `ca_file`: Optional Kubernetes apiserver ca certificate
+
+The user account provided must have permission to create, list and attach to pods in
+the specified namespace in order to function.
 
 If you are running the GitLab CI Runner within the Kubernetes cluster you can omit
 all of the above fields to have the Runner auto-discovery the Kubernetes API. This
