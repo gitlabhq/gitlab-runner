@@ -2,12 +2,20 @@ package machine
 
 import (
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"testing"
 )
 
 func TestMachineNewName(t *testing.T) {
-	a := newMachineName("machine-template-%s")
-	b := newMachineName("machine-template-%s")
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName: "test-machine-%s",
+			},
+		},
+	}
+	a := newMachineName(config)
+	b := newMachineName(config)
 	assert.NotEqual(t, a, b)
 }
 

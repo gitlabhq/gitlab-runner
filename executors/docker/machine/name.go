@@ -38,9 +38,9 @@ func filterMachineList(machines []string, filter string) (newMachines []string) 
 	return
 }
 
-func newMachineName(machineFilter string) string {
+func newMachineName(config *common.RunnerConfig) string {
 	r := make([]byte, 4)
 	rand.Read(r)
 	t := time.Now().Unix()
-	return fmt.Sprintf(machineFilter, fmt.Sprintf("%d-%x", t, r))
+	return fmt.Sprintf(machineFilter(config), fmt.Sprintf("%d-%x", t, r))
 }

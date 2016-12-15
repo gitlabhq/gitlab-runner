@@ -139,7 +139,7 @@ func (m *testMachine) Exist(name string) bool {
 	return false
 }
 
-func (m *testMachine) List(nodeFilter string) (machines []string, err error) {
+func (m *testMachine) List() (machines []string, err error) {
 	return m.machines, nil
 }
 
@@ -430,8 +430,8 @@ func TestMachineMaxBuildsForExistingMachines(t *testing.T) {
 }
 
 func TestMachineMaxBuilds(t *testing.T) {
-	p, _ := testMachineProvider("machine1")
 	config := createMachineConfig(1, 5)
+	p, _ := testMachineProvider(newMachineName(config))
 	config.Machine.MaxBuilds = 2 // by default we set it to 1
 	d, err := p.Acquire(config)
 	assert.NoError(t, err)

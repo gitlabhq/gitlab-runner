@@ -43,6 +43,7 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 			Name:      name,
 			Created:   time.Now(),
 			Used:      time.Now(),
+			LastSeen:  time.Now(),
 			UsedCount: 1, // any machine that we find we mark as already used
 			State:     machineStateIdle,
 		}
@@ -60,7 +61,7 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 }
 
 func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (details *machineDetails, errCh chan error) {
-	name := newMachineName(machineFilter(config))
+	name := newMachineName(config)
 	details = m.machineDetails(name, true)
 	details.State = machineStateCreating
 	details.UsedCount = 0

@@ -31,12 +31,14 @@ func TestMachineProviderDescribeAndCollect(t *testing.T) {
 }
 
 func TestMachineProviderDeadInterval(t *testing.T) {
-	provider := &machineProvider{}
+	provider := &machineProvider{
+		details: make(machinesDetails),
+	}
 	assert.Equal(t, 0, provider.collectDetails().Idle)
 
 	details := provider.machineDetails("test", false)
 	assert.Equal(t, 1, provider.collectDetails().Idle)
 
-	details.LastSeen = time.Now().Sub(machineDeadInterval)
+	details.LastSeen = time.Now().Add(-machineDeadInterval)
 	assert.Equal(t, 0, provider.collectDetails().Idle)
 }
