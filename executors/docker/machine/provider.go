@@ -65,6 +65,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	details.State = machineStateCreating
 	details.UsedCount = 0
 	details.RetryCount = 0
+	details.LastSeen = time.Now()
 	errCh = make(chan error, 1)
 
 	// Create machine asynchronously
@@ -241,6 +242,8 @@ func (m *machineProvider) updateMachines(machines []string, config *common.Runne
 
 	for _, name := range machines {
 		details := m.machineDetails(name, false)
+		details.LastSeen = time.Now()
+
 		err := m.updateMachine(config, &data, details)
 		if err == nil {
 			validMachines = append(validMachines, name)
@@ -269,9 +272,14 @@ func (m *machineProvider) createMachines(config *common.RunnerConfig, data *mach
 	}
 }
 
-func (m *machineProvider) loadMachines(config *common.RunnerConfig) ([]string, error) {
-	// Find a new machine
-	return m.machine.List(machineFilter(config))
+func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []string, err error) {
+	machines, err = m.machine.List()
+	if err != nil {
+		return nil, err
+	}
+
+	machines = filterMachineList(machines, machineFilter(config))
+	return
 }
 
 func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.ExecutorData, err error) {
@@ -280,21 +288,20 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 		return
 	}
 
+	// Lock updating machines, because two Acquires can be run at the same time
+	m.acquireLock.Lock()
+	defer m.acquireLock.Unlock()
+
 	machines, err := m.loadMachines(config)
 	if err != nil {
 		return
 	}
-
-	// Lock updating machines, because two Acquires can be run at the same time
-	m.acquireLock.Lock()
 
 	// Update a list of currently configured machines
 	machinesData, validMachines := m.updateMachines(machines, config)
 
 	// Pre-create machines
 	m.createMachines(config, &machinesData)
-
-	m.acquireLock.Unlock()
 
 	logrus.WithFields(machinesData.Fields()).
 		WithField("runner", config.ShortDescription()).

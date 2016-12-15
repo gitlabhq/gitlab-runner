@@ -18,6 +18,7 @@ type machineDetails struct {
 	State      machineState
 	Reason     string
 	RetryCount int
+	LastSeen   time.Time
 }
 
 func (m *machineDetails) isUsed() bool {
