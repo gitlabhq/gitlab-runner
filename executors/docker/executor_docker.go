@@ -780,9 +780,9 @@ func (s *executor) waitForContainer(id string) error {
 			return &common.BuildError{
 				Inner: fmt.Errorf("exit code %d", container.State.ExitCode),
 			}
-		} else {
-			return nil
 		}
+
+		return nil
 	}
 }
 
