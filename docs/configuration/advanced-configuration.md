@@ -430,6 +430,8 @@ in the [runners autoscale documentation](autoscale.md#distributed-runners-cachin
 | `BucketName`     | string           | Name of the bucket where cache will be stored. |
 | `BucketLocation` | string           | Name of S3 region. |
 | `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Is set to `false` by default. |
+| `Path`           | string           | Name of the path to prepend to the cache URL. |
+| `Shared          | boolean          | Enables cache sharing between runners, `false` by default. |
 
 Example:
 
@@ -442,6 +444,8 @@ Example:
   BucketName = "runners"
   BucketLocation = "eu-west-1"
   Insecure = false
+  Path = "path/to/prefix"
+  Shared = false
 ```
 
 > **Note:** For Amazon's S3 service the `ServerAddress` should always be `s3.amazonaws.com`. Minio S3 client will

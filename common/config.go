@@ -142,6 +142,8 @@ type CacheConfig struct {
 	BucketName     string `toml:"BucketName,omitempty" long:"s3-bucket-name" env:"S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
 	BucketLocation string `toml:"BucketLocation,omitempty" long:"s3-bucket-location" env:"S3_BUCKET_LOCATION" description:"Name of S3 region"`
 	Insecure       bool   `toml:"Insecure,omitempty" long:"s3-insecure" env:"S3_CACHE_INSECURE" description:"Use insecure mode (without https)"`
+	Path           string `toml:"Path,omitempty" long:"s3-cache-path" env:"S3_CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
+	Shared         bool   `toml:"Shared,omitempty" long:"cache-shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
 }
 
 type RunnerSettings struct {
