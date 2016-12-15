@@ -187,13 +187,13 @@ func (b *Build) executeScript(executor Executor, abort chan interface{}) error {
 	err := b.executeStage(BuildStagePrepare, executor, abort)
 
 	if err == nil {
-		err = b.executeStage(BuildStageGetSources, executor, abort)
+		err = b.attemptExecuteStage(BuildStageGetSources, executor, abort, b.GetGetSourcesAttempts())
 	}
 	if err == nil {
-		err = b.executeStage(BuildStageDownloadArtifacts, executor, abort)
+		err = b.attemptExecuteStage(BuildStageDownloadArtifacts, executor, abort, b.GetDownloadArtifactsAttempts())
 	}
 	if err == nil {
-		err = b.executeStage(BuildStageRestoreCache, executor, abort)
+		err = b.attemptExecuteStage(BuildStageRestoreCache, executor, abort, b.GetRestoreCacheAttempts())
 	}
 
 	if err == nil {
@@ -215,6 +215,18 @@ func (b *Build) executeScript(executor Executor, abort chan interface{}) error {
 	}
 	err = b.executeUploadArtifacts(err, executor, abort)
 	return err
+}
+
+func (b *Build) attemptExecuteStage(buildStage BuildStage, executor Executor, abort chan interface{}, attempts int) (err error) {
+	if attempts < 1 || attempts > 10 {
+		return fmt.Errorf("Number of attempts out of the range [1, 10] for stage: %s", buildStage)
+	}
+	for attempt := 0; attempt < attempts; attempt++ {
+		if err = b.executeStage(buildStage, executor, abort); err == nil {
+			return
+		}
+	}
+	return
 }
 
 func (b *Build) run(executor Executor) (err error) {
@@ -401,4 +413,28 @@ func (b *Build) IsDebugTraceEnabled() bool {
 
 func (b *Build) GetDockerAuthConfig() string {
 	return b.GetAllVariables().Get("DOCKER_AUTH_CONFIG")
+}
+
+func (b *Build) GetGetSourcesAttempts() int {
+	retries, err := strconv.Atoi(b.GetAllVariables().Get("GET_SOURCES_ATTEMPTS"))
+	if err != nil {
+		return DefaultGetSourcesAttempts
+	}
+	return retries
+}
+
+func (b *Build) GetDownloadArtifactsAttempts() int {
+	retries, err := strconv.Atoi(b.GetAllVariables().Get("ARTIFACT_DOWNLOAD_ATTEMPTS"))
+	if err != nil {
+		return DefaultArtifactDownloadAttempts
+	}
+	return retries
+}
+
+func (b *Build) GetRestoreCacheAttempts() int {
+	retries, err := strconv.Atoi(b.GetAllVariables().Get("RESTORE_CACHE_ATTEMPTS"))
+	if err != nil {
+		return DefaultRestoreCacheAttempts
+	}
+	return retries
 }
