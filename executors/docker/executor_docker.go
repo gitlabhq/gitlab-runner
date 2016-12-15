@@ -709,6 +709,7 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 			Links:         append(s.Config.Docker.Links, s.links...),
 			Devices:       s.devices,
 			Binds:         s.binds,
+			VolumeDriver:  s.Config.Docker.VolumeDriver,
 			VolumesFrom:   append(s.Config.Docker.VolumesFrom, s.volumesFrom...),
 			LogConfig: docker.LogConfig{
 				Type: "json-file",
