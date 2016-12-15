@@ -2,6 +2,7 @@ package machine
 
 import (
 	"testing"
+	"time"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 
@@ -27,4 +28,17 @@ func TestMachineProviderDescribeAndCollect(t *testing.T) {
 	metricCh := make(chan prometheus.Metric, 50)
 	provider.Collect(metricCh)
 	assert.Len(t, metricCh, 8)
+}
+
+func TestMachineProviderDeadInterval(t *testing.T) {
+	provider := &machineProvider{
+		details: make(machinesDetails),
+	}
+	assert.Equal(t, 0, provider.collectDetails().Idle)
+
+	details := provider.machineDetails("test", false)
+	assert.Equal(t, 1, provider.collectDetails().Idle)
+
+	details.LastSeen = time.Now().Add(-machineDeadInterval)
+	assert.Equal(t, 0, provider.collectDetails().Idle)
 }

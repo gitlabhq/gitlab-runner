@@ -18,10 +18,16 @@ type machineDetails struct {
 	State      machineState
 	Reason     string
 	RetryCount int
+	LastSeen   time.Time
 }
 
 func (m *machineDetails) isUsed() bool {
 	return m.State != machineStateIdle
+}
+
+func (m *machineDetails) isDead() bool {
+	return m.State == machineStateIdle &&
+		time.Since(m.LastSeen) > machineDeadInterval
 }
 
 func (m *machineDetails) canBeUsed() bool {

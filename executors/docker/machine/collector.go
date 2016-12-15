@@ -9,7 +9,9 @@ func (m *machineProvider) collectDetails() (data machinesData) {
 	defer m.lock.RUnlock()
 
 	for _, details := range m.details {
-		data.Add(details.State)
+		if !details.isDead() {
+			data.Add(details.State)
+		}
 	}
 	return
 }

@@ -1,7 +1,7 @@
 {
 	"ImportPath": "gitlab.com/gitlab-org/gitlab-ci-multi-runner",
 	"GoVersion": "go1.7",
-	"GodepVersion": "v74",
+	"GodepVersion": "v75",
 	"Packages": [
 		"./..."
 	],
@@ -122,6 +122,26 @@
 			"ImportPath": "github.com/docker/go-units",
 			"Comment": "v0.3.1-2-geb879ae",
 			"Rev": "eb879ae3e2b84e2a142af415b679ddeda47ec71c"
+		},
+		{
+			"ImportPath": "github.com/docker/machine/commands/mcndirs",
+			"Comment": "docs-v0.8.2-2016-09-26-87-g9d118748",
+			"Rev": "9d118748e74463dfd0ba9c86a5e0220b3af86d7e"
+		},
+		{
+			"ImportPath": "github.com/docker/machine/libmachine/log",
+			"Comment": "docs-v0.8.2-2016-09-26-87-g9d118748",
+			"Rev": "9d118748e74463dfd0ba9c86a5e0220b3af86d7e"
+		},
+		{
+			"ImportPath": "github.com/docker/machine/libmachine/mcnutils",
+			"Comment": "docs-v0.8.2-2016-09-26-87-g9d118748",
+			"Rev": "9d118748e74463dfd0ba9c86a5e0220b3af86d7e"
+		},
+		{
+			"ImportPath": "github.com/docker/machine/version",
+			"Comment": "docs-v0.8.2-2016-09-26-87-g9d118748",
+			"Rev": "9d118748e74463dfd0ba9c86a5e0220b3af86d7e"
 		},
 		{
 			"ImportPath": "github.com/docker/spdystream",
