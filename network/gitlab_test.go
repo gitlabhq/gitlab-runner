@@ -71,6 +71,7 @@ func testGetBuildHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	case "valid":
 		res["id"] = 10
 	case "no-builds":
+		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
 		w.WriteHeader(404)
 		return
 	case "invalid":
@@ -132,9 +133,11 @@ func TestGetBuild(t *testing.T) {
 	}
 	assert.True(t, ok)
 
+	assert.Empty(t, c.getLastUpdate(noBuildsToken.RunnerCredentials), "Last-Update should not be set")
 	res, ok = c.GetBuild(noBuildsToken)
 	assert.Nil(t, res)
 	assert.True(t, ok, "If no builds, runner is healthy")
+	assert.Equal(t, c.getLastUpdate(noBuildsToken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
 
 	res, ok = c.GetBuild(invalidToken)
 	assert.Nil(t, res)
