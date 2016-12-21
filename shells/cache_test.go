@@ -61,7 +61,7 @@ func TestGetCacheObjectName(t *testing.T) {
 	require.Equal(t, "runner/longtoke/project/10/key", url)
 }
 
-func TestGetCacheObjectNameWhenPathIsSetThenUrlContainstIt(t *testing.T) {
+func TestGetCacheObjectNameWhenPathIsSetThenUrlContainsIt(t *testing.T) {
 	s3Cache := defaultS3CacheFactory()
 	s3Cache.Path = "whatever"
 	url := getCacheObjectName(s3CacheBuild, s3Cache, "key")
