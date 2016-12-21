@@ -34,6 +34,17 @@ type client struct {
 	caData     []byte
 	skipVerify bool
 	updateTime time.Time
+	lastUpdate string
+}
+
+func (n *client) getLastUpdate() string {
+	return n.lastUpdate
+}
+
+func (n *client) setLastUpdate(headers http.Header) {
+	if lu := headers.Get("X-GitLab-Last-Update"); len(lu) > 0 {
+		n.lastUpdate = lu
+	}
 }
 
 func (n *client) ensureTLSConfig() {
@@ -190,6 +201,8 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 			}
 		}
 	}
+
+	n.setLastUpdate(res.Header)
 
 	return res.StatusCode, res.Status, n.getCAChain(res.TLS)
 }
