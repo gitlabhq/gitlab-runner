@@ -176,6 +176,7 @@ func (s *executor) setupBuildPod() error {
 				},
 			},
 			RestartPolicy: api.RestartPolicyNever,
+			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
 			}, services...),

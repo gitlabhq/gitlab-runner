@@ -1,8 +1,11 @@
 package kubernetes
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -272,6 +275,89 @@ func TestPrepare(t *testing.T) {
 		// we'll need to mock _something_
 		e.kubeClient = nil
 		assert.Equal(t, test.Expected, e)
+	}
+}
+
+func TestKubernetesNodeSelector(t *testing.T) {
+	version := testapi.Default.GroupVersion().Version
+	codec := testapi.Default.Codec()
+
+	tests := []struct {
+		RunnerConfig common.RunnerConfig
+	}{
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						NodeSelector: map[string]string{
+							"a-selector":       "first",
+							"another-selector": "second",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		verifyFunc := func(sel map[string]string) func(req *http.Request) (*http.Response, error) {
+			return func(req *http.Request) (resp *http.Response, err error) {
+				podBytes, err := ioutil.ReadAll(req.Body)
+
+				if err != nil {
+					t.Errorf("failed to read request body: %s", err.Error())
+					return
+				}
+
+				p := new(api.Pod)
+
+				err = json.Unmarshal(podBytes, p)
+
+				if err != nil {
+					t.Errorf("error decoding pod: %s", err.Error())
+					return
+				}
+
+				assert.Equal(t, sel, p.Spec.NodeSelector)
+
+				resp = &http.Response{StatusCode: 200, Body: FakeReadCloser{
+					Reader: bytes.NewBuffer(podBytes),
+				}}
+				resp.Header = make(http.Header)
+				resp.Header.Add("Content-Type", "application/json")
+
+				return
+			}
+		}
+
+		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
+		fakeClient := fake.RESTClient{
+			Codec:  codec,
+			Client: fake.CreateHTTPClient(verifyFunc(test.RunnerConfig.Kubernetes.NodeSelector)),
+		}
+		c.Client = fakeClient.Client
+
+		ex := executor{
+			kubeClient: c,
+			options:    &kubernetesOptions{},
+			AbstractExecutor: executors.AbstractExecutor{
+				Config:     test.RunnerConfig,
+				BuildShell: &common.ShellConfiguration{},
+				Build: &common.Build{
+					GetBuildResponse: common.GetBuildResponse{
+						Variables: []common.BuildVariable{},
+					},
+					Runner: &common.RunnerConfig{},
+				},
+			},
+		}
+
+		err := ex.setupBuildPod()
+
+		if err != nil {
+			t.Errorf("error setting up build pod: %s", err.Error())
+		}
 	}
 }
 

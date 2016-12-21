@@ -78,6 +78,7 @@ There are a couple of available executors currently.
 | `virtualbox`  | run build using VirtualBox VM, but connect to it with SSH - this requires the presence of `[runners.virtualbox]` and `[runners.ssh]` |
 | `docker+machine` | like `docker`, but uses [auto-scaled docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
 | `docker-ssh+machine` | like `docker-ssh`, but uses [auto-scaled docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
+| `kubernetes` | run build using Kubernetes Pods - this requires the presence of `[runners.kubernetes]` |
 
 ## The SHELLS
 
@@ -447,6 +448,48 @@ Example:
 
 > **Note:** For Amazon's S3 service the `ServerAddress` should always be `s3.amazonaws.com`. Minio S3 client will
 > get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
+
+## The [runners.kubernetes] section
+
+> **Note:**
+> Added in GitLab Runner v1.6.0
+
+This defines the Kubernetes parameters.
+
+| Parameter        | Type    | Description |
+|------------------|---------|-------------|
+| `host`           | string  | Optional Kubernetes master host URL (auto-discovery attempted if not specified) |
+| `cert_file`      | string  | Optional Kubernetes master auth certificate |
+| `key_file`       | string  | Optional Kubernetes master auth private key |
+| `ca_file`        | string  | Optional Kubernetes master auth ca certificate |
+| `image`          | string  | Default docker image to use for builds when none is specified |
+| `namespace`      | string  | Namespace to run Kubernetes jobs in |
+| `privileged`     | boolean | Run all containers with the privileged flag enabled |
+| `cpus`           | string  | The CPU allocation given to build containers |
+| `memory`         | string  | The amount of memory allocated to build containers |
+| `service_cpus`   | string  | The CPU allocation given to build service containers |
+| `service_memory` | string  | The amount of memory allocated to build service containers |
+| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs |
+
+
+Example:
+
+```bash
+[runners.kubernetes]
+	host = "https://45.67.34.123:4892"
+	cert_file = "/etc/ssl/kubernetes/api.crt"
+	key_file = "/etc/ssl/kubernetes/api.key"
+	ca_file = "/etc/ssl/kubernetes/ca.crt"
+	namespace = "gitlab"
+	image = "golang:1.7"
+	privileged = true
+	cpus = "750m"
+	memory = "250m"
+	service_cpus = "1000m"
+	service_memory = "450m"
+	[runners.kubernetes.node_selector]
+		gitlab = "true"
+```
 
 ## Note
 
