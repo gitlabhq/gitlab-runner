@@ -5,18 +5,32 @@ set -eo pipefail
 IS_LATEST=${IS_LATEST:-}
 ref_tag=${CI_BUILD_REF_NAME:-master}
 
+REVISION=${REVISION:-}
+if [[ -z "${REVISION}" ]]; then
+  REVISION=$(git rev-parse --short HEAD || echo "unknown")
+fi
+
 if [[ "${ref_tag}" = "master" ]]; then
     ref_tag=bleeding
 fi
 
+_docker() {
+    docker ${@}
+}
+
 build() {
     echo -e "\033[1mBuilding image: \033[32m${1}\033[0m"
-    docker build -t "${1}" "${2}"
+    _docker build -t "${1}" "${2}"
+}
+
+import() {
+    echo -e "\033[1mImporting image: \033[32m${2}\033[0m"
+    _docker import "${1}" "${2}"
 }
 
 tag() {
     echo -e "\033[1mTagging image: \033[32m${2}\033[0m"
-    docker tag "${1}" "${2}"
+    _docker tag "${1}" "${2}"
 }
 
 tag_latest() {
@@ -28,7 +42,8 @@ tag_latest() {
 }
 
 push() {
-    docker push "${1}"
+    echo -e "\033[1mPushing image: \033[32m${1}\033[0m"
+    _docker push "${1}"
 }
 
 push_latest() {
@@ -39,12 +54,23 @@ push_latest() {
     push "${@}"
 }
 
+release_docker_helper_images() {
+    helper_image_x86_64="gitlab/gitlab-runner-helper:x86_64-${REVISION}"
+    helper_image_arm="gitlab/gitlab-runner-helper:arm-${REVISION}"
+
+    import out/docker/prebuilt-x86_64.tar.xz ${helper_image_x86_64}
+    push ${helper_image_x86_64}
+
+    import out/docker/prebuilt-arm.tar.xz ${helper_image_arm}
+    push ${helper_image_arm}
+}
+
 login() {
-    docker login --username "${1}" --password "${2}" "${3}"
+    _docker login --username "${1}" --password "${2}" "${3}"
 }
 
 logout() {
-    docker logout "${1}"
+    _docker logout "${1}"
 }
 
 cp out/deb/gitlab-ci-multi-runner_amd64.deb dockerfiles/ubuntu/
@@ -93,6 +119,8 @@ if [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
     push_latest gitlab/gitlab-runner:ubuntu
     push_latest gitlab/gitlab-runner:latest
     push_latest gitlab/gitlab-runner:alpine
+
+    release_docker_helper_images
 
     logout
 fi

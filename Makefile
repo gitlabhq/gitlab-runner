@@ -337,28 +337,6 @@ else
 	@exit 1
 endif
 
-dockerhub: dockerhub-x86_64 dockerhub-arm
-
-dockerhub-x86_64: out/docker/prebuilt-x86_64.tar.xz
-ifneq (, $(shell docker info))
-	docker login -e "$DOCKER_EMAIL" -u "$DOCKER_USER" -p "$DOCKER_PASS"
-	docker push gitlab/gitlab-runner-helper:x86_64-$(REVISION)
-else
-	$(warning =============================================)
-	$(warning WARNING: skipping pushing x86_64 helper image to Dockerhub)
-	$(warning WARNING: to build and push images, install Docker Engine)
-fi
-
-dockerhub-arm: out/docker/prebuilt-arm.tar.xz
-ifneq (, $(shell docker info))
-	docker login -e "$DOCKER_EMAIL" -u "$DOCKER_USER" -p "$DOCKER_PASS"
-	docker push gitlab/gitlab-runner-helper:arm-$(REVISION)
-else
-	$(warning =============================================)
-	$(warning WARNING: skipping pushing arm helper image to Dockerhub)
-	$(warning WARNING: to build and push images, install Docker Engine)
-fi
-
 s3-upload:
 	export ARTIFACTS_DEST=artifacts; curl -sL https://raw.githubusercontent.com/travis-ci/artifacts/master/install | bash
 	./artifacts upload \
