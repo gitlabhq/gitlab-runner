@@ -189,8 +189,8 @@ more in [Distributed runners caching][caching].
 
     ```bash
     for i in `seq 1 180`; do # 1800 seconds = 30 minutes
-        gitlab-runner status || break;
-        sleep 10;
+        gitlab-runner status || break
+        sleep 10
     done
     ```
 
@@ -212,8 +212,8 @@ more in [Distributed runners caching][caching].
 
     ```bash
     for i in `seq 1 180`; do # 1800 seconds = 30 minutes
-        gitlab-runner status || break;
-        sleep 10;
+        gitlab-runner status || break
+        sleep 10
     done
     ```
 
