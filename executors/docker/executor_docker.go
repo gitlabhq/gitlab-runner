@@ -202,7 +202,7 @@ func (s *executor) getPrebuiltImage() (image *docker.Image, err error) {
 		return nil, errors.New("unsupported docker architecture")
 	}
 
-	imageName := prebuiltImageName + "-" + architecture + ":" + common.REVISION
+	imageName := prebuiltImageName + ":" + architecture + "-" + common.REVISION
 	s.Debugln("Looking for prebuilt image", imageName, "...")
 	image, err = s.client.InspectImage(imageName)
 	if err == nil {
@@ -216,8 +216,8 @@ func (s *executor) getPrebuiltImage() (image *docker.Image, err error) {
 
 	s.Debugln("Loading prebuilt image...")
 	err = s.client.ImportImage(docker.ImportImageOptions{
-		Repository:  prebuiltImageName + "-" + architecture,
-		Tag:         common.REVISION,
+		Repository:  prebuiltImageName,
+		Tag:         architecture + "-" + common.REVISION,
 		Source:      "-",
 		InputStream: bytes.NewBuffer(data),
 	})
