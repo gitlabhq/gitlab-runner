@@ -157,7 +157,6 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 	if err == nil {
 		// Don't pull image that is passed by ID
 		if image.ID == imageName {
-			s.Println("Using locally found image version with exactly the same ID")
 			return image, nil
 		}
 
