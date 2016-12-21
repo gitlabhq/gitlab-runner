@@ -66,7 +66,7 @@ The following keywords help to define the behaviour of the Runner within kuberne
 - `service_cpus`: The CPU allocation given to build service containers
 - `service_memory`: The amount of memory allocated to build service containers
 - `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
-- `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to k8s nodes matching all the `key=value` pairs
+- `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
 
 ## Define keywords in the config toml
 
