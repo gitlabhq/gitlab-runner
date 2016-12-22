@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultHelperImage = "jaymedh/gitlab-ci-runner-prebuild-x86_64:latest"
+	defaultHelperImage = "gitlab/gitlab-runner-helper:x86_64-latest"
 )
 
 var (
