@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultHelperImage = "gitlab/gitlab-runner-helper:x86_64-latest"
+	defaultHelperImage = "gitlab/gitlab-runner-helper"
 )
 
 var (
@@ -268,7 +268,8 @@ func (s *executor) checkDefaults() error {
 	}
 
 	if len(s.Config.Kubernetes.HelperImage) == 0 {
-		s.Config.Kubernetes.HelperImage = defaultHelperImage
+		// TODO: Better mechanism for using arm helper image
+		s.Config.Kubernetes.HelperImage = fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, common.REVISION)
 	}
 
 	return nil
