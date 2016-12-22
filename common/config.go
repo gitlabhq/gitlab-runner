@@ -198,7 +198,12 @@ func (c *KubernetesConfig) GetHelperImage() string {
 		return c.HelperImage
 	}
 
-	return fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, REVISION)
+	rev := REVISION
+	if rev == "HEAD" {
+		rev = "latest"
+	}
+
+	return fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, rev)
 }
 
 func (c *DockerMachine) GetIdleCount() int {
