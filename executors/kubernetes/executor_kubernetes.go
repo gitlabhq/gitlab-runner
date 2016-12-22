@@ -50,15 +50,15 @@ type executor struct {
 func (s *executor) setupLimits() error {
 	var err error
 	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPUs, s.Config.Kubernetes.ServiceMemory); err != nil {
-		return err
+		return fmt.Errorf("invalid service limits specified: %s", err.Error())
 	}
 
 	if s.buildLimits, err = limits(s.Config.Kubernetes.CPUs, s.Config.Kubernetes.Memory); err != nil {
-		return err
+		return fmt.Errorf("invalid build limits specified: %s", err.Error())
 	}
 
 	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
-		return err
+		return fmt.Errorf("invalid helper limits specified: %s", err.Error())
 	}
 	return nil
 }
