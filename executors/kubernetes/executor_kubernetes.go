@@ -179,7 +179,6 @@ func (s *executor) setupBuildPod() error {
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
 
-	//FIXME: Where to get the image for predefined container?
 	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
@@ -198,7 +197,7 @@ func (s *executor) setupBuildPod() error {
 			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("helper", s.Config.Kubernetes.HelperImage, s.helperLimits, []string{"gitlab-runner-build"}...),
+				s.buildContainer("helper", s.Config.Kubernetes.HelperImage, s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 		},
 	})
