@@ -333,6 +333,23 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.True(t, hasHelper)
 			},
 		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					if c.Name == "helper" {
+						assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.HelperImage, c.Image)
+					}
+				}
+			},
+		},
 	}
 
 	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
