@@ -294,9 +294,9 @@ func TestSetupBuildPod(t *testing.T) {
 	version := testapi.Default.GroupVersion().Version
 	codec := testapi.Default.Codec()
 
-	type testDef struct{
+	type testDef struct {
 		RunnerConfig common.RunnerConfig
-		VerifyFn func(*testing.T, testDef, *api.Pod)
+		VerifyFn     func(*testing.T, testDef, *api.Pod)
 	}
 	tests := []testDef{
 		{
