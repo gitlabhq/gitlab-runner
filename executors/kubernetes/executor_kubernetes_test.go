@@ -204,7 +204,7 @@ func TestPrepare(t *testing.T) {
 					api.ResourceCPU:    resource.MustParse("1.5"),
 					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
-				predefinedLimits: api.ResourceList{
+				helperLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("50m"),
 					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
@@ -248,7 +248,7 @@ func TestPrepare(t *testing.T) {
 					api.ResourceCPU:    resource.MustParse("1.5"),
 					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
-				predefinedLimits: api.ResourceList{
+				helperLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("50m"),
 					api.ResourceMemory: resource.MustParse("100Mi"),
 				},

@@ -37,14 +37,14 @@ type kubernetesOptions struct {
 type executor struct {
 	executors.AbstractExecutor
 
-	kubeClient *client.Client
-	pod        *api.Pod
-	options    *kubernetesOptions
+	kubeClient    *client.Client
+	pod           *api.Pod
+	options       *kubernetesOptions
 
-	buildLimits      api.ResourceList
-	serviceLimits    api.ResourceList
-	predefinedLimits api.ResourceList
-	pullPolicy       common.KubernetesPullPolicy
+	buildLimits   api.ResourceList
+	serviceLimits api.ResourceList
+	helperLimits  api.ResourceList
+	pullPolicy    common.KubernetesPullPolicy
 }
 
 func (s *executor) setupLimits() error {
@@ -57,7 +57,7 @@ func (s *executor) setupLimits() error {
 		return err
 	}
 
-	if s.predefinedLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
+	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
 		return err
 	}
 	return nil
@@ -112,7 +112,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 
 	containerName := "build"
 	if cmd.Predefined {
-		containerName = "predefined"
+		containerName = "helper"
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -198,7 +198,7 @@ func (s *executor) setupBuildPod() error {
 			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("predefined", s.Config.Kubernetes.HelperImage, s.predefinedLimits, []string{"gitlab-runner-build"}...),
+				s.buildContainer("helper", s.Config.Kubernetes.HelperImage, s.helperLimits, []string{"gitlab-runner-build"}...),
 			}, services...),
 		},
 	})
