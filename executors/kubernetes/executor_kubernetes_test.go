@@ -173,6 +173,8 @@ func TestPrepare(t *testing.T) {
 						ServiceMemory: "200Mi",
 						CPUs:          "1.5",
 						Memory:        "4Gi",
+						HelperCPUs:    "50m",
+						HelperMemory:  "100Mi",
 						Privileged:    true,
 						PullPolicy:    "if-not-present",
 					},
@@ -202,6 +204,10 @@ func TestPrepare(t *testing.T) {
 					api.ResourceCPU:    resource.MustParse("1.5"),
 					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
+				},
 				pullPolicy: "IfNotPresent",
 			},
 		},
@@ -215,6 +221,8 @@ func TestPrepare(t *testing.T) {
 						ServiceMemory: "200Mi",
 						CPUs:          "1.5",
 						Memory:        "4Gi",
+						HelperCPUs:    "50m",
+						HelperMemory:  "100Mi",
 						Privileged:    false,
 					},
 				},
@@ -239,6 +247,10 @@ func TestPrepare(t *testing.T) {
 				buildLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("1.5"),
 					api.ResourceMemory: resource.MustParse("4Gi"),
+				},
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
 			},
 			Error: true,
@@ -278,25 +290,69 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
-func TestKubernetesNodeSelector(t *testing.T) {
+func TestSetupBuildPod(t *testing.T) {
 	version := testapi.Default.GroupVersion().Version
 	codec := testapi.Default.Codec()
 
-	testRunnerConfigs := []common.RunnerConfig{
-		common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Kubernetes: &common.KubernetesConfig{
-					Namespace: "default",
-					NodeSelector: map[string]string{
-						"a-selector":       "first",
-						"another-selector": "second",
+	type testDef struct {
+		RunnerConfig common.RunnerConfig
+		VerifyFn     func(*testing.T, testDef, *api.Pod)
+	}
+	tests := []testDef{
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						NodeSelector: map[string]string{
+							"a-selector":       "first",
+							"another-selector": "second",
+						},
 					},
 				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.NodeSelector, pod.Spec.NodeSelector)
+			},
+		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				hasHelper := false
+				for _, c := range pod.Spec.Containers {
+					if c.Name == "helper" {
+						hasHelper = true
+					}
+				}
+				assert.True(t, hasHelper)
+			},
+		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					if c.Name == "helper" {
+						assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.HelperImage, c.Image)
+					}
+				}
 			},
 		},
 	}
 
-	fakeClientRoundTripper := func(sel map[string]string) func(req *http.Request) (*http.Response, error) {
+	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
 		return func(req *http.Request) (resp *http.Response, err error) {
 			podBytes, err := ioutil.ReadAll(req.Body)
 
@@ -314,7 +370,7 @@ func TestKubernetesNodeSelector(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, sel, p.Spec.NodeSelector)
+			test.VerifyFn(t, test, p)
 
 			resp = &http.Response{StatusCode: 200, Body: FakeReadCloser{
 				Reader: bytes.NewBuffer(podBytes),
@@ -326,11 +382,11 @@ func TestKubernetesNodeSelector(t *testing.T) {
 		}
 	}
 
-	for _, testRunnerConfig := range testRunnerConfigs {
+	for _, test := range tests {
 		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
 		fakeClient := fake.RESTClient{
 			Codec:  codec,
-			Client: fake.CreateHTTPClient(fakeClientRoundTripper(testRunnerConfig.Kubernetes.NodeSelector)),
+			Client: fake.CreateHTTPClient(fakeClientRoundTripper(test)),
 		}
 		c.Client = fakeClient.Client
 
@@ -338,7 +394,7 @@ func TestKubernetesNodeSelector(t *testing.T) {
 			kubeClient: c,
 			options:    &kubernetesOptions{},
 			AbstractExecutor: executors.AbstractExecutor{
-				Config:     testRunnerConfig,
+				Config:     test.RunnerConfig,
 				BuildShell: &common.ShellConfiguration{},
 				Build: &common.Build{
 					GetBuildResponse: common.GetBuildResponse{
@@ -430,7 +486,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
-	assert.Contains(t, err.Error(), "not found")
+	assert.Contains(t, err.Error(), "image pull failed")
 }
 
 func TestKubernetesMissingTag(t *testing.T) {
@@ -456,7 +512,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
-	assert.Contains(t, err.Error(), "not found")
+	assert.Contains(t, err.Error(), "image pull failed")
 }
 
 func TestKubernetesBuildAbort(t *testing.T) {

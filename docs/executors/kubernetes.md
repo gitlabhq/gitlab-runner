@@ -65,8 +65,11 @@ The following keywords help to define the behaviour of the Runner within kuberne
 - `memory`: The amount of memory allocated to build containers
 - `service_cpus`: The CPU allocation given to build service containers
 - `service_memory`: The amount of memory allocated to build service containers
+- `helper_cpus`: The CPU allocation given to build helper containers
+- `helper_memory`: The amount of memory allocated to build helper containers
 - `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
+- `helper_imager`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts
 
 ## Define keywords in the config toml
 
@@ -89,10 +92,12 @@ concurrent = 4
     ca_file = "/etc/ssl/kubernetes/ca.crt"
     namespace = "gitlab"
     privileged = true
-    cpus = "750m"
-    memory = "250m"
-    service_cpus = "1000m"
-    service_memory = "450m"
+    cpus = "1"
+    memory = "1Gi"
+    service_cpus = "1"
+    service_memory = "1Gi"
+    helper_cpus = "500m"
+    helper_memory = "100Mi"
     [runners.kubernetes.node_selector]
       gitlab = "true"
 ```
