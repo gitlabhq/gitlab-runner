@@ -25,6 +25,8 @@ const (
 	PullPolicyAlways       = "always"
 	PullPolicyNever        = "never"
 	PullPolicyIfNotPresent = "if-not-present"
+
+	defaultHelperImage = "gitlab/gitlab-runner-helper"
 )
 
 // Get returns one of the predefined values or returns an error if the value can't match the predefined
@@ -189,6 +191,14 @@ type Config struct {
 	SentryDSN            *string         `toml:"sentry_dsn"`
 	ModTime              time.Time       `toml:"-"`
 	Loaded               bool            `toml:"-"`
+}
+
+func (c *KubernetesConfig) GetHelperImage() string {
+	if len(c.HelperImage) > 0 {
+		return c.HelperImage
+	}
+
+	return fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, REVISION)
 }
 
 func (c *DockerMachine) GetIdleCount() int {
