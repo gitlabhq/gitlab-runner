@@ -5,12 +5,12 @@ docker version >/dev/null 2>/dev/null
 
 echo Clearing docker cache...
 
-CONTAINERS=($(docker ps -a \
-    --filter=status=exited \
-    --filter=status=dead \
-    --filter=label=com.gitlab.gitlab-runner.type=cache \
-    --format='{{.ID}}'))
+CONTAINERS=$(docker ps -a \
+             --filter=status=exited \
+             --filter=status=dead \
+             --filter=label=com.gitlab.gitlab-runner.type=cache \
+             --format='{{.ID}}')
 
-if [[ -n "${CONTAINERS}" ]]; then
-    docker rm -v ${CONTAINERS[@]}
+if [ -n "${CONTAINERS}" ]; then
+    docker rm -v ${CONTAINERS}
 fi
