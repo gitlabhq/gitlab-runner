@@ -57,7 +57,7 @@ func (s *executor) setupResources() error {
 		return fmt.Errorf("invalid service limits specified: %s", err.Error())
 	}
 
-	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
+	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit); err != nil {
 		return fmt.Errorf("invalid helper limits specified: %s", err.Error())
 	}
 
