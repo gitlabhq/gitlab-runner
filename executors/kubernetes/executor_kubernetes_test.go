@@ -210,6 +210,7 @@ func TestPrepare(t *testing.T) {
 				},
 				serviceRequests: api.ResourceList{},
 				buildRequests:   api.ResourceList{},
+				helperRequests:  api.ResourceList{},
 				pullPolicy:      "IfNotPresent",
 			},
 		},
@@ -229,6 +230,8 @@ func TestPrepare(t *testing.T) {
 						ServiceMemoryRequest: "5Mi",
 						CPURequest:           "1",
 						MemoryRequest:        "1.5Gi",
+						HelperCPURequest:     "0.5m",
+						HelperMemoryRequest:  "42Mi",
 						Privileged:           false,
 					},
 				},
@@ -265,6 +268,10 @@ func TestPrepare(t *testing.T) {
 				buildRequests: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("1"),
 					api.ResourceMemory: resource.MustParse("1.5Gi"),
+				},
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
 				},
 			},
 			Error: true,

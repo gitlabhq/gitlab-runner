@@ -42,6 +42,7 @@ type executor struct {
 	helperLimits    api.ResourceList
 	buildRequests   api.ResourceList
 	serviceRequests api.ResourceList
+	helperRequests  api.ResourceList
 	pullPolicy      common.KubernetesPullPolicy
 }
 
@@ -68,6 +69,10 @@ func (s *executor) setupResources() error {
 
 	if s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest); err != nil {
 		return fmt.Errorf("invalid service requests specified: %s", err.Error())
+	}
+
+	if s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest); err != nil {
+		return fmt.Errorf("invalid helper requests specified: %s", err.Error())
 	}
 
 	return nil
@@ -208,7 +213,7 @@ func (s *executor) setupBuildPod() error {
 			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 		},
