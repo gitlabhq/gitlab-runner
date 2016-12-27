@@ -81,6 +81,9 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 		if err != nil && !os.IsNotExist(err) {
 			logrus.Warningln(err)
 		}
+		if os.IsNotExist(err) {
+			logrus.Fatalln(err)
+		}
 	}
 
 	err := archives.ExtractZipFile(c.File)

@@ -10,8 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"time"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 const cacheExtractorArchive = "archive.zip"
@@ -98,7 +99,7 @@ func TestCacheExtractorRemoteServerNotFound(t *testing.T) {
 		File: "non-existing-test.zip",
 		URL:  ts.URL + "/invalid-file.zip",
 	}
-	assert.NotPanics(t, func() {
+	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
 	_, err := os.Stat(cacheExtractorTestArchivedFile)
