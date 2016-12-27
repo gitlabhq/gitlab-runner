@@ -276,6 +276,57 @@ func TestPrepare(t *testing.T) {
 			},
 			Error: true,
 		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:               "test-server",
+						ServiceCPUs:        "100m",
+						ServiceMemory:      "200Mi",
+						ServiceMemoryLimit: "202Mi",
+						CPUs:               "1.5",
+						Memory:             "4Gi",
+						HelperCPUs:         "50m",
+						HelperCPULimit:     "1m",
+						HelperMemory:       "100Mi",
+						Privileged:         true,
+					},
+				},
+			},
+			Build: &common.Build{
+				GetBuildResponse: common.GetBuildResponse{
+					Sha: "1234567890",
+					Options: common.BuildOptions{
+						"image": "test-image",
+					},
+					Variables: []common.BuildVariable{
+						common.BuildVariable{Key: "privileged", Value: "true"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("202Mi"),
+				},
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
+				},
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				serviceRequests: api.ResourceList{},
+				buildRequests:   api.ResourceList{},
+				helperRequests:  api.ResourceList{},
+			},
+		},
 	}
 
 	for _, test := range tests {
