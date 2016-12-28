@@ -124,10 +124,10 @@ type KubernetesConfig struct {
 	Image                         string               `toml:"image" json:"image" long:"image" env:"KUBERNETES_IMAGE" description:"Default docker image to use for builds when none is specified"`
 	Namespace                     string               `toml:"namespace" json:"namespace" long:"namespace" env:"KUBERNETES_NAMESPACE" description:"Namespace to run Kubernetes jobs in"`
 	Privileged                    bool                 `toml:"privileged" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
-	CPUs                          string               `toml:"cpus" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"The CPU allocation given to build containers"`
-	Memory                        string               `toml:"memory" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"The amount of memory allocated to build containers"`
-	ServiceCPUs                   string               `toml:"service_cpus" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
-	ServiceMemory                 string               `toml:"service_memory" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
+	CPUs                          string               `toml:"cpus" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"(deprecated) The CPU allocation given to build containers"`
+	Memory                        string               `toml:"memory" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"(deprecated) The amount of memory allocated to build containers"`
+	ServiceCPUs                   string               `toml:"service_cpus" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"(deprecated) The CPU allocation given to build service containers"`
+	ServiceMemory                 string               `toml:"service_memory" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"(deprecated) The amount of memory allocated to build service containers"`
 	HelperCPUs                    string               `toml:"helper_cpus" json:"helper_cpus" long:"helper-cpus" env:"KUBERNETES_HELPER_CPUS" description:"(deprecated) The CPU allocation given to build helper containers"`
 	HelperMemory                  string               `toml:"helper_memory" json:"helper_memory" long:"helper-memory" env:"KUBERNETES_HELPER_MEMORY" description:"(deprecated) The amount of memory allocated to build helper containers"`
 	CPULimit                      string               `toml:"cpu_limit" json:"cpu_limit" long:"cpu-limit" env:"KUBERNETES_CPU_LIMIT" description:"The CPU allocation given to build containers"`
