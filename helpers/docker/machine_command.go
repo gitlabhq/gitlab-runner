@@ -136,7 +136,10 @@ func (m *machineCommand) machinesPath() string {
 
 func (m *machineCommand) List() (hostNames []string, err error) {
 	dir, err := ioutil.ReadDir(m.machinesPath())
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
