@@ -163,6 +163,9 @@ func (c *Client) RemoveNetwork(id string) error {
 // See https://goo.gl/6GugX3 for more details.
 type NetworkConnectionOptions struct {
 	Container string
+
+	// Force is only applicable to the DisconnectNetwork call
+	Force bool
 }
 
 // ConnectNetwork adds a container to a network or returns an error in case of failure.

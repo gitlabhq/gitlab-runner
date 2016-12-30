@@ -862,6 +862,7 @@ func (s *executor) disconnectNetwork(id string) error {
 	}
 	disconnectNetworkOptions := docker.NetworkConnectionOptions{
 		Container: id,
+		Force:     true,
 	}
 	for _, network := range netList {
 		for _, pluggedContainer := range network.Containers {

@@ -151,7 +151,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return([]docker.Network{docker.Network{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
 		Once()
 
-	c.On("DisconnectNetwork", networkID, docker.NetworkConnectionOptions{Container: containerName}).
+	c.On("DisconnectNetwork", networkID, docker.NetworkConnectionOptions{Container: containerName, Force: true}).
 		Return(nil).
 		Once()
 
