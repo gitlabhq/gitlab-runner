@@ -1,3 +1,6 @@
+v 1.9.1
+- Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
+
 v 1.9.0
 - Add pprof HTTP endpoints to metrics server !398
 - Add a multiple prometheus metrics: !401
