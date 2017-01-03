@@ -201,7 +201,7 @@ func TestWaitForPodRunning(t *testing.T) {
 		}
 		phase, err := waitForPodRunning(context.Background(), c, test.Pod, fw, &common.KubernetesConfig{
 			PollInterval: 5,
-			PollTimeout: 600,
+			PollTimeout:  600,
 		})
 
 		if err != nil && !test.Error {
