@@ -151,22 +151,16 @@ func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan 
 // reached.
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
-
-func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, pollInterval int, pollTimeout int) (api.PodPhase, error) {
-	if pollInterval <= 0 {
-		pollInterval = KubernetesPollInterval
-	}
-	if pollTimeout <= 0 {
-		pollTimeout = KubernetesPollTimeout
-	}
-	for i := 0; i < pollTimeout/pollInterval; i++ {
+func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
+	pollInterval := config.GetPollInterval()
+	pollAttempts := config.GetPollTimeout() / pollInterval
+	for i := 0; i < pollAttempts; i++ {
 		select {
 		case r := <-triggerPodPhaseCheck(c, pod, out):
 			if !r.done {
 				time.Sleep(time.Duration(pollInterval) * time.Second)
 				continue
 			}
-
 			return r.phase, r.err
 		case <-ctx.Done():
 			return api.PodUnknown, ctx.Err()

@@ -208,6 +208,22 @@ func (c *KubernetesConfig) GetHelperImage() string {
 	return fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, rev)
 }
 
+func (c *KubernetesConfig) GetPollInterval() int {
+	if c == nil || c.PollInterval <= 0 {
+		return KubernetesPollInterval
+	}
+
+	return c.PollInterval
+}
+
+func (c *KubernetesConfig) GetPollTimeout() int {
+	if c == nil || c.PollTimeout <= 0 {
+		return KubernetesPollTimeout
+	}
+
+	return c.PollTimeout
+}
+
 func (c *DockerMachine) GetIdleCount() int {
 	if c.isOffPeak() {
 		return c.OffPeakIdleCount
