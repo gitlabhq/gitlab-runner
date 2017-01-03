@@ -39,6 +39,14 @@ func (n *GitLabClient) getClient(runner common.RunnerCredentials) (c *client, er
 	return
 }
 
+func (n *GitLabClient) getLastUpdate(runner common.RunnerCredentials) (lu string) {
+	cli, err := n.getClient(runner)
+	if err != nil {
+		return ""
+	}
+	return cli.getLastUpdate()
+}
+
 func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
 	info := common.VersionInfo{
 		Name:         common.NAME,
@@ -80,8 +88,9 @@ func (n *GitLabClient) doJSON(runner common.RunnerCredentials, method, uri strin
 
 func (n *GitLabClient) GetBuild(config common.RunnerConfig) (*common.GetBuildResponse, bool) {
 	request := common.GetBuildRequest{
-		Info:  n.getRunnerVersion(config),
-		Token: config.Token,
+		Info:       n.getRunnerVersion(config),
+		Token:      config.Token,
+		LastUpdate: n.getLastUpdate(config.RunnerCredentials),
 	}
 
 	var response common.GetBuildResponse

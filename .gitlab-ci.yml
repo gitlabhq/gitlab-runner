@@ -15,7 +15,7 @@ before_script:
   - source ci/prepare
   - wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
   - chmod +x /usr/bin/docker
-  services: ["docker:dind"]
+  services: ["docker:1.12.4-dind"]
   variables:
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
@@ -74,6 +74,28 @@ docker executor:
   script:
   - source ci/touch_make_dependencies
   - go test -cover ./executors/docker/
+
+integration windows:
+  stage: test
+  before_script:
+  - $GODIR = "$env:GOPATH\src\gitlab.com\gitlab-org"
+  - $target_path = "$GODIR\gitlab-ci-multi-runner"
+  - $current_path = pwd
+  - md $GODIR -Force
+  - if (Test-Path $target_path) { cmd /c rmdir $target_path }
+  - cmd /c mklink /D $target_path $current_path
+  - cd $GODIR\gitlab-ci-multi-runner
+  script:
+  - $packages = (go list ./... | findstr -v "\/vendor\/" | Out-String | %{$_ -replace "\r\n"," "})
+  - $testCommand = "go test $packages"
+  - Invoke-Expression $testCommand
+  - if ( $LASTEXITCODE -ne 0 ) { exit $LASTEXITCODE }
+  allow_failure: true
+  only:
+  - /.*/@gitlab-org/gitlab-ci-multi-runner
+  tags:
+  - integration
+  - windows
 
 binaries:
   stage: build

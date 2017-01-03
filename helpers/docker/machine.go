@@ -4,7 +4,7 @@ type Machine interface {
 	Create(driver, name string, opts ...string) error
 	Provision(name string) error
 	Remove(name string) error
-	List(nodeFilter string) (machines []string, err error)
+	List() (machines []string, err error)
 	Exist(name string) bool
 
 	CanConnect(name string) bool

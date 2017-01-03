@@ -159,22 +159,22 @@ func (b *CmdWriter) RmFile(path string) {
 }
 
 func (b *CmdWriter) Print(format string, arguments ...interface{}) {
-	coloredText := fmt.Sprintf(format, arguments...)
+	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
 func (b *CmdWriter) Notice(format string, arguments ...interface{}) {
-	coloredText := fmt.Sprintf(format, arguments...)
+	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
 func (b *CmdWriter) Warning(format string, arguments ...interface{}) {
-	coloredText := fmt.Sprintf(format, arguments...)
+	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
 func (b *CmdWriter) Error(format string, arguments ...interface{}) {
-	coloredText := fmt.Sprintf(format, arguments...)
+	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
@@ -199,7 +199,7 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 	return
 }
 
-func (b *CmdShell) GenerateScript(scriptType common.ShellScriptType, info common.ShellScriptInfo) (script string, err error) {
+func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &CmdWriter{
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
@@ -212,7 +212,7 @@ func (b *CmdShell) GenerateScript(scriptType common.ShellScriptType, info common
 	w.Line("setlocal enableDelayedExpansion")
 	w.Line("set nl=^\r\n\r\n")
 
-	if scriptType == common.ShellPrepareScript {
+	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo Running on %COMPUTERNAME% via " + batchEscape(info.Build.Hostname) + "...")
 		} else {
@@ -220,7 +220,7 @@ func (b *CmdShell) GenerateScript(scriptType common.ShellScriptType, info common
 		}
 	}
 
-	err = b.writeScript(w, scriptType, info)
+	err = b.writeScript(w, buildStage, info)
 	script = w.String()
 	return
 }

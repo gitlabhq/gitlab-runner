@@ -51,14 +51,6 @@ func (m *MockClient) StartContainer(id string, hostConfig *docker.HostConfig) er
 
 	return r0
 }
-func (m *MockClient) WaitContainer(id string) (int, error) {
-	ret := m.Called(id)
-
-	r0 := ret.Get(0).(int)
-	r1 := ret.Error(1)
-
-	return r0, r1
-}
 func (m *MockClient) KillContainer(opts docker.KillContainerOptions) error {
 	ret := m.Called(opts)
 
@@ -77,12 +69,13 @@ func (m *MockClient) InspectContainer(id string) (*docker.Container, error) {
 
 	return r0, r1
 }
-func (m *MockClient) AttachToContainer(opts docker.AttachToContainerOptions) error {
+func (m *MockClient) AttachToContainerNonBlocking(opts docker.AttachToContainerOptions) (docker.CloseWaiter, error) {
 	ret := m.Called(opts)
 
-	r0 := ret.Error(0)
+	r0 := ret.Get(0).(docker.CloseWaiter)
+	r1 := ret.Error(1)
 
-	return r0
+	return r0, r1
 }
 func (m *MockClient) RemoveContainer(opts docker.RemoveContainerOptions) error {
 	ret := m.Called(opts)

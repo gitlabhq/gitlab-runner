@@ -157,6 +157,27 @@ func TestBuildWithIndexLock(t *testing.T) {
 	})
 }
 
+func TestBuildWithShallowLock(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, []common.BuildVariable{
+			common.BuildVariable{Key: "GIT_DEPTH", Value: "1"},
+			common.BuildVariable{Key: "GIT_STRATEGY", Value: "fetch"}}...)
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+
+		ioutil.WriteFile(build.BuildDir+"/.git/shallow.lock", []byte{}, os.ModeSticky)
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+	})
+}
+
 func TestBuildWithGitStrategyNone(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()

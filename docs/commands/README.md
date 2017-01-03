@@ -156,6 +156,8 @@ following commands support the following signals:
 | `run`, `exec`, `run-single` | **SIGQUIT** | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
 | `run` | **SIGHUP** | Force to reload configuration file |
 
+If your operating system is configured to automatically restart the service if it fails (which is the default on some platforms) it may automatically restart the runner if it's shut down by the signals above.
+
 ## Commands overview
 
 This is what you see if you run `gitlab-runner` without any arguments:
@@ -371,7 +373,7 @@ This command stops and then starts the GitLab Runner service.
 
 ### gitlab-runner status
 
-This command prints the status of the GitLab Runner service.
+This command prints the status of the GitLab Runner service. The exit code is zero when the service is running and non-zero when the service is not running.
 
 ### Multiple services
 
@@ -418,6 +420,12 @@ You can see all possible configuration options by using the `--help` flag:
 ```bash
 gitlab-runner run-single --help
 ```
+
+You can use the `--max-builds` option to control how many builds the runner will execute before exiting.  The
+default of `0` means that the runner has no build limit and will run jobs forever.
+
+You can also use the `--wait-timeout` option to control how long the runner will wait for a job before
+exiting.  The default of `0` means that the runner has no timeout and will wait forever between jobs.
 
 ### gitlab-runner exec
 

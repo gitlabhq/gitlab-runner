@@ -162,18 +162,13 @@ func (s *executor) getDockerImage(imageName string) (*docker.Image, error) {
 
 		// If not-present is specified
 		if pullPolicy == common.PullPolicyIfNotPresent {
+			s.Println("Using locally found image version due to if-not-present pull policy")
 			return image, err
 		}
 	}
 
 	newImage, err := s.pullDockerImage(imageName, authConfig)
 	if err != nil {
-		// We only allow to return existing image if this is anonymous authorization
-		if pullPolicy != common.PullPolicyAlways && image != nil {
-			s.Warningln("Cannot pull the latest version of image", imageName, ":", err)
-			s.Warningln("Locally found image will be used instead.")
-			return image, nil
-		}
 		return nil, err
 	}
 	return newImage, nil
@@ -206,7 +201,7 @@ func (s *executor) getPrebuiltImage() (image *docker.Image, err error) {
 		return nil, errors.New("unsupported docker architecture")
 	}
 
-	imageName := prebuiltImageName + "-" + architecture + ":" + common.REVISION
+	imageName := prebuiltImageName + ":" + architecture + "-" + common.REVISION
 	s.Debugln("Looking for prebuilt image", imageName, "...")
 	image, err = s.client.InspectImage(imageName)
 	if err == nil {
@@ -220,8 +215,8 @@ func (s *executor) getPrebuiltImage() (image *docker.Image, err error) {
 
 	s.Debugln("Loading prebuilt image...")
 	err = s.client.ImportImage(docker.ImportImageOptions{
-		Repository:  prebuiltImageName + "-" + architecture,
-		Tag:         common.REVISION,
+		Repository:  prebuiltImageName,
+		Tag:         architecture + "-" + common.REVISION,
 		Source:      "-",
 		InputStream: bytes.NewBuffer(data),
 	})
@@ -307,15 +302,10 @@ func (s *executor) createCacheVolume(containerName, containerPath string) (*dock
 	}
 
 	s.Debugln("Waiting for cache container", container.ID, "...")
-	errorCode, err := s.client.WaitContainer(container.ID)
+	err = s.waitForContainer(container.ID)
 	if err != nil {
 		s.failures = append(s.failures, container)
 		return nil, err
-	}
-
-	if errorCode != 0 {
-		s.failures = append(s.failures, container)
-		return nil, fmt.Errorf("cache container for %s returned %d", containerPath, errorCode)
 	}
 
 	return container, nil
@@ -713,6 +703,7 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 			Links:         append(s.Config.Docker.Links, s.links...),
 			Devices:       s.devices,
 			Binds:         s.binds,
+			VolumeDriver:  s.Config.Docker.VolumeDriver,
 			VolumesFrom:   append(s.Config.Docker.VolumesFrom, s.volumesFrom...),
 			LogConfig: docker.LogConfig{
 				Type: "json-file",
@@ -755,13 +746,47 @@ func (s *executor) killContainer(container *docker.Container, waitCh chan error)
 	}
 }
 
-func (s *executor) watchContainer(container *docker.Container, input io.Reader, abort chan interface{}) (err error) {
-	s.Debugln("Starting container", container.ID, "...")
-	err = s.client.StartContainer(container.ID, nil)
-	if err != nil {
-		return
-	}
+func (s *executor) waitForContainer(id string) error {
+	s.Debugln("Waiting for container", id, "...")
 
+	retries := 0
+
+	// Use active wait
+	for {
+		container, err := s.client.InspectContainer(id)
+		if err != nil {
+			if _, ok := err.(*docker.NoSuchContainer); ok {
+				return err
+			}
+
+			if retries > 3 {
+				return err
+			}
+
+			retries++
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// Reset retry timer
+		retries = 0
+
+		if container.State.Running {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		if container.State.ExitCode != 0 {
+			return &common.BuildError{
+				Inner: fmt.Errorf("exit code %d", container.State.ExitCode),
+			}
+		}
+
+		return nil
+	}
+}
+
+func (s *executor) watchContainer(container *docker.Container, input io.Reader, abort chan interface{}) (err error) {
 	options := docker.AttachToContainerOptions{
 		Container:    container.ID,
 		InputStream:  input,
@@ -775,31 +800,41 @@ func (s *executor) watchContainer(container *docker.Container, input io.Reader, 
 		RawTerminal:  false,
 	}
 
+	s.Debugln("Attaching to container", container.ID, "...")
+	cw, err := s.client.AttachToContainerNonBlocking(options)
+	if err != nil {
+		return
+	}
+	defer cw.Close()
+
+	s.Debugln("Starting container", container.ID, "...")
+	err = s.client.StartContainer(container.ID, nil)
+	if err != nil {
+		return
+	}
+
+	attachCh := make(chan error, 1)
+	go func() {
+		s.Debugln("Waiting for attach to finish", container.ID, "...")
+		err := cw.Wait()
+		if err != nil {
+			attachCh <- err
+		}
+	}()
+
 	waitCh := make(chan error, 1)
 	go func() {
-		s.Debugln("Attaching to container", container.ID, "...")
-		err = s.client.AttachToContainer(options)
-		if err != nil {
-			waitCh <- err
-			return
-		}
-
-		s.Debugln("Waiting for container", container.ID, "...")
-		exitCode, err := s.client.WaitContainer(container.ID)
-		if err == nil {
-			if exitCode != 0 {
-				err = &common.BuildError{
-					Inner: fmt.Errorf("exit code %d", exitCode),
-				}
-			}
-		}
-		waitCh <- err
+		waitCh <- s.waitForContainer(container.ID)
 	}()
 
 	select {
 	case <-abort:
 		s.killContainer(container, waitCh)
 		err = errors.New("Aborted")
+
+	case err = <-attachCh:
+		s.killContainer(container, waitCh)
+		s.Debugln("Container", container.ID, "finished with", err)
 
 	case err = <-waitCh:
 		s.Debugln("Container", container.ID, "finished with", err)
@@ -1059,11 +1094,7 @@ func (s *executor) runServiceHealthCheckContainer(container *docker.Container, t
 
 	waitResult := make(chan error, 1)
 	go func() {
-		statusCode, err := s.client.WaitContainer(waitContainer.ID)
-		if err == nil && statusCode != 0 {
-			err = fmt.Errorf("Status code: %d", statusCode)
-		}
-		waitResult <- err
+		waitResult <- s.waitForContainer(waitContainer.ID)
 	}()
 
 	// these are warnings and they don't make the build fail

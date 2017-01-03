@@ -34,13 +34,29 @@ type executor struct {
 	executors.AbstractExecutor
 
 	kubeClient *client.Client
-	prepod     *api.Pod
 	pod        *api.Pod
 	options    *kubernetesOptions
 
 	buildLimits   api.ResourceList
 	serviceLimits api.ResourceList
+	helperLimits  api.ResourceList
 	pullPolicy    common.KubernetesPullPolicy
+}
+
+func (s *executor) setupLimits() error {
+	var err error
+	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPUs, s.Config.Kubernetes.ServiceMemory); err != nil {
+		return fmt.Errorf("invalid service limits specified: %s", err.Error())
+	}
+
+	if s.buildLimits, err = limits(s.Config.Kubernetes.CPUs, s.Config.Kubernetes.Memory); err != nil {
+		return fmt.Errorf("invalid build limits specified: %s", err.Error())
+	}
+
+	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPUs, s.Config.Kubernetes.HelperMemory); err != nil {
+		return fmt.Errorf("invalid helper limits specified: %s", err.Error())
+	}
+	return nil
 }
 
 func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
@@ -53,8 +69,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	err = build.Options.Decode(&s.options)
-	if err != nil {
+	if err = build.Options.Decode(&s.options); err != nil {
 		return err
 	}
 
@@ -63,16 +78,11 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
-	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPUs, s.Config.Kubernetes.ServiceMemory); err != nil {
+	if err = s.setupLimits(); err != nil {
 		return err
 	}
 
-	if s.buildLimits, err = limits(s.Config.Kubernetes.CPUs, s.Config.Kubernetes.Memory); err != nil {
-		return err
-	}
-
-	s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get()
-	if err != nil {
+	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
 		return err
 	}
 
@@ -97,6 +107,9 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	}
 
 	containerName := "build"
+	if cmd.Predefined {
+		containerName = "helper"
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	select {
@@ -161,6 +174,7 @@ func (s *executor) setupBuildPod() error {
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
+
 	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
@@ -176,12 +190,13 @@ func (s *executor) setupBuildPod() error {
 				},
 			},
 			RestartPolicy: api.RestartPolicyNever,
+			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 		},
 	})
-
 	if err != nil {
 		return err
 	}

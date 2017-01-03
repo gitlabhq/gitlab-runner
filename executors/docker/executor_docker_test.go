@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -8,13 +9,15 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fsouza/go-dockerclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 )
 
@@ -360,6 +363,27 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	image, err := e.getDockerImage("existing")
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
+}
+
+func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
+	var c docker_helpers.MockClient
+	defer c.AssertExpectations(t)
+
+	e := executor{client: &c}
+	e.setPolicyMode(common.PullPolicyAlways)
+
+	c.On("InspectImage", "existing").
+		Return(&docker.Image{}, nil).
+		Once()
+
+	ac := e.getAuthConfig("existing")
+	c.On("PullImage", docker.PullImageOptions{Repository: "existing:latest"}, ac).
+		Return(fmt.Errorf("not found")).
+		Once()
+
+	image, err := e.getDockerImage("existing")
+	assert.Error(t, err)
+	assert.Nil(t, image)
 }
 
 func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
@@ -715,6 +739,55 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 
 	testGetDockerImage(t, e, remoteImage, addFindsLocalImageExpectations)
 	testGetDockerImage(t, e, gitlabImage, addFindsLocalImageExpectations)
+}
+
+func TestDockerWatchOn_1_12_4(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	e := executor{}
+	e.Build = &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
+	e.Build.Token = "abcd123456"
+	e.BuildShell = &common.ShellConfiguration{
+		Environment: []string{},
+	}
+
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{
+		PullPolicy: common.PullPolicyAlways,
+	}
+
+	e.BuildTrace = &common.Trace{Writer: os.Stdout}
+
+	err := e.connectDocker()
+	assert.NoError(t, err)
+
+	container, err := e.createContainer("build", "alpine", []string{"/bin/sh"})
+	assert.NoError(t, err)
+	assert.NotNil(t, container)
+
+	abort := make(chan interface{})
+	input := bytes.NewBufferString("echo 'script'")
+
+	finished := make(chan bool, 1)
+	go func() {
+		err = e.watchContainer(container, input, abort)
+		assert.NoError(t, err)
+		t.Log(err)
+		finished <- true
+	}()
+
+	select {
+	case <-finished:
+	case <-time.After(15 * time.Second):
+		t.Error("Container script not finished")
+	}
+
+	err = e.removeContainer(container.ID)
+	assert.NoError(t, err)
 }
 
 func init() {

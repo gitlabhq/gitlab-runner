@@ -12,7 +12,7 @@ type BuildVariable struct {
 	Value    string `json:"value"`
 	Public   bool   `json:"public"`
 	Internal bool   `json:"-"`
-	File     bool   `json:"-"`
+	File     bool   `json:"file"`
 }
 
 type BuildVariables []BuildVariable

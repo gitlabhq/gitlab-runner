@@ -14,6 +14,10 @@ Give it permissions to execute:
 sudo chmod +x /usr/local/bin/gitlab-ci-multi-runner
 ```
 
+Get your gitlab-ci token from the *Specific Runners* section on your project 
+settings *Runners* page.
+
+
 **The rest of commands execute as the user who will run the runner.**
 
 Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):

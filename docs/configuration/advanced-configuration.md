@@ -78,6 +78,7 @@ There are a couple of available executors currently.
 | `virtualbox`  | run build using VirtualBox VM, but connect to it with SSH - this requires the presence of `[runners.virtualbox]` and `[runners.ssh]` |
 | `docker+machine` | like `docker`, but uses [auto-scaled docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
 | `docker-ssh+machine` | like `docker-ssh`, but uses [auto-scaled docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
+| `kubernetes` | run build using Kubernetes Pods - this requires the presence of `[runners.kubernetes]` |
 
 ## The SHELLS
 
@@ -114,11 +115,12 @@ This defines the Docker Container parameters.
 | `volumes`                   | specify additional volumes that should be mounted (same syntax as Docker -v option) |
 | `extra_hosts`               | specify hosts that should be defined in container environment |
 | `volumes_from`              | specify a list of volumes to inherit from another container in the form <code>\<container name\>[:\<ro&#124;rw\>]</code> |
+| `volume_driver`             | specify the volume driver to use for the container |
 | `links`                     | specify containers which should be linked with building container |
 | `services`                  | specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
 | `allowed_images`            | specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `allowed_services`          | specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `pull_policy`               | specify the image pull policy: never, if-not-present or always (default) |
+| `pull_policy`               | specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 
 Example:
 
@@ -202,11 +204,14 @@ This will use `/path/to/bind/from/host` of the CI host inside the container at
   support for using private registries, which required manual configuration
   of credentials on runner's host. We recommend to upgrade your Runner to
   at least version **1.8** if you want to use private registries.
-- Private registries are currently not supported by Kubernetes executor.
+- Private registries are currently not supported by the Kubernetes executor.
+- Using private registries with the `if-not-present` pull policy may introduce
+  [security implications][secpull]. To fully understand how pull policies work,
+  read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
 If you want to use private registries as a source of images for your builds,
-you can set the authorization configuration in the `DOCKER_AUTH_CONFIG` [secret
-variable][secret-variables]. It can be set in both GitLab Variables section of
+you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
+[secret variable]. It can be set in both GitLab Variables section of
 a project and in the `config.toml` file.
 
 As an example, let's assume that you want to use the `registry.example.com/private/image:latest`
@@ -257,10 +262,6 @@ The steps performed by the Runner can be summed up to:
 Now that the Runner is set up to authenticate against your private registry,
 learn [how to configure .gitlab-ci.yml][yaml-priv-reg] in order to use that
 registry.
-
-Also please notice, that using private registries with `if-not-present`
-pull policy may introduce security implications. Please read [the security
-documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) for more details.
 
 ### Support for GitLab integrated registry
 
@@ -431,6 +432,8 @@ in the [runners autoscale documentation](autoscale.md#distributed-runners-cachin
 | `BucketName`     | string           | Name of the bucket where cache will be stored. |
 | `BucketLocation` | string           | Name of S3 region. |
 | `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Is set to `false` by default. |
+| `Path`           | string           | Name of the path to prepend to the cache URL. |
+| `Shared          | boolean          | Enables cache sharing between runners, `false` by default. |
 
 Example:
 
@@ -443,10 +446,54 @@ Example:
   BucketName = "runners"
   BucketLocation = "eu-west-1"
   Insecure = false
+  Path = "path/to/prefix"
+  Shared = false
 ```
 
 > **Note:** For Amazon's S3 service the `ServerAddress` should always be `s3.amazonaws.com`. Minio S3 client will
 > get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
+
+## The [runners.kubernetes] section
+
+> **Note:**
+> Added in GitLab Runner v1.6.0
+
+This defines the Kubernetes parameters.
+
+| Parameter        | Type    | Description |
+|------------------|---------|-------------|
+| `host`           | string  | Optional Kubernetes master host URL (auto-discovery attempted if not specified) |
+| `cert_file`      | string  | Optional Kubernetes master auth certificate |
+| `key_file`       | string  | Optional Kubernetes master auth private key |
+| `ca_file`        | string  | Optional Kubernetes master auth ca certificate |
+| `image`          | string  | Default docker image to use for builds when none is specified |
+| `namespace`      | string  | Namespace to run Kubernetes jobs in |
+| `privileged`     | boolean | Run all containers with the privileged flag enabled |
+| `cpus`           | string  | The CPU allocation given to build containers |
+| `memory`         | string  | The amount of memory allocated to build containers |
+| `service_cpus`   | string  | The CPU allocation given to build service containers |
+| `service_memory` | string  | The amount of memory allocated to build service containers |
+| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs |
+
+
+Example:
+
+```bash
+[runners.kubernetes]
+	host = "https://45.67.34.123:4892"
+	cert_file = "/etc/ssl/kubernetes/api.crt"
+	key_file = "/etc/ssl/kubernetes/api.key"
+	ca_file = "/etc/ssl/kubernetes/ca.crt"
+	namespace = "gitlab"
+	image = "golang:1.7"
+	privileged = true
+	cpus = "750m"
+	memory = "250m"
+	service_cpus = "1000m"
+	service_memory = "450m"
+	[runners.kubernetes.node_selector]
+		gitlab = "true"
+```
 
 ## Note
 
@@ -458,3 +505,5 @@ It depends on what you'd like to do.
 [Docker Engine]: https://www.docker.com/docker-engine
 [yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#image-and-services
 [ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
+[secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
+[secret variable]: https://docs.gitlab.com/ce/ci/variables/#secret-variables

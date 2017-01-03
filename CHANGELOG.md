@@ -1,3 +1,41 @@
+v 1.9.1
+- Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
+
+v 1.9.0
+- Add pprof HTTP endpoints to metrics server !398
+- Add a multiple prometheus metrics: !401
+- Split prepare stage to be: prepare, git_clone, restore_cache, download_artifacts !406
+- Update CONTRIBUTING.md to refer to go 1.7.1 !409
+- Introduce docker.Client timeouts !411
+- Allow network-sourced variables to specify that they should be files !413
+- Add a retry mechanism to prevent failed clones in builds !399
+- Remove shallow.lock before fetching !407
+- Colorize log entries for cmd and powershell !400
+- Add section describing docker usage do Kubernetes executor docs !394
+- FreeBSD runner installation docs update !387
+- Update prompts for register command !377
+- Add volume_driver Docker configuration file option !365
+- Fix bug permission denied on ci build with external cache !347
+- Fix entrypoint for alpine image !346
+- Add windows vm checklist for virtualbox documentation !348
+- Clarification around authentication with the Kubernetes executor !296
+- Fix docker hanging for docker-engine 1.12.4 !415
+- Use lib machine to fetch a list of docker-machines !418
+- Cleanup docker cache clear script !388
+- Allow the --limit option to control the number of jobs a single runner will run !369
+- Store and send last_update value with API calls against GitLab !410
+- Add graceful shutdown documentation !421
+- Add Kubernete Node Selector !328
+- Push prebuilt images to dockerhub !420
+- Add path and share cache settings for S3 cache !423
+- Remove unnecessary warning about using image with the same ID as provided !424
+- Add a link where one can download the packages directly !292
+- Kubernetes executor - use pre-build container !425
+
+v 1.8.1
+- Rrefactor the private container registry docs !392
+- Make pull policies usage clear !393
+
 v 1.8.0
 - Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364
 - Fix path to runners-ssh page !368

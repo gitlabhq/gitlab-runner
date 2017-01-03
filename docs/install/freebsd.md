@@ -28,10 +28,16 @@ Create empty log file with correct permissions:
 sudo touch /var/log/gitlab_runner.log && sudo chown gitlab-runner:gitlab-runner /var/log/gitlab_runner.log
 ```
 
+Create rc.d directory in case it does not exist:
+
+```bash
+mkdir -p /usr/local/etc/rc.d
+```
+
 Create rc.d script:
 
 ```bash
-cat > /etc/rc.d/gitlab_runner << "EOF"
+sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
 #!/bin/sh
 # PROVIDE: gitlab_runner
 # REQUIRE: DAEMON NETWORKING
@@ -87,7 +93,7 @@ EOF
 Make it executable:
 
 ```bash
-sudo chmod +x /etc/rc.d/gitlab_runner
+sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
 ```
 
 

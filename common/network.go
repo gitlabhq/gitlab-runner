@@ -9,6 +9,14 @@ import (
 type UpdateState int
 type UploadState int
 type DownloadState int
+type BuildState string
+
+const (
+	Pending BuildState = "pending"
+	Running            = "running"
+	Failed             = "failed"
+	Success            = "success"
+)
 
 const (
 	UpdateSucceeded UpdateState = iota
@@ -51,8 +59,9 @@ type VersionInfo struct {
 }
 
 type GetBuildRequest struct {
-	Info  VersionInfo `json:"info,omitempty"`
-	Token string      `json:"token,omitempty"`
+	Info       VersionInfo `json:"info,omitempty"`
+	Token      string      `json:"token,omitempty"`
+	LastUpdate string      `json:"last_update,omitempty"`
 }
 
 type BuildArtifacts struct {

@@ -25,6 +25,8 @@ const (
 	PullPolicyAlways       = "always"
 	PullPolicyNever        = "never"
 	PullPolicyIfNotPresent = "if-not-present"
+
+	defaultHelperImage = "gitlab/gitlab-runner-helper"
 )
 
 // Get returns one of the predefined values or returns an error if the value can't match the predefined
@@ -57,6 +59,7 @@ type DockerConfig struct {
 	Devices                []string         `toml:"devices" json:"devices" long:"devices" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
 	DisableCache           bool             `toml:"disable_cache,omitzero" json:"disable_cache" long:"disable-cache" env:"DOCKER_DISABLE_CACHE" description:"Disable all container caching"`
 	Volumes                []string         `toml:"volumes,omitempty" json:"volumes" long:"volumes" env:"DOCKER_VOLUMES" description:"Bind mount a volumes"`
+	VolumeDriver           string           `toml:"volume_driver,omitempty" json:"volume_driver" long:"volume-driver" env:"DOCKER_VOLUME_DRIVER" description:"Volume driver to be used"`
 	CacheDir               string           `toml:"cache_dir,omitempty" json:"cache_dir" long:"cache-dir" env:"DOCKER_CACHE_DIR" description:"Directory where to store caches"`
 	ExtraHosts             []string         `toml:"extra_hosts,omitempty" json:"extra_hosts" long:"extra-hosts" env:"DOCKER_EXTRA_HOSTS" description:"Add a custom host-to-IP mapping"`
 	VolumesFrom            []string         `toml:"volumes_from,omitempty" json:"volumes_from" long:"volumes-from" env:"DOCKER_VOLUMES_FROM" description:"A list of volumes to inherit from another container"`
@@ -126,8 +129,12 @@ type KubernetesConfig struct {
 	ServiceCPUs   string               `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"The CPU allocation given to build service containers"`
 	ServiceMemory string               `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"The amount of memory allocated to build service containers"`
 	PullPolicy    KubernetesPullPolicy `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
-	PollInterval  int                  `toml:"poll_interval,omitempty" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes container it has just created to check its status. [Default: 3]"`
-	PollTimeout   int                  `toml:"poll_timeout,omitempty" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the conainer it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]"`
+	NodeSelector  map[string]string    `toml:"node_selector,omitempty" json:"node_selector" long:"node-selector" description:"A toml table/json object of key=value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key=value pairs."`
+	HelperCPUs    string               `toml:"helper_cpus,omitempty" json:"helper_cpus" long:"helper-cpus" env:"KUBERNETES_HELPER_CPUS" description:"The CPU allocation given to build helper containers"`
+	HelperMemory  string               `toml:"helper_memory,omitempty" json:"helper_memory" long:"helper-memory" env:"KUBERNETES_HELPER_MEMORY" description:"The amount of memory allocated to build helper containers"`
+	HelperImage   string               `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
+	PollInterval  int                  `toml:"poll_interval,omitempty" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status"`
+	PollTimeout   int                  `toml:"poll_timeout,omitzero" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The total amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the pod it has just created (useful for queueing more builds that the cluster can handle at a time)"`
 }
 
 type RunnerCredentials struct {
@@ -144,6 +151,8 @@ type CacheConfig struct {
 	BucketName     string `toml:"BucketName,omitempty" long:"s3-bucket-name" env:"S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
 	BucketLocation string `toml:"BucketLocation,omitempty" long:"s3-bucket-location" env:"S3_BUCKET_LOCATION" description:"Name of S3 region"`
 	Insecure       bool   `toml:"Insecure,omitempty" long:"s3-insecure" env:"S3_CACHE_INSECURE" description:"Use insecure mode (without https)"`
+	Path           string `toml:"Path,omitempty" long:"s3-cache-path" env:"S3_CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
+	Shared         bool   `toml:"Shared,omitempty" long:"cache-shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
 }
 
 type RunnerSettings struct {
@@ -184,6 +193,19 @@ type Config struct {
 	SentryDSN            *string         `toml:"sentry_dsn"`
 	ModTime              time.Time       `toml:"-"`
 	Loaded               bool            `toml:"-"`
+}
+
+func (c *KubernetesConfig) GetHelperImage() string {
+	if len(c.HelperImage) > 0 {
+		return c.HelperImage
+	}
+
+	rev := REVISION
+	if rev == "HEAD" {
+		rev = "latest"
+	}
+
+	return fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, rev)
 }
 
 func (c *DockerMachine) GetIdleCount() int {

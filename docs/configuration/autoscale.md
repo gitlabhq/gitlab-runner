@@ -337,7 +337,13 @@ To enable distributed caching, you have to define it in `config.toml` using the
     SecretKey = "secret-key"
     BucketName = "runner"
     Insecure = false
+    Path = "path/to/prefix"
+    Shared = false
 ```
+
+The S3 URLs follow the structure `http(s)://<ServerAddress>/<BucketName>/<Path>/runner/<runner-id>/project/<id>/<cache-key>`.
+
+To share the cache between two or more runners, set the `Shared` flag to true. That will remove the runner token from the S3 URL (`runner/<runner-id>`) and all configured runners will share the same cache. Remember that you can also set `Path` to separate caches between runners when cache sharing is enabled.
 
 Read how to [install your own caching server][caching].
 
