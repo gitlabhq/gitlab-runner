@@ -18,9 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
-const KubernetesPollInterval = 3
-const KubernetesPollTimeout = 180
-
 func init() {
 	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
 }
