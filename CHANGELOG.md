@@ -1,3 +1,6 @@
+v 1.7.2
+- Handle Content-Type header with charset information !430
+
 v 1.7.1
 - Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364
 
