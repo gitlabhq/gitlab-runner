@@ -22,6 +22,14 @@ const (
 	GitNone
 )
 
+type SubmoduleStrategy int
+
+const (
+	SubmoduleNone SubmoduleStrategy = iota
+	SubmoduleNormal
+	SubmoduleRecursive
+)
+
 type BuildRuntimeState string
 
 const (
@@ -399,6 +407,24 @@ func (b *Build) GetGitStrategy() GitStrategy {
 		}
 
 		return GitClone
+	}
+}
+
+func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
+	switch b.GetAllVariables().Get("GIT_SUBMODULE_STRATEGY") {
+	case "normal":
+		return SubmoduleNormal
+
+	case "recursive":
+		return SubmoduleRecursive
+
+	case "none", "":
+		// Default (legacy) behavior is to not update/init submodules
+		return SubmoduleNone
+
+	default:
+		// TODO: Raise an error here?
+		return SubmoduleNone
 	}
 }
 

@@ -103,6 +103,21 @@ func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Command("git", "checkout", "-f", "-q", build.Sha)
 }
 
+func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
+	if recursive {
+		w.Notice("Updating/initializing submodules recursively...")
+	} else {
+		w.Notice("Updating/initializing submodules...")
+	}
+
+	args := []string{"submodule", "update", "--init"}
+	if recursive {
+		args = append(args, "--recursive")
+	}
+
+	w.Command("git", args...)
+}
+
 func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, file string) {
 	if build.CacheDir == "" {
 		return
@@ -233,21 +248,12 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	return nil
 }
 
-func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeExports(w, info)
-
+func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 	gitDir := path.Join(build.FullProjectDir(), ".git")
-	strategy := info.Build.GetGitStrategy()
 
-	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
-
-	if info.PreCloneScript != "" && strategy != common.GitNone {
-		b.writeCommands(w, info.PreCloneScript)
-	}
-
-	switch strategy {
+	switch info.Build.GetGitStrategy() {
 	case common.GitFetch:
 		b.writeFetchCmd(w, build, projectDir, gitDir)
 		b.writeCheckoutCmd(w, build)
@@ -263,6 +269,46 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 	default:
 		return errors.New("unknown GIT_STRATEGY")
 	}
+
+	return nil
+}
+
+func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	build := info.Build
+
+	switch build.GetSubmoduleStrategy() {
+	case common.SubmoduleNormal:
+		b.writeSubmoduleUpdateCmd(w, build, false)
+
+	case common.SubmoduleRecursive:
+		b.writeSubmoduleUpdateCmd(w, build, true)
+
+	case common.SubmoduleNone:
+		w.Notice("Skipping Git submodules setup")
+
+	default:
+		return errors.New("unknown GIT_SUBMODULE_STRATEGY")
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	b.writeExports(w, info)
+	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
+
+	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
+		b.writeCommands(w, info.PreCloneScript)
+	}
+
+	if err := b.writeCloneFetchCmds(w, info); err != nil {
+		return err
+	}
+
+	if err = b.writeSubmoduleUpdateCmds(w, info); err != nil {
+		return err
+	}
+
 	return nil
 }
 
