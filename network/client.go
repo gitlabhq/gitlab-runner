@@ -9,10 +9,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/Sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,6 +19,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Sirupsen/logrus"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 var dialer = net.Dialer{
@@ -179,8 +182,9 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 
 	if res.StatusCode == statusCode {
 		if response != nil {
-			if contentType := res.Header.Get("Content-Type"); contentType != "application/json" {
-				return -1, fmt.Sprintf("Server should return application/json. Got: %v", contentType), ""
+			isApplicationJSON, err := isResponseApplicationJSON(res)
+			if !isApplicationJSON {
+				return -1, err.Error(), ""
 			}
 
 			d := json.NewDecoder(res.Body)
@@ -192,6 +196,21 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 	}
 
 	return res.StatusCode, res.Status, n.getCAChain(res.TLS)
+}
+
+func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
+	contentType := res.Header.Get("Content-Type")
+
+	mimetype, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false, fmt.Errorf("Content-Type parsing error: %v", err)
+	}
+
+	if mimetype != "application/json" {
+		return false, fmt.Errorf("Server should return application/json. Got: %v", contentType)
+	}
+
+	return true, nil
 }
 
 func fixCIURL(url string) string {

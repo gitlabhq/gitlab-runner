@@ -4,15 +4,17 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/Sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+
+	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
@@ -173,4 +175,50 @@ func TestUrlFixing(t *testing.T) {
 	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab/"))
 	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab///"))
 	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab"))
+}
+
+func charsetTestClientHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/ci/api/v1/with-charset":
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+		fmt.Fprint(w, "{\"key\":\"value\"}")
+	case "/ci/api/v1/without-charset":
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		fmt.Fprint(w, "{\"key\":\"value\"}")
+	case "/ci/api/v1/without-json":
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.WriteHeader(200)
+		fmt.Fprint(w, "{\"key\":\"value\"}")
+	case "/ci/api/v1/invalid-header":
+		w.Header().Set("Content-Type", "application/octet-stream, test, a=b")
+		w.WriteHeader(200)
+		fmt.Fprint(w, "{\"key\":\"value\"}")
+	}
+}
+
+func TestClientHandleCharsetInContentType(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(charsetTestClientHandler))
+	defer s.Close()
+
+	c, _ := newClient(RunnerCredentials{
+		URL: s.URL,
+	})
+
+	res := struct {
+		Key string `json:"key"`
+	}{}
+
+	statusCode, statusText, _ := c.doJSON("with-charset", "GET", 200, nil, &res)
+	assert.Equal(t, 200, statusCode, statusText)
+
+	statusCode, statusText, _ = c.doJSON("without-charset", "GET", 200, nil, &res)
+	assert.Equal(t, 200, statusCode, statusText)
+
+	statusCode, statusText, _ = c.doJSON("without-json", "GET", 200, nil, &res)
+	assert.Equal(t, -1, statusCode, statusText)
+
+	statusCode, statusText, _ = c.doJSON("invalid-header", "GET", 200, nil, &res)
+	assert.Equal(t, -1, statusCode, statusText)
 }
