@@ -1,3 +1,6 @@
+v 1.8.2
+- Handle Content-Type header with charset information !430
+
 v 1.8.1
 - Rrefactor the private container registry docs !392
 - Make pull policies usage clear !393
