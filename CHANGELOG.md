@@ -1,3 +1,7 @@
+v 1.9.2
+- Handle Content-Type header with charset information !430
+- Don't raise error if machines directory is missing on machines listing !433
+
 v 1.9.1
 - Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
 
