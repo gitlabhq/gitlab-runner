@@ -150,7 +150,7 @@ more in [Distributed runners caching][caching].
       MachineDriver = "digitalocean"
       MachineName = "auto-scale-runners-%s.my.domain.com"
       MachineOptions = [
-          "digitalocean-image=coreos-beta",
+          "digitalocean-image=coreos-stable",
           "digitalocean-ssh-user=core",
           "digitalocean-access-token=MY_DIGITAL_OCEAN_TOKEN",
           "digitalocean-region=nyc2",

@@ -391,7 +391,7 @@ Example:
   MachineName = "auto-scale-%s"
   MachineDriver = "digitalocean"
   MachineOptions = [
-      "digitalocean-image=coreos-beta",
+      "digitalocean-image=coreos-stable",
       "digitalocean-ssh-user=core",
       "digitalocean-access-token=DO_ACCESS_TOKEN",
       "digitalocean-region=nyc2",
