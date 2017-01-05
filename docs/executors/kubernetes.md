@@ -26,14 +26,10 @@ The Kubernetes executor divides the build into multiple steps:
 1. **Prepare**: Create the Pod against the Kubernetes Cluster.
 	This creates the containers required for the build and services to run.
 1. **Pre-build**: Clone, restore cache and download artifacts from previous
-   stages.
-   User provided image needs to have `git` installed.
+   stages. This is run on a special container as part of the pod.
 1. **Build**: User build.
-1. **Post-build**: Create cache, upload artifacts to GitLab.
-
-All stages are run on user provided image.
-This image needs to have `git` installed and optionally
-GitLab Runner binary installed for supporting artifacts and caching.
+1. **Post-build**: Create cache, upload artifacts to GitLab. This also uses
+   the special container as part of the pod.
 
 ## Connecting to the Kubernetes API
 
