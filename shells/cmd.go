@@ -140,7 +140,8 @@ func (b *CmdWriter) Cd(path string) {
 }
 
 func (b *CmdWriter) MkDir(path string) {
-	b.Line("md " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
+	b.Line("dir " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL || " +
+		"md " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
 }
 
 func (b *CmdWriter) MkTmpDir(name string) string {
