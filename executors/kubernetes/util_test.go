@@ -204,7 +204,7 @@ func TestWaitForPodRunning(t *testing.T) {
 						},
 					}
 					if retries > 3 {
-						t.Errorf("Too many retries for the given poll parameters. (Expected 3 with PollInterval=2 and PollTimeout=4")
+						t.Errorf("Too many retries for the given poll parameters. (Expected 3)")
 					}
 					retries++
 					return &http.Response{StatusCode: 200, Body: objBody(codec, pod), Header: map[string][]string{
