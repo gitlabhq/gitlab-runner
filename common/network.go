@@ -118,6 +118,7 @@ type RegisterRunnerRequest struct {
 	Token       string      `json:"token,omitempty"`
 	Description string      `json:"description,omitempty"`
 	Tags        string      `json:"tag_list,omitempty"`
+	RunUntagged bool        `json:"run_untagged"`
 }
 
 type RegisterRunnerResponse struct {
@@ -164,7 +165,7 @@ type BuildTracePatch interface {
 
 type Network interface {
 	GetBuild(config RunnerConfig) (*GetBuildResponse, bool)
-	RegisterRunner(config RunnerCredentials, description, tags string) *RegisterRunnerResponse
+	RegisterRunner(config RunnerCredentials, description, tags string, runUntagged bool) *RegisterRunnerResponse
 	DeleteRunner(config RunnerCredentials) bool
 	VerifyRunner(config RunnerCredentials) bool
 	UpdateBuild(config RunnerConfig, id int, state BuildState, trace *string) UpdateState

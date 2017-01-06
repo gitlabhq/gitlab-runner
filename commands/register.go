@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -25,6 +26,7 @@ type RegisterCommand struct {
 	NonInteractive    bool   `short:"n" long:"non-interactive" env:"REGISTER_NON_INTERACTIVE" description:"Run registration unattended"`
 	LeaveRunner       bool   `long:"leave-runner" env:"REGISTER_LEAVE_RUNNER" description:"Don't remove runner if registration fails"`
 	RegistrationToken string `short:"r" long:"registration-token" env:"REGISTRATION_TOKEN" description:"Runner's registration token"`
+	RunUntagged       bool   `long:"run-untagged" env:"REGISTER_RUN_UNTAGGED" description:"Register to run untagged builds; defaults to 'true' when 'tag-list' is empty"`
 
 	common.RunnerConfig
 }
@@ -143,7 +145,18 @@ func (s *RegisterCommand) askRunner() {
 		s.Name = s.ask("name", "Please enter the gitlab-ci description for this runner:")
 		s.TagList = s.ask("tag-list", "Please enter the gitlab-ci tags for this runner (comma separated):", true)
 
-		result := s.network.RegisterRunner(s.RunnerCredentials, s.Name, s.TagList)
+		if s.TagList == "" {
+			s.RunUntagged = true
+		} else {
+			runUntagged, err := strconv.ParseBool(s.ask("run-untagged", "Whether to run untagged builds [true/false]:", true))
+			if err != nil {
+				log.Panicf("Failed to parse option 'run-untagged': %v", err)
+			} else {
+				s.RunUntagged = runUntagged
+			}
+		}
+
+		result := s.network.RegisterRunner(s.RunnerCredentials, s.Name, s.TagList, s.RunUntagged)
 		if result == nil {
 			log.Panicln("Failed to register this runner. Perhaps you are having network problems")
 		}

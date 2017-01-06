@@ -3,9 +3,6 @@ package network
 import (
 	"bytes"
 	"fmt"
-	"github.com/Sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -15,6 +12,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+
+	"github.com/Sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 const clientError = -100
@@ -119,13 +120,14 @@ func (n *GitLabClient) GetBuild(config common.RunnerConfig) (*common.GetBuildRes
 	}
 }
 
-func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string) *common.RegisterRunnerResponse {
+func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged bool) *common.RegisterRunnerResponse {
 	// TODO: pass executor
 	request := common.RegisterRunnerRequest{
 		Info:        n.getRunnerVersion(common.RunnerConfig{}),
 		Token:       runner.Token,
 		Description: description,
 		Tags:        tags,
+		RunUntagged: runUntagged,
 	}
 
 	var response common.RegisterRunnerResponse
