@@ -97,7 +97,7 @@ currently supported.
 
 You can verify that the Runner created the service configuration file after
 executing the `install` command, by checking the
-`~user/Library/LaunchAgents/gitlab-runner.plist` file.
+`~/Library/LaunchAgents/gitlab-runner.plist` file.
 
 ### Upgrade the service file
 
