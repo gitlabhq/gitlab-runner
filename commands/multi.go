@@ -21,6 +21,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	prometheus_helper "gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/sentry"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
@@ -38,7 +39,8 @@ type RunCommand struct {
 	User             string `short:"u" long:"user" description:"Use specific user to execute shell scripts"`
 	Syslog           bool   `long:"syslog" description:"Log to syslog"`
 
-	sentryLogHook sentry.LogHook
+	sentryLogHook     sentry.LogHook
+	prometheusLogHook prometheus_helper.LogHook
 
 	// abortBuilds is used to abort running builds
 	abortBuilds chan os.Signal
@@ -320,6 +322,8 @@ func (mr *RunCommand) serveMetrics() error {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
+	// Metrics about catched errors
+	registry.MustRegister(&mr.prometheusLogHook)
 	// Metrics about the program's build version.
 	registry.MustRegister(common.AppVersion.NewMetricsCollector())
 	// Go-specific metrics about the process (GC stats, goroutines, etc.).
@@ -476,6 +480,7 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 	}
 
 	log.AddHook(&mr.sentryLogHook)
+	log.AddHook(&mr.prometheusLogHook)
 
 	err = service.Run()
 	if err != nil {
@@ -485,7 +490,8 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 
 func init() {
 	common.RegisterCommand2("run", "run multi runner service", &RunCommand{
-		ServiceName: defaultServiceName,
-		network:     &network.GitLabClient{},
+		ServiceName:       defaultServiceName,
+		network:           &network.GitLabClient{},
+		prometheusLogHook: prometheus_helper.NewLogHook(),
 	})
 }
