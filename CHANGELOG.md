@@ -1,3 +1,7 @@
+v 1.9.2
+- Handle Content-Type header with charset information !430
+- Don't raise error if machines directory is missing on machines listing !433
+
 v 1.9.1
 - Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
 
@@ -32,6 +36,9 @@ v 1.9.0
 - Add a link where one can download the packages directly !292
 - Kubernetes executor - use pre-build container !425
 
+v 1.8.2
+- Handle Content-Type header with charset information !430
+
 v 1.8.1
 - Rrefactor the private container registry docs !392
 - Make pull policies usage clear !393
@@ -51,6 +58,9 @@ v 1.8.0
 - Add PullPolicy config option for kubernetes !335
 - Handle received 'failed' build state while patching the trace !366
 - Add support for using private docker registries !386
+
+v 1.7.2
+- Handle Content-Type header with charset information !430
 
 v 1.7.1
 - Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364

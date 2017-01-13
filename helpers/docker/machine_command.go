@@ -130,13 +130,12 @@ func (m *machineCommand) Remove(name string) error {
 	return cmd.Run()
 }
 
-func (m *machineCommand) machinesPath() string {
-	return filepath.Join(mcndirs.GetBaseDir(), "machines")
-}
-
 func (m *machineCommand) List() (hostNames []string, err error) {
-	dir, err := ioutil.ReadDir(m.machinesPath())
-	if err != nil && !os.IsNotExist(err) {
+	dir, err := ioutil.ReadDir(mcndirs.GetMachineDir())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -183,7 +182,7 @@ func (m *machineCommand) Status(name string) (string, error) {
 }
 
 func (m *machineCommand) Exist(name string) bool {
-	configPath := filepath.Join(m.machinesPath(), name, "config.json")
+	configPath := filepath.Join(mcndirs.GetMachineDir(), name, "config.json")
 	_, err := os.Stat(configPath)
 	if err != nil {
 		return false
