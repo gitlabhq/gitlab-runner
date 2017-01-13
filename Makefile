@@ -231,7 +231,14 @@ build-and-deploy-binary:
 	make build BUILD_PLATFORMS="-os=linux -arch=amd64"
 	scp out/binaries/$(PACKAGE_NAME)-linux-amd64 $(SERVER):/usr/bin/gitlab-runner
 
-package: package-deps package-deb package-rpm
+package: package-deps package-prepare package-deb package-rpm
+
+package-deps:
+	# Installing packaging dependencies...
+	gem install fpm
+
+package-prepare:
+	chmod 755 packaging/root/usr/share/gitlab-runner/*
 
 package-deb:
 	# Building Debian compatible packages...
@@ -246,10 +253,6 @@ package-rpm:
 	make package-rpm-fpm ARCH=386 PACKAGE_ARCH=i686
 	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=arm
 	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=armhf
-
-package-deps:
-	# Installing packaging dependencies...
-	gem install fpm
 
 package-deb-fpm:
 	@mkdir -p out/deb/
