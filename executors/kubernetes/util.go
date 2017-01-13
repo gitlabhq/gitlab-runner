@@ -153,7 +153,7 @@ func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan 
 // parameters.
 func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
-	pollAttempts := config.GetPollTimeout() / pollInterval
+	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {
 		select {
 		case r := <-triggerPodPhaseCheck(c, pod, out):
