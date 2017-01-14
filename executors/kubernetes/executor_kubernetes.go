@@ -90,9 +90,7 @@ func (s *executor) setupResources() error {
 	return nil
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	var err error
-
+func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) (err error) {
 	if err = s.AbstractExecutor.Prepare(globalConfig, config, build); err != nil {
 		return err
 	}
@@ -311,14 +309,11 @@ func (s *executor) checkDefaults() error {
 // namespace, as long as it complies to validation regular-expression, when
 // expression is empty the overwrite is disabled.
 func (s *executor) overwriteNamespace(build *common.Build) error {
-	var err error
-	var r *regexp.Regexp
-
 	// looking for namespace overwrite variable, and expanding for interpolation
 	s.namespaceOverwrite = build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
 
 	if s.Config.Kubernetes.NamespaceOverwriteAllowed == "" {
-		s.Debugln("configuration entry 'namespace_overwrite_allowed' is empty, using configured namespace.")
+		s.Debugln("Configuration entry 'namespace_overwrite_allowed' is empty, using configured namespace.")
 		return nil
 	}
 
@@ -326,6 +321,8 @@ func (s *executor) overwriteNamespace(build *common.Build) error {
 		return fmt.Errorf("namespace overwrite expression informed, but 'KUBERNETES_NAMESPACE_OVERWRITE' is not set")
 	}
 
+	var err error
+	var r *regexp.Regexp
 	if r, err = regexp.Compile(s.Config.Kubernetes.NamespaceOverwriteAllowed); err != nil {
 		return err
 	}
