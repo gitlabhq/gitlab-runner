@@ -309,16 +309,15 @@ func (s *executor) checkDefaults() error {
 // namespace, as long as it complies to validation regular-expression, when
 // expression is empty the overwrite is disabled.
 func (s *executor) overwriteNamespace(build *common.Build) error {
-	// looking for namespace overwrite variable, and expanding for interpolation
-	s.namespaceOverwrite = build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
-
 	if s.Config.Kubernetes.NamespaceOverwriteAllowed == "" {
 		s.Debugln("Configuration entry 'namespace_overwrite_allowed' is empty, using configured namespace.")
 		return nil
 	}
 
+	// looking for namespace overwrite variable, and expanding for interpolation
+	s.namespaceOverwrite = build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
 	if s.namespaceOverwrite == "" {
-		return fmt.Errorf("namespace overwrite expression informed, but 'KUBERNETES_NAMESPACE_OVERWRITE' is not set")
+		return nil
 	}
 
 	var err error
