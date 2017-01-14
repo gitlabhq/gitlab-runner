@@ -13,7 +13,14 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
-func onShell(t *testing.T, name, command, extension string, cmdArgs []string, writer ShellWriter) {
+type TestShellWriter interface {
+	ShellWriter
+
+	Finish(trace bool) string
+	GetTemporaryPath() string
+}
+
+func onShell(t *testing.T, name, command, extension string, cmdArgs []string, writer TestShellWriter) {
 	const TestPath = "test-path"
 
 	t.Run(name, func(t *testing.T) {
