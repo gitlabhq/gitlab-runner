@@ -43,6 +43,10 @@ type BashWriter struct {
 	indent        int
 }
 
+func (b *BashWriter) GetTemporaryPath() string {
+	return b.TemporaryPath
+}
+
 func (b *BashWriter) Line(text string) {
 	b.WriteString(strings.Repeat("  ", b.indent) + text + "\n")
 }
