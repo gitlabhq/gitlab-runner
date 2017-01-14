@@ -1,3 +1,7 @@
+v 1.7.3
+- Fix package's scripts permissions !440
+- Check if directory exists before recreating it with Windows CMD !435
+
 v 1.7.2
 - Handle Content-Type header with charset information !430
 
