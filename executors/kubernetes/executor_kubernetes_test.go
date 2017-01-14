@@ -246,6 +246,9 @@ func TestPrepare(t *testing.T) {
 					Options: common.BuildOptions{
 						"image": "test-image",
 					},
+					Variables: []common.BuildVariable{
+						common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
+					},
 				},
 				Runner: &common.RunnerConfig{},
 			},
@@ -253,7 +256,7 @@ func TestPrepare(t *testing.T) {
 				options: &kubernetesOptions{
 					Image: "test-image",
 				},
-				namespaceOverwrite: "",
+				namespaceOverwrite: "namespacee",
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
