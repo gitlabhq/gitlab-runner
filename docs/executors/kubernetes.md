@@ -70,6 +70,7 @@ The following keywords help to define the behaviour of the Runner within kuberne
 - `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
 - `helper_imager`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts
+- `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
 
 ## Define keywords in the config toml
 
