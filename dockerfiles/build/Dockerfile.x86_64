@@ -1,5 +1,5 @@
 FROM alpine
 
-RUN apk add --update bash ca-certificates git
+RUN apk add --update bash ca-certificates git perl
 
 COPY ./ /usr/bin
