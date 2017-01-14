@@ -1,13 +1,16 @@
 package shells
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"io"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 type PowerShell struct {
@@ -41,6 +44,10 @@ func psQuoteVariable(text string) string {
 	text = psQuote(text)
 	text = strings.Replace(text, "$", "`$", -1)
 	return text
+}
+
+func (b *PsWriter) GetTemporaryPath() string {
+	return b.TemporaryPath
 }
 
 func (b *PsWriter) Line(text string) {
@@ -199,6 +206,19 @@ func (b *PsWriter) Absolute(dir string) string {
 	return filepath.Join("$CurrentDirectory", dir)
 }
 
+func (b *PsWriter) Finish(trace bool) string {
+	var buffer bytes.Buffer
+	w := bufio.NewWriter(&buffer)
+
+	if trace {
+		io.WriteString(w, "Set-PSDebug -Trace 2\r\n")
+	}
+
+	io.WriteString(w, b.String())
+	w.Flush()
+	return buffer.String()
+}
+
 func (b *PowerShell) GetName() string {
 	return "powershell"
 }
@@ -218,10 +238,6 @@ func (b *PowerShell) GenerateScript(scriptType common.ShellScriptType, info comm
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
 
-	if info.Build.IsDebugTraceEnabled() {
-		w.Line("Set-PSDebug -Trace 2")
-	}
-
 	if scriptType == common.ShellPrepareScript {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo \"Running on $env:computername via " + psQuoteVariable(info.Build.Hostname) + "...\"")
@@ -231,7 +247,7 @@ func (b *PowerShell) GenerateScript(scriptType common.ShellScriptType, info comm
 	}
 
 	err = b.writeScript(w, scriptType, info)
-	script = w.String()
+	script = w.Finish(info.Build.IsDebugTraceEnabled())
 	return
 }
 
