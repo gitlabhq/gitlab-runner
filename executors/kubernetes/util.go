@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
 	"golang.org/x/net/context"
@@ -221,17 +220,6 @@ func buildVariables(bv common.BuildVariables) []api.EnvVar {
 		}
 	}
 	return e
-}
-
-// getNamespace returns the namespace after checking on variables if there's an
-// overwrite, by using `KUBERNETES_NAMESPACE_OVERWRITE`, otherwise uses the
-// default (described on runner configuration).
-func getNamespace(defaultNamespace string) string {
-	namespaceOverwrite := os.Getenv("KUBERNETES_NAMESPACE_OVERWRITE")
-	if namespaceOverwrite == "" {
-		return defaultNamespace
-	}
-	return namespaceOverwrite
 }
 
 // getNewOrLegacy takes two strings and returns the former if it is not empty.
