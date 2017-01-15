@@ -92,6 +92,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					Namespace: "test-ns",
 				},
 			},
+			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
@@ -143,6 +144,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					Namespace: "test-ns",
 				},
 			},
+			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
@@ -175,6 +177,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					Namespace: "test-ns",
 				},
 			},
+			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				return nil, fmt.Errorf("error getting pod")
 			},
@@ -235,7 +238,7 @@ func TestWaitForPodRunning(t *testing.T) {
 			call: func(b []byte) (int, error) {
 				if retries < test.Retries {
 					if !strings.Contains(string(b), "Waiting for pod") {
-						t.Errorf("Expected to continue waiting for pod. Got: '%s'", string(b))
+						t.Errorf("[%s] Expected to continue waiting for pod. Got: '%s'", test.Name, string(b))
 					}
 				}
 				return len(b), nil
@@ -254,7 +257,7 @@ func TestWaitForPodRunning(t *testing.T) {
 		}
 
 		if test.ExactRetries && retries < test.Retries {
-			t.Errorf("Not enough retries. Expected: %d, got: %d", test.Retries, retries)
+			t.Errorf("[%s] Not enough retries. Expected: %d, got: %d", test.Name, test.Retries, retries)
 			continue
 		}
 	}
