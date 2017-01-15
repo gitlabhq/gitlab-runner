@@ -1,3 +1,6 @@
+v 1.8.4
+- Add armv6l to the ARM replacements list for docker executor helper image !446
+
 v 1.8.3
 - Fix package's scripts permissions !440
 - Check if directory exists before recreating it with Windows CMD !435
