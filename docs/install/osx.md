@@ -87,7 +87,7 @@ interface as your current user. Only then will you be able to manage the service
 Currently, the only proven to work mode for OSX is running service in user-mode.
 
 Since the service will be running only when the user is logged in, you should
-enable auto-logging on your OSX machine.
+enable auto-login on your OSX machine.
 
 The service will be launched as one of `LaunchAgents`. By using `LaunchAgents`,
 the builds will be able to do UI interactions, making it possible to run and
@@ -101,7 +101,7 @@ currently supported.
 
 You can verify that the Runner created the service configuration file after
 executing the `install` command, by checking the
-`~user/Library/LaunchAgents/gitlab-runner.plist` file.
+`~/Library/LaunchAgents/gitlab-runner.plist` file.
 
 ### Upgrade the service file
 
