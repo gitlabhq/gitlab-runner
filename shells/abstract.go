@@ -110,11 +110,18 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 		w.Notice("Updating/initializing submodules...")
 	}
 
-	args := []string{"submodule", "update", "--init"}
+	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
+	args := []string{"submodule", "sync"}
 	if recursive {
 		args = append(args, "--recursive")
 	}
+	w.Command("git", args...)
 
+	// Update / initialize submodules
+	args = []string{"submodule", "update", "--init"}
+	if recursive {
+		args = append(args, "--recursive")
+	}
 	w.Command("git", args...)
 }
 
