@@ -25,7 +25,8 @@ const (
 type SubmoduleStrategy int
 
 const (
-	SubmoduleNone SubmoduleStrategy = iota
+	SubmoduleInvalid SubmoduleStrategy = iota
+	SubmoduleNone
 	SubmoduleNormal
 	SubmoduleRecursive
 )
@@ -423,8 +424,8 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 		return SubmoduleNone
 
 	default:
-		// TODO: Raise an error here?
-		return SubmoduleNone
+		// Will cause an error in AbstractShell) writeSubmoduleUpdateCmds
+		return SubmoduleInvalid
 	}
 }
 
