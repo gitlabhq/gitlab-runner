@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 var brokenCredentials = RunnerCredentials{
@@ -223,21 +224,21 @@ func TestRegisterRunner(t *testing.T) {
 
 	c := GitLabClient{}
 
-	res := c.RegisterRunner(validToken, "test", "tags")
+	res := c.RegisterRunner(validToken, "test", "tags", true)
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
 	}
 
-	res = c.RegisterRunner(validToken, "invalid description", "tags")
+	res = c.RegisterRunner(validToken, "invalid description", "tags", true)
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(invalidToken, "test", "tags")
+	res = c.RegisterRunner(invalidToken, "test", "tags", true)
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(otherToken, "test", "tags")
+	res = c.RegisterRunner(otherToken, "test", "tags", true)
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(brokenCredentials, "test", "tags")
+	res = c.RegisterRunner(brokenCredentials, "test", "tags", true)
 	assert.Nil(t, res)
 }
 
