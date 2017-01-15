@@ -1,14 +1,17 @@
 package shells
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"io"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 type CmdShell struct {
@@ -54,6 +57,10 @@ func batchEscape(text string) string {
 
 func (b *CmdShell) GetName() string {
 	return "cmd"
+}
+
+func (b *CmdWriter) GetTemporaryPath() string {
+	return b.TemporaryPath
 }
 
 func (b *CmdWriter) Line(text string) {
@@ -140,7 +147,8 @@ func (b *CmdWriter) Cd(path string) {
 }
 
 func (b *CmdWriter) MkDir(path string) {
-	b.Line("md " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
+	args := batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL"
+	b.Line("dir " + args + " || md " + args)
 }
 
 func (b *CmdWriter) MkTmpDir(name string) string {
@@ -189,6 +197,23 @@ func (b *CmdWriter) Absolute(dir string) string {
 	return filepath.Join("%CD%", dir)
 }
 
+func (b *CmdWriter) Finish(trace bool) string {
+	var buffer bytes.Buffer
+	w := bufio.NewWriter(&buffer)
+
+	if trace {
+		io.WriteString(w, "@echo off\r\n")
+	}
+
+	io.WriteString(w, "setlocal enableextensions\r\n")
+	io.WriteString(w, "setlocal enableDelayedExpansion\r\n")
+	io.WriteString(w, "set nl=^\r\n\r\n\r\n")
+
+	io.WriteString(w, b.String())
+	w.Flush()
+	return buffer.String()
+}
+
 func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
 	script = &common.ShellConfiguration{
 		Command:   "cmd",
@@ -204,14 +229,6 @@ func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.Shel
 		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
 	}
 
-	if !info.Build.IsDebugTraceEnabled() {
-		w.Line("@echo off")
-	}
-
-	w.Line("setlocal enableextensions")
-	w.Line("setlocal enableDelayedExpansion")
-	w.Line("set nl=^\r\n\r\n")
-
 	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo Running on %COMPUTERNAME% via " + batchEscape(info.Build.Hostname) + "...")
@@ -221,7 +238,7 @@ func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.Shel
 	}
 
 	err = b.writeScript(w, buildStage, info)
-	script = w.String()
+	script = w.Finish(info.Build.IsDebugTraceEnabled())
 	return
 }
 

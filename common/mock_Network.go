@@ -19,8 +19,8 @@ func (m *MockNetwork) GetBuild(config RunnerConfig) (*GetBuildResponse, bool) {
 
 	return r0, r1
 }
-func (m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string) *RegisterRunnerResponse {
-	ret := m.Called(config, description, tags)
+func (m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string, runUntagged bool) *RegisterRunnerResponse {
+	ret := m.Called(config, description, tags, runUntagged)
 
 	var r0 *RegisterRunnerResponse
 	if ret.Get(0) != nil {

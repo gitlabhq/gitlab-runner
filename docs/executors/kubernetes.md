@@ -66,6 +66,7 @@ The following keywords help to define the behaviour of the Runner within kuberne
 - `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
 - `helper_imager`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts
+- `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
 - `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status. [Default: 3]
 - `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]
 

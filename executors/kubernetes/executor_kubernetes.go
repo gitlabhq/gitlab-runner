@@ -195,6 +195,7 @@ func (s *executor) setupBuildPod() error {
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
 				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
+			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 		},
 	})
 	if err != nil {
