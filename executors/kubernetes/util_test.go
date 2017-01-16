@@ -227,39 +227,41 @@ func TestWaitForPodRunning(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		retries = 0
-		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
-		fakeClient := fake.RESTClient{
-			Codec:  codec,
-			Client: fake.CreateHTTPClient(test.ClientFunc),
-		}
-		c.Client = fakeClient.Client
-		fw := testWriter{
-			call: func(b []byte) (int, error) {
-				if retries < test.Retries {
-					if !strings.Contains(string(b), "Waiting for pod") {
-						t.Errorf("[%s] Expected to continue waiting for pod. Got: '%s'", test.Name, string(b))
+		t.Run(test.Name, func(t *testing.T) {
+			retries = 0
+			c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
+			fakeClient := fake.RESTClient{
+				Codec:  codec,
+				Client: fake.CreateHTTPClient(test.ClientFunc),
+			}
+			c.Client = fakeClient.Client
+			fw := testWriter{
+				call: func(b []byte) (int, error) {
+					if retries < test.Retries {
+						if !strings.Contains(string(b), "Waiting for pod") {
+							t.Errorf("[%s] Expected to continue waiting for pod. Got: '%s'", test.Name, string(b))
+						}
 					}
-				}
-				return len(b), nil
-			},
-		}
-		phase, err := waitForPodRunning(context.Background(), c, test.Pod, fw, test.Config)
+					return len(b), nil
+				},
+			}
+			phase, err := waitForPodRunning(context.Background(), c, test.Pod, fw, test.Config)
 
-		if err != nil && !test.Error {
-			t.Errorf("[%s] Expected success. Got: %s", test.Name, err.Error())
-			continue
-		}
+			if err != nil && !test.Error {
+				t.Errorf("[%s] Expected success. Got: %s", test.Name, err.Error())
+				return
+			}
 
-		if phase != test.PodEndPhase {
-			t.Errorf("[%s] Invalid end state. Expected '%v', got: '%v'", test.Name, test.PodEndPhase, phase)
-			continue
-		}
+			if phase != test.PodEndPhase {
+				t.Errorf("[%s] Invalid end state. Expected '%v', got: '%v'", test.Name, test.PodEndPhase, phase)
+				return
+			}
 
-		if test.ExactRetries && retries < test.Retries {
-			t.Errorf("[%s] Not enough retries. Expected: %d, got: %d", test.Name, test.Retries, retries)
-			continue
-		}
+			if test.ExactRetries && retries < test.Retries {
+				t.Errorf("[%s] Not enough retries. Expected: %d, got: %d", test.Name, test.Retries, retries)
+				return
+			}
+		})
 	}
 }
 
