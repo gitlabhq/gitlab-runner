@@ -241,6 +241,78 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 	})
 }
 
+func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
+	for _, strategy := range []string{"none", ""} {
+		t.Run("strategy "+strategy, func(t *testing.T) {
+			onEachShell(t, func(t *testing.T, shell string) {
+				successfulBuild, err := common.GetSuccessfulBuild()
+				assert.NoError(t, err)
+				build, cleanup := newBuild(t, successfulBuild, shell)
+				defer cleanup()
+
+				build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"})
+
+				out, err := runBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+				assert.Contains(t, out, "Skipping Git submodules setup")
+				assert.NotContains(t, out, "Updating/initializing submodules...")
+				assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+			})
+		})
+	}
+}
+
+func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.Contains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.Contains(t, out, "Updating/initializing submodules recursively...")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "invalid"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.EqualError(t, err, "unknown GIT_SUBMODULE_STRATEGY")
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+	})
+}
+
 func TestBuildWithDebugTrace(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
