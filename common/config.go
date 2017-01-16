@@ -118,34 +118,36 @@ func (p KubernetesPullPolicy) Get() (KubernetesPullPolicy, error) {
 
 type KubernetesConfig struct {
 	Host                          string               `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
-	CertFile                      string               `toml:"cert_file" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
-	KeyFile                       string               `toml:"key_file" json:"key_file" long:"key-file" env:"KUBERNETES_KEY_FILE" description:"Optional Kubernetes master auth private key"`
-	CAFile                        string               `toml:"ca_file" json:"ca_file" long:"ca-file" env:"KUBERNETES_CA_FILE" description:"Optional Kubernetes master auth ca certificate"`
+	CertFile                      string               `toml:"cert_file,omitempty" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
+	KeyFile                       string               `toml:"key_file,omitempty" json:"key_file" long:"key-file" env:"KUBERNETES_KEY_FILE" description:"Optional Kubernetes master auth private key"`
+	CAFile                        string               `toml:"ca_file,omitempty" json:"ca_file" long:"ca-file" env:"KUBERNETES_CA_FILE" description:"Optional Kubernetes master auth ca certificate"`
 	Image                         string               `toml:"image" json:"image" long:"image" env:"KUBERNETES_IMAGE" description:"Default docker image to use for builds when none is specified"`
 	Namespace                     string               `toml:"namespace" json:"namespace" long:"namespace" env:"KUBERNETES_NAMESPACE" description:"Namespace to run Kubernetes jobs in"`
-	Privileged                    bool                 `toml:"privileged" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
-	CPUs                          string               `toml:"cpus" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"(deprecated) The CPU allocation given to build containers"`
-	Memory                        string               `toml:"memory" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"(deprecated) The amount of memory allocated to build containers"`
-	ServiceCPUs                   string               `toml:"service_cpus" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"(deprecated) The CPU allocation given to build service containers"`
-	ServiceMemory                 string               `toml:"service_memory" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"(deprecated) The amount of memory allocated to build service containers"`
-	HelperCPUs                    string               `toml:"helper_cpus" json:"helper_cpus" long:"helper-cpus" env:"KUBERNETES_HELPER_CPUS" description:"(deprecated) The CPU allocation given to build helper containers"`
-	HelperMemory                  string               `toml:"helper_memory" json:"helper_memory" long:"helper-memory" env:"KUBERNETES_HELPER_MEMORY" description:"(deprecated) The amount of memory allocated to build helper containers"`
-	CPULimit                      string               `toml:"cpu_limit" json:"cpu_limit" long:"cpu-limit" env:"KUBERNETES_CPU_LIMIT" description:"The CPU allocation given to build containers"`
-	MemoryLimit                   string               `toml:"memory_limit" json:"memory_limit" long:"memory-limit" env:"KUBERNETES_MEMORY_LIMIT" description:"The amount of memory allocated to build containers"`
-	ServiceCPULimit               string               `toml:"service_cpu_limit" json:"service_cpu_limit" long:"service-cpu-limit" env:"KUBERNETES_SERVICE_CPU_LIMIT" description:"The CPU allocation given to build service containers"`
-	ServiceMemoryLimit            string               `toml:"service_memory_limit" json:"service_memory_limit" long:"service-memory-limit" env:"KUBERNETES_SERVICE_MEMORY_LIMIT" description:"The amount of memory allocated to build service containers"`
-	HelperCPULimit                string               `toml:"helper_cpu_limit" json:"helper_cpu_limit" long:"helper-cpu-limit" env:"KUBERNETES_HELPER_CPU_LIMIT" description:"The CPU allocation given to build helper containers"`
-	HelperMemoryLimit             string               `toml:"helper_memory_limit" json:"helper_memory_limit" long:"helper-memory-limit" env:"KUBERNETES_HELPER_MEMORY_LIMIT" description:"The amount of memory allocated to build helper containers"`
-	CPURequest                    string               `toml:"cpu_request" json:"cpu_request" long:"cpu-request" env:"KUBERNETES_CPU_REQUEST" description:"The CPU allocation requested for build containers"`
-	MemoryRequest                 string               `toml:"memory_request" json:"memory_request" long:"memory-request" env:"KUBERNETES_MEMORY_REQUEST" description:"The amount of memory requested from build containers"`
-	ServiceCPURequest             string               `toml:"service_cpu_request" json:"service_cpu_request" long:"service-cpu-request" env:"KUBERNETES_SERVICE_CPU_REQUEST" description:"The CPU allocation requested for build service containers"`
-	ServiceMemoryRequest          string               `toml:"service_memory_request" json:"service_memory_request" long:"service-memory-request" env:"KUBERNETES_SERVICE_MEMORY_REQUEST" description:"The amount of memory requested for build service containers"`
-	HelperCPURequest              string               `toml:"helper_cpu_request" json:"helper_cpu_request" long:"helper-cpu-request" env:"KUBERNETES_HELPER_CPU_REQUEST" description:"The CPU allocation requested for build helper containers"`
-	HelperMemoryRequest           string               `toml:"helper_memory_request" json:"helper_memory_request" long:"helper-memory-request" env:"KUBERNETES_HELPER_MEMORY_REQUEST" description:"The amount of memory requested for build helper containers"`
+	Privileged                    bool                 `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
+	CPUs                          string               `toml:"cpus,omitempty" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"(deprecated) The CPU allocation given to build containers"`
+	Memory                        string               `toml:"memory,omitempty" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"(deprecated) The amount of memory allocated to build containers"`
+	ServiceCPUs                   string               `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"(deprecated) The CPU allocation given to build service containers"`
+	ServiceMemory                 string               `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"(deprecated) The amount of memory allocated to build service containers"`
+	HelperCPUs                    string               `toml:"helper_cpus,omitempty" json:"helper_cpus" long:"helper-cpus" env:"KUBERNETES_HELPER_CPUS" description:"(deprecated) The CPU allocation given to build helper containers"`
+	HelperMemory                  string               `toml:"helper_memory,omitempty" json:"helper_memory" long:"helper-memory" env:"KUBERNETES_HELPER_MEMORY" description:"(deprecated) The amount of memory allocated to build helper containers"`
+	CPULimit                      string               `toml:"cpu_limit,omitempty" json:"cpu_limit" long:"cpu-limit" env:"KUBERNETES_CPU_LIMIT" description:"The CPU allocation given to build containers"`
+	MemoryLimit                   string               `toml:"memory_limit,omitempty" json:"memory_limit" long:"memory-limit" env:"KUBERNETES_MEMORY_LIMIT" description:"The amount of memory allocated to build containers"`
+	ServiceCPULimit               string               `toml:"service_cpu_limit,omitempty" json:"service_cpu_limit" long:"service-cpu-limit" env:"KUBERNETES_SERVICE_CPU_LIMIT" description:"The CPU allocation given to build service containers"`
+	ServiceMemoryLimit            string               `toml:"service_memory_limit,omitempty" json:"service_memory_limit" long:"service-memory-limit" env:"KUBERNETES_SERVICE_MEMORY_LIMIT" description:"The amount of memory allocated to build service containers"`
+	HelperCPULimit                string               `toml:"helper_cpu_limit,omitempty" json:"helper_cpu_limit" long:"helper-cpu-limit" env:"KUBERNETES_HELPER_CPU_LIMIT" description:"The CPU allocation given to build helper containers"`
+	HelperMemoryLimit             string               `toml:"helper_memory_limit,omitempty" json:"helper_memory_limit" long:"helper-memory-limit" env:"KUBERNETES_HELPER_MEMORY_LIMIT" description:"The amount of memory allocated to build helper containers"`
+	CPURequest                    string               `toml:"cpu_request,omitempty" json:"cpu_request" long:"cpu-request" env:"KUBERNETES_CPU_REQUEST" description:"The CPU allocation requested for build containers"`
+	MemoryRequest                 string               `toml:"memory_request,omitempty" json:"memory_request" long:"memory-request" env:"KUBERNETES_MEMORY_REQUEST" description:"The amount of memory requested from build containers"`
+	ServiceCPURequest             string               `toml:"service_cpu_request,omitempty" json:"service_cpu_request" long:"service-cpu-request" env:"KUBERNETES_SERVICE_CPU_REQUEST" description:"The CPU allocation requested for build service containers"`
+	ServiceMemoryRequest          string               `toml:"service_memory_request,omitempty" json:"service_memory_request" long:"service-memory-request" env:"KUBERNETES_SERVICE_MEMORY_REQUEST" description:"The amount of memory requested for build service containers"`
+	HelperCPURequest              string               `toml:"helper_cpu_request,omitempty" json:"helper_cpu_request" long:"helper-cpu-request" env:"KUBERNETES_HELPER_CPU_REQUEST" description:"The CPU allocation requested for build helper containers"`
+	HelperMemoryRequest           string               `toml:"helper_memory_request,omitempty" json:"helper_memory_request" long:"helper-memory-request" env:"KUBERNETES_HELPER_MEMORY_REQUEST" description:"The amount of memory requested for build helper containers"`
 	PullPolicy                    KubernetesPullPolicy `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 	NodeSelector                  map[string]string    `toml:"node_selector,omitempty" json:"node_selector" long:"node-selector" description:"A toml table/json object of key=value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key=value pairs."`
-	HelperImage                   string               `toml:"helper_image" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
-	TerminationGracePeriodSeconds int64                `toml:"terminationGracePeriodSeconds,omitempty" json:"terminationGracePeriodSeconds" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal."`
+	HelperImage                   string               `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
+	TerminationGracePeriodSeconds int64                `toml:"terminationGracePeriodSeconds,omitzero" json:"terminationGracePeriodSeconds" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal."`
+	PollInterval                  int                  `toml:"poll_interval,omitzero" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status"`
+	PollTimeout                   int                  `toml:"poll_timeout,omitzero" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The total amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the pod it has just created (useful for queueing more builds that the cluster can handle at a time)"`
 }
 
 type RunnerCredentials struct {
@@ -217,6 +219,22 @@ func (c *KubernetesConfig) GetHelperImage() string {
 	}
 
 	return fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, rev)
+}
+
+func (c *KubernetesConfig) GetPollAttempts() int {
+	if c.PollTimeout <= 0 {
+		c.PollTimeout = KubernetesPollTimeout
+	}
+
+	return c.PollTimeout / c.GetPollInterval()
+}
+
+func (c *KubernetesConfig) GetPollInterval() int {
+	if c.PollInterval <= 0 {
+		c.PollInterval = KubernetesPollInterval
+	}
+
+	return c.PollInterval
 }
 
 func (c *DockerMachine) GetIdleCount() int {

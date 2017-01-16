@@ -26,14 +26,10 @@ The Kubernetes executor divides the build into multiple steps:
 1. **Prepare**: Create the Pod against the Kubernetes Cluster.
 	This creates the containers required for the build and services to run.
 1. **Pre-build**: Clone, restore cache and download artifacts from previous
-   stages.
-   User provided image needs to have `git` installed.
+   stages. This is run on a special container as part of the pod.
 1. **Build**: User build.
-1. **Post-build**: Create cache, upload artifacts to GitLab.
-
-All stages are run on user provided image.
-This image needs to have `git` installed and optionally
-GitLab Runner binary installed for supporting artifacts and caching.
+1. **Post-build**: Create cache, upload artifacts to GitLab. This also uses
+   the special container as part of the pod.
 
 ## Connecting to the Kubernetes API
 
@@ -77,6 +73,8 @@ The following keywords help to define the behaviour of the Runner within kuberne
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
 - `helper_imager`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts
 - `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
+- `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status. [Default: 3]
+- `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]
 
 The following keywords for resource limits are deprecated, please use the new ones above:
 
@@ -112,8 +110,10 @@ concurrent = 4
     memory_limit = "1Gi"
     service_cpu_limit = "1"
     service_memory_limit = "1Gi"
-    helper_cpu_limi = "500m"
+    helper_cpu_limit = "500m"
     helper_memory_limit = "100Mi"
+    poll_interval = 5
+    poll_timeout = 3600
     [runners.kubernetes.node_selector]
       gitlab = "true"
 ```
