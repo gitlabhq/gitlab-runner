@@ -168,15 +168,15 @@ func TestPrepare(t *testing.T) {
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Host:          "test-server",
-						ServiceCPUs:   "100m",
-						ServiceMemory: "200Mi",
-						CPUs:          "1.5",
-						Memory:        "4Gi",
-						HelperCPUs:    "50m",
-						HelperMemory:  "100Mi",
-						Privileged:    true,
-						PullPolicy:    "if-not-present",
+						Host:               "test-server",
+						ServiceCPULimit:    "100m",
+						ServiceMemoryLimit: "200Mi",
+						CPULimit:           "1.5",
+						MemoryLimit:        "4Gi",
+						HelperCPULimit:     "50m",
+						HelperMemoryLimit:  "100Mi",
+						Privileged:         true,
+						PullPolicy:         "if-not-present",
 					},
 				},
 			},
@@ -208,7 +208,10 @@ func TestPrepare(t *testing.T) {
 					api.ResourceCPU:    resource.MustParse("50m"),
 					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
-				pullPolicy: "IfNotPresent",
+				serviceRequests: api.ResourceList{},
+				buildRequests:   api.ResourceList{},
+				helperRequests:  api.ResourceList{},
+				pullPolicy:      "IfNotPresent",
 			},
 		},
 		{
@@ -216,14 +219,20 @@ func TestPrepare(t *testing.T) {
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Host:          "test-server",
-						ServiceCPUs:   "100m",
-						ServiceMemory: "200Mi",
-						CPUs:          "1.5",
-						Memory:        "4Gi",
-						HelperCPUs:    "50m",
-						HelperMemory:  "100Mi",
-						Privileged:    false,
+						Host:                 "test-server",
+						ServiceCPULimit:      "100m",
+						ServiceMemoryLimit:   "200Mi",
+						CPULimit:             "1.5",
+						MemoryLimit:          "4Gi",
+						HelperCPULimit:       "50m",
+						HelperMemoryLimit:    "100Mi",
+						ServiceCPURequest:    "99m",
+						ServiceMemoryRequest: "5Mi",
+						CPURequest:           "1",
+						MemoryRequest:        "1.5Gi",
+						HelperCPURequest:     "0.5m",
+						HelperMemoryRequest:  "42Mi",
+						Privileged:           false,
 					},
 				},
 			},
@@ -252,8 +261,71 @@ func TestPrepare(t *testing.T) {
 					api.ResourceCPU:    resource.MustParse("50m"),
 					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
+				serviceRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("99m"),
+					api.ResourceMemory: resource.MustParse("5Mi"),
+				},
+				buildRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1"),
+					api.ResourceMemory: resource.MustParse("1.5Gi"),
+				},
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
+				},
 			},
 			Error: true,
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:               "test-server",
+						ServiceCPUs:        "100m",
+						ServiceMemory:      "200Mi",
+						ServiceMemoryLimit: "202Mi",
+						CPUs:               "1.5",
+						Memory:             "4Gi",
+						HelperCPUs:         "50m",
+						HelperCPULimit:     "1m",
+						HelperMemory:       "100Mi",
+						Privileged:         true,
+					},
+				},
+			},
+			Build: &common.Build{
+				GetBuildResponse: common.GetBuildResponse{
+					Sha: "1234567890",
+					Options: common.BuildOptions{
+						"image": "test-image",
+					},
+					Variables: []common.BuildVariable{
+						common.BuildVariable{Key: "privileged", Value: "true"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("202Mi"),
+				},
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
+				},
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				serviceRequests: api.ResourceList{},
+				buildRequests:   api.ResourceList{},
+				helperRequests:  api.ResourceList{},
+			},
 		},
 	}
 

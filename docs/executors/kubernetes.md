@@ -61,16 +61,31 @@ The following keywords help to define the behaviour of the Runner within kuberne
 
 - `namespace`: Namespace to run Kubernetes Pods in
 - `privileged`: Run containers with the privileged flag
+- `cpu_limit`: The CPU allocation given to build containers
+- `memory_limit`: The amount of memory allocated to build containers
+- `service_cpu_limit`: The CPU allocation given to build service containers
+- `service_memory_limit`: The amount of memory allocated to build service containers
+- `helper_cpu_limit`: The CPU allocation given to build helper containers
+- `helper_memory_limit`: The amount of memory allocated to build helper containers
+- `cpu_request`: The CPU allocation requested for build containers
+- `memory_request`: The amount of memory requested from build containers
+- `service_cpu_request`: The CPU allocation requested for build service containers
+- `service_memory_request`: The amount of memory requested for build service containers
+- `helper_cpu_request`: The CPU allocation requested for build helper containers
+- `helper_memory_request`: The amount of memory requested for build helper containers
+- `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
+- `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
+- `helper_imager`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts
+- `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
+
+The following keywords for resource limits are deprecated, please use the new ones above:
+
 - `cpus`: The CPU allocation given to build containers
 - `memory`: The amount of memory allocated to build containers
 - `service_cpus`: The CPU allocation given to build service containers
 - `service_memory`: The amount of memory allocated to build service containers
 - `helper_cpus`: The CPU allocation given to build helper containers
 - `helper_memory`: The amount of memory allocated to build helper containers
-- `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
-- `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
-- `helper_imager`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts
-- `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
 
 ## Define keywords in the config toml
 
@@ -93,12 +108,12 @@ concurrent = 4
     ca_file = "/etc/ssl/kubernetes/ca.crt"
     namespace = "gitlab"
     privileged = true
-    cpus = "1"
-    memory = "1Gi"
-    service_cpus = "1"
-    service_memory = "1Gi"
-    helper_cpus = "500m"
-    helper_memory = "100Mi"
+    cpu_limit = "1"
+    memory_limit = "1Gi"
+    service_cpu_limit = "1"
+    service_memory_limit = "1Gi"
+    helper_cpu_limi = "500m"
+    helper_memory_limit = "100Mi"
     [runners.kubernetes.node_selector]
       gitlab = "true"
 ```
