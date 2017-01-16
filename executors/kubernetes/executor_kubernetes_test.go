@@ -362,7 +362,7 @@ func TestPrepare(t *testing.T) {
 				options: &kubernetesOptions{
 					Image: "test-image",
 				},
-				namespaceOverwrite: "namespace",
+				namespaceOverwrite: "",
 				serviceLimits:      api.ResourceList{},
 				buildLimits:        api.ResourceList{},
 				helperLimits:       api.ResourceList{},
