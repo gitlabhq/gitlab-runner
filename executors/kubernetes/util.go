@@ -221,3 +221,12 @@ func buildVariables(bv common.BuildVariables) []api.EnvVar {
 	}
 	return e
 }
+
+// getNewOrLegacy takes two strings and returns the former if it is not empty.
+// If the former string is empty, the latter is returned.
+func getNewOrLegacy(new, legacy string) string {
+	if new != "" {
+		return new
+	}
+	return legacy
+}
