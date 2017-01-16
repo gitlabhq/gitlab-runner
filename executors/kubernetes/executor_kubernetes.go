@@ -163,7 +163,7 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) buildContainer(name, image string, requests api.ResourceList, limits api.ResourceList, command ...string) api.Container {
+func (s *executor) buildContainer(name, image string, requests, limits api.ResourceList, command ...string) api.Container {
 	path := strings.Split(s.Build.BuildDir, "/")
 	path = path[:len(path)-1]
 
