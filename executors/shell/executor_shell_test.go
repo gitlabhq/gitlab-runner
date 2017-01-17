@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -257,6 +258,12 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 				assert.Contains(t, out, "Skipping Git submodules setup")
 				assert.NotContains(t, out, "Updating/initializing submodules...")
 				assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+				assert.Error(t, err, "Submodule not should have been initialized")
+
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+				assert.Error(t, err, "The submodule's submodule should not have been initialized")
 			})
 		})
 	}
@@ -276,6 +283,12 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 		assert.NotContains(t, out, "Skipping Git submodules setup")
 		assert.Contains(t, out, "Updating/initializing submodules...")
 		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.Error(t, err, "The submodule's submodule should not have been initialized")
 	})
 }
 
@@ -293,6 +306,12 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 		assert.NotContains(t, out, "Skipping Git submodules setup")
 		assert.NotContains(t, out, "Updating/initializing submodules...")
 		assert.Contains(t, out, "Updating/initializing submodules recursively...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.NoError(t, err, "The submodule's submodule should have been initialized")
 	})
 }
 
