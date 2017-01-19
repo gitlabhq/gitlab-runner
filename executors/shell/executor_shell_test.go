@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -238,6 +239,96 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 		assert.Contains(t, out, "Cloning repository")
 
 		assert.Contains(t, out, "pre-clone-script")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
+	for _, strategy := range []string{"none", ""} {
+		t.Run("strategy "+strategy, func(t *testing.T) {
+			onEachShell(t, func(t *testing.T, shell string) {
+				successfulBuild, err := common.GetSuccessfulBuild()
+				assert.NoError(t, err)
+				build, cleanup := newBuild(t, successfulBuild, shell)
+				defer cleanup()
+
+				build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"})
+
+				out, err := runBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+				assert.Contains(t, out, "Skipping Git submodules setup")
+				assert.NotContains(t, out, "Updating/initializing submodules...")
+				assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+				assert.Error(t, err, "Submodule not should have been initialized")
+
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+				assert.Error(t, err, "The submodule's submodule should not have been initialized")
+			})
+		})
+	}
+}
+
+func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.Contains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.Error(t, err, "The submodule's submodule should not have been initialized")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.Contains(t, out, "Updating/initializing submodules recursively...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.NoError(t, err, "The submodule's submodule should have been initialized")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "invalid"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.EqualError(t, err, "unknown GIT_SUBMODULE_STRATEGY")
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
 	})
 }
 
