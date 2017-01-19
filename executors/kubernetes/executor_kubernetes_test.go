@@ -392,6 +392,22 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
+						ImagePullSecrets: []string{
+							"docker-registry-credentials",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				secrets := api.LocalObjectReference{"docker-registry-credentials"}
+				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
+			},
+		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
 					},
 				},
 			},

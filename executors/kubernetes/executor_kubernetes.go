@@ -202,6 +202,11 @@ func (s *executor) setupBuildPod() error {
 		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, s.serviceRequests, s.serviceLimits)
 	}
 
+	var imagePullSecrets []api.LocalObjectReference
+	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})
+	}
+
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
 
 	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
@@ -225,6 +230,7 @@ func (s *executor) setupBuildPod() error {
 				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
+			ImagePullSecrets:              s.Config.Kubernetes.ImagePullSecrets,
 		},
 	})
 	if err != nil {
