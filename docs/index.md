@@ -41,7 +41,7 @@ installed.
 - Easy installation as a service for GNU/Linux, OSX and Windows
 - Embedded Prometheus metrics HTTP server
 
-## Install GitLab Runner
+## [Install GitLab Runner](install/index.md)
 
 GitLab Runner can be installed and used on GNU/Linux, macOS, FreeBSD and Windows.
 You can install it Using Docker, download the binary manually or use the
@@ -62,7 +62,7 @@ information on the different installation methods:
 
 - [See the commands documentation](commands/README.md)
 
-## Selecting the executor
+## [Selecting the executor](executors/README.md)
 
 GitLab Runner implements a number of executors that can be used to run your
 builds in different scenarios. If you are not sure what to select, read the
@@ -80,7 +80,7 @@ To jump into the specific documentation of each executor, visit:
 - [SSH](executors/ssh.md)
 - [Kubernetes](executors/kubernetes.md)
 
-## Advanced Configuration
+## [Advanced Configuration](configuration/index.md)
 
 - [Advanced configuration options](configuration/advanced-configuration.md) Learn how to use the [TOML][] configuration file that GitLab Runner uses.
 - [Use self-signed certificates](configuration/tls-self-signed.md) Configure certificates that are used to verify TLS peer when connecting to the GitLab server.
@@ -102,6 +102,11 @@ the [release documentation](release_process/README.md).
 ## Contributing
 
 Contributions are welcome, see [`CONTRIBUTING.md`][contribute] for more details.
+
+## Development
+
+See the [development documentation](development/README.md) to hack on GitLab
+Runner.
 
 ## Changelog
 
