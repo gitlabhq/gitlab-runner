@@ -474,7 +474,7 @@ This defines the Kubernetes parameters.
 | `service_cpus`   | string  | The CPU allocation given to build service containers |
 | `service_memory` | string  | The amount of memory allocated to build service containers |
 | `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs |
-
+| `image_pull_secrets` | array | A list of secrets that are used to authenticate docker image pulling |
 
 Example:
 
@@ -493,6 +493,7 @@ Example:
 	service_memory = "450m"
 	[runners.kubernetes.node_selector]
 		gitlab = "true"
+		image_pull_secrets = ["docker-registry-credentials"]
 ```
 
 ## Note
