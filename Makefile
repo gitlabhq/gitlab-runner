@@ -1,7 +1,7 @@
 NAME ?= gitlab-ci-multi-runner
 PACKAGE_NAME ?= $(NAME)
 PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
-VERSION := $(shell ./ci/version)
+export VERSION := $(shell ./ci/version)
 REVISION := $(shell git rev-parse --short HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
 BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
@@ -347,9 +347,13 @@ s3-upload:
 		--working-dir out \
 		--target-paths "$(S3_UPLOAD_PATH)/" \
 		$(shell cd out/; find . -type f)
+	@echo "\n\033[1m==> Download index file: \033[36mhttps://$$ARTIFACTS_S3_BUCKET.s3.amazonaws.com/$$S3_UPLOAD_PATH/index.html\033[0m\n"
 
 release:
 	@./ci/release "$$CI_BUILD_NAME"
+
+prepare_index:
+	@./ci/prepare_index
 
 release_docker_images:
 	@./ci/release_docker_images
