@@ -518,6 +518,7 @@ func (s *executor) createService(service, version, image string) (*docker.Contai
 		return nil, errors.New("invalid service name")
 	}
 
+	s.Println("Starting service", service+":"+version, "...")
 	serviceImage, err := s.getDockerImage(image)
 	if err != nil {
 		return nil, err
@@ -528,7 +529,6 @@ func (s *executor) createService(service, version, image string) (*docker.Contai
 	// this will fail potentially some builds if there's name collision
 	s.removeContainer(containerName)
 
-	s.Println("Starting service", service+":"+version, "...")
 	createContainerOpts := docker.CreateContainerOptions{
 		Name: containerName,
 		Config: &docker.Config{
