@@ -1,3 +1,6 @@
+v 1.7.5
+- Update Docker Machine in official Runner images to v0.9.0 !454
+
 v 1.7.4
 - Add armv6l to the ARM replacements list for docker executor helper image !446
 
