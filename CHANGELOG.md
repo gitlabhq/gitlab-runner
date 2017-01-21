@@ -1,3 +1,6 @@
+v 1.9.5
+- Update Docker Machine in official Runner images to v0.9.0 !454
+
 v 1.9.4
 - Add armv6l to the ARM replacements list for docker executor helper image !446
 
@@ -43,6 +46,9 @@ v 1.9.0
 - Add a link where one can download the packages directly !292
 - Kubernetes executor - use pre-build container !425
 
+v 1.8.5
+- Update Docker Machine in official Runner images to v0.9.0 !454
+
 v 1.8.4
 - Add armv6l to the ARM replacements list for docker executor helper image !446
 
@@ -72,6 +78,9 @@ v 1.8.0
 - Add PullPolicy config option for kubernetes !335
 - Handle received 'failed' build state while patching the trace !366
 - Add support for using private docker registries !386
+
+v 1.7.5
+- Update Docker Machine in official Runner images to v0.9.0 !454
 
 v 1.7.4
 - Add armv6l to the ARM replacements list for docker executor helper image !446
