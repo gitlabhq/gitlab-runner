@@ -17,7 +17,7 @@ v 1.10.0
 - Exclude unused options from AbstractExecutor.Build.Options !445
 - Update Docker Machine in official Runner images to v0.9.0 !454
 - Pass ImagePullSecrets for Kubernetes executor !449
-- Add Namespac overwrite posibility for Kubernetes executor !444
+- Add Namespace overwrite possibility for Kubernetes executor !444
 
 v 1.9.5
 - Update Docker Machine in official Runner images to v0.9.0 !454
