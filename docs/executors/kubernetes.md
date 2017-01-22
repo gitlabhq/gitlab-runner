@@ -53,9 +53,12 @@ on the cluster.
 
 ## The keywords
 
-The following keywords help to define the behaviour of the Runner within kubernetes:
+The following keywords help to define the behaviour of the Runner within Kubernetes:
 
 - `namespace`: Namespace to run Kubernetes Pods in
+- `namespace_overwrite_allowed`: Regular expression to validate the contents of
+  the namespace overwrite environment variable (documented following). When empty,
+  it disables the namespace overwrite feature
 - `privileged`: Run containers with the privileged flag
 - `cpu_limit`: The CPU allocation given to build containers
 - `memory_limit`: The amount of memory allocated to build containers
@@ -86,6 +89,24 @@ The following keywords for resource limits are deprecated, please use the new on
 - `helper_cpus`: The CPU allocation given to build helper containers
 - `helper_memory`: The amount of memory allocated to build helper containers
 
+### Overwriting Kubernetes Namespace
+
+Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, by using the variable
+`KUBERNETES_NAMESPACE_OVERWRITE`.
+
+This approach allow you to create a new isolated namespace dedicated for CI purposes, and deploy a custom
+set of pods. The `Pods` spawned by the runner will take place on the overwritten namespace, for simple
+and straight forward access between container during the CI stages.
+
+``` yaml
+variables:
+  KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_BUILD_REF_NAME}
+```
+
+Furthermore, to ensure only designated namespaces will be used during CI runs, inform the configuration
+`namespace_overwrite_allowed` with proper regular expression. When left empty the overwrite behaviour is
+disabled.
+
 ## Define keywords in the config toml
 
 Each of the keywords can be defined in the `config.toml` for the gitlab runner.
@@ -106,6 +127,7 @@ concurrent = 4
     key_file = "/etc/ssl/kubernetes/api.key"
     ca_file = "/etc/ssl/kubernetes/ca.crt"
     namespace = "gitlab"
+    namespace_overwrite_allowed = "ci-.*"
     privileged = true
     cpu_limit = "1"
     memory_limit = "1Gi"

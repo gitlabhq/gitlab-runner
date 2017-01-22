@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -36,6 +37,8 @@ type executor struct {
 	kubeClient *client.Client
 	pod        *api.Pod
 	options    *kubernetesOptions
+
+	namespaceOverwrite string
 
 	buildLimits     api.ResourceList
 	serviceLimits   api.ResourceList
@@ -87,9 +90,8 @@ func (s *executor) setupResources() error {
 	return nil
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.AbstractExecutor.Prepare(globalConfig, config, build)
-	if err != nil {
+func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) (err error) {
+	if err = s.AbstractExecutor.Prepare(globalConfig, config, build); err != nil {
 		return err
 	}
 
@@ -101,8 +103,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 
-	s.kubeClient, err = getKubeClient(config.Kubernetes)
-	if err != nil {
+	if s.kubeClient, err = getKubeClient(config.Kubernetes); err != nil {
 		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
@@ -111,6 +112,10 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 	}
 
 	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
+		return err
+	}
+
+	if err = s.overwriteNamespace(build); err != nil {
 		return err
 	}
 
@@ -286,6 +291,7 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	return errc
 }
 
+// checkDefaults Defines the configuration for the Pod on Kubernetes
 func (s *executor) checkDefaults() error {
 	if s.options.Image == "" {
 		if s.Config.Kubernetes.Image == "" {
@@ -296,8 +302,43 @@ func (s *executor) checkDefaults() error {
 	}
 
 	if s.Config.Kubernetes.Namespace == "" {
+		s.Warningln("Namespace is empty, therefore assuming 'default'.")
 		s.Config.Kubernetes.Namespace = "default"
 	}
+
+	s.Println("Using Kubernetes namespace:", s.Config.Kubernetes.Namespace)
+
+	return nil
+}
+
+// overwriteNamespace checks for variable in order to overwrite the configured
+// namespace, as long as it complies to validation regular-expression, when
+// expression is empty the overwrite is disabled.
+func (s *executor) overwriteNamespace(build *common.Build) error {
+	if s.Config.Kubernetes.NamespaceOverwriteAllowed == "" {
+		s.Debugln("Configuration entry 'namespace_overwrite_allowed' is empty, using configured namespace.")
+		return nil
+	}
+
+	// looking for namespace overwrite variable, and expanding for interpolation
+	s.namespaceOverwrite = build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
+	if s.namespaceOverwrite == "" {
+		return nil
+	}
+
+	var err error
+	var r *regexp.Regexp
+	if r, err = regexp.Compile(s.Config.Kubernetes.NamespaceOverwriteAllowed); err != nil {
+		return err
+	}
+
+	if match := r.MatchString(s.namespaceOverwrite); !match {
+		return fmt.Errorf("KUBERNETES_NAMESPACE_OVERWRITE='%s' does not match 'namespace_overwrite_allowed': '%s'",
+			s.namespaceOverwrite, s.Config.Kubernetes.NamespaceOverwriteAllowed)
+	}
+
+	s.Println("Overwritting configured namespace, from", s.Config.Kubernetes.Namespace, "to", s.namespaceOverwrite)
+	s.Config.Kubernetes.Namespace = s.namespaceOverwrite
 
 	return nil
 }

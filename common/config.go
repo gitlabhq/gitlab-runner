@@ -123,6 +123,7 @@ type KubernetesConfig struct {
 	CAFile                        string               `toml:"ca_file,omitempty" json:"ca_file" long:"ca-file" env:"KUBERNETES_CA_FILE" description:"Optional Kubernetes master auth ca certificate"`
 	Image                         string               `toml:"image" json:"image" long:"image" env:"KUBERNETES_IMAGE" description:"Default docker image to use for builds when none is specified"`
 	Namespace                     string               `toml:"namespace" json:"namespace" long:"namespace" env:"KUBERNETES_NAMESPACE" description:"Namespace to run Kubernetes jobs in"`
+	NamespaceOverwriteAllowed     string               `toml:"namespace_overwrite_allowed" json:"namespace_overwrite_allowed" long:"namespace_overwrite_allowed" env:"KUBERNETES_NAMESPACE_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_NAMESPACE_OVERWRITE' value"`
 	Privileged                    bool                 `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
 	CPUs                          string               `toml:"cpus,omitempty" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"(deprecated) The CPU allocation given to build containers"`
 	Memory                        string               `toml:"memory,omitempty" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"(deprecated) The amount of memory allocated to build containers"`
