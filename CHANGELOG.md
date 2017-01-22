@@ -1,3 +1,24 @@
+v 1.10.0
+- Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
+- Handle Content-Type header with charset information !430
+- Don't raise error if machines directory is missing on machines listing !433
+- Change digital ocean autoscale to use stable coreos channel !434
+- Fix package's scripts permissions !440
+- Use -q flag instead of --format. !442
+- Kubernetes termination grace period !383
+- Check if directory exists before recreating it with Windows CMD !435
+- Add '--run-tagged-only' cli option for runners !438
+- Add armv6l to the ARM replacements list for docker executor helper image !446
+- Add configuration options for Kubernetss resource requests !391
+- Add poll interval and timeout parameters for Kubernetes executor !384
+- Add support for GIT_SUBMODULE_STRATEGY !443
+- Create index file for S3 downloads !452
+- Add Prometheus metric that counts number of catched errors !439
+- Exclude unused options from AbstractExecutor.Build.Options !445
+- Update Docker Machine in official Runner images to v0.9.0 !454
+- Pass ImagePullSecrets for Kubernetes executor !449
+- Add Namespac overwrite posibility for Kubernetes executor !444
+
 v 1.9.5
 - Update Docker Machine in official Runner images to v0.9.0 !454
 
