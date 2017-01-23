@@ -211,8 +211,8 @@ bleeding edge packagecloud:
 
 stable S3:
   <<: *release_s3
-  <<: *release_bleeding_edge
+  <<: *release_stable
 
 stable packagecloud:
   <<: *release_packagecloud
-  <<: *release_bleeding_edge
+  <<: *release_stable
