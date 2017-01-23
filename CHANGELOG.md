@@ -1,3 +1,6 @@
+v 1.10.1
+- Fix S3 and packagecloud uploads step in release process !455
+
 v 1.10.0
 - Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
 - Handle Content-Type header with charset information !430
