@@ -22,6 +22,10 @@ before_script:
   tags:
   - docker
 
+#
+# Prebuild stage
+#
+
 bindata:
   <<: *docker
   stage: prebuild
@@ -47,6 +51,10 @@ clone test repo:
     paths:
     - tmp/gitlab-test
     expire_in: 7d
+
+#
+# Test stage
+#
 
 code style:
   stage: test
@@ -97,6 +105,10 @@ integration windows:
   - integration
   - windows
 
+#
+# Build stage
+#
+
 binaries:
   stage: build
   script:
@@ -109,6 +121,10 @@ binaries:
     expire_in: 7d
   tags:
   - docker
+
+#
+# Package stage
+#
 
 packages:
   stage: package
@@ -123,6 +139,10 @@ packages:
     expire_in: 7d
   tags:
   - docker
+
+#
+# Release stage
+#
 
 docker_images:
   <<: *docker
@@ -142,29 +162,57 @@ docker_images:
 
 .release: &release
   stage: release
-  script:
+  before_script:
+  - apt-get update -yqqq >/dev/null
+  - apt-get install -yqqq ruby ruby-dev >/dev/null
   - source ci/touch_make_dependencies
-  - make release
   tags:
   - release
 
-development:
+.release_s3: &release_s3
   <<: *release
+  script:
+  - make release_s3
+
+.release_packagecloud: &release_packagecloud
+  <<: *release
+  script:
+  - make release_packagecloud
+
+.release_development: &release_development
   only:
   - branches@gitlab-org/gitlab-ci-multi-runner
   except:
   - master@gitlab-org/gitlab-ci-multi-runner
-  environment: bleeding_edge
+  environment: development
 
-bleeding:
-  <<: *release
+.release_bleeding_edge: &release_bleeding_edge
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
   - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
   environment: bleeding_edge
 
-stable:
-  <<: *release
+.release_stable: &release_stable
   only:
   - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
   environment: stable_release
+
+development S3:
+  <<: *release_s3
+  <<: *release_development
+
+bleeding edge S3:
+  <<: *release_s3
+  <<: *release_bleeding_edge
+
+bleeding edge packagecloud:
+  <<: *release_packagecloud
+  <<: *release_bleeding_edge
+
+stable S3:
+  <<: *release_s3
+  <<: *release_stable
+
+stable packagecloud:
+  <<: *release_packagecloud
+  <<: *release_stable

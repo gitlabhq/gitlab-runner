@@ -2,24 +2,18 @@
 
 set -eo pipefail
 
-apt-get install -yqqq ruby ruby-dev
-
-make prepare_index
-make s3-upload "S3_UPLOAD_PATH=$CI_BUILD_REF_NAME"
-
-case "$1" in
-    development)
-        ;;
+target=$(echo ${1} | cut -f 1 -d ' ')
+case "${target}" in
     bleeding)
         make packagecloud PACKAGE_CLOUD="runner/unstable" \
                           DEB_PLATFORMS="debian/jessie ubuntu/trusty ubuntu/xenial" \
                           RPM_PLATFORMS="el/7 fedora/23"
         ;;
     stable)
-        if [[ -n "${IS_LATEST}" ]]; then
-            make s3-upload "S3_UPLOAD_PATH=latest"
-        fi
-
         make packagecloud
+        ;;
+    *)
+        echo "Unkown packagecloud upload target: '${target}'"
+        exit 1
         ;;
 esac
