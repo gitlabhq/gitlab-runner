@@ -346,16 +346,24 @@ s3-upload:
 		--permissions public-read \
 		--working-dir out \
 		--target-paths "$(S3_UPLOAD_PATH)/" \
+		--max-size $(shell du -bs out/ | cut -f1) \
 		$(shell cd out/; find . -type f)
 	@echo "\n\033[1m==> Download index file: \033[36mhttps://$$ARTIFACTS_S3_BUCKET.s3.amazonaws.com/$$S3_UPLOAD_PATH/index.html\033[0m\n"
 
-release:
-	@./ci/release "$$CI_BUILD_NAME"
+release_packagecloud:
+	# Releasing to https://packages.gitlab.com/runner/
+	@./ci/release_packagecloud "$$CI_BUILD_NAME"
+
+release_s3: prepare_index
+	# Releasing to S3
+	@./ci/release_s3
 
 prepare_index:
+	# Preparing index file
 	@./ci/prepare_index
 
 release_docker_images:
+	# Releasing Docker images
 	@./ci/release_docker_images
 
 check-tags-in-changelog:
