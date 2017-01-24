@@ -1,21 +1,34 @@
 package docker_helpers
 
-import "github.com/fsouza/go-dockerclient"
+import (
+	"io"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"golang.org/x/net/context"
+)
 
 type Client interface {
-	InspectImage(name string) (*docker.Image, error)
-	PullImage(opts docker.PullImageOptions, auth docker.AuthConfiguration) error
-	ImportImage(opts docker.ImportImageOptions) error
+	ImageInspectWithRaw(ctx context.Context, imageID string) (types.ImageInspect, []byte, error)
+	ImagePull(ctx context.Context, ref string, options types.ImagePullOptions) (io.ReadCloser, error)
 
-	CreateContainer(opts docker.CreateContainerOptions) (*docker.Container, error)
-	StartContainer(id string, hostConfig *docker.HostConfig) error
-	KillContainer(opts docker.KillContainerOptions) error
-	InspectContainer(id string) (*docker.Container, error)
-	AttachToContainerNonBlocking(opts docker.AttachToContainerOptions) (docker.CloseWaiter, error)
-	RemoveContainer(opts docker.RemoveContainerOptions) error
-	DisconnectNetwork(id string, opts docker.NetworkConnectionOptions) error
-	ListNetworks() ([]docker.Network, error)
-	Logs(opts docker.LogsOptions) error
+	// Like ImageImport in the official docker client, but handles the ReadCloser it returns
+	ImageImportBlocking(ctx context.Context, source types.ImageImportSource, ref string, options types.ImageImportOptions) error
 
-	Info() (*docker.Env, error)
+	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error)
+	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
+	ContainerWait(ctx context.Context, containerID string) (int64, error)
+	ContainerKill(ctx context.Context, containerID, signal string) error
+	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ContainerAttach(ctx context.Context, container string, options types.ContainerAttachOptions) (types.HijackedResponse, error)
+	ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error
+	ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error)
+
+	NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error
+	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
+
+	Info(ctx context.Context) (types.Info, error)
+
+	io.Closer
 }
