@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -785,11 +786,14 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	input := bytes.NewBufferString("echo 'script'")
 
 	finished := make(chan bool, 1)
+	wg := &sync.WaitGroup{}
+	wg.Add(1) // Avoid a race where assert.NoError() is called too late in the goroutine
 	go func() {
 		err = e.watchContainer(container.ID, input, abort)
 		assert.NoError(t, err)
 		t.Log(err)
 		finished <- true
+		wg.Done()
 	}()
 
 	select {
@@ -800,6 +804,7 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 
 	err = e.removeContainer(container.ID)
 	assert.NoError(t, err)
+	wg.Wait()
 }
 
 func init() {
