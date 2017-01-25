@@ -17,7 +17,7 @@ PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd'
 S3_UPLOAD_PATH ?= master
 DEB_PLATFORMS ?= debian/wheezy debian/jessie debian/stretch debian/buster \
-    ubuntu/precise ubuntu/trusty ubuntu/utopic ubuntu/vivid ubuntu/wily ubuntu/xenial \
+    ubuntu/precise ubuntu/trusty ubuntu/utopic ubuntu/vivid ubuntu/wily ubuntu/xenial ubuntu/yakkety \
     raspbian/wheezy raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/petra linuxmint/qiana linuxmint/rebecca linuxmint/rafaela linuxmint/rosa
 DEB_ARCHS ?= amd64 i386 armel armhf
