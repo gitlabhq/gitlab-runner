@@ -323,13 +323,13 @@ func (b *Build) Run(globalConfig *Config, trace BuildTrace) (err error) {
 
 	defer func() {
 		if _, ok := err.(*BuildError); ok {
-			logger.SoftErrorln("Build failed:", err)
+			logger.SoftErrorln("Job failed:", err)
 			trace.Fail(err)
 		} else if err != nil {
-			logger.Errorln("Build failed (system failure):", err)
+			logger.Errorln("Job failed (system failure):", err)
 			trace.Fail(err)
 		} else {
-			logger.Infoln("Build succeeded")
+			logger.Infoln("Job succeeded")
 			trace.Success()
 		}
 		if executor != nil {
