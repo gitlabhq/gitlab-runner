@@ -433,7 +433,7 @@ in the [runners autoscale documentation](autoscale.md#distributed-runners-cachin
 | `BucketLocation` | string           | Name of S3 region. |
 | `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Is set to `false` by default. |
 | `Path`           | string           | Name of the path to prepend to the cache URL. |
-| `Shared          | boolean          | Enables cache sharing between runners, `false` by default. |
+| `Shared`         | boolean          | Enables cache sharing between runners, `false` by default. |
 
 Example:
 
