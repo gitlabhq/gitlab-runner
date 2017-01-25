@@ -1,3 +1,7 @@
+v 1.10.2
+- Add ubuntu/yakkety to packages generation list !458
+- Reduce size of gitlab-runner-helper images !456
+
 v 1.10.1
 - Fix S3 and packagecloud uploads step in release process !455
 
