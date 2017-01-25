@@ -1,4 +1,7 @@
 v 1.8.6
+- Add ubuntu/yakkety to packages generation list !458
+
+v 1.8.5
 - Update Docker Machine in official Runner images to v0.9.0 !454
 
 v 1.8.4

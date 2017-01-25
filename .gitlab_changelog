@@ -1,0 +1,4 @@
+---
+gitlab_base_url: https://gitlab.com/
+gitlab_project_id: gitlab-org%2Fgitlab-ci-multi-runner
+filename: CHANGELOG.md
