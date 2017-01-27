@@ -97,7 +97,7 @@ func (e *machineExecutor) Cleanup() {
 	}
 
 	// Release allocated machine
-	if e.data != "" {
+	if e.data != nil {
 		e.provider.Release(&e.config, e.data)
 		e.data = nil
 	}

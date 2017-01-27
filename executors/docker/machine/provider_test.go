@@ -529,3 +529,23 @@ func TestMachineUseOnDemand(t *testing.T) {
 	assert.Error(t, err, "fail to create a new machine on connect")
 	assertTotalMachines(t, p, 3, "it fails on no-connect, but we leave the machine created")
 }
+
+func TestMachineReleaseIfInvalidDataArePassed(t *testing.T) {
+	p, _ := testMachineProvider()
+
+	_, nd, err := p.Use(machineDefaultConfig, nil)
+	assert.NoError(t, err, "it create a new machine")
+	assert.NotNil(t, nd)
+	assertTotalMachines(t, p, 1, "it creates one machine")
+
+	err = p.Release(nil, nd)
+	assert.NoError(t, err, "it should not fail")
+}
+
+func TestMachineCreationIfFailedToConnect(t *testing.T) {
+	p, _ := testMachineProvider()
+
+	_, nd, err := p.Use(machineNoConnect, nil)
+	assert.Error(t, err, "it create a new machine")
+	assert.Nil(t, nd)
+}

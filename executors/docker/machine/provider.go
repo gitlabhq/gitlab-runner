@@ -345,6 +345,7 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 		if newData != nil {
 			m.Release(config, newData)
 		}
+		newData = nil
 		return
 	}
 
@@ -374,7 +375,8 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 		}
 
 		// Remove machine if we already used it
-		if config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
+		if config != nil && config.Machine != nil &&
+			config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
 			err := m.remove(details.Name, "Too many builds")
 			if err == nil {
 				return nil
