@@ -1,6 +1,8 @@
 package prometheus
 
 import (
+	"sync"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -9,6 +11,7 @@ var numErrorsDesc = prometheus.NewDesc("ci_runner_errors", "The  number of catch
 
 type LogHook struct {
 	errorsNumber map[logrus.Level]float64
+	lock         sync.Mutex
 }
 
 func (lh *LogHook) Levels() []logrus.Level {
@@ -21,7 +24,11 @@ func (lh *LogHook) Levels() []logrus.Level {
 }
 
 func (lh *LogHook) Fire(entry *logrus.Entry) error {
+	lh.lock.Lock()
+	defer lh.lock.Unlock()
+
 	lh.errorsNumber[entry.Level]++
+
 	return nil
 }
 
