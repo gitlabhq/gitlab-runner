@@ -1,3 +1,6 @@
+v 1.10.4
+- Fix race in helpers/prometheus/log_hook.go: Fire() method !463
+
 v 1.10.3
 - Fix crash on machine creation !461
 
