@@ -532,9 +532,11 @@ func (s *executor) createService(service, version, image string) (*docker.Contai
 	createContainerOpts := docker.CreateContainerOptions{
 		Name: containerName,
 		Config: &docker.Config{
-			Image:  serviceImage.ID,
-			Labels: s.getLabels("service", "service="+service, "service.version="+version),
-			Env:    s.getServiceVariables(),
+			Image:        serviceImage.ID,
+			Labels:       s.getLabels("service", "service="+service, "service.version="+version),
+			AttachStdout: true,
+			AttachStderr: true,
+			Env:          s.getServiceVariables(),
 		},
 		HostConfig: &docker.HostConfig{
 			RestartPolicy: docker.NeverRestart(),
@@ -554,12 +556,39 @@ func (s *executor) createService(service, version, image string) (*docker.Contai
 		return nil, err
 	}
 
+	readTime := time.Now()
+
 	s.Debugln("Starting service container", container.ID, "...")
 	err = s.client.StartContainer(container.ID, nil)
 	if err != nil {
 		s.failures = append(s.failures, container)
 		return nil, err
 	}
+
+	s.Infoln("Attaching to container...")
+
+	go func() {
+		for {
+			var containerBuffer bytes.Buffer
+			err = s.client.Logs(docker.LogsOptions{
+				Container:    container.ID,
+				OutputStream: &containerBuffer,
+				ErrorStream:  &containerBuffer,
+				Stdout:       true,
+				Stderr:       true,
+				Timestamps:   true,
+				Since:        readTime.Unix(),
+			})
+			if err == nil {
+				io.Copy(s.BuildTrace, &containerBuffer)
+				containerBuffer.Reset()
+			} else {
+				break
+			}
+			readTime = time.Now()
+			time.Sleep(time.Second)
+		}
+	}()
 
 	return container, nil
 }
