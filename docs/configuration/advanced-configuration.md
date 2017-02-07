@@ -411,9 +411,9 @@ following fields:
 [second] [minute] [hour] [day of month] [month] [day of week] [year]
 ```
 
-Like in the standard cron configuration file the fields can contain single
+Like in the standard cron configuration file, the fields can contain single
 values, ranges, lists and asterisks. A detailed description of the syntax
-can be found [here](../../vendor/github.com/gorhill/cronexpr/README.md).
+can be found [here][cronvendor].
 
 ## The [runners.cache] section
 
@@ -508,3 +508,4 @@ It depends on what you'd like to do.
 [ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
 [secret variable]: https://docs.gitlab.com/ce/ci/variables/#secret-variables
+[cronvendor]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/vendor/github.com/gorhill/cronexpr/README.md
