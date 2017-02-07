@@ -566,6 +566,7 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 		Privileged:    s.Config.Docker.Privileged,
 		NetworkMode:   container.NetworkMode(s.Config.Docker.NetworkMode),
 		Binds:         s.binds,
+		ShmSize:       s.Config.Docker.ShmSize,
 		VolumesFrom:   s.volumesFrom,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -729,6 +730,7 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 		NetworkMode:   container.NetworkMode(s.Config.Docker.NetworkMode),
 		Links:         append(s.Config.Docker.Links, s.links...),
 		Binds:         s.binds,
+		ShmSize:       s.Config.Docker.ShmSize,
 		VolumeDriver:  s.Config.Docker.VolumeDriver,
 		VolumesFrom:   append(s.Config.Docker.VolumesFrom, s.volumesFrom...),
 		LogConfig: container.LogConfig{
