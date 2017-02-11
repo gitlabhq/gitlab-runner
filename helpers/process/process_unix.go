@@ -10,7 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
-const ProcessKillWaitTime = 10 * time.Second
+var ProcessKillWaitTime = 10 * time.Second
 
 func SetProcessGroup(cmd *exec.Cmd) {
 	prepareSysProcAttr(cmd)

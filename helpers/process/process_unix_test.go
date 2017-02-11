@@ -67,8 +67,6 @@ func createTestProcess(script string) *exec.Cmd {
 	cmd.Stdin = bytes.NewBufferString(script)
 	cmd.Start()
 
-	time.Sleep(time.Second * 2)
-
 	return cmd
 }
 
@@ -78,6 +76,7 @@ func testKillProcessGroup(t *testing.T, script string) {
 	}
 
 	cmd := createTestProcess(script)
+	time.Sleep(time.Second * 1)
 
 	cmdPid := cmd.Process.Pid
 	childPid := findChild(cmdPid)
@@ -86,19 +85,10 @@ func testKillProcessGroup(t *testing.T, script string) {
 	assert.NoError(t, checkProcess(childPid))
 
 	KillProcessGroup(cmd)
+	time.Sleep(time.Second * 1)
 
-	cmdProcessCheck := checkProcess(cmdPid)
-	childProcessCheck := checkProcess(childPid)
-
-	assert.Error(t, cmdProcessCheck, "Process check should return errorFinished error")
-	if cmdProcessCheck != nil {
-		assert.Equal(t, "os: process already finished", cmdProcessCheck.Error())
-	}
-
-	assert.Error(t, childProcessCheck, "Process check should return errorFinished error")
-	if childProcessCheck != nil {
-		assert.Equal(t, "os: process already finished", childProcessCheck.Error())
-	}
+	assert.EqualError(t, checkProcess(cmdPid), "os: process already finished", "Process check should return errorFinished error")
+	assert.EqualError(t, checkProcess(childPid), "os: process already finished", "Process check should return errorFinished error")
 }
 
 var simpleScript = "sleep 60"
@@ -108,9 +98,11 @@ sleep 60
 `
 
 func TestKillProcessGroupForSimpleScript(t *testing.T) {
+	ProcessKillWaitTime = 2 * time.Second
 	testKillProcessGroup(t, simpleScript)
 }
 
 func TestKillProcessGroupForNonTerminatableScript(t *testing.T) {
+	ProcessKillWaitTime = 2 * time.Second
 	testKillProcessGroup(t, nonTerminatableScript)
 }
