@@ -71,7 +71,7 @@ func createTestProcess(script string) *exec.Cmd {
 
 	startedCh := make(chan struct{})
 
-	PrepareProcessGroup(cmd, &common.ShellConfiguration{}, build, startedCh)
+	PrepareProcessGroup(cmd, &common.ShellConfiguration{}, build, common.BuildStageUserScript, startedCh)
 
 	cmd.Stdin = bytes.NewBufferString(script)
 	cmd.Start()

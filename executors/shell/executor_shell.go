@@ -98,7 +98,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 
 	// Prepare process group
 	startedCh := make(chan struct{})
-	process.PrepareProcessGroup(c, s.BuildShell, s.Build, startedCh)
+	process.PrepareProcessGroup(c, s.BuildShell, s.Build, cmd.BuildStage, startedCh)
 	defer process.KillProcessGroup(c)
 
 	// Start a process
