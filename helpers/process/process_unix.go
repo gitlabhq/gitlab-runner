@@ -41,9 +41,12 @@ func prepareSysProcAttr(cmd *exec.Cmd) {
 }
 
 func KillProcessGroup(cmd *exec.Cmd) {
-	if cmd == nil {
+	if cmd == nil || cmd.Process == nil {
 		return
 	}
+
+	pid := cmd.Process.Pid
+	log(pid, "Killing process")
 
 	waitCh := make(chan error)
 	go func() {
@@ -51,24 +54,15 @@ func KillProcessGroup(cmd *exec.Cmd) {
 		close(waitCh)
 	}()
 
-	process := cmd.Process
-	pid := process.Pid
-	if process != nil {
-		log(pid, "Killing process")
-		if pid > 0 {
-			log(pid, "Sending SIGTERM to process group")
-			syscall.Kill(-pid, syscall.SIGTERM)
-			select {
-			case <-waitCh:
-				log(pid, "Main process exited after SIGTERM")
-			case <-time.After(ProcessKillWaitTime):
-				log(pid, "SIGTERM timeouted, sending SIGKILL to process group")
-				syscall.Kill(-pid, syscall.SIGKILL)
-			}
-		} else {
-			// doing normal kill
-			process.Kill()
-		}
+	log(pid, "Sending SIGTERM to process group")
+	syscall.Kill(-pid, syscall.SIGTERM)
+
+	select {
+	case <-waitCh:
+		log(pid, "Main process exited after SIGTERM")
+	case <-time.After(ProcessKillWaitTime):
+		log(pid, "SIGTERM timeouted, sending SIGKILL to process group")
+		syscall.Kill(-pid, syscall.SIGKILL)
 	}
 
 	if !leftoversPresent(pid) {

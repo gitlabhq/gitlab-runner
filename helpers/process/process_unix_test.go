@@ -17,6 +17,10 @@ import (
 	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
+func init() {
+	ProcessLeftoversLookupWaitTime = 10 * time.Millisecond
+}
+
 func findChild(ppid int) int {
 	lines, _ := exec.Command("ps", "axo", "ppid,pid").CombinedOutput()
 
@@ -89,7 +93,7 @@ func testKillProcessGroup(t *testing.T, script string) {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	cmd := createTestProcess(script)
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(ProcessLeftoversLookupWaitTime)
 
 	cmdPid := cmd.Process.Pid
 	childPid := findChild(cmdPid)
@@ -98,7 +102,7 @@ func testKillProcessGroup(t *testing.T, script string) {
 	assert.NoError(t, checkProcess(childPid))
 
 	KillProcessGroup(cmd)
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(ProcessLeftoversLookupWaitTime)
 
 	assert.EqualError(t, checkProcess(cmdPid), "os: process already finished", "Process check should return errorFinished error")
 	assert.EqualError(t, checkProcess(childPid), "os: process already finished", "Process check should return errorFinished error")
@@ -108,11 +112,9 @@ var simpleScript = ": | eval $'sleep 60'"
 var nonTerminatableScript = ": | eval $'trap \"sleep 70\" SIGTERM\nsleep 60'"
 
 func TestKillProcessGroupForSimpleScript(t *testing.T) {
-	ProcessKillWaitTime = 2 * time.Second
 	testKillProcessGroup(t, simpleScript)
 }
 
 func TestKillProcessGroupForNonTerminatableScript(t *testing.T) {
-	ProcessKillWaitTime = 2 * time.Second
 	testKillProcessGroup(t, nonTerminatableScript)
 }
