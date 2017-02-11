@@ -41,8 +41,8 @@ func onEachShell(t *testing.T, f func(t *testing.T, shell string)) {
 }
 
 func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) error {
-	timeoutTimer := time.AfterFunc(10*time.Second, func() {
-		t.Log("Timed out")
+	timeoutTimer := time.AfterFunc(20*time.Second, func() {
+		t.Log("Test timed out")
 		t.FailNow()
 	})
 	defer timeoutTimer.Stop()

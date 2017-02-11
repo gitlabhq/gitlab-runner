@@ -10,7 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
@@ -60,12 +63,20 @@ func checkProcess(pid int) (err error) {
 func createTestProcess(script string) *exec.Cmd {
 	command := "bash"
 	arguments := []string{"--login"}
-
 	cmd := exec.Command(command, arguments...)
-	SetProcessGroup(cmd)
+
+	build := &common.Build{}
+	build.ID = 1
+	build.RepoURL = "http://gitlab.example.com/example/project.git"
+
+	startedCh := make(chan struct{})
+
+	PrepareProcessGroup(cmd, &common.ShellConfiguration{}, build, startedCh)
 
 	cmd.Stdin = bytes.NewBufferString(script)
 	cmd.Start()
+	startedCh <- struct{}{}
+	close(startedCh)
 
 	return cmd
 }
@@ -75,8 +86,10 @@ func testKillProcessGroup(t *testing.T, script string) {
 		return
 	}
 
+	logrus.SetLevel(logrus.DebugLevel)
+
 	cmd := createTestProcess(script)
-	time.Sleep(time.Second * 1)
+	time.Sleep(10 * time.Millisecond)
 
 	cmdPid := cmd.Process.Pid
 	childPid := findChild(cmdPid)
@@ -85,17 +98,14 @@ func testKillProcessGroup(t *testing.T, script string) {
 	assert.NoError(t, checkProcess(childPid))
 
 	KillProcessGroup(cmd)
-	time.Sleep(time.Second * 1)
+	time.Sleep(10 * time.Millisecond)
 
 	assert.EqualError(t, checkProcess(cmdPid), "os: process already finished", "Process check should return errorFinished error")
 	assert.EqualError(t, checkProcess(childPid), "os: process already finished", "Process check should return errorFinished error")
 }
 
-var simpleScript = "sleep 60"
-var nonTerminatableScript = `
-trap "sleep 70" SIGTERM
-sleep 60
-`
+var simpleScript = ": | eval $'sleep 60'"
+var nonTerminatableScript = ": | eval $'trap \"sleep 70\" SIGTERM\nsleep 60'"
 
 func TestKillProcessGroupForSimpleScript(t *testing.T) {
 	ProcessKillWaitTime = 2 * time.Second

@@ -11,6 +11,7 @@ import (
 )
 
 var ProcessKillWaitTime = 10 * time.Second
+var ProcessLeftoversLookupWaitTime = 10 * time.Millisecond
 
 func SetProcessGroup(cmd *exec.Cmd) {
 	prepareSysProcAttr(cmd)
@@ -51,14 +52,18 @@ func KillProcessGroup(cmd *exec.Cmd) {
 	}()
 
 	process := cmd.Process
+	pid := process.Pid
 	if process != nil {
-		if process.Pid > 0 {
-			syscall.Kill(-process.Pid, syscall.SIGTERM)
+		log(pid, "Killing process")
+		if pid > 0 {
+			log(pid, "Sending SIGTERM to process group")
+			syscall.Kill(-pid, syscall.SIGTERM)
 			select {
 			case <-waitCh:
-				return
+				log(pid, "Main process exited after SIGTERM")
 			case <-time.After(ProcessKillWaitTime):
-				syscall.Kill(-process.Pid, syscall.SIGKILL)
+				log(pid, "SIGTERM timeouted, sending SIGKILL to process group")
+				syscall.Kill(-pid, syscall.SIGKILL)
 			}
 		} else {
 			// doing normal kill
@@ -66,10 +71,29 @@ func KillProcessGroup(cmd *exec.Cmd) {
 		}
 	}
 
-	select {
-	case <-waitCh:
+	if !leftoversPresent(pid) {
 		return
-	case <-time.After(ProcessKillWaitTime):
-		panic("Process couldn't be killed!")
 	}
+
+	log(pid, "Found leftovers, sending SIGKILL to process group")
+	syscall.Kill(-pid, syscall.SIGKILL)
+
+	if !leftoversPresent(pid) {
+		return
+	}
+
+	panic("Process couldn't be killed!")
+}
+
+func leftoversPresent(pid int) bool {
+	log(pid, "Looking for leftovers")
+	time.Sleep(ProcessLeftoversLookupWaitTime)
+
+	err := syscall.Kill(-pid, syscall.Signal(0))
+	if err != nil {
+		log(pid, "No leftovers, process terminated")
+		return false
+	}
+
+	return true
 }

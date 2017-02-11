@@ -73,10 +73,6 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		return errors.New("Failed to generate execution command")
 	}
 
-	process.SetProcessGroup(c)
-	process.SetCredential(c, s.BuildShell)
-	defer process.KillProcessGroup(c)
-
 	// Fill process environment variables
 	c.Env = append(os.Environ(), s.BuildShell.Environment...)
 	c.Stdout = s.Trace
@@ -100,8 +96,15 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		c.Stdin = bytes.NewBufferString(cmd.Script)
 	}
 
+	// Prepare process group
+	startedCh := make(chan struct{})
+	process.PrepareProcessGroup(c, s.BuildShell, s.Build, startedCh)
+	defer process.KillProcessGroup(c)
+
 	// Start a process
 	err := c.Start()
+	startedCh <- struct{}{}
+	close(startedCh)
 	if err != nil {
 		return fmt.Errorf("Failed to start process: %s", err)
 	}
