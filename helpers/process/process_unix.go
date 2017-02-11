@@ -20,11 +20,11 @@ func SetProcessGroup(cmd *exec.Cmd) {
 }
 
 func SetCredential(cmd *exec.Cmd, shell *common.ShellConfiguration) {
-	prepareSysProcAttr(cmd)
-
 	if shell.CommandCredential == nil {
 		return
 	}
+
+	prepareSysProcAttr(cmd)
 
 	// Set Credential - run the command in context of UID and GID
 	cmd.SysProcAttr.Credential = &syscall.Credential{

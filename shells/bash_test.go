@@ -1,8 +1,10 @@
 package shells
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -23,17 +25,41 @@ func TestBash_IfCmdShellEscapes(t *testing.T) {
 	assert.Equal(t, `if $'foo' "x&(y)" >/dev/null 2>/dev/null; then`+"\n", writer.String())
 }
 
+var nonExistingUser = user.User{
+	Name: "non-existing-user",
+}
+var existingUser = user.User{
+	Name: "test-user",
+	Uid:  60000,
+	Gid:  60000,
+}
 
 var noUserShellScriptInfo = common.ShellScriptInfo{}
 var nonExistingUserShellScriptInfo = common.ShellScriptInfo{
-	User: "non-existing-user",
+	User: nonExistingUser.Name,
 }
 var existingUserShellScriptInfo = common.ShellScriptInfo{
-	User: "test-user",
+	User: existingUser.Name,
+}
+
+type fakeUserResolver struct {
+	supported bool
+}
+
+func (ur *fakeUserResolver) getCredentials(userName string) (*common.CommandCredential, error) {
+	if !ur.supported {
+		return nil, user.ErrUnsupported
+	}
+
+	if userName == nonExistingUser.Name {
+		return nil, fmt.Errorf("no matching entries in passwd file")
+	}
+
+	return &common.CommandCredential{UID: uint32(existingUser.Uid), GID: uint32(existingUser.Gid)}, nil
 }
 
 func TestBash_CommandCredentials(t *testing.T) {
-	shell := &BashShell{Shell: "bash"}
+	shell := &BashShell{Shell: "bash", userResolver: &fakeUserResolver{true}}
 
 	script, err := shell.GetConfiguration(noUserShellScriptInfo)
 	assert.NoError(t, err)
@@ -41,13 +67,32 @@ func TestBash_CommandCredentials(t *testing.T) {
 	assert.Nil(t, script.CommandCredential)
 
 	script, err = shell.GetConfiguration(nonExistingUserShellScriptInfo)
-	assert.Error(t, err)
+	assert.EqualError(t, err, "no matching entries in passwd file")
 	assert.Nil(t, script)
 
 	script, err = shell.GetConfiguration(existingUserShellScriptInfo)
 	assert.NoError(t, err)
 	require.NotNil(t, script)
 	require.NotNil(t, script.CommandCredential)
-	assert.Equal(t, 60000, script.CommandCredential.UID)
-	assert.Equal(t, 60000, script.CommandCredential.GID)
+	assert.Equal(t, existingUser.Uid, script.CommandCredential.UID)
+	assert.Equal(t, existingUser.Gid, script.CommandCredential.GID)
+}
+
+func TestBash_CommandCredentialsUnsupported(t *testing.T) {
+	shell := &BashShell{Shell: "bash", userResolver: &fakeUserResolver{false}}
+
+	script, err := shell.GetConfiguration(noUserShellScriptInfo)
+	assert.NoError(t, err)
+	require.NotNil(t, script)
+	assert.Nil(t, script.CommandCredential)
+
+	script, err = shell.GetConfiguration(nonExistingUserShellScriptInfo)
+	assert.NoError(t, err)
+	require.NotNil(t, script)
+	assert.Nil(t, script.CommandCredential)
+
+	script, err = shell.GetConfiguration(existingUserShellScriptInfo)
+	assert.NoError(t, err)
+	require.NotNil(t, script)
+	assert.Nil(t, script.CommandCredential)
 }

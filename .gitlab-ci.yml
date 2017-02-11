@@ -82,8 +82,6 @@ static code analysis:
 unit tests:
   stage: test
   script:
-  - groupadd --system --gid 60000 test-user
-  - useradd --system --uid 60000 --gid 60000 test-user
   - source ci/touch_make_dependencies
   - make test
   tags:

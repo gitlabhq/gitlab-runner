@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
-	"os/user"
 	"strconv"
 	"strings"
 	"syscall"
@@ -78,31 +77,25 @@ func testKillProcessGroup(t *testing.T, script string) {
 		return
 	}
 
-	_, userLookupError := user.Lookup("test-user")
-	if userLookupError != nil {
-		t.Skip("User 'test-user' must exist for this test to be executed")
-		return
-	}
-
 	cmd := createTestProcess(script)
 
 	cmdPid := cmd.Process.Pid
 	childPid := findChild(cmdPid)
 
-	assert.Nil(t, checkProcess(cmdPid))
-	assert.Nil(t, checkProcess(childPid))
+	assert.NoError(t, checkProcess(cmdPid))
+	assert.NoError(t, checkProcess(childPid))
 
 	KillProcessGroup(cmd)
 
 	cmdProcessCheck := checkProcess(cmdPid)
 	childProcessCheck := checkProcess(childPid)
 
-	assert.NotNil(t, cmdProcessCheck, "Process check should return errorFinished error")
+	assert.Error(t, cmdProcessCheck, "Process check should return errorFinished error")
 	if cmdProcessCheck != nil {
 		assert.Equal(t, "os: process already finished", cmdProcessCheck.Error())
 	}
 
-	assert.NotNil(t, childProcessCheck, "Process check should return errorFinished error")
+	assert.Error(t, childProcessCheck, "Process check should return errorFinished error")
 	if childProcessCheck != nil {
 		assert.Equal(t, "os: process already finished", childProcessCheck.Error())
 	}
@@ -118,6 +111,6 @@ func TestKillProcessGroupForSimpleScript(t *testing.T) {
 	testKillProcessGroup(t, simpleScript)
 }
 
-func TestKillProcessGroupForNonTermableScript(t *testing.T) {
+func TestKillProcessGroupForNonTerminatableScript(t *testing.T) {
 	testKillProcessGroup(t, nonTerminatableScript)
 }
