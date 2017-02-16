@@ -379,6 +379,10 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 	commands := info.Build.Commands
 	b.writeCommands(w, commands)
 
+	if info.PostBuildScript != "" {
+		b.writeCommands(w, info.PostBuildScript)
+	}
+
 	return nil
 }
 

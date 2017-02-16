@@ -33,21 +33,22 @@ This defines one runner entry.
 
 | Setting | Description |
 | ------- | ----------- |
-| `name`              | not used, just informatory |
-| `url`               | CI URL |
-| `token`             | runner token |
-| `tls-ca-file`       | file containing the certificates to verify the peer when using HTTPS |
-| `tls-skip-verify`   | whether to verify the TLS certificate when using HTTPS, default: false |
-| `limit`             | limit how many jobs can be handled concurrently by this token. 0 simply means don't limit |
-| `executor`          | select how a project should be built, see next section |
-| `shell`             | the name of shell to generate the script (default value is platform dependent) |
-| `builds_dir`        | directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
-| `cache_dir`         | directory where build caches will be stored in context of selected executor (Locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
-| `environment`       | append or overwrite environment variables |
-| `disable_verbose`   | don't print run commands |
-| `output_limit`      | set maximum build log size in kilobytes, by default set to 4096 (4MB) |
-| `pre_clone_script`  | commands to be executed on the runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. to insert multiple commands, use a (triple-quoted) multi-line string. |
-| `pre_build_script`  | commands to be executed on the runner after cloning the Git repository, but before executing the build. to insert multiple commands, use a (triple-quoted) multi-line string. |
+| `name`               | not used, just informatory |
+| `url`                | CI URL |
+| `token`              | runner token |
+| `tls-ca-file`        | file containing the certificates to verify the peer when using HTTPS |
+| `tls-skip-verify`    | whether to verify the TLS certificate when using HTTPS, default: false |
+| `limit`              | limit how many jobs can be handled concurrently by this token. 0 simply means don't limit |
+| `executor`           | select how a project should be built, see next section |
+| `shell`              | the name of shell to generate the script (default value is platform dependent) |
+| `builds_dir`         | directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
+| `cache_dir`          | directory where build caches will be stored in context of selected executor (Locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
+| `environment`        | append or overwrite environment variables |
+| `disable_verbose`    | don't print run commands |
+| `output_limit`       | set maximum build log size in kilobytes, by default set to 4096 (4MB) |
+| `pre_clone_script`   | commands to be executed on the runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `pre_build_script`   | commands to be executed on the runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `post_build_script`  | commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 
 Example:
 

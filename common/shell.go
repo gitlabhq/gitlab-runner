@@ -35,13 +35,14 @@ func (s *ShellConfiguration) String() string {
 }
 
 type ShellScriptInfo struct {
-	Shell          string
-	Build          *Build
-	Type           ShellType
-	User           string
-	RunnerCommand  string
-	PreCloneScript string
-	PreBuildScript string
+	Shell           string
+	Build           *Build
+	Type            ShellType
+	User            string
+	RunnerCommand   string
+	PreCloneScript  string
+	PreBuildScript  string
+	PostBuildScript string
 }
 
 type Shell interface {
