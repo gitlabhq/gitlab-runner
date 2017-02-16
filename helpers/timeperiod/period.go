@@ -23,7 +23,7 @@ func (t *TimePeriod) InPeriod() bool {
 	return false
 }
 
-func TimePeriods(periods []string) (*TimePeriod, error) {
+func TimePeriods(periods []string, timezone string) (*TimePeriod, error) {
 	var expressions []*cronexpr.Expression
 
 	for _, period := range periods {
@@ -35,9 +35,14 @@ func TimePeriods(periods []string) (*TimePeriod, error) {
 		expressions = append(expressions, expression)
 	}
 
+	location, err := time.LoadLocation(timezone)
+	if err != nil {
+		return nil, err
+	}
+
 	timePeriod := &TimePeriod{
 		expressions:    expressions,
-		GetCurrentTime: func() time.Time { return time.Now() },
+		GetCurrentTime: func() time.Time { return time.Now().In(location) },
 	}
 
 	return timePeriod, nil

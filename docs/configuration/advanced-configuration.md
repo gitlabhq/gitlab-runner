@@ -369,6 +369,7 @@ found in the separate [runners autoscale documentation](autoscale.md).
 | `IdleCount`         | Number of machines, that need to be created and waiting in _Idle_ state. |
 | `IdleTime`          | Time (in seconds) for machine to be in _Idle_ state before it is removed. |
 | `OffPeakPeriods`    | Time periods when the scheduler is in the OffPeak mode. An array of cron-style patterns (described below) |
+| `OffPeakTimezone`   | Time zone for the times given in OffPeakPeriods. A timezone string like Europe/Berlin (defaults to locale) |
 | `OffPeakIdleCount`  | Like `IdleCount`, but for _Off Peak_ time periods. |
 | `OffPeakIdleTime`   | Like `IdleTime`, but for _Off Peak_ time mperiods. |
 | `MaxBuilds`         | Builds count after which machine will be removed. |
@@ -386,6 +387,7 @@ Example:
     "* * 0-10,18-23 * * mon-fri *",
     "* * * * * sat,sun *"
   ]
+  OffPeakTimezone = "Europe/Berlin"
   OffPeakIdleCount = 1
   OffPeakIdleTime = 3600
   MaxBuilds = 100
