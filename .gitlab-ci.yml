@@ -64,6 +64,7 @@ code style:
   - make fmt
   - make lint
   - make complexity
+  - make vet
   tags:
   - docker
 

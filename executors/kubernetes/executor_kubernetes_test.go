@@ -445,7 +445,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
-				secrets := []api.LocalObjectReference{{"docker-registry-credentials"}}
+				secrets := []api.LocalObjectReference{{Name: "docker-registry-credentials"}}
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
