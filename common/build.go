@@ -412,6 +412,9 @@ func (b *Build) GetGitStrategy() GitStrategy {
 }
 
 func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
+	if b.GetGitStrategy() == GitNone {
+		return SubmoduleNone
+	}
 	switch b.GetAllVariables().Get("GIT_SUBMODULE_STRATEGY") {
 	case "normal":
 		return SubmoduleNormal
