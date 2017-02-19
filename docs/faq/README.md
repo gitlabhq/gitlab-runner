@@ -196,49 +196,47 @@ When installing and starting the GitLab Runner service on Windows you can
 meet with such error:
 
 ```
-$ gitlab-ci-multi-runner.exe install --password WINDOWS_MACHINE_PASSWORD
-$ gitlab-ci-multi-runner.exe start
+$ gitlab-runner install --password WINDOWS_MACHINE_PASSWORD
+$ gitlab-runner start
 $ FATA[0000] Failed to start GitLab Runner: The service did not start due to a logon failure.
 ```
 
-This error can occur when the user used to execut the service doesn't have
+This error can occur when the user used to execute the service doesn't have
 the `SeServiceLogonRight` permission. In such case you need to add this
 permission for the chosen user and then try to start the service again.
 
 You can add `SeServiceLogonRight` in two ways:
 
 1. Manually using Administrative Tools:
-
    - Go to _Control Panel > System and Security > Administrative Tools_,
    - open the _Local Security Policy_ tool,
-   - chose the _Security Settings > Local Policies > User RIghts Assigment_ on the
+   - chose the _Security Settings > Local Policies > User Rights Assignment_ on the
      list on the left,
    - open the _Log on as a service_ on the list on the right,
    - click on the _Add User or Group..._ button,
    - add the user ("by hand" or using _Advanced..._ button) and apply the settings.
 
-   > **Notice:** According to [Microsoft's documentation][microsoft-manually-set-seservicelogonright]
-   > this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
-   > Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, Windows 8
+     > **Notice:** According to [Microsoft's documentation][microsoft-manually-set-seservicelogonright]
+     > this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
+     > Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, Windows 8
 
-   > **Notice:** The _Local Security Policy_ tool may be not available in some
-   > Windows versions - for example in "Home Edition" variant of each version.
+     > **Notice:** The _Local Security Policy_ tool may be not available in some
+     > Windows versions - for example in "Home Edition" variant of each version.
 
-2. From command line, using the `Ntrights.exe` tool:
-
+1. From command line, using the `Ntrights.exe` tool:
    - Download tools from [Microsoft's download site][microsoft-ntrights-download],
    - execute `ntrights.exe ntrights +r SeServiceLogonRight -u USER_NAME_HERE` (remember,
      that you should provide a full path for `ntrights.exe` executable **or** add that
-     path to system's `$Path` environment variable).
+     path to system's `PATH` environment variable).
 
-   > **Notice:** The tool was created in 2003 and was initially designed to use
-   > with Windows XP and Windows Server 2003. On [Microsoft sites][microsoft-ntrights-usage-on-win7]
-   > you can find an example of usage `Ntrights.exe` that applies to Windows 7 and Windows Server 2008 R2.
-   > This solution is not tested and because of the age of the software **it may not work
-   > on newest Windows versions**.
+     > **Notice:** The tool was created in 2003 and was initially designed to use
+     > with Windows XP and Windows Server 2003. On [Microsoft sites][microsoft-ntrights-usage-on-win7]
+     > you can find an example of usage `Ntrights.exe` that applies to Windows 7 and Windows Server 2008 R2.
+     > This solution is not tested and because of the age of the software **it may not work
+     > on newest Windows versions**.
 
 After adding the `SeServiceLogonRight` for the user used in service configuration,
-the command `gitlab-ci-multi-runner.exe start` should finish without failures
+the command `gitlab-runner start` should finish without failures
 and the service should be started properly.
 
 [microsoft-manually-set-seservicelogonright]: https://technet.microsoft.com/en-us/library/dn221981
