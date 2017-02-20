@@ -1,3 +1,6 @@
+v 1.8.7
+- Update packages targets !485
+
 v 1.8.6
 - Add ubuntu/yakkety to packages generation list !458
 
