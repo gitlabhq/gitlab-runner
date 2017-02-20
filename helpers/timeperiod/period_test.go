@@ -40,17 +40,16 @@ func TestWrongTimezone(t *testing.T) {
 }
 
 func TestTimezone(t *testing.T) {
-	assert := assert.New(t)
 	// make sure timezones are respected and make no difference
 	_, timePeriods := newTimePeriods(t, "Local")
-	assert.WithinDuration(timePeriods.GetCurrentTime(), time.Now(), 1*time.Second)
+	assert.WithinDuration(t, timePeriods.GetCurrentTime(), time.Now(), 1*time.Second)
 	_, timePeriods = newTimePeriods(t, "America/New_York")
-	assert.WithinDuration(timePeriods.GetCurrentTime(), time.Now(), 1*time.Second)
+	assert.WithinDuration(t, timePeriods.GetCurrentTime(), time.Now(), 1*time.Second)
 	_, timePeriods = newTimePeriods(t, "Australia/Sydney")
-	assert.WithinDuration(timePeriods.GetCurrentTime(), time.Now(), 1*time.Second)
+	assert.WithinDuration(t, timePeriods.GetCurrentTime(), time.Now(), 1*time.Second)
 	// make sure timezones are calculated correctly
 	location, _ := time.LoadLocation("Australia/Sydney")
-	assert.Equal(timePeriods.GetCurrentTime().Format("3:04PM"), time.Now().In(location).Format("3:04PM"))
+	assert.Equal(t, timePeriods.GetCurrentTime().Format("3:04PM"), time.Now().In(location).Format("3:04PM"))
 }
 
 func TestInPeriod(t *testing.T) {
