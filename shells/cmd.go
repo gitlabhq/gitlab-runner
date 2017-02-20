@@ -202,6 +202,8 @@ func (b *CmdWriter) Finish(trace bool) string {
 	w := bufio.NewWriter(&buffer)
 
 	if trace {
+		io.WriteString(w, "@echo on\r\n")
+	} else {
 		io.WriteString(w, "@echo off\r\n")
 	}
 
@@ -217,7 +219,7 @@ func (b *CmdWriter) Finish(trace bool) string {
 func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
 	script = &common.ShellConfiguration{
 		Command:   "cmd",
-		Arguments: []string{"/Q", "/C"},
+		Arguments: []string{"/C"},
 		PassFile:  true,
 		Extension: "cmd",
 	}
