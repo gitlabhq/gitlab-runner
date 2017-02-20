@@ -42,9 +42,8 @@ func TestWrongTimezone(t *testing.T) {
 
 func TestTimezone(t *testing.T) {
 	assert := assert.New(t)
-	localtimezone, _ := time.Now().Zone()
 	// make sure timezones are respected and make no difference
-	_, timePeriods := newTimePeriods(t, localtimezone)
+	_, timePeriods := newTimePeriods(t, "Local")
 	assert.WithinDuration(timePeriods.GetCurrentTime(), time.Now(), 1*time.Second)
 	_, timePeriods = newTimePeriods(t, "America/New_York")
 	assert.WithinDuration(timePeriods.GetCurrentTime(), time.Now(), 1*time.Second)

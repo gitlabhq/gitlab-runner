@@ -37,7 +37,7 @@ func TimePeriods(periods []string, timezone string) (*TimePeriod, error) {
 
 	// if not set, default to system setting (the empty string would mean UTC)
 	if timezone == "" {
-		timezone, _ = time.Now().Zone()
+		timezone = "Local"
 	}
 	location, err := time.LoadLocation(timezone)
 	if err != nil {
