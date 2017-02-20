@@ -1,3 +1,19 @@
+v 1.10.5
+- Update packages targets !485
+
+v 1.10.4
+- Fix race in helpers/prometheus/log_hook.go: Fire() method !463
+
+v 1.10.3
+- Fix crash on machine creation !461
+
+v 1.10.2
+- Add ubuntu/yakkety to packages generation list !458
+- Reduce size of gitlab-runner-helper images !456
+
+v 1.10.1
+- Fix S3 and packagecloud uploads step in release process !455
+
 v 1.10.0
 - Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
 - Handle Content-Type header with charset information !430
@@ -18,6 +34,12 @@ v 1.10.0
 - Update Docker Machine in official Runner images to v0.9.0 !454
 - Pass ImagePullSecrets for Kubernetes executor !449
 - Add Namespace overwrite possibility for Kubernetes executor !444
+
+v 1.9.7
+- Update packages targets !485
+
+v 1.9.6
+- Add ubuntu/yakkety to packages generation list !458
 
 v 1.9.5
 - Update Docker Machine in official Runner images to v0.9.0 !454
@@ -66,6 +88,12 @@ v 1.9.0
 - Remove unnecessary warning about using image with the same ID as provided !424
 - Add a link where one can download the packages directly !292
 - Kubernetes executor - use pre-build container !425
+
+v 1.8.7
+- Update packages targets !485
+
+v 1.8.6
+- Add ubuntu/yakkety to packages generation list !458
 
 v 1.8.5
 - Update Docker Machine in official Runner images to v0.9.0 !454
