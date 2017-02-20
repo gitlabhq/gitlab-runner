@@ -317,7 +317,7 @@ func (b *Build) Run(globalConfig *Config, trace BuildTrace) (err error) {
 	var executor Executor
 
 	logger := NewBuildLogger(trace, b.Log())
-	logger.Println("Running with " + AppVersion.Line() + helpers.ANSI_RESET)
+	logger.Println(fmt.Sprintf("Running with %s\n  on %s (%s)", AppVersion.Line(), b.Runner.Name, b.Runner.ShortDescription()))
 
 	b.CurrentState = BuildRunStatePending
 
