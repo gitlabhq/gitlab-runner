@@ -10,8 +10,8 @@ case "$1" in
     bleeding)
         apt-get install -yqqq ruby ruby-dev
         make packagecloud PACKAGE_CLOUD="runner/unstable" \
-                          DEB_PLATFORMS="debian/jessie ubuntu/trusty ubuntu/xenial" \
-                          RPM_PLATFORMS="el/7 fedora/23"
+                          DEB_PLATFORMS="debian/jessie debian/stretch ubuntu/xenial ubuntu/yakkety" \
+                          RPM_PLATFORMS="el/7 fedora/25"
         ;;
     stable)
         if [[ -n "${IS_LATEST}" ]]; then
