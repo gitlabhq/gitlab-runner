@@ -35,9 +35,8 @@ func newTimePeriods(t *testing.T, timezone string) (time.Time, *TimePeriod) {
 }
 
 func TestWrongTimezone(t *testing.T) {
-	assert.Panics(t, func() {
-		_, _ = newTimePeriods(t, "NoValidTimezone/String")
-	}, "calling newTimePeriods with a wrong timezone string should panic")
+	_, err := TimePeriods([]string{}, "NoValidTimezone/String")
+	assert.Error(t, err)
 }
 
 func TestTimezone(t *testing.T) {
