@@ -111,6 +111,7 @@ This defines the Docker Container parameters.
 | `security_opt`              | set security options (--security-opt in docker run), takes a list of ':' separated key/values |
 | `devices`                   | share additional host devices with the container |
 | `disable_cache`             | disable automatic |
+| `network_mode`              | add container to a custom network |
 | `wait_for_services_timeout` | specify how long to wait for docker services, set to 0 to disable, default: 30 |
 | `cache_dir`                 | specify where Docker caches should be stored (this can be absolute or relative to current working directory) |
 | `volumes`                   | specify additional volumes that should be mounted (same syntax as Docker -v option) |
