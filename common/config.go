@@ -262,13 +262,18 @@ func (c *DockerMachine) isOffPeak() bool {
 		c.CompileOffPeakPeriods()
 	}
 
-	return c.offPeakTimePeriods != nil && c.offPeakTimePeriods.InPeriod()
+	return c.offPeakTimePeriods != nil && c.offPeakTimePeriods.InPeriod(c.OffPeakTimezone)
 }
 
 func (c *DockerMachine) CompileOffPeakPeriods() (err error) {
-	c.offPeakTimePeriods, err = timeperiod.TimePeriods(c.OffPeakPeriods, c.OffPeakTimezone)
+	c.offPeakTimePeriods, err = timeperiod.TimePeriods(c.OffPeakPeriods)
 	if err != nil {
 		err = errors.New(fmt.Sprint("Invalid OffPeakPeriods value: ", err))
+		return
+	}
+	_, err = time.LoadLocation(c.OffPeakTimezone)
+	if err != nil {
+		err = errors.New(fmt.Sprint("Invalid OffPeakTimeZone value: ", err))
 	}
 
 	return
