@@ -6,8 +6,8 @@ target=$(echo ${1} | cut -f 1 -d ' ')
 case "${target}" in
     bleeding)
         make packagecloud PACKAGE_CLOUD="runner/unstable" \
-                          DEB_PLATFORMS="debian/jessie ubuntu/trusty ubuntu/xenial" \
-                          RPM_PLATFORMS="el/7 fedora/23"
+                          DEB_PLATFORMS="debian/jessie debian/stretch ubuntu/xenial ubuntu/yakkety" \
+                          RPM_PLATFORMS="el/7 fedora/25"
         ;;
     stable)
         make packagecloud
