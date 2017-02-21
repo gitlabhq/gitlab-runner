@@ -19,14 +19,13 @@ var daysOfWeek = map[time.Weekday]string{
 }
 
 func newTimePeriods(t *testing.T) (time.Time, *TimePeriod) {
-	now := time.Now()
-	minute := now.Minute()
-	hour := now.Hour()
-	day := now.Weekday()
-	dayName := daysOfWeek[day]
+	location, _ := time.LoadLocation("Local")
+	now := time.Date(2017, time.February, 21, 14, 0, 0, 0, location)
 
-	periodPattern := fmt.Sprintf("* %d %d * * %s *", minute, hour, dayName)
-	timePeriods, err := TimePeriods([]string{periodPattern})
+	dayName := daysOfWeek[now.Weekday()]
+
+	periodPattern := fmt.Sprintf("* 0 14 * * %s *", dayName)
+	timePeriods, err := TimePeriods([]string{periodPattern}, location.String())
 	assert.NoError(t, err)
 
 	return now, timePeriods
@@ -37,7 +36,6 @@ func TestInPeriod(t *testing.T) {
 	timePeriods.GetCurrentTime = func() time.Time {
 		return now
 	}
-
 	assert.True(t, timePeriods.InPeriod())
 }
 
@@ -59,4 +57,43 @@ func TestPeriodOut(t *testing.T) {
 		return now.Add(time.Minute * 4)
 	}
 	assert.False(t, timePeriods.InPeriod())
+}
+
+func TestInvalidTimezone(t *testing.T) {
+	_, err := TimePeriods([]string{}, "InvalidTimezone/String")
+	assert.Error(t, err)
+}
+
+func testTimeperiodsWithTimezone(t *testing.T, period, timezone string, month time.Month, day, hour, minute int, inPeriod bool) {
+	timePeriods, _ := TimePeriods([]string{period}, timezone)
+	timePeriods.GetCurrentTime = func() time.Time {
+		return time.Date(2017, month, day, hour, minute, 0, 0, time.UTC)
+	}
+
+	now := timePeriods.GetCurrentTime()
+	nowInLocation := now.In(timePeriods.location)
+	t.Log(fmt.Sprintf("Checking timeperiod '%s' in timezone '%s' for %s (%s)", period, timezone, now, nowInLocation))
+
+	if inPeriod {
+		assert.True(t, timePeriods.InPeriod(), "It should be inside of the period")
+	} else {
+		assert.False(t, timePeriods.InPeriod(), "It should be outside of the period")
+	}
+}
+
+func TestTimeperiodsWithTimezone(t *testing.T) {
+	period := "* * 10-17 * * * *"
+	timezone := "Europe/Berlin"
+
+	// inside or outside of the timeperiod, basing on DST status
+	testTimeperiodsWithTimezone(t, period, timezone, time.January, 1, 16, 30, true)
+	testTimeperiodsWithTimezone(t, period, timezone, time.July, 1, 16, 30, false)
+
+	// always inside of the timeperiod
+	testTimeperiodsWithTimezone(t, period, timezone, time.January, 1, 14, 30, true)
+	testTimeperiodsWithTimezone(t, period, timezone, time.July, 1, 14, 30, true)
+
+	// always outside of the timeperiod
+	testTimeperiodsWithTimezone(t, period, timezone, time.January, 1, 20, 30, false)
+	testTimeperiodsWithTimezone(t, period, timezone, time.July, 1, 20, 30, false)
 }

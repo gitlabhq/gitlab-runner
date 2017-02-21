@@ -81,6 +81,7 @@ type DockerMachine struct {
 	MachineOptions []string `long:"machine-options" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
 
 	OffPeakPeriods   []string `long:"off-peak-periods" env:"MACHINE_OFF_PEAK_PERIODS" description:"Time periods when the scheduler is in the OffPeak mode"`
+	OffPeakTimezone  string   `long:"off-peak-timezone" env:"MACHINE_OFF_PEAK_TIMEZONE" description:"Timezone for the OffPeak periods (defaults to Local)"`
 	OffPeakIdleCount int      `long:"off-peak-idle-count" env:"MACHINE_OFF_PEAK_IDLE_COUNT" description:"Maximum idle machines when the scheduler is in the OffPeak mode"`
 	OffPeakIdleTime  int      `long:"off-peak-idle-time" env:"MACHINE_OFF_PEAK_IDLE_TIME" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode"`
 
@@ -265,7 +266,7 @@ func (c *DockerMachine) isOffPeak() bool {
 }
 
 func (c *DockerMachine) CompileOffPeakPeriods() (err error) {
-	c.offPeakTimePeriods, err = timeperiod.TimePeriods(c.OffPeakPeriods)
+	c.offPeakTimePeriods, err = timeperiod.TimePeriods(c.OffPeakPeriods, c.OffPeakTimezone)
 	if err != nil {
 		err = errors.New(fmt.Sprint("Invalid OffPeakPeriods value: ", err))
 	}

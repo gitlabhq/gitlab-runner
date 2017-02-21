@@ -276,10 +276,10 @@ periods.
 
 **How it is working?**
 
-Configuration of _Off Peak_ is done by three parameters: `OffPeakPeriods`,
-`OffPeakIdleCount` and `OffPeakIdleTime`. The `OffPeakPeriods` setting
-contains an array of cron-style patterns defining when the _Off Peak_ time
-mode should be set on. For example:
+Configuration of _Off Peak_ is done by four parameters: `OffPeakPeriods`,
+`OffPeakIdleCount`, `OffPeakIdleCount` and `OffPeakIdleTime`. The
+`OffPeakPeriods` setting contains an array of cron-style patterns defining
+when the _Off Peak_ time mode should be set on. For example:
 
 ```toml
 [runners.machine]
@@ -293,6 +293,10 @@ will enable the _Off Peak_ periods described above, so the _working_ days
 from 12am to 9am and from 6pm to 11pm and whole weekend days. Machines
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
+
+You can specify the `OffPeakTimezone` e.g. `"Australia/Sydney"`. If you don't,
+the system setting of the host machine of every runner will be used. This
+default can be stated as `OffPeakTimezone = "Local"` explicitly if you wish.
 
 When the _Off Peak_ time mode is enabled machines scheduler use
 `OffPeakIdleCount` instead of `IdleCount` setting and `OffPeakIdleTime`
