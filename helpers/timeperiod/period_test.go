@@ -19,14 +19,13 @@ var daysOfWeek = map[time.Weekday]string{
 }
 
 func newTimePeriods(t *testing.T) (time.Time, *TimePeriod) {
-	now := time.Now()
-	minute := now.Minute()
-	hour := now.Hour()
-	day := now.Weekday()
-	dayName := daysOfWeek[day]
+	location, _ := time.LoadLocation("Local")
+	now := time.Date(2017, time.February, 21, 14, 0, 0, 0, location)
 
-	periodPattern := fmt.Sprintf("* %d %d * * %s *", minute, hour, dayName)
-	timePeriods, err := TimePeriods([]string{periodPattern}, "Local")
+	dayName := daysOfWeek[now.Weekday()]
+
+	periodPattern := fmt.Sprintf("* 0 14 * * %s *", dayName)
+	timePeriods, err := TimePeriods([]string{periodPattern}, location.String())
 	assert.NoError(t, err)
 
 	return now, timePeriods
