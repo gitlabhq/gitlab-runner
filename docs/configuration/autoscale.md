@@ -294,8 +294,9 @@ from 12am to 9am and from 6pm to 11pm and whole weekend days. Machines
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
 
-You can specify the `OffPeakTimezone`. If you don't, the system setting
-of the host machine of every runner will be used. 
+You can specify the `OffPeakTimezone` e.g. `"Australia/Sydney"`. If you don't,
+the system setting of the host machine of every runner will be used. This
+default can be stated as `OffPeakTimezone = "Local"` explicitly if you wish.
 
 When the _Off Peak_ time mode is enabled machines scheduler use
 `OffPeakIdleCount` instead of `IdleCount` setting and `OffPeakIdleTime`

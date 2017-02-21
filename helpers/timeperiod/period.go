@@ -1,7 +1,6 @@
 package timeperiod
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gorhill/cronexpr"
@@ -9,22 +8,12 @@ import (
 
 type TimePeriod struct {
 	expressions    []*cronexpr.Expression
+	location       *time.Location
 	GetCurrentTime func() time.Time
 }
 
-func (t *TimePeriod) InPeriod(timezone string) bool {
-	// if not set, default to system setting (the empty string would mean UTC)
-	if timezone == "" {
-		timezone = "Local"
-	}
-	location, err := time.LoadLocation(timezone)
-	if err != nil {
-		// I don't want this function to return an error code.
-		// The validity of the input should already be checked on config load.
-		// But to be sure and able to test, we have this here.
-		panic(fmt.Sprint("Invalid OffPeakTimeZone value: ", err))
-	}
-	now := t.GetCurrentTime().In(location)
+func (t *TimePeriod) InPeriod() bool {
+	now := t.GetCurrentTime().In(t.location)
 	for _, expression := range t.expressions {
 		nextIn := expression.Next(now)
 		timeSince := now.Sub(nextIn)
@@ -36,7 +25,7 @@ func (t *TimePeriod) InPeriod(timezone string) bool {
 	return false
 }
 
-func TimePeriods(periods []string) (*TimePeriod, error) {
+func TimePeriods(periods []string, timezone string) (*TimePeriod, error) {
 	var expressions []*cronexpr.Expression
 
 	for _, period := range periods {
@@ -48,8 +37,18 @@ func TimePeriods(periods []string) (*TimePeriod, error) {
 		expressions = append(expressions, expression)
 	}
 
+	// if not set, default to system setting (the empty string would mean UTC)
+	if timezone == "" {
+		timezone = "Local"
+	}
+	location, err := time.LoadLocation(timezone)
+	if err != nil {
+		return nil, err
+	}
+
 	timePeriod := &TimePeriod{
 		expressions:    expressions,
+		location:       location,
 		GetCurrentTime: func() time.Time { return time.Now() },
 	}
 
