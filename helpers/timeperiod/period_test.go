@@ -26,7 +26,7 @@ func newTimePeriods(t *testing.T) (time.Time, *TimePeriod) {
 	dayName := daysOfWeek[day]
 
 	periodPattern := fmt.Sprintf("* %d %d * * %s *", minute, hour, dayName)
-	timePeriods, err := TimePeriods([]string{periodPattern}, "Europe/Berlin")
+	timePeriods, err := TimePeriods([]string{periodPattern}, "Local")
 	assert.NoError(t, err)
 
 	return now, timePeriods
