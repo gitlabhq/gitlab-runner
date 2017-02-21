@@ -1,3 +1,6 @@
+v 1.8.8
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
+
 v 1.8.7
 - Update packages targets !485
 
