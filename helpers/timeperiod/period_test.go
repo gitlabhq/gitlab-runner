@@ -37,16 +37,35 @@ func TestInvalidTimezone(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func testTimeperiodsWithTimezone(t *testing.T, period, timezone string, month time.Month, day, hour, minute int, inPeriod bool) {
+	timePeriods, _ := TimePeriods([]string{period}, timezone)
+	timePeriods.GetCurrentTime = func() time.Time {
+		return time.Date(2017, month, day, hour, minute, 0, 0, time.UTC)
+	}
+
+	now := timePeriods.GetCurrentTime()
+	nowInLocation := now.In(timePeriods.location)
+	t.Log(fmt.Sprintf("Checking timeperiod '%s' in timezone '%s' for %s (%s)", period, timezone, now, nowInLocation))
+
+	if inPeriod {
+		assert.True(t, timePeriods.InPeriod(), "It should be inside of the period")
+	} else {
+		assert.False(t, timePeriods.InPeriod(), "It should be outside of the period")
+	}
+}
+
 func TestOffPeakPeriod(t *testing.T) {
-	timePeriods, _ := TimePeriods([]string{"* * 10-17 * * * *"}, "Europe/Berlin")
-	timePeriods.GetCurrentTime = func() time.Time {
-		return time.Date(2017, time.January, 1, 16, 30, 0, 0, time.UTC)
-	}
-	assert.True(t, timePeriods.InPeriod(), "2017-01-01 16:30:00 UTC (no DST time in Europe/Berlin, so the time is +1h to UTC = 17:30 - which is inside of '* * 10-17 * * * *')")
-	timePeriods.GetCurrentTime = func() time.Time {
-		return time.Date(2017, time.July, 1, 16, 30, 0, 0, time.UTC)
-	}
-	assert.False(t, timePeriods.InPeriod(), "2017-07-01 16:30:00 UTC (DST time in Europe/Berlin, so the time is +2h to UTC = 18:30 - which is outside of '* * 10-17 * * * *')")
+	// inside or outside of the timeperiod, basing on DST status
+	testTimeperiodsWithTimezone(t, "* * 10-17 * * * *", "Europe/Berlin", time.January, 1, 16, 30, true)
+	testTimeperiodsWithTimezone(t, "* * 10-17 * * * *", "Europe/Berlin", time.July, 1, 16, 30, false)
+
+	// always inside of the timeperiod
+	testTimeperiodsWithTimezone(t, "* * 10-17 * * * *", "Europe/Berlin", time.January, 1, 14, 30, true)
+	testTimeperiodsWithTimezone(t, "* * 10-17 * * * *", "Europe/Berlin", time.July, 1, 14, 30, true)
+
+	// always outside of the timeperiod
+	testTimeperiodsWithTimezone(t, "* * 10-17 * * * *", "Europe/Berlin", time.January, 1, 20, 30, false)
+	testTimeperiodsWithTimezone(t, "* * 10-17 * * * *", "Europe/Berlin", time.July, 1, 20, 30, false)
 }
 
 func TestInPeriod(t *testing.T) {

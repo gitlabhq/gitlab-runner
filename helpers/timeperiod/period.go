@@ -17,7 +17,7 @@ func (t *TimePeriod) InPeriod() bool {
 	for _, expression := range t.expressions {
 		nextIn := expression.Next(now)
 		timeSince := now.Sub(nextIn)
-		if timeSince <= time.Second && timeSince >= -time.Second {
+		if -time.Second <= timeSince && timeSince <= time.Second {
 			return true
 		}
 	}
