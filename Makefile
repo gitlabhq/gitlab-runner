@@ -238,6 +238,7 @@ package-deps:
 	gem install fpm
 
 package-prepare:
+	chmod 755 packaging/root/usr/share/gitlab-runner/
 	chmod 755 packaging/root/usr/share/gitlab-runner/*
 
 package-deb:
