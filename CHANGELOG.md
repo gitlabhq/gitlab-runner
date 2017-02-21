@@ -1,3 +1,6 @@
+v 1.10.6
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
+
 v 1.10.5
 - Update packages targets !485
 
@@ -34,6 +37,9 @@ v 1.10.0
 - Update Docker Machine in official Runner images to v0.9.0 !454
 - Pass ImagePullSecrets for Kubernetes executor !449
 - Add Namespace overwrite possibility for Kubernetes executor !444
+
+v 1.9.8
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
 
 v 1.9.7
 - Update packages targets !485
@@ -88,6 +94,9 @@ v 1.9.0
 - Remove unnecessary warning about using image with the same ID as provided !424
 - Add a link where one can download the packages directly !292
 - Kubernetes executor - use pre-build container !425
+
+v 1.8.8
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
 
 v 1.8.7
 - Update packages targets !485
