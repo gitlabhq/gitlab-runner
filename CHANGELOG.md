@@ -1,3 +1,21 @@
+v 1.11.0
+- Fix S3 and packagecloud uploads step in release process !455
+- Add ubuntu/yakkety to packages generation list !458
+- Reduce size of gitlab-runner-helper images !456
+- Fix crash on machine creation !461
+- Rename 'Build (succeeded|failed)' to 'Job (succeeded|failed)' !459
+- Fix race in helpers/prometheus/log_hook.go: Fire() method !463
+- Fix missing VERSION on Mac build !465
+- Added post_build_script to call scripts after user-defined build scripts !460
+- Fix offense reported by vet. Add vet to 'code style' job. !477
+- Add the runner name to the first line of log output, after the version !473
+- Make CI_DEBUG_TRACE working on Windows CMD !483
+- Update packages targets !485
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
+- Add timezone support for OffPeak intervals !479
+- Set GIT_SUBMODULE_STRATEGY=SubmoduleNone when GIT_STRATEGY=GitNone !480
+- Update maintainers information !489
+
 v 1.10.6
 - Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
 
