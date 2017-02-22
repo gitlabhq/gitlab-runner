@@ -131,7 +131,7 @@ VERSION:
    1.0.0~beta.142.ga8d37f3 (a8d37f3)
 
 AUTHOR(S):
-   Kamil Trzciński <ayufan@ayufan.eu>
+   GitLab Inc. <support@gitlab.com>
 
 COMMANDS:
    exec		execute a build locally
