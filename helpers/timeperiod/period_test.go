@@ -18,45 +18,37 @@ var daysOfWeek = map[time.Weekday]string{
 	time.Sunday:    "sun",
 }
 
-func newTimePeriods(t *testing.T) (time.Time, *TimePeriod) {
+func testTimePeriods(t *testing.T, seconds int, getCurrentTime func(now time.Time) time.Time, inPeriod bool) {
 	location, _ := time.LoadLocation("Local")
-	now := time.Date(2017, time.February, 21, 14, 0, 0, 0, location)
+	now := time.Date(2017, time.February, 22, 14, 59, seconds, 0, location)
 
-	dayName := daysOfWeek[now.Weekday()]
+	minute := now.Minute()
+	hour := now.Hour()
+	dayofWeek := now.Weekday()
+	day := daysOfWeek[dayofWeek]
+	periodPattern := fmt.Sprintf("* %d %d * * %s *", minute, hour, day)
 
-	periodPattern := fmt.Sprintf("* 0 14 * * %s *", dayName)
 	timePeriods, err := TimePeriods([]string{periodPattern}, location.String())
 	assert.NoError(t, err)
+	timePeriods.GetCurrentTime = func() time.Time {
+		return getCurrentTime(now)
+	}
 
-	return now, timePeriods
+	t.Logf("Testing periodPattern '%s' with time '%s' and currentTime '%s'", periodPattern, now, timePeriods.GetCurrentTime())
+	if inPeriod {
+		assert.True(t, timePeriods.InPeriod(), "It should be inside of the period")
+	} else {
+		assert.False(t, timePeriods.InPeriod(), "It should be outside of the period")
+	}
 }
 
 func TestInPeriod(t *testing.T) {
-	now, timePeriods := newTimePeriods(t)
-	timePeriods.GetCurrentTime = func() time.Time {
-		return now
-	}
-	assert.True(t, timePeriods.InPeriod())
-}
-
-func TestPeriodOut(t *testing.T) {
-	now, timePeriods := newTimePeriods(t)
-	timePeriods.GetCurrentTime = func() time.Time {
-		return now.Add(time.Hour * 48)
-	}
-	assert.False(t, timePeriods.InPeriod())
-
-	now, timePeriods = newTimePeriods(t)
-	timePeriods.GetCurrentTime = func() time.Time {
-		return now.Add(time.Hour * 4)
-	}
-	assert.False(t, timePeriods.InPeriod())
-
-	now, timePeriods = newTimePeriods(t)
-	timePeriods.GetCurrentTime = func() time.Time {
-		return now.Add(time.Minute * 4)
-	}
-	assert.False(t, timePeriods.InPeriod())
+	testTimePeriods(t, 0, func(now time.Time) time.Time { return now }, true)
+	// TODO: Decide if this case should be fixed, and how to do this
+	testTimePeriods(t, 59, func(now time.Time) time.Time { return now }, false)
+	testTimePeriods(t, 0, func(now time.Time) time.Time { return now.Add(time.Hour * 48) }, false)
+	testTimePeriods(t, 0, func(now time.Time) time.Time { return now.Add(time.Hour * 4) }, false)
+	testTimePeriods(t, 0, func(now time.Time) time.Time { return now.Add(time.Minute * 4) }, false)
 }
 
 func TestInvalidTimezone(t *testing.T) {
