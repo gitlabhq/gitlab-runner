@@ -266,9 +266,9 @@ package-deb-fpm:
 		--before-remove packaging/scripts/prerm.deb \
 		--url https://gitlab.com/gitlab-org/gitlab-ci-multi-runner \
 		--description "GitLab Runner" \
-		-m "Kamil Trzciński <ayufan@ayufan.eu>" \
+		-m "GitLab Inc. <support@gitlab.com>" \
 		--license "MIT" \
-		--vendor "ayufan.eu" \
+		--vendor "GitLab Inc." \
 		--conflicts $(PACKAGE_CONFLICT) \
 		--provides gitlab-runner \
 		--replaces gitlab-runner \
@@ -291,9 +291,9 @@ package-rpm-fpm:
 		--before-remove packaging/scripts/prerm.rpm \
 		--url https://gitlab.com/gitlab-org/gitlab-ci-multi-runner \
 		--description "GitLab Runner" \
-		-m "Kamil Trzciński <ayufan@ayufan.eu>" \
+		-m "GitLab Inc. <support@gitlab.com>" \
 		--license "MIT" \
-		--vendor "ayufan.eu" \
+		--vendor "GitLab Inc." \
 		--conflicts $(PACKAGE_CONFLICT) \
 		--provides gitlab-runner \
 		--replaces gitlab-runner \
