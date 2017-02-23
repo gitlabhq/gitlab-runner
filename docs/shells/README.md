@@ -3,19 +3,6 @@
 GitLab Runner implements a few shell script generators that allow to execute
 builds on different systems.
 
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Overview](#overview)
-- [Sh/Bash shells](#sh-bash-shells)
-- [Windows Batch](#windows-batch)
-- [PowerShell](#powershell)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 ## Overview
 
 The shell scripts contain commands to execute all steps of the build:

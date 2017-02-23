@@ -1,23 +1,6 @@
 # FAQ
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-- [1. Where are logs stored when run as a service?](#1-where-are-logs-stored-when-run-as-a-service)
-- [2. Run in `--debug` mode](#2-run-in---debug-mode)
-- [3. I get a PathTooLongException during my builds on Windows](#3-i-get-a-pathtoolongexception-during-my-builds-on-windows)
-- [4. I'm seeing `x509: certificate signed by unknown authority`](#4-im-seeing-x509-certificate-signed-by-unknown-authority)
-- [5. I get `Permission Denied` when accessing the `/var/run/docker.sock`](#5-i-get-permission-denied-when-accessing-the-varrundockersock)
-- [6. The Docker executor gets timeout when building Java project.](#6-the-docker-executor-gets-timeout-when-building-java-project)
-- [7. I get 411 when uploading artifacts.](#7-i-get-411-when-uploading-artifacts)
-- [8. I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`.](#8-i-cant-run-windows-bash-scripts-im-getting-the-system-cannot-find-the-batch-label-specified---buildscript)
-- [9. My gitlab runner is on Windows. How can I get colored output on the web terminal?](#9-my-gitlab-runner-is-on-windows-how-can-i-get-colored-output-on-the-web-terminal)
-- [10. "warning: You appear to have cloned an empty repository."](#10-warning-you-appear-to-have-cloned-an-empty-repository)
-- [11. `"launchctl" failed: exit status 112, Could not find domain for`](#11-launchctl-failed-exit-status-112-could-not-find-domain-for)
-- [12. `Failed to authorize rights (0x1) with status: -60007.`](#12-failed-to-authorize-rights-0x1-with-status--60007)
-- [13. `The service did not start due to a logon failure` error when starting service on Windows](#13-the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service-on-windows)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+Some Frequently Asked Questions about GitLab Runner.
 
 ## 1. Where are logs stored when run as a service?
 

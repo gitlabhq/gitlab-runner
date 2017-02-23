@@ -1,90 +1,90 @@
-### Install on OSX
+# Install on macOS
 
-(In the future there will be a brew package).
+In the future there will be a brew package, but for now you have to manually
+download the macOS binary.
 
-Download the binary for your system:
+## Installation
 
-```bash
-sudo curl --output /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
-```
+1. Download the binary for your system:
 
-Give it permissions to execute:
+    ```bash
+    sudo curl --output /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
+    ```
 
-```bash
-sudo chmod +x /usr/local/bin/gitlab-ci-multi-runner
-```
+1. Give it permissions to execute:
 
-Get your gitlab-ci token from the *Specific Runners* section on your project 
-settings *Runners* page.
+    ```bash
+    sudo chmod +x /usr/local/bin/gitlab-ci-multi-runner
+    ```
 
+**The rest of commands execute as the user who will run the Runner.**
 
-**The rest of commands execute as the user who will run the runner.**
+1. Register the Runner (look into [Runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
 
-Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
-```bash
-gitlab-ci-multi-runner register
+    ```bash
+    gitlab-ci-multi-runner register
 
-Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
-https://gitlab.com
-Please enter the gitlab-ci token for this runner
-xxx
-Please enter the gitlab-ci description for this runner
-my-runner
-INFO[0034] fcf5c619 Registering runner... succeeded
-Please enter the executor: shell, docker, docker-ssh, ssh?
-docker
-Please enter the Docker image (eg. ruby:2.1):
-ruby:2.1
-INFO[0037] Runner registered successfully. Feel free to start it, but if it's
-running already the config should be automatically reloaded!
-```
+    Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
+    https://gitlab.com
+    Please enter the gitlab-ci token for this runner
+    xxx
+    Please enter the gitlab-ci description for this runner
+    my-runner
+    INFO[0034] fcf5c619 Registering runner... succeeded
+    Please enter the executor: shell, docker, docker-ssh, ssh?
+    docker
+    Please enter the Docker image (eg. ruby:2.1):
+    ruby:2.1
+    INFO[0037] Runner registered successfully. Feel free to start it, but if it's
+    running already the config should be automatically reloaded!
+    ```
 
-Install runner as service and start it:
+1. Install the Runner as service and start it:
 
-```bash
-cd ~
-gitlab-ci-multi-runner install
-gitlab-ci-multi-runner start
-```
+    ```bash
+    cd ~
+    gitlab-ci-multi-runner install
+    gitlab-ci-multi-runner start
+    ```
 
-Voila! Runner is installed and will be run after system reboot.
+Voila! Runner is installed and will be run after a system reboot.
 
-### Update
+## Update
 
-Stop the service:
+1. Stop the service:
 
-```bash
-gitlab-ci-multi-runner stop
-```
+    ```bash
+    gitlab-ci-multi-runner stop
+    ```
 
-Download binary to replace runner's executable:
+1. Download the binary to replace the Runner's executable:
 
-```bash
-curl -o /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
-```
+    ```bash
+    curl -o /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
+    ```
 
-Give it permissions to execute:
+1. Give it permissions to execute:
 
-```bash
-chmod +x /usr/local/bin/gitlab-ci-multi-runner
-```
+    ```bash
+    chmod +x /usr/local/bin/gitlab-ci-multi-runner
+    ```
 
-Start the service:
+1. Start the service:
 
-```bash
-gitlab-ci-multi-runner start
-```
+    ```bash
+    gitlab-ci-multi-runner start
+    ```
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
 
-### Limitations on OSX
+## Limitations on macOS
 
 >**Note:**
 The service needs to be installed from the Terminal by running its GUI
 interface as your current user. Only then will you be able to manage the service.
 
-Currently, the only proven to work mode for OSX is running service in user-mode.
+Currently, the only proven to work mode for macOS is running service in user-mode.
 
 Since the service will be running only when the user is logged in, you should
 enable auto-login on your OSX machine.
@@ -103,7 +103,7 @@ You can verify that the Runner created the service configuration file after
 executing the `install` command, by checking the
 `~/Library/LaunchAgents/gitlab-runner.plist` file.
 
-### Upgrade the service file
+## Upgrade the service file
 
 In order to upgrade the `LaunchAgent` configuration, you need to uninstall and
 install the service:

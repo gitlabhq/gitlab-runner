@@ -1,23 +1,25 @@
-# GitLab Runner Monitoring
+# GitLab Runner monitoring
+
+GitLab Runner can be monitored using [Prometheus].
 
 ## Embedded Prometheus metrics
 
 > The embedded HTTP Statistics Server with Prometheus metrics was
 introduced in GitLab Runner 1.8.0.
 
-The GitLab Runner is instrumented with native [Prometheus](https://prometheus.io/)
+The GitLab Runner is instrumented with native Prometheus
 metrics, which can be exposed via an embedded HTTP server on the `/metrics`
 path. The server - if enabled - can be scraped by the Prometheus monitoring
 system or accessed with any other HTTP client.
 
 The exposed information includes:
 
-- runner business logic metrics (e.g. the number of currently running builds)
+- Runner business logic metrics (e.g., the number of currently running builds)
 - Go-specific process metrics (garbage collection stats, goroutines, memstats, etc.)
-- general process metrics (memory usage, cpu usage, file descriptor usage, etc.)
+- general process metrics (memory usage, CPU usage, file descriptor usage, etc.)
 - build version information
 
-The following is an example of the metrics output in Prometheus's
+The following is an example of the metrics output in Prometheus'
 text-based metrics exposition format:
 
 ```
@@ -153,7 +155,7 @@ process_virtual_memory_bytes 3.39746816e+08
 ```
 
 Note that the lines starting with `# HELP` document the meaning of each exposed
-metric. This metrics format is documented in Prometheus's
+metric. This metrics format is documented in Prometheus'
 [Exposition formats](https://prometheus.io/docs/instrumenting/exposition_formats/)
 specification.
 
@@ -186,20 +188,22 @@ the `pprof` HTTP endpoints.
 `pprof` endpoints will be available via an embedded HTTP server on `/debug/pprof/`
 path.
 
-You can read more about using `pprof` in it's [documentation][go-pprof].
+You can read more about using `pprof` in its [documentation][go-pprof].
 
 ## Configuration of the metrics HTTP server
+
+> **Note:**
+The metrics server exports data about the internal state of the
+GitLab Runner process and should not be publicly available!
 
 The metrics HTTP server can be configured in two ways:
 
 - with a `metrics_server` global configuration option in `config.toml` file,
 - with a `--metrics-server` command line option for the `run` command.
 
-In both cases the option accepts a string with the format:
-
-`[host]:<port>`
-
+In both cases the option accepts a string with the format `[host]:<port>`,
 where:
+
 - `host` can be an IP address or a host name,
 - `port` is a valid TCP port or symbolic service name (like `http`).
 
@@ -218,7 +222,5 @@ to a public interface then you should consider to use your firewall to
 limit access to this server or add a HTTP proxy which will add the
 authorization and access control layer.
 
-> **Notice:** Metrics server exports data about internal state of the
-GitLab Runner process and should not be publicly available!
-
 [go-pprof]: https://golang.org/pkg/net/http/pprof/
+[prometheus]: https://prometheus.io

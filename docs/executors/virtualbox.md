@@ -1,25 +1,13 @@
 # VirtualBox
 
-> Note: The Parallels executor works the same as the VirtualBox executor. The
+>**Note:**
+The Parallels executor works the same as the VirtualBox executor. The
 caching feature is currently not supported.
 
 VirtualBox allows you to use VirtualBox's virtualization to provide a clean
 build environment for every build. This executor supports all systems that can
 be run on VirtualBox. The only requirement is that the virtual machine exposes
 its SSH server and provide a bash-compatible shell.
-
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Overview](#overview)
-- [Create a new base virtual machine](#create-a-new-base-virtual-machine)
-- [Create a new Runner](#create-a-new-runner)
-- [How it works](#how-it-works)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Overview
 

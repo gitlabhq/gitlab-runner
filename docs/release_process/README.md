@@ -3,22 +3,6 @@
 To handle the growth of this project, in `v1.6` we've introduced a release process correlated
 with GitLab's CE/EE release process.
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**
-
-- [Release roadmap](#release-roadmap)
-  - [Stable release timeline](#stable-release-timeline)
-  - [Supported releases](#supported-releases)
-  - [Release planning](#release-planning)
-- [Workflow, merging and tagging strategy](#workflow-merging-and-tagging-strategy)
-  - [Stable release](#stable-release)
-  - [Patch releases](#patch-releases)
-  - [Branch naming](#branch-naming)
-- [Documentation](#documentation)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 ## Release roadmap
 
 Starting with `v1.4`, GitLab Runner is released on the 22nd day of each month -
