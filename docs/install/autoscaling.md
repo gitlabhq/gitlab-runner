@@ -5,22 +5,6 @@
 For an overview of the auto-scale architecture, take a look at the
 [comprehensive documentation on auto-scaling](../configuration/autoscale.md).
 
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Prepare the environment](#prepare-the-environment)
-- [Prepare the Docker Registry and Cache Server](#prepare-the-docker-registry-and-cache-server)
-    - [Install Docker Registry](#install-docker-registry)
-    - [Install the cache server](#install-the-cache-server)
-- [Configure GitLab Runner](#configure-gitlab-runner)
-- [Upgrading the Runner](#upgrading-the-runner)
-- [Manage the Docker Machines](#manage-the-docker-machines)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 ## Prepare the environment
 
 In order to use the auto-scale feature, Docker and GitLab Runner must be

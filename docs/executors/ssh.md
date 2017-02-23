@@ -7,17 +7,6 @@ is currently not supported.
 This is a simple executor that allows you to execute builds on a remote machine
 by executing commands over SSH.
 
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Overview](#overview)
-- [Security](#security)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 ## Overview
 
 To use the SSH executor you need to specify `executor = "ssh"` under the

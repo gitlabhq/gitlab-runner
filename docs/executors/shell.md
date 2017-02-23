@@ -5,18 +5,6 @@ locally to the machine that the Runner is installed. It supports all systems on
 which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, Windows PowerShell and Windows Batch.
 
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Overview](#overview)
-- [Running as unprivileged user](#running-as-unprivileged-user)
-- [Security](#security)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 ## Overview
 
 The scripts can be run as unprivileged user if the `--user` is added to the
