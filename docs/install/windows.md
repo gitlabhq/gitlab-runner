@@ -1,52 +1,65 @@
 # Install on Windows
 
-To install GitLab Runner on Windows, your user must have a password set up.
+To install and run GitLab Runner on Windows you need:
+* Git installed
+* A password for your user account, if you want to run it under your user
+  account rather than the Built-in System Account
 
 ## Installation
 
-1. Create a folder somewhere in your system, ex.: `C:\Multi-Runner`.
+1. Create a folder somewhere in your system, ex.: `C:\GitLab-Runner`.
 
 1. Download the binary for [x86][]  or [amd64][] and put it into the folder you
-   created.
+   created. Rename the binary to `gitlab-runner.exe`.
 
-1. Run an `Administrator` command prompt ([How to][prompt]). The simplest is to
-   write `Command Prompt` in Windows search field, right click and select
-   `Run as administrator`. You will be asked to confirm that you want to execute
-   the elevated command prompt.
+1. Run an [`Administrator`/elevated command prompt][prompt] (<kbd>WindowsKey</kbd> + <kbd>X</kbd> then select Command Prompt (Admin)).
 
-1. Register the Runner (look into [Runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
+1. Register the Runner (see [Runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
 
     ```bash
-    cd C:\Multi-Runner
-    gitlab-ci-multi-runner register
+    C:\Windows\system32>cd C:\GitLab-Runner
 
-    Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
+    C:\GitLab-Runner>gitlab-runner register
+    Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com/):
     https://gitlab.com
-    Please enter the gitlab-ci token for this runner
-    xxx
-    Please enter the gitlab-ci description for this runner
-    my-runner
-    INFO[0034] fcf5c619 Registering runner... succeeded
-    Please enter the executor: shell, docker, docker-ssh, ssh?
-    docker
-    Please enter the Docker image (eg. ruby:2.1):
-    ruby:2.1
-    INFO[0037] Runner registered successfully. Feel free to start it, but if it's
-    running already the config should be automatically reloaded!
+    Please enter the gitlab-ci token for this runner:
+    xxxx
+    Please enter the gitlab-ci description for this runner:
+    [xxxx]:
+    Please enter the gitlab-ci tags for this runner (comma separated):
+    windows
+    Whether to run untagged builds [true/false]:
+    [false]: true
+    Registering runner... succeeded
+    Please enter the executor: docker+machine, kubernetes, docker, docker-ssh, parallels, virtualbox, shell, ssh, docker-ssh+machine:
+    shell
+    Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
     ```
 
-1. Install the Runner as a service and start it. You have to enter a valid password
-   for the current user account, because it's required to start the service by Windows:
+1. Install the Runner as a service and start it. You can either run the service
+   using the Built-in System Account (recommended) or using a user account.
+
+    **Run service using Built-in System Account**
+  
+    ```bash
+    gitlab-runner install
+    gitlab-runner start
+    ```
+    
+    **Run service using user account**
+    
+    You have to enter a valid password for the current user account, because 
+    it's required to start the service by Windows:
 
     ```bash
-    gitlab-ci-multi-runner install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
-    gitlab-ci-multi-runner start
+    gitlab-runner install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
+    gitlab-runner start
     ```
-
+    
     See the [troubleshooting section](#troubleshooting) if you encounter any
     errors during the Runner installation.
 
-Voila! Runner is installed and will be run after system reboot.
+Voila! Runner is installed, running, and will start again after each system reboot.
 Logs are stored in Windows Event Log.
 
 ## Update
@@ -54,35 +67,50 @@ Logs are stored in Windows Event Log.
 1. Stop the service (you need elevated command prompt as before):
 
     ```bash
-    cd C:\Multi-Runner
-    gitlab-ci-multi-runner stop
+    cd C:\GitLab-Runner
+    gitlab-runner stop
     ```
 
 1. Download the binary for [x86][] or [amd64][] and replace runner's executable.
 1. Start the service:
 
     ```bash
-    gitlab-ci-multi-runner start
+    gitlab-runner start
     ```
+
+## Uninstall
+
+From elevated command prompt:
+
+```bash
+cd C:\GitLab-Runner
+gitlab-runner stop
+gitlab-runner uninstall
+cd ..
+rmdir /s GitLab-Runner
+```
+
+## Troubleshooting
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
 
-## Troubleshooting
-
 If you encounter an error like _The account name is invalid_ try to add `.\` before the username:
 
 ```shell
-gitlab-ci-multi-runner install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASSWORD"
+gitlab-runner install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASSWORD"
 ```
 
 If you encounter a _The service did not start due to a logon failure_ error
-while starting the service, please [look into FAQ](../faq/README.md#13-the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service-on-windows) to check how to resolve the problem.
+while starting the service, please [look in the FAQ](../faq/README.md#13-the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service-on-windows) to check how to resolve the problem.
 
-If you don't have a Windows Password, Runner's service won't start. To
-fix this please read [How to Configure the Service to Start Up with the Built-in System Account](https://support.microsoft.com/en-us/kb/327545#bookmark-6)
+If you don't have a Windows Password, Runner's service won't start but you can 
+use the Built-in System Account. 
+
+If you have issues with the Built-in System Account, please read 
+[How to Configure the Service to Start Up with the Built-in System Account](https://support.microsoft.com/en-us/kb/327545#6)
 on Microsoft's support website.
 
 [x86]: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-windows-386.exe
 [amd64]: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-windows-amd64.exe
-[prompt]: http://pcsupport.about.com/od/windows-8/a/elevated-command-prompt-windows-8.htm
+[prompt]: https://www.tenforums.com/tutorials/2790-elevated-command-prompt-open-windows-10-a.html
