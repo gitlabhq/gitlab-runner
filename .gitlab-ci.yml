@@ -13,9 +13,11 @@ before_script:
 .docker: &docker
   before_script:
   - source ci/prepare
-  - wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
-  - chmod +x /usr/bin/docker
-  services: ["docker:1.12.4-dind"]
+  - wget -q https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O /tmp/docker.tar.gz
+  - tar -xzf /tmp/docker.tar.gz -C /tmp/
+  - cp /tmp/docker/docker* /usr/bin
+  - chmod +x /usr/bin/docker*
+  services: ["docker:dind"]
   variables:
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
