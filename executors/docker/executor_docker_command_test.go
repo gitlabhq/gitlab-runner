@@ -15,6 +15,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
+
+	"golang.org/x/net/context"
 )
 
 func TestDockerCommandSuccessRun(t *testing.T) {
@@ -83,7 +85,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "not found")
 }
 
@@ -105,7 +107,7 @@ func TestDockerCommandMissingTag(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "not found")
 }
 
@@ -268,7 +270,7 @@ func waitForDocker(credentials docker_helpers.DockerCredentials) error {
 	}
 
 	for i := 0; i < 20; i++ {
-		_, err = client.Info()
+		_, err = client.Info(context.TODO())
 		if err == nil {
 			break
 		}

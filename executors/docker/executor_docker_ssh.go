@@ -3,9 +3,13 @@ package docker
 import (
 	"errors"
 
+	"github.com/docker/docker/api/types"
+
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/ssh"
+
+	"golang.org/x/net/context"
 )
 
 type sshExecutor struct {
@@ -37,12 +41,12 @@ func (s *sshExecutor) Prepare(globalConfig *common.Config, config *common.Runner
 	}
 
 	s.Debugln("Starting container", container.ID, "...")
-	err = s.client.StartContainer(container.ID, nil)
+	err = s.client.ContainerStart(context.TODO(), container.ID, types.ContainerStartOptions{})
 	if err != nil {
 		return err
 	}
 
-	containerData, err := s.client.InspectContainer(container.ID)
+	containerData, err := s.client.ContainerInspect(context.TODO(), container.ID)
 	if err != nil {
 		return err
 	}
