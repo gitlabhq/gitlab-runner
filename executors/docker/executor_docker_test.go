@@ -154,14 +154,14 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Once()
 
 	networkContainersMap := map[string]types.EndpointResource{
-		"1": types.EndpointResource{Name: containerName},
+		"1": {Name: containerName},
 	}
 
 	c.On("NetworkList", context.TODO(), types.NetworkListOptions{}).
 		Return([]types.NetworkResource{{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
 		Once()
 
-	c.On("NetworkDisconnect", context.TODO(), networkID, containerName, false).
+	c.On("NetworkDisconnect", context.TODO(), networkID, containerName, true).
 		Return(nil).
 		Once()
 

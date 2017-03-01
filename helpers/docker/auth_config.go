@@ -69,7 +69,10 @@ func ReadDockerAuthConfigsFromHomeDir(userName string) (map[string]types.AuthCon
 	}
 
 	p := path.Join(homeDir, ".docker", "config.json")
+
 	r, err := os.Open(p)
+	defer r.Close()
+
 	if err != nil {
 		p := path.Join(homeDir, ".dockercfg")
 		r, err = os.Open(p)
@@ -82,7 +85,6 @@ func ReadDockerAuthConfigsFromHomeDir(userName string) (map[string]types.AuthCon
 		return make(map[string]types.AuthConfig), nil
 	}
 
-	defer r.Close()
 	return ReadAuthConfigsFromReader(r)
 }
 

@@ -888,7 +888,7 @@ func (s *executor) disconnectNetwork(id string) error {
 	for _, network := range netList {
 		for _, pluggedContainer := range network.Containers {
 			if id == pluggedContainer.Name {
-				err = s.client.NetworkDisconnect(context.TODO(), network.ID, id, false)
+				err = s.client.NetworkDisconnect(context.TODO(), network.ID, id, true)
 				if err != nil {
 					s.Warningln("Can't disconnect possibly zombie container", pluggedContainer.Name, "from network", network.Name, "->", err)
 				} else {

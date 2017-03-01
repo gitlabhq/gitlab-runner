@@ -4,11 +4,12 @@ import (
 	"errors"
 
 	"github.com/docker/docker/api/types"
-	"golang.org/x/net/context"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/ssh"
+
+	"golang.org/x/net/context"
 )
 
 type sshExecutor struct {
