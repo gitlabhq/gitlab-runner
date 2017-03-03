@@ -1,3 +1,6 @@
+v 1.10.7
+- Update docker-machine version to fix coreos provision !500
+
 v 1.10.6
 - Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
 
