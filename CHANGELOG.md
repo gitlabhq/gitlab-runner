@@ -1,3 +1,6 @@
+v 1.11.1
+- Update docker-machine version to fix coreos provision !500
+
 v 1.11.0
 - Fix S3 and packagecloud uploads step in release process !455
 - Add ubuntu/yakkety to packages generation list !458
