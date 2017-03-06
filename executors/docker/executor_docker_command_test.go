@@ -1,9 +1,11 @@
 package docker_test
 
 import (
+	"bytes"
 	"net/url"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -183,6 +185,36 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	err = build.Run(&common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
+}
+
+func TestDockerCommandOutput(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		GetBuildResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "alpine",
+				},
+			},
+		},
+	}
+
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	assert.NoError(t, err)
+
+	re, err := regexp.Compile("(?m)^Cloning into '/builds/gitlab-org/gitlab-test'...")
+	assert.NoError(t, err)
+	assert.Regexp(t, re, buffer.String())
 }
 
 func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
