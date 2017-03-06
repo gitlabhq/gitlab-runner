@@ -59,6 +59,9 @@ To install and run GitLab Runner on Windows you need:
     See the [troubleshooting section](#troubleshooting) if you encounter any
     errors during the Runner installation.
 
+1. (Optional) Update Runners `concurrent` value in `C:\GitLab-Runner\config.toml`
+   to allow multiple concurrent jobs as detailed in [advanced configuration details](https://docs.gitlab.com/runner/configuration/advanced-configuration.html).
+
 Voila! Runner is installed, running, and will start again after each system reboot.
 Logs are stored in Windows Event Log.
 
