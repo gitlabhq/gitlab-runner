@@ -16,7 +16,7 @@ This defines global settings of multi-runner.
 
 | Setting | Description |
 | ------- | ----------- |
-| `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners |
+| `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
 | `check_interval` | defines in seconds how often to check GitLab for a new builds |
 | `sentry_dsn`     | enable tracking of all system level errors to sentry |
 | `metrics_server` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
@@ -38,7 +38,7 @@ This defines one runner entry.
 | `token`              | runner token |
 | `tls-ca-file`        | file containing the certificates to verify the peer when using HTTPS |
 | `tls-skip-verify`    | whether to verify the TLS certificate when using HTTPS, default: false |
-| `limit`              | limit how many jobs can be handled concurrently by this token. 0 simply means don't limit |
+| `limit`              | limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
 | `executor`           | select how a project should be built, see next section |
 | `shell`              | the name of shell to generate the script (default value is platform dependent) |
 | `builds_dir`         | directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
