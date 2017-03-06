@@ -18,6 +18,8 @@ import (
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/pkg/stdcopy"
+
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
@@ -832,7 +834,7 @@ func (s *executor) watchContainer(id string, input io.Reader, abort chan interfa
 
 	// Copy any output to the build trace
 	go func() {
-		_, err := io.Copy(s.BuildTrace, hijacked.Reader)
+		_, err := stdcopy.StdCopy(s.BuildTrace, s.BuildTrace, hijacked.Reader)
 		if err != nil {
 			attachCh <- err
 		}
@@ -1149,7 +1151,7 @@ func (s *executor) waitForServiceContainer(service *types.Container, timeout tim
 	hijacked, err := s.client.ContainerLogs(context.TODO(), service.ID, options)
 	if err == nil {
 		defer hijacked.Close()
-		io.Copy(&containerBuffer, hijacked)
+		stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
 		if containerLog := containerBuffer.String(); containerLog != "" {
 			buffer.WriteString("\n")
 			buffer.WriteString(strings.TrimSpace(containerLog))
