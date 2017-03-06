@@ -283,6 +283,6 @@ func init() {
 				VirtualBox: &common.VirtualBoxConfig{},
 			},
 		},
-		network: &network.GitLabClient{},
+		network: network.NewGitLabClient(),
 	})
 }

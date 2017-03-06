@@ -25,7 +25,7 @@ var brokenConfig = RunnerConfig{
 }
 
 func TestClients(t *testing.T) {
-	c := GitLabClient{}
+	c := NewLegacyGitLabClient()
 	c1, _ := c.getClient(RunnerCredentials{
 		URL: "http://test/",
 	})
@@ -126,7 +126,7 @@ func TestGetBuild(t *testing.T) {
 		},
 	}
 
-	c := GitLabClient{}
+	c := NewLegacyGitLabClient()
 
 	res, ok := c.GetBuild(validToken)
 	if assert.NotNil(t, res) {
@@ -222,7 +222,7 @@ func TestRegisterRunner(t *testing.T) {
 		Token: "other",
 	}
 
-	c := GitLabClient{}
+	c := NewLegacyGitLabClient()
 
 	res := c.RegisterRunner(validToken, "test", "tags", true)
 	if assert.NotNil(t, res) {
@@ -289,7 +289,7 @@ func TestDeleteRunner(t *testing.T) {
 		Token: "other",
 	}
 
-	c := GitLabClient{}
+	c := NewLegacyGitLabClient()
 
 	state := c.DeleteRunner(validToken)
 	assert.True(t, state)
@@ -351,7 +351,7 @@ func TestVerifyRunner(t *testing.T) {
 		Token: "other",
 	}
 
-	c := GitLabClient{}
+	c := NewLegacyGitLabClient()
 
 	state := c.VerifyRunner(validToken)
 	assert.True(t, state)
@@ -409,7 +409,7 @@ func TestUpdateBuild(t *testing.T) {
 	}
 
 	trace := "trace"
-	c := GitLabClient{}
+	c := NewLegacyGitLabClient()
 
 	state := c.UpdateBuild(config, 10, "running", &trace)
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
@@ -479,7 +479,7 @@ func TestArtifactsUpload(t *testing.T) {
 	defer tempFile.Close()
 	defer os.Remove(tempFile.Name())
 
-	c := GitLabClient{}
+	c := NewLegacyGitLabClient()
 
 	fmt.Fprint(tempFile, "content")
 	state := c.UploadArtifacts(config, tempFile.Name())
@@ -499,7 +499,7 @@ func TestArtifactsUpload(t *testing.T) {
 var patchToken = "token"
 var patchTraceString = "trace trace trace"
 
-func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body string, offset, limit int)) (*httptest.Server, GitLabClient, RunnerConfig) {
+func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body string, offset, limit int)) (*httptest.Server, *GitLabClient, RunnerConfig) {
 	patchHandler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PATCH" {
 			w.WriteHeader(406)
@@ -531,7 +531,7 @@ func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Re
 		},
 	}
 
-	return server, GitLabClient{}, config
+	return server, NewLegacyGitLabClient(), config
 }
 
 func getTracePatch(traceString string, offset int) *tracePatch {

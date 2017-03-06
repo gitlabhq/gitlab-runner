@@ -78,7 +78,7 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 
 func init() {
 	common.RegisterCommand2("artifacts-uploader", "create and upload build artifacts (internal)", &ArtifactsUploaderCommand{
-		network: &network.GitLabClient{},
+		network: network.NewGitLabClient(),
 		retryHelper: retryHelper{
 			Retry:     2,
 			RetryTime: time.Second,

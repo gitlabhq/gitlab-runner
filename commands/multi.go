@@ -491,7 +491,7 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 func init() {
 	common.RegisterCommand2("run", "run multi runner service", &RunCommand{
 		ServiceName:       defaultServiceName,
-		network:           &network.GitLabClient{},
+		network:           network.NewGitLabClient(),
 		prometheusLogHook: prometheus_helper.NewLogHook(),
 	})
 }

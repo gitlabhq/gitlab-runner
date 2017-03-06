@@ -442,3 +442,11 @@ func (n *GitLabClient) ProcessBuild(config common.RunnerConfig, buildCredentials
 	trace.start()
 	return trace
 }
+
+func NewGitLabClient() *GitLabClient {
+	return &GitLabClient{}
+}
+
+func NewLegacyGitLabClient() *GitLabClient {
+	return &GitLabClient{}
+}

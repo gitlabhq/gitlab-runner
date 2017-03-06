@@ -160,6 +160,6 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 func init() {
 	common.RegisterCommand2("run-single", "start single runner", &RunSingleCommand{
-		network: &network.GitLabClient{},
+		network: network.NewGitLabClient(),
 	})
 }
