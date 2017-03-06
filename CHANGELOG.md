@@ -1,3 +1,6 @@
+v 1.11.1
+- Update docker-machine version to fix coreos provision !500
+
 v 1.11.0
 - Fix S3 and packagecloud uploads step in release process !455
 - Add ubuntu/yakkety to packages generation list !458
@@ -15,6 +18,9 @@ v 1.11.0
 - Add timezone support for OffPeak intervals !479
 - Set GIT_SUBMODULE_STRATEGY=SubmoduleNone when GIT_STRATEGY=GitNone !480
 - Update maintainers information !489
+
+v 1.10.7
+- Update docker-machine version to fix coreos provision !500
 
 v 1.10.6
 - Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
@@ -55,6 +61,9 @@ v 1.10.0
 - Update Docker Machine in official Runner images to v0.9.0 !454
 - Pass ImagePullSecrets for Kubernetes executor !449
 - Add Namespace overwrite possibility for Kubernetes executor !444
+
+v 1.9.9
+- Update docker-machine version to fix coreos provision !500
 
 v 1.9.8
 - Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
