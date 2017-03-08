@@ -117,7 +117,34 @@ gitlab-ci-multi-runner --debug run
 make install
 ```
 
-## 8. Congratulations!
+## 8. Run test suite locally
+
+GitLab Runner test suite consists of "core" tests and tests for executors.
+Tests for executors require certain binaries to be installed on your local
+machine. Some of these binaries cannot be installed on all operating
+systems. If a binary is not installed tests requiring this binary will be
+skipped.
+
+These are the binaries that you can install:
+1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+1. [kubectl](https://kubernetes.io/docs/user-guide/prereqs/) with
+  [Minikube](https://github.com/kubernetes/minikube)
+1. [Parallels](http://www.parallels.com/products/desktop/download/)
+1. [PowerShell](https://msdn.microsoft.com/en-us/powershell)
+
+After installing the binaries run:
+
+```
+make development_setup
+```
+
+To execute the tests run:
+
+```
+make test
+```
+
+## 9. Congratulations!
 
 You can start hacking GitLab-Runner code. If you are interested you can use Intellij IDEA Community Edition with [go-lang-idea-plugin](https://github.com/go-lang-plugin-org/go-lang-idea-plugin) to edit and debug code.
 
