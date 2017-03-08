@@ -207,7 +207,7 @@ in time:
 
 ![Autoscale state chart](img/autoscale-state-chart.png)
 
-## How `current`, `limit` and `IdleCount` generate the upper limit of running machines
+## How `concurrent`, `limit` and `IdleCount` generate the upper limit of running machines
 
 There doesn't exist a magic equation that will tell you what to set `limit` or
 `concurrent` to. Act according to your needs. Having `IdleCount` of _Idle_
