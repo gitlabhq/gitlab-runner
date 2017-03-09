@@ -8,13 +8,13 @@ download the macOS binary.
 1. Download the binary for your system:
 
     ```bash
-    sudo curl --output /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
+    sudo curl --output /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
     ```
 
 1. Give it permissions to execute:
 
     ```bash
-    sudo chmod +x /usr/local/bin/gitlab-ci-multi-runner
+    sudo chmod +x /usr/local/bin/gitlab-runner
     ```
 
 **The rest of commands execute as the user who will run the Runner.**
@@ -22,7 +22,7 @@ download the macOS binary.
 1. Register the Runner (look into [Runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
 
     ```bash
-    gitlab-ci-multi-runner register
+    gitlab-runner register
 
     Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
     https://gitlab.com
@@ -43,8 +43,8 @@ download the macOS binary.
 
     ```bash
     cd ~
-    gitlab-ci-multi-runner install
-    gitlab-ci-multi-runner start
+    gitlab-runner install
+    gitlab-runner start
     ```
 
 Voila! Runner is installed and will be run after a system reboot.
@@ -54,25 +54,25 @@ Voila! Runner is installed and will be run after a system reboot.
 1. Stop the service:
 
     ```bash
-    gitlab-ci-multi-runner stop
+    gitlab-runner stop
     ```
 
 1. Download the binary to replace the Runner's executable:
 
     ```bash
-    curl -o /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
+    curl -o /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
     ```
 
 1. Give it permissions to execute:
 
     ```bash
-    chmod +x /usr/local/bin/gitlab-ci-multi-runner
+    chmod +x /usr/local/bin/gitlab-runner
     ```
 
 1. Start the service:
 
     ```bash
-    gitlab-ci-multi-runner start
+    gitlab-runner start
     ```
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
@@ -109,7 +109,7 @@ In order to upgrade the `LaunchAgent` configuration, you need to uninstall and
 install the service:
 
 ```bash
-gitlab-ci-multi-runner uninstall
-gitlab-ci-multi-runner install
-gitlab-ci-multi-runner start
+gitlab-runner uninstall
+gitlab-runner install
+gitlab-runner start
 ```

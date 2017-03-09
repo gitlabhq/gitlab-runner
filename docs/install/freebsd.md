@@ -21,16 +21,16 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
     ```bash
     # For amd64
-    sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-amd64
+    sudo wget -O /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-amd64
 
     # For i386
-    sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-386
+    sudo wget -O /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-386
     ```
 
 1. Give it permissions to execute:
 
     ```bash
-    sudo chmod +x /usr/local/bin/gitlab-ci-multi-runner
+    sudo chmod +x /usr/local/bin/gitlab-runner
     ```
 
 1. Create an empty log file with correct permissions:
@@ -64,7 +64,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
     user="gitlab-runner"
     user_home="/home/gitlab-runner"
-    command="/usr/local/bin/gitlab-ci-multi-runner run"
+    command="/usr/local/bin/gitlab-runner run"
     pidfile="/var/run/${name}.pid"
 
     start_cmd="gitlab_runner_start"
@@ -109,7 +109,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 1. Register the Runner (look into [runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
 
     ```bash
-    sudo -u gitlab-runner -H /usr/local/bin/gitlab-ci-multi-runner register
+    sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
 
     Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com):
     Please enter the gitlab-ci token for this runner:
