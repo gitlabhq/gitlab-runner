@@ -180,7 +180,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		s.vmName = s.Config.VirtualBox.BaseName + "-" + s.Build.ProjectUniqueName()
 		if vbox.Exist(s.vmName) {
 			s.Debugln("Deleting old VM...")
-			vbox.Stop(s.vmName)
+			vbox.Kill(s.vmName)
 			vbox.Delete(s.vmName)
 			vbox.Unregister(s.vmName)
 		}
@@ -196,7 +196,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		err := s.restoreFromSnapshot()
 		if err != nil {
 			s.Println("Previous VM failed. Deleting, because", err)
-			vbox.Stop(s.vmName)
+			vbox.Kill(s.vmName)
 			vbox.Delete(s.vmName)
 			vbox.Unregister(s.vmName)
 		}

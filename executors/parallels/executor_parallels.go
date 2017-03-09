@@ -192,7 +192,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		s.vmName = s.Config.Parallels.BaseName + "-" + s.Build.ProjectUniqueName()
 		if prl.Exist(s.vmName) {
 			s.Debugln("Deleting old VM...")
-			prl.Stop(s.vmName)
+			prl.Kill(s.vmName)
 			prl.Delete(s.vmName)
 			prl.Unregister(s.vmName)
 		}
@@ -208,7 +208,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		err := s.restoreFromSnapshot()
 		if err != nil {
 			s.Println("Previous VM failed. Deleting, because", err)
-			prl.Stop(s.vmName)
+			prl.Kill(s.vmName)
 			prl.Delete(s.vmName)
 			prl.Unregister(s.vmName)
 		}
