@@ -6,7 +6,7 @@ The registration token can be found at `https://gitlab.com/project_namespace/pro
 You can export it as a variable and run the command below as is:
 
 ```bash
-gitlab-ci-multi-runner register \
+gitlab-runner register \
 --non-interactive \
 --url "https://gitlab.com" \
 --registration-token "$REGISTRATION_TOKEN" \
