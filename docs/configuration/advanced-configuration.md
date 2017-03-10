@@ -497,7 +497,7 @@ Example:
 	service_memory = "450m"
 	[runners.kubernetes.node_selector]
 		gitlab = "true"
-		image_pull_secrets = ["docker-registry-credentials"]
+	image_pull_secrets = ["docker-registry-credentials"]
 ```
 
 ## Note
