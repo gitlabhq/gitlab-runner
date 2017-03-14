@@ -1,15 +1,34 @@
 package docker_helpers
 
 import (
-	"github.com/fsouza/go-dockerclient"
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path"
 	"strings"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/cliconfig/configfile"
+	"github.com/docker/docker/pkg/homedir"
 )
 
 // DefaultDockerRegistry is the name of the index
 const DefaultDockerRegistry = "docker.io"
+
+// EncodeAuthConfig constructs a token from an AuthConfig, suitable for
+// authorizing against the Docker API with.
+func EncodeAuthConfig(authConfig *types.AuthConfig) (string, error) {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(authConfig); err != nil {
+		return "", err
+	}
+
+	return base64.URLEncoding.EncodeToString(buf.Bytes()), nil
+}
 
 // SplitDockerImageName breaks a reposName into an index name and remote name
 func SplitDockerImageName(reposName string) (string, string) {
@@ -32,23 +51,55 @@ func SplitDockerImageName(reposName string) (string, string) {
 	return indexName, remoteName
 }
 
-func ReadDockerAuthConfigs(homeDir string) (*docker.AuthConfigurations, error) {
-	var r io.Reader
-	var err error
-	p := path.Join(homeDir, ".docker", "config.json")
-	r, err = os.Open(p)
-	if err != nil {
-		p := path.Join(homeDir, ".dockercfg")
-		r, err = os.Open(p)
+var HomeDirectory = homedir.Get()
+
+func ReadDockerAuthConfigsFromHomeDir(userName string) (map[string]types.AuthConfig, error) {
+	homeDir := HomeDirectory
+
+	if userName != "" {
+		u, err := user.Lookup(userName)
 		if err != nil {
 			return nil, err
 		}
+		homeDir = u.HomeDir
 	}
-	return docker.NewAuthConfigurations(r)
+
+	if homeDir == "" {
+		return nil, fmt.Errorf("Failed to get home directory")
+	}
+
+	p := path.Join(homeDir, ".docker", "config.json")
+
+	r, err := os.Open(p)
+	defer r.Close()
+
+	if err != nil {
+		p := path.Join(homeDir, ".dockercfg")
+		r, err = os.Open(p)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
+
+	if r == nil {
+		return make(map[string]types.AuthConfig), nil
+	}
+
+	return ReadAuthConfigsFromReader(r)
+}
+
+func ReadAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
+	config := &configfile.ConfigFile{}
+
+	if err := config.LoadFromReader(r); err != nil {
+		return nil, err
+	}
+
+	return config.AuthConfigs, nil
 }
 
 // ResolveDockerAuthConfig taken from: https://github.com/docker/docker/blob/master/registry/auth.go
-func ResolveDockerAuthConfig(indexName string, configs *docker.AuthConfigurations) *docker.AuthConfiguration {
+func ResolveDockerAuthConfig(indexName string, configs map[string]types.AuthConfig) *types.AuthConfig {
 	if configs == nil {
 		return nil
 	}
@@ -70,7 +121,7 @@ func ResolveDockerAuthConfig(indexName string, configs *docker.AuthConfiguration
 
 	// Maybe they have a legacy config file, we will iterate the keys converting
 	// them to the new format and testing
-	for registry, authConfig := range configs.Configs {
+	for registry, authConfig := range configs {
 		if indexName == convertToHostname(registry) {
 			return &authConfig
 		}

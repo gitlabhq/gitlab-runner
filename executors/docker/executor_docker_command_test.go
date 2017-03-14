@@ -1,9 +1,11 @@
 package docker_test
 
 import (
+	"bytes"
 	"net/url"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +17,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
+
+	"golang.org/x/net/context"
 )
 
 func TestDockerCommandSuccessRun(t *testing.T) {
@@ -22,8 +26,10 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 		return
 	}
 
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.SuccessfulBuild,
+		GetBuildResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -34,7 +40,7 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -43,8 +49,10 @@ func TestDockerCommandBuildFail(t *testing.T) {
 		return
 	}
 
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.FailedBuild,
+		GetBuildResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -55,7 +63,7 @@ func TestDockerCommandBuildFail(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "exit code 1")
@@ -79,7 +87,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "not found")
 }
 
@@ -101,7 +109,7 @@ func TestDockerCommandMissingTag(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "not found")
 }
 
@@ -110,8 +118,10 @@ func TestDockerCommandBuildAbort(t *testing.T) {
 		return
 	}
 
+	longRunningBuild, err := common.GetRemoteLongRunningBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.LongRunningBuild,
+		GetBuildResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -135,7 +145,7 @@ func TestDockerCommandBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -144,8 +154,10 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 		return
 	}
 
+	longRunningBuild, err := common.GetRemoteLongRunningBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.LongRunningBuild,
+		GetBuildResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -170,9 +182,39 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err := build.Run(&common.Config{}, trace)
+	err = build.Run(&common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
+}
+
+func TestDockerCommandOutput(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		GetBuildResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "alpine",
+				},
+			},
+		},
+	}
+
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	assert.NoError(t, err)
+
+	re, err := regexp.Compile("(?m)^Cloning into '/builds/gitlab-org/gitlab-test'...")
+	assert.NoError(t, err)
+	assert.Regexp(t, re, buffer.String())
 }
 
 func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
@@ -193,8 +235,10 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 
 	for _, strategy := range strategies {
 		t.Log("Testing", strategy, "strategy...")
+		longRunningBuild, err := common.GetRemoteLongRunningBuild()
+		assert.NoError(t, err)
 		build := &common.Build{
-			GetBuildResponse: common.LongRunningBuild,
+			GetBuildResponse: longRunningBuild,
 			Runner: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Executor: "docker",
@@ -216,7 +260,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 			Key: "GIT_STRATEGY", Value: strategy,
 		})
 
-		err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+		err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 		assert.NoError(t, err)
 	}
 }
@@ -258,7 +302,7 @@ func waitForDocker(credentials docker_helpers.DockerCredentials) error {
 	}
 
 	for i := 0; i < 20; i++ {
-		_, err = client.Info()
+		_, err = client.Info(context.TODO())
 		if err == nil {
 			break
 		}
@@ -295,8 +339,10 @@ func testDockerVersion(t *testing.T, version string) {
 
 	t.Log("Docker", version, "is running at", credentials.Host)
 
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: common.SuccessfulBuild,
+		GetBuildResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",

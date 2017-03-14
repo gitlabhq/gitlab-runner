@@ -3,9 +3,6 @@ package network
 import (
 	"bytes"
 	"fmt"
-	"github.com/Sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -15,7 +12,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
+
+	"github.com/Sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 const clientError = -100
@@ -38,6 +38,14 @@ func (n *GitLabClient) getClient(runner common.RunnerCredentials) (c *client, er
 		n.clients[key] = c
 	}
 	return
+}
+
+func (n *GitLabClient) getLastUpdate(runner common.RunnerCredentials) (lu string) {
+	cli, err := n.getClient(runner)
+	if err != nil {
+		return ""
+	}
+	return cli.getLastUpdate()
 }
 
 func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
@@ -81,8 +89,9 @@ func (n *GitLabClient) doJSON(runner common.RunnerCredentials, method, uri strin
 
 func (n *GitLabClient) GetBuild(config common.RunnerConfig) (*common.GetBuildResponse, bool) {
 	request := common.GetBuildRequest{
-		Info:  n.getRunnerVersion(config),
-		Token: config.Token,
+		Info:       n.getRunnerVersion(config),
+		Token:      config.Token,
+		LastUpdate: n.getLastUpdate(config.RunnerCredentials),
 	}
 
 	var response common.GetBuildResponse
@@ -111,13 +120,14 @@ func (n *GitLabClient) GetBuild(config common.RunnerConfig) (*common.GetBuildRes
 	}
 }
 
-func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string) *common.RegisterRunnerResponse {
+func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged bool) *common.RegisterRunnerResponse {
 	// TODO: pass executor
 	request := common.RegisterRunnerRequest{
 		Info:        n.getRunnerVersion(common.RunnerConfig{}),
 		Token:       runner.Token,
 		Description: description,
 		Tags:        tags,
+		RunUntagged: runUntagged,
 	}
 
 	var response common.RegisterRunnerResponse
@@ -236,41 +246,31 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, buildCredentials *
 	defer response.Body.Close()
 	defer io.Copy(ioutil.Discard, response.Body)
 
-	remoteState := response.Header.Get("Build-Status")
-	remoteRange := response.Header.Get("Range")
+	tracePatchResponse := NewTracePatchResponse(response)
 	log := config.Log().WithFields(logrus.Fields{
 		"build":        id,
 		"sent-log":     contentRange,
-		"build-log":    remoteRange,
-		"build-status": remoteState,
+		"build-log":    tracePatchResponse.RemoteRange,
+		"build-status": tracePatchResponse.RemoteState,
 		"code":         response.StatusCode,
 		"status":       response.Status,
 	})
 
-	if remoteState == "canceled" {
+	switch {
+	case tracePatchResponse.IsAborted():
 		log.Warningln("Appending trace to coordinator", "aborted")
 		return common.UpdateAbort
-	}
-
-	switch response.StatusCode {
-	case 202:
+	case response.StatusCode == 202:
 		log.Debugln("Appending trace to coordinator...", "ok")
 		return common.UpdateSucceeded
-	case 404:
+	case response.StatusCode == 404:
 		log.Warningln("Appending trace to coordinator...", "not-found")
 		return common.UpdateNotFound
-	case 403:
-		log.Errorln("Appending trace to coordinator...", "forbidden")
-		return common.UpdateAbort
-	case 416:
+	case response.StatusCode == 416:
 		log.Warningln("Appending trace to coordinator...", "range mismatch")
-
-		remoteRange := strings.Split(remoteRange, "-")
-		newOffset, _ := strconv.Atoi(remoteRange[1])
-		tracePatch.SetNewOffset(newOffset)
-
+		tracePatch.SetNewOffset(tracePatchResponse.NewOffset())
 		return common.UpdateRangeMismatch
-	case clientError:
+	case response.StatusCode == clientError:
 		log.Errorln("Appending trace to coordinator...", "error")
 		return common.UpdateAbort
 	default:

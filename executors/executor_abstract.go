@@ -6,6 +6,20 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
+var (
+	excludedOptions = []string{"environment"}
+)
+
+func isOptionExcluded(option string) bool {
+	for _, excluded := range excludedOptions {
+		if option == excluded {
+			return true
+		}
+	}
+
+	return false
+}
+
 type ExecutorOptions struct {
 	DefaultBuildsDir string
 	DefaultCacheDir  string
@@ -37,6 +51,7 @@ func (e *AbstractExecutor) generateShellConfiguration() error {
 	info := e.Shell()
 	info.PreCloneScript = e.Config.PreCloneScript
 	info.PreBuildScript = e.Config.PreBuildScript
+	info.PostBuildScript = e.Config.PostBuildScript
 	shellConfiguration, err := common.GetShellConfiguration(*info)
 	if err != nil {
 		return err
@@ -75,6 +90,12 @@ func (e *AbstractExecutor) verifyOptions() error {
 		if value == nil {
 			continue
 		}
+
+		if isOptionExcluded(key) {
+			delete(e.Build.Options, key)
+			continue
+		}
+
 		found := false
 		for _, option := range supportedOptions {
 			if option == key {

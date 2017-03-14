@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -34,17 +35,63 @@ type executor struct {
 	executors.AbstractExecutor
 
 	kubeClient *client.Client
-	prepod     *api.Pod
 	pod        *api.Pod
 	options    *kubernetesOptions
 
-	buildLimits   api.ResourceList
-	serviceLimits api.ResourceList
+	namespaceOverwrite string
+
+	buildLimits     api.ResourceList
+	serviceLimits   api.ResourceList
+	helperLimits    api.ResourceList
+	buildRequests   api.ResourceList
+	serviceRequests api.ResourceList
+	helperRequests  api.ResourceList
+	pullPolicy      common.KubernetesPullPolicy
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.AbstractExecutor.Prepare(globalConfig, config, build)
-	if err != nil {
+func (s *executor) setupResources() error {
+	var err error
+
+	// Limit
+	CPULimit := getNewOrLegacy(s.Config.Kubernetes.CPULimit, s.Config.Kubernetes.CPUs)
+	MemoryLimit := getNewOrLegacy(s.Config.Kubernetes.MemoryLimit, s.Config.Kubernetes.Memory)
+
+	if s.buildLimits, err = limits(CPULimit, MemoryLimit); err != nil {
+		return fmt.Errorf("invalid build limits specified: %s", err.Error())
+	}
+
+	CPULimit = getNewOrLegacy(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceCPUs)
+	MemoryLimit = getNewOrLegacy(s.Config.Kubernetes.ServiceMemoryLimit, s.Config.Kubernetes.ServiceMemory)
+
+	if s.serviceLimits, err = limits(CPULimit, MemoryLimit); err != nil {
+		return fmt.Errorf("invalid service limits specified: %s", err.Error())
+	}
+
+	CPULimit = getNewOrLegacy(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperCPUs)
+	MemoryLimit = getNewOrLegacy(s.Config.Kubernetes.HelperMemoryLimit, s.Config.Kubernetes.HelperMemory)
+
+	if s.helperLimits, err = limits(CPULimit, MemoryLimit); err != nil {
+		return fmt.Errorf("invalid helper limits specified: %s", err.Error())
+	}
+
+	// Requests
+	if s.buildRequests, err = limits(s.Config.Kubernetes.CPURequest, s.Config.Kubernetes.MemoryRequest); err != nil {
+		return fmt.Errorf("invalid build requests specified: %s", err.Error())
+	}
+
+	if s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest); err != nil {
+		return fmt.Errorf("invalid service requests specified: %s", err.Error())
+	}
+
+	if s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest); err != nil {
+		return fmt.Errorf("invalid helper requests specified: %s", err.Error())
+	}
+
+	return nil
+}
+
+func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) (err error) {
+	if err = s.AbstractExecutor.Prepare(globalConfig, config, build); err != nil {
 		return err
 	}
 
@@ -52,21 +99,23 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	err = build.Options.Decode(&s.options)
-	if err != nil {
+	if err = build.Options.Decode(&s.options); err != nil {
 		return err
 	}
 
-	s.kubeClient, err = getKubeClient(config.Kubernetes)
-	if err != nil {
+	if s.kubeClient, err = getKubeClient(config.Kubernetes); err != nil {
 		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
-	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPUs, s.Config.Kubernetes.ServiceMemory); err != nil {
+	if err = s.setupResources(); err != nil {
 		return err
 	}
 
-	if s.buildLimits, err = limits(s.Config.Kubernetes.CPUs, s.Config.Kubernetes.Memory); err != nil {
+	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
+		return err
+	}
+
+	if err = s.overwriteNamespace(build); err != nil {
 		return err
 	}
 
@@ -91,6 +140,9 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	}
 
 	containerName := "build"
+	if cmd.Predefined {
+		containerName = "helper"
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	select {
@@ -176,10 +228,11 @@ func (s *executor) buildContainer(name, image string, limits api.ResourceList, c
 	}
 
 	return api.Container{
-		Name:    name,
-		Image:   image,
-		Command: command,
-		Env:     buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
+		Name:            name,
+		Image:           image,
+		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
+		Command:         command,
+		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
 		Resources: api.ResourceRequirements{
 			Limits: limits,
 		},
@@ -198,7 +251,13 @@ func (s *executor) setupBuildPod() error {
 		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, s.serviceLimits)
 	}
 
+	var imagePullSecrets []api.LocalObjectReference
+	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})
+	}
+
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
+
 	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
@@ -207,12 +266,15 @@ func (s *executor) setupBuildPod() error {
 		Spec: api.PodSpec{
 			Volumes:       s.getVolumes(),
 			RestartPolicy: api.RestartPolicyNever,
+			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
+			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
+			ImagePullSecrets:              imagePullSecrets,
 		},
 	})
-
 	if err != nil {
 		return err
 	}
@@ -227,7 +289,7 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	go func() {
 		defer close(errc)
 
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace)
+		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace, s.Config.Kubernetes)
 
 		if err != nil {
 			errc <- err
@@ -266,6 +328,7 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	return errc
 }
 
+// checkDefaults Defines the configuration for the Pod on Kubernetes
 func (s *executor) checkDefaults() error {
 	if s.options.Image == "" {
 		if s.Config.Kubernetes.Image == "" {
@@ -276,8 +339,43 @@ func (s *executor) checkDefaults() error {
 	}
 
 	if s.Config.Kubernetes.Namespace == "" {
+		s.Warningln("Namespace is empty, therefore assuming 'default'.")
 		s.Config.Kubernetes.Namespace = "default"
 	}
+
+	s.Println("Using Kubernetes namespace:", s.Config.Kubernetes.Namespace)
+
+	return nil
+}
+
+// overwriteNamespace checks for variable in order to overwrite the configured
+// namespace, as long as it complies to validation regular-expression, when
+// expression is empty the overwrite is disabled.
+func (s *executor) overwriteNamespace(build *common.Build) error {
+	if s.Config.Kubernetes.NamespaceOverwriteAllowed == "" {
+		s.Debugln("Configuration entry 'namespace_overwrite_allowed' is empty, using configured namespace.")
+		return nil
+	}
+
+	// looking for namespace overwrite variable, and expanding for interpolation
+	s.namespaceOverwrite = build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
+	if s.namespaceOverwrite == "" {
+		return nil
+	}
+
+	var err error
+	var r *regexp.Regexp
+	if r, err = regexp.Compile(s.Config.Kubernetes.NamespaceOverwriteAllowed); err != nil {
+		return err
+	}
+
+	if match := r.MatchString(s.namespaceOverwrite); !match {
+		return fmt.Errorf("KUBERNETES_NAMESPACE_OVERWRITE='%s' does not match 'namespace_overwrite_allowed': '%s'",
+			s.namespaceOverwrite, s.Config.Kubernetes.NamespaceOverwriteAllowed)
+	}
+
+	s.Println("Overwritting configured namespace, from", s.Config.Kubernetes.Namespace, "to", s.namespaceOverwrite)
+	s.Config.Kubernetes.Namespace = s.namespaceOverwrite
 
 	return nil
 }

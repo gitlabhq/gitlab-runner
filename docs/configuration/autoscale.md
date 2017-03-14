@@ -139,19 +139,16 @@ autoscale parameters:
 ```
 
 At the beginning, when no builds are queued, GitLab Runner starts two machines
-(`IdleCount = 2`), and sets them in _Idle_ state. If there is 30 minutes
-(`IdleTime = 1800`) of inactivity (since last project finished building), both
-machines will be removed. As of this moment we have **zero** machines in _Idle_
-state, so GitLab Runner starts 2 new machines to satisfy `IdleCount` which is
-set to 2.
+(`IdleCount = 2`), and sets them in _Idle_ state. Notice that we have also set 
+`IdleTime` to 30 minutes (`IdleTime = 1800`).
 
 Now, let's assume that 5 builds are queued in GitLab CI. The first 2 builds are
-sent to the _Idle_ machines. GitLab Runner notices that the number of _Idle_
-machines is less than `IdleCount` (`0 < 2`), so it starts 2 new machines. Then,
-the next 2 builds from the queue are sent to those newly created machines.
-Again, the number of _Idle_ machines is less than `IdleCount`, so GitLab Runner
-starts 2 new machines and the last queued build is sent to one of the _Idle_
-machines.
+sent to the _Idle_ machines of which we have two. GitLab Runner now notices that 
+the number of _Idle_ is less than `IdleCount` (`0 < 2`), so it starts 2 new 
+machines. Then, the next 2 builds from the queue are sent to those newly created 
+machines. Again, the number of _Idle_ machines is less than `IdleCount`, so 
+GitLab Runner starts 2 new machines and the last queued build is sent to one of 
+the _Idle_ machines.
 
 We now have 1 _Idle_ machine, so GitLab Runner starts another 1 new machine to
 satisfy `IdleCount`. Because there are no new builds in queue, those two
@@ -207,7 +204,7 @@ in time:
 
 ![Autoscale state chart](img/autoscale-state-chart.png)
 
-## How `current`, `limit` and `IdleCount` generate the upper limit of running machines
+## How `concurrent`, `limit` and `IdleCount` generate the upper limit of running machines
 
 There doesn't exist a magic equation that will tell you what to set `limit` or
 `concurrent` to. Act according to your needs. Having `IdleCount` of _Idle_
@@ -276,10 +273,10 @@ periods.
 
 **How it is working?**
 
-Configuration of _Off Peak_ is done by three parameters: `OffPeakPeriods`,
-`OffPeakIdleCount` and `OffPeakIdleTime`. The `OffPeakPeriods` setting
-contains an array of cron-style patterns defining when the _Off Peak_ time
-mode should be set on. For example:
+Configuration of _Off Peak_ is done by four parameters: `OffPeakPeriods`,
+`OffPeakIdleCount`, `OffPeakIdleCount` and `OffPeakIdleTime`. The
+`OffPeakPeriods` setting contains an array of cron-style patterns defining
+when the _Off Peak_ time mode should be set on. For example:
 
 ```toml
 [runners.machine]
@@ -293,6 +290,10 @@ will enable the _Off Peak_ periods described above, so the _working_ days
 from 12am to 9am and from 6pm to 11pm and whole weekend days. Machines
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
+
+You can specify the `OffPeakTimezone` e.g. `"Australia/Sydney"`. If you don't,
+the system setting of the host machine of every runner will be used. This
+default can be stated as `OffPeakTimezone = "Local"` explicitly if you wish.
 
 When the _Off Peak_ time mode is enabled machines scheduler use
 `OffPeakIdleCount` instead of `IdleCount` setting and `OffPeakIdleTime`
@@ -337,7 +338,13 @@ To enable distributed caching, you have to define it in `config.toml` using the
     SecretKey = "secret-key"
     BucketName = "runner"
     Insecure = false
+    Path = "path/to/prefix"
+    Shared = false
 ```
+
+The S3 URLs follow the structure `http(s)://<ServerAddress>/<BucketName>/<Path>/runner/<runner-id>/project/<id>/<cache-key>`.
+
+To share the cache between two or more runners, set the `Shared` flag to true. That will remove the runner token from the S3 URL (`runner/<runner-id>`) and all configured runners will share the same cache. Remember that you can also set `Path` to separate caches between runners when cache sharing is enabled.
 
 Read how to [install your own caching server][caching].
 
@@ -401,7 +408,7 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent builds
     MachineName = "auto-scale-%s"    # Each machine will have a unique name ('%s' is required)
     MachineDriver = "digitalocean"   # Docker Machine is using the 'digitalocean' driver
     MachineOptions = [
-        "digitalocean-image=coreos-beta",
+        "digitalocean-image=coreos-stable",
         "digitalocean-ssh-user=core",
         "digitalocean-access-token=DO_ACCESS_TOKEN",
         "digitalocean-region=nyc2",

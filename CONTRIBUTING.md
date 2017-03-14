@@ -24,7 +24,7 @@ If your contribution adds, removes or updates any dependencies to the runner,
 please ensure the vendored copies updated in lock-step. If you're new to Go, or
 Godep, here is a conservative process to follow:
 
-* Start with a completely empty GOPATH with the right Go version (currently 1.6.2). [GVM](https://github.com/moovweb/gvm) makes this easy.
+* Start with a completely empty GOPATH with the right Go version (currently 1.7.1). [GVM](https://github.com/moovweb/gvm) makes this easy.
 * Clone the repository into this GOPATH, e.g.: `go get gitlab.com/gitlab-org/gitlab-ci-multi-runner`
 * Run `go get github.com/tools/godep`
 * Change directory: `cd $GOPATH/src/gitlab.com/gitlab-org/gitlab-ci-multi-runner`

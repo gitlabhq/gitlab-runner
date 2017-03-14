@@ -1,4 +1,6 @@
-FROM scaleway/alpine
+FROM multiarch/alpine:armhf-v3.4
 
-RUN apk add --update bash ca-certificates git
+RUN apk add --update bash ca-certificates git miniperl \
+	&& ln -s miniperl /usr/bin/perl
+
 COPY ./ /usr/bin

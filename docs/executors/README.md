@@ -2,8 +2,8 @@
 
 GitLab Runner implements a number of executors that can be used to run your
 builds in different scenarios. If you are not sure what to select, read the
-[I'm not sure](#imnotsure) section.
-Visit the [compatibility chart][#compatibility-chart] to find
+[I'm not sure](#im-not-sure) section.
+Visit the [compatibility chart](#compatibility-chart) to find
 out what features each executor supports and what not.
 
 To jump into the specific documentation of each executor, visit:
@@ -16,7 +16,7 @@ To jump into the specific documentation of each executor, visit:
 - [SSH](ssh.md)
 - [Kubernetes](kubernetes.md)
 
-## Select the executor
+## Selecting the executor
 
 The executors support different platforms and methodologies for building a
 project. The table below shows the key facts for each executor which will help

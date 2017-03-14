@@ -1,3 +1,185 @@
+v 1.11.1
+- Update docker-machine version to fix coreos provision !500
+
+v 1.11.0
+- Fix S3 and packagecloud uploads step in release process !455
+- Add ubuntu/yakkety to packages generation list !458
+- Reduce size of gitlab-runner-helper images !456
+- Fix crash on machine creation !461
+- Rename 'Build (succeeded|failed)' to 'Job (succeeded|failed)' !459
+- Fix race in helpers/prometheus/log_hook.go: Fire() method !463
+- Fix missing VERSION on Mac build !465
+- Added post_build_script to call scripts after user-defined build scripts !460
+- Fix offense reported by vet. Add vet to 'code style' job. !477
+- Add the runner name to the first line of log output, after the version !473
+- Make CI_DEBUG_TRACE working on Windows CMD !483
+- Update packages targets !485
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
+- Add timezone support for OffPeak intervals !479
+- Set GIT_SUBMODULE_STRATEGY=SubmoduleNone when GIT_STRATEGY=GitNone !480
+- Update maintainers information !489
+
+v 1.10.7
+- Update docker-machine version to fix coreos provision !500
+
+v 1.10.6
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
+
+v 1.10.5
+- Update packages targets !485
+
+v 1.10.4
+- Fix race in helpers/prometheus/log_hook.go: Fire() method !463
+
+v 1.10.3
+- Fix crash on machine creation !461
+
+v 1.10.2
+- Add ubuntu/yakkety to packages generation list !458
+- Reduce size of gitlab-runner-helper images !456
+
+v 1.10.1
+- Fix S3 and packagecloud uploads step in release process !455
+
+v 1.10.0
+- Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
+- Handle Content-Type header with charset information !430
+- Don't raise error if machines directory is missing on machines listing !433
+- Change digital ocean autoscale to use stable coreos channel !434
+- Fix package's scripts permissions !440
+- Use -q flag instead of --format. !442
+- Kubernetes termination grace period !383
+- Check if directory exists before recreating it with Windows CMD !435
+- Add '--run-tagged-only' cli option for runners !438
+- Add armv6l to the ARM replacements list for docker executor helper image !446
+- Add configuration options for Kubernetss resource requests !391
+- Add poll interval and timeout parameters for Kubernetes executor !384
+- Add support for GIT_SUBMODULE_STRATEGY !443
+- Create index file for S3 downloads !452
+- Add Prometheus metric that counts number of catched errors !439
+- Exclude unused options from AbstractExecutor.Build.Options !445
+- Update Docker Machine in official Runner images to v0.9.0 !454
+- Pass ImagePullSecrets for Kubernetes executor !449
+- Add Namespace overwrite possibility for Kubernetes executor !444
+
+v 1.9.9
+- Update docker-machine version to fix coreos provision !500
+
+v 1.9.8
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
+
+v 1.9.7
+- Update packages targets !485
+
+v 1.9.6
+- Add ubuntu/yakkety to packages generation list !458
+
+v 1.9.5
+- Update Docker Machine in official Runner images to v0.9.0 !454
+
+v 1.9.4
+- Add armv6l to the ARM replacements list for docker executor helper image !446
+
+v 1.9.3
+- Fix package's scripts permissions !440
+- Check if directory exists before recreating it with Windows CMD !435
+
+v 1.9.2
+- Handle Content-Type header with charset information !430
+- Don't raise error if machines directory is missing on machines listing !433
+
+v 1.9.1
+- Make /usr/share/gitlab-runner/clear-docker-cache script /bin/sh compatible !427
+
+v 1.9.0
+- Add pprof HTTP endpoints to metrics server !398
+- Add a multiple prometheus metrics: !401
+- Split prepare stage to be: prepare, git_clone, restore_cache, download_artifacts !406
+- Update CONTRIBUTING.md to refer to go 1.7.1 !409
+- Introduce docker.Client timeouts !411
+- Allow network-sourced variables to specify that they should be files !413
+- Add a retry mechanism to prevent failed clones in builds !399
+- Remove shallow.lock before fetching !407
+- Colorize log entries for cmd and powershell !400
+- Add section describing docker usage do Kubernetes executor docs !394
+- FreeBSD runner installation docs update !387
+- Update prompts for register command !377
+- Add volume_driver Docker configuration file option !365
+- Fix bug permission denied on ci build with external cache !347
+- Fix entrypoint for alpine image !346
+- Add windows vm checklist for virtualbox documentation !348
+- Clarification around authentication with the Kubernetes executor !296
+- Fix docker hanging for docker-engine 1.12.4 !415
+- Use lib machine to fetch a list of docker-machines !418
+- Cleanup docker cache clear script !388
+- Allow the --limit option to control the number of jobs a single runner will run !369
+- Store and send last_update value with API calls against GitLab !410
+- Add graceful shutdown documentation !421
+- Add Kubernete Node Selector !328
+- Push prebuilt images to dockerhub !420
+- Add path and share cache settings for S3 cache !423
+- Remove unnecessary warning about using image with the same ID as provided !424
+- Add a link where one can download the packages directly !292
+- Kubernetes executor - use pre-build container !425
+
+v 1.8.8
+- Update Makefile (fix permissions on /usr/share/gitlab-runner/) !487
+
+v 1.8.7
+- Update packages targets !485
+
+v 1.8.6
+- Add ubuntu/yakkety to packages generation list !458
+
+v 1.8.5
+- Update Docker Machine in official Runner images to v0.9.0 !454
+
+v 1.8.4
+- Add armv6l to the ARM replacements list for docker executor helper image !446
+
+v 1.8.3
+- Fix package's scripts permissions !440
+- Check if directory exists before recreating it with Windows CMD !435
+
+v 1.8.2
+- Handle Content-Type header with charset information !430
+
+v 1.8.1
+- Rrefactor the private container registry docs !392
+- Make pull policies usage clear !393
+
+v 1.8.0
+- Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364
+- Fix path to runners-ssh page !368
+- Add initial Prometheus metrics server to runner manager !358
+- Add a global index.md for docs !371
+- Ensure that all builds are executed on tagged runners !374
+- Fix broken documentation links !382
+- Bug Fix: use a regex to pull out the service and version in the splitServiceAndVersion method !376
+- Add FAQ entry about handling the service logon failure on Windows !385
+- Fix "unit tests" random failures !370
+- Use correct constant for kubernetes ressource limits. !367
+- Unplug stalled endpoints !390
+- Add PullPolicy config option for kubernetes !335
+- Handle received 'failed' build state while patching the trace !366
+- Add support for using private docker registries !386
+
+v 1.7.5
+- Update Docker Machine in official Runner images to v0.9.0 !454
+
+v 1.7.4
+- Add armv6l to the ARM replacements list for docker executor helper image !446
+
+v 1.7.3
+- Fix package's scripts permissions !440
+- Check if directory exists before recreating it with Windows CMD !435
+
+v 1.7.2
+- Handle Content-Type header with charset information !430
+
+v 1.7.1
+- Fix {Bash,Cmd,Ps}Writer.IfCmd to escape its arguments !364
+
 v 1.7.0
 - Improve description of --s3-bucket-location option !325
 - Use Go 1.7 !323

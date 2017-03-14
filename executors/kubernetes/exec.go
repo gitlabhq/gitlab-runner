@@ -72,12 +72,13 @@ func (p *ExecOptions) Run() error {
 	}
 
 	if pod.Status.Phase != api.PodRunning {
-		return fmt.Errorf("pod %s is not running and cannot execute commands; current phase is %s", p.PodName, pod.Status.Phase)
+		return fmt.Errorf("Pod '%s' (on namespace '%s') is not running and cannot execute commands; current phase is '%s'",
+			p.PodName, p.Namespace, pod.Status.Phase)
 	}
 
 	containerName := p.ContainerName
 	if len(containerName) == 0 {
-		log.Infof("defaulting container name to %s", pod.Spec.Containers[0].Name)
+		log.Infof("defaulting container name to '%s'", pod.Spec.Containers[0].Name)
 		containerName = pod.Spec.Containers[0].Name
 	}
 

@@ -2,16 +2,17 @@ package docker_helpers
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/machine/commands/mcndirs"
 )
 
 type logWriter struct {
@@ -38,7 +39,9 @@ func (l *logWriter) watch() {
 				return
 			}
 		} else {
-			logrus.WithError(err).Errorln("Problem while reading command output")
+			if !strings.Contains(err.Error(), "bad file descriptor") {
+				logrus.WithError(err).Errorln("Problem while reading command output")
+			}
 			return
 		}
 	}
@@ -55,47 +58,23 @@ func newLogWriter(logFunction func(args ...interface{}), reader io.Reader) {
 
 func stdoutLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
 	log := logrus.WithFields(fields)
-	reader, _ := cmd.StdoutPipe()
+	reader, err := cmd.StdoutPipe()
 
-	newLogWriter(log.Infoln, reader)
+	if err == nil {
+		newLogWriter(log.Infoln, reader)
+	}
 }
 
 func stderrLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
 	log := logrus.WithFields(fields)
-	reader, _ := cmd.StderrPipe()
+	reader, err := cmd.StderrPipe()
 
-	newLogWriter(log.Errorln, reader)
+	if err == nil {
+		newLogWriter(log.Errorln, reader)
+	}
 }
 
 type machineCommand struct {
-	lsCmd   *exec.Cmd
-	lsLock  sync.Mutex
-	lsCond  *sync.Cond
-	lsData  []byte
-	lsError error
-}
-
-func (m *machineCommand) ls() (data []byte, err error) {
-	m.lsLock.Lock()
-	defer m.lsLock.Unlock()
-
-	if m.lsCond == nil {
-		m.lsCond = sync.NewCond(&m.lsLock)
-	}
-
-	if m.lsCmd == nil {
-		m.lsCmd = exec.Command("docker-machine", "ls", "-q")
-		m.lsCmd.Env = os.Environ()
-		go func() {
-			m.lsData, m.lsError = m.lsCmd.Output()
-			m.lsCmd = nil
-			m.lsCond.Broadcast()
-		}()
-	}
-
-	m.lsCond.Wait()
-
-	return m.lsData, m.lsError
 }
 
 func (m *machineCommand) Create(driver, name string, opts ...string) error {
@@ -151,36 +130,22 @@ func (m *machineCommand) Remove(name string) error {
 	return cmd.Run()
 }
 
-func (m *machineCommand) List(nodeFilter string) (machines []string, err error) {
-	data, err := m.ls()
+func (m *machineCommand) List() (hostNames []string, err error) {
+	dir, err := ioutil.ReadDir(mcndirs.GetMachineDir())
 	if err != nil {
-		return
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
 	}
 
-	reader := bufio.NewReader(bytes.NewReader(data))
-	for {
-		var line string
-
-		line, err = reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			return
+	for _, file := range dir {
+		if file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
+			hostNames = append(hostNames, file.Name())
 		}
-
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-
-		var query string
-		if n, _ := fmt.Sscanf(line, nodeFilter, &query); n != 1 {
-			continue
-		}
-
-		machines = append(machines, line)
 	}
+
+	return
 }
 
 func (m *machineCommand) get(args ...string) (out string, err error) {
@@ -217,6 +182,12 @@ func (m *machineCommand) Status(name string) (string, error) {
 }
 
 func (m *machineCommand) Exist(name string) bool {
+	configPath := filepath.Join(mcndirs.GetMachineDir(), name, "config.json")
+	_, err := os.Stat(configPath)
+	if err != nil {
+		return false
+	}
+
 	cmd := exec.Command("docker-machine", "inspect", name)
 	cmd.Env = os.Environ()
 

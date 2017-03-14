@@ -97,13 +97,13 @@ func (e *machineExecutor) Cleanup() {
 	}
 
 	// Release allocated machine
-	if e.data != "" {
+	if e.data != nil {
 		e.provider.Release(&e.config, e.data)
 		e.data = nil
 	}
 }
 
 func init() {
-	common.RegisterExecutor("docker+machine", newMachineProvider("docker"))
-	common.RegisterExecutor("docker-ssh+machine", newMachineProvider("docker-ssh"))
+	common.RegisterExecutor("docker+machine", newMachineProvider("docker_machines", "docker"))
+	common.RegisterExecutor("docker-ssh+machine", newMachineProvider("ssh_docker_machines", "docker-ssh"))
 }

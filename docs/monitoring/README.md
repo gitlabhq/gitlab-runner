@@ -1,41 +1,58 @@
-# GitLab Runner Monitoring
+# GitLab Runner monitoring
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+GitLab Runner can be monitored using [Prometheus].
 
-- [Embedded Prometheus HTTP Server](#embedded-prometheus-http-server)
-  - [Configuration of the Prometheus metrics HTTP server](#configuration-of-the-prometheus-metrics-http-server)
-- [Learning more about Prometheus](#learning-more-about-prometheus)
+## Embedded Prometheus metrics
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+> The embedded HTTP Statistics Server with Prometheus metrics was
+introduced in GitLab Runner 1.8.0.
 
-## Embedded Prometheus HTTP Server
-
-> The embedded HTTP Statistics Server was introduced in GitLab Runner 1.8.0.
-
-The GitLab Runner is instrumented with native [Prometheus](https://prometheus.io/)
+The GitLab Runner is instrumented with native Prometheus
 metrics, which can be exposed via an embedded HTTP server on the `/metrics`
 path. The server - if enabled - can be scraped by the Prometheus monitoring
 system or accessed with any other HTTP client.
 
 The exposed information includes:
 
-- runner business logic metrics (e.g. the number of currently running builds)
+- Runner business logic metrics (e.g., the number of currently running builds)
 - Go-specific process metrics (garbage collection stats, goroutines, memstats, etc.)
-- general process metrics (memory usage, cpu usage, file descriptor usage, etc.)
+- general process metrics (memory usage, CPU usage, file descriptor usage, etc.)
 - build version information
 
-The following is a full example of the metrics output in Prometheus's
+The following is an example of the metrics output in Prometheus'
 text-based metrics exposition format:
 
 ```
+# HELP ci_docker_machines The total number of machines created.
+# TYPE ci_docker_machines counter
+ci_docker_machines{type="created"} 0
+ci_docker_machines{type="removed"} 0
+ci_docker_machines{type="used"} 0
+# HELP ci_docker_machines_provider The current number of machines in given state.
+# TYPE ci_docker_machines_provider gauge
+ci_docker_machines_provider{state="acquired"} 0
+ci_docker_machines_provider{state="creating"} 0
+ci_docker_machines_provider{state="idle"} 0
+ci_docker_machines_provider{state="removing"} 0
+ci_docker_machines_provider{state="used"} 0
 # HELP ci_runner_builds The current number of running builds.
 # TYPE ci_runner_builds gauge
-ci_runner_builds 0
+ci_runner_builds{stage="prepare_script",state="running"} 1
 # HELP ci_runner_version_info A metric with a constant '1' value labeled by different build stats fields.
 # TYPE ci_runner_version_info gauge
-ci_runner_version_info{architecture="amd64",branch="HEAD",built_at="2016-10-19 19:28:58.820157327 +0200 CEST",go_version="go1.7.1",name="gitlab-ci-multi-runner",os="linux",revision="HEAD",version="dev"} 1
+ci_runner_version_info{architecture="amd64",branch="add-prometheus-metrics",built_at="2016-12-05 12:37:55 +0100 CET",go_version="go1.7.1",name="gitlab-ci-multi-runner",os="linux",revision="05c35a8",version="1.9.0~beta.19.g05c35a8"} 1
+# HELP ci_ssh_docker_machines The total number of machines created.
+# TYPE ci_ssh_docker_machines counter
+ci_ssh_docker_machines{type="created"} 0
+ci_ssh_docker_machines{type="removed"} 0
+ci_ssh_docker_machines{type="used"} 0
+# HELP ci_ssh_docker_machines_provider The current number of machines in given state.
+# TYPE ci_ssh_docker_machines_provider gauge
+ci_ssh_docker_machines_provider{state="acquired"} 0
+ci_ssh_docker_machines_provider{state="creating"} 0
+ci_ssh_docker_machines_provider{state="idle"} 0
+ci_ssh_docker_machines_provider{state="removing"} 0
+ci_ssh_docker_machines_provider{state="used"} 0
 # HELP go_gc_duration_seconds A summary of the GC invocation durations.
 # TYPE go_gc_duration_seconds summary
 go_gc_duration_seconds{quantile="0"} 0.00030304800000000004
@@ -138,7 +155,7 @@ process_virtual_memory_bytes 3.39746816e+08
 ```
 
 Note that the lines starting with `# HELP` document the meaning of each exposed
-metric. This metrics format is documented in Prometheus's
+metric. This metrics format is documented in Prometheus'
 [Exposition formats](https://prometheus.io/docs/instrumenting/exposition_formats/)
 specification.
 
@@ -148,18 +165,45 @@ on your runner's host is related to an increase of processed builds or not. Or
 you are running a cluster of machines to be used for the builds and you want to
 track build trends to plan changes in your infrastructure.
 
-### Configuration of the Prometheus metrics HTTP server
+### Learning more about Prometheus
 
-The Prometheus metrics HTTP server can be configured in two ways:
+To learn how to set up a Prometheus server to scrape this HTTP endpoint and
+make use of the collected metrics, see Prometheus's [Getting
+started](https://prometheus.io/docs/introduction/getting_started/) guide. Also
+see the [Configuration](https://prometheus.io/docs/operating/configuration/)
+section for more details on how to configure Prometheus, as well as the section
+on [Alerting rules](https://prometheus.io/docs/alerting/rules/) and setting up
+an [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) to
+dispatch alert notifications.
+
+## `pprof` HTTP endpoints
+
+> `pprof` integration was introduced in GitLab Runner 1.9.0.
+
+While having metrics about internal state of Runner process is useful
+we've found that in some cases it would be good to check what is happening
+inside of the Running process in real time. That's why we've introduced
+the `pprof` HTTP endpoints.
+
+`pprof` endpoints will be available via an embedded HTTP server on `/debug/pprof/`
+path.
+
+You can read more about using `pprof` in its [documentation][go-pprof].
+
+## Configuration of the metrics HTTP server
+
+> **Note:**
+The metrics server exports data about the internal state of the
+GitLab Runner process and should not be publicly available!
+
+The metrics HTTP server can be configured in two ways:
 
 - with a `metrics_server` global configuration option in `config.toml` file,
 - with a `--metrics-server` command line option for the `run` command.
 
-In both cases the option accepts a string with the format:
-
-`[host]:<port>`
-
+In both cases the option accepts a string with the format `[host]:<port>`,
 where:
+
 - `host` can be an IP address or a host name,
 - `port` is a valid TCP port or symbolic service name (like `http`).
 
@@ -172,13 +216,11 @@ Examples of addresses:
 Remember that for listening on ports below `1024` - at least on Linux/Unix
 systems - you need to have root/administrator rights.
 
-## Learning more about Prometheus
+Also please notice, that HTTP server is opened on selected `host:port`
+**without any authorization**. If you plan to bind the metrics server
+to a public interface then you should consider to use your firewall to
+limit access to this server or add a HTTP proxy which will add the
+authorization and access control layer.
 
-To learn how to set up a Prometheus server to scrape this HTTP endpoint and
-make use of the collected metrics, see Prometheus's [Getting
-started](https://prometheus.io/docs/introduction/getting_started/) guide. Also
-see the [Configuration](https://prometheus.io/docs/operating/configuration/)
-section for more details on how to configure Prometheus, as well as the section
-on [Alerting rules](https://prometheus.io/docs/alerting/rules/) and setting up
-an [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) to
-dispatch alert notifications.
+[go-pprof]: https://golang.org/pkg/net/http/pprof/
+[prometheus]: https://prometheus.io

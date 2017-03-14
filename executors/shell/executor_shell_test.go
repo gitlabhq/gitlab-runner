@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -91,17 +92,21 @@ func newBuild(t *testing.T, getBuildResponse common.GetBuildResponse, shell stri
 
 func TestBuildSuccess(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		err := runBuild(t, build)
+		err = runBuild(t, build)
 		assert.NoError(t, err)
 	})
 }
 
 func TestBuildAbort(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.LongRunningBuild, shell)
+		longRunningBuild, err := common.GetLongRunningBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, longRunningBuild, shell)
 		defer cleanup()
 
 		abortTimer := time.AfterFunc(time.Second, func() {
@@ -110,14 +115,16 @@ func TestBuildAbort(t *testing.T) {
 		})
 		defer abortTimer.Stop()
 
-		err := runBuild(t, build)
+		err = runBuild(t, build)
 		assert.EqualError(t, err, "aborted: interrupt")
 	})
 }
 
 func TestBuildCancel(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.LongRunningBuild, shell)
+		longRunningBuild, err := common.GetLongRunningBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, longRunningBuild, shell)
 		defer cleanup()
 
 		cancelChan := make(chan interface{}, 1)
@@ -127,7 +134,7 @@ func TestBuildCancel(t *testing.T) {
 		})
 		defer cancelTimer.Stop()
 
-		err := runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout, Abort: cancelChan})
+		err = runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout, Abort: cancelChan})
 		assert.EqualError(t, err, "canceled")
 		assert.IsType(t, err, &common.BuildError{})
 	})
@@ -135,10 +142,12 @@ func TestBuildCancel(t *testing.T) {
 
 func TestBuildWithIndexLock(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		err := runBuild(t, build)
+		err = runBuild(t, build)
 		assert.NoError(t, err)
 
 		build.GetBuildResponse.AllowGitFetch = true
@@ -149,9 +158,32 @@ func TestBuildWithIndexLock(t *testing.T) {
 	})
 }
 
+func TestBuildWithShallowLock(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, []common.BuildVariable{
+			common.BuildVariable{Key: "GIT_DEPTH", Value: "1"},
+			common.BuildVariable{Key: "GIT_STRATEGY", Value: "fetch"}}...)
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+
+		ioutil.WriteFile(build.BuildDir+"/.git/shallow.lock", []byte{}, os.ModeSticky)
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+	})
+}
+
 func TestBuildWithGitStrategyNone(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
@@ -168,7 +200,9 @@ func TestBuildWithGitStrategyNone(t *testing.T) {
 
 func TestBuildWithGitStrategyFetch(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
@@ -188,7 +222,9 @@ func TestBuildWithGitStrategyFetch(t *testing.T) {
 
 func TestBuildWithGitStrategyClone(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
@@ -206,9 +242,122 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 	})
 }
 
+func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
+	for _, strategy := range []string{"none", ""} {
+		t.Run("strategy "+strategy, func(t *testing.T) {
+			onEachShell(t, func(t *testing.T, shell string) {
+				successfulBuild, err := common.GetSuccessfulBuild()
+				assert.NoError(t, err)
+				build, cleanup := newBuild(t, successfulBuild, shell)
+				defer cleanup()
+
+				build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"})
+
+				out, err := runBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+				assert.Contains(t, out, "Skipping Git submodules setup")
+				assert.NotContains(t, out, "Updating/initializing submodules...")
+				assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+				assert.Error(t, err, "Submodule not should have been initialized")
+
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+				assert.Error(t, err, "The submodule's submodule should not have been initialized")
+			})
+		})
+	}
+}
+
+func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.Contains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.Error(t, err, "The submodule's submodule should not have been initialized")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.Contains(t, out, "Updating/initializing submodules recursively...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.NoError(t, err, "The submodule's submodule should have been initialized")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "invalid"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.EqualError(t, err, "unknown GIT_SUBMODULE_STRATEGY")
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_STRATEGY", Value: "none"})
+		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Cloning repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git repository setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+		assert.Contains(t, out, "Skipping Git submodules setup")
+	})
+}
+
 func TestBuildWithDebugTrace(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.SuccessfulBuild, shell)
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
 		// The default build shouldn't have debug tracing enabled

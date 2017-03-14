@@ -9,6 +9,14 @@ import (
 type UpdateState int
 type UploadState int
 type DownloadState int
+type BuildState string
+
+const (
+	Pending BuildState = "pending"
+	Running            = "running"
+	Failed             = "failed"
+	Success            = "success"
+)
 
 const (
 	UpdateSucceeded UpdateState = iota
@@ -51,8 +59,9 @@ type VersionInfo struct {
 }
 
 type GetBuildRequest struct {
-	Info  VersionInfo `json:"info,omitempty"`
-	Token string      `json:"token,omitempty"`
+	Info       VersionInfo `json:"info,omitempty"`
+	Token      string      `json:"token,omitempty"`
+	LastUpdate string      `json:"last_update,omitempty"`
 }
 
 type BuildArtifacts struct {
@@ -89,6 +98,15 @@ type GetBuildResponse struct {
 	Tag             bool           `json:"tag"`
 	DependsOnBuilds []BuildInfo    `json:"depends_on_builds"`
 	TLSCAChain      string         `json:"-"`
+
+	Credentials []BuildResponseCredentials `json:"credentials,omitempty"`
+}
+
+type BuildResponseCredentials struct {
+	Type     string `json:"type"`
+	URL      string `json:"url"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (b *GetBuildResponse) RepoCleanURL() (ret string) {
@@ -100,6 +118,7 @@ type RegisterRunnerRequest struct {
 	Token       string      `json:"token,omitempty"`
 	Description string      `json:"description,omitempty"`
 	Tags        string      `json:"tag_list,omitempty"`
+	RunUntagged bool        `json:"run_untagged"`
 }
 
 type RegisterRunnerResponse struct {
@@ -146,7 +165,7 @@ type BuildTracePatch interface {
 
 type Network interface {
 	GetBuild(config RunnerConfig) (*GetBuildResponse, bool)
-	RegisterRunner(config RunnerCredentials, description, tags string) *RegisterRunnerResponse
+	RegisterRunner(config RunnerCredentials, description, tags string, runUntagged bool) *RegisterRunnerResponse
 	DeleteRunner(config RunnerCredentials) bool
 	VerifyRunner(config RunnerCredentials) bool
 	UpdateBuild(config RunnerConfig, id int, state BuildState, trace *string) UpdateState

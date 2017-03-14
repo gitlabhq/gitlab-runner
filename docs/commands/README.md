@@ -15,48 +15,6 @@ Append `--help` after a command to see its specific help page:
 gitlab-runner <command> --help
 ```
 
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Using environment variables](#using-environment-variables)
-- [Running in debug mode](#running-in-debug-mode)
-- [Super-user permission](#super-user-permission)
-- [Configuration file](#configuration-file)
-- [Signals](#signals)
-- [Commands overview](#commands-overview)
-- [Registration-related commands](#registration-related-commands)
-    - [gitlab-runner register](#gitlab-runner-register)
-        - [Interactive registration](#interactive-registration)
-        - [Non-interactive registration](#non-interactive-registration)
-    - [gitlab-runner list](#gitlab-runner-list)
-    - [gitlab-runner verify](#gitlab-runner-verify)
-    - [gitlab-runner unregister](#gitlab-runner-unregister)
-- [Service-related commands](#service-related-commands)
-    - [gitlab-runner install](#gitlab-runner-install)
-    - [gitlab-runner uninstall](#gitlab-runner-uninstall)
-    - [gitlab-runner start](#gitlab-runner-start)
-    - [gitlab-runner stop](#gitlab-runner-stop)
-    - [gitlab-runner restart](#gitlab-runner-restart)
-    - [gitlab-runner status](#gitlab-runner-status)
-    - [Multiple services](#multiple-services)
-- [Run-related commands](#run-related-commands)
-    - [gitlab-runner run](#gitlab-runner-run)
-    - [gitlab-runner run-single](#gitlab-runner-run-single)
-    - [gitlab-runner exec](#gitlab-runner-exec)
-    - [Limitations of `gitlab-runner exec`](#limitations-of-gitlab-runner-exec)
-- [Internal commands](#internal-commands)
-    - [gitlab-runner artifacts-downloader](#gitlab-runner-artifacts-downloader)
-    - [gitlab-runner artifacts-uploader](#gitlab-runner-artifacts-uploader)
-    - [gitlab-runner cache-archiver](#gitlab-runner-cache-archiver)
-    - [gitlab-runner cache-extractor](#gitlab-runner-cache-extractor)
-- [Troubleshooting](#troubleshooting)
-    - [**Access Denied** when running the service-related commands](#access-denied-when-running-the-service-related-commands)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 ## Using environment variables
 
 Most of the commands support environment variables as a method to pass the
@@ -156,6 +114,8 @@ following commands support the following signals:
 | `run`, `exec`, `run-single` | **SIGQUIT** | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
 | `run` | **SIGHUP** | Force to reload configuration file |
 
+If your operating system is configured to automatically restart the service if it fails (which is the default on some platforms) it may automatically restart the runner if it's shut down by the signals above.
+
 ## Commands overview
 
 This is what you see if you run `gitlab-runner` without any arguments:
@@ -171,7 +131,7 @@ VERSION:
    1.0.0~beta.142.ga8d37f3 (a8d37f3)
 
 AUTHOR(S):
-   Kamil Trzciński <ayufan@ayufan.eu>
+   GitLab Inc. <support@gitlab.com>
 
 COMMANDS:
    exec		execute a build locally
@@ -371,7 +331,7 @@ This command stops and then starts the GitLab Runner service.
 
 ### gitlab-runner status
 
-This command prints the status of the GitLab Runner service.
+This command prints the status of the GitLab Runner service. The exit code is zero when the service is running and non-zero when the service is not running.
 
 ### Multiple services
 
@@ -418,6 +378,12 @@ You can see all possible configuration options by using the `--help` flag:
 ```bash
 gitlab-runner run-single --help
 ```
+
+You can use the `--max-builds` option to control how many builds the runner will execute before exiting.  The
+default of `0` means that the runner has no build limit and will run jobs forever.
+
+You can also use the `--wait-timeout` option to control how long the runner will wait for a job before
+exiting.  The default of `0` means that the runner has no timeout and will wait forever between jobs.
 
 ### gitlab-runner exec
 

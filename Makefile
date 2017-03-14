@@ -1,7 +1,7 @@
 NAME ?= gitlab-ci-multi-runner
 PACKAGE_NAME ?= $(NAME)
 PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
-VERSION := $(shell ./ci/version)
+export VERSION := $(shell ./ci/version)
 REVISION := $(shell git rev-parse --short HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
 BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
@@ -17,13 +17,13 @@ PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd'
 S3_UPLOAD_PATH ?= master
 DEB_PLATFORMS ?= debian/wheezy debian/jessie debian/stretch debian/buster \
-    ubuntu/precise ubuntu/trusty ubuntu/utopic ubuntu/vivid ubuntu/wily ubuntu/xenial \
+    ubuntu/precise ubuntu/trusty ubuntu/utopic ubuntu/vivid ubuntu/wily ubuntu/xenial ubuntu/yakkety ubuntu/zesty \
     raspbian/wheezy raspbian/jessie raspbian/stretch raspbian/buster \
-    linuxmint/petra linuxmint/qiana linuxmint/rebecca linuxmint/rafaela linuxmint/rosa
+    linuxmint/petra linuxmint/qiana linuxmint/rebecca linuxmint/rafaela linuxmint/rosa linuxmint/sarah linuxmint/serena
 DEB_ARCHS ?= amd64 i386 armel armhf
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
-    fedora/20 fedora/21 fedora/22 fedora/23
+    fedora/20 fedora/21 fedora/22 fedora/23 fedora/24 fedora/25
 RPM_ARCHS ?= x86_64 i686 arm armhf
 COMMON_PACKAGE_NAMESPACE=$(shell go list ./common)
 
@@ -95,9 +95,9 @@ ifneq (, $(shell docker info))
 		./apps/gitlab-runner-helper
 
 	# Build docker images
-	docker build -t gitlab-runner-prebuilt-x86_64:$(REVISION) -f dockerfiles/build/Dockerfile.x86_64 dockerfiles/build
+	docker build -t gitlab/gitlab-runner-helper:x86_64-$(REVISION) -f dockerfiles/build/Dockerfile.x86_64 dockerfiles/build
 	-docker rm -f gitlab-runner-prebuilt-x86_64-$(REVISION)
-	docker create --name=gitlab-runner-prebuilt-x86_64-$(REVISION) gitlab-runner-prebuilt-x86_64:$(REVISION) /bin/sh
+	docker create --name=gitlab-runner-prebuilt-x86_64-$(REVISION) gitlab/gitlab-runner-helper:x86_64-$(REVISION) /bin/sh
 	docker export -o out/docker/prebuilt-x86_64.tar gitlab-runner-prebuilt-x86_64-$(REVISION)
 	docker rm -f gitlab-runner-prebuilt-x86_64-$(REVISION)
 	xz -f -9 out/docker/prebuilt-x86_64.tar
@@ -123,9 +123,9 @@ ifneq (, $(shell docker info))
 		./apps/gitlab-runner-helper
 
 	# Build docker images
-	docker build -t gitlab-runner-prebuilt-arm:$(REVISION) -f dockerfiles/build/Dockerfile.arm dockerfiles/build
+	docker build -t gitlab/gitlab-runner-helper:arm-$(REVISION) -f dockerfiles/build/Dockerfile.arm dockerfiles/build
 	-docker rm -f gitlab-runner-prebuilt-arm-$(REVISION)
-	docker create --name=gitlab-runner-prebuilt-arm-$(REVISION) gitlab-runner-prebuilt-arm:$(REVISION) /bin/sh
+	docker create --name=gitlab-runner-prebuilt-arm-$(REVISION) gitlab/gitlab-runner-helper:arm-$(REVISION) /bin/sh
 	docker export -o out/docker/prebuilt-arm.tar gitlab-runner-prebuilt-arm-$(REVISION)
 	docker rm -f gitlab-runner-prebuilt-arm-$(REVISION)
 	xz -f -9 out/docker/prebuilt-arm.tar
@@ -231,7 +231,15 @@ build-and-deploy-binary:
 	make build BUILD_PLATFORMS="-os=linux -arch=amd64"
 	scp out/binaries/$(PACKAGE_NAME)-linux-amd64 $(SERVER):/usr/bin/gitlab-runner
 
-package: package-deps package-deb package-rpm
+package: package-deps package-prepare package-deb package-rpm
+
+package-deps:
+	# Installing packaging dependencies...
+	gem install fpm
+
+package-prepare:
+	chmod 755 packaging/root/usr/share/gitlab-runner/
+	chmod 755 packaging/root/usr/share/gitlab-runner/*
 
 package-deb:
 	# Building Debian compatible packages...
@@ -247,10 +255,6 @@ package-rpm:
 	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=arm
 	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=armhf
 
-package-deps:
-	# Installing packaging dependencies...
-	gem install fpm
-
 package-deb-fpm:
 	@mkdir -p out/deb/
 	fpm -s dir -t deb -n $(PACKAGE_NAME) -v $(VERSION) \
@@ -262,9 +266,9 @@ package-deb-fpm:
 		--before-remove packaging/scripts/prerm.deb \
 		--url https://gitlab.com/gitlab-org/gitlab-ci-multi-runner \
 		--description "GitLab Runner" \
-		-m "Kamil Trzciński <ayufan@ayufan.eu>" \
+		-m "GitLab Inc. <support@gitlab.com>" \
 		--license "MIT" \
-		--vendor "ayufan.eu" \
+		--vendor "GitLab Inc." \
 		--conflicts $(PACKAGE_CONFLICT) \
 		--provides gitlab-runner \
 		--replaces gitlab-runner \
@@ -287,9 +291,9 @@ package-rpm-fpm:
 		--before-remove packaging/scripts/prerm.rpm \
 		--url https://gitlab.com/gitlab-org/gitlab-ci-multi-runner \
 		--description "GitLab Runner" \
-		-m "Kamil Trzciński <ayufan@ayufan.eu>" \
+		-m "GitLab Inc. <support@gitlab.com>" \
 		--license "MIT" \
-		--vendor "ayufan.eu" \
+		--vendor "GitLab Inc." \
 		--conflicts $(PACKAGE_CONFLICT) \
 		--provides gitlab-runner \
 		--replaces gitlab-runner \
@@ -343,12 +347,24 @@ s3-upload:
 		--permissions public-read \
 		--working-dir out \
 		--target-paths "$(S3_UPLOAD_PATH)/" \
+		--max-size $(shell du -bs out/ | cut -f1) \
 		$(shell cd out/; find . -type f)
+	@echo "\n\033[1m==> Download index file: \033[36mhttps://$$ARTIFACTS_S3_BUCKET.s3.amazonaws.com/$$S3_UPLOAD_PATH/index.html\033[0m\n"
 
-release:
-	@./ci/release "$$CI_BUILD_NAME"
+release_packagecloud:
+	# Releasing to https://packages.gitlab.com/runner/
+	@./ci/release_packagecloud "$$CI_BUILD_NAME"
+
+release_s3: prepare_index
+	# Releasing to S3
+	@./ci/release_s3
+
+prepare_index:
+	# Preparing index file
+	@./ci/prepare_index
 
 release_docker_images:
+	# Releasing Docker images
 	@./ci/release_docker_images
 
 check-tags-in-changelog:

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 var brokenCredentials = RunnerCredentials{
@@ -71,6 +72,7 @@ func testGetBuildHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	case "valid":
 		res["id"] = 10
 	case "no-builds":
+		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
 		w.WriteHeader(404)
 		return
 	case "invalid":
@@ -132,9 +134,11 @@ func TestGetBuild(t *testing.T) {
 	}
 	assert.True(t, ok)
 
+	assert.Empty(t, c.getLastUpdate(noBuildsToken.RunnerCredentials), "Last-Update should not be set")
 	res, ok = c.GetBuild(noBuildsToken)
 	assert.Nil(t, res)
 	assert.True(t, ok, "If no builds, runner is healthy")
+	assert.Equal(t, c.getLastUpdate(noBuildsToken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
 
 	res, ok = c.GetBuild(invalidToken)
 	assert.Nil(t, res)
@@ -220,21 +224,21 @@ func TestRegisterRunner(t *testing.T) {
 
 	c := GitLabClient{}
 
-	res := c.RegisterRunner(validToken, "test", "tags")
+	res := c.RegisterRunner(validToken, "test", "tags", true)
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
 	}
 
-	res = c.RegisterRunner(validToken, "invalid description", "tags")
+	res = c.RegisterRunner(validToken, "invalid description", "tags", true)
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(invalidToken, "test", "tags")
+	res = c.RegisterRunner(invalidToken, "test", "tags", true)
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(otherToken, "test", "tags")
+	res = c.RegisterRunner(otherToken, "test", "tags", true)
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(brokenCredentials, "test", "tags")
+	res = c.RegisterRunner(brokenCredentials, "test", "tags", true)
 	assert.Nil(t, res)
 }
 
@@ -656,4 +660,18 @@ func TestResendDoubledBuildPatchTrace(t *testing.T) {
 	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateRangeMismatch, state)
 	assert.False(t, tracePatch.ValidateRange())
+}
+
+func TestBuildFailedStatePatchTrace(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		w.Header().Set("Build-Status", "failed")
+		w.WriteHeader(202)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	tracePatch := getTracePatch(patchTraceString, 0)
+	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateAbort, state)
 }

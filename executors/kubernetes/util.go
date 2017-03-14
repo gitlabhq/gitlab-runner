@@ -123,7 +123,7 @@ func getPodPhase(c *client.Client, pod *api.Pod, out io.Writer) podPhaseResponse
 
 		switch container.State.Waiting.Reason {
 		case "ErrImagePull", "ImagePullBackOff":
-			err = errors.New(container.State.Waiting.Message)
+			err = fmt.Errorf("image pull failed: %s", container.State.Waiting.Message)
 			err = &common.BuildError{Inner: err}
 			return podPhaseResponse{true, api.PodUnknown, err}
 		}
@@ -144,19 +144,23 @@ func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan 
 }
 
 // waitForPodRunning will use client c to detect when pod reaches the PodRunning
-// state. It will check every second, and will return the final PodPhase once
-// either PodRunning, PodSucceeded or PodFailed has been reached. In the case of
-// PodRunning, it will also wait until all containers within the pod are also Ready
-// Returns error if the call to retrieve pod details fails
-func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer) (api.PodPhase, error) {
-	for i := 0; i < 60; i++ {
+// state. It returns the final PodPhase once either PodRunning, PodSucceeded or
+// PodFailed has been reached. In the case of PodRunning, it will also wait until
+// all containers within the pod are also Ready.
+// It returns error if the call to retrieve pod details fails or the timeout is
+// reached.
+// The timeout and polling values are configurable through KubernetesConfig
+// parameters.
+func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
+	pollInterval := config.GetPollInterval()
+	pollAttempts := config.GetPollAttempts()
+	for i := 0; i <= pollAttempts; i++ {
 		select {
 		case r := <-triggerPodPhaseCheck(c, pod, out):
 			if !r.done {
-				time.Sleep(3 * time.Second)
+				time.Sleep(time.Duration(pollInterval) * time.Second)
 				continue
 			}
-
 			return r.phase, r.err
 		case <-ctx.Done():
 			return api.PodUnknown, ctx.Err()
@@ -196,10 +200,10 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 
 	q := resource.Quantity{}
 	if rCPU != q {
-		l[api.ResourceLimitsCPU] = rCPU
+		l[api.ResourceCPU] = rCPU
 	}
 	if rMem != q {
-		l[api.ResourceLimitsMemory] = rMem
+		l[api.ResourceMemory] = rMem
 	}
 
 	return l, nil
@@ -216,4 +220,13 @@ func buildVariables(bv common.BuildVariables) []api.EnvVar {
 		}
 	}
 	return e
+}
+
+// getNewOrLegacy takes two strings and returns the former if it is not empty.
+// If the former string is empty, the latter is returned.
+func getNewOrLegacy(new, legacy string) string {
+	if new != "" {
+		return new
+	}
+	return legacy
 }

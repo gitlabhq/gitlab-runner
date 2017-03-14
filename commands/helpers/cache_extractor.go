@@ -25,7 +25,7 @@ type CacheExtractorCommand struct {
 }
 
 func (c *CacheExtractorCommand) download() (bool, error) {
-	os.MkdirAll(filepath.Dir(c.File), 0600)
+	os.MkdirAll(filepath.Dir(c.File), 0700)
 
 	file, err := ioutil.TempFile(filepath.Dir(c.File), "cache")
 	if err != nil {

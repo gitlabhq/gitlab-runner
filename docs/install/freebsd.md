@@ -1,129 +1,137 @@
 # Install on FreeBSD
 
-Create gitlab-runner user and group:
+>**Notes:**
+- The FreeBSD version is also available as a [bleeding edge](bleeding-edge.md)
+  release.
+- Make sure that you read the [FAQ](../faq/README.md) section which describes
+  some of the most common problems with GitLab Runner.
 
-```bash
-sudo pw group add -n gitlab-runner
-sudo pw user add -n gitlab-runner -g gitlab-runner -s /usr/local/bin/bash
-sudo mkdir /home/gitlab-runner
-sudo chown gitlab-runner:gitlab-runner /home/gitlab-runner
-```
+Here are the steps to install and configure GitLab Runner under FreeBSD:
 
-Download the binary for your system:
+1. Create the `gitlab-runner` user and group:
 
-```bash
- sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-amd64
- sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-386
-```
+    ```bash
+    sudo pw group add -n gitlab-runner
+    sudo pw user add -n gitlab-runner -g gitlab-runner -s /usr/local/bin/bash
+    sudo mkdir /home/gitlab-runner
+    sudo chown gitlab-runner:gitlab-runner /home/gitlab-runner
+    ```
 
-Give it permissions to execute:
+1. Download the binary for your system:
 
-```bash
-sudo chmod +x /usr/local/bin/gitlab-ci-multi-runner
-```
+    ```bash
+    # For amd64
+    sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-amd64
 
-Create empty log file with correct permissions:
+    # For i386
+    sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-386
+    ```
 
-```bash
-sudo touch /var/log/gitlab_runner.log && sudo chown gitlab-runner:gitlab-runner /var/log/gitlab_runner.log
-```
+1. Give it permissions to execute:
 
-Create rc.d script:
+    ```bash
+    sudo chmod +x /usr/local/bin/gitlab-ci-multi-runner
+    ```
 
-```bash
-cat > /etc/rc.d/gitlab_runner << "EOF"
-#!/bin/sh
-# PROVIDE: gitlab_runner
-# REQUIRE: DAEMON NETWORKING
-# BEFORE:
-# KEYWORD:
+1. Create an empty log file with correct permissions:
 
-. /etc/rc.subr
+    ```bash
+    sudo touch /var/log/gitlab_runner.log && sudo chown gitlab-runner:gitlab-runner /var/log/gitlab_runner.log
+    ```
 
-name="gitlab_runner"
-rcvar="gitlab_runner_enable"
+1. Create the `rc.d` directory in case it doesn't exist:
 
-load_rc_config $name
+    ```bash
+    mkdir -p /usr/local/etc/rc.d
+    ```
 
-user="gitlab-runner"
-user_home="/home/gitlab-runner"
-command="/usr/local/bin/gitlab-ci-multi-runner run"
-pidfile="/var/run/${name}.pid"
+1. Create the `rc.d` script:
 
-start_cmd="gitlab_runner_start"
-stop_cmd="gitlab_runner_stop"
-status_cmd="gitlab_runner_status"
+    ```bash
+    sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
+    #!/bin/sh
+    # PROVIDE: gitlab_runner
+    # REQUIRE: DAEMON NETWORKING
+    # BEFORE:
+    # KEYWORD:
 
-gitlab_runner_start()
-{
-    export USER=${user}
-    export HOME=${user_home}
-    if checkyesno ${rcvar}; then
-        cd ${user_home}
-        /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} > /var/log/gitlab_runner.log 2>&1
-    fi
-}
+    . /etc/rc.subr
 
-gitlab_runner_stop()
-{
-    if [ -f ${pidfile} ]; then
-        kill `cat ${pidfile}`
-    fi
-}
+    name="gitlab_runner"
+    rcvar="gitlab_runner_enable"
 
-gitlab_runner_status()
-{
-    if [ ! -f ${pidfile} ] || kill -0 `cat ${pidfile}`; then
-        echo "Service ${name} is not running."
-    else
-        echo "${name} appears to be running."
-    fi
-}
+    load_rc_config $name
 
-run_rc_command $1
-EOF
-```
+    user="gitlab-runner"
+    user_home="/home/gitlab-runner"
+    command="/usr/local/bin/gitlab-ci-multi-runner run"
+    pidfile="/var/run/${name}.pid"
 
-Make it executable:
+    start_cmd="gitlab_runner_start"
+    stop_cmd="gitlab_runner_stop"
+    status_cmd="gitlab_runner_status"
 
-```bash
-sudo chmod +x /etc/rc.d/gitlab_runner
-```
+    gitlab_runner_start()
+    {
+        export USER=${user}
+        export HOME=${user_home}
+        if checkyesno ${rcvar}; then
+            cd ${user_home}
+            /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} > /var/log/gitlab_runner.log 2>&1
+        fi
+    }
 
+    gitlab_runner_stop()
+    {
+        if [ -f ${pidfile} ]; then
+            kill `cat ${pidfile}`
+        fi
+    }
 
-Register the runner (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
+    gitlab_runner_status()
+    {
+        if [ ! -f ${pidfile} ] || kill -0 `cat ${pidfile}`; then
+            echo "Service ${name} is not running."
+        else
+            echo "${name} appears to be running."
+        fi
+    }
 
-```bash
-sudo -u gitlab-runner -H /usr/local/bin/gitlab-ci-multi-runner register
+    run_rc_command $1
+    EOF
+    ```
 
-Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com):
+1. Make it executable:
 
-Please enter the gitlab-ci token for this runner:
+    ```bash
+    sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
+    ```
+1. Register the Runner (look into [runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
 
-Please enter the gitlab-ci description for this runner:
-[name]:
-Please enter the gitlab-ci tags for this runner (comma separated):
+    ```bash
+    sudo -u gitlab-runner -H /usr/local/bin/gitlab-ci-multi-runner register
 
-Registering runner... succeeded
-Please enter the executor: virtualbox, ssh, shell, parallels, docker, docker-ssh:
-shell
-Runner registered successfully. Feel free to start it, but if it\'s running already the config should be automatically reloaded!
-```
+    Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com):
+    Please enter the gitlab-ci token for this runner:
+    Please enter the gitlab-ci description for this runner:
+    [name]:
+    Please enter the gitlab-ci tags for this runner (comma separated):
+    Registering runner... succeeded
+    Please enter the executor: virtualbox, ssh, shell, parallels, docker, docker-ssh:
+    shell
+    Runner registered successfully. Feel free to start it, but if it\'s running already the config should be automatically reloaded!
+    ```
 
-Enable gitlab-runner service and start it:
+1. Enable the `gitlab-runner` service and start it:
 
-```bash
-sudo sysrc -f /etc/rc.conf "gitlab_runner_enable=YES"
-sudo service gitlab_runner start
-```
+    ```bash
+    sudo sysrc -f /etc/rc.conf "gitlab_runner_enable=YES"
+    sudo service gitlab_runner start
+    ```
 
-If you don't want to enable gitlab-runner server to restart after reboot, you can start it:
+    If you don't want to enable the `gitlab-runner` service to start after a
+    reboot, use:
 
-```bash
-sudo service gitlab_runner onestart
-```
-
-**The FreeBSD version is also available from [Bleeding edge](bleeding-edge.md)**
-
-Make sure that you read the [FAQ](../faq/README.md) section which describes
-some of the most common problems with GitLab Runner.
+    ```bash
+    sudo service gitlab_runner onestart
+    ```

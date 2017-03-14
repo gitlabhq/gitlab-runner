@@ -5,10 +5,6 @@ set -eo pipefail
 version=$(cat VERSION || echo dev | sed -e 's/^v//g')
 exact_tag=$(git describe --exact-match 2>/dev/null | sed -e 's/^v//g' || echo "")
 
-last_tag=$(git describe --tags --abbrev=0 --match 'v[0-9].[0-9].[0-9]')
-commits=$(git log --oneline ${last_tag}..HEAD | wc -l)
-revision=$(git rev-parse --short HEAD || echo unknown)
-
 if [[ $(echo ${exact_tag} | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$") ]]; then
     echo $exact_tag
     exit 0
@@ -18,5 +14,9 @@ if [[ $(echo ${exact_tag} | grep -E "^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$") ]]; t
     echo $exact_tag
     exit 0
 fi
+
+last_tag=$(git log --first-parent --pretty="%d" | grep -E "tag: v[0-9]+\.[0-9]+\.[0-9]+(\)|,)" -o | grep "v[0-9]*\.[0-9]*\.[0-9]*" -o | head -n 1)
+commits=$(git log --oneline ${last_tag}..HEAD | wc -l | tr -d ' ')
+revision=$(git rev-parse --short HEAD || echo unknown)
 
 echo "${version}~beta.${commits}.g${revision}"

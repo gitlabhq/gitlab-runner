@@ -74,9 +74,10 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	w.Cd(projectDir)
 	w.Command("git", "config", "fetch.recurseSubmodules", "false")
 
-	// Remove existing .git/index.lock file which can fail the fetch command
+	// Remove .git/{index,shallow}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
 	w.RmFile(".git/index.lock")
+	w.RmFile(".git/shallow.lock")
 
 	w.Command("git", "clean", "-ffdx")
 	w.Command("git", "reset", "--hard")
@@ -100,6 +101,28 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Notice("Checking out %s as %s...", build.Sha[0:8], build.RefName)
 	w.Command("git", "checkout", "-f", "-q", build.Sha)
+}
+
+func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
+	if recursive {
+		w.Notice("Updating/initializing submodules recursively...")
+	} else {
+		w.Notice("Updating/initializing submodules...")
+	}
+
+	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
+	args := []string{"submodule", "sync"}
+	if recursive {
+		args = append(args, "--recursive")
+	}
+	w.Command("git", args...)
+
+	// Update / initialize submodules
+	args = []string{"submodule", "update", "--init"}
+	if recursive {
+		args = append(args, "--recursive")
+	}
+	w.Command("git", args...)
 }
 
 func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, file string) {
@@ -229,21 +252,15 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, dependencies *depend
 }
 
 func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeExports(w, info)
+	return nil
+}
 
+func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	build := info.Build
 	projectDir := build.FullProjectDir()
 	gitDir := path.Join(build.FullProjectDir(), ".git")
-	strategy := info.Build.GetGitStrategy()
 
-	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
-	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
-
-	if info.PreCloneScript != "" && strategy != common.GitNone {
-		b.writeCommands(w, info.PreCloneScript)
-	}
-
-	switch strategy {
+	switch info.Build.GetGitStrategy() {
 	case common.GitFetch:
 		b.writeFetchCmd(w, build, projectDir, gitDir)
 		b.writeCheckoutCmd(w, build)
@@ -255,12 +272,54 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	case common.GitNone:
 		w.Notice("Skipping Git repository setup")
 		w.MkDir(projectDir)
-		w.Cd(projectDir)
 
 	default:
 		return errors.New("unknown GIT_STRATEGY")
 	}
 
+	return nil
+}
+
+func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	build := info.Build
+
+	switch build.GetSubmoduleStrategy() {
+	case common.SubmoduleNormal:
+		b.writeSubmoduleUpdateCmd(w, build, false)
+
+	case common.SubmoduleRecursive:
+		b.writeSubmoduleUpdateCmd(w, build, true)
+
+	case common.SubmoduleNone:
+		w.Notice("Skipping Git submodules setup")
+
+	default:
+		return errors.New("unknown GIT_SUBMODULE_STRATEGY")
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	b.writeExports(w, info)
+	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
+
+	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
+		b.writeCommands(w, info.PreCloneScript)
+	}
+
+	if err := b.writeCloneFetchCmds(w, info); err != nil {
+		return err
+	}
+
+	if err = b.writeSubmoduleUpdateCmds(w, info); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	// Parse options
 	var options shellOptions
 	err = info.Build.Options.Decode(&options)
@@ -268,8 +327,26 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 		return
 	}
 
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
+
 	// Try to restore from main cache, if not found cache for master
 	b.cacheExtractor(w, options.Cache, info)
+	return nil
+}
+
+func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	// Parse options
+	var options shellOptions
+	err = info.Build.Options.Decode(&options)
+	if err != nil {
+		return
+	}
+
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Process all artifacts
 	b.downloadAllArtifacts(w, options.Dependencies, info)
@@ -291,7 +368,7 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
 	}
 }
 
-func (b *AbstractShell) writeBuildScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
@@ -301,6 +378,10 @@ func (b *AbstractShell) writeBuildScript(w ShellWriter, info common.ShellScriptI
 
 	commands := info.Build.Commands
 	b.writeCommands(w, commands)
+
+	if info.PostBuildScript != "" {
+		b.writeCommands(w, info.PostBuildScript)
+	}
 
 	return nil
 }
@@ -453,24 +534,22 @@ func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.Sh
 	return
 }
 
-func (b *AbstractShell) writeScript(w ShellWriter, scriptType common.ShellScriptType, info common.ShellScriptInfo) (err error) {
-	switch scriptType {
-	case common.ShellPrepareScript:
-		return b.writePrepareScript(w, info)
-
-	case common.ShellBuildScript:
-		return b.writeBuildScript(w, info)
-
-	case common.ShellAfterScript:
-		return b.writeAfterScript(w, info)
-
-	case common.ShellArchiveCache:
-		return b.writeArchiveCacheScript(w, info)
-
-	case common.ShellUploadArtifacts:
-		return b.writeUploadArtifactsScript(w, info)
-
-	default:
-		return errors.New("Not supported script type: " + string(scriptType))
+func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {
+	methods := map[common.BuildStage]func(ShellWriter, common.ShellScriptInfo) error{
+		common.BuildStagePrepare:           b.writePrepareScript,
+		common.BuildStageGetSources:        b.writeGetSourcesScript,
+		common.BuildStageRestoreCache:      b.writeRestoreCacheScript,
+		common.BuildStageDownloadArtifacts: b.writeDownloadArtifactsScript,
+		common.BuildStageUserScript:        b.writeUserScript,
+		common.BuildStageAfterScript:       b.writeAfterScript,
+		common.BuildStageArchiveCache:      b.writeArchiveCacheScript,
+		common.BuildStageUploadArtifacts:   b.writeUploadArtifactsScript,
 	}
+
+	fn := methods[buildStage]
+	if fn == nil {
+		return errors.New("Not supported script type: " + string(buildStage))
+	}
+
+	return fn(w, info)
 }

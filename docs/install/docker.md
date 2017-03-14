@@ -1,6 +1,8 @@
-## Run gitlab-runner in a container
+# Run GitLab Runner in a container
 
-### Docker image installation and configuration
+This is how you can run GitLab Runner inside a Docker container.
+
+## Docker image installation and configuration
 
 Install Docker first:
 
@@ -8,16 +10,17 @@ Install Docker first:
 curl -sSL https://get.docker.com/ | sh
 ```
 
-We need to mount a config volume into our gitlab-runner container to
+We need to mount a config volume into our `gitlab-runner` container to
 be used for configs and other resources:
 
 ```bash
 docker run -d --name gitlab-runner --restart always \
   -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   gitlab/gitlab-runner:latest
 ```
 
-OR you can use a config container to mount your custom data volume:
+Or, you can use a config container to mount your custom data volume:
 
 ```bash
 docker run -d --name gitlab-runner-config \
@@ -30,7 +33,7 @@ docker run -d --name gitlab-runner --restart always \
     gitlab/gitlab-runner:latest
 ```
 
-If you plan on using Docker as the method of spawning runners, you will need to
+If you plan on using Docker as the method of spawning Runners, you will need to
 mount your docker socket like this:
 
 ```bash
@@ -65,7 +68,7 @@ The runner should is started already and you are ready to build your projects!
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
 
-### Update
+## Update
 
 Pull the latest version:
 
@@ -91,7 +94,7 @@ docker run -d --name gitlab-runner --restart always \
 **Note**: you need to use the same method for mounting you data volume as you
     did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or `--volumes-from gitlab-runner`)
 
-### Installing Trusted SSL Server Certificates
+## Installing trusted SSL server certificates
 
 If your GitLab CI server is using self-signed SSL certificates then you should
 make sure the GitLab CI server certificate is trusted by the gitlab-ci-multi-runner
@@ -107,7 +110,7 @@ want gitlab-ci-multi-runner to trust. The gitlab-ci-multi-runner container will
 import the `ca.crt` file on startup so if your container is already running you
 may need to restart it for the changes to take effect.
 
-### Alpine Linux
+## Alpine Linux
 
 You can also use alternative [Alpine Linux](https://www.alpinelinux.org/) based image with much smaller footprint:
 ```
@@ -119,7 +122,7 @@ gitlab/gitlab-runner    alpine              7c431ac8f30f        13 hours ago    
 
 The original `gitlab/gitlab-runner:latest` is based on Ubuntu 14.04 LTS.
 
-### SELinux
+## SELinux
 
 Some distributions (CentOS, RedHat, Fedora) use SELinux by default to enhance the security of the underlying system.
 
@@ -134,10 +137,10 @@ Install the `selinux-dockersock` and to resolve the issue: https://github.com/dp
 1. Run docker with `:Z` on volumes:
 
 ```bash
-    docker run -d --name gitlab-runner --restart always \
-      -v /var/run/docker.sock:/var/run/docker.sock \
-      -v /srv/gitlab-runner/config:/etc/gitlab-runner:Z \
-      gitlab/gitlab-runner:latest
+docker run -d --name gitlab-runner --restart always \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /srv/gitlab-runner/config:/etc/gitlab-runner:Z \
+  gitlab/gitlab-runner:latest
 ```
 
 More information about the cause and resolution can be found here:

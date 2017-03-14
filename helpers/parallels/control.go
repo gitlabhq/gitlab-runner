@@ -35,8 +35,7 @@ const (
 
 func PrlctlOutput(args ...string) (string, error) {
 	if runtime.GOOS != "darwin" {
-		return "", fmt.Errorf(
-			"Parallels works only on \"darwin\" platform!")
+		return "", fmt.Errorf("Parallels works only on \"darwin\" platform")
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -173,10 +172,6 @@ func Kill(vmName string) error {
 	return Prlctl("stop", vmName, "--kill")
 }
 
-func Stop(vmName string) error {
-	return Prlctl("stop", vmName)
-}
-
 func Delete(vmName string) error {
 	return Prlctl("delete", vmName)
 }
@@ -196,7 +191,7 @@ func Mac(vmName string) (string, error) {
 	macMatch := re.FindAllStringSubmatch(stdoutString, 1)
 
 	if len(macMatch) != 1 {
-		return "", fmt.Errorf("MAC address for NIC: nic0 on Virtual Machine: %s not found!\n", vmName)
+		return "", fmt.Errorf("MAC address for NIC: nic0 on Virtual Machine: %s not found", vmName)
 	}
 
 	mac := macMatch[0][1]
@@ -213,7 +208,7 @@ func Mac(vmName string) (string, error) {
 // IP Address   ="Lease expiry, Lease time, MAC, MAC or DUID"
 func IPAddress(mac string) (string, error) {
 	if len(mac) != 12 {
-		return "", fmt.Errorf("Not a valid MAC address: %s. It should be exactly 12 digits.", mac)
+		return "", fmt.Errorf("Not a valid MAC address: %s. It should be exactly 12 digits", mac)
 	}
 
 	leases, err := ioutil.ReadFile(dhcpLeases)
@@ -236,7 +231,7 @@ func IPAddress(mac string) (string, error) {
 	}
 
 	if len(mostRecentIP) == 0 {
-		return "", fmt.Errorf("IP lease not found for MAC address %s in: %s\n", mac, dhcpLeases)
+		return "", fmt.Errorf("IP lease not found for MAC address %s in: %s", mac, dhcpLeases)
 	}
 
 	logrus.Debugf("Found IP lease: %s for MAC address %s\n", mostRecentIP, mac)

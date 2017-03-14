@@ -3,9 +3,10 @@ package machine
 import (
 	"crypto/rand"
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"strings"
 	"time"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 func machineFormat(runner string, template string) string {
@@ -19,9 +20,27 @@ func machineFilter(config *common.RunnerConfig) string {
 	return machineFormat(config.ShortDescription(), config.Machine.MachineName)
 }
 
-func newMachineName(machineFilter string) string {
+func matchesMachineFilter(name, filter string) bool {
+	var query string
+	if n, _ := fmt.Sscanf(name, filter, &query); n == 1 {
+		return true
+	}
+	return false
+}
+
+func filterMachineList(machines []string, filter string) (newMachines []string) {
+	newMachines = make([]string, 0, len(machines))
+	for _, machine := range machines {
+		if matchesMachineFilter(machine, filter) {
+			newMachines = append(newMachines, machine)
+		}
+	}
+	return
+}
+
+func newMachineName(config *common.RunnerConfig) string {
 	r := make([]byte, 4)
 	rand.Read(r)
 	t := time.Now().Unix()
-	return fmt.Sprintf(machineFilter, fmt.Sprintf("%d-%x", t, r))
+	return fmt.Sprintf(machineFilter(config), fmt.Sprintf("%d-%x", t, r))
 }

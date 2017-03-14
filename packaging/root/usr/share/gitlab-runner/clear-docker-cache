@@ -3,9 +3,13 @@
 set -e
 docker version >/dev/null 2>/dev/null
 
-CONTAINERS=$(docker ps -a | grep runner | grep project | grep concurrent | grep cache)
-
 echo Clearing docker cache...
-for container in $(echo "$CONTAINERS" | awk '{print $1}'); do
-    docker rm -v $container || :
-done
+
+CONTAINERS=$(docker ps -a -q \
+             --filter=status=exited \
+             --filter=status=dead \
+             --filter=label=com.gitlab.gitlab-runner.type=cache)
+
+if [ -n "${CONTAINERS}" ]; then
+    docker rm -v ${CONTAINERS}
+fi

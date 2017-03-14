@@ -1,4 +1,4 @@
-## GitLab Runner
+# GitLab Runner
 
 This is the repository of the official GitLab Runner written in Go.
 It runs tests and sends the results to GitLab.
@@ -8,16 +8,15 @@ The old name of this project was GitLab CI Multi Runner but please use "GitLab R
 
 ![Build Status](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/badges/master/build.svg)
 
-### Release process
+## Release process
 
 The description of release process of GitLab Runner project can be found in the [release documentation](docs/release_process/README.md).
 
-### Contributing
+## Contributing
 
 Contributions are welcome, see [`CONTRIBUTING.md`](CONTRIBUTING.md) for more details.
 
-
-#### Closing issues and merge requests
+### Closing issues and merge requests
 
 GitLab is growing very fast and we have a limited resources to deal with reported issues
 and merge requests opened by the community volunteers. We appreciate all the contributions
@@ -35,107 +34,53 @@ try upgrading to the latest version. If the issue persists, reopen this issue
 or merge request with the relevant information.
 ```
 
-### Requirements
+## Documentation
 
-**None:** GitLab Runner is run as a single binary.
+The documentation source files can be found under the [docs/](docs/) directory. You can
+read the documentation online at https://docs.gitlab.com/runner/.
 
-This project is designed to run on the Linux, OS X, and Windows operating systems.
-Other operating systems will probably work as long as you can compile a Go binary on them.
+## Requirements
 
-If you want to use **Docker** make sure that you have **1.5.0** at least installed.
+[Read about the requirements of GitLab Runner.](https://docs.gitlab.com/runner/#requirements)
 
-### Features
+## Features
 
-* Allows to run:
- - multiple jobs concurrently
- - use multiple tokens with multiple server (even per-project)
- - limit number of concurrent jobs per-token
-* Jobs can be run:
- - locally
- - using Docker container
- - using Docker container and executing job over SSH
- - using Docker container with autoscaling on different clouds and virtualization hypervisors
- - connecting to remote SSH server
-* Is written in Go and distributed as single binary without any other requirements
-* Supports Bash, Windows Batch and Windows PowerShell
-* Works on Ubuntu, Debian, OS X and Windows (and anywhere you can run Docker)
-* Allows to customize job running environment
-* Automatic configuration reload without restart
-* Easy to use setup with support for docker, docker-ssh, parallels or ssh running environments
-* Enables caching of Docker containers
-* Easy installation as service for Linux, OSX and Windows
+[Read about the features of GitLab Runner.](https://docs.gitlab.com/runner/#features)
 
-### Compatibility chart
+## Compatibility chart
 
-Supported features by different executors:
+[Read about what options each executor can offer.](https://docs.gitlab.com/runner/executors/#compatibility-chart)
 
-| Executor                              | Shell   | Docker | Docker-SSH | VirtualBox | Parallels | SSH  |
-|---------------------------------------|---------|--------|------------|------------|-----------|------|
-| Secure Variables                      | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    |
-| GitLab Runner Exec command            | ✓       | ✓      | ✓          | no         | no        | no   |
-| gitlab-ci.yml: image                  | no      | ✓      | ✓          | no         | no        | no   |
-| gitlab-ci.yml: services               | no      | ✓      | ✓          | no         | no        | no   |
-| gitlab-ci.yml: cache                  | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    |
-| gitlab-ci.yml: artifacts              | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    |
-| Absolute paths: caching, artifacts    | no      | no     | no         | no         | no        | no   |
-| Passing artifacts between stages      | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    |
+## Install GitLab Runner
 
-Supported systems by different shells:
+Visit the [installation documentation](https://docs.gitlab.com/runner/install/).
 
-| Shells                                | Bash        | Windows Batch  | PowerShell |
-|---------------------------------------|-------------|----------------|------------|
-| Windows                               | ✓           | ✓ (default)    | ✓          |
-| Linux                                 | ✓ (default) | no             | no         |
-| OSX                                   | ✓ (default) | no             | no         |
-| FreeBSD                               | ✓ (default) | no             | no         |
+## Use GitLab Runner
 
-### Install GitLab Runner
+See [https://docs.gitlab.com/runner/#using-gitlab-runner](https://docs.gitlab.com/runner/#using-gitlab-runner).
 
-* [Install using GitLab's repository for Debian/Ubuntu/CentOS/RedHat (preferred)](docs/install/linux-repository.md)
-* [Install on OSX (preferred)](docs/install/osx.md)
-* [Install on Windows (preferred)](docs/install/windows.md)
-* [Install as Docker Service](docs/install/docker.md)
-* [Install in Auto-scaling mode](docs/install/autoscaling.md)
-* [Use on FreeBSD](docs/install/freebsd.md)
+## Select executor
 
-### Use GitLab Runner
+See [https://docs.gitlab.com/runner/executors/#selecting-the-executor](https://docs.gitlab.com/runner/executors/#selecting-the-executor).
 
-* [See the **commands** documentation](docs/commands/README.md)
-* [Use self-signed certificates](docs/configuration/tls-self-signed.md)
-* [Cleanup the docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup)
+## Troubleshooting
 
-### Select executor
+Read the [FAQ](https://docs.gitlab.com/runner/faq/).
 
-* [Help me select executor](docs/executors/README.md#imnotsure)
-* [Shell](docs/executors/shell.md)
-* [Docker and Docker-SSH](docs/executors/docker.md)
-* [Parallels](docs/executors/parallels.md)
-* [VirtualBox](docs/executors/virtualbox.md)
-* [SSH](docs/executors/ssh.md)
+## Advanced Configuration
 
-### Troubleshooting
+See [https://docs.gitlab.com/runner/#advanced-configuration](https://docs.gitlab.com/runner/#advanced-configuration).
 
-* [FAQ](docs/faq/README.md)
-
-### Advanced Configuration
-
-* [Auto-scaling](docs/configuration/autoscale.md)
-* [Install Bleeding Edge (development)](docs/install/bleeding-edge.md)
-* [Manual installation (advanced)](docs/install/linux-manually.md)
-* [See details about the shells](docs/shells/README.md)
-* [See advanced configuration options](docs/configuration/advanced-configuration.md)
-* [See security considerations](docs/security/index.md)
-
-### Extra projects?
+## Extra projects?
 
 If you want to add another project, token or image simply RE-RUN SETUP.
 *You don't have to re-run the runner. It will automatically reload configuration once it changes.*
 
-### Changelog
+## Changelog
 
-Visit [Changelog](CHANGELOG.md) to view recent changes.
+Visit the [Changelog](CHANGELOG.md) to view recent changes.
 
-#### Version 0.5.0
+### Version 0.5.0
 
 Version 0.5.0 introduces many security related changes.
 One of such changes is the different location of `config.toml`.
@@ -147,15 +92,18 @@ However, this doesn't apply to Windows where config is still read from current w
 The config file is automatically migrated when GitLab Runner was installed from GitLab's repository.
 **For manual installations the config needs to be moved by hand.**
 
-### The future
+## The future
 
 * Please see the [GitLab Direction page](https://about.gitlab.com/direction/).
 * Feel free submit issues with feature proposals on the issue tracker.
 
-### Author
+## Author
 
-[Kamil Trzciński](mailto:ayufan@ayufan.eu)
+```
+2014 - 2015   : [Kamil Trzciński](mailto:ayufan@ayufan.eu)
+2015 - now    : GitLab Inc. team and contributors
+```
 
-### License
+## License
 
-This code is distributed under the MIT license, see the LICENSE file.
+This code is distributed under the MIT license, see the [LICENSE](LICENSE.md) file.

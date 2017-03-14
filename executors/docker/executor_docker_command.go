@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/fsouza/go-dockerclient"
+	"github.com/docker/docker/api/types"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
 )
 
 type commandExecutor struct {
 	executor
-	predefinedContainer *docker.Container
-	buildContainer      *docker.Container
+	predefinedContainer *types.ContainerJSON
+	buildContainer      *types.ContainerJSON
 }
 
 func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
@@ -52,17 +52,17 @@ func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.Ru
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
-	var container *docker.Container
+	var runOn *types.ContainerJSON
 
 	if cmd.Predefined {
-		container = s.predefinedContainer
+		runOn = s.predefinedContainer
 	} else {
-		container = s.buildContainer
+		runOn = s.buildContainer
 	}
 
-	s.Debugln("Executing on", container.Name, "the", cmd.Script)
+	s.Debugln("Executing on", runOn.Name, "the", cmd.Script)
 
-	return s.watchContainer(container, bytes.NewBufferString(cmd.Script), cmd.Abort)
+	return s.watchContainer(runOn.ID, bytes.NewBufferString(cmd.Script), cmd.Abort)
 }
 
 func init() {

@@ -5,22 +5,6 @@
 For an overview of the auto-scale architecture, take a look at the
 [comprehensive documentation on auto-scaling](../configuration/autoscale.md).
 
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Prepare the environment](#prepare-the-environment)
-- [Prepare the Docker Registry and Cache Server](#prepare-the-docker-registry-and-cache-server)
-    - [Install Docker Registry](#install-docker-registry)
-    - [Install the cache server](#install-the-cache-server)
-- [Configure GitLab Runner](#configure-gitlab-runner)
-- [Upgrading the Runner](#upgrading-the-runner)
-- [Manage the Docker Machines](#manage-the-docker-machines)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 ## Prepare the environment
 
 In order to use the auto-scale feature, Docker and GitLab Runner must be
@@ -150,7 +134,7 @@ more in [Distributed runners caching][caching].
       MachineDriver = "digitalocean"
       MachineName = "auto-scale-runners-%s.my.domain.com"
       MachineOptions = [
-          "digitalocean-image=coreos-beta",
+          "digitalocean-image=coreos-stable",
           "digitalocean-ssh-user=core",
           "digitalocean-access-token=MY_DIGITAL_OCEAN_TOKEN",
           "digitalocean-region=nyc2",
@@ -171,6 +155,9 @@ more in [Distributed runners caching][caching].
 
 ## Upgrading the Runner
 
+1. Ensure your operating system isn't configured to automatically restart the
+   runner if it exits (which is the default configuration on some platforms).
+
 1. Stop the runner:
 
     ```bash
@@ -181,10 +168,22 @@ more in [Distributed runners caching][caching].
     gracefully. It will stop accepting new jobs, and will exit as soon as the
     current builds are finished.
 
-1. Wait until the Runner exits. You can check its status with: `gitlab-runner status`
+1. Wait until the Runner exits. You can check its status with `gitlab-runner status` 
+    or await a graceful shutdown for up to 30 minutes with:
+
+    ```bash
+    for i in `seq 1 180`; do # 1800 seconds = 30 minutes
+        gitlab-runner status || break
+        sleep 10
+    done
+    ```
+
 1. You can now safely upgrade the Runner without interrupting any builds
 
 ## Manage the Docker Machines
+
+1. Ensure your operating system isn't configured to automatically restart the
+   runner if it exits (which is the default configuration on some platforms).
 
 1. Stop the Runner:
 
@@ -193,6 +192,15 @@ more in [Distributed runners caching][caching].
     ```
 
 1. Wait until the Runner exits. You can check its status with: `gitlab-runner status`
+    or await a graceful shutdown for up to 30 minutes with:
+
+    ```bash
+    for i in `seq 1 180`; do # 1800 seconds = 30 minutes
+        gitlab-runner status || break
+        sleep 10
+    done
+    ```
+
 1. You can now manage (upgrade or remove) any Docker Machines with the
    [`docker-machine` command][docker-machine]
 
