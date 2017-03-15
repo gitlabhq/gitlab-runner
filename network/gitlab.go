@@ -227,14 +227,15 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, id int, state commo
 	}
 }
 
-func (n *GitLabClient) PatchTrace(config common.RunnerConfig, buildCredentials *common.JobCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
-	id := buildCredentials.ID
+func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) common.UpdateState {
+	id := jobCredentials.ID
 
 	contentRange := fmt.Sprintf("%d-%d", tracePatch.Offset(), tracePatch.Limit())
 	headers := make(http.Header)
 	headers.Set("Content-Range", contentRange)
-	headers.Set("BUILD-TOKEN", buildCredentials.Token)
-	uri := fmt.Sprintf("builds/%d/trace.txt", id)
+	headers.Set("JOB-TOKEN", jobCredentials.Token)
+
+	uri := fmt.Sprintf("jobs/%d/trace", id)
 	request := bytes.NewReader(tracePatch.Patch())
 
 	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
@@ -248,12 +249,12 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, buildCredentials *
 
 	tracePatchResponse := NewTracePatchResponse(response)
 	log := config.Log().WithFields(logrus.Fields{
-		"build":        id,
-		"sent-log":     contentRange,
-		"build-log":    tracePatchResponse.RemoteRange,
-		"build-status": tracePatchResponse.RemoteState,
-		"code":         response.StatusCode,
-		"status":       response.Status,
+		"job":        id,
+		"sent-log":   contentRange,
+		"job-log":    tracePatchResponse.RemoteRange,
+		"job-status": tracePatchResponse.RemoteState,
+		"code":       response.StatusCode,
+		"status":     response.Status,
 	})
 
 	switch {

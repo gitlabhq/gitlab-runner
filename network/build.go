@@ -63,12 +63,12 @@ func newTracePatch(trace bytes.Buffer, offset int) (*tracePatch, error) {
 type clientBuildTrace struct {
 	*io.PipeWriter
 
-	client           common.Network
-	config           common.RunnerConfig
-	buildCredentials *common.JobCredentials
-	id               int
-	limit            int64
-	abortCh          chan interface{}
+	client         common.Network
+	config         common.RunnerConfig
+	jobCredentials *common.JobCredentials
+	id             int
+	limit          int64
+	abortCh        chan interface{}
 
 	incrementalAvailable bool
 
@@ -223,13 +223,13 @@ func (c *clientBuildTrace) incrementalUpdate() common.UpdateState {
 		c.config.Log().Errorln("Error while creating a tracePatch", err.Error())
 	}
 
-	update := c.client.PatchTrace(c.config, c.buildCredentials, tracePatch)
+	update := c.client.PatchTrace(c.config, c.jobCredentials, tracePatch)
 	if update == common.UpdateNotFound {
 		return update
 	}
 
 	if update == common.UpdateRangeMismatch {
-		update = c.resendPatch(c.buildCredentials.ID, c.config, c.buildCredentials, tracePatch)
+		update = c.resendPatch(c.jobCredentials.ID, c.config, c.jobCredentials, tracePatch)
 	}
 
 	if update == common.UpdateSucceeded {
@@ -240,7 +240,7 @@ func (c *clientBuildTrace) incrementalUpdate() common.UpdateState {
 	return update
 }
 
-func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, buildCredentials *common.JobCredentials, tracePatch common.BuildTracePatch) (update common.UpdateState) {
+func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) (update common.UpdateState) {
 	if !tracePatch.ValidateRange() {
 		config.Log().Warningln(id, "Full build update is needed")
 		fullTrace := c.log.String()
@@ -250,7 +250,7 @@ func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, build
 
 	config.Log().Warningln(id, "Resending trace patch due to range mismatch")
 
-	update = c.client.PatchTrace(config, buildCredentials, tracePatch)
+	update = c.client.PatchTrace(config, jobCredentials, tracePatch)
 	if update == common.UpdateRangeMismatch {
 		config.Log().Errorln(id, "Appending trace to coordinator...", "failed due to range mismatch")
 
@@ -311,10 +311,10 @@ func (c *clientBuildTrace) watch() {
 
 func newBuildTrace(client common.Network, config common.RunnerConfig, buildCredentials *common.JobCredentials) *clientBuildTrace {
 	return &clientBuildTrace{
-		client:           client,
-		config:           config,
-		buildCredentials: buildCredentials,
-		id:               buildCredentials.ID,
-		abortCh:          make(chan interface{}),
+		client:         client,
+		config:         config,
+		jobCredentials: buildCredentials,
+		id:             buildCredentials.ID,
+		abortCh:        make(chan interface{}),
 	}
 }

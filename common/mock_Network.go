@@ -50,7 +50,7 @@ func (m *MockNetwork) UpdateJob(config RunnerConfig, id int, state JobState, tra
 
 	return r0
 }
-func (m *MockNetwork) PatchTrace(config RunnerConfig, buildCredentials *JobCredentials, tracePart BuildTracePatch) UpdateState {
+func (m *MockNetwork) PatchTrace(config RunnerConfig, buildCredentials *JobCredentials, tracePart JobTracePatch) UpdateState {
 	ret := m.Called(config, buildCredentials, tracePart)
 
 	r0 := ret.Get(0).(UpdateState)

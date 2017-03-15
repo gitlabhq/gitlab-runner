@@ -53,7 +53,7 @@ func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, id int, state
 	}
 }
 
-func (m *updateTraceNetwork) PatchTrace(config common.RunnerConfig, buildCredentials *common.JobCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
+func (m *updateTraceNetwork) PatchTrace(config common.RunnerConfig, buildCredentials *common.JobCredentials, tracePatch common.JobTracePatch) common.UpdateState {
 	return common.UpdateNotFound
 }
 

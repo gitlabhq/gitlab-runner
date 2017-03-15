@@ -445,12 +445,17 @@ var patchTraceString = "trace trace trace"
 
 func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body string, offset, limit int)) (*httptest.Server, *GitLabClient, RunnerConfig) {
 	patchHandler := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v4/jobs/1/trace" {
+			w.WriteHeader(404)
+			return
+		}
+
 		if r.Method != "PATCH" {
 			w.WriteHeader(406)
 			return
 		}
 
-		assert.Equal(t, patchToken, r.Header.Get("BUILD-TOKEN"))
+		assert.Equal(t, patchToken, r.Header.Get("JOB-TOKEN"))
 
 		body, err := ioutil.ReadAll(r.Body)
 		assert.NoError(t, err)
@@ -608,7 +613,7 @@ func TestResendDoubledBuildPatchTrace(t *testing.T) {
 
 func TestBuildFailedStatePatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		w.Header().Set("Build-Status", "failed")
+		w.Header().Set("Job-Status", "failed")
 		w.WriteHeader(202)
 	}
 

@@ -168,7 +168,7 @@ type BuildTrace interface {
 	IsStdout() bool
 }
 
-type BuildTracePatch interface {
+type JobTracePatch interface {
 	Patch() []byte
 	Offset() int
 	Limit() int
@@ -182,7 +182,7 @@ type Network interface {
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig) (*JobResponse, bool)
 	UpdateJob(config RunnerConfig, id int, state JobState, trace *string) UpdateState
-	PatchTrace(config RunnerConfig, buildCredentials *JobCredentials, tracePart BuildTracePatch) UpdateState
+	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
 	UploadArtifacts(config JobCredentials, artifactsFile string) UploadState

@@ -35,7 +35,7 @@ func (p *TracePatchResponse) NewOffset() int {
 func NewTracePatchResponse(response *http.Response) *TracePatchResponse {
 	return &TracePatchResponse{
 		response:    response,
-		RemoteState: response.Header.Get("Build-Status"),
+		RemoteState: response.Header.Get("Job-Status"),
 		RemoteRange: response.Header.Get("Range"),
 	}
 }
