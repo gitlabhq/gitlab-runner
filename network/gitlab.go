@@ -314,8 +314,8 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 	}
 
 	headers := make(http.Header)
-	headers.Set("BUILD-TOKEN", config.Token)
-	res, err := n.doRaw(&config, "POST", fmt.Sprintf("builds/%d/artifacts?%s", config.ID, query.Encode()), pr, mpw.FormDataContentType(), headers)
+	headers.Set("JOB-TOKEN", config.Token)
+	res, err := n.doRaw(&config, "POST", fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()), pr, mpw.FormDataContentType(), headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,

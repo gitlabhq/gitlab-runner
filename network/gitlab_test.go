@@ -435,75 +435,6 @@ func TestUpdateBuild(t *testing.T) {
 	assert.Equal(t, UpdateAbort, state)
 }
 
-func TestArtifactsUpload(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/ci/api/v1/builds/10/artifacts" {
-			w.WriteHeader(404)
-			return
-		}
-
-		if r.Method != "POST" {
-			w.WriteHeader(406)
-			return
-		}
-
-		if r.Header.Get("BUILD-TOKEN") != "token" {
-			w.WriteHeader(403)
-			return
-		}
-
-		file, _, err := r.FormFile("file")
-		if err != nil {
-			w.WriteHeader(400)
-			return
-		}
-
-		body, err := ioutil.ReadAll(file)
-		assert.NoError(t, err)
-
-		if string(body) != "content" {
-			w.WriteHeader(413)
-		} else {
-			w.WriteHeader(201)
-		}
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
-	defer s.Close()
-
-	config := JobCredentials{
-		ID:    10,
-		URL:   s.URL,
-		Token: "token",
-	}
-	invalidToken := JobCredentials{
-		ID:    10,
-		URL:   s.URL,
-		Token: "invalid-token",
-	}
-
-	tempFile, err := ioutil.TempFile("", "artifacts")
-	assert.NoError(t, err)
-	defer tempFile.Close()
-	defer os.Remove(tempFile.Name())
-
-	c := NewGitLabClient()
-
-	fmt.Fprint(tempFile, "content")
-	state := c.UploadArtifacts(config, tempFile.Name())
-	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded")
-
-	fmt.Fprint(tempFile, "too large")
-	state = c.UploadArtifacts(config, tempFile.Name())
-	assert.Equal(t, UploadTooLarge, state, "Artifacts should be not uploaded, because of too large archive")
-
-	state = c.UploadArtifacts(config, "not/existing/file")
-	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
-
-	state = c.UploadArtifacts(invalidToken, tempFile.Name())
-	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
-}
-
 var patchToken = "token"
 var patchTraceString = "trace trace trace"
 
@@ -682,4 +613,77 @@ func TestBuildFailedStatePatchTrace(t *testing.T) {
 	tracePatch := getTracePatch(patchTraceString, 0)
 	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateAbort, state)
+}
+
+func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
+		w.WriteHeader(404)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(406)
+		return
+	}
+
+	if r.Header.Get("JOB-TOKEN") != "token" {
+		w.WriteHeader(403)
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		w.WriteHeader(400)
+		return
+	}
+
+	body, err := ioutil.ReadAll(file)
+	assert.NoError(t, err)
+
+	if string(body) != "content" {
+		w.WriteHeader(413)
+	} else {
+		w.WriteHeader(201)
+	}
+}
+
+func TestArtifactsUpload(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testArtifactsUploadHandler(w, r, t)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	config := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "token",
+	}
+	invalidToken := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "invalid-token",
+	}
+
+	tempFile, err := ioutil.TempFile("", "artifacts")
+	assert.NoError(t, err)
+	defer tempFile.Close()
+	defer os.Remove(tempFile.Name())
+
+	c := NewGitLabClient()
+
+	fmt.Fprint(tempFile, "content")
+	state := c.UploadArtifacts(config, tempFile.Name())
+	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded")
+
+	fmt.Fprint(tempFile, "too large")
+	state = c.UploadArtifacts(config, tempFile.Name())
+	assert.Equal(t, UploadTooLarge, state, "Artifacts should be not uploaded, because of too large archive")
+
+	state = c.UploadArtifacts(config, "not/existing/file")
+	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
+
+	state = c.UploadArtifacts(invalidToken, tempFile.Name())
+	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
 }
