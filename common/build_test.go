@@ -41,7 +41,7 @@ func TestBuildRun(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-test",
@@ -81,7 +81,7 @@ func TestRetryPrepare(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-retry-prepare",
@@ -114,7 +114,7 @@ func TestPrepareFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-failure",
@@ -145,7 +145,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-failure-on-build-error",
@@ -180,7 +180,7 @@ func TestRunFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-run-failure",
@@ -216,7 +216,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-get-sources-run-failure",
@@ -254,7 +254,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-artifacts-run-failure",
@@ -292,7 +292,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-cache-run-failure",
@@ -329,7 +329,7 @@ func TestRunWrongAttempts(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-attempt-failure",
@@ -366,7 +366,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-success-second-attempt",

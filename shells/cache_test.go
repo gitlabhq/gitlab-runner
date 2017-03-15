@@ -21,7 +21,7 @@ func defaultS3CacheFactory() *common.CacheConfig {
 }
 
 var s3CacheBuild = &common.Build{
-	GetBuildResponse: common.GetBuildResponse{
+	JobResponse: common.JobResponse{
 		ProjectID: 10,
 		Timeout:   3600,
 	},

@@ -117,7 +117,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	defer mr.buildsHelper.release(runner)
 
 	// Receive a new build
-	buildData, healthy := mr.network.GetBuild(*runner)
+	buildData, healthy := mr.network.RequestJob(*runner)
 	mr.makeHealthy(runner.UniqueID(), healthy)
 	if buildData == nil {
 		return
@@ -133,10 +133,10 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	// Create a new build
 	build := &common.Build{
-		GetBuildResponse: *buildData,
-		Runner:           runner,
-		ExecutorData:     context,
-		SystemInterrupt:  mr.abortBuilds,
+		JobResponse:     *buildData,
+		Runner:          runner,
+		ExecutorData:    context,
+		SystemInterrupt: mr.abortBuilds,
 	}
 
 	// Add build to list of builds to assign numbers

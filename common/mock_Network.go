@@ -32,12 +32,12 @@ func (m *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
 
 	return r0
 }
-func (m *MockNetwork) GetBuild(config RunnerConfig) (*GetBuildResponse, bool) {
+func (m *MockNetwork) RequestJob(config RunnerConfig) (*JobResponse, bool) {
 	ret := m.Called(config)
 
-	var r0 *GetBuildResponse
+	var r0 *JobResponse
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*GetBuildResponse)
+		r0 = ret.Get(0).(*JobResponse)
 	}
 	r1 := ret.Get(1).(bool)
 

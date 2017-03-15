@@ -12,32 +12,32 @@ const repoSHA = "6907208d755b60ebeacb2e9dfea74c92c3449a1f"
 const repoBeforeSHA = "c347ca2e140aa667b968e51ed0ffe055501fe4f4"
 const repoRefName = "master"
 
-func GetSuccessfulBuild() (GetBuildResponse, error) {
+func GetSuccessfulBuild() (JobResponse, error) {
 	return getLocalBuildResponse("echo Hello World")
 }
 
-func GetRemoteSuccessfulBuild() (GetBuildResponse, error) {
+func GetRemoteSuccessfulBuild() (JobResponse, error) {
 	return getRemoteBuildResponse("echo Hello World")
 }
 
-func GetFailedBuild() (GetBuildResponse, error) {
+func GetFailedBuild() (JobResponse, error) {
 	return getLocalBuildResponse("exit 1")
 }
 
-func GetRemoteFailedBuild() (GetBuildResponse, error) {
+func GetRemoteFailedBuild() (JobResponse, error) {
 	return getRemoteBuildResponse("exit 1")
 }
 
-func GetLongRunningBuild() (GetBuildResponse, error) {
+func GetLongRunningBuild() (JobResponse, error) {
 	return getLocalBuildResponse("sleep 3600")
 }
 
-func GetRemoteLongRunningBuild() (GetBuildResponse, error) {
+func GetRemoteLongRunningBuild() (JobResponse, error) {
 	return getRemoteBuildResponse("sleep 3600")
 }
 
-func getRemoteBuildResponse(commands string) (response GetBuildResponse, err error) {
-	response = GetBuildResponse{
+func getRemoteBuildResponse(commands string) (response JobResponse, err error) {
+	response = JobResponse{
 		Commands:  commands,
 		RepoURL:   repoRemoteURL,
 		Sha:       repoSHA,
@@ -48,13 +48,13 @@ func getRemoteBuildResponse(commands string) (response GetBuildResponse, err err
 	return
 }
 
-func getLocalBuildResponse(commands string) (response GetBuildResponse, err error) {
+func getLocalBuildResponse(commands string) (response JobResponse, err error) {
 	localRepoURL, err := getLocalRepoURL()
 	if err != nil {
 		return
 	}
 
-	response = GetBuildResponse{
+	response = JobResponse{
 		Commands:  commands,
 		RepoURL:   localRepoURL,
 		Sha:       repoSHA,

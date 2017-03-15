@@ -274,7 +274,7 @@ func TestVerifyRunner(t *testing.T) {
 	assert.False(t, state)
 }
 
-func testGetBuildHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/ci/api/v1/builds/register.json" {
 		w.WriteHeader(404)
 		return
@@ -325,9 +325,9 @@ func testGetBuildHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	w.Write(output)
 }
 
-func TestGetBuild(t *testing.T) {
+func TestRequestJob(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testGetBuildHandler(w, r, t)
+		testRequestJobHandler(w, r, t)
 	}))
 	defer s.Close()
 
@@ -354,23 +354,23 @@ func TestGetBuild(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res, ok := c.GetBuild(validToken)
+	res, ok := c.RequestJob(validToken)
 	if assert.NotNil(t, res) {
 		assert.NotEmpty(t, res.ID)
 	}
 	assert.True(t, ok)
 
 	assert.Empty(t, c.getLastUpdate(&noBuildsToken.RunnerCredentials), "Last-Update should not be set")
-	res, ok = c.GetBuild(noBuildsToken)
+	res, ok = c.RequestJob(noBuildsToken)
 	assert.Nil(t, res)
 	assert.True(t, ok, "If no builds, runner is healthy")
 	assert.Equal(t, c.getLastUpdate(&noBuildsToken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
 
-	res, ok = c.GetBuild(invalidToken)
+	res, ok = c.RequestJob(invalidToken)
 	assert.Nil(t, res)
 	assert.False(t, ok, "If token is invalid, the runner is unhealthy")
 
-	res, ok = c.GetBuild(brokenConfig)
+	res, ok = c.RequestJob(brokenConfig)
 	assert.Nil(t, res)
 	assert.False(t, ok)
 }

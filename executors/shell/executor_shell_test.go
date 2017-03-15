@@ -63,7 +63,7 @@ func runBuildReturningOutput(t *testing.T, build *common.Build) (string, error) 
 	return output, err
 }
 
-func newBuild(t *testing.T, getBuildResponse common.GetBuildResponse, shell string) (*common.Build, func()) {
+func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (*common.Build, func()) {
 	dir, err := ioutil.TempDir("", "gitlab-runner-shell-executor-test")
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +72,7 @@ func newBuild(t *testing.T, getBuildResponse common.GetBuildResponse, shell stri
 	t.Log("Build directory:", dir)
 
 	build := &common.Build{
-		GetBuildResponse: getBuildResponse,
+		JobResponse: getBuildResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				BuildsDir: dir,
@@ -150,7 +150,7 @@ func TestBuildWithIndexLock(t *testing.T) {
 		err = runBuild(t, build)
 		assert.NoError(t, err)
 
-		build.GetBuildResponse.AllowGitFetch = true
+		build.JobResponse.AllowGitFetch = true
 		ioutil.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
 
 		err = runBuild(t, build)

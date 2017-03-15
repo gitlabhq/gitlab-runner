@@ -165,14 +165,14 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 	}
 }
 
-func (n *GitLabClient) GetBuild(config common.RunnerConfig) (*common.GetBuildResponse, bool) {
-	request := common.GetBuildRequest{
+func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobResponse, bool) {
+	request := common.JobRequest{
 		Info:       n.getRunnerVersion(config),
 		Token:      config.Token,
 		LastUpdate: n.getLastUpdate(&config.RunnerCredentials),
 	}
 
-	var response common.GetBuildResponse
+	var response common.JobResponse
 	result, statusText, certificates := n.doJSON(&config.RunnerCredentials, "POST", "builds/register.json", 201, &request, &response)
 
 	switch result {

@@ -56,7 +56,7 @@ const (
 )
 
 type Build struct {
-	GetBuildResponse `yaml:",inline"`
+	JobResponse `yaml:",inline"`
 
 	Trace           BuildTrace
 	SystemInterrupt chan os.Signal `json:"-" yaml:"-"`

@@ -210,7 +210,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, options *archivingOptions,
 	})
 }
 
-func (b *AbstractShell) downloadArtifacts(w ShellWriter, build *common.BuildInfo, info common.ShellScriptInfo) {
+func (b *AbstractShell) downloadArtifacts(w ShellWriter, build *common.JobInfo, info common.ShellScriptInfo) {
 	args := []string{
 		"artifacts-downloader",
 		"--url",
@@ -225,7 +225,7 @@ func (b *AbstractShell) downloadArtifacts(w ShellWriter, build *common.BuildInfo
 	w.Command(info.RunnerCommand, args...)
 }
 
-func (b *AbstractShell) buildArtifacts(dependencies *dependencies, info common.ShellScriptInfo) (otherBuilds []common.BuildInfo) {
+func (b *AbstractShell) buildArtifacts(dependencies *dependencies, info common.ShellScriptInfo) (otherBuilds []common.JobInfo) {
 	for _, otherBuild := range info.Build.DependsOnBuilds {
 		if otherBuild.Artifacts == nil || otherBuild.Artifacts.Filename == "" {
 			continue

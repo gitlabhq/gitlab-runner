@@ -29,7 +29,7 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -52,7 +52,7 @@ func TestDockerCommandBuildFail(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -121,7 +121,7 @@ func TestDockerCommandBuildAbort(t *testing.T) {
 	longRunningBuild, err := common.GetRemoteLongRunningBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: longRunningBuild,
+		JobResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -157,7 +157,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	longRunningBuild, err := common.GetRemoteLongRunningBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: longRunningBuild,
+		JobResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -195,7 +195,7 @@ func TestDockerCommandOutput(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -238,7 +238,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 		longRunningBuild, err := common.GetRemoteLongRunningBuild()
 		assert.NoError(t, err)
 		build := &common.Build{
-			GetBuildResponse: longRunningBuild,
+			JobResponse: longRunningBuild,
 			Runner: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Executor: "docker",
@@ -342,7 +342,7 @@ func testDockerVersion(t *testing.T, version string) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",

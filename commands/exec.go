@@ -148,7 +148,7 @@ func (c *ExecCommand) buildOptions(config, jobConfig common.BuildOptions) (optio
 	return
 }
 
-func (c *ExecCommand) parseYaml(job string, build *common.GetBuildResponse) error {
+func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 	data, err := ioutil.ReadFile(".gitlab-ci.yml")
 	if err != nil {
 		return err
@@ -222,7 +222,7 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 	}
 
 	build = &common.Build{
-		GetBuildResponse: common.GetBuildResponse{
+		JobResponse: common.JobResponse{
 			ID:            1,
 			ProjectID:     1,
 			RepoURL:       repoURL,
@@ -287,7 +287,7 @@ func (c *ExecCommand) Execute(context *cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	err = c.parseYaml(c.Job, &build.GetBuildResponse)
+	err = c.parseYaml(c.Job, &build.JobResponse)
 	if err != nil {
 		logrus.Fatalln(err)
 	}

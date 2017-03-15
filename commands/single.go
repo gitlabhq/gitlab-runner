@@ -64,7 +64,7 @@ func (r *RunSingleCommand) postBuild() {
 }
 
 func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) (err error) {
-	buildData, healthy := r.network.GetBuild(r.RunnerConfig)
+	buildData, healthy := r.network.RequestJob(r.RunnerConfig)
 	if !healthy {
 		log.Println("Runner is not healthy!")
 		select {
@@ -85,10 +85,10 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 	config := common.NewConfig()
 
 	newBuild := common.Build{
-		GetBuildResponse: *buildData,
-		Runner:           &r.RunnerConfig,
-		SystemInterrupt:  abortSignal,
-		ExecutorData:     data,
+		JobResponse:     *buildData,
+		Runner:          &r.RunnerConfig,
+		SystemInterrupt: abortSignal,
+		ExecutorData:    data,
 	}
 
 	buildCredentials := &common.JobCredentials{

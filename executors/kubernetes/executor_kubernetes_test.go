@@ -182,7 +182,7 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
+				JobResponse: common.JobResponse{
 					Sha: "1234567890",
 					Options: common.BuildOptions{
 						"image": "test-image",
@@ -241,7 +241,7 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
+				JobResponse: common.JobResponse{
 					Sha: "1234567890",
 					Options: common.BuildOptions{
 						"image": "test-image",
@@ -303,7 +303,7 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
+				JobResponse: common.JobResponse{
 					Sha: "1234567890",
 					Options: common.BuildOptions{
 						"image": "test-image",
@@ -347,7 +347,7 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
+				JobResponse: common.JobResponse{
 					Sha: "1234567890",
 					Options: common.BuildOptions{
 						"image": "test-image",
@@ -531,7 +531,7 @@ func TestSetupBuildPod(t *testing.T) {
 				Config:     test.RunnerConfig,
 				BuildShell: &common.ShellConfiguration{},
 				Build: &common.Build{
-					GetBuildResponse: common.GetBuildResponse{
+					JobResponse: common.JobResponse{
 						Variables: []common.BuildVariable{},
 					},
 					Runner: &common.RunnerConfig{},
@@ -558,7 +558,7 @@ func TestKubernetesSuccessRun(t *testing.T) {
 		"image": "docker:git",
 	}
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -579,7 +579,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -605,7 +605,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -631,7 +631,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -657,7 +657,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -694,7 +694,7 @@ func TestKubernetesBuildCancel(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -732,7 +732,7 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 	}
 
 	build := &common.Build{
-		GetBuildResponse: common.GetBuildResponse{
+		JobResponse: common.JobResponse{
 			Sha: "1234567890",
 			Options: common.BuildOptions{
 				"image": "test-image",
