@@ -50,35 +50,35 @@ func (m *MockNetwork) UpdateBuild(config RunnerConfig, id int, state BuildState,
 
 	return r0
 }
-func (m *MockNetwork) PatchTrace(config RunnerConfig, buildCredentials *BuildCredentials, tracePart BuildTracePatch) UpdateState {
+func (m *MockNetwork) PatchTrace(config RunnerConfig, buildCredentials *JobCredentials, tracePart BuildTracePatch) UpdateState {
 	ret := m.Called(config, buildCredentials, tracePart)
 
 	r0 := ret.Get(0).(UpdateState)
 
 	return r0
 }
-func (m *MockNetwork) DownloadArtifacts(config BuildCredentials, artifactsFile string) DownloadState {
+func (m *MockNetwork) DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState {
 	ret := m.Called(config, artifactsFile)
 
 	r0 := ret.Get(0).(DownloadState)
 
 	return r0
 }
-func (m *MockNetwork) UploadRawArtifacts(config BuildCredentials, reader io.Reader, baseName string, expireIn string) UploadState {
+func (m *MockNetwork) UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState {
 	ret := m.Called(config, reader, baseName, expireIn)
 
 	r0 := ret.Get(0).(UploadState)
 
 	return r0
 }
-func (m *MockNetwork) UploadArtifacts(config BuildCredentials, artifactsFile string) UploadState {
+func (m *MockNetwork) UploadArtifacts(config JobCredentials, artifactsFile string) UploadState {
 	ret := m.Called(config, artifactsFile)
 
 	r0 := ret.Get(0).(UploadState)
 
 	return r0
 }
-func (m *MockNetwork) ProcessBuild(config RunnerConfig, buildCredentials *BuildCredentials) BuildTrace {
+func (m *MockNetwork) ProcessBuild(config RunnerConfig, buildCredentials *JobCredentials) BuildTrace {
 	ret := m.Called(config, buildCredentials)
 
 	r0 := ret.Get(0).(BuildTrace)

@@ -15,13 +15,13 @@ import (
 )
 
 type ArtifactsDownloaderCommand struct {
-	common.BuildCredentials
+	common.JobCredentials
 	retryHelper
 	network common.Network
 }
 
 func (c *ArtifactsDownloaderCommand) download(file string) (bool, error) {
-	switch c.network.DownloadArtifacts(c.BuildCredentials, file) {
+	switch c.network.DownloadArtifacts(c.JobCredentials, file) {
 	case common.DownloadSucceeded:
 		return false, nil
 	case common.DownloadNotFound:

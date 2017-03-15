@@ -228,7 +228,7 @@ func (n *GitLabClient) UpdateBuild(config common.RunnerConfig, id int, state com
 	}
 }
 
-func (n *GitLabClient) PatchTrace(config common.RunnerConfig, buildCredentials *common.BuildCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
+func (n *GitLabClient) PatchTrace(config common.RunnerConfig, buildCredentials *common.JobCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
 	id := buildCredentials.ID
 
 	contentRange := fmt.Sprintf("%d-%d", tracePatch.Offset(), tracePatch.Limit())
@@ -293,7 +293,7 @@ func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Read
 	return nil
 }
 
-func (n *GitLabClient) UploadRawArtifacts(config common.BuildCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
+func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
@@ -349,7 +349,7 @@ func (n *GitLabClient) UploadRawArtifacts(config common.BuildCredentials, reader
 	}
 }
 
-func (n *GitLabClient) UploadArtifacts(config common.BuildCredentials, artifactsFile string) common.UploadState {
+func (n *GitLabClient) UploadArtifacts(config common.JobCredentials, artifactsFile string) common.UploadState {
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,
 		"token": helpers.ShortenToken(config.Token),
@@ -376,7 +376,7 @@ func (n *GitLabClient) UploadArtifacts(config common.BuildCredentials, artifacts
 	return n.UploadRawArtifacts(config, file, baseName, "")
 }
 
-func (n *GitLabClient) DownloadArtifacts(config common.BuildCredentials, artifactsFile string) common.DownloadState {
+func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {
 	headers := make(http.Header)
 	headers.Set("BUILD-TOKEN", config.Token)
 	res, err := n.doRaw(&config, "GET", fmt.Sprintf("builds/%d/artifacts", config.ID), nil, "", headers)
@@ -424,7 +424,7 @@ func (n *GitLabClient) DownloadArtifacts(config common.BuildCredentials, artifac
 	}
 }
 
-func (n *GitLabClient) ProcessBuild(config common.RunnerConfig, buildCredentials *common.BuildCredentials) common.BuildTrace {
+func (n *GitLabClient) ProcessBuild(config common.RunnerConfig, buildCredentials *common.JobCredentials) common.BuildTrace {
 	trace := newBuildTrace(n, config, buildCredentials)
 	trace.start()
 	return trace

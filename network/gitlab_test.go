@@ -471,12 +471,12 @@ func TestArtifactsUpload(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(handler))
 	defer s.Close()
 
-	config := BuildCredentials{
+	config := JobCredentials{
 		ID:    10,
 		URL:   s.URL,
 		Token: "token",
 	}
-	invalidToken := BuildCredentials{
+	invalidToken := JobCredentials{
 		ID:    10,
 		URL:   s.URL,
 		Token: "invalid-token",
@@ -559,7 +559,7 @@ func TestUnknownPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateNotFound, state)
 }
 
@@ -572,7 +572,7 @@ func TestForbiddenPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateAbort, state)
 }
 
@@ -587,15 +587,15 @@ func TestPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateSucceeded, state)
 
 	tracePatch = getTracePatch(patchTraceString, 3)
-	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateSucceeded, state)
 
 	tracePatch = getTracePatch(patchTraceString[:10], 3)
-	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateSucceeded, state)
 }
 
@@ -613,15 +613,15 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	tracePatch := getTracePatch(patchTraceString, 11)
-	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateRangeMismatch, state)
 
 	tracePatch = getTracePatch(patchTraceString, 15)
-	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateRangeMismatch, state)
 
 	tracePatch = getTracePatch(patchTraceString, 5)
-	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateSucceeded, state)
 }
 
@@ -639,10 +639,10 @@ func TestResendPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	tracePatch := getTracePatch(patchTraceString, 11)
-	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateRangeMismatch, state)
 
-	state = client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateSucceeded, state)
 }
 
@@ -665,7 +665,7 @@ func TestResendDoubledBuildPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	tracePatch := getTracePatch(patchTraceString, 11)
-	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateRangeMismatch, state)
 	assert.False(t, tracePatch.ValidateRange())
 }
@@ -680,6 +680,6 @@ func TestBuildFailedStatePatchTrace(t *testing.T) {
 	defer server.Close()
 
 	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &BuildCredentials{ID: 1, Token: patchToken}, tracePatch)
+	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateAbort, state)
 }

@@ -53,13 +53,13 @@ func (m *updateTraceNetwork) UpdateBuild(config common.RunnerConfig, id int, sta
 	}
 }
 
-func (m *updateTraceNetwork) PatchTrace(config common.RunnerConfig, buildCredentials *common.BuildCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
+func (m *updateTraceNetwork) PatchTrace(config common.RunnerConfig, buildCredentials *common.JobCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
 	return common.UpdateNotFound
 }
 
 func TestBuildTraceSuccess(t *testing.T) {
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID: successID,
 	}
 	b := newBuildTrace(u, buildConfig, buildCredentials)
@@ -72,7 +72,7 @@ func TestBuildTraceSuccess(t *testing.T) {
 
 func TestBuildTraceFailure(t *testing.T) {
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID: successID,
 	}
 	b := newBuildTrace(u, buildConfig, buildCredentials)
@@ -85,7 +85,7 @@ func TestBuildTraceFailure(t *testing.T) {
 
 func TestIgnoreStatusChange(t *testing.T) {
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID: successID,
 	}
 	b := newBuildTrace(u, buildConfig, buildCredentials)
@@ -99,7 +99,7 @@ func TestBuildAbort(t *testing.T) {
 	traceUpdateInterval = 0
 
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID: cancelID,
 	}
 	b := newBuildTrace(u, buildConfig, buildCredentials)
@@ -110,7 +110,7 @@ func TestBuildAbort(t *testing.T) {
 
 func TestBuildOutputLimit(t *testing.T) {
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID: successID,
 	}
 	b := newBuildTrace(u, buildOutputLimit, buildCredentials)
@@ -129,7 +129,7 @@ func TestBuildFinishRetry(t *testing.T) {
 	traceFinishRetryInterval = time.Microsecond
 
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID: retryID,
 	}
 	b := newBuildTrace(u, buildOutputLimit, buildCredentials)
@@ -144,7 +144,7 @@ func TestBuildForceSend(t *testing.T) {
 	traceForceSendInterval = time.Minute
 
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID: successID,
 	}
 	b := newBuildTrace(u, buildOutputLimit, buildCredentials)

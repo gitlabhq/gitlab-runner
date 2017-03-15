@@ -17,7 +17,7 @@ import (
 )
 
 type ArtifactsUploaderCommand struct {
-	common.BuildCredentials
+	common.JobCredentials
 	fileArchiver
 	retryHelper
 	network common.Network
@@ -39,7 +39,7 @@ func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
 	artifactsName := path.Base(c.Name) + ".zip"
 
 	// Upload the data
-	switch c.network.UploadRawArtifacts(c.BuildCredentials, pr, artifactsName, c.ExpireIn) {
+	switch c.network.UploadRawArtifacts(c.JobCredentials, pr, artifactsName, c.ExpireIn) {
 	case common.UploadSucceeded:
 		return false, nil
 	case common.UploadForbidden:

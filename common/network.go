@@ -141,22 +141,22 @@ type UpdateBuildRequest struct {
 	Trace *string     `json:"trace,omitempty"`
 }
 
-type BuildCredentials struct {
+type JobCredentials struct {
 	ID        int    `long:"id" env:"CI_BUILD_ID" description:"The build ID to upload artifacts for"`
 	Token     string `long:"token" env:"CI_BUILD_TOKEN" required:"true" description:"Build token"`
 	URL       string `long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab CI URL"`
 	TLSCAFile string `long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
 }
 
-func (j *BuildCredentials) GetURL() string {
+func (j *JobCredentials) GetURL() string {
 	return j.URL
 }
 
-func (j *BuildCredentials) GetTLSCAFile() string {
+func (j *JobCredentials) GetTLSCAFile() string {
 	return j.TLSCAFile
 }
 
-func (j *BuildCredentials) GetToken() string {
+func (j *JobCredentials) GetToken() string {
 	return j.Token
 }
 
@@ -182,9 +182,9 @@ type Network interface {
 	UnregisterRunner(config RunnerCredentials) bool
 	GetBuild(config RunnerConfig) (*GetBuildResponse, bool)
 	UpdateBuild(config RunnerConfig, id int, state BuildState, trace *string) UpdateState
-	PatchTrace(config RunnerConfig, buildCredentials *BuildCredentials, tracePart BuildTracePatch) UpdateState
-	DownloadArtifacts(config BuildCredentials, artifactsFile string) DownloadState
-	UploadRawArtifacts(config BuildCredentials, reader io.Reader, baseName string, expireIn string) UploadState
-	UploadArtifacts(config BuildCredentials, artifactsFile string) UploadState
-	ProcessBuild(config RunnerConfig, buildCredentials *BuildCredentials) BuildTrace
+	PatchTrace(config RunnerConfig, buildCredentials *JobCredentials, tracePart BuildTracePatch) UpdateState
+	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
+	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
+	UploadArtifacts(config JobCredentials, artifactsFile string) UploadState
+	ProcessBuild(config RunnerConfig, buildCredentials *JobCredentials) BuildTrace
 }

@@ -91,7 +91,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		ExecutorData:     data,
 	}
 
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID:    buildData.ID,
 		Token: buildData.Token,
 	}

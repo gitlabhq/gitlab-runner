@@ -65,7 +65,7 @@ type clientBuildTrace struct {
 
 	client           common.Network
 	config           common.RunnerConfig
-	buildCredentials *common.BuildCredentials
+	buildCredentials *common.JobCredentials
 	id               int
 	limit            int64
 	abortCh          chan interface{}
@@ -240,7 +240,7 @@ func (c *clientBuildTrace) incrementalUpdate() common.UpdateState {
 	return update
 }
 
-func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, buildCredentials *common.BuildCredentials, tracePatch common.BuildTracePatch) (update common.UpdateState) {
+func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, buildCredentials *common.JobCredentials, tracePatch common.BuildTracePatch) (update common.UpdateState) {
 	if !tracePatch.ValidateRange() {
 		config.Log().Warningln(id, "Full build update is needed")
 		fullTrace := c.log.String()
@@ -309,7 +309,7 @@ func (c *clientBuildTrace) watch() {
 	}
 }
 
-func newBuildTrace(client common.Network, config common.RunnerConfig, buildCredentials *common.BuildCredentials) *clientBuildTrace {
+func newBuildTrace(client common.Network, config common.RunnerConfig, buildCredentials *common.JobCredentials) *clientBuildTrace {
 	return &clientBuildTrace{
 		client:           client,
 		config:           config,

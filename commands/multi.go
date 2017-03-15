@@ -124,7 +124,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	}
 
 	// Make sure to always close output
-	buildCredentials := &common.BuildCredentials{
+	buildCredentials := &common.JobCredentials{
 		ID:    buildData.ID,
 		Token: buildData.Token,
 	}
