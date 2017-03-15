@@ -148,6 +148,18 @@ type BuildCredentials struct {
 	TLSCAFile string `long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
 }
 
+func (j *BuildCredentials) GetURL() string {
+	return j.URL
+}
+
+func (j *BuildCredentials) GetTLSCAFile() string {
+	return j.TLSCAFile
+}
+
+func (j *BuildCredentials) GetToken() string {
+	return j.Token
+}
+
 type BuildTrace interface {
 	io.Writer
 	Success()

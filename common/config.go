@@ -274,6 +274,18 @@ func (c *DockerMachine) CompileOffPeakPeriods() (err error) {
 	return
 }
 
+func (c *RunnerCredentials) GetURL() string {
+	return c.URL
+}
+
+func (c *RunnerCredentials) GetTLSCAFile() string {
+	return c.TLSCAFile
+}
+
+func (c *RunnerCredentials) GetToken() string {
+	return c.Token
+}
+
 func (c *RunnerCredentials) ShortDescription() string {
 	return helpers.ShortenToken(c.Token)
 }

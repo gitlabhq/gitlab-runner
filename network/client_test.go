@@ -57,7 +57,7 @@ func writeTLSCertificate(s *httptest.Server, file string) error {
 }
 
 func TestNewClient(t *testing.T) {
-	c, err := newClient(RunnerCredentials{
+	c, err := newClient(&RunnerCredentials{
 		URL: "http://test.example.com/ci///",
 	})
 	assert.NoError(t, err)
@@ -66,7 +66,7 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestInvalidUrl(t *testing.T) {
-	_, err := newClient(RunnerCredentials{
+	_, err := newClient(&RunnerCredentials{
 		URL: "address.com/ci///",
 	})
 	assert.Error(t, err)
@@ -76,7 +76,7 @@ func TestClientDo(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(clientHandler))
 	defer s.Close()
 
-	c, err := newClient(RunnerCredentials{
+	c, err := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
 	assert.NoError(t, err)
@@ -113,7 +113,7 @@ func TestClientInvalidSSL(t *testing.T) {
 	s := httptest.NewTLSServer(http.HandlerFunc(clientHandler))
 	defer s.Close()
 
-	c, _ := newClient(RunnerCredentials{
+	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
 	statusCode, statusText, _ := c.doJSON("test/ok", "GET", 200, nil, nil)
@@ -133,7 +133,7 @@ func TestClientTLSCAFile(t *testing.T) {
 	err = writeTLSCertificate(s, file.Name())
 	assert.NoError(t, err)
 
-	c, _ := newClient(RunnerCredentials{
+	c, _ := newClient(&RunnerCredentials{
 		URL:       s.URL,
 		TLSCAFile: file.Name(),
 	})
@@ -154,7 +154,7 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 	err = writeTLSCertificate(s, filepath.Join(tempDir, "127.0.0.1.crt"))
 	assert.NoError(t, err)
 
-	c, _ := newClient(RunnerCredentials{
+	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
 	statusCode, statusText, certificates := c.doJSON("test/ok", "GET", 200, nil, nil)
@@ -202,7 +202,7 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(charsetTestClientHandler))
 	defer s.Close()
 
-	c, _ := newClient(RunnerCredentials{
+	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
 

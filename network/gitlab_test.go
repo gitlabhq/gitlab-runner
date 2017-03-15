@@ -26,21 +26,21 @@ var brokenConfig = RunnerConfig{
 
 func TestClients(t *testing.T) {
 	c := NewGitLabClient()
-	c1, _ := c.getClient(RunnerCredentials{
+	c1, _ := c.getClient(&RunnerCredentials{
 		URL: "http://test/",
 	})
-	c2, _ := c.getClient(RunnerCredentials{
+	c2, _ := c.getClient(&RunnerCredentials{
 		URL: "http://test2/",
 	})
-	c4, _ := c.getClient(RunnerCredentials{
+	c4, _ := c.getClient(&RunnerCredentials{
 		URL:       "http://test/",
 		TLSCAFile: "ca_file",
 	})
-	c5, _ := c.getClient(RunnerCredentials{
+	c5, _ := c.getClient(&RunnerCredentials{
 		URL:       "http://test/",
 		TLSCAFile: "ca_file",
 	})
-	c6, c6err := c.getClient(brokenCredentials)
+	c6, c6err := c.getClient(&brokenCredentials)
 	assert.NotEqual(t, c1, c2)
 	assert.NotEqual(t, c1, c4)
 	assert.Equal(t, c4, c5)
@@ -359,11 +359,11 @@ func TestGetBuild(t *testing.T) {
 	}
 	assert.True(t, ok)
 
-	assert.Empty(t, c.getLastUpdate(noBuildsToken.RunnerCredentials), "Last-Update should not be set")
+	assert.Empty(t, c.getLastUpdate(&noBuildsToken.RunnerCredentials), "Last-Update should not be set")
 	res, ok = c.GetBuild(noBuildsToken)
 	assert.Nil(t, res)
 	assert.True(t, ok, "If no builds, runner is healthy")
-	assert.Equal(t, c.getLastUpdate(noBuildsToken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
+	assert.Equal(t, c.getLastUpdate(&noBuildsToken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
 
 	res, ok = c.GetBuild(invalidToken)
 	assert.Nil(t, res)

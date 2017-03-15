@@ -25,6 +25,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
+type requestCredentials interface {
+	GetURL() string
+	GetToken() string
+	GetTLSCAFile() string
+}
+
 var dialer = net.Dialer{
 	Timeout:   30 * time.Second,
 	KeepAlive: 30 * time.Second,
@@ -234,8 +240,8 @@ func fixCIURL(url string) string {
 	return url
 }
 
-func newClient(config common.RunnerCredentials) (c *client, err error) {
-	url, err := url.Parse(fixCIURL(config.URL) + "/api/v4/")
+func newClient(requestCredentials requestCredentials) (c *client, err error) {
+	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
 	if err != nil {
 		return
 	}
@@ -247,7 +253,7 @@ func newClient(config common.RunnerCredentials) (c *client, err error) {
 
 	c = &client{
 		url:    url,
-		caFile: config.TLSCAFile,
+		caFile: requestCredentials.GetTLSCAFile(),
 	}
 
 	if CertificateDirectory != "" && c.caFile == "" {
