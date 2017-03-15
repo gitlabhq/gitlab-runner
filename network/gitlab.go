@@ -378,8 +378,8 @@ func (n *GitLabClient) UploadArtifacts(config common.JobCredentials, artifactsFi
 
 func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {
 	headers := make(http.Header)
-	headers.Set("BUILD-TOKEN", config.Token)
-	res, err := n.doRaw(&config, "GET", fmt.Sprintf("builds/%d/artifacts", config.ID), nil, "", headers)
+	headers.Set("JOB-TOKEN", config.Token)
+	res, err := n.doRaw(&config, "GET", fmt.Sprintf("jobs/%d/artifacts", config.ID), nil, "", headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,

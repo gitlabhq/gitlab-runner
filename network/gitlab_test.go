@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -686,4 +687,66 @@ func TestArtifactsUpload(t *testing.T) {
 
 	state = c.UploadArtifacts(invalidToken, tempFile.Name())
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
+}
+
+func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
+		w.WriteHeader(404)
+		return
+	}
+
+	if r.Method != "GET" {
+		w.WriteHeader(406)
+		return
+	}
+
+	if r.Header.Get("JOB-TOKEN") != "token" {
+		w.WriteHeader(403)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes.NewBufferString("Test artifact file content").Bytes())
+}
+
+func TestArtifactsDownload(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testArtifactsDownloadHandler(w, r, t)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	credentials := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "token",
+	}
+	invalidTokenCredentials := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "invalid-token",
+	}
+	fileNotFoundTokenCredentials := JobCredentials{
+		ID:    11,
+		URL:   s.URL,
+		Token: "token",
+	}
+
+	c := NewGitLabClient()
+
+	tempDir, err := ioutil.TempDir("", "artifacts")
+	assert.NoError(t, err)
+
+	artifactsFileName := filepath.Join(tempDir, "downloaded-artifact")
+	defer os.Remove(artifactsFileName)
+
+	state := c.DownloadArtifacts(credentials, artifactsFileName)
+	assert.Equal(t, DownloadSucceeded, state, "Artifacts should be downloaded")
+
+	state = c.DownloadArtifacts(invalidTokenCredentials, artifactsFileName)
+	assert.Equal(t, DownloadForbidden, state, "Artifacts should be not downloaded if invalid token is used")
+
+	state = c.DownloadArtifacts(fileNotFoundTokenCredentials, artifactsFileName)
+	assert.Equal(t, DownloadNotFound, state, "Artifacts should be bit downloaded if it's not found")
 }
