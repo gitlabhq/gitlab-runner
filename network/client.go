@@ -228,14 +228,14 @@ func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
 
 func fixCIURL(url string) string {
 	url = strings.TrimRight(url, "/")
-	if !strings.HasSuffix(url, "/ci") {
-		url += "/ci"
+	if strings.HasSuffix(url, "/ci") {
+		url = strings.TrimSuffix(url, "/ci")
 	}
 	return url
 }
 
 func newClient(config common.RunnerCredentials) (c *client, err error) {
-	url, err := url.Parse(fixCIURL(config.URL) + "/api/v1/")
+	url, err := url.Parse(fixCIURL(config.URL) + "/api/v4/")
 	if err != nil {
 		return
 	}

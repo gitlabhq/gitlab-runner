@@ -25,10 +25,10 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		"Body:", string(body))
 
 	switch r.URL.Path {
-	case "/ci/api/v1/test/ok":
-	case "/ci/api/v1/test/auth":
+	case "/api/v4/test/ok":
+	case "/api/v4/test/auth":
 		w.WriteHeader(403)
-	case "/ci/api/v1/test/json":
+	case "/api/v4/test/json":
 		if r.Header.Get("Content-Type") != "application/json" {
 			w.WriteHeader(400)
 		} else if r.Header.Get("Accept") != "application/json" {
@@ -62,7 +62,7 @@ func TestNewClient(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
-	assert.Equal(t, "http://test.example.com/ci/api/v1/", c.url.String())
+	assert.Equal(t, "http://test.example.com/api/v4/", c.url.String())
 }
 
 func TestInvalidUrl(t *testing.T) {
@@ -163,35 +163,35 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 }
 
 func TestUrlFixing(t *testing.T) {
-	assert.Equal(t, "https://gitlab.example.com/ci", fixCIURL("https://gitlab.example.com/ci///"))
-	assert.Equal(t, "https://gitlab.example.com/ci", fixCIURL("https://gitlab.example.com/ci/"))
-	assert.Equal(t, "https://gitlab.example.com/ci", fixCIURL("https://gitlab.example.com/ci"))
-	assert.Equal(t, "https://gitlab.example.com/ci", fixCIURL("https://gitlab.example.com/"))
-	assert.Equal(t, "https://gitlab.example.com/ci", fixCIURL("https://gitlab.example.com///"))
-	assert.Equal(t, "https://gitlab.example.com/ci", fixCIURL("https://gitlab.example.com"))
-	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab/ci/"))
-	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab/ci///"))
-	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab/ci"))
-	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab/"))
-	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab///"))
-	assert.Equal(t, "https://example.com/gitlab/ci", fixCIURL("https://example.com/gitlab"))
+	assert.Equal(t, "https://gitlab.example.com", fixCIURL("https://gitlab.example.com/ci///"))
+	assert.Equal(t, "https://gitlab.example.com", fixCIURL("https://gitlab.example.com/ci/"))
+	assert.Equal(t, "https://gitlab.example.com", fixCIURL("https://gitlab.example.com/ci"))
+	assert.Equal(t, "https://gitlab.example.com", fixCIURL("https://gitlab.example.com/"))
+	assert.Equal(t, "https://gitlab.example.com", fixCIURL("https://gitlab.example.com///"))
+	assert.Equal(t, "https://gitlab.example.com", fixCIURL("https://gitlab.example.com"))
+	assert.Equal(t, "https://example.com/gitlab", fixCIURL("https://example.com/gitlab/ci/"))
+	assert.Equal(t, "https://example.com/gitlab", fixCIURL("https://example.com/gitlab/ci///"))
+	assert.Equal(t, "https://example.com/gitlab", fixCIURL("https://example.com/gitlab/ci"))
+	assert.Equal(t, "https://example.com/gitlab", fixCIURL("https://example.com/gitlab/"))
+	assert.Equal(t, "https://example.com/gitlab", fixCIURL("https://example.com/gitlab///"))
+	assert.Equal(t, "https://example.com/gitlab", fixCIURL("https://example.com/gitlab"))
 }
 
 func charsetTestClientHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
-	case "/ci/api/v1/with-charset":
+	case "/api/v4/with-charset":
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
 		fmt.Fprint(w, "{\"key\":\"value\"}")
-	case "/ci/api/v1/without-charset":
+	case "/api/v4/without-charset":
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		fmt.Fprint(w, "{\"key\":\"value\"}")
-	case "/ci/api/v1/without-json":
+	case "/api/v4/without-json":
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.WriteHeader(200)
 		fmt.Fprint(w, "{\"key\":\"value\"}")
-	case "/ci/api/v1/invalid-header":
+	case "/api/v4/invalid-header":
 		w.Header().Set("Content-Type", "application/octet-stream, test, a=b")
 		w.WriteHeader(200)
 		fmt.Fprint(w, "{\"key\":\"value\"}")
