@@ -375,36 +375,40 @@ func TestRequestJob(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestUpdateBuild(t *testing.T) {
+func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/jobs/10" {
+		w.WriteHeader(404)
+		return
+	}
+
+	if r.Method != "PUT" {
+		w.WriteHeader(406)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	assert.NoError(t, err)
+
+	var req map[string]interface{}
+	err = json.Unmarshal(body, &req)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "token", req["token"])
+	assert.Equal(t, "trace", req["trace"])
+
+	switch req["state"].(string) {
+	case "running":
+		w.WriteHeader(200)
+	case "forbidden":
+		w.WriteHeader(403)
+	default:
+		w.WriteHeader(400)
+	}
+}
+
+func TestUpdateJob(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/ci/api/v1/builds/10.json" {
-			w.WriteHeader(404)
-			return
-		}
-
-		if r.Method != "PUT" {
-			w.WriteHeader(406)
-			return
-		}
-
-		body, err := ioutil.ReadAll(r.Body)
-		assert.NoError(t, err)
-
-		var req map[string]interface{}
-		err = json.Unmarshal(body, &req)
-		assert.NoError(t, err)
-
-		assert.Equal(t, "token", req["token"])
-		assert.Equal(t, "trace", req["trace"])
-
-		switch req["state"].(string) {
-		case "running":
-			w.WriteHeader(200)
-		case "forbidden":
-			w.WriteHeader(403)
-		default:
-			w.WriteHeader(400)
-		}
+		testUpdateJobHandler(w, r, t)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
@@ -420,19 +424,19 @@ func TestUpdateBuild(t *testing.T) {
 	trace := "trace"
 	c := NewGitLabClient()
 
-	state := c.UpdateBuild(config, 10, "running", &trace)
+	state := c.UpdateJob(config, 10, "running", &trace)
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateBuild(config, 10, "forbidden", &trace)
+	state = c.UpdateJob(config, 10, "forbidden", &trace)
 	assert.Equal(t, UpdateAbort, state, "Update should if the state is forbidden")
 
-	state = c.UpdateBuild(config, 10, "other", &trace)
+	state = c.UpdateJob(config, 10, "other", &trace)
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
-	state = c.UpdateBuild(config, 4, "state", &trace)
+	state = c.UpdateJob(config, 4, "state", &trace)
 	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown build")
 
-	state = c.UpdateBuild(brokenConfig, 4, "state", &trace)
+	state = c.UpdateJob(brokenConfig, 4, "state", &trace)
 	assert.Equal(t, UpdateAbort, state)
 }
 

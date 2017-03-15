@@ -177,7 +177,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	switch result {
 	case 201:
 		config.Log().WithFields(logrus.Fields{
-			"job":    strconv.Itoa(response.ID),
+			"job":      strconv.Itoa(response.ID),
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
 		response.TLSCAChain = certificates
@@ -197,32 +197,32 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	}
 }
 
-func (n *GitLabClient) UpdateBuild(config common.RunnerConfig, id int, state common.BuildState, trace *string) common.UpdateState {
-	request := common.UpdateBuildRequest{
+func (n *GitLabClient) UpdateJob(config common.RunnerConfig, id int, state common.JobState, trace *string) common.UpdateState {
+	request := common.UpdateJobRequest{
 		Info:  n.getRunnerVersion(config),
 		Token: config.Token,
 		State: state,
 		Trace: trace,
 	}
 
-	log := config.Log().WithField("build", id)
+	log := config.Log().WithField("job", id)
 
-	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("builds/%d.json", id), 200, &request, nil)
+	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", id), 200, &request, nil)
 	switch result {
 	case 200:
-		log.Debugln("Submitting build to coordinator...", "ok")
+		log.Debugln("Submitting job to coordinator...", "ok")
 		return common.UpdateSucceeded
 	case 404:
-		log.Warningln("Submitting build to coordinator...", "aborted")
+		log.Warningln("Submitting job to coordinator...", "aborted")
 		return common.UpdateAbort
 	case 403:
-		log.WithField("status", statusText).Errorln("Submitting build to coordinator...", "forbidden")
+		log.WithField("status", statusText).Errorln("Submitting job to coordinator...", "forbidden")
 		return common.UpdateAbort
 	case clientError:
-		log.WithField("status", statusText).Errorln("Submitting build to coordinator...", "error")
+		log.WithField("status", statusText).Errorln("Submitting job to coordinator...", "error")
 		return common.UpdateAbort
 	default:
-		log.WithField("status", statusText).Warningln("Submitting build to coordinator...", "failed")
+		log.WithField("status", statusText).Warningln("Submitting job to coordinator...", "failed")
 		return common.UpdateFailed
 	}
 }

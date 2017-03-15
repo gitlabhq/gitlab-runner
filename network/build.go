@@ -74,12 +74,12 @@ type clientBuildTrace struct {
 
 	log      bytes.Buffer
 	lock     sync.RWMutex
-	state    common.BuildState
+	state    common.JobState
 	finished chan bool
 
 	sentTrace int
 	sentTime  time.Time
-	sentState common.BuildState
+	sentState common.JobState
 }
 
 func (c *clientBuildTrace) Success() {
@@ -214,7 +214,7 @@ func (c *clientBuildTrace) incrementalUpdate() common.UpdateState {
 	}
 
 	if c.sentState != state {
-		c.client.UpdateBuild(c.config, c.id, state, nil)
+		c.client.UpdateJob(c.config, c.id, state, nil)
 		c.sentState = state
 	}
 
@@ -245,7 +245,7 @@ func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, build
 		config.Log().Warningln(id, "Full build update is needed")
 		fullTrace := c.log.String()
 
-		return c.client.UpdateBuild(c.config, c.id, c.state, &fullTrace)
+		return c.client.UpdateJob(c.config, c.id, c.state, &fullTrace)
 	}
 
 	config.Log().Warningln(id, "Resending trace patch due to range mismatch")
@@ -272,7 +272,7 @@ func (c *clientBuildTrace) staleUpdate() common.UpdateState {
 		return common.UpdateSucceeded
 	}
 
-	upload := c.client.UpdateBuild(c.config, c.id, state, &trace)
+	upload := c.client.UpdateJob(c.config, c.id, state, &trace)
 	if upload == common.UpdateSucceeded {
 		c.sentTrace = len(trace)
 		c.sentState = state

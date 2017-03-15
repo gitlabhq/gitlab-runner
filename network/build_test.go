@@ -20,12 +20,12 @@ var buildOutputLimit = common.RunnerConfig{OutputLimit: 1}
 
 type updateTraceNetwork struct {
 	common.MockNetwork
-	state common.BuildState
+	state common.JobState
 	trace *string
 	count int
 }
 
-func (m *updateTraceNetwork) UpdateBuild(config common.RunnerConfig, id int, state common.BuildState, trace *string) common.UpdateState {
+func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, id int, state common.JobState, trace *string) common.UpdateState {
 	switch id {
 	case successID:
 		m.count++

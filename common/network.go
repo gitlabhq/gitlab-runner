@@ -9,13 +9,13 @@ import (
 type UpdateState int
 type UploadState int
 type DownloadState int
-type BuildState string
+type JobState string
 
 const (
-	Pending BuildState = "pending"
-	Running            = "running"
-	Failed             = "failed"
-	Success            = "success"
+	Pending JobState = "pending"
+	Running          = "running"
+	Failed           = "failed"
+	Success          = "success"
 )
 
 const (
@@ -134,10 +134,10 @@ func (b *JobResponse) RepoCleanURL() (ret string) {
 	return url_helpers.CleanURL(b.RepoURL)
 }
 
-type UpdateBuildRequest struct {
+type UpdateJobRequest struct {
 	Info  VersionInfo `json:"info,omitempty"`
 	Token string      `json:"token,omitempty"`
-	State BuildState  `json:"state,omitempty"`
+	State JobState    `json:"state,omitempty"`
 	Trace *string     `json:"trace,omitempty"`
 }
 
@@ -181,7 +181,7 @@ type Network interface {
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig) (*JobResponse, bool)
-	UpdateBuild(config RunnerConfig, id int, state BuildState, trace *string) UpdateState
+	UpdateJob(config RunnerConfig, id int, state JobState, trace *string) UpdateState
 	PatchTrace(config RunnerConfig, buildCredentials *JobCredentials, tracePart BuildTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
