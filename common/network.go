@@ -119,17 +119,18 @@ type RegisterRunnerRequest struct {
 	Description string      `json:"description,omitempty"`
 	Tags        string      `json:"tag_list,omitempty"`
 	RunUntagged bool        `json:"run_untagged"`
+	Locked      bool        `json:"locked"`
 }
 
 type RegisterRunnerResponse struct {
 	Token string `json:"token,omitempty"`
 }
 
-type DeleteRunnerRequest struct {
+type VerifyRunnerRequest struct {
 	Token string `json:"token,omitempty"`
 }
 
-type VerifyRunnerRequest struct {
+type UnregisterRunnerRequest struct {
 	Token string `json:"token,omitempty"`
 }
 
@@ -164,10 +165,10 @@ type BuildTracePatch interface {
 }
 
 type Network interface {
-	GetBuild(config RunnerConfig) (*GetBuildResponse, bool)
-	RegisterRunner(config RunnerCredentials, description, tags string, runUntagged bool) *RegisterRunnerResponse
-	DeleteRunner(config RunnerCredentials) bool
+	RegisterRunner(config RunnerCredentials, description, tags string, runUntagged, locked bool) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool
+	UnregisterRunner(config RunnerCredentials) bool
+	GetBuild(config RunnerConfig) (*GetBuildResponse, bool)
 	UpdateBuild(config RunnerConfig, id int, state BuildState, trace *string) UpdateState
 	PatchTrace(config RunnerConfig, buildCredentials *BuildCredentials, tracePart BuildTracePatch) UpdateState
 	DownloadArtifacts(config BuildCredentials, artifactsFile string) DownloadState

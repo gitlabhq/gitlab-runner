@@ -87,6 +87,84 @@ func (n *GitLabClient) doJSON(runner common.RunnerCredentials, method, uri strin
 	return c.doJSON(uri, method, statusCode, request, response)
 }
 
+func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged, locked bool) *common.RegisterRunnerResponse {
+	// TODO: pass executor
+	request := common.RegisterRunnerRequest{
+		Token:       runner.Token,
+		Description: description,
+		Info:        n.getRunnerVersion(common.RunnerConfig{}),
+		Locked:      locked,
+		RunUntagged: runUntagged,
+		Tags:        tags,
+	}
+
+	var response common.RegisterRunnerResponse
+	result, statusText, _ := n.doJSON(runner, "POST", "runners", 201, &request, &response)
+
+	switch result {
+	case 201:
+		runner.Log().Println("Registering runner...", "succeeded")
+		return &response
+	case 403:
+		runner.Log().Errorln("Registering runner...", "forbidden (check registration token)")
+		return nil
+	case clientError:
+		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "error")
+		return nil
+	default:
+		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "failed")
+		return nil
+	}
+}
+
+func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
+	request := common.VerifyRunnerRequest{
+		Token: runner.Token,
+	}
+
+	// HACK: we use non-existing build id to check if receive forbidden or not found
+	result, statusText, _ := n.doJSON(runner, "POST", "runners/verify", 200, &request, nil)
+
+	switch result {
+	case 200:
+		// this is expected due to fact that we ask for non-existing job
+		runner.Log().Println("Verifying runner...", "is alive")
+		return true
+	case 403:
+		runner.Log().Errorln("Verifying runner...", "is removed")
+		return false
+	case clientError:
+		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "error")
+		return false
+	default:
+		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "failed")
+		return true
+	}
+}
+
+func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
+	request := common.UnregisterRunnerRequest{
+		Token: runner.Token,
+	}
+
+	result, statusText, _ := n.doJSON(runner, "DELETE", "runners", 200, &request, nil)
+
+	switch result {
+	case 204:
+		runner.Log().Println("Deleting runner...", "succeeded")
+		return true
+	case 403:
+		runner.Log().Errorln("Deleting runner...", "forbidden")
+		return false
+	case clientError:
+		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "error")
+		return false
+	default:
+		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "failed")
+		return false
+	}
+}
+
 func (n *GitLabClient) GetBuild(config common.RunnerConfig) (*common.GetBuildResponse, bool) {
 	request := common.GetBuildRequest{
 		Info:       n.getRunnerVersion(config),
@@ -117,83 +195,6 @@ func (n *GitLabClient) GetBuild(config common.RunnerConfig) (*common.GetBuildRes
 	default:
 		config.Log().WithField("status", statusText).Warningln("Checking for builds...", "failed")
 		return nil, true
-	}
-}
-
-func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged bool) *common.RegisterRunnerResponse {
-	// TODO: pass executor
-	request := common.RegisterRunnerRequest{
-		Info:        n.getRunnerVersion(common.RunnerConfig{}),
-		Token:       runner.Token,
-		Description: description,
-		Tags:        tags,
-		RunUntagged: runUntagged,
-	}
-
-	var response common.RegisterRunnerResponse
-	result, statusText, _ := n.doJSON(runner, "POST", "runners/register.json", 201, &request, &response)
-
-	switch result {
-	case 201:
-		runner.Log().Println("Registering runner...", "succeeded")
-		return &response
-	case 403:
-		runner.Log().Errorln("Registering runner...", "forbidden (check registration token)")
-		return nil
-	case clientError:
-		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "error")
-		return nil
-	default:
-		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "failed")
-		return nil
-	}
-}
-
-func (n *GitLabClient) DeleteRunner(runner common.RunnerCredentials) bool {
-	request := common.DeleteRunnerRequest{
-		Token: runner.Token,
-	}
-
-	result, statusText, _ := n.doJSON(runner, "DELETE", "runners/delete", 200, &request, nil)
-
-	switch result {
-	case 200:
-		runner.Log().Println("Deleting runner...", "succeeded")
-		return true
-	case 403:
-		runner.Log().Errorln("Deleting runner...", "forbidden")
-		return false
-	case clientError:
-		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "error")
-		return false
-	default:
-		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "failed")
-		return false
-	}
-}
-
-func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
-	request := common.VerifyRunnerRequest{
-		Token: runner.Token,
-	}
-
-	// HACK: we use non-existing build id to check if receive forbidden or not found
-	result, statusText, _ := n.doJSON(runner, "PUT", fmt.Sprintf("builds/%d", -1), 200, &request, nil)
-
-	switch result {
-	case 404:
-		// this is expected due to fact that we ask for non-existing job
-		runner.Log().Println("Verifying runner...", "is alive")
-		return true
-	case 403:
-		runner.Log().Errorln("Verifying runner...", "is removed")
-		return false
-	case clientError:
-		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "error")
-		return false
-	default:
-		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "failed")
-		return true
 	}
 }
 
@@ -444,9 +445,5 @@ func (n *GitLabClient) ProcessBuild(config common.RunnerConfig, buildCredentials
 }
 
 func NewGitLabClient() *GitLabClient {
-	return &GitLabClient{}
-}
-
-func NewLegacyGitLabClient() *GitLabClient {
 	return &GitLabClient{}
 }

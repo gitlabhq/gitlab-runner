@@ -25,7 +25,7 @@ var brokenConfig = RunnerConfig{
 }
 
 func TestClients(t *testing.T) {
-	c := NewLegacyGitLabClient()
+	c := NewGitLabClient()
 	c1, _ := c.getClient(RunnerCredentials{
 		URL: "http://test/",
 	})
@@ -46,6 +46,231 @@ func TestClients(t *testing.T) {
 	assert.Equal(t, c4, c5)
 	assert.Nil(t, c6)
 	assert.Error(t, c6err)
+}
+
+func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/runners" {
+		w.WriteHeader(404)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(406)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	assert.NoError(t, err)
+
+	var req map[string]interface{}
+	err = json.Unmarshal(body, &req)
+	assert.NoError(t, err)
+
+	res := make(map[string]interface{})
+
+	switch req["token"].(string) {
+	case "valid":
+		if req["description"].(string) != "test" {
+			w.WriteHeader(400)
+			return
+		}
+
+		res["token"] = req["token"].(string)
+	case "invalid":
+		w.WriteHeader(403)
+		return
+	default:
+		w.WriteHeader(400)
+		return
+	}
+
+	if r.Header.Get("Accept") != "application/json" {
+		w.WriteHeader(400)
+		return
+	}
+
+	output, err := json.Marshal(res)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	w.Write(output)
+}
+
+func TestRegisterRunner(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		testRegisterRunnerHandler(w, r, t)
+	}))
+	defer s.Close()
+
+	validToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "valid",
+	}
+
+	invalidToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "invalid",
+	}
+
+	otherToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "other",
+	}
+
+	c := NewGitLabClient()
+
+	res := c.RegisterRunner(validToken, "test", "tags", true, true)
+	if assert.NotNil(t, res) {
+		assert.Equal(t, validToken.Token, res.Token)
+	}
+
+	res = c.RegisterRunner(validToken, "invalid description", "tags", true, true)
+	assert.Nil(t, res)
+
+	res = c.RegisterRunner(invalidToken, "test", "tags", true, true)
+	assert.Nil(t, res)
+
+	res = c.RegisterRunner(otherToken, "test", "tags", true, true)
+	assert.Nil(t, res)
+
+	res = c.RegisterRunner(brokenCredentials, "test", "tags", true, true)
+	assert.Nil(t, res)
+}
+
+func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/runners" {
+		w.WriteHeader(404)
+		return
+	}
+
+	if r.Method != "DELETE" {
+		w.WriteHeader(406)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	assert.NoError(t, err)
+
+	var req map[string]interface{}
+	err = json.Unmarshal(body, &req)
+	assert.NoError(t, err)
+
+	switch req["token"].(string) {
+	case "valid":
+		w.WriteHeader(204)
+	case "invalid":
+		w.WriteHeader(403)
+	default:
+		w.WriteHeader(400)
+	}
+}
+
+func TestUnregisterRunner(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testUnregisterRunnerHandler(w, r, t)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	validToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "valid",
+	}
+
+	invalidToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "invalid",
+	}
+
+	otherToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "other",
+	}
+
+	c := NewGitLabClient()
+
+	state := c.UnregisterRunner(validToken)
+	assert.True(t, state)
+
+	state = c.UnregisterRunner(invalidToken)
+	assert.False(t, state)
+
+	state = c.UnregisterRunner(otherToken)
+	assert.False(t, state)
+
+	state = c.UnregisterRunner(brokenCredentials)
+	assert.False(t, state)
+}
+
+func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/runners/verify" {
+		w.WriteHeader(404)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(406)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	assert.NoError(t, err)
+
+	var req map[string]interface{}
+	err = json.Unmarshal(body, &req)
+	assert.NoError(t, err)
+
+	switch req["token"].(string) {
+	case "valid":
+		w.WriteHeader(200) // since the build id is broken, we should not find this build
+	case "invalid":
+		w.WriteHeader(403)
+	default:
+		w.WriteHeader(400)
+	}
+}
+
+func TestVerifyRunner(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testVerifyRunnerHandler(w, r, t)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	validToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "valid",
+	}
+
+	invalidToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "invalid",
+	}
+
+	otherToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "other",
+	}
+
+	c := NewGitLabClient()
+
+	state := c.VerifyRunner(validToken)
+	assert.True(t, state)
+
+	state = c.VerifyRunner(invalidToken)
+	assert.False(t, state)
+
+	state = c.VerifyRunner(otherToken)
+	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
+
+	state = c.VerifyRunner(brokenCredentials)
+	assert.False(t, state)
 }
 
 func testGetBuildHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
@@ -126,7 +351,7 @@ func TestGetBuild(t *testing.T) {
 		},
 	}
 
-	c := NewLegacyGitLabClient()
+	c := NewGitLabClient()
 
 	res, ok := c.GetBuild(validToken)
 	if assert.NotNil(t, res) {
@@ -147,223 +372,6 @@ func TestGetBuild(t *testing.T) {
 	res, ok = c.GetBuild(brokenConfig)
 	assert.Nil(t, res)
 	assert.False(t, ok)
-}
-
-func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
-	if r.URL.Path != "/ci/api/v1/runners/register.json" {
-		w.WriteHeader(404)
-		return
-	}
-
-	if r.Method != "POST" {
-		w.WriteHeader(406)
-		return
-	}
-
-	body, err := ioutil.ReadAll(r.Body)
-	assert.NoError(t, err)
-
-	var req map[string]interface{}
-	err = json.Unmarshal(body, &req)
-	assert.NoError(t, err)
-
-	res := make(map[string]interface{})
-
-	switch req["token"].(string) {
-	case "valid":
-		if req["description"].(string) != "test" {
-			w.WriteHeader(400)
-			return
-		}
-
-		res["token"] = req["token"].(string)
-	case "invalid":
-		w.WriteHeader(403)
-		return
-	default:
-		w.WriteHeader(400)
-		return
-	}
-
-	if r.Header.Get("Accept") != "application/json" {
-		w.WriteHeader(400)
-		return
-	}
-
-	output, err := json.Marshal(res)
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	w.Write(output)
-}
-
-func TestRegisterRunner(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testRegisterRunnerHandler(w, r, t)
-	}))
-	defer s.Close()
-
-	validToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "valid",
-	}
-
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "invalid",
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
-	}
-
-	c := NewLegacyGitLabClient()
-
-	res := c.RegisterRunner(validToken, "test", "tags", true)
-	if assert.NotNil(t, res) {
-		assert.Equal(t, validToken.Token, res.Token)
-	}
-
-	res = c.RegisterRunner(validToken, "invalid description", "tags", true)
-	assert.Nil(t, res)
-
-	res = c.RegisterRunner(invalidToken, "test", "tags", true)
-	assert.Nil(t, res)
-
-	res = c.RegisterRunner(otherToken, "test", "tags", true)
-	assert.Nil(t, res)
-
-	res = c.RegisterRunner(brokenCredentials, "test", "tags", true)
-	assert.Nil(t, res)
-}
-
-func TestDeleteRunner(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/ci/api/v1/runners/delete" {
-			w.WriteHeader(404)
-			return
-		}
-
-		if r.Method != "DELETE" {
-			w.WriteHeader(406)
-			return
-		}
-
-		body, err := ioutil.ReadAll(r.Body)
-		assert.NoError(t, err)
-
-		var req map[string]interface{}
-		err = json.Unmarshal(body, &req)
-		assert.NoError(t, err)
-
-		switch req["token"].(string) {
-		case "valid":
-			w.WriteHeader(200)
-		case "invalid":
-			w.WriteHeader(403)
-		default:
-			w.WriteHeader(400)
-		}
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
-	defer s.Close()
-
-	validToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "valid",
-	}
-
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "invalid",
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
-	}
-
-	c := NewLegacyGitLabClient()
-
-	state := c.DeleteRunner(validToken)
-	assert.True(t, state)
-
-	state = c.DeleteRunner(invalidToken)
-	assert.False(t, state)
-
-	state = c.DeleteRunner(otherToken)
-	assert.False(t, state)
-
-	state = c.DeleteRunner(brokenCredentials)
-	assert.False(t, state)
-}
-
-func TestVerifyRunner(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/ci/api/v1/builds/-1" {
-			w.WriteHeader(404)
-			return
-		}
-
-		if r.Method != "PUT" {
-			w.WriteHeader(406)
-			return
-		}
-
-		body, err := ioutil.ReadAll(r.Body)
-		assert.NoError(t, err)
-
-		var req map[string]interface{}
-		err = json.Unmarshal(body, &req)
-		assert.NoError(t, err)
-
-		switch req["token"].(string) {
-		case "valid":
-			w.WriteHeader(404) // since the build id is broken, we should not find this build
-		case "invalid":
-			w.WriteHeader(403)
-		default:
-			w.WriteHeader(400)
-		}
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
-	defer s.Close()
-
-	validToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "valid",
-	}
-
-	invalidToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "invalid",
-	}
-
-	otherToken := RunnerCredentials{
-		URL:   s.URL,
-		Token: "other",
-	}
-
-	c := NewLegacyGitLabClient()
-
-	state := c.VerifyRunner(validToken)
-	assert.True(t, state)
-
-	state = c.VerifyRunner(invalidToken)
-	assert.False(t, state)
-
-	state = c.VerifyRunner(otherToken)
-	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
-
-	state = c.VerifyRunner(brokenCredentials)
-	assert.False(t, state)
 }
 
 func TestUpdateBuild(t *testing.T) {
@@ -409,7 +417,7 @@ func TestUpdateBuild(t *testing.T) {
 	}
 
 	trace := "trace"
-	c := NewLegacyGitLabClient()
+	c := NewGitLabClient()
 
 	state := c.UpdateBuild(config, 10, "running", &trace)
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
@@ -479,7 +487,7 @@ func TestArtifactsUpload(t *testing.T) {
 	defer tempFile.Close()
 	defer os.Remove(tempFile.Name())
 
-	c := NewLegacyGitLabClient()
+	c := NewGitLabClient()
 
 	fmt.Fprint(tempFile, "content")
 	state := c.UploadArtifacts(config, tempFile.Name())
@@ -531,7 +539,7 @@ func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Re
 		},
 	}
 
-	return server, NewLegacyGitLabClient(), config
+	return server, NewGitLabClient(), config
 }
 
 func getTracePatch(traceString string, offset int) *tracePatch {

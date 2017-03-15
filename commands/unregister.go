@@ -33,7 +33,7 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 		c.RunnerCredentials = runnerConfig.RunnerCredentials
 	}
 
-	if !c.network.DeleteRunner(c.RunnerCredentials) {
+	if !c.network.UnregisterRunner(c.RunnerCredentials) {
 		log.Fatalln("Failed to delete runner", c.Name)
 		return
 	}

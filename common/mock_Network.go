@@ -8,6 +8,30 @@ type MockNetwork struct {
 	mock.Mock
 }
 
+func (m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string, runUntagged, locked bool) *RegisterRunnerResponse {
+	ret := m.Called(config, description, tags, runUntagged, locked)
+
+	var r0 *RegisterRunnerResponse
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).(*RegisterRunnerResponse)
+	}
+
+	return r0
+}
+func (m *MockNetwork) VerifyRunner(config RunnerCredentials) bool {
+	ret := m.Called(config)
+
+	r0 := ret.Get(0).(bool)
+
+	return r0
+}
+func (m *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
+	ret := m.Called(config)
+
+	r0 := ret.Get(0).(bool)
+
+	return r0
+}
 func (m *MockNetwork) GetBuild(config RunnerConfig) (*GetBuildResponse, bool) {
 	ret := m.Called(config)
 
@@ -18,30 +42,6 @@ func (m *MockNetwork) GetBuild(config RunnerConfig) (*GetBuildResponse, bool) {
 	r1 := ret.Get(1).(bool)
 
 	return r0, r1
-}
-func (m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string, runUntagged bool) *RegisterRunnerResponse {
-	ret := m.Called(config, description, tags, runUntagged)
-
-	var r0 *RegisterRunnerResponse
-	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*RegisterRunnerResponse)
-	}
-
-	return r0
-}
-func (m *MockNetwork) DeleteRunner(config RunnerCredentials) bool {
-	ret := m.Called(config)
-
-	r0 := ret.Get(0).(bool)
-
-	return r0
-}
-func (m *MockNetwork) VerifyRunner(config RunnerCredentials) bool {
-	ret := m.Called(config)
-
-	r0 := ret.Get(0).(bool)
-
-	return r0
 }
 func (m *MockNetwork) UpdateBuild(config RunnerConfig, id int, state BuildState, trace *string) UpdateState {
 	ret := m.Called(config, id, state, trace)

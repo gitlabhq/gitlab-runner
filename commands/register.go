@@ -27,6 +27,7 @@ type RegisterCommand struct {
 	LeaveRunner       bool   `long:"leave-runner" env:"REGISTER_LEAVE_RUNNER" description:"Don't remove runner if registration fails"`
 	RegistrationToken string `short:"r" long:"registration-token" env:"REGISTRATION_TOKEN" description:"Runner's registration token"`
 	RunUntagged       bool   `long:"run-untagged" env:"REGISTER_RUN_UNTAGGED" description:"Register to run untagged builds; defaults to 'true' when 'tag-list' is empty"`
+	Locked            bool   `long:"locked" env:"REGISTER_LOCKED" description:"Lock Runner for current project, defaults to 'false'"`
 
 	common.RunnerConfig
 }
@@ -156,7 +157,12 @@ func (s *RegisterCommand) askRunner() {
 			}
 		}
 
-		result := s.network.RegisterRunner(s.RunnerCredentials, s.Name, s.TagList, s.RunUntagged)
+		locked, err := strconv.ParseBool(s.ask("locked", "Whether to lock Runner to current project [true/false]:", false))
+		if err != nil {
+			log.Panicf("Failed to parse option 'locked': %v", err)
+		}
+
+		result := s.network.RegisterRunner(s.RunnerCredentials, s.Name, s.TagList, s.RunUntagged, locked)
 		if result == nil {
 			log.Panicln("Failed to register this runner. Perhaps you are having network problems")
 		}
@@ -234,7 +240,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 			// De-register runner on panic
 			if r := recover(); r != nil {
 				if s.registered {
-					s.network.DeleteRunner(s.RunnerCredentials)
+					s.network.UnregisterRunner(s.RunnerCredentials)
 				}
 
 				// pass panic to next defer
@@ -247,7 +253,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 
 		go func() {
 			signal := <-signals
-			s.network.DeleteRunner(s.RunnerCredentials)
+			s.network.UnregisterRunner(s.RunnerCredentials)
 			log.Fatalf("RECEIVED SIGNAL: %v", signal)
 		}()
 	}
