@@ -117,23 +117,23 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	defer mr.buildsHelper.release(runner)
 
 	// Receive a new build
-	buildData, healthy := mr.network.RequestJob(*runner)
+	jobData, healthy := mr.network.RequestJob(*runner)
 	mr.makeHealthy(runner.UniqueID(), healthy)
-	if buildData == nil {
+	if jobData == nil {
 		return
 	}
 
 	// Make sure to always close output
-	buildCredentials := &common.JobCredentials{
-		ID:    buildData.ID,
-		Token: buildData.Token,
+	jobCredentials := &common.JobCredentials{
+		ID:    jobData.ID,
+		Token: jobData.Token,
 	}
-	trace := mr.network.ProcessBuild(*runner, buildCredentials)
+	trace := mr.network.ProcessJob(*runner, jobCredentials)
 	defer trace.Fail(err)
 
 	// Create a new build
 	build := &common.Build{
-		JobResponse:     *buildData,
+		JobResponse:     *jobData,
 		Runner:          runner,
 		ExecutorData:    context,
 		SystemInterrupt: mr.abortBuilds,

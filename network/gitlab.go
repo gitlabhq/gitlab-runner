@@ -424,8 +424,8 @@ func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifacts
 	}
 }
 
-func (n *GitLabClient) ProcessBuild(config common.RunnerConfig, buildCredentials *common.JobCredentials) common.BuildTrace {
-	trace := newBuildTrace(n, config, buildCredentials)
+func (n *GitLabClient) ProcessJob(config common.RunnerConfig, jobCredentials *common.JobCredentials) common.JobTrace {
+	trace := newJobTrace(n, config, jobCredentials)
 	trace.start()
 	return trace
 }

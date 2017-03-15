@@ -228,7 +228,7 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.
 
 	switch req["token"].(string) {
 	case "valid":
-		w.WriteHeader(200) // since the build id is broken, we should not find this build
+		w.WriteHeader(200) // since the job id is broken, we should not find this job
 	case "invalid":
 		w.WriteHeader(403)
 	default:
@@ -297,7 +297,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 	switch req["token"].(string) {
 	case "valid":
 		res["id"] = 10
-	case "no-builds":
+	case "no-jobs":
 		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
 		w.WriteHeader(404)
 		return
@@ -338,10 +338,10 @@ func TestRequestJob(t *testing.T) {
 		},
 	}
 
-	noBuildsToken := RunnerConfig{
+	noJobsTOken := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
 			URL:   s.URL,
-			Token: "no-builds",
+			Token: "no-jobs",
 		},
 	}
 
@@ -360,11 +360,11 @@ func TestRequestJob(t *testing.T) {
 	}
 	assert.True(t, ok)
 
-	assert.Empty(t, c.getLastUpdate(&noBuildsToken.RunnerCredentials), "Last-Update should not be set")
-	res, ok = c.RequestJob(noBuildsToken)
+	assert.Empty(t, c.getLastUpdate(&noJobsTOken.RunnerCredentials), "Last-Update should not be set")
+	res, ok = c.RequestJob(noJobsTOken)
 	assert.Nil(t, res)
-	assert.True(t, ok, "If no builds, runner is healthy")
-	assert.Equal(t, c.getLastUpdate(&noBuildsToken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
+	assert.True(t, ok, "If no jobs, runner is healthy")
+	assert.Equal(t, c.getLastUpdate(&noJobsTOken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
 
 	res, ok = c.RequestJob(invalidToken)
 	assert.Nil(t, res)
@@ -434,7 +434,7 @@ func TestUpdateJob(t *testing.T) {
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
 	state = c.UpdateJob(config, 4, "state", &trace)
-	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown build")
+	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown job")
 
 	state = c.UpdateJob(brokenConfig, 4, "state", &trace)
 	assert.Equal(t, UpdateAbort, state)
@@ -587,12 +587,12 @@ func TestResendPatchTrace(t *testing.T) {
 	assert.Equal(t, UpdateSucceeded, state)
 }
 
-// We've had a situation where the same build was triggered second time by GItLab. In GitLab the build trace
-// was 17041 bytes long while the repeated build trace was only 66 bytes long. We've had a `RangeMismatch`
+// We've had a situation where the same job was triggered second time by GItLab. In GitLab the job trace
+// was 17041 bytes long while the repeated job trace was only 66 bytes long. We've had a `RangeMismatch`
 // response, so the offset was updated (to 17041) and `client.PatchTrace` was repeated, at it was planned.
 // Unfortunately the `tracePatch` struct was  not resistant to a situation when the offset is set to a
 // value bigger than trace's length. This test simulates such situation.
-func TestResendDoubledBuildPatchTrace(t *testing.T) {
+func TestResendDoubledJobPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
 		if offset > 10 {
 			w.Header().Set("Range", "0-100")
@@ -611,7 +611,7 @@ func TestResendDoubledBuildPatchTrace(t *testing.T) {
 	assert.False(t, tracePatch.ValidateRange())
 }
 
-func TestBuildFailedStatePatchTrace(t *testing.T) {
+func TestJobFailedStatePatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
 		w.Header().Set("Job-Status", "failed")
 		w.WriteHeader(202)

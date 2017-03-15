@@ -34,7 +34,7 @@ type AbstractExecutor struct {
 	common.BuildLogger
 	Config     common.RunnerConfig
 	Build      *common.Build
-	BuildTrace common.BuildTrace
+	BuildTrace common.JobTrace
 	BuildShell *common.ShellConfiguration
 }
 

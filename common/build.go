@@ -58,7 +58,7 @@ const (
 type Build struct {
 	JobResponse `yaml:",inline"`
 
-	Trace           BuildTrace
+	Trace           JobTrace
 	SystemInterrupt chan os.Signal `json:"-" yaml:"-"`
 	RootDir         string         `json:"-" yaml:"-"`
 	BuildDir        string         `json:"-" yaml:"-"`
@@ -313,7 +313,7 @@ func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvi
 	return
 }
 
-func (b *Build) Run(globalConfig *Config, trace BuildTrace) (err error) {
+func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	var executor Executor
 
 	logger := NewBuildLogger(trace, b.Log())

@@ -160,7 +160,7 @@ func (j *JobCredentials) GetToken() string {
 	return j.Token
 }
 
-type BuildTrace interface {
+type JobTrace interface {
 	io.Writer
 	Success()
 	Fail(err error)
@@ -186,5 +186,5 @@ type Network interface {
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
 	UploadArtifacts(config JobCredentials, artifactsFile string) UploadState
-	ProcessBuild(config RunnerConfig, buildCredentials *JobCredentials) BuildTrace
+	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) JobTrace
 }

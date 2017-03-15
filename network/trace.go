@@ -60,7 +60,7 @@ func newTracePatch(trace bytes.Buffer, offset int) (*tracePatch, error) {
 	return patch, nil
 }
 
-type clientBuildTrace struct {
+type clientJobTrace struct {
 	*io.PipeWriter
 
 	client         common.Network
@@ -82,11 +82,11 @@ type clientBuildTrace struct {
 	sentState common.JobState
 }
 
-func (c *clientBuildTrace) Success() {
+func (c *clientJobTrace) Success() {
 	c.Fail(nil)
 }
 
-func (c *clientBuildTrace) Fail(err error) {
+func (c *clientJobTrace) Fail(err error) {
 	c.lock.Lock()
 	if c.state != common.Running {
 		c.lock.Unlock()
@@ -102,15 +102,15 @@ func (c *clientBuildTrace) Fail(err error) {
 	c.finish()
 }
 
-func (c *clientBuildTrace) Aborted() chan interface{} {
+func (c *clientJobTrace) Aborted() chan interface{} {
 	return c.abortCh
 }
 
-func (c *clientBuildTrace) IsStdout() bool {
+func (c *clientJobTrace) IsStdout() bool {
 	return false
 }
 
-func (c *clientBuildTrace) start() {
+func (c *clientJobTrace) start() {
 	reader, writer := io.Pipe()
 	c.PipeWriter = writer
 	c.finished = make(chan bool)
@@ -120,11 +120,11 @@ func (c *clientBuildTrace) start() {
 	go c.watch()
 }
 
-func (c *clientBuildTrace) finish() {
+func (c *clientJobTrace) finish() {
 	c.Close()
 	c.finished <- true
 
-	// Do final upload of build trace
+	// Do final upload of job trace
 	for {
 		if c.staleUpdate() != common.UpdateFailed {
 			return
@@ -133,7 +133,7 @@ func (c *clientBuildTrace) finish() {
 	}
 }
 
-func (c *clientBuildTrace) writeRune(r rune, limit int) (n int, err error) {
+func (c *clientJobTrace) writeRune(r rune, limit int) (n int, err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -142,7 +142,7 @@ func (c *clientBuildTrace) writeRune(r rune, limit int) (n int, err error) {
 		return
 	}
 
-	output := fmt.Sprintf("\n%sBuild log exceeded limit of %v bytes.%s\n",
+	output := fmt.Sprintf("\n%sJob's log exceeded limit of %v bytes.%s\n",
 		helpers.ANSI_BOLD_RED,
 		limit,
 		helpers.ANSI_RESET,
@@ -152,7 +152,7 @@ func (c *clientBuildTrace) writeRune(r rune, limit int) (n int, err error) {
 	return
 }
 
-func (c *clientBuildTrace) process(pipe *io.PipeReader) {
+func (c *clientJobTrace) process(pipe *io.PipeReader) {
 	defer pipe.Close()
 
 	stopped := false
@@ -168,7 +168,7 @@ func (c *clientBuildTrace) process(pipe *io.PipeReader) {
 		if s <= 0 {
 			break
 		} else if stopped {
-			// ignore symbols if build log exceeded limit
+			// ignore symbols if job log exceeded limit
 			continue
 		} else if err == nil {
 			_, err = c.writeRune(r, limit)
@@ -182,7 +182,7 @@ func (c *clientBuildTrace) process(pipe *io.PipeReader) {
 	}
 }
 
-func (c *clientBuildTrace) update() common.UpdateState {
+func (c *clientJobTrace) update() common.UpdateState {
 	var update common.UpdateState
 
 	if c.incrementalAvailable != false {
@@ -190,7 +190,7 @@ func (c *clientBuildTrace) update() common.UpdateState {
 
 		if update == common.UpdateNotFound {
 			c.incrementalAvailable = false
-			c.config.Log().Warningln("Incremental build update not available. Switching back to full build update")
+			c.config.Log().Warningln("Incremental job update not available. Switching back to full job update")
 		}
 	}
 
@@ -201,7 +201,7 @@ func (c *clientBuildTrace) update() common.UpdateState {
 	return update
 }
 
-func (c *clientBuildTrace) incrementalUpdate() common.UpdateState {
+func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 	c.lock.RLock()
 	state := c.state
 	trace := c.log
@@ -240,9 +240,9 @@ func (c *clientBuildTrace) incrementalUpdate() common.UpdateState {
 	return update
 }
 
-func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) (update common.UpdateState) {
+func (c *clientJobTrace) resendPatch(id int, config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) (update common.UpdateState) {
 	if !tracePatch.ValidateRange() {
-		config.Log().Warningln(id, "Full build update is needed")
+		config.Log().Warningln(id, "Full job update is needed")
 		fullTrace := c.log.String()
 
 		return c.client.UpdateJob(c.config, c.id, c.state, &fullTrace)
@@ -260,7 +260,7 @@ func (c *clientBuildTrace) resendPatch(id int, config common.RunnerConfig, jobCr
 	return
 }
 
-func (c *clientBuildTrace) staleUpdate() common.UpdateState {
+func (c *clientJobTrace) staleUpdate() common.UpdateState {
 	c.lock.RLock()
 	state := c.state
 	trace := c.log.String()
@@ -282,7 +282,7 @@ func (c *clientBuildTrace) staleUpdate() common.UpdateState {
 	return upload
 }
 
-func (c *clientBuildTrace) abort() bool {
+func (c *clientJobTrace) abort() bool {
 	select {
 	case c.abortCh <- true:
 		return true
@@ -292,7 +292,7 @@ func (c *clientBuildTrace) abort() bool {
 	}
 }
 
-func (c *clientBuildTrace) watch() {
+func (c *clientJobTrace) watch() {
 	for {
 		select {
 		case <-time.After(traceUpdateInterval):
@@ -309,12 +309,12 @@ func (c *clientBuildTrace) watch() {
 	}
 }
 
-func newBuildTrace(client common.Network, config common.RunnerConfig, buildCredentials *common.JobCredentials) *clientBuildTrace {
-	return &clientBuildTrace{
+func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentials *common.JobCredentials) *clientJobTrace {
+	return &clientJobTrace{
 		client:         client,
 		config:         config,
-		jobCredentials: buildCredentials,
-		id:             buildCredentials.ID,
+		jobCredentials: jobCredentials,
+		id:             jobCredentials.ID,
 		abortCh:        make(chan interface{}),
 	}
 }

@@ -78,10 +78,10 @@ func (m *MockNetwork) UploadArtifacts(config JobCredentials, artifactsFile strin
 
 	return r0
 }
-func (m *MockNetwork) ProcessBuild(config RunnerConfig, buildCredentials *JobCredentials) BuildTrace {
-	ret := m.Called(config, buildCredentials)
+func (m *MockNetwork) ProcessJob(config RunnerConfig, jobCredentials *JobCredentials) JobTrace {
+	ret := m.Called(config, jobCredentials)
 
-	r0 := ret.Get(0).(BuildTrace)
+	r0 := ret.Get(0).(JobTrace)
 
 	return r0
 }
