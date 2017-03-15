@@ -122,7 +122,6 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	// HACK: we use non-existing build id to check if receive forbidden or not found
 	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", 200, &request, nil)
 
 	switch result {
@@ -173,27 +172,27 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	}
 
 	var response common.JobResponse
-	result, statusText, certificates := n.doJSON(&config.RunnerCredentials, "POST", "builds/register.json", 201, &request, &response)
+	result, statusText, certificates := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", 201, &request, &response)
 
 	switch result {
 	case 201:
 		config.Log().WithFields(logrus.Fields{
-			"build":    strconv.Itoa(response.ID),
+			"job":    strconv.Itoa(response.ID),
 			"repo_url": response.RepoCleanURL(),
-		}).Println("Checking for builds...", "received")
+		}).Println("Checking for jobs...", "received")
 		response.TLSCAChain = certificates
 		return &response, true
 	case 403:
-		config.Log().Errorln("Checking for builds...", "forbidden")
+		config.Log().Errorln("Checking for jobs...", "forbidden")
 		return nil, false
 	case 204, 404:
-		config.Log().Debugln("Checking for builds...", "nothing")
+		config.Log().Debugln("Checking for jobs...", "nothing")
 		return nil, true
 	case clientError:
-		config.Log().WithField("status", statusText).Errorln("Checking for builds...", "error")
+		config.Log().WithField("status", statusText).Errorln("Checking for jobs...", "error")
 		return nil, false
 	default:
-		config.Log().WithField("status", statusText).Warningln("Checking for builds...", "failed")
+		config.Log().WithField("status", statusText).Warningln("Checking for jobs...", "failed")
 		return nil, true
 	}
 }

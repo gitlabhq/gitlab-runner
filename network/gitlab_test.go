@@ -275,7 +275,7 @@ func TestVerifyRunner(t *testing.T) {
 }
 
 func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
-	if r.URL.Path != "/ci/api/v1/builds/register.json" {
+	if r.URL.Path != "/api/v4/jobs/request" {
 		w.WriteHeader(404)
 		return
 	}
