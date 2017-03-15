@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"testing"
@@ -54,7 +55,29 @@ func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, id int, state
 }
 
 func (m *updateTraceNetwork) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) common.UpdateState {
-	return common.UpdateNotFound
+	switch jobCredentials.ID {
+	case successID:
+		m.count++
+
+		buffer := &bytes.Buffer{}
+		if m.trace != nil {
+			buffer = bytes.NewBufferString(*m.trace)
+		}
+
+		buffer.Write(tracePatch.Patch())
+
+		newTrace := buffer.String()
+		m.trace = &newTrace
+
+		return common.UpdateSucceeded
+
+	case cancelID:
+		m.count++
+		return common.UpdateAbort
+
+	default:
+		return common.UpdateFailed
+	}
 }
 
 func TestJobTraceSuccess(t *testing.T) {
@@ -109,6 +132,8 @@ func TestJobAbort(t *testing.T) {
 }
 
 func TestJobOutputLimit(t *testing.T) {
+	traceUpdateInterval = 5 * time.Second
+
 	u := &updateTraceNetwork{}
 	jobCredentials := &common.JobCredentials{
 		ID: successID,
@@ -116,13 +141,16 @@ func TestJobOutputLimit(t *testing.T) {
 	b := newJobTrace(u, jobOutputLimit, jobCredentials)
 	b.start()
 
-	// Write 500k to the buffer
-	for i := 0; i < 100000; i++ {
+	// Write 5k to the buffer
+	for i := 0; i < 1024; i++ {
 		fmt.Fprint(b, "abcde")
 	}
 	b.Success()
+
+	t.Logf("Trace length: %d", len(*u.trace))
+
 	assert.True(t, len(*u.trace) < 2000, "the output should be less than 2000 bytes")
-	assert.Contains(t, *u.trace, "Job log exceeded limit")
+	assert.Contains(t, *u.trace, "Job's log exceeded limit")
 }
 
 func TestJobFinishRetry(t *testing.T) {

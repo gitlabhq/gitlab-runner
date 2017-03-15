@@ -70,8 +70,6 @@ type clientJobTrace struct {
 	limit          int64
 	abortCh        chan interface{}
 
-	incrementalAvailable bool
-
 	log      bytes.Buffer
 	lock     sync.RWMutex
 	state    common.JobState
@@ -115,7 +113,6 @@ func (c *clientJobTrace) start() {
 	c.PipeWriter = writer
 	c.finished = make(chan bool)
 	c.state = common.Running
-	c.incrementalAvailable = true
 	go c.process(reader)
 	go c.watch()
 }
@@ -126,7 +123,7 @@ func (c *clientJobTrace) finish() {
 
 	// Do final upload of job trace
 	for {
-		if c.staleUpdate() != common.UpdateFailed {
+		if c.fullUpdate() != common.UpdateFailed {
 			return
 		}
 		time.Sleep(traceFinishRetryInterval)
@@ -180,25 +177,6 @@ func (c *clientJobTrace) process(pipe *io.PipeReader) {
 			continue
 		}
 	}
-}
-
-func (c *clientJobTrace) update() common.UpdateState {
-	var update common.UpdateState
-
-	if c.incrementalAvailable != false {
-		update = c.incrementalUpdate()
-
-		if update == common.UpdateNotFound {
-			c.incrementalAvailable = false
-			c.config.Log().Warningln("Incremental job update not available. Switching back to full job update")
-		}
-	}
-
-	if c.incrementalAvailable == false {
-		update = c.staleUpdate()
-	}
-
-	return update
 }
 
 func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
@@ -260,7 +238,7 @@ func (c *clientJobTrace) resendPatch(id int, config common.RunnerConfig, jobCred
 	return
 }
 
-func (c *clientJobTrace) staleUpdate() common.UpdateState {
+func (c *clientJobTrace) fullUpdate() common.UpdateState {
 	c.lock.RLock()
 	state := c.state
 	trace := c.log.String()
@@ -296,7 +274,7 @@ func (c *clientJobTrace) watch() {
 	for {
 		select {
 		case <-time.After(traceUpdateInterval):
-			state := c.update()
+			state := c.incrementalUpdate()
 			if state == common.UpdateAbort && c.abort() {
 				<-c.finished
 				return
