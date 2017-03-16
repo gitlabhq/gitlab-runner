@@ -213,7 +213,6 @@ type JobResponse struct {
 	Timeout   int          `json:"timeout,omitempty"`
 	Options   BuildOptions `json:"options"`
 	Name      string       `json:"name"`
-	Stage     string       `json:"stage"`
 
 	TLSCAChain string `json:"-"`
 }

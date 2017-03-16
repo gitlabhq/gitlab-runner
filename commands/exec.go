@@ -190,9 +190,9 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 	}
 
 	if stage, ok := jobConfig.GetString("stage"); ok {
-		build.Stage = stage
+		build.JobInfo.Stage = stage
 	} else {
-		build.Stage = "test"
+		build.JobInfo.Stage = "test"
 	}
 	return nil
 }
