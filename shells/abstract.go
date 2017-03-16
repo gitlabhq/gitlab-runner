@@ -350,6 +350,18 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
 }
 
 func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	var scriptStep *common.JRStep
+	for _, step := range info.Build.Steps {
+		if step.Name != "script" {
+			continue
+		}
+		scriptStep = &step
+	}
+
+	if scriptStep == nil {
+		return nil
+	}
+
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
@@ -357,7 +369,7 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 		b.writeCommands(w, info.PreBuildScript)
 	}
 
-	commands := info.Build.Commands
+	commands := strings.Join(scriptStep.Script, "\n")
 	b.writeCommands(w, commands)
 
 	if info.PostBuildScript != "" {

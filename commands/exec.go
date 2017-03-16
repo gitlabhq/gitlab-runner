@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -20,7 +21,6 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/shell"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/ssh"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/virtualbox"
-	"strconv"
 )
 
 type ExecCommand struct {
@@ -37,53 +37,82 @@ func (c *ExecCommand) runCommand(name string, arg ...string) (string, error) {
 	return string(result), err
 }
 
-func (c *ExecCommand) getCommands(commands interface{}) (string, error) {
+func (c *ExecCommand) getCommands(commands interface{}) (common.JRStepScript, error) {
 	if lines, ok := commands.([]interface{}); ok {
 		text := ""
 		for _, line := range lines {
 			if lineText, ok := line.(string); ok {
 				text += lineText + "\n"
 			} else {
-				return "", errors.New("unsupported script")
+				return common.JRStepScript{}, errors.New("unsupported script")
 			}
 		}
-		return text + "\n", nil
+		return common.JRStepScript(strings.Split(text, "\n")), nil
 	} else if text, ok := commands.(string); ok {
-		return text + "\n", nil
+		return common.JRStepScript(strings.Split(text, "\n")), nil
 	} else if commands != nil {
-		return "", errors.New("unsupported script")
+		return common.JRStepScript{}, errors.New("unsupported script")
 	}
-	return "", nil
+	return common.JRStepScript{}, nil
 }
 
-func (c *ExecCommand) buildCommands(configBeforeScript, jobConfigBeforeScript, jobScript interface{}) (commands string, err error) {
+func (c *ExecCommand) buildSteps(config, jobConfig common.BuildOptions) (steps common.JRSteps, err error) {
+	if jobConfig["script"] == nil {
+		err = fmt.Errorf("missing 'script' for job")
+		return
+	}
+
+	var scriptCommands, afterScriptCommands common.JRStepScript
+
 	// get before_script
-	beforeScript, err := c.getCommands(configBeforeScript)
+	beforeScript, err := c.getCommands(config["before_script"])
 	if err != nil {
 		return
 	}
 
 	// get job before_script
-	jobBeforeScript, err := c.getCommands(jobConfigBeforeScript)
+	jobBeforeScript, err := c.getCommands(jobConfig["before_script"])
 	if err != nil {
 		return
 	}
 
-	if jobBeforeScript == "" {
-		commands += beforeScript
+	if len(jobBeforeScript) < 1 {
+		scriptCommands = beforeScript
 	} else {
-		commands += jobBeforeScript
+		scriptCommands = jobBeforeScript
 	}
 
 	// get script
-	script, err := c.getCommands(jobScript)
+	script, err := c.getCommands(jobConfig["script"])
 	if err != nil {
 		return
-	} else if jobScript == nil {
-		err = fmt.Errorf("missing 'script' for job")
+	}
+	for _, scriptLine := range script {
+		scriptCommands = append(scriptCommands, scriptLine)
+	}
+
+	afterScriptCommands, err = c.getCommands(jobConfig["after_script"])
+	if err != nil {
 		return
 	}
-	commands += script
+
+	steps = common.JRSteps{
+		common.JRStep{
+			Name:         "script",
+			Script:       scriptCommands,
+			Timeout:      3600,
+			When:         common.StepWhenOnSuccess,
+			AllowFailure: false,
+		},
+		common.JRStep{
+			Name:         "after_script",
+			Script:       afterScriptCommands,
+			Timeout:      3600,
+			When:         common.StepWhenOnSuccess,
+			AllowFailure: false,
+		},
+	}
+
 	return
 }
 
@@ -147,7 +176,7 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 		return fmt.Errorf("no job named %q", job)
 	}
 
-	build.Commands, err = c.buildCommands(config["before_script"], jobConfig["before_script"], jobConfig["script"])
+	build.Steps, err = c.buildSteps(config, jobConfig)
 	if err != nil {
 		return err
 	}
@@ -157,37 +186,37 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 		return err
 	}
 
-	build.Image.Name = getOption("image", config, jobConfig)
+	build.Image.Name, _ = getOption("image", config, jobConfig).(string)
 
-	services := []string(getOption("services", config, jobConfig))
+	services := getOption("services", config, jobConfig).([]string)
 	for _, service := range services {
 		build.Services = append(build.Services, common.JRImage{
 			Name: service,
 		})
 	}
 
-	artifacts := getOption("artifacts", config, jobConfig)
-	untracked, err := strconv.ParseBool(artifacts["untracked"])
+	artifacts := getOption("artifacts", config, jobConfig).(map[string]interface{})
+	untracked, err := strconv.ParseBool(artifacts["untracked"].(string))
 	if err != nil {
 		untracked = false
 	}
 	build.Artifacts[0] = common.JRArtifact{
-		Name:      artifacts["name"],
+		Name:      artifacts["name"].(string),
 		Untracted: untracked,
-		Paths:     artifacts["paths"],
-		When:      artifacts["when"],
-		ExpireIn:  artifacts["expireIn"],
+		Paths:     artifacts["paths"].([]string),
+		When:      artifacts["when"].(common.JRArtifactWhen),
+		ExpireIn:  artifacts["expireIn"].(string),
 	}
 
-	cache := getOption("cache", config, jobConfig)
-	untracked, err = strconv.ParseBool(cache["untracked"])
+	cache := getOption("cache", config, jobConfig).(map[string]interface{})
+	untracked, err = strconv.ParseBool(cache["untracked"].(string))
 	if err != nil {
 		untracked = false
 	}
 	build.Cache[0] = common.JRCache{
-		Key:       cache["key"],
+		Key:       cache["key"].(string),
 		Untracted: untracked,
-		Paths:     cache["paths"],
+		Paths:     cache["paths"].([]string),
 	}
 
 	if stage, ok := jobConfig.GetString("stage"); ok {
@@ -198,16 +227,18 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 	return nil
 }
 
-func getOption(optionKey string, config, jobConfig common.BuildOptions) interface{} {
+func getOption(optionKey string, config, jobConfig common.BuildOptions) (value interface{}) {
+	var key string
+
 	// parse job options
-	for key, value := range jobConfig {
+	for key, value = range jobConfig {
 		if key == optionKey {
-			return value
+			return
 		}
 	}
 
 	// parse global options
-	for key, value := range config {
+	for key, value = range config {
 		if key == optionKey {
 			return value
 		}

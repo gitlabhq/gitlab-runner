@@ -177,10 +177,10 @@ func TestRunFailure(t *testing.T) {
 
 	RegisterExecutor("build-run-run-failure", &p)
 
-	successfulBuild, err := GetSuccessfulBuild()
+	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		JobResponse: successfulBuild,
+		JobResponse: failedBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-run-failure",

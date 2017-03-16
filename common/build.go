@@ -171,7 +171,7 @@ func (b *Build) executeStage(buildStage BuildStage, executor Executor, abort cha
 
 func (b *Build) executeUploadArtifacts(state error, executor Executor, abort chan interface{}) (err error) {
 	if len(b.Artifacts) < 1 {
-		return
+		return state
 	}
 
 	when := JRArtifact(b.Artifacts[0]).When
