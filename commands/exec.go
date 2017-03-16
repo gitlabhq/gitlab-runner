@@ -228,7 +228,7 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 	build.Artifacts = make(common.JRArtifacts, 1)
 	build.Artifacts[0] = common.JRArtifact{
 		Name:      artifactsName,
-		Untracted: artifactsUntracked.(bool),
+		Untracked: artifactsUntracked.(bool),
 		Paths:     paths,
 		When:      common.JRArtifactWhen(artifactsWhen),
 		ExpireIn:  artifactsExpireIn,
@@ -255,7 +255,7 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 	build.Cache = make(common.JRCaches, 1)
 	build.Cache[0] = common.JRCache{
 		Key:       cacheKey,
-		Untracted: cacheUntracked.(bool),
+		Untracked: cacheUntracked.(bool),
 		Paths:     paths,
 	}
 

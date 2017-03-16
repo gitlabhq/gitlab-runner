@@ -171,7 +171,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		archiverArgs = append(archiverArgs, "--path", path)
 	}
 
-	if cacheOptions.Untracted {
+	if cacheOptions.Untracked {
 		archiverArgs = append(archiverArgs, "--untracked")
 	}
 
@@ -403,7 +403,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		archiverArgs = append(archiverArgs, "--path", path)
 	}
 
-	if cacheOptions.Untracted {
+	if cacheOptions.Untracked {
 		archiverArgs = append(archiverArgs, "--untracked")
 	}
 
@@ -455,7 +455,7 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptIn
 		archiverArgs = append(archiverArgs, "--path", path)
 	}
 
-	if artifacts.Untracted {
+	if artifacts.Untracked {
 		archiverArgs = append(archiverArgs, "--untracked")
 	}
 

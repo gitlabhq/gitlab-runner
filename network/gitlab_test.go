@@ -513,7 +513,7 @@ func TestUpdateJob(t *testing.T) {
 
 	config := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
-			URL:   s.URL,
+			URL: s.URL,
 		},
 	}
 

@@ -149,7 +149,7 @@ const (
 
 type JRArtifact struct {
 	Name      string          `json:"name"`
-	Untracted bool            `json:"untracted"`
+	Untracked bool            `json:"untracked"`
 	Paths     JRArtifactPaths `json:"paths"`
 	When      JRArtifactWhen  `json:"when"`
 	ExpireIn  string          `json:"expire_in"`
@@ -159,7 +159,7 @@ type JRArtifacts []JRArtifact
 
 type JRCache struct {
 	Key       string          `json:"key"`
-	Untracted bool            `json:"untracted"`
+	Untracked bool            `json:"untracked"`
 	Paths     JRArtifactPaths `json:"paths"`
 }
 
