@@ -174,8 +174,6 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	var response common.JobResponse
 	result, statusText, certificates := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", 201, &request, &response)
 
-	fmt.Printf("\n%v\n", response)
-
 	switch result {
 	case 201:
 		config.Log().WithFields(logrus.Fields{
@@ -199,10 +197,10 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	}
 }
 
-func (n *GitLabClient) UpdateJob(config common.RunnerConfig, id int, state common.JobState, trace *string) common.UpdateState {
+func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string) common.UpdateState {
 	request := common.UpdateJobRequest{
 		Info:  n.getRunnerVersion(config),
-		Token: config.Token,
+		Token: jobCredentials.Token,
 		State: state,
 		Trace: trace,
 	}

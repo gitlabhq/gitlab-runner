@@ -85,8 +85,6 @@ type JobRequest struct {
 	LastUpdate string      `json:"last_update,omitempty"`
 }
 
-// ---[ JobResponse START ]---
-
 type JRJobInfo struct {
 	Name        string `json:"name"`
 	Stage       string `json:"stage"`
@@ -213,8 +211,6 @@ func (j *JobResponse) RepoCleanURL() string {
 	return url_helpers.CleanURL(j.GitInfo.RepoURL)
 }
 
-// ---[ JobResponse END ]---
-
 type UpdateJobRequest struct {
 	Info  VersionInfo `json:"info,omitempty"`
 	Token string      `json:"token,omitempty"`
@@ -262,7 +258,7 @@ type Network interface {
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig) (*JobResponse, bool)
-	UpdateJob(config RunnerConfig, id int, state JobState, trace *string) UpdateState
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState

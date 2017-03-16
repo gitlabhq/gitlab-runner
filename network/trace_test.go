@@ -26,7 +26,7 @@ type updateTraceNetwork struct {
 	count int
 }
 
-func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, id int, state common.JobState, trace *string) common.UpdateState {
+func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string) common.UpdateState {
 	switch id {
 	case successID:
 		m.count++

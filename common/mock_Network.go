@@ -43,8 +43,8 @@ func (m *MockNetwork) RequestJob(config RunnerConfig) (*JobResponse, bool) {
 
 	return r0, r1
 }
-func (m *MockNetwork) UpdateJob(config RunnerConfig, id int, state JobState, trace *string) UpdateState {
-	ret := m.Called(config, id, state, trace)
+func (m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string) UpdateState {
+	ret := m.Called(config, jobCredentials, id, state, trace)
 
 	r0 := ret.Get(0).(UpdateState)
 
