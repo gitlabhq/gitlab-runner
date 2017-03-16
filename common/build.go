@@ -241,7 +241,7 @@ func (b *Build) attemptExecuteStage(buildStage BuildStage, executor Executor, ab
 func (b *Build) run(executor Executor) (err error) {
 	b.CurrentState = BuildRunRuntimeRunning
 
-	buildTimeout := b.Timeout
+	buildTimeout := b.RunnerInfo.Timeout
 	if buildTimeout <= 0 {
 		buildTimeout = DefaultTimeout
 	}

@@ -210,7 +210,6 @@ type JobResponse struct {
 	Sha       string       `json:"sha,omitempty"`
 	RefName   string       `json:"ref,omitempty"`
 	BeforeSha string       `json:"before_sha,omitempty"`
-	Timeout   int          `json:"timeout,omitempty"`
 	Options   BuildOptions `json:"options"`
 
 	TLSCAChain string `json:"-"`
