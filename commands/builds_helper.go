@@ -60,7 +60,7 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 		}
 		runners[otherBuild.RunnerID] = true
 
-		if otherBuild.ProjectID != build.ProjectID {
+		if otherBuild.JobInfo.ProjectID != build.JobInfo.ProjectID {
 			continue
 		}
 		projectRunners[otherBuild.ProjectRunnerID] = true

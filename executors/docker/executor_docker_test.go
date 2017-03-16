@@ -138,7 +138,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		ProjectRunnerID: 0,
 		Runner:          &common.RunnerConfig{},
 	}
-	e.Build.ProjectID = 0
+	e.Build.JobInfo.ProjectID = 0
 	e.Build.Runner.Token = "abcdef1234567890"
 
 	c.On("ImagePullBlocking", context.TODO(), imageName, options).

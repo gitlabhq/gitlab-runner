@@ -224,18 +224,23 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 	build = &common.Build{
 		JobResponse: common.JobResponse{
 			ID:            1,
-			ProjectID:     1,
-			RepoURL:       repoURL,
-			Commands:      "",
-			Sha:           strings.TrimSpace(sha),
-			RefName:       strings.TrimSpace(refName),
-			BeforeSha:     strings.TrimSpace(beforeSha),
-			AllowGitFetch: false,
-			Timeout:       c.getTimeout(),
 			Token:         "",
-			Name:          "",
-			Stage:         "",
-			Tag:           false,
+			AllowGitFetch: false,
+			JobInfo: common.JRJobInfo{
+				Name:        "",
+				Stage:       "",
+				ProjectID:   1,
+				ProjectName: "",
+			},
+			GitInfo: common.JRGitInfo{
+				RepoURL:   repoURL,
+				Ref:       strings.TrimSpace(refName),
+				Sha:       strings.TrimSpace(sha),
+				BeforeSha: strings.TrimSpace(beforeSha),
+			},
+			RunnerInfo: common.JRRunnerInfo{
+				Timeout: c.getTimeout(),
+			},
 		},
 		Runner: &common.RunnerConfig{
 			RunnerSettings: c.RunnerSettings,

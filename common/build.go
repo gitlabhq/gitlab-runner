@@ -78,12 +78,12 @@ type Build struct {
 }
 
 func (b *Build) Log() *logrus.Entry {
-	return b.Runner.Log().WithField("build", b.ID).WithField("project", b.ProjectID)
+	return b.Runner.Log().WithField("job", b.ID).WithField("project", b.JobInfo.ProjectID)
 }
 
 func (b *Build) ProjectUniqueName() string {
 	return fmt.Sprintf("runner-%s-project-%d-concurrent-%d",
-		b.Runner.ShortDescription(), b.ProjectID, b.ProjectRunnerID)
+		b.Runner.ShortDescription(), b.JobInfo.ProjectID, b.ProjectRunnerID)
 }
 
 func (b *Build) ProjectSlug() (string, error) {
@@ -110,7 +110,7 @@ func (b *Build) ProjectSlug() (string, error) {
 func (b *Build) ProjectUniqueDir(sharedDir bool) string {
 	dir, err := b.ProjectSlug()
 	if err != nil {
-		dir = fmt.Sprintf("project-%d", b.ProjectID)
+		dir = fmt.Sprintf("project-%d", b.JobInfo.ProjectID)
 	}
 
 	// for shared dirs path is constructed like this:
@@ -368,7 +368,7 @@ func (b *Build) GetDefaultVariables() BuildVariables {
 		{"CI_BUILD_ID", strconv.Itoa(b.ID), true, true, false},
 		{"CI_BUILD_REPO", b.RepoURL, true, true, false},
 		{"CI_BUILD_TOKEN", b.Token, true, true, false},
-		{"CI_PROJECT_ID", strconv.Itoa(b.ProjectID), true, true, false},
+		{"CI_PROJECT_ID", strconv.Itoa(b.JobInfo.ProjectID), true, true, false},
 		{"CI_PROJECT_DIR", b.FullProjectDir(), true, true, false},
 		{"CI_SERVER", "yes", true, true, false},
 		{"CI_SERVER_NAME", "GitLab CI", true, true, false},

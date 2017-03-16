@@ -199,8 +199,8 @@ type JRDependencyArtifactsFile struct {
 }
 
 type JRDependency struct {
-	ID int `json:"id"`
-	Name string `json:"name"`
+	ID            int                       `json:"id"`
+	Name          string                    `json:"name"`
 	ArtifactsFile JRDependencyArtifactsFile `json:"artifacts_file"`
 }
 
@@ -223,7 +223,6 @@ type JobResponse struct {
 	Dependencies  JRDependencies  `json:"dependencies"`
 
 	// TODO: LEGACY KEYS - TO BE REFACTORIZED WITH USAGE!!!
-	ProjectID       int          `json:"project_id,omitempty"`
 	Commands        string       `json:"commands,omitempty"`
 	RepoURL         string       `json:"repo_url,omitempty"`
 	Sha             string       `json:"sha,omitempty"`
@@ -239,8 +238,8 @@ type JobResponse struct {
 	TLSCAChain string `json:"-"`
 }
 
-func (b *JobResponse) RepoCleanURL() string {
-	return url_helpers.CleanURL(b.GitInfo.RepoURL)
+func (j *JobResponse) RepoCleanURL() string {
+	return url_helpers.CleanURL(j.GitInfo.RepoURL)
 }
 
 // ---[ JobResponse END ]---

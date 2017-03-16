@@ -174,6 +174,8 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	var response common.JobResponse
 	result, statusText, certificates := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", 201, &request, &response)
 
+	fmt.Printf("\n%v\n", response)
+
 	switch result {
 	case 201:
 		config.Log().WithFields(logrus.Fields{
