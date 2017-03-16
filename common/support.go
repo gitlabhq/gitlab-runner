@@ -11,6 +11,7 @@ const repoRemoteURL = "https://gitlab.com/gitlab-org/gitlab-test.git"
 const repoSHA = "6907208d755b60ebeacb2e9dfea74c92c3449a1f"
 const repoBeforeSHA = "c347ca2e140aa667b968e51ed0ffe055501fe4f4"
 const repoRefName = "master"
+const repoRefType = RefTypeBranch
 
 func GetSuccessfulBuild() (JobResponse, error) {
 	return getLocalBuildResponse("echo Hello World")
@@ -38,11 +39,21 @@ func GetRemoteLongRunningBuild() (JobResponse, error) {
 
 func getRemoteBuildResponse(commands string) (response JobResponse, err error) {
 	response = JobResponse{
-		Commands:  commands,
-		RepoURL:   repoRemoteURL,
-		Sha:       repoSHA,
-		BeforeSha: repoBeforeSHA,
-		RefName:   repoRefName,
+		GitInfo: JRGitInfo{
+			RepoURL:   repoRemoteURL,
+			Sha:       repoSHA,
+			BeforeSha: repoBeforeSHA,
+			Ref:       repoRefName,
+			RefType:   repoRefType,
+		},
+		Steps: JRSteps{
+			JRStep{
+				Name:         "script",
+				Script:       JRStepScript{commands},
+				When:         StepWhenAlways,
+				AllowFailure: false,
+			},
+		},
 	}
 
 	return
@@ -55,11 +66,21 @@ func getLocalBuildResponse(commands string) (response JobResponse, err error) {
 	}
 
 	response = JobResponse{
-		Commands:  commands,
-		RepoURL:   localRepoURL,
-		Sha:       repoSHA,
-		BeforeSha: repoBeforeSHA,
-		RefName:   repoRefName,
+		GitInfo: JRGitInfo{
+			RepoURL:   localRepoURL,
+			Sha:       repoSHA,
+			BeforeSha: repoBeforeSHA,
+			Ref:       repoRefName,
+			RefType:   repoRefType,
+		},
+		Steps: JRSteps{
+			JRStep{
+				Name:         "script",
+				Script:       JRStepScript{commands},
+				When:         StepWhenAlways,
+				AllowFailure: false,
+			},
+		},
 	}
 
 	return

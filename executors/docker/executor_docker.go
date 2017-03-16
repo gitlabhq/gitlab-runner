@@ -261,10 +261,10 @@ func (s *executor) addHostVolume(hostPath, containerPath string) error {
 
 func (s *executor) getLabels(containerType string, otherLabels ...string) map[string]string {
 	labels := make(map[string]string)
-	labels[dockerLabelPrefix+".build.id"] = strconv.Itoa(s.Build.ID)
-	labels[dockerLabelPrefix+".build.sha"] = s.Build.Sha
-	labels[dockerLabelPrefix+".build.before_sha"] = s.Build.BeforeSha
-	labels[dockerLabelPrefix+".build.ref_name"] = s.Build.RefName
+	labels[dockerLabelPrefix+".job.id"] = strconv.Itoa(s.Build.ID)
+	labels[dockerLabelPrefix+".job.sha"] = s.Build.GitInfo.Sha
+	labels[dockerLabelPrefix+".job.before_sha"] = s.Build.GitInfo.BeforeSha
+	labels[dockerLabelPrefix+".job.ref"] = s.Build.GitInfo.Ref
 	labels[dockerLabelPrefix+".project.id"] = strconv.Itoa(s.Build.JobInfo.ProjectID)
 	labels[dockerLabelPrefix+".runner.id"] = s.Build.Runner.ShortDescription()
 	labels[dockerLabelPrefix+".runner.local_id"] = strconv.Itoa(s.Build.RunnerID)

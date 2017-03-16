@@ -209,7 +209,6 @@ type JobResponse struct {
 	RepoURL   string       `json:"repo_url,omitempty"`
 	Sha       string       `json:"sha,omitempty"`
 	RefName   string       `json:"ref,omitempty"`
-	BeforeSha string       `json:"before_sha,omitempty"`
 	Options   BuildOptions `json:"options"`
 
 	TLSCAChain string `json:"-"`
