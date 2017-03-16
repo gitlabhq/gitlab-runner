@@ -72,7 +72,9 @@ version: FORCE
 	@echo RPM platforms: $(RPM_PLATFORMS)
 	@echo IS_LATEST: $(IS_LATEST)
 
-verify: fmt vet lint complexity test
+verify: static_code_analysis test
+
+static_code_analysis: fmt vet lint complexity
 
 deps:
 	# Installing dependencies...

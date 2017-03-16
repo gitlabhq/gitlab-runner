@@ -70,7 +70,7 @@ clone test repo:
 # Test stage
 #
 
-code style:
+static code analysis:
   stage: test
   script:
   - source ci/touch_make_dependencies
