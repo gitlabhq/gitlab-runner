@@ -85,25 +85,6 @@ type JobRequest struct {
 	LastUpdate string      `json:"last_update,omitempty"`
 }
 
-// ---[ LEGACY JobResponse START ]---
-
-type JobArtifacts struct {
-	Filename string `json:"filename,omitempty"`
-	Size     int64  `json:"size,omitempty"`
-}
-
-type JobInfo struct {
-	ID        int           `json:"id,omitempty"`
-	Sha       string        `json:"sha,omitempty"`
-	RefName   string        `json:"ref,omitempty"`
-	Token     string        `json:"token"`
-	Name      string        `json:"name"`
-	Stage     string        `json:"stage"`
-	Tag       bool          `json:"tag"`
-	Artifacts *JobArtifacts `json:"artifacts_file"`
-}
-
-// ---[ LEGACY JobResponse END ]---
 // ---[ JobResponse START ]---
 
 type JRJobInfo struct {
@@ -200,6 +181,7 @@ type JRDependencyArtifactsFile struct {
 
 type JRDependency struct {
 	ID            int                       `json:"id"`
+	Token         string                    `json:"token"`
 	Name          string                    `json:"name"`
 	ArtifactsFile JRDependencyArtifactsFile `json:"artifacts_file"`
 }
@@ -223,17 +205,16 @@ type JobResponse struct {
 	Dependencies  JRDependencies  `json:"dependencies"`
 
 	// TODO: LEGACY KEYS - TO BE REFACTORIZED WITH USAGE!!!
-	Commands        string       `json:"commands,omitempty"`
-	RepoURL         string       `json:"repo_url,omitempty"`
-	Sha             string       `json:"sha,omitempty"`
-	RefName         string       `json:"ref,omitempty"`
-	BeforeSha       string       `json:"before_sha,omitempty"`
-	Timeout         int          `json:"timeout,omitempty"`
-	Options         BuildOptions `json:"options"`
-	Name            string       `json:"name"`
-	Stage           string       `json:"stage"`
-	Tag             bool         `json:"tag"`
-	DependsOnBuilds []JobInfo    `json:"depends_on_builds"`
+	Commands  string       `json:"commands,omitempty"`
+	RepoURL   string       `json:"repo_url,omitempty"`
+	Sha       string       `json:"sha,omitempty"`
+	RefName   string       `json:"ref,omitempty"`
+	BeforeSha string       `json:"before_sha,omitempty"`
+	Timeout   int          `json:"timeout,omitempty"`
+	Options   BuildOptions `json:"options"`
+	Name      string       `json:"name"`
+	Stage     string       `json:"stage"`
+	Tag       bool         `json:"tag"`
 
 	TLSCAChain string `json:"-"`
 }

@@ -210,43 +210,41 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, options *archivingOptions,
 	})
 }
 
-func (b *AbstractShell) downloadArtifacts(w ShellWriter, build *common.JobInfo, info common.ShellScriptInfo) {
+func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.JRDependency, info common.ShellScriptInfo) {
 	args := []string{
 		"artifacts-downloader",
 		"--url",
 		info.Build.Runner.URL,
 		"--token",
-		build.Token,
+		job.Token,
 		"--id",
-		strconv.Itoa(build.ID),
+		strconv.Itoa(job.ID),
 	}
 
-	w.Notice("Downloading artifacts for %s (%d)...", build.Name, build.ID)
+	w.Notice("Downloading artifacts for %s (%d)...", job.Name, job.ID)
 	w.Command(info.RunnerCommand, args...)
 }
 
-func (b *AbstractShell) buildArtifacts(dependencies *dependencies, info common.ShellScriptInfo) (otherBuilds []common.JobInfo) {
-	for _, otherBuild := range info.Build.DependsOnBuilds {
-		if otherBuild.Artifacts == nil || otherBuild.Artifacts.Filename == "" {
+func (b *AbstractShell) jobArtifacts(info common.ShellScriptInfo) (otherJobs []common.JRDependency) {
+	for _, otherJob := range info.Build.Dependencies {
+		if otherJob.ArtifactsFile.Filename == "" {
 			continue
 		}
-		if !dependencies.IsDependent(otherBuild.Name) {
-			continue
-		}
-		otherBuilds = append(otherBuilds, otherBuild)
+
+		otherJobs = append(otherJobs, otherJob)
 	}
 	return
 }
 
-func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, dependencies *dependencies, info common.ShellScriptInfo) {
-	otherBuilds := b.buildArtifacts(dependencies, info)
-	if len(otherBuilds) == 0 {
+func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScriptInfo) {
+	otherJobs := b.jobArtifacts(info)
+	if len(otherJobs) == 0 {
 		return
 	}
 
 	b.guardRunnerCommand(w, info.RunnerCommand, "Artifacts downloading", func() {
-		for _, otherBuild := range otherBuilds {
-			b.downloadArtifacts(w, &otherBuild, info)
+		for _, otherJob := range otherJobs {
+			b.downloadArtifacts(w, otherJob, info)
 		}
 	})
 }
@@ -337,19 +335,12 @@ func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.Shell
 }
 
 func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	// Parse options
-	var options shellOptions
-	err = info.Build.Options.Decode(&options)
-	if err != nil {
-		return
-	}
-
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Process all artifacts
-	b.downloadAllArtifacts(w, options.Dependencies, info)
+	b.downloadAllArtifacts(w, info)
 	return nil
 }
 

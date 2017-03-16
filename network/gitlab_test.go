@@ -363,6 +363,7 @@ func getRequestJobResponse() (res map[string]interface{}) {
 	dependencies[0] = make(map[string]interface{})
 	dependencies[0]["id"] = 9
 	dependencies[0]["name"] = "other-job"
+	dependencies[0]["token"] = "other-job-token"
 	artifactsFile0 := make(map[string]interface{})
 	artifactsFile0["filename"] = "binaries.zip"
 	artifactsFile0["size"] = 13631488
