@@ -299,7 +299,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		res["id"] = 10
 	case "no-jobs":
 		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
-		w.WriteHeader(404)
+		w.WriteHeader(204)
 		return
 	case "invalid":
 		w.WriteHeader(403)
@@ -338,7 +338,7 @@ func TestRequestJob(t *testing.T) {
 		},
 	}
 
-	noJobsTOken := RunnerConfig{
+	noJobsToken := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
 			URL:   s.URL,
 			Token: "no-jobs",
@@ -360,11 +360,11 @@ func TestRequestJob(t *testing.T) {
 	}
 	assert.True(t, ok)
 
-	assert.Empty(t, c.getLastUpdate(&noJobsTOken.RunnerCredentials), "Last-Update should not be set")
-	res, ok = c.RequestJob(noJobsTOken)
+	assert.Empty(t, c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should not be set")
+	res, ok = c.RequestJob(noJobsToken)
 	assert.Nil(t, res)
 	assert.True(t, ok, "If no jobs, runner is healthy")
-	assert.Equal(t, c.getLastUpdate(&noJobsTOken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
+	assert.Equal(t, c.getLastUpdate(&noJobsToken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
 
 	res, ok = c.RequestJob(invalidToken)
 	assert.Nil(t, res)

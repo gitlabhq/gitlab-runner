@@ -185,7 +185,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	case 403:
 		config.Log().Errorln("Checking for jobs...", "forbidden")
 		return nil, false
-	case 204, 404:
+	case 204:
 		config.Log().Debugln("Checking for jobs...", "nothing")
 		return nil, true
 	case clientError:
