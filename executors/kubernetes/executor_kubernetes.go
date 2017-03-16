@@ -21,8 +21,7 @@ var (
 			Type:          common.NormalShell,
 			RunnerCommand: "/usr/bin/gitlab-runner-helper",
 		},
-		ShowHostname:     true,
-		SupportedOptions: []string{"image", "services", "artifacts", "cache"},
+		ShowHostname: true,
 	}
 )
 
@@ -293,7 +292,7 @@ func (s *executor) prepareOptions(job *common.Build) {
 	s.options = &kubernetesOptions{}
 	s.options.Image = job.Image.Name
 	for _, service := range job.Services {
-		serviceName := common.JRImage(service).Name
+		serviceName := service.Name
 		if serviceName == "" {
 			continue
 		}

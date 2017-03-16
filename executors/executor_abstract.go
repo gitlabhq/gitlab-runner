@@ -6,27 +6,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
-var (
-	excludedOptions = []string{"environment"}
-)
-
-func isOptionExcluded(option string) bool {
-	for _, excluded := range excludedOptions {
-		if option == excluded {
-			return true
-		}
-	}
-
-	return false
-}
-
 type ExecutorOptions struct {
 	DefaultBuildsDir string
 	DefaultCacheDir  string
 	SharedBuildsDir  bool
 	Shell            common.ShellScriptInfo
 	ShowHostname     bool
-	SupportedOptions []string
 }
 
 type AbstractExecutor struct {
@@ -80,37 +65,6 @@ func (e *AbstractExecutor) startBuild() error {
 	return nil
 }
 
-func (e *AbstractExecutor) verifyOptions() error {
-	supportedOptions := e.SupportedOptions
-	if shell := common.GetShell(e.Shell().Shell); shell != nil {
-		supportedOptions = append(supportedOptions, shell.GetSupportedOptions()...)
-	}
-
-	for key, value := range e.Build.Options {
-		if value == nil {
-			continue
-		}
-
-		if isOptionExcluded(key) {
-			delete(e.Build.Options, key)
-			continue
-		}
-
-		found := false
-		for _, option := range supportedOptions {
-			if option == key {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			e.Warningln(key, "is not supported by selected executor and shell")
-		}
-	}
-	return nil
-}
-
 func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
 	return &e.ExecutorOptions.Shell
 }
@@ -127,11 +81,6 @@ func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.R
 	}
 
 	err = e.updateShell()
-	if err != nil {
-		return err
-	}
-
-	err = e.verifyOptions()
 	if err != nil {
 		return err
 	}

@@ -13,16 +13,6 @@ func (m *MockShell) GetName() string {
 
 	return r0
 }
-func (m *MockShell) GetSupportedOptions() []string {
-	ret := m.Called()
-
-	var r0 []string
-	if ret.Get(0) != nil {
-		r0 = ret.Get(0).([]string)
-	}
-
-	return r0
-}
 func (m *MockShell) GetFeatures(features *FeaturesInfo) {
 	m.Called(features)
 }

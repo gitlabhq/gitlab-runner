@@ -20,6 +20,7 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/shell"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/ssh"
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/virtualbox"
+	"strconv"
 )
 
 type ExecCommand struct {
@@ -53,15 +54,6 @@ func (c *ExecCommand) getCommands(commands interface{}) (string, error) {
 		return "", errors.New("unsupported script")
 	}
 	return "", nil
-}
-
-func (c *ExecCommand) supportedOption(key string, _ interface{}) bool {
-	switch key {
-	case "image", "services", "artifacts", "cache", "after_script":
-		return true
-	default:
-		return false
-	}
 }
 
 func (c *ExecCommand) buildCommands(configBeforeScript, jobConfigBeforeScript, jobScript interface{}) (commands string, err error) {
@@ -129,25 +121,6 @@ func (c *ExecCommand) buildGlobalAndJobVariables(global, job interface{}) (build
 	return
 }
 
-func (c *ExecCommand) buildOptions(config, jobConfig common.BuildOptions) (options common.BuildOptions, err error) {
-	options = make(common.BuildOptions)
-
-	// parse global options
-	for key, value := range config {
-		if c.supportedOption(key, value) {
-			options[key] = value
-		}
-	}
-
-	// parse job options
-	for key, value := range jobConfig {
-		if c.supportedOption(key, value) {
-			options[key] = value
-		}
-	}
-	return
-}
-
 func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 	data, err := ioutil.ReadFile(".gitlab-ci.yml")
 	if err != nil {
@@ -184,9 +157,37 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 		return err
 	}
 
-	build.Options, err = c.buildOptions(config, jobConfig)
+	build.Image.Name = getOption("image", config, jobConfig)
+
+	services := []string(getOption("services", config, jobConfig))
+	for _, service := range services {
+		build.Services = append(build.Services, common.JRImage{
+			Name: service,
+		})
+	}
+
+	artifacts := getOption("artifacts", config, jobConfig)
+	untracked, err := strconv.ParseBool(artifacts["untracked"])
 	if err != nil {
-		return err
+		untracked = false
+	}
+	build.Artifacts[0] = common.JRArtifact{
+		Name:      artifacts["name"],
+		Untracted: untracked,
+		Paths:     artifacts["paths"],
+		When:      artifacts["when"],
+		ExpireIn:  artifacts["expireIn"],
+	}
+
+	cache := getOption("cache", config, jobConfig)
+	untracked, err = strconv.ParseBool(cache["untracked"])
+	if err != nil {
+		untracked = false
+	}
+	build.Cache[0] = common.JRCache{
+		Key:       cache["key"],
+		Untracted: untracked,
+		Paths:     cache["paths"],
 	}
 
 	if stage, ok := jobConfig.GetString("stage"); ok {
@@ -195,6 +196,24 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 		build.JobInfo.Stage = "test"
 	}
 	return nil
+}
+
+func getOption(optionKey string, config, jobConfig common.BuildOptions) interface{} {
+	// parse job options
+	for key, value := range jobConfig {
+		if key == optionKey {
+			return value
+		}
+	}
+
+	// parse global options
+	for key, value := range config {
+		if key == optionKey {
+			return value
+		}
+	}
+
+	return
 }
 
 func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (build *common.Build, err error) {

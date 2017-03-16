@@ -1011,11 +1011,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return errors.New("Missing docker configuration")
 	}
 
-	err = build.Options.Decode(&s.options)
-	if err != nil {
-		return err
-	}
-
+	s.prepareOptions()
 	imageName, err := s.getImageName()
 	if err != nil {
 		return err
@@ -1033,6 +1029,19 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 	return nil
+}
+
+func (s *executor) prepareOptions() {
+	s.options = dockerOptions{}
+	s.options.Image = s.Build.Image.Name
+	for _, service := range s.Build.Services {
+		serviceName := service.Name
+		if serviceName == "" {
+			continue
+		}
+
+		s.options.Services = append(s.options.Services, serviceName)
+	}
 }
 
 func (s *executor) prepareBuildsDir(config *common.RunnerConfig) error {

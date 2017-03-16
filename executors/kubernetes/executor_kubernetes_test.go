@@ -595,9 +595,7 @@ func TestKubernetesSuccessRun(t *testing.T) {
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
-	successfulBuild.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	successfulBuild.Image.Name = "docker:git"
 	build := &common.Build{
 		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
@@ -628,9 +626,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
@@ -654,9 +650,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "some/non-existing/image",
-	}
+	build.Image.Name = "some/non-existing/image"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -680,9 +674,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:missing-tag",
-	}
+	build.Image.Name = "docker:missing-tag"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -707,9 +699,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
@@ -744,9 +734,7 @@ func TestKubernetesBuildCancel(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	trace := &common.Trace{Writer: os.Stdout, Abort: make(chan interface{}, 1)}
 
@@ -794,9 +782,7 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)

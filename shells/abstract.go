@@ -1,12 +1,12 @@
 package shells
 
 import (
+	"errors"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"errors"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
@@ -16,10 +16,6 @@ type AbstractShell struct {
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Artifacts = true
 	features.Cache = true
-}
-
-func (b *AbstractShell) GetSupportedOptions() []string {
-	return []string{"artifacts", "cache", "dependencies", "after_script"}
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
@@ -149,17 +145,6 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, fil
 	return
 }
 
-func (o *archivingOptions) CommandArguments() (args []string) {
-	for _, path := range o.Paths {
-		args = append(args, "--path", path)
-	}
-
-	if o.Untracked {
-		args = append(args, "--untracked")
-	}
-	return
-}
-
 func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, action string, f func()) {
 	if runnerCommand == "" {
 		w.Warning("%s is not supported by this executor.", action)
@@ -173,18 +158,30 @@ func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, 
 	w.EndIf()
 }
 
-func (b *AbstractShell) cacheExtractor(w ShellWriter, options *archivingOptions, info common.ShellScriptInfo) {
-	if options == nil {
+func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInfo) {
+	if len(info.Build.Cache) < 1 {
 		return
 	}
 
+	cacheOptions := info.Build.Cache[0]
+
+	// Create list of files to archive
+	var archiverArgs []string
+	for _, path := range cacheOptions.Paths {
+		archiverArgs = append(archiverArgs, "--path", path)
+	}
+
+	if cacheOptions.Untracted {
+		archiverArgs = append(archiverArgs, "--untracked")
+	}
+
 	// Skip restoring cache if no cache is defined
-	if archiverArgs := options.CommandArguments(); len(archiverArgs) == 0 {
+	if len(archiverArgs) < 1 {
 		return
 	}
 
 	// Skip archiving if no cache is defined
-	cacheKey, cacheFile := b.cacheFile(info.Build, options.Key)
+	cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 	if cacheKey == "" {
 		return
 	}
@@ -318,19 +315,12 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 }
 
 func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	// Parse options
-	var options shellOptions
-	err = info.Build.Options.Decode(&options)
-	if err != nil {
-		return
-	}
-
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Try to restore from main cache, if not found cache for master
-	b.cacheExtractor(w, options.Cache, info)
+	b.cacheExtractor(w, info)
 	return nil
 }
 
@@ -377,13 +367,15 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 	return nil
 }
 
-func (b *AbstractShell) cacheArchiver(w ShellWriter, options *archivingOptions, info common.ShellScriptInfo) {
-	if options == nil {
+func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo) {
+	if len(info.Build.Cache) < 1 {
 		return
 	}
 
+	cacheOptions := info.Build.Cache[0]
+
 	// Skip archiving if no cache is defined
-	cacheKey, cacheFile := b.cacheFile(info.Build, options.Key)
+	cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 	if cacheKey == "" {
 		return
 	}
@@ -394,8 +386,16 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, options *archivingOptions, 
 	}
 
 	// Create list of files to archive
-	archiverArgs := options.CommandArguments()
-	if len(archiverArgs) == 0 {
+	var archiverArgs []string
+	for _, path := range cacheOptions.Paths {
+		archiverArgs = append(archiverArgs, "--path", path)
+	}
+
+	if cacheOptions.Untracted {
+		archiverArgs = append(archiverArgs, "--untracked")
+	}
+
+	if len(archiverArgs) < 1 {
 		// Skip creating archive
 		return
 	}
@@ -417,8 +417,8 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, options *archivingOptions, 
 	})
 }
 
-func (b *AbstractShell) uploadArtifacts(w ShellWriter, options *archivingOptions, info common.ShellScriptInfo) {
-	if options == nil {
+func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo) {
+	if len(info.Build.Artifacts) < 1 {
 		return
 	}
 	if info.Build.Runner.URL == "" {
@@ -435,22 +435,30 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, options *archivingOptions
 		strconv.Itoa(info.Build.ID),
 	}
 
+	artifacts := info.Build.Artifacts[0]
+
 	// Create list of files to archive
-	archiverArgs := options.CommandArguments()
-	if len(archiverArgs) == 0 {
+	var archiverArgs []string
+	for _, path := range artifacts.Paths {
+		archiverArgs = append(archiverArgs, "--path", path)
+	}
+
+	if artifacts.Untracted {
+		archiverArgs = append(archiverArgs, "--untracked")
+	}
+
+	if len(archiverArgs) < 1 {
 		// Skip creating archive
 		return
 	}
 	args = append(args, archiverArgs...)
 
-	// Get artifacts:name
-	if name, ok := info.Build.Options.GetString("artifacts", "name"); ok && name != "" {
-		args = append(args, "--name", name)
+	if artifacts.Name != "" {
+		args = append(args, "--name", artifacts.Name)
 	}
 
-	// Get artifacts:expire_in
-	if expireIn, ok := info.Build.Options.GetString("artifacts", "expire_in"); ok && expireIn != "" {
-		args = append(args, "--expire-in", expireIn)
+	if artifacts.ExpireIn != "" {
+		args = append(args, "--expire-in", artifacts.ExpireIn)
 	}
 
 	b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
@@ -460,15 +468,15 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, options *archivingOptions
 }
 
 func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptInfo) error {
-	shellOptions := struct {
-		AfterScript []string `json:"after_script"`
-	}{}
-	err := info.Build.Options.Decode(&shellOptions)
-	if err != nil {
-		return err
+	var afterScriptStep *common.JRStep
+	for _, step := range info.Build.Steps {
+		if step.Name != "after_script" {
+			continue
+		}
+		afterScriptStep = &step
 	}
 
-	if len(shellOptions.AfterScript) == 0 {
+	if afterScriptStep == nil {
 		return nil
 	}
 
@@ -477,7 +485,7 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 
 	w.Notice("Running after script...")
 
-	for _, command := range shellOptions.AfterScript {
+	for _, command := range afterScriptStep.Script {
 		command = strings.TrimSpace(command)
 		if command != "" {
 			w.Notice("$ %s", command)
@@ -492,36 +500,22 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 }
 
 func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	// Parse options
-	var options shellOptions
-	err = info.Build.Options.Decode(&options)
-	if err != nil {
-		return
-	}
-
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Find cached files and archive them
-	b.cacheArchiver(w, options.Cache, info)
+	b.cacheArchiver(w, info)
 	return
 }
 
 func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	// Parse options
-	var options shellOptions
-	err = info.Build.Options.Decode(&options)
-	if err != nil {
-		return
-	}
-
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Upload artifacts
-	b.uploadArtifacts(w, options.Artifacts, info)
+	b.uploadArtifacts(w, info)
 	return
 }
 

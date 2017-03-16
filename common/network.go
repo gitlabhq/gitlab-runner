@@ -205,8 +205,7 @@ type JobResponse struct {
 	Dependencies  JRDependencies  `json:"dependencies"`
 
 	// TODO: LEGACY KEYS - TO BE REFACTORIZED WITH USAGE!!!
-	Commands string       `json:"commands,omitempty"` // TODO: This introduces a change in scripts execution!
-	Options  BuildOptions `json:"options"`
+	Commands string `json:"commands,omitempty"` // TODO: This introduces a change in scripts execution!
 
 	TLSCAChain string `json:"-"`
 }

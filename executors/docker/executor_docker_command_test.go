@@ -249,11 +249,18 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 				},
 			},
 		}
-		build.Commands = strings.Join(commands, "\n")
-		build.Options = common.BuildOptions{
-			"image": "docker:git",
-			"services": []string{
-				"docker:dind",
+		build.Steps = common.JRSteps{
+			common.JRStep{
+				Name:         "script",
+				Script:       common.JRStepScript(commands),
+				When:         common.StepWhenOnSuccess,
+				AllowFailure: false,
+			},
+		}
+		build.Image.Name = "docker:git"
+		build.Services = common.JRServices{
+			common.JRImage{
+				Name: "docker:dind",
 			},
 		}
 		build.Variables = append(build.Variables, common.BuildVariable{

@@ -170,16 +170,20 @@ func (b *Build) executeStage(buildStage BuildStage, executor Executor, abort cha
 }
 
 func (b *Build) executeUploadArtifacts(state error, executor Executor, abort chan interface{}) (err error) {
-	when, _ := b.Options.GetString("artifacts", "when")
+	if len(b.Artifacts) < 1 {
+		return
+	}
+
+	when := JRArtifact(b.Artifacts[0]).When
 
 	if state == nil {
 		// Previous stages were successful
-		if when == "" || when == "on_success" || when == "always" {
+		if when == "" || when == ArtifactWhenOnSuccess || when == ArtifactWhenAlways {
 			err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
 		}
 	} else {
 		// Previous stage did fail
-		if when == "on_failure" || when == "always" {
+		if when == ArtifactWhenOnFailure || when == ArtifactWhenAlways {
 			err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
 		}
 	}
