@@ -87,7 +87,7 @@ func (b *Build) ProjectUniqueName() string {
 }
 
 func (b *Build) ProjectSlug() (string, error) {
-	url, err := url.Parse(b.RepoURL)
+	url, err := url.Parse(b.GitInfo.RepoURL)
 	if err != nil {
 		return "", err
 	}

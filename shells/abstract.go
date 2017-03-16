@@ -46,7 +46,7 @@ func (b *AbstractShell) writeTLSCAInfo(w ShellWriter, build *common.Build, key s
 
 func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
 	templateDir := w.MkTmpDir("git-template")
-	args := []string{"clone", "--no-checkout", build.RepoURL, projectDir, "--template", templateDir}
+	args := []string{"clone", "--no-checkout", build.GitInfo.RepoURL, projectDir, "--template", templateDir}
 
 	w.RmDir(projectDir)
 	w.Command("git", "config", "-f", path.Join(templateDir, "config"), "fetch.recurseSubmodules", "false")
@@ -81,7 +81,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 
 	w.Command("git", "clean", "-ffdx")
 	w.Command("git", "reset", "--hard")
-	w.Command("git", "remote", "set-url", "origin", build.RepoURL)
+	w.Command("git", "remote", "set-url", "origin", build.GitInfo.RepoURL)
 	if depth != "" {
 		var refspec string
 		if build.GitInfo.RefType == common.RefTypeTag {
