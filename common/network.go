@@ -214,7 +214,6 @@ type JobResponse struct {
 	Options   BuildOptions `json:"options"`
 	Name      string       `json:"name"`
 	Stage     string       `json:"stage"`
-	Tag       bool         `json:"tag"`
 
 	TLSCAChain string `json:"-"`
 }

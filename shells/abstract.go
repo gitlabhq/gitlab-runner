@@ -84,7 +84,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	w.Command("git", "remote", "set-url", "origin", build.RepoURL)
 	if depth != "" {
 		var refspec string
-		if build.Tag {
+		if build.GitInfo.RefType == common.RefTypeTag {
 			refspec = "+refs/tags/" + build.RefName + ":refs/tags/" + build.RefName
 		} else {
 			refspec = "+refs/heads/" + build.RefName + ":refs/remotes/origin/" + build.RefName
