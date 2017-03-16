@@ -274,6 +274,103 @@ func TestVerifyRunner(t *testing.T) {
 	assert.False(t, state)
 }
 
+func getRequestJobResponse() (res map[string]interface{}) {
+	jobToken := "job-token"
+
+	res = make(map[string]interface{})
+	res["id"] = 10
+	res["token"] = jobToken
+	res["allow_git_fetch"] = false
+
+	jobInfo := make(map[string]interface{})
+	jobInfo["name"] = "test-job"
+	jobInfo["stage"] = "test"
+	jobInfo["project_id"] = 123
+	jobInfo["project_name"] = "test-project"
+	res["job_info"] = jobInfo
+
+	gitInfo := make(map[string]interface{})
+	gitInfo["repo_url"] = "https://gitlab-ci-token:testTokenHere1234@gitlab.example.com/test/test-project.git"
+	gitInfo["ref"] = "master"
+	gitInfo["sha"] = "abcdef123456"
+	gitInfo["before_sha"] = "654321fedcba"
+	gitInfo["ref_type"] = "branch"
+	res["git_info"] = gitInfo
+
+	runnerInfo := make(map[string]interface{})
+	runnerInfo["timeout"] = 3600
+	res["runner_info"] = runnerInfo
+
+	variables := make([]map[string]interface{}, 1)
+	variables[0] = make(map[string]interface{})
+	variables[0]["key"] = "CI"
+	variables[0]["value"] = true
+	variables[0]["public"] = true
+	res["variables"] = variables
+
+	steps := make([]map[string]interface{}, 2)
+	steps[0] = make(map[string]interface{})
+	steps[0]["name"] = "script"
+	steps[0]["script"] = []string{"date", "ls -ls"}
+	steps[0]["timeout"] = 3600
+	steps[0]["when"] = "on_success"
+	steps[0]["allow_failure"] = false
+	steps[1] = make(map[string]interface{})
+	steps[1]["name"] = "after_script"
+	steps[1]["script"] = []string{"ls -ls"}
+	steps[1]["timeout"] = 3600
+	steps[1]["when"] = "always"
+	steps[1]["allow_failure"] = true
+	res["steps"] = steps
+
+	image := make(map[string]interface{})
+	image["name"] = "ruby:2.0"
+	res["image"] = image
+
+	services := make([]map[string]interface{}, 2)
+	services[0] = make(map[string]interface{})
+	services[0]["name"] = "postgresql:9.5"
+	services[1] = make(map[string]interface{})
+	services[1]["name"] = "mysql:5.6"
+	res["services"] = services
+
+	artifacts := make([]map[string]interface{}, 1)
+	artifacts[0] = make(map[string]interface{})
+	artifacts[0]["name"] = "artifact.zip"
+	artifacts[0]["untracked"] = false
+	artifacts[0]["paths"] = []string{"out/*"}
+	artifacts[0]["when"] = "always"
+	artifacts[0]["expire_in"] = "7d"
+	res["artifacts"] = artifacts
+
+	cache := make([]map[string]interface{}, 1)
+	cache[0] = make(map[string]interface{})
+	cache[0]["key"] = "$CI_BUILD_REF"
+	cache[0]["untracked"] = false
+	cache[0]["paths"] = []string{"vendor/*"}
+	res["cache"] = cache
+
+	credentials := make([]map[string]interface{}, 1)
+	credentials[0] = make(map[string]interface{})
+	credentials[0]["type"] = "Registry"
+	credentials[0]["url"] = "http://registry.gitlab.example.com/"
+	credentials[0]["username"] = "gitlab-ci-token"
+	credentials[0]["password"] = jobToken
+	res["credentials"] = credentials
+
+	dependencies := make([]map[string]interface{}, 1)
+	dependencies[0] = make(map[string]interface{})
+	dependencies[0]["id"] = 9
+	dependencies[0]["name"] = "other-job"
+	artifactsFile0 := make(map[string]interface{})
+	artifactsFile0["filename"] = "binaries.zip"
+	artifactsFile0["size"] = 13631488
+	dependencies[0]["artifacts_file"] = artifactsFile0
+	res["dependencies"] = dependencies
+
+	return
+}
+
 func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/jobs/request" {
 		w.WriteHeader(404)
@@ -292,11 +389,8 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 	err = json.Unmarshal(body, &req)
 	assert.NoError(t, err)
 
-	res := make(map[string]interface{})
-
 	switch req["token"].(string) {
 	case "valid":
-		res["id"] = 10
 	case "no-jobs":
 		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
 		w.WriteHeader(204)
@@ -314,7 +408,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	output, err := json.Marshal(res)
+	output, err := json.Marshal(getRequestJobResponse())
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -323,6 +417,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	w.Write(output)
+	t.Logf("JobRequest response: %s\n", output)
 }
 
 func TestRequestJob(t *testing.T) {
