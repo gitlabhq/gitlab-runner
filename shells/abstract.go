@@ -99,8 +99,8 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
-	w.Notice("Checking out %s as %s...", build.Sha[0:8], build.RefName)
-	w.Command("git", "checkout", "-f", "-q", build.Sha)
+	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
+	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
 }
 
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
@@ -131,7 +131,7 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, fil
 	}
 
 	// Deduce cache key
-	key = path.Join(build.JobInfo.Name, build.GitInfo.RefName)
+	key = path.Join(build.JobInfo.Name, build.GitInfo.Ref)
 	if userKey != "" {
 		key = build.GetAllVariables().ExpandValue(userKey)
 	}

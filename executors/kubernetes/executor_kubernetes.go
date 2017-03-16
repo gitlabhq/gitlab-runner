@@ -90,17 +90,13 @@ func (s *executor) setupResources() error {
 	return nil
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) (err error) {
-	if err = s.AbstractExecutor.Prepare(globalConfig, config, build); err != nil {
+func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, job *common.Build) (err error) {
+	if err = s.AbstractExecutor.Prepare(globalConfig, config, job); err != nil {
 		return err
 	}
 
 	if s.BuildShell.PassFile {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
-	}
-
-	if err = build.Options.Decode(&s.options); err != nil {
-		return err
 	}
 
 	if s.kubeClient, err = getKubeClient(config.Kubernetes); err != nil {
@@ -115,9 +111,11 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 
-	if err = s.overwriteNamespace(build); err != nil {
+	if err = s.overwriteNamespace(job); err != nil {
 		return err
 	}
+
+	s.prepareOptions(job)
 
 	if err = s.checkDefaults(); err != nil {
 		return err
@@ -291,6 +289,19 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	return errc
 }
 
+func (s *executor) prepareOptions(job *common.Build) {
+	s.options = &kubernetesOptions{}
+	s.options.Image = job.Image.Name
+	for _, service := range job.Services {
+		serviceName := common.JRImage(service).Name
+		if serviceName == "" {
+			continue
+		}
+
+		s.options.Services = append(s.options.Services, serviceName)
+	}
+}
+
 // checkDefaults Defines the configuration for the Pod on Kubernetes
 func (s *executor) checkDefaults() error {
 	if s.options.Image == "" {
@@ -314,14 +325,14 @@ func (s *executor) checkDefaults() error {
 // overwriteNamespace checks for variable in order to overwrite the configured
 // namespace, as long as it complies to validation regular-expression, when
 // expression is empty the overwrite is disabled.
-func (s *executor) overwriteNamespace(build *common.Build) error {
+func (s *executor) overwriteNamespace(job *common.Build) error {
 	if s.Config.Kubernetes.NamespaceOverwriteAllowed == "" {
 		s.Debugln("Configuration entry 'namespace_overwrite_allowed' is empty, using configured namespace.")
 		return nil
 	}
 
 	// looking for namespace overwrite variable, and expanding for interpolation
-	s.namespaceOverwrite = build.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
+	s.namespaceOverwrite = job.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
 	if s.namespaceOverwrite == "" {
 		return nil
 	}

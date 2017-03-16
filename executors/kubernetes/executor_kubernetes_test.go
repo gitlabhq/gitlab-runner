@@ -183,12 +183,14 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+					GitInfo: common.JRGitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.JRImage{
+						Name: "test-image",
 					},
 					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "privileged", Value: "true"},
+						{Key: "privileged", Value: "true"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -242,12 +244,14 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+					GitInfo: common.JRGitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.JRImage{
+						Name: "test-image",
 					},
 					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
+						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -304,12 +308,14 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+					GitInfo: common.JRGitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.JRImage{
+						Name: "test-image",
 					},
 					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "privileged", Value: "true"},
+						{Key: "privileged", Value: "true"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -348,12 +354,47 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+					GitInfo: common.JRGitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.JRImage{
+						Name: "test-image",
 					},
 					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				namespaceOverwrite: "",
+				serviceLimits:      api.ResourceList{},
+				buildLimits:        api.ResourceList{},
+				helperLimits:       api.ResourceList{},
+				serviceRequests:    api.ResourceList{},
+				buildRequests:      api.ResourceList{},
+				helperRequests:     api.ResourceList{},
+			},
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.JRGitInfo{
+						Sha: "1234567890",
+					},
+					Variables: []common.BuildVariable{
+						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -733,12 +774,14 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 
 	build := &common.Build{
 		JobResponse: common.JobResponse{
-			Sha: "1234567890",
-			Options: common.BuildOptions{
-				"image": "test-image",
+			GitInfo: common.JRGitInfo{
+				Sha: "1234567890",
+			},
+			Image: common.JRImage{
+				Name: "test-image",
 			},
 			Variables: []common.BuildVariable{
-				common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+				{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
 			},
 		},
 		Runner: &common.RunnerConfig{
