@@ -52,8 +52,8 @@ func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projec
 	w.Command("git", "config", "-f", path.Join(templateDir, "config"), "fetch.recurseSubmodules", "false")
 
 	if depth := build.GetGitDepth(); depth != "" {
-		w.Notice("Cloning repository for %s with git depth set to %s...", build.RefName, depth)
-		args = append(args, "--depth", depth, "--branch", build.RefName)
+		w.Notice("Cloning repository for %s with git depth set to %s...", build.GitInfo.Ref, depth)
+		args = append(args, "--depth", depth, "--branch", build.GitInfo.Ref)
 	} else {
 		w.Notice("Cloning repository...")
 	}
@@ -67,7 +67,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 
 	w.IfDirectory(gitDir)
 	if depth != "" {
-		w.Notice("Fetching changes for %s with git depth set to %s...", build.RefName, depth)
+		w.Notice("Fetching changes for %s with git depth set to %s...", build.GitInfo.Ref, depth)
 	} else {
 		w.Notice("Fetching changes...")
 	}
@@ -85,9 +85,9 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	if depth != "" {
 		var refspec string
 		if build.GitInfo.RefType == common.RefTypeTag {
-			refspec = "+refs/tags/" + build.RefName + ":refs/tags/" + build.RefName
+			refspec = "+refs/tags/" + build.GitInfo.Ref + ":refs/tags/" + build.GitInfo.Ref
 		} else {
-			refspec = "+refs/heads/" + build.RefName + ":refs/remotes/origin/" + build.RefName
+			refspec = "+refs/heads/" + build.GitInfo.Ref + ":refs/remotes/origin/" + build.GitInfo.Ref
 		}
 		w.Command("git", "fetch", "--depth", depth, "origin", "--prune", refspec)
 	} else {

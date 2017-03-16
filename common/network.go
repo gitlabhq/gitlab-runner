@@ -206,7 +206,6 @@ type JobResponse struct {
 
 	// TODO: LEGACY KEYS - TO BE REFACTORIZED WITH USAGE!!!
 	Commands string       `json:"commands,omitempty"` // TODO: This introduces a change in scripts execution!
-	RefName  string       `json:"ref,omitempty"`
 	Options  BuildOptions `json:"options"`
 
 	TLSCAChain string `json:"-"`
