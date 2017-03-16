@@ -85,6 +85,8 @@ type JobRequest struct {
 	LastUpdate string      `json:"last_update,omitempty"`
 }
 
+// ---[ LEGACY JobResponse START ]---
+
 type JobArtifacts struct {
 	Filename string `json:"filename,omitempty"`
 	Size     int64  `json:"size,omitempty"`
@@ -101,38 +103,147 @@ type JobInfo struct {
 	Artifacts *JobArtifacts `json:"artifacts_file"`
 }
 
-type JobResponseCredentials struct {
+// ---[ LEGACY JobResponse END ]---
+// ---[ JobResponse START ]---
+
+type JRJobInfo struct {
+	Name        string `json:"name"`
+	Stage       string `json:"stage"`
+	ProjectID   int    `json:"project_id"`
+	ProjectName string `json:"project_name"`
+}
+
+type JRGitInfoRefType string
+
+const (
+	RefTypeBranch JRGitInfoRefType = "branch"
+	RefTypeTag                     = "tag"
+)
+
+type JRGitInfo struct {
+	RepoURL   string           `json:"repo_url"`
+	Ref       string           `json:"ref"`
+	Sha       string           `json:"sha"`
+	BeforeSha string           `json:"before_sha"`
+	RefType   JRGitInfoRefType `json:"ref_type"`
+}
+
+type JRRunnerInfo struct {
+	Timeout int `json:"timeout"`
+}
+
+type JRStepScript []string
+
+type JRStepWhen string
+
+const (
+	StepWhenOnFailure JRStepWhen = "on_failure"
+	StepWhenOnSuccess            = "on_success"
+	StepWhenAlways               = "always"
+)
+
+type JRStep struct {
+	Name         string       `json:"name"`
+	Script       JRStepScript `json:"script"`
+	Timeout      int          `json:"timeout"`
+	When         JRStepWhen   `json:"when"`
+	AllowFailure bool         `json:"allow_failure"`
+}
+
+type JRSteps []JRStep
+
+type JRImage struct {
+	Name string `json:"name"`
+}
+
+type JRServices []JRImage
+
+type JRArtifactPaths []string
+
+type JRArtifactWhen string
+
+const (
+	ArtifactWhenOnFailure JRArtifactWhen = "on_failure"
+	ArtifactWhenOnSuccess                = "on_success"
+	ArtifactWhenAlways                   = "always"
+)
+
+type JRArtifact struct {
+	Name      string          `json:"name"`
+	Untracted bool            `json:"untracted"`
+	Paths     JRArtifactPaths `json:"paths"`
+	When      JRArtifactWhen  `json:"when"`
+	ExpireIn  string          `json:"expire_in"`
+}
+
+type JRArtifacts []JRArtifact
+
+type JRCache struct {
+	Key       string          `json:"key"`
+	Untracted bool            `json:"untracted"`
+	Paths     JRArtifactPaths `json:"paths"`
+}
+
+type JRCaches []JRCache
+
+type JRCredentials struct {
 	Type     string `json:"type"`
 	URL      string `json:"url"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
+type JRDependencyArtifactsFile struct {
+	Filename string `json:"filename"`
+	Size     int64  `json:"size"`
+}
+
+type JRDependency struct {
+	ID int `json:"id"`
+	Name string `json:"name"`
+	ArtifactsFile JRDependencyArtifactsFile `json:"artifacts_file"`
+}
+
+type JRDependencies []JRDependency
+
 type JobResponse struct {
-	ID              int            `json:"id,omitempty"`
-	ProjectID       int            `json:"project_id,omitempty"`
-	Commands        string         `json:"commands,omitempty"`
-	RepoURL         string         `json:"repo_url,omitempty"`
-	Sha             string         `json:"sha,omitempty"`
-	RefName         string         `json:"ref,omitempty"`
-	BeforeSha       string         `json:"before_sha,omitempty"`
-	AllowGitFetch   bool           `json:"allow_git_fetch,omitempty"`
-	Timeout         int            `json:"timeout,omitempty"`
-	Variables       BuildVariables `json:"variables"`
-	Options         BuildOptions   `json:"options"`
-	Token           string         `json:"token"`
-	Name            string         `json:"name"`
-	Stage           string         `json:"stage"`
-	Tag             bool           `json:"tag"`
-	DependsOnBuilds []JobInfo      `json:"depends_on_builds"`
-	TLSCAChain      string         `json:"-"`
+	ID            int             `json:"id"`
+	Token         string          `json:"token"`
+	AllowGitFetch bool            `json:"allow_git_fetch"`
+	JobInfo       JRJobInfo       `json:"job_info"`
+	GitInfo       JRGitInfo       `json:"git_info"`
+	RunnerInfo    JRRunnerInfo    `json:"runner_info"`
+	Variables     BuildVariables  `json:"variables"` // TODO: Rename BuildVariables to JobVariables
+	Steps         JRSteps         `json:"steps"`
+	Image         JRImage         `json:"image"`
+	Services      JRServices      `json:"services"`
+	Artifacts     JRArtifacts     `json:"artifacts"`
+	Cache         JRCaches        `json:"cache"`
+	Credentials   []JRCredentials `json:"credentials"`
+	Dependencies  JRDependencies  `json:"dependencies"`
 
-	Credentials []JobResponseCredentials `json:"credentials,omitempty"`
+	// TODO: LEGACY KEYS - TO BE REFACTORIZED WITH USAGE!!!
+	ProjectID       int          `json:"project_id,omitempty"`
+	Commands        string       `json:"commands,omitempty"`
+	RepoURL         string       `json:"repo_url,omitempty"`
+	Sha             string       `json:"sha,omitempty"`
+	RefName         string       `json:"ref,omitempty"`
+	BeforeSha       string       `json:"before_sha,omitempty"`
+	Timeout         int          `json:"timeout,omitempty"`
+	Options         BuildOptions `json:"options"`
+	Name            string       `json:"name"`
+	Stage           string       `json:"stage"`
+	Tag             bool         `json:"tag"`
+	DependsOnBuilds []JobInfo    `json:"depends_on_builds"`
+
+	TLSCAChain string `json:"-"`
 }
 
-func (b *JobResponse) RepoCleanURL() (ret string) {
-	return url_helpers.CleanURL(b.RepoURL)
+func (b *JobResponse) RepoCleanURL() string {
+	return url_helpers.CleanURL(b.GitInfo.RepoURL)
 }
+
+// ---[ JobResponse END ]---
 
 type UpdateJobRequest struct {
 	Info  VersionInfo `json:"info,omitempty"`

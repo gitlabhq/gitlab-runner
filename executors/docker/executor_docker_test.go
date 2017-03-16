@@ -495,7 +495,7 @@ func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) executor 
 }
 
 func addGitLabRegistryCredentials(e *executor) {
-	e.Build.Credentials = []common.JobResponseCredentials{
+	e.Build.Credentials = []common.JRCredentials{
 		{
 			Type:     "registry",
 			URL:      "registry.gitlab.tld:1234",

@@ -303,9 +303,10 @@ func getRequestJobResponse() (res map[string]interface{}) {
 
 	variables := make([]map[string]interface{}, 1)
 	variables[0] = make(map[string]interface{})
-	variables[0]["key"] = "CI"
-	variables[0]["value"] = true
+	variables[0]["key"] = "CI_REF_NAME"
+	variables[0]["value"] = "master"
 	variables[0]["public"] = true
+	variables[0]["file"] = true
 	res["variables"] = variables
 
 	steps := make([]map[string]interface{}, 2)
