@@ -154,7 +154,7 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 		return err
 	}
 
-	build.Name = job
+	build.JobInfo.Name = job
 
 	// parse gitlab-ci.yml
 	config := make(common.BuildOptions)

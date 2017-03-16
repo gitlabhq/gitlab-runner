@@ -131,7 +131,7 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, fil
 	}
 
 	// Deduce cache key
-	key = path.Join(build.Name, build.RefName)
+	key = path.Join(build.JobInfo.Name, build.GitInfo.RefName)
 	if userKey != "" {
 		key = build.GetAllVariables().ExpandValue(userKey)
 	}
