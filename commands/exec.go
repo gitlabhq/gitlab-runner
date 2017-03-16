@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -108,7 +107,7 @@ func (c *ExecCommand) buildSteps(config, jobConfig common.BuildOptions) (steps c
 			Name:         "after_script",
 			Script:       afterScriptCommands,
 			Timeout:      3600,
-			When:         common.StepWhenOnSuccess,
+			When:         common.StepWhenAlways,
 			AllowFailure: false,
 		},
 	}
@@ -186,37 +185,78 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 		return err
 	}
 
-	build.Image.Name, _ = getOption("image", config, jobConfig).(string)
-
-	services := getOption("services", config, jobConfig).([]string)
-	for _, service := range services {
-		build.Services = append(build.Services, common.JRImage{
-			Name: service,
-		})
+	if imageName, ok := getOption("image", config, jobConfig); ok {
+		build.Image.Name = imageName.(string)
 	}
 
-	artifacts := getOption("artifacts", config, jobConfig).(map[string]interface{})
-	untracked, err := strconv.ParseBool(artifacts["untracked"].(string))
-	if err != nil {
-		untracked = false
+	if services, ok := getOptions("services", config, jobConfig); ok {
+		for _, service := range services {
+			build.Services = append(build.Services, common.JRImage{
+				Name: service.(string),
+			})
+		}
 	}
+
+	artifacts := getOptionsMap("artifacts", config, jobConfig)
+
+	artifactsPaths, _ := artifacts.GetSlice("paths")
+	paths := common.JRArtifactPaths{}
+	for _, path := range artifactsPaths {
+		paths = append(paths, path.(string))
+	}
+
+	var artifactsName string
+	if artifactsName, ok = artifacts.GetString("name"); !ok {
+		artifactsName = ""
+	}
+
+	var artifactsUntracked interface{}
+	if artifactsUntracked, ok = artifacts.Get("untracked"); !ok {
+		artifactsUntracked = false
+	}
+
+	var artifactsWhen string
+	if artifactsWhen, ok = artifacts.GetString("when"); !ok {
+		artifactsWhen = common.ArtifactWhenOnSuccess
+	}
+
+	var artifactsExpireIn string
+	if artifactsExpireIn, ok = artifacts.GetString("expireIn"); !ok {
+		artifactsExpireIn = ""
+	}
+
+	build.Artifacts = make(common.JRArtifacts, 1)
 	build.Artifacts[0] = common.JRArtifact{
-		Name:      artifacts["name"].(string),
-		Untracted: untracked,
-		Paths:     artifacts["paths"].([]string),
-		When:      artifacts["when"].(common.JRArtifactWhen),
-		ExpireIn:  artifacts["expireIn"].(string),
+		Name:      artifactsName,
+		Untracted: artifactsUntracked.(bool),
+		Paths:     paths,
+		When:      common.JRArtifactWhen(artifactsWhen),
+		ExpireIn:  artifactsExpireIn,
 	}
 
-	cache := getOption("cache", config, jobConfig).(map[string]interface{})
-	untracked, err = strconv.ParseBool(cache["untracked"].(string))
-	if err != nil {
-		untracked = false
+	cache := getOptionsMap("cache", config, jobConfig)
+
+	cachePaths, _ := cache.GetSlice("paths")
+	paths = common.JRArtifactPaths{}
+	for _, path := range cachePaths {
+		paths = append(paths, path.(string))
 	}
+
+	var cacheKey string
+	if cacheKey, ok = cache.GetString("key"); !ok {
+		cacheKey = ""
+	}
+
+	var cacheUntracked interface{}
+	if cacheUntracked, ok = cache.Get("untracked"); !ok {
+		cacheUntracked = false
+	}
+
+	build.Cache = make(common.JRCaches, 1)
 	build.Cache[0] = common.JRCache{
-		Key:       cache["key"].(string),
-		Untracted: untracked,
-		Paths:     cache["paths"].([]string),
+		Key:       cacheKey,
+		Untracted: cacheUntracked.(bool),
+		Paths:     paths,
 	}
 
 	if stage, ok := jobConfig.GetString("stage"); ok {
@@ -224,24 +264,32 @@ func (c *ExecCommand) parseYaml(job string, build *common.JobResponse) error {
 	} else {
 		build.JobInfo.Stage = "test"
 	}
+
 	return nil
 }
 
-func getOption(optionKey string, config, jobConfig common.BuildOptions) (value interface{}) {
-	var key string
-
-	// parse job options
-	for key, value = range jobConfig {
-		if key == optionKey {
-			return
-		}
+func getOptionsMap(optionKey string, config, jobConfig common.BuildOptions) (value common.BuildOptions) {
+	value, ok := jobConfig.GetSubOptions(optionKey)
+	if !ok {
+		value, _ = config.GetSubOptions(optionKey)
 	}
 
-	// parse global options
-	for key, value = range config {
-		if key == optionKey {
-			return value
-		}
+	return
+}
+
+func getOptions(optionKey string, config, jobConfig common.BuildOptions) (value []interface{}, ok bool) {
+	value, ok = jobConfig.GetSlice(optionKey)
+	if !ok {
+		value, ok = config.GetSlice(optionKey)
+	}
+
+	return
+}
+
+func getOption(optionKey string, config, jobConfig common.BuildOptions) (value interface{}, ok bool) {
+	value, ok = jobConfig.Get(optionKey)
+	if !ok {
+		value, ok = config.Get(optionKey)
 	}
 
 	return

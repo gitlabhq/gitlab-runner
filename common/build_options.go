@@ -14,6 +14,14 @@ func (m *BuildOptions) Get(keys ...string) (interface{}, bool) {
 	return helpers.GetMapKey(*m, keys...)
 }
 
+func (m *BuildOptions) GetSlice(keys ...string) ([]interface{}, bool) {
+	slice, ok := helpers.GetMapKey(*m, keys...)
+	if slice != nil {
+		return slice.([]interface{}), ok
+	}
+	return nil, false
+}
+
 func (m *BuildOptions) GetSubOptions(keys ...string) (result BuildOptions, ok bool) {
 	value, ok := helpers.GetMapKey(*m, keys...)
 	if ok {

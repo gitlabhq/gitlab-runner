@@ -174,8 +174,7 @@ func (b *Build) executeUploadArtifacts(state error, executor Executor, abort cha
 		return state
 	}
 
-	when := JRArtifact(b.Artifacts[0]).When
-
+	when := b.Artifacts[0].When
 	if state == nil {
 		// Previous stages were successful
 		if when == "" || when == ArtifactWhenOnSuccess || when == ArtifactWhenAlways {
