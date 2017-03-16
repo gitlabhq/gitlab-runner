@@ -385,6 +385,7 @@ func TestPrepare(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Image: "test-image",
+						Host:  "test-server",
 					},
 				},
 			},
@@ -392,9 +393,6 @@ func TestPrepare(t *testing.T) {
 				JobResponse: common.JobResponse{
 					GitInfo: common.JRGitInfo{
 						Sha: "1234567890",
-					},
-					Variables: []common.BuildVariable{
-						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
