@@ -547,6 +547,8 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 		return nil, err
 	}
 
+	s.Println(fmt.Sprintf("Using docker image %s ID=%s for service %s...", image, serviceImage.ID, service))
+
 	containerName := s.Build.ProjectUniqueName() + "-" + strings.Replace(service, "/", "__", -1)
 
 	// this will fail potentially some builds if there's name collision
@@ -687,6 +689,8 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 	if err != nil {
 		return nil, err
 	}
+
+	s.Println(fmt.Sprintf("Using docker image %s ID=%s for %s container...", imageName, image.ID, containerType))
 
 	hostname := s.Config.Docker.Hostname
 	if hostname == "" {
