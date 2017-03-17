@@ -129,7 +129,7 @@ type KubernetesHostPathVolumeSource struct {
 
 type KubernetesSecretVolumeSource struct {
 	Name       string `toml:"name" json:"name" description:"The name of the volume"`
-	SecretName string `toml:"path" json:"path" description:"The name of the secret to use"`
+	SecretName string `toml:"secret_name" json:"secret_name" description:"The name of the secret to use"`
 }
 
 type KubernetesVolumeSources struct {
