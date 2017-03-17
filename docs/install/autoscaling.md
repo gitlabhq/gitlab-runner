@@ -1,9 +1,9 @@
-# Install and configure GitLab Runner for auto-scaling
+# Install and configure GitLab Runner for autoscaling
 
 > The auto scale feature was introduced in GitLab Runner 1.1.0.
 
 For an overview of the auto-scale architecture, take a look at the
-[comprehensive documentation on auto-scaling](../configuration/autoscale.md).
+[comprehensive documentation on autoscaling](../configuration/autoscale.md).
 
 ## Prepare the environment
 
