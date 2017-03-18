@@ -170,26 +170,26 @@ func (b *Build) executeStage(buildStage BuildStage, executor Executor, abort cha
 }
 
 func (b *Build) executeUploadArtifacts(state error, executor Executor, abort chan interface{}) (err error) {
-	if len(b.Artifacts) < 1 {
-		return state
+	jobState := state
+
+	for _, artifacts := range b.Artifacts {
+		when := artifacts.When
+		if state == nil {
+			// Previous stages were successful
+			if when == "" || when == ArtifactWhenOnSuccess || when == ArtifactWhenAlways {
+				state = b.executeStage(BuildStageUploadArtifacts, executor, abort)
+			}
+		} else {
+			// Previous stage did fail
+			if when == ArtifactWhenOnFailure || when == ArtifactWhenAlways {
+				err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
+			}
+		}
 	}
 
-	when := b.Artifacts[0].When
-	if state == nil {
-		// Previous stages were successful
-		if when == "" || when == ArtifactWhenOnSuccess || when == ArtifactWhenAlways {
-			err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
-		}
-	} else {
-		// Previous stage did fail
-		if when == ArtifactWhenOnFailure || when == ArtifactWhenAlways {
-			err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
-		}
-	}
-
-	// Use previous error if set
-	if state != nil {
-		err = state
+	// Use job's error if set
+	if jobState != nil {
+		err = jobState
 	}
 	return
 }
