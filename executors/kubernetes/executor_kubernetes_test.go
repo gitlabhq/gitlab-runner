@@ -189,7 +189,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
-					Variables: []common.BuildVariable{
+					Variables: []common.JobVariable{
 						{Key: "privileged", Value: "true"},
 					},
 				},
@@ -250,7 +250,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
-					Variables: []common.BuildVariable{
+					Variables: []common.JobVariable{
 						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
 					},
 				},
@@ -314,7 +314,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
-					Variables: []common.BuildVariable{
+					Variables: []common.JobVariable{
 						{Key: "privileged", Value: "true"},
 					},
 				},
@@ -360,7 +360,7 @@ func TestPrepare(t *testing.T) {
 					Image: common.Image{
 						Name: "test-image",
 					},
-					Variables: []common.BuildVariable{
+					Variables: []common.JobVariable{
 						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
 					},
 				},
@@ -571,7 +571,7 @@ func TestSetupBuildPod(t *testing.T) {
 				BuildShell: &common.ShellConfiguration{},
 				Build: &common.Build{
 					JobResponse: common.JobResponse{
-						Variables: []common.BuildVariable{},
+						Variables: []common.JobVariable{},
 					},
 					Runner: &common.RunnerConfig{},
 				},
@@ -766,7 +766,7 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 			Image: common.Image{
 				Name: "test-image",
 			},
-			Variables: []common.BuildVariable{
+			Variables: []common.JobVariable{
 				{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
 			},
 		},

@@ -263,7 +263,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 				Name: "docker:dind",
 			},
 		}
-		build.Variables = append(build.Variables, common.BuildVariable{
+		build.Variables = append(build.Variables, common.JobVariable{
 			Key: "GIT_STRATEGY", Value: strategy,
 		})
 

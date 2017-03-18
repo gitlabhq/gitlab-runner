@@ -101,7 +101,7 @@ func (b *CmdWriter) buildCommand(command string, arguments ...string) string {
 	return strings.Join(list, " ")
 }
 
-func (b *CmdWriter) Variable(variable common.BuildVariable) {
+func (b *CmdWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.Absolute(path.Join(b.TemporaryPath, variable.Key))
 		variableFile = helpers.ToBackslash(variableFile)

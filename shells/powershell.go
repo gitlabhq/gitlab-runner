@@ -88,7 +88,7 @@ func (b *PsWriter) buildCommand(command string, arguments ...string) string {
 	return "& " + strings.Join(list, " ")
 }
 
-func (b *PsWriter) Variable(variable common.BuildVariable) {
+func (b *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.Absolute(path.Join(b.TemporaryPath, variable.Key))
 		variableFile = helpers.ToBackslash(variableFile)

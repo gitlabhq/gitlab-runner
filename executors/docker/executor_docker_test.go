@@ -506,8 +506,8 @@ func addGitLabRegistryCredentials(e *executor) {
 }
 
 func addRemoteVariableCredentials(e *executor) {
-	e.Build.Variables = common.BuildVariables{
-		common.BuildVariable{
+	e.Build.Variables = common.JobVariables{
+		common.JobVariable{
 			Key:   "DOCKER_AUTH_CONFIG",
 			Value: testVariableAuthConfigs,
 		},

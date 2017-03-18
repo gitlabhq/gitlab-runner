@@ -194,20 +194,20 @@ type Dependency struct {
 type Dependencies []Dependency
 
 type JobResponse struct {
-	ID            int            `json:"id"`
-	Token         string         `json:"token"`
-	AllowGitFetch bool           `json:"allow_git_fetch"`
-	JobInfo       JobInfo        `json:"job_info"`
-	GitInfo       GitInfo        `json:"git_info"`
-	RunnerInfo    RunnerInfo     `json:"runner_info"`
-	Variables     BuildVariables `json:"variables"` // TODO: Rename BuildVariables to JobVariables
-	Steps         Steps          `json:"steps"`
-	Image         Image          `json:"image"`
-	Services      Services       `json:"services"`
-	Artifacts     Artifacts      `json:"artifacts"`
-	Cache         Caches         `json:"cache"`
-	Credentials   []Credentials  `json:"credentials"`
-	Dependencies  Dependencies   `json:"dependencies"`
+	ID            int           `json:"id"`
+	Token         string        `json:"token"`
+	AllowGitFetch bool          `json:"allow_git_fetch"`
+	JobInfo       JobInfo       `json:"job_info"`
+	GitInfo       GitInfo       `json:"git_info"`
+	RunnerInfo    RunnerInfo    `json:"runner_info"`
+	Variables     JobVariables  `json:"variables"`
+	Steps         Steps         `json:"steps"`
+	Image         Image         `json:"image"`
+	Services      Services      `json:"services"`
+	Artifacts     Artifacts     `json:"artifacts"`
+	Cache         Caches        `json:"cache"`
+	Credentials   []Credentials `json:"credentials"`
+	Dependencies  Dependencies  `json:"dependencies"`
 
 	TLSCAChain string `json:"-"`
 }

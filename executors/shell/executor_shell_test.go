@@ -165,9 +165,9 @@ func TestBuildWithShallowLock(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, []common.BuildVariable{
-			common.BuildVariable{Key: "GIT_DEPTH", Value: "1"},
-			common.BuildVariable{Key: "GIT_STRATEGY", Value: "fetch"}}...)
+		build.Variables = append(build.Variables, []common.JobVariable{
+			common.JobVariable{Key: "GIT_DEPTH", Value: "1"},
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"}}...)
 
 		err = runBuild(t, build)
 		assert.NoError(t, err)
@@ -187,7 +187,7 @@ func TestBuildWithGitStrategyNone(t *testing.T) {
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_STRATEGY", Value: "none"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -206,7 +206,7 @@ func TestBuildWithGitStrategyFetch(t *testing.T) {
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -228,7 +228,7 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_STRATEGY", Value: "clone"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -251,7 +251,7 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 				build, cleanup := newBuild(t, successfulBuild, shell)
 				defer cleanup()
 
-				build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"})
+				build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"})
 
 				out, err := runBuildReturningOutput(t, build)
 				assert.NoError(t, err)
@@ -276,7 +276,7 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -299,7 +299,7 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -322,7 +322,7 @@ func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "invalid"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "invalid"})
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.EqualError(t, err, "unknown GIT_SUBMODULE_STRATEGY")
@@ -339,8 +339,8 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_STRATEGY", Value: "none"})
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -365,7 +365,7 @@ func TestBuildWithDebugTrace(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotRegexp(t, `[^$] echo Hello World`, out)
 
-		build.Variables = append(build.Variables, common.BuildVariable{Key: "CI_DEBUG_TRACE", Value: "true"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "true"})
 
 		out, err = runBuildReturningOutput(t, build)
 		assert.NoError(t, err)

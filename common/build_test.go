@@ -224,7 +224,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -262,7 +262,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, JobVariable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -300,7 +300,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, JobVariable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -337,7 +337,7 @@ func TestRunWrongAttempts(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
+	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "Number of attempts out of the range [1, 10] for stage: get_sources")
 }
@@ -374,7 +374,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }

@@ -144,11 +144,11 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 	return
 }
 
-func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildVariables common.BuildVariables, err error) {
+func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildVariables common.JobVariables, err error) {
 	if variables, ok := configVariables.(map[string]interface{}); ok {
 		for key, value := range variables {
 			if valueText, ok := value.(string); ok {
-				buildVariables = append(buildVariables, common.BuildVariable{
+				buildVariables = append(buildVariables, common.JobVariable{
 					Key:    key,
 					Value:  valueText,
 					Public: true,
@@ -165,7 +165,7 @@ func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildV
 }
 
 func (c *GitLabCiYamlParser) prepareVariables(job *common.JobResponse) (err error) {
-	job.Variables = common.BuildVariables{}
+	job.Variables = common.JobVariables{}
 	job.Variables, err = c.buildVariables(c.config["variables"])
 	if err != nil {
 		return

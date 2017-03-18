@@ -361,8 +361,8 @@ func (b *Build) String() string {
 	return helpers.ToYAML(b)
 }
 
-func (b *Build) GetDefaultVariables() BuildVariables {
-	return BuildVariables{
+func (b *Build) GetDefaultVariables() JobVariables {
+	return JobVariables{
 		{"CI", "true", true, true, false},
 		{"CI_DEBUG_TRACE", "false", true, true, false},
 		{"CI_BUILD_REF", b.GitInfo.Sha, true, true, false},
@@ -381,7 +381,7 @@ func (b *Build) GetDefaultVariables() BuildVariables {
 	}
 }
 
-func (b *Build) GetAllVariables() (variables BuildVariables) {
+func (b *Build) GetAllVariables() (variables JobVariables) {
 	if b.Runner != nil {
 		variables = append(variables, b.Runner.GetVariables()...)
 	}
