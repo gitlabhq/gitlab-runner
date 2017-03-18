@@ -159,52 +159,48 @@ func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, 
 }
 
 func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInfo) {
-	if len(info.Build.Cache) < 1 {
-		return
+	for _, cacheOptions := range info.Build.Cache {
+		// Create list of files to archive
+		archiverArgs := []string{}
+		for _, path := range cacheOptions.Paths {
+			archiverArgs = append(archiverArgs, "--path", path)
+		}
+
+		if cacheOptions.Untracked {
+			archiverArgs = append(archiverArgs, "--untracked")
+		}
+
+		// Skip restoring cache if no cache is defined
+		if len(archiverArgs) < 1 {
+			continue
+		}
+
+		// Skip archiving if no cache is defined
+		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
+		if cacheKey == "" {
+			continue
+		}
+
+		args := []string{
+			"cache-extractor",
+			"--file", cacheFile,
+		}
+
+		// Generate cache download address
+		if url := getCacheDownloadURL(info.Build, cacheKey); url != nil {
+			args = append(args, "--url", url.String())
+		}
+
+		// Execute cache-extractor command. Failure is not fatal.
+		b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
+			w.Notice("Checking cache for %s...", cacheKey)
+			w.IfCmd(info.RunnerCommand, args...)
+			w.Notice("Successfully extracted cache")
+			w.Else()
+			w.Warning("Failed to extract cache")
+			w.EndIf()
+		})
 	}
-
-	cacheOptions := info.Build.Cache[0]
-
-	// Create list of files to archive
-	var archiverArgs []string
-	for _, path := range cacheOptions.Paths {
-		archiverArgs = append(archiverArgs, "--path", path)
-	}
-
-	if cacheOptions.Untracked {
-		archiverArgs = append(archiverArgs, "--untracked")
-	}
-
-	// Skip restoring cache if no cache is defined
-	if len(archiverArgs) < 1 {
-		return
-	}
-
-	// Skip archiving if no cache is defined
-	cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
-	if cacheKey == "" {
-		return
-	}
-
-	args := []string{
-		"cache-extractor",
-		"--file", cacheFile,
-	}
-
-	// Generate cache download address
-	if url := getCacheDownloadURL(info.Build, cacheKey); url != nil {
-		args = append(args, "--url", url.String())
-	}
-
-	// Execute cache-extractor command. Failure is not fatal.
-	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		w.Notice("Checking cache for %s...", cacheKey)
-		w.IfCmd(info.RunnerCommand, args...)
-		w.Notice("Successfully extracted cache")
-		w.Else()
-		w.Warning("Failed to extract cache")
-		w.EndIf()
-	})
 }
 
 func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
