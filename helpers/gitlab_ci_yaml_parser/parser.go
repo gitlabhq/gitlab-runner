@@ -51,7 +51,7 @@ func (c *GitLabCiYamlParser) loadJob() (err error) {
 }
 
 func (c *GitLabCiYamlParser) prepareJobInfo(job *common.JobResponse) (err error) {
-	job.JobInfo = common.JRJobInfo{
+	job.JobInfo = common.JobInfo{
 		Name: c.jobName,
 	}
 
@@ -64,24 +64,24 @@ func (c *GitLabCiYamlParser) prepareJobInfo(job *common.JobResponse) (err error)
 	return
 }
 
-func (c *GitLabCiYamlParser) getCommands(commands interface{}) (common.JRStepScript, error) {
+func (c *GitLabCiYamlParser) getCommands(commands interface{}) (common.StepScript, error) {
 	if lines, ok := commands.([]interface{}); ok {
 		text := ""
 		for _, line := range lines {
 			if lineText, ok := line.(string); ok {
 				text += lineText + "\n"
 			} else {
-				return common.JRStepScript{}, errors.New("unsupported script")
+				return common.StepScript{}, errors.New("unsupported script")
 			}
 		}
-		return common.JRStepScript(strings.Split(text, "\n")), nil
+		return common.StepScript(strings.Split(text, "\n")), nil
 	} else if text, ok := commands.(string); ok {
-		return common.JRStepScript(strings.Split(text, "\n")), nil
+		return common.StepScript(strings.Split(text, "\n")), nil
 	} else if commands != nil {
-		return common.JRStepScript{}, errors.New("unsupported script")
+		return common.StepScript{}, errors.New("unsupported script")
 	}
 
-	return common.JRStepScript{}, nil
+	return common.StepScript{}, nil
 }
 
 func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
@@ -90,7 +90,7 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 		return
 	}
 
-	var scriptCommands, afterScriptCommands common.JRStepScript
+	var scriptCommands, afterScriptCommands common.StepScript
 
 	// get before_script
 	beforeScript, err := c.getCommands(c.config["before_script"])
@@ -124,15 +124,15 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 		return
 	}
 
-	job.Steps = common.JRSteps{
-		common.JRStep{
+	job.Steps = common.Steps{
+		common.Step{
 			Name:         "script",
 			Script:       scriptCommands,
 			Timeout:      3600,
 			When:         common.StepWhenOnSuccess,
 			AllowFailure: false,
 		},
-		common.JRStep{
+		common.Step{
 			Name:         "after_script",
 			Script:       afterScriptCommands,
 			Timeout:      3600,
@@ -182,7 +182,7 @@ func (c *GitLabCiYamlParser) prepareVariables(job *common.JobResponse) (err erro
 }
 
 func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) (err error) {
-	job.Image = common.JRImage{}
+	job.Image = common.Image{}
 	if imageName, ok := getOption("image", c.config, c.jobConfig); ok {
 		job.Image.Name = imageName.(string)
 	}
@@ -191,11 +191,11 @@ func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) (err error) {
 }
 
 func (c *GitLabCiYamlParser) prepareServices(job *common.JobResponse) (err error) {
-	job.Services = common.JRServices{}
+	job.Services = common.Services{}
 
 	if servicesMap, ok := getOptions("services", c.config, c.jobConfig); ok {
 		for _, service := range servicesMap {
-			job.Services = append(job.Services, common.JRImage{
+			job.Services = append(job.Services, common.Image{
 				Name: service.(string),
 			})
 		}
@@ -210,7 +210,7 @@ func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err erro
 	artifactsMap := getOptionsMap("artifacts", c.config, c.jobConfig)
 
 	artifactsPaths, _ := artifactsMap.GetSlice("paths")
-	paths := common.JRArtifactPaths{}
+	paths := common.ArtifactPaths{}
 	for _, path := range artifactsPaths {
 		paths = append(paths, path.(string))
 	}
@@ -235,12 +235,12 @@ func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err erro
 		artifactsExpireIn = ""
 	}
 
-	job.Artifacts = make(common.JRArtifacts, 1)
-	job.Artifacts[0] = common.JRArtifact{
+	job.Artifacts = make(common.Artifacts, 1)
+	job.Artifacts[0] = common.Artifact{
 		Name:      artifactsName,
 		Untracked: artifactsUntracked.(bool),
 		Paths:     paths,
-		When:      common.JRArtifactWhen(artifactsWhen),
+		When:      common.ArtifactWhen(artifactsWhen),
 		ExpireIn:  artifactsExpireIn,
 	}
 
@@ -253,7 +253,7 @@ func (c *GitLabCiYamlParser) prepareCache(job *common.JobResponse) (err error) {
 	cacheMap := getOptionsMap("cache", c.config, c.jobConfig)
 
 	cachePaths, _ := cacheMap.GetSlice("paths")
-	paths := common.JRArtifactPaths{}
+	paths := common.ArtifactPaths{}
 	for _, path := range cachePaths {
 		paths = append(paths, path.(string))
 	}
@@ -268,8 +268,8 @@ func (c *GitLabCiYamlParser) prepareCache(job *common.JobResponse) (err error) {
 		cacheUntracked = false
 	}
 
-	job.Cache = make(common.JRCaches, 1)
-	job.Cache[0] = common.JRCache{
+	job.Cache = make(common.Caches, 1)
+	job.Cache[0] = common.Cache{
 		Key:       cacheKey,
 		Untracked: cacheUntracked.(bool),
 		Paths:     paths,

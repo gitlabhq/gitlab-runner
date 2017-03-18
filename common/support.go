@@ -39,17 +39,17 @@ func GetRemoteLongRunningBuild() (JobResponse, error) {
 
 func getRemoteBuildResponse(commands string) (response JobResponse, err error) {
 	response = JobResponse{
-		GitInfo: JRGitInfo{
+		GitInfo: GitInfo{
 			RepoURL:   repoRemoteURL,
 			Sha:       repoSHA,
 			BeforeSha: repoBeforeSHA,
 			Ref:       repoRefName,
 			RefType:   repoRefType,
 		},
-		Steps: JRSteps{
-			JRStep{
+		Steps: Steps{
+			Step{
 				Name:         "script",
-				Script:       JRStepScript{commands},
+				Script:       StepScript{commands},
 				When:         StepWhenAlways,
 				AllowFailure: false,
 			},
@@ -66,17 +66,17 @@ func getLocalBuildResponse(commands string) (response JobResponse, err error) {
 	}
 
 	response = JobResponse{
-		GitInfo: JRGitInfo{
+		GitInfo: GitInfo{
 			RepoURL:   localRepoURL,
 			Sha:       repoSHA,
 			BeforeSha: repoBeforeSHA,
 			Ref:       repoRefName,
 			RefType:   repoRefType,
 		},
-		Steps: JRSteps{
-			JRStep{
+		Steps: Steps{
+			Step{
 				Name:         "script",
-				Script:       JRStepScript{commands},
+				Script:       StepScript{commands},
 				When:         StepWhenAlways,
 				AllowFailure: false,
 			},

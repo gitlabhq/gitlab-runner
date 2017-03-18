@@ -183,10 +183,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					GitInfo: common.JRGitInfo{
+					GitInfo: common.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.JRImage{
+					Image: common.Image{
 						Name: "test-image",
 					},
 					Variables: []common.BuildVariable{
@@ -244,10 +244,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					GitInfo: common.JRGitInfo{
+					GitInfo: common.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.JRImage{
+					Image: common.Image{
 						Name: "test-image",
 					},
 					Variables: []common.BuildVariable{
@@ -308,10 +308,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					GitInfo: common.JRGitInfo{
+					GitInfo: common.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.JRImage{
+					Image: common.Image{
 						Name: "test-image",
 					},
 					Variables: []common.BuildVariable{
@@ -354,10 +354,10 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					GitInfo: common.JRGitInfo{
+					GitInfo: common.GitInfo{
 						Sha: "1234567890",
 					},
-					Image: common.JRImage{
+					Image: common.Image{
 						Name: "test-image",
 					},
 					Variables: []common.BuildVariable{
@@ -391,7 +391,7 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
-					GitInfo: common.JRGitInfo{
+					GitInfo: common.GitInfo{
 						Sha: "1234567890",
 					},
 				},
@@ -760,10 +760,10 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 
 	build := &common.Build{
 		JobResponse: common.JobResponse{
-			GitInfo: common.JRGitInfo{
+			GitInfo: common.GitInfo{
 				Sha: "1234567890",
 			},
-			Image: common.JRImage{
+			Image: common.Image{
 				Name: "test-image",
 			},
 			Variables: []common.BuildVariable{

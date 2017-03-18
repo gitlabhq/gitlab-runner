@@ -22,10 +22,10 @@ func defaultS3CacheFactory() *common.CacheConfig {
 
 var s3CacheBuild = &common.Build{
 	JobResponse: common.JobResponse{
-		JobInfo: common.JRJobInfo{
+		JobInfo: common.JobInfo{
 			ProjectID: 10,
 		},
-		RunnerInfo: common.JRRunnerInfo{
+		RunnerInfo: common.RunnerInfo{
 			Timeout: 3600,
 		},
 	},

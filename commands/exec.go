@@ -62,19 +62,19 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 			ID:            1,
 			Token:         "",
 			AllowGitFetch: false,
-			JobInfo: common.JRJobInfo{
+			JobInfo: common.JobInfo{
 				Name:        "",
 				Stage:       "",
 				ProjectID:   1,
 				ProjectName: "",
 			},
-			GitInfo: common.JRGitInfo{
+			GitInfo: common.GitInfo{
 				RepoURL:   repoURL,
 				Ref:       strings.TrimSpace(refName),
 				Sha:       strings.TrimSpace(sha),
 				BeforeSha: strings.TrimSpace(beforeSha),
 			},
-			RunnerInfo: common.JRRunnerInfo{
+			RunnerInfo: common.RunnerInfo{
 				Timeout: c.getTimeout(),
 			},
 		},

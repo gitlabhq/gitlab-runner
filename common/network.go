@@ -85,124 +85,122 @@ type JobRequest struct {
 	LastUpdate string      `json:"last_update,omitempty"`
 }
 
-type JRJobInfo struct {
+type JobInfo struct {
 	Name        string `json:"name"`
 	Stage       string `json:"stage"`
 	ProjectID   int    `json:"project_id"`
 	ProjectName string `json:"project_name"`
 }
 
-type JRGitInfoRefType string
+type GitInfoRefType string
 
 const (
-	RefTypeBranch JRGitInfoRefType = "branch"
-	RefTypeTag                     = "tag"
+	RefTypeBranch GitInfoRefType = "branch"
+	RefTypeTag                   = "tag"
 )
 
-type JRGitInfo struct {
-	RepoURL   string           `json:"repo_url"`
-	Ref       string           `json:"ref"`
-	Sha       string           `json:"sha"`
-	BeforeSha string           `json:"before_sha"`
-	RefType   JRGitInfoRefType `json:"ref_type"`
+type GitInfo struct {
+	RepoURL   string         `json:"repo_url"`
+	Ref       string         `json:"ref"`
+	Sha       string         `json:"sha"`
+	BeforeSha string         `json:"before_sha"`
+	RefType   GitInfoRefType `json:"ref_type"`
 }
 
-type JRRunnerInfo struct {
+type RunnerInfo struct {
 	Timeout int `json:"timeout"`
 }
 
-type JRStepScript []string
+type StepScript []string
 
-type JRStepWhen string
+type StepWhen string
 
 const (
-	StepWhenOnFailure JRStepWhen = "on_failure"
-	StepWhenOnSuccess            = "on_success"
-	StepWhenAlways               = "always"
+	StepWhenOnFailure StepWhen = "on_failure"
+	StepWhenOnSuccess          = "on_success"
+	StepWhenAlways             = "always"
 )
 
-type JRStep struct {
-	Name         string       `json:"name"`
-	Script       JRStepScript `json:"script"`
-	Timeout      int          `json:"timeout"`
-	When         JRStepWhen   `json:"when"`
-	AllowFailure bool         `json:"allow_failure"`
+type Step struct {
+	Name         string     `json:"name"`
+	Script       StepScript `json:"script"`
+	Timeout      int        `json:"timeout"`
+	When         StepWhen   `json:"when"`
+	AllowFailure bool       `json:"allow_failure"`
 }
 
-type JRSteps []JRStep
+type Steps []Step
 
-type JRImage struct {
+type Image struct {
 	Name string `json:"name"`
 }
 
-type JRServices []JRImage
+type Services []Image
 
-type JRArtifactPaths []string
+type ArtifactPaths []string
 
-type JRArtifactWhen string
+type ArtifactWhen string
 
 const (
-	ArtifactWhenOnFailure JRArtifactWhen = "on_failure"
-	ArtifactWhenOnSuccess                = "on_success"
-	ArtifactWhenAlways                   = "always"
+	ArtifactWhenOnFailure ArtifactWhen = "on_failure"
+	ArtifactWhenOnSuccess              = "on_success"
+	ArtifactWhenAlways                 = "always"
 )
 
-type JRArtifact struct {
-	Name      string          `json:"name"`
-	Untracked bool            `json:"untracked"`
-	Paths     JRArtifactPaths `json:"paths"`
-	When      JRArtifactWhen  `json:"when"`
-	ExpireIn  string          `json:"expire_in"`
+type Artifact struct {
+	Name      string        `json:"name"`
+	Untracked bool          `json:"untracked"`
+	Paths     ArtifactPaths `json:"paths"`
+	When      ArtifactWhen  `json:"when"`
+	ExpireIn  string        `json:"expire_in"`
 }
 
-type JRArtifacts []JRArtifact
+type Artifacts []Artifact
 
-type JRCache struct {
-	Key       string          `json:"key"`
-	Untracked bool            `json:"untracked"`
-	Paths     JRArtifactPaths `json:"paths"`
+type Cache struct {
+	Key       string        `json:"key"`
+	Untracked bool          `json:"untracked"`
+	Paths     ArtifactPaths `json:"paths"`
 }
 
-type JRCaches []JRCache
+type Caches []Cache
 
-type JRCredentials struct {
+type Credentials struct {
 	Type     string `json:"type"`
 	URL      string `json:"url"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-type JRDependencyArtifactsFile struct {
+type DependencyArtifactsFile struct {
 	Filename string `json:"filename"`
 	Size     int64  `json:"size"`
 }
 
-type JRDependency struct {
-	ID            int                       `json:"id"`
-	Token         string                    `json:"token"`
-	Name          string                    `json:"name"`
-	ArtifactsFile JRDependencyArtifactsFile `json:"artifacts_file"`
+type Dependency struct {
+	ID            int                     `json:"id"`
+	Token         string                  `json:"token"`
+	Name          string                  `json:"name"`
+	ArtifactsFile DependencyArtifactsFile `json:"artifacts_file"`
 }
 
-type JRDependencies []JRDependency
+type Dependencies []Dependency
 
 type JobResponse struct {
-	ID            int             `json:"id"`
-	Token         string          `json:"token"`
-	AllowGitFetch bool            `json:"allow_git_fetch"`
-	JobInfo       JRJobInfo       `json:"job_info"`
-	GitInfo       JRGitInfo       `json:"git_info"`
-	RunnerInfo    JRRunnerInfo    `json:"runner_info"`
-	Variables     BuildVariables  `json:"variables"` // TODO: Rename BuildVariables to JobVariables
-	Steps         JRSteps         `json:"steps"`
-	Image         JRImage         `json:"image"`
-	Services      JRServices      `json:"services"`
-	Artifacts     JRArtifacts     `json:"artifacts"`
-	Cache         JRCaches        `json:"cache"`
-	Credentials   []JRCredentials `json:"credentials"`
-	Dependencies  JRDependencies  `json:"dependencies"`
-
-	// TODO: Introduces changes in scripts execution!
+	ID            int            `json:"id"`
+	Token         string         `json:"token"`
+	AllowGitFetch bool           `json:"allow_git_fetch"`
+	JobInfo       JobInfo        `json:"job_info"`
+	GitInfo       GitInfo        `json:"git_info"`
+	RunnerInfo    RunnerInfo     `json:"runner_info"`
+	Variables     BuildVariables `json:"variables"` // TODO: Rename BuildVariables to JobVariables
+	Steps         Steps          `json:"steps"`
+	Image         Image          `json:"image"`
+	Services      Services       `json:"services"`
+	Artifacts     Artifacts      `json:"artifacts"`
+	Cache         Caches         `json:"cache"`
+	Credentials   []Credentials  `json:"credentials"`
+	Dependencies  Dependencies   `json:"dependencies"`
 
 	TLSCAChain string `json:"-"`
 }

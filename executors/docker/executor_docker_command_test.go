@@ -249,17 +249,17 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 				},
 			},
 		}
-		build.Steps = common.JRSteps{
-			common.JRStep{
+		build.Steps = common.Steps{
+			common.Step{
 				Name:         "script",
-				Script:       common.JRStepScript(commands),
+				Script:       common.StepScript(commands),
 				When:         common.StepWhenOnSuccess,
 				AllowFailure: false,
 			},
 		}
 		build.Image.Name = "docker:git"
-		build.Services = common.JRServices{
-			common.JRImage{
+		build.Services = common.Services{
+			common.Image{
 				Name: "docker:dind",
 			},
 		}

@@ -207,7 +207,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 	})
 }
 
-func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.JRDependency, info common.ShellScriptInfo) {
+func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
 	args := []string{
 		"artifacts-downloader",
 		"--url",
@@ -222,7 +222,7 @@ func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.JRDependency
 	w.Command(info.RunnerCommand, args...)
 }
 
-func (b *AbstractShell) jobArtifacts(info common.ShellScriptInfo) (otherJobs []common.JRDependency) {
+func (b *AbstractShell) jobArtifacts(info common.ShellScriptInfo) (otherJobs []common.Dependency) {
 	for _, otherJob := range info.Build.Dependencies {
 		if otherJob.ArtifactsFile.Filename == "" {
 			continue
@@ -350,7 +350,7 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
 }
 
 func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	var scriptStep *common.JRStep
+	var scriptStep *common.Step
 	for _, step := range info.Build.Steps {
 		if step.Name == "script" {
 			scriptStep = &step
@@ -480,7 +480,7 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptIn
 }
 
 func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptInfo) error {
-	var afterScriptStep *common.JRStep
+	var afterScriptStep *common.Step
 	for _, step := range info.Build.Steps {
 		if step.Name == "after_script" {
 			afterScriptStep = &step
