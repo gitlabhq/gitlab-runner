@@ -376,53 +376,49 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 }
 
 func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo) {
-	if len(info.Build.Cache) < 1 {
-		return
+	for _, cacheOptions := range info.Build.Cache {
+		// Skip archiving if no cache is defined
+		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
+		if cacheKey == "" {
+			continue
+		}
+
+		args := []string{
+			"cache-archiver",
+			"--file", cacheFile,
+		}
+
+		// Create list of files to archive
+		archiverArgs := []string{}
+		for _, path := range cacheOptions.Paths {
+			archiverArgs = append(archiverArgs, "--path", path)
+		}
+
+		if cacheOptions.Untracked {
+			archiverArgs = append(archiverArgs, "--untracked")
+		}
+
+		if len(archiverArgs) < 1 {
+			// Skip creating archive
+			continue
+		}
+		args = append(args, archiverArgs...)
+
+		// Generate cache upload address
+		if url := getCacheUploadURL(info.Build, cacheKey); url != nil {
+			args = append(args, "--url", url.String())
+		}
+
+		// Execute cache-archiver command. Failure is not fatal.
+		b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
+			w.Notice("Creating cache %s...", cacheKey)
+			w.IfCmd(info.RunnerCommand, args...)
+			w.Notice("Created cache")
+			w.Else()
+			w.Warning("Failed to create cache")
+			w.EndIf()
+		})
 	}
-
-	cacheOptions := info.Build.Cache[0]
-
-	// Skip archiving if no cache is defined
-	cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
-	if cacheKey == "" {
-		return
-	}
-
-	args := []string{
-		"cache-archiver",
-		"--file", cacheFile,
-	}
-
-	// Create list of files to archive
-	var archiverArgs []string
-	for _, path := range cacheOptions.Paths {
-		archiverArgs = append(archiverArgs, "--path", path)
-	}
-
-	if cacheOptions.Untracked {
-		archiverArgs = append(archiverArgs, "--untracked")
-	}
-
-	if len(archiverArgs) < 1 {
-		// Skip creating archive
-		return
-	}
-	args = append(args, archiverArgs...)
-
-	// Generate cache upload address
-	if url := getCacheUploadURL(info.Build, cacheKey); url != nil {
-		args = append(args, "--url", url.String())
-	}
-
-	// Execute cache-archiver command. Failure is not fatal.
-	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
-		w.Notice("Creating cache %s...", cacheKey)
-		w.IfCmd(info.RunnerCommand, args...)
-		w.Notice("Created cache")
-		w.Else()
-		w.Warning("Failed to create cache")
-		w.EndIf()
-	})
 }
 
 func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo) {
