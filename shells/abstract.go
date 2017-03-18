@@ -422,53 +422,50 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 }
 
 func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo) {
-	if len(info.Build.Artifacts) < 1 {
-		return
-	}
 	if info.Build.Runner.URL == "" {
 		return
 	}
 
-	args := []string{
-		"artifacts-uploader",
-		"--url",
-		info.Build.Runner.URL,
-		"--token",
-		info.Build.Token,
-		"--id",
-		strconv.Itoa(info.Build.ID),
+	for _, artifacts := range info.Build.Artifacts {
+		args := []string{
+			"artifacts-uploader",
+			"--url",
+			info.Build.Runner.URL,
+			"--token",
+			info.Build.Token,
+			"--id",
+			strconv.Itoa(info.Build.ID),
+		}
+
+		// Create list of files to archive
+		archiverArgs := []string{}
+		for _, path := range artifacts.Paths {
+			archiverArgs = append(archiverArgs, "--path", path)
+		}
+
+		if artifacts.Untracked {
+			archiverArgs = append(archiverArgs, "--untracked")
+		}
+
+		if len(archiverArgs) < 1 {
+			// Skip creating archive
+			continue
+		}
+		args = append(args, archiverArgs...)
+
+		if artifacts.Name != "" {
+			args = append(args, "--name", artifacts.Name)
+		}
+
+		if artifacts.ExpireIn != "" {
+			args = append(args, "--expire-in", artifacts.ExpireIn)
+		}
+
+		b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
+			w.Notice("Uploading artifacts...")
+			w.Command(info.RunnerCommand, args...)
+		})
 	}
-
-	artifacts := info.Build.Artifacts[0]
-
-	// Create list of files to archive
-	var archiverArgs []string
-	for _, path := range artifacts.Paths {
-		archiverArgs = append(archiverArgs, "--path", path)
-	}
-
-	if artifacts.Untracked {
-		archiverArgs = append(archiverArgs, "--untracked")
-	}
-
-	if len(archiverArgs) < 1 {
-		// Skip creating archive
-		return
-	}
-	args = append(args, archiverArgs...)
-
-	if artifacts.Name != "" {
-		args = append(args, "--name", artifacts.Name)
-	}
-
-	if artifacts.ExpireIn != "" {
-		args = append(args, "--expire-in", artifacts.ExpireIn)
-	}
-
-	b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
-		w.Notice("Uploading artifacts...")
-		w.Command(info.RunnerCommand, args...)
-	})
 }
 
 func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptInfo) error {
