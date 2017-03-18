@@ -113,6 +113,13 @@ type RunnerInfo struct {
 
 type StepScript []string
 
+type StepName string
+
+const (
+	StepNameScript      StepName = "script"
+	StepNameAfterScript          = "after_script"
+)
+
 type StepWhen string
 
 const (
@@ -122,7 +129,7 @@ const (
 )
 
 type Step struct {
-	Name         string     `json:"name"`
+	Name         StepName   `json:"name"`
 	Script       StepScript `json:"script"`
 	Timeout      int        `json:"timeout"`
 	When         StepWhen   `json:"when"`

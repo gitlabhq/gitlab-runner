@@ -251,7 +251,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 		}
 		build.Steps = common.Steps{
 			common.Step{
-				Name:         "script",
+				Name:         common.StepNameScript,
 				Script:       common.StepScript(commands),
 				When:         common.StepWhenOnSuccess,
 				AllowFailure: false,

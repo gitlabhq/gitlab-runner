@@ -48,7 +48,7 @@ func getRemoteBuildResponse(commands string) (response JobResponse, err error) {
 		},
 		Steps: Steps{
 			Step{
-				Name:         "script",
+				Name:         StepNameScript,
 				Script:       StepScript{commands},
 				When:         StepWhenAlways,
 				AllowFailure: false,
@@ -75,7 +75,7 @@ func getLocalBuildResponse(commands string) (response JobResponse, err error) {
 		},
 		Steps: Steps{
 			Step{
-				Name:         "script",
+				Name:         StepNameScript,
 				Script:       StepScript{commands},
 				When:         StepWhenAlways,
 				AllowFailure: false,

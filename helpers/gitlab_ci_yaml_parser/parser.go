@@ -126,14 +126,14 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 
 	job.Steps = common.Steps{
 		common.Step{
-			Name:         "script",
+			Name:         common.StepNameScript,
 			Script:       scriptCommands,
 			Timeout:      3600,
 			When:         common.StepWhenOnSuccess,
 			AllowFailure: false,
 		},
 		common.Step{
-			Name:         "after_script",
+			Name:         common.StepNameAfterScript,
 			Script:       afterScriptCommands,
 			Timeout:      3600,
 			When:         common.StepWhenAlways,
