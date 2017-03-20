@@ -379,4 +379,9 @@ check-tags-in-changelog:
 		echo "$$tag:   \t $$state"; \
 	done
 
+development_setup:
+	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/gitlab-test.git tmp/gitlab-test
+	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
+	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
+
 FORCE:
