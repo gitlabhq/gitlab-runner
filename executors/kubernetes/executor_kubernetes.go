@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"golang.org/x/net/context"
 	"k8s.io/kubernetes/pkg/api"
 	client "k8s.io/kubernetes/pkg/client/unversioned"
+	"k8s.io/kubernetes/pkg/credentialprovider"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
@@ -33,9 +35,10 @@ type kubernetesOptions struct {
 type executor struct {
 	executors.AbstractExecutor
 
-	kubeClient *client.Client
-	pod        *api.Pod
-	options    *kubernetesOptions
+	kubeClient  *client.Client
+	pod         *api.Pod
+	credentials *api.Secret
+	options     *kubernetesOptions
 
 	namespaceOverwrite string
 
@@ -129,8 +132,12 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	s.Debugln("Starting Kubernetes command...")
 
 	if s.pod == nil {
-		err := s.setupBuildPod()
+		err := s.setupCredentials()
+		if err != nil {
+			return err
+		}
 
+		err = s.setupBuildPod()
 		if err != nil {
 			return err
 		}
@@ -159,6 +166,12 @@ func (s *executor) Cleanup() {
 		err := s.kubeClient.Pods(s.pod.Namespace).Delete(s.pod.Name, nil)
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
+		}
+	}
+	if s.credentials != nil {
+		err := s.kubeClient.Secrets(s.pod.Namespace).Delete(s.credentials.Name)
+		if err != nil {
+			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
 	}
 	closeKubeClient(s.kubeClient)
@@ -197,6 +210,43 @@ func (s *executor) buildContainer(name, image string, requests, limits api.Resou
 	}
 }
 
+func (s *executor) setupCredentials() error {
+	authConfigs := make(map[string]credentialprovider.DockerConfigEntry)
+
+	for _, credentials := range s.Build.Credentials {
+		if credentials.Type != "registry" {
+			continue
+		}
+
+		authConfigs[credentials.URL] = credentialprovider.DockerConfigEntry{
+			Username: credentials.Username,
+			Password: credentials.Password,
+		}
+	}
+
+	if len(authConfigs) == 0 {
+		return nil
+	}
+
+	dockerCfgContent, err := json.Marshal(authConfigs)
+	if err != nil {
+		return err
+	}
+
+	secret := api.Secret{}
+	secret.GenerateName = s.Build.ProjectUniqueName()
+	secret.Namespace = s.Config.Kubernetes.Namespace
+	secret.Type = api.SecretTypeDockercfg
+	secret.Data = map[string][]byte{}
+	secret.Data[api.DockerConfigKey] = dockerCfgContent
+
+	s.credentials, err = s.kubeClient.Secrets(s.Config.Kubernetes.Namespace).Create(&secret)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *executor) setupBuildPod() error {
 	services := make([]api.Container, len(s.options.Services))
 	for i, image := range s.options.Services {
@@ -207,6 +257,10 @@ func (s *executor) setupBuildPod() error {
 	var imagePullSecrets []api.LocalObjectReference
 	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})
+	}
+
+	if s.credentials != nil {
+		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)

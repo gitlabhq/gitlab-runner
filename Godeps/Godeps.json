@@ -214,6 +214,56 @@
 			"Rev": "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"
 		},
 		{
+			"ImportPath": "github.com/docker/engine-api/types",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/blkiodev",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/container",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/filters",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/mount",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/network",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/registry",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/strslice",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/swarm",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
+			"ImportPath": "github.com/docker/engine-api/types/versions",
+			"Comment": "v0.4.0-66-g4290f40",
+			"Rev": "4290f40c056686fcaa5c9caf02eac1dde9315adf"
+		},
+		{
 			"ImportPath": "github.com/docker/go-connections/nat",
 			"Comment": "v0.2.1-4-g988efe9",
 			"Rev": "988efe982fdecb46f01d53465878ff1f2ff411ce"
@@ -894,6 +944,11 @@
 		},
 		{
 			"ImportPath": "k8s.io/kubernetes/pkg/conversion/queryparams",
+			"Comment": "v1.3.5",
+			"Rev": "b0deb2eb8f4037421077f77cb163dbb4c0a2a9f5"
+		},
+		{
+			"ImportPath": "k8s.io/kubernetes/pkg/credentialprovider",
 			"Comment": "v1.3.5",
 			"Rev": "b0deb2eb8f4037421077f77cb163dbb4c0a2a9f5"
 		},
