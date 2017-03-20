@@ -42,7 +42,7 @@ func getCacheObjectName(build *common.Build, cache *common.CacheConfig, key stri
 	if !cache.Shared {
 		runnerSegment = path.Join("runner", build.Runner.ShortDescription())
 	}
-	return path.Join(cache.Path, runnerSegment, "project", strconv.Itoa(build.ProjectID), key)
+	return path.Join(cache.Path, runnerSegment, "project", strconv.Itoa(build.JobInfo.ProjectID), key)
 }
 
 func getCacheStorageClient(cache *common.CacheConfig) (scl *minio.Client, err error) {
@@ -69,7 +69,7 @@ func getS3DownloadURL(build *common.Build, key string) (url *url.URL) {
 		return
 	}
 
-	url, err = scl.PresignedGetObject(cache.BucketName, objectName, time.Second*time.Duration(build.Timeout), nil)
+	url, err = scl.PresignedGetObject(cache.BucketName, objectName, time.Second*time.Duration(build.RunnerInfo.Timeout), nil)
 	if err != nil {
 		logrus.Warningln(err)
 		return
@@ -103,7 +103,7 @@ func getS3UploadURL(build *common.Build, key string) (url *url.URL) {
 		return
 	}
 
-	url, err = scl.PresignedPutObject(cache.BucketName, objectName, time.Second*time.Duration(build.Timeout))
+	url, err = scl.PresignedPutObject(cache.BucketName, objectName, time.Second*time.Duration(build.RunnerInfo.Timeout))
 	if err != nil {
 		logrus.Warningln(err)
 		return

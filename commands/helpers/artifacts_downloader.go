@@ -15,13 +15,13 @@ import (
 )
 
 type ArtifactsDownloaderCommand struct {
-	common.BuildCredentials
+	common.JobCredentials
 	retryHelper
 	network common.Network
 }
 
 func (c *ArtifactsDownloaderCommand) download(file string) (bool, error) {
-	switch c.network.DownloadArtifacts(c.BuildCredentials, file) {
+	switch c.network.DownloadArtifacts(c.JobCredentials, file) {
 	case common.DownloadSucceeded:
 		return false, nil
 	case common.DownloadNotFound:
@@ -70,7 +70,7 @@ func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 
 func init() {
 	common.RegisterCommand2("artifacts-downloader", "download and extract build artifacts (internal)", &ArtifactsDownloaderCommand{
-		network: &network.GitLabClient{},
+		network: network.NewGitLabClient(),
 		retryHelper: retryHelper{
 			Retry:     2,
 			RetryTime: time.Second,

@@ -64,7 +64,7 @@ func (r *RunSingleCommand) postBuild() {
 }
 
 func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) (err error) {
-	buildData, healthy := r.network.GetBuild(r.RunnerConfig)
+	jobData, healthy := r.network.RequestJob(r.RunnerConfig)
 	if !healthy {
 		log.Println("Runner is not healthy!")
 		select {
@@ -74,7 +74,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		return
 	}
 
-	if buildData == nil {
+	if jobData == nil {
 		select {
 		case <-time.After(common.CheckInterval):
 		case <-abortSignal:
@@ -85,17 +85,17 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 	config := common.NewConfig()
 
 	newBuild := common.Build{
-		GetBuildResponse: *buildData,
-		Runner:           &r.RunnerConfig,
-		SystemInterrupt:  abortSignal,
-		ExecutorData:     data,
+		JobResponse:     *jobData,
+		Runner:          &r.RunnerConfig,
+		SystemInterrupt: abortSignal,
+		ExecutorData:    data,
 	}
 
-	buildCredentials := &common.BuildCredentials{
-		ID:    buildData.ID,
-		Token: buildData.Token,
+	jobCredentials := &common.JobCredentials{
+		ID:    jobData.ID,
+		Token: jobData.Token,
 	}
-	trace := r.network.ProcessBuild(r.RunnerConfig, buildCredentials)
+	trace := r.network.ProcessJob(r.RunnerConfig, jobCredentials)
 	defer trace.Fail(err)
 
 	err = newBuild.Run(config, trace)
@@ -160,6 +160,6 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 func init() {
 	common.RegisterCommand2("run-single", "start single runner", &RunSingleCommand{
-		network: &network.GitLabClient{},
+		network: network.NewGitLabClient(),
 	})
 }

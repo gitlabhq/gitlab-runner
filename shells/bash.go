@@ -78,7 +78,7 @@ func (b *BashWriter) buildCommand(command string, arguments ...string) string {
 	return strings.Join(list, " ")
 }
 
-func (b *BashWriter) Variable(variable common.BuildVariable) {
+func (b *BashWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.Absolute(path.Join(b.TemporaryPath, variable.Key))
 		b.Line(fmt.Sprintf("mkdir -p %q", helpers.ToSlash(b.TemporaryPath)))

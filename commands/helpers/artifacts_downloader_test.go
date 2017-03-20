@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-var downloaderCredentials = common.BuildCredentials{
+var downloaderCredentials = common.JobCredentials{
 	ID:    1000,
 	Token: "test",
 	URL:   "test",
@@ -30,8 +30,8 @@ func TestArtifactsDownloaderNotFound(t *testing.T) {
 		downloadState: common.DownloadNotFound,
 	}
 	cmd := ArtifactsDownloaderCommand{
-		BuildCredentials: downloaderCredentials,
-		network:          network,
+		JobCredentials: downloaderCredentials,
+		network:        network,
 	}
 
 	assert.Panics(t, func() {
@@ -46,8 +46,8 @@ func TestArtifactsDownloaderForbidden(t *testing.T) {
 		downloadState: common.DownloadForbidden,
 	}
 	cmd := ArtifactsDownloaderCommand{
-		BuildCredentials: downloaderCredentials,
-		network:          network,
+		JobCredentials: downloaderCredentials,
+		network:        network,
 	}
 
 	assert.Panics(t, func() {
@@ -62,8 +62,8 @@ func TestArtifactsDownloaderRetry(t *testing.T) {
 		downloadState: common.DownloadFailed,
 	}
 	cmd := ArtifactsDownloaderCommand{
-		BuildCredentials: downloaderCredentials,
-		network:          network,
+		JobCredentials: downloaderCredentials,
+		network:        network,
 		retryHelper: retryHelper{
 			Retry: 2,
 		},
@@ -81,8 +81,8 @@ func TestArtifactsDownloaderSucceeded(t *testing.T) {
 		downloadState: common.DownloadSucceeded,
 	}
 	cmd := ArtifactsDownloaderCommand{
-		BuildCredentials: downloaderCredentials,
-		network:          network,
+		JobCredentials: downloaderCredentials,
+		network:        network,
 	}
 
 	os.Remove(artifactsTestArchivedFile)

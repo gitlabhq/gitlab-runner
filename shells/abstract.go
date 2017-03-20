@@ -1,12 +1,12 @@
 package shells
 
 import (
+	"errors"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"errors"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
@@ -16,10 +16,6 @@ type AbstractShell struct {
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Artifacts = true
 	features.Cache = true
-}
-
-func (b *AbstractShell) GetSupportedOptions() []string {
-	return []string{"artifacts", "cache", "dependencies", "after_script"}
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
@@ -34,7 +30,7 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 
 func (b *AbstractShell) writeTLSCAInfo(w ShellWriter, build *common.Build, key string) {
 	if build.TLSCAChain != "" {
-		w.Variable(common.BuildVariable{
+		w.Variable(common.JobVariable{
 			Key:      key,
 			Value:    build.TLSCAChain,
 			Public:   true,
@@ -46,14 +42,14 @@ func (b *AbstractShell) writeTLSCAInfo(w ShellWriter, build *common.Build, key s
 
 func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
 	templateDir := w.MkTmpDir("git-template")
-	args := []string{"clone", "--no-checkout", build.RepoURL, projectDir, "--template", templateDir}
+	args := []string{"clone", "--no-checkout", build.GitInfo.RepoURL, projectDir, "--template", templateDir}
 
 	w.RmDir(projectDir)
 	w.Command("git", "config", "-f", path.Join(templateDir, "config"), "fetch.recurseSubmodules", "false")
 
 	if depth := build.GetGitDepth(); depth != "" {
-		w.Notice("Cloning repository for %s with git depth set to %s...", build.RefName, depth)
-		args = append(args, "--depth", depth, "--branch", build.RefName)
+		w.Notice("Cloning repository for %s with git depth set to %s...", build.GitInfo.Ref, depth)
+		args = append(args, "--depth", depth, "--branch", build.GitInfo.Ref)
 	} else {
 		w.Notice("Cloning repository...")
 	}
@@ -67,7 +63,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 
 	w.IfDirectory(gitDir)
 	if depth != "" {
-		w.Notice("Fetching changes for %s with git depth set to %s...", build.RefName, depth)
+		w.Notice("Fetching changes for %s with git depth set to %s...", build.GitInfo.Ref, depth)
 	} else {
 		w.Notice("Fetching changes...")
 	}
@@ -81,13 +77,13 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 
 	w.Command("git", "clean", "-ffdx")
 	w.Command("git", "reset", "--hard")
-	w.Command("git", "remote", "set-url", "origin", build.RepoURL)
+	w.Command("git", "remote", "set-url", "origin", build.GitInfo.RepoURL)
 	if depth != "" {
 		var refspec string
-		if build.Tag {
-			refspec = "+refs/tags/" + build.RefName + ":refs/tags/" + build.RefName
+		if build.GitInfo.RefType == common.RefTypeTag {
+			refspec = "+refs/tags/" + build.GitInfo.Ref + ":refs/tags/" + build.GitInfo.Ref
 		} else {
-			refspec = "+refs/heads/" + build.RefName + ":refs/remotes/origin/" + build.RefName
+			refspec = "+refs/heads/" + build.GitInfo.Ref + ":refs/remotes/origin/" + build.GitInfo.Ref
 		}
 		w.Command("git", "fetch", "--depth", depth, "origin", "--prune", refspec)
 	} else {
@@ -99,8 +95,8 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
-	w.Notice("Checking out %s as %s...", build.Sha[0:8], build.RefName)
-	w.Command("git", "checkout", "-f", "-q", build.Sha)
+	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
+	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
 }
 
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
@@ -131,7 +127,7 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, fil
 	}
 
 	// Deduce cache key
-	key = path.Join(build.Name, build.RefName)
+	key = path.Join(build.JobInfo.Name, build.GitInfo.Ref)
 	if userKey != "" {
 		key = build.GetAllVariables().ExpandValue(userKey)
 	}
@@ -149,17 +145,6 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, fil
 	return
 }
 
-func (o *archivingOptions) CommandArguments() (args []string) {
-	for _, path := range o.Paths {
-		args = append(args, "--path", path)
-	}
-
-	if o.Untracked {
-		args = append(args, "--untracked")
-	}
-	return
-}
-
 func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, action string, f func()) {
 	if runnerCommand == "" {
 		w.Warning("%s is not supported by this executor.", action)
@@ -173,80 +158,86 @@ func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, 
 	w.EndIf()
 }
 
-func (b *AbstractShell) cacheExtractor(w ShellWriter, options *archivingOptions, info common.ShellScriptInfo) {
-	if options == nil {
-		return
-	}
+func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInfo) {
+	for _, cacheOptions := range info.Build.Cache {
+		// Create list of files to archive
+		archiverArgs := []string{}
+		for _, path := range cacheOptions.Paths {
+			archiverArgs = append(archiverArgs, "--path", path)
+		}
 
-	// Skip restoring cache if no cache is defined
-	if archiverArgs := options.CommandArguments(); len(archiverArgs) == 0 {
-		return
-	}
+		if cacheOptions.Untracked {
+			archiverArgs = append(archiverArgs, "--untracked")
+		}
 
-	// Skip archiving if no cache is defined
-	cacheKey, cacheFile := b.cacheFile(info.Build, options.Key)
-	if cacheKey == "" {
-		return
-	}
+		// Skip restoring cache if no cache is defined
+		if len(archiverArgs) < 1 {
+			continue
+		}
 
-	args := []string{
-		"cache-extractor",
-		"--file", cacheFile,
-	}
+		// Skip archiving if no cache is defined
+		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
+		if cacheKey == "" {
+			continue
+		}
 
-	// Generate cache download address
-	if url := getCacheDownloadURL(info.Build, cacheKey); url != nil {
-		args = append(args, "--url", url.String())
-	}
+		args := []string{
+			"cache-extractor",
+			"--file", cacheFile,
+		}
 
-	// Execute cache-extractor command. Failure is not fatal.
-	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		w.Notice("Checking cache for %s...", cacheKey)
-		w.IfCmd(info.RunnerCommand, args...)
-		w.Notice("Successfully extracted cache")
-		w.Else()
-		w.Warning("Failed to extract cache")
-		w.EndIf()
-	})
+		// Generate cache download address
+		if url := getCacheDownloadURL(info.Build, cacheKey); url != nil {
+			args = append(args, "--url", url.String())
+		}
+
+		// Execute cache-extractor command. Failure is not fatal.
+		b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
+			w.Notice("Checking cache for %s...", cacheKey)
+			w.IfCmd(info.RunnerCommand, args...)
+			w.Notice("Successfully extracted cache")
+			w.Else()
+			w.Warning("Failed to extract cache")
+			w.EndIf()
+		})
+	}
 }
 
-func (b *AbstractShell) downloadArtifacts(w ShellWriter, build *common.BuildInfo, info common.ShellScriptInfo) {
+func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
 	args := []string{
 		"artifacts-downloader",
 		"--url",
 		info.Build.Runner.URL,
 		"--token",
-		build.Token,
+		job.Token,
 		"--id",
-		strconv.Itoa(build.ID),
+		strconv.Itoa(job.ID),
 	}
 
-	w.Notice("Downloading artifacts for %s (%d)...", build.Name, build.ID)
+	w.Notice("Downloading artifacts for %s (%d)...", job.Name, job.ID)
 	w.Command(info.RunnerCommand, args...)
 }
 
-func (b *AbstractShell) buildArtifacts(dependencies *dependencies, info common.ShellScriptInfo) (otherBuilds []common.BuildInfo) {
-	for _, otherBuild := range info.Build.DependsOnBuilds {
-		if otherBuild.Artifacts == nil || otherBuild.Artifacts.Filename == "" {
+func (b *AbstractShell) jobArtifacts(info common.ShellScriptInfo) (otherJobs []common.Dependency) {
+	for _, otherJob := range info.Build.Dependencies {
+		if otherJob.ArtifactsFile.Filename == "" {
 			continue
 		}
-		if !dependencies.IsDependent(otherBuild.Name) {
-			continue
-		}
-		otherBuilds = append(otherBuilds, otherBuild)
+
+		otherJobs = append(otherJobs, otherJob)
 	}
 	return
 }
 
-func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, dependencies *dependencies, info common.ShellScriptInfo) {
-	otherBuilds := b.buildArtifacts(dependencies, info)
-	if len(otherBuilds) == 0 {
+func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScriptInfo) {
+	otherJobs := b.jobArtifacts(info)
+	if len(otherJobs) == 0 {
 		return
 	}
 
 	b.guardRunnerCommand(w, info.RunnerCommand, "Artifacts downloading", func() {
-		for _, otherBuild := range otherBuilds {
-			b.downloadArtifacts(w, &otherBuild, info)
+		for _, otherJob := range otherJobs {
+			b.downloadArtifacts(w, otherJob, info)
 		}
 	})
 }
@@ -320,36 +311,22 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 }
 
 func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	// Parse options
-	var options shellOptions
-	err = info.Build.Options.Decode(&options)
-	if err != nil {
-		return
-	}
-
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Try to restore from main cache, if not found cache for master
-	b.cacheExtractor(w, options.Cache, info)
+	b.cacheExtractor(w, info)
 	return nil
 }
 
 func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	// Parse options
-	var options shellOptions
-	err = info.Build.Options.Decode(&options)
-	if err != nil {
-		return
-	}
-
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Process all artifacts
-	b.downloadAllArtifacts(w, options.Dependencies, info)
+	b.downloadAllArtifacts(w, info)
 	return nil
 }
 
@@ -369,6 +346,18 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
 }
 
 func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	var scriptStep *common.Step
+	for _, step := range info.Build.Steps {
+		if step.Name == common.StepNameScript {
+			scriptStep = &step
+			break
+		}
+	}
+
+	if scriptStep == nil {
+		return nil
+	}
+
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
@@ -376,7 +365,7 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 		b.writeCommands(w, info.PreBuildScript)
 	}
 
-	commands := info.Build.Commands
+	commands := strings.Join(scriptStep.Script, "\n")
 	b.writeCommands(w, commands)
 
 	if info.PostBuildScript != "" {
@@ -386,98 +375,109 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 	return nil
 }
 
-func (b *AbstractShell) cacheArchiver(w ShellWriter, options *archivingOptions, info common.ShellScriptInfo) {
-	if options == nil {
-		return
-	}
+func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo) {
+	for _, cacheOptions := range info.Build.Cache {
+		// Skip archiving if no cache is defined
+		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
+		if cacheKey == "" {
+			continue
+		}
 
-	// Skip archiving if no cache is defined
-	cacheKey, cacheFile := b.cacheFile(info.Build, options.Key)
-	if cacheKey == "" {
-		return
-	}
+		args := []string{
+			"cache-archiver",
+			"--file", cacheFile,
+		}
 
-	args := []string{
-		"cache-archiver",
-		"--file", cacheFile,
-	}
+		// Create list of files to archive
+		archiverArgs := []string{}
+		for _, path := range cacheOptions.Paths {
+			archiverArgs = append(archiverArgs, "--path", path)
+		}
 
-	// Create list of files to archive
-	archiverArgs := options.CommandArguments()
-	if len(archiverArgs) == 0 {
-		// Skip creating archive
-		return
-	}
-	args = append(args, archiverArgs...)
+		if cacheOptions.Untracked {
+			archiverArgs = append(archiverArgs, "--untracked")
+		}
 
-	// Generate cache upload address
-	if url := getCacheUploadURL(info.Build, cacheKey); url != nil {
-		args = append(args, "--url", url.String())
-	}
+		if len(archiverArgs) < 1 {
+			// Skip creating archive
+			continue
+		}
+		args = append(args, archiverArgs...)
 
-	// Execute cache-archiver command. Failure is not fatal.
-	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
-		w.Notice("Creating cache %s...", cacheKey)
-		w.IfCmd(info.RunnerCommand, args...)
-		w.Notice("Created cache")
-		w.Else()
-		w.Warning("Failed to create cache")
-		w.EndIf()
-	})
+		// Generate cache upload address
+		if url := getCacheUploadURL(info.Build, cacheKey); url != nil {
+			args = append(args, "--url", url.String())
+		}
+
+		// Execute cache-archiver command. Failure is not fatal.
+		b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
+			w.Notice("Creating cache %s...", cacheKey)
+			w.IfCmd(info.RunnerCommand, args...)
+			w.Notice("Created cache")
+			w.Else()
+			w.Warning("Failed to create cache")
+			w.EndIf()
+		})
+	}
 }
 
-func (b *AbstractShell) uploadArtifacts(w ShellWriter, options *archivingOptions, info common.ShellScriptInfo) {
-	if options == nil {
-		return
-	}
+func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo) {
 	if info.Build.Runner.URL == "" {
 		return
 	}
 
-	args := []string{
-		"artifacts-uploader",
-		"--url",
-		info.Build.Runner.URL,
-		"--token",
-		info.Build.Token,
-		"--id",
-		strconv.Itoa(info.Build.ID),
-	}
+	for _, artifacts := range info.Build.Artifacts {
+		args := []string{
+			"artifacts-uploader",
+			"--url",
+			info.Build.Runner.URL,
+			"--token",
+			info.Build.Token,
+			"--id",
+			strconv.Itoa(info.Build.ID),
+		}
 
-	// Create list of files to archive
-	archiverArgs := options.CommandArguments()
-	if len(archiverArgs) == 0 {
-		// Skip creating archive
-		return
-	}
-	args = append(args, archiverArgs...)
+		// Create list of files to archive
+		archiverArgs := []string{}
+		for _, path := range artifacts.Paths {
+			archiverArgs = append(archiverArgs, "--path", path)
+		}
 
-	// Get artifacts:name
-	if name, ok := info.Build.Options.GetString("artifacts", "name"); ok && name != "" {
-		args = append(args, "--name", name)
-	}
+		if artifacts.Untracked {
+			archiverArgs = append(archiverArgs, "--untracked")
+		}
 
-	// Get artifacts:expire_in
-	if expireIn, ok := info.Build.Options.GetString("artifacts", "expire_in"); ok && expireIn != "" {
-		args = append(args, "--expire-in", expireIn)
-	}
+		if len(archiverArgs) < 1 {
+			// Skip creating archive
+			continue
+		}
+		args = append(args, archiverArgs...)
 
-	b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
-		w.Notice("Uploading artifacts...")
-		w.Command(info.RunnerCommand, args...)
-	})
+		if artifacts.Name != "" {
+			args = append(args, "--name", artifacts.Name)
+		}
+
+		if artifacts.ExpireIn != "" {
+			args = append(args, "--expire-in", artifacts.ExpireIn)
+		}
+
+		b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
+			w.Notice("Uploading artifacts...")
+			w.Command(info.RunnerCommand, args...)
+		})
+	}
 }
 
 func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptInfo) error {
-	shellOptions := struct {
-		AfterScript []string `json:"after_script"`
-	}{}
-	err := info.Build.Options.Decode(&shellOptions)
-	if err != nil {
-		return err
+	var afterScriptStep *common.Step
+	for _, step := range info.Build.Steps {
+		if step.Name == common.StepNameAfterScript {
+			afterScriptStep = &step
+			break
+		}
 	}
 
-	if len(shellOptions.AfterScript) == 0 {
+	if afterScriptStep == nil {
 		return nil
 	}
 
@@ -486,7 +486,7 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 
 	w.Notice("Running after script...")
 
-	for _, command := range shellOptions.AfterScript {
+	for _, command := range afterScriptStep.Script {
 		command = strings.TrimSpace(command)
 		if command != "" {
 			w.Notice("$ %s", command)
@@ -501,36 +501,22 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 }
 
 func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	// Parse options
-	var options shellOptions
-	err = info.Build.Options.Decode(&options)
-	if err != nil {
-		return
-	}
-
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Find cached files and archive them
-	b.cacheArchiver(w, options.Cache, info)
+	b.cacheArchiver(w, info)
 	return
 }
 
 func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	// Parse options
-	var options shellOptions
-	err = info.Build.Options.Decode(&options)
-	if err != nil {
-		return
-	}
-
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Upload artifacts
-	b.uploadArtifacts(w, options.Artifacts, info)
+	b.uploadArtifacts(w, info)
 	return
 }
 

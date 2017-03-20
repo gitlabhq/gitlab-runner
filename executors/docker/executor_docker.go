@@ -261,11 +261,11 @@ func (s *executor) addHostVolume(hostPath, containerPath string) error {
 
 func (s *executor) getLabels(containerType string, otherLabels ...string) map[string]string {
 	labels := make(map[string]string)
-	labels[dockerLabelPrefix+".build.id"] = strconv.Itoa(s.Build.ID)
-	labels[dockerLabelPrefix+".build.sha"] = s.Build.Sha
-	labels[dockerLabelPrefix+".build.before_sha"] = s.Build.BeforeSha
-	labels[dockerLabelPrefix+".build.ref_name"] = s.Build.RefName
-	labels[dockerLabelPrefix+".project.id"] = strconv.Itoa(s.Build.ProjectID)
+	labels[dockerLabelPrefix+".job.id"] = strconv.Itoa(s.Build.ID)
+	labels[dockerLabelPrefix+".job.sha"] = s.Build.GitInfo.Sha
+	labels[dockerLabelPrefix+".job.before_sha"] = s.Build.GitInfo.BeforeSha
+	labels[dockerLabelPrefix+".job.ref"] = s.Build.GitInfo.Ref
+	labels[dockerLabelPrefix+".project.id"] = strconv.Itoa(s.Build.JobInfo.ProjectID)
 	labels[dockerLabelPrefix+".runner.id"] = s.Build.Runner.ShortDescription()
 	labels[dockerLabelPrefix+".runner.local_id"] = strconv.Itoa(s.Build.RunnerID)
 	labels[dockerLabelPrefix+".type"] = containerType
@@ -1015,11 +1015,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return errors.New("Missing docker configuration")
 	}
 
-	err = build.Options.Decode(&s.options)
-	if err != nil {
-		return err
-	}
-
+	s.prepareOptions()
 	imageName, err := s.getImageName()
 	if err != nil {
 		return err
@@ -1037,6 +1033,19 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 	return nil
+}
+
+func (s *executor) prepareOptions() {
+	s.options = dockerOptions{}
+	s.options.Image = s.Build.Image.Name
+	for _, service := range s.Build.Services {
+		serviceName := service.Name
+		if serviceName == "" {
+			continue
+		}
+
+		s.options.Services = append(s.options.Services, serviceName)
+	}
 }
 
 func (s *executor) prepareBuildsDir(config *common.RunnerConfig) error {

@@ -9,13 +9,13 @@ import (
 type UpdateState int
 type UploadState int
 type DownloadState int
-type BuildState string
+type JobState string
 
 const (
-	Pending BuildState = "pending"
-	Running            = "running"
-	Failed             = "failed"
-	Success            = "success"
+	Pending JobState = "pending"
+	Running          = "running"
+	Failed           = "failed"
+	Success          = "success"
 )
 
 const (
@@ -48,6 +48,27 @@ type FeaturesInfo struct {
 	Cache     bool `json:"cache"`
 }
 
+type RegisterRunnerRequest struct {
+	Info        VersionInfo `json:"info,omitempty"`
+	Token       string      `json:"token,omitempty"`
+	Description string      `json:"description,omitempty"`
+	Tags        string      `json:"tag_list,omitempty"`
+	RunUntagged bool        `json:"run_untagged"`
+	Locked      bool        `json:"locked"`
+}
+
+type RegisterRunnerResponse struct {
+	Token string `json:"token,omitempty"`
+}
+
+type VerifyRunnerRequest struct {
+	Token string `json:"token,omitempty"`
+}
+
+type UnregisterRunnerRequest struct {
+	Token string `json:"token,omitempty"`
+}
+
 type VersionInfo struct {
 	Name         string       `json:"name,omitempty"`
 	Version      string       `json:"version,omitempty"`
@@ -58,96 +79,170 @@ type VersionInfo struct {
 	Features     FeaturesInfo `json:"features"`
 }
 
-type GetBuildRequest struct {
+type JobRequest struct {
 	Info       VersionInfo `json:"info,omitempty"`
 	Token      string      `json:"token,omitempty"`
 	LastUpdate string      `json:"last_update,omitempty"`
 }
 
-type BuildArtifacts struct {
-	Filename string `json:"filename,omitempty"`
-	Size     int64  `json:"size,omitempty"`
+type JobInfo struct {
+	Name        string `json:"name"`
+	Stage       string `json:"stage"`
+	ProjectID   int    `json:"project_id"`
+	ProjectName string `json:"project_name"`
 }
 
-type BuildInfo struct {
-	ID        int             `json:"id,omitempty"`
-	Sha       string          `json:"sha,omitempty"`
-	RefName   string          `json:"ref,omitempty"`
-	Token     string          `json:"token"`
-	Name      string          `json:"name"`
-	Stage     string          `json:"stage"`
-	Tag       bool            `json:"tag"`
-	Artifacts *BuildArtifacts `json:"artifacts_file"`
+type GitInfoRefType string
+
+const (
+	RefTypeBranch GitInfoRefType = "branch"
+	RefTypeTag                   = "tag"
+)
+
+type GitInfo struct {
+	RepoURL   string         `json:"repo_url"`
+	Ref       string         `json:"ref"`
+	Sha       string         `json:"sha"`
+	BeforeSha string         `json:"before_sha"`
+	RefType   GitInfoRefType `json:"ref_type"`
 }
 
-type GetBuildResponse struct {
-	ID              int            `json:"id,omitempty"`
-	ProjectID       int            `json:"project_id,omitempty"`
-	Commands        string         `json:"commands,omitempty"`
-	RepoURL         string         `json:"repo_url,omitempty"`
-	Sha             string         `json:"sha,omitempty"`
-	RefName         string         `json:"ref,omitempty"`
-	BeforeSha       string         `json:"before_sha,omitempty"`
-	AllowGitFetch   bool           `json:"allow_git_fetch,omitempty"`
-	Timeout         int            `json:"timeout,omitempty"`
-	Variables       BuildVariables `json:"variables"`
-	Options         BuildOptions   `json:"options"`
-	Token           string         `json:"token"`
-	Name            string         `json:"name"`
-	Stage           string         `json:"stage"`
-	Tag             bool           `json:"tag"`
-	DependsOnBuilds []BuildInfo    `json:"depends_on_builds"`
-	TLSCAChain      string         `json:"-"`
-
-	Credentials []BuildResponseCredentials `json:"credentials,omitempty"`
+type RunnerInfo struct {
+	Timeout int `json:"timeout"`
 }
 
-type BuildResponseCredentials struct {
+type StepScript []string
+
+type StepName string
+
+const (
+	StepNameScript      StepName = "script"
+	StepNameAfterScript          = "after_script"
+)
+
+type StepWhen string
+
+const (
+	StepWhenOnFailure StepWhen = "on_failure"
+	StepWhenOnSuccess          = "on_success"
+	StepWhenAlways             = "always"
+)
+
+type Step struct {
+	Name         StepName   `json:"name"`
+	Script       StepScript `json:"script"`
+	Timeout      int        `json:"timeout"`
+	When         StepWhen   `json:"when"`
+	AllowFailure bool       `json:"allow_failure"`
+}
+
+type Steps []Step
+
+type Image struct {
+	Name string `json:"name"`
+}
+
+type Services []Image
+
+type ArtifactPaths []string
+
+type ArtifactWhen string
+
+const (
+	ArtifactWhenOnFailure ArtifactWhen = "on_failure"
+	ArtifactWhenOnSuccess              = "on_success"
+	ArtifactWhenAlways                 = "always"
+)
+
+type Artifact struct {
+	Name      string        `json:"name"`
+	Untracked bool          `json:"untracked"`
+	Paths     ArtifactPaths `json:"paths"`
+	When      ArtifactWhen  `json:"when"`
+	ExpireIn  string        `json:"expire_in"`
+}
+
+type Artifacts []Artifact
+
+type Cache struct {
+	Key       string        `json:"key"`
+	Untracked bool          `json:"untracked"`
+	Paths     ArtifactPaths `json:"paths"`
+}
+
+type Caches []Cache
+
+type Credentials struct {
 	Type     string `json:"type"`
 	URL      string `json:"url"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-func (b *GetBuildResponse) RepoCleanURL() (ret string) {
-	return url_helpers.CleanURL(b.RepoURL)
+type DependencyArtifactsFile struct {
+	Filename string `json:"filename"`
+	Size     int64  `json:"size"`
 }
 
-type RegisterRunnerRequest struct {
-	Info        VersionInfo `json:"info,omitempty"`
-	Token       string      `json:"token,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Tags        string      `json:"tag_list,omitempty"`
-	RunUntagged bool        `json:"run_untagged"`
+type Dependency struct {
+	ID            int                     `json:"id"`
+	Token         string                  `json:"token"`
+	Name          string                  `json:"name"`
+	ArtifactsFile DependencyArtifactsFile `json:"artifacts_file"`
 }
 
-type RegisterRunnerResponse struct {
-	Token string `json:"token,omitempty"`
+type Dependencies []Dependency
+
+type JobResponse struct {
+	ID            int           `json:"id"`
+	Token         string        `json:"token"`
+	AllowGitFetch bool          `json:"allow_git_fetch"`
+	JobInfo       JobInfo       `json:"job_info"`
+	GitInfo       GitInfo       `json:"git_info"`
+	RunnerInfo    RunnerInfo    `json:"runner_info"`
+	Variables     JobVariables  `json:"variables"`
+	Steps         Steps         `json:"steps"`
+	Image         Image         `json:"image"`
+	Services      Services      `json:"services"`
+	Artifacts     Artifacts     `json:"artifacts"`
+	Cache         Caches        `json:"cache"`
+	Credentials   []Credentials `json:"credentials"`
+	Dependencies  Dependencies  `json:"dependencies"`
+
+	TLSCAChain string `json:"-"`
 }
 
-type DeleteRunnerRequest struct {
-	Token string `json:"token,omitempty"`
+func (j *JobResponse) RepoCleanURL() string {
+	return url_helpers.CleanURL(j.GitInfo.RepoURL)
 }
 
-type VerifyRunnerRequest struct {
-	Token string `json:"token,omitempty"`
-}
-
-type UpdateBuildRequest struct {
+type UpdateJobRequest struct {
 	Info  VersionInfo `json:"info,omitempty"`
 	Token string      `json:"token,omitempty"`
-	State BuildState  `json:"state,omitempty"`
+	State JobState    `json:"state,omitempty"`
 	Trace *string     `json:"trace,omitempty"`
 }
 
-type BuildCredentials struct {
+type JobCredentials struct {
 	ID        int    `long:"id" env:"CI_BUILD_ID" description:"The build ID to upload artifacts for"`
 	Token     string `long:"token" env:"CI_BUILD_TOKEN" required:"true" description:"Build token"`
 	URL       string `long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab CI URL"`
 	TLSCAFile string `long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
 }
 
-type BuildTrace interface {
+func (j *JobCredentials) GetURL() string {
+	return j.URL
+}
+
+func (j *JobCredentials) GetTLSCAFile() string {
+	return j.TLSCAFile
+}
+
+func (j *JobCredentials) GetToken() string {
+	return j.Token
+}
+
+type JobTrace interface {
 	io.Writer
 	Success()
 	Fail(err error)
@@ -155,7 +250,7 @@ type BuildTrace interface {
 	IsStdout() bool
 }
 
-type BuildTracePatch interface {
+type JobTracePatch interface {
 	Patch() []byte
 	Offset() int
 	Limit() int
@@ -164,14 +259,14 @@ type BuildTracePatch interface {
 }
 
 type Network interface {
-	GetBuild(config RunnerConfig) (*GetBuildResponse, bool)
-	RegisterRunner(config RunnerCredentials, description, tags string, runUntagged bool) *RegisterRunnerResponse
-	DeleteRunner(config RunnerCredentials) bool
+	RegisterRunner(config RunnerCredentials, description, tags string, runUntagged, locked bool) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool
-	UpdateBuild(config RunnerConfig, id int, state BuildState, trace *string) UpdateState
-	PatchTrace(config RunnerConfig, buildCredentials *BuildCredentials, tracePart BuildTracePatch) UpdateState
-	DownloadArtifacts(config BuildCredentials, artifactsFile string) DownloadState
-	UploadRawArtifacts(config BuildCredentials, reader io.Reader, baseName string, expireIn string) UploadState
-	UploadArtifacts(config BuildCredentials, artifactsFile string) UploadState
-	ProcessBuild(config RunnerConfig, buildCredentials *BuildCredentials) BuildTrace
+	UnregisterRunner(config RunnerCredentials) bool
+	RequestJob(config RunnerConfig) (*JobResponse, bool)
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string) UpdateState
+	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
+	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
+	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
+	UploadArtifacts(config JobCredentials, artifactsFile string) UploadState
+	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) JobTrace
 }

@@ -75,8 +75,7 @@ func init() {
 			Type:          common.NormalShell,
 			RunnerCommand: "/usr/bin/gitlab-runner-helper",
 		},
-		ShowHostname:     true,
-		SupportedOptions: []string{"image", "services"},
+		ShowHostname: true,
 	}
 
 	creator := func() common.Executor {

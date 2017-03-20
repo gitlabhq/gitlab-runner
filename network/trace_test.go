@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"testing"
@@ -15,17 +16,17 @@ const successID = 4
 const cancelID = 5
 const retryID = 6
 
-var buildConfig = common.RunnerConfig{}
-var buildOutputLimit = common.RunnerConfig{OutputLimit: 1}
+var jobConfig = common.RunnerConfig{}
+var jobOutputLimit = common.RunnerConfig{OutputLimit: 1}
 
 type updateTraceNetwork struct {
 	common.MockNetwork
-	state common.BuildState
+	state common.JobState
 	trace *string
 	count int
 }
 
-func (m *updateTraceNetwork) UpdateBuild(config common.RunnerConfig, id int, state common.BuildState, trace *string) common.UpdateState {
+func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string) common.UpdateState {
 	switch id {
 	case successID:
 		m.count++
@@ -53,16 +54,38 @@ func (m *updateTraceNetwork) UpdateBuild(config common.RunnerConfig, id int, sta
 	}
 }
 
-func (m *updateTraceNetwork) PatchTrace(config common.RunnerConfig, buildCredentials *common.BuildCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
-	return common.UpdateNotFound
+func (m *updateTraceNetwork) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) common.UpdateState {
+	switch jobCredentials.ID {
+	case successID:
+		m.count++
+
+		buffer := &bytes.Buffer{}
+		if m.trace != nil {
+			buffer = bytes.NewBufferString(*m.trace)
+		}
+
+		buffer.Write(tracePatch.Patch())
+
+		newTrace := buffer.String()
+		m.trace = &newTrace
+
+		return common.UpdateSucceeded
+
+	case cancelID:
+		m.count++
+		return common.UpdateAbort
+
+	default:
+		return common.UpdateFailed
+	}
 }
 
-func TestBuildTraceSuccess(t *testing.T) {
+func TestJobTraceSuccess(t *testing.T) {
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	jobCredentials := &common.JobCredentials{
 		ID: successID,
 	}
-	b := newBuildTrace(u, buildConfig, buildCredentials)
+	b := newJobTrace(u, jobConfig, jobCredentials)
 	b.start()
 	fmt.Fprint(b, "test content")
 	b.Success()
@@ -70,12 +93,12 @@ func TestBuildTraceSuccess(t *testing.T) {
 	assert.Equal(t, common.Success, u.state)
 }
 
-func TestBuildTraceFailure(t *testing.T) {
+func TestJobTraceFailure(t *testing.T) {
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	jobCredentials := &common.JobCredentials{
 		ID: successID,
 	}
-	b := newBuildTrace(u, buildConfig, buildCredentials)
+	b := newJobTrace(u, jobConfig, jobCredentials)
 	b.start()
 	fmt.Fprint(b, "test content")
 	b.Fail(errors.New("test"))
@@ -85,69 +108,74 @@ func TestBuildTraceFailure(t *testing.T) {
 
 func TestIgnoreStatusChange(t *testing.T) {
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	jobCredentials := &common.JobCredentials{
 		ID: successID,
 	}
-	b := newBuildTrace(u, buildConfig, buildCredentials)
+	b := newJobTrace(u, jobConfig, jobCredentials)
 	b.start()
 	b.Success()
 	b.Fail(errors.New("test"))
 	assert.Equal(t, common.Success, u.state)
 }
 
-func TestBuildAbort(t *testing.T) {
+func TestJobAbort(t *testing.T) {
 	traceUpdateInterval = 0
 
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	jobCredentials := &common.JobCredentials{
 		ID: cancelID,
 	}
-	b := newBuildTrace(u, buildConfig, buildCredentials)
+	b := newJobTrace(u, jobConfig, jobCredentials)
 	b.start()
-	assert.NotNil(t, <-b.Aborted(), "should abort the build")
+	assert.NotNil(t, <-b.Aborted(), "should abort the job")
 	b.Success()
 }
 
-func TestBuildOutputLimit(t *testing.T) {
+func TestJobOutputLimit(t *testing.T) {
+	traceUpdateInterval = 5 * time.Second
+
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	jobCredentials := &common.JobCredentials{
 		ID: successID,
 	}
-	b := newBuildTrace(u, buildOutputLimit, buildCredentials)
+	b := newJobTrace(u, jobOutputLimit, jobCredentials)
 	b.start()
 
-	// Write 500k to the buffer
-	for i := 0; i < 100000; i++ {
+	// Write 5k to the buffer
+	for i := 0; i < 1024; i++ {
 		fmt.Fprint(b, "abcde")
 	}
 	b.Success()
+
+	t.Logf("Trace length: %d", len(*u.trace))
+
 	assert.True(t, len(*u.trace) < 2000, "the output should be less than 2000 bytes")
-	assert.Contains(t, *u.trace, "Build log exceeded limit")
+	assert.Contains(t, *u.trace, "Job's log exceeded limit")
 }
 
-func TestBuildFinishRetry(t *testing.T) {
+func TestJobFinishRetry(t *testing.T) {
 	traceFinishRetryInterval = time.Microsecond
 
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	jobCredentials := &common.JobCredentials{
 		ID: retryID,
 	}
-	b := newBuildTrace(u, buildOutputLimit, buildCredentials)
+	b := newJobTrace(u, jobOutputLimit, jobCredentials)
 	b.start()
 	b.Success()
 	assert.Equal(t, 5, u.count, "it should retry a few times")
 	assert.Equal(t, common.Success, u.state)
 }
 
-func TestBuildForceSend(t *testing.T) {
+func TestJobForceSend(t *testing.T) {
 	traceUpdateInterval = 0
 	traceForceSendInterval = time.Minute
 
 	u := &updateTraceNetwork{}
-	buildCredentials := &common.BuildCredentials{
+	jobCredentials := &common.JobCredentials{
 		ID: successID,
 	}
-	b := newBuildTrace(u, buildOutputLimit, buildCredentials)
+	b := newJobTrace(u, jobOutputLimit, jobCredentials)
 	b.start()
 	defer b.Success()
 

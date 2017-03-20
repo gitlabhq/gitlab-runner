@@ -138,7 +138,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		ProjectRunnerID: 0,
 		Runner:          &common.RunnerConfig{},
 	}
-	e.Build.ProjectID = 0
+	e.Build.JobInfo.ProjectID = 0
 	e.Build.Runner.Token = "abcdef1234567890"
 
 	c.On("ImagePullBlocking", context.TODO(), imageName, options).
@@ -495,7 +495,7 @@ func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) executor 
 }
 
 func addGitLabRegistryCredentials(e *executor) {
-	e.Build.Credentials = []common.BuildResponseCredentials{
+	e.Build.Credentials = []common.Credentials{
 		{
 			Type:     "registry",
 			URL:      "registry.gitlab.tld:1234",
@@ -506,8 +506,8 @@ func addGitLabRegistryCredentials(e *executor) {
 }
 
 func addRemoteVariableCredentials(e *executor) {
-	e.Build.Variables = common.BuildVariables{
-		common.BuildVariable{
+	e.Build.Variables = common.JobVariables{
+		common.JobVariable{
 			Key:   "DOCKER_AUTH_CONFIG",
 			Value: testVariableAuthConfigs,
 		},

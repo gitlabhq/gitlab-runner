@@ -211,7 +211,7 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 
 // buildVariables converts a common.BuildVariables into a list of
 // kubernetes EnvVar objects
-func buildVariables(bv common.BuildVariables) []api.EnvVar {
+func buildVariables(bv common.JobVariables) []api.EnvVar {
 	e := make([]api.EnvVar, len(bv))
 	for i, b := range bv {
 		e[i] = api.EnvVar{

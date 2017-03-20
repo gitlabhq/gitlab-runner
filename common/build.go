@@ -56,9 +56,9 @@ const (
 )
 
 type Build struct {
-	GetBuildResponse `yaml:",inline"`
+	JobResponse `yaml:",inline"`
 
-	Trace           BuildTrace
+	Trace           JobTrace
 	SystemInterrupt chan os.Signal `json:"-" yaml:"-"`
 	RootDir         string         `json:"-" yaml:"-"`
 	BuildDir        string         `json:"-" yaml:"-"`
@@ -78,16 +78,16 @@ type Build struct {
 }
 
 func (b *Build) Log() *logrus.Entry {
-	return b.Runner.Log().WithField("build", b.ID).WithField("project", b.ProjectID)
+	return b.Runner.Log().WithField("job", b.ID).WithField("project", b.JobInfo.ProjectID)
 }
 
 func (b *Build) ProjectUniqueName() string {
 	return fmt.Sprintf("runner-%s-project-%d-concurrent-%d",
-		b.Runner.ShortDescription(), b.ProjectID, b.ProjectRunnerID)
+		b.Runner.ShortDescription(), b.JobInfo.ProjectID, b.ProjectRunnerID)
 }
 
 func (b *Build) ProjectSlug() (string, error) {
-	url, err := url.Parse(b.RepoURL)
+	url, err := url.Parse(b.GitInfo.RepoURL)
 	if err != nil {
 		return "", err
 	}
@@ -110,7 +110,7 @@ func (b *Build) ProjectSlug() (string, error) {
 func (b *Build) ProjectUniqueDir(sharedDir bool) string {
 	dir, err := b.ProjectSlug()
 	if err != nil {
-		dir = fmt.Sprintf("project-%d", b.ProjectID)
+		dir = fmt.Sprintf("project-%d", b.JobInfo.ProjectID)
 	}
 
 	// for shared dirs path is constructed like this:
@@ -170,23 +170,26 @@ func (b *Build) executeStage(buildStage BuildStage, executor Executor, abort cha
 }
 
 func (b *Build) executeUploadArtifacts(state error, executor Executor, abort chan interface{}) (err error) {
-	when, _ := b.Options.GetString("artifacts", "when")
+	jobState := state
 
-	if state == nil {
-		// Previous stages were successful
-		if when == "" || when == "on_success" || when == "always" {
-			err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
-		}
-	} else {
-		// Previous stage did fail
-		if when == "on_failure" || when == "always" {
-			err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
+	for _, artifacts := range b.Artifacts {
+		when := artifacts.When
+		if state == nil {
+			// Previous stages were successful
+			if when == "" || when == ArtifactWhenOnSuccess || when == ArtifactWhenAlways {
+				state = b.executeStage(BuildStageUploadArtifacts, executor, abort)
+			}
+		} else {
+			// Previous stage did fail
+			if when == ArtifactWhenOnFailure || when == ArtifactWhenAlways {
+				err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
+			}
 		}
 	}
 
-	// Use previous error if set
-	if state != nil {
-		err = state
+	// Use job's error if set
+	if jobState != nil {
+		err = jobState
 	}
 	return
 }
@@ -241,7 +244,7 @@ func (b *Build) attemptExecuteStage(buildStage BuildStage, executor Executor, ab
 func (b *Build) run(executor Executor) (err error) {
 	b.CurrentState = BuildRunRuntimeRunning
 
-	buildTimeout := b.Timeout
+	buildTimeout := b.RunnerInfo.Timeout
 	if buildTimeout <= 0 {
 		buildTimeout = DefaultTimeout
 	}
@@ -313,7 +316,7 @@ func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvi
 	return
 }
 
-func (b *Build) Run(globalConfig *Config, trace BuildTrace) (err error) {
+func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	var executor Executor
 
 	logger := NewBuildLogger(trace, b.Log())
@@ -358,17 +361,17 @@ func (b *Build) String() string {
 	return helpers.ToYAML(b)
 }
 
-func (b *Build) GetDefaultVariables() BuildVariables {
-	return BuildVariables{
+func (b *Build) GetDefaultVariables() JobVariables {
+	return JobVariables{
 		{"CI", "true", true, true, false},
 		{"CI_DEBUG_TRACE", "false", true, true, false},
-		{"CI_BUILD_REF", b.Sha, true, true, false},
-		{"CI_BUILD_BEFORE_SHA", b.BeforeSha, true, true, false},
-		{"CI_BUILD_REF_NAME", b.RefName, true, true, false},
+		{"CI_BUILD_REF", b.GitInfo.Sha, true, true, false},
+		{"CI_BUILD_BEFORE_SHA", b.GitInfo.BeforeSha, true, true, false},
+		{"CI_BUILD_REF_NAME", b.GitInfo.Ref, true, true, false},
 		{"CI_BUILD_ID", strconv.Itoa(b.ID), true, true, false},
-		{"CI_BUILD_REPO", b.RepoURL, true, true, false},
+		{"CI_BUILD_REPO", b.GitInfo.RepoURL, true, true, false},
 		{"CI_BUILD_TOKEN", b.Token, true, true, false},
-		{"CI_PROJECT_ID", strconv.Itoa(b.ProjectID), true, true, false},
+		{"CI_PROJECT_ID", strconv.Itoa(b.JobInfo.ProjectID), true, true, false},
 		{"CI_PROJECT_DIR", b.FullProjectDir(), true, true, false},
 		{"CI_SERVER", "yes", true, true, false},
 		{"CI_SERVER_NAME", "GitLab CI", true, true, false},
@@ -378,7 +381,7 @@ func (b *Build) GetDefaultVariables() BuildVariables {
 	}
 }
 
-func (b *Build) GetAllVariables() (variables BuildVariables) {
+func (b *Build) GetAllVariables() (variables JobVariables) {
 	if b.Runner != nil {
 		variables = append(variables, b.Runner.GetVariables()...)
 	}

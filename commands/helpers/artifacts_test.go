@@ -21,7 +21,7 @@ type testNetwork struct {
 	uploadCalled   int
 }
 
-func (m *testNetwork) DownloadArtifacts(config common.BuildCredentials, artifactsFile string) common.DownloadState {
+func (m *testNetwork) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {
 	m.downloadCalled++
 
 	if m.downloadState == common.DownloadSucceeded {
@@ -39,7 +39,7 @@ func (m *testNetwork) DownloadArtifacts(config common.BuildCredentials, artifact
 	return m.downloadState
 }
 
-func (m *testNetwork) UploadRawArtifacts(config common.BuildCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
+func (m *testNetwork) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
 	m.uploadCalled++
 
 	if m.uploadState == common.UploadSucceeded {

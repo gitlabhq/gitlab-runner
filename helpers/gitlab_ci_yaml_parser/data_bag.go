@@ -1,4 +1,4 @@
-package common
+package gitlab_ci_yaml_parser
 
 import (
 	"encoding/json"
@@ -8,13 +8,21 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
-type BuildOptions map[string]interface{}
+type DataBag map[string]interface{}
 
-func (m *BuildOptions) Get(keys ...string) (interface{}, bool) {
+func (m *DataBag) Get(keys ...string) (interface{}, bool) {
 	return helpers.GetMapKey(*m, keys...)
 }
 
-func (m *BuildOptions) GetSubOptions(keys ...string) (result BuildOptions, ok bool) {
+func (m *DataBag) GetSlice(keys ...string) ([]interface{}, bool) {
+	slice, ok := helpers.GetMapKey(*m, keys...)
+	if slice != nil {
+		return slice.([]interface{}), ok
+	}
+	return nil, false
+}
+
+func (m *DataBag) GetSubOptions(keys ...string) (result DataBag, ok bool) {
 	value, ok := helpers.GetMapKey(*m, keys...)
 	if ok {
 		result, ok = value.(map[string]interface{})
@@ -22,7 +30,7 @@ func (m *BuildOptions) GetSubOptions(keys ...string) (result BuildOptions, ok bo
 	return
 }
 
-func (m *BuildOptions) GetString(keys ...string) (result string, ok bool) {
+func (m *DataBag) GetString(keys ...string) (result string, ok bool) {
 	value, ok := helpers.GetMapKey(*m, keys...)
 	if ok {
 		result, ok = value.(string)
@@ -30,7 +38,7 @@ func (m *BuildOptions) GetString(keys ...string) (result string, ok bool) {
 	return
 }
 
-func (m *BuildOptions) Decode(result interface{}, keys ...string) error {
+func (m *DataBag) Decode(result interface{}, keys ...string) error {
 	value, ok := m.Get(keys...)
 	if !ok {
 		return fmt.Errorf("key not found %v", strings.Join(keys, "."))
@@ -76,8 +84,8 @@ func convertMapToStringMap(in interface{}) (out interface{}, err error) {
 	return in, nil
 }
 
-func (m *BuildOptions) Sanitize() (err error) {
-	n := make(BuildOptions)
+func (m *DataBag) Sanitize() (err error) {
+	n := make(DataBag)
 	for k, v := range *m {
 		n[k], err = convertMapToStringMap(v)
 		if err != nil {
@@ -85,5 +93,32 @@ func (m *BuildOptions) Sanitize() (err error) {
 		}
 	}
 	*m = n
+	return
+}
+
+func getOptionsMap(optionKey string, primary, secondary DataBag) (value DataBag) {
+	value, ok := primary.GetSubOptions(optionKey)
+	if !ok {
+		value, _ = secondary.GetSubOptions(optionKey)
+	}
+
+	return
+}
+
+func getOptions(optionKey string, primary, secondary DataBag) (value []interface{}, ok bool) {
+	value, ok = primary.GetSlice(optionKey)
+	if !ok {
+		value, ok = secondary.GetSlice(optionKey)
+	}
+
+	return
+}
+
+func getOption(optionKey string, primary, secondary DataBag) (value interface{}, ok bool) {
+	value, ok = primary.Get(optionKey)
+	if !ok {
+		value, ok = secondary.Get(optionKey)
+	}
+
 	return
 }

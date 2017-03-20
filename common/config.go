@@ -274,6 +274,18 @@ func (c *DockerMachine) CompileOffPeakPeriods() (err error) {
 	return
 }
 
+func (c *RunnerCredentials) GetURL() string {
+	return c.URL
+}
+
+func (c *RunnerCredentials) GetTLSCAFile() string {
+	return c.TLSCAFile
+}
+
+func (c *RunnerCredentials) GetToken() string {
+	return c.Token
+}
+
 func (c *RunnerCredentials) ShortDescription() string {
 	return helpers.ShortenToken(c.Token)
 }
@@ -293,8 +305,8 @@ func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
 }
 
-func (c *RunnerConfig) GetVariables() BuildVariables {
-	var variables BuildVariables
+func (c *RunnerConfig) GetVariables() JobVariables {
+	var variables JobVariables
 
 	for _, environment := range c.Environment {
 		if variable, err := ParseVariable(environment); err == nil {

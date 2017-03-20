@@ -8,7 +8,7 @@ import (
 )
 
 type BuildLogger struct {
-	log   BuildTrace
+	log   JobTrace
 	entry *logrus.Entry
 }
 
@@ -70,7 +70,7 @@ func (e *BuildLogger) Errorln(args ...interface{}) {
 	e.sendLog(e.entry.Errorln, helpers.ANSI_BOLD_RED+"ERROR: ", args...)
 }
 
-func NewBuildLogger(log BuildTrace, entry *logrus.Entry) BuildLogger {
+func NewBuildLogger(log JobTrace, entry *logrus.Entry) BuildLogger {
 	return BuildLogger{
 		log:   log,
 		entry: entry,

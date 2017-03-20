@@ -1,4 +1,4 @@
-package common
+package gitlab_ci_yaml_parser
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ type testOptions struct {
 }
 
 type buildTest struct {
-	BuildOptions `json:"options"`
+	DataBag `json:"options"`
 }
 
 const exampleOptionsJSON = `{
@@ -49,10 +49,10 @@ func (o *buildTest) Unmarshal(data string) error {
 	return json.Unmarshal([]byte(data), o)
 }
 
-func TestBuildOptionsUnmarshaling(t *testing.T) {
+func TestDataBagUnmarshaling(t *testing.T) {
 	var options buildTest
 	require.NoError(t, options.Unmarshal(exampleOptionsJSON))
-	assert.Equal(t, "value", options.BuildOptions["root"])
+	assert.Equal(t, "value", options.DataBag["root"])
 
 	result, _ := options.Get("data", "string")
 	assert.Equal(t, "value", result)
@@ -65,7 +65,7 @@ func TestBuildOptionsUnmarshaling(t *testing.T) {
 	assert.Equal(t, "", result2)
 }
 
-func TestBuildOptionsDecodeTest(t *testing.T) {
+func TestDataBagDecodeTest(t *testing.T) {
 	var options buildTest
 	var test testOptions
 	require.NoError(t, options.Unmarshal(exampleOptionsJSON))
@@ -74,7 +74,7 @@ func TestBuildOptionsDecodeTest(t *testing.T) {
 	assert.NotNil(t, test.Data)
 }
 
-func TestBuildOptionsDecodeTestNoData(t *testing.T) {
+func TestDataBagDecodeTestNoData(t *testing.T) {
 	var options buildTest
 	var test testOptions
 	require.NoError(t, options.Unmarshal(exampleOptionsNoDataJSON))
@@ -83,7 +83,7 @@ func TestBuildOptionsDecodeTestNoData(t *testing.T) {
 	assert.Nil(t, test.Data)
 }
 
-func TestBuildOptionsDecodeData(t *testing.T) {
+func TestDataBagDecodeData(t *testing.T) {
 	var options buildTest
 	var data dataOptions
 	require.NoError(t, options.Unmarshal(exampleOptionsJSON))
@@ -92,11 +92,11 @@ func TestBuildOptionsDecodeData(t *testing.T) {
 	assert.Equal(t, 1, data.Integer)
 }
 
-func TestBuildOptionsSanitizeWithYamlDecode(t *testing.T) {
-	options := make(BuildOptions)
+func TestDataBagSanitizeWithYamlDecode(t *testing.T) {
+	options := make(DataBag)
 
 	require.NoError(t, yaml.Unmarshal([]byte(exampleOptionsYAML), options))
-	assert.Equal(t, BuildOptions{
+	assert.Equal(t, DataBag{
 		"image": "test:latest",
 		"variables": map[interface{}]interface{}{
 			"KEY": "value",
@@ -104,7 +104,7 @@ func TestBuildOptionsSanitizeWithYamlDecode(t *testing.T) {
 	}, options)
 
 	require.NoError(t, options.Sanitize())
-	assert.Equal(t, BuildOptions{
+	assert.Equal(t, DataBag{
 		"image": "test:latest",
 		"variables": map[string]interface{}{
 			"KEY": "value",

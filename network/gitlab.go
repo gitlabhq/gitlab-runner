@@ -24,14 +24,14 @@ type GitLabClient struct {
 	clients map[string]*client
 }
 
-func (n *GitLabClient) getClient(runner common.RunnerCredentials) (c *client, err error) {
+func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err error) {
 	if n.clients == nil {
 		n.clients = make(map[string]*client)
 	}
-	key := fmt.Sprintf("%s_%s", runner.URL, runner.TLSCAFile)
+	key := fmt.Sprintf("%s_%s", credentials.GetURL(), credentials.GetTLSCAFile())
 	c = n.clients[key]
 	if c == nil {
-		c, err = newClient(runner)
+		c, err = newClient(credentials)
 		if err != nil {
 			return
 		}
@@ -40,8 +40,8 @@ func (n *GitLabClient) getClient(runner common.RunnerCredentials) (c *client, er
 	return
 }
 
-func (n *GitLabClient) getLastUpdate(runner common.RunnerCredentials) (lu string) {
-	cli, err := n.getClient(runner)
+func (n *GitLabClient) getLastUpdate(credentials requestCredentials) (lu string) {
+	cli, err := n.getClient(credentials)
 	if err != nil {
 		return ""
 	}
@@ -69,8 +69,8 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 	return info
 }
 
-func (n *GitLabClient) doRaw(runner common.RunnerCredentials, method, uri string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
-	c, err := n.getClient(runner)
+func (n *GitLabClient) doRaw(credentials requestCredentials, method, uri string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
+	c, err := n.getClient(credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +78,8 @@ func (n *GitLabClient) doRaw(runner common.RunnerCredentials, method, uri string
 	return c.do(uri, method, request, requestType, headers)
 }
 
-func (n *GitLabClient) doJSON(runner common.RunnerCredentials, method, uri string, statusCode int, request interface{}, response interface{}) (int, string, string) {
-	c, err := n.getClient(runner)
+func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string, statusCode int, request interface{}, response interface{}) (int, string, string) {
+	c, err := n.getClient(credentials)
 	if err != nil {
 		return clientError, err.Error(), ""
 	}
@@ -87,51 +87,19 @@ func (n *GitLabClient) doJSON(runner common.RunnerCredentials, method, uri strin
 	return c.doJSON(uri, method, statusCode, request, response)
 }
 
-func (n *GitLabClient) GetBuild(config common.RunnerConfig) (*common.GetBuildResponse, bool) {
-	request := common.GetBuildRequest{
-		Info:       n.getRunnerVersion(config),
-		Token:      config.Token,
-		LastUpdate: n.getLastUpdate(config.RunnerCredentials),
-	}
-
-	var response common.GetBuildResponse
-	result, statusText, certificates := n.doJSON(config.RunnerCredentials, "POST", "builds/register.json", 201, &request, &response)
-
-	switch result {
-	case 201:
-		config.Log().WithFields(logrus.Fields{
-			"build":    strconv.Itoa(response.ID),
-			"repo_url": response.RepoCleanURL(),
-		}).Println("Checking for builds...", "received")
-		response.TLSCAChain = certificates
-		return &response, true
-	case 403:
-		config.Log().Errorln("Checking for builds...", "forbidden")
-		return nil, false
-	case 204, 404:
-		config.Log().Debugln("Checking for builds...", "nothing")
-		return nil, true
-	case clientError:
-		config.Log().WithField("status", statusText).Errorln("Checking for builds...", "error")
-		return nil, false
-	default:
-		config.Log().WithField("status", statusText).Warningln("Checking for builds...", "failed")
-		return nil, true
-	}
-}
-
-func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged bool) *common.RegisterRunnerResponse {
+func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged, locked bool) *common.RegisterRunnerResponse {
 	// TODO: pass executor
 	request := common.RegisterRunnerRequest{
-		Info:        n.getRunnerVersion(common.RunnerConfig{}),
 		Token:       runner.Token,
 		Description: description,
-		Tags:        tags,
+		Info:        n.getRunnerVersion(common.RunnerConfig{}),
+		Locked:      locked,
 		RunUntagged: runUntagged,
+		Tags:        tags,
 	}
 
 	var response common.RegisterRunnerResponse
-	result, statusText, _ := n.doJSON(runner, "POST", "runners/register.json", 201, &request, &response)
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners", 201, &request, &response)
 
 	switch result {
 	case 201:
@@ -149,39 +117,15 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 	}
 }
 
-func (n *GitLabClient) DeleteRunner(runner common.RunnerCredentials) bool {
-	request := common.DeleteRunnerRequest{
-		Token: runner.Token,
-	}
-
-	result, statusText, _ := n.doJSON(runner, "DELETE", "runners/delete", 200, &request, nil)
-
-	switch result {
-	case 200:
-		runner.Log().Println("Deleting runner...", "succeeded")
-		return true
-	case 403:
-		runner.Log().Errorln("Deleting runner...", "forbidden")
-		return false
-	case clientError:
-		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "error")
-		return false
-	default:
-		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "failed")
-		return false
-	}
-}
-
 func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 	request := common.VerifyRunnerRequest{
 		Token: runner.Token,
 	}
 
-	// HACK: we use non-existing build id to check if receive forbidden or not found
-	result, statusText, _ := n.doJSON(runner, "PUT", fmt.Sprintf("builds/%d", -1), 200, &request, nil)
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", 200, &request, nil)
 
 	switch result {
-	case 404:
+	case 200:
 		// this is expected due to fact that we ask for non-existing job
 		runner.Log().Println("Verifying runner...", "is alive")
 		return true
@@ -197,47 +141,104 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 	}
 }
 
-func (n *GitLabClient) UpdateBuild(config common.RunnerConfig, id int, state common.BuildState, trace *string) common.UpdateState {
-	request := common.UpdateBuildRequest{
+func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
+	request := common.UnregisterRunnerRequest{
+		Token: runner.Token,
+	}
+
+	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", 200, &request, nil)
+
+	switch result {
+	case 204:
+		runner.Log().Println("Deleting runner...", "succeeded")
+		return true
+	case 403:
+		runner.Log().Errorln("Deleting runner...", "forbidden")
+		return false
+	case clientError:
+		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "error")
+		return false
+	default:
+		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "failed")
+		return false
+	}
+}
+
+func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobResponse, bool) {
+	request := common.JobRequest{
+		Info:       n.getRunnerVersion(config),
+		Token:      config.Token,
+		LastUpdate: n.getLastUpdate(&config.RunnerCredentials),
+	}
+
+	var response common.JobResponse
+	result, statusText, certificates := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", 201, &request, &response)
+
+	switch result {
+	case 201:
+		config.Log().WithFields(logrus.Fields{
+			"job":      strconv.Itoa(response.ID),
+			"repo_url": response.RepoCleanURL(),
+		}).Println("Checking for jobs...", "received")
+		response.TLSCAChain = certificates
+		return &response, true
+	case 403:
+		config.Log().Errorln("Checking for jobs...", "forbidden")
+		return nil, false
+	case 204:
+		config.Log().Debugln("Checking for jobs...", "nothing")
+		return nil, true
+	case clientError:
+		config.Log().WithField("status", statusText).Errorln("Checking for jobs...", "error")
+		return nil, false
+	default:
+		config.Log().WithField("status", statusText).Warningln("Checking for jobs...", "failed")
+		return nil, true
+	}
+}
+
+func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string) common.UpdateState {
+	request := common.UpdateJobRequest{
 		Info:  n.getRunnerVersion(config),
-		Token: config.Token,
+		Token: jobCredentials.Token,
 		State: state,
 		Trace: trace,
 	}
 
-	log := config.Log().WithField("build", id)
+	log := config.Log().WithField("job", id)
 
-	result, statusText, _ := n.doJSON(config.RunnerCredentials, "PUT", fmt.Sprintf("builds/%d.json", id), 200, &request, nil)
+	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", id), 200, &request, nil)
 	switch result {
 	case 200:
-		log.Debugln("Submitting build to coordinator...", "ok")
+		log.Debugln("Submitting job to coordinator...", "ok")
 		return common.UpdateSucceeded
 	case 404:
-		log.Warningln("Submitting build to coordinator...", "aborted")
+		log.Warningln("Submitting job to coordinator...", "aborted")
 		return common.UpdateAbort
 	case 403:
-		log.WithField("status", statusText).Errorln("Submitting build to coordinator...", "forbidden")
+		log.WithField("status", statusText).Errorln("Submitting job to coordinator...", "forbidden")
 		return common.UpdateAbort
 	case clientError:
-		log.WithField("status", statusText).Errorln("Submitting build to coordinator...", "error")
+		log.WithField("status", statusText).Errorln("Submitting job to coordinator...", "error")
 		return common.UpdateAbort
 	default:
-		log.WithField("status", statusText).Warningln("Submitting build to coordinator...", "failed")
+		log.WithField("status", statusText).Warningln("Submitting job to coordinator...", "failed")
 		return common.UpdateFailed
 	}
 }
 
-func (n *GitLabClient) PatchTrace(config common.RunnerConfig, buildCredentials *common.BuildCredentials, tracePatch common.BuildTracePatch) common.UpdateState {
-	id := buildCredentials.ID
+func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) common.UpdateState {
+	id := jobCredentials.ID
 
 	contentRange := fmt.Sprintf("%d-%d", tracePatch.Offset(), tracePatch.Limit())
 	headers := make(http.Header)
 	headers.Set("Content-Range", contentRange)
-	headers.Set("BUILD-TOKEN", buildCredentials.Token)
-	uri := fmt.Sprintf("builds/%d/trace.txt", id)
+	headers.Set("JOB-TOKEN", jobCredentials.Token)
+
+	uri := fmt.Sprintf("jobs/%d/trace", id)
 	request := bytes.NewReader(tracePatch.Patch())
 
-	response, err := n.doRaw(config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
+	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
 		return common.UpdateFailed
@@ -248,12 +249,12 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, buildCredentials *
 
 	tracePatchResponse := NewTracePatchResponse(response)
 	log := config.Log().WithFields(logrus.Fields{
-		"build":        id,
-		"sent-log":     contentRange,
-		"build-log":    tracePatchResponse.RemoteRange,
-		"build-status": tracePatchResponse.RemoteState,
-		"code":         response.StatusCode,
-		"status":       response.Status,
+		"job":        id,
+		"sent-log":   contentRange,
+		"job-log":    tracePatchResponse.RemoteRange,
+		"job-status": tracePatchResponse.RemoteState,
+		"code":       response.StatusCode,
+		"status":     response.Status,
 	})
 
 	switch {
@@ -292,7 +293,7 @@ func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Read
 	return nil
 }
 
-func (n *GitLabClient) UploadRawArtifacts(config common.BuildCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
+func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
@@ -307,21 +308,14 @@ func (n *GitLabClient) UploadRawArtifacts(config common.BuildCredentials, reader
 		}
 	}()
 
-	// TODO: Create proper interface for `doRaw` that can use other types than RunnerCredentials
-	mappedConfig := common.RunnerCredentials{
-		URL:       config.URL,
-		Token:     config.Token,
-		TLSCAFile: config.TLSCAFile,
-	}
-
 	query := url.Values{}
 	if expireIn != "" {
 		query.Set("expire_in", expireIn)
 	}
 
 	headers := make(http.Header)
-	headers.Set("BUILD-TOKEN", config.Token)
-	res, err := n.doRaw(mappedConfig, "POST", fmt.Sprintf("builds/%d/artifacts?%s", config.ID, query.Encode()), pr, mpw.FormDataContentType(), headers)
+	headers.Set("JOB-TOKEN", config.Token)
+	res, err := n.doRaw(&config, "POST", fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()), pr, mpw.FormDataContentType(), headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,
@@ -355,7 +349,7 @@ func (n *GitLabClient) UploadRawArtifacts(config common.BuildCredentials, reader
 	}
 }
 
-func (n *GitLabClient) UploadArtifacts(config common.BuildCredentials, artifactsFile string) common.UploadState {
+func (n *GitLabClient) UploadArtifacts(config common.JobCredentials, artifactsFile string) common.UploadState {
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,
 		"token": helpers.ShortenToken(config.Token),
@@ -382,17 +376,10 @@ func (n *GitLabClient) UploadArtifacts(config common.BuildCredentials, artifacts
 	return n.UploadRawArtifacts(config, file, baseName, "")
 }
 
-func (n *GitLabClient) DownloadArtifacts(config common.BuildCredentials, artifactsFile string) common.DownloadState {
-	// TODO: Create proper interface for `doRaw` that can use other types than RunnerCredentials
-	mappedConfig := common.RunnerCredentials{
-		URL:       config.URL,
-		Token:     config.Token,
-		TLSCAFile: config.TLSCAFile,
-	}
-
+func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {
 	headers := make(http.Header)
-	headers.Set("BUILD-TOKEN", config.Token)
-	res, err := n.doRaw(mappedConfig, "GET", fmt.Sprintf("builds/%d/artifacts", config.ID), nil, "", headers)
+	headers.Set("JOB-TOKEN", config.Token)
+	res, err := n.doRaw(&config, "GET", fmt.Sprintf("jobs/%d/artifacts", config.ID), nil, "", headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,
@@ -437,8 +424,12 @@ func (n *GitLabClient) DownloadArtifacts(config common.BuildCredentials, artifac
 	}
 }
 
-func (n *GitLabClient) ProcessBuild(config common.RunnerConfig, buildCredentials *common.BuildCredentials) common.BuildTrace {
-	trace := newBuildTrace(n, config, buildCredentials)
+func (n *GitLabClient) ProcessJob(config common.RunnerConfig, jobCredentials *common.JobCredentials) common.JobTrace {
+	trace := newJobTrace(n, config, jobCredentials)
 	trace.start()
 	return trace
+}
+
+func NewGitLabClient() *GitLabClient {
+	return &GitLabClient{}
 }

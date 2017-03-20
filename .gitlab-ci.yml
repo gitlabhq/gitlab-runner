@@ -58,15 +58,12 @@ clone test repo:
 # Test stage
 #
 
-code style:
+static code analysis:
   stage: test
   script:
   - source ci/touch_make_dependencies
   - make deps
-  - make fmt
-  - make lint
-  - make complexity
-  - make vet
+  - make static_code_analysis
   tags:
   - docker
 

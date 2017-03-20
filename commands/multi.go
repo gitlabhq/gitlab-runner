@@ -117,26 +117,26 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	defer mr.buildsHelper.release(runner)
 
 	// Receive a new build
-	buildData, healthy := mr.network.GetBuild(*runner)
+	jobData, healthy := mr.network.RequestJob(*runner)
 	mr.makeHealthy(runner.UniqueID(), healthy)
-	if buildData == nil {
+	if jobData == nil {
 		return
 	}
 
 	// Make sure to always close output
-	buildCredentials := &common.BuildCredentials{
-		ID:    buildData.ID,
-		Token: buildData.Token,
+	jobCredentials := &common.JobCredentials{
+		ID:    jobData.ID,
+		Token: jobData.Token,
 	}
-	trace := mr.network.ProcessBuild(*runner, buildCredentials)
+	trace := mr.network.ProcessJob(*runner, jobCredentials)
 	defer trace.Fail(err)
 
 	// Create a new build
 	build := &common.Build{
-		GetBuildResponse: *buildData,
-		Runner:           runner,
-		ExecutorData:     context,
-		SystemInterrupt:  mr.abortBuilds,
+		JobResponse:     *jobData,
+		Runner:          runner,
+		ExecutorData:    context,
+		SystemInterrupt: mr.abortBuilds,
 	}
 
 	// Add build to list of builds to assign numbers
@@ -491,7 +491,7 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 func init() {
 	common.RegisterCommand2("run", "run multi runner service", &RunCommand{
 		ServiceName:       defaultServiceName,
-		network:           &network.GitLabClient{},
+		network:           network.NewGitLabClient(),
 		prometheusLogHook: prometheus_helper.NewLogHook(),
 	})
 }

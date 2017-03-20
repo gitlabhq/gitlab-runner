@@ -182,13 +182,15 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
-					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "privileged", Value: "true"},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "privileged", Value: "true"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -241,13 +243,15 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
-					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -303,13 +307,15 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
-					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "privileged", Value: "true"},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "privileged", Value: "true"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -347,13 +353,46 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
-					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				namespaceOverwrite: "",
+				serviceLimits:      api.ResourceList{},
+				buildLimits:        api.ResourceList{},
+				helperLimits:       api.ResourceList{},
+				serviceRequests:    api.ResourceList{},
+				buildRequests:      api.ResourceList{},
+				helperRequests:     api.ResourceList{},
+			},
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -531,8 +570,8 @@ func TestSetupBuildPod(t *testing.T) {
 				Config:     test.RunnerConfig,
 				BuildShell: &common.ShellConfiguration{},
 				Build: &common.Build{
-					GetBuildResponse: common.GetBuildResponse{
-						Variables: []common.BuildVariable{},
+					JobResponse: common.JobResponse{
+						Variables: []common.JobVariable{},
 					},
 					Runner: &common.RunnerConfig{},
 				},
@@ -554,11 +593,9 @@ func TestKubernetesSuccessRun(t *testing.T) {
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
-	successfulBuild.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	successfulBuild.Image.Name = "docker:git"
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -579,7 +616,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -587,9 +624,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
@@ -605,7 +640,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -613,9 +648,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "some/non-existing/image",
-	}
+	build.Image.Name = "some/non-existing/image"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -631,7 +664,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -639,9 +672,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:missing-tag",
-	}
+	build.Image.Name = "docker:missing-tag"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -657,7 +688,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -666,9 +697,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
@@ -694,7 +723,7 @@ func TestKubernetesBuildCancel(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -703,9 +732,7 @@ func TestKubernetesBuildCancel(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	trace := &common.Trace{Writer: os.Stdout, Abort: make(chan interface{}, 1)}
 
@@ -732,13 +759,15 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 	}
 
 	build := &common.Build{
-		GetBuildResponse: common.GetBuildResponse{
-			Sha: "1234567890",
-			Options: common.BuildOptions{
-				"image": "test-image",
+		JobResponse: common.JobResponse{
+			GitInfo: common.GitInfo{
+				Sha: "1234567890",
 			},
-			Variables: []common.BuildVariable{
-				common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+			Image: common.Image{
+				Name: "test-image",
+			},
+			Variables: []common.JobVariable{
+				{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
 			},
 		},
 		Runner: &common.RunnerConfig{
@@ -751,9 +780,7 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
