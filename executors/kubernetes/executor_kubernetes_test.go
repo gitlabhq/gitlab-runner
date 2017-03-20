@@ -447,12 +447,129 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
+func TestSetupCredentials(t *testing.T) {
+	version := testapi.Default.GroupVersion().Version
+	codec := testapi.Default.Codec()
+
+	type testDef struct {
+		Credentials []common.Credentials
+		VerifyFn    func(*testing.T, testDef, *api.Secret)
+	}
+	tests := []testDef{
+		{
+			// don't execute VerifyFn
+			VerifyFn: nil,
+		},
+		{
+			Credentials: []common.Credentials{
+				{
+					Type:     "registry",
+					URL:      "http://example.com",
+					Username: "user",
+					Password: "password",
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
+				assert.Equal(t, api.SecretTypeDockercfg, secret.Type)
+				assert.NotEmpty(t, secret.Data[api.DockerConfigKey])
+			},
+		},
+		{
+			Credentials: []common.Credentials{
+				{
+					Type:     "other",
+					URL:      "http://example.com",
+					Username: "user",
+					Password: "password",
+				},
+			},
+			// don't execute VerifyFn
+			VerifyFn: nil,
+		},
+	}
+
+	executed := false
+	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
+		return func(req *http.Request) (resp *http.Response, err error) {
+			podBytes, err := ioutil.ReadAll(req.Body)
+			executed = true
+
+			if err != nil {
+				t.Errorf("failed to read request body: %s", err.Error())
+				return
+			}
+
+			p := new(api.Secret)
+
+			err = json.Unmarshal(podBytes, p)
+
+			if err != nil {
+				t.Errorf("error decoding pod: %s", err.Error())
+				return
+			}
+
+			if test.VerifyFn != nil {
+				test.VerifyFn(t, test, p)
+			}
+
+			resp = &http.Response{StatusCode: 200, Body: FakeReadCloser{
+				Reader: bytes.NewBuffer(podBytes),
+			}}
+			resp.Header = make(http.Header)
+			resp.Header.Add("Content-Type", "application/json")
+
+			return
+		}
+	}
+
+	for _, test := range tests {
+		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
+		fakeClient := fake.RESTClient{
+			Codec:  codec,
+			Client: fake.CreateHTTPClient(fakeClientRoundTripper(test)),
+		}
+		c.Client = fakeClient.Client
+
+		ex := executor{
+			kubeClient: c,
+			options:    &kubernetesOptions{},
+			AbstractExecutor: executors.AbstractExecutor{
+				Config: common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Kubernetes: &common.KubernetesConfig{
+							Namespace: "default",
+						},
+					},
+				},
+				BuildShell: &common.ShellConfiguration{},
+				Build: &common.Build{
+					JobResponse: common.JobResponse{
+						Variables:   []common.JobVariable{},
+						Credentials: test.Credentials,
+					},
+					Runner: &common.RunnerConfig{},
+				},
+			},
+		}
+
+		executed = false
+		err := ex.setupCredentials()
+		assert.NoError(t, err)
+		if test.VerifyFn != nil {
+			assert.True(t, executed)
+		} else {
+			assert.False(t, executed)
+		}
+	}
+}
+
 func TestSetupBuildPod(t *testing.T) {
 	version := testapi.Default.GroupVersion().Version
 	codec := testapi.Default.Codec()
 
 	type testDef struct {
 		RunnerConfig common.RunnerConfig
+		PrepareFn    func(*testing.T, testDef, *executor)
 		VerifyFn     func(*testing.T, testDef, *api.Pod)
 	}
 	tests := []testDef{
@@ -470,6 +587,26 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.NodeSelector, pod.Spec.NodeSelector)
+			},
+		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			PrepareFn: func(t *testing.T, test testDef, e *executor) {
+				e.credentials = &api.Secret{
+					ObjectMeta: api.ObjectMeta{
+						Name: "build-credentials",
+					},
+				}
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				secrets := []api.LocalObjectReference{{Name: "build-credentials"}}
+				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
 		{
@@ -525,8 +662,10 @@ func TestSetupBuildPod(t *testing.T) {
 		},
 	}
 
+	executed := false
 	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
 		return func(req *http.Request) (resp *http.Response, err error) {
+			executed = true
 			podBytes, err := ioutil.ReadAll(req.Body)
 
 			if err != nil {
@@ -578,11 +717,14 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 		}
 
-		err := ex.setupBuildPod()
-
-		if err != nil {
-			t.Errorf("error setting up build pod: %s", err.Error())
+		if test.PrepareFn != nil {
+			test.PrepareFn(t, test, &ex)
 		}
+
+		executed = false
+		err := ex.setupBuildPod()
+		assert.NoError(t, err, "error setting up build pod: %s")
+		assert.True(t, executed)
 	}
 }
 

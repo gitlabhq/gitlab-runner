@@ -132,7 +132,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	s.Debugln("Starting Kubernetes command...")
 
 	if s.pod == nil {
-		err := s.setupBuildSecrets()
+		err := s.setupCredentials()
 		if err != nil {
 			return err
 		}
@@ -210,7 +210,7 @@ func (s *executor) buildContainer(name, image string, requests, limits api.Resou
 	}
 }
 
-func (s *executor) setupBuildSecrets() error {
+func (s *executor) setupCredentials() error {
 	authConfigs := make(map[string]credentialprovider.DockerConfigEntry)
 
 	for _, credentials := range s.Build.Credentials {
@@ -222,6 +222,10 @@ func (s *executor) setupBuildSecrets() error {
 			Username: credentials.Username,
 			Password: credentials.Password,
 		}
+	}
+
+	if len(authConfigs) == 0 {
+		return nil
 	}
 
 	dockerCfgContent, err := json.Marshal(authConfigs)
