@@ -165,9 +165,9 @@ causes to why this happens:
    reinstall the `LaunchAgent` script:
 
     ```
-    gitlab-ci-multi-runner uninstall
-    gitlab-ci-multi-runner install
-    gitlab-ci-multi-runner start
+    gitlab-runner uninstall
+    gitlab-runner install
+    gitlab-runner start
     ```
 
     Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
