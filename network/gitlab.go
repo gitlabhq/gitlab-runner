@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"sync"
 
 	"github.com/Sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
@@ -22,13 +23,17 @@ const clientError = -100
 
 type GitLabClient struct {
 	clients map[string]*client
+	lock    sync.Mutex
 }
 
 func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err error) {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
 	if n.clients == nil {
 		n.clients = make(map[string]*client)
 	}
-	key := fmt.Sprintf("%s_%s", credentials.GetURL(), credentials.GetTLSCAFile())
+	key := fmt.Sprintf("%s_%s_%s", credentials.GetURL(), credentials.GetToken(), credentials.GetTLSCAFile())
 	c = n.clients[key]
 	if c == nil {
 		c, err = newClient(credentials)
