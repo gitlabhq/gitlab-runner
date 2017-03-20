@@ -600,12 +600,12 @@ func TestSetupBuildPod(t *testing.T) {
 			PrepareFn: func(t *testing.T, test testDef, e *executor) {
 				e.credentials = &api.Secret{
 					ObjectMeta: api.ObjectMeta{
-						Name: "build-credentials",
+						Name: "job-credentials",
 					},
 				}
 			},
 			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
-				secrets := []api.LocalObjectReference{{Name: "build-credentials"}}
+				secrets := []api.LocalObjectReference{{Name: "job-credentials"}}
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
