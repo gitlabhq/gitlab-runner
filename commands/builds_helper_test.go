@@ -63,6 +63,15 @@ func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 
 	result = b.releaseRequest(&runner)
 	require.False(t, result, "release only one request")
+
+	result = b.acquireRequest(&runner)
+	require.True(t, result)
+
+	result = b.releaseRequest(&runner)
+	require.True(t, result)
+
+	result = b.releaseRequest(&runner)
+	require.False(t, result, "nothing to release")
 }
 
 func TestBuildsHelperAcquireBuildWithLimit(t *testing.T) {
