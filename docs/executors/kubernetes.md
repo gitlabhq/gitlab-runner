@@ -76,15 +76,6 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status. [Default: 3]
 - `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]
 
-The following keywords for resource limits are deprecated, please use the new ones above:
-
-- `cpus`: The CPU allocation given to build containers
-- `memory`: The amount of memory allocated to build containers
-- `service_cpus`: The CPU allocation given to build service containers
-- `service_memory`: The amount of memory allocated to build service containers
-- `helper_cpus`: The CPU allocation given to build helper containers
-- `helper_memory`: The amount of memory allocated to build helper containers
-
 ### Overwriting Kubernetes Namespace
 
 Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, by using the variable
