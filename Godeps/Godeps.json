@@ -898,6 +898,11 @@
 			"Rev": "b0deb2eb8f4037421077f77cb163dbb4c0a2a9f5"
 		},
 		{
+			"ImportPath": "k8s.io/kubernetes/pkg/credentialprovider",
+			"Comment": "v1.3.5",
+			"Rev": "b0deb2eb8f4037421077f77cb163dbb4c0a2a9f5"
+		},
+		{
 			"ImportPath": "k8s.io/kubernetes/pkg/fields",
 			"Comment": "v1.3.5",
 			"Rev": "b0deb2eb8f4037421077f77cb163dbb4c0a2a9f5"
