@@ -10,38 +10,78 @@ import (
 
 var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage"}, nil)
 
-type buildsHelper struct {
-	counts map[string]int
-	builds []*common.Build
-	lock   sync.Mutex
+type runnerCounter struct {
+	builds   int
+	requests int
 }
 
-func (b *buildsHelper) acquire(runner *common.RunnerConfig) bool {
+type buildsHelper struct {
+	counters map[string]*runnerCounter
+	builds   []*common.Build
+	lock     sync.Mutex
+}
+
+func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCounter {
+	if b.counters == nil {
+		b.counters = make(map[string]*runnerCounter)
+	}
+
+	counter, _ := b.counters[runner.Token]
+	if counter == nil {
+		counter = &runnerCounter{}
+		b.counters[runner.Token] = counter
+	}
+	return counter
+}
+
+func (b *buildsHelper) acquireBuild(runner *common.RunnerConfig) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// Check number of builds
-	count, _ := b.counts[runner.Token]
-	if runner.Limit > 0 && count >= runner.Limit {
+	counter := b.getRunnerCounter(runner)
+
+	if runner.Limit > 0 && counter.builds >= runner.Limit {
 		// Too many builds
 		return false
 	}
 
-	// Create a new build
-	if b.counts == nil {
-		b.counts = make(map[string]int)
-	}
-	b.counts[runner.Token]++
+	counter.builds++
 	return true
 }
 
-func (b *buildsHelper) release(runner *common.RunnerConfig) bool {
+func (b *buildsHelper) releaseBuild(runner *common.RunnerConfig) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	_, ok := b.counts[runner.Token]
-	if ok {
-		b.counts[runner.Token]--
+	counter := b.getRunnerCounter(runner)
+	if counter.builds > 0 {
+		counter.builds--
+		return true
+	}
+	return false
+}
+
+func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	counter := b.getRunnerCounter(runner)
+
+	if counter.requests >= runner.GetRequestConcurrency() {
+		return false
+	}
+
+	counter.requests++
+	return true
+}
+
+func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig) bool {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	counter := b.getRunnerCounter(runner)
+	if counter.requests > 0 {
+		counter.requests--
 		return true
 	}
 	return false

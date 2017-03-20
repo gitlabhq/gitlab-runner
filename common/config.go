@@ -191,9 +191,10 @@ type RunnerSettings struct {
 }
 
 type RunnerConfig struct {
-	Name        string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
-	Limit       int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
-	OutputLimit int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
+	Name               string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
+	Limit              int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
+	OutputLimit        int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
+	RequestConcurrency int    `toml:"request_concurrency,omitzero" long:"request-concurrency" env:"RUNNER_REQUEST_CONCURRENCY" description:"Maximum concurrency for job requests"`
 
 	RunnerCredentials
 	RunnerSettings
@@ -289,6 +290,13 @@ func (c *RunnerCredentials) Log() *log.Entry {
 
 func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
+}
+
+func (c *RunnerConfig) GetRequestConcurrency() int {
+	if c.RequestConcurrency <= 0 {
+		return 1
+	}
+	return c.RequestConcurrency
 }
 
 func (c *RunnerConfig) GetVariables() BuildVariables {

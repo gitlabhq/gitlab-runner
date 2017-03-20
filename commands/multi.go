@@ -97,6 +97,17 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 	}
 }
 
+func (mr *RunCommand) requestJob(runner *common.RunnerConfig) (*common.GetBuildResponse, bool) {
+	if !mr.buildsHelper.acquireRequest(runner) {
+		return nil, false
+	}
+	defer mr.buildsHelper.releaseRequest(runner)
+
+	jobData, healthy := mr.network.GetBuild(*runner)
+	mr.makeHealthy(runner.UniqueID(), healthy)
+	return jobData, true
+}
+
 func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) (err error) {
 	provider := common.GetExecutor(runner.Executor)
 	if provider == nil {
@@ -111,14 +122,20 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	defer provider.Release(runner, context)
 
 	// Acquire build slot
-	if !mr.buildsHelper.acquire(runner) {
+	if !mr.buildsHelper.acquireBuild(runner) {
+		mr.log().WithField("runner", runner.ShortDescription()).
+			Debugln("Failed to request job: runner limit meet")
 		return
 	}
-	defer mr.buildsHelper.release(runner)
+	defer mr.buildsHelper.releaseBuild(runner)
 
 	// Receive a new build
-	buildData, healthy := mr.network.GetBuild(*runner)
-	mr.makeHealthy(runner.UniqueID(), healthy)
+	buildData, result := mr.requestJob(runner)
+	if !result {
+		mr.log().WithField("runner", runner.ShortDescription()).
+			Debugln("Failed to request job: runner requestConcurrency meet")
+		return
+	}
 	if buildData == nil {
 		return
 	}
