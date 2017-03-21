@@ -11,3 +11,6 @@ dockerfiles/ubuntu/gitlab-ci-multi-runner_amd64.deb
 tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
+
+# Ignore the generated binary
+gitlab-ci-multi-runner
