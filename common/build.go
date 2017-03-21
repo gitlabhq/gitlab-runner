@@ -363,21 +363,9 @@ func (b *Build) String() string {
 
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
-		{"CI", "true", true, true, false},
-		{"CI_DEBUG_TRACE", "false", true, true, false},
-		{"CI_BUILD_REF", b.GitInfo.Sha, true, true, false},
-		{"CI_BUILD_BEFORE_SHA", b.GitInfo.BeforeSha, true, true, false},
-		{"CI_BUILD_REF_NAME", b.GitInfo.Ref, true, true, false},
-		{"CI_BUILD_ID", strconv.Itoa(b.ID), true, true, false},
-		{"CI_BUILD_REPO", b.GitInfo.RepoURL, true, true, false},
-		{"CI_BUILD_TOKEN", b.Token, true, true, false},
-		{"CI_PROJECT_ID", strconv.Itoa(b.JobInfo.ProjectID), true, true, false},
-		{"CI_PROJECT_DIR", b.FullProjectDir(), true, true, false},
-		{"CI_SERVER", "yes", true, true, false},
-		{"CI_SERVER_NAME", "GitLab CI", true, true, false},
-		{"CI_SERVER_VERSION", "", true, true, false},
-		{"CI_SERVER_REVISION", "", true, true, false},
-		{"GITLAB_CI", "true", true, true, false},
+		{Key: "CI_DEBUG_TRACE", Value: "false", Public: true, Internal: true, File: false},
+		{Key: "CI_PROJECT_DIR", Value: b.FullProjectDir(), Public: true, Internal: true, File: false},
+		{Key: "CI_SERVER", Value: "yes", Public: true, Internal: true, File: false},
 	}
 }
 
