@@ -17,6 +17,7 @@ This defines global settings of multi-runner.
 | Setting | Description |
 | ------- | ----------- |
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
+| `log_level`      | Log level (options: debug, info, warn, error, fatal, panic) |
 | `check_interval` | defines in seconds how often to check GitLab for a new builds |
 | `sentry_dsn`     | enable tracking of all system level errors to sentry |
 | `metrics_server` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |

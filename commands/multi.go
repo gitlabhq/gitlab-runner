@@ -205,6 +205,15 @@ func (mr *RunCommand) loadConfig() error {
 		return err
 	}
 
+	// Set log level
+	if mr.config.LogLevel != nil {
+		level, err := log.ParseLevel(*mr.config.LogLevel)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		log.SetLevel(level)
+	}
+
 	// pass user to execute scripts as specific user
 	if mr.User != "" {
 		mr.config.User = mr.User
