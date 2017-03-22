@@ -1,3 +1,6 @@
+v 1.9.10
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
+
 v 1.9.9
 - Update docker-machine version to fix coreos provision !500
 
