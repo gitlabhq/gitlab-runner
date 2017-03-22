@@ -10,6 +10,9 @@ sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runne
 sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-linux-arm
 ```
 
+You can download a binary for every available version as described in
+[Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+
 Give it permissions to execute:
 
 ```bash
@@ -61,6 +64,9 @@ Download the binary to replace runner's executable:
 sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-linux-386
 sudo wget -O /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-linux-amd64
 ```
+
+You can download a binary for every available version as described in
+[Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
 Give it permissions to execute:
 

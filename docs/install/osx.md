@@ -8,6 +8,9 @@ Download the binary for your system:
 sudo curl --output /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
 ```
 
+You can download a binary for every available version as described in
+[Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+
 Give it permissions to execute:
 
 ```bash
@@ -62,6 +65,9 @@ Download binary to replace runner's executable:
 ```bash
 curl -o /usr/local/bin/gitlab-ci-multi-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
 ```
+
+You can download a binary for every available version as described in
+[Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
 Give it permissions to execute:
 
