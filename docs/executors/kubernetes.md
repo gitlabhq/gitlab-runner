@@ -1,8 +1,5 @@
 # The Kubernetes executor
 
->**Note:**
-This executor is **EXPERIMENTAL**.
-
 GitLab Runner can use Kubernetes to run builds on a kubernetes cluster. This is
 possible with the use of the **Kubernetes** executor.
 
