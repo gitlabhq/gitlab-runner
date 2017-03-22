@@ -5,6 +5,9 @@ Create a folder somewhere in your system, ex.: `C:\Multi-Runner`.
 Download the binary for [x86][]  or [amd64][] and put it into the folder you
 created.
 
+You can download a binary for every available version as described in
+[Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+
 Run an `Administrator` command prompt ([How to][prompt]). The simplest is to
 write `Command Prompt` in Windows search field, right click and select
 `Run as administrator`. You will be asked to confirm that you want to execute
@@ -65,6 +68,9 @@ gitlab-ci-multi-runner stop
 ```
 
 Download the binary for [x86][] or [amd64][] and replace runner's executable.
+
+You can download a binary for every available version as described in
+[Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
 Start service:
 
