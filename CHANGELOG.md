@@ -1,3 +1,23 @@
+v 9.0.0
+- Change dependency from `github.com/fsouza/go-dockerclient` to `github.com/docker/docker/client`" !301
+- Update docker-machine version to fix coreos provision !500
+- Cleanup windows install docs !497
+- Replace io.Copy with stdcopy.StdCopy for docker output handling !503
+- Fixes typo: current to concurrent. !508
+- Modifies autoscale algorithm example !509
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
+- Fix indentation of 'image_pull_secrets' in kubernetes configuration example !512
+- Show Docker image ID in job's log !507
+- Fix word consistency in autoscaling docs !519
+- Rename the binary on download to use gitlab-runner as command !510
+- Improve details around limits !502
+- Switch from CI API v1 to API v4 !517
+- Make it easier to run tests locally !506
+- Kubernetes private credentials !520
+- Limit number of concurrent requests to builds/register.json !518
+- Remove deprecated kubernetes executor configuration fields !521
+- Drop Kubernetes executor 'experimental' notice !525
+
 v 1.11.1
 - Update docker-machine version to fix coreos provision !500
 
