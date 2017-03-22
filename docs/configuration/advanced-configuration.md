@@ -474,10 +474,6 @@ This defines the Kubernetes parameters.
 | `image`          | string  | Default docker image to use for builds when none is specified |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled |
-| `cpus`           | string  | The CPU allocation given to build containers |
-| `memory`         | string  | The amount of memory allocated to build containers |
-| `service_cpus`   | string  | The CPU allocation given to build service containers |
-| `service_memory` | string  | The amount of memory allocated to build service containers |
 | `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs |
 | `image_pull_secrets` | array | A list of secrets that are used to authenticate docker image pulling |
 
@@ -492,10 +488,6 @@ Example:
 	namespace = "gitlab"
 	image = "golang:1.7"
 	privileged = true
-	cpus = "750m"
-	memory = "250m"
-	service_cpus = "1000m"
-	service_memory = "450m"
 	[runners.kubernetes.node_selector]
 		gitlab = "true"
 	image_pull_secrets = ["docker-registry-credentials"]

@@ -55,24 +55,15 @@ func (s *executor) setupResources() error {
 	var err error
 
 	// Limit
-	CPULimit := getNewOrLegacy(s.Config.Kubernetes.CPULimit, s.Config.Kubernetes.CPUs)
-	MemoryLimit := getNewOrLegacy(s.Config.Kubernetes.MemoryLimit, s.Config.Kubernetes.Memory)
-
-	if s.buildLimits, err = limits(CPULimit, MemoryLimit); err != nil {
+	if s.buildLimits, err = limits(s.Config.Kubernetes.CPULimit, s.Config.Kubernetes.MemoryLimit); err != nil {
 		return fmt.Errorf("invalid build limits specified: %s", err.Error())
 	}
 
-	CPULimit = getNewOrLegacy(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceCPUs)
-	MemoryLimit = getNewOrLegacy(s.Config.Kubernetes.ServiceMemoryLimit, s.Config.Kubernetes.ServiceMemory)
-
-	if s.serviceLimits, err = limits(CPULimit, MemoryLimit); err != nil {
+	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit); err != nil {
 		return fmt.Errorf("invalid service limits specified: %s", err.Error())
 	}
 
-	CPULimit = getNewOrLegacy(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperCPUs)
-	MemoryLimit = getNewOrLegacy(s.Config.Kubernetes.HelperMemoryLimit, s.Config.Kubernetes.HelperMemory)
-
-	if s.helperLimits, err = limits(CPULimit, MemoryLimit); err != nil {
+	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit); err != nil {
 		return fmt.Errorf("invalid helper limits specified: %s", err.Error())
 	}
 
