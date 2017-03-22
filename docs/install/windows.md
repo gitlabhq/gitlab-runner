@@ -12,6 +12,9 @@ To install and run GitLab Runner on Windows you need:
 1. Download the binary for [x86][]  or [amd64][] and put it into the folder you
    created. Rename the binary to `gitlab-runner.exe`.
 
+   You can download a binary for every available version as described in
+   [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+
 1. Run an [`Administrator`/elevated command prompt][prompt] (<kbd>WindowsKey</kbd> + <kbd>X</kbd> then select Command Prompt (Admin)).
 
 1. Register the Runner (see [Runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
@@ -40,27 +43,27 @@ To install and run GitLab Runner on Windows you need:
    using the Built-in System Account (recommended) or using a user account.
 
     **Run service using Built-in System Account**
-  
+
     ```bash
     gitlab-runner install
     gitlab-runner start
     ```
-    
+
     **Run service using user account**
-    
-    You have to enter a valid password for the current user account, because 
+
+    You have to enter a valid password for the current user account, because
     it's required to start the service by Windows:
 
     ```bash
     gitlab-runner install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
     gitlab-runner start
     ```
-    
+
     See the [troubleshooting section](#troubleshooting) if you encounter any
     errors during the Runner installation.
 
 1. (Optional) Update Runners `concurrent` value in `C:\GitLab-Runner\config.toml`
-   to allow multiple concurrent jobs as detailed in [advanced configuration details](https://docs.gitlab.com/runner/configuration/advanced-configuration.html).
+   to allow multiple concurrent jobs as detailed in [advanced configuration details](../configuration/advanced-configuration.md).
 
 Voila! Runner is installed, running, and will start again after each system reboot.
 Logs are stored in Windows Event Log.
@@ -75,6 +78,10 @@ Logs are stored in Windows Event Log.
     ```
 
 1. Download the binary for [x86][] or [amd64][] and replace runner's executable.
+
+   You can download a binary for every available version as described in
+   [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+
 1. Start the service:
 
     ```bash
@@ -107,10 +114,10 @@ gitlab-runner install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASS
 If you encounter a _The service did not start due to a logon failure_ error
 while starting the service, please [look in the FAQ](../faq/README.md#13-the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service-on-windows) to check how to resolve the problem.
 
-If you don't have a Windows Password, Runner's service won't start but you can 
-use the Built-in System Account. 
+If you don't have a Windows Password, Runner's service won't start but you can
+use the Built-in System Account.
 
-If you have issues with the Built-in System Account, please read 
+If you have issues with the Built-in System Account, please read
 [How to Configure the Service to Start Up with the Built-in System Account](https://support.microsoft.com/en-us/kb/327545#6)
 on Microsoft's support website.
 

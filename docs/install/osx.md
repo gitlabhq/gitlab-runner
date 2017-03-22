@@ -11,6 +11,9 @@ download the macOS binary.
     sudo curl --output /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
     ```
 
+    You can download a binary for every available version as described in
+    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+
 1. Give it permissions to execute:
 
     ```bash
@@ -62,6 +65,9 @@ Voila! Runner is installed and will be run after a system reboot.
     ```bash
     curl -o /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
     ```
+
+    You can download a binary for every available version as described in
+    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
 1. Give it permissions to execute:
 
