@@ -27,6 +27,9 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
     sudo wget -O /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-freebsd-386
     ```
 
+    You can download a binary for every available version as described in
+    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+
 1. Give it permissions to execute:
 
     ```bash
