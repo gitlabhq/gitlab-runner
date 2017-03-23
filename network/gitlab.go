@@ -21,6 +21,8 @@ import (
 
 const clientError = -100
 
+var notSupportingGitLabPre90Message = "GitLab Runner >= 9.0 supports ONLY GitLab CE/EE >= 9.0"
+
 type GitLabClient struct {
 	clients map[string]*client
 	lock    sync.Mutex
@@ -113,6 +115,12 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 	case 403:
 		runner.Log().Errorln("Registering runner...", "forbidden (check registration token)")
 		return nil
+	case 404:
+		runner.Log().WithFields(logrus.Fields{
+			"status": statusText,
+			"reason": notSupportingGitLabPre90Message,
+		}).Errorln("Registering runner...", "not-compatible")
+		return nil
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "error")
 		return nil
@@ -137,6 +145,12 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 	case 403:
 		runner.Log().Errorln("Verifying runner...", "is removed")
 		return false
+	case 404:
+		runner.Log().WithFields(logrus.Fields{
+			"status": statusText,
+			"reason": notSupportingGitLabPre90Message,
+		}).Errorln("Verifying runner...", "not-compatible")
+		return false
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "error")
 		return false
@@ -151,7 +165,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", 200, &request, nil)
+	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", 204, &request, nil)
 
 	switch result {
 	case 204:
@@ -159,6 +173,12 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		return true
 	case 403:
 		runner.Log().Errorln("Deleting runner...", "forbidden")
+		return false
+	case 404:
+		runner.Log().WithFields(logrus.Fields{
+			"status": statusText,
+			"reason": notSupportingGitLabPre90Message,
+		}).Errorln("Deleting runner...", "not-compatible")
 		return false
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "error")
@@ -193,6 +213,12 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	case 204:
 		config.Log().Debugln("Checking for jobs...", "nothing")
 		return nil, true
+	case 404:
+		config.Log().WithFields(logrus.Fields{
+			"status": statusText,
+			"reason": notSupportingGitLabPre90Message,
+		}).Errorln("checking for jobs...", "not-compatible")
+		return nil, false
 	case clientError:
 		config.Log().WithField("status", statusText).Errorln("Checking for jobs...", "error")
 		return nil, false

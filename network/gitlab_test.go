@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
@@ -858,4 +859,78 @@ func TestArtifactsDownload(t *testing.T) {
 
 	state = c.DownloadArtifacts(fileNotFoundTokenCredentials, artifactsFileName)
 	assert.Equal(t, DownloadNotFound, state, "Artifacts should be bit downloaded if it's not found")
+}
+
+func prepareAPIv4CompatibilityTestEnvironment(handler func(w http.ResponseWriter, r *http.Request)) (server *httptest.Server, runner RunnerConfig) {
+	server = httptest.NewServer(http.HandlerFunc(handler))
+
+	runner = RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   server.URL,
+			Token: "valid",
+		},
+	}
+
+	return
+}
+
+func TestAPIv4Compatibility(t *testing.T) {
+	serverPre90, runnerPre90 := prepareAPIv4CompatibilityTestEnvironment(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v4/runners":
+			w.WriteHeader(404)
+		case "/api/v4/runners/verify":
+			w.WriteHeader(404)
+		case "/api/v4/jobs/request":
+			w.WriteHeader(404)
+		}
+	})
+	defer serverPre90.Close()
+
+	server90, runner90 := prepareAPIv4CompatibilityTestEnvironment(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v4/runners":
+			switch r.Method {
+			case "POST":
+				res := make(map[string]interface{})
+				res["token"] = "token-here"
+
+				output, err := json.Marshal(res)
+				require.NoError(t, err)
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(201)
+				w.Write(output)
+			case "DELETE":
+				w.WriteHeader(204)
+			}
+		case "/api/v4/runners/verify":
+			w.WriteHeader(200)
+		case "/api/v4/jobs/request":
+			w.WriteHeader(204)
+		}
+	})
+	defer server90.Close()
+
+	c := NewGitLabClient()
+
+	resp := c.RegisterRunner(runnerPre90.RunnerCredentials, "", "", false, false)
+	assert.Nil(t, resp, "Request against GitLab < 9.0 should not register Runner")
+	resp = c.RegisterRunner(runner90.RunnerCredentials, "", "", false, false)
+	assert.NotNil(t, resp, "Request against GitLab < 9.0 should register Runner")
+
+	ok := c.VerifyRunner(runnerPre90.RunnerCredentials)
+	assert.False(t, ok, "Request against GitLab < 9.0 should not verify Runner")
+	ok = c.VerifyRunner(runner90.RunnerCredentials)
+	assert.True(t, ok, "Request against GitLab < 9.0 should verify Runner")
+
+	ok = c.UnregisterRunner(runnerPre90.RunnerCredentials)
+	assert.False(t, ok, "Request against GitLab < 9.0 should not unregister Runner")
+	ok = c.UnregisterRunner(runner90.RunnerCredentials)
+	assert.True(t, ok, "Request against GitLab < 9.0 should unregister Runner")
+
+	_, healthy := c.RequestJob(runnerPre90)
+	assert.False(t, healthy, "Request against GitLab < 9.0 should mark Runner as unhealthy")
+	_, healthy = c.RequestJob(runner90)
+	assert.True(t, healthy, "Request against GitLab >= 9.0 should mark Runner as healthy")
 }
