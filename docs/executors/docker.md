@@ -164,7 +164,7 @@ services:
 
 When the build is run, `tutum/wordpress` will be started first and you will have
 access to it from your build container under the hostname `tutum__wordpress`
-or `tutum-wordpress`.
+and `tutum-wordpress`.
 
 The GitLab Runner creates two alias hostnames for the service that you can use
 alternatively. The aliases are taken from the image name following these rules:
@@ -172,6 +172,11 @@ alternatively. The aliases are taken from the image name following these rules:
 1. Everything after `:` is stripped
 2. For the first alias, the slash (`/`) is replaced with double underscores (`__`)
 2. For the second alias, the slash (`/`) is replaced with a single dash (`-`)
+
+Using a private service image will strip any port given and apply the rules as
+described above. A service `registry.gitlab-wp.com:4999/tutum/wordpress` will
+result in hostname `registry.gitlab__wp.com__tutum__wordpress` and
+`registry.gitlab-wp.com-tutum-wordpress`.
 
 ## Configuring services
 
