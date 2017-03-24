@@ -18,22 +18,8 @@ func TestIfMachineProviderExposesCollectInterface(t *testing.T) {
 	assert.NotNil(t, collector)
 }
 
-func TestMachineProviderDescribeAndCollect(t *testing.T) {
-	provider := &machineProvider{}
-
-	descCh := make(chan *prometheus.Desc, 10)
-	provider.Describe(descCh)
-	assert.Len(t, descCh, 2)
-
-	metricCh := make(chan prometheus.Metric, 50)
-	provider.Collect(metricCh)
-	assert.Len(t, metricCh, 8)
-}
-
 func TestMachineProviderDeadInterval(t *testing.T) {
-	provider := &machineProvider{
-		details: make(machinesDetails),
-	}
+	provider := newMachineProvider("docker_machines", "docker")
 	assert.Equal(t, 0, provider.collectDetails().Idle)
 
 	details := provider.machineDetails("test", false)
