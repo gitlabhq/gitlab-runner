@@ -259,15 +259,15 @@ func (b *Build) run(executor Executor) (err error) {
 	select {
 	case <-b.Trace.Aborted():
 		err = &BuildError{Inner: errors.New("canceled")}
-		b.CurrentStage = BuildRunRuntimeCanceled
+		b.CurrentState = BuildRunRuntimeCanceled
 
 	case <-time.After(time.Duration(buildTimeout) * time.Second):
 		err = &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", buildTimeout)}
-		b.CurrentStage = BuildRunRuntimeTimedout
+		b.CurrentState = BuildRunRuntimeTimedout
 
 	case signal := <-b.SystemInterrupt:
 		err = fmt.Errorf("aborted: %v", signal)
-		b.CurrentStage = BuildRunRuntimeTerminated
+		b.CurrentState = BuildRunRuntimeTerminated
 
 	case err = <-buildFinish:
 		b.CurrentState = BuildRunRuntimeFinished
