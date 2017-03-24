@@ -133,9 +133,15 @@ func getTestBuild() *common.Build {
 	return build
 }
 
-func concurrentlyCallStatesAndStages(b *buildsHelper) {
+func concurrentlyCallStatesAndStages(b *buildsHelper, finished chan struct{}, wg *sync.WaitGroup) {
 	for {
-		b.statesAndStages()
+		select {
+		case <-finished:
+			wg.Done()
+			return
+		case <-time.After(1 * time.Millisecond):
+			b.statesAndStages()
+		}
 	}
 }
 
@@ -175,9 +181,13 @@ func handleTestBuild(wg *sync.WaitGroup, b *buildsHelper, build *common.Build) {
 func TestBuildHelperCollectWhenRemovingBuild(t *testing.T) {
 	t.Log("This test tries to simulate concurrency. It can be false-positive! But failure is always a sign that something is wrong.")
 	b := &buildsHelper{}
+	statesAndStagesCallConcurrency := 10
+	finished := make(chan struct{})
 
-	for i := 0; i < 10; i++ {
-		go concurrentlyCallStatesAndStages(b)
+	wg1 := &sync.WaitGroup{}
+	wg1.Add(statesAndStagesCallConcurrency)
+	for i := 0; i < statesAndStagesCallConcurrency; i++ {
+		go concurrentlyCallStatesAndStages(b, finished, wg1)
 	}
 
 	var builds []*common.Build
@@ -185,12 +195,13 @@ func TestBuildHelperCollectWhenRemovingBuild(t *testing.T) {
 		builds = append(builds, getTestBuild())
 	}
 
-	wg := &sync.WaitGroup{}
-	wg.Add(len(builds))
-
+	wg2 := &sync.WaitGroup{}
+	wg2.Add(len(builds))
 	for _, build := range builds {
-		go handleTestBuild(wg, b, build)
+		go handleTestBuild(wg2, b, build)
 	}
+	wg2.Wait()
 
-	wg.Wait()
+	close(finished)
+	wg1.Wait()
 }
