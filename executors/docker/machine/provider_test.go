@@ -3,12 +3,13 @@ package machine
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 )
 
 var machineDefaultConfig = &common.RunnerConfig{
@@ -221,10 +222,8 @@ func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
 		Created:  make(chan bool, 10),
 		Removed:  make(chan bool, 10),
 	}
-	p := &machineProvider{
-		details: make(machinesDetails),
-		machine: t,
-	}
+	p := newMachineProvider("docker_machines", "docker")
+	p.machine = t
 	return p, t
 }
 
