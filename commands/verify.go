@@ -10,9 +10,10 @@ import (
 
 type VerifyCommand struct {
 	configOptions
-	network common.Network
-
-	DeleteNonExisting bool `long:"delete" description:"Delete no longer existing runners?"`
+	common.RunnerCredentials
+	network           common.Network
+	Name              string `toml:"name" json:"name" short:"n" long:"name" description:"Name of the runner you wish to verify"`
+	DeleteNonExisting bool   `long:"delete" description:"Delete no longer existing runners?"`
 }
 
 func (c *VerifyCommand) Execute(context *cli.Context) {
@@ -24,16 +25,24 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		return
 	}
 
+	// select runners to verify
+	toVerify, okRunners := c.selectRunners()
+
+	// check if there's something to verify
+	if len(toVerify) == 0 {
+		log.Fatalln("No runners to verify")
+		return
+	}
+
 	// verify if runner exist
-	runners := []*common.RunnerConfig{}
-	for _, runner := range c.config.Runners {
+	for _, runner := range toVerify {
 		if c.network.VerifyRunner(runner.RunnerCredentials) {
-			runners = append(runners, runner)
+			okRunners = append(okRunners, runner)
 		}
 	}
 
 	// check if anything changed
-	if len(c.config.Runners) == len(runners) {
+	if len(c.config.Runners) == len(okRunners) {
 		return
 	}
 
@@ -42,7 +51,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		return
 	}
 
-	c.config.Runners = runners
+	c.config.Runners = okRunners
 
 	// save config file
 	err = c.saveConfig()
@@ -52,6 +61,25 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 	log.Println("Updated", c.ConfigFile)
 }
 
+func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunners []*common.RunnerConfig) {
+	for _, runner := range c.config.Runners {
+		skip := false
+
+		if len(c.Name) > 0 {
+			skip = runner.Name != c.Name
+		} else if len(c.RunnerCredentials.URL) > 0 || len(c.RunnerCredentials.Token) > 0 {
+			skip = runner.RunnerCredentials != c.RunnerCredentials
+		}
+
+		if skip {
+			okRunners = append(okRunners, runner)
+		} else {
+			toVerify = append(toVerify, runner)
+		}
+	}
+
+	return
+}
 func init() {
 	common.RegisterCommand2("verify", "verify all registered runners", &VerifyCommand{
 		network: network.NewGitLabClient(),
