@@ -32,12 +32,13 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		}
 	}
 
-	if !c.DeleteNonExisting {
+	// check if anything changed
+	if len(c.config.Runners) == len(runners) {
 		return
 	}
 
-	// check if anything changed
-	if len(c.config.Runners) == len(runners) {
+	if !c.DeleteNonExisting {
+		log.Fatalln("Failed to verify runners")
 		return
 	}
 
