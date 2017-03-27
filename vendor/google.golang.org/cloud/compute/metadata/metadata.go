@@ -17,7 +17,7 @@
 //
 // This package is a wrapper around the GCE metadata service,
 // as documented at https://developers.google.com/compute/docs/metadata.
-package metadata
+package metadata // import "cloud.google.com/go/compute/metadata"
 
 import (
 	"encoding/json"
@@ -35,7 +35,7 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/net/context/ctxhttp"
 
-	"google.golang.org/cloud/internal"
+	"cloud.google.com/go/internal"
 )
 
 const (
@@ -200,7 +200,7 @@ func testOnGCE() bool {
 	resc := make(chan bool, 2)
 
 	// Try two strategies in parallel.
-	// See https://github.com/GoogleCloudPlatform/gcloud-golang/issues/194
+	// See https://github.com/GoogleCloudPlatform/google-cloud-go/issues/194
 	go func() {
 		res, err := ctxhttp.Get(ctx, metaClient, "http://"+metadataIP)
 		if err != nil {
