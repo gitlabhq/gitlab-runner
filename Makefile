@@ -384,4 +384,8 @@ development_setup:
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 
+update_govendor_dependencies:
+	# updating vendor/ dependencies
+	@./scripts/update-govendor-dependencies
+
 FORCE:
