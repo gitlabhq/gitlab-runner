@@ -8,6 +8,7 @@ dockerfiles/alpine/gitlab-ci-multi-runner-linux-amd64
 dockerfiles/build/gitlab-runner-helper
 dockerfiles/ubuntu/gitlab-ci-multi-runner_amd64.deb
 .idea/
+.editorconfig
 tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
