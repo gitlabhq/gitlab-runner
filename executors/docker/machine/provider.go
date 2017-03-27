@@ -25,6 +25,7 @@ type machineProvider struct {
 	// metrics
 	totalActions      *prometheus.CounterVec
 	currentStatesDesc *prometheus.Desc
+	creationHistogram prometheus.Histogram
 }
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
@@ -84,12 +85,14 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 		} else {
 			details.State = state
 			details.Used = time.Now()
-			logrus.WithField("time", time.Since(started)).
+			creationTime := time.Since(started)
+			logrus.WithField("time", creationTime).
 				WithField("name", details.Name).
 				WithField("now", time.Now()).
 				WithField("retries", details.RetryCount).
 				Infoln("Machine created")
 			m.totalActions.WithLabelValues("created").Inc()
+			m.creationHistogram.Observe(creationTime.Seconds())
 		}
 		errCh <- err
 	}()
@@ -418,6 +421,13 @@ func newMachineProvider(name, executor string) *machineProvider {
 			"The current number of machines per state in this provider.",
 			[]string{"state"},
 			nil,
+		),
+		creationHistogram: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "ci_" + name + "_provider_machine_creation_duration_seconds",
+				Help:    "Histogram of machine creation time.",
+				Buckets: prometheus.ExponentialBuckets(30, 1.25, 10),
+			},
 		),
 	}
 }
