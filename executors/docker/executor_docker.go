@@ -357,7 +357,8 @@ func (s *executor) addCacheVolume(containerPath string) error {
 	containerName := fmt.Sprintf("%s-cache-%x", s.Build.ProjectUniqueName(), hash)
 	if inspected, err := s.client.ContainerInspect(context.TODO(), containerName); err == nil {
 		// check if we have valid cache, if not remove the broken container
-		if _, stale := inspected.Config.Volumes[containerPath]; stale {
+		if _, ok := inspected.Config.Volumes[containerPath]; !ok {
+			s.Debugln("Removing broken cache container for ", containerPath, "path")
 			s.removeContainer(inspected.ID)
 		} else {
 			containerID = inspected.ID

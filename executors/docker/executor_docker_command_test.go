@@ -272,6 +272,62 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 	}
 }
 
+func runTestJobWithOutput(t *testing.T, build *common.Build) (output string) {
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	assert.NoError(t, err)
+
+	output = buffer.String()
+	return
+}
+
+func TestCacheInContainer(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	successfulBuild.JobInfo.ProjectID = int(time.Now().Unix())
+	successfulBuild.Steps[0].Script = common.StepScript{
+		"(test -d cached/ && ls -lh cached/) || echo \"no cached directory\"",
+		"(test -f cached/date && cat cached/date) || echo \"no cached date\"",
+		"mkdir -p cached",
+		"date > cached/date",
+	}
+	successfulBuild.Cache = common.Caches{
+		common.Cache{
+			Key: "key",
+			Paths: common.ArtifactPaths{"cached/*"},
+		},
+	}
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "alpine",
+					Volumes: []string{"/cache"},
+				},
+			},
+		},
+	}
+
+	re, err := regexp.Compile("(?m)^no cached directory")
+	assert.NoError(t, err)
+
+	output := runTestJobWithOutput(t, build)
+	assert.Regexp(t, re, output)
+
+	output = runTestJobWithOutput(t, build)
+	assert.NotRegexp(t, re, output)
+}
+
 func runDockerInDocker(version string) (id string, err error) {
 	cmd := exec.Command("docker", "run", "--detach", "--privileged", "-p", "2375", "docker:"+version+"-dind")
 	cmd.Stderr = os.Stderr
