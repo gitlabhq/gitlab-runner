@@ -300,7 +300,7 @@ func TestCacheInContainer(t *testing.T) {
 	}
 	successfulBuild.Cache = common.Caches{
 		common.Cache{
-			Key: "key",
+			Key:   "key",
 			Paths: common.ArtifactPaths{"cached/*"},
 		},
 	}
@@ -311,7 +311,7 @@ func TestCacheInContainer(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:   "alpine",
 					Volumes: []string{"/cache"},
 				},
 			},
