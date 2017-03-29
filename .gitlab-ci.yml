@@ -119,17 +119,23 @@ integration windows:
 # Build stage
 #
 
-binaries:
+.binaries: &binaries
   stage: build
   script:
   - source ci/touch_make_dependencies
-  - make build
+  - export platforms=$(echo $CI_JOB_NAME | sed 's|binaries ||')
+  - make build BUILD_PLATFORMS="-osarch='$platforms'"
   artifacts:
     paths:
     - out/binaries/
     expire_in: 7d
   tags:
   - docker
+
+binaries darwin/386 darwin/amd64: *binaries
+binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
+binaries linux/386 linux/amd64 linux/arm: *binaries
+binaries windows/386 windows/amd64: *binaries
 
 #
 # Package stage
