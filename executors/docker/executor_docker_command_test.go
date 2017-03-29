@@ -318,14 +318,13 @@ func TestCacheInContainer(t *testing.T) {
 		},
 	}
 
-	re, err := regexp.Compile("(?m)^no cached directory")
-	assert.NoError(t, err)
+	re := regexp.MustCompile("(?m)^no cached directory")
 
 	output := runTestJobWithOutput(t, build)
-	assert.Regexp(t, re, output)
+	assert.Regexp(t, re, output, "First job execution should not have cached data")
 
 	output = runTestJobWithOutput(t, build)
-	assert.NotRegexp(t, re, output)
+	assert.NotRegexp(t, re, output, "Second job execution should have cached data")
 }
 
 func runDockerInDocker(version string) (id string, err error) {
