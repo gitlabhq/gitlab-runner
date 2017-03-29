@@ -13,9 +13,9 @@ type JobState string
 
 const (
 	Pending JobState = "pending"
-	Running          = "running"
-	Failed           = "failed"
-	Success          = "success"
+	Running JobState = "running"
+	Failed  JobState = "failed"
+	Success JobState = "success"
 )
 
 const (
@@ -96,7 +96,7 @@ type GitInfoRefType string
 
 const (
 	RefTypeBranch GitInfoRefType = "branch"
-	RefTypeTag                   = "tag"
+	RefTypeTag    GitInfoRefType = "tag"
 )
 
 type GitInfo struct {
@@ -117,15 +117,15 @@ type StepName string
 
 const (
 	StepNameScript      StepName = "script"
-	StepNameAfterScript          = "after_script"
+	StepNameAfterScript StepName = "after_script"
 )
 
 type StepWhen string
 
 const (
 	StepWhenOnFailure StepWhen = "on_failure"
-	StepWhenOnSuccess          = "on_success"
-	StepWhenAlways             = "always"
+	StepWhenOnSuccess StepWhen = "on_success"
+	StepWhenAlways    StepWhen = "always"
 )
 
 type Step struct {
@@ -150,8 +150,8 @@ type ArtifactWhen string
 
 const (
 	ArtifactWhenOnFailure ArtifactWhen = "on_failure"
-	ArtifactWhenOnSuccess              = "on_success"
-	ArtifactWhenAlways                 = "always"
+	ArtifactWhenOnSuccess ArtifactWhen = "on_success"
+	ArtifactWhenAlways    ArtifactWhen = "always"
 )
 
 type Artifact struct {

@@ -35,24 +35,24 @@ type BuildRuntimeState string
 
 const (
 	BuildRunStatePending      BuildRuntimeState = "pending"
-	BuildRunRuntimeRunning                      = "running"
-	BuildRunRuntimeFinished                     = "finished"
-	BuildRunRuntimeCanceled                     = "canceled"
-	BuildRunRuntimeTerminated                   = "terminated"
-	BuildRunRuntimeTimedout                     = "timedout"
+	BuildRunRuntimeRunning    BuildRuntimeState = "running"
+	BuildRunRuntimeFinished   BuildRuntimeState = "finished"
+	BuildRunRuntimeCanceled   BuildRuntimeState = "canceled"
+	BuildRunRuntimeTerminated BuildRuntimeState = "terminated"
+	BuildRunRuntimeTimedout   BuildRuntimeState = "timedout"
 )
 
 type BuildStage string
 
 const (
 	BuildStagePrepare           BuildStage = "prepare_script"
-	BuildStageGetSources                   = "get_sources"
-	BuildStageRestoreCache                 = "restore_cache"
-	BuildStageDownloadArtifacts            = "download_artifacts"
-	BuildStageUserScript                   = "build_script"
-	BuildStageAfterScript                  = "after_script"
-	BuildStageArchiveCache                 = "archive_cache"
-	BuildStageUploadArtifacts              = "upload_artifacts"
+	BuildStageGetSources        BuildStage = "get_sources"
+	BuildStageRestoreCache      BuildStage = "restore_cache"
+	BuildStageDownloadArtifacts BuildStage = "download_artifacts"
+	BuildStageUserScript        BuildStage = "build_script"
+	BuildStageAfterScript       BuildStage = "after_script"
+	BuildStageArchiveCache      BuildStage = "archive_cache"
+	BuildStageUploadArtifacts   BuildStage = "upload_artifacts"
 )
 
 type Build struct {
