@@ -13,13 +13,14 @@ import (
 )
 
 type GitLabCiYamlParser struct {
+	filename  string
 	jobName   string
 	config    DataBag
 	jobConfig DataBag
 }
 
 func (c *GitLabCiYamlParser) parseFile() (err error) {
-	data, err := ioutil.ReadFile(".gitlab-ci.yml")
+	data, err := ioutil.ReadFile(c.filename)
 	if err != nil {
 		return err
 	}
@@ -214,7 +215,7 @@ func (c *GitLabCiYamlParser) prepareVariables(job *common.JobResponse) (err erro
 
 func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) (err error) {
 	job.Image = common.Image{}
-	if imageName, ok := getOption("image", c.config, c.jobConfig); ok {
+	if imageName, ok := getOption("image", c.jobConfig, c.config); ok {
 		job.Image.Name = imageName.(string)
 	}
 
@@ -224,7 +225,7 @@ func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) (err error) {
 func (c *GitLabCiYamlParser) prepareServices(job *common.JobResponse) (err error) {
 	job.Services = common.Services{}
 
-	if servicesMap, ok := getOptions("services", c.config, c.jobConfig); ok {
+	if servicesMap, ok := getOptions("services", c.jobConfig, c.config); ok {
 		for _, service := range servicesMap {
 			job.Services = append(job.Services, common.Image{
 				Name: service.(string),
@@ -238,7 +239,7 @@ func (c *GitLabCiYamlParser) prepareServices(job *common.JobResponse) (err error
 func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err error) {
 	var ok bool
 
-	artifactsMap := getOptionsMap("artifacts", c.config, c.jobConfig)
+	artifactsMap := getOptionsMap("artifacts", c.jobConfig, c.config)
 
 	artifactsPaths, _ := artifactsMap.GetSlice("paths")
 	paths := common.ArtifactPaths{}
@@ -281,7 +282,7 @@ func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err erro
 func (c *GitLabCiYamlParser) prepareCache(job *common.JobResponse) (err error) {
 	var ok bool
 
-	cacheMap := getOptionsMap("cache", c.config, c.jobConfig)
+	cacheMap := getOptionsMap("cache", c.jobConfig, c.config)
 
 	cachePaths, _ := cacheMap.GetSlice("paths")
 	paths := common.ArtifactPaths{}
@@ -344,6 +345,7 @@ func (c *GitLabCiYamlParser) ParseYaml(job *common.JobResponse) (err error) {
 
 func NewGitLabCiYamlParser(jobName string) *GitLabCiYamlParser {
 	return &GitLabCiYamlParser{
-		jobName: jobName,
+		filename: ".gitlab-ci.yml",
+		jobName:  jobName,
 	}
 }
