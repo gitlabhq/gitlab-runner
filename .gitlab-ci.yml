@@ -141,11 +141,15 @@ binaries windows/386 windows/amd64: *binaries
 # Package stage
 #
 
-packages:
+.packages: &packages
   stage: package
   script:
+  - mkdir -p out/docker
+  - touch out/docker/prebuilt-x86_64.tar.xz
+  - touch out/docker/prebuilt-arm.tar.xz
+  - touch executors/docker/bindata.go
   - source ci/touch_make_dependencies
-  - make package
+  - make ${CI_JOB_NAME}
   artifacts:
     paths:
     - out/deb/
@@ -153,6 +157,9 @@ packages:
     expire_in: 7d
   tags:
   - docker
+
+package-deb: *packages
+package-rpm: *packages
 
 #
 # Release stage

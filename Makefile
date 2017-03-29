@@ -243,14 +243,14 @@ package-prepare:
 	chmod 755 packaging/root/usr/share/gitlab-runner/
 	chmod 755 packaging/root/usr/share/gitlab-runner/*
 
-package-deb:
+package-deb: package-deps package-prepare
 	# Building Debian compatible packages...
 	make package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64
 	make package-deb-fpm ARCH=386 PACKAGE_ARCH=i386
 	make package-deb-fpm ARCH=arm PACKAGE_ARCH=armel
 	make package-deb-fpm ARCH=arm PACKAGE_ARCH=armhf
 
-package-rpm:
+package-rpm: package-deps package-prepare
 	# Building RedHat compatible packages...
 	make package-rpm-fpm ARCH=amd64 PACKAGE_ARCH=amd64
 	make package-rpm-fpm ARCH=386 PACKAGE_ARCH=i686
