@@ -145,19 +145,15 @@ packages:
 # Release stage
 #
 
-docker_images:
+.release_docker_images: &release_docker_images
   <<: *docker
   stage: release
-  image: docker:1.12-git
+  image: docker:git
   before_script:
   - source ci/touch_make_dependencies
   - apk -U add make bash
   script:
   - make release_docker_images
-  only:
-  - master@gitlab-org/gitlab-ci-multi-runner
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
   tags:
   - release
 
@@ -185,35 +181,61 @@ docker_images:
   - branches@gitlab-org/gitlab-ci-multi-runner
   except:
   - master@gitlab-org/gitlab-ci-multi-runner
-  environment: development
 
 .release_bleeding_edge: &release_bleeding_edge
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
   - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
-  environment: bleeding_edge
 
 .release_stable: &release_stable
   only:
   - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
-  environment: stable_release
 
 development S3:
   <<: *release_s3
   <<: *release_development
+  environment:
+    name: development/s3/${CI_COMMIT_REF_NAME}
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_SLUG}/index.html
 
 bleeding edge S3:
   <<: *release_s3
   <<: *release_bleeding_edge
+  environment:
+    name: bleeding_edge/s3
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_SLUG}/index.html
 
 bleeding edge packagecloud:
   <<: *release_packagecloud
   <<: *release_bleeding_edge
+  environment:
+    name: bleeding_edge/packagecloud
+    url: https://packages.gitlab.com/runner/unstable
+
+bleeding edge docker images:
+  <<: *release_docker_images
+  <<: *release_bleeding_edge
+  environment:
+    name: bleeding_edge/docker_images
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable S3:
   <<: *release_s3
   <<: *release_stable
+  environment:
+    name: stable/s3
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_SLUG}/index.html
 
 stable packagecloud:
   <<: *release_packagecloud
   <<: *release_stable
+  environment:
+    name: stable/packagecloud
+    url: https://packages.gitlab.com/runner/gitlab-ci-multi-runner
+
+stable docker images:
+  <<: *release_docker_images
+  <<: *release_stable
+  environment:
+      name: stable/docker_images
+      url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/

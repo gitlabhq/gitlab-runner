@@ -353,7 +353,7 @@ s3-upload:
 
 release_packagecloud:
 	# Releasing to https://packages.gitlab.com/runner/
-	@./ci/release_packagecloud "$$CI_BUILD_NAME"
+	@./ci/release_packagecloud "$$CI_JOB_NAME"
 
 release_s3: prepare_index
 	# Releasing to S3
