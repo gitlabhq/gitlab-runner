@@ -38,12 +38,13 @@ var dialer = net.Dialer{
 
 type client struct {
 	http.Client
-	url        *url.URL
-	caFile     string
-	caData     []byte
-	skipVerify bool
-	updateTime time.Time
-	lastUpdate string
+	url                  *url.URL
+	caFile               string
+	caData               []byte
+	skipVerify           bool
+	updateTime           time.Time
+	lastUpdate           string
+	compatibleWithGitLab bool
 }
 
 func (n *client) getLastUpdate() string {
@@ -252,8 +253,9 @@ func newClient(requestCredentials requestCredentials) (c *client, err error) {
 	}
 
 	c = &client{
-		url:    url,
-		caFile: requestCredentials.GetTLSCAFile(),
+		url:                  url,
+		caFile:               requestCredentials.GetTLSCAFile(),
+		compatibleWithGitLab: true,
 	}
 
 	if CertificateDirectory != "" && c.caFile == "" {

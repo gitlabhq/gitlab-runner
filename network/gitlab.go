@@ -21,7 +21,7 @@ import (
 
 const clientError = -100
 
-var notSupportingGitLabPre90Message = "GitLab Runner >= 9.0 supports ONLY GitLab CE/EE >= 9.0"
+var notSupportingGitLabPre90Message = "GitLab Runner >= 9.0 can be used ONLY with GitLab CE/EE >= 9.0"
 
 type GitLabClient struct {
 	clients map[string]*client
@@ -44,6 +44,7 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err
 		}
 		n.clients[key] = c
 	}
+
 	return
 }
 
@@ -94,6 +95,28 @@ func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string
 	return c.doJSON(uri, method, statusCode, request, response)
 }
 
+func (n *GitLabClient) checkGitLabVersionCompatibility(runner common.RunnerCredentials) {
+	request := common.VerifyRunnerRequest{
+		Token: "compatiblity-check",
+	}
+
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", 200, &request, nil)
+
+	switch result {
+	case 403:
+		runner.Log().Println("Checking GitLab compatibility...", "OK")
+	default:
+		runner.Log().WithFields(logrus.Fields{
+			"result":     result,
+			"statusText": statusText,
+			"reason":     notSupportingGitLabPre90Message,
+		}).Errorln("Checking GitLab compatibility...", "not-compatible")
+
+		c, _ := n.getClient(&runner)
+		c.compatibleWithGitLab = false
+	}
+}
+
 func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged, locked bool) *common.RegisterRunnerResponse {
 	// TODO: pass executor
 	request := common.RegisterRunnerRequest{
@@ -115,17 +138,12 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 	case 403:
 		runner.Log().Errorln("Registering runner...", "forbidden (check registration token)")
 		return nil
-	case 404:
-		runner.Log().WithFields(logrus.Fields{
-			"status": statusText,
-			"reason": notSupportingGitLabPre90Message,
-		}).Errorln("Registering runner...", "not-compatible")
-		return nil
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "error")
 		return nil
 	default:
 		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "failed")
+		n.checkGitLabVersionCompatibility(runner)
 		return nil
 	}
 }
@@ -145,17 +163,12 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 	case 403:
 		runner.Log().Errorln("Verifying runner...", "is removed")
 		return false
-	case 404:
-		runner.Log().WithFields(logrus.Fields{
-			"status": statusText,
-			"reason": notSupportingGitLabPre90Message,
-		}).Errorln("Verifying runner...", "not-compatible")
-		return false
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "error")
-		return false
+		return true
 	default:
 		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "failed")
+		n.checkGitLabVersionCompatibility(runner)
 		return true
 	}
 }
@@ -174,17 +187,12 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 	case 403:
 		runner.Log().Errorln("Deleting runner...", "forbidden")
 		return false
-	case 404:
-		runner.Log().WithFields(logrus.Fields{
-			"status": statusText,
-			"reason": notSupportingGitLabPre90Message,
-		}).Errorln("Deleting runner...", "not-compatible")
-		return false
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "error")
 		return false
 	default:
 		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "failed")
+		n.checkGitLabVersionCompatibility(runner)
 		return false
 	}
 }
@@ -213,17 +221,12 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	case 204:
 		config.Log().Debugln("Checking for jobs...", "nothing")
 		return nil, true
-	case 404:
-		config.Log().WithFields(logrus.Fields{
-			"status": statusText,
-			"reason": notSupportingGitLabPre90Message,
-		}).Errorln("checking for jobs...", "not-compatible")
-		return nil, false
 	case clientError:
 		config.Log().WithField("status", statusText).Errorln("Checking for jobs...", "error")
 		return nil, false
 	default:
 		config.Log().WithField("status", statusText).Warningln("Checking for jobs...", "failed")
+		n.checkGitLabVersionCompatibility(config.RunnerCredentials)
 		return nil, true
 	}
 }
