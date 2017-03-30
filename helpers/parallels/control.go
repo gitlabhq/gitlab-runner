@@ -21,10 +21,10 @@ type StatusType string
 
 const (
 	NotFound  StatusType = "notfound"
-	Invalid              = "invalid"
-	Stopped              = "stopped"
-	Suspended            = "suspended"
-	Running              = "running"
+	Invalid   StatusType = "invalid"
+	Stopped   StatusType = "stopped"
+	Suspended StatusType = "suspended"
+	Running   StatusType = "running"
 	// TODO: more statuses
 )
 

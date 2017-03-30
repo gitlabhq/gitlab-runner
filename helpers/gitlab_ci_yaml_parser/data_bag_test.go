@@ -57,7 +57,7 @@ func TestDataBagUnmarshaling(t *testing.T) {
 	result, _ := options.Get("data", "string")
 	assert.Equal(t, "value", result)
 	result, _ = options.Get("data", "integer")
-	assert.Equal(t, 1, result)
+	assert.Equal(t, float64(1), result)
 
 	result2, _ := options.GetString("data", "string")
 	assert.Equal(t, "value", result2)

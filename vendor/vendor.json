@@ -501,6 +501,12 @@
 			"revision": "248dadf4e9068a0b3e79f02ed0a610d935de5302"
 		},
 		{
+			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",
+			"path": "github.com/pmezard/go-difflib/difflib",
+			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
+			"revisionTime": "2016-01-10T10:55:54Z"
+		},
+		{
 			"checksumSHA1": "Ph+qmEo8RdBKBHZUhx0y5Oyk/U0=",
 			"comment": "v0.8.0-9-g334af01",
 			"path": "github.com/prometheus/client_golang/prometheus",
@@ -549,19 +555,22 @@
 			"revision": "cbeaeb16a013161a98496fad62933b1d21786672"
 		},
 		{
-			"checksumSHA1": "4uEmekuD2eHuhPbwKVh/X9Y/ESo=",
+			"checksumSHA1": "q1qqfgDOGwfEuMlbHWNjYf09ACM=",
 			"path": "github.com/stretchr/testify/assert",
-			"revision": "1297dc01ed0a819ff634c89707081a4df43baf6b"
+			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
+			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
-			"checksumSHA1": "x95fwFU4c/Jku5bMz6xLmYfWEqQ=",
+			"checksumSHA1": "Je6cJkYWj2SoaHDMGpE00BGi9sw=",
 			"path": "github.com/stretchr/testify/mock",
-			"revision": "1297dc01ed0a819ff634c89707081a4df43baf6b"
+			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
+			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
-			"checksumSHA1": "6uKFd53ZAwUlXLwarorVT6upajU=",
+			"checksumSHA1": "P9FJpir2c4G5PA46qEkaWy3l60U=",
 			"path": "github.com/stretchr/testify/require",
-			"revision": "1297dc01ed0a819ff634c89707081a4df43baf6b"
+			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
+			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
 			"checksumSHA1": "VDdgQz6FoZx6+4WrfrnrpBJIaDU=",
