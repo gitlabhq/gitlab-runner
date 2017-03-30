@@ -227,7 +227,7 @@ func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err erro
 
 	var artifactsWhen string
 	if artifactsWhen, ok = artifactsMap.GetString("when"); !ok {
-		artifactsWhen = common.ArtifactWhenOnSuccess
+		artifactsWhen = string(common.ArtifactWhenOnSuccess)
 	}
 
 	var artifactsExpireIn string

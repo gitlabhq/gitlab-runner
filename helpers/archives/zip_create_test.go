@@ -75,7 +75,7 @@ func TestZipCreate(t *testing.T) {
 
 	assert.Len(t, archive.File, 3)
 	assert.Equal(t, "test_file.txt", archive.File[0].Name)
-	assert.Equal(t, 0640, archive.File[0].Mode().Perm())
+	assert.Equal(t, os.FileMode(0640), archive.File[0].Mode().Perm())
 	assert.NotEmpty(t, archive.File[0].Extra)
 	assert.Equal(t, "new_symlink", archive.File[1].Name)
 	assert.Equal(t, "test_directory/", archive.File[2].Name)
