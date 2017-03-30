@@ -363,7 +363,6 @@ func (b *Build) String() string {
 
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
-		{Key: "CI_DEBUG_TRACE", Value: "false", Public: true, Internal: true, File: false},
 		{Key: "CI_PROJECT_DIR", Value: b.FullProjectDir(), Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER", Value: "yes", Public: true, Internal: true, File: false},
 	}

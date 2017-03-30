@@ -378,3 +378,26 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
+
+func TestDebugTrace(t *testing.T) {
+	build := &Build{}
+	assert.False(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be false if CI_DEBUG_TRACE is not set")
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+
+	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{"CI_DEBUG_TRACE", "false", true, true, false})
+	build = &Build{
+		JobResponse: successfulBuild,
+	}
+	assert.False(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be false if CI_DEBUG_TRACE is set to false")
+
+	successfulBuild, err = GetSuccessfulBuild()
+	assert.NoError(t, err)
+
+	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{"CI_DEBUG_TRACE", "true", true, true, false})
+	build = &Build{
+		JobResponse: successfulBuild,
+	}
+	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
+}

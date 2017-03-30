@@ -96,7 +96,7 @@ and straight forward access between container during the CI stages.
 
 ``` yaml
 variables:
-  KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_BUILD_REF_NAME}
+  KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_COMMIT_REF_NAME}
 ```
 
 Furthermore, to ensure only designated namespaces will be used during CI runs, inform the configuration
