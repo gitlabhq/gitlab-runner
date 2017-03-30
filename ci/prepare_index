@@ -105,5 +105,5 @@ EOS
 end
 
 ReleaseIndexer.new('GitLab Runner', ENV['VERSION'],
-                   "#{ENV['CI_PROJECT_URL']}/tree/#{ENV['CI_BUILD_REF_NAME']}", 'out')
+                   "#{ENV['CI_PROJECT_URL']}/tree/#{ENV['CI_COMMIT_REF_SLUG']}", 'out')
                    .generate!

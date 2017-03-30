@@ -3,7 +3,7 @@
 set -eo pipefail
 
 IS_LATEST=${IS_LATEST:-}
-ref_tag=${CI_BUILD_REF_NAME:-master}
+ref_tag=${CI_COMMIT_REF_SLUG:-master}
 
 REVISION=${REVISION:-}
 if [[ -z "${REVISION}" ]]; then
@@ -103,8 +103,8 @@ if [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
     tag_latest gitlab/gitlab-runner:latest "${CI_REGISTRY_IMAGE}:latest"
     tag_latest gitlab/gitlab-runner:alpine "${CI_REGISTRY_IMAGE}:alpine"
 
-    if [[ -n "${CI_BUILD_TOKEN}" ]]; then
-        login gitlab-ci-token "${CI_BUILD_TOKEN}" "${CI_REGISTRY}"
+    if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]]; then
+        login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
 
         push "${CI_REGISTRY_IMAGE}:ubuntu-${ref_tag}"
         push "${CI_REGISTRY_IMAGE}:alpine-${ref_tag}"
