@@ -7,7 +7,7 @@ stages:
 - release
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.7
 
 image: $CI_IMAGE
 
@@ -18,7 +18,7 @@ before_script:
   services:
   - docker:dind
   variables:
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.7
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
   tags:
