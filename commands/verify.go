@@ -25,12 +25,13 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		return
 	}
 
+	hasFilters := c.Name != "" || c.RunnerCredentials.UniqueID() != ""
 	// select runners to verify
 	toVerify, okRunners := c.selectRunners()
 
 	// check if there's something to verify
-	if len(toVerify) == 0 {
-		log.Fatalln("No runners to verify")
+	if hasFilters && len(toVerify) == 0 {
+		log.Fatalln("No runner matches the filtering parameters")
 		return
 	}
 
