@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"github.com/codegangsta/cli"
 
 	log "github.com/Sirupsen/logrus"
@@ -25,13 +26,10 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		return
 	}
 
-	hasFilters := c.Name != "" || c.RunnerCredentials.UniqueID() != ""
-	// select runners to verify
-	toVerify, okRunners := c.selectRunners()
-
 	// check if there's something to verify
-	if hasFilters && len(toVerify) == 0 {
-		log.Fatalln("No runner matches the filtering parameters")
+	toVerify, okRunners, err := c.selectRunners()
+	if err != nil {
+		log.Fatalln(err)
 		return
 	}
 
@@ -62,7 +60,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 	log.Println("Updated", c.ConfigFile)
 }
 
-func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunners []*common.RunnerConfig) {
+func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunners []*common.RunnerConfig, err error) {
 	for _, runner := range c.config.Runners {
 		skip := false
 
@@ -79,6 +77,9 @@ func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunn
 		}
 	}
 
+	if (c.Name != "" || c.RunnerCredentials.UniqueID() != "") && len(toVerify) == 0 {
+		err = errors.New("No runner matches the filtering parameters")
+	}
 	return
 }
 func init() {
