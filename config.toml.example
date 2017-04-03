@@ -36,6 +36,8 @@ concurrent = 4
     privileged = false
     disable_cache = false
     cache_dir = ""
+    [runners.docker.sysctls]
+      "net.ipv4.ip_forward" = "1"
   [runners.ssh]
     port = "22"
     user = "root"

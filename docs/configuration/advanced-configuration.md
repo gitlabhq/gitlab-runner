@@ -130,6 +130,7 @@ This defines the Docker Container parameters.
 | `allowed_images`            | specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `allowed_services`          | specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `pull_policy`               | specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
+| `sysctls`                   | specify the sysctl options |
 
 Example:
 
@@ -158,6 +159,8 @@ Example:
   services = ["mysql", "redis:2.8", "postgres:9"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
   allowed_services = ["postgres:9.4", "postgres:latest"]
+  [runners.docker.sysctls]
+    "net.ipv4.ip_forward" = "1"
 ```
 
 ### Volumes in the [runners.docker] section

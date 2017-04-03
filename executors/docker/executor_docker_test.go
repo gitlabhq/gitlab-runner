@@ -951,6 +951,20 @@ func TestDockerUserNSSetting(t *testing.T) {
 
 }
 
+func TestDockerSysctlsSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		SysCtls: map[string]string{
+			"net.ipv4.ip_forward": "1",
+		},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "1", hostConfig.Sysctls["net.ipv4.ip_forward"])
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
 func init() {
 	docker_helpers.HomeDirectory = ""
 }
