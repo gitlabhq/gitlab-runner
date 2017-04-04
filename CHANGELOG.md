@@ -1,3 +1,10 @@
+v 1.11.2
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Limit number of concurrent requests to builds/register.json !518
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
+
 v 1.11.1
 - Update docker-machine version to fix coreos provision !500
 
