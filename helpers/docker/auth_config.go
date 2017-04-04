@@ -13,6 +13,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/cliconfig/configfile"
+	"github.com/docker/docker/cliconfig/credentials"
 	"github.com/docker/docker/pkg/homedir"
 )
 
@@ -95,7 +96,36 @@ func ReadAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error)
 		return nil, err
 	}
 
-	return config.AuthConfigs, nil
+	auths := make(map[string]types.AuthConfig)
+	addAll(auths, config.AuthConfigs)
+
+	if config.CredentialsStore != "" {
+		authsFromCredentialsStore, err := readAuthConfigsFromCredentialsStore(config)
+		if err != nil {
+			return nil, err
+		}
+		addAll(auths, authsFromCredentialsStore)
+	}
+
+	return auths, nil
+}
+
+func readAuthConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
+	store := credentials.NewNativeStore(config, config.CredentialsStore)
+
+	newAuths, err := store.GetAll()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return newAuths, nil
+}
+
+func addAll(to, from map[string]types.AuthConfig) {
+	for reg, ac := range from {
+		to[reg] = ac
+	}
 }
 
 // ResolveDockerAuthConfig taken from: https://github.com/docker/docker/blob/master/registry/auth.go
