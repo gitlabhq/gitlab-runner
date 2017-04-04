@@ -8,6 +8,61 @@ The old name of this project was GitLab CI Multi Runner but please use "GitLab R
 
 ![Build Status](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/badges/master/build.svg)
 
+## Runner and GitLab CE/EE compatibility
+
+GitLab Runner >= 9.0 requires GitLab's API v4 endpoints, which were introduced in
+GitLab CE/EE 9.0.
+
+Because of this **Runner >= 9.0 requires GitLab CE/EE >= 9.0 and will not work
+with older GitLab versions**.
+
+Old API used by Runner will be still present in GitLab >= versions until August 2017.
+Until then we will also support the v1.11.x version of Runner.
+
+> This means that if you want to have a newer version of GitLab CE/EE but for some
+reason you don't want to install newer version of Runner, 1.11.x will be still
+maintained and will be working with GitLab CE/EE until August 2017. It may not
+support some new features, but any bugs or security violations will be handled
+as for the stable version.
+
+### Compatibility chart
+
+|                    | 8.16.x (01.2017) | 8.17.x (02.2017) | 9.0.x (03.2017) | 9.1.x (04.2017) | 9.2.x (05.2017) | 9.3.x (06.2017) | 9.4.x (07.2017) | 9.5.x (08.2017) | 9.6.x (09.2017) |
+|:------------------:|:----------------:|:----------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|
+| v1.10.x            | Y, s             | Y, s             | Y, s            | Y, **u**        | Y, **u**        | Y, **u**        | Y, **u**        | Y, **u**        | **N**, **u**    |
+| v1.11.x            | Y                | Y, s             | Y, s            | Y, s            | Y, s            | Y, s            | Y, s            | Y, s            | **N**, **u**    |
+| v9.0.x             | **N**            | **N**            | Y, s            | Y, s            | Y, s            | Y, **u**        | Y, **u**        | Y, **u**        | Y, **u**        |
+| v9.1.x _(planned)_ | **N**            | **N**            | Y               | Y, s            | Y, s            | Y, s            | Y, **u**        | Y, **u**        | Y, **u**        |
+| v9.2.x _(planned)_ | **N**            | **N**            | Y               | Y               | Y, s            | Y, s            | Y, s            | Y, **u**        | Y, **u**        |
+| v9.3.x _(planned)_ | **N**            | **N**            | Y               | Y               | Y               | Y, s            | Y, s            | Y, s            | Y, **u**        |
+| v9.4.x _(planned)_ | **N**            | **N**            | Y               | Y               | Y               | Y               | Y, s            | Y, s            | Y, s            |
+| v9.5.x _(planned)_ | **N**            | **N**            | Y               | Y               | Y               | Y               | Y               | Y, s            | Y, s            |
+| v9.6.x _(planned)_ | **N**            | **N**            | Y               | Y               | Y               | Y               | Y               | Y               | Y, s            |
+
+**Legend**
+
+* Y - specified Runner version is/will be working with specified GitLab version
+* N - specified Runner version is/will not be working with specified GitLab version
+* s - specified Runner version is supported
+* u - specified Runner version is not supported
+
+### How to install older versions
+
+Let's assume that you want to install version 1.11.2 of Runner:
+
+1. If you're using DEB/RPM based installation:
+
+    ```bash
+    # for DEB based systems
+    root@host:# apt-get install gitlab-ci-multi-runner=v1.11.2
+
+    # for RPM based systems
+    root@host:# yum install gitlab-ci-multi-runner-1.11.2-1
+    ```
+
+1. If you need to install Runner manually, you can look for a propper package/binary
+   at https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/v1.11.2/index.html
+
 ## Release process
 
 The description of release process of GitLab Runner project can be found in the [release documentation](docs/release_process/README.md).
