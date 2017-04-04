@@ -1,0 +1,48 @@
+#!/bin/bash
+
+set -eo pipefail
+
+registry_credentials_available() {
+    echo "Checking registry credentials"
+    [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && return 0
+    return 1
+}
+
+login() {
+    echo "Logging into registry"
+    registry_credentials_available || return 0
+    docker login --username ${CI_REGISTRY_USER} --password ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+}
+
+logout() {
+    echo "Logging out of registry"
+    docker logout ${CI_REGISTRY}
+}
+
+pull () {
+    echo "Pulling base image"
+    registry_credentials_available || return 0
+    docker pull ${CI_IMAGE} || echo "${CI_IMAGE} image is not available. Will not use cache."
+}
+
+push () {
+    echo "Pushing image"
+    registry_credentials_available || return 0
+    docker push ${CI_IMAGE}
+}
+
+
+build() {
+    echo "Building image"
+    docker build \
+           --cache-from ${CI_IMAGE} \
+           -t ${CI_IMAGE} \
+           -f ./dockerfiles/ci/Dockerfile \
+           .
+}
+
+login
+pull
+build
+push
+logout
