@@ -8,6 +8,23 @@ The old name of this project was GitLab CI Multi Runner but please use "GitLab R
 
 ![Build Status](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/badges/master/build.svg)
 
+## Runner and GitLab CE/EE compatibility
+
+GitLab Runner >= 9.0 requires GitLab's API v4 endpoints, which were introduced in
+GitLab CE/EE 9.0.
+
+Because of this **Runner >= 9.0 requires GitLab CE/EE >= 9.0 and will not work
+with older GitLab versions**.
+
+Old API used by Runner will be still present in GitLab >= versions until August
+2017. Until then we will also support the v1.11.x version of Runner.
+
+> This means that if you want to have a newer version of GitLab CE/EE but for some
+reason you don't want to install newer version of Runner, 1.11.x will be still
+maintained and will be working with GitLab CE/EE until August 2017. It may not
+support some new features, but any bugs or security violations will be handled
+as for the stable version.
+
 ## Release process
 
 The description of release process of GitLab Runner project can be found in the [release documentation](docs/release_process/README.md).
