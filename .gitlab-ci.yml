@@ -86,6 +86,22 @@ unit tests:
   tags:
   - docker
 
+docs check links:
+  image: "registry.gitlab.com/gitlab-org/gitlab-build-images:nanoc-bootstrap-ruby-2.4-alpine"
+  stage: test
+  variables:
+    GIT_DEPTH: "3"
+  cache: {}
+  dependencies: []
+  before_script: []
+  script:
+    - mv docs/ /nanoc/content/
+    - cd /nanoc
+    # Build HTML from Markdown
+    - bundle exec nanoc
+    # Check the internal links
+    - bundle exec nanoc check internal_links
+
 docker executor:
   <<: *docker
   stage: test
