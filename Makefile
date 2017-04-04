@@ -357,9 +357,13 @@ release_packagecloud:
 	# Releasing to https://packages.gitlab.com/runner/
 	@./ci/release_packagecloud "$$CI_JOB_NAME"
 
-release_s3: prepare_index
+release_s3: prepare_zoneinfo prepare_index
 	# Releasing to S3
 	@./ci/release_s3
+
+prepare_zoneinfo:
+	# preparing the zoneinfo file
+	@cp $$GOROOT/lib/time/zoneinfo.zip out/
 
 prepare_index:
 	# Preparing index file

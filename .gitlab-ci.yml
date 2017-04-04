@@ -8,6 +8,7 @@ stages:
 
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.7
+  GOROOT: /usr/local/go
 
 image: $CI_IMAGE
 
