@@ -1,26 +1,42 @@
-image: golang:1.7
-
 stages:
+- prepare
 - prebuild
 - test
 - build
 - package
 - release
 
+variables:
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.7
+
+image: $CI_IMAGE
+
 before_script:
 - source ci/prepare
 
 .docker: &docker
-  before_script:
-  - source ci/prepare
-  - wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
-  - chmod +x /usr/bin/docker
-  services: ["docker:1.12.4-dind"]
+  services:
+  - docker:dind
   variables:
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.7
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
   tags:
   - docker
+
+#
+# Prepare stage
+#
+
+prepare ci image:
+  <<: *docker
+  stage: prepare
+  image: docker:git
+  before_script: []
+  script:
+  - source ./ci/build_ci_image
+  only:
+  - /\Adocker-ci-image\/.*/@gitlab-org/gitlab-ci-multi-runner
 
 #
 # Prebuild stage
@@ -30,8 +46,6 @@ bindata:
   <<: *docker
   stage: prebuild
   script:
-  - apt-get install -yqqq xz-utils
-  - make deps
   - make docker
   artifacts:
     paths:
@@ -60,11 +74,7 @@ code style:
   stage: test
   script:
   - source ci/touch_make_dependencies
-  - make deps
-  - make fmt
-  - make lint
-  - make complexity
-  - make vet
+  - make static_code_analysis
   tags:
   - docker
 
@@ -72,7 +82,6 @@ unit tests:
   stage: test
   script:
   - source ci/touch_make_dependencies
-  - make deps
   - make test
   tags:
   - docker
@@ -110,12 +119,12 @@ integration windows:
 # Build stage
 #
 
-binaries:
+.binaries: &binaries
   stage: build
   script:
   - source ci/touch_make_dependencies
-  - make deps
-  - make build
+  - export platforms=$(echo $CI_JOB_NAME | sed 's|binaries ||')
+  - make build BUILD_PLATFORMS="-osarch='$platforms'"
   artifacts:
     paths:
     - out/binaries/
@@ -123,16 +132,24 @@ binaries:
   tags:
   - docker
 
+binaries darwin/386 darwin/amd64: *binaries
+binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
+binaries linux/386 linux/amd64 linux/arm: *binaries
+binaries windows/386 windows/amd64: *binaries
+
 #
 # Package stage
 #
 
-packages:
+.packages: &packages
   stage: package
   script:
+  - mkdir -p out/docker
+  - touch out/docker/prebuilt-x86_64.tar.xz
+  - touch out/docker/prebuilt-arm.tar.xz
+  - touch executors/docker/bindata.go
   - source ci/touch_make_dependencies
-  - apt-get install -yqqq ruby ruby-dev python-pip dpkg-sig createrepo rpm
-  - make package
+  - make ${CI_JOB_NAME}
   artifacts:
     paths:
     - out/deb/
@@ -141,6 +158,9 @@ packages:
   tags:
   - docker
 
+package-deb: *packages
+package-rpm: *packages
+
 #
 # Release stage
 #
@@ -148,11 +168,8 @@ packages:
 .release_docker_images: &release_docker_images
   <<: *docker
   stage: release
-  image: docker:git
-  before_script:
-  - source ci/touch_make_dependencies
-  - apk -U add make bash
   script:
+  - source ci/touch_make_dependencies
   - make release_docker_images
   tags:
   - release
@@ -160,8 +177,6 @@ packages:
 .release: &release
   stage: release
   before_script:
-  - apt-get update -yqqq >/dev/null
-  - apt-get install -yqqq ruby ruby-dev >/dev/null
   - source ci/touch_make_dependencies
   tags:
   - release
