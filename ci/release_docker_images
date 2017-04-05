@@ -3,7 +3,7 @@
 set -eo pipefail
 
 IS_LATEST=${IS_LATEST:-}
-ref_tag=${CI_COMMIT_REF_SLUG:-master}
+ref_tag=${CI_COMMIT_REF_NAME:-master}
 
 REVISION=${REVISION:-}
 if [[ -z "${REVISION}" ]]; then
