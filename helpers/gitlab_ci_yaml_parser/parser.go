@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
@@ -144,6 +145,26 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 	return
 }
 
+func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) (defaultVariables common.JobVariables, err error) {
+	defaultVariables = common.JobVariables{
+		{"CI", "true", true, true, false},
+		{"GITLAB_CI", "true", true, true, false},
+		{"CI_SERVER_NAME", "GitLab CI", true, true, false},
+		{"CI_SERVER_VERSION", "", true, true, false},
+		{"CI_SERVER_REVISION", "", true, true, false},
+		{"CI_PROJECT_ID", strconv.Itoa(job.JobInfo.ProjectID), true, true, false},
+		{"CI_JOB_ID", strconv.Itoa(job.ID), true, true, false},
+		{"CI_JOB_NAME", job.JobInfo.Name, true, true, false},
+		{"CI_JOB_STAGE", job.JobInfo.Stage, true, true, false},
+		{"CI_JOB_TOKEN", job.Token, true, true, false},
+		{"CI_REPOSITORY_URL", job.GitInfo.RepoURL, true, true, false},
+		{"CI_COMMIT_REF", job.GitInfo.Sha, true, true, false},
+		{"CI_COMMIT_BEFORE_SHA", job.GitInfo.BeforeSha, true, true, false},
+		{"CI_COMMIT_REF_NAME", job.GitInfo.Ref, true, true, false},
+	}
+	return
+}
+
 func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildVariables common.JobVariables, err error) {
 	if variables, ok := configVariables.(map[string]interface{}); ok {
 		for key, value := range variables {
@@ -166,10 +187,20 @@ func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildV
 
 func (c *GitLabCiYamlParser) prepareVariables(job *common.JobResponse) (err error) {
 	job.Variables = common.JobVariables{}
-	job.Variables, err = c.buildVariables(c.config["variables"])
+
+	defaultVariables, err := c.buildDefaultVariables(job)
 	if err != nil {
 		return
 	}
+
+	job.Variables = append(job.Variables, defaultVariables...)
+
+	globalVariables, err := c.buildVariables(c.config["variables"])
+	if err != nil {
+		return
+	}
+
+	job.Variables = append(job.Variables, globalVariables...)
 
 	jobVariables, err := c.buildVariables(c.jobConfig["variables"])
 	if err != nil {
