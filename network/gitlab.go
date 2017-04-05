@@ -21,6 +21,8 @@ import (
 
 const clientError = -100
 
+var notSupportingGitLabPre90Message = "GitLab Runner >= 9.0 can be used ONLY with GitLab CE/EE >= 9.0"
+
 type GitLabClient struct {
 	clients map[string]*client
 	lock    sync.Mutex
@@ -42,6 +44,7 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err
 		}
 		n.clients[key] = c
 	}
+
 	return
 }
 
@@ -92,6 +95,28 @@ func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string
 	return c.doJSON(uri, method, statusCode, request, response)
 }
 
+func (n *GitLabClient) checkGitLabVersionCompatibility(runner common.RunnerCredentials) {
+	request := common.VerifyRunnerRequest{
+		Token: "compatiblity-check",
+	}
+
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", 200, &request, nil)
+
+	switch result {
+	case 403:
+		runner.Log().Println("Checking GitLab compatibility...", "OK")
+	default:
+		runner.Log().WithFields(logrus.Fields{
+			"result":     result,
+			"statusText": statusText,
+			"reason":     notSupportingGitLabPre90Message,
+		}).Errorln("Checking GitLab compatibility...", "not-compatible")
+
+		c, _ := n.getClient(&runner)
+		c.compatibleWithGitLab = false
+	}
+}
+
 func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged, locked bool) *common.RegisterRunnerResponse {
 	// TODO: pass executor
 	request := common.RegisterRunnerRequest{
@@ -118,6 +143,7 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 		return nil
 	default:
 		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "failed")
+		n.checkGitLabVersionCompatibility(runner)
 		return nil
 	}
 }
@@ -139,9 +165,10 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 		return false
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "error")
-		return false
+		return true
 	default:
 		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "failed")
+		n.checkGitLabVersionCompatibility(runner)
 		return true
 	}
 }
@@ -151,7 +178,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", 200, &request, nil)
+	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", 204, &request, nil)
 
 	switch result {
 	case 204:
@@ -165,6 +192,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		return false
 	default:
 		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "failed")
+		n.checkGitLabVersionCompatibility(runner)
 		return false
 	}
 }
@@ -198,6 +226,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 		return nil, false
 	default:
 		config.Log().WithField("status", statusText).Warningln("Checking for jobs...", "failed")
+		n.checkGitLabVersionCompatibility(config.RunnerCredentials)
 		return nil, true
 	}
 }

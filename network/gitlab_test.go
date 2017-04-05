@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	. "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
@@ -271,7 +272,7 @@ func TestVerifyRunner(t *testing.T) {
 	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
 
 	state = c.VerifyRunner(brokenCredentials)
-	assert.False(t, state)
+	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
 }
 
 func getRequestJobResponse() (res map[string]interface{}) {
@@ -858,4 +859,91 @@ func TestArtifactsDownload(t *testing.T) {
 
 	state = c.DownloadArtifacts(fileNotFoundTokenCredentials, artifactsFileName)
 	assert.Equal(t, DownloadNotFound, state, "Artifacts should be bit downloaded if it's not found")
+}
+
+func prepareAPIv4CompatibilityTestEnvironment(name string, handler func(w http.ResponseWriter, r *http.Request)) (server *httptest.Server, runner RunnerConfig) {
+	server = httptest.NewServer(http.HandlerFunc(handler))
+
+	runner = RunnerConfig{
+		Name: name,
+		RunnerCredentials: RunnerCredentials{
+			URL:   server.URL,
+			Token: "valid",
+		},
+	}
+
+	return
+}
+
+func execAPIv4CompatibilityTestRequest(t *testing.T, requestType string, runner RunnerConfig, isCompatible bool) {
+	t.Run(fmt.Sprintf("%s/%s", requestType, runner.Name), func(t *testing.T) {
+		c := NewGitLabClient()
+
+		switch requestType {
+		case "register runner":
+			c.RegisterRunner(runner.RunnerCredentials, "", "", false, false)
+		case "verify runner":
+			c.VerifyRunner(runner.RunnerCredentials)
+		case "unregister runner":
+			c.UnregisterRunner(runner.RunnerCredentials)
+		case "request job":
+			c.RequestJob(runner)
+		}
+
+		client, err := c.getClient(&runner.RunnerCredentials)
+		assert.NoError(t, err)
+		if isCompatible {
+			assert.True(t, client.compatibleWithGitLab, "Client should be marked as compatible with GitLab")
+		} else {
+			assert.False(t, client.compatibleWithGitLab, "Client should be marked as not compatible with GitLab")
+		}
+	})
+}
+
+func TestAPIv4Compatibility(t *testing.T) {
+	serverPre90, runnerPre90 := prepareAPIv4CompatibilityTestEnvironment("pre 9.0", func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v4/runners":
+			w.WriteHeader(401)
+		case "/api/v4/runners/verify":
+			w.WriteHeader(401)
+		case "/api/v4/jobs/request":
+			w.WriteHeader(404)
+		}
+	})
+	defer serverPre90.Close()
+
+	server90, runner90 := prepareAPIv4CompatibilityTestEnvironment("9.0", func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v4/runners":
+			switch r.Method {
+			case "POST":
+				res := make(map[string]interface{})
+				res["token"] = "token-here"
+
+				output, err := json.Marshal(res)
+				require.NoError(t, err)
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(201)
+				w.Write(output)
+			case "DELETE":
+				w.WriteHeader(204)
+			}
+		case "/api/v4/runners/verify":
+			w.WriteHeader(200)
+		case "/api/v4/jobs/request":
+			w.WriteHeader(204)
+		}
+	})
+	defer server90.Close()
+
+	execAPIv4CompatibilityTestRequest(t, "register runner", runnerPre90, false)
+	execAPIv4CompatibilityTestRequest(t, "register runner", runner90, true)
+	execAPIv4CompatibilityTestRequest(t, "verify runner", runnerPre90, false)
+	execAPIv4CompatibilityTestRequest(t, "verify runner", runner90, true)
+	execAPIv4CompatibilityTestRequest(t, "unregister runner", runnerPre90, false)
+	execAPIv4CompatibilityTestRequest(t, "unregister runner", runner90, true)
+	execAPIv4CompatibilityTestRequest(t, "request job", runnerPre90, false)
+	execAPIv4CompatibilityTestRequest(t, "request job", runner90, true)
 }
