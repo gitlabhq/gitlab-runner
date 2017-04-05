@@ -1,3 +1,13 @@
+v 9.0.1 (2017-04-05)
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
+- Replace godep with govendor !505
+- Fix cache containers dicsovering regression !534
+- Add urls to environments created with CI release jobs !537
+- Mention Runner -> GitLab compatibility concerns after 9.0 release !544
+- Log error if API v4 is not present (GitLab CE/EE is older than 9.0) !528
+
 v 9.0.0 (2017-03-22)
 
 > **Notice:** With GitLab Runner 9.0 we're switching from GitLab's CI API v1 to GitLab's API v4
