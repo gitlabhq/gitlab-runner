@@ -1,4 +1,9 @@
-v 9.0.0
+v 9.0.0 (2017-03-22)
+
+> **Notice:** With GitLab Runner 9.0 we're switching from GitLab's CI API v1 to GitLab's API v4
+> which is present in GitLab 9.0 and newer. Starting with this version Runner **WILL NOT**
+> support GitLab versions older than 9.0
+
 - Change dependency from `github.com/fsouza/go-dockerclient` to `github.com/docker/docker/client`" !301
 - Update docker-machine version to fix coreos provision !500
 - Cleanup windows install docs !497
