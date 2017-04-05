@@ -228,66 +228,66 @@ and the service should be started properly.
 
 ## 14. `zoneinfo.zip: no such file or directory` error when using `OffPeakTimezone`
 
-In `v1.11.0` we've added a possibility to configure timezone in which `OffPeakPeriods`
-are described. The feature should work on most Unix systems out of the box. However on some
+In `v1.11.0` we made it possible to configure the timezone in which `OffPeakPeriods`
+are described. This feature should work on most Unix systems out of the box. However on some
 Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
-Runner's binaries), when used it will crash Runner at start with an error similar to:
+Runner's binaries), when used, the Runner will crash at start with an error similar to:
 
 ```
 Failed to load config Invalid OffPeakPeriods value: open /usr/local/go/lib/time/zoneinfo.zip: no such file or directory
 ```
 
-The error is caused by `time` package in Go. Go uses the IANA Time Zone database to load
-configuration of specified timezone. On most Unix systems this database is already present on
+The error is caused by the `time` package in Go. Go uses the IANA Time Zone database to load
+the configuration of the specified timezone. On most Unix systems, this database is already present on
 one of well-known paths (`/usr/share/zoneinfo`, `/usr/share/lib/zoneinfo`, `/usr/lib/locale/TZ/`).
-Go's `time` package looks for the Time Zone database in all three paths. If it will not find any
+Go's `time` package looks for the Time Zone database in all those three paths. If it doesn't find any
 of them, but the machine has a configured Go development environment (with a proper `$GOPATH`
-present for Runner's process) then it will fallback to the `$GOROOT/lib/time/zoneinfo.zip` file.
+present for Runner's process), then it will fallback to the `$GOROOT/lib/time/zoneinfo.zip` file.
 
-If none of these path is present (for example on a production Windows host) the above error is thrown.
+If none of those paths are present (for example on a production Windows host) the above error is thrown.
 
-In case if your system has support for IANA Time Zone database, but it's not available by default, you
+In case your system has support for the IANA Time Zone database, but it's not available by default, you
 can try to install it. For Linux systems it can be done for example by:
 
 ```bash
 # on Debian/Ubuntu based systems
-root@host:# apt-get install tzdata
+sudo apt-get install tzdata
 
 # on RPM based systems
-root@host:# yum install tzdata
+sudo yum install tzdata
 
 # on Linux Alpine
-root@host:# apk add -U tzdata
+sudo apk add -U tzdata
 ```
 
 If your system doesn't provide this database in a _native_ way, then you can make `OffPeakTimezone`
-working by:
+working by following the steps below:
 
 1. Downloading the [`zoneinfo.zip`][zoneinfo-file]. Starting with version v9.1.0 you can download
-   the file from a tagged path. In that case you should replace `latest` with the tag name (e.g. `v9.1.0`)
+   the file from a tagged path. In that case you should replace `latest` with the tag name (e.g., `v9.1.0`)
    in the `zoneinfo.zip` download URL.
 
 1. Store this file in a well known directory. We're suggesting to use the same directory where
    the `config.toml` file is present. So for example, if you're hosting Runner on Windows machine
-   and your config file is stored at `C:\gitlab-runner\config.toml` then save the `zoneinfo.zip`
+   and your config file is stored at `C:\gitlab-runner\config.toml`, then save the `zoneinfo.zip`
    at `C:\gitlab-runner\zoneinfo.zip`.
 
 1. Set the `ZONEINFO` environment variable containing a full path to the `zoneinfo.zip` file. If you
-   are starting Runner using the `run` command, then you can do this by:
+   are starting the Runner using the `run` command, then you can do this with:
 
     ```bash
-    $ ZONEINFO=/etc/gitlab-runner/zoneinfo.zip gitlab-runner run [other options ...]
+    ZONEINFO=/etc/gitlab-runner/zoneinfo.zip gitlab-runner run [other options ...]
     ```
 
-    or
+    or if using Windows:
 
     ```powershell
     C:\gitlab-runner> set ZONEINFO=C:\gitlab-runner\zoneinfo.zip
     C:\gitlab-runner> gitlab-runner run [other options ...]
     ```
 
-    If you are starting Runner as a system service then you will need to update/override
-    service configuration in a way that is provided by your service manager software
+    If you are starting the Runner as a system service then you will need to update/override
+    the service configuration in a way that is provided by your service manager software
     (unix systems) or by adding the `ZONEINFO` variable to the list of environment variables
     available for Runner's user through System Settings (Windows).
 
