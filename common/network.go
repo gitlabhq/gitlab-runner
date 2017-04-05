@@ -224,8 +224,8 @@ type UpdateJobRequest struct {
 }
 
 type JobCredentials struct {
-	ID        int    `long:"id" env:"CI_BUILD_ID" description:"The build ID to upload artifacts for"`
-	Token     string `long:"token" env:"CI_BUILD_TOKEN" required:"true" description:"Build token"`
+	ID        int    `long:"id" env:"CI_JOB_ID" description:"The build ID to upload artifacts for"`
+	Token     string `long:"token" env:"CI_JOB_TOKEN" required:"true" description:"Build token"`
 	URL       string `long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab CI URL"`
 	TLSCAFile string `long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
 }
