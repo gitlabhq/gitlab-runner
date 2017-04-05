@@ -226,14 +226,14 @@ development S3:
   <<: *release_development
   environment:
     name: development/s3/${CI_COMMIT_REF_NAME}
-    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_SLUG}/index.html
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 bleeding edge S3:
   <<: *release_s3
   <<: *release_bleeding_edge
   environment:
     name: bleeding_edge/s3
-    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_SLUG}/index.html
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 bleeding edge packagecloud:
   <<: *release_packagecloud
@@ -254,7 +254,7 @@ stable S3:
   <<: *release_stable
   environment:
     name: stable/s3
-    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_SLUG}/index.html
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 stable packagecloud:
   <<: *release_packagecloud
