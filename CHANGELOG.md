@@ -1,3 +1,6 @@
+v 9.0.2 (2017-04-06)
+- Speed up CI pipeline !536
+
 v 9.0.1 (2017-04-05)
 - Don't install docs for the fpm Gem !526
 - Mention tagged S3 sources in installation documentation !513
