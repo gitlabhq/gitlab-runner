@@ -12,12 +12,19 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
 )
 
+const (
+	DockerMachineExecutorStageUseMachine     common.ExecutorStage = "docker_machine_use_machine"
+	DockerMachineExecutorStageReleaseMachine common.ExecutorStage = "docker_machine_release_machine"
+)
+
 type machineExecutor struct {
 	provider *machineProvider
 	executor common.Executor
 	build    *common.Build
 	data     common.ExecutorData
 	config   common.RunnerConfig
+
+	currentStage common.ExecutorStage
 }
 
 func (e *machineExecutor) log() (log *logrus.Entry) {
@@ -53,6 +60,7 @@ func (e *machineExecutor) Prepare(globalConfig *common.Config, config *common.Ru
 	e.build = build
 
 	// Use the machine
+	e.SetCurrentStage(DockerMachineExecutorStageUseMachine)
 	e.config, e.data, err = e.provider.Use(config, build.ExecutorData)
 	if err != nil {
 		return err
@@ -98,9 +106,27 @@ func (e *machineExecutor) Cleanup() {
 
 	// Release allocated machine
 	if e.data != nil {
+		e.SetCurrentStage(DockerMachineExecutorStageReleaseMachine)
 		e.provider.Release(&e.config, e.data)
 		e.data = nil
 	}
+}
+
+func (e *machineExecutor) GetCurrentStage() common.ExecutorStage {
+	if e.executor == nil {
+		return common.ExecutorStage("")
+	}
+
+	return e.executor.GetCurrentStage()
+}
+
+func (e *machineExecutor) SetCurrentStage(stage common.ExecutorStage) {
+	if e.executor == nil {
+		e.currentStage = stage
+		return
+	}
+
+	e.executor.SetCurrentStage(stage)
 }
 
 func init() {

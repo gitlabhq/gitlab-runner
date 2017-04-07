@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage"}, nil)
+var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage", "executor_stage"}, nil)
 
 type runnerCounter struct {
 	builds   int
@@ -144,19 +144,23 @@ func (b *buildsHelper) buildsCount() int {
 	return len(b.builds)
 }
 
-func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common.BuildStage]int {
+func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common.BuildStage]map[common.ExecutorStage]int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	data := make(map[common.BuildRuntimeState]map[common.BuildStage]int)
+	data := make(map[common.BuildRuntimeState]map[common.BuildStage]map[common.ExecutorStage]int)
 	for _, build := range b.builds {
 		state := build.CurrentState
 		stage := build.CurrentStage
+		executorStage := build.CurrentExecutorStage()
 
 		if data[state] == nil {
-			data[state] = make(map[common.BuildStage]int)
+			data[state] = make(map[common.BuildStage]map[common.ExecutorStage]int)
 		}
-		data[state][stage]++
+		if data[state][stage] == nil {
+			data[state][stage] = make(map[common.ExecutorStage]int)
+		}
+		data[state][stage][executorStage]++
 	}
 	return data
 }
@@ -171,9 +175,11 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	data := b.statesAndStages()
 
 	for state, scripts := range data {
-		for stage, count := range scripts {
+		for stage, executor_stages := range scripts {
+			for executor_stage, count := range executor_stages {
 			ch <- prometheus.MustNewConstMetric(numBuildsDesc, prometheus.GaugeValue, float64(count),
-				string(state), string(stage))
+				string(state), string(stage), string(executor_stage))
+			}
 		}
 	}
 }

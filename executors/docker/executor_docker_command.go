@@ -52,8 +52,9 @@ func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.Ru
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
-	var runOn *types.ContainerJSON
+	s.SetCurrentStage(DockerExecutorStageRun)
 
+	var runOn *types.ContainerJSON
 	if cmd.Predefined {
 		runOn = s.predefinedContainer
 	} else {
@@ -79,13 +80,15 @@ func init() {
 	}
 
 	creator := func() common.Executor {
-		return &commandExecutor{
+		e := &commandExecutor{
 			executor: executor{
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: options,
 				},
 			},
 		}
+		e.SetCurrentStage(common.ExecutorStageCreated)
+		return e
 	}
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
