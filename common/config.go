@@ -206,7 +206,7 @@ type Config struct {
 	MetricsServerAddress string          `toml:"metrics_server,omitempty" json:"metrics_server"`
 	Concurrent           int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval        int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
-	LogLevel             *string         `toml:"log_level" json:"log_level" description:"Define log level"`
+	LogLevel             *string         `toml:"log_level" json:"log_level" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
 	User                 string          `toml:"user,omitempty" json:"user"`
 	Runners              []*RunnerConfig `toml:"runners" json:"runners"`
 	SentryDSN            *string         `toml:"sentry_dsn"`
