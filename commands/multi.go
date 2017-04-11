@@ -21,6 +21,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/cli"
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/sentry"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/service"
@@ -203,6 +204,15 @@ func (mr *RunCommand) loadConfig() error {
 	err := mr.configOptions.loadConfig()
 	if err != nil {
 		return err
+	}
+
+	// Set log level
+	if !cli_helpers.CustomLogLevelSet && mr.config.LogLevel != nil {
+		level, err := log.ParseLevel(*mr.config.LogLevel)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		log.SetLevel(level)
 	}
 
 	// pass user to execute scripts as specific user
