@@ -150,10 +150,13 @@ func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common
 
 	data := make(map[common.BuildRuntimeState]map[common.BuildStage]int)
 	for _, build := range b.builds {
-		if data[build.CurrentState] == nil {
-			data[build.CurrentState] = make(map[common.BuildStage]int)
+		state := build.CurrentState
+		stage := build.CurrentStage
+
+		if data[state] == nil {
+			data[state] = make(map[common.BuildStage]int)
 		}
-		data[build.CurrentState][build.CurrentStage]++
+		data[state][stage]++
 	}
 	return data
 }
