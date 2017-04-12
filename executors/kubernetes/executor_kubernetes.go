@@ -168,59 +168,6 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
-	path := strings.Split(s.Build.BuildDir, "/")
-	path = path[:len(path)-1]
-
-	mounts = append(mounts, api.VolumeMount{
-		Name:      "repo",
-		MountPath: strings.Join(path, "/"),
-	})
-
-	for _, mount := range s.Config.Kubernetes.VolumeMounts {
-		mounts = append(mounts, api.VolumeMount{
-			Name:      mount.Name,
-			MountPath: mount.MountPath,
-			ReadOnly:  mount.ReadOnly,
-		})
-	}
-
-	return
-}
-
-func (s *executor) getVolumes() (volumes []api.Volume) {
-	volumes = append(volumes, api.Volume{
-		Name: "repo",
-		VolumeSource: api.VolumeSource{
-			EmptyDir: &api.EmptyDirVolumeSource{},
-		},
-	})
-
-	for _, volume := range s.Config.Kubernetes.VolumeSources.HostPaths {
-		volumes = append(volumes, api.Volume{
-			Name: volume.Name,
-			VolumeSource: api.VolumeSource{
-				HostPath: &api.HostPathVolumeSource{
-					Path: volume.Path,
-				},
-			},
-		})
-	}
-
-	for _, volume := range s.Config.Kubernetes.VolumeSources.Secrets {
-		volumes = append(volumes, api.Volume{
-			Name: volume.Name,
-			VolumeSource: api.VolumeSource{
-				Secret: &api.SecretVolumeSource{
-					SecretName: volume.SecretName,
-				},
-			},
-		})
-	}
-
-	return
-}
-
 func (s *executor) buildContainer(name, image string, limits api.ResourceList, command ...string) api.Container {
 	privileged := false
 	if s.Config.Kubernetes != nil {
@@ -264,10 +211,12 @@ func (s *executor) setupBuildPod() error {
 			Namespace:    s.Config.Kubernetes.Namespace,
 		},
 		Spec: api.PodSpec{
+			// TODO use the pods template file
 			Volumes:       s.getVolumes(),
 			RestartPolicy: api.RestartPolicyNever,
 			NodeSelector:  s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
+				// TODO use the build and helper template here
 				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
 				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
