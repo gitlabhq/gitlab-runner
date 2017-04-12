@@ -5,9 +5,9 @@ possible with the use of the **Kubernetes** executor.
 
 The **Kubernetes** executor, when used with GitLab CI, connects to the Kubernetes
 API in the cluster creating a Pod for each GitLab CI Job. This Pod is made
-up of, at the very least, a build container, there will
-then be additional containers, one for each `service` defined by the GitLab CI
-yaml. The names for these containers are as follows:
+up of, at the very least, a build container and an additional container for each
+`service` defined by the GitLab CI yaml. The names for these containers 
+are as follows:
 
 - The build container is `build`
 - The services containers are `svc-X` where `X` is `[0-9]+`
@@ -19,10 +19,10 @@ The Kubernetes executor divides the build into multiple steps:
 1. **Prepare**: Create the Pod against the Kubernetes Cluster.
 	This creates the containers required for the build and services to run.
 1. **Pre-build**: Clone, restore cache and download artifacts from previous
-   stages. This is run on a special container as part of the pod.
+   stages. This is run on a special container as part of the Pod.
 1. **Build**: User build.
 1. **Post-build**: Create cache, upload artifacts to GitLab. This also uses
-   the special container as part of the pod.
+   the special container as part of the Pod.
 
 ## Connecting to the Kubernetes API
 
@@ -33,7 +33,7 @@ The following options are provided, which allow you to connect to the Kubernetes
 - `key_file`: Optional Kubernetes apiserver user auth private key
 - `ca_file`: Optional Kubernetes apiserver ca certificate
 
-The user account provided must have permission to create, list and attach to pods in
+The user account provided must have permission to create, list and attach to Pods in
 the specified namespace in order to function.
 
 If you are running the GitLab CI Runner within the Kubernetes cluster you can omit
@@ -65,7 +65,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `service_memory_request`: The amount of memory requested for build service containers
 - `helper_cpu_request`: The CPU allocation requested for build helper containers
 - `helper_memory_request`: The amount of memory requested for build helper containers
-- `pull_policy`: specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
+- `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set.
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
 - `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
 - `helper_image`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts
@@ -79,7 +79,7 @@ Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, 
 `KUBERNETES_NAMESPACE_OVERWRITE`.
 
 This approach allow you to create a new isolated namespace dedicated for CI purposes, and deploy a custom
-set of pods. The `Pods` spawned by the runner will take place on the overwritten namespace, for simple
+set of Pods. The `Pods` spawned by the runner will take place on the overwritten namespace, for simple
 and straight forward access between container during the CI stages.
 
 ``` yaml
@@ -142,7 +142,7 @@ your production containers it might not be wise to do that.
 > **Note**:
 Pods are not yet able to be scheduled to nodes with certain labels like
 `role=build` using the `nodeSelector` field in the `PodSpec`, the only separation
-between build pods and the rest of the system is by namespace.
+between build Pods and the rest of the system is by namespace.
 
 ### Using `docker:dind`
 Running the `docker:dind` also known as the `docker-in-docker` image is also
@@ -150,8 +150,8 @@ possible but sadly needs the containers to be run in privileged mode.
 If you're willing to take that risk other problems will arise that might not
 seem as straight forward at first glance. Because the docker daemon is started
 as a `service` usually in your `.gitlab-ci.yaml` it will be run as a separate
-container in your pod. Basically containers in pods only share volumes assigned
-to them and an IP address by wich they can reach each other using `localhost`.
+container in your Pod. Basically containers in Pods only share volumes assigned
+to them and an IP address by which they can reach each other using `localhost`.
 `/var/run/docker.sock` is not shared by the `docker:dind` container and the `docker`
 binary tries to use it by default. To overwrite this and make the client use tcp
 to contact the docker daemon in the other container be sure to include
@@ -160,7 +160,7 @@ to contact the docker daemon in the other container be sure to include
 ### Not supplying git
 Do *not* try to use an image that doesn't supply git and add the `GIT_STRATEGY=none`
 environment variable for a job that you think doesn't need to do a fetch or clone.
-Because pods are ephemeral and do not keep state of previously run jobs your
+Because Pods are ephemeral and do not keep state of previously run jobs your
 checked out code will not exist in both the build and the docker service container. 
 Error's you might run into are things like `could not find git binary` and
 the docker service complaining that it cannot follow some symlinks into your
@@ -169,6 +169,6 @@ build context because of the missing code.
 ### Resource separation
 In both the `docker:dind` and `/var/run/docker.sock` cases the docker daemon
 has access to the underlying kernel of the host machine. This means that any
-`limits` that had been set in the pod will not work when building docker images.
+`limits` that had been set in the Pod will not work when building docker images.
 The docker daemon will report the full capacity of the node regardless of
 the limits imposed on the docker build containers spawned by kubernetes.
