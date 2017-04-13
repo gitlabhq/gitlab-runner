@@ -489,9 +489,9 @@ Example:
 	namespace = "gitlab"
 	image = "golang:1.7"
 	privileged = true
+	image_pull_secrets = ["docker-registry-credentials"]
 	[runners.kubernetes.node_selector]
 		gitlab = "true"
-	image_pull_secrets = ["docker-registry-credentials"]
 ```
 
 ## Note
