@@ -119,6 +119,7 @@ This defines the Docker Container parameters.
 | `cache_dir`                 | specify where Docker caches should be stored (this can be absolute or relative to current working directory) |
 | `volumes`                   | specify additional volumes that should be mounted (same syntax as Docker -v option) |
 | `extra_hosts`               | specify hosts that should be defined in container environment |
+| `shm_size`                  | specify shared memory size for images (in bytes) |
 | `volumes_from`              | specify a list of volumes to inherit from another container in the form <code>\<container name\>[:\<ro&#124;rw\>]</code> |
 | `volume_driver`             | specify the volume driver to use for the container |
 | `links`                     | specify containers which should be linked with building container |
@@ -147,6 +148,7 @@ Example:
   cache_dir = ""
   volumes = ["/data", "/home/project/cache"]
   extra_hosts = ["other-host:127.0.0.1"]
+  shm_size = 300000
   volumes_from = ["storage_container:ro"]
   links = ["mysql_container:mysql"]
   services = ["mysql", "redis:2.8", "postgres:9"]
