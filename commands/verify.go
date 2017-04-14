@@ -67,7 +67,7 @@ func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunn
 
 		if c.Name != "" {
 			skip = runner.Name != c.Name
-		} else if c.RunnerCredentials.UniqueID() != "" {
+		} else if c.RunnerCredentials.URL != "" && c.RunnerCredentials.Token != "" {
 			skip = runner.RunnerCredentials.UniqueID() != c.RunnerCredentials.UniqueID()
 		}
 
