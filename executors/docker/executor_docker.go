@@ -30,7 +30,7 @@ import (
 
 const (
 	DockerExecutorStagePrepare common.ExecutorStage = "docker_prepare"
-	DockerExecutorStageRun common.ExecutorStage = "docker_run"
+	DockerExecutorStageRun     common.ExecutorStage = "docker_run"
 	DockerExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
 
 	DockerExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
