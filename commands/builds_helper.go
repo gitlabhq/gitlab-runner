@@ -10,6 +10,20 @@ import (
 
 var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage", "executor_stage"}, nil)
 
+type statePermutation struct {
+	buildState    common.BuildRuntimeState
+	buildStage    common.BuildStage
+	executorStage common.ExecutorStage
+}
+
+func newStatePermutationFromBuild(build *common.Build) statePermutation {
+	return statePermutation{
+		buildState:    build.CurrentState,
+		buildStage:    build.CurrentStage,
+		executorStage: build.CurrentExecutorStage(),
+	}
+}
+
 type runnerCounter struct {
 	builds   int
 	requests int
@@ -144,23 +158,18 @@ func (b *buildsHelper) buildsCount() int {
 	return len(b.builds)
 }
 
-func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common.BuildStage]map[common.ExecutorStage]int {
+func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	data := make(map[common.BuildRuntimeState]map[common.BuildStage]map[common.ExecutorStage]int)
+	data := make(map[statePermutation]int)
 	for _, build := range b.builds {
-		state := build.CurrentState
-		stage := build.CurrentStage
-		executorStage := build.CurrentExecutorStage()
-
-		if data[state] == nil {
-			data[state] = make(map[common.BuildStage]map[common.ExecutorStage]int)
+		state := newStatePermutationFromBuild(build)
+		if _, ok := data[state]; ok {
+			data[state]++
+		} else {
+			data[state] = 1
 		}
-		if data[state][stage] == nil {
-			data[state][stage] = make(map[common.ExecutorStage]int)
-		}
-		data[state][stage][executorStage]++
 	}
 	return data
 }
@@ -174,12 +183,14 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	data := b.statesAndStages()
 
-	for state, scripts := range data {
-		for stage, executor_stages := range scripts {
-			for executor_stage, count := range executor_stages {
-			ch <- prometheus.MustNewConstMetric(numBuildsDesc, prometheus.GaugeValue, float64(count),
-				string(state), string(stage), string(executor_stage))
-			}
-		}
+	for state, count := range data {
+		ch <- prometheus.MustNewConstMetric(
+			numBuildsDesc,
+			prometheus.GaugeValue,
+			float64(count),
+			string(state.buildState),
+			string(state.buildStage),
+			string(state.executorStage),
+		)
 	}
 }
