@@ -36,3 +36,18 @@ func (m *MockExecutor) Finish(err error) {
 func (m *MockExecutor) Cleanup() {
 	m.Called()
 }
+
+func (m *MockExecutor) GetCurrentStage() ExecutorStage {
+	ret := m.Called()
+
+	var r0 ExecutorStage
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).(ExecutorStage)
+	}
+
+	return r0
+}
+
+func (m *MockExecutor) SetCurrentStage(stage ExecutorStage) {
+	m.Called(stage)
+}
