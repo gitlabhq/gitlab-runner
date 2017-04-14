@@ -2,9 +2,10 @@ package commands
 
 import (
 	"errors"
-	"github.com/codegangsta/cli"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/codegangsta/cli"
+
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
