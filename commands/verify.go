@@ -65,7 +65,7 @@ func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunn
 	var selectorPresent = c.Name != "" || c.RunnerCredentials.URL != "" || c.RunnerCredentials.Token != ""
 
 	for _, runner := range c.config.Runners {
-		selected := selectorPresent && (runner.Name == c.Name || runner.RunnerCredentials.SameAs(&c.RunnerCredentials))
+		selected := !selectorPresent || runner.Name == c.Name || runner.RunnerCredentials.SameAs(&c.RunnerCredentials)
 
 		if selected {
 			toVerify = append(toVerify, runner)
