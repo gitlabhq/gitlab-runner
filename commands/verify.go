@@ -62,27 +62,24 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 }
 
 func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunners []*common.RunnerConfig, err error) {
+	var selectorPresent = c.Name != "" || c.RunnerCredentials.URL != "" || c.RunnerCredentials.Token != ""
+
 	for _, runner := range c.config.Runners {
-		skip := false
+		selected := selectorPresent && (runner.Name == c.Name || runner.RunnerCredentials.SameAs(&c.RunnerCredentials))
 
-		if c.Name != "" {
-			skip = runner.Name != c.Name
-		} else if c.RunnerCredentials.URL != "" && c.RunnerCredentials.Token != "" {
-			skip = runner.RunnerCredentials.UniqueID() != c.RunnerCredentials.UniqueID()
-		}
-
-		if skip {
-			okRunners = append(okRunners, runner)
-		} else {
+		if selected {
 			toVerify = append(toVerify, runner)
+		} else {
+			okRunners = append(okRunners, runner)
 		}
 	}
 
-	if (c.Name != "" || c.RunnerCredentials.UniqueID() != "") && len(toVerify) == 0 {
+	if selectorPresent && len(toVerify) == 0 {
 		err = errors.New("No runner matches the filtering parameters")
 	}
 	return
 }
+
 func init() {
 	common.RegisterCommand2("verify", "verify all registered runners", &VerifyCommand{
 		network: network.NewGitLabClient(),
