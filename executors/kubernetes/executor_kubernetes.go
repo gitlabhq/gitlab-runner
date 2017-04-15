@@ -40,15 +40,15 @@ type executor struct {
 	credentials *api.Secret
 	options     *kubernetesOptions
 
-	namespaceOverwrite string
-
-	buildLimits     api.ResourceList
-	serviceLimits   api.ResourceList
-	helperLimits    api.ResourceList
-	buildRequests   api.ResourceList
-	serviceRequests api.ResourceList
-	helperRequests  api.ResourceList
-	pullPolicy      common.KubernetesPullPolicy
+	namespaceOverwrite      string
+	serviceAccountOverwrite string
+	buildLimits             api.ResourceList
+	serviceLimits           api.ResourceList
+	helperLimits            api.ResourceList
+	buildRequests           api.ResourceList
+	serviceRequests         api.ResourceList
+	helperRequests          api.ResourceList
+	pullPolicy              common.KubernetesPullPolicy
 }
 
 func (s *executor) setupResources() error {
@@ -79,7 +79,6 @@ func (s *executor) setupResources() error {
 	if s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest); err != nil {
 		return fmt.Errorf("invalid helper requests specified: %s", err.Error())
 	}
-
 	return nil
 }
 
@@ -105,6 +104,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	if err = s.overwriteNamespace(options.Build); err != nil {
+		return err
+	}
+
+	if err = s.overwriteServiceAccount(options.Build); err != nil {
 		return err
 	}
 
@@ -261,7 +264,6 @@ func (s *executor) setupBuildPod() error {
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
-
 	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
@@ -277,8 +279,9 @@ func (s *executor) setupBuildPod() error {
 					},
 				},
 			},
-			RestartPolicy: api.RestartPolicyNever,
-			NodeSelector:  s.Config.Kubernetes.NodeSelector,
+			ServiceAccountName: s.Config.Kubernetes.ServiceAccount,
+			RestartPolicy:      api.RestartPolicyNever,
+			NodeSelector:       s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				s.buildContainer("build", buildImage, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
 				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
@@ -388,20 +391,52 @@ func (s *executor) overwriteNamespace(job *common.Build) error {
 		return nil
 	}
 
-	var err error
-	var r *regexp.Regexp
-	if r, err = regexp.Compile(s.Config.Kubernetes.NamespaceOverwriteAllowed); err != nil {
+	if err := overwriteRegexCheck(s.Config.Kubernetes.NamespaceOverwriteAllowed, s.namespaceOverwrite); err != nil {
 		return err
-	}
-
-	if match := r.MatchString(s.namespaceOverwrite); !match {
-		return fmt.Errorf("KUBERNETES_NAMESPACE_OVERWRITE='%s' does not match 'namespace_overwrite_allowed': '%s'",
-			s.namespaceOverwrite, s.Config.Kubernetes.NamespaceOverwriteAllowed)
 	}
 
 	s.Println("Overwritting configured namespace, from", s.Config.Kubernetes.Namespace, "to", s.namespaceOverwrite)
 	s.Config.Kubernetes.Namespace = s.namespaceOverwrite
 
+	return nil
+}
+
+// overwriteSercviceAccount checks for variable in order to overwrite the configured
+// service account, as long as it complies to validation regular-expression, when
+// expression is empty the overwrite is disabled.
+func (s *executor) overwriteServiceAccount(job *common.Build) error {
+	if s.Config.Kubernetes.ServiceAccountOverwriteAllowed == "" {
+		s.Debugln("Configuration entry 'service_accunt_overwrite_allowed' is empty, disabling override.")
+		return nil
+	}
+
+	s.serviceAccountOverwrite = job.Variables.Expand().Get("KUBERNETES_SERVICE_ACCOUNT_OVERWRITE")
+	if s.serviceAccountOverwrite == "" {
+		return nil
+	}
+
+	if err := overwriteRegexCheck(s.Config.Kubernetes.ServiceAccountOverwriteAllowed, s.serviceAccountOverwrite); err != nil {
+		return err
+	}
+
+	s.Println("Overwritting configured ServiceAccount, from", s.Config.Kubernetes.ServiceAccount, "to", s.serviceAccountOverwrite)
+	s.Config.Kubernetes.ServiceAccount = s.serviceAccountOverwrite
+
+	return nil
+}
+
+//overwriteRegexCheck check if the regex provided for overwriting a config field matches the
+//paramether provided, returns error if doesn't match
+func overwriteRegexCheck(regex, value string) error {
+	var err error
+	var r *regexp.Regexp
+	if r, err = regexp.Compile(regex); err != nil {
+		return err
+	}
+
+	if match := r.MatchString(value); !match {
+		return fmt.Errorf("Provided value %s does not match regex %s", value, regex)
+	}
 	return nil
 }
 
