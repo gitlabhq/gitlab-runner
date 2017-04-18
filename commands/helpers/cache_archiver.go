@@ -86,7 +86,7 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	if c.URL != "" {
 		err := c.doRetry(c.upload)
 		if err != nil {
-			logrus.Warningln(err)
+			logrus.Fatalln(err)
 		}
 	}
 }

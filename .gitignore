@@ -3,6 +3,7 @@ config.toml
 .project
 out
 builds/
+commands/helpers/archive.zip
 executors/docker/bindata.go
 dockerfiles/alpine/gitlab-ci-multi-runner-linux-amd64
 dockerfiles/build/gitlab-runner-helper

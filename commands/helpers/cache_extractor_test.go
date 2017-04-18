@@ -133,14 +133,14 @@ func TestCacheExtractorRemoteServer(t *testing.T) {
 	}, "archive is up to date")
 }
 
-func TestCacheExtractorRemoteServerDoesntFailOnInvalidServer(t *testing.T) {
+func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
 	helpers.MakeFatalToPanic()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheExtractorCommand{
 		File: cacheExtractorArchive,
 		URL:  "http://localhost:65333/cache.zip",
 	}
-	assert.NotPanics(t, func() {
+	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
 
