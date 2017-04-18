@@ -8,7 +8,21 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage"}, nil)
+var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage", "executor_stage"}, nil)
+
+type statePermutation struct {
+	buildState    common.BuildRuntimeState
+	buildStage    common.BuildStage
+	executorStage common.ExecutorStage
+}
+
+func newStatePermutationFromBuild(build *common.Build) statePermutation {
+	return statePermutation{
+		buildState:    build.CurrentState,
+		buildStage:    build.CurrentStage,
+		executorStage: build.CurrentExecutorStage(),
+	}
+}
 
 type runnerCounter struct {
 	builds   int
@@ -144,19 +158,18 @@ func (b *buildsHelper) buildsCount() int {
 	return len(b.builds)
 }
 
-func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common.BuildStage]int {
+func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	data := make(map[common.BuildRuntimeState]map[common.BuildStage]int)
+	data := make(map[statePermutation]int)
 	for _, build := range b.builds {
-		state := build.CurrentState
-		stage := build.CurrentStage
-
-		if data[state] == nil {
-			data[state] = make(map[common.BuildStage]int)
+		state := newStatePermutationFromBuild(build)
+		if _, ok := data[state]; ok {
+			data[state]++
+		} else {
+			data[state] = 1
 		}
-		data[state][stage]++
 	}
 	return data
 }
@@ -170,10 +183,14 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	data := b.statesAndStages()
 
-	for state, scripts := range data {
-		for stage, count := range scripts {
-			ch <- prometheus.MustNewConstMetric(numBuildsDesc, prometheus.GaugeValue, float64(count),
-				string(state), string(stage))
-		}
+	for state, count := range data {
+		ch <- prometheus.MustNewConstMetric(
+			numBuildsDesc,
+			prometheus.GaugeValue,
+			float64(count),
+			string(state.buildState),
+			string(state.buildStage),
+			string(state.executorStage),
+		)
 	}
 }

@@ -12,12 +12,23 @@ type ExecutorCommand struct {
 	Abort      chan interface{}
 }
 
+type ExecutorStage string
+
+const (
+	ExecutorStageCreated ExecutorStage = "created"
+	ExecutorStagePrepare ExecutorStage = "prepare"
+	ExecutorStageFinish  ExecutorStage = "finish"
+	ExecutorStageCleanup ExecutorStage = "cleanup"
+)
+
 type Executor interface {
 	Shell() *ShellScriptInfo
 	Prepare(globalConfig *Config, config *RunnerConfig, build *Build) error
 	Run(cmd ExecutorCommand) error
 	Finish(err error)
 	Cleanup()
+	GetCurrentStage() ExecutorStage
+	SetCurrentStage(stage ExecutorStage)
 }
 
 type ExecutorProvider interface {

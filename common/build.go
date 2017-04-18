@@ -75,6 +75,8 @@ type Build struct {
 
 	CurrentStage BuildStage
 	CurrentState BuildRuntimeState
+
+	executorStageResolver func() ExecutorStage
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -297,6 +299,8 @@ func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvi
 			return
 		}
 
+		b.executorStageResolver = executor.GetCurrentStage
+
 		err = executor.Prepare(globalConfig, b.Runner, b)
 		if err == nil {
 			break
@@ -314,6 +318,16 @@ func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvi
 		time.Sleep(PreparationRetryInterval)
 	}
 	return
+}
+
+func (b *Build) CurrentExecutorStage() ExecutorStage {
+	if b.executorStageResolver == nil {
+		b.executorStageResolver = func() ExecutorStage {
+			return ExecutorStage("")
+		}
+	}
+
+	return b.executorStageResolver()
 }
 
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {

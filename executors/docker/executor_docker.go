@@ -28,6 +28,17 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	DockerExecutorStagePrepare common.ExecutorStage = "docker_prepare"
+	DockerExecutorStageRun     common.ExecutorStage = "docker_run"
+	DockerExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
+
+	DockerExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
+	DockerExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
+	DockerExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
+	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
+)
+
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
 type dockerOptions struct {
@@ -122,6 +133,7 @@ func (s *executor) getAuthConfig(imageName string) *types.AuthConfig {
 }
 
 func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*types.ImageInspect, error) {
+	s.SetCurrentStage(DockerExecutorStagePullingImage)
 	s.Println("Pulling docker image", imageName, "...")
 
 	ref := imageName
@@ -978,18 +990,21 @@ func (s *executor) createDependencies() (err error) {
 		return err
 	}
 
+	s.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
 	s.Debugln("Creating build volume...")
 	err = s.createBuildVolume()
 	if err != nil {
 		return err
 	}
 
+	s.SetCurrentStage(DockerExecutorStageCreatingServices)
 	s.Debugln("Creating services...")
 	err = s.createServices()
 	if err != nil {
 		return err
 	}
 
+	s.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	s.Debugln("Creating user-defined volumes...")
 	err = s.createUserVolumes()
 	if err != nil {
@@ -1018,6 +1033,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return errors.New("Missing docker configuration")
 	}
 
+	s.SetCurrentStage(DockerExecutorStagePrepare)
 	s.prepareOptions()
 	imageName, err := s.getImageName()
 	if err != nil {
@@ -1063,8 +1079,9 @@ func (s *executor) prepareBuildsDir(config *common.RunnerConfig) error {
 }
 
 func (s *executor) Cleanup() {
-	var wg sync.WaitGroup
+	s.SetCurrentStage(DockerExecutorStageCleanup)
 
+	var wg sync.WaitGroup
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {

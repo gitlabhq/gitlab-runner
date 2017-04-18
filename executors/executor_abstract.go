@@ -21,6 +21,8 @@ type AbstractExecutor struct {
 	Build      *common.Build
 	BuildTrace common.JobTrace
 	BuildShell *common.ShellConfiguration
+
+	currentStage common.ExecutorStage
 }
 
 func (e *AbstractExecutor) updateShell() error {
@@ -70,6 +72,7 @@ func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
 }
 
 func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
+	e.currentStage = common.ExecutorStagePrepare
 	e.Config = *config
 	e.Build = build
 	e.BuildTrace = build.Trace
@@ -93,7 +96,17 @@ func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.R
 }
 
 func (e *AbstractExecutor) Finish(err error) {
+	e.currentStage = common.ExecutorStageFinish
 }
 
 func (e *AbstractExecutor) Cleanup() {
+	e.currentStage = common.ExecutorStageCleanup
+}
+
+func (e *AbstractExecutor) GetCurrentStage() common.ExecutorStage {
+	return e.currentStage
+}
+
+func (e *AbstractExecutor) SetCurrentStage(stage common.ExecutorStage) {
+	e.currentStage = stage
 }

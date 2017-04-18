@@ -68,6 +68,8 @@ func (s *sshExecutor) Prepare(globalConfig *common.Config, config *common.Runner
 }
 
 func (s *sshExecutor) Run(cmd common.ExecutorCommand) error {
+	s.SetCurrentStage(DockerExecutorStageRun)
+
 	err := s.sshCommand.Run(ssh.Command{
 		Environment: s.BuildShell.Environment,
 		Command:     s.BuildShell.GetCommandWithArguments(),
@@ -98,13 +100,15 @@ func init() {
 	}
 
 	creator := func() common.Executor {
-		return &sshExecutor{
+		e := &sshExecutor{
 			executor: executor{
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: options,
 				},
 			},
 		}
+		e.SetCurrentStage(common.ExecutorStageCreated)
+		return e
 	}
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
