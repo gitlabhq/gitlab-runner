@@ -180,18 +180,19 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 
 	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", 204, &request, nil)
 
+	const baseLogText = "Unregistering runner from GitLab"
 	switch result {
 	case 204:
-		runner.Log().Println("Deleting runner...", "succeeded")
+		runner.Log().Println(baseLogText, "succeeded")
 		return true
 	case 403:
-		runner.Log().Errorln("Deleting runner...", "forbidden")
+		runner.Log().Errorln(baseLogText, "forbidden")
 		return false
 	case clientError:
-		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "error")
+		runner.Log().WithField("status", statusText).Errorln(baseLogText, "error")
 		return false
 	default:
-		runner.Log().WithField("status", statusText).Errorln("Deleting runner...", "failed")
+		runner.Log().WithField("status", statusText).Errorln(baseLogText, "failed")
 		n.checkGitLabVersionCompatibility(runner)
 		return false
 	}
