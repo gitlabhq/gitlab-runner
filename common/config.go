@@ -298,6 +298,10 @@ func (c *RunnerCredentials) Log() *log.Entry {
 	return log.WithFields(log.Fields{})
 }
 
+func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
+	return c.URL == other.URL && c.Token == other.Token
+}
+
 func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
 }
