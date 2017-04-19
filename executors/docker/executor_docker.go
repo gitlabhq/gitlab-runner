@@ -520,6 +520,16 @@ func (s *executor) bindDevices() (err error) {
 	return nil
 }
 
+func (s *executor) printUsedDockerImageID(imageName, imageID, containerType, containerTypeName string) {
+	var line string
+	if imageName == imageID {
+		line = fmt.Sprintf("Using docker image %s for %s %s...", imageName, containerTypeName, containerType)
+	} else {
+		line = fmt.Sprintf("Using docker image %s ID=%s for %s %s...", imageName, imageID, containerTypeName, containerType)
+	}
+	s.Println(line)
+}
+
 func (s *executor) splitServiceAndVersion(serviceDescription string) (service, version, imageName string, linkNames []string) {
 	ReferenceRegexpNoPort := regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
 	imageName = serviceDescription
@@ -560,7 +570,7 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 		return nil, err
 	}
 
-	s.Println(fmt.Sprintf("Using docker image %s ID=%s for service %s...", image, serviceImage.ID, service))
+	s.printUsedDockerImageID(image, serviceImage.ID, "service", service)
 
 	containerName := s.Build.ProjectUniqueName() + "-" + strings.Replace(service, "/", "__", -1)
 
@@ -704,7 +714,7 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 		return nil, err
 	}
 
-	s.Println(fmt.Sprintf("Using docker image %s ID=%s for %s container...", imageName, image.ID, containerType))
+	s.printUsedDockerImageID(imageName, image.ID, "container", containerType)
 
 	hostname := s.Config.Docker.Hostname
 	if hostname == "" {
