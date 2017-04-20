@@ -63,7 +63,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 
 	s.Debugln("Executing on", runOn.Name, "the", cmd.Script)
 
-	return s.watchContainer(runOn.ID, bytes.NewBufferString(cmd.Script), cmd.Abort)
+	return s.watchContainer(cmd.Context, runOn.ID, bytes.NewBufferString(cmd.Script))
 }
 
 func init() {

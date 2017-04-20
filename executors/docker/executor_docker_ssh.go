@@ -39,12 +39,12 @@ func (s *sshExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	s.Debugln("Starting container", container.ID, "...")
-	err = s.client.ContainerStart(s.context, container.ID, types.ContainerStartOptions{})
+	err = s.client.ContainerStart(s.Context, container.ID, types.ContainerStartOptions{})
 	if err != nil {
 		return err
 	}
 
-	containerData, err := s.client.ContainerInspect(s.context, container.ID)
+	containerData, err := s.client.ContainerInspect(s.Context, container.ID)
 	if err != nil {
 		return err
 	}
@@ -68,11 +68,10 @@ func (s *sshExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 func (s *sshExecutor) Run(cmd common.ExecutorCommand) error {
 	s.SetCurrentStage(DockerExecutorStageRun)
 
-	err := s.sshCommand.Run(ssh.Command{
+	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Environment: s.BuildShell.Environment,
 		Command:     s.BuildShell.GetCommandWithArguments(),
 		Stdin:       cmd.Script,
-		Abort:       cmd.Abort,
 	})
 	if _, ok := err.(*ssh.ExitError); ok {
 		err = &common.BuildError{Inner: err}

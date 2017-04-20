@@ -11,6 +11,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"context"
 )
 
 type Client struct {
@@ -27,7 +28,6 @@ type Command struct {
 	Environment []string
 	Command     []string
 	Stdin       string
-	Abort       chan interface{}
 }
 
 type ExitError struct {
@@ -131,7 +131,7 @@ func (s *Command) fullCommand() string {
 	return strings.Join(arguments, " ")
 }
 
-func (s *Client) Run(cmd Command) error {
+func (s *Client) Run(ctx context.Context, cmd Command) error {
 	if s.client == nil {
 		return errors.New("Not connected")
 	}
@@ -168,7 +168,7 @@ func (s *Client) Run(cmd Command) error {
 	}()
 
 	select {
-	case <-cmd.Abort:
+	case <-ctx.Done():
 		session.Signal(ssh.SIGKILL)
 		session.Close()
 		return <-waitCh

@@ -3,6 +3,7 @@ package executors
 import (
 	"os"
 
+	"context"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
@@ -21,8 +22,8 @@ type AbstractExecutor struct {
 	Build      *common.Build
 	BuildTrace common.JobTrace
 	BuildShell *common.ShellConfiguration
-
 	currentStage common.ExecutorStage
+	Context    context.Context
 }
 
 func (e *AbstractExecutor) updateShell() error {
@@ -73,6 +74,7 @@ func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
 
 func (e *AbstractExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.currentStage = common.ExecutorStagePrepare
+	e.Context = options.Context
 	e.Config = *options.Config
 	e.Build = options.Build
 	e.BuildTrace = options.Trace

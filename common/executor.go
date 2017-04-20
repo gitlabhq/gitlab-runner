@@ -2,6 +2,7 @@ package common
 
 import (
 	log "github.com/Sirupsen/logrus"
+	"context"
 )
 
 type ExecutorData interface{}
@@ -10,6 +11,7 @@ type ExecutorCommand struct {
 	Script     string
 	Predefined bool
 	Abort      chan interface{}
+	Context    context.Context
 }
 
 type ExecutorStage string
@@ -22,10 +24,11 @@ const (
 )
 
 type ExecutorPrepareOptions struct {
-	Config *RunnerConfig
-	Build  *Build
-	Trace  JobTrace
-	User   string
+	Config  *RunnerConfig
+	Build   *Build
+	Trace   JobTrace
+	User    string
+	Context context.Context
 }
 
 type Executor interface {

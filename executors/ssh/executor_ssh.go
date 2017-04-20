@@ -46,11 +46,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	err := s.sshCommand.Run(ssh.Command{
+	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Environment: s.BuildShell.Environment,
 		Command:     s.BuildShell.GetCommandWithArguments(),
 		Stdin:       cmd.Script,
-		Abort:       cmd.Abort,
 	})
 	if _, ok := err.(*ssh.ExitError); ok {
 		err = &common.BuildError{Inner: err}
