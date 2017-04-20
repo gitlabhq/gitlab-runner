@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"context"
 
 	"github.com/Sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
-	"gitlab.com/hackwaw-disrupt/golang-proxy-server/Godeps/_workspace/src/golang.org/x/net/context"
 )
 
 type GitStrategy int
@@ -159,7 +159,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 
 	cmd := ExecutorCommand{
 		Context: ctx,
-		Script: script,
+		Script:  script,
 	}
 
 	switch buildStage {
@@ -272,7 +272,7 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 
 	case <-ctx.Done():
 		err = &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout())}
-		b.CurrentStage = BuildRunRuntimeTimedout
+		b.CurrentState = BuildRunRuntimeTimedout
 
 	case signal := <-b.SystemInterrupt:
 		err = fmt.Errorf("aborted: %v", signal)
@@ -358,10 +358,10 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	defer cancel()
 
 	options := ExecutorPrepareOptions{
-		Config: b.Runner,
-		Build: b,
-		Trace: b.Trace,
-		User: globalConfig.User,
+		Config:  b.Runner,
+		Build:   b,
+		Trace:   b.Trace,
+		User:    globalConfig.User,
 		Context: context,
 	}
 

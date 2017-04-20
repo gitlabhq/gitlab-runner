@@ -1,8 +1,9 @@
 package common
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"context"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type ExecutorData interface{}

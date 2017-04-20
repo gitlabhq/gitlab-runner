@@ -1,9 +1,9 @@
 package executors
 
 import (
+	"context"
 	"os"
 
-	"context"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
@@ -18,12 +18,12 @@ type ExecutorOptions struct {
 type AbstractExecutor struct {
 	ExecutorOptions
 	common.BuildLogger
-	Config     common.RunnerConfig
-	Build      *common.Build
-	BuildTrace common.JobTrace
-	BuildShell *common.ShellConfiguration
+	Config       common.RunnerConfig
+	Build        *common.Build
+	BuildTrace   common.JobTrace
+	BuildShell   *common.ShellConfiguration
 	currentStage common.ExecutorStage
-	Context    context.Context
+	Context      context.Context
 }
 
 func (e *AbstractExecutor) updateShell() error {
