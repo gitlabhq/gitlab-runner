@@ -6,12 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
-	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/sockets"
 	"github.com/docker/go-connections/tlsconfig"
 	"golang.org/x/net/context"
 )
@@ -112,7 +110,8 @@ func newHTTPTransport(c DockerCredentials) (*http.Transport, error) {
 	}
 
 	tr := &http.Transport{}
-	if err := sockets.ConfigureTransport(tr, proto, addr); err != nil {
+
+	if err := configureTransport(tr, proto, addr); err != nil {
 		return nil, err
 	}
 
@@ -132,7 +131,6 @@ func newHTTPTransport(c DockerCredentials) (*http.Transport, error) {
 			return nil, err
 		}
 
-		tr.TLSHandshakeTimeout = 10 * time.Second
 		tr.TLSClientConfig = tlsConfig
 	}
 
