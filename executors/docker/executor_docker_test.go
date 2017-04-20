@@ -192,7 +192,7 @@ func TestDockerForNamedImage(t *testing.T) {
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	options := buildImagePullOptions(e, "test")
 
 	c.On("ImagePullBlocking", e.Context, "test:latest", options).
@@ -225,7 +225,7 @@ func TestDockerForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	options := buildImagePullOptions(e, "existing")
 
 	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
@@ -257,7 +257,7 @@ func TestDockerGetImageById(t *testing.T) {
 
 	// Use default policy
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.setPolicyMode("")
 
 	c.On("ImageInspectWithRaw", e.Context, "ID").
@@ -275,7 +275,7 @@ func TestDockerUnknownPolicyMode(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.setPolicyMode("unknown")
 
 	_, err := e.getDockerImage("not-existing")
@@ -287,7 +287,7 @@ func TestDockerPolicyModeNever(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyNever)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -311,7 +311,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -328,7 +328,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("ImageInspectWithRaw", e.Context, "not-existing").
@@ -363,7 +363,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -389,7 +389,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -411,7 +411,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executor{client: &c}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "to-pull").
@@ -744,7 +744,7 @@ func TestPullPolicyWhenAlwaysIsSet(t *testing.T) {
 	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
 
 	e := getAuthConfigTestExecutor(t, false)
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.Config.Docker.PullPolicy = common.PullPolicyAlways
 
 	testGetDockerImage(t, e, remoteImage, addPullsRemoteImageExpectations)
@@ -759,7 +759,7 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
 
 	e := getAuthConfigTestExecutor(t, false)
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.Config.Docker.PullPolicy = common.PullPolicyIfNotPresent
 
 	testGetDockerImage(t, e, remoteImage, addFindsLocalImageExpectations)
@@ -772,7 +772,7 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	}
 
 	e := executor{}
-	e.Context, _ = context.WithCancel(context.Background())
+	e.Context = context.Background()
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
 	}
