@@ -367,7 +367,13 @@ func TestPrepare(t *testing.T) {
 				},
 			}
 
-			err := e.Prepare(test.GlobalConfig, test.RunnerConfig, test.Build)
+			prepareOptions := common.ExecutorPrepareOptions{
+				Config:  test.RunnerConfig,
+				Build:   test.Build,
+				Context: context.TODO(),
+			}
+
+			err := e.Prepare(prepareOptions)
 
 			if err != nil {
 				if test.Error {

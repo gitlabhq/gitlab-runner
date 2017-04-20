@@ -1,7 +1,6 @@
 package parallels_test
 
 import (
-	"context"
 	"os"
 	"testing"
 	"time"
