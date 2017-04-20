@@ -10,7 +10,6 @@ type ExecutorData interface{}
 type ExecutorCommand struct {
 	Script     string
 	Predefined bool
-	Abort      chan interface{}
 	Context    context.Context
 }
 

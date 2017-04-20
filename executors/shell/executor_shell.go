@@ -120,7 +120,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	case err = <-waitCh:
 		return err
 
-	case <-cmd.Abort:
+	case <-cmd.Context.Done():
 		return s.killAndWait(c, waitCh)
 	}
 }
