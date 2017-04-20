@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -9,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"context"
 
 	"github.com/Sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
@@ -59,7 +59,6 @@ const (
 type Build struct {
 	JobResponse `yaml:",inline"`
 
-	Trace           JobTrace
 	SystemInterrupt chan os.Signal `json:"-" yaml:"-"`
 	RootDir         string         `json:"-" yaml:"-"`
 	BuildDir        string         `json:"-" yaml:"-"`
@@ -250,6 +249,22 @@ func (b *Build) GetBuildTimeout() time.Duration {
 	return time.Duration(buildTimeout) * time.Second
 }
 
+func (b *Build) handleError(err error) error {
+	switch err {
+	case context.Canceled:
+		b.CurrentState = BuildRunRuntimeCanceled
+		return &BuildError{Inner: errors.New("canceled")}
+
+	case context.DeadlineExceeded:
+		b.CurrentState = BuildRunRuntimeTimedout
+		return &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout())}
+
+	default:
+		b.CurrentState = BuildRunRuntimeFinished
+		return err
+	}
+}
+
 func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	b.CurrentState = BuildRunRuntimeRunning
 
@@ -266,13 +281,8 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	// Wait for signals: cancel, timeout, abort or finish
 	b.Log().Debugln("Waiting for signals...")
 	select {
-	case <-b.Trace.Aborted():
-		err = &BuildError{Inner: errors.New("canceled")}
-		b.CurrentState = BuildRunRuntimeCanceled
-
 	case <-ctx.Done():
-		err = &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout())}
-		b.CurrentState = BuildRunRuntimeTimedout
+		err = b.handleError(ctx.Err())
 
 	case signal := <-b.SystemInterrupt:
 		err = fmt.Errorf("aborted: %v", signal)
@@ -311,6 +321,8 @@ func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider Exe
 		}
 		if _, ok := err.(*BuildError); ok {
 			break
+		} else if options.Context.Err() != nil {
+			return nil, b.handleError(options.Context.Err())
 		}
 
 		logger.SoftErrorln("Preparation failed:", err)
@@ -357,15 +369,15 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	context, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
 
+	trace.SetCancelFunc(cancel)
+
 	options := ExecutorPrepareOptions{
 		Config:  b.Runner,
 		Build:   b,
-		Trace:   b.Trace,
+		Trace:   trace,
 		User:    globalConfig.User,
 		Context: context,
 	}
-
-	b.Trace = trace
 
 	provider := GetExecutor(b.Runner.Executor)
 	if provider == nil {

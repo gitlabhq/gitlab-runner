@@ -863,7 +863,7 @@ func (s *executor) watchContainer(ctx context.Context, id string, input io.Reade
 
 	// Copy any output to the build trace
 	go func() {
-		_, err := stdcopy.StdCopy(s.BuildTrace, s.BuildTrace, hijacked.Reader)
+		_, err := stdcopy.StdCopy(s.Trace, s.Trace, hijacked.Reader)
 		if err != nil {
 			attachCh <- err
 		}
@@ -1211,6 +1211,6 @@ func (s *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
 	buffer.WriteString("\n")
-	io.Copy(s.BuildTrace, &buffer)
+	io.Copy(s.Trace, &buffer)
 	return err
 }

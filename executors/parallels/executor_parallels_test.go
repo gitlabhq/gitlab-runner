@@ -1,6 +1,7 @@
 package parallels_test
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -187,11 +188,11 @@ func TestParallelsBuildCancel(t *testing.T) {
 		},
 	}
 
-	trace := &common.Trace{Writer: os.Stdout, Abort: make(chan interface{}, 1)}
+	trace := &common.Trace{Writer: os.Stdout}
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.Abort <- true
+		trace.CancelFunc()
 	})
 	defer abortTimer.Stop()
 

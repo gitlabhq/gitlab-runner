@@ -296,7 +296,7 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	go func() {
 		defer close(errc)
 
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace, s.Config.Kubernetes)
+		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.Trace, s.Config.Kubernetes)
 
 		if err != nil {
 			errc <- err
@@ -321,8 +321,8 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 			ContainerName: name,
 			Command:       s.BuildShell.DockerCommand,
 			In:            strings.NewReader(command),
-			Out:           s.BuildTrace,
-			Err:           s.BuildTrace,
+			Out:           s.Trace,
+			Err:           s.Trace,
 			Stdin:         true,
 			Config:        config,
 			Client:        s.kubeClient,

@@ -3,13 +3,15 @@ package network
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"io"
 	"sync"
 	"time"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 var traceUpdateInterval = common.UpdateInterval
@@ -68,7 +70,7 @@ type clientJobTrace struct {
 	jobCredentials *common.JobCredentials
 	id             int
 	limit          int64
-	abortCh        chan interface{}
+	cancelFunc     context.CancelFunc
 
 	log      bytes.Buffer
 	lock     sync.RWMutex
@@ -100,8 +102,8 @@ func (c *clientJobTrace) Fail(err error) {
 	c.finish()
 }
 
-func (c *clientJobTrace) Aborted() chan interface{} {
-	return c.abortCh
+func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
+	c.cancelFunc = cancelFunc
 }
 
 func (c *clientJobTrace) IsStdout() bool {
@@ -261,13 +263,12 @@ func (c *clientJobTrace) fullUpdate() common.UpdateState {
 }
 
 func (c *clientJobTrace) abort() bool {
-	select {
-	case c.abortCh <- true:
+	if c.cancelFunc != nil {
+		c.cancelFunc()
+		c.cancelFunc = nil
 		return true
-
-	default:
-		return false
 	}
+	return false
 }
 
 func (c *clientJobTrace) watch() {
@@ -293,6 +294,5 @@ func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentia
 		config:         config,
 		jobCredentials: jobCredentials,
 		id:             jobCredentials.ID,
-		abortCh:        make(chan interface{}),
 	}
 }

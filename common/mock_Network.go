@@ -8,7 +8,7 @@ type MockNetwork struct {
 	mock.Mock
 }
 
-func (m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string, runUntagged, locked bool) *RegisterRunnerResponse {
+func (m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string, runUntagged bool, locked bool) *RegisterRunnerResponse {
 	ret := m.Called(config, description, tags, runUntagged, locked)
 
 	var r0 *RegisterRunnerResponse
@@ -50,8 +50,8 @@ func (m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredenti
 
 	return r0
 }
-func (m *MockNetwork) PatchTrace(config RunnerConfig, buildCredentials *JobCredentials, tracePart JobTracePatch) UpdateState {
-	ret := m.Called(config, buildCredentials, tracePart)
+func (m *MockNetwork) PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState {
+	ret := m.Called(config, jobCredentials, tracePart)
 
 	r0 := ret.Get(0).(UpdateState)
 
@@ -78,8 +78,8 @@ func (m *MockNetwork) UploadArtifacts(config JobCredentials, artifactsFile strin
 
 	return r0
 }
-func (m *MockNetwork) ProcessJob(config RunnerConfig, jobCredentials *JobCredentials) JobTrace {
-	ret := m.Called(config, jobCredentials)
+func (m *MockNetwork) ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) JobTrace {
+	ret := m.Called(config, buildCredentials)
 
 	r0 := ret.Get(0).(JobTrace)
 

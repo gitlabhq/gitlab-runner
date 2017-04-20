@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"io"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/url"
@@ -246,7 +247,7 @@ type JobTrace interface {
 	io.Writer
 	Success()
 	Fail(err error)
-	Aborted() chan interface{}
+	SetCancelFunc(cancelFunc context.CancelFunc)
 	IsStdout() bool
 }
 

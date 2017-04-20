@@ -78,8 +78,8 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 
 	// Fill process environment variables
 	c.Env = append(os.Environ(), s.BuildShell.Environment...)
-	c.Stdout = s.BuildTrace
-	c.Stderr = s.BuildTrace
+	c.Stdout = s.Trace
+	c.Stderr = s.Trace
 
 	if s.BuildShell.PassFile {
 		scriptDir, err := ioutil.TempDir("", "build_script")

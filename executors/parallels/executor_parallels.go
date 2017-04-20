@@ -63,8 +63,8 @@ func (s *executor) verifyMachine(vmName string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		Config:         *s.Config.SSH,
-		Stdout:         s.BuildTrace,
-		Stderr:         s.BuildTrace,
+		Stdout:         s.Trace,
+		Stderr:         s.Trace,
 		ConnectRetries: 30,
 	}
 	sshCommand.Host = ipAddr
@@ -278,8 +278,8 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.Debugln("Starting SSH command...")
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.BuildTrace,
-		Stderr: s.BuildTrace,
+		Stdout: s.Trace,
+		Stderr: s.Trace,
 	}
 	s.sshCommand.Host = ipAddr
 

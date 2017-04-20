@@ -1,13 +1,14 @@
 package common
 
 import (
+	"context"
 	"io"
 	"os"
 )
 
 type Trace struct {
-	Writer io.Writer
-	Abort  chan interface{}
+	Writer     io.Writer
+	CancelFunc context.CancelFunc
 }
 
 func (s *Trace) Write(p []byte) (n int, err error) {
@@ -23,8 +24,8 @@ func (s *Trace) Success() {
 func (s *Trace) Fail(err error) {
 }
 
-func (s *Trace) Aborted() chan interface{} {
-	return s.Abort
+func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {
+	s.CancelFunc = cancelFunc
 }
 
 func (s *Trace) IsStdout() bool {

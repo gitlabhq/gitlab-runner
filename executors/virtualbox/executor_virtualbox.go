@@ -27,8 +27,8 @@ func (s *executor) verifyMachine(vmName string, sshPort string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		Config:         *s.Config.SSH,
-		Stdout:         s.BuildTrace,
-		Stderr:         s.BuildTrace,
+		Stdout:         s.Trace,
+		Stderr:         s.Trace,
 		ConnectRetries: 30,
 	}
 	sshCommand.Port = sshPort
@@ -258,8 +258,8 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.Println("Starting SSH command...")
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.BuildTrace,
-		Stderr: s.BuildTrace,
+		Stdout: s.Trace,
+		Stderr: s.Trace,
 	}
 	s.sshCommand.Port = s.sshPort
 	s.sshCommand.Host = "localhost"

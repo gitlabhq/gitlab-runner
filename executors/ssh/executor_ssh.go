@@ -33,8 +33,8 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	// Create SSH command
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.BuildTrace,
-		Stderr: s.BuildTrace,
+		Stdout: s.Trace,
+		Stderr: s.Trace,
 	}
 
 	s.Debugln("Connecting to SSH server...")

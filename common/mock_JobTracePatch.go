@@ -2,11 +2,11 @@ package common
 
 import "github.com/stretchr/testify/mock"
 
-type MockBuildTracePatch struct {
+type MockJobTracePatch struct {
 	mock.Mock
 }
 
-func (m *MockBuildTracePatch) Patch() []byte {
+func (m *MockJobTracePatch) Patch() []byte {
 	ret := m.Called()
 
 	var r0 []byte
@@ -16,24 +16,24 @@ func (m *MockBuildTracePatch) Patch() []byte {
 
 	return r0
 }
-func (m *MockBuildTracePatch) Offset() int {
+func (m *MockJobTracePatch) Offset() int {
 	ret := m.Called()
 
 	r0 := ret.Get(0).(int)
 
 	return r0
 }
-func (m *MockBuildTracePatch) Limit() int {
+func (m *MockJobTracePatch) Limit() int {
 	ret := m.Called()
 
 	r0 := ret.Get(0).(int)
 
 	return r0
 }
-func (m *MockBuildTracePatch) SetNewOffset(newOffset int) {
+func (m *MockJobTracePatch) SetNewOffset(newOffset int) {
 	m.Called(newOffset)
 }
-func (m *MockBuildTracePatch) ValidateRange() bool {
+func (m *MockJobTracePatch) ValidateRange() bool {
 	ret := m.Called()
 
 	r0 := ret.Get(0).(bool)

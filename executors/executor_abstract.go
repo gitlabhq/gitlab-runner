@@ -20,7 +20,7 @@ type AbstractExecutor struct {
 	common.BuildLogger
 	Config       common.RunnerConfig
 	Build        *common.Build
-	BuildTrace   common.JobTrace
+	Trace        common.JobTrace
 	BuildShell   *common.ShellConfiguration
 	currentStage common.ExecutorStage
 	Context      context.Context
@@ -77,8 +77,8 @@ func (e *AbstractExecutor) Prepare(options common.ExecutorPrepareOptions) error 
 	e.Context = options.Context
 	e.Config = *options.Config
 	e.Build = options.Build
-	e.BuildTrace = options.Trace
-	e.BuildLogger = common.NewBuildLogger(options.Build.Trace, options.Build.Log())
+	e.Trace = options.Trace
+	e.BuildLogger = common.NewBuildLogger(options.Trace, options.Build.Log())
 
 	err := e.startBuild()
 	if err != nil {

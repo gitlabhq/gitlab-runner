@@ -127,14 +127,15 @@ func TestBuildCancel(t *testing.T) {
 		build, cleanup := newBuild(t, longRunningBuild, shell)
 		defer cleanup()
 
-		cancelChan := make(chan interface{}, 1)
+		trace := &common.Trace{Writer: os.Stdout}
+
 		cancelTimer := time.AfterFunc(time.Second, func() {
 			t.Log("Cancel")
-			cancelChan <- true
+			trace.CancelFunc()
 		})
 		defer cancelTimer.Stop()
 
-		err = runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout, Abort: cancelChan})
+		err = runBuildWithTrace(t, build, trace)
 		assert.EqualError(t, err, "canceled")
 		assert.IsType(t, err, &common.BuildError{})
 	})
