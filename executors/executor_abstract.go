@@ -71,12 +71,12 @@ func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
 	return &e.ExecutorOptions.Shell
 }
 
-func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
+func (e *AbstractExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.currentStage = common.ExecutorStagePrepare
-	e.Config = *config
-	e.Build = build
-	e.BuildTrace = build.Trace
-	e.BuildLogger = common.NewBuildLogger(build.Trace, build.Log())
+	e.Config = *options.Config
+	e.Build = options.Build
+	e.BuildTrace = options.Trace
+	e.BuildLogger = common.NewBuildLogger(options.Build.Trace, options.Build.Log())
 
 	err := e.startBuild()
 	if err != nil {

@@ -292,6 +292,13 @@ func (b *Build) run(executor Executor) (err error) {
 }
 
 func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvider, logger BuildLogger) (executor Executor, err error) {
+	options := ExecutorPrepareOptions{
+		Config: b.Runner,
+		Build: b,
+		Trace: b.Trace,
+		User: globalConfig.User,
+	}
+
 	for tries := 0; tries < PreparationRetries; tries++ {
 		executor = provider.Create()
 		if executor == nil {
@@ -301,7 +308,7 @@ func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvi
 
 		b.executorStageResolver = executor.GetCurrentStage
 
-		err = executor.Prepare(globalConfig, b.Runner, b)
+		err = executor.Prepare(options)
 		if err == nil {
 			break
 		}

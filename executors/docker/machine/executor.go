@@ -56,22 +56,22 @@ func (e *machineExecutor) Shell() *common.ShellScriptInfo {
 	return e.executor.Shell()
 }
 
-func (e *machineExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) (err error) {
-	e.build = build
+func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err error) {
+	e.build = options.Build
 
 	// Use the machine
 	e.SetCurrentStage(DockerMachineExecutorStageUseMachine)
-	e.config, e.data, err = e.provider.Use(config, build.ExecutorData)
+	e.config, e.data, err = e.provider.Use(options.Config, options.Build.ExecutorData)
 	if err != nil {
 		return err
 	}
 
 	// TODO: Currently the docker-machine doesn't support multiple builds
-	build.ProjectRunnerID = 0
-	if details, _ := build.ExecutorData.(*machineDetails); details != nil {
-		build.Hostname = details.Name
+	e.build.ProjectRunnerID = 0
+	if details, _ := options.Build.ExecutorData.(*machineDetails); details != nil {
+		options.Build.Hostname = details.Name
 	} else if details, _ := e.data.(*machineDetails); details != nil {
-		build.Hostname = details.Name
+		options.Build.Hostname = details.Name
 	}
 
 	e.log().Infoln("Starting docker-machine build...")
@@ -81,7 +81,7 @@ func (e *machineExecutor) Prepare(globalConfig *common.Config, config *common.Ru
 	if e.executor == nil {
 		return errors.New("failed to create an executor")
 	}
-	return e.executor.Prepare(globalConfig, &e.config, build)
+	return e.executor.Prepare(options)
 }
 
 func (e *machineExecutor) Run(cmd common.ExecutorCommand) error {

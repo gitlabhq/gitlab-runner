@@ -21,9 +21,16 @@ const (
 	ExecutorStageCleanup ExecutorStage = "cleanup"
 )
 
+type ExecutorPrepareOptions struct {
+	Config *RunnerConfig
+	Build  *Build
+	Trace  JobTrace
+	User   string
+}
+
 type Executor interface {
 	Shell() *ShellScriptInfo
-	Prepare(globalConfig *Config, config *RunnerConfig, build *Build) error
+	Prepare(options ExecutorPrepareOptions) error
 	Run(cmd ExecutorCommand) error
 	Finish(err error)
 	Cleanup()

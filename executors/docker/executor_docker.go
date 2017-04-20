@@ -48,17 +48,19 @@ type dockerOptions struct {
 
 type executor struct {
 	executors.AbstractExecutor
-	client      docker_helpers.Client
-	failures    []string // IDs of containers that have failed in some way
-	builds      []*types.Container
-	services    []*types.Container
-	caches      []string // IDs of cache containers
-	options     dockerOptions
-	info        types.Info
-	binds       []string
-	volumesFrom []string
-	devices     []container.DeviceMapping
-	links       []string
+	client        docker_helpers.Client
+	failures      []string // IDs of containers that have failed in some way
+	builds        []*types.Container
+	services      []*types.Container
+	caches        []string // IDs of cache containers
+	options       dockerOptions
+	info          types.Info
+	binds         []string
+	volumesFrom   []string
+	devices       []container.DeviceMapping
+	links         []string
+	context       context.Context
+	contextCancel context.CancelFunc
 }
 
 func (s *executor) getServiceVariables() []string {
@@ -147,14 +149,14 @@ func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 		options.RegistryAuth, _ = docker_helpers.EncodeAuthConfig(ac)
 	}
 
-	if err := s.client.ImagePullBlocking(context.TODO(), ref, options); err != nil {
+	if err := s.client.ImagePullBlocking(s.context, ref, options); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return nil, &common.BuildError{Inner: err}
 		}
 		return nil, err
 	}
 
-	image, _, err := s.client.ImageInspectWithRaw(context.TODO(), imageName)
+	image, _, err := s.client.ImageInspectWithRaw(s.context, imageName)
 	return &image, err
 }
 
@@ -167,7 +169,7 @@ func (s *executor) getDockerImage(imageName string) (*types.ImageInspect, error)
 	authConfig := s.getAuthConfig(imageName)
 
 	s.Debugln("Looking for image", imageName, "...")
-	image, _, err := s.client.ImageInspectWithRaw(context.TODO(), imageName)
+	image, _, err := s.client.ImageInspectWithRaw(s.context, imageName)
 
 	// If never is specified then we return what inspect did return
 	if pullPolicy == common.PullPolicyNever {
@@ -223,7 +225,7 @@ func (s *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 	imageName := prebuiltImageName + ":" + architecture + "-" + common.REVISION
 	s.Debugln("Looking for prebuilt image", imageName, "...")
-	image, _, err := s.client.ImageInspectWithRaw(context.TODO(), imageName)
+	image, _, err := s.client.ImageInspectWithRaw(s.context, imageName)
 	if err == nil {
 		return &image, nil
 	}
@@ -244,11 +246,11 @@ func (s *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		Tag: architecture + "-" + common.REVISION,
 	}
 
-	if err := s.client.ImageImportBlocking(context.TODO(), source, ref, options); err != nil {
+	if err := s.client.ImageImportBlocking(s.context, source, ref, options); err != nil {
 		return nil, fmt.Errorf("Failed to import image: %s", err)
 	}
 
-	image, _, err = s.client.ImageInspectWithRaw(context.TODO(), imageName)
+	image, _, err = s.client.ImageInspectWithRaw(s.context, imageName)
 	if err != nil {
 		s.Debugln("Inspecting imported image", imageName, "failed:", err)
 		return nil, err
@@ -315,7 +317,7 @@ func (s *executor) createCacheVolume(containerName, containerPath string) (strin
 		},
 	}
 
-	resp, err := s.client.ContainerCreate(context.TODO(), config, hostConfig, nil, containerName)
+	resp, err := s.client.ContainerCreate(s.context, config, hostConfig, nil, containerName)
 	if err != nil {
 		if resp.ID != "" {
 			s.failures = append(s.failures, resp.ID)
@@ -324,7 +326,7 @@ func (s *executor) createCacheVolume(containerName, containerPath string) (strin
 	}
 
 	s.Debugln("Starting cache container", resp.ID, "...")
-	err = s.client.ContainerStart(context.TODO(), resp.ID, types.ContainerStartOptions{})
+	err = s.client.ContainerStart(s.context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
 		s.failures = append(s.failures, resp.ID)
 		return "", err
@@ -367,11 +369,11 @@ func (s *executor) addCacheVolume(containerPath string) error {
 	// get existing cache container
 	var containerID string
 	containerName := fmt.Sprintf("%s-cache-%x", s.Build.ProjectUniqueName(), hash)
-	if inspected, err := s.client.ContainerInspect(context.TODO(), containerName); err == nil {
+	if inspected, err := s.client.ContainerInspect(s.context, containerName); err == nil {
 		// check if we have valid cache, if not remove the broken container
 		if _, ok := inspected.Config.Volumes[containerPath]; !ok {
 			s.Debugln("Removing broken cache container for ", containerPath, "path")
-			s.removeContainer(inspected.ID)
+			s.removeContainer(s.context, inspected.ID)
 		} else {
 			containerID = inspected.ID
 		}
@@ -575,7 +577,7 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 	containerName := s.Build.ProjectUniqueName() + "-" + strings.Replace(service, "/", "__", -1)
 
 	// this will fail potentially some builds if there's name collision
-	s.removeContainer(containerName)
+	s.removeContainer(s.context, containerName)
 
 	config := &container.Config{
 		Image:  serviceImage.ID,
@@ -596,13 +598,13 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 	}
 
 	s.Debugln("Creating service container", containerName, "...")
-	resp, err := s.client.ContainerCreate(context.TODO(), config, hostConfig, nil, containerName)
+	resp, err := s.client.ContainerCreate(s.context, config, hostConfig, nil, containerName)
 	if err != nil {
 		return nil, err
 	}
 
 	s.Debugln("Starting service container", resp.ID, "...")
-	err = s.client.ContainerStart(context.TODO(), resp.ID, types.ContainerStartOptions{})
+	err = s.client.ContainerStart(s.context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
 		s.failures = append(s.failures, resp.ID)
 		return nil, err
@@ -650,7 +652,7 @@ func (s *executor) waitForServices() {
 
 func (s *executor) buildServiceLinks(linksMap map[string]*types.Container) (links []string) {
 	for linkName, linkee := range linksMap {
-		newContainer, err := s.client.ContainerInspect(context.TODO(), linkee.ID)
+		newContainer, err := s.client.ContainerInspect(s.context, linkee.ID)
 		if err != nil {
 			continue
 		}
@@ -761,10 +763,10 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 	}
 
 	// this will fail potentially some builds if there's name collision
-	s.removeContainer(containerName)
+	s.removeContainer(s.context, containerName)
 
 	s.Debugln("Creating container", containerName, "...")
-	resp, err := s.client.ContainerCreate(context.TODO(), config, hostConfig, nil, containerName)
+	resp, err := s.client.ContainerCreate(s.context, config, hostConfig, nil, containerName)
 	if err != nil {
 		if resp.ID != "" {
 			s.failures = append(s.failures, resp.ID)
@@ -772,7 +774,7 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 		return nil, err
 	}
 
-	inspect, err := s.client.ContainerInspect(context.TODO(), resp.ID)
+	inspect, err := s.client.ContainerInspect(s.context, resp.ID)
 	if err != nil {
 		s.failures = append(s.failures, resp.ID)
 		return nil, err
@@ -782,9 +784,9 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 
 func (s *executor) killContainer(id string, waitCh chan error) (err error) {
 	for {
-		s.disconnectNetwork(id)
+		s.disconnectNetwork(s.context, id)
 		s.Debugln("Killing container", id, "...")
-		s.client.ContainerKill(context.TODO(), id, "SIGKILL")
+		s.client.ContainerKill(s.context, id, "SIGKILL")
 
 		// Wait for signal that container were killed
 		// or retry after some time
@@ -804,7 +806,7 @@ func (s *executor) waitForContainer(id string) error {
 
 	// Use active wait
 	for {
-		container, err := s.client.ContainerInspect(context.TODO(), id)
+		container, err := s.client.ContainerInspect(s.context, id)
 		if err != nil {
 			if docker_helpers.IsErrNotFound(err) {
 				return err
@@ -846,14 +848,14 @@ func (s *executor) watchContainer(id string, input io.Reader, abort chan interfa
 	}
 
 	s.Debugln("Attaching to container", id, "...")
-	hijacked, err := s.client.ContainerAttach(context.TODO(), id, options)
+	hijacked, err := s.client.ContainerAttach(s.context, id, options)
 	if err != nil {
 		return
 	}
 	defer hijacked.Close()
 
 	s.Debugln("Starting container", id, "...")
-	err = s.client.ContainerStart(context.TODO(), id, types.ContainerStartOptions{})
+	err = s.client.ContainerStart(s.context, id, types.ContainerStartOptions{})
 	if err != nil {
 		return
 	}
@@ -898,19 +900,19 @@ func (s *executor) watchContainer(id string, input io.Reader, abort chan interfa
 	return
 }
 
-func (s *executor) removeContainer(id string) error {
-	s.disconnectNetwork(id)
+func (s *executor) removeContainer(ctx context.Context, id string) error {
+	s.disconnectNetwork(ctx, id)
 	options := types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
-	err := s.client.ContainerRemove(context.TODO(), id, options)
+	err := s.client.ContainerRemove(ctx, id, options)
 	s.Debugln("Removed container", id, "with", err)
 	return err
 }
 
-func (s *executor) disconnectNetwork(id string) error {
-	netList, err := s.client.NetworkList(context.TODO(), types.NetworkListOptions{})
+func (s *executor) disconnectNetwork(ctx context.Context, id string) error {
+	netList, err := s.client.NetworkList(ctx, types.NetworkListOptions{})
 	if err != nil {
 		s.Debugln("Can't get network list. ListNetworks exited with", err)
 		return err
@@ -919,7 +921,7 @@ func (s *executor) disconnectNetwork(id string) error {
 	for _, network := range netList {
 		for _, pluggedContainer := range network.Containers {
 			if id == pluggedContainer.Name {
-				err = s.client.NetworkDisconnect(context.TODO(), network.ID, id, true)
+				err = s.client.NetworkDisconnect(ctx, network.ID, id, true)
 				if err != nil {
 					s.Warningln("Can't disconnect possibly zombie container", pluggedContainer.Name, "from network", network.Name, "->", err)
 				} else {
@@ -986,7 +988,7 @@ func (s *executor) connectDocker() (err error) {
 	}
 	s.client = client
 
-	s.info, err = client.Info(context.TODO())
+	s.info, err = client.Info(s.context)
 	if err != nil {
 		return err
 	}
@@ -1024,13 +1026,13 @@ func (s *executor) createDependencies() (err error) {
 	return
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.prepareBuildsDir(config)
+func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
+	err := s.prepareBuildsDir(options.Config)
 	if err != nil {
 		return err
 	}
 
-	err = s.AbstractExecutor.Prepare(globalConfig, config, build)
+	err = s.AbstractExecutor.Prepare(options)
 	if err != nil {
 		return err
 	}
@@ -1039,7 +1041,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return errors.New("Docker doesn't support shells that require script file")
 	}
 
-	if config.Docker == nil {
+	if options.Config.Docker == nil {
 		return errors.New("Missing docker configuration")
 	}
 
@@ -1092,10 +1094,14 @@ func (s *executor) Cleanup() {
 	s.SetCurrentStage(DockerExecutorStageCleanup)
 
 	var wg sync.WaitGroup
+
+	ctx, cancel := context.WithTimeout(context.Background(), dockerCleanupTimeout)
+	defer cancel()
+
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {
-			s.removeContainer(id)
+			s.removeContainer(ctx, id)
 			wg.Done()
 		}()
 	}
@@ -1147,12 +1153,12 @@ func (s *executor) runServiceHealthCheckContainer(service *types.Container, time
 		},
 	}
 	s.Debugln("Waiting for service container", containerName, "to be up and running...")
-	resp, err := s.client.ContainerCreate(context.TODO(), config, hostConfig, nil, containerName)
+	resp, err := s.client.ContainerCreate(s.context, config, hostConfig, nil, containerName)
 	if err != nil {
 		return err
 	}
-	defer s.removeContainer(resp.ID)
-	err = s.client.ContainerStart(context.TODO(), resp.ID, types.ContainerStartOptions{})
+	defer s.removeContainer(s.context, resp.ID)
+	err = s.client.ContainerStart(s.context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
 		return err
 	}
@@ -1191,7 +1197,7 @@ func (s *executor) waitForServiceContainer(service *types.Container, timeout tim
 		Timestamps: true,
 	}
 
-	hijacked, err := s.client.ContainerLogs(context.TODO(), service.ID, options)
+	hijacked, err := s.client.ContainerLogs(s.context, service.ID, options)
 	if err == nil {
 		defer hijacked.Close()
 		stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)

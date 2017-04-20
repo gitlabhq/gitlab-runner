@@ -15,8 +15,8 @@ type commandExecutor struct {
 	buildContainer      *types.ContainerJSON
 }
 
-func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.executor.Prepare(globalConfig, config, build)
+func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
+	err := s.executor.Prepare(options)
 	if err != nil {
 		return err
 	}

@@ -153,8 +153,8 @@ func (s *executor) createVM() error {
 	return nil
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.AbstractExecutor.Prepare(globalConfig, config, build)
+func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
+	err := s.AbstractExecutor.Prepare(options)
 	if err != nil {
 		return err
 	}

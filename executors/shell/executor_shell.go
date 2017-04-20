@@ -21,9 +21,9 @@ type executor struct {
 	executors.AbstractExecutor
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	if globalConfig != nil {
-		s.Shell().User = globalConfig.User
+func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
+	if options.User != "" {
+		s.Shell().User = options.User
 	}
 
 	// expand environment variables to have current directory
@@ -45,7 +45,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 	s.DefaultCacheDir = os.Expand(s.DefaultCacheDir, mapping)
 
 	// Pass control to executor
-	err = s.AbstractExecutor.Prepare(globalConfig, config, build)
+	err = s.AbstractExecutor.Prepare(options)
 	if err != nil {
 		return err
 	}

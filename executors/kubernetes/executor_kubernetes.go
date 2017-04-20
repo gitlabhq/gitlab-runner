@@ -83,8 +83,8 @@ func (s *executor) setupResources() error {
 	return nil
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, job *common.Build) (err error) {
-	if err = s.AbstractExecutor.Prepare(globalConfig, config, job); err != nil {
+func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
+	if err = s.AbstractExecutor.Prepare(options); err != nil {
 		return err
 	}
 
@@ -92,7 +92,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	if s.kubeClient, err = getKubeClient(config.Kubernetes); err != nil {
+	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes); err != nil {
 		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
@@ -104,11 +104,11 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 
-	if err = s.overwriteNamespace(job); err != nil {
+	if err = s.overwriteNamespace(options.Build); err != nil {
 		return err
 	}
 
-	s.prepareOptions(job)
+	s.prepareOptions(options.Build)
 
 	if err = s.checkDefaults(); err != nil {
 		return err
