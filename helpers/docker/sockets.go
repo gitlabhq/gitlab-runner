@@ -21,26 +21,18 @@ const defaultIdleConnTimeout = time.Minute
 // If the proto is unix (using a unix socket to communicate) or npipe the
 // compression is disabled.
 func configureTransport(tr *http.Transport, proto, addr string) error {
+	err := sockets.ConfigureTransport(tr, proto, addr)
+	if err != nil {
+		return err
+	}
+
 	tr.TLSHandshakeTimeout = defaultTLSHandshakeTimeout
 	tr.ResponseHeaderTimeout = defaultResponseHeaderTimeout
 	tr.ExpectContinueTimeout = defaultExpectContinueTimeout
 	tr.IdleConnTimeout = defaultIdleConnTimeout
 
-	switch proto {
-	case "unix":
-		// No need for compression in local communications.
-		tr.DisableCompression = true
-		tr.Dial = func(_, _ string) (net.Conn, error) {
-			return net.DialTimeout(proto, addr, defaultTimeout)
-		}
-	case "npipe":
-		// No need for compression in local communications.
-		tr.DisableCompression = true
-		tr.Dial = func(_, _ string) (net.Conn, error) {
-			return sockets.DialPipe(addr, defaultTimeout)
-		}
-	default:
-		tr.Proxy = http.ProxyFromEnvironment
+	// for network protocols set custom sockets with keep-alive
+	if proto == "tcp" || proto == "http" || proto == "https" {
 		dialer, err := sockets.DialerFromEnvironment(&net.Dialer{
 			Timeout:   defaultTimeout,
 			KeepAlive: defaultKeepAlive,
