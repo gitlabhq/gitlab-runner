@@ -1,3 +1,20 @@
+v 9.0.3 (2017-04-21)
+- Fix runner crashing on builds helper collect !529
+- Properly configure connection timeouts and keep-alives !560
+
+v 9.0.2 (2017-04-06)
+- Speed up CI pipeline !536
+
+v 9.0.1 (2017-04-05)
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
+- Replace godep with govendor !505
+- Fix cache containers dicsovering regression !534
+- Add urls to environments created with CI release jobs !537
+- Mention Runner -> GitLab compatibility concerns after 9.0 release !544
+- Log error if API v4 is not present (GitLab CE/EE is older than 9.0) !528
+
 v 9.0.0
 - Change dependency from `github.com/fsouza/go-dockerclient` to `github.com/docker/docker/client`" !301
 - Update docker-machine version to fix coreos provision !500
@@ -17,6 +34,13 @@ v 9.0.0
 - Limit number of concurrent requests to builds/register.json !518
 - Remove deprecated kubernetes executor configuration fields !521
 - Drop Kubernetes executor 'experimental' notice !525
+
+v 1.11.2
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Limit number of concurrent requests to builds/register.json !518
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
 
 v 1.11.1
 - Update docker-machine version to fix coreos provision !500
@@ -38,6 +62,13 @@ v 1.11.0
 - Add timezone support for OffPeak intervals !479
 - Set GIT_SUBMODULE_STRATEGY=SubmoduleNone when GIT_STRATEGY=GitNone !480
 - Update maintainers information !489
+
+v 1.10.8
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Limit number of concurrent requests to builds/register.json !518
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
 
 v 1.10.7
 - Update docker-machine version to fix coreos provision !500
@@ -81,6 +112,9 @@ v 1.10.0
 - Update Docker Machine in official Runner images to v0.9.0 !454
 - Pass ImagePullSecrets for Kubernetes executor !449
 - Add Namespace overwrite possibility for Kubernetes executor !444
+
+v 1.9.10
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
 
 v 1.9.9
 - Update docker-machine version to fix coreos provision !500
