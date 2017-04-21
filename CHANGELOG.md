@@ -1,3 +1,7 @@
+v 9.0.3 (2017-04-21)
+- Fix runner crashing on builds helper collect !529
+- Properly configure connection timeouts and keep-alives !560
+
 v 9.0.2 (2017-04-06)
 - Speed up CI pipeline !536
 
