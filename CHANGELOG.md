@@ -1,3 +1,36 @@
+v 9.1.0 (2017-04-22)
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Extend documentation about accessing docker services !527
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
+- Docker provider metrics cleanups and renaming !531
+- Replace godep with govendor !505
+- Add histogram metrics for docker machine creation !533
+- Fix cache containers dicsovering regression !534
+- Add urls to environments created with CI release jobs !537
+- Remove unmanaged docker images sources !538
+- Speed up CI pipeline !536
+- Add job for checking the internal docs links !542
+- Mention Runner -> GitLab compatibility concerns after 9.0 release !544
+- Log error if API v4 is not present (GitLab CE/EE is older than 9.0) !528
+- Cleanup variables set on GitLab already !523
+- Add faq entry describing how to handle missing zoneinfo.zip problem !543
+- Add documentation on how Runner uses Minio library !419
+- Update docker.md - typo in runners documentation link !546
+- Add log_level option to config.toml !524
+- Support private registries with Kubernetes !551
+- Cleanup Kubernetes typos and wording !550
+- Fix runner crashing on builds helper collect !529
+- Config docs: Fix syntax in example TOML for Kubernetes !552
+- Docker: Allow to configure shared memory size !468
+- Return error for cache-extractor command when S3 cache source returns 404 !429
+- Add executor stage to ci_runner_builds metric's labels !548
+- Don't show image's ID when it's the same as image's name !557
+- Extended verify command with runner selector !532
+- Changed information line logged by Runner while unregistering !540
+- Properly configure connection timeouts and keep-alives !560
+- Log fatal error when concurrent is less than 1 !549
+
 v 9.0.3 (2017-04-21)
 - Fix runner crashing on builds helper collect !529
 - Properly configure connection timeouts and keep-alives !560
