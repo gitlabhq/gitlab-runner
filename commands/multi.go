@@ -289,6 +289,10 @@ func (mr *RunCommand) Start(s service.Service) error {
 func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stopWorker chan bool) os.Signal {
 	buildLimit := mr.config.Concurrent
 
+	if buildLimit < 1 {
+		mr.log().Fatalln("Concurrent is less than 1 - no jobs will be processed")
+	}
+
 	for mr.currentWorkers > buildLimit {
 		select {
 		case stopWorker <- true:
