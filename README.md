@@ -54,7 +54,7 @@ Let's assume that you want to install version 1.11.2 of Runner:
 
     ```bash
     # for DEB based systems
-    root@host:# apt-get install gitlab-ci-multi-runner=v1.11.2
+    root@host:# apt-get install gitlab-ci-multi-runner=1.11.2
 
     # for RPM based systems
     root@host:# yum install gitlab-ci-multi-runner-1.11.2-1
