@@ -377,15 +377,30 @@ func (mr *RunCommand) serveMetrics() error {
 	return nil
 }
 
-func (mr *RunCommand) Run() {
-	if mr.metricsServerAddress() != "" {
-		if err := mr.serveMetrics(); err != nil {
-			log.Fatalln(err)
-		}
-		log.Infoln("Metrics server listening at", mr.metricsServerAddress())
-	} else {
+func (mr *RunCommand) serveDebugData() error {
+	http.Handle("/debug/jobs/list", http.HandlerFunc(mr.buildsHelper.ListJobsHandler))
+	return nil
+}
+
+func (mr *RunCommand) setupMetricsAndDebugServer() {
+	if mr.metricsServerAddress() == "" {
 		log.Infoln("Metrics server disabled")
+		return
 	}
+
+	if err := mr.serveMetrics(); err != nil {
+		log.Fatalln(err)
+	}
+
+	if err := mr.serveDebugData(); err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Infoln("Metrics server listening at", mr.metricsServerAddress())
+}
+
+func (mr *RunCommand) Run() {
+	mr.setupMetricsAndDebugServer()
 
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)

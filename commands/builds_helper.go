@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
 	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
@@ -193,4 +196,20 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			string(state.executorStage),
 		)
 	}
+}
+
+func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain")
+
+	var jobs []string
+	for _, job := range b.builds {
+		jobDescription := fmt.Sprintf(
+			"id=%d url=%s state=%s stage=%s executor_stage=%s",
+			job.ID, job.RepoCleanURL(),
+			job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(),
+		)
+		jobs = append(jobs, jobDescription)
+	}
+
+	w.Write([]byte(strings.Join(jobs, "\n")))
 }
