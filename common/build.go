@@ -382,11 +382,36 @@ func (b *Build) GetDefaultVariables() JobVariables {
 	}
 }
 
+func (b *Build) GetCITLSVariables() JobVariables {
+	variables := JobVariables{}
+	if b.TLSCAChain != "" {
+		variables = append(variables, JobVariable{"CI_SERVER_TLS_CA_FILE", b.TLSCAChain, true, true, true})
+	}
+	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
+		variables = append(variables, JobVariable{"CI_SERVER_TLS_CERT_FILE", b.TLSAuthCert, true, true, true})
+		variables = append(variables, JobVariable{"CI_SERVER_TLS_KEY_FILE", b.TLSAuthKey, true, true, true})
+	}
+	return variables
+}
+
+func (b *Build) GetGitTLSVariables() JobVariables {
+	variables := JobVariables{}
+	if b.TLSCAChain != "" {
+		variables = append(variables, JobVariable{"GIT_SSL_CAINFO", b.TLSCAChain, true, true, true})
+	}
+	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
+		variables = append(variables, JobVariable{"GIT_SSL_CERT", b.TLSAuthCert, true, true, true})
+		variables = append(variables, JobVariable{"GIT_SSL_KEY", b.TLSAuthKey, true, true, true})
+	}
+	return variables
+}
+
 func (b *Build) GetAllVariables() (variables JobVariables) {
 	if b.Runner != nil {
 		variables = append(variables, b.Runner.GetVariables()...)
 	}
 	variables = append(variables, b.GetDefaultVariables()...)
+	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
 	return variables.Expand()
 }

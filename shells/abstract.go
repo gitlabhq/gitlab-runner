@@ -28,15 +28,9 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 	}
 }
 
-func (b *AbstractShell) writeTLSCAInfo(w ShellWriter, build *common.Build, key string) {
-	if build.TLSCAChain != "" {
-		w.Variable(common.JobVariable{
-			Key:      key,
-			Value:    build.TLSCAChain,
-			Public:   true,
-			Internal: true,
-			File:     true,
-		})
+func (b *AbstractShell) writeGitExports(w ShellWriter, info common.ShellScriptInfo) {
+	for _, variable := range info.Build.GetGitTLSVariables() {
+		w.Variable(variable)
 	}
 }
 
@@ -293,7 +287,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 
 func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
-	b.writeTLSCAInfo(w, info.Build, "GIT_SSL_CAINFO")
+	b.writeGitExports(w, info)
 
 	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
 		b.writeCommands(w, info.PreCloneScript)
@@ -313,7 +307,6 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
-	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Try to restore from main cache, if not found cache for master
 	b.cacheExtractor(w, info)
@@ -323,7 +316,6 @@ func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.Shell
 func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
-	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Process all artifacts
 	b.downloadAllArtifacts(w, info)
@@ -503,7 +495,6 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
-	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Find cached files and archive them
 	b.cacheArchiver(w, info)
@@ -513,7 +504,6 @@ func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.Shell
 func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
-	b.writeTLSCAInfo(w, info.Build, "CI_SERVER_TLS_CA_FILE")
 
 	// Upload artifacts
 	b.uploadArtifacts(w, info)

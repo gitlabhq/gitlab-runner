@@ -35,7 +35,7 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err
 	if n.clients == nil {
 		n.clients = make(map[string]*client)
 	}
-	key := fmt.Sprintf("%s_%s_%s", credentials.GetURL(), credentials.GetToken(), credentials.GetTLSCAFile())
+	key := fmt.Sprintf("%s_%s_%s_%s", credentials.GetURL(), credentials.GetToken(), credentials.GetTLSCAFile(), credentials.GetTLSCertFile())
 	c = n.clients[key]
 	if c == nil {
 		c, err = newClient(credentials)
@@ -86,10 +86,10 @@ func (n *GitLabClient) doRaw(credentials requestCredentials, method, uri string,
 	return c.do(uri, method, request, requestType, headers)
 }
 
-func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string, statusCode int, request interface{}, response interface{}) (int, string, string) {
+func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string, statusCode int, request interface{}, response interface{}) (int, string, ResponseTLSData) {
 	c, err := n.getClient(credentials)
 	if err != nil {
-		return clientError, err.Error(), ""
+		return clientError, err.Error(), ResponseTLSData{}
 	}
 
 	return c.doJSON(uri, method, statusCode, request, response)
@@ -198,6 +198,24 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 	}
 }
 
+func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
+	if tlsData.CAChain != "" {
+		response.TLSCAChain = tlsData.CAChain
+	}
+
+	if tlsData.CertFile != "" && tlsData.KeyFile != "" {
+		data, err := ioutil.ReadFile(tlsData.CertFile)
+		if err == nil {
+			response.TLSAuthCert = string(data)
+		}
+		data, err = ioutil.ReadFile(tlsData.KeyFile)
+		if err == nil {
+			response.TLSAuthKey = string(data)
+		}
+
+	}
+}
+
 func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobResponse, bool) {
 	request := common.JobRequest{
 		Info:       n.getRunnerVersion(config),
@@ -206,7 +224,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	}
 
 	var response common.JobResponse
-	result, statusText, certificates := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", 201, &request, &response)
+	result, statusText, tlsData := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", 201, &request, &response)
 
 	switch result {
 	case 201:
@@ -214,7 +232,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 			"job":      strconv.Itoa(response.ID),
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
-		response.TLSCAChain = certificates
+		addTLSData(&response, tlsData)
 		return &response, true
 	case 403:
 		config.Log().Errorln("Checking for jobs...", "forbidden")
