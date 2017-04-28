@@ -342,14 +342,7 @@ func (mr *RunCommand) runWait() {
 	mr.stopSignal = <-mr.stopSignals
 }
 
-func (mr *RunCommand) serveMetrics() error {
-	// We separate out the listener creation here so that we can return an error if
-	// the provided address is invalid or there is some other listener error.
-	listener, err := net.Listen("tcp", mr.metricsServerAddress())
-	if err != nil {
-		return err
-	}
-
+func (mr *RunCommand) serveMetrics() {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
@@ -370,16 +363,10 @@ func (mr *RunCommand) serveMetrics() error {
 	}
 
 	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
-	go func() {
-		log.Fatalln(http.Serve(listener, nil))
-	}()
-
-	return nil
 }
 
-func (mr *RunCommand) serveDebugData() error {
+func (mr *RunCommand) serveDebugData() {
 	http.Handle("/debug/jobs/list", http.HandlerFunc(mr.buildsHelper.ListJobsHandler))
-	return nil
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
@@ -388,13 +375,19 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 		return
 	}
 
-	if err := mr.serveMetrics(); err != nil {
+	// We separate out the listener creation here so that we can return an error if
+	// the provided address is invalid or there is some other listener error.
+	listener, err := net.Listen("tcp", mr.metricsServerAddress())
+	if err != nil {
 		log.Fatalln(err)
 	}
 
-	if err := mr.serveDebugData(); err != nil {
-		log.Fatalln(err)
-	}
+	go func() {
+		log.Fatalln(http.Serve(listener, nil))
+	}()
+
+	mr.serveMetrics()
+	mr.serveDebugData()
 
 	log.Infoln("Metrics server listening at", mr.metricsServerAddress())
 }
