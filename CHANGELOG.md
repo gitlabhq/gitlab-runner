@@ -1,3 +1,8 @@
+v 1.11.3 (2017-04-28)
+- Add urls to environments created with CI release jobs !537
+- Speed up CI pipeline !536
+- Fix runner crashing on builds helper collect !529
+
 v 1.11.2
 - Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
 - Don't install docs for the fpm Gem !526
