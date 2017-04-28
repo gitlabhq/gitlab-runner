@@ -121,14 +121,11 @@ func getTestBuild() *common.Build {
 
 	runner := common.RunnerConfig{}
 	runner.Token = "a1b2c3d4"
-	jobInfo := common.JobInfo{
-		ProjectID: 1,
-	}
 
 	build := &common.Build{}
 	build.ID = testBuildCurrentID
 	build.Runner = &runner
-	build.JobInfo = jobInfo
+	build.ProjectID = 1
 
 	return build
 }
