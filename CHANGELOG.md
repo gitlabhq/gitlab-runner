@@ -1,3 +1,6 @@
+v 1.11.4 (2017-04-28)
+- Fixes test that was failing 1.11.3 release
+
 v 1.11.3 (2017-04-28)
 - Add urls to environments created with CI release jobs !537
 - Speed up CI pipeline !536
