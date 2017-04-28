@@ -244,6 +244,10 @@ func (s *executor) setupBuildPod() error {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(image)
 		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, s.serviceRequests, s.serviceLimits)
 	}
+	labels := make(map[string]string)
+	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
+		labels[k] = s.Build.Variables.ExpandValue(v)
+	}
 
 	var imagePullSecrets []api.LocalObjectReference
 	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
@@ -260,6 +264,7 @@ func (s *executor) setupBuildPod() error {
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
 			Namespace:    s.Config.Kubernetes.Namespace,
+			Labels:       labels,
 		},
 		Spec: api.PodSpec{
 			Volumes: []api.Volume{

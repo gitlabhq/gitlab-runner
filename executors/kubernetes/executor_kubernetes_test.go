@@ -517,6 +517,7 @@ func TestSetupBuildPod(t *testing.T) {
 		RunnerConfig common.RunnerConfig
 		PrepareFn    func(*testing.T, testDef, *executor)
 		VerifyFn     func(*testing.T, testDef, *api.Pod)
+		Variables    []common.JobVariable
 	}
 	tests := []testDef{
 		{
@@ -606,6 +607,30 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 			},
 		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						PodLabels: map[string]string{
+							"test":    "label",
+							"another": "label",
+							"var":     "$test",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"test":    "label",
+					"another": "label",
+					"var":     "sometestvar",
+				}, pod.ObjectMeta.Labels)
+			},
+			Variables: []common.JobVariable{
+				{Key: "test", Value: "sometestvar"},
+			},
+		},
 	}
 
 	executed := false
@@ -648,6 +673,10 @@ func TestSetupBuildPod(t *testing.T) {
 		}
 		c.Client = fakeClient.Client
 
+		vars := test.Variables
+		if vars == nil {
+			vars = []common.JobVariable{}
+		}
 		ex := executor{
 			kubeClient: c,
 			options:    &kubernetesOptions{},
@@ -656,9 +685,9 @@ func TestSetupBuildPod(t *testing.T) {
 				BuildShell: &common.ShellConfiguration{},
 				Build: &common.Build{
 					JobResponse: common.JobResponse{
-						Variables: []common.JobVariable{},
+						Variables: vars,
 					},
-					Runner: &common.RunnerConfig{},
+					Runner: &test.RunnerConfig,
 				},
 			},
 		}
