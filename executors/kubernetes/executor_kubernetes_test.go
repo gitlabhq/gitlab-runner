@@ -98,7 +98,7 @@ func TestCleanup(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/pods/test-pod":
-					return &http.Response{StatusCode: 200, Body: FakeReadCloser{
+					return &http.Response{StatusCode: http.StatusOK, Body: FakeReadCloser{
 						Reader: strings.NewReader(""),
 					}}, nil
 				default:
@@ -608,7 +608,7 @@ func TestSetupCredentials(t *testing.T) {
 				test.VerifyFn(t, test, p)
 			}
 
-			resp = &http.Response{StatusCode: 200, Body: FakeReadCloser{
+			resp = &http.Response{StatusCode: http.StatusOK, Body: FakeReadCloser{
 				Reader: bytes.NewBuffer(podBytes),
 			}}
 			resp.Header = make(http.Header)
@@ -805,7 +805,7 @@ func TestSetupBuildPod(t *testing.T) {
 
 			test.VerifyFn(t, test, p)
 
-			resp = &http.Response{StatusCode: 200, Body: FakeReadCloser{
+			resp = &http.Response{StatusCode: http.StatusOK, Body: FakeReadCloser{
 				Reader: bytes.NewBuffer(podBytes),
 			}}
 			resp.Header = make(http.Header)
