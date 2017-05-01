@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -359,4 +361,78 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 
 	statusCode, statusText, _ = c.doJSON("invalid-header", "GET", 200, nil, &res)
 	assert.Equal(t, -1, statusCode, statusText)
+}
+
+func tooManyRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	delay := r.Header.Get("delay") == "yes"
+
+	if delay {
+		w.WriteHeader(429)
+	} else {
+		w.WriteHeader(201)
+	}
+}
+
+func doTestCall(t *testing.T, c *client, delay bool) (duration time.Duration) {
+	var body io.Reader
+	headers := make(http.Header)
+	if delay {
+		headers.Add("delay", "yes")
+	} else {
+		headers.Add("delay", "no")
+	}
+
+	started := time.Now()
+	res, err := c.do("", "POST", body, "application/json", headers)
+	duration = time.Since(started)
+
+	assert.NoError(t, err)
+	if delay {
+		assert.Equal(t, http.StatusTooManyRequests, res.StatusCode)
+	} else {
+		assert.Equal(t, http.StatusCreated, res.StatusCode)
+	}
+
+	return
+}
+
+func compareDurations(t *testing.T, delayed bool, previousDuration, duration time.Duration, minFactor, maxFactor float64) {
+	durationsFactor := duration.Seconds() / previousDuration.Seconds()
+	factorsComparison := minFactor < durationsFactor && durationsFactor < maxFactor
+
+	message := "Requests finished with 429 should generate a delay"
+	if !delayed {
+		message = "Requests not finished with 429 should reset the delay"
+	}
+	assert.True(t, factorsComparison, message)
+}
+
+func TestRequestsBackOff(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(tooManyRequestsHandler))
+	defer s.Close()
+
+	c, _ := newClient(&RunnerCredentials{
+		URL: s.URL,
+	})
+
+	testCases := []struct {
+		delayed        bool
+		minDelayFactor float64
+		maxDelayFactor float64
+	}{
+		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
+		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
+		{false, 0, 0.5},
+		{true, 0, backOffDelayFactor * 1000},
+		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
+	}
+
+	previousDuration := doTestCall(t, c, true)
+	for id, testCase := range testCases {
+		t.Run(fmt.Sprintf("%d", id), func(t *testing.T) {
+			duration := doTestCall(t, c, testCase.delayed)
+			compareDurations(t, testCase.delayed, previousDuration, duration, testCase.minDelayFactor, testCase.maxDelayFactor)
+			previousDuration = duration
+		})
+	}
 }

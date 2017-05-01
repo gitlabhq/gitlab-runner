@@ -18,9 +18,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/jpillora/backoff"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
@@ -33,10 +35,16 @@ type requestCredentials interface {
 	GetTLSKeyFile() string
 }
 
-var dialer = net.Dialer{
-	Timeout:   30 * time.Second,
-	KeepAlive: 30 * time.Second,
-}
+var (
+	dialer = net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	backOffDelayMin    = 100 * time.Millisecond
+	backOffDelayMax    = 60 * time.Second
+	backOffDelayFactor = 2.0
+)
 
 type client struct {
 	http.Client
@@ -49,6 +57,8 @@ type client struct {
 	updateTime           time.Time
 	lastUpdate           string
 	compatibleWithGitLab bool
+	requestBackOffs      map[string]*backoff.Backoff
+	lock                 sync.Mutex
 }
 
 type ResponseTLSData struct {
@@ -186,6 +196,28 @@ func (n *client) getCAChain(tls *tls.ConnectionState) string {
 	return out.String()
 }
 
+func (n *client) backOffRequest(response *http.Response, method, uri string) {
+	n.lock.Lock()
+
+	key := fmt.Sprintf("%s_%s", method, uri)
+	if n.requestBackOffs[key] == nil {
+		n.requestBackOffs[key] = &backoff.Backoff{
+			Min:    backOffDelayMin,
+			Max:    backOffDelayMax,
+			Factor: backOffDelayFactor,
+			Jitter: false,
+		}
+	}
+	n.lock.Unlock()
+
+	if response.StatusCode == http.StatusTooManyRequests {
+		time.Sleep(n.requestBackOffs[key].Duration())
+	} else {
+		n.requestBackOffs[key].Reset()
+	}
+
+}
+
 func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
 	url, err := n.url.Parse(uri)
 	if err != nil {
@@ -214,6 +246,9 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 		err = fmt.Errorf("couldn't execute %v against %s: %v", req.Method, req.URL, err)
 		return
 	}
+
+	n.backOffRequest(res, method, uri)
+
 	return
 }
 
@@ -316,6 +351,7 @@ func newClient(requestCredentials requestCredentials) (c *client, err error) {
 		certFile:             requestCredentials.GetTLSCertFile(),
 		keyFile:              requestCredentials.GetTLSKeyFile(),
 		compatibleWithGitLab: true,
+		requestBackOffs:      make(map[string]*backoff.Backoff),
 	}
 
 	host := strings.Split(url.Host, ":")[0]
