@@ -196,8 +196,9 @@ func (n *client) getCAChain(tls *tls.ConnectionState) string {
 	return out.String()
 }
 
-func (n *client) backOffRequest(response *http.Response, method, uri string) {
+func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
 	n.lock.Lock()
+	defer n.lock.Unlock()
 
 	key := fmt.Sprintf("%s_%s", method, uri)
 	if n.requestBackOffs[key] == nil {
@@ -208,14 +209,25 @@ func (n *client) backOffRequest(response *http.Response, method, uri string) {
 			Jitter: false,
 		}
 	}
-	n.lock.Unlock()
 
-	if response.StatusCode == http.StatusTooManyRequests {
-		time.Sleep(n.requestBackOffs[key].Duration())
-	} else {
-		n.requestBackOffs[key].Reset()
+	return n.requestBackOffs[key]
+}
+
+func (n *client) doBackoffRequest(req *http.Request) (res *http.Response, err error) {
+	backoffDelay := n.ensureBackoff(req.Method, req.RequestURI)
+
+	time.Sleep(backoffDelay.Duration())
+	res, err = n.Do(req)
+	if err != nil {
+		err = fmt.Errorf("couldn't execute %v against %s: %v", req.Method, req.URL, err)
+		return
 	}
 
+	if res.StatusCode != http.StatusTooManyRequests {
+		backoffDelay.Reset()
+	}
+
+	return
 }
 
 func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
@@ -241,14 +253,7 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 
 	n.ensureTLSConfig()
 
-	res, err = n.Do(req)
-	if err != nil {
-		err = fmt.Errorf("couldn't execute %v against %s: %v", req.Method, req.URL, err)
-		return
-	}
-
-	n.backOffRequest(res, method, uri)
-
+	res, err = n.doBackoffRequest(req)
 	return
 }
 

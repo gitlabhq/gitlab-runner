@@ -373,38 +373,47 @@ func tooManyRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func doTestCall(t *testing.T, c *client, delay bool) (duration time.Duration) {
+type backoffTestCase struct {
+	delayed        bool
+	minDelayFactor float64
+	maxDelayFactor float64
+}
+
+func compareDurations(t *testing.T, testCase backoffTestCase, previousDuration, duration time.Duration) {
+	previous := previousDuration.Seconds()
+	if previous == 0 {
+		return
+	}
+
+	durationsFactor := duration.Seconds() / previousDuration.Seconds()
+	factorsComparison := testCase.minDelayFactor < durationsFactor && durationsFactor < testCase.maxDelayFactor
+
+	message := "Previous and current duration factor should be between %.3f and %.3f, got %.3f"
+	assert.True(t, factorsComparison, message, testCase.minDelayFactor, testCase.maxDelayFactor, durationsFactor)
+}
+
+func doTestCall(t *testing.T, c *client, testCase backoffTestCase, previousDuration time.Duration) (duration time.Duration) {
+	var expectedStatusCode int
 	var body io.Reader
 	headers := make(http.Header)
-	if delay {
+
+	if testCase.delayed {
 		headers.Add("delay", "yes")
+		expectedStatusCode = http.StatusTooManyRequests
 	} else {
 		headers.Add("delay", "no")
+		expectedStatusCode = http.StatusCreated
 	}
 
 	started := time.Now()
-	res, err := c.do("", "POST", body, "application/json", headers)
+	res, err := c.do("/", "POST", body, "application/json", headers)
 	duration = time.Since(started)
 
 	assert.NoError(t, err)
-	if delay {
-		assert.Equal(t, http.StatusTooManyRequests, res.StatusCode)
-	} else {
-		assert.Equal(t, http.StatusCreated, res.StatusCode)
-	}
+	assert.Equal(t, expectedStatusCode, res.StatusCode)
+	compareDurations(t, testCase, previousDuration, duration)
 
 	return
-}
-
-func compareDurations(t *testing.T, delayed bool, previousDuration, duration time.Duration, minFactor, maxFactor float64) {
-	durationsFactor := duration.Seconds() / previousDuration.Seconds()
-	factorsComparison := minFactor < durationsFactor && durationsFactor < maxFactor
-
-	message := "Requests finished with 429 should generate a delay"
-	if !delayed {
-		message = "Requests not finished with 429 should reset the delay"
-	}
-	assert.True(t, factorsComparison, message)
 }
 
 func TestRequestsBackOff(t *testing.T) {
@@ -415,24 +424,22 @@ func TestRequestsBackOff(t *testing.T) {
 		URL: s.URL,
 	})
 
-	testCases := []struct {
-		delayed        bool
-		minDelayFactor float64
-		maxDelayFactor float64
-	}{
+	testCases := []backoffTestCase{
+		{false, 0, 1.1},
+		{true, 0, 1.1},
 		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
 		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
-		{false, 0, 0.5},
-		{true, 0, backOffDelayFactor * 1000},
+		{false, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
+		{true, 0, 1.1},
 		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
+		{false, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
+		{true, 0, 1.1},
 	}
 
-	previousDuration := doTestCall(t, c, true)
+	var duration time.Duration
 	for id, testCase := range testCases {
 		t.Run(fmt.Sprintf("%d", id), func(t *testing.T) {
-			duration := doTestCall(t, c, testCase.delayed)
-			compareDurations(t, testCase.delayed, previousDuration, duration, testCase.minDelayFactor, testCase.maxDelayFactor)
-			previousDuration = duration
+			duration = doTestCall(t, c, testCase, duration)
 		})
 	}
 }
