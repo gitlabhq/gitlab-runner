@@ -1,3 +1,7 @@
+v 9.1.1 (2017-05-02)
+- Fix apt-get syntax to install a specific version. !563
+- Remove the build container after execution has completed !571
+
 v 9.1.0 (2017-04-22)
 - Don't install docs for the fpm Gem !526
 - Mention tagged S3 sources in installation documentation !513
@@ -30,6 +34,10 @@ v 9.1.0 (2017-04-22)
 - Changed information line logged by Runner while unregistering !540
 - Properly configure connection timeouts and keep-alives !560
 - Log fatal error when concurrent is less than 1 !549
+
+v 9.0.4 (2017-05-02)
+- Fix apt-get syntax to install a specific version. !563
+- Remove the build container after execution has completed !571
 
 v 9.0.3 (2017-04-21)
 - Fix runner crashing on builds helper collect !529
