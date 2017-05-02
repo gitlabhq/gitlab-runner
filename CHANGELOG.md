@@ -1,3 +1,7 @@
+v 9.0.4 (2017-05-02)
+- Fix apt-get syntax to install a specific version. !563
+- Remove the build container after execution has completed !571
+
 v 9.0.3 (2017-04-21)
 - Fix runner crashing on builds helper collect !529
 - Properly configure connection timeouts and keep-alives !560
