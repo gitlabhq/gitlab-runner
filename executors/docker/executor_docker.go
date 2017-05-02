@@ -39,7 +39,7 @@ type executor struct {
 	executors.AbstractExecutor
 	client      docker_helpers.Client
 	failures    []string // IDs of containers that have failed in some way
-	builds      []*types.Container
+	builds      []string // IDs of successfully created build containers
 	services    []*types.Container
 	caches      []string // IDs of cache containers
 	options     dockerOptions
@@ -753,6 +753,8 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 		s.failures = append(s.failures, resp.ID)
 		return nil, err
 	}
+
+	s.builds = append(s.builds, resp.ID)
 	return &inspect, nil
 }
 
@@ -1083,8 +1085,8 @@ func (s *executor) Cleanup() {
 		remove(cacheID)
 	}
 
-	for _, build := range s.builds {
-		remove(build.ID)
+	for _, buildID := range s.builds {
+		remove(buildID)
 	}
 
 	wg.Wait()
