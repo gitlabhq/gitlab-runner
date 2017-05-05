@@ -2,45 +2,21 @@
 
 > The autoscale feature was introduced in GitLab Runner 1.1.0.
 
----
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Overview](#overview)
-- [System requirements](#system-requirements)
-- [Runner configuration](#runner-configuration)
-  - [Runner global options](#runner-global-options)
-  - [`[[runners]]` options](#runners-options)
-  - [`[runners.machine]` options](#runnersmachine-options)
-  - [`[runners.cache]` options](#runnerscache-options)
-  - [Additional configuration information](#additional-configuration-information)
-- [Autoscaling algorithm and parameters](#autoscaling-algorithm-and-parameters)
-- [How `current`, `limit` and `IdleCount` generate the upper limit of running machines](#how-current-limit-and-idlecount-generate-the-upper-limit-of-running-machines)
-- [Off Peak time mode configuration](#off-peak-time-mode-configuration)
-- [Distributed runners caching](#distributed-runners-caching)
-- [Distributed Docker registry mirroring](#distributed-docker-registry-mirroring)
-- [A complete example of `config.toml`](#a-complete-example-of-configtoml)
-- [What are the supported cloud providers](#what-are-the-supported-cloud-providers)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-## Overview
-
 Autoscale provides the ability to utilize resources in a more elastic and
 dynamic way.
+
+Thanks to Runners being able to autoscale, your infrastructure contains only as
+much build instances as necessary at anytime. If you configure the Runner to
+only use autoscale, the system on which the Runner is installed acts as a
+bastion for all the machines it creates.
+
+## Overview
 
 When this feature is enabled and configured properly, builds are executed on
 machines created _on demand_. Those machines, after the build is finished, can
 wait to run the next builds or can be removed after the configured `IdleTime`.
 In case of many cloud providers this helps to utilize the cost of already used
 instances.
-
-Thanks to runners being able to autoscale, your infrastructure contains only as
-much build instances as necessary at anytime. If you configure the Runner to
-only use autoscale, the system on which the Runner is installed acts as a
-bastion for all the machines it creates.
 
 Below, you can see a real life example of the runners autoscale feature, tested
 on GitLab.com for the [GitLab Community Edition][ce] project:
@@ -436,8 +412,8 @@ configuration options, including virtualization/cloud provider parameters, are
 available at the [Docker Machine documentation][docker-machine-driver].
 
 [cache]: http://doc.gitlab.com/ce/ci/yaml/README.html#cache
-[runner-installation]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner#installation
-[runner-configuration]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner#advanced-configuration
+[runner-installation]: ../install/autoscaling.md
+[runner-configuration]: index.md
 [docker-machine-docs]: https://docs.docker.com/machine/
 [docker-machine-driver]: https://docs.docker.com/machine/drivers/
 [docker-machine-installation]: https://docs.docker.com/machine/install-machine/
