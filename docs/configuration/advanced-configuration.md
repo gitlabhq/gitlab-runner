@@ -17,7 +17,7 @@ This defines global settings of multi-runner.
 | Setting | Description |
 | ------- | ----------- |
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
-| `log_level`      | Log level (options: debug, info, warn, error, fatal, panic). Note that this setting has lower priority than log-level set by command line argument --debug, -l or --log-level | 
+| `log_level`      | Log level (options: debug, info, warn, error, fatal, panic). Note that this setting has lower priority than log-level set by command line argument --debug, -l or --log-level |
 | `check_interval` | defines in seconds how often to check GitLab for a new builds |
 | `sentry_dsn`     | enable tracking of all system level errors to sentry |
 | `metrics_server` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
@@ -26,7 +26,7 @@ Example:
 
 ```bash
 concurrent = 4
-log_level = "warning"  
+log_level = "warning"
 ```
 
 ## The [[runners]] section
@@ -257,7 +257,7 @@ To configure access for `registry.example.com`, follow these steps:
    `image` and/or `services` in your [`.gitlab-ci.yml` file][yaml-priv-reg].
 
 You can add configuration for as many registries as you want, adding more
-registries to the `"auth"` hash as described above.
+registries to the `"auths"` hash as described above.
 
 The steps performed by the Runner can be summed up to:
 
@@ -271,11 +271,12 @@ Now that the Runner is set up to authenticate against your private registry,
 learn [how to configure .gitlab-ci.yml][yaml-priv-reg] in order to use that
 registry.
 
-### Support for GitLab integrated registry
+#### Support for GitLab integrated registry
 
 > **Note:**
 To work automatically with private/protected images from
-GitLab integrated registry it needs at least GitLab CE/EE **8.14**.
+GitLab integrated registry it needs at least GitLab CE/EE **8.14**
+and GitLab Runner **1.8**.
 
 Starting with GitLab CE/EE 8.14, GitLab will send credentials for its integrated
 registry along with the build data. These credentials will be automatically
@@ -289,13 +290,30 @@ registry, even if the image is private/protected. To fully understand for
 which images the builds will have access, read the
 [New CI build permissions model][ci-build-permissions-model] documentation.
 
-### Restrict `allowed_images` to private registry
+#### Precedence of Docker authorization resolving
+
+As described above, GitLab Runner can authorize Docker against a registry by
+using credentials sent in different way. To find a proper registry, the following
+precedence is taken into account:
+
+1. Credentials configured with `DOCKER_AUTH_CONFIG`.
+1. Credentials configured locally on Runner's host with `~/.docker/config.json`
+   or `~/.dockercfg` files (e.g., by running `docker login` on the host).
+1. Credentials sent by default with job's payload (e.g., credentials for _integrated
+   registry_ described above).
+
+The first found credentials for the registry will be used. So for example,
+if you add some credentials for the _integrated registry_ with the
+`DOCKER_AUTH_CONFIG` variable, then the default credentials will be overridden.
+
+#### Restrict `allowed_images` to private registry
+
 For certain setups you will restrict access of the build jobs to docker images
 which comes from your private docker registry. In that case set
 
 ```bash
 [runners.docker]
-  …
+  ...
   allowed_images = ["my.registry.tld:5000/*:*"]
 ```
 
