@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -58,7 +59,6 @@ const (
 type Build struct {
 	JobResponse `yaml:",inline"`
 
-	Trace           JobTrace
 	SystemInterrupt chan os.Signal `json:"-" yaml:"-"`
 	RootDir         string         `json:"-" yaml:"-"`
 	BuildDir        string         `json:"-" yaml:"-"`
@@ -138,7 +138,7 @@ func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
 }
 
-func (b *Build) executeStage(buildStage BuildStage, executor Executor, abort chan interface{}) error {
+func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
 	b.CurrentStage = buildStage
 
 	shell := executor.Shell()
@@ -157,8 +157,8 @@ func (b *Build) executeStage(buildStage BuildStage, executor Executor, abort cha
 	}
 
 	cmd := ExecutorCommand{
-		Script: script,
-		Abort:  abort,
+		Context: ctx,
+		Script:  script,
 	}
 
 	switch buildStage {
@@ -171,7 +171,7 @@ func (b *Build) executeStage(buildStage BuildStage, executor Executor, abort cha
 	return executor.Run(cmd)
 }
 
-func (b *Build) executeUploadArtifacts(state error, executor Executor, abort chan interface{}) (err error) {
+func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
 	jobState := state
 
 	for _, artifacts := range b.Artifacts {
@@ -179,12 +179,12 @@ func (b *Build) executeUploadArtifacts(state error, executor Executor, abort cha
 		if state == nil {
 			// Previous stages were successful
 			if when == "" || when == ArtifactWhenOnSuccess || when == ArtifactWhenAlways {
-				state = b.executeStage(BuildStageUploadArtifacts, executor, abort)
+				state = b.executeStage(ctx, BuildStageUploadArtifacts, executor)
 			}
 		} else {
 			// Previous stage did fail
 			if when == ArtifactWhenOnFailure || when == ArtifactWhenAlways {
-				err = b.executeStage(BuildStageUploadArtifacts, executor, abort)
+				err = b.executeStage(ctx, BuildStageUploadArtifacts, executor)
 			}
 		}
 	}
@@ -196,79 +196,93 @@ func (b *Build) executeUploadArtifacts(state error, executor Executor, abort cha
 	return
 }
 
-func (b *Build) executeScript(executor Executor, abort chan interface{}) error {
+func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	// Prepare stage
-	err := b.executeStage(BuildStagePrepare, executor, abort)
+	err := b.executeStage(ctx, BuildStagePrepare, executor)
 
 	if err == nil {
-		err = b.attemptExecuteStage(BuildStageGetSources, executor, abort, b.GetGetSourcesAttempts())
+		err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
 	}
 	if err == nil {
-		err = b.attemptExecuteStage(BuildStageDownloadArtifacts, executor, abort, b.GetDownloadArtifactsAttempts())
+		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts())
 	}
 	if err == nil {
-		err = b.attemptExecuteStage(BuildStageRestoreCache, executor, abort, b.GetRestoreCacheAttempts())
+		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts())
 	}
 
 	if err == nil {
 		// Execute user build script (before_script + script)
-		err = b.executeStage(BuildStageUserScript, executor, abort)
+		err = b.executeStage(ctx, BuildStageUserScript, executor)
 
 		// Execute after script (after_script)
-		timeoutCh := make(chan interface{}, 1)
-		timeout := time.AfterFunc(time.Minute*5, func() {
-			close(timeoutCh)
-		})
-		b.executeStage(BuildStageAfterScript, executor, timeoutCh)
-		timeout.Stop()
+		timeoutContext, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
+		defer timeoutCancel()
+
+		b.executeStage(timeoutContext, BuildStageAfterScript, executor)
 	}
 
 	// Execute post script (cache store, artifacts upload)
 	if err == nil {
-		err = b.executeStage(BuildStageArchiveCache, executor, abort)
+		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
 	}
-	err = b.executeUploadArtifacts(err, executor, abort)
+	err = b.executeUploadArtifacts(ctx, err, executor)
 	return err
 }
 
-func (b *Build) attemptExecuteStage(buildStage BuildStage, executor Executor, abort chan interface{}, attempts int) (err error) {
+func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {
 	if attempts < 1 || attempts > 10 {
 		return fmt.Errorf("Number of attempts out of the range [1, 10] for stage: %s", buildStage)
 	}
 	for attempt := 0; attempt < attempts; attempt++ {
-		if err = b.executeStage(buildStage, executor, abort); err == nil {
+		if err = b.executeStage(ctx, buildStage, executor); err == nil {
 			return
 		}
 	}
 	return
 }
 
-func (b *Build) run(executor Executor) (err error) {
-	b.CurrentState = BuildRunRuntimeRunning
-
+func (b *Build) GetBuildTimeout() time.Duration {
 	buildTimeout := b.RunnerInfo.Timeout
 	if buildTimeout <= 0 {
 		buildTimeout = DefaultTimeout
 	}
+	return time.Duration(buildTimeout) * time.Second
+}
+
+func (b *Build) handleError(err error) error {
+	switch err {
+	case context.Canceled:
+		b.CurrentState = BuildRunRuntimeCanceled
+		return &BuildError{Inner: errors.New("canceled")}
+
+	case context.DeadlineExceeded:
+		b.CurrentState = BuildRunRuntimeTimedout
+		return &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout())}
+
+	default:
+		b.CurrentState = BuildRunRuntimeFinished
+		return err
+	}
+}
+
+func (b *Build) run(ctx context.Context, executor Executor) (err error) {
+	b.CurrentState = BuildRunRuntimeRunning
 
 	buildFinish := make(chan error, 1)
-	buildAbort := make(chan interface{})
+
+	runContext, runCancel := context.WithCancel(context.Background())
+	defer runCancel()
 
 	// Run build script
 	go func() {
-		buildFinish <- b.executeScript(executor, buildAbort)
+		buildFinish <- b.executeScript(runContext, executor)
 	}()
 
 	// Wait for signals: cancel, timeout, abort or finish
 	b.Log().Debugln("Waiting for signals...")
 	select {
-	case <-b.Trace.Aborted():
-		err = &BuildError{Inner: errors.New("canceled")}
-		b.CurrentState = BuildRunRuntimeCanceled
-
-	case <-time.After(time.Duration(buildTimeout) * time.Second):
-		err = &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", buildTimeout)}
-		b.CurrentState = BuildRunRuntimeTimedout
+	case <-ctx.Done():
+		err = b.handleError(ctx.Err())
 
 	case signal := <-b.SystemInterrupt:
 		err = fmt.Errorf("aborted: %v", signal)
@@ -282,16 +296,12 @@ func (b *Build) run(executor Executor) (err error) {
 	b.Log().WithError(err).Debugln("Waiting for build to finish...")
 
 	// Wait till we receive that build did finish
-	for {
-		select {
-		case buildAbort <- true:
-		case <-buildFinish:
-			return err
-		}
-	}
+	runCancel()
+	<-buildFinish
+	return err
 }
 
-func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvider, logger BuildLogger) (executor Executor, err error) {
+func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider ExecutorProvider, logger BuildLogger) (executor Executor, err error) {
 	for tries := 0; tries < PreparationRetries; tries++ {
 		executor = provider.Create()
 		if executor == nil {
@@ -301,7 +311,7 @@ func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvi
 
 		b.executorStageResolver = executor.GetCurrentStage
 
-		err = executor.Prepare(globalConfig, b.Runner, b)
+		err = executor.Prepare(options)
 		if err == nil {
 			break
 		}
@@ -311,6 +321,8 @@ func (b *Build) retryCreateExecutor(globalConfig *Config, provider ExecutorProvi
 		}
 		if _, ok := err.(*BuildError); ok {
 			break
+		} else if options.Context.Err() != nil {
+			return nil, b.handleError(options.Context.Err())
 		}
 
 		logger.SoftErrorln("Preparation failed:", err)
@@ -354,16 +366,27 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		}
 	}()
 
-	b.Trace = trace
+	context, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
+	defer cancel()
+
+	trace.SetCancelFunc(cancel)
+
+	options := ExecutorPrepareOptions{
+		Config:  b.Runner,
+		Build:   b,
+		Trace:   trace,
+		User:    globalConfig.User,
+		Context: context,
+	}
 
 	provider := GetExecutor(b.Runner.Executor)
 	if provider == nil {
 		return errors.New("executor not found")
 	}
 
-	executor, err = b.retryCreateExecutor(globalConfig, provider, logger)
+	executor, err = b.retryCreateExecutor(options, provider, logger)
 	if err == nil {
-		err = b.run(executor)
+		err = b.run(context, executor)
 	}
 	if executor != nil {
 		executor.Finish(err)

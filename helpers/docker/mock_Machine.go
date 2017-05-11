@@ -27,8 +27,8 @@ func (m *MockMachine) Remove(name string) error {
 
 	return r0
 }
-func (m *MockMachine) List(nodeFilter string) ([]string, error) {
-	ret := m.Called(nodeFilter)
+func (m *MockMachine) List() ([]string, error) {
+	ret := m.Called()
 
 	var r0 []string
 	if ret.Get(0) != nil {

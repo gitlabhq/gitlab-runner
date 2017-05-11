@@ -15,8 +15,8 @@ type commandExecutor struct {
 	buildContainer      *types.ContainerJSON
 }
 
-func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.executor.Prepare(globalConfig, config, build)
+func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
+	err := s.executor.Prepare(options)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 
 	s.Debugln("Executing on", runOn.Name, "the", cmd.Script)
 
-	return s.watchContainer(runOn.ID, bytes.NewBufferString(cmd.Script), cmd.Abort)
+	return s.watchContainer(cmd.Context, runOn.ID, bytes.NewBufferString(cmd.Script))
 }
 
 func init() {

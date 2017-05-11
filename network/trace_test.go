@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -121,13 +122,17 @@ func TestIgnoreStatusChange(t *testing.T) {
 func TestJobAbort(t *testing.T) {
 	traceUpdateInterval = 0
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	u := &updateTraceNetwork{}
 	jobCredentials := &common.JobCredentials{
 		ID: cancelID,
 	}
 	b := newJobTrace(u, jobConfig, jobCredentials)
+	b.SetCancelFunc(cancel)
 	b.start()
-	assert.NotNil(t, <-b.Aborted(), "should abort the job")
+	assert.NotNil(t, <-ctx.Done(), "should abort the job")
 	b.Success()
 }
 

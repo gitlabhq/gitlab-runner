@@ -29,5 +29,5 @@ type Client interface {
 
 	Info(ctx context.Context) (types.Info, error)
 
-	io.Closer
+	Close() error
 }

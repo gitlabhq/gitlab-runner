@@ -83,8 +83,8 @@ func (s *executor) setupResources() error {
 	return nil
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, job *common.Build) (err error) {
-	if err = s.AbstractExecutor.Prepare(globalConfig, config, job); err != nil {
+func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
+	if err = s.AbstractExecutor.Prepare(options); err != nil {
 		return err
 	}
 
@@ -92,7 +92,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	if s.kubeClient, err = getKubeClient(config.Kubernetes); err != nil {
+	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes); err != nil {
 		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
@@ -104,11 +104,11 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 		return err
 	}
 
-	if err = s.overwriteNamespace(job); err != nil {
+	if err = s.overwriteNamespace(options.Build); err != nil {
 		return err
 	}
 
-	s.prepareOptions(job)
+	s.prepareOptions(options.Build)
 
 	if err = s.checkDefaults(); err != nil {
 		return err
@@ -140,14 +140,16 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	select {
 	case err := <-s.runInContainer(ctx, containerName, cmd.Script):
 		if err != nil && strings.Contains(err.Error(), "executing in Docker Container") {
 			return &common.BuildError{Inner: err}
 		}
 		return err
-	case <-cmd.Abort:
-		cancel()
+
+	case <-cmd.Context.Done():
 		return fmt.Errorf("build aborted")
 	}
 }
@@ -299,7 +301,7 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 	go func() {
 		defer close(errc)
 
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.BuildTrace, s.Config.Kubernetes)
+		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.Trace, s.Config.Kubernetes)
 
 		if err != nil {
 			errc <- err
@@ -324,8 +326,8 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 			ContainerName: name,
 			Command:       s.BuildShell.DockerCommand,
 			In:            strings.NewReader(command),
-			Out:           s.BuildTrace,
-			Err:           s.BuildTrace,
+			Out:           s.Trace,
+			Err:           s.Trace,
 			Stdin:         true,
 			Config:        config,
 			Client:        s.kubeClient,

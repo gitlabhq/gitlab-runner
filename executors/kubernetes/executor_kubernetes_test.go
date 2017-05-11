@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -146,7 +147,7 @@ func TestCleanup(t *testing.T) {
 				},
 			},
 		}
-		ex.AbstractExecutor.BuildTrace = buildTrace
+		ex.AbstractExecutor.Trace = buildTrace
 		ex.AbstractExecutor.BuildLogger = common.NewBuildLogger(buildTrace, logrus.WithFields(logrus.Fields{}))
 		ex.Cleanup()
 		if test.Error && !errored {
@@ -366,7 +367,13 @@ func TestPrepare(t *testing.T) {
 				},
 			}
 
-			err := e.Prepare(test.GlobalConfig, test.RunnerConfig, test.Build)
+			prepareOptions := common.ExecutorPrepareOptions{
+				Config:  test.RunnerConfig,
+				Build:   test.Build,
+				Context: context.TODO(),
+			}
+
+			err := e.Prepare(prepareOptions)
 
 			if err != nil {
 				if test.Error {
@@ -851,11 +858,11 @@ func TestKubernetesBuildCancel(t *testing.T) {
 	}
 	build.Image.Name = "docker:git"
 
-	trace := &common.Trace{Writer: os.Stdout, Abort: make(chan interface{}, 1)}
+	trace := &common.Trace{Writer: os.Stdout}
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.Abort <- true
+		trace.CancelFunc()
 	})
 	defer abortTimer.Stop()
 
@@ -916,12 +923,10 @@ type FakeBuildTrace struct {
 	testWriter
 }
 
-func (f FakeBuildTrace) Success()      {}
-func (f FakeBuildTrace) Fail(error)    {}
-func (f FakeBuildTrace) Notify(func()) {}
-func (f FakeBuildTrace) Aborted() chan interface{} {
-	return make(chan interface{})
-}
+func (f FakeBuildTrace) Success()                                    {}
+func (f FakeBuildTrace) Fail(error)                                  {}
+func (f FakeBuildTrace) Notify(func())                               {}
+func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc) {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }
