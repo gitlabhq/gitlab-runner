@@ -6,7 +6,7 @@ possible with the use of the **Kubernetes** executor.
 The **Kubernetes** executor, when used with GitLab CI, connects to the Kubernetes
 API in the cluster creating a Pod for each GitLab CI Job. This Pod is made
 up of, at the very least, a build container and an additional container for each
-`service` defined by the GitLab CI yaml. The names for these containers 
+`service` defined by the GitLab CI yaml. The names for these containers
 are as follows:
 
 - The build container is `build`
@@ -73,6 +73,14 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status. [Default: 3]
 - `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]
 - `pod_labels`: A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion.
+- `service-account`: default service account to be used for making kubernetes api calls.
+- `service_account_overwrite_allowed`: Regular expression to validate the contents of
+  the service account overwrite environment variable. When empty,
+    it disables the service account overwrite feature
+
+### Configuring executor Service Account
+
+You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--service-account` flag
 
 ### Overwriting Kubernetes Namespace
 
@@ -91,6 +99,23 @@ variables:
 Furthermore, to ensure only designated namespaces will be used during CI runs, inform the configuration
 `namespace_overwrite_allowed` with proper regular expression. When left empty the overwrite behaviour is
 disabled.
+
+### Overwriting Kubernetes Default Service Account
+
+Additionally, Kubernetes service account can be overwritten on `.gitlab-ci.yml` file, by using the variable
+`KUBERNETES_SERVICE_ACCOUNT_OVERWRITE`.
+
+This approach allow you to specify a service account that is attached to the namespace, usefull when dealing
+with complex RBAC configurations.
+``` yaml
+variables:
+  KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: ci-service-account
+```
+usefull when overwritting the namespace and RBAC is setup in the cluster.
+
+To ensure only designated service accounts will be used during CI runs, inform the configuration
+ `service_account_overwrite_allowed` or set the environment variable `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED`
+ with proper regular expression. When left empty the overwrite behaviour is disabled.
 
 ## Define keywords in the config toml
 
@@ -163,7 +188,7 @@ to contact the docker daemon in the other container be sure to include
 Do *not* try to use an image that doesn't supply git and add the `GIT_STRATEGY=none`
 environment variable for a job that you think doesn't need to do a fetch or clone.
 Because Pods are ephemeral and do not keep state of previously run jobs your
-checked out code will not exist in both the build and the docker service container. 
+checked out code will not exist in both the build and the docker service container.
 Error's you might run into are things like `could not find git binary` and
 the docker service complaining that it cannot follow some symlinks into your
 build context because of the missing code.

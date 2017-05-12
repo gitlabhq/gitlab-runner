@@ -224,22 +224,165 @@ func TestPrepare(t *testing.T) {
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Host:                      "test-server",
-						Namespace:                 "namespace",
-						NamespaceOverwriteAllowed: "^n.*?e$",
-						ServiceCPULimit:           "100m",
-						ServiceMemoryLimit:        "200Mi",
-						CPULimit:                  "1.5",
-						MemoryLimit:               "4Gi",
-						HelperCPULimit:            "50m",
-						HelperMemoryLimit:         "100Mi",
-						ServiceCPURequest:         "99m",
-						ServiceMemoryRequest:      "5Mi",
-						CPURequest:                "1",
-						MemoryRequest:             "1.5Gi",
-						HelperCPURequest:          "0.5m",
-						HelperMemoryRequest:       "42Mi",
-						Privileged:                false,
+						Host:                           "test-server",
+						ServiceAccount:                 "default",
+						ServiceAccountOverwriteAllowed: ".*",
+						ServiceCPULimit:                "100m",
+						ServiceMemoryLimit:             "200Mi",
+						CPULimit:                       "1.5",
+						MemoryLimit:                    "4Gi",
+						HelperCPULimit:                 "50m",
+						HelperMemoryLimit:              "100Mi",
+						ServiceCPURequest:              "99m",
+						ServiceMemoryRequest:           "5Mi",
+						CPURequest:                     "1",
+						MemoryRequest:                  "1.5Gi",
+						HelperCPURequest:               "0.5m",
+						HelperMemoryRequest:            "42Mi",
+						Privileged:                     false,
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				serviceAccountOverwrite: "not-default",
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
+				},
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
+				},
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				serviceRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("99m"),
+					api.ResourceMemory: resource.MustParse("5Mi"),
+				},
+				buildRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1"),
+					api.ResourceMemory: resource.MustParse("1.5Gi"),
+				},
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
+				},
+			},
+			Error: false,
+		},
+
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:                           "test-server",
+						ServiceAccount:                 "default",
+						ServiceAccountOverwriteAllowed: "allowed-.*",
+						ServiceCPULimit:                "100m",
+						ServiceMemoryLimit:             "200Mi",
+						CPULimit:                       "1.5",
+						MemoryLimit:                    "4Gi",
+						HelperCPULimit:                 "50m",
+						HelperMemoryLimit:              "100Mi",
+						ServiceCPURequest:              "99m",
+						ServiceMemoryRequest:           "5Mi",
+						CPURequest:                     "1",
+						MemoryRequest:                  "1.5Gi",
+						HelperCPURequest:               "0.5m",
+						HelperMemoryRequest:            "42Mi",
+						Privileged:                     false,
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				namespaceOverwrite: "namespacee",
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
+				},
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
+				},
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				serviceRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("99m"),
+					api.ResourceMemory: resource.MustParse("5Mi"),
+				},
+				buildRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1"),
+					api.ResourceMemory: resource.MustParse("1.5Gi"),
+				},
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
+				},
+			},
+			Error: true,
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:                           "test-server",
+						Namespace:                      "namespace",
+						ServiceAccount:                 "default",
+						ServiceAccountOverwriteAllowed: ".*",
+						NamespaceOverwriteAllowed:      "^n.*?e$",
+						ServiceCPULimit:                "100m",
+						ServiceMemoryLimit:             "200Mi",
+						CPULimit:                       "1.5",
+						MemoryLimit:                    "4Gi",
+						HelperCPULimit:                 "50m",
+						HelperMemoryLimit:              "100Mi",
+						ServiceCPURequest:              "99m",
+						ServiceMemoryRequest:           "5Mi",
+						CPURequest:                     "1",
+						MemoryRequest:                  "1.5Gi",
+						HelperCPURequest:               "0.5m",
+						HelperMemoryRequest:            "42Mi",
+						Privileged:                     false,
 					},
 				},
 			},
@@ -899,6 +1042,40 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 				Executor: "kubernetes",
 				Kubernetes: &common.KubernetesConfig{
 					NamespaceOverwriteAllowed: "^not_a_match$",
+				},
+			},
+		},
+		SystemInterrupt: make(chan os.Signal, 1),
+	}
+	build.Image.Name = "docker:git"
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not match")
+}
+
+func TestOverwriteServiceAccountNotMatch(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			GitInfo: common.GitInfo{
+				Sha: "1234567890",
+			},
+			Image: common.Image{
+				Name: "test-image",
+			},
+			Variables: []common.JobVariable{
+				{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "service-account"},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					ServiceAccountOverwriteAllowed: "^not_a_match$",
 				},
 			},
 		},
