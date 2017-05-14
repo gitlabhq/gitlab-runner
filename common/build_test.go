@@ -245,7 +245,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(nil).Times(2)
+	e.On("Run", mock.Anything).Return(nil).Times(3)
 	e.On("Run", mock.Anything).Return(errors.New("build fail")).Times(3)
 	e.On("Finish", errors.New("build fail")).Return().Once()
 
@@ -283,7 +283,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(nil).Times(3)
+	e.On("Run", mock.Anything).Return(nil).Times(2)
 	e.On("Run", mock.Anything).Return(errors.New("build fail")).Times(3)
 	e.On("Finish", errors.New("build fail")).Return().Once()
 
