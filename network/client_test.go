@@ -408,6 +408,7 @@ func doTestCall(t *testing.T, c *client, testCase backoffTestCase, previousDurat
 	started := time.Now()
 	res, err := c.do("/", "POST", body, "application/json", headers)
 	duration = time.Since(started)
+	t.Logf("previous=%-20s current=%s", previousDuration, duration)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedStatusCode, res.StatusCode)
@@ -424,16 +425,18 @@ func TestRequestsBackOff(t *testing.T) {
 		URL: s.URL,
 	})
 
+	backOffDelayJitter = false
 	testCases := []backoffTestCase{
 		{false, 0, 1.1},
-		{true, 0, 1.1},
+		{true, 0, 500},
 		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
 		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
-		{false, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
-		{true, 0, 1.1},
+		{false, 0, 1.1},
+		{true, 0, 500},
 		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
-		{false, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
-		{true, 0, 1.1},
+		{false, 0, 1.1},
+		{true, 0, 500},
+		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
 	}
 
 	var duration time.Duration

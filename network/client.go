@@ -44,6 +44,7 @@ var (
 	backOffDelayMin    = 100 * time.Millisecond
 	backOffDelayMax    = 60 * time.Second
 	backOffDelayFactor = 2.0
+	backOffDelayJitter = true
 )
 
 type client struct {
@@ -206,7 +207,7 @@ func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
 			Min:    backOffDelayMin,
 			Max:    backOffDelayMax,
 			Factor: backOffDelayFactor,
-			Jitter: false,
+			Jitter: backOffDelayJitter,
 		}
 	}
 
@@ -216,14 +217,15 @@ func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
 func (n *client) doBackoffRequest(req *http.Request) (res *http.Response, err error) {
 	backoffDelay := n.ensureBackoff(req.Method, req.RequestURI)
 
-	time.Sleep(backoffDelay.Duration())
 	res, err = n.Do(req)
 	if err != nil {
 		err = fmt.Errorf("couldn't execute %v against %s: %v", req.Method, req.URL, err)
 		return
 	}
 
-	if res.StatusCode != http.StatusTooManyRequests {
+	if res.StatusCode == http.StatusTooManyRequests {
+		time.Sleep(backoffDelay.Duration())
+	} else {
 		backoffDelay.Reset()
 	}
 
