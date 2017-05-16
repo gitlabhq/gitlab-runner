@@ -214,16 +214,19 @@ func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
 	return n.requestBackOffs[key]
 }
 
-func (n *client) doBackoffRequest(req *http.Request) (res *http.Response, err error) {
-	backoffDelay := n.ensureBackoff(req.Method, req.RequestURI)
+func (n *client) backoffRequired(res *http.Response) bool {
+	return res.StatusCode >= 400 && res.StatusCode < 600
+}
 
+func (n *client) doBackoffRequest(req *http.Request) (res *http.Response, err error) {
 	res, err = n.Do(req)
 	if err != nil {
 		err = fmt.Errorf("couldn't execute %v against %s: %v", req.Method, req.URL, err)
 		return
 	}
 
-	if res.StatusCode == http.StatusTooManyRequests {
+	backoffDelay := n.ensureBackoff(req.Method, req.RequestURI)
+	if n.backoffRequired(res) {
 		time.Sleep(backoffDelay.Duration())
 	} else {
 		backoffDelay.Reset()

@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -363,18 +364,8 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 	assert.Equal(t, -1, statusCode, statusText)
 }
 
-func tooManyRequestsHandler(w http.ResponseWriter, r *http.Request) {
-	delay := r.Header.Get("delay") == "yes"
-
-	if delay {
-		w.WriteHeader(429)
-	} else {
-		w.WriteHeader(201)
-	}
-}
-
 type backoffTestCase struct {
-	delayed        bool
+	responseStatus int
 	minDelayFactor float64
 	maxDelayFactor float64
 }
@@ -386,6 +377,8 @@ func compareDurations(t *testing.T, testCase backoffTestCase, previousDuration, 
 	}
 
 	durationsFactor := duration.Seconds() / previousDuration.Seconds()
+	t.Logf("previous=%-20s current=%-20s factor=%5.3f", previousDuration, duration, durationsFactor)
+
 	factorsComparison := testCase.minDelayFactor < durationsFactor && durationsFactor < testCase.maxDelayFactor
 
 	message := "Previous and current duration factor should be between %.3f and %.3f, got %.3f"
@@ -393,28 +386,28 @@ func compareDurations(t *testing.T, testCase backoffTestCase, previousDuration, 
 }
 
 func doTestCall(t *testing.T, c *client, testCase backoffTestCase, previousDuration time.Duration) (duration time.Duration) {
-	var expectedStatusCode int
 	var body io.Reader
 	headers := make(http.Header)
-
-	if testCase.delayed {
-		headers.Add("delay", "yes")
-		expectedStatusCode = http.StatusTooManyRequests
-	} else {
-		headers.Add("delay", "no")
-		expectedStatusCode = http.StatusCreated
-	}
+	headers.Add("responseStatus", strconv.Itoa(testCase.responseStatus))
 
 	started := time.Now()
 	res, err := c.do("/", "POST", body, "application/json", headers)
 	duration = time.Since(started)
-	t.Logf("previous=%-20s current=%s", previousDuration, duration)
 
 	assert.NoError(t, err)
-	assert.Equal(t, expectedStatusCode, res.StatusCode)
+	assert.Equal(t, testCase.responseStatus, res.StatusCode)
 	compareDurations(t, testCase, previousDuration, duration)
 
 	return
+}
+
+func tooManyRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	status, err := strconv.Atoi(r.Header.Get("responseStatus"))
+	if err != nil {
+		w.WriteHeader(599)
+	} else {
+		w.WriteHeader(status)
+	}
 }
 
 func TestRequestsBackOff(t *testing.T) {
@@ -425,23 +418,31 @@ func TestRequestsBackOff(t *testing.T) {
 		URL: s.URL,
 	})
 
+	backOffDelayMin = 1 * time.Millisecond
 	backOffDelayJitter = false
+	switchFactor := float64((backOffDelayMin / (1 * time.Microsecond)))
+
+	delayFactorMin := backOffDelayFactor - 0.5
+	delayFactorMax := backOffDelayFactor + 0.5
+
 	testCases := []backoffTestCase{
-		{false, 0, 1.1},
-		{true, 0, 500},
-		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
-		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
-		{false, 0, 1.1},
-		{true, 0, 500},
-		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
-		{false, 0, 1.1},
-		{true, 0, 500},
-		{true, backOffDelayFactor - 0.5, backOffDelayFactor + 0.5},
+		{http.StatusCreated, 0, switchFactor},
+		{http.StatusInternalServerError, 0, switchFactor},
+		{http.StatusBadGateway, delayFactorMin, delayFactorMax},
+		{http.StatusServiceUnavailable, delayFactorMin, delayFactorMax},
+		{http.StatusOK, 0, switchFactor},
+		{http.StatusConflict, 0, switchFactor},
+		{http.StatusTooManyRequests, delayFactorMin, delayFactorMax},
+		{http.StatusCreated, 0, switchFactor},
+		{http.StatusInternalServerError, 0, switchFactor},
+		{http.StatusTooManyRequests, delayFactorMin, delayFactorMax},
+		{599, delayFactorMin, delayFactorMax},
+		{499, delayFactorMin, delayFactorMax},
 	}
 
 	var duration time.Duration
 	for id, testCase := range testCases {
-		t.Run(fmt.Sprintf("%d", id), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d-%d", id, testCase.responseStatus), func(t *testing.T) {
 			duration = doTestCall(t, c, testCase, duration)
 		})
 	}
