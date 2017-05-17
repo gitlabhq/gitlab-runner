@@ -18,7 +18,7 @@ const (
 )
 
 type machineExecutor struct {
-	provider *machineProvider
+	provider ProviderInterface
 	executor common.Executor
 	build    *common.Build
 	data     common.ExecutorData
@@ -65,6 +65,7 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 	if err != nil {
 		return err
 	}
+	options.Config.Docker.DockerCredentials = e.config.Docker.DockerCredentials
 
 	// TODO: Currently the docker-machine doesn't support multiple builds
 	e.build.ProjectRunnerID = 0
@@ -77,10 +78,11 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 	e.log().Infoln("Starting docker-machine build...")
 
 	// Create original executor
-	e.executor = e.provider.provider.Create()
+	e.executor = e.provider.CreateInternalExecutor()
 	if e.executor == nil {
 		return errors.New("failed to create an executor")
 	}
+
 	return e.executor.Prepare(options)
 }
 
