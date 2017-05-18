@@ -53,7 +53,7 @@ func TestCacheArchiverForIfNoFileDefined(t *testing.T) {
 
 func testCacheUploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "PUT" {
-		http.Error(w, "408 Method not allowed", 408) // 405 ?
+		http.Error(w, "405 Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	if r.URL.Path != "/cache.zip" {
