@@ -23,7 +23,6 @@ data:
       executor = "kubernetes"
       [runners.kubernetes]
         namespace = "gitlab"
-        privileged = true
 ```
 
 Then create a `Deployment` or `ReplicationController` which uses the `ConfigMap`.
