@@ -3,8 +3,8 @@ package machine
 import (
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
@@ -54,6 +54,7 @@ func (e *machineCredentialsUsageFakeExecutor) GetCurrentStage() common.ExecutorS
 }
 
 func TestMachineCredentialsUsage(t *testing.T) {
+	machineName := "expected-machine"
 	machineCredentials := docker_helpers.DockerCredentials{
 		Host: "tcp://expected-host:1234",
 	}
@@ -63,24 +64,40 @@ func TestMachineCredentialsUsage(t *testing.T) {
 		Config: runnerConfig,
 		Build: &common.Build{
 			Runner: runnerConfig,
+			ExecutorData: &machineDetails{
+				Name:  machineName,
+				State: machineStateAcquired,
+			},
 		},
 	}
 
-	machineRunnerConfig := getRunnerConfig()
-	machineRunnerConfig.Docker.DockerCredentials = machineCredentials
+	machine := &docker_helpers.MockMachine{}
+	defer machine.AssertExpectations(t)
+
+	machine.On("CanConnect", machineName).
+		Return(true).Once()
+	machine.On("Credentials", machineName).
+		Return(machineCredentials, nil).Once()
+
+	executorProvider := &common.MockExecutorProvider{}
+	defer executorProvider.AssertExpectations(t)
 
 	fakeExecutor := &machineCredentialsUsageFakeExecutor{t, machineCredentials}
-
-	machineProvider := &MockProviderInterface{}
-	defer machineProvider.AssertExpectations(t)
-
-	machineProvider.On("Use", options.Config, options.Build.ExecutorData).
-		Return(*machineRunnerConfig, mock.Anything, nil).Once()
-	machineProvider.On("CreateInternalExecutor").
+	executorProvider.On("Create").
 		Return(fakeExecutor).Once()
 
 	e := &machineExecutor{
-		provider: machineProvider,
+		provider: &machineProvider{
+			machine:  machine,
+			provider: executorProvider,
+			totalActions: prometheus.NewCounterVec(
+				prometheus.CounterOpts{
+					Name: "actions_total",
+					Help: "actions_total",
+				},
+				[]string{"action"},
+			),
+		},
 	}
 	err := e.Prepare(options)
 	assert.NoError(t, err)

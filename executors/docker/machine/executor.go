@@ -18,7 +18,7 @@ const (
 )
 
 type machineExecutor struct {
-	provider ProviderInterface
+	provider *machineProvider
 	executor common.Executor
 	build    *common.Build
 	data     common.ExecutorData
@@ -78,7 +78,7 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 	e.log().Infoln("Starting docker-machine build...")
 
 	// Create original executor
-	e.executor = e.provider.CreateInternalExecutor()
+	e.executor = e.provider.provider.Create()
 	if e.executor == nil {
 		return errors.New("failed to create an executor")
 	}

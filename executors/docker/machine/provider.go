@@ -13,12 +13,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 )
 
-type ProviderInterface interface {
-	CreateInternalExecutor() common.Executor
-	Release(config *common.RunnerConfig, data common.ExecutorData) error
-	Use(config *common.RunnerConfig, data common.ExecutorData) (newConfig common.RunnerConfig, newData common.ExecutorData, err error)
-}
-
 type machineProvider struct {
 	name        string
 	machine     docker_helpers.Machine
@@ -396,10 +390,6 @@ func (m *machineProvider) CanCreate() bool {
 
 func (m *machineProvider) GetFeatures(features *common.FeaturesInfo) {
 	m.provider.GetFeatures(features)
-}
-
-func (m *machineProvider) CreateInternalExecutor() common.Executor {
-	return m.provider.Create()
 }
 
 func (m *machineProvider) Create() common.Executor {
