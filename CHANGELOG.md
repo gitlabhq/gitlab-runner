@@ -1,3 +1,34 @@
+v 9.2.0 (2017-05-22)
+
+This release introduces a change in the ordering of artifacts and cache restoring!
+
+It may happen that someone, by mistake or by purpose, uses the same path in
+`.gitlab-ci.yml` for both cache and artifacts keywords, and this could cause that
+a stale cache might inadvertently override artifacts that are used across the
+pipeline.
+
+Starting with this release, artifacts are always restored after the cache to ensure
+that even in edge cases you can always rely on them.
+
+- Improve Windows runner details !514
+- Add support for TLS client authentication !157
+- Fix apt-get syntax to install a specific version. !563
+- Add link to Using Docker Build CI docs !561
+- Document the `coordinator` and make the FAQ list unordered !567
+- Add links to additional kubernetes details !566
+- Add '/debug/jobs/list' endpoint that lists all handled jobs !564
+- Remove .godir !568
+- Add PodLabels field to Kubernetes config structure !558
+- Remove the build container after execution has completed !571
+- Print proper message when cache upload operation failed !556
+- Remove redundant ToC from autoscale docs and add intro paragraph !574
+- Make possible to compile Runner under Openbsd2 !511
+- Improve docker configuration docs !576
+- Use contexes everywhere !559
+- Add support for kubernetes service account and override on gitlab-ci.yaml !554
+- Restore cache before artifacts !577
+- Fix link to the LICENSE file. !579
+
 v 9.1.1 (2017-05-02)
 - Fix apt-get syntax to install a specific version. !563
 - Remove the build container after execution has completed !571
