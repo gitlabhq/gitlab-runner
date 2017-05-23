@@ -2,18 +2,20 @@ package machine
 
 import (
 	"fmt"
-	"github.com/Sirupsen/logrus"
 	"os"
 	"time"
+
+	"github.com/Sirupsen/logrus"
 )
 
 type machinesData struct {
-	Runner   string
-	Acquired int
-	Creating int
-	Idle     int
-	Used     int
-	Removing int
+	Runner          string
+	Acquired        int
+	Creating        int
+	Idle            int
+	Used            int
+	Removing        int
+	StuckOnRemoving int
 }
 
 func (d *machinesData) Available() int {
@@ -21,11 +23,11 @@ func (d *machinesData) Available() int {
 }
 
 func (d *machinesData) Total() int {
-	return d.Acquired + d.Creating + d.Idle + d.Used + d.Removing
+	return d.Acquired + d.Creating + d.Idle + d.Used + d.Removing + d.StuckOnRemoving
 }
 
-func (d *machinesData) Add(state machineState) {
-	switch state {
+func (d *machinesData) Add(details *machineDetails) {
+	switch details.State {
 	case machineStateIdle:
 		d.Idle++
 
@@ -39,7 +41,11 @@ func (d *machinesData) Add(state machineState) {
 		d.Used++
 
 	case machineStateRemoving:
-		d.Removing++
+		if details.isStuckOnRemove() {
+			d.StuckOnRemoving++
+		} else {
+			d.Removing++
+		}
 	}
 }
 

@@ -22,6 +22,8 @@ type machineProvider struct {
 	// provider stores a real executor that is used to start run the builds
 	provider common.ExecutorProvider
 
+	stuckRemoveLock sync.Mutex
+
 	// metrics
 	totalActions      *prometheus.CounterVec
 	currentStatesDesc *prometheus.Desc
@@ -146,28 +148,44 @@ func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details 
 	return
 }
 
-func (m *machineProvider) finalizeRemoval(details *machineDetails) {
-	for {
-		if !m.machine.Exist(details.Name) {
-			logrus.WithField("name", details.Name).
-				WithField("created", time.Since(details.Created)).
-				WithField("used", time.Since(details.Used)).
-				WithField("reason", details.Reason).
-				Warningln("Skipping machine removal, because it doesn't exist")
-			break
-		}
-
-		err := m.machine.Remove(details.Name)
-		if err == nil {
-			break
-		}
-		time.Sleep(30 * time.Second)
+func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
+	if !m.machine.Exist(details.Name) {
 		logrus.WithField("name", details.Name).
 			WithField("created", time.Since(details.Created)).
 			WithField("used", time.Since(details.Used)).
 			WithField("reason", details.Reason).
-			Warningln("Retrying removal")
-		details.RetryCount++
+			Warningln("Skipping machine removal, because it doesn't exist")
+		return nil
+	}
+
+	// This code limits amount of removal of stuck machines to one machine per interval
+	if details.isStuckOnRemove() {
+		m.stuckRemoveLock.Lock()
+		defer m.stuckRemoveLock.Unlock()
+	}
+
+	logrus.WithField("name", details.Name).
+		WithField("created", time.Since(details.Created)).
+		WithField("used", time.Since(details.Used)).
+		WithField("reason", details.Reason).
+		Warningln("Removing machine")
+
+	err = m.machine.Remove(details.Name)
+	if err == nil {
+		return nil
+	}
+
+	details.RetryCount++
+	time.Sleep(removeRetryInterval)
+	return err
+}
+
+func (m *machineProvider) finalizeRemoval(details *machineDetails) {
+	for {
+		err := m.removeMachine(details)
+		if err == nil {
+			break
+		}
 	}
 
 	m.lock.Lock()
@@ -249,7 +267,7 @@ func (m *machineProvider) updateMachines(machines []string, config *common.Runne
 			m.remove(details.Name, err)
 		}
 
-		data.Add(details.State)
+		data.Add(details)
 	}
 	return
 }

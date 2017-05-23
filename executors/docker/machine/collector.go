@@ -10,7 +10,7 @@ func (m *machineProvider) collectDetails() (data machinesData) {
 
 	for _, details := range m.details {
 		if !details.isDead() {
-			data.Add(details.State)
+			data.Add(details)
 		}
 	}
 	return
@@ -31,6 +31,7 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Idle), "idle")
 	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Used), "used")
 	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Removing), "removing")
+	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.StuckOnRemoving), "stuck-on-removing")
 
 	m.totalActions.Collect(ch)
 	m.creationHistogram.Collect(ch)
