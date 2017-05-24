@@ -111,6 +111,14 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 	case http.StatusCreated:
 		runner.Log().Println("Registering runner...", "succeeded")
 		return &response
+	case http.StatusBadRequest:
+		runner.Log().Errorln("Registering runner...", "bad request")
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			panic(err.Error())
+		}
+		runner.Log().Errorln(body)
+		return nil
 	case http.StatusForbidden:
 		runner.Log().Errorln("Registering runner...", "forbidden (check registration token)")
 		return nil
