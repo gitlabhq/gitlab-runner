@@ -88,7 +88,7 @@ func (c *configOptionsWithMetricsServer) metricsServerAddress() (string, error) 
 	if len(port) == 0 {
 		return fmt.Sprintf("%s:%d", address, common.DefaultMetricsServerPort), nil
 	}
-	return c.config.MetricsServerAddress, nil
+	return address, nil
 }
 
 func init() {
