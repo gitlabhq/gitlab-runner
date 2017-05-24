@@ -370,14 +370,21 @@ func (mr *RunCommand) serveDebugData() {
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
-	if mr.metricsServerAddress() == "" {
+	serverAddress, err := mr.metricsServerAddress()
+
+	if err != nil {
+		mr.log().Errorf("invalid metrics server address: %s", err.Error())
+		return
+	}
+
+	if serverAddress == "" {
 		log.Infoln("Metrics server disabled")
 		return
 	}
 
 	// We separate out the listener creation here so that we can return an error if
 	// the provided address is invalid or there is some other listener error.
-	listener, err := net.Listen("tcp", mr.metricsServerAddress())
+	listener, err := net.Listen("tcp", serverAddress)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -389,7 +396,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 	mr.serveMetrics()
 	mr.serveDebugData()
 
-	log.Infoln("Metrics server listening at", mr.metricsServerAddress())
+	log.Infoln("Metrics server listening at", serverAddress)
 }
 
 func (mr *RunCommand) Run() {

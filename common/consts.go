@@ -22,5 +22,6 @@ const DefaultRestoreCacheAttempts = 1
 const KubernetesPollInterval = 3
 const KubernetesPollTimeout = 180
 const AfterScriptTimeout = 5 * time.Minute
+const DefaultMetricsServerPort = 9252
 
 var PreparationRetryInterval = 3 * time.Second
