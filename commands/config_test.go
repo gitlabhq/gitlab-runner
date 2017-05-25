@@ -8,91 +8,54 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
-func TestMetricsServerNone(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-
-	address, err := cfg.metricsServerAddress()
-	assert.NoError(t, err)
-	assert.Equal(t, address, "")
+type metricsServerTestExample struct {
+	address         string
+	setAddress      bool
+	expectedAddress string
+	errorIsExpected bool
 }
 
-func TestMetricsServerEmpty(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-	cfg.MetricsServerAddress = ""
+type metricsServerConfigurationType string
 
-	address, err := cfg.metricsServerAddress()
-	assert.NoError(t, err)
-	assert.Equal(t, address, "")
+const (
+	configurationFromCli    metricsServerConfigurationType = "from-cli"
+	configurationFromConfig metricsServerConfigurationType = "from-config"
+)
+
+func testMetricsServerSetting(t *testing.T, exampleName string, example metricsServerTestExample, testType metricsServerConfigurationType) {
+	t.Run(fmt.Sprintf("%s-%s", exampleName, testType), func(t *testing.T) {
+		cfg := configOptionsWithMetricsServer{}
+		cfg.config = &common.Config{}
+		if example.setAddress {
+			if testType == configurationFromCli {
+				cfg.MetricsServerAddress = example.address
+			} else {
+				cfg.config.MetricsServerAddress = example.address
+			}
+		}
+
+		address, err := cfg.metricsServerAddress()
+		assert.Equal(t, example.expectedAddress, address)
+		if example.errorIsExpected {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+	})
 }
 
-func TestMetricsServerEmptyCommonConfig(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-	cfg.config.MetricsServerAddress = ""
+func TestMetricsServer(t *testing.T) {
+	examples := map[string]metricsServerTestExample{
+		"address-set-without-port": {"localhost", true, "localhost:9252", false},
+		"port-set-without-address": {":1234", true, ":1234", false},
+		"address-set-with-port":    {"localhost:1234", true, "localhost:1234", false},
+		"address-is-empty":         {"", true, "", false},
+		"address-is-invalid":       {"localhost::1234", true, "", true},
+		"address-not-set":          {"", false, "", false},
+	}
 
-	address, err := cfg.metricsServerAddress()
-	assert.NoError(t, err)
-	assert.Equal(t, address, "")
-}
-
-func TestMetricsServerInvalid(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-	cfg.MetricsServerAddress = "localhost::1234"
-
-	address, err := cfg.metricsServerAddress()
-	assert.Error(t, err)
-	assert.Equal(t, address, "")
-}
-
-func TestMetricsServerInvalidCommonConfig(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-	cfg.config.MetricsServerAddress = "localhost::1234"
-
-	address, err := cfg.metricsServerAddress()
-	assert.Error(t, err)
-	assert.Equal(t, address, "")
-}
-
-func TestMetricsServerDefaultPort(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-	cfg.MetricsServerAddress = "localhost"
-
-	address, err := cfg.metricsServerAddress()
-	assert.NoError(t, err)
-	assert.Equal(t, fmt.Sprintf("%s:%d", cfg.MetricsServerAddress, common.DefaultMetricsServerPort), address)
-}
-
-func TestMetricsServerDefaultPortCommonConfig(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-	cfg.config.MetricsServerAddress = "localhost"
-
-	address, err := cfg.metricsServerAddress()
-	assert.NoError(t, err)
-	assert.Equal(t, address, fmt.Sprintf("%s:%d", cfg.config.MetricsServerAddress, common.DefaultMetricsServerPort))
-}
-
-func TestMetricsServerDoesNotTouchExistingPort(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-	cfg.MetricsServerAddress = "localhost:1234"
-
-	address, err := cfg.metricsServerAddress()
-	assert.NoError(t, err)
-	assert.Equal(t, address, cfg.MetricsServerAddress)
-}
-
-func TestMetricsServerDoesNotTouchExistingPortCommonConfig(t *testing.T) {
-	cfg := configOptionsWithMetricsServer{}
-	cfg.config = &common.Config{}
-	cfg.config.MetricsServerAddress = "localhost:1234"
-
-	address, err := cfg.metricsServerAddress()
-	assert.NoError(t, err)
-	assert.Equal(t, address, cfg.config.MetricsServerAddress)
+	for exampleName, example := range examples {
+		testMetricsServerSetting(t, exampleName, example, configurationFromCli)
+		testMetricsServerSetting(t, exampleName, example, configurationFromConfig)
+	}
 }
