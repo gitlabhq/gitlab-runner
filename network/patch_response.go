@@ -18,7 +18,7 @@ func (p *TracePatchResponse) IsAborted() bool {
 		return true
 	}
 
-	if p.response.StatusCode == 403 {
+	if p.response.StatusCode == http.StatusForbidden {
 		return true
 	}
 
