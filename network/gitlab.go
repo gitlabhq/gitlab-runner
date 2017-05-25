@@ -107,6 +107,7 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 
 	var response common.RegisterRunnerResponse
 	result, statusText, _ := n.doJSON(&runner, "POST", "runners", http.StatusCreated, &request, &response)
+	defer response.Body.Close()
 
 	switch result {
 	case http.StatusCreated:
