@@ -463,6 +463,23 @@ func (b *Build) GetGitStrategy() GitStrategy {
 	}
 }
 
+func (b *Build) GetGitCheckout() bool {
+	if b.GetGitStrategy() == GitNone {
+		return false
+	}
+
+	strCheckout := b.GetAllVariables().Get("GIT_CHECKOUT")
+	if len(strCheckout) == 0 {
+		return true
+	}
+
+	checkout, err := strconv.ParseBool(strCheckout)
+	if err != nil {
+		return true
+	}
+	return checkout
+}
+
 func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 	if b.GetGitStrategy() == GitNone {
 		return SubmoduleNone

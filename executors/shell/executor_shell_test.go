@@ -212,11 +212,36 @@ func TestBuildWithGitStrategyFetch(t *testing.T) {
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Cloning repository")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
 		out, err = runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Fetching changes")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		assert.Contains(t, out, "pre-clone-script")
+	})
+}
 
+func TestBuildWithGitStrategyFetchNoCheckout(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Skippping Git checkout")
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skippping Git checkout")
 		assert.Contains(t, out, "pre-clone-script")
 	})
 }
@@ -238,7 +263,30 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 		out, err = runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Cloning repository")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		assert.Contains(t, out, "pre-clone-script")
+	})
+}
 
+func TestBuildWithGitStrategyCloneNoCheckout(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Cloning repository")
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Skippping Git checkout")
 		assert.Contains(t, out, "pre-clone-script")
 	})
 }

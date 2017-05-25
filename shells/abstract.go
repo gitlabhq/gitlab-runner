@@ -248,18 +248,19 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 	switch info.Build.GetGitStrategy() {
 	case common.GitFetch:
 		b.writeFetchCmd(w, build, projectDir, gitDir)
-		b.writeCheckoutCmd(w, build)
-
 	case common.GitClone:
 		b.writeCloneCmd(w, build, projectDir)
-		b.writeCheckoutCmd(w, build)
-
 	case common.GitNone:
 		w.Notice("Skipping Git repository setup")
 		w.MkDir(projectDir)
-
 	default:
 		return errors.New("unknown GIT_STRATEGY")
+	}
+
+	if info.Build.GetGitCheckout() {
+		b.writeCheckoutCmd(w, build)
+	} else {
+		w.Notice("Skippping Git checkout")
 	}
 
 	return nil
