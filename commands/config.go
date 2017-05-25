@@ -2,10 +2,13 @@ package commands
 
 import (
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
 )
 
 func getDefaultConfigFile() string {
@@ -70,12 +73,26 @@ type configOptionsWithMetricsServer struct {
 	MetricsServerAddress string `long:"metrics-server" env:"METRICS_SERVER" description:"Metrics server listening address"`
 }
 
-func (c *configOptionsWithMetricsServer) metricsServerAddress() string {
+func (c *configOptionsWithMetricsServer) metricsServerAddress() (string, error) {
+	address := c.config.MetricsServerAddress
+
 	if c.MetricsServerAddress != "" {
-		return c.MetricsServerAddress
+		address = c.MetricsServerAddress
 	}
 
-	return c.config.MetricsServerAddress
+	if address == "" {
+		return "", nil
+	}
+
+	_, port, err := net.SplitHostPort(address)
+	if err != nil && !strings.Contains(err.Error(), "missing port in address") {
+		return "", err
+	}
+
+	if len(port) == 0 {
+		return fmt.Sprintf("%s:%d", address, common.DefaultMetricsServerPort), nil
+	}
+	return address, nil
 }
 
 func init() {

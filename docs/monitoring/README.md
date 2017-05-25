@@ -205,12 +205,14 @@ In both cases the option accepts a string with the format `[host]:<port>`,
 where:
 
 - `host` can be an IP address or a host name,
-- `port` is a valid TCP port or symbolic service name (like `http`).
+- `port` is a valid TCP port or symbolic service name (like `http`). We recommend to use port `9252` which is already [allocated in Prometheus](https://github.com/prometheus/prometheus/wiki/Default-port-allocations).
+
+If the metrics server address does not contain a port, it will default to `9252`.
 
 Examples of addresses:
 
-- `:9999` - will listen on all IPs of all interfaces on port `9999`
-- `localhost:1234` - will only listen on the loopback interface on port `1234`
+- `:9252` - will listen on all IPs of all interfaces on port `9252`
+- `localhost:9252` - will only listen on the loopback interface on port `9252`
 - `[2001:db8::1]:http` - will listen on IPv6 address `[2001:db8::1]` on the HTTP port `80`
 
 Remember that for listening on ports below `1024` - at least on Linux/Unix
