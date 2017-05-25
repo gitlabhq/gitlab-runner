@@ -115,7 +115,8 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 		runner.Log().Errorln("Registering runner...", "bad request")
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			panic(err.Error())
+			runner.Log().Errorln(err.Error())
+			return nil
 		}
 		runner.Log().Errorln(body)
 		return nil
