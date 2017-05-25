@@ -80,12 +80,16 @@ func (c *configOptionsWithMetricsServer) metricsServerAddress() (string, error) 
 		address = c.MetricsServerAddress
 	}
 
+	if address == "" {
+		return "", nil
+	}
+
 	_, port, err := net.SplitHostPort(address)
 	if err != nil && !strings.Contains(err.Error(), "missing port in address") {
 		return "", err
 	}
 
-	if len(address) > 0 && len(port) == 0 {
+	if len(port) == 0 {
 		return fmt.Sprintf("%s:%d", address, common.DefaultMetricsServerPort), nil
 	}
 	return address, nil
