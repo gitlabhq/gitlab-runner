@@ -18,23 +18,20 @@ func (m *machineProvider) collectDetails() (data machinesData) {
 
 // Describe implements prometheus.Collector.
 func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
-	m.machinesDataDesc = prometheus.NewDesc("ci_"+m.name+"_provider", "The current number of machines in given state.", []string{"state"}, nil)
-	m.providerStatisticsDesc = prometheus.NewDesc("ci_"+m.name, "The total number of machines created.", []string{"type"}, nil)
-
-	ch <- m.machinesDataDesc
-	ch <- m.providerStatisticsDesc
+	m.totalActions.Describe(ch)
+	m.creationHistogram.Describe(ch)
+	ch <- m.currentStatesDesc
 }
 
 // Collect implements prometheus.Collector.
 func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	data := m.collectDetails()
-	ch <- prometheus.MustNewConstMetric(m.machinesDataDesc, prometheus.GaugeValue, float64(data.Acquired), "acquired")
-	ch <- prometheus.MustNewConstMetric(m.machinesDataDesc, prometheus.GaugeValue, float64(data.Creating), "creating")
-	ch <- prometheus.MustNewConstMetric(m.machinesDataDesc, prometheus.GaugeValue, float64(data.Idle), "idle")
-	ch <- prometheus.MustNewConstMetric(m.machinesDataDesc, prometheus.GaugeValue, float64(data.Used), "used")
-	ch <- prometheus.MustNewConstMetric(m.machinesDataDesc, prometheus.GaugeValue, float64(data.Removing), "removing")
+	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Acquired), "acquired")
+	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Creating), "creating")
+	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Idle), "idle")
+	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Used), "used")
+	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Removing), "removing")
 
-	ch <- prometheus.MustNewConstMetric(m.providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Created), "created")
-	ch <- prometheus.MustNewConstMetric(m.providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Used), "used")
-	ch <- prometheus.MustNewConstMetric(m.providerStatisticsDesc, prometheus.CounterValue, float64(m.statistics.Removed), "removed")
+	m.totalActions.Collect(ch)
+	m.creationHistogram.Collect(ch)
 }

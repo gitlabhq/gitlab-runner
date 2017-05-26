@@ -23,7 +23,6 @@ data:
       executor = "kubernetes"
       [runners.kubernetes]
         namespace = "gitlab"
-        privileged = true
 ```
 
 Then create a `Deployment` or `ReplicationController` which uses the `ConfigMap`.
@@ -66,3 +65,6 @@ spec:
           path: /usr/share/ca-certificates/mozilla
         name: cacerts
 ```
+
+For more details see [Kubernetes executor](../executors/kubernetes.md)
+and the [[runners.kubernetes] section of advanced configuration](../configuration/advanced-configuration.md#the-runnerskubernetes-section).

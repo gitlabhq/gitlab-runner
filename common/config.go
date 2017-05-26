@@ -70,6 +70,7 @@ type DockerConfig struct {
 	AllowedImages          []string         `toml:"allowed_images,omitempty" json:"allowed_images" long:"allowed-images" env:"DOCKER_ALLOWED_IMAGES" description:"Whitelist allowed images"`
 	AllowedServices        []string         `toml:"allowed_services,omitempty" json:"allowed_services" long:"allowed-services" env:"DOCKER_ALLOWED_SERVICES" description:"Whitelist allowed services"`
 	PullPolicy             DockerPullPolicy `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"DOCKER_PULL_POLICY" description:"Image pull policy: never, if-not-present, always"`
+	ShmSize                int64            `toml:"shm_size,omitempty" json:"shm_size" long:"shm-size" env:"DOCKER_SHM_SIZE" description:"Shared memory size for docker images (in bytes)"`
 }
 
 type DockerMachine struct {
@@ -158,9 +159,11 @@ type KubernetesConfig struct {
 }
 
 type RunnerCredentials struct {
-	URL       string `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"Runner URL"`
-	Token     string `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token"`
-	TLSCAFile string `toml:"tls-ca-file,omitempty" json:"tls-ca-file" long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
+	URL         string `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"Runner URL"`
+	Token       string `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token"`
+	TLSCAFile   string `toml:"tls-ca-file,omitempty" json:"tls-ca-file" long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
+	TLSCertFile string `toml:"tls-cert-file,omitempty" json:"tls-cert-file" long:"tls-cert-file" env:"CI_SERVER_TLS_CERT_FILE" description:"File containing certificate for TLS client auth when using HTTPS"`
+	TLSKeyFile  string `toml:"tls-key-file,omitempty" json:"tls-key-file" long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth when using HTTPS"`
 }
 
 type CacheConfig struct {
@@ -197,9 +200,10 @@ type RunnerSettings struct {
 }
 
 type RunnerConfig struct {
-	Name        string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
-	Limit       int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
-	OutputLimit int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
+	Name               string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
+	Limit              int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
+	OutputLimit        int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
+	RequestConcurrency int    `toml:"request_concurrency,omitzero" long:"request-concurrency" env:"RUNNER_REQUEST_CONCURRENCY" description:"Maximum concurrency for job requests"`
 
 	RunnerCredentials
 	RunnerSettings
@@ -209,6 +213,7 @@ type Config struct {
 	MetricsServerAddress string          `toml:"metrics_server,omitempty" json:"metrics_server"`
 	Concurrent           int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval        int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
+	LogLevel             *string         `toml:"log_level" json:"log_level" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
 	User                 string          `toml:"user,omitempty" json:"user"`
 	Runners              []*RunnerConfig `toml:"runners" json:"runners"`
 	SentryDSN            *string         `toml:"sentry_dsn"`
@@ -278,6 +283,26 @@ func (c *DockerMachine) CompileOffPeakPeriods() (err error) {
 	return
 }
 
+func (c *RunnerCredentials) GetURL() string {
+	return c.URL
+}
+
+func (c *RunnerCredentials) GetTLSCAFile() string {
+	return c.TLSCAFile
+}
+
+func (c *RunnerCredentials) GetTLSCertFile() string {
+	return c.TLSCertFile
+}
+
+func (c *RunnerCredentials) GetTLSKeyFile() string {
+	return c.TLSKeyFile
+}
+
+func (c *RunnerCredentials) GetToken() string {
+	return c.Token
+}
+
 func (c *RunnerCredentials) ShortDescription() string {
 	return helpers.ShortenToken(c.Token)
 }
@@ -293,12 +318,23 @@ func (c *RunnerCredentials) Log() *log.Entry {
 	return log.WithFields(log.Fields{})
 }
 
+func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
+	return c.URL == other.URL && c.Token == other.Token
+}
+
 func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
 }
 
-func (c *RunnerConfig) GetVariables() BuildVariables {
-	var variables BuildVariables
+func (c *RunnerConfig) GetRequestConcurrency() int {
+	if c.RequestConcurrency <= 0 {
+		return 1
+	}
+	return c.RequestConcurrency
+}
+
+func (c *RunnerConfig) GetVariables() JobVariables {
+	var variables JobVariables
 
 	for _, environment := range c.Environment {
 		if variable, err := ParseVariable(environment); err == nil {

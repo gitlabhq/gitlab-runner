@@ -3,11 +3,16 @@ config.toml
 .project
 out
 builds/
+commands/helpers/archive.zip
 executors/docker/bindata.go
 dockerfiles/alpine/gitlab-ci-multi-runner-linux-amd64
 dockerfiles/build/gitlab-runner-helper
 dockerfiles/ubuntu/gitlab-ci-multi-runner_amd64.deb
 .idea/
+.editorconfig
 tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
+
+# Ignore the generated binary
+gitlab-ci-multi-runner

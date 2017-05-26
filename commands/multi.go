@@ -21,6 +21,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/cli"
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/sentry"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/service"
@@ -97,6 +98,17 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 	}
 }
 
+func (mr *RunCommand) requestJob(runner *common.RunnerConfig) (*common.JobResponse, bool) {
+	if !mr.buildsHelper.acquireRequest(runner) {
+		return nil, false
+	}
+	defer mr.buildsHelper.releaseRequest(runner)
+
+	jobData, healthy := mr.network.RequestJob(*runner)
+	mr.makeHealthy(runner.UniqueID(), healthy)
+	return jobData, true
+}
+
 func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) (err error) {
 	provider := common.GetExecutor(runner.Executor)
 	if provider == nil {
@@ -111,32 +123,38 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	defer provider.Release(runner, context)
 
 	// Acquire build slot
-	if !mr.buildsHelper.acquire(runner) {
+	if !mr.buildsHelper.acquireBuild(runner) {
+		mr.log().WithField("runner", runner.ShortDescription()).
+			Debugln("Failed to request job: runner limit meet")
 		return
 	}
-	defer mr.buildsHelper.release(runner)
+	defer mr.buildsHelper.releaseBuild(runner)
 
 	// Receive a new build
-	buildData, healthy := mr.network.GetBuild(*runner)
-	mr.makeHealthy(runner.UniqueID(), healthy)
-	if buildData == nil {
+	jobData, result := mr.requestJob(runner)
+	if !result {
+		mr.log().WithField("runner", runner.ShortDescription()).
+			Debugln("Failed to request job: runner requestConcurrency meet")
+		return
+	}
+	if jobData == nil {
 		return
 	}
 
 	// Make sure to always close output
-	buildCredentials := &common.BuildCredentials{
-		ID:    buildData.ID,
-		Token: buildData.Token,
+	jobCredentials := &common.JobCredentials{
+		ID:    jobData.ID,
+		Token: jobData.Token,
 	}
-	trace := mr.network.ProcessBuild(*runner, buildCredentials)
+	trace := mr.network.ProcessJob(*runner, jobCredentials)
 	defer trace.Fail(err)
 
 	// Create a new build
 	build := &common.Build{
-		GetBuildResponse: *buildData,
-		Runner:           runner,
-		ExecutorData:     context,
-		SystemInterrupt:  mr.abortBuilds,
+		JobResponse:     *jobData,
+		Runner:          runner,
+		ExecutorData:    context,
+		SystemInterrupt: mr.abortBuilds,
 	}
 
 	// Add build to list of builds to assign numbers
@@ -186,6 +204,15 @@ func (mr *RunCommand) loadConfig() error {
 	err := mr.configOptions.loadConfig()
 	if err != nil {
 		return err
+	}
+
+	// Set log level
+	if !cli_helpers.CustomLogLevelSet && mr.config.LogLevel != nil {
+		level, err := log.ParseLevel(*mr.config.LogLevel)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		log.SetLevel(level)
 	}
 
 	// pass user to execute scripts as specific user
@@ -262,6 +289,10 @@ func (mr *RunCommand) Start(s service.Service) error {
 func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stopWorker chan bool) os.Signal {
 	buildLimit := mr.config.Concurrent
 
+	if buildLimit < 1 {
+		mr.log().Fatalln("Concurrent is less than 1 - no jobs will be processed")
+	}
+
 	for mr.currentWorkers > buildLimit {
 		select {
 		case stopWorker <- true:
@@ -311,14 +342,7 @@ func (mr *RunCommand) runWait() {
 	mr.stopSignal = <-mr.stopSignals
 }
 
-func (mr *RunCommand) serveMetrics() error {
-	// We separate out the listener creation here so that we can return an error if
-	// the provided address is invalid or there is some other listener error.
-	listener, err := net.Listen("tcp", mr.metricsServerAddress())
-	if err != nil {
-		return err
-	}
-
+func (mr *RunCommand) serveMetrics() {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
@@ -339,22 +363,44 @@ func (mr *RunCommand) serveMetrics() error {
 	}
 
 	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+}
+
+func (mr *RunCommand) serveDebugData() {
+	http.Handle("/debug/jobs/list", http.HandlerFunc(mr.buildsHelper.ListJobsHandler))
+}
+
+func (mr *RunCommand) setupMetricsAndDebugServer() {
+	serverAddress, err := mr.metricsServerAddress()
+
+	if err != nil {
+		mr.log().Errorf("invalid metrics server address: %s", err.Error())
+		return
+	}
+
+	if serverAddress == "" {
+		log.Infoln("Metrics server disabled")
+		return
+	}
+
+	// We separate out the listener creation here so that we can return an error if
+	// the provided address is invalid or there is some other listener error.
+	listener, err := net.Listen("tcp", serverAddress)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	go func() {
 		log.Fatalln(http.Serve(listener, nil))
 	}()
 
-	return nil
+	mr.serveMetrics()
+	mr.serveDebugData()
+
+	log.Infoln("Metrics server listening at", serverAddress)
 }
 
 func (mr *RunCommand) Run() {
-	if mr.metricsServerAddress() != "" {
-		if err := mr.serveMetrics(); err != nil {
-			log.Fatalln(err)
-		}
-		log.Infoln("Metrics server listening at", mr.metricsServerAddress())
-	} else {
-		log.Infoln("Metrics server disabled")
-	}
+	mr.setupMetricsAndDebugServer()
 
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
@@ -491,7 +537,7 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 func init() {
 	common.RegisterCommand2("run", "run multi runner service", &RunCommand{
 		ServiceName:       defaultServiceName,
-		network:           &network.GitLabClient{},
+		network:           network.NewGitLabClient(),
 		prometheusLogHook: prometheus_helper.NewLogHook(),
 	})
 }

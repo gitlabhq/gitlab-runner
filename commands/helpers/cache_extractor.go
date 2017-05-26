@@ -78,8 +78,8 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 
 	if c.URL != "" {
 		err := c.doRetry(c.download)
-		if err != nil && !os.IsNotExist(err) {
-			logrus.Warningln(err)
+		if err != nil {
+			logrus.Fatalln(err)
 		}
 	}
 

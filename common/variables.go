@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type BuildVariable struct {
+type JobVariable struct {
 	Key      string `json:"key"`
 	Value    string `json:"value"`
 	Public   bool   `json:"public"`
@@ -15,13 +15,13 @@ type BuildVariable struct {
 	File     bool   `json:"file"`
 }
 
-type BuildVariables []BuildVariable
+type JobVariables []JobVariable
 
-func (b BuildVariable) String() string {
+func (b JobVariable) String() string {
 	return fmt.Sprintf("%s=%s", b.Key, b.Value)
 }
 
-func (b BuildVariables) PublicOrInternal() (variables BuildVariables) {
+func (b JobVariables) PublicOrInternal() (variables JobVariables) {
 	for _, variable := range b {
 		if variable.Public || variable.Internal {
 			variables = append(variables, variable)
@@ -30,14 +30,14 @@ func (b BuildVariables) PublicOrInternal() (variables BuildVariables) {
 	return variables
 }
 
-func (b BuildVariables) StringList() (variables []string) {
+func (b JobVariables) StringList() (variables []string) {
 	for _, variable := range b {
 		variables = append(variables, variable.String())
 	}
 	return variables
 }
 
-func (b BuildVariables) Get(key string) string {
+func (b JobVariables) Get(key string) string {
 	switch key {
 	case "$":
 		return key
@@ -52,11 +52,11 @@ func (b BuildVariables) Get(key string) string {
 	return ""
 }
 
-func (b BuildVariables) ExpandValue(value string) string {
+func (b JobVariables) ExpandValue(value string) string {
 	return os.Expand(value, b.Get)
 }
 
-func (b BuildVariables) Expand() (variables BuildVariables) {
+func (b JobVariables) Expand() (variables JobVariables) {
 	for _, variable := range b {
 		variable.Value = b.ExpandValue(variable.Value)
 		variables = append(variables, variable)
@@ -64,13 +64,13 @@ func (b BuildVariables) Expand() (variables BuildVariables) {
 	return variables
 }
 
-func ParseVariable(text string) (variable BuildVariable, err error) {
+func ParseVariable(text string) (variable JobVariable, err error) {
 	keyValue := strings.SplitN(text, "=", 2)
 	if len(keyValue) != 2 {
 		err = errors.New("missing =")
 		return
 	}
-	variable = BuildVariable{
+	variable = JobVariable{
 		Key:   keyValue[0],
 		Value: keyValue[1],
 	}

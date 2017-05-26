@@ -1,3 +1,127 @@
+v 9.2.0 (2017-05-22)
+
+This release introduces a change in the ordering of artifacts and cache restoring!
+
+It may happen that someone, by mistake or by purpose, uses the same path in
+`.gitlab-ci.yml` for both cache and artifacts keywords, and this could cause that
+a stale cache might inadvertently override artifacts that are used across the
+pipeline.
+
+Starting with this release, artifacts are always restored after the cache to ensure
+that even in edge cases you can always rely on them.
+
+- Improve Windows runner details !514
+- Add support for TLS client authentication !157
+- Fix apt-get syntax to install a specific version. !563
+- Add link to Using Docker Build CI docs !561
+- Document the `coordinator` and make the FAQ list unordered !567
+- Add links to additional kubernetes details !566
+- Add '/debug/jobs/list' endpoint that lists all handled jobs !564
+- Remove .godir !568
+- Add PodLabels field to Kubernetes config structure !558
+- Remove the build container after execution has completed !571
+- Print proper message when cache upload operation failed !556
+- Remove redundant ToC from autoscale docs and add intro paragraph !574
+- Make possible to compile Runner under Openbsd2 !511
+- Improve docker configuration docs !576
+- Use contexes everywhere !559
+- Add support for kubernetes service account and override on gitlab-ci.yaml !554
+- Restore cache before artifacts !577
+- Fix link to the LICENSE file. !579
+
+v 9.1.1 (2017-05-02)
+- Fix apt-get syntax to install a specific version. !563
+- Remove the build container after execution has completed !571
+
+v 9.1.0 (2017-04-22)
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Extend documentation about accessing docker services !527
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
+- Docker provider metrics cleanups and renaming !531
+- Replace godep with govendor !505
+- Add histogram metrics for docker machine creation !533
+- Fix cache containers dicsovering regression !534
+- Add urls to environments created with CI release jobs !537
+- Remove unmanaged docker images sources !538
+- Speed up CI pipeline !536
+- Add job for checking the internal docs links !542
+- Mention Runner -> GitLab compatibility concerns after 9.0 release !544
+- Log error if API v4 is not present (GitLab CE/EE is older than 9.0) !528
+- Cleanup variables set on GitLab already !523
+- Add faq entry describing how to handle missing zoneinfo.zip problem !543
+- Add documentation on how Runner uses Minio library !419
+- Update docker.md - typo in runners documentation link !546
+- Add log_level option to config.toml !524
+- Support private registries with Kubernetes !551
+- Cleanup Kubernetes typos and wording !550
+- Fix runner crashing on builds helper collect !529
+- Config docs: Fix syntax in example TOML for Kubernetes !552
+- Docker: Allow to configure shared memory size !468
+- Return error for cache-extractor command when S3 cache source returns 404 !429
+- Add executor stage to ci_runner_builds metric's labels !548
+- Don't show image's ID when it's the same as image's name !557
+- Extended verify command with runner selector !532
+- Changed information line logged by Runner while unregistering !540
+- Properly configure connection timeouts and keep-alives !560
+- Log fatal error when concurrent is less than 1 !549
+
+v 9.0.4 (2017-05-02)
+- Fix apt-get syntax to install a specific version. !563
+- Remove the build container after execution has completed !571
+
+v 9.0.3 (2017-04-21)
+- Fix runner crashing on builds helper collect !529
+- Properly configure connection timeouts and keep-alives !560
+
+v 9.0.2 (2017-04-06)
+- Speed up CI pipeline !536
+
+v 9.0.1 (2017-04-05)
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
+- Replace godep with govendor !505
+- Fix cache containers dicsovering regression !534
+- Add urls to environments created with CI release jobs !537
+- Mention Runner -> GitLab compatibility concerns after 9.0 release !544
+- Log error if API v4 is not present (GitLab CE/EE is older than 9.0) !528
+
+v 9.0.0
+- Change dependency from `github.com/fsouza/go-dockerclient` to `github.com/docker/docker/client`" !301
+- Update docker-machine version to fix coreos provision !500
+- Cleanup windows install docs !497
+- Replace io.Copy with stdcopy.StdCopy for docker output handling !503
+- Fixes typo: current to concurrent. !508
+- Modifies autoscale algorithm example !509
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
+- Fix indentation of 'image_pull_secrets' in kubernetes configuration example !512
+- Show Docker image ID in job's log !507
+- Fix word consistency in autoscaling docs !519
+- Rename the binary on download to use gitlab-runner as command !510
+- Improve details around limits !502
+- Switch from CI API v1 to API v4 !517
+- Make it easier to run tests locally !506
+- Kubernetes private credentials !520
+- Limit number of concurrent requests to builds/register.json !518
+- Remove deprecated kubernetes executor configuration fields !521
+- Drop Kubernetes executor 'experimental' notice !525
+
+v 1.11.4 (2017-04-28)
+- Fixes test that was failing 1.11.3 release
+
+v 1.11.3 (2017-04-28)
+- Add urls to environments created with CI release jobs !537
+- Speed up CI pipeline !536
+- Fix runner crashing on builds helper collect !529
+
+v 1.11.2
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Limit number of concurrent requests to builds/register.json !518
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
+
 v 1.11.1
 - Update docker-machine version to fix coreos provision !500
 
@@ -18,6 +142,13 @@ v 1.11.0
 - Add timezone support for OffPeak intervals !479
 - Set GIT_SUBMODULE_STRATEGY=SubmoduleNone when GIT_STRATEGY=GitNone !480
 - Update maintainers information !489
+
+v 1.10.8
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
+- Don't install docs for the fpm Gem !526
+- Mention tagged S3 sources in installation documentation !513
+- Limit number of concurrent requests to builds/register.json !518
+- Replace b.CurrentStage with b.CurrentState where it was misused !530
 
 v 1.10.7
 - Update docker-machine version to fix coreos provision !500
@@ -61,6 +192,9 @@ v 1.10.0
 - Update Docker Machine in official Runner images to v0.9.0 !454
 - Pass ImagePullSecrets for Kubernetes executor !449
 - Add Namespace overwrite possibility for Kubernetes executor !444
+
+v 1.9.10
+- Force-terminate VirtualBox and Parallels VMs so snapshot restore works properly !313
 
 v 1.9.9
 - Update docker-machine version to fix coreos provision !500

@@ -13,24 +13,19 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 )
 
-type machineProviderStatistics struct {
-	Created int
-	Used    int
-	Removed int
-}
-
 type machineProvider struct {
 	name        string
 	machine     docker_helpers.Machine
 	details     machinesDetails
 	lock        sync.RWMutex
 	acquireLock sync.Mutex
-	statistics  machineProviderStatistics
 	// provider stores a real executor that is used to start run the builds
 	provider common.ExecutorProvider
 
-	machinesDataDesc       *prometheus.Desc
-	providerStatisticsDesc *prometheus.Desc
+	// metrics
+	totalActions      *prometheus.CounterVec
+	currentStatesDesc *prometheus.Desc
+	creationHistogram prometheus.Histogram
 }
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
@@ -90,12 +85,14 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 		} else {
 			details.State = state
 			details.Used = time.Now()
-			logrus.WithField("time", time.Since(started)).
+			creationTime := time.Since(started)
+			logrus.WithField("time", creationTime).
 				WithField("name", details.Name).
 				WithField("now", time.Now()).
 				WithField("retries", details.RetryCount).
 				Infoln("Machine created")
-			m.statistics.Created++
+			m.totalActions.WithLabelValues("created").Inc()
+			m.creationHistogram.Observe(creationTime.Seconds())
 		}
 		errCh <- err
 	}()
@@ -185,7 +182,7 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 		WithField("retries", details.RetryCount).
 		Infoln("Machine removed")
 
-	m.statistics.Removed++
+	m.totalActions.WithLabelValues("removed").Inc()
 }
 
 func (m *machineProvider) remove(machineName string, reason ...interface{}) error {
@@ -361,7 +358,7 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 	details.State = machineStateUsed
 	details.Used = time.Now()
 	details.UsedCount++
-	m.statistics.Used++
+	m.totalActions.WithLabelValues("used").Inc()
 	return
 }
 
@@ -412,5 +409,25 @@ func newMachineProvider(name, executor string) *machineProvider {
 		details:  make(machinesDetails),
 		machine:  docker_helpers.NewMachineCommand(),
 		provider: provider,
+		totalActions: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "ci_" + name + "_provider_actions_total",
+				Help: "The total number of actions executed by the provider.",
+			},
+			[]string{"action"},
+		),
+		currentStatesDesc: prometheus.NewDesc(
+			"ci_"+name+"_provider_machine_states",
+			"The current number of machines per state in this provider.",
+			[]string{"state"},
+			nil,
+		),
+		creationHistogram: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "ci_" + name + "_provider_machine_creation_duration_seconds",
+				Help:    "Histogram of machine creation time.",
+				Buckets: prometheus.ExponentialBuckets(30, 1.25, 10),
+			},
+		),
 	}
 }

@@ -21,9 +21,9 @@ type executor struct {
 	executors.AbstractExecutor
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	if globalConfig != nil {
-		s.Shell().User = globalConfig.User
+func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
+	if options.User != "" {
+		s.Shell().User = options.User
 	}
 
 	// expand environment variables to have current directory
@@ -45,7 +45,7 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 	s.DefaultCacheDir = os.Expand(s.DefaultCacheDir, mapping)
 
 	// Pass control to executor
-	err = s.AbstractExecutor.Prepare(globalConfig, config, build)
+	err = s.AbstractExecutor.Prepare(options)
 	if err != nil {
 		return err
 	}
@@ -78,8 +78,8 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 
 	// Fill process environment variables
 	c.Env = append(os.Environ(), s.BuildShell.Environment...)
-	c.Stdout = s.BuildTrace
-	c.Stderr = s.BuildTrace
+	c.Stdout = s.Trace
+	c.Stderr = s.Trace
 
 	if s.BuildShell.PassFile {
 		scriptDir, err := ioutil.TempDir("", "build_script")
@@ -120,7 +120,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	case err = <-waitCh:
 		return err
 
-	case <-cmd.Abort:
+	case <-cmd.Context.Done():
 		return s.killAndWait(c, waitCh)
 	}
 }

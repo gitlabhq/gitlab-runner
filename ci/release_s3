@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -eo pipefail
 
-make s3-upload "S3_UPLOAD_PATH=${CI_BUILD_REF_NAME}"
+make s3-upload "S3_UPLOAD_PATH=${CI_COMMIT_REF_NAME}"
 if [[ -n "${IS_LATEST}" ]]; then
     make s3-upload "S3_UPLOAD_PATH=latest"
 fi

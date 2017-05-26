@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -286,7 +287,7 @@ func TestCleanup(t *testing.T) {
 				},
 			},
 		}
-		ex.AbstractExecutor.BuildTrace = buildTrace
+		ex.AbstractExecutor.Trace = buildTrace
 		ex.AbstractExecutor.BuildLogger = common.NewBuildLogger(buildTrace, logrus.WithFields(logrus.Fields{}))
 		ex.Cleanup()
 		if test.Error && !errored {
@@ -322,13 +323,15 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
-					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "privileged", Value: "true"},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "privileged", Value: "true"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -361,33 +364,106 @@ func TestPrepare(t *testing.T) {
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Host:                      "test-server",
-						Namespace:                 "namespace",
-						NamespaceOverwriteAllowed: "^n.*?e$",
-						ServiceCPULimit:           "100m",
-						ServiceMemoryLimit:        "200Mi",
-						CPULimit:                  "1.5",
-						MemoryLimit:               "4Gi",
-						HelperCPULimit:            "50m",
-						HelperMemoryLimit:         "100Mi",
-						ServiceCPURequest:         "99m",
-						ServiceMemoryRequest:      "5Mi",
-						CPURequest:                "1",
-						MemoryRequest:             "1.5Gi",
-						HelperCPURequest:          "0.5m",
-						HelperMemoryRequest:       "42Mi",
-						Privileged:                false,
+						Host:                           "test-server",
+						ServiceAccount:                 "default",
+						ServiceAccountOverwriteAllowed: ".*",
+						ServiceCPULimit:                "100m",
+						ServiceMemoryLimit:             "200Mi",
+						CPULimit:                       "1.5",
+						MemoryLimit:                    "4Gi",
+						HelperCPULimit:                 "50m",
+						HelperMemoryLimit:              "100Mi",
+						ServiceCPURequest:              "99m",
+						ServiceMemoryRequest:           "5Mi",
+						CPURequest:                     "1",
+						MemoryRequest:                  "1.5Gi",
+						HelperCPURequest:               "0.5m",
+						HelperMemoryRequest:            "42Mi",
+						Privileged:                     false,
 					},
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
-					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				serviceAccountOverwrite: "not-default",
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
+				},
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
+				},
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				serviceRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("99m"),
+					api.ResourceMemory: resource.MustParse("5Mi"),
+				},
+				buildRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1"),
+					api.ResourceMemory: resource.MustParse("1.5Gi"),
+				},
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
+				},
+			},
+			Error: false,
+		},
+
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:                           "test-server",
+						ServiceAccount:                 "default",
+						ServiceAccountOverwriteAllowed: "allowed-.*",
+						ServiceCPULimit:                "100m",
+						ServiceMemoryLimit:             "200Mi",
+						CPULimit:                       "1.5",
+						MemoryLimit:                    "4Gi",
+						HelperCPULimit:                 "50m",
+						HelperMemoryLimit:              "100Mi",
+						ServiceCPURequest:              "99m",
+						ServiceMemoryRequest:           "5Mi",
+						CPURequest:                     "1",
+						MemoryRequest:                  "1.5Gi",
+						HelperCPURequest:               "0.5m",
+						HelperMemoryRequest:            "42Mi",
+						Privileged:                     false,
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -429,27 +505,37 @@ func TestPrepare(t *testing.T) {
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Host:               "test-server",
-						ServiceCPUs:        "100m",
-						ServiceMemory:      "200Mi",
-						ServiceMemoryLimit: "202Mi",
-						CPUs:               "1.5",
-						Memory:             "4Gi",
-						HelperCPUs:         "50m",
-						HelperCPULimit:     "1m",
-						HelperMemory:       "100Mi",
-						Privileged:         true,
+						Host:                           "test-server",
+						Namespace:                      "namespace",
+						ServiceAccount:                 "default",
+						ServiceAccountOverwriteAllowed: ".*",
+						NamespaceOverwriteAllowed:      "^n.*?e$",
+						ServiceCPULimit:                "100m",
+						ServiceMemoryLimit:             "200Mi",
+						CPULimit:                       "1.5",
+						MemoryLimit:                    "4Gi",
+						HelperCPULimit:                 "50m",
+						HelperMemoryLimit:              "100Mi",
+						ServiceCPURequest:              "99m",
+						ServiceMemoryRequest:           "5Mi",
+						CPURequest:                     "1",
+						MemoryRequest:                  "1.5Gi",
+						HelperCPURequest:               "0.5m",
+						HelperMemoryRequest:            "42Mi",
+						Privileged:                     false,
 					},
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
-					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "privileged", Value: "true"},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -458,23 +544,33 @@ func TestPrepare(t *testing.T) {
 				options: &kubernetesOptions{
 					Image: "test-image",
 				},
-				namespaceOverwrite: "",
+				namespaceOverwrite: "namespacee",
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("202Mi"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
 				},
 				buildLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("1.5"),
 					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
 				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1m"),
+					api.ResourceCPU:    resource.MustParse("50m"),
 					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
-				serviceRequests: api.ResourceList{},
-				buildRequests:   api.ResourceList{},
-				helperRequests:  api.ResourceList{},
+				serviceRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("99m"),
+					api.ResourceMemory: resource.MustParse("5Mi"),
+				},
+				buildRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1"),
+					api.ResourceMemory: resource.MustParse("1.5Gi"),
+				},
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
+				},
 			},
+			Error: true,
 		},
 		{
 			GlobalConfig: &common.Config{},
@@ -487,13 +583,46 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{
-					Sha: "1234567890",
-					Options: common.BuildOptions{
-						"image": "test-image",
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
-					Variables: []common.BuildVariable{
-						common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: "test-image",
+				},
+				namespaceOverwrite: "",
+				serviceLimits:      api.ResourceList{},
+				buildLimits:        api.ResourceList{},
+				helperLimits:       api.ResourceList{},
+				serviceRequests:    api.ResourceList{},
+				buildRequests:      api.ResourceList{},
+				helperRequests:     api.ResourceList{},
+			},
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -521,7 +650,13 @@ func TestPrepare(t *testing.T) {
 				},
 			}
 
-			err := e.Prepare(test.GlobalConfig, test.RunnerConfig, test.Build)
+			prepareOptions := common.ExecutorPrepareOptions{
+				Config:  test.RunnerConfig,
+				Build:   test.Build,
+				Context: context.TODO(),
+			}
+
+			err := e.Prepare(prepareOptions)
 
 			if err != nil {
 				if test.Error {
@@ -548,13 +683,131 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
+func TestSetupCredentials(t *testing.T) {
+	version := testapi.Default.GroupVersion().Version
+	codec := testapi.Default.Codec()
+
+	type testDef struct {
+		Credentials []common.Credentials
+		VerifyFn    func(*testing.T, testDef, *api.Secret)
+	}
+	tests := []testDef{
+		{
+			// don't execute VerifyFn
+			VerifyFn: nil,
+		},
+		{
+			Credentials: []common.Credentials{
+				{
+					Type:     "registry",
+					URL:      "http://example.com",
+					Username: "user",
+					Password: "password",
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
+				assert.Equal(t, api.SecretTypeDockercfg, secret.Type)
+				assert.NotEmpty(t, secret.Data[api.DockerConfigKey])
+			},
+		},
+		{
+			Credentials: []common.Credentials{
+				{
+					Type:     "other",
+					URL:      "http://example.com",
+					Username: "user",
+					Password: "password",
+				},
+			},
+			// don't execute VerifyFn
+			VerifyFn: nil,
+		},
+	}
+
+	executed := false
+	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
+		return func(req *http.Request) (resp *http.Response, err error) {
+			podBytes, err := ioutil.ReadAll(req.Body)
+			executed = true
+
+			if err != nil {
+				t.Errorf("failed to read request body: %s", err.Error())
+				return
+			}
+
+			p := new(api.Secret)
+
+			err = json.Unmarshal(podBytes, p)
+
+			if err != nil {
+				t.Errorf("error decoding pod: %s", err.Error())
+				return
+			}
+
+			if test.VerifyFn != nil {
+				test.VerifyFn(t, test, p)
+			}
+
+			resp = &http.Response{StatusCode: 200, Body: FakeReadCloser{
+				Reader: bytes.NewBuffer(podBytes),
+			}}
+			resp.Header = make(http.Header)
+			resp.Header.Add("Content-Type", "application/json")
+
+			return
+		}
+	}
+
+	for _, test := range tests {
+		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
+		fakeClient := fake.RESTClient{
+			Codec:  codec,
+			Client: fake.CreateHTTPClient(fakeClientRoundTripper(test)),
+		}
+		c.Client = fakeClient.Client
+
+		ex := executor{
+			kubeClient: c,
+			options:    &kubernetesOptions{},
+			AbstractExecutor: executors.AbstractExecutor{
+				Config: common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Kubernetes: &common.KubernetesConfig{
+							Namespace: "default",
+						},
+					},
+				},
+				BuildShell: &common.ShellConfiguration{},
+				Build: &common.Build{
+					JobResponse: common.JobResponse{
+						Variables:   []common.JobVariable{},
+						Credentials: test.Credentials,
+					},
+					Runner: &common.RunnerConfig{},
+				},
+			},
+		}
+
+		executed = false
+		err := ex.setupCredentials()
+		assert.NoError(t, err)
+		if test.VerifyFn != nil {
+			assert.True(t, executed)
+		} else {
+			assert.False(t, executed)
+		}
+	}
+}
+
 func TestSetupBuildPod(t *testing.T) {
 	version := testapi.Default.GroupVersion().Version
 	codec := testapi.Default.Codec()
 
 	type testDef struct {
 		RunnerConfig common.RunnerConfig
+		PrepareFn    func(*testing.T, testDef, *executor)
 		VerifyFn     func(*testing.T, testDef, *api.Pod)
+		Variables    []common.JobVariable
 	}
 	tests := []testDef{
 		{
@@ -571,6 +824,26 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.NodeSelector, pod.Spec.NodeSelector)
+			},
+		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			PrepareFn: func(t *testing.T, test testDef, e *executor) {
+				e.credentials = &api.Secret{
+					ObjectMeta: api.ObjectMeta{
+						Name: "job-credentials",
+					},
+				}
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				secrets := []api.LocalObjectReference{{Name: "job-credentials"}}
+				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
 		{
@@ -624,10 +897,36 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 			},
 		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						PodLabels: map[string]string{
+							"test":    "label",
+							"another": "label",
+							"var":     "$test",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"test":    "label",
+					"another": "label",
+					"var":     "sometestvar",
+				}, pod.ObjectMeta.Labels)
+			},
+			Variables: []common.JobVariable{
+				{Key: "test", Value: "sometestvar"},
+			},
+		},
 	}
 
+	executed := false
 	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
 		return func(req *http.Request) (resp *http.Response, err error) {
+			executed = true
 			podBytes, err := ioutil.ReadAll(req.Body)
 
 			if err != nil {
@@ -664,6 +963,10 @@ func TestSetupBuildPod(t *testing.T) {
 		}
 		c.Client = fakeClient.Client
 
+		vars := test.Variables
+		if vars == nil {
+			vars = []common.JobVariable{}
+		}
 		ex := executor{
 			kubeClient: c,
 			options:    &kubernetesOptions{},
@@ -671,19 +974,22 @@ func TestSetupBuildPod(t *testing.T) {
 				Config:     test.RunnerConfig,
 				BuildShell: &common.ShellConfiguration{},
 				Build: &common.Build{
-					GetBuildResponse: common.GetBuildResponse{
-						Variables: []common.BuildVariable{},
+					JobResponse: common.JobResponse{
+						Variables: vars,
 					},
-					Runner: &common.RunnerConfig{},
+					Runner: &test.RunnerConfig,
 				},
 			},
 		}
 
-		err := ex.setupBuildPod()
-
-		if err != nil {
-			t.Errorf("error setting up build pod: %s", err.Error())
+		if test.PrepareFn != nil {
+			test.PrepareFn(t, test, &ex)
 		}
+
+		executed = false
+		err := ex.setupBuildPod()
+		assert.NoError(t, err, "error setting up build pod: %s")
+		assert.True(t, executed)
 	}
 }
 
@@ -694,11 +1000,9 @@ func TestKubernetesSuccessRun(t *testing.T) {
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
-	successfulBuild.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	successfulBuild.Image.Name = "docker:git"
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -719,7 +1023,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -727,9 +1031,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
@@ -745,7 +1047,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -753,9 +1055,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "some/non-existing/image",
-	}
+	build.Image.Name = "some/non-existing/image"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -771,7 +1071,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -779,9 +1079,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 			},
 		},
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:missing-tag",
-	}
+	build.Image.Name = "docker:missing-tag"
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -797,7 +1095,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -806,9 +1104,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
@@ -834,7 +1130,7 @@ func TestKubernetesBuildCancel(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor:   "kubernetes",
@@ -843,15 +1139,13 @@ func TestKubernetesBuildCancel(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
-	}
+	build.Image.Name = "docker:git"
 
-	trace := &common.Trace{Writer: os.Stdout, Abort: make(chan interface{}, 1)}
+	trace := &common.Trace{Writer: os.Stdout}
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.Abort <- true
+		trace.CancelFunc()
 	})
 	defer abortTimer.Stop()
 
@@ -872,13 +1166,15 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 	}
 
 	build := &common.Build{
-		GetBuildResponse: common.GetBuildResponse{
-			Sha: "1234567890",
-			Options: common.BuildOptions{
-				"image": "test-image",
+		JobResponse: common.JobResponse{
+			GitInfo: common.GitInfo{
+				Sha: "1234567890",
 			},
-			Variables: []common.BuildVariable{
-				common.BuildVariable{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+			Image: common.Image{
+				Name: "test-image",
+			},
+			Variables: []common.JobVariable{
+				{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
 			},
 		},
 		Runner: &common.RunnerConfig{
@@ -891,9 +1187,41 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Options = map[string]interface{}{
-		"image": "docker:git",
+	build.Image.Name = "docker:git"
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not match")
+}
+
+func TestOverwriteServiceAccountNotMatch(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
 	}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			GitInfo: common.GitInfo{
+				Sha: "1234567890",
+			},
+			Image: common.Image{
+				Name: "test-image",
+			},
+			Variables: []common.JobVariable{
+				{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "service-account"},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					ServiceAccountOverwriteAllowed: "^not_a_match$",
+				},
+			},
+		},
+		SystemInterrupt: make(chan os.Signal, 1),
+	}
+	build.Image.Name = "docker:git"
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -912,12 +1240,10 @@ type FakeBuildTrace struct {
 	testWriter
 }
 
-func (f FakeBuildTrace) Success()      {}
-func (f FakeBuildTrace) Fail(error)    {}
-func (f FakeBuildTrace) Notify(func()) {}
-func (f FakeBuildTrace) Aborted() chan interface{} {
-	return make(chan interface{})
-}
+func (f FakeBuildTrace) Success()                                    {}
+func (f FakeBuildTrace) Fail(error)                                  {}
+func (f FakeBuildTrace) Notify(func())                               {}
+func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc) {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }

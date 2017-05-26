@@ -47,7 +47,6 @@ type ShellScriptInfo struct {
 
 type Shell interface {
 	GetName() string
-	GetSupportedOptions() []string
 	GetFeatures(features *FeaturesInfo)
 	IsDefault() bool
 

@@ -1,24 +1,11 @@
 package executors
 
 import (
+	"context"
 	"os"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
-
-var (
-	excludedOptions = []string{"environment"}
-)
-
-func isOptionExcluded(option string) bool {
-	for _, excluded := range excludedOptions {
-		if option == excluded {
-			return true
-		}
-	}
-
-	return false
-}
 
 type ExecutorOptions struct {
 	DefaultBuildsDir string
@@ -26,16 +13,17 @@ type ExecutorOptions struct {
 	SharedBuildsDir  bool
 	Shell            common.ShellScriptInfo
 	ShowHostname     bool
-	SupportedOptions []string
 }
 
 type AbstractExecutor struct {
 	ExecutorOptions
 	common.BuildLogger
-	Config     common.RunnerConfig
-	Build      *common.Build
-	BuildTrace common.BuildTrace
-	BuildShell *common.ShellConfiguration
+	Config       common.RunnerConfig
+	Build        *common.Build
+	Trace        common.JobTrace
+	BuildShell   *common.ShellConfiguration
+	currentStage common.ExecutorStage
+	Context      context.Context
 }
 
 func (e *AbstractExecutor) updateShell() error {
@@ -80,46 +68,17 @@ func (e *AbstractExecutor) startBuild() error {
 	return nil
 }
 
-func (e *AbstractExecutor) verifyOptions() error {
-	supportedOptions := e.SupportedOptions
-	if shell := common.GetShell(e.Shell().Shell); shell != nil {
-		supportedOptions = append(supportedOptions, shell.GetSupportedOptions()...)
-	}
-
-	for key, value := range e.Build.Options {
-		if value == nil {
-			continue
-		}
-
-		if isOptionExcluded(key) {
-			delete(e.Build.Options, key)
-			continue
-		}
-
-		found := false
-		for _, option := range supportedOptions {
-			if option == key {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			e.Warningln(key, "is not supported by selected executor and shell")
-		}
-	}
-	return nil
-}
-
 func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
 	return &e.ExecutorOptions.Shell
 }
 
-func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	e.Config = *config
-	e.Build = build
-	e.BuildTrace = build.Trace
-	e.BuildLogger = common.NewBuildLogger(build.Trace, build.Log())
+func (e *AbstractExecutor) Prepare(options common.ExecutorPrepareOptions) error {
+	e.currentStage = common.ExecutorStagePrepare
+	e.Context = options.Context
+	e.Config = *options.Config
+	e.Build = options.Build
+	e.Trace = options.Trace
+	e.BuildLogger = common.NewBuildLogger(options.Trace, options.Build.Log())
 
 	err := e.startBuild()
 	if err != nil {
@@ -127,11 +86,6 @@ func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.R
 	}
 
 	err = e.updateShell()
-	if err != nil {
-		return err
-	}
-
-	err = e.verifyOptions()
 	if err != nil {
 		return err
 	}
@@ -144,7 +98,17 @@ func (e *AbstractExecutor) Prepare(globalConfig *common.Config, config *common.R
 }
 
 func (e *AbstractExecutor) Finish(err error) {
+	e.currentStage = common.ExecutorStageFinish
 }
 
 func (e *AbstractExecutor) Cleanup() {
+	e.currentStage = common.ExecutorStageCleanup
+}
+
+func (e *AbstractExecutor) GetCurrentStage() common.ExecutorStage {
+	return e.currentStage
+}
+
+func (e *AbstractExecutor) SetCurrentStage(stage common.ExecutorStage) {
+	e.currentStage = stage
 }

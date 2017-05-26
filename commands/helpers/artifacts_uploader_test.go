@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 )
 
-var UploaderCredentials = common.BuildCredentials{
+var UploaderCredentials = common.JobCredentials{
 	ID:    1000,
 	Token: "test",
 	URL:   "test",
@@ -31,8 +31,8 @@ func TestArtifactsUploaderTooLarge(t *testing.T) {
 		uploadState: common.UploadTooLarge,
 	}
 	cmd := ArtifactsUploaderCommand{
-		BuildCredentials: UploaderCredentials,
-		network:          network,
+		JobCredentials: UploaderCredentials,
+		network:        network,
 	}
 
 	assert.Panics(t, func() {
@@ -47,8 +47,8 @@ func TestArtifactsUploaderForbidden(t *testing.T) {
 		uploadState: common.UploadForbidden,
 	}
 	cmd := ArtifactsUploaderCommand{
-		BuildCredentials: UploaderCredentials,
-		network:          network,
+		JobCredentials: UploaderCredentials,
+		network:        network,
 	}
 
 	assert.Panics(t, func() {
@@ -63,8 +63,8 @@ func TestArtifactsUploaderRetry(t *testing.T) {
 		uploadState: common.UploadFailed,
 	}
 	cmd := ArtifactsUploaderCommand{
-		BuildCredentials: UploaderCredentials,
-		network:          network,
+		JobCredentials: UploaderCredentials,
+		network:        network,
 		retryHelper: retryHelper{
 			Retry: 2,
 		},
@@ -82,8 +82,8 @@ func TestArtifactsUploaderSucceeded(t *testing.T) {
 		uploadState: common.UploadSucceeded,
 	}
 	cmd := ArtifactsUploaderCommand{
-		BuildCredentials: UploaderCredentials,
-		network:          network,
+		JobCredentials: UploaderCredentials,
+		network:        network,
 		fileArchiver: fileArchiver{
 			Paths: []string{artifactsTestArchivedFile},
 		},

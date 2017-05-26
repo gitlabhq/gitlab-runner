@@ -117,9 +117,88 @@ gitlab-ci-multi-runner --debug run
 make install
 ```
 
-## 8. Congratulations!
+## 8. Run test suite locally
+
+GitLab Runner test suite consists of "core" tests and tests for executors.
+Tests for executors require certain binaries to be installed on your local
+machine. Some of these binaries cannot be installed on all operating
+systems. If a binary is not installed tests requiring this binary will be
+skipped.
+
+These are the binaries that you can install:
+1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+1. [kubectl](https://kubernetes.io/docs/user-guide/prereqs/) with
+  [Minikube](https://github.com/kubernetes/minikube)
+1. [Parallels](http://www.parallels.com/products/desktop/download/)
+1. [PowerShell](https://msdn.microsoft.com/en-us/powershell)
+
+After installing the binaries run:
+
+```
+make development_setup
+```
+
+To execute the tests run:
+
+```
+make test
+```
+
+## 9. Congratulations!
 
 You can start hacking GitLab-Runner code. If you are interested you can use Intellij IDEA Community Edition with [go-lang-idea-plugin](https://github.com/go-lang-plugin-org/go-lang-idea-plugin) to edit and debug code.
+
+## Managing build dependencies
+
+GitLab Runner uses [Govendor](https://github.com/kardianos/govendor) to manage
+its dependencies - they get checked into the repository under the `vendor/` directory,
+with a manifest stored in `vendor/vendor.json`.
+
+If your contribution adds, removes or updates any dependencies to the runner,
+please ensure the vendored copies updated in lock-step.
+
+**For added/removed dependencies:**
+
+1. Run `go get [package]` (if you haven't done this already) to download required package into your `$GOPATH`.
+   Repeat this for any added package.
+
+1. Commit all added changes and stash/remove all uncommited changes to have a clean working directory.
+
+1. Execute
+
+    ```bash
+    $ make update_govendor_dependencies
+    ```
+
+    This task will:
+    * remove all unused packages with,
+    * add all missing or external packages (packages that are not stored in vendor but can be found in `$GOPATH`),
+    * show git status and ask if changes in `vendor/` or done properly,
+    * show diff of `vendor/vendor.json` and ask if it is done properly,
+    * add and commit changes in `vendor/` directory.
+
+**For dependencies that need update:**
+
+1. Run `go get -u [package]` (if you haven't done this already) to upload selected package present in your `$GOPATH`
+   or download it if it's not present.
+
+    If you want to use specific version then go to the package directory in your `$GOPATH` and checkout it to this
+    version, e.g.:
+
+    ```bash
+    $ cd $GOPATH/src/github.com/docker/docker/client
+    $ git checkout v1.13.0
+    ```
+
+    Repeat this for any added package.
+
+1. Execute
+
+    ```bash
+    $ make update_govendor_dependencies
+    ```
+
+    This task will behave just like described above.
 
 ## Troubleshooting
 

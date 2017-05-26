@@ -16,8 +16,8 @@ func (m *MockExecutor) Shell() *ShellScriptInfo {
 
 	return r0
 }
-func (m *MockExecutor) Prepare(globalConfig *Config, config *RunnerConfig, build *Build) error {
-	ret := m.Called(globalConfig, config, build)
+func (m *MockExecutor) Prepare(options ExecutorPrepareOptions) error {
+	ret := m.Called(options)
 
 	r0 := ret.Error(0)
 
@@ -35,4 +35,14 @@ func (m *MockExecutor) Finish(err error) {
 }
 func (m *MockExecutor) Cleanup() {
 	m.Called()
+}
+func (m *MockExecutor) GetCurrentStage() ExecutorStage {
+	ret := m.Called()
+
+	r0 := ret.Get(0).(ExecutorStage)
+
+	return r0
+}
+func (m *MockExecutor) SetCurrentStage(stage ExecutorStage) {
+	m.Called(stage)
 }

@@ -6,6 +6,11 @@ import (
 	"os"
 )
 
+var (
+	DefaultLogLevel   = log.InfoLevel
+	CustomLogLevelSet = false
+)
+
 func SetupLogLevelOptions(app *cli.App) {
 	newFlags := []cli.Flag{
 		cli.BoolFlag{
@@ -15,7 +20,6 @@ func SetupLogLevelOptions(app *cli.App) {
 		},
 		cli.StringFlag{
 			Name:  "log-level, l",
-			Value: "info",
 			Usage: "Log level (options: debug, info, warn, error, fatal, panic)",
 		},
 	}
@@ -25,16 +29,17 @@ func SetupLogLevelOptions(app *cli.App) {
 	// logs
 	app.Before = func(c *cli.Context) error {
 		log.SetOutput(os.Stderr)
-		level, err := log.ParseLevel(c.String("log-level"))
-		if err != nil {
-			log.Fatalf(err.Error())
-		}
-		log.SetLevel(level)
+		log.SetLevel(DefaultLogLevel)
 
-		// If a log level wasn't specified and we are running in debug mode,
-		// enforce log-level=debug.
-		if !c.IsSet("log-level") && !c.IsSet("l") && c.Bool("debug") {
-			log.SetLevel(log.DebugLevel)
+		if c.IsSet("log-level") || c.IsSet("l") {
+			level, err := log.ParseLevel(c.String("log-level"))
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+
+			setCustomLevel(level)
+		} else if c.Bool("debug") {
+			setCustomLevel(log.DebugLevel)
 			go watchForGoroutinesDump()
 		}
 
@@ -43,4 +48,9 @@ func SetupLogLevelOptions(app *cli.App) {
 		}
 		return nil
 	}
+}
+
+func setCustomLevel(level log.Level) {
+	log.SetLevel(level)
+	CustomLogLevelSet = true
 }

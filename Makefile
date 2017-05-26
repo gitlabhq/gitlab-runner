@@ -72,7 +72,9 @@ version: FORCE
 	@echo RPM platforms: $(RPM_PLATFORMS)
 	@echo IS_LATEST: $(IS_LATEST)
 
-verify: fmt vet lint complexity test
+verify: static_code_analysis test
+
+static_code_analysis: fmt vet lint complexity
 
 deps:
 	# Installing dependencies...
@@ -182,11 +184,12 @@ lint:
 
 complexity:
 	# Checking code complexity
-	@gocyclo -over 9 $(shell find . -name '*.go' -not -path './vendor/*' | grep -v \
+	@gocyclo -over 9 $(shell find . -name '*.go' | grep -v \
+	    -e "/vendor/" \
 	    -e "/helpers/shell_escape.go" \
-			-e "/executors/kubernetes/executor_kubernetes_test.go" \
-			-e "/executors/kubernetes/util_test.go" \
-			-e "/executors/kubernetes/exec_test.go" \
+	    -e "/executors/kubernetes/executor_kubernetes_test.go" \
+	    -e "/executors/kubernetes/util_test.go" \
+	    -e "/executors/kubernetes/exec_test.go" \
 	    -e "/executors/parallels/" \
 	    -e "/executors/virtualbox/")
 
@@ -235,20 +238,20 @@ package: package-deps package-prepare package-deb package-rpm
 
 package-deps:
 	# Installing packaging dependencies...
-	gem install fpm
+	gem install fpm --no-ri --no-rdoc
 
 package-prepare:
 	chmod 755 packaging/root/usr/share/gitlab-runner/
 	chmod 755 packaging/root/usr/share/gitlab-runner/*
 
-package-deb:
+package-deb: package-deps package-prepare
 	# Building Debian compatible packages...
 	make package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64
 	make package-deb-fpm ARCH=386 PACKAGE_ARCH=i386
 	make package-deb-fpm ARCH=arm PACKAGE_ARCH=armel
 	make package-deb-fpm ARCH=arm PACKAGE_ARCH=armhf
 
-package-rpm:
+package-rpm: package-deps package-prepare
 	# Building RedHat compatible packages...
 	make package-rpm-fpm ARCH=amd64 PACKAGE_ARCH=amd64
 	make package-rpm-fpm ARCH=386 PACKAGE_ARCH=i686
@@ -308,7 +311,7 @@ packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
 
 packagecloud-deps:
 	# Installing packagecloud dependencies...
-	gem install package_cloud
+	gem install package_cloud --no-ri --no-rdoc
 
 packagecloud-deb:
 	# Sending Debian compatible packages...
@@ -353,11 +356,15 @@ s3-upload:
 
 release_packagecloud:
 	# Releasing to https://packages.gitlab.com/runner/
-	@./ci/release_packagecloud "$$CI_BUILD_NAME"
+	@./ci/release_packagecloud "$$CI_JOB_NAME"
 
-release_s3: prepare_index
+release_s3: prepare_zoneinfo prepare_index
 	# Releasing to S3
 	@./ci/release_s3
+
+prepare_zoneinfo:
+	# preparing the zoneinfo file
+	@cp $$GOROOT/lib/time/zoneinfo.zip out/
 
 prepare_index:
 	# Preparing index file
@@ -376,5 +383,14 @@ check-tags-in-changelog:
 		[ "$$?" -eq 1 ] || state="OK"; \
 		echo "$$tag:   \t $$state"; \
 	done
+
+development_setup:
+	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/gitlab-test.git tmp/gitlab-test
+	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
+	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
+
+update_govendor_dependencies:
+	# updating vendor/ dependencies
+	@./scripts/update-govendor-dependencies
 
 FORCE:

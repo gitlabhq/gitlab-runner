@@ -8,8 +8,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/ssh"
-
-	"golang.org/x/net/context"
 )
 
 type sshExecutor struct {
@@ -17,8 +15,8 @@ type sshExecutor struct {
 	sshCommand ssh.Client
 }
 
-func (s *sshExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.executor.Prepare(globalConfig, config, build)
+func (s *sshExecutor) Prepare(options common.ExecutorPrepareOptions) error {
+	err := s.executor.Prepare(options)
 	if err != nil {
 		return err
 	}
@@ -41,12 +39,12 @@ func (s *sshExecutor) Prepare(globalConfig *common.Config, config *common.Runner
 	}
 
 	s.Debugln("Starting container", container.ID, "...")
-	err = s.client.ContainerStart(context.TODO(), container.ID, types.ContainerStartOptions{})
+	err = s.client.ContainerStart(s.Context, container.ID, types.ContainerStartOptions{})
 	if err != nil {
 		return err
 	}
 
-	containerData, err := s.client.ContainerInspect(context.TODO(), container.ID)
+	containerData, err := s.client.ContainerInspect(s.Context, container.ID)
 	if err != nil {
 		return err
 	}
@@ -54,8 +52,8 @@ func (s *sshExecutor) Prepare(globalConfig *common.Config, config *common.Runner
 	// Create SSH command
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.BuildTrace,
-		Stderr: s.BuildTrace,
+		Stdout: s.Trace,
+		Stderr: s.Trace,
 	}
 	s.sshCommand.Host = containerData.NetworkSettings.IPAddress
 
@@ -68,11 +66,12 @@ func (s *sshExecutor) Prepare(globalConfig *common.Config, config *common.Runner
 }
 
 func (s *sshExecutor) Run(cmd common.ExecutorCommand) error {
-	err := s.sshCommand.Run(ssh.Command{
+	s.SetCurrentStage(DockerExecutorStageRun)
+
+	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Environment: s.BuildShell.Environment,
 		Command:     s.BuildShell.GetCommandWithArguments(),
 		Stdin:       cmd.Script,
-		Abort:       cmd.Abort,
 	})
 	if _, ok := err.(*ssh.ExitError); ok {
 		err = &common.BuildError{Inner: err}
@@ -94,18 +93,19 @@ func init() {
 			Type:          common.LoginShell,
 			RunnerCommand: "gitlab-runner",
 		},
-		ShowHostname:     true,
-		SupportedOptions: []string{"image", "services"},
+		ShowHostname: true,
 	}
 
 	creator := func() common.Executor {
-		return &sshExecutor{
+		e := &sshExecutor{
 			executor: executor{
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: options,
 				},
 			},
 		}
+		e.SetCurrentStage(common.ExecutorStageCreated)
+		return e
 	}
 
 	featuresUpdater := func(features *common.FeaturesInfo) {

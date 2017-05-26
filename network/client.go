@@ -25,6 +25,14 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
+type requestCredentials interface {
+	GetURL() string
+	GetToken() string
+	GetTLSCAFile() string
+	GetTLSCertFile() string
+	GetTLSKeyFile() string
+}
+
 var dialer = net.Dialer{
 	Timeout:   30 * time.Second,
 	KeepAlive: 30 * time.Second,
@@ -32,12 +40,21 @@ var dialer = net.Dialer{
 
 type client struct {
 	http.Client
-	url        *url.URL
-	caFile     string
-	caData     []byte
-	skipVerify bool
-	updateTime time.Time
-	lastUpdate string
+	url                  *url.URL
+	caFile               string
+	certFile             string
+	keyFile              string
+	caData               []byte
+	skipVerify           bool
+	updateTime           time.Time
+	lastUpdate           string
+	compatibleWithGitLab bool
+}
+
+type ResponseTLSData struct {
+	CAChain  string
+	CertFile string
+	KeyFile  string
 }
 
 func (n *client) getLastUpdate() string {
@@ -56,6 +73,16 @@ func (n *client) ensureTLSConfig() {
 		n.Transport = nil
 	}
 
+	// client certificate got modified
+	if stat, err := os.Stat(n.certFile); err == nil && n.updateTime.Before(stat.ModTime()) {
+		n.Transport = nil
+	}
+
+	// client private key got modified
+	if stat, err := os.Stat(n.keyFile); err == nil && n.updateTime.Before(stat.ModTime()) {
+		n.Transport = nil
+	}
+
 	// create or update transport
 	if n.Transport == nil {
 		n.updateTime = time.Now()
@@ -63,14 +90,8 @@ func (n *client) ensureTLSConfig() {
 	}
 }
 
-func (n *client) createTransport() {
-	// create reference TLS config
-	tlsConfig := tls.Config{
-		MinVersion:         tls.VersionTLS10,
-		InsecureSkipVerify: n.skipVerify,
-	}
-
-	// load TLS certificate
+func (n *client) addTLSCA(tlsConfig *tls.Config) {
+	// load TLS CA certificate
 	if file := n.caFile; file != "" && !n.skipVerify {
 		logrus.Debugln("Trying to load", file, "...")
 
@@ -89,6 +110,34 @@ func (n *client) createTransport() {
 			}
 		}
 	}
+}
+
+func (n *client) addTLSAuth(tlsConfig *tls.Config) {
+	// load TLS client keypair
+	if cert, key := n.certFile, n.keyFile; cert != "" && key != "" {
+		logrus.Debugln("Trying to load", cert, "and", key, "pair...")
+
+		certificate, err := tls.LoadX509KeyPair(cert, key)
+		if err == nil {
+			tlsConfig.Certificates = []tls.Certificate{certificate}
+			tlsConfig.BuildNameToCertificate()
+		} else {
+			if !os.IsNotExist(err) {
+				logrus.Errorln("Failed to load", cert, key, err)
+			}
+		}
+	}
+}
+
+func (n *client) createTransport() {
+	// create reference TLS config
+	tlsConfig := tls.Config{
+		MinVersion:         tls.VersionTLS10,
+		InsecureSkipVerify: n.skipVerify,
+	}
+
+	n.addTLSCA(&tlsConfig)
+	n.addTLSAuth(&tlsConfig)
 
 	// create transport
 	n.Transport = &http.Transport{
@@ -168,13 +217,13 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 	return
 }
 
-func (n *client) doJSON(uri, method string, statusCode int, request interface{}, response interface{}) (int, string, string) {
+func (n *client) doJSON(uri, method string, statusCode int, request interface{}, response interface{}) (int, string, ResponseTLSData) {
 	var body io.Reader
 
 	if request != nil {
 		requestBody, err := json.Marshal(request)
 		if err != nil {
-			return -1, fmt.Sprintf("failed to marshal project object: %v", err), ""
+			return -1, fmt.Sprintf("failed to marshal project object: %v", err), ResponseTLSData{}
 		}
 		body = bytes.NewReader(requestBody)
 	}
@@ -186,7 +235,7 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 
 	res, err := n.do(uri, method, body, "application/json", headers)
 	if err != nil {
-		return -1, err.Error(), ""
+		return -1, err.Error(), ResponseTLSData{}
 	}
 	defer res.Body.Close()
 	defer io.Copy(ioutil.Discard, res.Body)
@@ -195,20 +244,26 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 		if response != nil {
 			isApplicationJSON, err := isResponseApplicationJSON(res)
 			if !isApplicationJSON {
-				return -1, err.Error(), ""
+				return -1, err.Error(), ResponseTLSData{}
 			}
 
 			d := json.NewDecoder(res.Body)
 			err = d.Decode(response)
 			if err != nil {
-				return -1, fmt.Sprintf("Error decoding json payload %v", err), ""
+				return -1, fmt.Sprintf("Error decoding json payload %v", err), ResponseTLSData{}
 			}
 		}
 	}
 
 	n.setLastUpdate(res.Header)
 
-	return res.StatusCode, res.Status, n.getCAChain(res.TLS)
+	TLSData := ResponseTLSData{
+		CAChain:  n.getCAChain(res.TLS),
+		CertFile: n.certFile,
+		KeyFile:  n.keyFile,
+	}
+
+	return res.StatusCode, res.Status, TLSData
 }
 
 func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
@@ -228,14 +283,24 @@ func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
 
 func fixCIURL(url string) string {
 	url = strings.TrimRight(url, "/")
-	if !strings.HasSuffix(url, "/ci") {
-		url += "/ci"
+	if strings.HasSuffix(url, "/ci") {
+		url = strings.TrimSuffix(url, "/ci")
 	}
 	return url
 }
 
-func newClient(config common.RunnerCredentials) (c *client, err error) {
-	url, err := url.Parse(fixCIURL(config.URL) + "/api/v1/")
+func (n *client) findCertificate(certificate *string, base string, name string) {
+	if *certificate != "" {
+		return
+	}
+	path := filepath.Join(base, name)
+	if _, err := os.Stat(path); err == nil {
+		*certificate = path
+	}
+}
+
+func newClient(requestCredentials requestCredentials) (c *client, err error) {
+	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
 	if err != nil {
 		return
 	}
@@ -246,13 +311,18 @@ func newClient(config common.RunnerCredentials) (c *client, err error) {
 	}
 
 	c = &client{
-		url:    url,
-		caFile: config.TLSCAFile,
+		url:                  url,
+		caFile:               requestCredentials.GetTLSCAFile(),
+		certFile:             requestCredentials.GetTLSCertFile(),
+		keyFile:              requestCredentials.GetTLSKeyFile(),
+		compatibleWithGitLab: true,
 	}
 
-	if CertificateDirectory != "" && c.caFile == "" {
-		hostAndPort := strings.Split(url.Host, ":")
-		c.caFile = filepath.Join(CertificateDirectory, hostAndPort[0]+".crt")
+	host := strings.Split(url.Host, ":")[0]
+	if CertificateDirectory != "" {
+		c.findCertificate(&c.caFile, CertificateDirectory, host+".crt")
+		c.findCertificate(&c.certFile, CertificateDirectory, host+".auth.crt")
+		c.findCertificate(&c.keyFile, CertificateDirectory, host+".auth.key")
 	}
 
 	return

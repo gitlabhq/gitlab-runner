@@ -12,12 +12,19 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
 )
 
+const (
+	DockerMachineExecutorStageUseMachine     common.ExecutorStage = "docker_machine_use_machine"
+	DockerMachineExecutorStageReleaseMachine common.ExecutorStage = "docker_machine_release_machine"
+)
+
 type machineExecutor struct {
 	provider *machineProvider
 	executor common.Executor
 	build    *common.Build
 	data     common.ExecutorData
 	config   common.RunnerConfig
+
+	currentStage common.ExecutorStage
 }
 
 func (e *machineExecutor) log() (log *logrus.Entry) {
@@ -49,21 +56,23 @@ func (e *machineExecutor) Shell() *common.ShellScriptInfo {
 	return e.executor.Shell()
 }
 
-func (e *machineExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) (err error) {
-	e.build = build
+func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err error) {
+	e.build = options.Build
 
 	// Use the machine
-	e.config, e.data, err = e.provider.Use(config, build.ExecutorData)
+	e.SetCurrentStage(DockerMachineExecutorStageUseMachine)
+	e.config, e.data, err = e.provider.Use(options.Config, options.Build.ExecutorData)
 	if err != nil {
 		return err
 	}
+	options.Config.Docker.DockerCredentials = e.config.Docker.DockerCredentials
 
 	// TODO: Currently the docker-machine doesn't support multiple builds
-	build.ProjectRunnerID = 0
-	if details, _ := build.ExecutorData.(*machineDetails); details != nil {
-		build.Hostname = details.Name
+	e.build.ProjectRunnerID = 0
+	if details, _ := options.Build.ExecutorData.(*machineDetails); details != nil {
+		options.Build.Hostname = details.Name
 	} else if details, _ := e.data.(*machineDetails); details != nil {
-		build.Hostname = details.Name
+		options.Build.Hostname = details.Name
 	}
 
 	e.log().Infoln("Starting docker-machine build...")
@@ -73,7 +82,8 @@ func (e *machineExecutor) Prepare(globalConfig *common.Config, config *common.Ru
 	if e.executor == nil {
 		return errors.New("failed to create an executor")
 	}
-	return e.executor.Prepare(globalConfig, &e.config, build)
+
+	return e.executor.Prepare(options)
 }
 
 func (e *machineExecutor) Run(cmd common.ExecutorCommand) error {
@@ -98,9 +108,27 @@ func (e *machineExecutor) Cleanup() {
 
 	// Release allocated machine
 	if e.data != nil {
+		e.SetCurrentStage(DockerMachineExecutorStageReleaseMachine)
 		e.provider.Release(&e.config, e.data)
 		e.data = nil
 	}
+}
+
+func (e *machineExecutor) GetCurrentStage() common.ExecutorStage {
+	if e.executor == nil {
+		return common.ExecutorStage("")
+	}
+
+	return e.executor.GetCurrentStage()
+}
+
+func (e *machineExecutor) SetCurrentStage(stage common.ExecutorStage) {
+	if e.executor == nil {
+		e.currentStage = stage
+		return
+	}
+
+	e.executor.SetCurrentStage(stage)
 }
 
 func init() {

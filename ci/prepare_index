@@ -3,14 +3,15 @@
 require 'digest'
 
 class ReleaseIndexer
-  attr_reader :name, :version, :sources_url, :workdir
+  attr_reader :name, :sources_url, :version, :revision, :workdir
   attr_reader :index_file, :checksum_file
   attr_reader :files, :created_at
 
-  def initialize(name, version, sources_url, workdir)
+  def initialize(name, sources_url, version, revision, workdir)
     @name = name
-    @version = version
     @sources_url = sources_url
+    @version = version
+    @revision = revision
     @workdir = workdir
 
     @index_file = "#{workdir}/index.html"
@@ -82,6 +83,7 @@ class ReleaseIndexer
     <body>
         <h1>#{title}</h1>
         <p><span>Sources:</span> <a href="#{sources_url}" target="_blank">#{sources_url}</a></p>
+        <p><span>Revision:</span> #{revision}</p>
         <p><span>Created at:</span> #{created_at}</p>
         <ul>
 EOS
@@ -104,6 +106,8 @@ EOS
   end
 end
 
-ReleaseIndexer.new('GitLab Runner', ENV['VERSION'],
-                   "#{ENV['CI_PROJECT_URL']}/tree/#{ENV['CI_BUILD_REF_NAME']}", 'out')
-                   .generate!
+ReleaseIndexer.new('GitLab Runner',
+                   "#{ENV['CI_PROJECT_URL']}/tree/#{ENV['CI_COMMIT_REF_NAME']}",
+                   ENV['VERSION'],
+                   ENV['CI_COMMIT_SHA'],
+                   'out').generate!

@@ -211,7 +211,7 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 
 // buildVariables converts a common.BuildVariables into a list of
 // kubernetes EnvVar objects
-func buildVariables(bv common.BuildVariables) []api.EnvVar {
+func buildVariables(bv common.JobVariables) []api.EnvVar {
 	e := make([]api.EnvVar, len(bv))
 	for i, b := range bv {
 		e[i] = api.EnvVar{
@@ -220,13 +220,4 @@ func buildVariables(bv common.BuildVariables) []api.EnvVar {
 		}
 	}
 	return e
-}
-
-// getNewOrLegacy takes two strings and returns the former if it is not empty.
-// If the former string is empty, the latter is returned.
-func getNewOrLegacy(new, legacy string) string {
-	if new != "" {
-		return new
-	}
-	return legacy
 }

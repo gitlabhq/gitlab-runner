@@ -33,8 +33,8 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 		c.RunnerCredentials = runnerConfig.RunnerCredentials
 	}
 
-	if !c.network.DeleteRunner(c.RunnerCredentials) {
-		log.Fatalln("Failed to delete runner", c.Name)
+	if !c.network.UnregisterRunner(c.RunnerCredentials) {
+		log.Fatalln("Failed to unregister runner", c.Name)
 		return
 	}
 
@@ -63,6 +63,6 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 
 func init() {
 	common.RegisterCommand2("unregister", "unregister specific runner", &UnregisterCommand{
-		network: &network.GitLabClient{},
+		network: network.NewGitLabClient(),
 	})
 }

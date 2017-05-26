@@ -1,9 +1,9 @@
-# Install and configure GitLab Runner for auto-scaling
+# Install and configure GitLab Runner for autoscaling
 
 > The auto scale feature was introduced in GitLab Runner 1.1.0.
 
 For an overview of the auto-scale architecture, take a look at the
-[comprehensive documentation on auto-scaling](../configuration/autoscale.md).
+[comprehensive documentation on autoscaling](../configuration/autoscale.md).
 
 ## Prepare the environment
 
@@ -92,7 +92,7 @@ more in [Distributed runners caching][caching].
 1. Register a GitLab Runner, selecting the `docker+machine` executor (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
 
     ```bash
-    sudo gitlab-ci-multi-runner register
+    sudo gitlab-runner register
     ```
 
     Example output:
@@ -168,7 +168,7 @@ more in [Distributed runners caching][caching].
     gracefully. It will stop accepting new jobs, and will exit as soon as the
     current builds are finished.
 
-1. Wait until the Runner exits. You can check its status with `gitlab-runner status` 
+1. Wait until the Runner exits. You can check its status with `gitlab-runner status`
     or await a graceful shutdown for up to 30 minutes with:
 
     ```bash

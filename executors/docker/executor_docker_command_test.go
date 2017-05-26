@@ -29,7 +29,7 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -52,7 +52,7 @@ func TestDockerCommandBuildFail(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -121,7 +121,7 @@ func TestDockerCommandBuildAbort(t *testing.T) {
 	longRunningBuild, err := common.GetRemoteLongRunningBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: longRunningBuild,
+		JobResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -157,7 +157,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	longRunningBuild, err := common.GetRemoteLongRunningBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: longRunningBuild,
+		JobResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -168,11 +168,11 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 		},
 	}
 
-	trace := &common.Trace{Writer: os.Stdout, Abort: make(chan interface{}, 1)}
+	trace := &common.Trace{Writer: os.Stdout}
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.Abort <- true
+		trace.CancelFunc()
 	})
 	defer abortTimer.Stop()
 
@@ -195,7 +195,7 @@ func TestDockerCommandOutput(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -238,7 +238,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 		longRunningBuild, err := common.GetRemoteLongRunningBuild()
 		assert.NoError(t, err)
 		build := &common.Build{
-			GetBuildResponse: longRunningBuild,
+			JobResponse: longRunningBuild,
 			Runner: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Executor: "docker",
@@ -249,20 +249,82 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 				},
 			},
 		}
-		build.Commands = strings.Join(commands, "\n")
-		build.Options = common.BuildOptions{
-			"image": "docker:git",
-			"services": []string{
-				"docker:dind",
+		build.Steps = common.Steps{
+			common.Step{
+				Name:         common.StepNameScript,
+				Script:       common.StepScript(commands),
+				When:         common.StepWhenOnSuccess,
+				AllowFailure: false,
 			},
 		}
-		build.Variables = append(build.Variables, common.BuildVariable{
+		build.Image.Name = "docker:git"
+		build.Services = common.Services{
+			common.Image{
+				Name: "docker:dind",
+			},
+		}
+		build.Variables = append(build.Variables, common.JobVariable{
 			Key: "GIT_STRATEGY", Value: strategy,
 		})
 
 		err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 		assert.NoError(t, err)
 	}
+}
+
+func runTestJobWithOutput(t *testing.T, build *common.Build) (output string) {
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	assert.NoError(t, err)
+
+	output = buffer.String()
+	return
+}
+
+func TestCacheInContainer(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	successfulBuild.JobInfo.ProjectID = int(time.Now().Unix())
+	successfulBuild.Steps[0].Script = common.StepScript{
+		"(test -d cached/ && ls -lh cached/) || echo \"no cached directory\"",
+		"(test -f cached/date && cat cached/date) || echo \"no cached date\"",
+		"mkdir -p cached",
+		"date > cached/date",
+	}
+	successfulBuild.Cache = common.Caches{
+		common.Cache{
+			Key:   "key",
+			Paths: common.ArtifactPaths{"cached/*"},
+		},
+	}
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:   "alpine",
+					Volumes: []string{"/cache"},
+				},
+			},
+		},
+	}
+
+	re := regexp.MustCompile("(?m)^no cached directory")
+
+	output := runTestJobWithOutput(t, build)
+	assert.Regexp(t, re, output, "First job execution should not have cached data")
+
+	output = runTestJobWithOutput(t, build)
+	assert.NotRegexp(t, re, output, "Second job execution should have cached data")
 }
 
 func runDockerInDocker(version string) (id string, err error) {
@@ -342,7 +404,7 @@ func testDockerVersion(t *testing.T, version string) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",

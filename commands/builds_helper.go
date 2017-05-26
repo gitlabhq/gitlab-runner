@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
 	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
@@ -8,40 +11,94 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage"}, nil)
+var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage", "executor_stage"}, nil)
 
-type buildsHelper struct {
-	counts map[string]int
-	builds []*common.Build
-	lock   sync.Mutex
+type statePermutation struct {
+	buildState    common.BuildRuntimeState
+	buildStage    common.BuildStage
+	executorStage common.ExecutorStage
 }
 
-func (b *buildsHelper) acquire(runner *common.RunnerConfig) bool {
+func newStatePermutationFromBuild(build *common.Build) statePermutation {
+	return statePermutation{
+		buildState:    build.CurrentState,
+		buildStage:    build.CurrentStage,
+		executorStage: build.CurrentExecutorStage(),
+	}
+}
+
+type runnerCounter struct {
+	builds   int
+	requests int
+}
+
+type buildsHelper struct {
+	counters map[string]*runnerCounter
+	builds   []*common.Build
+	lock     sync.Mutex
+}
+
+func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCounter {
+	if b.counters == nil {
+		b.counters = make(map[string]*runnerCounter)
+	}
+
+	counter, _ := b.counters[runner.Token]
+	if counter == nil {
+		counter = &runnerCounter{}
+		b.counters[runner.Token] = counter
+	}
+	return counter
+}
+
+func (b *buildsHelper) acquireBuild(runner *common.RunnerConfig) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// Check number of builds
-	count, _ := b.counts[runner.Token]
-	if runner.Limit > 0 && count >= runner.Limit {
+	counter := b.getRunnerCounter(runner)
+
+	if runner.Limit > 0 && counter.builds >= runner.Limit {
 		// Too many builds
 		return false
 	}
 
-	// Create a new build
-	if b.counts == nil {
-		b.counts = make(map[string]int)
-	}
-	b.counts[runner.Token]++
+	counter.builds++
 	return true
 }
 
-func (b *buildsHelper) release(runner *common.RunnerConfig) bool {
+func (b *buildsHelper) releaseBuild(runner *common.RunnerConfig) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	_, ok := b.counts[runner.Token]
-	if ok {
-		b.counts[runner.Token]--
+	counter := b.getRunnerCounter(runner)
+	if counter.builds > 0 {
+		counter.builds--
+		return true
+	}
+	return false
+}
+
+func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	counter := b.getRunnerCounter(runner)
+
+	if counter.requests >= runner.GetRequestConcurrency() {
+		return false
+	}
+
+	counter.requests++
+	return true
+}
+
+func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig) bool {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	counter := b.getRunnerCounter(runner)
+	if counter.requests > 0 {
+		counter.requests--
 		return true
 	}
 	return false
@@ -60,7 +117,7 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 		}
 		runners[otherBuild.RunnerID] = true
 
-		if otherBuild.ProjectID != build.ProjectID {
+		if otherBuild.JobInfo.ProjectID != build.JobInfo.ProjectID {
 			continue
 		}
 		projectRunners[otherBuild.ProjectRunnerID] = true
@@ -104,16 +161,18 @@ func (b *buildsHelper) buildsCount() int {
 	return len(b.builds)
 }
 
-func (b *buildsHelper) statesAndStages() map[common.BuildRuntimeState]map[common.BuildStage]int {
+func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	data := make(map[common.BuildRuntimeState]map[common.BuildStage]int)
+	data := make(map[statePermutation]int)
 	for _, build := range b.builds {
-		if data[build.CurrentState] == nil {
-			data[build.CurrentState] = make(map[common.BuildStage]int)
+		state := newStatePermutationFromBuild(build)
+		if _, ok := data[state]; ok {
+			data[state]++
+		} else {
+			data[state] = 1
 		}
-		data[build.CurrentState][build.CurrentStage]++
 	}
 	return data
 }
@@ -127,10 +186,30 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	data := b.statesAndStages()
 
-	for state, scripts := range data {
-		for stage, count := range scripts {
-			ch <- prometheus.MustNewConstMetric(numBuildsDesc, prometheus.GaugeValue, float64(count),
-				string(state), string(stage))
-		}
+	for state, count := range data {
+		ch <- prometheus.MustNewConstMetric(
+			numBuildsDesc,
+			prometheus.GaugeValue,
+			float64(count),
+			string(state.buildState),
+			string(state.buildStage),
+			string(state.executorStage),
+		)
 	}
+}
+
+func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain")
+
+	var jobs []string
+	for _, job := range b.builds {
+		jobDescription := fmt.Sprintf(
+			"id=%d url=%s state=%s stage=%s executor_stage=%s",
+			job.ID, job.RepoCleanURL(),
+			job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(),
+		)
+		jobs = append(jobs, jobDescription)
+	}
+
+	w.Write([]byte(strings.Join(jobs, "\n")))
 }

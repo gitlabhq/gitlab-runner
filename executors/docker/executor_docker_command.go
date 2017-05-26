@@ -15,8 +15,8 @@ type commandExecutor struct {
 	buildContainer      *types.ContainerJSON
 }
 
-func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.executor.Prepare(globalConfig, config, build)
+func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
+	err := s.executor.Prepare(options)
 	if err != nil {
 		return err
 	}
@@ -52,8 +52,9 @@ func (s *commandExecutor) Prepare(globalConfig *common.Config, config *common.Ru
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
-	var runOn *types.ContainerJSON
+	s.SetCurrentStage(DockerExecutorStageRun)
 
+	var runOn *types.ContainerJSON
 	if cmd.Predefined {
 		runOn = s.predefinedContainer
 	} else {
@@ -62,7 +63,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 
 	s.Debugln("Executing on", runOn.Name, "the", cmd.Script)
 
-	return s.watchContainer(runOn.ID, bytes.NewBufferString(cmd.Script), cmd.Abort)
+	return s.watchContainer(cmd.Context, runOn.ID, bytes.NewBufferString(cmd.Script))
 }
 
 func init() {
@@ -75,18 +76,19 @@ func init() {
 			Type:          common.NormalShell,
 			RunnerCommand: "/usr/bin/gitlab-runner-helper",
 		},
-		ShowHostname:     true,
-		SupportedOptions: []string{"image", "services"},
+		ShowHostname: true,
 	}
 
 	creator := func() common.Executor {
-		return &commandExecutor{
+		e := &commandExecutor{
 			executor: executor{
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: options,
 				},
 			},
 		}
+		e.SetCurrentStage(common.ExecutorStageCreated)
+		return e
 	}
 
 	featuresUpdater := func(features *common.FeaturesInfo) {

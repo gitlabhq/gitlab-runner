@@ -3,7 +3,7 @@ package shells
 import "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 
 type ShellWriter interface {
-	Variable(variable common.BuildVariable)
+	Variable(variable common.JobVariable)
 	Command(command string, arguments ...string)
 	Line(text string)
 	CheckForErrors()

@@ -39,7 +39,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "virtualbox",
@@ -64,7 +64,7 @@ func TestVirtualBoxBuildFail(t *testing.T) {
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: failedBuild,
+		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "virtualbox",
@@ -136,7 +136,7 @@ func TestVirtualBoxBuildAbort(t *testing.T) {
 	longRunningBuild, err := common.GetRemoteLongRunningBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: longRunningBuild,
+		JobResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "virtualbox",
@@ -174,7 +174,7 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 	longRunningBuild, err := common.GetRemoteLongRunningBuild()
 	assert.NoError(t, err)
 	build := &common.Build{
-		GetBuildResponse: longRunningBuild,
+		JobResponse: longRunningBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "virtualbox",
@@ -187,11 +187,11 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 		},
 	}
 
-	trace := &common.Trace{Writer: os.Stdout, Abort: make(chan interface{}, 1)}
+	trace := &common.Trace{Writer: os.Stdout}
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.Abort <- true
+		trace.CancelFunc()
 	})
 	defer abortTimer.Stop()
 

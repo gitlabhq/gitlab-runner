@@ -1,6 +1,8 @@
 package common
 
 import (
+	"context"
+
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -9,15 +11,34 @@ type ExecutorData interface{}
 type ExecutorCommand struct {
 	Script     string
 	Predefined bool
-	Abort      chan interface{}
+	Context    context.Context
+}
+
+type ExecutorStage string
+
+const (
+	ExecutorStageCreated ExecutorStage = "created"
+	ExecutorStagePrepare ExecutorStage = "prepare"
+	ExecutorStageFinish  ExecutorStage = "finish"
+	ExecutorStageCleanup ExecutorStage = "cleanup"
+)
+
+type ExecutorPrepareOptions struct {
+	Config  *RunnerConfig
+	Build   *Build
+	Trace   JobTrace
+	User    string
+	Context context.Context
 }
 
 type Executor interface {
 	Shell() *ShellScriptInfo
-	Prepare(globalConfig *Config, config *RunnerConfig, build *Build) error
+	Prepare(options ExecutorPrepareOptions) error
 	Run(cmd ExecutorCommand) error
 	Finish(err error)
 	Cleanup()
+	GetCurrentStage() ExecutorStage
+	SetCurrentStage(stage ExecutorStage)
 }
 
 type ExecutorProvider interface {

@@ -1,9 +1,6 @@
 package commands
 
 import (
-	"errors"
-	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,7 +9,7 @@ import (
 	"github.com/codegangsta/cli"
 	"gitlab.com/ayufan/golang-cli-helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gopkg.in/yaml.v2"
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/gitlab_ci_yaml_parser"
 
 	// Force to load all executors, executes init() on them
 	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
@@ -34,167 +31,6 @@ func (c *ExecCommand) runCommand(name string, arg ...string) (string, error) {
 	cmd.Stderr = os.Stderr
 	result, err := cmd.Output()
 	return string(result), err
-}
-
-func (c *ExecCommand) getCommands(commands interface{}) (string, error) {
-	if lines, ok := commands.([]interface{}); ok {
-		text := ""
-		for _, line := range lines {
-			if lineText, ok := line.(string); ok {
-				text += lineText + "\n"
-			} else {
-				return "", errors.New("unsupported script")
-			}
-		}
-		return text + "\n", nil
-	} else if text, ok := commands.(string); ok {
-		return text + "\n", nil
-	} else if commands != nil {
-		return "", errors.New("unsupported script")
-	}
-	return "", nil
-}
-
-func (c *ExecCommand) supportedOption(key string, _ interface{}) bool {
-	switch key {
-	case "image", "services", "artifacts", "cache", "after_script":
-		return true
-	default:
-		return false
-	}
-}
-
-func (c *ExecCommand) buildCommands(configBeforeScript, jobConfigBeforeScript, jobScript interface{}) (commands string, err error) {
-	// get before_script
-	beforeScript, err := c.getCommands(configBeforeScript)
-	if err != nil {
-		return
-	}
-
-	// get job before_script
-	jobBeforeScript, err := c.getCommands(jobConfigBeforeScript)
-	if err != nil {
-		return
-	}
-
-	if jobBeforeScript == "" {
-		commands += beforeScript
-	} else {
-		commands += jobBeforeScript
-	}
-
-	// get script
-	script, err := c.getCommands(jobScript)
-	if err != nil {
-		return
-	} else if jobScript == nil {
-		err = fmt.Errorf("missing 'script' for job")
-		return
-	}
-	commands += script
-	return
-}
-
-func (c *ExecCommand) buildVariables(configVariables interface{}) (buildVariables common.BuildVariables, err error) {
-	if variables, ok := configVariables.(map[string]interface{}); ok {
-		for key, value := range variables {
-			if valueText, ok := value.(string); ok {
-				buildVariables = append(buildVariables, common.BuildVariable{
-					Key:    key,
-					Value:  valueText,
-					Public: true,
-				})
-			} else {
-				err = fmt.Errorf("invalid value for variable %q", key)
-			}
-		}
-	} else if configVariables != nil {
-		err = errors.New("unsupported variables")
-	}
-	return
-}
-
-func (c *ExecCommand) buildGlobalAndJobVariables(global, job interface{}) (buildVariables common.BuildVariables, err error) {
-	buildVariables, err = c.buildVariables(global)
-	if err != nil {
-		return
-	}
-
-	jobVariables, err := c.buildVariables(job)
-	if err != nil {
-		return
-	}
-
-	buildVariables = append(buildVariables, jobVariables...)
-	return
-}
-
-func (c *ExecCommand) buildOptions(config, jobConfig common.BuildOptions) (options common.BuildOptions, err error) {
-	options = make(common.BuildOptions)
-
-	// parse global options
-	for key, value := range config {
-		if c.supportedOption(key, value) {
-			options[key] = value
-		}
-	}
-
-	// parse job options
-	for key, value := range jobConfig {
-		if c.supportedOption(key, value) {
-			options[key] = value
-		}
-	}
-	return
-}
-
-func (c *ExecCommand) parseYaml(job string, build *common.GetBuildResponse) error {
-	data, err := ioutil.ReadFile(".gitlab-ci.yml")
-	if err != nil {
-		return err
-	}
-
-	build.Name = job
-
-	// parse gitlab-ci.yml
-	config := make(common.BuildOptions)
-	err = yaml.Unmarshal(data, config)
-	if err != nil {
-		return err
-	}
-
-	err = config.Sanitize()
-	if err != nil {
-		return err
-	}
-
-	// get job
-	jobConfig, ok := config.GetSubOptions(job)
-	if !ok {
-		return fmt.Errorf("no job named %q", job)
-	}
-
-	build.Commands, err = c.buildCommands(config["before_script"], jobConfig["before_script"], jobConfig["script"])
-	if err != nil {
-		return err
-	}
-
-	build.Variables, err = c.buildGlobalAndJobVariables(config["variables"], jobConfig["variables"])
-	if err != nil {
-		return err
-	}
-
-	build.Options, err = c.buildOptions(config, jobConfig)
-	if err != nil {
-		return err
-	}
-
-	if stage, ok := jobConfig.GetString("stage"); ok {
-		build.Stage = stage
-	} else {
-		build.Stage = "test"
-	}
-	return nil
 }
 
 func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (build *common.Build, err error) {
@@ -222,20 +58,25 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 	}
 
 	build = &common.Build{
-		GetBuildResponse: common.GetBuildResponse{
+		JobResponse: common.JobResponse{
 			ID:            1,
-			ProjectID:     1,
-			RepoURL:       repoURL,
-			Commands:      "",
-			Sha:           strings.TrimSpace(sha),
-			RefName:       strings.TrimSpace(refName),
-			BeforeSha:     strings.TrimSpace(beforeSha),
-			AllowGitFetch: false,
-			Timeout:       c.getTimeout(),
 			Token:         "",
-			Name:          "",
-			Stage:         "",
-			Tag:           false,
+			AllowGitFetch: false,
+			JobInfo: common.JobInfo{
+				Name:        "",
+				Stage:       "",
+				ProjectID:   1,
+				ProjectName: "",
+			},
+			GitInfo: common.GitInfo{
+				RepoURL:   repoURL,
+				Ref:       strings.TrimSpace(refName),
+				Sha:       strings.TrimSpace(sha),
+				BeforeSha: strings.TrimSpace(beforeSha),
+			},
+			RunnerInfo: common.RunnerInfo{
+				Timeout: c.getTimeout(),
+			},
 		},
 		Runner: &common.RunnerConfig{
 			RunnerSettings: c.RunnerSettings,
@@ -287,7 +128,8 @@ func (c *ExecCommand) Execute(context *cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	err = c.parseYaml(c.Job, &build.GetBuildResponse)
+	parser := gitlab_ci_yaml_parser.NewGitLabCiYamlParser(c.Job)
+	err = parser.ParseYaml(&build.JobResponse)
 	if err != nil {
 		logrus.Fatalln(err)
 	}

@@ -72,7 +72,7 @@ func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
 		File: cacheExtractorArchive,
 		URL:  ts.URL + "/invalid-file.zip",
 	}
-	assert.NotPanics(t, func() {
+	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
 }
@@ -92,14 +92,14 @@ func TestCacheArchiverRemoteServe(t *testing.T) {
 	})
 }
 
-func TestCacheArchiverRemoteServerDoesntFailOnInvalidServer(t *testing.T) {
+func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
 	helpers.MakeFatalToPanic()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheArchiverCommand{
 		File: cacheExtractorArchive,
 		URL:  "http://localhost:65333/cache.zip",
 	}
-	assert.NotPanics(t, func() {
+	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
 

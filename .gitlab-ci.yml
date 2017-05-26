@@ -1,28 +1,43 @@
-image: golang:1.7
-
 stages:
+- prepare
 - prebuild
 - test
 - build
 - package
 - release
 
+variables:
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.7
+  GOROOT: /usr/local/go
+
+image: $CI_IMAGE
+
 before_script:
 - source ci/prepare
 
 .docker: &docker
-  before_script:
-  - source ci/prepare
-  - wget -q https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O /tmp/docker.tar.gz
-  - tar -xzf /tmp/docker.tar.gz -C /tmp/
-  - cp /tmp/docker/docker* /usr/bin
-  - chmod +x /usr/bin/docker*
-  services: ["docker:dind"]
+  services:
+  - docker:dind
   variables:
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.7
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
   tags:
   - docker
+
+#
+# Prepare stage
+#
+
+prepare ci image:
+  <<: *docker
+  stage: prepare
+  image: docker:git
+  before_script: []
+  script:
+  - source ./ci/build_ci_image
+  only:
+  - /\Adocker-ci-image\/.*/@gitlab-org/gitlab-ci-multi-runner
 
 #
 # Prebuild stage
@@ -32,8 +47,6 @@ bindata:
   <<: *docker
   stage: prebuild
   script:
-  - apt-get install -yqqq xz-utils
-  - make deps
   - make docker
   artifacts:
     paths:
@@ -58,15 +71,11 @@ clone test repo:
 # Test stage
 #
 
-code style:
+static code analysis:
   stage: test
   script:
   - source ci/touch_make_dependencies
-  - make deps
-  - make fmt
-  - make lint
-  - make complexity
-  - make vet
+  - make static_code_analysis
   tags:
   - docker
 
@@ -74,10 +83,23 @@ unit tests:
   stage: test
   script:
   - source ci/touch_make_dependencies
-  - make deps
   - make test
   tags:
   - docker
+
+docs check links:
+  image: "registry.gitlab.com/gitlab-org/gitlab-build-images:nanoc-bootstrap-ruby-2.4-alpine"
+  stage: test
+  cache: {}
+  dependencies: []
+  before_script: []
+  script:
+    - mv docs/ /nanoc/content/
+    - cd /nanoc
+    # Build HTML from Markdown
+    - bundle exec nanoc
+    # Check the internal links
+    - bundle exec nanoc check internal_links
 
 docker executor:
   <<: *docker
@@ -112,12 +134,12 @@ integration windows:
 # Build stage
 #
 
-binaries:
+.binaries: &binaries
   stage: build
   script:
   - source ci/touch_make_dependencies
-  - make deps
-  - make build
+  - export platforms=$(echo $CI_JOB_NAME | sed 's|binaries ||')
+  - make build BUILD_PLATFORMS="-osarch='$platforms'"
   artifacts:
     paths:
     - out/binaries/
@@ -125,16 +147,24 @@ binaries:
   tags:
   - docker
 
+binaries darwin/386 darwin/amd64: *binaries
+binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
+binaries linux/386 linux/amd64 linux/arm: *binaries
+binaries windows/386 windows/amd64: *binaries
+
 #
 # Package stage
 #
 
-packages:
+.packages: &packages
   stage: package
   script:
+  - mkdir -p out/docker
+  - touch out/docker/prebuilt-x86_64.tar.xz
+  - touch out/docker/prebuilt-arm.tar.xz
+  - touch executors/docker/bindata.go
   - source ci/touch_make_dependencies
-  - apt-get install -yqqq ruby ruby-dev python-pip dpkg-sig createrepo rpm
-  - make package
+  - make ${CI_JOB_NAME}
   artifacts:
     paths:
     - out/deb/
@@ -143,31 +173,25 @@ packages:
   tags:
   - docker
 
+package-deb: *packages
+package-rpm: *packages
+
 #
 # Release stage
 #
 
-docker_images:
+.release_docker_images: &release_docker_images
   <<: *docker
   stage: release
-  image: docker:1.12-git
-  before_script:
-  - source ci/touch_make_dependencies
-  - apk -U add make bash
   script:
+  - source ci/touch_make_dependencies
   - make release_docker_images
-  only:
-  - master@gitlab-org/gitlab-ci-multi-runner
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
   tags:
   - release
 
 .release: &release
   stage: release
   before_script:
-  - apt-get update -yqqq >/dev/null
-  - apt-get install -yqqq ruby ruby-dev >/dev/null
   - source ci/touch_make_dependencies
   tags:
   - release
@@ -187,35 +211,61 @@ docker_images:
   - branches@gitlab-org/gitlab-ci-multi-runner
   except:
   - master@gitlab-org/gitlab-ci-multi-runner
-  environment: development
 
 .release_bleeding_edge: &release_bleeding_edge
   only:
   - master@gitlab-org/gitlab-ci-multi-runner
   - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
-  environment: bleeding_edge
 
 .release_stable: &release_stable
   only:
   - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
-  environment: stable_release
 
 development S3:
   <<: *release_s3
   <<: *release_development
+  environment:
+    name: development/s3/${CI_COMMIT_REF_NAME}
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 bleeding edge S3:
   <<: *release_s3
   <<: *release_bleeding_edge
+  environment:
+    name: bleeding_edge/s3
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 bleeding edge packagecloud:
   <<: *release_packagecloud
   <<: *release_bleeding_edge
+  environment:
+    name: bleeding_edge/packagecloud
+    url: https://packages.gitlab.com/runner/unstable
+
+bleeding edge docker images:
+  <<: *release_docker_images
+  <<: *release_bleeding_edge
+  environment:
+    name: bleeding_edge/docker_images
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable S3:
   <<: *release_s3
   <<: *release_stable
+  environment:
+    name: stable/s3
+    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 stable packagecloud:
   <<: *release_packagecloud
   <<: *release_stable
+  environment:
+    name: stable/packagecloud
+    url: https://packages.gitlab.com/runner/gitlab-ci-multi-runner
+
+stable docker images:
+  <<: *release_docker_images
+  <<: *release_stable
+  environment:
+      name: stable/docker_images
+      url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/

@@ -41,7 +41,7 @@ func TestBuildRun(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-test",
@@ -81,7 +81,7 @@ func TestRetryPrepare(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-retry-prepare",
@@ -114,7 +114,7 @@ func TestPrepareFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-failure",
@@ -145,7 +145,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-failure-on-build-error",
@@ -177,10 +177,10 @@ func TestRunFailure(t *testing.T) {
 
 	RegisterExecutor("build-run-run-failure", &p)
 
-	successfulBuild, err := GetSuccessfulBuild()
+	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: failedBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-run-failure",
@@ -216,7 +216,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-get-sources-run-failure",
@@ -224,7 +224,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -245,7 +245,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(nil).Times(2)
+	e.On("Run", mock.Anything).Return(nil).Times(3)
 	e.On("Run", mock.Anything).Return(errors.New("build fail")).Times(3)
 	e.On("Finish", errors.New("build fail")).Return().Once()
 
@@ -254,7 +254,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-artifacts-run-failure",
@@ -262,7 +262,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, JobVariable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -283,7 +283,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(nil).Times(3)
+	e.On("Run", mock.Anything).Return(nil).Times(2)
 	e.On("Run", mock.Anything).Return(errors.New("build fail")).Times(3)
 	e.On("Finish", errors.New("build fail")).Return().Once()
 
@@ -292,7 +292,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-cache-run-failure",
@@ -300,7 +300,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, JobVariable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
@@ -329,7 +329,7 @@ func TestRunWrongAttempts(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-attempt-failure",
@@ -337,7 +337,7 @@ func TestRunWrongAttempts(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
+	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "Number of attempts out of the range [1, 10] for stage: get_sources")
 }
@@ -366,7 +366,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		GetBuildResponse: successfulBuild,
+		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-success-second-attempt",
@@ -374,7 +374,30 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 		},
 	}
 
-	build.Variables = append(build.Variables, BuildVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
+	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func TestDebugTrace(t *testing.T) {
+	build := &Build{}
+	assert.False(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be false if CI_DEBUG_TRACE is not set")
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+
+	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{"CI_DEBUG_TRACE", "false", true, true, false})
+	build = &Build{
+		JobResponse: successfulBuild,
+	}
+	assert.False(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be false if CI_DEBUG_TRACE is set to false")
+
+	successfulBuild, err = GetSuccessfulBuild()
+	assert.NoError(t, err)
+
+	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{"CI_DEBUG_TRACE", "true", true, true, false})
+	build = &Build{
+		JobResponse: successfulBuild,
+	}
+	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
 }

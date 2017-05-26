@@ -13,8 +13,8 @@ type executor struct {
 	sshCommand ssh.Client
 }
 
-func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerConfig, build *common.Build) error {
-	err := s.AbstractExecutor.Prepare(globalConfig, config, build)
+func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
+	err := s.AbstractExecutor.Prepare(options)
 	if err != nil {
 		return err
 	}
@@ -33,8 +33,8 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 	// Create SSH command
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.BuildTrace,
-		Stderr: s.BuildTrace,
+		Stdout: s.Trace,
+		Stderr: s.Trace,
 	}
 
 	s.Debugln("Connecting to SSH server...")
@@ -46,11 +46,10 @@ func (s *executor) Prepare(globalConfig *common.Config, config *common.RunnerCon
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	err := s.sshCommand.Run(ssh.Command{
+	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Environment: s.BuildShell.Environment,
 		Command:     s.BuildShell.GetCommandWithArguments(),
 		Stdin:       cmd.Script,
-		Abort:       cmd.Abort,
 	})
 	if _, ok := err.(*ssh.ExitError); ok {
 		err = &common.BuildError{Inner: err}

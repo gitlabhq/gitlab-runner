@@ -39,7 +39,7 @@ func TestConcurrentFireCall(t *testing.T) {
 		finished++
 	}
 
-	assert.Equal(t, total, *lh.errorsNumber[logrus.ErrorLevel], "Should fire log_hook N times")
+	assert.Equal(t, int64(total), *lh.errorsNumber[logrus.ErrorLevel], "Should fire log_hook N times")
 }
 
 func callCollectConcurrent(t *testing.T, lh *LogHook, repeats int, ch chan<- prometheus.Metric, finish chan bool) {
@@ -79,5 +79,5 @@ func TestCouncurrentFireCallWithCollect(t *testing.T) {
 		finished++
 	}
 
-	assert.Equal(t, total/2, *lh.errorsNumber[logrus.ErrorLevel], "Should fire log_hook N times")
+	assert.Equal(t, int64(total/2), *lh.errorsNumber[logrus.ErrorLevel], "Should fire log_hook N times")
 }

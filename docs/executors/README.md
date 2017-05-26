@@ -94,16 +94,17 @@ any of the above.
 
 Supported features by different executors:
 
-| Executor                              | Shell   | Docker | Docker-SSH | VirtualBox | Parallels | SSH  |
-|---------------------------------------|---------|--------|------------|------------|-----------|------|
-| Secure Variables                      | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    |
-| GitLab Runner Exec command            | ✓       | ✓      | ✓          | no         | no        | no   |
-| gitlab-ci.yml: image                  | no      | ✓      | ✓          | no         | no        | no   |
-| gitlab-ci.yml: services               | no      | ✓      | ✓          | no         | no        | no   |
-| gitlab-ci.yml: cache                  | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    |
-| gitlab-ci.yml: artifacts              | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    |
-| Absolute paths: caching, artifacts    | no      | no     | no         | no         | no        | no   |
-| Passing artifacts between stages      | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    |
+| Executor                              | Shell   | Docker | Docker-SSH | VirtualBox | Parallels | SSH  | Kubernetes |
+|---------------------------------------|---------|--------|------------|------------|-----------|------|------------|
+| Secure Variables                      | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    | ✓          |
+| GitLab Runner Exec command            | ✓       | ✓      | ✓          | no         | no        | no   | ✓          |
+| gitlab-ci.yml: image                  | no      | ✓      | ✓          | no         | no        | no   | ✓          |
+| gitlab-ci.yml: services               | no      | ✓      | ✓          | no         | no        | no   | ✓          |
+| gitlab-ci.yml: cache                  | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    | ✓          |
+| gitlab-ci.yml: artifacts              | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    | ✓          |
+| Absolute paths: caching, artifacts    | no      | no     | no         | no         | no        | no   | ✓          |
+| Passing artifacts between stages      | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    | ✓          |
+| Use GitLab Container Registry private images | n/a | ✓   | ✓          | n/a        | n/a       | n/a  | ✓          |
 
 Supported systems by different shells:
 

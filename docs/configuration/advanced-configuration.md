@@ -16,7 +16,8 @@ This defines global settings of multi-runner.
 
 | Setting | Description |
 | ------- | ----------- |
-| `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners |
+| `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
+| `log_level`      | Log level (options: debug, info, warn, error, fatal, panic). Note that this setting has lower priority than log-level set by command line argument --debug, -l or --log-level |
 | `check_interval` | defines in seconds how often to check GitLab for a new builds |
 | `sentry_dsn`     | enable tracking of all system level errors to sentry |
 | `metrics_server` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
@@ -25,6 +26,7 @@ Example:
 
 ```bash
 concurrent = 4
+log_level = "warning"
 ```
 
 ## The [[runners]] section
@@ -37,14 +39,17 @@ This defines one runner entry.
 | `url`                | CI URL |
 | `token`              | runner token |
 | `tls-ca-file`        | file containing the certificates to verify the peer when using HTTPS |
+| `tls-cert-file`      | file containing the certificate to authenticate with the peer when using HTTPS |
+| `tls-key-file`       | file containing the private key to authenticate with the peer when using HTTPS |
 | `tls-skip-verify`    | whether to verify the TLS certificate when using HTTPS, default: false |
-| `limit`              | limit how many jobs can be handled concurrently by this token. 0 simply means don't limit |
+| `limit`              | limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
 | `executor`           | select how a project should be built, see next section |
 | `shell`              | the name of shell to generate the script (default value is platform dependent) |
 | `builds_dir`         | directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
 | `cache_dir`          | directory where build caches will be stored in context of selected executor (Locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
 | `environment`        | append or overwrite environment variables |
 | `disable_verbose`    | don't print run commands |
+| `request_concurrency` | limit number of concurrent requests for new jobs from GitLab (default 1) |
 | `output_limit`       | set maximum build log size in kilobytes, by default set to 4096 (4MB) |
 | `pre_clone_script`   | commands to be executed on the runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `pre_build_script`   | commands to be executed on the runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
@@ -116,6 +121,7 @@ This defines the Docker Container parameters.
 | `cache_dir`                 | specify where Docker caches should be stored (this can be absolute or relative to current working directory) |
 | `volumes`                   | specify additional volumes that should be mounted (same syntax as Docker -v option) |
 | `extra_hosts`               | specify hosts that should be defined in container environment |
+| `shm_size`                  | specify shared memory size for images (in bytes) |
 | `volumes_from`              | specify a list of volumes to inherit from another container in the form <code>\<container name\>[:\<ro&#124;rw\>]</code> |
 | `volume_driver`             | specify the volume driver to use for the container |
 | `links`                     | specify containers which should be linked with building container |
@@ -144,6 +150,7 @@ Example:
   cache_dir = ""
   volumes = ["/data", "/home/project/cache"]
   extra_hosts = ["other-host:127.0.0.1"]
+  shm_size = 300000
   volumes_from = ["storage_container:ro"]
   links = ["mysql_container:mysql"]
   services = ["mysql", "redis:2.8", "postgres:9"]
@@ -206,7 +213,6 @@ This will use `/path/to/bind/from/host` of the CI host inside the container at
   support for using private registries, which required manual configuration
   of credentials on runner's host. We recommend to upgrade your Runner to
   at least version **1.8** if you want to use private registries.
-- Private registries are currently not supported by the Kubernetes executor.
 - Using private registries with the `if-not-present` pull policy may introduce
   [security implications][secpull]. To fully understand how pull policies work,
   read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
@@ -251,7 +257,7 @@ To configure access for `registry.example.com`, follow these steps:
    `image` and/or `services` in your [`.gitlab-ci.yml` file][yaml-priv-reg].
 
 You can add configuration for as many registries as you want, adding more
-registries to the `"auth"` hash as described above.
+registries to the `"auths"` hash as described above.
 
 The steps performed by the Runner can be summed up to:
 
@@ -265,11 +271,12 @@ Now that the Runner is set up to authenticate against your private registry,
 learn [how to configure .gitlab-ci.yml][yaml-priv-reg] in order to use that
 registry.
 
-### Support for GitLab integrated registry
+#### Support for GitLab integrated registry
 
 > **Note:**
 To work automatically with private/protected images from
-GitLab integrated registry it needs at least GitLab CE/EE **8.14**.
+GitLab integrated registry it needs at least GitLab CE/EE **8.14**
+and GitLab Runner **1.8**.
 
 Starting with GitLab CE/EE 8.14, GitLab will send credentials for its integrated
 registry along with the build data. These credentials will be automatically
@@ -283,13 +290,30 @@ registry, even if the image is private/protected. To fully understand for
 which images the builds will have access, read the
 [New CI build permissions model][ci-build-permissions-model] documentation.
 
-### Restrict `allowed_images` to private registry
+#### Precedence of Docker authorization resolving
+
+As described above, GitLab Runner can authorize Docker against a registry by
+using credentials sent in different way. To find a proper registry, the following
+precedence is taken into account:
+
+1. Credentials configured with `DOCKER_AUTH_CONFIG`.
+1. Credentials configured locally on Runner's host with `~/.docker/config.json`
+   or `~/.dockercfg` files (e.g., by running `docker login` on the host).
+1. Credentials sent by default with job's payload (e.g., credentials for _integrated
+   registry_ described above).
+
+The first found credentials for the registry will be used. So for example,
+if you add some credentials for the _integrated registry_ with the
+`DOCKER_AUTH_CONFIG` variable, then the default credentials will be overridden.
+
+#### Restrict `allowed_images` to private registry
+
 For certain setups you will restrict access of the build jobs to docker images
 which comes from your private docker registry. In that case set
 
 ```bash
 [runners.docker]
-  …
+  ...
   allowed_images = ["my.registry.tld:5000/*:*"]
 ```
 
@@ -473,10 +497,6 @@ This defines the Kubernetes parameters.
 | `image`          | string  | Default docker image to use for builds when none is specified |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled |
-| `cpus`           | string  | The CPU allocation given to build containers |
-| `memory`         | string  | The amount of memory allocated to build containers |
-| `service_cpus`   | string  | The CPU allocation given to build service containers |
-| `service_memory` | string  | The amount of memory allocated to build service containers |
 | `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs |
 | `image_pull_secrets` | array | A list of secrets that are used to authenticate docker image pulling |
 
@@ -491,13 +511,9 @@ Example:
 	namespace = "gitlab"
 	image = "golang:1.7"
 	privileged = true
-	cpus = "750m"
-	memory = "250m"
-	service_cpus = "1000m"
-	service_memory = "450m"
+	image_pull_secrets = ["docker-registry-credentials"]
 	[runners.kubernetes.node_selector]
 		gitlab = "true"
-	image_pull_secrets = ["docker-registry-credentials"]
 ```
 
 ## Note
