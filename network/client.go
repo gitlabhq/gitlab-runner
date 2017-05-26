@@ -67,6 +67,8 @@ type ResponseTLSData struct {
 	KeyFile  string
 }
 
+type APIErrorResponse map[string]map[string][]string
+
 func (n *client) getLastUpdate() string {
 	return n.lastUpdate
 }
@@ -291,16 +293,16 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 
 	if res.StatusCode == statusCode {
 		if response != nil {
-			isApplicationJSON, err := isResponseApplicationJSON(res)
-			if !isApplicationJSON {
+			err := decodeJSONPayload(res, &response)
+			if err != nil {
+				logrus.Errorln(err.Error())
 				return -1, err.Error(), ResponseTLSData{}
 			}
-
-			d := json.NewDecoder(res.Body)
-			err = d.Decode(response)
-			if err != nil {
-				return -1, fmt.Sprintf("Error decoding json payload %v", err), ResponseTLSData{}
-			}
+		}
+	} else {
+		err := logAPIErrorMessages(res)
+		if err != nil {
+			logrus.Errorln(err.Error())
 		}
 	}
 
@@ -313,6 +315,21 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 	}
 
 	return res.StatusCode, res.Status, TLSData
+}
+
+func decodeJSONPayload(res *http.Response, response interface{}) (err error) {
+	isApplicationJSON, err := isResponseApplicationJSON(res)
+	if !isApplicationJSON {
+		return err
+	}
+
+	d := json.NewDecoder(res.Body)
+	err = d.Decode(response)
+	if err != nil {
+		return fmt.Errorf("Error decoding json payload %v", err)
+	}
+
+	return nil
 }
 
 func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
@@ -328,6 +345,45 @@ func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
 	}
 
 	return true, nil
+}
+
+func logAPIErrorMessages(res *http.Response) (err error) {
+	isApplicationJSON, err := isResponseApplicationJSON(res)
+	if err != nil {
+		return err
+	}
+
+	if !isApplicationJSON {
+		return nil
+	}
+
+	var apiErrorResponse APIErrorResponse
+	err = json.NewDecoder(res.Body).Decode(&apiErrorResponse)
+	if err != nil {
+		return err
+	}
+
+	for _, message := range apiErrorResponse.ErrorMessages() {
+		logrus.Errorln(message)
+	}
+
+	return nil
+}
+
+func (a APIErrorResponse) ErrorMessages() []string {
+	problems, ok := a["message"]
+	if !ok {
+		return []string{"Unknown error"}
+	}
+
+	out := []string{}
+	for key, messages := range problems {
+		for _, message := range messages {
+			out = append(out, key+": "+message)
+		}
+	}
+
+	return out
 }
 
 func fixCIURL(url string) string {

@@ -2,7 +2,6 @@ package network
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -107,7 +106,6 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 
 	var response common.RegisterRunnerResponse
 	result, statusText, _ := n.doJSON(&runner, "POST", "runners", http.StatusCreated, &request, &response)
-	defer response.Body.Close()
 
 	switch result {
 	case http.StatusCreated:
@@ -115,19 +113,6 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 		return &response
 	case http.StatusBadRequest:
 		runner.Log().Errorln("Registering runner...", "bad request")
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			runner.Log().Errorln(err.Error())
-			return nil
-		}
-		err = json.NewDecoder(body).Decode(&result)
-		if err != nil {
-			runner.Log().Errorln(err.Error())
-			return nil
-		}
-		for _, problem := range result.Problems() {
-			runner.Log().Errorln(problem)
-		}
 		return nil
 	case http.StatusForbidden:
 		runner.Log().Errorln("Registering runner...", "forbidden (check registration token)")
@@ -139,24 +124,6 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 		runner.Log().WithField("status", statusText).Errorln("Registering runner...", "failed")
 		return nil
 	}
-}
-
-type APIErrorMessage map[string]map[string][]string
-
-func (a APIErrorMessage) Problems() []string {
-	problems, ok := a["message"]
-	if !ok {
-		return []string{"Unknown error"}
-	}
-
-	out := []string{}
-	for key, messages := range problems {
-		for _, message := range messages {
-			out = append(out, key+": "+message)
-		}
-	}
-
-	return out
 }
 
 func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
