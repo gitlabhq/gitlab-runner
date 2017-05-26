@@ -1,6 +1,8 @@
 FROM alpine:3.4
 
-RUN apk add --no-cache bash ca-certificates git miniperl \ 
-	&& ln -s miniperl /usr/bin/perl
+RUN apk add --no-cache bash ca-certificates git miniperl openssl \
+	&& ln -s miniperl /usr/bin/perl \
+	&& wget -qO- https://github.com/git-lfs/git-lfs/releases/download/v2.1.1/git-lfs-linux-amd64-2.1.1.tar.gz | tar xz \
+	&& mv git-lfs-*/git-lfs /usr/bin/ && rm -rf git-lfs-*
 
 COPY ./ /usr/bin
