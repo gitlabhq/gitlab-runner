@@ -26,6 +26,9 @@ func (e DefaultExecutorProvider) Release(config *common.RunnerConfig, data commo
 	return nil
 }
 
+func (e DefaultExecutorProvider) Reload(runners... *common.RunnerConfig) {
+}
+
 func (e DefaultExecutorProvider) GetFeatures(features *common.FeaturesInfo) {
 	if e.FeaturesUpdater != nil {
 		e.FeaturesUpdater(features)

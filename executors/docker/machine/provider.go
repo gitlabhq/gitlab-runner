@@ -398,6 +398,9 @@ func (m *machineProvider) Create() common.Executor {
 	}
 }
 
+func (m *machineProvider) Reload(runners... *common.RunnerConfig) {
+}
+
 func newMachineProvider(name, executor string) *machineProvider {
 	provider := common.GetExecutor(executor)
 	if provider == nil {

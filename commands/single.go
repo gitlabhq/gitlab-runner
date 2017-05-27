@@ -144,16 +144,22 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 	r.lastBuild = time.Now()
 
+	executorProvider.Reload(&r.RunnerConfig)
+
 	for !r.finished {
+		r.checkFinishedConditions()
+
 		data, err := executorProvider.Acquire(&r.RunnerConfig)
-		if err != nil {
+		if err == nil {
 			log.Warningln("Executor update:", err)
+			time.Sleep(3 * time.Second)
 		}
 
 		r.processBuild(data, abortSignal)
-		r.checkFinishedConditions()
 		executorProvider.Release(&r.RunnerConfig, data)
 	}
+
+	executorProvider.Reload()
 
 	doneSignal <- 0
 }

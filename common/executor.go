@@ -47,6 +47,7 @@ type ExecutorProvider interface {
 	Acquire(config *RunnerConfig) (ExecutorData, error)
 	Release(config *RunnerConfig, data ExecutorData) error
 	GetFeatures(features *FeaturesInfo)
+	Reload(runners... *RunnerConfig)
 }
 
 type BuildError struct {

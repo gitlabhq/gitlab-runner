@@ -171,6 +171,22 @@ type CacheConfig struct {
 	Shared         bool   `toml:"Shared,omitempty" long:"cache-shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
 }
 
+type DigitalOceanConfig struct {
+	Token       	string `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token"`
+	Image       	string
+	Region      	string
+	Size        	string
+	IPv6              bool
+	Backups           bool
+	PrivateNetworking bool
+	UserData string
+	SSHFingerprint string
+	Tags              []string
+	CreationTimeout time.Duration
+	ReinstallTimeout time.Duration
+	RemovalTimeout time.Duration
+}
+
 type RunnerSettings struct {
 	Executor  string `toml:"executor" json:"executor" long:"executor" env:"RUNNER_EXECUTOR" required:"true" description:"Select executor, eg. shell, docker, etc."`
 	BuildsDir string `toml:"builds_dir,omitempty" json:"builds_dir" long:"builds-dir" env:"RUNNER_BUILDS_DIR" description:"Directory where builds are stored"`
@@ -190,6 +206,7 @@ type RunnerSettings struct {
 	Cache      *CacheConfig      `toml:"cache,omitempty" json:"cache" group:"cache configuration" namespace:"cache"`
 	Machine    *DockerMachine    `toml:"machine,omitempty" json:"machine" group:"docker machine provider" namespace:"machine"`
 	Kubernetes *KubernetesConfig `toml:"kubernetes,omitempty" json:"kubernetes" group:"kubernetes executor" namespace:"kubernetes"`
+	DigitalOcean *DigitalOceanConfig
 }
 
 type RunnerConfig struct {

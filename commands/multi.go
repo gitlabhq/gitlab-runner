@@ -115,13 +115,6 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		return
 	}
 
-	context, err := provider.Acquire(runner)
-	if err != nil {
-		log.Warningln("Failed to update executor", runner.Executor, "for", runner.ShortDescription(), err)
-		return
-	}
-	defer provider.Release(runner, context)
-
 	// Acquire build slot
 	if !mr.buildsHelper.acquireBuild(runner) {
 		mr.log().WithField("runner", runner.ShortDescription()).
@@ -129,6 +122,13 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		return
 	}
 	defer mr.buildsHelper.releaseBuild(runner)
+
+	context, err := provider.Acquire(runner)
+	if err != nil {
+		log.Warningln("Failed to update executor", runner.Executor, "for", runner.ShortDescription(), err)
+		return
+	}
+	defer provider.Release(runner, context)
 
 	// Receive a new build
 	jobData, result := mr.requestJob(runner)
@@ -235,6 +235,9 @@ func (mr *RunCommand) loadConfig() error {
 		mr.sentryLogHook = sentry.LogHook{}
 	}
 
+	for _, provider := range common.GetExecutorProviders() {
+		provider.Reload(mr.config.Runners...)
+	}
 	return nil
 }
 
@@ -465,6 +468,11 @@ func (mr *RunCommand) handleShutdown() error {
 	mr.log().Warningln("Requested service stop:", mr.stopSignal)
 
 	go mr.abortAllBuilds()
+
+	// Reload all providers to unload data
+	for _, provider := range common.GetExecutorProviders() {
+		provider.Reload()
+	}
 
 	// Wait for graceful shutdown or abort after timeout
 	for {
