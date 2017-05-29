@@ -113,7 +113,7 @@ func (s *RegisterCommand) askParallels() {
 }
 
 func (s *RegisterCommand) askVirtualBox() {
-	s.VirtualBox.BaseName = s.ask("virtualbox-vm", "Please enter the VirtualBox VM (e.g. my-vm):")
+	s.VirtualBox.BaseName = s.ask("virtualbox-base-name", "Please enter the VirtualBox VM (e.g. my-vm):")
 }
 
 func (s *RegisterCommand) askSSHServer() {
@@ -217,7 +217,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 		s.Parallels = parallels
 		s.askParallels()
 		s.askSSHServer()
-	case "VirtualBox":
+	case "virtualbox":
 		s.SSH = ssh
 		s.VirtualBox = virtualbox
 		s.askVirtualBox()
