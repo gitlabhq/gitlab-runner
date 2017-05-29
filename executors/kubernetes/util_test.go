@@ -124,7 +124,7 @@ func TestWaitForPodRunning(t *testing.T) {
 						}
 					}
 					retries++
-					return &http.Response{StatusCode: 200, Body: objBody(codec, pod), Header: map[string][]string{
+					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
 						"Content-Type": []string{"application/json"},
 					}}, nil
 				default:
@@ -157,7 +157,7 @@ func TestWaitForPodRunning(t *testing.T) {
 							Phase: api.PodSucceeded,
 						},
 					}
-					return &http.Response{StatusCode: 200, Body: objBody(codec, pod), Header: map[string][]string{
+					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
 						"Content-Type": []string{"application/json"},
 					}}, nil
 				default:
@@ -210,7 +210,7 @@ func TestWaitForPodRunning(t *testing.T) {
 						t.Errorf("Too many retries for the given poll parameters. (Expected 3)")
 					}
 					retries++
-					return &http.Response{StatusCode: 200, Body: objBody(codec, pod), Header: map[string][]string{
+					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
 						"Content-Type": []string{"application/json"},
 					}}, nil
 				default:

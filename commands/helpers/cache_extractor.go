@@ -40,7 +40,7 @@ func (c *CacheExtractorCommand) download() (bool, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		return false, os.ErrNotExist
 	} else if resp.StatusCode/100 != 2 {
 		// Retry on server errors

@@ -66,12 +66,12 @@ func TestClients(t *testing.T) {
 
 func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/runners" {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if r.Method != "POST" {
-		w.WriteHeader(406)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
@@ -87,32 +87,32 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 	switch req["token"].(string) {
 	case "valid":
 		if req["description"].(string) != "test" {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		res["token"] = req["token"].(string)
 	case "invalid":
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	default:
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if r.Header.Get("Accept") != "application/json" {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	output, err := json.Marshal(res)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
+	w.WriteHeader(http.StatusCreated)
 	w.Write(output)
 }
 
@@ -159,12 +159,12 @@ func TestRegisterRunner(t *testing.T) {
 
 func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/runners" {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if r.Method != "DELETE" {
-		w.WriteHeader(406)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
@@ -177,11 +177,11 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 
 	switch req["token"].(string) {
 	case "valid":
-		w.WriteHeader(204)
+		w.WriteHeader(http.StatusNoContent)
 	case "invalid":
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 	default:
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 }
 
@@ -225,12 +225,12 @@ func TestUnregisterRunner(t *testing.T) {
 
 func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/runners/verify" {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if r.Method != "POST" {
-		w.WriteHeader(406)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
@@ -243,11 +243,11 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.
 
 	switch req["token"].(string) {
 	case "valid":
-		w.WriteHeader(200) // since the job id is broken, we should not find this job
+		w.WriteHeader(http.StatusOK) // since the job id is broken, we should not find this job
 	case "invalid":
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 	default:
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 }
 
@@ -390,12 +390,12 @@ func getRequestJobResponse() (res map[string]interface{}) {
 
 func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/jobs/request" {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if r.Method != "POST" {
-		w.WriteHeader(406)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
@@ -410,29 +410,29 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 	case "valid":
 	case "no-jobs":
 		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
-		w.WriteHeader(204)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	case "invalid":
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	default:
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if r.Header.Get("Accept") != "application/json" {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	output, err := json.Marshal(getRequestJobResponse())
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
+	w.WriteHeader(http.StatusCreated)
 	w.Write(output)
 	t.Logf("JobRequest response: %s\n", output)
 }
@@ -489,12 +489,12 @@ func TestRequestJob(t *testing.T) {
 
 func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/jobs/10" {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if r.Method != "PUT" {
-		w.WriteHeader(406)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
@@ -510,11 +510,11 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 
 	switch req["state"].(string) {
 	case "running":
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	case "forbidden":
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 	default:
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 }
 
@@ -561,12 +561,12 @@ var patchTraceString = "trace trace trace"
 func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body string, offset, limit int)) (*httptest.Server, *GitLabClient, RunnerConfig) {
 	patchHandler := func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v4/jobs/1/trace" {
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		if r.Method != "PATCH" {
-			w.WriteHeader(406)
+			w.WriteHeader(http.StatusNotAcceptable)
 			return
 		}
 
@@ -608,7 +608,7 @@ func getTracePatch(traceString string, offset int) *tracePatch {
 
 func TestUnknownPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 	}
 
 	server, client, config := getPatchServer(t, handler)
@@ -621,7 +621,7 @@ func TestUnknownPatchTrace(t *testing.T) {
 
 func TestForbiddenPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 	}
 
 	server, client, config := getPatchServer(t, handler)
@@ -636,7 +636,7 @@ func TestPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
 		assert.Equal(t, patchTraceString[offset:limit], body)
 
-		w.WriteHeader(202)
+		w.WriteHeader(http.StatusAccepted)
 	}
 
 	server, client, config := getPatchServer(t, handler)
@@ -659,10 +659,10 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
 		if offset > 10 {
 			w.Header().Set("Range", "0-10")
-			w.WriteHeader(416)
+			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
 		}
 
-		w.WriteHeader(202)
+		w.WriteHeader(http.StatusAccepted)
 	}
 
 	server, client, config := getPatchServer(t, handler)
@@ -685,10 +685,10 @@ func TestResendPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
 		if offset > 10 {
 			w.Header().Set("Range", "0-10")
-			w.WriteHeader(416)
+			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
 		}
 
-		w.WriteHeader(202)
+		w.WriteHeader(http.StatusAccepted)
 	}
 
 	server, client, config := getPatchServer(t, handler)
@@ -711,10 +711,10 @@ func TestResendDoubledJobPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
 		if offset > 10 {
 			w.Header().Set("Range", "0-100")
-			w.WriteHeader(416)
+			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
 		}
 
-		w.WriteHeader(202)
+		w.WriteHeader(http.StatusAccepted)
 	}
 
 	server, client, config := getPatchServer(t, handler)
@@ -729,7 +729,7 @@ func TestResendDoubledJobPatchTrace(t *testing.T) {
 func TestJobFailedStatePatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
 		w.Header().Set("Job-Status", "failed")
-		w.WriteHeader(202)
+		w.WriteHeader(http.StatusAccepted)
 	}
 
 	server, client, config := getPatchServer(t, handler)
@@ -742,23 +742,23 @@ func TestJobFailedStatePatchTrace(t *testing.T) {
 
 func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if r.Method != "POST" {
-		w.WriteHeader(406)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
 	if r.Header.Get("JOB-TOKEN") != "token" {
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -766,9 +766,9 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 	assert.NoError(t, err)
 
 	if string(body) != "content" {
-		w.WriteHeader(413)
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
 	} else {
-		w.WriteHeader(201)
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 
@@ -815,21 +815,21 @@ func TestArtifactsUpload(t *testing.T) {
 
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if r.Method != "GET" {
-		w.WriteHeader(406)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
 	if r.Header.Get("JOB-TOKEN") != "token" {
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	w.Write(bytes.NewBufferString("Test artifact file content").Bytes())
 }
 
@@ -918,11 +918,11 @@ func TestAPIv4Compatibility(t *testing.T) {
 	serverPre90, runnerPre90 := prepareAPIv4CompatibilityTestEnvironment("pre 9.0", func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v4/runners":
-			w.WriteHeader(401)
+			w.WriteHeader(http.StatusUnauthorized)
 		case "/api/v4/runners/verify":
-			w.WriteHeader(401)
+			w.WriteHeader(http.StatusUnauthorized)
 		case "/api/v4/jobs/request":
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 		}
 	})
 	defer serverPre90.Close()
@@ -939,15 +939,15 @@ func TestAPIv4Compatibility(t *testing.T) {
 				require.NoError(t, err)
 
 				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(201)
+				w.WriteHeader(http.StatusCreated)
 				w.Write(output)
 			case "DELETE":
-				w.WriteHeader(204)
+				w.WriteHeader(http.StatusNoContent)
 			}
 		case "/api/v4/runners/verify":
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 		case "/api/v4/jobs/request":
-			w.WriteHeader(204)
+			w.WriteHeader(http.StatusNoContent)
 		}
 	})
 	defer server90.Close()

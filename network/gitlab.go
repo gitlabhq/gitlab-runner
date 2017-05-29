@@ -100,10 +100,10 @@ func (n *GitLabClient) checkGitLabVersionCompatibility(runner common.RunnerCrede
 		Token: "compatiblity-check",
 	}
 
-	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", 200, &request, nil)
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", http.StatusOK, &request, nil)
 
 	switch result {
-	case 403:
+	case http.StatusForbidden:
 		runner.Log().Println("Checking GitLab compatibility...", "OK")
 	default:
 		runner.Log().WithFields(logrus.Fields{
@@ -129,13 +129,13 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, descripti
 	}
 
 	var response common.RegisterRunnerResponse
-	result, statusText, _ := n.doJSON(&runner, "POST", "runners", 201, &request, &response)
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners", http.StatusCreated, &request, &response)
 
 	switch result {
-	case 201:
+	case http.StatusCreated:
 		runner.Log().Println("Registering runner...", "succeeded")
 		return &response
-	case 403:
+	case http.StatusForbidden:
 		runner.Log().Errorln("Registering runner...", "forbidden (check registration token)")
 		return nil
 	case clientError:
@@ -153,14 +153,14 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", 200, &request, nil)
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", http.StatusOK, &request, nil)
 
 	switch result {
-	case 200:
+	case http.StatusOK:
 		// this is expected due to fact that we ask for non-existing job
 		runner.Log().Println("Verifying runner...", "is alive")
 		return true
-	case 403:
+	case http.StatusForbidden:
 		runner.Log().Errorln("Verifying runner...", "is removed")
 		return false
 	case clientError:
@@ -178,14 +178,14 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", 204, &request, nil)
+	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", http.StatusNoContent, &request, nil)
 
 	const baseLogText = "Unregistering runner from GitLab"
 	switch result {
-	case 204:
+	case http.StatusNoContent:
 		runner.Log().Println(baseLogText, "succeeded")
 		return true
-	case 403:
+	case http.StatusForbidden:
 		runner.Log().Errorln(baseLogText, "forbidden")
 		return false
 	case clientError:
@@ -224,20 +224,20 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	}
 
 	var response common.JobResponse
-	result, statusText, tlsData := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", 201, &request, &response)
+	result, statusText, tlsData := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", http.StatusCreated, &request, &response)
 
 	switch result {
-	case 201:
+	case http.StatusCreated:
 		config.Log().WithFields(logrus.Fields{
 			"job":      strconv.Itoa(response.ID),
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
 		addTLSData(&response, tlsData)
 		return &response, true
-	case 403:
+	case http.StatusForbidden:
 		config.Log().Errorln("Checking for jobs...", "forbidden")
 		return nil, false
-	case 204:
+	case http.StatusNoContent:
 		config.Log().Debugln("Checking for jobs...", "nothing")
 		return nil, true
 	case clientError:
@@ -260,15 +260,15 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 
 	log := config.Log().WithField("job", id)
 
-	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", id), 200, &request, nil)
+	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", id), http.StatusOK, &request, nil)
 	switch result {
-	case 200:
+	case http.StatusOK:
 		log.Debugln("Submitting job to coordinator...", "ok")
 		return common.UpdateSucceeded
-	case 404:
+	case http.StatusNotFound:
 		log.Warningln("Submitting job to coordinator...", "aborted")
 		return common.UpdateAbort
-	case 403:
+	case http.StatusForbidden:
 		log.WithField("status", statusText).Errorln("Submitting job to coordinator...", "forbidden")
 		return common.UpdateAbort
 	case clientError:
@@ -314,13 +314,13 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *co
 	case tracePatchResponse.IsAborted():
 		log.Warningln("Appending trace to coordinator", "aborted")
 		return common.UpdateAbort
-	case response.StatusCode == 202:
+	case response.StatusCode == http.StatusAccepted:
 		log.Debugln("Appending trace to coordinator...", "ok")
 		return common.UpdateSucceeded
-	case response.StatusCode == 404:
+	case response.StatusCode == http.StatusNotFound:
 		log.Warningln("Appending trace to coordinator...", "not-found")
 		return common.UpdateNotFound
-	case response.StatusCode == 416:
+	case response.StatusCode == http.StatusRequestedRangeNotSatisfiable:
 		log.Warningln("Appending trace to coordinator...", "range mismatch")
 		tracePatch.SetNewOffset(tracePatchResponse.NewOffset())
 		return common.UpdateRangeMismatch
@@ -387,13 +387,13 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 	defer io.Copy(ioutil.Discard, res.Body)
 
 	switch res.StatusCode {
-	case 201:
+	case http.StatusCreated:
 		log.Println("Uploading artifacts to coordinator...", "ok")
 		return common.UploadSucceeded
-	case 403:
+	case http.StatusForbidden:
 		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "forbidden")
 		return common.UploadForbidden
-	case 413:
+	case http.StatusRequestEntityTooLarge:
 		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "too large archive")
 		return common.UploadTooLarge
 	default:
@@ -451,7 +451,7 @@ func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifacts
 	defer io.Copy(ioutil.Discard, res.Body)
 
 	switch res.StatusCode {
-	case 200:
+	case http.StatusOK:
 		file, err := os.Create(artifactsFile)
 		if err == nil {
 			defer file.Close()
@@ -465,10 +465,10 @@ func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifacts
 		}
 		log.Println("Downloading artifacts from coordinator...", "ok")
 		return common.DownloadSucceeded
-	case 403:
+	case http.StatusForbidden:
 		log.WithField("status", res.Status).Errorln("Downloading artifacts from coordinator...", "forbidden")
 		return common.DownloadForbidden
-	case 404:
+	case http.StatusNotFound:
 		log.Errorln("Downloading artifacts from coordinator...", "not found")
 		return common.DownloadNotFound
 	default:

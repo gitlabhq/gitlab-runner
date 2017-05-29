@@ -88,7 +88,7 @@ func TestExec(t *testing.T) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == test.podPath && m == "GET":
 					body := objBody(codec, test.pod)
-					return &http.Response{StatusCode: 200, Body: body, Header: map[string][]string{
+					return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
 						"Content-Type": []string{"application/json"},
 					}}, nil
 				default:
