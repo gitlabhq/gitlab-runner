@@ -25,6 +25,10 @@ func (m *machineDetails) isUsed() bool {
 	return m.State != machineStateIdle
 }
 
+func (m *machineDetails) isStuckOnRemove() bool {
+	return m.State == machineStateRemoving && m.RetryCount >= removeRetryTries
+}
+
 func (m *machineDetails) isDead() bool {
 	return m.State == machineStateIdle &&
 		time.Since(m.LastSeen) > machineDeadInterval
