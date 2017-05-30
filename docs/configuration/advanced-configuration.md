@@ -41,7 +41,6 @@ This defines one runner entry.
 | `tls-ca-file`        | file containing the certificates to verify the peer when using HTTPS |
 | `tls-cert-file`      | file containing the certificate to authenticate with the peer when using HTTPS |
 | `tls-key-file`       | file containing the private key to authenticate with the peer when using HTTPS |
-| `tls-skip-verify`    | whether to verify the TLS certificate when using HTTPS, default: false |
 | `limit`              | limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
 | `executor`           | select how a project should be built, see next section |
 | `shell`              | the name of shell to generate the script (default value is platform dependent) |
