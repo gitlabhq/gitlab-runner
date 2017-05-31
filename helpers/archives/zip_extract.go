@@ -103,12 +103,38 @@ func ExtractZipArchive(archive *zip.Reader) error {
 	return nil
 }
 
-func ExtractZipFile(fileName string) error {
+type ZipArchiveLister struct {
+	paths []string
+}
+
+func (a *ZipArchiveLister) list(archive *zip.Reader) error {
+	for _, file := range archive.File {
+		a.paths = append(a.paths, file.Name)
+	}
+
+	return nil
+}
+
+func workOnZipArchive(fileName string, handler func(archive *zip.Reader) error) error {
 	archive, err := zip.OpenReader(fileName)
 	if err != nil {
 		return err
 	}
 	defer archive.Close()
 
-	return ExtractZipArchive(&archive.Reader)
+	return handler(&archive.Reader)
+}
+
+func ExtractZipFile(fileName string) error {
+	return workOnZipArchive(fileName, ExtractZipArchive)
+}
+
+func ListZipFile(fileName string) ([]string, error) {
+	al := &ZipArchiveLister{}
+	err := workOnZipArchive(fileName, al.list)
+	if err != nil {
+		return []string{}, err
+	}
+
+	return al.paths, nil
 }
