@@ -130,6 +130,13 @@ func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
 	b.Indent()
 }
 
+func (b *CmdWriter) IfCmdWithOutput(cmd string, arguments ...string) {
+	cmdline := b.buildCommand(cmd, arguments...)
+	b.Line(fmt.Sprintf("%s", cmdline))
+	b.Line("IF %errorlevel% EQU 0 (")
+	b.Indent()
+}
+
 func (b *CmdWriter) Else() {
 	b.Unindent()
 	b.Line(") ELSE (")
