@@ -197,6 +197,52 @@ func (s *executor) buildContainer(name, image string, limits api.ResourceList, c
 	}
 }
 
+func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
+	for _, mount := range s.Config.Kubernetes.Volumes.HostPaths {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			ReadOnly:  mount.ReadOnly,
+		})
+	}
+
+	for _, mount := range s.Config.Kubernetes.Volumes.Secrets {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			ReadOnly:  mount.ReadOnly,
+		})
+	}
+
+	return
+}
+
+func (s *executor) getVolumes() (volumes []api.Volume) {
+	for _, volume := range s.Config.Kubernetes.Volumes.HostPaths {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				HostPath: &api.HostPathVolumeSource{
+					Path: volume.MountPath,
+				},
+			},
+		})
+	}
+
+	for _, volume := range s.Config.Kubernetes.Volumes.Secrets {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				Secret: &api.SecretVolumeSource{
+					SecretName: volume.Name,
+				},
+			},
+		})
+	}
+
+	return
+}
+
 func (s *executor) setupCredentials() error {
 	authConfigs := make(map[string]credentialprovider.DockerConfigEntry)
 
@@ -275,6 +321,7 @@ func (s *executor) setupBuildPod() error {
 			ImagePullSecrets:              imagePullSecrets,
 		},
 	})
+
 	if err != nil {
 		return err
 	}
