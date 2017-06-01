@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	log "github.com/Sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/ssh"
@@ -50,6 +52,7 @@ type DockerConfig struct {
 	Hostname               string           `toml:"hostname,omitempty" json:"hostname" long:"hostname" env:"DOCKER_HOSTNAME" description:"Custom container hostname"`
 	Image                  string           `toml:"image" json:"image" long:"image" env:"DOCKER_IMAGE" description:"Docker image to be used"`
 	CPUSetCPUs             string           `toml:"cpuset_cpus,omitempty" json:"cpuset_cpus" long:"cpuset-cpus" env:"DOCKER_CPUSET_CPUS" description:"String value containing the cgroups CpusetCpus to use"`
+	CPUS                   string           `toml:"cpus,omitempty" json:"cpus" long:"cpus" env:"DOCKER_CPUS" description:"Number of CPUs"`
 	DNS                    []string         `toml:"dns,omitempty" json:"dns" long:"dns" env:"DOCKER_DNS" description:"A list of DNS servers for the container to use"`
 	DNSSearch              []string         `toml:"dns_search,omitempty" json:"dns_search" long:"dns-search" env:"DOCKER_DNS_SEARCH" description:"A list of DNS search domains"`
 	Privileged             bool             `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"DOCKER_PRIVILEGED" description:"Give extended privileges to container"`
@@ -212,6 +215,21 @@ type Config struct {
 	SentryDSN            *string         `toml:"sentry_dsn"`
 	ModTime              time.Time       `toml:"-"`
 	Loaded               bool            `toml:"-"`
+}
+
+func (c *DockerConfig) GetNanoCPUs() (int64, error) {
+	if c.CPUS == "" {
+		return 0, nil
+	}
+
+	cpu, ok := new(big.Rat).SetString(c.CPUS)
+	if !ok {
+		return 0, fmt.Errorf("failed to parse %v as a rational number", c.CPUS)
+	}
+
+	nano, _ := cpu.Mul(cpu, big.NewRat(1e9, 1)).Float64()
+
+	return int64(nano), nil
 }
 
 func (c *KubernetesConfig) GetHelperImage() string {

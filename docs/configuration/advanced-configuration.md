@@ -107,6 +107,7 @@ This defines the Docker Container parameters.
 | `tls_cert_path`             | when set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
 | `image`                     | use this image to run builds |
 | `cpuset_cpus`               | string value containing the cgroups CpusetCpus to use |
+| `cpus`                      | number of CPUs (available in docker 1.13 or later) |
 | `dns`                       | a list of DNS servers for the container to use |
 | `dns_search`                | a list of DNS search domains |
 | `privileged`                | make container run in Privileged mode (insecure) |
