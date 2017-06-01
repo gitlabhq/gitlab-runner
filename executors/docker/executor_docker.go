@@ -736,9 +736,15 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 		Env:          append(s.Build.GetAllVariables().StringList(), s.BuildShell.Environment...),
 	}
 
+	nanoCPUs, err := s.Config.Docker.GetNanoCPUs()
+	if err != nil {
+		return nil, err
+	}
+
 	hostConfig := &container.HostConfig{
 		Resources: container.Resources{
 			CpusetCpus: s.Config.Docker.CPUSetCPUs,
+			NanoCPUs:   nanoCPUs,
 			Devices:    s.devices,
 		},
 		DNS:           s.Config.Docker.DNS,
