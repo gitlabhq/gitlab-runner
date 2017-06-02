@@ -294,7 +294,7 @@ All service related commands accept these arguments:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `--service-name` | `gitlab-runner` | Specify custom service name |
+| `--service` | `gitlab-runner` | Specify custom service name |
 | `--config` | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
 
 ### gitlab-runner install
@@ -307,7 +307,7 @@ allows you to drop privileges of builds run with the **shell** executor.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `--service-name`      | `gitlab-runner` | Specify a custom name for the Runner |
+| `--service`      | `gitlab-runner` | Specify a custom name for the Runner |
 | `--working-directory` | the current directory | Specify the root directory where all data will be stored when builds will be run with the **shell** executor |
 | `--user`              | `root` | Specify the user which will be used to execute builds |
 | `--password`          | none   | Specify the password for the user that will be used to execute the builds |
@@ -335,7 +335,7 @@ This command prints the status of the GitLab Runner service. The exit code is ze
 
 ### Multiple services
 
-By specifying the `--service-name` flag, it is possible to have multiple GitLab
+By specifying the `--service` flag, it is possible to have multiple GitLab
 Runner services installed, with multiple separate configurations.
 
 ## Run-related commands
