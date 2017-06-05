@@ -41,11 +41,6 @@ const (
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
-type dockerOptions struct {
-	Image    string   `json:"image"`
-	Services []string `json:"services"`
-}
-
 type executor struct {
 	executors.AbstractExecutor
 	client      docker_helpers.Client
@@ -53,7 +48,6 @@ type executor struct {
 	builds      []string // IDs of successfully created build containers
 	services    []*types.Container
 	caches      []string // IDs of cache containers
-	options     dockerOptions
 	info        types.Info
 	binds       []string
 	volumesFrom []string
@@ -559,7 +553,7 @@ func (s *executor) splitServiceAndVersion(serviceDescription string) (service, v
 	return
 }
 
-func (s *executor) createService(service, version, image string) (*types.Container, error) {
+func (s *executor) createService(service, version, image string, serviceDefinition common.Image) (*types.Container, error) {
 	if len(service) == 0 {
 		return nil, errors.New("invalid service name")
 	}
@@ -581,6 +575,13 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 		Image:  serviceImage.ID,
 		Labels: s.getLabels("service", "service="+service, "service.version="+version),
 		Env:    s.getServiceVariables(),
+	}
+
+	if serviceDefinition.Command != "" {
+		config.Cmd = serviceDefinition.GetCommand()
+	}
+	if serviceDefinition.Entrypoint != "" {
+		config.Entrypoint = serviceDefinition.GetEntrypoint()
 	}
 
 	hostConfig := &container.HostConfig{
@@ -611,20 +612,25 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 	return fakeContainer(resp.ID, containerName), nil
 }
 
-func (s *executor) getServiceNames() ([]string, error) {
-	services := s.Config.Docker.Services
+func (s *executor) getServicesDefinitions() (common.Services, error) {
+	serviceDefinitions := common.Services{}
+	for _, service := range s.Config.Docker.Services {
+		serviceDefinitions = append(serviceDefinitions, common.Image{Name: service})
+	}
 
-	for _, service := range s.options.Services {
-		service = s.Build.GetAllVariables().ExpandValue(service)
-		err := s.verifyAllowedImage(service, "services", s.Config.Docker.AllowedServices, s.Config.Docker.Services)
+	for _, service := range s.Build.Services {
+		serviceName := s.Build.GetAllVariables().ExpandValue(service.Name)
+		err := s.verifyAllowedImage(service.Name, "services", s.Config.Docker.AllowedServices, s.Config.Docker.Services)
 		if err != nil {
 			return nil, err
 		}
 
-		services = append(services, service)
+		service.Name = serviceName
+
+		serviceDefinitions = append(serviceDefinitions, service)
 	}
 
-	return services, nil
+	return serviceDefinitions, nil
 }
 
 func (s *executor) waitForServices() {
@@ -661,24 +667,28 @@ func (s *executor) buildServiceLinks(linksMap map[string]*types.Container) (link
 	return
 }
 
-func (s *executor) createFromServiceDescription(description string, linksMap map[string]*types.Container) (err error) {
+func (s *executor) createFromServiceDefinition(serviceDefinition common.Image, linksMap map[string]*types.Container) (err error) {
 	var container *types.Container
 
-	service, version, imageName, linkNames := s.splitServiceAndVersion(description)
+	service, version, imageName, linkNames := s.splitServiceAndVersion(serviceDefinition.Name)
+
+	if serviceDefinition.Alias != "" {
+		linkNames = append(linkNames, serviceDefinition.Alias)
+	}
 
 	for _, linkName := range linkNames {
 		if linksMap[linkName] != nil {
-			s.Warningln("Service", description, "is already created. Ignoring.")
+			s.Warningln("Service", serviceDefinition.Name, "is already created. Ignoring.")
 			continue
 		}
 
 		// Create service if not yet created
 		if container == nil {
-			container, err = s.createService(service, version, imageName)
+			container, err = s.createService(service, version, imageName, serviceDefinition)
 			if err != nil {
 				return
 			}
-			s.Debugln("Created service", description, "as", container.ID)
+			s.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
 			s.services = append(s.services, container)
 		}
 		linksMap[linkName] = container
@@ -687,27 +697,33 @@ func (s *executor) createFromServiceDescription(description string, linksMap map
 }
 
 func (s *executor) createServices() (err error) {
-	serviceNames, err := s.getServiceNames()
+	servicesDefinitions, err := s.getServicesDefinitions()
 	if err != nil {
 		return
 	}
 
 	linksMap := make(map[string]*types.Container)
 
-	for _, serviceDescription := range serviceNames {
-		err = s.createFromServiceDescription(serviceDescription, linksMap)
+	for _, serviceDefinition := range servicesDefinitions {
+		err = s.createFromServiceDefinition(serviceDefinition, linksMap)
 		if err != nil {
 			return
 		}
 	}
 
 	s.waitForServices()
+	fmt.Println(linksMap)
 
 	s.links = s.buildServiceLinks(linksMap)
 	return
 }
 
-func (s *executor) createContainer(containerType, imageName string, cmd []string) (*types.ContainerJSON, error) {
+func (s *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string) (*types.ContainerJSON, error) {
+	imageName, err := s.expandImageName(imageDefinition.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	// Fetch image
 	image, err := s.getDockerImage(imageName)
 	if err != nil {
@@ -734,6 +750,10 @@ func (s *executor) createContainer(containerType, imageName string, cmd []string
 		OpenStdin:    true,
 		StdinOnce:    true,
 		Env:          append(s.Build.GetAllVariables().StringList(), s.BuildShell.Environment...),
+	}
+
+	if imageDefinition.Entrypoint != "" {
+		config.Entrypoint = imageDefinition.GetEntrypoint()
 	}
 
 	nanoCPUs, err := s.Config.Docker.GetNanoCPUs()
@@ -971,10 +991,10 @@ func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []
 	return errors.New("invalid image")
 }
 
-func (s *executor) getImageName() (string, error) {
-	if s.options.Image != "" {
-		image := s.Build.GetAllVariables().ExpandValue(s.options.Image)
-		err := s.verifyAllowedImage(s.options.Image, "images", s.Config.Docker.AllowedImages, []string{s.Config.Docker.Image})
+func (s *executor) expandImageName(imageName string) (string, error) {
+	if imageName != "" {
+		image := s.Build.GetAllVariables().ExpandValue(imageName)
+		err := s.verifyAllowedImage(imageName, "images", s.Config.Docker.AllowedImages, []string{s.Config.Docker.Image})
 		if err != nil {
 			return "", err
 		}
@@ -1053,8 +1073,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	s.SetCurrentStage(DockerExecutorStagePrepare)
-	s.prepareOptions()
-	imageName, err := s.getImageName()
+	imageName, err := s.expandImageName(s.Build.Image.Name)
 	if err != nil {
 		return err
 	}
@@ -1071,19 +1090,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 	return nil
-}
-
-func (s *executor) prepareOptions() {
-	s.options = dockerOptions{}
-	s.options.Image = s.Build.Image.Name
-	for _, service := range s.Build.Services {
-		serviceName := service.Name
-		if serviceName == "" {
-			continue
-		}
-
-		s.options.Services = append(s.options.Services, serviceName)
-	}
 }
 
 func (s *executor) prepareBuildsDir(config *common.RunnerConfig) error {

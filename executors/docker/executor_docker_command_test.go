@@ -2,6 +2,7 @@ package docker_test
 
 import (
 	"bytes"
+	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
@@ -269,6 +270,97 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 
 		err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 		assert.NoError(t, err)
+	}
+}
+
+func getTestDockerJob(t *testing.T) *common.Build {
+	commands := []string{
+		"docker info",
+	}
+
+	longRunningBuild, err := common.GetRemoteLongRunningBuild()
+	assert.NoError(t, err)
+
+	build := &common.Build{
+		JobResponse: longRunningBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:      "alpine",
+					Privileged: true,
+				},
+			},
+		},
+	}
+	build.Steps = common.Steps{
+		common.Step{
+			Name:         common.StepNameScript,
+			Script:       common.StepScript(commands),
+			When:         common.StepWhenOnSuccess,
+			AllowFailure: false,
+		},
+	}
+
+	return build
+}
+
+func TestDockerExtendedConfigurationFromJob(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	examples := []struct {
+		image     common.Image
+		services  common.Services
+		variables common.JobVariables
+	}{
+		{
+			image: common.Image{
+				Name:       "$IMAGE_NAME",
+				Entrypoint: "sh -c",
+			},
+			services: common.Services{
+				common.Image{
+					Name:       "$SERVICE_NAME",
+					Entrypoint: "sh -c",
+					Command:    "dockerd-entrypoint.sh",
+					Alias:      "my-docker-service",
+				},
+			},
+			variables: common.JobVariables{
+				{Key: "DOCKER_HOST", Value: "tcp://my-docker-service:2375"},
+				{Key: "IMAGE_NAME", Value: "docker:git"},
+				{Key: "SERVICE_NAME", Value: "docker:dind"},
+			},
+		},
+		{
+			image: common.Image{
+				Name: "$IMAGE_NAME",
+			},
+			services: common.Services{
+				common.Image{
+					Name: "$SERVICE_NAME",
+				},
+			},
+			variables: common.JobVariables{
+				{Key: "DOCKER_HOST", Value: "tcp://docker:2375"},
+				{Key: "IMAGE_NAME", Value: "docker:git"},
+				{Key: "SERVICE_NAME", Value: "docker:dind"},
+			},
+		},
+	}
+
+	for exampleID, example := range examples {
+		t.Run(fmt.Sprintf("example-%d", exampleID), func(t *testing.T) {
+			build := getTestDockerJob(t)
+			build.Image = example.image
+			build.Services = example.services
+			build.Variables = append(build.Variables, example.variables...)
+
+			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			assert.NoError(t, err)
+		})
 	}
 }
 

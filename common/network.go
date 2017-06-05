@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/url"
 )
@@ -154,6 +155,22 @@ type Image struct {
 	Alias      string `json:"alias,omitempty"`
 	Command    string `json:"command,omitempty"`
 	Entrypoint string `json:"entrypoint,omitempty"`
+}
+
+func (i *Image) GetEntrypoint() []string {
+	return i.getCommand(i.Entrypoint)
+}
+
+func (i *Image) GetCommand() []string {
+	return i.getCommand(i.Command)
+}
+
+func (i *Image) getCommand(command string) []string {
+	if command == "" {
+		return []string{}
+	}
+
+	return strings.Split(command, " ")
 }
 
 type Services []Image
