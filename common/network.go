@@ -150,7 +150,10 @@ type Step struct {
 type Steps []Step
 
 type Image struct {
-	Name string `json:"name"`
+	Name       string `json:"name"`
+	Alias      string `json:"alias,omitempty"`
+	Command    string `json:"command,omitempty"`
+	Entrypoint string `json:"entrypoint,omitempty"`
 }
 
 type Services []Image
