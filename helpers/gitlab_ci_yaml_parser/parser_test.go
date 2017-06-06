@@ -1,0 +1,129 @@
+package gitlab_ci_yaml_parser
+
+import (
+	"io/ioutil"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+)
+
+var testFile1 = `
+image: global:image
+
+job1:
+  stage: test
+  script:
+  - line 1
+  - line 2
+  image: job1:image
+  services:
+  - service:1
+  - service:2
+
+job2:
+  script: test
+
+job3:
+  stage: a
+
+job4:
+  script: job4
+  image: alpine
+  services:
+  - service:1
+  - service:2
+`
+
+var testFile2 = `
+image: global:image
+
+services:
+- service:1
+- service:2
+
+job1:
+  script: job1
+
+job2:
+  script: job1
+  image: job2:image
+  services:
+  - service:1
+  - service:2
+`
+
+func prepareTestFile(t *testing.T, fileContent string) string {
+	file, err := ioutil.TempFile("", "gitlab-ci-yml")
+	require.NoError(t, err)
+	defer file.Close()
+
+	file.WriteString(fileContent)
+	return file.Name()
+}
+
+func getJobResponse(t *testing.T, fileContent, jobName string, expectingError bool) *common.JobResponse {
+	file := prepareTestFile(t, fileContent)
+	defer os.Remove(file)
+
+	parser := &GitLabCiYamlParser{
+		filename: file,
+		jobName:  jobName,
+	}
+
+	jobResponse := &common.JobResponse{}
+	err := parser.ParseYaml(jobResponse)
+	if expectingError {
+		assert.Error(t, err)
+	} else {
+		assert.NoError(t, err)
+	}
+
+	return jobResponse
+}
+
+func TestFileParsing(t *testing.T) {
+	// file1 - job1
+	jobResponse := getJobResponse(t, testFile1, "job1", false)
+	require.Len(t, jobResponse.Steps, 2)
+	assert.Contains(t, jobResponse.Steps[0].Script, "line 1")
+	assert.Contains(t, jobResponse.Steps[0].Script, "line 2")
+	assert.Equal(t, "test", jobResponse.JobInfo.Stage)
+	assert.Equal(t, "job1:image", jobResponse.Image.Name)
+	require.Len(t, jobResponse.Services, 2)
+	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
+	assert.Equal(t, "service:2", jobResponse.Services[1].Name)
+
+	// file1 - job2
+	jobResponse = getJobResponse(t, testFile1, "job2", false)
+	require.Len(t, jobResponse.Steps, 2)
+	assert.Contains(t, jobResponse.Steps[0].Script, "test")
+	assert.Equal(t, "global:image", jobResponse.Image.Name)
+
+	// file1 - job3
+	jobResponse = getJobResponse(t, testFile1, "job3", true)
+
+	// file1 - job4
+	jobResponse = getJobResponse(t, testFile1, "job4", false)
+	assert.Equal(t, "alpine", jobResponse.Image.Name)
+	require.Len(t, jobResponse.Services, 2)
+	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
+	assert.Equal(t, "service:2", jobResponse.Services[1].Name)
+
+	// file2 - job1
+	jobResponse = getJobResponse(t, testFile2, "job1", false)
+	assert.Equal(t, "global:image", jobResponse.Image.Name)
+	require.Len(t, jobResponse.Services, 2)
+	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
+	assert.Equal(t, "service:2", jobResponse.Services[1].Name)
+
+	// file2 - job2
+	jobResponse = getJobResponse(t, testFile2, "job2", false)
+	assert.Equal(t, "job2:image", jobResponse.Image.Name)
+	require.Len(t, jobResponse.Services, 2)
+	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
+	assert.Equal(t, "service:2", jobResponse.Services[1].Name)
+}
