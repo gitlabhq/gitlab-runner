@@ -113,12 +113,3 @@ func getOptions(optionKey string, primary, secondary DataBag) (value []interface
 
 	return
 }
-
-func getOption(optionKey string, primary, secondary DataBag) (value interface{}, ok bool) {
-	value, ok = primary.Get(optionKey)
-	if !ok {
-		value, ok = secondary.Get(optionKey)
-	}
-
-	return
-}
