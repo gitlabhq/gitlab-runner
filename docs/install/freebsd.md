@@ -109,22 +109,8 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
     ```bash
     sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
     ```
-1. Register the Runner (look into [runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
 
-    ```bash
-    sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
-
-    Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com):
-    Please enter the gitlab-ci token for this runner:
-    Please enter the gitlab-ci description for this runner:
-    [name]:
-    Please enter the gitlab-ci tags for this runner (comma separated):
-    Registering runner... succeeded
-    Please enter the executor: virtualbox, ssh, shell, parallels, docker, docker-ssh:
-    shell
-    Runner registered successfully. Feel free to start it, but if it\'s running already the config should be automatically reloaded!
-    ```
-
+1. [Register the Runner](../register/index.md)
 1. Enable the `gitlab-runner` service and start it:
 
     ```bash
