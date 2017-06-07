@@ -198,7 +198,7 @@ Secure variables are only passed to the build container.
 
 ## Build directory in service
 
-Since version 1.5 GitLab Runner mounts a `/build` directory to all shared services.
+Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.
 
 See an issue: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1520
 
