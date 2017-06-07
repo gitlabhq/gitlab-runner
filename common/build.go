@@ -32,6 +32,14 @@ const (
 	SubmoduleRecursive
 )
 
+type DebugServicesStrategy int
+
+const (
+	DebugServicesTrace DebugServicesStrategy = iota
+	DebugServicesNone
+	DebugServicesInvalid
+)
+
 type BuildRuntimeState string
 
 const (
@@ -508,6 +516,21 @@ func (b *Build) IsDebugTraceEnabled() bool {
 	}
 
 	return trace
+}
+
+func (b *Build) GetDebugServicesStrategy() DebugServicesStrategy {
+	servicesStrategy := strings.ToLower(b.GetAllVariables().Get("CI_DEBUG_SERVICES"))
+
+	switch servicesStrategy {
+	case "trace":
+		return DebugServicesTrace
+
+	case "none", "":
+		return DebugServicesNone
+
+	default:
+		return DebugServicesInvalid
+	}
 }
 
 func (b *Build) GetDockerAuthConfig() string {

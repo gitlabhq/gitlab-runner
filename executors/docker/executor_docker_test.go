@@ -1,9 +1,11 @@
 package docker
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"strings"
@@ -124,7 +126,15 @@ func TestSplitService(t *testing.T) {
 	}
 }
 
-func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string) {
+type fakeConnection struct {
+	net.Conn
+}
+
+func (fc *fakeConnection) Close() error {
+	return nil
+}
+
+func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string, withServicesTrace bool) {
 	var c docker_helpers.MockClient
 	defer c.AssertExpectations(t)
 
@@ -171,6 +181,19 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(container.ContainerCreateCreatedBody{ID: containerName}, nil).
 		Once()
 
+	if withServicesTrace {
+		e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+			Key:   "CI_DEBUG_SERVICES",
+			Value: "TRaCe",
+		})
+		c.On("ContainerAttach", mock.Anything, mock.Anything, mock.Anything).
+			Return(types.HijackedResponse{
+				Reader: bufio.NewReader(bytes.NewReader(nil)),
+				Conn:   &fakeConnection{},
+			}, nil).
+			Once()
+	}
+
 	c.On("ContainerStart", e.Context, mock.Anything, mock.Anything).
 		Return(nil).
 		Once()
@@ -183,7 +206,15 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 func TestServiceFromNamedImage(t *testing.T) {
 	for _, test := range testServices {
 		t.Run(test.description, func(t *testing.T) {
-			testServiceFromNamedImage(t, test.description, test.image, test.service)
+			testServiceFromNamedImage(t, test.description, test.image, test.service, false)
+		})
+	}
+}
+
+func TestServiceFromNamedImageWithServicesTrace(t *testing.T) {
+	for _, test := range testServices {
+		t.Run(test.description, func(t *testing.T) {
+			testServiceFromNamedImage(t, test.description, test.image, test.service, true)
 		})
 	}
 }

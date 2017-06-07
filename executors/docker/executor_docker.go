@@ -559,6 +559,44 @@ func (s *executor) splitServiceAndVersion(serviceDescription string) (service, v
 	return
 }
 
+func (s *executor) watchServiceContainer(container container.ContainerCreateCreatedBody, containerName string) error {
+	debugServicesStrategy := s.Build.GetDebugServicesStrategy()
+
+	if debugServicesStrategy == common.DebugServicesNone {
+		return nil
+	}
+
+	if s.Build.GetDebugServicesStrategy() == common.DebugServicesInvalid {
+		return fmt.Errorf("Invalid value of CI_DEBUG_SERVICES")
+	}
+
+	attachOptions := types.ContainerAttachOptions{
+		Stream: true,
+		Stdout: true,
+		Stderr: true,
+	}
+
+	s.Debugln("Attaching to container", container.ID, "...")
+	hijacked, err := s.client.ContainerAttach(s.Context, container.ID, attachOptions)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer hijacked.Close()
+
+		serviceLogger := docker_helpers.NewServiceLogger(containerName, s.Trace)
+		loggerWriter := serviceLogger.Writer()
+
+		_, err := stdcopy.StdCopy(loggerWriter, loggerWriter, hijacked.Reader)
+		if err != nil {
+			s.SoftErrorln(fmt.Sprintf("Error while reading service's logs: %q", err))
+		}
+	}()
+
+	return nil
+}
+
 func (s *executor) createService(service, version, image string) (*types.Container, error) {
 	if len(service) == 0 {
 		return nil, errors.New("invalid service name")
@@ -597,6 +635,11 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 
 	s.Debugln("Creating service container", containerName, "...")
 	resp, err := s.client.ContainerCreate(s.Context, config, hostConfig, nil, containerName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.watchServiceContainer(resp, containerName)
 	if err != nil {
 		return nil, err
 	}
