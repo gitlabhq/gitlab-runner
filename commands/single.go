@@ -1,17 +1,17 @@
 package commands
 
 import (
-	"github.com/urfave/cli"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/tevino/abool"
+	"github.com/urfave/cli"
+
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
-	"os/signal"
-	"syscall"
 )
 
 type RunSingleCommand struct {
