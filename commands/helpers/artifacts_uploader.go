@@ -30,9 +30,14 @@ func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
+	files := c.sortedFiles()
+	if len(files) < 1 {
+		return false, nil
+	}
+
 	// Create the archive
 	go func() {
-		err := archives.CreateZipArchive(pw, c.sortedFiles())
+		err := archives.CreateZipArchive(pw, files)
 		pw.CloseWithError(err)
 	}()
 

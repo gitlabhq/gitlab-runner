@@ -97,3 +97,19 @@ func TestArtifactsUploaderSucceeded(t *testing.T) {
 	fi, _ := os.Stat(artifactsTestArchivedFile)
 	assert.NotNil(t, fi)
 }
+
+func TestArtifactsUploaderNoMatchingFiles(t *testing.T) {
+	network := &testNetwork{
+		uploadState: common.UploadSucceeded,
+	}
+	cmd := ArtifactsUploaderCommand{
+		JobCredentials: UploaderCredentials,
+		network:        network,
+		fileArchiver: fileArchiver{
+			Paths: []string{"non-existing-*"},
+		},
+	}
+
+	cmd.Execute(nil)
+	assert.Equal(t, 0, network.uploadCalled)
+}
