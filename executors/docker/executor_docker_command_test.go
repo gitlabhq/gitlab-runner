@@ -411,6 +411,7 @@ func testDockerVersion(t *testing.T, version string) {
 				Docker: &common.DockerConfig{
 					Image:             "alpine",
 					DockerCredentials: credentials,
+					CPUS:              "0.1",
 				},
 			},
 		},
@@ -478,4 +479,16 @@ func TestDocker1_12Compatibility(t *testing.T) {
 	}
 
 	testDockerVersion(t, "1.12")
+}
+
+func TestDocker1_13Compatibility(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+	if os.Getenv("CI") != "" {
+		t.Skip("This test doesn't work in nested dind")
+		return
+	}
+
+	testDockerVersion(t, "1.13")
 }

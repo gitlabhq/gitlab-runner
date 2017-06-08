@@ -18,9 +18,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/jpillora/backoff"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
@@ -33,10 +35,17 @@ type requestCredentials interface {
 	GetTLSKeyFile() string
 }
 
-var dialer = net.Dialer{
-	Timeout:   30 * time.Second,
-	KeepAlive: 30 * time.Second,
-}
+var (
+	dialer = net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	backOffDelayMin    = 100 * time.Millisecond
+	backOffDelayMax    = 60 * time.Second
+	backOffDelayFactor = 2.0
+	backOffDelayJitter = true
+)
 
 type client struct {
 	http.Client
@@ -49,6 +58,8 @@ type client struct {
 	updateTime           time.Time
 	lastUpdate           string
 	compatibleWithGitLab bool
+	requestBackOffs      map[string]*backoff.Backoff
+	lock                 sync.Mutex
 }
 
 type ResponseTLSData struct {
@@ -186,6 +197,44 @@ func (n *client) getCAChain(tls *tls.ConnectionState) string {
 	return out.String()
 }
 
+func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	key := fmt.Sprintf("%s_%s", method, uri)
+	if n.requestBackOffs[key] == nil {
+		n.requestBackOffs[key] = &backoff.Backoff{
+			Min:    backOffDelayMin,
+			Max:    backOffDelayMax,
+			Factor: backOffDelayFactor,
+			Jitter: backOffDelayJitter,
+		}
+	}
+
+	return n.requestBackOffs[key]
+}
+
+func (n *client) backoffRequired(res *http.Response) bool {
+	return res.StatusCode >= 400 && res.StatusCode < 600
+}
+
+func (n *client) doBackoffRequest(req *http.Request) (res *http.Response, err error) {
+	res, err = n.Do(req)
+	if err != nil {
+		err = fmt.Errorf("couldn't execute %v against %s: %v", req.Method, req.URL, err)
+		return
+	}
+
+	backoffDelay := n.ensureBackoff(req.Method, req.RequestURI)
+	if n.backoffRequired(res) {
+		time.Sleep(backoffDelay.Duration())
+	} else {
+		backoffDelay.Reset()
+	}
+
+	return
+}
+
 func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
 	url, err := n.url.Parse(uri)
 	if err != nil {
@@ -209,11 +258,7 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 
 	n.ensureTLSConfig()
 
-	res, err = n.Do(req)
-	if err != nil {
-		err = fmt.Errorf("couldn't execute %v against %s: %v", req.Method, req.URL, err)
-		return
-	}
+	res, err = n.doBackoffRequest(req)
 	return
 }
 
@@ -316,6 +361,7 @@ func newClient(requestCredentials requestCredentials) (c *client, err error) {
 		certFile:             requestCredentials.GetTLSCertFile(),
 		keyFile:              requestCredentials.GetTLSKeyFile(),
 		compatibleWithGitLab: true,
+		requestBackOffs:      make(map[string]*backoff.Backoff),
 	}
 
 	host := strings.Split(url.Host, ":")[0]

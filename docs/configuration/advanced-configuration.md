@@ -41,7 +41,6 @@ This defines one runner entry.
 | `tls-ca-file`        | file containing the certificates to verify the peer when using HTTPS |
 | `tls-cert-file`      | file containing the certificate to authenticate with the peer when using HTTPS |
 | `tls-key-file`       | file containing the private key to authenticate with the peer when using HTTPS |
-| `tls-skip-verify`    | whether to verify the TLS certificate when using HTTPS, default: false |
 | `limit`              | limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
 | `executor`           | select how a project should be built, see next section |
 | `shell`              | the name of shell to generate the script (default value is platform dependent) |
@@ -108,6 +107,7 @@ This defines the Docker Container parameters.
 | `tls_cert_path`             | when set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
 | `image`                     | use this image to run builds |
 | `cpuset_cpus`               | string value containing the cgroups CpusetCpus to use |
+| `cpus`                      | number of CPUs (available in docker 1.13 or later) |
 | `dns`                       | a list of DNS servers for the container to use |
 | `dns_search`                | a list of DNS search domains |
 | `privileged`                | make container run in Privileged mode (insecure) |
@@ -222,42 +222,7 @@ you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
 [secret variable]. It can be set in both GitLab Variables section of
 a project and in the `config.toml` file.
 
-As an example, let's assume that you want to use the `registry.example.com/private/image:latest`
-image which is private and requires you to login into a private container registry.
-To configure access for `registry.example.com`, follow these steps:
-
-1. Do a `docker login` on your computer:
-
-     ```bash
-     docker login registry.example.com --username my_username --password my_password
-     ```
-
-1. Copy the content of `~/.docker/config.json`
-1. Create a [secret variable] `DOCKER_AUTH_CONFIG` with the content of the
-   Docker configuration file as the value:
-
-     ```json
-     {
-         "auths": {
-             "registry.example.com": {
-                 "auth": "bXlfdXNlcm5hbWU6bXlfcGFzc3dvcmQ="
-             }
-         }
-     }
-     ```
-
-1. Do a `docker logout` on your computer if you don't need access to the
-   registry from it:
-
-     ```bash
-     docker logout registry.example.com
-     ```
-
-1. You can now use any private image from `registry.example.com` defined in
-   `image` and/or `services` in your [`.gitlab-ci.yml` file][yaml-priv-reg].
-
-You can add configuration for as many registries as you want, adding more
-registries to the `"auths"` hash as described above.
+For a detailed example, visit the [Using Docker images documentation][priv-example].
 
 The steps performed by the Runner can be summed up to:
 
@@ -527,5 +492,6 @@ It depends on what you'd like to do.
 [yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#image-and-services
 [ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
+[priv-example]: https://docs.gitlab.com/ce/ci/docker/using_docker_images.html#define-an-image-from-a-private-docker-registry
 [secret variable]: https://docs.gitlab.com/ce/ci/variables/#secret-variables
 [cronvendor]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/vendor/github.com/gorhill/cronexpr/README.md

@@ -2,7 +2,6 @@ package docker
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -21,6 +21,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
+
+	"golang.org/x/net/context"
 )
 
 // ImagePullOptions contains the RegistryAuth which is inferred from the docker
@@ -817,6 +819,92 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	err = e.removeContainer(e.Context, container.ID)
 	assert.NoError(t, err)
 	wg.Wait()
+}
+
+type containerConfigExpectations func(*testing.T, *container.Config, *container.HostConfig)
+
+type dockerConfigurationTestFakeDockerClient struct {
+	docker_helpers.MockClient
+
+	cce containerConfigExpectations
+	t   *testing.T
+}
+
+func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error) {
+	c.cce(c.t, config, hostConfig)
+	return container.ContainerCreateCreatedBody{ID: "abc"}, nil
+}
+
+func testDockerConfiguration(t *testing.T, dockerConfig *common.DockerConfig, cce containerConfigExpectations) {
+	c := &dockerConfigurationTestFakeDockerClient{
+		cce: cce,
+		t:   t,
+	}
+	defer c.AssertExpectations(t)
+
+	e := executor{}
+	e.client = c
+	e.Config.Docker = dockerConfig
+	e.Build = &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
+	e.Build.Token = "abcd123456"
+	e.BuildShell = &common.ShellConfiguration{
+		Environment: []string{},
+	}
+
+	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
+		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
+	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
+		Return(nil).Once()
+	c.On("NetworkList", mock.Anything, mock.Anything).
+		Return([]types.NetworkResource{}, nil).Once()
+	c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	c.On("ContainerInspect", mock.Anything, "abc").
+		Return(types.ContainerJSON{}, nil).Once()
+
+	_, err := e.createContainer("build", "alpine", []string{"/bin/sh"})
+	assert.NoError(t, err, "Should create container without errors")
+}
+
+func TestDockerCPUSSetting(t *testing.T) {
+	examples := []struct {
+		cpus     string
+		nanocpus int64
+	}{
+		{"0.5", 500000000},
+		{"0.25", 250000000},
+		{"1/3", 333333333},
+		{"1/8", 125000000},
+		{"0.0001", 100000},
+	}
+
+	for _, example := range examples {
+		t.Run(example.cpus, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				CPUS: example.cpus,
+			}
+
+			cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, int64(example.nanocpus), hostConfig.NanoCPUs)
+			}
+
+			testDockerConfiguration(t, dockerConfig, cce)
+		})
+	}
+}
+
+func TestDockerCPUSetCPUsSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		CPUSetCPUs: "1-3,5",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "1-3,5", hostConfig.CpusetCpus)
+	}
+
+	testDockerConfiguration(t, dockerConfig, cce)
 }
 
 func init() {
