@@ -174,7 +174,7 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) buildContainer(name, image string, limits api.ResourceList, command ...string) api.Container {
+func (s *executor) buildContainer(name, image string, requests, limits api.ResourceList, command ...string) api.Container {
 	privileged := false
 	if s.Config.Kubernetes != nil {
 		privileged = s.Config.Kubernetes.Privileged
@@ -187,7 +187,8 @@ func (s *executor) buildContainer(name, image string, limits api.ResourceList, c
 		Command:         command,
 		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
 		Resources: api.ResourceRequirements{
-			Limits: limits,
+			Limits:   limits,
+			Requests: requests,
 		},
 		VolumeMounts: s.getVolumeMounts(),
 		SecurityContext: &api.SecurityContext{
@@ -198,6 +199,14 @@ func (s *executor) buildContainer(name, image string, limits api.ResourceList, c
 }
 
 func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
+	path := strings.Split(s.Build.BuildDir, "/")
+	path = path[:len(path)-1]
+
+	mounts = append(mounts, api.VolumeMount{
+		Name:      "repo",
+		MountPath: strings.Join(path, "/"),
+	})
+
 	for _, mount := range s.Config.Kubernetes.Volumes.HostPaths {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
@@ -218,6 +227,13 @@ func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
 }
 
 func (s *executor) getVolumes() (volumes []api.Volume) {
+	volumes = append(volumes, api.Volume{
+		Name: "repo",
+		VolumeSource: api.VolumeSource{
+			EmptyDir: &api.EmptyDirVolumeSource{},
+		},
+	})
+
 	for _, volume := range s.Config.Kubernetes.Volumes.HostPaths {
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
@@ -284,7 +300,7 @@ func (s *executor) setupBuildPod() error {
 	services := make([]api.Container, len(s.options.Services))
 	for i, image := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(image)
-		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, s.serviceLimits)
+		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, s.serviceRequests, s.serviceLimits)
 	}
 	labels := make(map[string]string)
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
@@ -314,8 +330,8 @@ func (s *executor) setupBuildPod() error {
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				// TODO use the build and helper template here
-				s.buildContainer("build", buildImage, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("build", buildImage, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,

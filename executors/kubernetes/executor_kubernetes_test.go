@@ -95,8 +95,7 @@ func TestVolumeMounts(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{},
-				Runner:           &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
 				api.VolumeMount{Name: "repo"},
@@ -107,15 +106,16 @@ func TestVolumeMounts(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						VolumeMounts: []*common.KubernetesVolumeMount{
-							&common.KubernetesVolumeMount{Name: "docker", MountPath: "/var/run/docker.sock"},
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "docker", MountPath: "/var/run/docker.sock"},
+							},
 						},
 					},
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{},
-				Runner:           &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
 				api.VolumeMount{Name: "repo"},
@@ -127,15 +127,16 @@ func TestVolumeMounts(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						VolumeMounts: []*common.KubernetesVolumeMount{
-							&common.KubernetesVolumeMount{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
+							},
 						},
 					},
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{},
-				Runner:           &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
 				api.VolumeMount{Name: "repo"},
@@ -174,8 +175,7 @@ func TestVolumes(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{},
-				Runner:           &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
 				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
@@ -186,17 +186,16 @@ func TestVolumes(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						VolumeSources: common.KubernetesVolumeSources{
-							HostPaths: []common.KubernetesHostPathVolumeSource{
-								common.KubernetesHostPathVolumeSource{Name: "docker", Path: "/var/run/docker.sock"},
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "docker", MountPath: "/var/run/docker.sock"},
 							},
 						},
 					},
 				},
 			},
 			Build: &common.Build{
-				GetBuildResponse: common.GetBuildResponse{},
-				Runner:           &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
 				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
