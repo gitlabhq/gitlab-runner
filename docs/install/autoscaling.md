@@ -129,6 +129,8 @@ more in [Distributed runners caching][caching].
     [[runners]]
     executor = "docker+machine"
     limit = 20
+    [runners.docker]
+      image = "ruby:2.1"
     [runners.machine]
       IdleCount = 5
       MachineDriver = "digitalocean"
