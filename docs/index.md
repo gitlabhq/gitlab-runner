@@ -58,6 +58,12 @@ information on the different installation methods:
 - [Install on Kubernetes](install/kubernetes.md)
 - [Install the nightly binary manually (development)](install/bleeding-edge.md)
 
+## [Register GitLab Runner](register/index.md)
+
+Once GitLab Runner is installed, you need to register it with GitLab.
+
+Learn how to [register a GitLab Runner](register/index.md).
+
 ## Using GitLab Runner
 
 - [See the commands documentation](commands/README.md)
