@@ -590,6 +590,7 @@ func (s *executor) createService(service, version, image string) (*types.Contain
 		Binds:         s.binds,
 		ShmSize:       s.Config.Docker.ShmSize,
 		VolumesFrom:   s.volumesFrom,
+		Tmpfs:         s.Config.Docker.ServicesTmpfs,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},
