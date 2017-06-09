@@ -79,6 +79,145 @@ func TestLimits(t *testing.T) {
 	}
 }
 
+func TestVolumeMounts(t *testing.T) {
+	tests := []struct {
+		GlobalConfig *common.Config
+		RunnerConfig common.RunnerConfig
+		Build        *common.Build
+
+		Expected []api.VolumeMount
+	}{
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				api.VolumeMount{Name: "repo"},
+			},
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "docker", MountPath: "/var/run/docker.sock"},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				api.VolumeMount{Name: "repo"},
+				api.VolumeMount{Name: "docker", MountPath: "/var/run/docker.sock"},
+			},
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				api.VolumeMount{Name: "repo"},
+				api.VolumeMount{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		e := &executor{
+			AbstractExecutor: executors.AbstractExecutor{
+				ExecutorOptions: executorOptions,
+				Build:           test.Build,
+				Config:          test.RunnerConfig,
+			},
+		}
+
+		mounts := e.getVolumeMounts()
+		assert.Equal(t, &test.Expected, &mounts)
+	}
+}
+
+func TestVolumes(t *testing.T) {
+	tests := []struct {
+		GlobalConfig *common.Config
+		RunnerConfig common.RunnerConfig
+		Build        *common.Build
+
+		Expected []api.Volume
+	}{
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: []api.Volume{
+				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+			},
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "docker", MountPath: "/var/run/docker.sock"},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: []api.Volume{
+				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				api.Volume{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		e := &executor{
+			AbstractExecutor: executors.AbstractExecutor{
+				ExecutorOptions: executorOptions,
+				Build:           test.Build,
+				Config:          test.RunnerConfig,
+			},
+		}
+
+		volumes := e.getVolumes()
+		assert.Equal(t, &test.Expected, &volumes)
+	}
+}
+
 func TestCleanup(t *testing.T) {
 	version := testapi.Default.GroupVersion().Version
 	codec := testapi.Default.Codec()
