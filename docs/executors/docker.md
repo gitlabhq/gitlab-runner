@@ -196,6 +196,19 @@ distinguish which variable should go where.
 >
 Secure variables are only passed to the build container.
 
+## Mounting a directory in RAM
+
+You can mount a path inside all the services containers in RAM using tmpfs. This can speed up the time required to test if there is a lot of I/O related work, such as with databases.
+If you use the `services_tmpfs` option in the runner configuration, you c  an specify multiple paths, each with its own options. See the [docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
+This is an example `config.toml` to mount the data directory for the official Mysql container in RAM.
+
+```
+[runners.docker]
+  [runners.docker.services_tmpfs]
+      "/var/lib/mysql" = "rw,noexec"
+
+```
+
 ## Build directory in service
 
 Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.
