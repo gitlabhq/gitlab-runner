@@ -231,6 +231,14 @@ func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
 		})
 	}
 
+	for _, mount := range s.Config.Kubernetes.Volumes.ConfigMaps {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			ReadOnly:  mount.ReadOnly,
+		})
+	}
+
 	return
 }
 
@@ -271,6 +279,19 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 				PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{
 					ClaimName: volume.Name,
 					ReadOnly:  volume.ReadOnly,
+				},
+			},
+		})
+	}
+
+	for _, volume := range s.Config.Kubernetes.Volumes.ConfigMaps {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				ConfigMap: &api.ConfigMapVolumeSource{
+					LocalObjectReference: api.LocalObjectReference{
+						Name: volume.Name,
+					},
 				},
 			},
 		})
