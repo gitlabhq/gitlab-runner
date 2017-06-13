@@ -83,6 +83,8 @@ func createZipEntry(archive *zip.Writer, fileName string) error {
 }
 
 func CreateZipArchive(w io.Writer, fileNames []string) error {
+	warnIfTryingToArchiveGitDirectory(fileNames)
+
 	archive := zip.NewWriter(w)
 	defer archive.Close()
 

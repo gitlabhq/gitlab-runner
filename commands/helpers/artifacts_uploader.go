@@ -30,8 +30,6 @@ func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
-	warnIfTryingToArchiveGitDirectory(c.sortedFiles())
-
 	// Create the archive
 	go func() {
 		err := archives.CreateZipArchive(pw, c.sortedFiles())

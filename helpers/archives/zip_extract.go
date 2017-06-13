@@ -83,13 +83,12 @@ func extractZipFile(file *zip.File) (err error) {
 func ExtractZipArchive(archive *zip.Reader) error {
 	tracker := newPathErrorTracker()
 
+	paths := []string{}
 	for _, file := range archive.File {
 		if err := extractZipFile(file); tracker.actionable(err) {
 			logrus.Warningf("%s: %s (suppressing repeats)", file.Name, err)
 		}
-	}
 
-	for _, file := range archive.File {
 		// Update file permissions
 		if err := os.Chmod(file.Name, file.Mode().Perm()); tracker.actionable(err) {
 			logrus.Warningf("%s: %s (suppressing repeats)", file.Name, err)
@@ -99,42 +98,21 @@ func ExtractZipArchive(archive *zip.Reader) error {
 		if err := processZipExtra(&file.FileHeader); tracker.actionable(err) {
 			logrus.Warningf("%s: %s (suppressing repeats)", file.Name, err)
 		}
-	}
-	return nil
-}
 
-type ZipArchiveLister struct {
-	paths []string
-}
-
-func (a *ZipArchiveLister) list(archive *zip.Reader) error {
-	for _, file := range archive.File {
-		a.paths = append(a.paths, file.Name)
+		paths = append(paths, file.Name)
 	}
+
+	warnIfTryingToExtractGitDirectory(paths)
 
 	return nil
 }
 
-func workOnZipArchive(fileName string, handler func(archive *zip.Reader) error) error {
+func ExtractZipFile(fileName string) error {
 	archive, err := zip.OpenReader(fileName)
 	if err != nil {
 		return err
 	}
 	defer archive.Close()
 
-	return handler(&archive.Reader)
-}
-
-func ExtractZipFile(fileName string) error {
-	return workOnZipArchive(fileName, ExtractZipArchive)
-}
-
-func ListZipFile(fileName string) ([]string, error) {
-	al := &ZipArchiveLister{}
-	err := workOnZipArchive(fileName, al.list)
-	if err != nil {
-		return []string{}, err
-	}
-
-	return al.paths, nil
+	return ExtractZipArchive(&archive.Reader)
 }

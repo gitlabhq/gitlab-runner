@@ -70,8 +70,6 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	warnIfTryingToArchiveGitDirectory(c.sortedFiles())
-
 	// Check if list of files changed
 	if !c.isFileChanged(c.File) {
 		logrus.Infoln("Archive is up to date!")

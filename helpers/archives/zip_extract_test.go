@@ -21,7 +21,7 @@ func writeArchive(t *testing.T, w io.Writer) {
 	io.WriteString(testFile, "test file")
 }
 
-func onTemporaryArchive(t *testing.T, handler func(t *testing.T, tempFile *os.File)) {
+func TestExtractZipFile(t *testing.T) {
 	tempFile, err := ioutil.TempFile("", "archive")
 	if !assert.NoError(t, err) {
 		return
@@ -31,39 +31,24 @@ func onTemporaryArchive(t *testing.T, handler func(t *testing.T, tempFile *os.Fi
 	writeArchive(t, tempFile)
 	tempFile.Close()
 
-	handler(t, tempFile)
-}
+	err = ExtractZipFile(tempFile.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
 
-func TestExtractZipFile(t *testing.T) {
-	onTemporaryArchive(t, func(t *testing.T, tempFile *os.File) {
-		err := ExtractZipFile(tempFile.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
+	stat, err := os.Stat("temporary_file.txt")
+	assert.False(t, os.IsNotExist(err), "Expected temporary_file.txt to exist")
+	if !os.IsNotExist(err) {
+		assert.NoError(t, err)
+	}
 
-		stat, err := os.Stat("temporary_file.txt")
-		assert.False(t, os.IsNotExist(err), "Expected temporary_file.txt to exist")
-		if !os.IsNotExist(err) {
-			assert.NoError(t, err)
-		}
-
-		if stat != nil {
-			defer os.Remove("temporary_file.txt")
-			assert.Equal(t, int64(9), stat.Size())
-		}
-	})
+	if stat != nil {
+		defer os.Remove("temporary_file.txt")
+		assert.Equal(t, int64(9), stat.Size())
+	}
 }
 
 func TestExtractZipFileNotFound(t *testing.T) {
 	err := ExtractZipFile("non_existing_zip_file.zip")
 	assert.Error(t, err)
-}
-
-func TestListZipFile(t *testing.T) {
-	onTemporaryArchive(t, func(t *testing.T, tempFile *os.File) {
-		paths, err := ListZipFile(tempFile.Name())
-		assert.NoError(t, err)
-		assert.NotEmpty(t, paths)
-		assert.Contains(t, paths, "temporary_file.txt")
-	})
 }

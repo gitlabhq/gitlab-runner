@@ -83,13 +83,7 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 		}
 	}
 
-	paths, err := archives.ListZipFile(c.File)
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-	warnIfTryingToExtractGitDirectory(paths)
-
-	err = archives.ExtractZipFile(c.File)
+	err := archives.ExtractZipFile(c.File)
 	if err != nil && !os.IsNotExist(err) {
 		logrus.Fatalln(err)
 	}

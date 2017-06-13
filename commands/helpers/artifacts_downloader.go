@@ -61,12 +61,6 @@ func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	paths, err := archives.ListZipFile(file.Name())
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-	warnIfTryingToExtractGitDirectory(paths)
-
 	// Extract artifacts file
 	err = archives.ExtractZipFile(file.Name())
 	if err != nil {

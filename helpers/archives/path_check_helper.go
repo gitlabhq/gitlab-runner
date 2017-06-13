@@ -1,4 +1,4 @@
-package helpers
+package archives
 
 import (
 	"path/filepath"
