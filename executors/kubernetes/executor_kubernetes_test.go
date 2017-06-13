@@ -110,6 +110,9 @@ func TestVolumeMounts(t *testing.T) {
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "docker", MountPath: "/var/run/docker.sock"},
 							},
+							PVCs: []common.KubernetesPVC{
+								{Name: "PVC", MountPath: "/path/to/whatever"},
+							},
 						},
 					},
 				},
@@ -120,6 +123,7 @@ func TestVolumeMounts(t *testing.T) {
 			Expected: []api.VolumeMount{
 				api.VolumeMount{Name: "repo"},
 				api.VolumeMount{Name: "docker", MountPath: "/var/run/docker.sock"},
+				api.VolumeMount{Name: "PVC", MountPath: "/path/to/whatever"},
 			},
 		},
 		{
@@ -190,6 +194,9 @@ func TestVolumes(t *testing.T) {
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "docker", MountPath: "/var/run/docker.sock"},
 							},
+							PVCs: []common.KubernetesPVC{
+								{Name: "PVC", MountPath: "/path/to/whatever"},
+							},
 						},
 					},
 				},
@@ -200,6 +207,7 @@ func TestVolumes(t *testing.T) {
 			Expected: []api.Volume{
 				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 				api.Volume{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
+				api.Volume{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
 			},
 		},
 	}

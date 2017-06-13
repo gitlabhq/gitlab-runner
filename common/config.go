@@ -166,10 +166,17 @@ type KubernetesConfig struct {
 
 type KubernetesVolumes struct {
 	HostPaths []KubernetesHostPath `toml:"host_path"`
+	PVCs      []KubernetesPVC      `toml:"persistent_volume_claim"`
 	Secrets   []KubernetesSecret   `toml:"secret"`
 }
 
 type KubernetesHostPath struct {
+	Name      string `toml:"name" json:"name" description:"The name of the volume"`
+	MountPath string `toml:"mount_path"`
+	ReadOnly  bool   `toml:"read_only,omitempty"`
+}
+
+type KubernetesPVC struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
 	MountPath string `toml:"mount_path"`
 	ReadOnly  bool   `toml:"read_only,omitempty"`
