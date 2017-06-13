@@ -111,6 +111,7 @@ This defines the Docker Container parameters.
 | `dns`                       | a list of DNS servers for the container to use |
 | `dns_search`                | a list of DNS search domains |
 | `privileged`                | make container run in Privileged mode (insecure) |
+| `userns_mode`               | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in docker 1.10 or later) |
 | `cap_add`                   | add additional Linux capabilities to the container |
 | `cap_drop`                  | drop additional Linux capabilities from the container |
 | `security_opt`              | set security options (--security-opt in docker run), takes a list of ':' separated key/values |
@@ -142,6 +143,7 @@ Example:
   dns = ["8.8.8.8"]
   dns_search = [""]
   privileged = false
+  userns_mode = "host"
   cap_add = ["NET_ADMIN"]
   cap_drop = ["DAC_OVERRIDE"]
   devices = ["/dev/net/tun"]

@@ -956,14 +956,14 @@ func TestDockerServicesTmpfsSetting(t *testing.T) {
 		Once()
 
 	//Check that the parameter HostConfig contains a defined Tmpfs map, with the specified settings
-	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.MatchedBy(func(req *container.HostConfig) bool { return req.Tmpfs["/tmpfs"] == "rw,noexec"}), mock.Anything, mock.Anything).
+	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.MatchedBy(func(req *container.HostConfig) bool { return req.Tmpfs["/tmpfs"] == "rw,noexec" }), mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{ID: containerName}, nil).
 		Once()
-	
+
 	c.On("ContainerRemove", e.Context, containerName, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
 		Return(nil).
 		Once()
-	
+
 	c.On("ContainerStart", e.Context, mock.Anything, mock.Anything).
 		Return(nil).
 		Once()
@@ -972,6 +972,17 @@ func TestDockerServicesTmpfsSetting(t *testing.T) {
 	_, err := e.createService("alpine", "latest", "latest")
 
 	assert.NoError(t, err)
+}
+func TestDockerUserNSSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		UsernsMode: "host",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
+	}
+
+	testDockerConfiguration(t, dockerConfig, cce)
 }
 
 func init() {

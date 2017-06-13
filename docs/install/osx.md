@@ -22,26 +22,7 @@ download the macOS binary.
 
 **The rest of commands execute as the user who will run the Runner.**
 
-1. Register the Runner (look into [Runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
-
-    ```bash
-    gitlab-runner register
-
-    Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
-    https://gitlab.com
-    Please enter the gitlab-ci token for this runner
-    xxx
-    Please enter the gitlab-ci description for this runner
-    my-runner
-    INFO[0034] fcf5c619 Registering runner... succeeded
-    Please enter the executor: shell, docker, docker-ssh, ssh?
-    docker
-    Please enter the Docker image (eg. ruby:2.1):
-    ruby:2.1
-    INFO[0037] Runner registered successfully. Feel free to start it, but if it's
-    running already the config should be automatically reloaded!
-    ```
-
+1. [Register the Runner](../register/index.md)
 1. Install the Runner as service and start it:
 
     ```bash

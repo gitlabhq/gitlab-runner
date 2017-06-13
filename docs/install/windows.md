@@ -8,39 +8,12 @@ To install and run GitLab Runner on Windows you need:
 ## Installation
 
 1. Create a folder somewhere in your system, ex.: `C:\GitLab-Runner`.
-
 1. Download the binary for [x86][]  or [amd64][] and put it into the folder you
    created. Rename the binary to `gitlab-runner.exe`.
-
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
-
 1. Run an [`Administrator`/elevated command prompt][prompt] (<kbd>WindowsKey</kbd> + <kbd>X</kbd> then select Command Prompt (Admin)).
-
-1. Register the Runner (see [Runners documentation](https://docs.gitlab.com/ce/ci/runners/) to learn how to obtain a token):
-
-    ```bash
-    C:\Windows\system32>cd C:\GitLab-Runner
-
-    C:\GitLab-Runner>gitlab-runner register
-    Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com/):
-    https://gitlab.com
-    Please enter the gitlab-ci token for this runner:
-    xxxx
-    Please enter the gitlab-ci description for this runner:
-    [xxxx]:
-    Please enter the gitlab-ci tags for this runner (comma separated):
-    windows
-    Whether to run untagged builds [true/false]:
-    [false]: true
-    Registering runner... succeeded
-    Please enter the executor: docker+machine, kubernetes, docker, docker-ssh, parallels, virtualbox, shell, ssh, docker-ssh+machine:
-    shell
-    Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
-    ```
-   If you'd like to register multiple Runners on the same machine with different
-   configurations repeat the `gitlab-runner register` command.
-
+1. [Register the Runner](../register/index.md).
 1. Install the Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
 
