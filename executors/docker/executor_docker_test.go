@@ -907,6 +907,73 @@ func TestDockerCPUSetCPUsSetting(t *testing.T) {
 	testDockerConfiguration(t, dockerConfig, cce)
 }
 
+func TestDockerServicesTmpfsSetting(t *testing.T) {
+	var c docker_helpers.MockClient
+	defer c.AssertExpectations(t)
+
+	//Set the runner options for tmpfs in services
+	tmpfsOptions := make(map[string]string)
+	tmpfsOptions["/tmpfs"] = "rw,noexec"
+
+	dockerConfig := &common.DockerConfig{
+		ServicesTmpfs: tmpfsOptions,
+	}
+
+	//Setup Mock objects
+	e := executor{client: &c}
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = dockerConfig
+	e.Context = context.Background()
+
+	e.Build = &common.Build{
+		ProjectRunnerID: 0,
+		Runner:          &common.RunnerConfig{},
+	}
+	e.Build.JobInfo.ProjectID = 0
+	e.Build.Runner.Token = "abcdef1234567890"
+
+	c.On("ImageInspectWithRaw", e.Context, mock.Anything).
+		Return(types.ImageInspect{}, nil, nil).
+		Twice()
+
+	c.On("ImagePullBlocking", e.Context, mock.Anything, mock.Anything).
+		Return(nil).
+		Once()
+
+	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s", strings.Replace("alpine", "/", "__", -1))
+	networkID := "network-id"
+
+	networkContainersMap := map[string]types.EndpointResource{
+		"1": {Name: containerName},
+	}
+
+	c.On("NetworkList", e.Context, types.NetworkListOptions{}).
+		Return([]types.NetworkResource{{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
+		Once()
+
+	c.On("NetworkDisconnect", e.Context, networkID, containerName, true).
+		Return(nil).
+		Once()
+
+	//Check that the parameter HostConfig contains a defined Tmpfs map, with the specified settings
+	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.MatchedBy(func(req *container.HostConfig) bool { return req.Tmpfs["/tmpfs"] == "rw,noexec"}), mock.Anything, mock.Anything).
+		Return(container.ContainerCreateCreatedBody{ID: containerName}, nil).
+		Once()
+	
+	c.On("ContainerRemove", e.Context, containerName, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
+		Return(nil).
+		Once()
+	
+	c.On("ContainerStart", e.Context, mock.Anything, mock.Anything).
+		Return(nil).
+		Once()
+
+	//call the function to be tested
+	_, err := e.createService("alpine", "latest", "latest")
+
+	assert.NoError(t, err)
+}
+
 func init() {
 	docker_helpers.HomeDirectory = ""
 }
