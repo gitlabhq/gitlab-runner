@@ -44,7 +44,8 @@ func (c *CacheArchiverCommand) upload() (bool, error) {
 	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
 	req.ContentLength = fi.Size()
 
-	resp, err := http.DefaultClient.Do(req)
+	client := NewCacheClient()
+	resp, err := client.Do(req)
 	if err != nil {
 		return true, err
 	}

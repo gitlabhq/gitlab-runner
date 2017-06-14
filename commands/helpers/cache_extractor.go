@@ -34,7 +34,8 @@ func (c *CacheExtractorCommand) download() (bool, error) {
 	defer file.Close()
 	defer os.Remove(file.Name())
 
-	resp, err := http.Get(c.URL)
+	client := NewCacheClient()
+	resp, err := client.Get(c.URL)
 	if err != nil {
 		return true, err
 	}
