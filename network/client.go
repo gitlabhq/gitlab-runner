@@ -318,9 +318,13 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 }
 
 func decodeJSONPayload(res *http.Response, response interface{}) (err error) {
-	isApplicationJSON, err := isResponseApplicationJSON(res)
-	if !isApplicationJSON {
+	mimeType, err := getResponseMimeType(res)
+	if err != nil {
 		return err
+	}
+
+	if mimeType != "application/json" {
+		return fmt.Errorf("Server should return application/json. Got: %v", mimeType)
 	}
 
 	d := json.NewDecoder(res.Body)
@@ -332,29 +336,30 @@ func decodeJSONPayload(res *http.Response, response interface{}) (err error) {
 	return nil
 }
 
-func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
+func getResponseMimeType(res *http.Response) (mimeType string, err error) {
 	contentType := res.Header.Get("Content-Type")
 
-	mimetype, _, err := mime.ParseMediaType(contentType)
+	mimeType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		return false, fmt.Errorf("Content-Type parsing error: %v", err)
+		return nil, fmt.Errorf("Content-Type parsing error: %v", err)
 	}
 
-	if mimetype != "application/json" {
-		return false, fmt.Errorf("Server should return application/json. Got: %v", contentType)
-	}
-
-	return true, nil
+	return mimeType, nil
 }
 
 func logAPIErrorMessages(res *http.Response) (err error) {
-	isApplicationJSON, err := isResponseApplicationJSON(res)
+	mimeType, err := getResponseMimeType(res)
 	if err != nil {
 		return err
 	}
 
-	if !isApplicationJSON {
-		return nil
+	if mimeType != "application/json" {
+		if mimeType == "text/plain" {
+			logrus.Errorln(ioutil.ReadAll(res.Body))
+			return nil
+		}
+
+		return fmt.Errorf("Server should return application/json. Got: %v", mimeType)
 	}
 
 	var apiErrorResponse APIErrorResponse
