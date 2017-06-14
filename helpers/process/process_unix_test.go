@@ -71,11 +71,11 @@ func createTestProcess(script string) *exec.Cmd {
 
 	build := &common.Build{}
 	build.ID = 1
-	build.RepoURL = "http://gitlab.example.com/example/project.git"
+	build.GitInfo.RepoURL = "http://gitlab.example.com/example/project.git"
 
 	startedCh := make(chan struct{})
 
-	PrepareProcessGroup(cmd, &common.ShellConfiguration{}, build, common.BuildStageUserScript, startedCh)
+	PrepareProcessGroup(cmd, &common.ShellConfiguration{}, build, startedCh)
 
 	cmd.Stdin = bytes.NewBufferString(script)
 	cmd.Start()

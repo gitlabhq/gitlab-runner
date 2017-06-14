@@ -74,8 +74,8 @@ func TestBash_CommandCredentials(t *testing.T) {
 	assert.NoError(t, err)
 	require.NotNil(t, script)
 	require.NotNil(t, script.CommandCredential)
-	assert.Equal(t, existingUser.Uid, script.CommandCredential.UID)
-	assert.Equal(t, existingUser.Gid, script.CommandCredential.GID)
+	assert.Equal(t, uint32(existingUser.Uid), script.CommandCredential.UID)
+	assert.Equal(t, uint32(existingUser.Gid), script.CommandCredential.GID)
 }
 
 func TestBash_CommandCredentialsUnsupported(t *testing.T) {

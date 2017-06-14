@@ -9,7 +9,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
-func PrepareProcessGroup(cmd *exec.Cmd, shell *common.ShellConfiguration, build *common.Build, buildStage common.BuildStage, startedCh chan struct{}) {
+func PrepareProcessGroup(cmd *exec.Cmd, shell *common.ShellConfiguration, build *common.Build, startedCh chan struct{}) {
 	SetProcessGroup(cmd)
 	SetCredential(cmd, shell)
 
@@ -19,7 +19,6 @@ func PrepareProcessGroup(cmd *exec.Cmd, shell *common.ShellConfiguration, build 
 		logWithFields(process.Pid, "Starting process group", logrus.Fields{
 			"build":   strconv.Itoa(build.ID),
 			"repoURL": build.RepoCleanURL(),
-			"stage":   buildStage,
 		})
 	}()
 }
