@@ -1,3 +1,7 @@
+v 9.2.1 (2017-06-17)
+- Fix regression introduced in the way how `exec` parses `.gitlab-ci.yml` !535
+- Fix another regression on docker-machine credentials usage !610
+
 v 9.2.0 (2017-05-22)
 
 This release introduces a change in the ordering of artifacts and cache restoring!
@@ -28,6 +32,10 @@ that even in edge cases you can always rely on them.
 - Add support for kubernetes service account and override on gitlab-ci.yaml !554
 - Restore cache before artifacts !577
 - Fix link to the LICENSE file. !579
+
+v 9.1.2 (2017-06-17)
+- Print proper message when cache upload operation fails !556
+- Fix regression introduced in the way how `exec` parses `.gitlab-ci.yml` !535
 
 v 9.1.1 (2017-05-02)
 - Fix apt-get syntax to install a specific version. !563
