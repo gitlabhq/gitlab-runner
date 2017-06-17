@@ -23,18 +23,29 @@ func getRunnerConfig() *common.RunnerConfig {
 	}
 }
 
+func getRunnerConfigWithoutDockerConfig() *common.RunnerConfig {
+	return &common.RunnerConfig{
+		Name: "runner",
+		RunnerSettings: common.RunnerSettings{
+			Executor: "docker+machine",
+		},
+	}
+}
+
 type machineCredentialsUsageFakeExecutor struct {
-	t                  *testing.T
-	machineCredentials docker_helpers.DockerCredentials
+	t *testing.T
+
+	expectedmachineCredentials docker_helpers.DockerCredentials
+	expectedRunnerConfig       *common.RunnerConfig
 }
 
 func (e *machineCredentialsUsageFakeExecutor) assertRunnerConfiguration(runnerConfig *common.RunnerConfig) {
-	expectedRunnerConfig := getRunnerConfig()
-
-	assert.Equal(e.t, expectedRunnerConfig.Name, runnerConfig.Name)
-	assert.Equal(e.t, expectedRunnerConfig.RunnerSettings.Executor, runnerConfig.RunnerSettings.Executor)
-	assert.Equal(e.t, expectedRunnerConfig.Docker.Image, runnerConfig.Docker.Image)
-	assert.Equal(e.t, e.machineCredentials, runnerConfig.Docker.DockerCredentials, "DockerCredentials should be filled with machine's credentials")
+	assert.Equal(e.t, e.expectedRunnerConfig.Name, runnerConfig.Name)
+	assert.Equal(e.t, e.expectedRunnerConfig.RunnerSettings.Executor, runnerConfig.RunnerSettings.Executor)
+	if e.expectedRunnerConfig.Docker != nil {
+		assert.Equal(e.t, e.expectedRunnerConfig.Docker.Image, runnerConfig.Docker.Image)
+	}
+	assert.Equal(e.t, e.expectedmachineCredentials, runnerConfig.Docker.DockerCredentials, "DockerCredentials should be filled with machine's credentials")
 
 }
 
@@ -53,52 +64,63 @@ func (e *machineCredentialsUsageFakeExecutor) GetCurrentStage() common.ExecutorS
 	return common.ExecutorStageCreated
 }
 
-func TestMachineCredentialsUsage(t *testing.T) {
-	machineName := "expected-machine"
-	machineCredentials := docker_helpers.DockerCredentials{
-		Host: "tcp://expected-host:1234",
-	}
+func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource func() *common.RunnerConfig) {
+	t.Run(name, func(t *testing.T) {
+		machineName := "expected-machine"
+		machineCredentials := docker_helpers.DockerCredentials{
+			Host: "tcp://expected-host:1234",
+		}
 
-	runnerConfig := getRunnerConfig()
-	options := common.ExecutorPrepareOptions{
-		Config: runnerConfig,
-		Build: &common.Build{
-			Runner: runnerConfig,
-			ExecutorData: &machineDetails{
-				Name:  machineName,
-				State: machineStateAcquired,
-			},
-		},
-	}
-
-	machine := &docker_helpers.MockMachine{}
-	defer machine.AssertExpectations(t)
-
-	machine.On("CanConnect", machineName).
-		Return(true).Once()
-	machine.On("Credentials", machineName).
-		Return(machineCredentials, nil).Once()
-
-	executorProvider := &common.MockExecutorProvider{}
-	defer executorProvider.AssertExpectations(t)
-
-	fakeExecutor := &machineCredentialsUsageFakeExecutor{t, machineCredentials}
-	executorProvider.On("Create").
-		Return(fakeExecutor).Once()
-
-	e := &machineExecutor{
-		provider: &machineProvider{
-			machine:  machine,
-			provider: executorProvider,
-			totalActions: prometheus.NewCounterVec(
-				prometheus.CounterOpts{
-					Name: "actions_total",
-					Help: "actions_total",
+		runnerConfig := runnerConfigSource()
+		options := common.ExecutorPrepareOptions{
+			Config: runnerConfig,
+			Build: &common.Build{
+				Runner: runnerConfig,
+				ExecutorData: &machineDetails{
+					Name:  machineName,
+					State: machineStateAcquired,
 				},
-				[]string{"action"},
-			),
-		},
-	}
-	err := e.Prepare(options)
-	assert.NoError(t, err)
+			},
+		}
+
+		machine := &docker_helpers.MockMachine{}
+		defer machine.AssertExpectations(t)
+
+		machine.On("CanConnect", machineName).
+			Return(true).Once()
+		machine.On("Credentials", machineName).
+			Return(machineCredentials, nil).Once()
+
+		executorProvider := &common.MockExecutorProvider{}
+		defer executorProvider.AssertExpectations(t)
+
+		fakeExecutor := &machineCredentialsUsageFakeExecutor{
+			t: t,
+			expectedmachineCredentials: machineCredentials,
+			expectedRunnerConfig:       runnerConfigSource(),
+		}
+		executorProvider.On("Create").
+			Return(fakeExecutor).Once()
+
+		e := &machineExecutor{
+			provider: &machineProvider{
+				machine:  machine,
+				provider: executorProvider,
+				totalActions: prometheus.NewCounterVec(
+					prometheus.CounterOpts{
+						Name: "actions_total",
+						Help: "actions_total",
+					},
+					[]string{"action"},
+				),
+			},
+		}
+		err := e.Prepare(options)
+		assert.NoError(t, err)
+	})
+}
+
+func TestMachineCredentialsUsage(t *testing.T) {
+	testMachineCredentialsUsage(t, "config-with-docker-section", getRunnerConfig)
+	testMachineCredentialsUsage(t, "config-without-docker-section", getRunnerConfigWithoutDockerConfig)
 }
