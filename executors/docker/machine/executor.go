@@ -59,6 +59,10 @@ func (e *machineExecutor) Shell() *common.ShellScriptInfo {
 func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	e.build = options.Build
 
+	if options.Config.Docker == nil {
+		options.Config.Docker = &common.DockerConfig{}
+	}
+
 	// Use the machine
 	e.SetCurrentStage(DockerMachineExecutorStageUseMachine)
 	e.config, e.data, err = e.provider.Use(options.Config, options.Build.ExecutorData)
