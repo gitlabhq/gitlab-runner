@@ -1,3 +1,7 @@
+v 9.2.1 (2017-06-17)
+- Fix regression introduced in the way how `exec` parses `.gitlab-ci.yml` !535
+- Fix another regression on docker-machine credentials usage !610
+
 v 9.2.0 (2017-05-22)
 
 This release introduces a change in the ordering of artifacts and cache restoring!
