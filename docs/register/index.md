@@ -152,6 +152,7 @@ To register a Runner under macOS:
     Please enter the Docker image (eg. ruby:2.1):
     alpine:latest
     ```
+    **Note** _[be sure Docker.app is installed on your mac](https://docs.docker.com/docker-for-mac/install/)_
 
 ## Windows
 
