@@ -2,7 +2,7 @@
 
 GitLab Runner implements a number of executors that can be used to run your
 builds in different scenarios. If you are not sure what to select, read the
-[I'm not sure](#im-not-sure) section.
+[I am not sure](#i-am-not-sure) section.
 Visit the [compatibility chart](#compatibility-chart) to find
 out what features each executor supports and what not.
 
@@ -35,7 +35,7 @@ you decide.
 2. it requires to install all dependencies by hand
 3. for example using Vagrant
 
-### I'm not sure
+### I am not sure
 
 **Shell** is the simplest executor to configure. All required dependencies for
 your builds need to be installed manually on the machine that the Runner is
