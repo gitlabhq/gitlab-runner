@@ -835,14 +835,13 @@ func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(ctx context.Co
 	return container.ContainerCreateCreatedBody{ID: "abc"}, nil
 }
 
-func testDockerConfiguration(t *testing.T, dockerConfig *common.DockerConfig, cce containerConfigExpectations) {
+func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerConfig, cce containerConfigExpectations) (*dockerConfigurationTestFakeDockerClient, *executor) {
 	c := &dockerConfigurationTestFakeDockerClient{
 		cce: cce,
 		t:   t,
 	}
-	defer c.AssertExpectations(t)
 
-	e := executor{}
+	e := &executor{}
 	e.client = c
 	e.Config.Docker = dockerConfig
 	e.Build = &common.Build{
@@ -861,11 +860,30 @@ func testDockerConfiguration(t *testing.T, dockerConfig *common.DockerConfig, cc
 		Return([]types.NetworkResource{}, nil).Once()
 	c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
+
+	return c, e
+}
+
+func testDockerConfigurationWithJobContainer(t *testing.T, dockerConfig *common.DockerConfig, cce containerConfigExpectations) {
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	defer c.AssertExpectations(t)
+
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
 
 	_, err := e.createContainer("build", "alpine", []string{"/bin/sh"})
-	assert.NoError(t, err, "Should create container without errors")
+	assert.NoError(t, err, "Should create job container without errors")
+}
+
+func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *common.DockerConfig, cce containerConfigExpectations) {
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	defer c.AssertExpectations(t)
+
+	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
+		Return(nil).Once()
+
+	_, err := e.createService("build", "alpine", "alpine")
+	assert.NoError(t, err, "Should create service container without errors")
 }
 
 func TestDockerCPUSSetting(t *testing.T) {
@@ -890,7 +908,7 @@ func TestDockerCPUSSetting(t *testing.T) {
 				assert.Equal(t, int64(example.nanocpus), hostConfig.NanoCPUs)
 			}
 
-			testDockerConfiguration(t, dockerConfig, cce)
+			testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 		})
 	}
 }
@@ -904,74 +922,21 @@ func TestDockerCPUSetCPUsSetting(t *testing.T) {
 		assert.Equal(t, "1-3,5", hostConfig.CpusetCpus)
 	}
 
-	testDockerConfiguration(t, dockerConfig, cce)
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
 
 func TestDockerServicesTmpfsSetting(t *testing.T) {
-	var c docker_helpers.MockClient
-	defer c.AssertExpectations(t)
-
-	//Set the runner options for tmpfs in services
-	tmpfsOptions := make(map[string]string)
-	tmpfsOptions["/tmpfs"] = "rw,noexec"
-
 	dockerConfig := &common.DockerConfig{
-		ServicesTmpfs: tmpfsOptions,
+		ServicesTmpfs: map[string]string{
+			"/tmpfs": "rw,noexec",
+		},
 	}
 
-	//Setup Mock objects
-	e := executor{client: &c}
-	e.Config = common.RunnerConfig{}
-	e.Config.Docker = dockerConfig
-	e.Context = context.Background()
-
-	e.Build = &common.Build{
-		ProjectRunnerID: 0,
-		Runner:          &common.RunnerConfig{},
-	}
-	e.Build.JobInfo.ProjectID = 0
-	e.Build.Runner.Token = "abcdef1234567890"
-
-	c.On("ImageInspectWithRaw", e.Context, mock.Anything).
-		Return(types.ImageInspect{}, nil, nil).
-		Twice()
-
-	c.On("ImagePullBlocking", e.Context, mock.Anything, mock.Anything).
-		Return(nil).
-		Once()
-
-	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s", strings.Replace("alpine", "/", "__", -1))
-	networkID := "network-id"
-
-	networkContainersMap := map[string]types.EndpointResource{
-		"1": {Name: containerName},
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		require.NotEmpty(t, hostConfig.Tmpfs)
 	}
 
-	c.On("NetworkList", e.Context, types.NetworkListOptions{}).
-		Return([]types.NetworkResource{{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
-		Once()
-
-	c.On("NetworkDisconnect", e.Context, networkID, containerName, true).
-		Return(nil).
-		Once()
-
-	//Check that the parameter HostConfig contains a defined Tmpfs map, with the specified settings
-	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.MatchedBy(func(req *container.HostConfig) bool { return req.Tmpfs["/tmpfs"] == "rw,noexec" }), mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{ID: containerName}, nil).
-		Once()
-
-	c.On("ContainerRemove", e.Context, containerName, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
-		Return(nil).
-		Once()
-
-	c.On("ContainerStart", e.Context, mock.Anything, mock.Anything).
-		Return(nil).
-		Once()
-
-	//call the function to be tested
-	_, err := e.createService("alpine", "latest", "latest")
-
-	assert.NoError(t, err)
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
 }
 func TestDockerUserNSSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
@@ -982,7 +947,7 @@ func TestDockerUserNSSetting(t *testing.T) {
 		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
 	}
 
-	testDockerConfiguration(t, dockerConfig, cce)
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
 
 func init() {
