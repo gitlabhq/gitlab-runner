@@ -102,7 +102,7 @@ func ExtractZipArchive(archive *zip.Reader) error {
 		paths = append(paths, file.Name)
 	}
 
-	warnIfTryingToExtractGitDirectory(paths)
+	warnOnGitDirectory("extract", paths)
 
 	return nil
 }

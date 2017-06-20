@@ -1,6 +1,7 @@
 package archives
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -18,16 +19,11 @@ func doesPathsListContainGitDirectory(paths []string) bool {
 	return false
 }
 
-func warnIfTryingToArchiveGitDirectory(paths []string) {
-	if doesPathsListContainGitDirectory(paths) {
-		logrus.Warn("Part of .git directory is on the list of files to archive")
-		logrus.Warn("This may introduce unexpected problems")
+func warnOnGitDirectory(operation string, paths []string) {
+	if !doesPathsListContainGitDirectory(paths) {
+		return
 	}
-}
 
-func warnIfTryingToExtractGitDirectory(paths []string) {
-	if doesPathsListContainGitDirectory(paths) {
-		logrus.Warn("Part of .git directory is on the list of files to extract")
-		logrus.Warn("This may introduce unexpected problems")
-	}
+	logrus.Warn(fmt.Sprintf("Part of .git directory is on the list of files to %s", operation))
+	logrus.Warn("This may introduce unexpected problems")
 }

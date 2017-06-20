@@ -2,50 +2,87 @@ package archives
 
 import (
 	"archive/zip"
+	"bytes"
 	"io"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func writeArchive(t *testing.T, w io.Writer) {
-	archive := zip.NewWriter(w)
-	defer archive.Close()
-
+func createDefaultArchive(t *testing.T, archive *zip.Writer) {
 	testFile, err := archive.Create("temporary_file.txt")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	io.WriteString(testFile, "test file")
 }
 
-func TestExtractZipFile(t *testing.T) {
+func createArchiveWithGitPath(t *testing.T, archive *zip.Writer) {
+	testGitFile, err := archive.Create(".git/test_file")
+	require.NoError(t, err)
+	io.WriteString(testGitFile, "test git file")
+}
+
+func testOnArchive(t *testing.T, createArchive func(t *testing.T, archive *zip.Writer), testCase func(t *testing.T, fileName string)) {
 	tempFile, err := ioutil.TempFile("", "archive")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	defer tempFile.Close()
 	defer os.Remove(tempFile.Name())
-	writeArchive(t, tempFile)
+
+	archive := zip.NewWriter(tempFile)
+	defer archive.Close()
+
+	createArchive(t, archive)
+	archive.Close()
 	tempFile.Close()
 
-	err = ExtractZipFile(tempFile.Name())
-	if !assert.NoError(t, err) {
-		return
-	}
+	testCase(t, tempFile.Name())
+}
 
-	stat, err := os.Stat("temporary_file.txt")
-	assert.False(t, os.IsNotExist(err), "Expected temporary_file.txt to exist")
-	if !os.IsNotExist(err) {
-		assert.NoError(t, err)
-	}
+func TestExtractZipFile(t *testing.T) {
+	testOnArchive(t, createDefaultArchive, func(t *testing.T, fileName string) {
+		err := ExtractZipFile(fileName)
+		require.NoError(t, err)
 
-	if stat != nil {
-		defer os.Remove("temporary_file.txt")
-		assert.Equal(t, int64(9), stat.Size())
-	}
+		stat, err := os.Stat("temporary_file.txt")
+		assert.False(t, os.IsNotExist(err), "Expected temporary_file.txt to exist")
+		if !os.IsNotExist(err) {
+			assert.NoError(t, err)
+		}
+
+		if stat != nil {
+			defer os.Remove("temporary_file.txt")
+			assert.Equal(t, int64(9), stat.Size())
+		}
+	})
+
+}
+
+func TestExtractZipFileWithGitPath(t *testing.T) {
+	testOnArchive(t, createArchiveWithGitPath, func(t *testing.T, fileName string) {
+		output := logrus.StandardLogger().Out
+		var buf bytes.Buffer
+		logrus.SetOutput(&buf)
+		defer logrus.SetOutput(output)
+
+		err := ExtractZipFile(fileName)
+		require.NoError(t, err)
+
+		assert.Contains(t, buf.String(), "Part of .git directory is on the list of files to extract")
+
+		stat, err := os.Stat(".git/test_file")
+		assert.False(t, os.IsNotExist(err), "Expected .git/test_file to exist")
+		if !os.IsNotExist(err) {
+			assert.NoError(t, err)
+		}
+
+		if stat != nil {
+			defer os.Remove(".git/test_file")
+			assert.Equal(t, int64(13), stat.Size())
+		}
+	})
 }
 
 func TestExtractZipFileNotFound(t *testing.T) {
