@@ -45,11 +45,3 @@ func printGitArchiveWarning(operation string) {
 	logrus.Warn(fmt.Sprintf("Part of .git directory is on the list of files to %s", operation))
 	logrus.Warn("This may introduce unexpected problems")
 }
-
-func warnOnGitDirectory(operation string, paths []string) {
-	if !doesPathsListContainGitDirectory(paths) {
-		return
-	}
-
-	printGitArchiveWarning(operation)
-}

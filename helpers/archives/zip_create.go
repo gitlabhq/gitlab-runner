@@ -83,12 +83,16 @@ func createZipEntry(archive *zip.Writer, fileName string) error {
 }
 
 func CreateZipArchive(w io.Writer, fileNames []string) error {
-	warnOnGitDirectory("archive", fileNames)
+	tracker := newPathErrorTracker()
 
 	archive := zip.NewWriter(w)
 	defer archive.Close()
 
 	for _, fileName := range fileNames {
+		if err := errorIfGitDirectory(fileName); tracker.actionable(err) {
+			printGitArchiveWarning("archive")
+		}
+
 		err := createZipEntry(archive, fileName)
 		if err != nil {
 			return err
