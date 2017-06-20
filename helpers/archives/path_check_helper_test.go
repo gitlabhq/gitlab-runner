@@ -9,22 +9,22 @@ import (
 
 func TestDoesPathsListContainGitDirectory(t *testing.T) {
 	examples := []struct {
-		paths  []string
+		path   string
 		unsafe bool
 	}{
-		{[]string{".git"}, true},
-		{[]string{".git/"}, true},
-		{[]string{"././././.git/"}, true},
-		{[]string{"././.git/.././.git/"}, true},
-		{[]string{".git/test"}, true},
-		{[]string{"./.git/test"}, true},
-		{[]string{"test/.git"}, false},
-		{[]string{"test/.git/test"}, false},
+		{".git", true},
+		{".git/", true},
+		{"././././.git/", true},
+		{"././.git/.././.git/", true},
+		{".git/test", true},
+		{"./.git/test", true},
+		{"test/.git", false},
+		{"test/.git/test", false},
 	}
 
 	for id, example := range examples {
 		t.Run(fmt.Sprintf("example-%d", id), func(t *testing.T) {
-			unsafe := doesPathsListContainGitDirectory(example.paths)
+			unsafe := isPathAGitDirectory(example.path)
 			assert.Equal(t, example.unsafe, unsafe)
 		})
 	}

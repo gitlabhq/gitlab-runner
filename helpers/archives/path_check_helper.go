@@ -31,16 +31,6 @@ func errorIfGitDirectory(path string) *os.PathError {
 	}
 }
 
-func doesPathsListContainGitDirectory(paths []string) bool {
-	for _, path := range paths {
-		if isPathAGitDirectory(path) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func printGitArchiveWarning(operation string) {
 	logrus.Warn(fmt.Sprintf("Part of .git directory is on the list of files to %s", operation))
 	logrus.Warn("This may introduce unexpected problems")
