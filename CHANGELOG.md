@@ -1,3 +1,25 @@
+v 9.3.0 (2017-06-22)
+- Make GitLab Runner metrics HTTP endpoint default to :9252 !584
+- Add handling for GIT_CHECKOUT variable to skip checkout !585
+- Use HTTP status code constants from net/http library !569
+- Remove tls-skip-verify from advanced-configuration.md !590
+- Improve docker machine removal !582
+- Add support for Docker '--cpus' option !586
+- Add requests backoff mechanism !570
+- Fixed doc typo, change `--service-name` to `--service` !592
+- Slight fix to build/ path in multi runner documentation !598
+- Move docs on private Registry to GitLab docs !597
+- Install Git LFS in Helper image for X86_64 !588
+- Docker entrypoint: use exec !581
+- Create gitlab-runner user on alpine !593
+- Move registering Runners info in a separate document !599
+- Add basic support for Kubernetes volumes !516
+- Add required runners.docker section to example config. !604
+- Add userns support for Docker executor !553
+- Fix another regression on docker-machine credentials usage !610
+- Added ref of Docker app installation !612
+- Update linux-repository.md !615
+
 v 9.2.1 (2017-06-17)
 - Fix regression introduced in the way how `exec` parses `.gitlab-ci.yml` !535
 - Fix another regression on docker-machine credentials usage !610
