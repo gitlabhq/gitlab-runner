@@ -52,10 +52,10 @@ To install the Runner:
 
     ```bash
     # For Debian/Ubuntu
-    sudo apt-get install gitlab-runner
+    sudo apt-get install gitlab-ci-multi-runner
 
     # For RHEL/CentOS
-    sudo yum install gitlab-runner
+    sudo yum install gitlab-ci-multi-runner
     ```
 
 1. [Register the Runner](../register/index.md)
