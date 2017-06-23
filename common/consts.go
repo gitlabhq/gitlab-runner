@@ -23,5 +23,6 @@ const KubernetesPollInterval = 3
 const KubernetesPollTimeout = 180
 const AfterScriptTimeout = 5 * time.Minute
 const DefaultMetricsServerPort = 9252
+const DefaultNetworkClientTimeout = 60 * time.Minute
 
 var PreparationRetryInterval = 3 * time.Second
