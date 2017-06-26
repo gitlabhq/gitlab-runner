@@ -34,5 +34,5 @@
 >
 > ```
 > Running with gitlab-ci-multi-runner 1.4.2 (bcc1794)
-> Using Docker executor with image golang:1.6 ...
+> Using Docker executor with image golang:1.8 ...
 > ```
