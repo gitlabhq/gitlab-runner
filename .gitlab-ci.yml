@@ -37,7 +37,7 @@ prepare ci image:
   script:
   - source ./ci/build_ci_image
   only:
-  - /\Adocker-ci-image\/.*/@gitlab-org/gitlab-ci-multi-runner
+  - /\Adocker-ci-image\/.*/
 
 #
 # Prebuild stage
