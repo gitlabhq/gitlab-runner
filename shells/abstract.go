@@ -2,6 +2,7 @@ package shells
 
 import (
 	"errors"
+	"fmt"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -156,9 +157,10 @@ func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, 
 	w.EndIf()
 }
 
-func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInfo) {
+func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInfo) error {
 	for _, cacheOptions := range info.Build.Cache {
-		// Create list of files to archive
+
+		// Create list of files to extract
 		archiverArgs := []string{}
 		for _, path := range cacheOptions.Paths {
 			archiverArgs = append(archiverArgs, "--path", path)
@@ -173,9 +175,16 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			continue
 		}
 
-		// Skip archiving if no cache is defined
+		// Skip extraction if no cache is defined
 		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 		if cacheKey == "" {
+			continue
+		}
+
+		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPull); err != nil {
+			return fmt.Errorf("%s for %s", err, cacheKey)
+		} else if !ok {
+			w.Notice("Not downloading cache %s due to policy", cacheKey)
 			continue
 		}
 
@@ -200,6 +209,8 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			w.EndIf()
 		})
 	}
+
+	return nil
 }
 
 func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
@@ -315,8 +326,7 @@ func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.Shell
 	b.writeCdBuildDir(w, info)
 
 	// Try to restore from main cache, if not found cache for master
-	b.cacheExtractor(w, info)
-	return nil
+	return b.cacheExtractor(w, info)
 }
 
 func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
@@ -373,11 +383,18 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 	return nil
 }
 
-func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo) {
+func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo) error {
 	for _, cacheOptions := range info.Build.Cache {
 		// Skip archiving if no cache is defined
 		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 		if cacheKey == "" {
+			continue
+		}
+
+		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPush); err != nil {
+			return fmt.Errorf("%s for %s", err, cacheKey)
+		} else if !ok {
+			w.Notice("Not uploading cache %s due to policy", cacheKey)
 			continue
 		}
 
@@ -418,6 +435,8 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 			w.EndIf()
 		})
 	}
+
+	return nil
 }
 
 func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo) {
@@ -504,8 +523,7 @@ func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.Shell
 	b.writeCdBuildDir(w, info)
 
 	// Find cached files and archive them
-	b.cacheArchiver(w, info)
-	return
+	return b.cacheArchiver(w, info)
 }
 
 func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
