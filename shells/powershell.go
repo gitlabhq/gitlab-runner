@@ -118,6 +118,12 @@ func (b *PsWriter) IfCmd(cmd string, arguments ...string) {
 	b.Indent()
 }
 
+func (b *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
+	b.Line(b.buildCommand(cmd, arguments...))
+	b.Line("if($?) {")
+	b.Indent()
+}
+
 func (b *PsWriter) Else() {
 	b.Unindent()
 	b.Line("} else {")

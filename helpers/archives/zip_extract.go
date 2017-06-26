@@ -84,6 +84,10 @@ func ExtractZipArchive(archive *zip.Reader) error {
 	tracker := newPathErrorTracker()
 
 	for _, file := range archive.File {
+		if err := errorIfGitDirectory(file.Name); tracker.actionable(err) {
+			printGitArchiveWarning("extract")
+		}
+
 		if err := extractZipFile(file); tracker.actionable(err) {
 			logrus.Warningf("%s: %s (suppressing repeats)", file.Name, err)
 		}
@@ -100,6 +104,7 @@ func ExtractZipArchive(archive *zip.Reader) error {
 			logrus.Warningf("%s: %s (suppressing repeats)", file.Name, err)
 		}
 	}
+
 	return nil
 }
 

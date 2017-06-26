@@ -188,7 +188,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		// Execute cache-extractor command. Failure is not fatal.
 		b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
 			w.Notice("Checking cache for %s...", cacheKey)
-			w.IfCmd(info.RunnerCommand, args...)
+			w.IfCmdWithOutput(info.RunnerCommand, args...)
 			w.Notice("Successfully extracted cache")
 			w.Else()
 			w.Warning("Failed to extract cache")
@@ -405,7 +405,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		// Execute cache-archiver command. Failure is not fatal.
 		b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
 			w.Notice("Creating cache %s...", cacheKey)
-			w.IfCmd(info.RunnerCommand, args...)
+			w.IfCmdWithOutput(info.RunnerCommand, args...)
 			w.Notice("Created cache")
 			w.Else()
 			w.Warning("Failed to create cache")

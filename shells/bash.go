@@ -105,6 +105,12 @@ func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
 	b.Indent()
 }
 
+func (b *BashWriter) IfCmdWithOutput(cmd string, arguments ...string) {
+	cmdline := b.buildCommand(cmd, arguments...)
+	b.Line(fmt.Sprintf("if %s; then", cmdline))
+	b.Indent()
+}
+
 func (b *BashWriter) Else() {
 	b.Unindent()
 	b.Line("else")

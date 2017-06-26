@@ -11,6 +11,7 @@ type ShellWriter interface {
 	IfDirectory(path string)
 	IfFile(file string)
 	IfCmd(cmd string, arguments ...string)
+	IfCmdWithOutput(cmd string, arguments ...string)
 	Else()
 	EndIf()
 
