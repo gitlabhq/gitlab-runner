@@ -476,7 +476,7 @@ Example:
 	key_file = "/etc/ssl/kubernetes/api.key"
 	ca_file = "/etc/ssl/kubernetes/ca.crt"
 	namespace = "gitlab"
-	image = "golang:1.7"
+	image = "golang:1.8"
 	privileged = true
 	image_pull_secrets = ["docker-registry-credentials"]
 	[runners.kubernetes.node_selector]
