@@ -11,8 +11,22 @@ import (
 type UnregisterCommand struct {
 	configOptions
 	common.RunnerCredentials
-	network common.Network
-	Name    string `toml:"name" json:"name" short:"n" long:"name" description:"Name of the runner you wish to unregister"`
+	network    common.Network
+	Name       string `toml:"name" json:"name" short:"n" long:"name" description:"Name of the runner you wish to unregister"`
+	AllRunners bool   `toml:"all" json:"all" short:"a" long:"all" description:"Unregister all runners"`
+}
+
+func (c *UnregisterCommand) UnregisterRunner(name string) bool {
+	runnerConfig, err := c.RunnerByName(name)
+	if err != nil {
+		log.Fatalln(err)
+		return false
+	}
+	if !c.network.UnregisterRunner(runnerConfig.RunnerCredentials) {
+		log.Fatalln("Failed to unregister runner", name)
+		return false
+	}
+	return true
 }
 
 func (c *UnregisterCommand) Execute(context *cli.Context) {
@@ -24,26 +38,25 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 		return
 	}
 
-	if len(c.Name) > 0 {
-		runnerConfig, err := c.RunnerByName(c.Name)
-		if err != nil {
-			log.Fatalln(err)
-			return
-		}
-		c.RunnerCredentials = runnerConfig.RunnerCredentials
-	}
-
-	if !c.network.UnregisterRunner(c.RunnerCredentials) {
-		log.Fatalln("Failed to unregister runner", c.Name)
-		return
-	}
-
+	// Final runner slice
 	runners := []*common.RunnerConfig{}
-	for _, otherRunner := range c.config.Runners {
-		if otherRunner.RunnerCredentials == c.RunnerCredentials {
-			continue
+
+	if c.AllRunners {
+		// Unregister all runners
+		for _, r := range c.config.Runners {
+			if !c.UnregisterRunner(r.Name) {
+				runners = append(runners, r)
+			}
 		}
-		runners = append(runners, otherRunner)
+	} else {
+		// Unregister single runner
+		c.UnregisterRunner(c.Name)
+		for _, otherRunner := range c.config.Runners {
+			if otherRunner.RunnerCredentials == c.RunnerCredentials {
+				continue
+			}
+			runners = append(runners, otherRunner)
+		}
 	}
 
 	// check if anything changed
