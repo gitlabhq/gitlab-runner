@@ -1,15 +1,16 @@
 package helpers
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
 const cacheArchiverArchive = "archive.zip"
@@ -69,8 +70,9 @@ func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
 	helpers.MakeFatalToPanic()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheArchiverCommand{
-		File: cacheExtractorArchive,
-		URL:  ts.URL + "/invalid-file.zip",
+		File:    cacheExtractorArchive,
+		URL:     ts.URL + "/invalid-file.zip",
+		Timeout: 0,
 	}
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
@@ -84,8 +86,9 @@ func TestCacheArchiverRemoteServe(t *testing.T) {
 	helpers.MakeFatalToPanic()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheArchiverCommand{
-		File: cacheExtractorArchive,
-		URL:  ts.URL + "/cache.zip",
+		File:    cacheExtractorArchive,
+		URL:     ts.URL + "/cache.zip",
+		Timeout: 0,
 	}
 	assert.NotPanics(t, func() {
 		cmd.Execute(nil)
@@ -96,8 +99,9 @@ func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
 	helpers.MakeFatalToPanic()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheArchiverCommand{
-		File: cacheExtractorArchive,
-		URL:  "http://localhost:65333/cache.zip",
+		File:    cacheExtractorArchive,
+		URL:     "http://localhost:65333/cache.zip",
+		Timeout: 0,
 	}
 	assert.Panics(t, func() {
 		cmd.Execute(nil)

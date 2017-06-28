@@ -7,10 +7,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"time"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
@@ -96,8 +95,9 @@ func TestCacheExtractorRemoteServerNotFound(t *testing.T) {
 
 	helpers.MakeFatalToPanic()
 	cmd := CacheExtractorCommand{
-		File: "non-existing-test.zip",
-		URL:  ts.URL + "/invalid-file.zip",
+		File:    "non-existing-test.zip",
+		URL:     ts.URL + "/invalid-file.zip",
+		Timeout: 0,
 	}
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
@@ -117,8 +117,9 @@ func TestCacheExtractorRemoteServer(t *testing.T) {
 
 	helpers.MakeFatalToPanic()
 	cmd := CacheExtractorCommand{
-		File: cacheExtractorArchive,
-		URL:  ts.URL + "/cache.zip",
+		File:    cacheExtractorArchive,
+		URL:     ts.URL + "/cache.zip",
+		Timeout: 0,
 	}
 	assert.NotPanics(t, func() {
 		cmd.Execute(nil)
@@ -137,8 +138,9 @@ func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
 	helpers.MakeFatalToPanic()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheExtractorCommand{
-		File: cacheExtractorArchive,
-		URL:  "http://localhost:65333/cache.zip",
+		File:    cacheExtractorArchive,
+		URL:     "http://localhost:65333/cache.zip",
+		Timeout: 0,
 	}
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
