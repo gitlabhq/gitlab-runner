@@ -16,7 +16,7 @@ func (c *CacheClient) prepareClient(timeout int) {
 	if timeout > 0 {
 		c.Timeout = time.Duration(timeout) * time.Minute
 	} else {
-		c.Timeout = common.DefaultCacheRequestTimeout
+		c.Timeout = time.Duration(common.DefaultCacheRequestTimeout) * time.Minute
 	}
 }
 

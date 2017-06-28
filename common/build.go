@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
 
@@ -536,4 +537,12 @@ func (b *Build) GetRestoreCacheAttempts() int {
 		return DefaultRestoreCacheAttempts
 	}
 	return retries
+}
+
+func (b *Build) GetCacheRequestTimeout() int {
+	timeout, err := strconv.Atoi(b.GetAllVariables().Get("CACHE_REQUEST_TIMEOUT"))
+	if err != nil {
+		return DefaultCacheRequestTimeout
+	}
+	return timeout
 }
