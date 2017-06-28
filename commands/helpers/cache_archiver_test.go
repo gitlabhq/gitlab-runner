@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
@@ -45,7 +47,8 @@ func TestCacheArchiverIsUpToDate(t *testing.T) {
 }
 
 func TestCacheArchiverForIfNoFileDefined(t *testing.T) {
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	cmd := CacheArchiverCommand{}
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
@@ -58,6 +61,9 @@ func testCacheUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path != "/cache.zip" {
+		if r.URL.Path == "/timeout" {
+			time.Sleep(50 * time.Millisecond)
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -67,7 +73,8 @@ func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 	defer ts.Close()
 
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheArchiverCommand{
 		File:    cacheExtractorArchive,
@@ -79,11 +86,12 @@ func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
 	})
 }
 
-func TestCacheArchiverRemoteServe(t *testing.T) {
+func TestCacheArchiverRemoteServer(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 	defer ts.Close()
 
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheArchiverCommand{
 		File:    cacheExtractorArchive,
@@ -95,8 +103,33 @@ func TestCacheArchiverRemoteServe(t *testing.T) {
 	})
 }
 
+func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
+	defer ts.Close()
+
+	output := logrus.StandardLogger().Out
+	var buf bytes.Buffer
+	logrus.SetOutput(&buf)
+	defer logrus.SetOutput(output)
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+
+	os.Remove(cacheExtractorArchive)
+	cmd := CacheArchiverCommand{
+		File: cacheExtractorArchive,
+		URL:  ts.URL + "/timeout",
+	}
+	cmd.getClient().Timeout = 1 * time.Millisecond
+
+	assert.Panics(t, func() {
+		cmd.Execute(nil)
+	})
+	assert.Contains(t, buf.String(), "net/http: request canceled (Client.Timeout")
+}
+
 func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheArchiverCommand{
 		File:    cacheExtractorArchive,
