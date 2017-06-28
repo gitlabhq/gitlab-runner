@@ -18,8 +18,9 @@ import (
 type CacheArchiverCommand struct {
 	fileArchiver
 	retryHelper
-	File string `long:"file" description:"The path to file"`
-	URL  string `long:"url" description:"Download artifacts instead of uploading them"`
+	File    string `long:"file" description:"The path to file"`
+	URL     string `long:"url" description:"URL of remote cache resource"`
+	Timeout int    `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
 }
 
 func (c *CacheArchiverCommand) upload() (bool, error) {
@@ -44,7 +45,7 @@ func (c *CacheArchiverCommand) upload() (bool, error) {
 	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
 	req.ContentLength = fi.Size()
 
-	client := NewCacheClient()
+	client := NewCacheClient(c.Timeout)
 	resp, err := client.Do(req)
 	if err != nil {
 		return true, err

@@ -4,14 +4,20 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 )
 
 type CacheClient struct {
 	http.Client
 }
 
-func (c *CacheClient) prepareClient() {
-	c.Timeout = 3 * time.Minute
+func (c *CacheClient) prepareClient(timeout int) {
+	if timeout > 0 {
+		c.Timeout = time.Duration(timeout) * time.Minute
+	} else {
+		c.Timeout = common.DefaultCacheRequestTimeout
+	}
 }
 
 func (c *CacheClient) prepareTransport() {
@@ -28,9 +34,9 @@ func (c *CacheClient) prepareTransport() {
 	}
 }
 
-func NewCacheClient() *CacheClient {
+func NewCacheClient(timeout int) *CacheClient {
 	client := &CacheClient{}
-	client.prepareClient()
+	client.prepareClient(timeout)
 	client.prepareTransport()
 
 	return client
