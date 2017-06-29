@@ -20,8 +20,19 @@ import (
 
 type CacheExtractorCommand struct {
 	retryHelper
-	File string `long:"file" description:"The file containing your cache artifacts"`
-	URL  string `long:"url" description:"Download artifacts instead of uploading them"`
+	File    string `long:"file" description:"The file containing your cache artifacts"`
+	URL     string `long:"url" description:"URL of remote cache resource"`
+	Timeout int    `long:"timeout" description:"Overall timeout for cache downloading request (in minutes)"`
+
+	client *CacheClient
+}
+
+func (c *CacheExtractorCommand) getClient() *CacheClient {
+	if c.client == nil {
+		c.client = NewCacheClient(c.Timeout)
+	}
+
+	return c.client
 }
 
 func (c *CacheExtractorCommand) download() (bool, error) {
@@ -34,7 +45,7 @@ func (c *CacheExtractorCommand) download() (bool, error) {
 	defer file.Close()
 	defer os.Remove(file.Name())
 
-	resp, err := http.Get(c.URL)
+	resp, err := c.getClient().Get(c.URL)
 	if err != nil {
 		return true, err
 	}

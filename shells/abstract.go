@@ -178,6 +178,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		args := []string{
 			"cache-extractor",
 			"--file", cacheFile,
+			"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 		}
 
 		// Generate cache download address
@@ -379,6 +380,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		args := []string{
 			"cache-archiver",
 			"--file", cacheFile,
+			"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 		}
 
 		// Create list of files to archive

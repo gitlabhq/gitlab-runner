@@ -18,7 +18,8 @@ var UploaderCredentials = common.JobCredentials{
 }
 
 func TestArtifactsUploaderRequirements(t *testing.T) {
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 
 	cmd := ArtifactsUploaderCommand{}
 	assert.Panics(t, func() {
@@ -35,6 +36,9 @@ func TestArtifactsUploaderTooLarge(t *testing.T) {
 		network:        network,
 	}
 
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
@@ -50,6 +54,9 @@ func TestArtifactsUploaderForbidden(t *testing.T) {
 		JobCredentials: UploaderCredentials,
 		network:        network,
 	}
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
@@ -69,6 +76,9 @@ func TestArtifactsUploaderRetry(t *testing.T) {
 			Retry: 2,
 		},
 	}
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 
 	assert.Panics(t, func() {
 		cmd.Execute(nil)

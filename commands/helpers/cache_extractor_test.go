@@ -2,15 +2,16 @@ package helpers
 
 import (
 	"archive/zip"
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-
 	"time"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
 )
@@ -44,7 +45,8 @@ func TestCacheExtractorValidArchive(t *testing.T) {
 }
 
 func TestCacheExtractorForInvalidArchive(t *testing.T) {
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	ioutil.WriteFile(cacheExtractorArchive, nil, 0600)
 	defer os.Remove(cacheExtractorArchive)
 
@@ -57,7 +59,8 @@ func TestCacheExtractorForInvalidArchive(t *testing.T) {
 }
 
 func TestCacheExtractorForIfNoFileDefined(t *testing.T) {
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	cmd := CacheExtractorCommand{}
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
@@ -65,7 +68,8 @@ func TestCacheExtractorForIfNoFileDefined(t *testing.T) {
 }
 
 func TestCacheExtractorForNotExistingFile(t *testing.T) {
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	cmd := CacheExtractorCommand{
 		File: "/../../../test.zip",
 	}
@@ -80,6 +84,9 @@ func testServeCache(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path != "/cache.zip" {
+		if r.URL.Path == "/timeout" {
+			time.Sleep(50 * time.Millisecond)
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -94,14 +101,42 @@ func TestCacheExtractorRemoteServerNotFound(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(testServeCache))
 	defer ts.Close()
 
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	cmd := CacheExtractorCommand{
-		File: "non-existing-test.zip",
-		URL:  ts.URL + "/invalid-file.zip",
+		File:    "non-existing-test.zip",
+		URL:     ts.URL + "/invalid-file.zip",
+		Timeout: 0,
 	}
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
+	_, err := os.Stat(cacheExtractorTestArchivedFile)
+	assert.Error(t, err)
+}
+
+func TestCacheExtractorRemoteServerTimedOut(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testServeCache))
+	defer ts.Close()
+
+	output := logrus.StandardLogger().Out
+	var buf bytes.Buffer
+	logrus.SetOutput(&buf)
+	defer logrus.SetOutput(output)
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+
+	cmd := CacheExtractorCommand{
+		File: "non-existing-test.zip",
+		URL:  ts.URL + "/timeout",
+	}
+	cmd.getClient().Timeout = 1 * time.Millisecond
+
+	assert.Panics(t, func() {
+		cmd.Execute(nil)
+	})
+	assert.Contains(t, buf.String(), "net/http: request canceled (Client.Timeout")
+
 	_, err := os.Stat(cacheExtractorTestArchivedFile)
 	assert.Error(t, err)
 }
@@ -115,10 +150,12 @@ func TestCacheExtractorRemoteServer(t *testing.T) {
 	os.Remove(cacheExtractorArchive)
 	os.Remove(cacheExtractorTestArchivedFile)
 
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	cmd := CacheExtractorCommand{
-		File: cacheExtractorArchive,
-		URL:  ts.URL + "/cache.zip",
+		File:    cacheExtractorArchive,
+		URL:     ts.URL + "/cache.zip",
+		Timeout: 0,
 	}
 	assert.NotPanics(t, func() {
 		cmd.Execute(nil)
@@ -134,11 +171,13 @@ func TestCacheExtractorRemoteServer(t *testing.T) {
 }
 
 func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 	os.Remove(cacheExtractorArchive)
 	cmd := CacheExtractorCommand{
-		File: cacheExtractorArchive,
-		URL:  "http://localhost:65333/cache.zip",
+		File:    cacheExtractorArchive,
+		URL:     "http://localhost:65333/cache.zip",
+		Timeout: 0,
 	}
 	assert.Panics(t, func() {
 		cmd.Execute(nil)

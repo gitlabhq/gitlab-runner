@@ -17,7 +17,8 @@ var downloaderCredentials = common.JobCredentials{
 }
 
 func TestArtifactsDownloaderRequirements(t *testing.T) {
-	helpers.MakeFatalToPanic()
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 
 	cmd := ArtifactsDownloaderCommand{}
 	assert.Panics(t, func() {
@@ -34,6 +35,9 @@ func TestArtifactsDownloaderNotFound(t *testing.T) {
 		network:        network,
 	}
 
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
@@ -49,6 +53,9 @@ func TestArtifactsDownloaderForbidden(t *testing.T) {
 		JobCredentials: downloaderCredentials,
 		network:        network,
 	}
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
@@ -68,6 +75,9 @@ func TestArtifactsDownloaderRetry(t *testing.T) {
 			Retry: 2,
 		},
 	}
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
 
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
