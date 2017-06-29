@@ -95,6 +95,7 @@ To jump into the specific documentation of each executor, visit:
 - [Security considerations](security/index.md) Be aware of potential security implications when running your jobs with GitLab Runner.
 - [Runner monitoring](monitoring/README.md) Learn how to monitor Runner's behavior.
 - [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup) A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
+- [Configure GitLab Runner to run behind a proxy](configuration/proxy.md) Learn how to set up a Linux proxy and configure GitLab Runner. Especially useful for the Docker executor.
 
 ## Troubleshooting
 
