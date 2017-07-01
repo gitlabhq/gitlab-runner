@@ -109,7 +109,7 @@ func (s *RegisterCommand) askDocker() {
 }
 
 func (s *RegisterCommand) askParallels() {
-	s.Parallels.BaseName = s.ask("parallels-vm", "Please enter the Parallels VM (e.g. my-vm):")
+	s.Parallels.BaseName = s.ask("parallels-base-name", "Please enter the Parallels VM (e.g. my-vm):")
 }
 
 func (s *RegisterCommand) askVirtualBox() {
