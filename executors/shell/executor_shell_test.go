@@ -180,6 +180,27 @@ func TestBuildWithShallowLock(t *testing.T) {
 	})
 }
 
+func TestBuildWithGitLFSHook(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+
+		gitLFSPostCheckoutHook := "#!/bin/sh\necho 'running git lfs hook' >&2\nexit 2\n"
+
+		os.MkdirAll(build.BuildDir+"/.git/hooks/", 0755)
+		ioutil.WriteFile(build.BuildDir+"/.git/hooks/post-checkout", []byte(gitLFSPostCheckoutHook), 0777)
+		build.JobResponse.AllowGitFetch = true
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+	})
+}
+
 func TestBuildWithGitStrategyNone(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()

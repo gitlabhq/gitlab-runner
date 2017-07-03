@@ -69,6 +69,10 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	w.RmFile(".git/index.lock")
 	w.RmFile(".git/shallow.lock")
 
+	w.IfFile(".git/hooks/post-checkout")
+	w.RmFile(".git/hooks/post-checkout")
+	w.EndIf()
+
 	w.Command("git", "clean", "-ffdx")
 	w.Command("git", "reset", "--hard")
 	w.Command("git", "remote", "set-url", "origin", build.GitInfo.RepoURL)
