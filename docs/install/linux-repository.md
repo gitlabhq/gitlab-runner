@@ -60,7 +60,7 @@ To install the Runner:
 
 1. [Register the Runner](../register/index.md)
 
-After completing the step above, he Runner should be started already being
+After completing the step above, the Runner should be started already being
 ready to be used by your projects!
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
