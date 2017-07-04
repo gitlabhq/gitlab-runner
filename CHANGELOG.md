@@ -1,3 +1,6 @@
+v 9.1.3 (2017-07-04)
+- Fix VirtualBox and Parallels executors registration bugs !589
+
 v 9.1.2 (2017-06-17)
 - Print proper message when cache upload operation fails !556
 - Fix regression introduced in the way how `exec` parses `.gitlab-ci.yml` !535
