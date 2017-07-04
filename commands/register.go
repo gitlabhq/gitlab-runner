@@ -108,11 +108,11 @@ func (s *RegisterCommand) askDocker() {
 }
 
 func (s *RegisterCommand) askParallels() {
-	s.Parallels.BaseName = s.ask("parallels-vm", "Please enter the Parallels VM (e.g. my-vm):")
+	s.Parallels.BaseName = s.ask("parallels-base-name", "Please enter the Parallels VM (e.g. my-vm):")
 }
 
 func (s *RegisterCommand) askVirtualBox() {
-	s.VirtualBox.BaseName = s.ask("virtualbox-vm", "Please enter the VirtualBox VM (e.g. my-vm):")
+	s.VirtualBox.BaseName = s.ask("virtualbox-base-name", "Please enter the VirtualBox VM (e.g. my-vm):")
 }
 
 func (s *RegisterCommand) askSSHServer() {
@@ -211,7 +211,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 		s.Parallels = parallels
 		s.askParallels()
 		s.askSSHServer()
-	case "VirtualBox":
+	case "virtualbox":
 		s.SSH = ssh
 		s.VirtualBox = virtualbox
 		s.askVirtualBox()
