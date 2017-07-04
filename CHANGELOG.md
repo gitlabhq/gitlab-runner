@@ -1,3 +1,6 @@
+v 9.2.2 (2017-07-04)
+- Fix VirtualBox and Parallels executors registration bugs !589
+
 v 9.2.1 (2017-06-17)
 - Fix regression introduced in the way how `exec` parses `.gitlab-ci.yml` !535
 - Fix another regression on docker-machine credentials usage !610
