@@ -1,3 +1,6 @@
+v 1.11.5 (2017-07-04)
+- Fix VirtualBox and Parallels executors registration bugs !589
+
 v 1.11.4 (2017-04-28)
 - Fixes test that was failing 1.11.3 release
 
