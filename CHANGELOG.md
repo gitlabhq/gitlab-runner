@@ -1,3 +1,6 @@
+v 9.3.1 (2017-07-04)
+- Fix VirtualBox and Parallels executors registration bugs !589
+
 v 9.3.0 (2017-06-22)
 - Make GitLab Runner metrics HTTP endpoint default to :9252 !584
 - Add handling for GIT_CHECKOUT variable to skip checkout !585
