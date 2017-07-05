@@ -166,29 +166,29 @@ type KubernetesVolumes struct {
 }
 
 type KubernetesConfigMap struct {
-	Name      string            `toml:"name" json:"name" description:"The name of the volume"`
-	MountPath string            `toml:"mount_path"`
+	Name      string            `toml:"name" json:"name" description:"The name of the volume and ConfigMap to use"`
+	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	ReadOnly  bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	Items     map[string]string `toml:"items,omitempty" description:"Key-to-path mapping for keys from the config map that should be used."`
 }
 
 type KubernetesHostPath struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
-	MountPath string `toml:"mount_path"`
+	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	HostPath  string `toml:"host_path" description:"Path from the host that should be mounted as a volume"`
 }
 
 type KubernetesPVC struct {
-	Name      string `toml:"name" json:"name" description:"The name of the volume"`
-	MountPath string `toml:"mount_path"`
+	Name      string `toml:"name" json:"name" description:"The name of the volume and PVC to use"`
+	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 }
 
 type KubernetesSecret struct {
-	Name      string `toml:"name" json:"name" description:"The name of the volume"`
-	MountPath string `toml:"mount_path"`
-	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	Name      string            `toml:"name" json:"name" description:"The name of the volume and Secret to use"`
+	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	ReadOnly  bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	Items     map[string]string `toml:"items,omitempty" description:"Key-to-path mapping for keys from the secret that should be used."`
 }
 
