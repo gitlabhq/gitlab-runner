@@ -285,6 +285,11 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.ConfigMaps {
+		items := []api.KeyToPath{}
+		for key, path := range volume.Items {
+			items = append(items, api.KeyToPath{Key: key, Path: path})
+		}
+
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
@@ -292,6 +297,7 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 					LocalObjectReference: api.LocalObjectReference{
 						Name: volume.Name,
 					},
+					Items: items,
 				},
 			},
 		})

@@ -202,7 +202,7 @@ func TestVolumes(t *testing.T) {
 								{Name: "PVC", MountPath: "/path/to/whatever"},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
-								{Name: "ConfigMap", MountPath: "/path/to/config"},
+								{Name: "ConfigMap", MountPath: "/path/to/config", Items: map[string]string{"key_1": "/path/to/key_1"}},
 							},
 						},
 					},
@@ -215,8 +215,14 @@ func TestVolumes(t *testing.T) {
 				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 				api.Volume{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
 				api.Volume{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
-				api.Volume{Name: "ConfigMap", VolumeSource: api.VolumeSource{ConfigMap: &api.ConfigMapVolumeSource{
-					LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap"}}},
+				api.Volume{
+					Name: "ConfigMap",
+					VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap"},
+							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
+						},
+					},
 				},
 			},
 		},
