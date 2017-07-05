@@ -211,7 +211,7 @@ func TestVolumes(t *testing.T) {
 								{Name: "ConfigMap", MountPath: "/path/to/config", Items: map[string]string{"key_1": "/path/to/key_1"}},
 							},
 							Secrets: []common.KubernetesSecret{
-								{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
+								{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true, Items: map[string]string{"secret_1": "/path/to/secret_1"}},
 							},
 						},
 					},
@@ -233,7 +233,15 @@ func TestVolumes(t *testing.T) {
 						},
 					},
 				},
-				{Name: "secret", VolumeSource: api.VolumeSource{Secret: &api.SecretVolumeSource{SecretName: "secret"}}},
+				{
+					Name: "secret",
+					VolumeSource: api.VolumeSource{
+						Secret: &api.SecretVolumeSource{
+							SecretName: "secret",
+							Items:      []api.KeyToPath{{Key: "secret_1", Path: "/path/to/secret_1"}},
+						},
+					},
+				},
 			},
 		},
 	}

@@ -189,6 +189,7 @@ type KubernetesSecret struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
 	MountPath string `toml:"mount_path"`
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	Items     map[string]string `toml:"items,omitempty" description:"Key-to-path mapping for keys from the secret that should be used."`
 }
 
 type RunnerCredentials struct {

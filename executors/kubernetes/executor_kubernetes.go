@@ -262,11 +262,17 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.Secrets {
+		items := []api.KeyToPath{}
+		for key, path := range volume.Items {
+			items = append(items, api.KeyToPath{Key: key, Path: path})
+		}
+
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
 				Secret: &api.SecretVolumeSource{
 					SecretName: volume.Name,
+					Items:      items,
 				},
 			},
 		})
