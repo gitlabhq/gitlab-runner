@@ -204,7 +204,7 @@ following options:
 |------------|---------|----------|-------------|
 | name       | string  | yes      | The name of the volume |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| host_path  | string  | yes      | Host's path that should be mounted as volume |
+| host_path  | string  | no       | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
 | read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
 
 ### PVC volumes

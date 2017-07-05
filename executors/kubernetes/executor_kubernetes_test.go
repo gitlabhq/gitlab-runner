@@ -134,6 +134,7 @@ func TestVolumeMounts(t *testing.T) {
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true, HostPath: "/opt/test/rw"},
+								{Name: "docker", MountPath: "/var/run/docker.sock"},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
 								{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
@@ -151,6 +152,7 @@ func TestVolumeMounts(t *testing.T) {
 			Expected: []api.VolumeMount{
 				{Name: "repo"},
 				{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
+				{Name: "docker", MountPath: "/var/run/docker.sock"},
 				{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
 				{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
 			},
@@ -168,7 +170,7 @@ func TestVolumeMounts(t *testing.T) {
 
 		mounts := e.getVolumeMounts()
 		for _, expected := range test.Expected {
-			assert.Contains(t, mounts, expected)
+			assert.Contains(t, mounts, expected, "Expected volumeMount definition for %s was not found", expected.Name)
 		}
 	}
 }
@@ -202,7 +204,8 @@ func TestVolumes(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
-								{Name: "docker", MountPath: "/var/run/docker.sock", HostPath: "/var/run/docker.sock"},
+								{Name: "docker", MountPath: "/var/run/docker.sock"},
+								{Name: "host-path", MountPath: "/path/two", HostPath: "/path/one"},
 							},
 							PVCs: []common.KubernetesPVC{
 								{Name: "PVC", MountPath: "/path/to/whatever"},
@@ -223,6 +226,7 @@ func TestVolumes(t *testing.T) {
 			Expected: []api.Volume{
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 				{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
+				{Name: "host-path", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
 				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
 				{
 					Name: "ConfigMap",
@@ -257,7 +261,7 @@ func TestVolumes(t *testing.T) {
 
 		volumes := e.getVolumes()
 		for _, expected := range test.Expected {
-			assert.Contains(t, volumes, expected)
+			assert.Contains(t, volumes, expected, "Expected volume definition for %s was not found", expected.Name)
 		}
 	}
 }

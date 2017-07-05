@@ -251,11 +251,17 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 	})
 
 	for _, volume := range s.Config.Kubernetes.Volumes.HostPaths {
+		path := volume.HostPath
+		// Make backward compatible with syntax introduced in version 9.3.0
+		if path == "" {
+			path = volume.MountPath
+		}
+
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
 				HostPath: &api.HostPathVolumeSource{
-					Path: volume.HostPath,
+					Path: path,
 				},
 			},
 		})
