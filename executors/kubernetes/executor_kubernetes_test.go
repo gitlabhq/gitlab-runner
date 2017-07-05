@@ -98,7 +98,7 @@ func TestVolumeMounts(t *testing.T) {
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				api.VolumeMount{Name: "repo"},
+				{Name: "repo"},
 			},
 		},
 		{
@@ -121,9 +121,9 @@ func TestVolumeMounts(t *testing.T) {
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				api.VolumeMount{Name: "repo"},
-				api.VolumeMount{Name: "docker", MountPath: "/var/run/docker.sock"},
-				api.VolumeMount{Name: "PVC", MountPath: "/path/to/whatever"},
+				{Name: "repo"},
+				{Name: "docker", MountPath: "/var/run/docker.sock"},
+				{Name: "PVC", MountPath: "/path/to/whatever"},
 			},
 		},
 		{
@@ -138,6 +138,9 @@ func TestVolumeMounts(t *testing.T) {
 							ConfigMaps: []common.KubernetesConfigMap{
 								{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
 							},
+							Secrets: []common.KubernetesSecret{
+								{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
+							},
 						},
 					},
 				},
@@ -146,9 +149,10 @@ func TestVolumeMounts(t *testing.T) {
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				api.VolumeMount{Name: "repo"},
-				api.VolumeMount{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
-				api.VolumeMount{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
+				{Name: "repo"},
+				{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
+				{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
+				{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
 			},
 		},
 	}
@@ -163,7 +167,9 @@ func TestVolumeMounts(t *testing.T) {
 		}
 
 		mounts := e.getVolumeMounts()
-		assert.Equal(t, &test.Expected, &mounts)
+		for _, expected := range test.Expected {
+			assert.Contains(t, mounts, expected)
+		}
 	}
 }
 
@@ -186,7 +192,7 @@ func TestVolumes(t *testing.T) {
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
-				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
 		{
@@ -204,6 +210,9 @@ func TestVolumes(t *testing.T) {
 							ConfigMaps: []common.KubernetesConfigMap{
 								{Name: "ConfigMap", MountPath: "/path/to/config", Items: map[string]string{"key_1": "/path/to/key_1"}},
 							},
+							Secrets: []common.KubernetesSecret{
+								{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
+							},
 						},
 					},
 				},
@@ -212,10 +221,10 @@ func TestVolumes(t *testing.T) {
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
-				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
-				api.Volume{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
-				api.Volume{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
-				api.Volume{
+				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
+				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
+				{
 					Name: "ConfigMap",
 					VolumeSource: api.VolumeSource{
 						ConfigMap: &api.ConfigMapVolumeSource{
@@ -224,6 +233,7 @@ func TestVolumes(t *testing.T) {
 						},
 					},
 				},
+				{Name: "secret", VolumeSource: api.VolumeSource{Secret: &api.SecretVolumeSource{SecretName: "secret"}}},
 			},
 		},
 	}
@@ -238,7 +248,9 @@ func TestVolumes(t *testing.T) {
 		}
 
 		volumes := e.getVolumes()
-		assert.Equal(t, &test.Expected, &volumes)
+		for _, expected := range test.Expected {
+			assert.Contains(t, volumes, expected)
+		}
 	}
 }
 
