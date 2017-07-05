@@ -77,6 +77,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
     it disables the service account overwrite feature
+- `volumes`: configured throught the config file, the list of volumes will be mounted in the build container.
 
 ### Configuring executor Service Account
 
@@ -149,6 +150,36 @@ concurrent = 4
     poll_timeout = 3600
     [runners.kubernetes.node_selector]
       gitlab = "true"
+```
+
+## Using volumes
+
+As described earlier, volumes can be mounted in the build container. At this time host paths, PVCs, config maps, and secrets are supported.
+
+Here is an example configuration:
+
+```toml
+concurrent = 4
+
+[[runners]]
+  executor = "kubernetes"
+  # usual configuration
+  [runners.kubernetes]
+    [runners.kubernetes.volumes.host_path]
+      name = "HostPath"
+      mount_path = "/path/to/mount/point"
+      read_only = true
+    [runners.kubernetes.volumes.pvc]
+      name = "PersistentVolumeClaim"
+      mount_path = "/path/to/mount/point1"
+      # read_only defaults to false
+    [runners.kubernetes.volumes.config_map]
+      name = "Config Map"
+      mount_path = "/path/to/directory"
+    [runners.kubernetes.volumes.secret]
+      name = "secrets"
+      mount_path = "/path/to/directory1"
+      read_only = true
 ```
 
 ## Using Docker in your builds

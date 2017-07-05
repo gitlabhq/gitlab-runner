@@ -165,20 +165,35 @@ type KubernetesConfig struct {
 }
 
 type KubernetesVolumes struct {
-	HostPaths []KubernetesHostPath `toml:"host_path"`
-	Secrets   []KubernetesSecret   `toml:"secret"`
+	HostPaths []KubernetesHostPath `toml:"host_path" description:"The host paths which will be mounted"`
+	PVCs      []KubernetesPVC      `toml:"pvc" description:"The persistent volume claims that will be mounted"`
+
+	ConfigMaps []KubernetesConfigMap `toml:"config_map" description:"The config maps which will be mounted as volumes"`
+	Secrets    []KubernetesSecret    `toml:"secret" description:"The secret maps which will be mounted"`
+}
+
+type KubernetesConfigMap struct {
+	Name      string `toml:"name" json:"name" description:"The name of the volume"`
+	MountPath string `toml:"mount_path"`
+	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 }
 
 type KubernetesHostPath struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
 	MountPath string `toml:"mount_path"`
-	ReadOnly  bool   `toml:"read_only,omitempty"`
+	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+}
+
+type KubernetesPVC struct {
+	Name      string `toml:"name" json:"name" description:"The name of the volume"`
+	MountPath string `toml:"mount_path"`
+	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 }
 
 type KubernetesSecret struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
 	MountPath string `toml:"mount_path"`
-	ReadOnly  bool   `toml:"read_only,omitempty"`
+	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 }
 
 type RunnerCredentials struct {

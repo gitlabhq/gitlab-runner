@@ -110,6 +110,9 @@ func TestVolumeMounts(t *testing.T) {
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "docker", MountPath: "/var/run/docker.sock"},
 							},
+							PVCs: []common.KubernetesPVC{
+								{Name: "PVC", MountPath: "/path/to/whatever"},
+							},
 						},
 					},
 				},
@@ -120,6 +123,7 @@ func TestVolumeMounts(t *testing.T) {
 			Expected: []api.VolumeMount{
 				api.VolumeMount{Name: "repo"},
 				api.VolumeMount{Name: "docker", MountPath: "/var/run/docker.sock"},
+				api.VolumeMount{Name: "PVC", MountPath: "/path/to/whatever"},
 			},
 		},
 		{
@@ -131,6 +135,9 @@ func TestVolumeMounts(t *testing.T) {
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
 							},
+							ConfigMaps: []common.KubernetesConfigMap{
+								{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
+							},
 						},
 					},
 				},
@@ -141,6 +148,7 @@ func TestVolumeMounts(t *testing.T) {
 			Expected: []api.VolumeMount{
 				api.VolumeMount{Name: "repo"},
 				api.VolumeMount{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
+				api.VolumeMount{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
 			},
 		},
 	}
@@ -190,6 +198,12 @@ func TestVolumes(t *testing.T) {
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "docker", MountPath: "/var/run/docker.sock"},
 							},
+							PVCs: []common.KubernetesPVC{
+								{Name: "PVC", MountPath: "/path/to/whatever"},
+							},
+							ConfigMaps: []common.KubernetesConfigMap{
+								{Name: "ConfigMap", MountPath: "/path/to/config"},
+							},
 						},
 					},
 				},
@@ -200,6 +214,10 @@ func TestVolumes(t *testing.T) {
 			Expected: []api.Volume{
 				api.Volume{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 				api.Volume{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
+				api.Volume{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
+				api.Volume{Name: "ConfigMap", VolumeSource: api.VolumeSource{ConfigMap: &api.ConfigMapVolumeSource{
+					LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap"}}},
+				},
 			},
 		},
 	}
