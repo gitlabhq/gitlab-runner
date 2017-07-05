@@ -176,6 +176,7 @@ type KubernetesHostPath struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
 	MountPath string `toml:"mount_path"`
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	HostPath  string `toml:"host_path" description:"Path from the host that should be mounted as a volume"`
 }
 
 type KubernetesPVC struct {

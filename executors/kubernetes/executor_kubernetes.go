@@ -255,7 +255,7 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
 				HostPath: &api.HostPathVolumeSource{
-					Path: volume.MountPath,
+					Path: volume.HostPath,
 				},
 			},
 		})

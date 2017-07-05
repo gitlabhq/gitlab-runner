@@ -108,7 +108,7 @@ func TestVolumeMounts(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
-								{Name: "docker", MountPath: "/var/run/docker.sock"},
+								{Name: "docker", MountPath: "/var/run/docker.sock", HostPath: "/var/run/docker.sock"},
 							},
 							PVCs: []common.KubernetesPVC{
 								{Name: "PVC", MountPath: "/path/to/whatever"},
@@ -133,7 +133,7 @@ func TestVolumeMounts(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
-								{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
+								{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true, HostPath: "/opt/test/rw"},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
 								{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
@@ -196,7 +196,7 @@ func TestVolumes(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
-								{Name: "docker", MountPath: "/var/run/docker.sock"},
+								{Name: "docker", MountPath: "/var/run/docker.sock", HostPath: "/var/run/docker.sock"},
 							},
 							PVCs: []common.KubernetesPVC{
 								{Name: "PVC", MountPath: "/path/to/whatever"},
