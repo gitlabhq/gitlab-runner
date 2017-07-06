@@ -37,7 +37,16 @@ func GetRemoteLongRunningBuild() (JobResponse, error) {
 	return getRemoteBuildResponse("sleep 3600")
 }
 
-func getRemoteBuildResponse(commands string) (response JobResponse, err error) {
+func GetMultilineBashBuild() (JobResponse, error) {
+	return getRemoteBuildResponse(`if true; then
+	bash \
+		--login \
+		-c 'echo Hello World'
+fi
+`)
+}
+
+func getRemoteBuildResponse(commands ...string) (response JobResponse, err error) {
 	response = JobResponse{
 		GitInfo: GitInfo{
 			RepoURL:   repoRemoteURL,
@@ -49,7 +58,7 @@ func getRemoteBuildResponse(commands string) (response JobResponse, err error) {
 		Steps: Steps{
 			Step{
 				Name:         StepNameScript,
-				Script:       StepScript{commands},
+				Script:       commands,
 				When:         StepWhenAlways,
 				AllowFailure: false,
 			},
@@ -59,7 +68,7 @@ func getRemoteBuildResponse(commands string) (response JobResponse, err error) {
 	return
 }
 
-func getLocalBuildResponse(commands string) (response JobResponse, err error) {
+func getLocalBuildResponse(commands ...string) (response JobResponse, err error) {
 	localRepoURL, err := getLocalRepoURL()
 	if err != nil {
 		return
@@ -76,7 +85,7 @@ func getLocalBuildResponse(commands string) (response JobResponse, err error) {
 		Steps: Steps{
 			Step{
 				Name:         StepNameScript,
-				Script:       StepScript{commands},
+				Script:       commands,
 				When:         StepWhenAlways,
 				AllowFailure: false,
 			},

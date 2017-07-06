@@ -442,3 +442,16 @@ func TestBuildWithDebugTrace(t *testing.T) {
 		assert.Regexp(t, `[^$] echo Hello World`, out)
 	})
 }
+func TestBuildMultilineCommand(t *testing.T) {
+	multilineBuild, err := common.GetMultilineBashBuild()
+	assert.NoError(t, err)
+	build, cleanup := newBuild(t, multilineBuild, "bash")
+	defer cleanup()
+
+	// The default build shouldn't have debug tracing enabled
+	out, err := runBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.NotContains(t, out, "bash")
+	assert.Contains(t, out, "Hello World")
+	assert.Contains(t, out, "collapsed multi-line command")
+}

@@ -67,15 +67,15 @@ func (c *GitLabCiYamlParser) prepareJobInfo(job *common.JobResponse) (err error)
 
 func (c *GitLabCiYamlParser) getCommands(commands interface{}) (common.StepScript, error) {
 	if lines, ok := commands.([]interface{}); ok {
-		text := ""
+		var steps common.StepScript
 		for _, line := range lines {
 			if lineText, ok := line.(string); ok {
-				text += lineText + "\n"
+				steps = append(steps, lineText)
 			} else {
 				return common.StepScript{}, errors.New("unsupported script")
 			}
 		}
-		return common.StepScript(strings.Split(text, "\n")), nil
+		return steps, nil
 	} else if text, ok := commands.(string); ok {
 		return common.StepScript(strings.Split(text, "\n")), nil
 	} else if commands != nil {
@@ -116,9 +116,7 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 	if err != nil {
 		return
 	}
-	for _, scriptLine := range script {
-		scriptCommands = append(scriptCommands, scriptLine)
-	}
+	scriptCommands = append(scriptCommands, script...)
 
 	afterScriptCommands, err = c.getCommands(c.jobConfig["after_script"])
 	if err != nil {

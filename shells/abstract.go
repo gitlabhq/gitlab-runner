@@ -339,12 +339,17 @@ func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.
 }
 
 // Write the given string of commands using the provided ShellWriter object.
-func (b *AbstractShell) writeCommands(w ShellWriter, commands string) {
-	commands = strings.TrimSpace(commands)
-	for _, command := range strings.Split(commands, "\n") {
+func (b *AbstractShell) writeCommands(w ShellWriter, commands ...string) {
+	for _, command := range commands {
 		command = strings.TrimSpace(command)
 		if command != "" {
-			w.Notice("$ %s", command)
+			lines := strings.SplitN(command, "\n", 2)
+			if len(lines) > 1 {
+				// TODO: this should be collapsable once we introduce that in GitLab
+				w.Notice("$ %s # collapsed multi-line command", lines[0])
+			} else {
+				w.Notice("$ %s", lines[0])
+			}
 		} else {
 			w.EmptyLine()
 		}
@@ -373,8 +378,7 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 		b.writeCommands(w, info.PreBuildScript)
 	}
 
-	commands := strings.Join(scriptStep.Script, "\n")
-	b.writeCommands(w, commands)
+	b.writeCommands(w, scriptStep.Script...)
 
 	if info.PostBuildScript != "" {
 		b.writeCommands(w, info.PostBuildScript)
@@ -503,18 +507,7 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 	b.writeCdBuildDir(w, info)
 
 	w.Notice("Running after script...")
-
-	for _, command := range afterScriptStep.Script {
-		command = strings.TrimSpace(command)
-		if command != "" {
-			w.Notice("$ %s", command)
-		} else {
-			w.EmptyLine()
-		}
-		w.Line(command)
-		w.CheckForErrors()
-	}
-
+	b.writeCommands(w, afterScriptStep.Script...)
 	return nil
 }
 
