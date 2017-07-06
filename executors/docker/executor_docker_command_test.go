@@ -300,8 +300,9 @@ func TestCacheInContainer(t *testing.T) {
 	}
 	successfulBuild.Cache = common.Caches{
 		common.Cache{
-			Key:   "key",
-			Paths: common.ArtifactPaths{"cached/*"},
+			Key:    "key",
+			Paths:  common.ArtifactPaths{"cached/*"},
+			Policy: common.CachePolicyPullPush,
 		},
 	}
 
@@ -318,13 +319,29 @@ func TestCacheInContainer(t *testing.T) {
 		},
 	}
 
-	re := regexp.MustCompile("(?m)^no cached directory")
+	cacheNotPresentRE := regexp.MustCompile("(?m)^no cached directory")
+	skipCacheDownload := "Not downloading cache key due to policy"
+	skipCacheUpload := "Not uploading cache key due to policy"
 
+	// The first job lacks any cache to pull, but tries to both pull and push
 	output := runTestJobWithOutput(t, build)
-	assert.Regexp(t, re, output, "First job execution should not have cached data")
+	assert.Regexp(t, cacheNotPresentRE, output, "First job execution should not have cached data")
+	assert.NotContains(t, output, skipCacheDownload, "Cache download should be performed with policy: %s", common.CachePolicyPullPush)
+	assert.NotContains(t, output, skipCacheUpload, "Cache upload should be performed with policy: %s", common.CachePolicyPullPush)
 
+	// pull-only jobs should skip the push step
+	build.JobResponse.Cache[0].Policy = common.CachePolicyPull
 	output = runTestJobWithOutput(t, build)
-	assert.NotRegexp(t, re, output, "Second job execution should have cached data")
+	assert.NotRegexp(t, cacheNotPresentRE, output, "Second job execution should have cached data")
+	assert.NotContains(t, output, skipCacheDownload, "Cache download should be performed with policy: %s", common.CachePolicyPull)
+	assert.Contains(t, output, skipCacheUpload, "Cache upload should be skipped with policy: %s", common.CachePolicyPull)
+
+	// push-only jobs should skip the pull step
+	build.JobResponse.Cache[0].Policy = common.CachePolicyPush
+	output = runTestJobWithOutput(t, build)
+	assert.Regexp(t, cacheNotPresentRE, output, "Third job execution should not have cached data")
+	assert.Contains(t, output, skipCacheDownload, "Cache download be skipped with policy: push")
+	assert.NotContains(t, output, skipCacheUpload, "Cache upload should be performed with policy: push")
 }
 
 func runDockerInDocker(version string) (id string, err error) {

@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/url"
@@ -129,6 +130,15 @@ const (
 	StepWhenAlways    StepWhen = "always"
 )
 
+type CachePolicy string
+
+const (
+	CachePolicyUndefined CachePolicy = ""
+	CachePolicyPullPush  CachePolicy = "pull-push"
+	CachePolicyPull      CachePolicy = "pull"
+	CachePolicyPush      CachePolicy = "push"
+)
+
 type Step struct {
 	Name         StepName   `json:"name"`
 	Script       StepScript `json:"script"`
@@ -168,7 +178,19 @@ type Artifacts []Artifact
 type Cache struct {
 	Key       string        `json:"key"`
 	Untracked bool          `json:"untracked"`
+	Policy    CachePolicy   `json:"policy"`
 	Paths     ArtifactPaths `json:"paths"`
+}
+
+func (c Cache) CheckPolicy(wanted CachePolicy) (bool, error) {
+	switch c.Policy {
+	case CachePolicyUndefined, CachePolicyPullPush:
+		return true, nil
+	case CachePolicyPull, CachePolicyPush:
+		return wanted == c.Policy, nil
+	}
+
+	return false, fmt.Errorf("Unknown cache policy %s", c.Policy)
 }
 
 type Caches []Cache

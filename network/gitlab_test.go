@@ -364,6 +364,7 @@ func getRequestJobResponse() (res map[string]interface{}) {
 	cache[0]["key"] = "$CI_COMMIT_REF"
 	cache[0]["untracked"] = false
 	cache[0]["paths"] = []string{"vendor/*"}
+	cache[0]["policy"] = "push"
 	res["cache"] = cache
 
 	credentials := make([]map[string]interface{}, 1)
