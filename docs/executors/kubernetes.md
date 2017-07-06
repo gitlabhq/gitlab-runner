@@ -77,7 +77,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
     it disables the service account overwrite feature
-- `volumes`: configured throught the config file, the list of volumes will be mounted in the build container.
+- `volumes`: configured throught the config file, the list of volumes that will be mounted in the build container. [Read more about using volumes.](#using-volumes)
 
 ### Configuring executor Service Account
 
@@ -154,7 +154,10 @@ concurrent = 4
 
 ## Using volumes
 
-As described earlier, volumes can be mounted in the build container. At this time host paths, PVCs, config maps, and secrets are supported.
+As described earlier, volumes can be mounted in the build container.
+At this time _hostPath_, _PVC_, _configMap_, and _secret_ volume types
+are supported. User can configure any number of volumes for each of
+mentioned types.
 
 Here is an example configuration:
 
@@ -162,25 +165,105 @@ Here is an example configuration:
 concurrent = 4
 
 [[runners]]
-  executor = "kubernetes"
   # usual configuration
+  executor = "kubernetes"
   [runners.kubernetes]
-    [runners.kubernetes.volumes.host_path]
+    [[runners.kubernetes.volumes.host_path]]
       name = "HostPath"
       mount_path = "/path/to/mount/point"
       read_only = true
-    [runners.kubernetes.volumes.pvc]
+      host_path = "/path/on/host"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "HostPath"
+      mount_path = "/path/to/mount/point_2"
+      read_only = true
+    [[runners.kubernetes.volumes.pvc]]
       name = "PersistentVolumeClaim"
       mount_path = "/path/to/mount/point1"
-      # read_only defaults to false
-    [runners.kubernetes.volumes.config_map]
-      name = "Config Map"
+    [[runners.kubernetes.volumes.config_map]]
+      name = "config-map-1"
       mount_path = "/path/to/directory"
-    [runners.kubernetes.volumes.secret]
+      [runners.kubernetes.volumes.config_map.items]
+        "key_1" = "relative/path/to/key_1_file"
+        "key_2" = "key_2"
+    [[runners.kubernetes.volumes.secret]]
       name = "secrets"
       mount_path = "/path/to/directory1"
       read_only = true
+      [runners.kubernetes.volumes.secret.items]
+        "secret_1" = "relative/path/to/secret_1_file"
 ```
+
+### Host Path volumes
+
+[_HostPath_ volume][k8s-host-path-volume-docs] configuration instructs Kubernetes to mount
+a specified host path inside of the container. The volume can be configured with
+following options:
+
+| Option     | Type    | Required | Description |
+|------------|---------|----------|-------------|
+| name       | string  | yes      | The name of the volume |
+| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| host_path  | string  | no       | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
+| read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
+
+### PVC volumes
+
+[_PVC_ volume][k8s-pvc-volume-docs] configuration instructs Kubernetes to use a _PersistentVolumeClaim_
+that is defined in Kubernetes cluster and mount it inside of the container. The volume
+can be configured with following options:
+
+| Option     | Type    | Required | Description |
+|------------|---------|----------|-------------|
+| name       | string  | yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used |
+| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
+
+### Config Map volumes
+
+_ConfigMap_ volume configuration instructs Kubernetes to use a [_configMap_][k8s-config-map-docs]
+that is defined in Kubernetes cluster and mount it inside of the container.
+
+| Option     | Type    | Required | Description |
+|------------|---------|----------|-------------|
+| name       | string  | yes      | The name of the volume and at the same time the name of _configMap_ that should be used |
+| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
+| items      | map[string]string | no | Key-to-path mapping for keys from the _configMap_ that should be used. |
+
+When using _configMap_ volume, each key from selected _configMap_ will be changed into a file
+stored inside of the selected mount path. By default all keys are present, _configMap's_ key
+is used as file's name and value is stored as file's content. The default behavior can be
+changed with `items` option.
+
+`items` option is defining a mapping between key that should be used and path (relative
+to volume's mount path) where _configMap's_ value should be saved. When using `items` option
+**only selected keys** will be added to the volumes and all other will be skipped.
+
+> **Notice**: If a non-existing key will be used then job will fail on Pod creation stage.
+
+### Secret volumes
+
+[_Secret_ volume][k8s-secret-volume-docs] configuration instructs Kubernetes to use
+a _secret_ that is defined in Kubernetes cluster and mount it inside of the container.
+
+| Option     | Type    | Required | Description |
+|------------|---------|----------|-------------|
+| name       | string  | yes      | The name of the volume and at the same time the name of _secret_ that should be used |
+| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
+| items      | map[string]string | no | Key-to-path mapping for keys from the _secret_ that should be used. |
+
+When using _secret_ volume each key from selected _secret_ will be changed into a file
+stored inside of the selected mount path. By default all keys are present, _secret's_ key
+is used as file's name and value is stored as file's content. The default behavior can be
+changed with `items` option.
+
+`items` option is defining a mapping between key that should be used and path (relative
+to volume's mount path) where _secret's_ value should be saved. When using `items` option
+**only selected keys** will be added to the volumes and all other will be skipped.
+
+> **Notice**: If a non-existing key will be used then job will fail on Pod creation stage.
 
 ## Using Docker in your builds
 
@@ -230,3 +313,8 @@ has access to the underlying kernel of the host machine. This means that any
 `limits` that had been set in the Pod will not work when building docker images.
 The docker daemon will report the full capacity of the node regardless of
 the limits imposed on the docker build containers spawned by kubernetes.
+
+[k8s-host-path-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+[k8s-pvc-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim
+[k8s-secret-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#secret
+[k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configmap/

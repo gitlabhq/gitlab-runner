@@ -131,12 +131,6 @@ type KubernetesConfig struct {
 	Namespace                     string               `toml:"namespace" json:"namespace" long:"namespace" env:"KUBERNETES_NAMESPACE" description:"Namespace to run Kubernetes jobs in"`
 	NamespaceOverwriteAllowed     string               `toml:"namespace_overwrite_allowed" json:"namespace_overwrite_allowed" long:"namespace_overwrite_allowed" env:"KUBERNETES_NAMESPACE_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_NAMESPACE_OVERWRITE' value"`
 	Privileged                    bool                 `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
-	CPUs                          string               `toml:"cpus,omitempty" json:"cpus" long:"cpus" env:"KUBERNETES_CPUS" description:"(deprecated) The CPU allocation given to build containers"`
-	Memory                        string               `toml:"memory,omitempty" json:"memory" long:"memory" env:"KUBERNETES_MEMORY" description:"(deprecated) The amount of memory allocated to build containers"`
-	ServiceCPUs                   string               `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"KUBERNETES_SERVICE_CPUS" description:"(deprecated) The CPU allocation given to build service containers"`
-	ServiceMemory                 string               `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"KUBERNETES_SERVICE_MEMORY" description:"(deprecated) The amount of memory allocated to build service containers"`
-	HelperCPUs                    string               `toml:"helper_cpus,omitempty" json:"helper_cpus" long:"helper-cpus" env:"KUBERNETES_HELPER_CPUS" description:"(deprecated) The CPU allocation given to build helper containers"`
-	HelperMemory                  string               `toml:"helper_memory,omitempty" json:"helper_memory" long:"helper-memory" env:"KUBERNETES_HELPER_MEMORY" description:"(deprecated) The amount of memory allocated to build helper containers"`
 	CPULimit                      string               `toml:"cpu_limit,omitempty" json:"cpu_limit" long:"cpu-limit" env:"KUBERNETES_CPU_LIMIT" description:"The CPU allocation given to build containers"`
 	MemoryLimit                   string               `toml:"memory_limit,omitempty" json:"memory_limit" long:"memory-limit" env:"KUBERNETES_MEMORY_LIMIT" description:"The amount of memory allocated to build containers"`
 	ServiceCPULimit               string               `toml:"service_cpu_limit,omitempty" json:"service_cpu_limit" long:"service-cpu-limit" env:"KUBERNETES_SERVICE_CPU_LIMIT" description:"The CPU allocation given to build service containers"`
@@ -165,35 +159,37 @@ type KubernetesConfig struct {
 }
 
 type KubernetesVolumes struct {
-	HostPaths []KubernetesHostPath `toml:"host_path" description:"The host paths which will be mounted"`
-	PVCs      []KubernetesPVC      `toml:"pvc" description:"The persistent volume claims that will be mounted"`
-
+	HostPaths  []KubernetesHostPath  `toml:"host_path" description:"The host paths which will be mounted"`
+	PVCs       []KubernetesPVC       `toml:"pvc" description:"The persistent volume claims that will be mounted"`
 	ConfigMaps []KubernetesConfigMap `toml:"config_map" description:"The config maps which will be mounted as volumes"`
 	Secrets    []KubernetesSecret    `toml:"secret" description:"The secret maps which will be mounted"`
 }
 
 type KubernetesConfigMap struct {
-	Name      string `toml:"name" json:"name" description:"The name of the volume"`
-	MountPath string `toml:"mount_path"`
-	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	Name      string            `toml:"name" json:"name" description:"The name of the volume and ConfigMap to use"`
+	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	ReadOnly  bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	Items     map[string]string `toml:"items,omitempty" description:"Key-to-path mapping for keys from the config map that should be used."`
 }
 
 type KubernetesHostPath struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
-	MountPath string `toml:"mount_path"`
+	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	HostPath  string `toml:"host_path,omitempty" description:"Path from the host that should be mounted as a volume"`
 }
 
 type KubernetesPVC struct {
-	Name      string `toml:"name" json:"name" description:"The name of the volume"`
-	MountPath string `toml:"mount_path"`
+	Name      string `toml:"name" json:"name" description:"The name of the volume and PVC to use"`
+	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 }
 
 type KubernetesSecret struct {
-	Name      string `toml:"name" json:"name" description:"The name of the volume"`
-	MountPath string `toml:"mount_path"`
-	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	Name      string            `toml:"name" json:"name" description:"The name of the volume and Secret to use"`
+	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	ReadOnly  bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	Items     map[string]string `toml:"items,omitempty" description:"Key-to-path mapping for keys from the secret that should be used."`
 }
 
 type RunnerCredentials struct {
