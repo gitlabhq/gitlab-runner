@@ -34,26 +34,27 @@ job4:
   script: job4
   image:
     name: alpine
-    entrypoint: /bin/sh
+    entrypoint: ["/bin/sh"]
   services:
   - name: service:1
-    command: sleep 30
+    command: ["sleep", "30"]
     alias: service-1
   - name: service:2
-    entrypoint: /bin/sh
+    entrypoint: ["/bin/sh"]
     alias: service-2
 `
 
 var testFile2 = `
 image:
   name: global:image
+  entrypoint: [/bin/sh]
 
 services:
 - name: service:1
-  command: sleep 30
+  command: ["sleep", "30"]
   alias: service-1
 - name: service:2
-  entrypoint: /bin/sh
+  entrypoint: [/bin/sh]
   alias: service-2
 
 job1:
@@ -126,33 +127,35 @@ func TestFileParsing(t *testing.T) {
 	// file1 - job4
 	jobResponse = getJobResponse(t, testFile1, "job4", false)
 	assert.Equal(t, "alpine", jobResponse.Image.Name)
-	assert.Equal(t, "/bin/sh", jobResponse.Image.Entrypoint)
+	assert.Equal(t, []string{"/bin/sh"}, jobResponse.Image.Entrypoint)
 	require.Len(t, jobResponse.Services, 2)
 	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
 	assert.Equal(t, "service-1", jobResponse.Services[0].Alias)
-	assert.Equal(t, "sleep 30", jobResponse.Services[0].Command)
+	assert.Equal(t, []string{"sleep", "30"}, jobResponse.Services[0].Command)
 	assert.Empty(t, jobResponse.Services[0].Entrypoint)
 	assert.Equal(t, "service:2", jobResponse.Services[1].Name)
 	assert.Equal(t, "service-2", jobResponse.Services[1].Alias)
 	assert.Empty(t, jobResponse.Services[1].Command)
-	assert.Equal(t, "/bin/sh", jobResponse.Services[1].Entrypoint)
+	assert.Equal(t, []string{"/bin/sh"}, jobResponse.Services[1].Entrypoint)
 
 	// file2 - job1
 	jobResponse = getJobResponse(t, testFile2, "job1", false)
 	assert.Equal(t, "global:image", jobResponse.Image.Name)
+	assert.Equal(t, []string{"/bin/sh"}, jobResponse.Image.Entrypoint)
 	require.Len(t, jobResponse.Services, 2)
 	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
 	assert.Equal(t, "service-1", jobResponse.Services[0].Alias)
-	assert.Equal(t, "sleep 30", jobResponse.Services[0].Command)
+	assert.Equal(t, []string{"sleep", "30"}, jobResponse.Services[0].Command)
 	assert.Empty(t, jobResponse.Services[0].Entrypoint)
 	assert.Equal(t, "service:2", jobResponse.Services[1].Name)
 	assert.Equal(t, "service-2", jobResponse.Services[1].Alias)
 	assert.Empty(t, jobResponse.Services[1].Command)
-	assert.Equal(t, "/bin/sh", jobResponse.Services[1].Entrypoint)
+	assert.Equal(t, []string{"/bin/sh"}, jobResponse.Services[1].Entrypoint)
 
 	// file2 - job2
 	jobResponse = getJobResponse(t, testFile2, "job2", false)
 	assert.Equal(t, "job2:image", jobResponse.Image.Name)
+	assert.Empty(t, jobResponse.Image.Entrypoint)
 	require.Len(t, jobResponse.Services, 2)
 	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
 	assert.Empty(t, jobResponse.Services[0].Alias)

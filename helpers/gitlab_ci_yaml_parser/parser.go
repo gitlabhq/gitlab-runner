@@ -223,7 +223,7 @@ func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) (err error) {
 
 	if imageDefinition, ok := c.jobConfig.GetSubOptions("image"); ok {
 		job.Image.Name, _ = imageDefinition.GetString("name")
-		job.Image.Entrypoint, _ = imageDefinition.GetString("entrypoint")
+		job.Image.Entrypoint, _ = imageDefinition.GetStringSlice("entrypoint")
 		return
 	}
 
@@ -234,33 +234,24 @@ func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) (err error) {
 
 	if imageDefinition, ok := c.config.GetSubOptions("image"); ok {
 		job.Image.Name, _ = imageDefinition.GetString("name")
+		job.Image.Entrypoint, _ = imageDefinition.GetStringSlice("entrypoint")
 		return
 	}
 
 	return
 }
 
-func parseExtendedServiceDefinitionMap(serviceDefinition map[interface{}]interface{}) common.Image {
-	var name, alias, command, entrypoint string
+func parseExtendedServiceDefinitionMap(serviceDefinition map[interface{}]interface{}) (image common.Image) {
+	service := make(DataBag)
 	for key, value := range serviceDefinition {
-		switch key {
-		case "name":
-			name = value.(string)
-		case "alias":
-			alias = value.(string)
-		case "command":
-			command = value.(string)
-		case "entrypoint":
-			entrypoint = value.(string)
-		}
+		service[key.(string)] = value
 	}
 
-	return common.Image{
-		Name:       name,
-		Alias:      alias,
-		Command:    command,
-		Entrypoint: entrypoint,
-	}
+	image.Name, _ = service.GetString("name")
+	image.Alias, _ = service.GetString("alias")
+	image.Command, _ = service.GetStringSlice("command")
+	image.Entrypoint, _ = service.GetStringSlice("entrypoint")
+	return
 }
 
 func (c *GitLabCiYamlParser) prepareServices(job *common.JobResponse) (err error) {

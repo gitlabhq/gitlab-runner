@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/url"
 )
