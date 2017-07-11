@@ -275,15 +275,11 @@ documentation but it is worth it to revisit them here as you might run into
 some slightly different things when running this on your cluster.
 
 ### Exposing `/var/run/docker.sock`
-Exposing your host's `/var/run/docker.sock` into your build container brings the
-same risks with it as always. That node's containers are accessible from the
-build container and depending if you are running builds in the same cluster as
-your production containers it might not be wise to do that.
-
-> **Note**:
-Pods are not yet able to be scheduled to nodes with certain labels like
-`role=build` using the `nodeSelector` field in the `PodSpec`, the only separation
-between build Pods and the rest of the system is by namespace.
+Exposing your host's `/var/run/docker.sock` into your build container, using the
+`runners.kubernetes.volumes.host_path` option, brings the same risks with it as
+always. That node's containers are accessible from the build container and
+depending if you are running builds in the same cluster as your production
+containers it might not be wise to do that.
 
 ### Using `docker:dind`
 Running the `docker:dind` also known as the `docker-in-docker` image is also
@@ -313,6 +309,13 @@ has access to the underlying kernel of the host machine. This means that any
 `limits` that had been set in the Pod will not work when building docker images.
 The docker daemon will report the full capacity of the node regardless of
 the limits imposed on the docker build containers spawned by kubernetes.
+
+One way to help minimize the exposure of the host's kernel to any build container
+when running in privileged mode or by exposing `/var/run/docker.sock` is to use
+the `node_selector` option to set one or more labels that have to match a node 
+before any containers are deployed to it. For example build containers may only run
+on nodes that are labeled with `role=ci` while running all other production services
+on other nodes.
 
 [k8s-host-path-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 [k8s-pvc-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim
