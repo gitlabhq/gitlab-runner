@@ -175,7 +175,7 @@ alternatively. The aliases are taken from the image name following these rules:
 
 Using a private service image will strip any port given and apply the rules as
 described above. A service `registry.gitlab-wp.com:4999/tutum/wordpress` will
-result in hostname `registry.gitlab__wp.com__tutum__wordpress` and
+result in hostname `registry.gitlab-wp.com__tutum__wordpress` and
 `registry.gitlab-wp.com-tutum-wordpress`.
 
 ## Configuring services
