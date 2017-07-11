@@ -318,13 +318,13 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 		{
 			image: common.Image{
 				Name:       "$IMAGE_NAME",
-				Entrypoint: "sh -c",
+				Entrypoint: []string{"sh", "-c"},
 			},
 			services: common.Services{
 				common.Image{
 					Name:       "$SERVICE_NAME",
-					Entrypoint: "sh -c",
-					Command:    "dockerd-entrypoint.sh",
+					Entrypoint: []string{"sh", "-c"},
+					Command:    []string{"dockerd-entrypoint.sh"},
 					Alias:      "my-docker-service",
 				},
 			},

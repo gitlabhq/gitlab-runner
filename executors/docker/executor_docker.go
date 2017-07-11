@@ -577,11 +577,11 @@ func (s *executor) createService(service, version, image string, serviceDefiniti
 		Env:    s.getServiceVariables(),
 	}
 
-	if serviceDefinition.Command != "" {
-		config.Cmd = serviceDefinition.GetCommand()
+	if len(serviceDefinition.Command) > 0 {
+		config.Cmd = serviceDefinition.Command
 	}
-	if serviceDefinition.Entrypoint != "" {
-		config.Entrypoint = serviceDefinition.GetEntrypoint()
+	if len(serviceDefinition.Entrypoint) > 0 {
+		config.Entrypoint = serviceDefinition.Entrypoint
 	}
 
 	hostConfig := &container.HostConfig{
@@ -752,8 +752,8 @@ func (s *executor) createContainer(containerType string, imageDefinition common.
 		Env:          append(s.Build.GetAllVariables().StringList(), s.BuildShell.Environment...),
 	}
 
-	if imageDefinition.Entrypoint != "" {
-		config.Entrypoint = imageDefinition.GetEntrypoint()
+	if len(imageDefinition.Entrypoint) > 0 {
+		config.Entrypoint = imageDefinition.Entrypoint
 	}
 
 	nanoCPUs, err := s.Config.Docker.GetNanoCPUs()
