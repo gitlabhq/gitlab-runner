@@ -513,7 +513,7 @@ func (s *executor) overwriteNamespace(job *common.Build) error {
 // expression is empty the overwrite is disabled.
 func (s *executor) overwriteServiceAccount(job *common.Build) error {
 	if s.Config.Kubernetes.ServiceAccountOverwriteAllowed == "" {
-		s.Debugln("Configuration entry 'service_accunt_overwrite_allowed' is empty, disabling override.")
+		s.Debugln("Configuration entry 'service_account_overwrite_allowed' is empty, disabling override.")
 		return nil
 	}
 
