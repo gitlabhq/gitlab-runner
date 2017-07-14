@@ -29,9 +29,9 @@ func TestCacheCheckPolicy(t *testing.T) {
 
 		result, err := cache.CheckPolicy(tc.subject)
 		if tc.expectErr {
-			assert.Error(t, err, "case %d: %s", num, tc.description)
+			assert.Errorf(t, err, "case %d: %s", num, tc.description)
 		} else {
-			assert.NoError(t, err, "case %d: %s", num, tc.description)
+			assert.NoErrorf(t, err, "case %d: %s", num, tc.description)
 		}
 
 		assert.Equal(t, tc.expected, result, "case %d: %s", num, tc.description)
