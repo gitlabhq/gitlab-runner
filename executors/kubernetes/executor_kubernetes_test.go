@@ -385,7 +385,9 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: "test-image",
+					Image: common.Image{
+						Name: "test-image",
+					},
 				},
 				namespaceOverwrite: "",
 				serviceLimits: api.ResourceList{
@@ -446,7 +448,9 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: "test-image",
+					Image: common.Image{
+						Name: "test-image",
+					},
 				},
 				serviceAccountOverwrite: "not-default",
 				serviceLimits: api.ResourceList{
@@ -517,7 +521,9 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: "test-image",
+					Image: common.Image{
+						Name: "test-image",
+					},
 				},
 				namespaceOverwrite: "namespacee",
 				serviceLimits: api.ResourceList{
@@ -589,7 +595,9 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: "test-image",
+					Image: common.Image{
+						Name: "test-image",
+					},
 				},
 				namespaceOverwrite: "namespacee",
 				serviceLimits: api.ResourceList{
@@ -645,7 +653,9 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: "test-image",
+					Image: common.Image{
+						Name: "test-image",
+					},
 				},
 				namespaceOverwrite: "",
 				serviceLimits:      api.ResourceList{},
@@ -676,7 +686,60 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
-					Image: "test-image",
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				namespaceOverwrite: "",
+				serviceLimits:      api.ResourceList{},
+				buildLimits:        api.ResourceList{},
+				helperLimits:       api.ResourceList{},
+				serviceRequests:    api.ResourceList{},
+				buildRequests:      api.ResourceList{},
+				helperRequests:     api.ResourceList{},
+			},
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
 				},
 				namespaceOverwrite: "",
 				serviceLimits:      api.ResourceList{},
@@ -852,6 +915,7 @@ func TestSetupBuildPod(t *testing.T) {
 
 	type testDef struct {
 		RunnerConfig common.RunnerConfig
+		Options      *kubernetesOptions
 		PrepareFn    func(*testing.T, testDef, *executor)
 		VerifyFn     func(*testing.T, testDef, *api.Pod)
 		Variables    []common.JobVariable
@@ -968,6 +1032,47 @@ func TestSetupBuildPod(t *testing.T) {
 				{Key: "test", Value: "sometestvar"},
 			},
 		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name:       "test-image",
+					Entrypoint: []string{"/init", "run"},
+				},
+				Services: common.Services{
+					{
+						Name:       "test-service",
+						Entrypoint: []string{"/init", "run"},
+						Command:    []string{"application", "--debug"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.Containers, 3)
+
+				assert.Equal(t, pod.Spec.Containers[0].Name, "build")
+				assert.Equal(t, pod.Spec.Containers[0].Image, "test-image")
+				assert.Equal(t, pod.Spec.Containers[0].Command, []string{"/init", "run"})
+				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
+
+				assert.Equal(t, pod.Spec.Containers[1].Name, "helper")
+				assert.Equal(t, pod.Spec.Containers[1].Image, "custom/helper-image")
+				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
+				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
+
+				assert.Equal(t, pod.Spec.Containers[2].Name, "svc-0")
+				assert.Equal(t, pod.Spec.Containers[2].Image, "test-service")
+				assert.Equal(t, pod.Spec.Containers[2].Command, []string{"/init", "run"})
+				assert.Equal(t, pod.Spec.Containers[2].Args, []string{"application", "--debug"})
+			},
+		},
 	}
 
 	executed := false
@@ -1014,9 +1119,14 @@ func TestSetupBuildPod(t *testing.T) {
 		if vars == nil {
 			vars = []common.JobVariable{}
 		}
+
+		options := test.Options
+		if options == nil {
+			options = &kubernetesOptions{}
+		}
 		ex := executor{
 			kubeClient: c,
-			options:    &kubernetesOptions{},
+			options:    options,
 			AbstractExecutor: executors.AbstractExecutor{
 				Config:     test.RunnerConfig,
 				BuildShell: &common.ShellConfiguration{},

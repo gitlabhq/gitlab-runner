@@ -150,8 +150,8 @@ type Step struct {
 type Steps []Step
 
 type Image struct {
-	Name       string `json:"name"`
-	Alias      string `json:"alias,omitempty"`
+	Name       string   `json:"name"`
+	Alias      string   `json:"alias,omitempty"`
 	Command    []string `json:"command,omitempty"`
 	Entrypoint []string `json:"entrypoint,omitempty"`
 }
