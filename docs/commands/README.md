@@ -248,9 +248,12 @@ gitlab-runner verify --delete
 
 ### gitlab-runner unregister
 
-This command allows to unregister one of the registered runners. It expects either
-a full URL and the runner's token, or the runner's name. First get the runner's details by
-executing `gitlab-runner list`:
+This command allows to unregister one of the registered runners. It expects
+either a full URL and the runner's token, or the runner's name. With the
+`--all-runners` option it will unregister all the attached runners.
+
+To unregister a specific runner, first get the runner's details by executing
+`gitlab-runner list`:
 
 ```bash
 test-runner     Executor=shell Token=t0k3n URL=http://gitlab.example.com
@@ -274,6 +277,12 @@ gitlab-runner unregister --url http://gitlab.example.com/ --token t0k3n
 
 ```bash
 gitlab-runner unregister --name test-runner
+```
+
+#### All Runners:
+
+```bash
+gitlab-runner unregister --all-runners
 ```
 
 ## Service-related commands
