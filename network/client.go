@@ -49,17 +49,16 @@ var (
 
 type client struct {
 	http.Client
-	url                  *url.URL
-	caFile               string
-	certFile             string
-	keyFile              string
-	caData               []byte
-	skipVerify           bool
-	updateTime           time.Time
-	lastUpdate           string
-	compatibleWithGitLab bool
-	requestBackOffs      map[string]*backoff.Backoff
-	lock                 sync.Mutex
+	url             *url.URL
+	caFile          string
+	certFile        string
+	keyFile         string
+	caData          []byte
+	skipVerify      bool
+	updateTime      time.Time
+	lastUpdate      string
+	requestBackOffs map[string]*backoff.Backoff
+	lock            sync.Mutex
 }
 
 type ResponseTLSData struct {
@@ -361,12 +360,11 @@ func newClient(requestCredentials requestCredentials) (c *client, err error) {
 	}
 
 	c = &client{
-		url:                  url,
-		caFile:               requestCredentials.GetTLSCAFile(),
-		certFile:             requestCredentials.GetTLSCertFile(),
-		keyFile:              requestCredentials.GetTLSKeyFile(),
-		compatibleWithGitLab: true,
-		requestBackOffs:      make(map[string]*backoff.Backoff),
+		url:             url,
+		caFile:          requestCredentials.GetTLSCAFile(),
+		certFile:        requestCredentials.GetTLSCertFile(),
+		keyFile:         requestCredentials.GetTLSKeyFile(),
+		requestBackOffs: make(map[string]*backoff.Backoff),
 	}
 
 	host := strings.Split(url.Host, ":")[0]
