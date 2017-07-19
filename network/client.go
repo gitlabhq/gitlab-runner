@@ -157,8 +157,11 @@ func (n *client) createTransport() {
 			logrus.Debugln("Dialing:", network, addr, "...")
 			return dialer.Dial(network, addr)
 		},
-		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     &tlsConfig,
+		TLSClientConfig:       &tlsConfig,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		IdleConnTimeout:       30 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
 	}
 }
 
@@ -363,6 +366,7 @@ func newClient(requestCredentials requestCredentials) (c *client, err error) {
 		compatibleWithGitLab: true,
 		requestBackOffs:      make(map[string]*backoff.Backoff),
 	}
+	c.Timeout = common.DefaultNetworkClientTimeout
 
 	host := strings.Split(url.Host, ":")[0]
 	if CertificateDirectory != "" {
