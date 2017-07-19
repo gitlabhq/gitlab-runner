@@ -103,10 +103,11 @@
 			"revision": "3ac0863d7acf3bc44daf49afef8919af12f704ef"
 		},
 		{
-			"checksumSHA1": "5rPfda8jFccr3A6heL+JAmi9K9g=",
-			"comment": "v1.0.0",
+			"checksumSHA1": "dvabztWVQX8f6oMLRyv4dLH+TGY=",
+			"comment": "v1.1.0",
 			"path": "github.com/davecgh/go-spew/spew",
-			"revision": "6cf5744a041a0022271cefed95ba843f6d87fd51"
+			"revision": "346938d642f2ec3594ed81d874461961cd0faa76",
+			"revisionTime": "2016-10-29T20:57:26Z"
 		},
 		{
 			"checksumSHA1": "f1wARLDzsF/JoyN01yoxXEwFIp8=",
@@ -561,22 +562,22 @@
 			"revision": "cbeaeb16a013161a98496fad62933b1d21786672"
 		},
 		{
-			"checksumSHA1": "q1qqfgDOGwfEuMlbHWNjYf09ACM=",
+			"checksumSHA1": "Rbe7jAiIJ1fugtTHlyMdHb3CiEQ=",
 			"path": "github.com/stretchr/testify/assert",
-			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
-			"revisionTime": "2016-09-25T01:54:16Z"
+			"revision": "b1f989447a57594c728884458a39abf3a73447f7",
+			"revisionTime": "2017-07-13T17:13:24Z"
 		},
 		{
-			"checksumSHA1": "Je6cJkYWj2SoaHDMGpE00BGi9sw=",
+			"checksumSHA1": "o+jsS/rxceTym4M3reSPfrPxaio=",
 			"path": "github.com/stretchr/testify/mock",
-			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
-			"revisionTime": "2016-09-25T01:54:16Z"
+			"revision": "b1f989447a57594c728884458a39abf3a73447f7",
+			"revisionTime": "2017-07-13T17:13:24Z"
 		},
 		{
-			"checksumSHA1": "P9FJpir2c4G5PA46qEkaWy3l60U=",
+			"checksumSHA1": "7vs6dSc1PPGBKyzb/SCIyeMJPLQ=",
 			"path": "github.com/stretchr/testify/require",
-			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
-			"revisionTime": "2016-09-25T01:54:16Z"
+			"revision": "b1f989447a57594c728884458a39abf3a73447f7",
+			"revisionTime": "2017-07-13T17:13:24Z"
 		},
 		{
 			"checksumSHA1": "VDdgQz6FoZx6+4WrfrnrpBJIaDU=",

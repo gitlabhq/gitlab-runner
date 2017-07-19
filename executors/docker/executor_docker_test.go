@@ -176,7 +176,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Once()
 
 	linksMap := make(map[string]*types.Container)
-	err := e.createFromServiceDescription(description, linksMap)
+	err := e.createFromServiceDefinition(common.Image{Name: description}, linksMap)
 	assert.NoError(t, err)
 }
 
@@ -793,7 +793,7 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	err := e.connectDocker()
 	assert.NoError(t, err)
 
-	container, err := e.createContainer("build", "alpine", []string{"/bin/sh"})
+	container, err := e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"})
 	assert.NoError(t, err)
 	assert.NotNil(t, container)
 
@@ -864,7 +864,7 @@ func testDockerConfiguration(t *testing.T, dockerConfig *common.DockerConfig, cc
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
 
-	_, err := e.createContainer("build", "alpine", []string{"/bin/sh"})
+	_, err := e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"})
 	assert.NoError(t, err, "Should create container without errors")
 }
 

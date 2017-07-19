@@ -28,8 +28,8 @@ var (
 )
 
 type kubernetesOptions struct {
-	Image    string   `json:"image"`
-	Services []string `json:"services"`
+	Image    common.Image
+	Services common.Services
 }
 
 type executor struct {
@@ -117,7 +117,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return err
 	}
 
-	s.Println("Using Kubernetes executor with image", s.options.Image, "...")
+	s.Println("Using Kubernetes executor with image", s.options.Image.Name, "...")
 
 	return nil
 }
@@ -174,10 +174,20 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) buildContainer(name, image string, requests, limits api.ResourceList, command ...string) api.Container {
+func (s *executor) buildContainer(name, image string, imageDefinition common.Image, requests, limits api.ResourceList, command ...string) api.Container {
 	privileged := false
 	if s.Config.Kubernetes != nil {
 		privileged = s.Config.Kubernetes.Privileged
+	}
+
+	if len(command) == 0 && len(imageDefinition.Command) > 0 {
+		command = imageDefinition.Command
+	}
+
+	var args []string
+	if len(imageDefinition.Entrypoint) > 0 {
+		args = command
+		command = imageDefinition.Entrypoint
 	}
 
 	return api.Container{
@@ -185,6 +195,7 @@ func (s *executor) buildContainer(name, image string, requests, limits api.Resou
 		Image:           image,
 		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
 		Command:         command,
+		Args:            args,
 		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
 		Resources: api.ResourceRequirements{
 			Limits:   limits,
@@ -357,9 +368,9 @@ func (s *executor) setupCredentials() error {
 
 func (s *executor) setupBuildPod() error {
 	services := make([]api.Container, len(s.options.Services))
-	for i, image := range s.options.Services {
-		resolvedImage := s.Build.GetAllVariables().ExpandValue(image)
-		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, s.serviceRequests, s.serviceLimits)
+	for i, service := range s.options.Services {
+		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
+		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, service, s.serviceRequests, s.serviceLimits)
 	}
 	labels := make(map[string]string)
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
@@ -375,7 +386,7 @@ func (s *executor) setupBuildPod() error {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
 	}
 
-	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image)
+	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
 	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
@@ -389,8 +400,8 @@ func (s *executor) setupBuildPod() error {
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
 				// TODO use the build and helper template here
-				s.buildContainer("build", buildImage, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("build", buildImage, s.options.Image, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), common.Image{}, s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
@@ -452,25 +463,25 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 
 func (s *executor) prepareOptions(job *common.Build) {
 	s.options = &kubernetesOptions{}
-	s.options.Image = job.Image.Name
+	s.options.Image = job.Image
 	for _, service := range job.Services {
-		serviceName := service.Name
-		if serviceName == "" {
+		if service.Name == "" {
 			continue
 		}
-
-		s.options.Services = append(s.options.Services, serviceName)
+		s.options.Services = append(s.options.Services, service)
 	}
 }
 
 // checkDefaults Defines the configuration for the Pod on Kubernetes
 func (s *executor) checkDefaults() error {
-	if s.options.Image == "" {
+	if s.options.Image.Name == "" {
 		if s.Config.Kubernetes.Image == "" {
 			return fmt.Errorf("no image specified and no default set in config")
 		}
 
-		s.options.Image = s.Config.Kubernetes.Image
+		s.options.Image = common.Image{
+			Name: s.Config.Kubernetes.Image,
+		}
 	}
 
 	if s.Config.Kubernetes.Namespace == "" {

@@ -27,24 +27,23 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("Script is not compatible with Docker")
 	}
 
-	imageName, err := s.getImageName()
+	prebuildImage, err := s.getPrebuiltImage()
 	if err != nil {
 		return err
 	}
 
-	buildImage, err := s.getPrebuiltImage()
-	if err != nil {
-		return err
+	buildImage := common.Image{
+		Name: prebuildImage.ID,
 	}
 
 	// Start pre-build container which will git clone changes
-	s.predefinedContainer, err = s.createContainer("predefined", buildImage.ID, []string{"gitlab-runner-build"})
+	s.predefinedContainer, err = s.createContainer("predefined", buildImage, []string{"gitlab-runner-build"})
 	if err != nil {
 		return err
 	}
 
 	// Start build container which will run actual build
-	s.buildContainer, err = s.createContainer("build", imageName, s.BuildShell.DockerCommand)
+	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand)
 	if err != nil {
 		return err
 	}

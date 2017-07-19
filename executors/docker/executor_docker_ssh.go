@@ -27,13 +27,8 @@ func (s *sshExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	s.Debugln("Starting SSH command...")
 
-	imageName, err := s.getImageName()
-	if err != nil {
-		return err
-	}
-
 	// Start build container which will run actual build
-	container, err := s.createContainer("build", imageName, []string{})
+	container, err := s.createContainer("build", s.Build.Image, []string{})
 	if err != nil {
 		return err
 	}

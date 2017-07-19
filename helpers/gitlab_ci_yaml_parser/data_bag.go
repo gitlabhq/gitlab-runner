@@ -22,6 +22,20 @@ func (m *DataBag) GetSlice(keys ...string) ([]interface{}, bool) {
 	return nil, false
 }
 
+func (m *DataBag) GetStringSlice(keys ...string) (slice []string, ok bool) {
+	rawSlice, ok := m.GetSlice(keys...)
+	if !ok {
+		return
+	}
+
+	for _, rawElement := range rawSlice {
+		if element, ok := rawElement.(string); ok {
+			slice = append(slice, element)
+		}
+	}
+	return
+}
+
 func (m *DataBag) GetSubOptions(keys ...string) (result DataBag, ok bool) {
 	value, ok := helpers.GetMapKey(*m, keys...)
 	if ok {
@@ -109,15 +123,6 @@ func getOptions(optionKey string, primary, secondary DataBag) (value []interface
 	value, ok = primary.GetSlice(optionKey)
 	if !ok {
 		value, ok = secondary.GetSlice(optionKey)
-	}
-
-	return
-}
-
-func getOption(optionKey string, primary, secondary DataBag) (value interface{}, ok bool) {
-	value, ok = primary.Get(optionKey)
-	if !ok {
-		value, ok = secondary.Get(optionKey)
 	}
 
 	return

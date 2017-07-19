@@ -341,13 +341,18 @@ func getRequestJobResponse() (res map[string]interface{}) {
 
 	image := make(map[string]interface{})
 	image["name"] = "ruby:2.0"
+	image["entrypoint"] = []string{"/bin/sh"}
 	res["image"] = image
 
 	services := make([]map[string]interface{}, 2)
 	services[0] = make(map[string]interface{})
 	services[0]["name"] = "postgresql:9.5"
+	services[0]["entrypoint"] = []string{"/bin/sh"}
+	services[0]["command"] = []string{"sleep", "30"}
+	services[0]["alias"] = "db-pg"
 	services[1] = make(map[string]interface{})
 	services[1]["name"] = "mysql:5.6"
+	services[1]["alias"] = "db-mysql"
 	res["services"] = services
 
 	artifacts := make([]map[string]interface{}, 1)
@@ -472,6 +477,16 @@ func TestRequestJob(t *testing.T) {
 		assert.NotEmpty(t, res.ID)
 	}
 	assert.True(t, ok)
+
+	assert.Equal(t, "ruby:2.0", res.Image.Name)
+	assert.Equal(t, []string{"/bin/sh"}, res.Image.Entrypoint)
+	require.Len(t, res.Services, 2)
+	assert.Equal(t, "postgresql:9.5", res.Services[0].Name)
+	assert.Equal(t, []string{"/bin/sh"}, res.Services[0].Entrypoint)
+	assert.Equal(t, []string{"sleep", "30"}, res.Services[0].Command)
+	assert.Equal(t, "db-pg", res.Services[0].Alias)
+	assert.Equal(t, "mysql:5.6", res.Services[1].Name)
+	assert.Equal(t, "db-mysql", res.Services[1].Alias)
 
 	assert.Empty(t, c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should not be set")
 	res, ok = c.RequestJob(noJobsToken)

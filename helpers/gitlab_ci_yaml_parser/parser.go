@@ -13,13 +13,14 @@ import (
 )
 
 type GitLabCiYamlParser struct {
+	filename  string
 	jobName   string
 	config    DataBag
 	jobConfig DataBag
 }
 
 func (c *GitLabCiYamlParser) parseFile() (err error) {
-	data, err := ioutil.ReadFile(".gitlab-ci.yml")
+	data, err := ioutil.ReadFile(c.filename)
 	if err != nil {
 		return err
 	}
@@ -147,20 +148,20 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 
 func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) (defaultVariables common.JobVariables, err error) {
 	defaultVariables = common.JobVariables{
-		{"CI", "true", true, true, false},
-		{"GITLAB_CI", "true", true, true, false},
-		{"CI_SERVER_NAME", "GitLab CI", true, true, false},
-		{"CI_SERVER_VERSION", "", true, true, false},
-		{"CI_SERVER_REVISION", "", true, true, false},
-		{"CI_PROJECT_ID", strconv.Itoa(job.JobInfo.ProjectID), true, true, false},
-		{"CI_JOB_ID", strconv.Itoa(job.ID), true, true, false},
-		{"CI_JOB_NAME", job.JobInfo.Name, true, true, false},
-		{"CI_JOB_STAGE", job.JobInfo.Stage, true, true, false},
-		{"CI_JOB_TOKEN", job.Token, true, true, false},
-		{"CI_REPOSITORY_URL", job.GitInfo.RepoURL, true, true, false},
-		{"CI_COMMIT_REF", job.GitInfo.Sha, true, true, false},
-		{"CI_COMMIT_BEFORE_SHA", job.GitInfo.BeforeSha, true, true, false},
-		{"CI_COMMIT_REF_NAME", job.GitInfo.Ref, true, true, false},
+		{Key: "CI", Value: "true", Public: true, Internal: true, File: false},
+		{Key: "GITLAB_CI", Value: "true", Public: true, Internal: true, File: false},
+		{Key: "CI_SERVER_NAME", Value: "GitLab CI", Public: true, Internal: true, File: false},
+		{Key: "CI_SERVER_VERSION", Value: "", Public: true, Internal: true, File: false},
+		{Key: "CI_SERVER_REVISION", Value: "", Public: true, Internal: true, File: false},
+		{Key: "CI_PROJECT_ID", Value: strconv.Itoa(job.JobInfo.ProjectID), Public: true, Internal: true, File: false},
+		{Key: "CI_JOB_ID", Value: strconv.Itoa(job.ID), Public: true, Internal: true, File: false},
+		{Key: "CI_JOB_NAME", Value: job.JobInfo.Name, Public: true, Internal: true, File: false},
+		{Key: "CI_JOB_STAGE", Value: job.JobInfo.Stage, Public: true, Internal: true, File: false},
+		{Key: "CI_JOB_TOKEN", Value: job.Token, Public: true, Internal: true, File: false},
+		{Key: "CI_REPOSITORY_URL", Value: job.GitInfo.RepoURL, Public: true, Internal: true, File: false},
+		{Key: "CI_COMMIT_REF", Value: job.GitInfo.Sha, Public: true, Internal: true, File: false},
+		{Key: "CI_COMMIT_BEFORE_SHA", Value: job.GitInfo.BeforeSha, Public: true, Internal: true, File: false},
+		{Key: "CI_COMMIT_REF_NAME", Value: job.GitInfo.Ref, Public: true, Internal: true, File: false},
 	}
 	return
 }
@@ -214,21 +215,60 @@ func (c *GitLabCiYamlParser) prepareVariables(job *common.JobResponse) (err erro
 
 func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) (err error) {
 	job.Image = common.Image{}
-	if imageName, ok := getOption("image", c.config, c.jobConfig); ok {
-		job.Image.Name = imageName.(string)
+
+	if imageName, ok := c.jobConfig.GetString("image"); ok {
+		job.Image.Name = imageName
+		return
 	}
 
+	if imageDefinition, ok := c.jobConfig.GetSubOptions("image"); ok {
+		job.Image.Name, _ = imageDefinition.GetString("name")
+		job.Image.Entrypoint, _ = imageDefinition.GetStringSlice("entrypoint")
+		return
+	}
+
+	if imageName, ok := c.config.GetString("image"); ok {
+		job.Image.Name = imageName
+		return
+	}
+
+	if imageDefinition, ok := c.config.GetSubOptions("image"); ok {
+		job.Image.Name, _ = imageDefinition.GetString("name")
+		job.Image.Entrypoint, _ = imageDefinition.GetStringSlice("entrypoint")
+		return
+	}
+
+	return
+}
+
+func parseExtendedServiceDefinitionMap(serviceDefinition map[interface{}]interface{}) (image common.Image) {
+	service := make(DataBag)
+	for key, value := range serviceDefinition {
+		service[key.(string)] = value
+	}
+
+	image.Name, _ = service.GetString("name")
+	image.Alias, _ = service.GetString("alias")
+	image.Command, _ = service.GetStringSlice("command")
+	image.Entrypoint, _ = service.GetStringSlice("entrypoint")
 	return
 }
 
 func (c *GitLabCiYamlParser) prepareServices(job *common.JobResponse) (err error) {
 	job.Services = common.Services{}
 
-	if servicesMap, ok := getOptions("services", c.config, c.jobConfig); ok {
+	if servicesMap, ok := getOptions("services", c.jobConfig, c.config); ok {
 		for _, service := range servicesMap {
-			job.Services = append(job.Services, common.Image{
-				Name: service.(string),
-			})
+			if serviceName, ok := service.(string); ok {
+				job.Services = append(job.Services, common.Image{
+					Name: serviceName,
+				})
+				continue
+			}
+
+			if serviceDefinition, ok := service.(map[interface{}]interface{}); ok {
+				job.Services = append(job.Services, parseExtendedServiceDefinitionMap(serviceDefinition))
+			}
 		}
 	}
 
@@ -238,7 +278,7 @@ func (c *GitLabCiYamlParser) prepareServices(job *common.JobResponse) (err error
 func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err error) {
 	var ok bool
 
-	artifactsMap := getOptionsMap("artifacts", c.config, c.jobConfig)
+	artifactsMap := getOptionsMap("artifacts", c.jobConfig, c.config)
 
 	artifactsPaths, _ := artifactsMap.GetSlice("paths")
 	paths := common.ArtifactPaths{}
@@ -281,7 +321,7 @@ func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err erro
 func (c *GitLabCiYamlParser) prepareCache(job *common.JobResponse) (err error) {
 	var ok bool
 
-	cacheMap := getOptionsMap("cache", c.config, c.jobConfig)
+	cacheMap := getOptionsMap("cache", c.jobConfig, c.config)
 
 	cachePaths, _ := cacheMap.GetSlice("paths")
 	paths := common.ArtifactPaths{}
@@ -344,6 +384,7 @@ func (c *GitLabCiYamlParser) ParseYaml(job *common.JobResponse) (err error) {
 
 func NewGitLabCiYamlParser(jobName string) *GitLabCiYamlParser {
 	return &GitLabCiYamlParser{
-		jobName: jobName,
+		filename: ".gitlab-ci.yml",
+		jobName:  jobName,
 	}
 }
