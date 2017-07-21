@@ -158,11 +158,13 @@ func (n *client) createTransport() {
 			return dialer.Dial(network, addr)
 		},
 		TLSClientConfig:       &tlsConfig,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		IdleConnTimeout:       30 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Minute,
 	}
+	n.Timeout = common.DefaultNetworkClientTimeout
 }
 
 func (n *client) getCAChain(tls *tls.ConnectionState) string {
@@ -366,7 +368,6 @@ func newClient(requestCredentials requestCredentials) (c *client, err error) {
 		compatibleWithGitLab: true,
 		requestBackOffs:      make(map[string]*backoff.Backoff),
 	}
-	c.Timeout = common.DefaultNetworkClientTimeout
 
 	host := strings.Split(url.Host, ":")[0]
 	if CertificateDirectory != "" {
