@@ -1,3 +1,19 @@
+v 9.4.0 (2017-07-22)
+- Use Go 1.8 for CI !620
+- Warn on archiving git directory !591
+- Add CacheClient with timeout configuration for cache operations !608
+- Remove '.git/hooks/post-checkout' hooks when using fetch strategy !603
+- Fix VirtualBox and Parallels executors registration bugs !589
+- Support Kubernetes PVCs !606
+- Support cache policies in .gitlab-ci.yml !621
+- Improve kubernetes volumes support !625
+- Adds an option `--all` to unregister command !622
+- Add the technical description of version release !631
+- Update documentation on building docker images inside of a kubernetes cluster. !628
+- Support for extended docker configuration in gitlab-ci.yml !596
+- Add ServicesTmpfs options to Docker runner configuration. !605
+- Fix network timeouts !634
+
 v 9.3.0 (2017-06-22)
 - Make GitLab Runner metrics HTTP endpoint default to :9252 !584
 - Add handling for GIT_CHECKOUT variable to skip checkout !585
