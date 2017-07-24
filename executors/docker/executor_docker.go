@@ -713,14 +713,13 @@ func (s *executor) createServices() (err error) {
 	}
 
 	s.waitForServices()
-	fmt.Println(linksMap)
 
 	s.links = s.buildServiceLinks(linksMap)
 	return
 }
 
-func (s *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string) (*types.ContainerJSON, error) {
-	imageName, err := s.expandImageName(imageDefinition.Name)
+func (s *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
+	imageName, err := s.expandImageName(imageDefinition.Name, allowedInternalImages)
 	if err != nil {
 		return nil, err
 	}
@@ -992,10 +991,11 @@ func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []
 	return errors.New("invalid image")
 }
 
-func (s *executor) expandImageName(imageName string) (string, error) {
+func (s *executor) expandImageName(imageName string, allowedInternalImages []string) (string, error) {
 	if imageName != "" {
 		image := s.Build.GetAllVariables().ExpandValue(imageName)
-		err := s.verifyAllowedImage(imageName, "images", s.Config.Docker.AllowedImages, []string{s.Config.Docker.Image})
+		allowedInternalImages = append(allowedInternalImages, s.Config.Docker.Image)
+		err := s.verifyAllowedImage(image, "images", s.Config.Docker.AllowedImages, allowedInternalImages)
 		if err != nil {
 			return "", err
 		}
@@ -1074,7 +1074,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	s.SetCurrentStage(DockerExecutorStagePrepare)
-	imageName, err := s.expandImageName(s.Build.Image.Name)
+	imageName, err := s.expandImageName(s.Build.Image.Name, []string{})
 	if err != nil {
 		return err
 	}
