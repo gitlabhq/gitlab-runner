@@ -1,3 +1,6 @@
+v 9.4.1 (2017-07-25)
+- Fix allowed_images behavior !635
+
 v 9.4.0 (2017-07-22)
 - Use Go 1.8 for CI !620
 - Warn on archiving git directory !591
