@@ -37,13 +37,13 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	// Start pre-build container which will git clone changes
-	s.predefinedContainer, err = s.createContainer("predefined", buildImage, []string{"gitlab-runner-build"})
+	s.predefinedContainer, err = s.createContainer("predefined", buildImage, []string{"gitlab-runner-build"}, []string{prebuildImage.ID})
 	if err != nil {
 		return err
 	}
 
 	// Start build container which will run actual build
-	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand)
+	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
 	if err != nil {
 		return err
 	}

@@ -70,6 +70,40 @@ func TestDockerCommandBuildFail(t *testing.T) {
 	assert.Contains(t, err.Error(), "exit code 1")
 }
 
+func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	successfulBuild.Image = common.Image{Name: "$IMAGE_NAME"}
+	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+		Key:      "IMAGE_NAME",
+		Value:    "alpine",
+		Public:   true,
+		Internal: false,
+		File:     false,
+	})
+	successfulBuild.Services = append(successfulBuild.Services, common.Image{Name: "docker:dind"})
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					AllowedImages:   []string{"alpine"},
+					AllowedServices: []string{"docker:dind"},
+					Privileged:      true,
+				},
+			},
+		},
+	}
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
 func TestDockerCommandMissingImage(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
