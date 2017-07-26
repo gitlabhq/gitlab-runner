@@ -169,16 +169,16 @@ concurrent = 4
   executor = "kubernetes"
   [runners.kubernetes]
     [[runners.kubernetes.volumes.host_path]]
-      name = "HostPath"
+      name = "hostpath-1"
       mount_path = "/path/to/mount/point"
       read_only = true
       host_path = "/path/on/host"
     [[runners.kubernetes.volumes.host_path]]
-      name = "HostPath"
+      name = "hostpath-2"
       mount_path = "/path/to/mount/point_2"
       read_only = true
     [[runners.kubernetes.volumes.pvc]]
-      name = "PersistentVolumeClaim"
+      name = "pvc-1"
       mount_path = "/path/to/mount/point1"
     [[runners.kubernetes.volumes.config_map]]
       name = "config-map-1"
