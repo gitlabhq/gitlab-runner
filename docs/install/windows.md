@@ -55,7 +55,6 @@ Logs are stored in Windows Event Log.
     ```
 
 1. Download the binary for [x86][] or [amd64][] and replace runner's executable.
-
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
