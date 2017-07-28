@@ -190,7 +190,7 @@ more in [Distributed runners caching][caching].
 1. Stop the Runner:
 
     ```bash
-    killall -SIGQUIT gitlab-runner
+    killall -SIGQUIT gitlab-ci-multi-runner
     ```
 
 1. Wait until the Runner exits. You can check its status with: `gitlab-runner status`
