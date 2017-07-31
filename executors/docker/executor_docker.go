@@ -553,7 +553,7 @@ func (s *executor) splitServiceAndVersion(serviceDescription string) (service, v
 	return
 }
 
-func (s *executor) createService(service, version, image string, serviceDefinition common.Image) (*types.Container, error) {
+func (s *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image) (*types.Container, error) {
 	if len(service) == 0 {
 		return nil, errors.New("invalid service name")
 	}
@@ -566,7 +566,8 @@ func (s *executor) createService(service, version, image string, serviceDefiniti
 
 	s.printUsedDockerImageID(image, serviceImage.ID, "service", service)
 
-	containerName := s.Build.ProjectUniqueName() + "-" + strings.Replace(service, "/", "__", -1)
+	serviceSlug := strings.Replace(service, "/", "__", -1)
+	containerName := fmt.Sprintf("%s-%s-%d", s.Build.ProjectUniqueName(), serviceSlug, serviceIndex)
 
 	// this will fail potentially some builds if there's name collision
 	s.removeContainer(s.Context, containerName)
@@ -668,7 +669,7 @@ func (s *executor) buildServiceLinks(linksMap map[string]*types.Container) (link
 	return
 }
 
-func (s *executor) createFromServiceDefinition(serviceDefinition common.Image, linksMap map[string]*types.Container) (err error) {
+func (s *executor) createFromServiceDefinition(serviceIndex int, serviceDefinition common.Image, linksMap map[string]*types.Container) (err error) {
 	var container *types.Container
 
 	service, version, imageName, linkNames := s.splitServiceAndVersion(serviceDefinition.Name)
@@ -685,7 +686,7 @@ func (s *executor) createFromServiceDefinition(serviceDefinition common.Image, l
 
 		// Create service if not yet created
 		if container == nil {
-			container, err = s.createService(service, version, imageName, serviceDefinition)
+			container, err = s.createService(serviceIndex, service, version, imageName, serviceDefinition)
 			if err != nil {
 				return
 			}
@@ -705,8 +706,8 @@ func (s *executor) createServices() (err error) {
 
 	linksMap := make(map[string]*types.Container)
 
-	for _, serviceDefinition := range servicesDefinitions {
-		err = s.createFromServiceDefinition(serviceDefinition, linksMap)
+	for index, serviceDefinition := range servicesDefinitions {
+		err = s.createFromServiceDefinition(index, serviceDefinition, linksMap)
 		if err != nil {
 			return
 		}

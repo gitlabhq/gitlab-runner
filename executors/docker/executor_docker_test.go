@@ -128,7 +128,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	var c docker_helpers.MockClient
 	defer c.AssertExpectations(t)
 
-	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s", strings.Replace(serviceName, "/", "__", -1))
+	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s-0", strings.Replace(serviceName, "/", "__", -1))
 	networkID := "network-id"
 
 	e := executor{client: &c}
@@ -176,7 +176,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Once()
 
 	linksMap := make(map[string]*types.Container)
-	err := e.createFromServiceDefinition(common.Image{Name: description}, linksMap)
+	err := e.createFromServiceDefinition(0, common.Image{Name: description}, linksMap)
 	assert.NoError(t, err)
 }
 
@@ -882,7 +882,7 @@ func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *com
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
 		Return(nil).Once()
 
-	_, err := e.createService("build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}})
+	_, err := e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}})
 	assert.NoError(t, err, "Should create service container without errors")
 }
 

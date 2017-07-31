@@ -222,6 +222,41 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	assert.EqualError(t, err, "canceled")
 }
 
+func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	successfulBuild.Services = common.Services{
+		{Name: "alpine", Alias: "service-1"},
+		{Name: "alpine", Alias: "service-2"},
+	}
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "alpine",
+				},
+			},
+		},
+	}
+
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	assert.NoError(t, err)
+	str := buffer.String()
+
+	re, err := regexp.Compile("(?m)Conflict. The container name [^ ]+ is already in use by container")
+	require.NoError(t, err)
+	assert.NotRegexp(t, re, str, "Both service containers should be started and use different name")
+}
+
 func TestDockerCommandOutput(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
