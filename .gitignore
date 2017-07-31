@@ -6,8 +6,10 @@ builds/
 commands/helpers/archive.zip
 executors/docker/bindata.go
 dockerfiles/alpine/gitlab-ci-multi-runner-linux-amd64
+dockerfiles/alpine/checksums.sha256
 dockerfiles/build/gitlab-runner-helper
 dockerfiles/ubuntu/gitlab-ci-multi-runner_amd64.deb
+dockerfiles/ubuntu/checksums.sha256
 .idea/
 .editorconfig
 tests/ubuntu/.vagrant
