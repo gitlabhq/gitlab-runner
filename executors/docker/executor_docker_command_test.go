@@ -470,6 +470,72 @@ func TestCacheInContainer(t *testing.T) {
 	assert.NotContains(t, output, skipCacheUpload, "Cache upload should be performed with policy: push")
 }
 
+func TestDockerImageNameFromVariable(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+		Key:   "CI_REGISTRY_IMAGE",
+		Value: "alpine",
+	})
+	successfulBuild.Image = common.Image{
+		Name: "$CI_REGISTRY_IMAGE",
+	}
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:           "alpine",
+					AllowedServices: []string{"alpine"},
+				},
+			},
+		},
+	}
+
+	re := regexp.MustCompile("(?m)^ERROR: The [^ ]+ is not present on list of allowed images")
+
+	output := runTestJobWithOutput(t, build)
+	assert.NotRegexp(t, re, output, "Image's name should be expanded from variable")
+}
+
+func TestDockerServiceNameFromVariable(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+		Key:   "CI_REGISTRY_IMAGE",
+		Value: "alpine",
+	})
+	successfulBuild.Services = append(successfulBuild.Services, common.Image{
+		Name: "$CI_REGISTRY_IMAGE",
+	})
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:           "alpine",
+					AllowedServices: []string{"alpine"},
+				},
+			},
+		},
+	}
+
+	re := regexp.MustCompile("(?m)^ERROR: The [^ ]+ is not present on list of allowed services")
+
+	output := runTestJobWithOutput(t, build)
+	assert.NotRegexp(t, re, output, "Service's name should be expanded from variable")
+}
+
 func runDockerInDocker(version string) (id string, err error) {
 	cmd := exec.Command("docker", "run", "--detach", "--privileged", "-p", "2375", "docker:"+version+"-dind")
 	cmd.Stderr = os.Stderr
