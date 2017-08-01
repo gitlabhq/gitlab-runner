@@ -83,7 +83,9 @@ logout() {
 }
 
 cp out/deb/gitlab-ci-multi-runner_amd64.deb dockerfiles/ubuntu/
+cp dockerfiles/checksums.sha256 dockerfiles/ubuntu
 cp out/binaries/gitlab-ci-multi-runner-linux-amd64 dockerfiles/alpine
+cp dockerfiles/checksums.sha256 dockerfiles/alpine
 
 build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu
 build "gitlab/gitlab-runner:alpine-${ref_tag}" dockerfiles/alpine

@@ -1,8 +1,5 @@
 FROM ubuntu:14.04
 
-ADD https://github.com/Yelp/dumb-init/releases/download/v1.0.2/dumb-init_1.0.2_amd64 /usr/bin/dumb-init
-RUN chmod +x /usr/bin/dumb-init
-
 RUN apt-get update -y && \
     apt-get upgrade -y && \
     apt-get install -y ca-certificates wget apt-transport-https vim nano && \
@@ -10,6 +7,7 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 COPY gitlab-ci-multi-runner_amd64.deb /tmp/
+COPY checksums.sha256 /tmp/
 RUN dpkg -i /tmp/gitlab-ci-multi-runner_amd64.deb; \
     apt-get update &&  \
     apt-get -f install -y && \
@@ -17,10 +15,15 @@ RUN dpkg -i /tmp/gitlab-ci-multi-runner_amd64.deb; \
     rm -rf /var/lib/apt/lists/* && \
     rm /tmp/gitlab-ci-multi-runner_amd64.deb && \
     gitlab-runner --version && \
-    wget -q https://github.com/docker/machine/releases/download/v0.10.0/docker-machine-Linux-x86_64 -O /usr/bin/docker-machine && \
-    chmod +x /usr/bin/docker-machine && \
     mkdir -p /etc/gitlab-runner/certs && \
-    chmod -R 700 /etc/gitlab-runner
+    chmod -R 700 /etc/gitlab-runner && \
+    wget -q https://github.com/docker/machine/releases/download/v0.12.2/docker-machine-Linux-x86_64 -O /usr/bin/docker-machine && \
+    chmod +x /usr/bin/docker-machine && \
+    docker-machine --version && \
+    wget -q https://github.com/Yelp/dumb-init/releases/download/v1.0.2/dumb-init_1.0.2_amd64 -O /usr/bin/dumb-init && \
+    chmod +x /usr/bin/dumb-init && \
+    dumb-init --version && \
+    sha256sum --check --strict /tmp/checksums.sha256
 
 COPY entrypoint /
 RUN chmod +x /entrypoint
