@@ -622,13 +622,12 @@ func (s *executor) getServicesDefinitions() (common.Services, error) {
 
 	for _, service := range s.Build.Services {
 		serviceName := s.Build.GetAllVariables().ExpandValue(service.Name)
-		err := s.verifyAllowedImage(service.Name, "services", s.Config.Docker.AllowedServices, s.Config.Docker.Services)
+		err := s.verifyAllowedImage(serviceName, "services", s.Config.Docker.AllowedServices, s.Config.Docker.Services)
 		if err != nil {
 			return nil, err
 		}
 
 		service.Name = serviceName
-
 		serviceDefinitions = append(serviceDefinitions, service)
 	}
 
