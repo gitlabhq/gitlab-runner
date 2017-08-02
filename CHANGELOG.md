@@ -1,3 +1,7 @@
+v 9.4.2 (2017-08-02)
+- Fix usage of one image for multiple services in one job !639
+- Fix services usage when service name is using variable !641
+
 v 9.4.1 (2017-07-25)
 - Fix allowed_images behavior !635
 
