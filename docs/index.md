@@ -1,3 +1,7 @@
+---
+toc: false
+---
+
 # GitLab Runner
 
 [![Build Status](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/badges/master/build.svg)](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner)
