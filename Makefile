@@ -33,7 +33,8 @@ OUR_PACKAGES=$(shell go list ./... | grep -v '/vendor/')
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
-              -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH)
+              -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
+              -s -w
 GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED := 0
 
