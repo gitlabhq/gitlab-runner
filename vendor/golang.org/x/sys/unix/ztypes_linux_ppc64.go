@@ -1,7 +1,6 @@
+// +build ppc64,linux
 // Created by cgo -godefs - DO NOT EDIT
 // cgo -godefs types_linux.go
-
-// +build ppc64,linux
 
 package unix
 
@@ -591,17 +590,17 @@ type EpollEvent struct {
 const (
 	AT_FDCWD            = -0x64
 	AT_REMOVEDIR        = 0x200
+	AT_SYMLINK_FOLLOW   = 0x400
 	AT_SYMLINK_NOFOLLOW = 0x100
 )
 
 type Termios struct {
-	Iflag     uint32
-	Oflag     uint32
-	Cflag     uint32
-	Lflag     uint32
-	Line      uint8
-	Cc        [32]uint8
-	Pad_cgo_0 [3]byte
-	Ispeed    uint32
-	Ospeed    uint32
+	Iflag  uint32
+	Oflag  uint32
+	Cflag  uint32
+	Lflag  uint32
+	Cc     [19]uint8
+	Line   uint8
+	Ispeed uint32
+	Ospeed uint32
 }
