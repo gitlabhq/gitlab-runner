@@ -19,7 +19,9 @@ This is how you can run GitLab Runner inside a Docker container.
       -v /var/run/docker.sock:/var/run/docker.sock \
       gitlab/gitlab-runner:latest
     ```
-
+    
+    *On OSX, substitute the path "/Users/Shared" for "/srv".*
+    
     Or, you can use a config container to mount your custom data volume:
 
     ```bash
