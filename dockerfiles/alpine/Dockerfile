@@ -7,7 +7,9 @@ RUN apk add --update \
     ca-certificates \
     git \
     openssl \
+    tzdata \
     wget
+    
 
 COPY gitlab-ci-multi-runner-linux-amd64 /usr/bin/gitlab-ci-multi-runner
 COPY checksums.sha256 /tmp/
