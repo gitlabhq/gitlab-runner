@@ -72,7 +72,7 @@ Learn how to [register a GitLab Runner](register/index.md).
 
 GitLab Runner implements a number of executors that can be used to run your
 builds in different scenarios. If you are not sure what to select, read the
-[I'm not sure](executors/README.md#imnotsure) section.
+[I am not sure](executors/README.md#i-am-not-sure) section.
 Visit the [compatibility chart](executors/README.md#compatibility-chart) to find
 out what features each executor supports and what not.
 
