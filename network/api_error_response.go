@@ -48,7 +48,7 @@ func (a APIErrorResponse) ErrorMessages() []string {
 	out := []string{}
 	for key, messages := range problems {
 		for _, message := range messages {
-			out = append(out, key+": "+message)
+			out = append(out, fmt.Sprintf("%s: %s", key, message))
 		}
 	}
 
