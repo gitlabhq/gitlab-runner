@@ -11,6 +11,22 @@ import (
 
 type APIErrorResponse map[string]map[string][]string
 
+func (a APIErrorResponse) ErrorMessages() []string {
+	problems, ok := a["message"]
+	if !ok {
+		return []string{"Unknown error"}
+	}
+
+	out := []string{}
+	for key, messages := range problems {
+		for _, message := range messages {
+			out = append(out, fmt.Sprintf("%s: %s", key, message))
+		}
+	}
+
+	return out
+}
+
 func logAPIErrorMessages(res *http.Response) (err error) {
 	mimeType, err := getResponseMimeType(res)
 	if err != nil {
@@ -37,20 +53,4 @@ func logAPIErrorMessages(res *http.Response) (err error) {
 	}
 
 	return nil
-}
-
-func (a APIErrorResponse) ErrorMessages() []string {
-	problems, ok := a["message"]
-	if !ok {
-		return []string{"Unknown error"}
-	}
-
-	out := []string{}
-	for key, messages := range problems {
-		for _, message := range messages {
-			out = append(out, fmt.Sprintf("%s: %s", key, message))
-		}
-	}
-
-	return out
 }
