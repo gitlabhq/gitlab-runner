@@ -29,7 +29,7 @@ func logAPIErrorMessages(res *http.Response) (err error) {
 	var apiErrorResponse APIErrorResponse
 	err = json.NewDecoder(res.Body).Decode(&apiErrorResponse)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error decoding json payload %v", err)
 	}
 
 	for _, message := range apiErrorResponse.ErrorMessages() {
