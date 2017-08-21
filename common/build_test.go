@@ -267,6 +267,51 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	assert.EqualError(t, err, "build fail")
 }
 
+func TestArtifactUploadRunFailure(t *testing.T) {
+	e := MockExecutor{}
+	defer e.AssertExpectations(t)
+
+	p := MockExecutorProvider{}
+	defer p.AssertExpectations(t)
+
+	// Create executor
+	p.On("Create").Return(&e).Once()
+
+	// Prepare plan
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	e.On("Cleanup").Return()
+
+	// Successful build script
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Times(8)
+	e.On("Run", mock.Anything).Return(nil).Times(7)
+	// Fail last stage (upload stage)
+	e.On("Run", mock.Anything).Return(errors.New("upload fail")).Once()
+	e.On("Finish", errors.New("upload fail")).Return().Once()
+
+	RegisterExecutor("build-upload-artifacts-run-failure", &p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	successfulBuild.Artifacts = make(Artifacts, 1)
+	successfulBuild.Artifacts[0] = Artifact{
+		Name:      "my-artifact",
+		Untracked: false,
+		Paths:     ArtifactPaths{"cached/*"},
+		When:      ArtifactWhenAlways,
+	}
+	assert.NoError(t, err)
+	build := &Build{
+		JobResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-upload-artifacts-run-failure",
+			},
+		},
+	}
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.EqualError(t, err, "upload fail")
+}
+
 func TestRestoreCacheRunFailure(t *testing.T) {
 	e := MockExecutor{}
 	defer e.AssertExpectations(t)

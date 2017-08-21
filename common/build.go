@@ -173,27 +173,17 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 }
 
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
-	jobState := state
+	var uploadError error
 
-	for _, artifacts := range b.Artifacts {
-		when := artifacts.When
-		if state == nil {
-			// Previous stages were successful
-			if when == "" || when == ArtifactWhenOnSuccess || when == ArtifactWhenAlways {
-				state = b.executeStage(ctx, BuildStageUploadArtifacts, executor)
-			}
-		} else {
-			// Previous stage did fail
-			if when == ArtifactWhenOnFailure || when == ArtifactWhenAlways {
-				err = b.executeStage(ctx, BuildStageUploadArtifacts, executor)
-			}
+	for _, artifact := range b.JobResponse.Artifacts {
+		if artifact.ShouldUpload(state) {
+			uploadError = b.executeStage(ctx, BuildStageUploadArtifacts, executor)
+		}
+		if uploadError != nil {
+			err = uploadError
 		}
 	}
 
-	// Use job's error if set
-	if jobState != nil {
-		err = jobState
-	}
 	return
 }
 
@@ -226,7 +216,14 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	if err == nil {
 		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
 	}
-	err = b.executeUploadArtifacts(ctx, err, executor)
+
+	jobState := err
+	err = b.executeUploadArtifacts(ctx, jobState, executor)
+
+	// Use job's error if set
+	if jobState != nil {
+		err = jobState
+	}
 	return err
 }
 

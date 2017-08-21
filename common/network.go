@@ -168,12 +168,24 @@ const (
 	ArtifactWhenAlways    ArtifactWhen = "always"
 )
 
+func (when ArtifactWhen) OnSuccess() bool {
+	return when == "" || when == ArtifactWhenOnSuccess || when == ArtifactWhenAlways
+}
+
+func (when ArtifactWhen) OnFailure() bool {
+	return when == ArtifactWhenOnFailure || when == ArtifactWhenAlways
+}
+
 type Artifact struct {
 	Name      string        `json:"name"`
 	Untracked bool          `json:"untracked"`
 	Paths     ArtifactPaths `json:"paths"`
 	When      ArtifactWhen  `json:"when"`
 	ExpireIn  string        `json:"expire_in"`
+}
+
+func (a Artifact) ShouldUpload(state error) bool {
+	return (state == nil && a.When.OnSuccess()) || (state != nil && a.When.OnFailure())
 }
 
 type Artifacts []Artifact
