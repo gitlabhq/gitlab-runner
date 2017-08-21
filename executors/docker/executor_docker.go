@@ -785,6 +785,7 @@ func (s *executor) createContainer(containerType string, imageDefinition common.
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},
+		Tmpfs:   s.Config.Docker.Tmpfs,
 		Sysctls: s.Config.Docker.SysCtls,
 	}
 

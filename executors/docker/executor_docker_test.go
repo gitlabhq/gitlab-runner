@@ -938,6 +938,19 @@ func TestDockerServicesTmpfsSetting(t *testing.T) {
 
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
 }
+func TestDockerTmpfsSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		Tmpfs: map[string]string{
+			"/tmpfs": "rw,noexec",
+		},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		require.NotEmpty(t, hostConfig.Tmpfs)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
 func TestDockerUserNSSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		UsernsMode: "host",
