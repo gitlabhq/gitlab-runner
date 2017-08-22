@@ -1,3 +1,23 @@
+v 9.5.0 (2017-08-22)
+- Fix allowed_images behavior !635
+- Cleanup formatting on windows upgrade details !637
+- Names must meet the DNS name requirements (no upper case) !636
+- Execute steps for build as-is, without joining and splitting them !626
+- Fix typo on killall command !638
+- Fix usage of one image for multiple services in one job !639
+- Update Docker Machine to 0.12.2 and add checksum checking for Docker Machine and dumb-init for official Docker images !640
+- Fix services usage when service name is using variable !641
+- Remove confusing compatibility check !642
+- Add sysctl support for Docker executor !541
+- Reduce binary size with removing debugging symbols !643
+- Add support for credentials store !501
+- Fix I am not sure section link !650
+- Add tzdata by default to official Docker images to avoid OffPeakPeriods timezone error !649
+- Fix read error from upload artifacts execution !645
+- Add support for tmpfs on the job container !654
+- Include note about volume path on OSX !648
+- Start using 'toc' in yaml frontmatter to explicitly disable it !644
+
 v 9.4.0 (2017-07-22)
 - Use Go 1.8 for CI !620
 - Warn on archiving git directory !591
