@@ -66,12 +66,6 @@
 			"revision": "99c3df83b51532e3615f851d8c2dbb638f5313bf"
 		},
 		{
-			"checksumSHA1": "5VX2b0wPZpmryYf3jXwpfQsgGKg=",
-			"comment": "v1.8.0-4-g142e6cd",
-			"path": "github.com/codegangsta/cli",
-			"revision": "142e6cd241a4dfbf7f07a018f1f8225180018da4"
-		},
-		{
 			"checksumSHA1": "Z2AOGSmDKKvI6nuxa+UPjQWpIeM=",
 			"path": "github.com/coreos/go-oidc/http",
 			"revision": "1efe0e1303a62da553fcb6beb8bd2aa9250c0ca8"
@@ -913,10 +907,10 @@
 			"revision": "4a1cb5252a6951f715a85d0e4be334c2a2dbf2a2"
 		},
 		{
-			"checksumSHA1": "rEIS5EfbhPRBasakArGCeOWwY8c=",
+			"checksumSHA1": "wHJK2MbuCCBwndMy6qzRMCDuQ1E=",
 			"path": "github.com/urfave/cli",
-			"revision": "55f715e28c46073d0e217e2ce8eb46b0b45e3db6",
-			"revisionTime": "2016-10-06T03:53:53Z"
+			"revision": "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
+			"revisionTime": "2017-08-11T01:42:03Z"
 		},
 		{
 			"checksumSHA1": "xMhZY52HabUCN/3v3xkP/w3bYsc=",
