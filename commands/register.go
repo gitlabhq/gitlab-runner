@@ -27,7 +27,7 @@ type RegisterCommand struct {
 	LeaveRunner       bool   `long:"leave-runner" env:"REGISTER_LEAVE_RUNNER" description:"Don't remove runner if registration fails"`
 	RegistrationToken string `short:"r" long:"registration-token" env:"REGISTRATION_TOKEN" description:"Runner's registration token"`
 	RunUntagged       bool   `long:"run-untagged" env:"REGISTER_RUN_UNTAGGED" description:"Register to run untagged builds; defaults to 'true' when 'tag-list' is empty"`
-	Locked            bool   `long:"locked" env:"REGISTER_LOCKED" description:"Lock Runner for current project, defaults to 'false'"`
+	Locked            bool   `long:"locked" env:"REGISTER_LOCKED" description:"Lock Runner for current project, defaults to 'true'"`
 
 	common.RunnerConfig
 }
@@ -157,7 +157,7 @@ func (s *RegisterCommand) askRunner() {
 			}
 		}
 
-		locked, err := strconv.ParseBool(s.ask("locked", "Whether to lock Runner to current project [true/false]:", false))
+		locked, err := strconv.ParseBool(s.ask("locked", "Whether to lock the Runner to current project [true/false]:", true))
 		if err != nil {
 			log.Panicf("Failed to parse option 'locked': %v", err)
 		}

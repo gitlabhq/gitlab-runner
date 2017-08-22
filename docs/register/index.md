@@ -60,11 +60,11 @@ To register a Runner under GNU/Linux:
 
 1. Choose whether to lock the Runner to the current project, you can change
    this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   false):
+   true):
 
     ```
     Whether to lock Runner to current project [true/false]:
-    [false]: false
+    [true]: true
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
@@ -131,11 +131,11 @@ To register a Runner under macOS:
 
 1. Choose whether to lock the Runner to the current project, you can change
    this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   false):
+   true):
 
     ```
     Whether to lock Runner to current project [true/false]:
-    [false]: false
+    [true]: true
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
@@ -203,11 +203,11 @@ To register a Runner under Windows:
 
 1. Choose whether to lock the Runner to the current project, you can change
    this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   false):
+   true):
 
     ```
     Whether to lock Runner to current project [true/false]:
-    [false]: false
+    [true]: true
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
@@ -281,7 +281,7 @@ To register a Runner under FreeBSD:
 
     ```
     Whether to lock Runner to current project [true/false]:
-    [false]: false
+    [true]: true
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
@@ -348,11 +348,11 @@ To register a Runner using a Docker container:
 
 1. Choose whether to lock the Runner to the current project, you can change
    this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   false):
+   true):
 
     ```
     Whether to lock Runner to current project [true/false]:
-    [false]: false
+    [true]: true
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
