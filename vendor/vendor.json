@@ -937,9 +937,10 @@
 			"revisionTime": "2016-09-27T02:54:18Z"
 		},
 		{
-			"checksumSHA1": "A+G1gBUl5JkopfxqoL/ojs/zThE=",
+			"checksumSHA1": "AsIommRofK62X9WOgOrtHXRFjqo=",
 			"path": "gitlab.com/ayufan/golang-cli-helpers",
-			"revision": "0a14b63a7466ee44de4a90f998fad73afa8482bf"
+			"revision": "308be8b1ccf3b8e896a0e572ea2eb7599d369bef",
+			"revisionTime": "2017-04-25T20:31:14Z"
 		},
 		{
 			"checksumSHA1": "h+pFYiRHBogczS8/F1NoN3Ata44=",

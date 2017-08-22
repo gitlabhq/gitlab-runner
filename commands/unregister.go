@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 
 	log "github.com/Sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"

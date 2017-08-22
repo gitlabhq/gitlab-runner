@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/docker/pkg/homedir"
+	"github.com/urfave/cli"
 )
 
 func FixHOME(app *cli.App) {

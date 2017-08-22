@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/urfave/cli"
 )
 
 var NAME = "gitlab-ci-multi-runner"
