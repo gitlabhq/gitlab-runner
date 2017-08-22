@@ -2,7 +2,7 @@ package common
 
 import "github.com/stretchr/testify/mock"
 
-import "github.com/codegangsta/cli"
+import "github.com/urfave/cli"
 
 type MockCommander struct {
 	mock.Mock

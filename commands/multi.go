@@ -13,9 +13,9 @@ import (
 	"time"
 
 	service "github.com/ayufan/golang-kardianos-service"
-	"github.com/codegangsta/cli"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/urfave/cli"
 
 	log "github.com/Sirupsen/logrus"
 

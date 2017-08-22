@@ -6,7 +6,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 func LogRuntimePlatform(app *cli.App) {

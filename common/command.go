@@ -2,7 +2,7 @@ package common
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	"gitlab.com/ayufan/golang-cli-helpers"
 )
 

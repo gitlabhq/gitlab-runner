@@ -4,7 +4,7 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 func SetupCPUProfile(app *cli.App) {

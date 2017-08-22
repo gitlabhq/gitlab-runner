@@ -3,7 +3,7 @@ package clihelpers
 import (
 	"strings"
 	"reflect"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 type StructFieldValue struct {
