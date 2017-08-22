@@ -913,6 +913,12 @@
 			"revision": "4a1cb5252a6951f715a85d0e4be334c2a2dbf2a2"
 		},
 		{
+			"checksumSHA1": "rEIS5EfbhPRBasakArGCeOWwY8c=",
+			"path": "github.com/urfave/cli",
+			"revision": "55f715e28c46073d0e217e2ce8eb46b0b45e3db6",
+			"revisionTime": "2016-10-06T03:53:53Z"
+		},
+		{
 			"checksumSHA1": "xMhZY52HabUCN/3v3xkP/w3bYsc=",
 			"path": "github.com/vbatts/tar-split/archive/tar",
 			"revision": "bd4c5d64c3e9297f410025a3b1bd0c58f659e721",
