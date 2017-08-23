@@ -49,21 +49,40 @@ func logAPIErrorMessages(res *http.Response) (err error) {
 
 	bodyBytes, err := ioutil.ReadAll(res.Body)
 
-	var validationErrorResponse APIValidationErrorResponse
-	err = json.Unmarshal(bodyBytes, &validationErrorResponse)
+	err = logAPIValidationErrorMessages(bodyBytes)
 	if err != nil {
-		var genericErrorResponse APIGenericErrorResponse
-		err = json.Unmarshal(bodyBytes, &genericErrorResponse)
+		err = logAPIGenericErrorMessages(bodyBytes)
 		if err != nil {
 			return fmt.Errorf("Error decoding json payload %v", err)
 		}
-		message := genericErrorResponse.Message()
-		logrus.Errorln(message)
-	} else {
-		for _, message := range validationErrorResponse.ErrorMessages() {
-			logrus.Errorln(message)
-		}
 	}
+
+	return nil
+}
+
+func logAPIValidationErrorMessages(bodyBytes []byte) (err error) {
+	var validationErrorResponse APIValidationErrorResponse
+	err = json.Unmarshal(bodyBytes, &validationErrorResponse)
+	if err != nil {
+		return err
+	}
+
+	for _, message := range validationErrorResponse.ErrorMessages() {
+		logrus.Errorln(message)
+	}
+
+	return nil
+}
+
+func logAPIGenericErrorMessages(bodyBytes []byte) (err error) {
+	var genericErrorResponse APIGenericErrorResponse
+	err = json.Unmarshal(bodyBytes, &genericErrorResponse)
+	if err != nil {
+		return err
+	}
+
+	message := genericErrorResponse.Message()
+	logrus.Errorln(message)
 
 	return nil
 }
