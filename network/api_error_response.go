@@ -9,9 +9,10 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-type APIErrorResponse map[string]map[string][]string
+type APIValidationErrorResponse map[string]map[string][]string
+type APIGenericErrorResponse map[string]string
 
-func (a APIErrorResponse) ErrorMessages() []string {
+func (a APIValidationErrorResponse) ErrorMessages() []string {
 	problems, ok := a["message"]
 	if !ok {
 		return []string{"Unknown error"}
@@ -25,6 +26,15 @@ func (a APIErrorResponse) ErrorMessages() []string {
 	}
 
 	return out
+}
+
+func (g APIGenericErrorResponse) Message() string {
+	problem, ok := g["message"]
+	if !ok {
+		return "Unknown error"
+	}
+
+	return problem
 }
 
 func logAPIErrorMessages(res *http.Response) (err error) {
@@ -42,14 +52,22 @@ func logAPIErrorMessages(res *http.Response) (err error) {
 		return fmt.Errorf("Server should return application/json. Got: %v", mimeType)
 	}
 
-	var apiErrorResponse APIErrorResponse
-	err = json.NewDecoder(res.Body).Decode(&apiErrorResponse)
-	if err != nil {
-		return fmt.Errorf("Error decoding json payload %v", err)
-	}
+	bodyBytes, err := ioutil.ReadAll(res.Body)
 
-	for _, message := range apiErrorResponse.ErrorMessages() {
+	var validationErrorResponse APIValidationErrorResponse
+	err = json.Unmarshal(bodyBytes, &validationErrorResponse)
+	if err != nil {
+		var genericErrorResponse APIGenericErrorResponse
+		err = json.Unmarshal(bodyBytes, &genericErrorResponse)
+		if err != nil {
+			return fmt.Errorf("Error decoding json payload %v", err)
+		}
+		message := genericErrorResponse.Message()
 		logrus.Errorln(message)
+	} else {
+		for _, message := range validationErrorResponse.ErrorMessages() {
+			logrus.Errorln(message)
+		}
 	}
 
 	return nil
