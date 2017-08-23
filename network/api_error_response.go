@@ -44,11 +44,6 @@ func logAPIErrorMessages(res *http.Response) (err error) {
 	}
 
 	if mimeType != "application/json" {
-		if mimeType == "text/plain" {
-			logrus.Errorln(ioutil.ReadAll(res.Body))
-			return nil
-		}
-
 		return fmt.Errorf("Server should return application/json. Got: %v", mimeType)
 	}
 
