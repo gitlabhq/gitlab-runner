@@ -126,7 +126,7 @@ systems. If a binary is not installed tests requiring this binary will be
 skipped.
 
 These are the binaries that you can install:
-1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html)
 1. [kubectl](https://kubernetes.io/docs/user-guide/prereqs/) with
   [Minikube](https://github.com/kubernetes/minikube)
 1. [Parallels](http://www.parallels.com/products/desktop/download/)
