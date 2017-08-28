@@ -902,6 +902,12 @@
 			"revisionTime": "2017-07-13T17:13:24Z"
 		},
 		{
+			"checksumSHA1": "gHQ2dBOhcQ77GlEtXSOOkoV7e7A=",
+			"path": "github.com/tevino/abool",
+			"revision": "3c25f2fe7cd0ef3eabefce1d90efd69a65d35b12",
+			"revisionTime": "2016-06-28T10:11:33Z"
+		},
+		{
 			"checksumSHA1": "VDdgQz6FoZx6+4WrfrnrpBJIaDU=",
 			"path": "github.com/ugorji/go/codec",
 			"revision": "4a1cb5252a6951f715a85d0e4be334c2a2dbf2a2"

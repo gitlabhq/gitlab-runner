@@ -1,16 +1,17 @@
 package commands
 
 import (
-	"github.com/urfave/cli"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/tevino/abool"
+	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/network"
-	"os/signal"
-	"syscall"
 )
 
 type RunSingleCommand struct {
@@ -20,16 +21,16 @@ type RunSingleCommand struct {
 	lastBuild   time.Time
 	runForever  bool
 	MaxBuilds   int `long:"max-builds" description:"How many builds to process before exiting"`
-	finished    bool
+	finished    *abool.AtomicBool
 }
 
-func waitForInterrupts(finished *bool, abortSignal chan os.Signal, doneSignal chan int) {
+func waitForInterrupts(finished *abool.AtomicBool, abortSignal chan os.Signal, doneSignal chan int) {
 	signals := make(chan os.Signal)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 
 	interrupt := <-signals
 	if finished != nil {
-		*finished = true
+		finished.Set()
 	}
 
 	// request stop, but wait for force exit
@@ -108,11 +109,11 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 func (r *RunSingleCommand) checkFinishedConditions() {
 	if r.MaxBuilds < 1 && !r.runForever {
 		log.Println("This runner has processed its build limit, so now exiting")
-		r.finished = true
+		r.finished.Set()
 	}
 	if r.WaitTimeout > 0 && int(time.Since(r.lastBuild).Seconds()) > r.WaitTimeout {
 		log.Println("This runner has not received a job in", r.WaitTimeout, "seconds, so now exiting")
-		r.finished = true
+		r.finished.Set()
 	}
 	return
 }
@@ -135,16 +136,16 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 	log.Println("Starting runner for", r.URL, "with token", r.ShortDescription(), "...")
 
-	r.finished = false
+	r.finished = abool.New()
 	abortSignal := make(chan os.Signal)
 	doneSignal := make(chan int, 1)
 	r.runForever = r.MaxBuilds == 0
 
-	go waitForInterrupts(&r.finished, abortSignal, doneSignal)
+	go waitForInterrupts(r.finished, abortSignal, doneSignal)
 
 	r.lastBuild = time.Now()
 
-	for !r.finished {
+	for !r.finished.IsSet() {
 		data, err := executorProvider.Acquire(&r.RunnerConfig)
 		if err != nil {
 			log.Warningln("Executor update:", err)
