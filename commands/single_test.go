@@ -42,7 +42,6 @@ func TestSingleRunnerMaxBuilds(t *testing.T) {
 	single, cleanup := mockingExecutionStack(t, "test-max-build", maxBuilds, nil)
 	defer cleanup()
 
-	single.MaxBuilds = maxBuilds
 	single.Execute(nil)
 }
 
@@ -93,10 +92,14 @@ func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job
 
 	common.RegisterExecutor(executorName, &p)
 
-	return newRunSingleCommand(executorName, &mockNetwork), func() {
+	single := newRunSingleCommand(executorName, &mockNetwork)
+	single.MaxBuilds = maxBuilds
+	cleanup := func() {
 		e.AssertExpectations(t)
 		p.AssertExpectations(t)
 		mockNetwork.AssertExpectations(t)
 		cancel()
 	}
+
+	return single, cleanup
 }
