@@ -6,14 +6,14 @@ RUN apt-get update -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY gitlab-ci-multi-runner_amd64.deb /tmp/
+COPY gitlab-runner_amd64.deb /tmp/
 COPY checksums.sha256 /tmp/
-RUN dpkg -i /tmp/gitlab-ci-multi-runner_amd64.deb; \
+RUN dpkg -i /tmp/gitlab-runner_amd64.deb; \
     apt-get update &&  \
     apt-get -f install -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    rm /tmp/gitlab-ci-multi-runner_amd64.deb && \
+    rm /tmp/gitlab-runner_amd64.deb && \
     gitlab-runner --version && \
     mkdir -p /etc/gitlab-runner/certs && \
     chmod -R 700 /etc/gitlab-runner && \

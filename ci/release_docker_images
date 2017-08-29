@@ -82,9 +82,9 @@ logout() {
     _docker logout "${1}"
 }
 
-cp out/deb/gitlab-ci-multi-runner_amd64.deb dockerfiles/ubuntu/
+cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/
 cp dockerfiles/checksums.sha256 dockerfiles/ubuntu
-cp out/binaries/gitlab-ci-multi-runner-linux-amd64 dockerfiles/alpine
+cp out/binaries/gitlab-runner-linux-amd64 dockerfiles/alpine
 cp dockerfiles/checksums.sha256 dockerfiles/alpine
 
 build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu

@@ -11,10 +11,10 @@ RUN apk add --update \
     wget
     
 
-COPY gitlab-ci-multi-runner-linux-amd64 /usr/bin/gitlab-ci-multi-runner
+COPY gitlab-runner-linux-amd64 /usr/bin/gitlab-runner
 COPY checksums.sha256 /tmp/
-RUN chmod +x /usr/bin/gitlab-ci-multi-runner && \
-    ln -s /usr/bin/gitlab-ci-multi-runner /usr/bin/gitlab-runner && \
+RUN chmod +x /usr/bin/gitlab-runner && \
+    ln -s /usr/bin/gitlab-runner /usr/bin/gitlab-ci-multi-runner && \
     gitlab-runner --version && \
     mkdir -p /etc/gitlab-runner/certs && \
     chmod -R 700 /etc/gitlab-runner && \

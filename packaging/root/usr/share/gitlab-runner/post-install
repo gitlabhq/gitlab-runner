@@ -34,13 +34,21 @@ if [ -f $HOMEDIR/config.toml ] && [ ! -f /etc/gitlab-runner/config.toml ]; then
 fi
 
 # uninstall old service
-gitlab-ci-multi-runner stop --service="gitlab-ci-multi-runner" >/dev/null 2>/dev/null || :
-gitlab-ci-multi-runner uninstall --service="gitlab-ci-multi-runner" >/dev/null 2>/dev/null || :
+if gitlab-runner status --service="gitlab-runner"; then
+  gitlab-runner stop --service="gitlab-runner" >/dev/null 2>/dev/null || :
+  gitlab-runner uninstall --service="gitlab-runner" >/dev/null 2>/dev/null || :
+fi
+
+# if migrating from pre 10.0.0 installation
+if gitlab-runner status --service="gitlab-ci-multi-runner"; then
+  gitlab-runner stop --service="gitlab-ci-multi-runner" >/dev/null 2>/dev/null || :
+  gitlab-runner uninstall --service="gitlab-ci-multi-runner" >/dev/null 2>/dev/null || :
+fi
 
 # re-register runner
-gitlab-ci-multi-runner stop >/dev/null 2>/dev/null || :
-gitlab-ci-multi-runner uninstall >/dev/null 2>/dev/null || :
-gitlab-ci-multi-runner install --user=$USER --working-directory=$HOMEDIR
+gitlab-runner stop >/dev/null 2>/dev/null || :
+gitlab-runner uninstall >/dev/null 2>/dev/null || :
+gitlab-runner install --user=$USER --working-directory=$HOMEDIR
 
 # start runner service
-gitlab-ci-multi-runner start || :
+gitlab-runner start || :

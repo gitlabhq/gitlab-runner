@@ -1,6 +1,5 @@
-NAME ?= gitlab-ci-multi-runner
+NAME ?= gitlab-runner
 PACKAGE_NAME ?= $(NAME)
-PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
 export VERSION := $(shell ./ci/version)
 REVISION := $(shell git rev-parse --short=8 HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
@@ -46,7 +45,7 @@ help:
 	# make version - show information about current version
 	#
 	# Development commands:
-	# make install - install the version suitable for your OS as gitlab-ci-multi-runner
+	# make install - install the version suitable for your OS as gitlab-runner
 	# make docker - build docker dependencies
 	#
 	# Testing commands:
@@ -111,7 +110,7 @@ else
 	$(warning WARNING: and remove out/docker/prebuilt-x86_64.tar.xz)
 	$(warning =============================================)
 	curl -o out/docker/prebuilt-x86_64.tar.xz \
-		https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz
+		https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz
 endif
 
 out/docker/prebuilt-arm.tar.xz: $(GO_FILES)
@@ -139,7 +138,7 @@ else
 	$(warning WARNING: and remove out/docker/prebuilt-arm.tar.xz)
 	$(warning =============================================)
 	curl -o out/docker/prebuilt-arm.tar.xz \
-		https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz
+		https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz
 endif
 
 executors/docker/bindata.go: out/docker/prebuilt-x86_64.tar.xz out/docker/prebuilt-arm.tar.xz
@@ -268,14 +267,16 @@ package-deb-fpm:
 		--deb-compression bzip2 \
 		--after-install packaging/scripts/postinst.deb \
 		--before-remove packaging/scripts/prerm.deb \
-		--url https://gitlab.com/gitlab-org/gitlab-ci-multi-runner \
+		--url https://gitlab.com/gitlab-org/gitlab-runner \
 		--description "GitLab Runner" \
 		-m "GitLab Inc. <support@gitlab.com>" \
 		--license "MIT" \
 		--vendor "GitLab Inc." \
-		--conflicts $(PACKAGE_CONFLICT) \
-		--provides gitlab-runner \
-		--replaces gitlab-runner \
+		--conflicts $(PACKAGE_NAME)-beta \
+		--conflicts gitlab-ci-multi-runner \
+		--conflicts gitlab-ci-multi-runner-beta \
+		--provides gitlab-ci-multi-runner \
+		--replaces gitlab-ci-multi-runner \
 		--depends ca-certificates \
 		--depends git \
 		--depends curl \
@@ -283,7 +284,7 @@ package-deb-fpm:
 		--deb-suggests docker-engine \
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-ci-multi-runner
+		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-runner
 
 package-rpm-fpm:
 	@mkdir -p out/rpm/
@@ -293,20 +294,22 @@ package-rpm-fpm:
 		--force \
 		--after-install packaging/scripts/postinst.rpm \
 		--before-remove packaging/scripts/prerm.rpm \
-		--url https://gitlab.com/gitlab-org/gitlab-ci-multi-runner \
+		--url https://gitlab.com/gitlab-org/gitlab-runner \
 		--description "GitLab Runner" \
 		-m "GitLab Inc. <support@gitlab.com>" \
 		--license "MIT" \
 		--vendor "GitLab Inc." \
-		--conflicts $(PACKAGE_CONFLICT) \
-		--provides gitlab-runner \
-		--replaces gitlab-runner \
+		--conflicts $(PACKAGE_NAME)-beta \
+		--conflicts gitlab-ci-multi-runner \
+		--conflicts gitlab-ci-multi-runner-beta \
+		--provides gitlab-ci-multi-runner \
+		--replaces gitlab-ci-multi-runner \
 		--depends git \
 		--depends curl \
 		--depends tar \
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-ci-multi-runner
+		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-runner
 
 packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
 

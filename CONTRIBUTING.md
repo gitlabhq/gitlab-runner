@@ -2,11 +2,11 @@
 
 Contributions are welcome!
 
-The official repository for this project is on [GitLab.com](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner).
+The official repository for this project is on [GitLab.com](https://gitlab.com/gitlab-org/gitlab-runner).
 
 * [Development](docs/development/README.md)
-* [Issues](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues)
-* [Merge Requests](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/merge_requests)
+* [Issues](https://gitlab.com/gitlab-org/gitlab-runner/issues)
+* [Merge Requests](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests)
 
 ## Contributor license agreement
 

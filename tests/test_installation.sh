@@ -28,8 +28,8 @@ case $IMAGE in
 		docker exec $ID apt-get update -y
 		docker exec $ID apt-get install -y curl procps
 		if [[ -n "$UPGRADE" ]]; then
-			curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | docker exec -i $ID bash
-			docker exec $ID apt-get install -y gitlab-ci-multi-runner
+			curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | docker exec -i $ID bash
+			docker exec $ID apt-get install -y gitlab-runner
 		fi
 		if ! docker exec $ID dpkg -i "/$(basename $INSTALL_FILE)"
 		then
@@ -41,8 +41,8 @@ case $IMAGE in
 	centos:*)
 		docker exec $ID yum install -y curl sysvinit-tools
 		if [[ -n "$UPGRADE" ]]; then
-			curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.rpm.sh | docker exec -i $ID bash
-			docker exec $ID yum install -y gitlab-ci-multi-runner
+			curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | docker exec -i $ID bash
+			docker exec $ID yum install -y gitlab-runner
 		fi
 		docker exec $ID yum localinstall -y "/$(basename $INSTALL_FILE)"
 		;;
