@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/url"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 type UpdateState int

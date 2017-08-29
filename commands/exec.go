@@ -8,15 +8,15 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
 	"gitlab.com/ayufan/golang-cli-helpers"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/gitlab_ci_yaml_parser"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/gitlab_ci_yaml_parser"
 
 	// Force to load all executors, executes init() on them
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/parallels"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/shell"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/ssh"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/virtualbox"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 )
 
 type ExecCommand struct {

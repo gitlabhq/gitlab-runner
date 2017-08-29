@@ -8,9 +8,9 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/ayufan/golang-kardianos-service"
 	"github.com/urfave/cli"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/service"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 )
 
 const (

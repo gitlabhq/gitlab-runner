@@ -1,6 +1,6 @@
 package shells
 
-import "gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+import "gitlab.com/gitlab-org/gitlab-runner/common"
 
 type ShellWriter interface {
 	Variable(variable common.JobVariable)

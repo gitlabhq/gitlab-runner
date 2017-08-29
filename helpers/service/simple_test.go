@@ -7,7 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/service/mocks"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/service/mocks"
 )
 
 var errExample = errors.New("example error")
