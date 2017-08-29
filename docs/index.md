@@ -4,7 +4,7 @@ toc: false
 
 # GitLab Runner
 
-[![Build Status](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/badges/master/build.svg)](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner)
+[![Build Status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/build.svg)](https://gitlab.com/gitlab-org/gitlab-runner)
 
 GitLab Runner is the open source project that is used to run your jobs and
 send the results back to GitLab. It is used in conjunction with [GitLab CI][ci],
@@ -127,8 +127,8 @@ Visit [Changelog] to view recent changes.
 This code is distributed under the MIT license, see the [LICENSE][] file.
 
 [ci]: https://about.gitlab.com/gitlab-ci
-[Changelog]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/CHANGELOG.md
-[contribute]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/CONTRIBUTING.md
+[Changelog]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CHANGELOG.md
+[contribute]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CONTRIBUTING.md
 [golang]: https://golang.org/
-[LICENSE]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/blob/master/LICENSE
+[LICENSE]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/LICENSE
 [TOML]: https://github.com/toml-lang/toml

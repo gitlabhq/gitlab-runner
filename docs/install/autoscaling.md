@@ -190,7 +190,7 @@ more in [Distributed runners caching][caching].
 1. Stop the Runner:
 
     ```bash
-    killall -SIGQUIT gitlab-ci-multi-runner
+    killall -SIGQUIT gitlab-runner
     ```
 
 1. Wait until the Runner exits. You can check its status with: `gitlab-runner status`
@@ -206,7 +206,7 @@ more in [Distributed runners caching][caching].
 1. You can now manage (upgrade or remove) any Docker Machines with the
    [`docker-machine` command][docker-machine]
 
-[runner-installation]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner#installation
+[runner-installation]: https://gitlab.com/gitlab-org/gitlab-runner#installation
 [docker-machine-installation]: https://docs.docker.com/machine/install-machine/
 [runner-autoscaling]: ../configuration/autoscale.md
 [s3]: https://aws.amazon.com/s3/

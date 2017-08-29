@@ -21,10 +21,10 @@ To install the Runner:
 
     ```bash
     # For Debian/Ubuntu
-    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | sudo bash
+    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
 
     # For RHEL/CentOS
-    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.rpm.sh | sudo bash
+    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
     ```
 
     >**Note:**
@@ -42,20 +42,20 @@ To install the Runner:
     ```bash
     cat > /etc/apt/preferences.d/pin-gitlab-runner.pref <<EOF
     Explanation: Prefer GitLab provided packages over the Debian native ones
-    Package: gitlab-ci-multi-runner
+    Package: gitlab-runner
     Pin: origin packages.gitlab.com
     Pin-Priority: 1001
     EOF
     ```
 
-1. Install `gitlab-ci-multi-runner`:
+1. Install `gitlab-runner`:
 
     ```bash
     # For Debian/Ubuntu
-    sudo apt-get install gitlab-ci-multi-runner
+    sudo apt-get install gitlab-runner
 
     # For RHEL/CentOS
-    sudo yum install gitlab-ci-multi-runner
+    sudo yum install gitlab-runner
     ```
 
 1. [Register the Runner](../register/index.md)
@@ -73,16 +73,16 @@ Simply execute to install latest version:
 ```bash
 # For Debian/Ubuntu
 sudo apt-get update
-sudo apt-get install gitlab-ci-multi-runner
+sudo apt-get install gitlab-runner
 
 # For RHEL/CentOS
 sudo yum update
-sudo yum install gitlab-ci-multi-runner
+sudo yum install gitlab-runner
 ```
 
 ## Manually download packages
 
 You can manually download the packages from the following URL:
-<https://packages.gitlab.com/runner/gitlab-ci-multi-runner>
+<https://packages.gitlab.com/runner/gitlab-runner>
 
 [docker executor]: ../executors/docker.md

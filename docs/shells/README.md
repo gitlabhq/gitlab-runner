@@ -92,18 +92,18 @@ SET CI_SERVER_NAME=GitLab CI
 SET CI_SERVER_VERSION=
 SET CI_SERVER_REVISION=
 SET GITLAB_CI=true
-md "C:\\Multi-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-SET GIT_SSL_CAINFO=C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-md "C:\\Multi-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-SET CI_SERVER_TLS_CA_FILE=C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
+md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
+echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
+SET GIT_SSL_CAINFO=C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
+md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
+echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
+SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
 echo Cloning repository...
-rd /s /q "C:\Multi-Runner\builds\0\project-1" 2>NUL 1>NUL
+rd /s /q "C:\GitLab-Runner\builds\0\project-1" 2>NUL 1>NUL
 "git" "clone" "http://gitlab.example.com/group/project.git" "Z:/Gitlab/tests/test/builds/0/project-1"
 IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
-cd /D "C:\Multi-Runner\builds\0\project-1"
+cd /D "C:\GitLab-Runner\builds\0\project-1"
 IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
 echo Checking out db45ad9a as master...
@@ -112,13 +112,13 @@ IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
 IF EXIST "..\..\..\cache\project-1\pages\master\cache.tgz" (
   echo Restoring cache...
-  "gitlab-ci-multi-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
+  "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
   IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
 ) ELSE (
   IF EXIST "..\..\..\cache\project-1\pages\master\cache.tgz" (
     echo Restoring cache...
-    "gitlab-ci-multi-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
+    "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
     IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
   )
@@ -139,13 +139,13 @@ SET CI_SERVER_NAME=GitLab CI
 SET CI_SERVER_VERSION=
 SET CI_SERVER_REVISION=
 SET GITLAB_CI=true
-md "C:\\Multi-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-SET GIT_SSL_CAINFO=C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-md "C:\\Multi-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-SET CI_SERVER_TLS_CA_FILE=C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-cd /D "C:\Multi-Runner\builds\0\project-1"
+md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
+echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
+SET GIT_SSL_CAINFO=C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
+md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
+echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
+SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
+cd /D "C:\GitLab-Runner\builds\0\project-1"
 IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
 echo $ echo true
@@ -166,17 +166,17 @@ SET CI_SERVER_NAME=GitLab CI
 SET CI_SERVER_VERSION=
 SET CI_SERVER_REVISION=
 SET GITLAB_CI=true
-md "C:\\Multi-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-SET GIT_SSL_CAINFO=C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-md "C:\\Multi-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-SET CI_SERVER_TLS_CA_FILE=C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-cd /D "C:\Multi-Runner\builds\0\project-1"
+md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
+echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
+SET GIT_SSL_CAINFO=C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
+md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
+echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
+SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
+cd /D "C:\GitLab-Runner\builds\0\project-1"
 IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
 echo Archiving cache...
-"gitlab-ci-multi-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz" "--path" "vendor"
+"gitlab-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz" "--path" "vendor"
 IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
 goto :EOF
@@ -228,26 +228,26 @@ echo "Running on $env:computername..."
   $GITLAB_CI="true"
   $env:GITLAB_CI=$GITLAB_CI
   $GIT_SSL_CAINFO=""
-  md "C:\Multi-Runner\builds\0\project-1.tmp" -Force | out-null
-  $GIT_SSL_CAINFO | Out-File "C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
-  $GIT_SSL_CAINFO="C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
+  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  $GIT_SSL_CAINFO | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
+  $GIT_SSL_CAINFO="C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $env:GIT_SSL_CAINFO=$GIT_SSL_CAINFO
   $CI_SERVER_TLS_CA_FILE=""
-  md "C:\Multi-Runner\builds\0\project-1.tmp" -Force | out-null
-  $CI_SERVER_TLS_CA_FILE | Out-File "C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
-  $CI_SERVER_TLS_CA_FILE="C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
+  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  $CI_SERVER_TLS_CA_FILE | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
+  $CI_SERVER_TLS_CA_FILE="C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $env:CI_SERVER_TLS_CA_FILE=$CI_SERVER_TLS_CA_FILE
   echo "Cloning repository..."
-  if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "C:\Multi-Runner\builds\0\project-1" -PathType Container) ) {
-    Remove-Item2 -Force -Recurse "C:\Multi-Runner\builds\0\project-1"
-  } elseif(Test-Path "C:\Multi-Runner\builds\0\project-1") {
-    Remove-Item -Force -Recurse "C:\Multi-Runner\builds\0\project-1"
+  if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "C:\GitLab-Runner\builds\0\project-1" -PathType Container) ) {
+    Remove-Item2 -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
+  } elseif(Test-Path "C:\GitLab-Runner\builds\0\project-1") {
+    Remove-Item -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
   }
 
   & "git" "clone" "https://gitlab.com/group/project.git" "Z:/Gitlab/tests/test/builds/0/project-1"
   if(!$?) { Exit $LASTEXITCODE }
 
-  cd "C:\Multi-Runner\builds\0\project-1"
+  cd "C:\GitLab-Runner\builds\0\project-1"
   if(!$?) { Exit $LASTEXITCODE }
 
   echo "Checking out db45ad9a as master..."
@@ -256,13 +256,13 @@ echo "Running on $env:computername..."
 
   if(Test-Path "..\..\..\cache\project-1\pages\master\cache.tgz" -PathType Leaf) {
     echo "Restoring cache..."
-    & "gitlab-ci-multi-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
+    & "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
     if(!$?) { Exit $LASTEXITCODE }
 
   } else {
     if(Test-Path "..\..\..\cache\project-1\pages\master\cache.tgz" -PathType Leaf) {
       echo "Restoring cache..."
-      & "gitlab-ci-multi-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
+      & "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
       if(!$?) { Exit $LASTEXITCODE }
 
     }
@@ -298,16 +298,16 @@ if(!$?) { Exit $LASTEXITCODE }
   $GITLAB_CI="true"
   $env:GITLAB_CI=$GITLAB_CI
   $GIT_SSL_CAINFO=""
-  md "C:\Multi-Runner\builds\0\project-1.tmp" -Force | out-null
-  $GIT_SSL_CAINFO | Out-File "C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
-  $GIT_SSL_CAINFO="C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
+  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  $GIT_SSL_CAINFO | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
+  $GIT_SSL_CAINFO="C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $env:GIT_SSL_CAINFO=$GIT_SSL_CAINFO
   $CI_SERVER_TLS_CA_FILE=""
-  md "C:\Multi-Runner\builds\0\project-1.tmp" -Force | out-null
-  $CI_SERVER_TLS_CA_FILE | Out-File "C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
-  $CI_SERVER_TLS_CA_FILE="C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
+  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  $CI_SERVER_TLS_CA_FILE | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
+  $CI_SERVER_TLS_CA_FILE="C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $env:CI_SERVER_TLS_CA_FILE=$CI_SERVER_TLS_CA_FILE
-  cd "C:\Multi-Runner\builds\0\project-1"
+  cd "C:\GitLab-Runner\builds\0\project-1"
   if(!$?) { Exit $LASTEXITCODE }
 
   echo "`$ echo true"
@@ -343,20 +343,20 @@ if(!$?) { Exit $LASTEXITCODE }
   $GITLAB_CI="true"
   $env:GITLAB_CI=$GITLAB_CI
   $GIT_SSL_CAINFO=""
-  md "C:\Multi-Runner\builds\0\project-1.tmp" -Force | out-null
-  $GIT_SSL_CAINFO | Out-File "C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
-  $GIT_SSL_CAINFO="C:\Multi-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
+  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  $GIT_SSL_CAINFO | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
+  $GIT_SSL_CAINFO="C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $env:GIT_SSL_CAINFO=$GIT_SSL_CAINFO
   $CI_SERVER_TLS_CA_FILE=""
-  md "C:\Multi-Runner\builds\0\project-1.tmp" -Force | out-null
-  $CI_SERVER_TLS_CA_FILE | Out-File "C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
-  $CI_SERVER_TLS_CA_FILE="C:\Multi-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
+  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  $CI_SERVER_TLS_CA_FILE | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
+  $CI_SERVER_TLS_CA_FILE="C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $env:CI_SERVER_TLS_CA_FILE=$CI_SERVER_TLS_CA_FILE
-  cd "C:\Multi-Runner\builds\0\project-1"
+  cd "C:\GitLab-Runner\builds\0\project-1"
   if(!$?) { Exit $LASTEXITCODE }
 
   echo "Archiving cache..."
-  & "gitlab-ci-multi-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz" "--path" "vendor"
+  & "gitlab-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz" "--path" "vendor"
   if(!$?) { Exit $LASTEXITCODE }
 
 }

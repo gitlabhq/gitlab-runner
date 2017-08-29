@@ -58,4 +58,4 @@ projects that are run on this server. Use it only for running builds on a
 server you trust and own.
 
 [run]: ../commands/README.md#gitlab-runner-run
-[packages]: https://packages.gitlab.com/runner/gitlab-ci-multi-runner
+[packages]: https://packages.gitlab.com/runner/gitlab-runner

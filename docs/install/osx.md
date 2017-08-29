@@ -8,7 +8,7 @@ download the macOS binary.
 1. Download the binary for your system:
 
     ```bash
-    sudo curl --output /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
+    sudo curl --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
     ```
 
     You can download a binary for every available version as described in
@@ -44,7 +44,7 @@ Voila! Runner is installed and will be run after a system reboot.
 1. Download the binary to replace the Runner's executable:
 
     ```bash
-    curl -o /usr/local/bin/gitlab-runner https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-ci-multi-runner-darwin-amd64
+    curl -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
     ```
 
     You can download a binary for every available version as described in
