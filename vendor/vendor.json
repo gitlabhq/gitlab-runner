@@ -730,6 +730,12 @@
 			"revisionTime": "2017-02-28T22:43:54Z"
 		},
 		{
+			"checksumSHA1": "tUGxc7rfX0cmhOOUDhMuAZ9rWsA=",
+			"path": "github.com/hashicorp/go-version",
+			"revision": "03c5bf6be031b6dd45afec16b1cf94fc8938bc77",
+			"revisionTime": "2017-02-02T08:07:59Z"
+		},
+		{
 			"checksumSHA1": "hwGdeQbcfc2RvIQS5wAaYRKJDd4=",
 			"comment": "0.2.2-6-g50d4dbd",
 			"path": "github.com/imdario/mergo",
