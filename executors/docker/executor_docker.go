@@ -1040,13 +1040,6 @@ func (s *executor) createDependencies() (err error) {
 		return err
 	}
 
-	s.SetCurrentStage(DockerExecutorStageCreatingServices)
-	s.Debugln("Creating services...")
-	err = s.createServices()
-	if err != nil {
-		return err
-	}
-
 	s.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	s.Debugln("Creating user-defined volumes...")
 	err = s.createUserVolumes()
@@ -1054,6 +1047,12 @@ func (s *executor) createDependencies() (err error) {
 		return err
 	}
 
+	s.SetCurrentStage(DockerExecutorStageCreatingServices)
+	s.Debugln("Creating services...")
+	err = s.createServices()
+	if err != nil {
+		return err
+	}
 	return
 }
 
