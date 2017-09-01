@@ -141,8 +141,9 @@ func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 		options.RegistryAuth, _ = docker_helpers.EncodeAuthConfig(ac)
 	}
 
+	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
 	if err := s.client.ImagePullBlocking(s.Context, ref, options); err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errorRegexp.MatchString(err.Error()) {
 			return nil, &common.BuildError{Inner: err}
 		}
 		return nil, err
