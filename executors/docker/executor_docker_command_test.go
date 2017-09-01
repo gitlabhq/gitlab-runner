@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -104,6 +105,23 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func isDockerOlderThan17_07(t *testing.T) bool {
+	cmd := exec.Command("docker", "version")
+	output, err := cmd.Output()
+	require.NoError(t, err, "docker version should return output")
+
+	r := regexp.MustCompile(`(?ms)Server:\s*\n\s+Version:\s+([^\n]+)$`)
+	v := r.FindStringSubmatch(string(output))[1]
+
+	localVersion, err := version.NewVersion(v)
+	require.NoError(t, err)
+
+	checkedVersion, err := version.NewVersion("17.07.0-ce")
+	require.NoError(t, err)
+
+	return localVersion.LessThan(checkedVersion)
+}
+
 func TestDockerCommandMissingImage(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
@@ -123,7 +141,13 @@ func TestDockerCommandMissingImage(t *testing.T) {
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, &common.BuildError{}, err)
-	assert.Contains(t, err.Error(), "not found")
+
+	contains := "repository does not exist"
+	if isDockerOlderThan17_07(t) {
+		contains = "not found"
+	}
+
+	assert.Contains(t, err.Error(), contains)
 }
 
 func TestDockerCommandMissingTag(t *testing.T) {
