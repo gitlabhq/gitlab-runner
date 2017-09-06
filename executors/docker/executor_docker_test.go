@@ -793,7 +793,7 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	err := e.connectDocker()
 	assert.NoError(t, err)
 
-	container, err := e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	container, err := e.createContainer("build", "alpine", []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err)
 	assert.NotNil(t, container)
 
@@ -871,7 +871,7 @@ func testDockerConfigurationWithJobContainer(t *testing.T, dockerConfig *common.
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
 
-	_, err := e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	_, err := e.createContainer("build", "alpine", []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err, "Should create container without errors")
 }
 

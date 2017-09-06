@@ -155,18 +155,28 @@ func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 	return &image, err
 }
 
-func (s *executor) isNewImage(name, id string) bool {
+func (s *executor) isImageUsed(name, id string) bool {
 	if name == id {
 		return false
-	}
-	if s.images == nil {
-		s.images = make(map[string]string)
 	}
 	if s.images[name] == id {
 		return false
 	}
-	s.images[name] = id
 	return true
+}
+
+func (s *executor) useImage(source, name, id string) {
+	if !s.isImageUsed(name, id) {
+		return
+	}
+
+	if s.images == nil {
+		s.images = make(map[string]string)
+	}
+	s.images[name] = id
+
+	pullPolicy, _ := s.Config.Docker.PullPolicy.Get()
+	s.Println("Using", source, "image", id[0:14], "for", name, "(pull-policy:", pullPolicy, ")...")
 }
 
 func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*types.ImageInspect, error) {
@@ -175,8 +185,6 @@ func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*t
 		return nil, err
 	}
 
-	imageName = s.Build.GetAllVariables().ExpandValue(imageName)
-
 	authConfig := s.getAuthConfig(imageName)
 
 	s.Debugln("Looking for image", imageName, "...")
@@ -184,8 +192,8 @@ func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*t
 
 	// If never is specified then we return what inspect did return
 	if pullPolicy == common.PullPolicyNever {
-		if err == nil && s.isNewImage(imageName, image.ID) {
-			s.Println("Using local image", image.ID[0:7], "for", imageName, "(pull-policy: never)...")
+		if err == nil {
+			s.useImage("local", imageName, image.ID)
 		}
 		return &image, err
 	}
@@ -198,14 +206,12 @@ func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*t
 
 		// If not-present is specified
 		if pullPolicy == common.PullPolicyIfNotPresent {
-			if s.isNewImage(imageName, image.ID) {
-				s.Println("Using local image", image.ID[0:7], "for", imageName, "(pull-policy: if-not-present)...")
-			}
+			s.useImage("local", imageName, image.ID)
 			return &image, err
 		}
 
 		// If already tried to pull image in this run, don't do it again
-		if !s.isNewImage(imageName, image.ID) {
+		if !s.isImageUsed(imageName, image.ID) {
 			return &image, err
 		}
 	}
@@ -214,9 +220,7 @@ func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*t
 	if err != nil {
 		return nil, err
 	}
-	if s.isNewImage(imageName, image.ID) {
-		s.Println("Using pulled image", image.ID[0:7], "for", imageName, "...")
-	}
+	s.useImage("pulled", imageName, newImage.ID)
 	return newImage, nil
 }
 
@@ -560,16 +564,6 @@ func (s *executor) bindDevices() (err error) {
 	return nil
 }
 
-func (s *executor) printUsedDockerImageID(imageName, imageID, containerType, containerTypeName string) {
-	var line string
-	if imageName == imageID {
-		line = fmt.Sprintf("Using docker image %s for %s %s...", imageName, containerTypeName, containerType)
-	} else {
-		line = fmt.Sprintf("Using docker image %s ID=%s for %s %s...", imageName, imageID, containerTypeName, containerType)
-	}
-	s.Println(line)
-}
-
 func (s *executor) splitServiceAndVersion(serviceDescription string) (service, version, imageName string, linkNames []string) {
 	ReferenceRegexpNoPort := regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
 	imageName = serviceDescription
@@ -609,8 +603,6 @@ func (s *executor) createService(serviceIndex int, service, version, image strin
 	if err != nil {
 		return nil, err
 	}
-
-	s.printUsedDockerImageID(image, serviceImage.ID, "service", service)
 
 	serviceSlug := strings.Replace(service, "/", "__", -1)
 	containerName := fmt.Sprintf("%s-%s-%d", s.Build.ProjectUniqueName(), serviceSlug, serviceIndex)
