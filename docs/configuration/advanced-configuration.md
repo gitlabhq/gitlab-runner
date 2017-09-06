@@ -457,6 +457,7 @@ Example:
 > Added in GitLab Runner v1.6.0
 
 This defines the Kubernetes parameters.
+See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
 
 | Parameter        | Type    | Description |
 |------------------|---------|-------------|
