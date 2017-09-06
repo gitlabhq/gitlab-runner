@@ -7,7 +7,7 @@ ref_tag=${CI_COMMIT_REF_NAME:-master}
 
 REVISION=${REVISION:-}
 if [[ -z "${REVISION}" ]]; then
-  REVISION=$(git rev-parse --short HEAD || echo "unknown")
+  REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
 fi
 
 if [[ "${ref_tag}" = "master" ]]; then
