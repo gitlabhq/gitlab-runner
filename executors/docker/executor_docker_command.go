@@ -3,6 +3,7 @@ package docker
 import (
 	"bytes"
 	"errors"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
@@ -27,37 +28,51 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("Script is not compatible with Docker")
 	}
 
-	prebuildImage, err := s.getPrebuiltImage()
-	if err != nil {
-		return err
-	}
-
-	buildImage := common.Image{
-		Name: prebuildImage.ID,
-	}
-
-	// Start pre-build container which will git clone changes
-	s.predefinedContainer, err = s.createContainer("predefined", buildImage, []string{"gitlab-runner-build"}, []string{prebuildImage.ID})
-	if err != nil {
-		return err
-	}
-
-	// Start build container which will run actual build
-	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
+	_, err = s.getPrebuiltImage()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+func (s *commandExecutor) createPrebuiltContainer() (*types.ContainerJSON, error) {
+	prebuildImage, err := s.getPrebuiltImage()
+	if err != nil {
+		return nil, err
+	}
+
+	return s.createContainer("predefined", prebuildImage.ID, []string{}, []string{"gitlab-runner-build"})
+}
+
+func (s *commandExecutor) createBuildContainer() (*types.ContainerJSON, error) {
+	buildImage, err := s.getBuildImage()
+	if err != nil {
+		return nil, err
+	}
+
+	return s.createContainer("build", buildImage.ID, s.Build.Image.Entrypoint, s.BuildShell.DockerCommand)
+}
+
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	s.SetCurrentStage(DockerExecutorStageRun)
 
 	var runOn *types.ContainerJSON
-	if cmd.Predefined {
-		runOn = s.predefinedContainer
-	} else {
-		runOn = s.buildContainer
+	var err error
+
+	for i := 0; i < 3; i++ {
+		if cmd.Predefined {
+			runOn, err = s.createPrebuiltContainer()
+		} else {
+			runOn, err = s.createBuildContainer()
+		}
+		if err == nil {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+	if err != nil {
+		return err
 	}
 
 	s.Debugln("Executing on", runOn.Name, "the", cmd.Script)

@@ -53,6 +53,8 @@ type executor struct {
 	volumesFrom []string
 	devices     []container.DeviceMapping
 	links       []string
+	images      map[string]string
+	buildImage  *types.ImageInspect
 }
 
 func (s *executor) getServiceVariables() []string {
@@ -153,11 +155,27 @@ func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 	return &image, err
 }
 
-func (s *executor) getDockerImage(imageName string) (*types.ImageInspect, error) {
+func (s *executor) isNewImage(name, id string) bool {
+	if name == id {
+		return false
+	}
+	if s.images == nil {
+		s.images = make(map[string]string)
+	}
+	if s.images[name] == id {
+		return false
+	}
+	s.images[name] = id
+	return true
+}
+
+func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*types.ImageInspect, error) {
 	pullPolicy, err := s.Config.Docker.PullPolicy.Get()
 	if err != nil {
 		return nil, err
 	}
+
+	imageName = s.Build.GetAllVariables().ExpandValue(imageName)
 
 	authConfig := s.getAuthConfig(imageName)
 
@@ -166,6 +184,9 @@ func (s *executor) getDockerImage(imageName string) (*types.ImageInspect, error)
 
 	// If never is specified then we return what inspect did return
 	if pullPolicy == common.PullPolicyNever {
+		if err == nil && s.isNewImage(imageName, image.ID) {
+			s.Println("Using local image", image.ID[0:7], "for", imageName, "(pull-policy: never)...")
+		}
 		return &image, err
 	}
 
@@ -177,7 +198,14 @@ func (s *executor) getDockerImage(imageName string) (*types.ImageInspect, error)
 
 		// If not-present is specified
 		if pullPolicy == common.PullPolicyIfNotPresent {
-			s.Println("Using locally found image version due to if-not-present pull policy")
+			if s.isNewImage(imageName, image.ID) {
+				s.Println("Using local image", image.ID[0:7], "for", imageName, "(pull-policy: if-not-present)...")
+			}
+			return &image, err
+		}
+
+		// If already tried to pull image in this run, don't do it again
+		if !s.isNewImage(imageName, image.ID) {
 			return &image, err
 		}
 	}
@@ -185,6 +213,9 @@ func (s *executor) getDockerImage(imageName string) (*types.ImageInspect, error)
 	newImage, err := s.pullDockerImage(imageName, authConfig)
 	if err != nil {
 		return nil, err
+	}
+	if s.isNewImage(imageName, image.ID) {
+		s.Println("Using pulled image", image.ID[0:7], "for", imageName, "...")
 	}
 	return newImage, nil
 }
@@ -250,6 +281,20 @@ func (s *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	}
 
 	return &image, err
+}
+
+func (s *executor) getBuildImage() (*types.ImageInspect, error) {
+	if s.Config.Docker.Image == "" {
+		return nil, errors.New("No Docker image specified to run the build in")
+	}
+
+	imageName := s.Build.GetAllVariables().ExpandValue(s.Config.Docker.Image)
+	err := s.verifyAllowedImage(imageName, "images", append(s.Config.Docker.AllowedImages, s.Config.Docker.Image))
+	if err != nil {
+		return nil, err
+	}
+
+	return s.getDockerImage(imageName)
 }
 
 func (s *executor) getAbsoluteContainerPath(dir string) string {
@@ -623,7 +668,7 @@ func (s *executor) getServicesDefinitions() (common.Services, error) {
 
 	for _, service := range s.Build.Services {
 		serviceName := s.Build.GetAllVariables().ExpandValue(service.Name)
-		err := s.verifyAllowedImage(serviceName, "services", s.Config.Docker.AllowedServices, s.Config.Docker.Services)
+		err := s.verifyAllowedImage(serviceName, "services", append(s.Config.Docker.AllowedServices, s.Config.Docker.Services...))
 		if err != nil {
 			return nil, err
 		}
@@ -719,19 +764,11 @@ func (s *executor) createServices() (err error) {
 	return
 }
 
-func (s *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
-	imageName, err := s.expandImageName(imageDefinition.Name, allowedInternalImages)
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch image
+func (s *executor) createContainer(containerType string, imageName string, entrypoint, cmd []string) (*types.ContainerJSON, error) {
 	image, err := s.getDockerImage(imageName)
 	if err != nil {
 		return nil, err
 	}
-
-	s.printUsedDockerImageID(imageName, image.ID, "container", containerType)
 
 	hostname := s.Config.Docker.Hostname
 	if hostname == "" {
@@ -753,8 +790,8 @@ func (s *executor) createContainer(containerType string, imageDefinition common.
 		Env:          append(s.Build.GetAllVariables().StringList(), s.BuildShell.Environment...),
 	}
 
-	if len(imageDefinition.Entrypoint) > 0 {
-		config.Entrypoint = imageDefinition.Entrypoint
+	if len(entrypoint) > 0 {
+		config.Entrypoint = entrypoint
 	}
 
 	nanoCPUs, err := s.Config.Docker.GetNanoCPUs()
@@ -912,7 +949,15 @@ func (s *executor) watchContainer(ctx context.Context, id string, input io.Reade
 
 	waitCh := make(chan error, 1)
 	go func() {
-		waitCh <- s.waitForContainer(id)
+		for {
+			err := s.waitForContainer(id)
+			// if api.IsErrTimeout(err) {
+			// 	time.Sleep(time.Second)
+			// 	continue
+			// }
+			waitCh <- err
+			break
+		}
 	}()
 
 	select {
@@ -964,16 +1009,10 @@ func (s *executor) disconnectNetwork(ctx context.Context, id string) error {
 	return err
 }
 
-func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalImages []string) error {
+func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []string) error {
 	for _, allowedImage := range allowedImages {
 		ok, _ := filepath.Match(allowedImage, image)
 		if ok {
-			return nil
-		}
-	}
-
-	for _, internalImage := range internalImages {
-		if internalImage == image {
 			return nil
 		}
 	}
@@ -982,7 +1021,9 @@ func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []
 		s.Println()
 		s.Errorln("The", image, "is not present on list of allowed", optionName)
 		for _, allowedImage := range allowedImages {
-			s.Println("-", allowedImage)
+			if allowedImage != "" {
+				s.Println("-", allowedImage)
+			}
 		}
 		s.Println()
 	} else {
@@ -992,24 +1033,6 @@ func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []
 
 	s.Println("Please check runner's configuration: http://doc.gitlab.com/ci/docker/using_docker_images.html#overwrite-image-and-services")
 	return errors.New("invalid image")
-}
-
-func (s *executor) expandImageName(imageName string, allowedInternalImages []string) (string, error) {
-	if imageName != "" {
-		image := s.Build.GetAllVariables().ExpandValue(imageName)
-		allowedInternalImages = append(allowedInternalImages, s.Config.Docker.Image)
-		err := s.verifyAllowedImage(image, "images", s.Config.Docker.AllowedImages, allowedInternalImages)
-		if err != nil {
-			return "", err
-		}
-		return image, nil
-	}
-
-	if s.Config.Docker.Image == "" {
-		return "", errors.New("No Docker image specified to run the build in")
-	}
-
-	return s.Config.Docker.Image, nil
 }
 
 func (s *executor) connectDocker() (err error) {
@@ -1076,14 +1099,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	s.SetCurrentStage(DockerExecutorStagePrepare)
-	imageName, err := s.expandImageName(s.Build.Image.Name, []string{})
+	s.Println("Using Docker executor...")
+
+	err = s.connectDocker()
 	if err != nil {
 		return err
 	}
 
-	s.Println("Using Docker executor with image", imageName, "...")
-
-	err = s.connectDocker()
+	s.buildImage, err = s.getBuildImage()
 	if err != nil {
 		return err
 	}
