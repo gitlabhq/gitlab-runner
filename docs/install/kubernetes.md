@@ -23,7 +23,11 @@ data:
       executor = "kubernetes"
       [runners.kubernetes]
         namespace = "gitlab"
+        image = "busybox"
 ```
+
+Where `image` (optional) is the default Docker image to run jobs on top of.
+
 
 Then create a `Deployment` or `ReplicationController` which uses the `ConfigMap`.
 This is an example of a `Deployment`:
