@@ -157,16 +157,16 @@ func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 
 func (s *executor) isImageUsed(name, id string) bool {
 	if name == id {
-		return false
+		return true
 	}
 	if s.images[name] == id {
-		return false
+		return true
 	}
-	return true
+	return false
 }
 
 func (s *executor) useImage(source, name, id string) {
-	if !s.isImageUsed(name, id) {
+	if s.isImageUsed(name, id) {
 		return
 	}
 
@@ -176,7 +176,7 @@ func (s *executor) useImage(source, name, id string) {
 	s.images[name] = id
 
 	pullPolicy, _ := s.Config.Docker.PullPolicy.Get()
-	s.Println("Using", source, "image", id[0:14], "for", name, "(pull-policy:", pullPolicy, ")...")
+	s.Println("Using", source, "image", helpers.ShortenTokenN(id, 14), "for", name, "(pull-policy:", pullPolicy, ")...")
 }
 
 func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*types.ImageInspect, error) {
@@ -211,7 +211,7 @@ func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*t
 		}
 
 		// If already tried to pull image in this run, don't do it again
-		if !s.isImageUsed(imageName, image.ID) {
+		if s.isImageUsed(imageName, image.ID) {
 			return &image, err
 		}
 	}
