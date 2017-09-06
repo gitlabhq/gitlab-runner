@@ -3,7 +3,6 @@ package docker
 import (
 	"bytes"
 	"errors"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
@@ -59,18 +58,11 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	var runOn *types.ContainerJSON
 	var err error
 
-	for i := 0; i < 3; i++ {
-		if cmd.Predefined {
-			runOn, err = s.createPrebuiltContainer()
-		} else {
-			runOn, err = s.createBuildContainer()
-		}
-		if err == nil {
-			break
-		}
-		time.Sleep(3 * time.Second)
+	if cmd.Predefined {
+		runOn, err = s.createPrebuiltContainer()
+	} else {
+		runOn, err = s.createBuildContainer()
 	}
-
 	if err != nil {
 		return err
 	}
