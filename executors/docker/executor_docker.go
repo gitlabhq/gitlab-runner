@@ -176,7 +176,7 @@ func (s *executor) useImage(source, name, id string) {
 	s.images[name] = id
 
 	pullPolicy, _ := s.Config.Docker.PullPolicy.Get()
-	s.Println("Using", source, "image", helpers.ShortenTokenN(id, 14), "for", name, "(pull-policy:", pullPolicy, ")...")
+	s.Println("Using", source, "image", helpers.ShortenTokenN(id, 14), "for", name, "(pull-policy:", pullPolicy+")...")
 }
 
 func (s *executor) getDockerImage(imageName string, allowedImages ...string) (*types.ImageInspect, error) {
@@ -288,12 +288,20 @@ func (s *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 }
 
 func (s *executor) getBuildImage() (*types.ImageInspect, error) {
-	if s.Config.Docker.Image == "" {
+	// Use user-provided image first
+	imageName := s.Build.Image.Name
+
+	if imageName == "" {
+		// User configuration-specified image second
+		imageName = s.Config.Docker.Image
+	}
+	if imageName == "" {
 		return nil, errors.New("No Docker image specified to run the build in")
 	}
 
-	imageName := s.Build.GetAllVariables().ExpandValue(s.Config.Docker.Image)
-	err := s.verifyAllowedImage(imageName, "images", append(s.Config.Docker.AllowedImages, s.Config.Docker.Image))
+	imageName = s.Build.GetAllVariables().ExpandValue(imageName)
+
+	err := s.verifyAllowedImage(imageName, "images", s.Config.Docker.AllowedImages, s.Config.Docker.Image)
 	if err != nil {
 		return nil, err
 	}
@@ -660,7 +668,7 @@ func (s *executor) getServicesDefinitions() (common.Services, error) {
 
 	for _, service := range s.Build.Services {
 		serviceName := s.Build.GetAllVariables().ExpandValue(service.Name)
-		err := s.verifyAllowedImage(serviceName, "services", append(s.Config.Docker.AllowedServices, s.Config.Docker.Services...))
+		err := s.verifyAllowedImage(serviceName, "services", s.Config.Docker.AllowedServices, s.Config.Docker.Services...)
 		if err != nil {
 			return nil, err
 		}
@@ -1001,8 +1009,14 @@ func (s *executor) disconnectNetwork(ctx context.Context, id string) error {
 	return err
 }
 
-func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []string) error {
+func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalAllowedImages ...string) error {
 	for _, allowedImage := range allowedImages {
+		ok, _ := filepath.Match(allowedImage, image)
+		if ok {
+			return nil
+		}
+	}
+	for _, allowedImage := range internalAllowedImages {
 		ok, _ := filepath.Match(allowedImage, image)
 		if ok {
 			return nil
