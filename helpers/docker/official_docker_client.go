@@ -100,7 +100,12 @@ func New(c DockerCredentials, apiVersion string) (Client, error) {
 		c.Host = client.DefaultDockerHost
 	}
 
-	return newOfficialDockerClient(c, apiVersion)
+	client, err := newOfficialDockerClient(c, apiVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return &clientWithErrorLogger{Client: client}, nil
 }
 
 func newHTTPTransport(c DockerCredentials) (*http.Transport, error) {
