@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"runtime"
@@ -19,6 +20,28 @@ func GetSuccessfulBuild() (JobResponse, error) {
 
 func GetRemoteSuccessfulBuild() (JobResponse, error) {
 	return getRemoteBuildResponse("echo Hello World")
+}
+
+func GetRemoteSuccessfulBuildWithDumpedVariables() (response JobResponse, err error) {
+	variableName := "test_dump"
+	variableValue := "test"
+
+	response, err = getRemoteBuildResponse(
+		fmt.Sprintf("[[ \"${%s}\" != \"\" ]]", variableName),
+		fmt.Sprintf("[[ $(cat $%s) == \"%s\" ]]", variableName, variableValue),
+	)
+
+	if err != nil {
+		return
+	}
+
+	dumpedVariable := JobVariable{
+		Key: variableName, Value: variableValue,
+		Internal: true, Public: true, File: true,
+	}
+	response.Variables = append(response.Variables, dumpedVariable)
+
+	return
 }
 
 func GetFailedBuild() (JobResponse, error) {

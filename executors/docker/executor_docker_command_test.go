@@ -46,6 +46,29 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDockerCommandNoRootImage(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
+
+	assert.NoError(t, err)
+	successfulBuild.Image.Name = "quay.io/nolith/alpine-no-root"
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker:   &common.DockerConfig{},
+			},
+		},
+	}
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
 func TestDockerCommandBuildFail(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
