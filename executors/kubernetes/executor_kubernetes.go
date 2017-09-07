@@ -141,7 +141,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	containerCommand := s.BuildShell.DockerCommand
 	if cmd.Predefined {
 		containerName = "helper"
-		containerCommand = []string{"gitlab-runner-build"}
+		containerCommand = common.ContainerCommandBuild
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
