@@ -54,7 +54,7 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
 
 	assert.NoError(t, err)
-	successfulBuild.Image.Name = "quay.io/nolith/alpine-no-root"
+	successfulBuild.Image.Name = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root"
 	build := &common.Build{
 		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{

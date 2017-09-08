@@ -29,15 +29,29 @@ before_script:
 # Prepare stage
 #
 
-prepare ci image:
+.image_builder: &image_builder
   <<: *docker
   stage: prepare
   image: docker:git
   before_script: []
   script:
   - source ./ci/build_ci_image
+
+prepare ci image:
+  <<: *image_builder
+  variables:
+    BULD_IMAGE: $CI_IMAGE
+    BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile
   only:
   - /\Adocker-ci-image\/.*/
+
+prepare alpine-no-root image:
+  <<: *image_builder
+  variables:
+    BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
+    BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-no-root/Dockerfile
+  only:
+  - /\Adocker-alpine-no-root-image\/.*/
 
 #
 # Prebuild stage
