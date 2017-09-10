@@ -42,9 +42,17 @@ func TestJobTraceUpdateSucceeded(t *testing.T) {
 			var wg sync.WaitGroup
 			jobCredentials := &common.JobCredentials{ID: idx}
 			net := new(common.MockNetwork)
-			net.On("UpdateJob", jobConfig, jobCredentials, idx, common.Running, noTrace).Return(common.UpdateSucceeded).Once()
+			net.On("UpdateJob", jobConfig, jobCredentials, idx, common.Running, noTrace, common.JobFailureReason("")).Return(common.UpdateSucceeded).Once()
 			net.On("PatchTrace", jobConfig, jobCredentials, patchTraceMatcher).Return(common.UpdateSucceeded).Run(func(_ mock.Arguments) { wg.Done() })
-			net.On("UpdateJob", jobConfig, jobCredentials, idx, test.jobState, traceMatcher).Return(common.UpdateSucceeded)
+
+			var expectedFailureReason common.JobFailureReason
+			switch test.jobState {
+			case common.Success:
+				expectedFailureReason = common.JobFailureReason("")
+			case common.Failed:
+				expectedFailureReason = common.JobFailureReason("script_failure")
+			}
+			net.On("UpdateJob", jobConfig, jobCredentials, idx, test.jobState, traceMatcher, expectedFailureReason).Return(common.UpdateSucceeded)
 
 			b := newJobTrace(net, jobConfig, jobCredentials)
 			// speed up execution time
@@ -59,7 +67,7 @@ func TestJobTraceUpdateSucceeded(t *testing.T) {
 			case common.Success:
 				b.Success()
 			case common.Failed:
-				b.Fail(errors.New("test"))
+				b.Fail(errors.New("test"), "script_failure")
 			}
 
 			net.AssertExpectations(t)
@@ -69,7 +77,7 @@ func TestJobTraceUpdateSucceeded(t *testing.T) {
 
 func TestIgnoreStatusChange(t *testing.T) {
 	net := new(common.MockNetwork)
-	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded)
+	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string"), common.JobFailureReason("")).Return(common.UpdateSucceeded)
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
 	// prevent any UpdateJob before `b.Success()` call
@@ -77,7 +85,7 @@ func TestIgnoreStatusChange(t *testing.T) {
 
 	b.start()
 	b.Success()
-	b.Fail(errors.New("test"))
+	b.Fail(errors.New("test"), "script_failure")
 
 	net.AssertExpectations(t)
 }

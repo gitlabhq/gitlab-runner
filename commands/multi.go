@@ -147,7 +147,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		Token: jobData.Token,
 	}
 	trace := mr.network.ProcessJob(*runner, jobCredentials)
-	defer trace.Fail(err)
+	defer trace.Fail(err, "")
 
 	// Create a new build
 	build := &common.Build{

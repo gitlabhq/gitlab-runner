@@ -26,7 +26,7 @@ func (s *Trace) Write(p []byte) (n int, err error) {
 func (s *Trace) Success() {
 }
 
-func (s *Trace) Fail(err error) {
+func (s *Trace) Fail(err error, failureReason JobFailureReason) {
 }
 
 func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {

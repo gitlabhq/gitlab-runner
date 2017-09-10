@@ -68,10 +68,11 @@ type clientJobTrace struct {
 	bytesLimit     int
 	cancelFunc     context.CancelFunc
 
-	log      bytes.Buffer
-	lock     sync.RWMutex
-	state    common.JobState
-	finished chan bool
+	log           bytes.Buffer
+	lock          sync.RWMutex
+	state         common.JobState
+	failureReason common.JobFailureReason
+	finished      chan bool
 
 	sentTrace int
 	sentTime  time.Time
@@ -83,10 +84,10 @@ type clientJobTrace struct {
 }
 
 func (c *clientJobTrace) Success() {
-	c.Fail(nil)
+	c.Fail(nil, "")
 }
 
-func (c *clientJobTrace) Fail(err error) {
+func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {
 	c.lock.Lock()
 	if c.state != common.Running {
 		c.lock.Unlock()
@@ -96,6 +97,7 @@ func (c *clientJobTrace) Fail(err error) {
 		c.state = common.Success
 	} else {
 		c.state = common.Failed
+		c.failureReason = failureReason
 	}
 	c.lock.Unlock()
 
@@ -186,7 +188,7 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 	}
 
 	if c.sentState != state {
-		c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, nil)
+		c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, nil, c.failureReason)
 		c.sentState = state
 	}
 
@@ -217,7 +219,7 @@ func (c *clientJobTrace) resendPatch(id int, config common.RunnerConfig, jobCred
 		config.Log().Warningln(id, "Full job update is needed")
 		fullTrace := c.log.String()
 
-		return c.client.UpdateJob(c.config, jobCredentials, c.id, c.state, &fullTrace)
+		return c.client.UpdateJob(c.config, jobCredentials, c.id, c.state, &fullTrace, c.failureReason)
 	}
 
 	config.Log().Warningln(id, "Resending trace patch due to range mismatch")
@@ -244,7 +246,7 @@ func (c *clientJobTrace) fullUpdate() common.UpdateState {
 		return common.UpdateSucceeded
 	}
 
-	upload := c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, &trace)
+	upload := c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, &trace, c.failureReason)
 	if upload == common.UpdateSucceeded {
 		c.sentTrace = len(trace)
 		c.sentState = state
