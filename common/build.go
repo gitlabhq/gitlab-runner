@@ -360,10 +360,10 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	defer func() {
 		if _, ok := err.(*BuildError); ok {
 			b.logger.SoftErrorln("Job failed:", err)
-			trace.Fail(err, common.ScriptFailure)
+			trace.Fail(err, ScriptFailure)
 		} else if err != nil {
 			b.logger.Errorln("Job failed (system failure):", err)
-			trace.Fail(err, common.RunnerSystemFailure)
+			trace.Fail(err, RunnerSystemFailure)
 		} else {
 			b.logger.Infoln("Job succeeded")
 			trace.Success()

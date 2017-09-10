@@ -311,7 +311,7 @@ func (j *JobCredentials) GetToken() string {
 type JobTrace interface {
 	io.Writer
 	Success()
-	Fail(err error)
+	Fail(err error, failure_reason JobFailureReason)
 	SetCancelFunc(cancelFunc context.CancelFunc)
 	IsStdout() bool
 }
@@ -329,7 +329,7 @@ type Network interface {
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig) (*JobResponse, bool)
-	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string, failure_reason FailureReason) UpdateState
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string, failure_reason JobFailureReason) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
