@@ -22,9 +22,9 @@ var jobOutputLimit = common.RunnerConfig{OutputLimit: 1}
 
 type updateTraceNetwork struct {
 	common.MockNetwork
-	state common.JobState
-	trace *string
-	count int
+	state         common.JobState
+	trace         *string
+	count         int
 	failureReason common.JobFailureReason
 }
 
