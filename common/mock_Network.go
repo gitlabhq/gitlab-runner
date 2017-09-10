@@ -110,7 +110,7 @@ func (_m *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
 }
 
 // UpdateJob provides a mock function with given fields: config, jobCredentials, id, state, trace
-func (_m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string) UpdateState {
+func (_m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string, failure_reason JobFailureReason) UpdateState {
 	ret := _m.Called(config, jobCredentials, id, state, trace)
 
 	var r0 UpdateState

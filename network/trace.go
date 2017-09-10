@@ -72,11 +72,11 @@ type clientJobTrace struct {
 	limit          int64
 	cancelFunc     context.CancelFunc
 
-	log      bytes.Buffer
-	lock     sync.RWMutex
-	state    common.JobState
+	log            bytes.Buffer
+	lock           sync.RWMutex
+	state          common.JobState
 	failure_reason common.JobFailureReason
-	finished chan bool
+	finished       chan bool
 
 	sentTrace int
 	sentTime  time.Time

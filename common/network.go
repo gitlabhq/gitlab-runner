@@ -24,8 +24,8 @@ const (
 // Those failure_reason need to be compatible with
 // CommitStatus.failure_reasons.keys in Gitlab-CE/EE
 const (
-	UnknownFailure JobFailureReason = "unknown_failure"
-	ScriptFailure JobFailureReason = "script_failure"
+	UnknownFailure      JobFailureReason = "unknown_failure"
+	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 )
 
@@ -272,10 +272,10 @@ func (j *JobResponse) RepoCleanURL() string {
 }
 
 type UpdateJobRequest struct {
-	Info  		  VersionInfo 	 		  `json:"info,omitempty"`
-	Token 		  string      	 		  `json:"token,omitempty"`
-	State 		  JobState    	 		  `json:"state,omitempty"`
-	Trace 		  *string     	 		  `json:"trace,omitempty"`
+	Info          VersionInfo      `json:"info,omitempty"`
+	Token         string           `json:"token,omitempty"`
+	State         JobState         `json:"state,omitempty"`
+	Trace         *string          `json:"trace,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
 }
 
