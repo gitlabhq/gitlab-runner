@@ -525,8 +525,14 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.Equal(t, "trace", req["trace"])
 
 	switch req["state"].(string) {
-	case "running", "failed":
+	case "running":
 		w.WriteHeader(http.StatusOK)
+	case "failed":
+		if req["failure_reason"].(string) == common.ScriptFailure {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
 	case "forbidden":
 		w.WriteHeader(http.StatusForbidden)
 	default:
