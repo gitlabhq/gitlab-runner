@@ -119,7 +119,7 @@ func TestIgnoreStatusChange(t *testing.T) {
 	b := newJobTrace(u, jobConfig, jobCredentials)
 	b.start()
 	b.Success()
-	b.Fail(errors.New("test"))
+	b.Fail(errors.New("test"), "script_failure")
 	assert.Equal(t, common.Success, u.state)
 }
 
