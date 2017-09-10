@@ -12,6 +12,7 @@ type UpdateState int
 type UploadState int
 type DownloadState int
 type JobState string
+type JobFailureReason string
 
 const (
 	Pending JobState = "pending"
