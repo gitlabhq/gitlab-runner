@@ -25,13 +25,15 @@ type updateTraceNetwork struct {
 	state common.JobState
 	trace *string
 	count int
+	failureReason common.JobFailureReason
 }
 
-func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string) common.UpdateState {
+func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string, failureReason common.JobFailureReason) common.UpdateState {
 	switch id {
 	case successID:
 		m.count++
 		m.state = state
+		m.failureReason = failureReason
 		m.trace = trace
 		return common.UpdateSucceeded
 
@@ -44,6 +46,7 @@ func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredential
 			m.count++
 			if m.count >= 5 {
 				m.state = state
+				m.failureReason = failureReason
 				m.trace = trace
 				return common.UpdateSucceeded
 			}
@@ -102,9 +105,10 @@ func TestJobTraceFailure(t *testing.T) {
 	b := newJobTrace(u, jobConfig, jobCredentials)
 	b.start()
 	fmt.Fprint(b, "test content")
-	b.Fail(errors.New("test"))
+	b.Fail(errors.New("test"), "script_failure")
 	assert.Equal(t, "test content", *u.trace)
 	assert.Equal(t, common.Failed, u.state)
+	assert.Equal(t, common.ScriptFailure, u.failureReason)
 }
 
 func TestIgnoreStatusChange(t *testing.T) {

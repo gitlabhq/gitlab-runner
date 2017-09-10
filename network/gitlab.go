@@ -228,7 +228,7 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 		Token:         jobCredentials.Token,
 		State:         state,
 		Trace:         trace,
-		FailureReason: failure_reason,
+		FailureReason: failureReason,
 	}
 
 	log := config.Log().WithField("job", id)

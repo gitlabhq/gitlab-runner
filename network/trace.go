@@ -97,7 +97,7 @@ func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) 
 		c.state = common.Success
 	} else {
 		c.state = common.Failed
-		c.failure_reason = failure_reason
+		c.failureReason = failureReason
 	}
 	c.lock.Unlock()
 
@@ -196,7 +196,7 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 	}
 
 	if c.sentState != state {
-		c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, nil, c.failure_reason)
+		c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, nil, c.failureReason)
 		c.sentState = state
 	}
 
@@ -227,7 +227,7 @@ func (c *clientJobTrace) resendPatch(id int, config common.RunnerConfig, jobCred
 		config.Log().Warningln(id, "Full job update is needed")
 		fullTrace := c.log.String()
 
-		return c.client.UpdateJob(c.config, jobCredentials, c.id, c.state, &fullTrace, c.failure_reason)
+		return c.client.UpdateJob(c.config, jobCredentials, c.id, c.state, &fullTrace, c.failureReason)
 	}
 
 	config.Log().Warningln(id, "Resending trace patch due to range mismatch")
@@ -254,7 +254,7 @@ func (c *clientJobTrace) fullUpdate() common.UpdateState {
 		return common.UpdateSucceeded
 	}
 
-	upload := c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, &trace, c.failure_reason)
+	upload := c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, &trace, c.failureReason)
 	if upload == common.UpdateSucceeded {
 		c.sentTrace = len(trace)
 		c.sentState = state
