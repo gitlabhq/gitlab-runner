@@ -72,11 +72,11 @@ type clientJobTrace struct {
 	limit          int64
 	cancelFunc     context.CancelFunc
 
-	log            bytes.Buffer
-	lock           sync.RWMutex
-	state          common.JobState
-	failure_reason common.JobFailureReason
-	finished       chan bool
+	log           bytes.Buffer
+	lock          sync.RWMutex
+	state         common.JobState
+	failureReason common.JobFailureReason
+	finished      chan bool
 
 	sentTrace int
 	sentTime  time.Time
@@ -87,7 +87,7 @@ func (c *clientJobTrace) Success() {
 	c.Fail(nil, "")
 }
 
-func (c *clientJobTrace) Fail(err error, failure_reason common.JobFailureReason) {
+func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {
 	c.lock.Lock()
 	if c.state != common.Running {
 		c.lock.Unlock()
