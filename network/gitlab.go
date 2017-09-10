@@ -222,12 +222,13 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	}
 }
 
-func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string) common.UpdateState {
+func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string, failure_reason common.JobFailureReason) common.UpdateState {
 	request := common.UpdateJobRequest{
 		Info:  n.getRunnerVersion(config),
 		Token: jobCredentials.Token,
 		State: state,
 		Trace: trace,
+		FailureReason: failure_reason,
 	}
 
 	log := config.Log().WithField("job", id)

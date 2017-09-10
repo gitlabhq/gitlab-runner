@@ -20,6 +20,14 @@ const (
 	Success JobState = "success"
 )
 
+// Those failure_reason need to be compatible with
+// CommitStatus.failure_reasons.keys in Gitlab-CE/EE
+const (
+	UnknownFailure JobFailureReason = "unknown_failure"
+	ScriptFailure JobFailureReason = "script_failure"
+	RunnerSystemFailure JobFailureReason = "runner_system_failure"
+)
+
 const (
 	UpdateSucceeded UpdateState = iota
 	UpdateNotFound
@@ -263,10 +271,11 @@ func (j *JobResponse) RepoCleanURL() string {
 }
 
 type UpdateJobRequest struct {
-	Info  VersionInfo `json:"info,omitempty"`
-	Token string      `json:"token,omitempty"`
-	State JobState    `json:"state,omitempty"`
-	Trace *string     `json:"trace,omitempty"`
+	Info  		  VersionInfo 	 		  `json:"info,omitempty"`
+	Token 		  string      	 		  `json:"token,omitempty"`
+	State 		  JobState    	 		  `json:"state,omitempty"`
+	Trace 		  *string     	 		  `json:"trace,omitempty"`
+	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
 }
 
 type JobCredentials struct {
@@ -319,7 +328,7 @@ type Network interface {
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig) (*JobResponse, bool)
-	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string) UpdateState
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string, failure_reason FailureReason) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
