@@ -8,29 +8,31 @@ import (
 	"time"
 
 	"golang.org/x/net/context"
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/resource"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	clientcmd "k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
-	clientcmdapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/kubernetes"
+	clientcmd "k8s.io/client-go/tools/clientcmd"
+	// clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	// "k8s.io/kubernetes/pkg/api"
+	api "k8s.io/client-go/pkg/api/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func init() {
-	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
-}
+// func init() {
+// 	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
+// }
 
-func getKubeClientConfig(config *common.KubernetesConfig) (*restclient.Config, error) {
+func getKubeClientConfig(config *common.KubernetesConfig) (*rest.Config, error) {
 	switch {
 	case len(config.CertFile) > 0:
 		if len(config.KeyFile) == 0 || len(config.CAFile) == 0 {
 			return nil, fmt.Errorf("ca file, cert file and key file must be specified when using file based auth")
 		}
-		return &restclient.Config{
+		return &rest.Config{
 			Host: config.Host,
-			TLSClientConfig: restclient.TLSClientConfig{
+			TLSClientConfig: rest.TLSClientConfig{
 				CertFile: config.CertFile,
 				KeyFile:  config.KeyFile,
 				CAFile:   config.CAFile,
@@ -38,13 +40,13 @@ func getKubeClientConfig(config *common.KubernetesConfig) (*restclient.Config, e
 		}, nil
 
 	case len(config.Host) > 0:
-		return &restclient.Config{
+		return &rest.Config{
 			Host: config.Host,
 		}, nil
 
 	default:
 		// Try in cluster config first
-		if inClusterCfg, err := restclient.InClusterConfig(); err == nil {
+		if inClusterCfg, err := rest.InClusterConfig(); err == nil {
 			return inClusterCfg, nil
 		}
 		config, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
@@ -57,20 +59,24 @@ func getKubeClientConfig(config *common.KubernetesConfig) (*restclient.Config, e
 	}
 }
 
-func getKubeClient(config *common.KubernetesConfig) (*client.Client, error) {
+func getKubeClient(config *common.KubernetesConfig) (*kubernetes.Clientset, error) {
 	restConfig, err := getKubeClientConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return client.New(restConfig)
+	return kubernetes.NewForConfig(restConfig)
 }
 
-func closeKubeClient(client *client.Client) bool {
-	if client == nil || client.Client == nil || client.Client.Transport == nil {
+func closeKubeClient(client *kubernetes.Clientset) bool {
+	if client == nil {
 		return false
 	}
-	if transport, _ := client.Client.Transport.(*http.Transport); transport != nil {
+	coreClient := client.CoreV1Client.RESTClient().(*rest.RESTClient).Client
+	if coreClient == nil || coreClient.Transport == nil {
+		return false
+	}
+	if transport, _ := coreClient.Transport.(*http.Transport); transport != nil {
 		transport.CloseIdleConnections()
 		return true
 	}
@@ -96,8 +102,8 @@ type podPhaseResponse struct {
 	err   error
 }
 
-func getPodPhase(c *client.Client, pod *api.Pod, out io.Writer) podPhaseResponse {
-	pod, err := c.Pods(pod.Namespace).Get(pod.Name)
+func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseResponse {
+	pod, err := c.Pods(pod.Namespace).Get(pod.Name, meta_v1.GetOptions{})
 	if err != nil {
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
@@ -134,7 +140,7 @@ func getPodPhase(c *client.Client, pod *api.Pod, out io.Writer) podPhaseResponse
 
 }
 
-func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
+func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
 	errc := make(chan podPhaseResponse)
 	go func() {
 		defer close(errc)
@@ -151,7 +157,7 @@ func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan 
 // reached.
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
-func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
+func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {

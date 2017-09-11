@@ -7,9 +7,11 @@ import (
 	"strings"
 
 	"golang.org/x/net/context"
-	"k8s.io/kubernetes/pkg/api"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	"k8s.io/kubernetes/pkg/credentialprovider"
+	"k8s.io/client-go/kubernetes"
+	// "k8s.io/client-go/rest"
+	// "k8s.io/kubernetes/pkg/api"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	api "k8s.io/client-go/pkg/api/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -35,7 +37,7 @@ type kubernetesOptions struct {
 type executor struct {
 	executors.AbstractExecutor
 
-	kubeClient  *client.Client
+	kubeClient  *kubernetes.Clientset
 	pod         *api.Pod
 	credentials *api.Secret
 	options     *kubernetesOptions
@@ -165,7 +167,7 @@ func (s *executor) Cleanup() {
 		}
 	}
 	if s.credentials != nil {
-		err := s.kubeClient.Secrets(s.pod.Namespace).Delete(s.credentials.Name)
+		err := s.kubeClient.Secrets(s.pod.Namespace).Delete(s.credentials.Name, &meta_v1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
@@ -329,15 +331,20 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 	return
 }
 
+type dockerConfigEntry struct {
+	Username string
+	Password string
+}
+
 func (s *executor) setupCredentials() error {
-	authConfigs := make(map[string]credentialprovider.DockerConfigEntry)
+	authConfigs := make(map[string]dockerConfigEntry)
 
 	for _, credentials := range s.Build.Credentials {
 		if credentials.Type != "registry" {
 			continue
 		}
 
-		authConfigs[credentials.URL] = credentialprovider.DockerConfigEntry{
+		authConfigs[credentials.URL] = dockerConfigEntry{
 			Username: credentials.Username,
 			Password: credentials.Password,
 		}
@@ -388,7 +395,7 @@ func (s *executor) setupBuildPod() error {
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
 	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
-		ObjectMeta: api.ObjectMeta{
+		ObjectMeta: meta_v1.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
 			Namespace:    s.Config.Kubernetes.Namespace,
 			Labels:       labels,
