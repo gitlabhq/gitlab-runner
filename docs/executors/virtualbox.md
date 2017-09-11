@@ -24,9 +24,12 @@ the `[[runners]]` section in
 
 ## Create a new base virtual machine
 
+1. Install [VirtualBox](https://www.virtualbox.org) and if running from Windows,
+   add VirtualBox installation folder (e.g. `C:\Program Files\Oracle\VirtualBox`)
+   to `PATH` environment variable
 1. Import or create a new virtual machine in VirtualBox
 1. Log into the new virtual machine
-1. If on Windows, see [Checklist for Windows VMs](#checklist-for-windows-vms)
+1. If Windows VM, see [Checklist for Windows VMs](#checklist-for-windows-vms)
 1. Install the OpenSSH server
 1. Install all other dependencies required by your build
 1. Log out and shutdown the virtual machine
