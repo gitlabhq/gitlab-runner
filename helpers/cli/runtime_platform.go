@@ -3,7 +3,7 @@ package cli_helpers
 import (
 	"runtime"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"

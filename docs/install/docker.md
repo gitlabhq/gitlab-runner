@@ -81,7 +81,7 @@ did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
 ## Installing trusted SSL server certificates
 
 If your GitLab CI server is using self-signed SSL certificates then you should
-make sure the GitLab CI server certificate is trusted by the gitlab-ci-multi-runner
+make sure the GitLab CI server certificate is trusted by the gitlab-runner
 container for them to be able to talk to each other.
 
 The `gitlab/gitlab-runner` image is configured to look for the trusted SSL
@@ -90,7 +90,7 @@ certificates at `/etc/gitlab-runner/certs/ca.crt`, this can however be changed u
 
 Copy the `ca.crt` file into the `certs` directory on the data volume (or container).
 The `ca.crt` file should contain the root certificates of all the servers you
-want gitlab-ci-multi-runner to trust. The gitlab-ci-multi-runner container will
+want gitlab-runner to trust. The gitlab-runner container will
 import the `ca.crt` file on startup so if your container is already running you
 may need to restart it for the changes to take effect.
 

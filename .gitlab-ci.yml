@@ -7,7 +7,7 @@ stages:
 - release
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.8
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner:ci-1.8
   GOROOT: /usr/local/go
 
 image: $CI_IMAGE
@@ -19,7 +19,7 @@ before_script:
   services:
   - docker:dind
   variables:
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-ci-multi-runner:ci-1.8
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner:ci-1.8
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
   tags:
@@ -112,12 +112,12 @@ integration windows:
   stage: test
   before_script:
   - $GODIR = "$env:GOPATH\src\gitlab.com\gitlab-org"
-  - $target_path = "$GODIR\gitlab-ci-multi-runner"
+  - $target_path = "$GODIR\gitlab-runner"
   - $current_path = pwd
   - md $GODIR -Force
   - if (Test-Path $target_path) { cmd /c rmdir $target_path }
   - cmd /c mklink /D $target_path $current_path
-  - cd $GODIR\gitlab-ci-multi-runner
+  - cd $GODIR\gitlab-runner
   script:
   - $packages = (go list ./... | findstr -v "\/vendor\/" | Out-String | %{$_ -replace "\r\n"," "})
   - $testCommand = "go test $packages"
@@ -125,7 +125,7 @@ integration windows:
   - if ( $LASTEXITCODE -ne 0 ) { exit $LASTEXITCODE }
   allow_failure: true
   only:
-  - /.*/@gitlab-org/gitlab-ci-multi-runner
+  - /.*/@gitlab-org/gitlab-runner
   tags:
   - integration
   - windows
@@ -208,32 +208,32 @@ package-rpm: *packages
 
 .release_development: &release_development
   only:
-  - branches@gitlab-org/gitlab-ci-multi-runner
+  - branches@gitlab-org/gitlab-runner
   except:
-  - master@gitlab-org/gitlab-ci-multi-runner
+  - master@gitlab-org/gitlab-runner
 
 .release_bleeding_edge: &release_bleeding_edge
   only:
-  - master@gitlab-org/gitlab-ci-multi-runner
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
+  - master@gitlab-org/gitlab-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-runner
 
 .release_stable: &release_stable
   only:
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-runner
 
 development S3:
   <<: *release_s3
   <<: *release_development
   environment:
     name: development/s3/${CI_COMMIT_REF_NAME}
-    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
+    url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 bleeding edge S3:
   <<: *release_s3
   <<: *release_bleeding_edge
   environment:
     name: bleeding_edge/s3
-    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
+    url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 bleeding edge packagecloud:
   <<: *release_packagecloud
@@ -254,14 +254,14 @@ stable S3:
   <<: *release_stable
   environment:
     name: stable/s3
-    url: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
+    url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 stable packagecloud:
   <<: *release_packagecloud
   <<: *release_stable
   environment:
     name: stable/packagecloud
-    url: https://packages.gitlab.com/runner/gitlab-ci-multi-runner
+    url: https://packages.gitlab.com/runner/gitlab-runner
 
 stable docker images:
   <<: *release_docker_images

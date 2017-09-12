@@ -15,10 +15,10 @@ import (
 	"github.com/BurntSushi/toml"
 	log "github.com/Sirupsen/logrus"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/ssh"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/timeperiod"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
 )
 
 type DockerPullPolicy string

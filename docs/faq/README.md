@@ -66,7 +66,7 @@ or this article about [control and configure with systemd](https://docs.docker.c
 
 This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of Nginx (http://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors).
 
-Upgrade your Nginx to newer version. For more information see this issue: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1031
+Upgrade your Nginx to newer version. For more information see this issue: https://gitlab.com/gitlab-org/gitlab-runner/issues/1031
 
 ## I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`.
 
@@ -78,7 +78,7 @@ before_script:
   - call C:\path\to\test.bat
 ```
 
-Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1025).
+Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-runner/issues/1025).
 
 ## My gitlab runner is on Windows. How can I get colored output on the web terminal?
 
@@ -99,7 +99,7 @@ them to win32 calls when running on a Windows system (example: [Colorama](https:
 
 If your program is doing the above, then you need to disable that conversion for the CI builds so that the ANSI codes remain in the string.
 
-See issue [#332](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/332) for more information.
+See issue [#332](https://gitlab.com/gitlab-org/gitlab-runner/issues/332) for more information.
 
 ## "warning: You appear to have cloned an empty repository."
 
@@ -135,7 +135,7 @@ See [an example of a user issue][1105].
 
 [omnibus-ext-nginx]: http://doc.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server
 [recipes]: https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server
-[1105]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1105
+[1105]: https://gitlab.com/gitlab-org/gitlab-runner/issues/1105
 
 ## `"launchctl" failed: exit status 112, Could not find domain for`
 
@@ -298,4 +298,4 @@ working by following the steps below:
     (unix systems) or by adding the `ZONEINFO` variable to the list of environment variables
     available for Runner's user through System Settings (Windows).
 
-[zoneinfo-file]: https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip
+[zoneinfo-file]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip

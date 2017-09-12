@@ -40,7 +40,7 @@ ci_docker_machines_provider{state="used"} 0
 ci_runner_builds{stage="prepare_script",state="running"} 1
 # HELP ci_runner_version_info A metric with a constant '1' value labeled by different build stats fields.
 # TYPE ci_runner_version_info gauge
-ci_runner_version_info{architecture="amd64",branch="add-prometheus-metrics",built_at="2016-12-05 12:37:55 +0100 CET",go_version="go1.7.1",name="gitlab-ci-multi-runner",os="linux",revision="05c35a8",version="1.9.0~beta.19.g05c35a8"} 1
+ci_runner_version_info{architecture="amd64",branch="rename-to-gitlab-runner",built_at="2017-09-11 15:30:31 +0000 +0000",go_version="go1.8.3",name="gitlab-runner",os="linux",revision="35e724fa",version="10.0.0~beta.28.g35e724fa"} 1
 # HELP ci_ssh_docker_machines The total number of machines created.
 # TYPE ci_ssh_docker_machines counter
 ci_ssh_docker_machines{type="created"} 0

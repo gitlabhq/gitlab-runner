@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type ExecutorOptions struct {

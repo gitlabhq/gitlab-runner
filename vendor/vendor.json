@@ -1787,5 +1787,5 @@
 			"revision": "b0deb2eb8f4037421077f77cb163dbb4c0a2a9f5"
 		}
 	],
-	"rootPath": "gitlab.com/gitlab-org/gitlab-ci-multi-runner"
+	"rootPath": "gitlab.com/gitlab-org/gitlab-runner"
 }

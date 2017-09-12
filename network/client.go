@@ -24,7 +24,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/jpillora/backoff"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type requestCredentials interface {

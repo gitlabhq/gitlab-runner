@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 
 	"github.com/prometheus/client_golang/prometheus"
 )

@@ -82,8 +82,8 @@ mkdir -p $GOPATH
 ## 4. Download runner sources
 
 ```
-go get gitlab.com/gitlab-org/gitlab-ci-multi-runner
-cd $GOPATH/src/gitlab.com/gitlab-org/gitlab-ci-multi-runner/
+go get gitlab.com/gitlab-org/gitlab-runner
+cd $GOPATH/src/gitlab.com/gitlab-org/gitlab-runner/
 ```
 
 ## 5. Install runner dependencies
@@ -101,17 +101,17 @@ Normally you would use `gitlab-runner`, in order to compile and run Go source us
 
 ```
 make install
-gitlab-ci-multi-runner run
+gitlab-runner run
 ```
 
 You can run runner in debug-mode:
 
 ```
 make install
-gitlab-ci-multi-runner --debug run
+gitlab-runner --debug run
 ```
 
-## 7. Compile and install runner binary as `gitlab-ci-multi-runner`
+## 7. Compile and install runner binary as `gitlab-runner`
 
 ```
 make install
@@ -209,6 +209,6 @@ Which is especially tricky on Windows.
 
 Try to execute: `make deps docker`, if it doesn't help you can do that in steps:
 1. Execute `go get -u github.com/jteeuwen/go-bindata/...`
-2. Download https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz and save to out/docker/prebuilt-x86_64.tar.xz
-3. Download https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz and save to out/docker/prebuilt-arm.tar.xz
+2. Download https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz and save to out/docker/prebuilt-x86_64.tar.xz
+3. Download https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz and save to out/docker/prebuilt-arm.tar.xz
 4. Execute `make docker` or check the Makefile how this command looks like

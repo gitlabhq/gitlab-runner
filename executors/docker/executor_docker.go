@@ -20,10 +20,10 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 
 	"golang.org/x/net/context"
 )

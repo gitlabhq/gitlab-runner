@@ -9,7 +9,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var NAME = "gitlab-ci-multi-runner"
+var NAME = "gitlab-runner"
 var VERSION = "dev"
 var REVISION = "HEAD"
 var BRANCH = "HEAD"

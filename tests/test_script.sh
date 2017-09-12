@@ -4,7 +4,7 @@ set -e
 USER="$1"
 
 status() {
-	pidof gitlab-ci-multi-runner
+	pidof gitlab-runner
 }
 
 echo Checking existence of $USER...

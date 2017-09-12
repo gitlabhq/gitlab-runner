@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# gitlab-ci-multi-runner data directory
+# gitlab-runner data directory
 DATA_DIR="/etc/gitlab-runner"
 CONFIG_FILE=${CONFIG_FILE:-$DATA_DIR/config.toml}
 # custom certificate authority path
@@ -18,5 +18,5 @@ if [ -f "${CA_CERTIFICATES_PATH}" ]; then
   cmp -s "${CA_CERTIFICATES_PATH}" "${LOCAL_CA_PATH}" || update_ca
 fi
 
-# launch gitlab-ci-multi-runner passing all arguments
-exec gitlab-ci-multi-runner "$@"
+# launch gitlab-runner passing all arguments
+exec gitlab-runner "$@"

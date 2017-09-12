@@ -6,7 +6,7 @@ It runs tests and sends the results to GitLab.
 continuous integration service included with GitLab that coordinates the testing.
 The old name of this project was GitLab CI Multi Runner but please use "GitLab Runner" (without CI) from now on.
 
-![Build Status](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/badges/master/build.svg)
+![Build Status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/build.svg)
 
 ## Runner and GitLab CE/EE compatibility
 
@@ -54,14 +54,14 @@ Let's assume that you want to install version 1.11.2 of Runner:
 
     ```bash
     # for DEB based systems
-    root@host:# apt-get install gitlab-ci-multi-runner=1.11.2
+    root@host:# apt-get install gitlab-runner=10.0.0
 
     # for RPM based systems
-    root@host:# yum install gitlab-ci-multi-runner-1.11.2-1
+    root@host:# yum install gitlab-runner-10.0.0-1
     ```
 
 1. If you need to install Runner manually, you can look for a propper package/binary
-   at https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/v1.11.2/index.html
+   at https://gitlab-runner-downloads.s3.amazonaws.com/v10.0.0/index.html
 
 ## Release process
 

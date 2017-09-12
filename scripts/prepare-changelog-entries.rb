@@ -24,7 +24,7 @@ end
 
 exclude_mr_ids = []
 exclude_mr_ids = ENV['EXCLUDE_MR_IDS'].split(',').map(&:to_i) if ENV['EXCLUDE_MR_IDS']
-project_id = ENV['PROJECT_ID'] || 'gitlab-org%2Fgitlab-ci-multi-runner'
+project_id = ENV['PROJECT_ID'] || 'gitlab-org%2Fgitlab-runner'
 
 base_url = URI("https://gitlab.com/api/v3/projects/#{project_id}/merge_requests/")
 merge_requests = {}

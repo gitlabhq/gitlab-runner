@@ -217,7 +217,7 @@ This is an example `config.toml` to mount the data directory for the official My
 
 Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.
 
-See an issue: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1520
+See an issue: https://gitlab.com/gitlab-org/gitlab-runner/issues/1520
 
 ### PostgreSQL service example
 
@@ -475,7 +475,7 @@ fall back to local copy of an image and print a warning:
 >
 That is changed in version `v1.8`. To understand why we changed this and
 how incorrect usage of may be revealed please look into issue
-[#1905](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/issues/1905).
+[#1905](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
 
 **When to use this pull policy?**
 
@@ -526,8 +526,8 @@ using its internal IP.
 [yaml]: http://doc.gitlab.com/ce/ci/yaml/README.html
 [toml]: ../commands/README.md#configuration-file
 [alpine linux]: https://alpinelinux.org/
-[special-build]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/tree/master/dockerfiles/build
-[service-file]: https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/tree/master/dockerfiles/service
+[special-build]: https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles/build
+[service-file]: https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles/service
 [privileged]: https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities
 [entry]: https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime
 [secpull]: ../security/index.md##usage-of-private-docker-images-with-if-not-present-pull-policy

@@ -6,20 +6,20 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/cli"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/formatter"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/formatter"
 
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/commands"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/commands/helpers"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/docker/machine"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/kubernetes"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/parallels"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/shell"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/ssh"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/executors/virtualbox"
-	_ "gitlab.com/gitlab-org/gitlab-ci-multi-runner/shells"
+	_ "gitlab.com/gitlab-org/gitlab-runner/commands"
+	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
+	_ "gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 func main() {

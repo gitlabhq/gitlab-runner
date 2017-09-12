@@ -9,8 +9,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/common"
-	"gitlab.com/gitlab-org/gitlab-ci-multi-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type machineProvider struct {

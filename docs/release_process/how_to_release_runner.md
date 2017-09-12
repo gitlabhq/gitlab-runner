@@ -1,12 +1,12 @@
 # How to release GitLab Runner
 
-Permission to push to `master` branch at https://gitlab.com/gitlab-org/gitlab-ci-multi-runner.git
+Permission to push to `master` branch at https://gitlab.com/gitlab-org/gitlab-runner.git
 are required to release the Runner.
 
 ## Release stable version
 
 1. Make sure that all required changes are merged in and that the recent CI/CD pipeline
-    for `master` branch is passing. The easiest way is to check https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/commits/master.
+    for `master` branch is passing. The easiest way is to check https://gitlab.com/gitlab-org/gitlab-runner/commits/master.
 
 1. Run `./scripts/prepare-changelog-entries.rb` to list merge requests merged since last
     tag, e.g.:
@@ -108,7 +108,7 @@ are required to release the Runner.
     $ git push
     ```
 
-1. Go to https://gitlab.com/gitlab-org/gitlab-ci-multi-runner/pipelines and wait until
+1. Go to https://gitlab.com/gitlab-org/gitlab-runner/pipelines and wait until
     the CI/CD Pipeline for tag will pass. If the latest Pipeline for `master` was passing
     then following the process above there should be not changes that could fail the pipeline
     at this time. Any failures should be a temoprary failures related to CI infrastructure
