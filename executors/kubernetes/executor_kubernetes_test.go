@@ -18,13 +18,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/resource"
-	"k8s.io/kubernetes/pkg/api/testapi"
-	"k8s.io/kubernetes/pkg/api/unversioned"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	"k8s.io/kubernetes/pkg/client/unversioned/fake"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	api "k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -267,8 +264,7 @@ func TestVolumes(t *testing.T) {
 }
 
 func TestCleanup(t *testing.T) {
-	version := testapi.Default.GroupVersion().Version
-	codec := testapi.Default.Codec()
+	version, _ := testVersionAndCodec()
 
 	tests := []struct {
 		Pod        *api.Pod
@@ -277,7 +273,7 @@ func TestCleanup(t *testing.T) {
 	}{
 		{
 			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -295,7 +291,7 @@ func TestCleanup(t *testing.T) {
 		},
 		{
 			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -308,15 +304,8 @@ func TestCleanup(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
-		fakeClient := fake.RESTClient{
-			Codec:  codec,
-			Client: fake.CreateHTTPClient(test.ClientFunc),
-		}
-		c.Client = fakeClient.Client
-
 		ex := executor{
-			kubeClient: c,
+			kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(test.ClientFunc)),
 			pod:        test.Pod,
 		}
 		errored := false
@@ -794,8 +783,7 @@ func TestPrepare(t *testing.T) {
 }
 
 func TestSetupCredentials(t *testing.T) {
-	version := testapi.Default.GroupVersion().Version
-	codec := testapi.Default.Codec()
+	version, _ := testVersionAndCodec()
 
 	type testDef struct {
 		Credentials []common.Credentials
@@ -869,15 +857,8 @@ func TestSetupCredentials(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
-		fakeClient := fake.RESTClient{
-			Codec:  codec,
-			Client: fake.CreateHTTPClient(fakeClientRoundTripper(test)),
-		}
-		c.Client = fakeClient.Client
-
 		ex := executor{
-			kubeClient: c,
+			kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
 			options:    &kubernetesOptions{},
 			AbstractExecutor: executors.AbstractExecutor{
 				Config: common.RunnerConfig{
@@ -910,8 +891,7 @@ func TestSetupCredentials(t *testing.T) {
 }
 
 func TestSetupBuildPod(t *testing.T) {
-	version := testapi.Default.GroupVersion().Version
-	codec := testapi.Default.Codec()
+	version, _ := testVersionAndCodec()
 
 	type testDef struct {
 		RunnerConfig common.RunnerConfig
@@ -947,7 +927,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			PrepareFn: func(t *testing.T, test testDef, e *executor) {
 				e.credentials = &api.Secret{
-					ObjectMeta: api.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "job-credentials",
 					},
 				}
@@ -1108,13 +1088,6 @@ func TestSetupBuildPod(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
-		fakeClient := fake.RESTClient{
-			Codec:  codec,
-			Client: fake.CreateHTTPClient(fakeClientRoundTripper(test)),
-		}
-		c.Client = fakeClient.Client
-
 		vars := test.Variables
 		if vars == nil {
 			vars = []common.JobVariable{}
@@ -1125,7 +1098,7 @@ func TestSetupBuildPod(t *testing.T) {
 			options = &kubernetesOptions{}
 		}
 		ex := executor{
-			kubeClient: c,
+			kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
 			options:    options,
 			AbstractExecutor: executors.AbstractExecutor{
 				Config:     test.RunnerConfig,

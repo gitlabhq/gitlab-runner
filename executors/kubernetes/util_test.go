@@ -1,19 +1,25 @@
 package kubernetes
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
 	"golang.org/x/net/context"
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/testapi"
-	"k8s.io/kubernetes/pkg/api/unversioned"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	"k8s.io/kubernetes/pkg/client/unversioned/fake"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/pkg/api"
+	_ "k8s.io/client-go/pkg/api/install"
+	apiv1 "k8s.io/client-go/pkg/api/v1"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -70,24 +76,23 @@ func TestGetKubeClientConfig(t *testing.T) {
 }
 
 func TestWaitForPodRunning(t *testing.T) {
-	version := testapi.Default.GroupVersion().Version
-	codec := testapi.Default.Codec()
+	version, codec := testVersionAndCodec()
 	retries := 0
 
 	tests := []struct {
 		Name         string
-		Pod          *api.Pod
+		Pod          *apiv1.Pod
 		Config       *common.KubernetesConfig
 		ClientFunc   func(*http.Request) (*http.Response, error)
-		PodEndPhase  api.PodPhase
+		PodEndPhase  apiv1.PodPhase
 		Retries      int
 		Error        bool
 		ExactRetries bool
 	}{
 		{
 			Name: "ensure function retries until ready",
-			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+			Pod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -96,19 +101,19 @@ func TestWaitForPodRunning(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
-					pod := &api.Pod{
-						ObjectMeta: api.ObjectMeta{
+					pod := &apiv1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
-						Status: api.PodStatus{
-							Phase: api.PodPending,
+						Status: apiv1.PodStatus{
+							Phase: apiv1.PodPending,
 						},
 					}
 
 					if retries > 1 {
-						pod.Status.Phase = api.PodRunning
-						pod.Status.ContainerStatuses = []api.ContainerStatus{
+						pod.Status.Phase = apiv1.PodRunning
+						pod.Status.ContainerStatuses = []apiv1.ContainerStatus{
 							{
 								Ready: false,
 							},
@@ -116,8 +121,8 @@ func TestWaitForPodRunning(t *testing.T) {
 					}
 
 					if retries > 2 {
-						pod.Status.Phase = api.PodRunning
-						pod.Status.ContainerStatuses = []api.ContainerStatus{
+						pod.Status.Phase = apiv1.PodRunning
+						pod.Status.ContainerStatuses = []apiv1.ContainerStatus{
 							{
 								Ready: true,
 							},
@@ -133,13 +138,13 @@ func TestWaitForPodRunning(t *testing.T) {
 					return nil, fmt.Errorf("unexpected request")
 				}
 			},
-			PodEndPhase: api.PodRunning,
+			PodEndPhase: apiv1.PodRunning,
 			Retries:     2,
 		},
 		{
 			Name: "ensure function errors if pod already succeeded",
-			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+			Pod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -148,13 +153,13 @@ func TestWaitForPodRunning(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
-					pod := &api.Pod{
-						ObjectMeta: api.ObjectMeta{
+					pod := &apiv1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
-						Status: api.PodStatus{
-							Phase: api.PodSucceeded,
+						Status: apiv1.PodStatus{
+							Phase: apiv1.PodSucceeded,
 						},
 					}
 					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
@@ -167,12 +172,12 @@ func TestWaitForPodRunning(t *testing.T) {
 				}
 			},
 			Error:       true,
-			PodEndPhase: api.PodSucceeded,
+			PodEndPhase: apiv1.PodSucceeded,
 		},
 		{
 			Name: "ensure function returns error if pod unknown",
-			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+			Pod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -181,13 +186,13 @@ func TestWaitForPodRunning(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				return nil, fmt.Errorf("error getting pod")
 			},
-			PodEndPhase: api.PodUnknown,
+			PodEndPhase: apiv1.PodUnknown,
 			Error:       true,
 		},
 		{
 			Name: "ensure poll parameters work correctly",
-			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+			Pod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -200,8 +205,8 @@ func TestWaitForPodRunning(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
-					pod := &api.Pod{
-						ObjectMeta: api.ObjectMeta{
+					pod := &apiv1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
@@ -219,7 +224,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					return nil, fmt.Errorf("unexpected request")
 				}
 			},
-			PodEndPhase:  api.PodUnknown,
+			PodEndPhase:  apiv1.PodUnknown,
 			Retries:      3,
 			Error:        true,
 			ExactRetries: true,
@@ -229,12 +234,13 @@ func TestWaitForPodRunning(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			retries = 0
-			c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
+			c := kubernetes.NewForConfigOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &schema.GroupVersion{Version: version}}})
 			fakeClient := fake.RESTClient{
-				Codec:  codec,
+				// Codec:  codec,
 				Client: fake.CreateHTTPClient(test.ClientFunc),
 			}
-			c.Client = fakeClient.Client
+			c.CoreV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
+			// c.Client = fakeClient.Client
 			fw := testWriter{
 				call: func(b []byte) (int, error) {
 					if retries < test.Retries {
@@ -271,4 +277,37 @@ type testWriter struct {
 
 func (t testWriter) Write(b []byte) (int, error) {
 	return t.call(b)
+}
+
+func objBody(codec runtime.Codec, obj runtime.Object) io.ReadCloser {
+	return ioutil.NopCloser(bytes.NewReader([]byte(runtime.EncodeOrDie(codec, obj))))
+}
+
+func testKubernetesClient(version string, httpClient *http.Client) *kubernetes.Clientset {
+	conf := restclient.Config{
+		ContentConfig: restclient.ContentConfig{
+			GroupVersion: &schema.GroupVersion{Version: version},
+		},
+	}
+	kube := kubernetes.NewForConfigOrDie(&conf)
+	fakeClient := fake.RESTClient{Client: httpClient}
+	kube.Core().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
+	kube.Extensions().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
+
+	return kube
+}
+
+// minimal port from k8s.io/kubernetes/pkg/testapi
+func testVersionAndCodec() (version string, codec runtime.Codec) {
+	versionGroup := schema.GroupVersion{Group: api.GroupName, Version: api.Registry.GroupOrDie(api.GroupName).GroupVersion.Version}
+	version = versionGroup.Version
+
+	serializer := runtime.SerializerInfo{}
+	if serializer.Serializer == nil {
+		codec = api.Codecs.LegacyCodec(versionGroup)
+	} else {
+		codec = api.Codecs.CodecForVersions(serializer.Serializer, api.Codecs.UniversalDeserializer(), schema.GroupVersions{versionGroup}, nil)
+	}
+
+	return
 }
