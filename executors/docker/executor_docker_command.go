@@ -37,7 +37,7 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	// Start pre-build container which will git clone changes
-	s.predefinedContainer, err = s.createContainer("predefined", buildImage, []string{"gitlab-runner-build"}, []string{prebuildImage.ID})
+	s.predefinedContainer, err = s.createContainer("predefined", buildImage, common.ContainerCommandBuild, []string{prebuildImage.ID})
 	if err != nil {
 		return err
 	}

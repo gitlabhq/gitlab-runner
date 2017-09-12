@@ -22,22 +22,22 @@ logout() {
 pull () {
     echo "Pulling base image"
     registry_credentials_available || return 0
-    docker pull ${CI_IMAGE} || echo "${CI_IMAGE} image is not available. Will not use cache."
+    docker pull ${BUILD_IMAGE} || echo "${BUILD_IMAGE} image is not available. Will not use cache."
 }
 
 push () {
     echo "Pushing image"
     registry_credentials_available || return 0
-    docker push ${CI_IMAGE}
+    docker push ${BUILD_IMAGE}
 }
 
 
 build() {
     echo "Building image"
     docker build \
-           --cache-from ${CI_IMAGE} \
-           -t ${CI_IMAGE} \
-           -f ./dockerfiles/ci/Dockerfile \
+           --cache-from ${BUILD_IMAGE} \
+           -t ${BUILD_IMAGE} \
+           -f ${BUILD_DOCKERFILE} \
            .
 }
 

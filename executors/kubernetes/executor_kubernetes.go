@@ -138,15 +138,17 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	}
 
 	containerName := "build"
+	containerCommand := s.BuildShell.DockerCommand
 	if cmd.Predefined {
 		containerName = "helper"
+		containerCommand = common.ContainerCommandBuild
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	select {
-	case err := <-s.runInContainer(ctx, containerName, cmd.Script):
+	case err := <-s.runInContainer(ctx, containerName, containerCommand, cmd.Script):
 		if err != nil && strings.Contains(err.Error(), "executing in Docker Container") {
 			return &common.BuildError{Inner: err}
 		}
@@ -417,7 +419,7 @@ func (s *executor) setupBuildPod() error {
 	return nil
 }
 
-func (s *executor) runInContainer(ctx context.Context, name, command string) <-chan error {
+func (s *executor) runInContainer(ctx context.Context, name string, command []string, script string) <-chan error {
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
@@ -445,8 +447,8 @@ func (s *executor) runInContainer(ctx context.Context, name, command string) <-c
 			PodName:       s.pod.Name,
 			Namespace:     s.pod.Namespace,
 			ContainerName: name,
-			Command:       s.BuildShell.DockerCommand,
-			In:            strings.NewReader(command),
+			Command:       command,
+			In:            strings.NewReader(script),
 			Out:           s.Trace,
 			Err:           s.Trace,
 			Stdin:         true,
