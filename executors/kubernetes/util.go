@@ -8,14 +8,12 @@ import (
 	"time"
 
 	"golang.org/x/net/context"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/kubernetes"
-	clientcmd "k8s.io/client-go/tools/clientcmd"
-	// clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	// "k8s.io/kubernetes/pkg/api"
-	api "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	api "k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
