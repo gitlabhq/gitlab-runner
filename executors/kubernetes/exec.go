@@ -27,7 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	remotecommandserver "k8s.io/apimachinery/pkg/util/remotecommand"
 	"k8s.io/client-go/kubernetes"
-	api "k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/pkg/api"
+	"k8s.io/client-go/pkg/api/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 )
@@ -79,7 +80,7 @@ func (p *ExecOptions) Run() error {
 		return err
 	}
 
-	if pod.Status.Phase != api.PodRunning {
+	if pod.Status.Phase != v1.PodRunning {
 		return fmt.Errorf("Pod '%s' (on namespace '%s') is not running and cannot execute commands; current phase is '%s'",
 			p.PodName, p.Namespace, pod.Status.Phase)
 	}
@@ -103,13 +104,13 @@ func (p *ExecOptions) Run() error {
 		Namespace(pod.Namespace).
 		SubResource("exec").
 		Param("container", containerName)
-	req.VersionedParams(&api.PodExecOptions{
+	req.VersionedParams(&v1.PodExecOptions{
 		Container: containerName,
 		Command:   p.Command,
 		Stdin:     stdin != nil,
 		Stdout:    p.Out != nil,
 		Stderr:    p.Err != nil,
-	}, metav1.ParameterCodec)
+	}, api.ParameterCodec)
 
 	return p.Executor.Execute("POST", req.URL(), p.Config, stdin, p.Out, p.Err, false)
 }
