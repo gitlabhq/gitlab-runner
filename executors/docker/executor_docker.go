@@ -18,6 +18,7 @@ import (
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -554,7 +555,7 @@ func (s *executor) splitServiceAndVersion(serviceDescription string) (service, v
 	return
 }
 
-func (s *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image) (*types.Container, error) {
+func (s *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image, aliases []string) (*types.Container, error) {
 	if len(service) == 0 {
 		return nil, errors.New("invalid service name")
 	}
@@ -599,8 +600,19 @@ func (s *executor) createService(serviceIndex int, service, version, image strin
 		},
 	}
 
+	networkConfig := &network.NetworkingConfig{}
+	if s.Config.Docker.NetworkMode != "" {
+		networkConfig = &network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				s.Config.Docker.NetworkMode: {
+					Aliases: aliases,
+				},
+			},
+		}
+	}
+
 	s.Debugln("Creating service container", containerName, "...")
-	resp, err := s.client.ContainerCreate(s.Context, config, hostConfig, nil, containerName)
+	resp, err := s.client.ContainerCreate(s.Context, config, hostConfig, networkConfig, containerName)
 	if err != nil {
 		return nil, err
 	}
@@ -686,7 +698,7 @@ func (s *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 
 		// Create service if not yet created
 		if container == nil {
-			container, err = s.createService(serviceIndex, service, version, imageName, serviceDefinition)
+			container, err = s.createService(serviceIndex, service, version, imageName, serviceDefinition, linkNames)
 			if err != nil {
 				return
 			}

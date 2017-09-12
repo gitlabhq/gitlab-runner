@@ -882,7 +882,7 @@ func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *com
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
 		Return(nil).Once()
 
-	_, err := e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}})
+	_, err := e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}}, []string{})
 	assert.NoError(t, err, "Should create service container without errors")
 }
 
