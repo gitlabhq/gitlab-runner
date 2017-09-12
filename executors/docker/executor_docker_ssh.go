@@ -21,6 +21,8 @@ func (s *sshExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
+	s.Warningln("Since GitLab Runner 10.0 docker-ssh and docker-ssh+machine executors are marked as DEPRECATED and will be removed in one of the upcoming releases")
+
 	if s.Config.SSH == nil {
 		return errors.New("Missing SSH configuration")
 	}

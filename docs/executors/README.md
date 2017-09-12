@@ -10,7 +10,7 @@ To jump into the specific documentation of each executor, visit:
 
 - [Shell](shell.md)
 - [Docker](docker.md)
-- [Docker Machine and Docker Machine SSH (auto-scaling)](../install/autoscaling.md)
+- [Docker Machine (auto-scaling)](../install/autoscaling.md)
 - [Parallels](parallels.md)
 - [VirtualBox](virtualbox.md)
 - [SSH](ssh.md)
@@ -22,13 +22,13 @@ The executors support different platforms and methodologies for building a
 project. The table below shows the key facts for each executor which will help
 you decide.
 
-| Executor                                          | Shell   | Docker | Docker-SSH | VirtualBox | Parallels | SSH  | Kubernetes |
-|---------------------------------------------------|---------|--------|------------|------------|-----------|------|------------|
-| Clean build environment for every build           | no      | ✓      | ✓          | ✓          | ✓         | no   | ✓          |
-| Migrate runner machine                            | no      | ✓      | ✓          | partial    | partial   | no   | ✓          |
-| Zero-configuration support for concurrent builds  | no (1)  | ✓      | ✓          | ✓          | ✓         | no   | ✓          |
-| Complicated build environments                    | no (2)  | ✓      | ✓          | ✓ (3)      | ✓ (3)     | no   | ✓          |
-| Debugging build problems                          | easy    | medium | medium     | hard       | hard      | easy | medium     |
+| Executor                                          | Shell   | Docker | VirtualBox | Parallels | SSH  | Kubernetes |
+|---------------------------------------------------|---------|--------|------------|-----------|------|------------|
+| Clean build environment for every build           | no      | ✓      | ✓          | ✓         | no   | ✓          |
+| Migrate runner machine                            | no      | ✓      | partial    | partial   | no   | ✓          |
+| Zero-configuration support for concurrent builds  | no (1)  | ✓      | ✓          | ✓         | no   | ✓          |
+| Complicated build environments                    | no (2)  | ✓      | ✓ (3)      | ✓ (3)     | no   | ✓          |
+| Debugging build problems                          | easy    | medium | hard       | hard      | easy | medium     |
 
 1. it's possible, but in most cases it is problematic if the build uses services
    installed on the build machine
@@ -50,20 +50,9 @@ a build environment with dependent [services], like MySQL.
 
 ---
 
-We usually don't advise to use **Docker-SSH** which is a special version of
-the **Docker** executor. This executor allows you to connect to a Docker
-container that runs the **SSH** daemon inside it. It can be useful if your
-Docker image tries to replicate a full working system: it uses some process
-management system (`init`), exposes the SSH daemon, and contains already
-installed services. These kind of images are fat images, and are not generally
-advised to be used by the Docker community.
-
----
-
-The **Docker Machine** and **Docker Machine SSH** are also a special versions
-of the **Docker** executor with support for auto-scaling. It works like the
-normal **Docker** executor but with build hosts created on demand by
-_Docker Machine_.
+The **Docker Machine** is a special version of the **Docker** executor
+with support for auto-scaling. It works like the normal **Docker** executor
+ ut with build hosts created on demand by _Docker Machine_.
 
 ---
 
@@ -94,17 +83,17 @@ any of the above.
 
 Supported features by different executors:
 
-| Executor                              | Shell   | Docker | Docker-SSH | VirtualBox | Parallels | SSH  | Kubernetes |
-|---------------------------------------|---------|--------|------------|------------|-----------|------|------------|
-| Secure Variables                      | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    | ✓          |
-| GitLab Runner Exec command            | ✓       | ✓      | ✓          | no         | no        | no   | ✓          |
-| gitlab-ci.yml: image                  | no      | ✓      | ✓          | no         | no        | no   | ✓          |
-| gitlab-ci.yml: services               | no      | ✓      | ✓          | no         | no        | no   | ✓          |
-| gitlab-ci.yml: cache                  | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    | ✓          |
-| gitlab-ci.yml: artifacts              | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    | ✓          |
-| Absolute paths: caching, artifacts    | no      | no     | no         | no         | no        | no   | ✓          |
-| Passing artifacts between stages      | ✓       | ✓      | ✓          | ✓          | ✓         | ✓    | ✓          |
-| Use GitLab Container Registry private images | n/a | ✓   | ✓          | n/a        | n/a       | n/a  | ✓          |
+| Executor                              | Shell   | Docker | VirtualBox | Parallels | SSH  | Kubernetes |
+|---------------------------------------|---------|--------|------------|-----------|------|------------|
+| Secure Variables                      | ✓       | ✓      | ✓          | ✓         | ✓    | ✓          |
+| GitLab Runner Exec command            | ✓       | ✓      | no         | no        | no   | ✓          |
+| gitlab-ci.yml: image                  | no      | ✓      | no         | no        | no   | ✓          |
+| gitlab-ci.yml: services               | no      | ✓      | no         | no        | no   | ✓          |
+| gitlab-ci.yml: cache                  | ✓       | ✓      | ✓          | ✓         | ✓    | ✓          |
+| gitlab-ci.yml: artifacts              | ✓       | ✓      | ✓          | ✓         | ✓    | ✓          |
+| Absolute paths: caching, artifacts    | no      | no     | no         | no        | no   | ✓          |
+| Passing artifacts between stages      | ✓       | ✓      | ✓          | ✓         | ✓    | ✓          |
+| Use GitLab Container Registry private images | n/a | ✓   | n/a        | n/a       | n/a  | ✓          |
 
 Supported systems by different shells:
 
