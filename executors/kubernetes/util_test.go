@@ -234,13 +234,8 @@ func TestWaitForPodRunning(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			retries = 0
-			c := kubernetes.NewForConfigOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &schema.GroupVersion{Version: version}}})
-			fakeClient := fake.RESTClient{
-				// Codec:  codec,
-				Client: fake.CreateHTTPClient(test.ClientFunc),
-			}
-			c.CoreV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-			// c.Client = fakeClient.Client
+			c := testKubernetesClient(version, fake.CreateHTTPClient(test.ClientFunc))
+
 			fw := testWriter{
 				call: func(b []byte) (int, error) {
 					if retries < test.Retries {

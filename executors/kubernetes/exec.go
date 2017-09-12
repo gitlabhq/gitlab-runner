@@ -24,13 +24,11 @@ import (
 	"net/url"
 
 	log "github.com/Sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
-	// "k8s.io/kubernetes/pkg/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	api "k8s.io/client-go/pkg/api/v1"
-	// client "k8s.io/kubernetes/pkg/client/unversioned"
 	remotecommandserver "k8s.io/apimachinery/pkg/util/remotecommand"
+	"k8s.io/client-go/kubernetes"
+	api "k8s.io/client-go/pkg/api/v1"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
