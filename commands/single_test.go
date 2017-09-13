@@ -3,11 +3,11 @@ package commands
 import (
 	"context"
 	"io/ioutil"
+	"os"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -23,15 +23,20 @@ func init() {
 type jobSimulation func(mock.Arguments)
 
 func TestSingleRunnerSigquit(t *testing.T) {
+	var sendQuitSignal func()
+
 	job := func(_ mock.Arguments) {
-		err := syscall.Kill(syscall.Getpid(), syscall.SIGQUIT)
-		assert.NoError(t, err)
+		sendQuitSignal()
 		// simulate some real work while while sigquit get handled
 		time.Sleep(time.Second)
 	}
 
 	single, cleanup := mockingExecutionStack(t, "test-sigquit", 1, job)
 	defer cleanup()
+
+	sendQuitSignal = func() {
+		single.interruptSignals <- syscall.SIGQUIT
+	}
 
 	single.Execute(nil)
 }
@@ -57,6 +62,7 @@ func newRunSingleCommand(executorName string, network common.Network) *RunSingle
 				Token: "_test_token_",
 			},
 		},
+		interruptSignals: make(chan os.Signal),
 	}
 }
 

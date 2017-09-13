@@ -16,19 +16,22 @@ import (
 
 type RunSingleCommand struct {
 	common.RunnerConfig
-	network     common.Network
-	WaitTimeout int `long:"wait-timeout" description:"How long to wait in seconds before receiving the first job"`
-	lastBuild   time.Time
-	runForever  bool
-	MaxBuilds   int `long:"max-builds" description:"How many builds to process before exiting"`
-	finished    *abool.AtomicBool
+	network          common.Network
+	WaitTimeout      int `long:"wait-timeout" description:"How long to wait in seconds before receiving the first job"`
+	lastBuild        time.Time
+	runForever       bool
+	MaxBuilds        int `long:"max-builds" description:"How many builds to process before exiting"`
+	finished         *abool.AtomicBool
+	interruptSignals chan os.Signal
 }
 
-func waitForInterrupts(finished *abool.AtomicBool, abortSignal chan os.Signal, doneSignal chan int) {
-	signals := make(chan os.Signal)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+func waitForInterrupts(finished *abool.AtomicBool, abortSignal chan os.Signal, doneSignal chan int, interruptSignals chan os.Signal) {
+	if interruptSignals == nil {
+		interruptSignals = make(chan os.Signal)
+	}
+	signal.Notify(interruptSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 
-	interrupt := <-signals
+	interrupt := <-interruptSignals
 	if finished != nil {
 		finished.Set()
 	}
@@ -36,7 +39,7 @@ func waitForInterrupts(finished *abool.AtomicBool, abortSignal chan os.Signal, d
 	// request stop, but wait for force exit
 	for interrupt == syscall.SIGQUIT {
 		log.Warningln("Requested quit, waiting for builds to finish")
-		interrupt = <-signals
+		interrupt = <-interruptSignals
 	}
 
 	log.Warningln("Requested exit:", interrupt)
@@ -48,7 +51,7 @@ func waitForInterrupts(finished *abool.AtomicBool, abortSignal chan os.Signal, d
 	}()
 
 	select {
-	case newSignal := <-signals:
+	case newSignal := <-interruptSignals:
 		log.Fatalln("forced exit:", newSignal)
 	case <-time.After(common.ShutdownTimeout * time.Second):
 		log.Fatalln("shutdown timedout")
@@ -141,7 +144,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 	doneSignal := make(chan int, 1)
 	r.runForever = r.MaxBuilds == 0
 
-	go waitForInterrupts(r.finished, abortSignal, doneSignal)
+	go waitForInterrupts(r.finished, abortSignal, doneSignal, r.interruptSignals)
 
 	r.lastBuild = time.Now()
 
