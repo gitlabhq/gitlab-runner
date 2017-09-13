@@ -22,7 +22,7 @@ func init() {
 
 type jobSimulation func(mock.Arguments)
 
-func TestSingleRunnerSigquit(t *testing.T) {
+func TestSingleRunnerSigquitFlaky(t *testing.T) {
 	job := func(_ mock.Arguments) {
 		err := syscall.Kill(syscall.Getpid(), syscall.SIGQUIT)
 		assert.NoError(t, err)

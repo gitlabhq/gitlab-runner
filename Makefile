@@ -195,7 +195,11 @@ complexity:
 
 test: executors/docker/bindata.go
 	# Running tests...
-	@go test $(OUR_PACKAGES) -cover
+	@go test $(OUR_PACKAGES) -cover -run='([^F]laky|[^l]aky|[^a]ky|[^k]y|[^y])$$'
+
+flaky_test: executors/docker/bindata.go
+	# Running tests...
+	@go test $(OUR_PACKAGES) -run=Flaky$$
 
 install: executors/docker/bindata.go
 	go install --ldflags="$(GO_LDFLAGS)"
