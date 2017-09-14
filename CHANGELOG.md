@@ -9,6 +9,9 @@ be removed in one of the upcoming releases.
 > **Note:** Starting with 10.0, we're marking the `docker-ssh` and `docker-ssh+machine` executors as **deprecated**.
 They will be removed in one of the upcoming releases.
 
+> **Note:** Starting with 10.0, behavior of `register` command was slightly changed. Please look into
+https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/657 for more details.
+
 - Lock runners to project by default on registration !657
 - Update cli library !656
 - Fix RunSingleCommand race condition in waitForInterrupts !594
