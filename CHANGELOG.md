@@ -1,3 +1,30 @@
+v 10.0.0-rc.1 (2017-09-14)
+
+> **Note:** With 10.0, we've moved repository from https://gitlab.com/gitlab-org/gitlab-ci-multi-runner
+to https://gitlab.com/gitlab-org/gitlab-runner
+
+> **Note:** Starting with 10.0, we're marking the `exec` and service-related commands as **deprecated**. They will
+be removed in one of the upcoming releases.
+
+> **Note:** Starting with 10.0, we're marking the `docker-ssh` and `docker-ssh+machine` executors as **deprecated**.
+They will be removed in one of the upcoming releases.
+
+- Lock runners to project by default on registration !657
+- Update cli library !656
+- Fix RunSingleCommand race condition in waitForInterrupts !594
+- Add handling of non-existing images for Docker >= 17.07 !664
+- Document how to define default image to run using Kubernetes executor !668
+- Specify an explicit length for git rev-parse --short to avoid conflicts when run !672
+- Add link to Kubernetes executor details !670
+- Add install VirtualBox step & improve VM setup details !676
+- Rename repository from gitlab-ci-multi-runner to gitlab-runner !661
+- Fix variable file permission !655
+- Add Release Checklist template !677
+- Fix randomly failing test from commands/single_test.go !684
+- Mark docker-ssh and docker-ssh+machine executors as DEPRECATED !681
+- Mark exec and service-management commands as DEPRECATED !679
+- Fix support for `tmpfs` in docker executor config !680
+
 v 9.5.0 (2017-08-22)
 - Fix allowed_images behavior !635
 - Cleanup formatting on windows upgrade details !637
