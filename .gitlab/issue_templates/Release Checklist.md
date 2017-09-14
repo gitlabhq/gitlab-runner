@@ -1,4 +1,4 @@
-# GitLab Runner X.Y release checklist
+z GitLab Runner X.Y release checklist
 
 GitLab Runner Release manager: **MENTION_HERE**
 
@@ -20,8 +20,9 @@ Runner entries need to be added to blog post until: **BLOG_POST_DEADLINE_HERE**
 - [ ] check if Pipeline for `master` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/master)
     - [ ] add all required fixes to make `master` Pipeline passing
 - [ ] add **vX.Y.0-rc.1** CHANGELOG entries
-- [ ] tag **vX.Y.0-rc.1**
-- [ ] create `X-Y-stable` branch
+- [ ] tag and push **vX.Y.0-rc.1**
+- [ ] create and push `X-Y-stable` branch
+- [ ] checkout to `master`, update `VERSION` file to `X.Y.0` and push `master`
 - [ ] deploy **vX.Y.0-rc.1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 
 _New features_ window is closed - things not merged into `master` up to
