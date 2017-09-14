@@ -190,10 +190,8 @@ For all possible configuration variables check the documentation of each image
 provided in their corresponding Docker hub page.
 
 > **Note**:
->
-All variables will be passed to all services containers. It's not designed to
+> All variables will be passed to all services containers. It's not designed to
 distinguish which variable should go where.
->
 Secure variables are only passed to the build container.
 
 ## Mounting a directory in RAM
@@ -376,12 +374,11 @@ limitless.
 
 ## How pull policies work
 
-When using the `docker`, `docker-ssh`, `docker+machine` or `docker-ssh+machine`
-executors, you can set the `pull_policy` parameter which defines how the
-Runner will work when pulling Docker images (for both `image` and `services`
-keywords).
+When using the `docker` or `docker+machine` executors, you can set the
+`pull_policy` parameter which defines how the Runner will work when pulling
+Docker images (for both `image` and `services` keywords).
 
->**Note:**
+> **Note:**
 If you don't set any value for the `pull_policy` parameter, then
 Runner will use the `always` pull policy as the default value.
 
@@ -463,7 +460,7 @@ Pulling docker image registry.tld/my/image:latest ...
 ERROR: Build failed: Error: image registry.tld/my/image:latest not found
 ```
 
->**Note:**
+> **Note:**
 For versions prior to `v1.8`, when using the `always` pull policy, it could
 fall back to local copy of an image and print a warning:
 >
@@ -503,17 +500,21 @@ Pulling docker image local_image:latest ...
 ERROR: Build failed: Error: image local_image:latest not found
 ```
 
-## Docker vs Docker-SSH
+## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
->**Note**:
-The docker-ssh executor is deprecated and no new features will be added to it
+> **Note**:
+Starting with GitLab Runner 10.0, both docker-ssh and docker-ssh+machine executors
+are **deprecated** and will be removed in one of the upcoming releases.
 
-We provide a support for a special type of Docker executor, namely Docker-SSH.
-Docker-SSH uses the same logic as the Docker executor, but instead of executing
-the script directly, it uses an SSH client to connect to the build container.
+We provided a support for a special type of Docker executor, namely Docker-SSH
+(and the autoscaled version: Docker-SSH+Machine). Docker-SSH uses the same logic
+as the Docker executor, but instead of executing the script directly, it uses an
+SSH client to connect to the build container.
 
 Docker-ssh then connects to the SSH server that is running inside the container
 using its internal IP.
+
+This executor is no longer maintained and will be removed in near future.
 
 [Docker Fundamentals]: https://docs.docker.com/engine/understanding-docker/
 [docker engine]: https://www.docker.com/products/docker-engine
