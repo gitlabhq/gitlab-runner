@@ -114,7 +114,7 @@ func (c *ExecCommand) Execute(context *cli.Context) {
 	abortSignal := make(chan os.Signal)
 	doneSignal := make(chan int, 1)
 
-	go waitForInterrupts(nil, abortSignal, doneSignal)
+	go waitForInterrupts(nil, abortSignal, doneSignal, nil)
 
 	// Add self-volume to docker
 	if c.RunnerSettings.Docker == nil {
