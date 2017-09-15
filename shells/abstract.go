@@ -3,6 +3,7 @@ package shells
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -29,10 +30,35 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 	}
 }
 
-func (b *AbstractShell) writeGitExports(w ShellWriter, info common.ShellScriptInfo) {
-	for _, variable := range info.Build.GetGitTLSVariables() {
-		w.Variable(variable)
+func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, info common.ShellScriptInfo) error {
+	repoURL, err := url.Parse(info.Build.GitInfo.RepoURL)
+	if err != nil {
+		return err
 	}
+
+	repoURL.Path = ""
+	repoURL.RawPath = ""
+	repoURL.User = nil
+	gitlabHost := repoURL.String()
+
+	for _, variable := range info.Build.GetCITLSVariables() {
+		var configKey, configValue string
+		switch variable.Key {
+		case "CI_SERVER_TLS_CA_FILE":
+			configKey = "sslCAInfo"
+		case "CI_SERVER_TLS_CERT_FILE":
+			configKey = "sslCert"
+		case "CI_SERVER_TLS_KEY_FILE":
+			configKey = "sslKey"
+		default:
+			continue
+		}
+		configValue = w.TmpFile(variable.Key)
+		composedConfigKey := fmt.Sprintf("http.%s.%s", gitlabHost, configKey)
+		w.Command("git", "config", "--global", composedConfigKey, configValue)
+	}
+
+	return nil
 }
 
 func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
@@ -304,13 +330,15 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 
 func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
-	b.writeGitExports(w, info)
+	if err := b.writeGitSSLConfig(w, info); err != nil {
+		return err
+	}
 
 	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
 		b.writeCommands(w, info.PreCloneScript)
 	}
 
-	if err := b.writeCloneFetchCmds(w, info); err != nil {
+	if err = b.writeCloneFetchCmds(w, info); err != nil {
 		return err
 	}
 

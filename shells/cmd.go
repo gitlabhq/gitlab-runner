@@ -101,10 +101,14 @@ func (b *CmdWriter) buildCommand(command string, arguments ...string) string {
 	return strings.Join(list, " ")
 }
 
+func (b *CmdWriter) TmpFile(name string) string {
+	filePath := b.Absolute(path.Join(b.TemporaryPath, name))
+	return helpers.ToBackslash(filePath)
+}
+
 func (b *CmdWriter) Variable(variable common.JobVariable) {
 	if variable.File {
-		variableFile := b.Absolute(path.Join(b.TemporaryPath, variable.Key))
-		variableFile = helpers.ToBackslash(variableFile)
+		variableFile := b.TmpFile(variable.Key)
 		b.Line(fmt.Sprintf("md %q 2>NUL 1>NUL", batchEscape(helpers.ToBackslash(b.TemporaryPath))))
 		b.Line(fmt.Sprintf("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile)))
 		b.Line("SET " + batchEscapeVariable(variable.Key) + "=" + batchEscape(variableFile))
