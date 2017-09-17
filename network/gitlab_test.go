@@ -576,11 +576,11 @@ func TestUpdateJob(t *testing.T) {
 	state = c.UpdateJob(brokenConfig, jobCredentials, 4, "state", &trace, "")
 	assert.Equal(t, UpdateAbort, state)
 
-	state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "script_failure")
-	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
+	// state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "script_failure")
+	// assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "xxxxx")
-	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
+	// state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "xxxxx")
+	// assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 }
 
 var patchToken = "token"
