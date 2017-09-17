@@ -528,7 +528,7 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	case "running":
 		w.WriteHeader(http.StatusOK)
 	case "failed":
-		if req["failure_reason"].(string) == ScriptFailure {
+		if req["failure_reason"].(JobFailureReason) == ScriptFailure {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
