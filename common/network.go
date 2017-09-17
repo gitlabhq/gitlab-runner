@@ -274,8 +274,8 @@ type UpdateJobRequest struct {
 	Info          VersionInfo      `json:"info,omitempty"`
 	Token         string           `json:"token,omitempty"`
 	State         JobState         `json:"state,omitempty"`
-	Trace         *string          `json:"trace,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
+	Trace         *string          `json:"trace,omitempty"`
 }
 
 type JobCredentials struct {
