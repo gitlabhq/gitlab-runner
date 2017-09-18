@@ -12,6 +12,13 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+type gitConfigDestination string
+
+const (
+	gitConfigLocal  gitConfigDestination = "--local"
+	gitConfigGlobal gitConfigDestination = "--global"
+)
+
 type AbstractShell struct {
 }
 
@@ -30,18 +37,20 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 	}
 }
 
-func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, info common.ShellScriptInfo) error {
-	repoURL, err := url.Parse(info.Build.GitInfo.RepoURL)
+func (b *AbstractShell) gitSSLConfig(w ShellWriter, build *common.Build) (conf map[string]string) {
+	repoURL, err := url.Parse(build.GitInfo.RepoURL)
 	if err != nil {
-		return err
+		w.Warning("git SSL config: Can't parse repository URL. %s", err)
+		return
 	}
 
 	repoURL.Path = ""
 	repoURL.RawPath = ""
 	repoURL.User = nil
 	gitlabHost := repoURL.String()
+	conf = make(map[string]string)
 
-	for _, variable := range info.Build.GetCITLSVariables() {
+	for _, variable := range build.GetCITLSVariables() {
 		var configKey, configValue string
 		switch variable.Key {
 		case "CI_SERVER_TLS_CA_FILE":
@@ -55,18 +64,19 @@ func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, info common.ShellScript
 		}
 		configValue = w.TmpFile(variable.Key)
 		composedConfigKey := fmt.Sprintf("http.%s.%s", gitlabHost, configKey)
-		w.Command("git", "config", "--global", composedConfigKey, configValue)
+		conf[composedConfigKey] = configValue
 	}
 
-	return nil
+	return
 }
 
 func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
-	templateDir := w.MkTmpDir("git-template")
-	args := []string{"clone", "--no-checkout", build.GitInfo.RepoURL, projectDir, "--template", templateDir}
+	args := []string{"clone", "--no-checkout", build.GitInfo.RepoURL, projectDir, "--config", "fetch.recurseSubmodules=false"}
+	for key, value := range b.gitSSLConfig(w, build) {
+		args = append(args, "--config", fmt.Sprintf("%s=%s", key, value))
+	}
 
 	w.RmDir(projectDir)
-	w.Command("git", "config", "-f", path.Join(templateDir, "config"), "fetch.recurseSubmodules", "false")
 
 	if depth := build.GetGitDepth(); depth != "" {
 		w.Notice("Cloning repository for %s with git depth set to %s...", build.GitInfo.Ref, depth)
@@ -90,6 +100,10 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	}
 	w.Cd(projectDir)
 	w.Command("git", "config", "fetch.recurseSubmodules", "false")
+
+	if build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, build, gitConfigLocal)
+	}
 
 	// Remove .git/{index,shallow}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
@@ -328,17 +342,23 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 	return nil
 }
 
+func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where gitConfigDestination) {
+	for key, value := range b.gitSSLConfig(w, build) {
+		w.Command("git", "config", string(where), key, value)
+	}
+}
+
 func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
-	if err := b.writeGitSSLConfig(w, info); err != nil {
-		return err
+	if !info.Build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, info.Build, gitConfigGlobal)
 	}
 
 	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
 		b.writeCommands(w, info.PreCloneScript)
 	}
 
-	if err = b.writeCloneFetchCmds(w, info); err != nil {
+	if err := b.writeCloneFetchCmds(w, info); err != nil {
 		return err
 	}
 
