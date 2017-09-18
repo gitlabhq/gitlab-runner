@@ -51,7 +51,9 @@ func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) e
 }
 
 func runBuild(t *testing.T, build *common.Build) error {
-	return runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
+	err := runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
+	assert.True(t, build.SharedEnv)
+	return err
 }
 
 func runBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {

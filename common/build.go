@@ -74,6 +74,8 @@ type Build struct {
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
 
+	SharedEnv bool
+
 	CurrentStage BuildStage
 	CurrentState BuildRuntimeState
 
@@ -434,6 +436,13 @@ func (b *Build) GetAllVariables() (variables JobVariables) {
 	variables = append(variables, b.GetDefaultVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
+
+	if b.SharedEnv {
+		variables = append(variables, JobVariable{Key: "CI_SHARED_ENVIRONMENT", Value: "true", Public: true, Internal: true, File: false})
+	} else {
+		variables = append(variables, JobVariable{Key: "CI_DISPOSABLE_ENVIRONMENT", Value: "true", Public: true, Internal: true, File: false})
+	}
+
 	return variables.Expand()
 }
 
