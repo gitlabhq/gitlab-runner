@@ -76,3 +76,9 @@ releases.
 **Parallels executor is the safest possible option**, because it uses full system
 virtualization and with VM machines that are configured to run in isolated mode
 it blocks access to all peripherals and shared folders.
+
+## Cloning a runner
+
+Runners use a token to identify to the GitLab Server. If you clone a runner then
+the cloned runner could be picking up the same jobs for that token. This is a possible
+attack vector to "steal" runner jobs. 
