@@ -4,6 +4,7 @@ export VERSION := $(shell ./ci/version)
 REVISION := $(shell git rev-parse --short=8 HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
 BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
+TESTFLAGS ?= -cover
 
 LATEST_STABLE_TAG := $(shell git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" --sort=-v:refname | awk '!/rc/' | head -n 1)
 export IS_LATEST :=
@@ -195,7 +196,7 @@ complexity:
 
 test: executors/docker/bindata.go
 	# Running tests...
-	@go test $(OUR_PACKAGES) -cover
+	@go test $(OUR_PACKAGES) $(TESTFLAGS)
 
 install: executors/docker/bindata.go
 	go install --ldflags="$(GO_LDFLAGS)"
