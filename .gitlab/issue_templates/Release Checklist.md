@@ -1,4 +1,4 @@
-z GitLab Runner X.Y release checklist
+# GitLab Runner X.Y release checklist
 
 GitLab Runner Release manager: **MENTION_HERE**
 
@@ -41,7 +41,8 @@ this day, will be released with next release.
       documentation_link: 'https://docs.gitlab.com/runner'
       documentation_text: "Read through the documentation on GitLab Runner"
       description: |
-        We're also releasing GitLab Runner X.Y today!
+        We're also releasing GitLab Runner X.Y today! GitLab Runner is the open source project
+        that is used to run your CI/CD jobs and send the results back to GitLab.
 
         ##### Most interesting changes:
 
