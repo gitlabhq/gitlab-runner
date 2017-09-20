@@ -19,12 +19,24 @@ To install the Runner:
 
 1. Add GitLab's official repository:
 
+    **For GitLab Runner 10.0 and newer**
+
     ```bash
     # For Debian/Ubuntu
     curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
 
     # For RHEL/CentOS
     curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
+    ```
+
+    **For versions older than 10.0, please use**
+
+    ```bash
+    # For Debian/Ubuntu
+    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | sudo bash
+
+    # For RHEL/CentOS
+    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.rpm.sh | sudo bash
     ```
 
     >**Note:**
@@ -50,12 +62,24 @@ To install the Runner:
 
 1. Install `gitlab-runner`:
 
+    **For GitLab Runner 10.0 and newer**
+
     ```bash
     # For Debian/Ubuntu
     sudo apt-get install gitlab-runner
 
     # For RHEL/CentOS
     sudo yum install gitlab-runner
+    ```
+
+    **For versions older than 10.0, please use**
+
+    ```bash
+    # For Debian/Ubuntu
+    sudo apt-get install gitlab-ci-multi-runner
+
+    # For RHEL/CentOS
+    sudo yum install gitlab-ci-multi-runner
     ```
 
 1. [Register the Runner](../register/index.md)
@@ -70,6 +94,8 @@ some of the most common problems with GitLab Runner.
 
 Simply execute to install latest version:
 
+**For GitLab Runner 10.0 and newer**
+
 ```bash
 # For Debian/Ubuntu
 sudo apt-get update
@@ -78,6 +104,18 @@ sudo apt-get install gitlab-runner
 # For RHEL/CentOS
 sudo yum update
 sudo yum install gitlab-runner
+```
+
+**For versions older than 10.0, please use**
+
+```bash
+# For Debian/Ubuntu
+sudo apt-get update
+sudo apt-get install gitlab-ci-multi-runner
+
+# For RHEL/CentOS
+sudo yum update
+sudo yum install gitlab-ci-multi-runner
 ```
 
 ## Manually download packages
