@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-type Printer interface {
-	Println(args ...interface{})
+type RawLogger interface {
+	SendRawLog(args ...interface{})
 }
 
 type BuildSection struct {
@@ -23,20 +23,20 @@ func nowUnixUTC() int64 {
 	return time.Now().UTC().Unix()
 }
 
-func (s *BuildSection) timestamp(format string, logger Printer) {
+func (s *BuildSection) timestamp(format string, logger RawLogger) {
 	sectionLine := fmt.Sprintf(format, nowUnixUTC(), s.Name)
-	logger.Println(sectionLine)
+	logger.SendRawLog(sectionLine)
 }
 
-func (s *BuildSection) start(logger Printer) {
+func (s *BuildSection) start(logger RawLogger) {
 	s.timestamp(traceSectionStart, logger)
 }
 
-func (s *BuildSection) end(logger Printer) {
+func (s *BuildSection) end(logger RawLogger) {
 	s.timestamp(traceSectionEnd, logger)
 }
 
-func (s *BuildSection) RunAndCollectMetrics(logger Printer) error {
+func (s *BuildSection) RunAndCollectMetrics(logger RawLogger) error {
 	s.start(logger)
 	defer s.end(logger)
 

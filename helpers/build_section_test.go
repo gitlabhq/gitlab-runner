@@ -36,7 +36,7 @@ type sectionParser struct {
 	currentSection *parsedSection
 }
 
-func (p *sectionParser) Println(args ...interface{}) {
+func (p *sectionParser) SendRawLog(args ...interface{}) {
 	if p.Error != nil {
 		return
 	}
