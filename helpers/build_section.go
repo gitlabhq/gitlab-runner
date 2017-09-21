@@ -15,8 +15,8 @@ type BuildSection struct {
 }
 
 const (
-	traceSectionStart = "\rsection_start:%v:%s\r"
-	traceSectionEnd   = "\rsection_end:%v:%s\r"
+	traceSectionStart = "section_start:%v:%s\r" + ANSI_CLEAR
+	traceSectionEnd   = "section_end:%v:%s\r" + ANSI_CLEAR
 )
 
 func nowUnixUTC() int64 {

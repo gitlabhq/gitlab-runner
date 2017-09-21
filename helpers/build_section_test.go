@@ -12,7 +12,7 @@ import (
 
 func newSectionParser() *sectionParser {
 	parser := &sectionParser{}
-	parser.SectionRegexp = regexp.MustCompile("\rsection_((?:start)|(?:end)):(\\d+):(.+)\r")
+	parser.SectionRegexp = regexp.MustCompile("section_((?:start)|(?:end)):(\\d+):(.+)\r\033\\[0K")
 	parser.Sections = make([]*parsedSection, 0)
 
 	return parser
