@@ -170,8 +170,8 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		cmd.Predefined = true
 	}
 
-	section := BuildSection{
-		Name: fmt.Sprint(buildStage),
+	section := helpers.BuildSection{
+		Name: string(buildStage),
 		Run:  func() error { return executor.Run(cmd) },
 	}
 	return section.RunAndCollectMetrics(&b.logger)
