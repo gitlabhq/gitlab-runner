@@ -1,7 +1,7 @@
-v 10.0.0-rc.1 (2017-09-14)
+v 10.0.0 (2017-09-22)
 
 > **Note:** With 10.0, we've moved repository from https://gitlab.com/gitlab-org/gitlab-ci-multi-runner
-to https://gitlab.com/gitlab-org/gitlab-runner
+to https://gitlab.com/gitlab-org/gitlab-runner. Please update your Bookmarks!
 
 > **Note:** Starting with 10.0, we're marking the `exec` and service-related commands as **deprecated**. They will
 be removed in one of the upcoming releases.
