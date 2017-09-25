@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -445,4 +446,30 @@ func TestDebugTrace(t *testing.T) {
 		JobResponse: successfulBuild,
 	}
 	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
+}
+
+func TestSharedEnvVariables(t *testing.T) {
+	for _, shared := range [...]bool{true, false} {
+		t.Run(fmt.Sprintf("Value:%v", shared), func(t *testing.T) {
+			assert := assert.New(t)
+			build := Build{SharedEnv: shared}
+			vars := build.GetAllVariables().StringList()
+
+			assert.NotNil(vars)
+
+			present := "CI_SHARED_ENVIRONMENT=true"
+			absent := "CI_DISPOSABLE_ENVIRONMENT=true"
+			if !shared {
+				tmp := present
+				present = absent
+				absent = tmp
+			}
+
+			assert.Contains(vars, present)
+			assert.NotContains(vars, absent)
+			// we never expose false
+			assert.NotContains(vars, "CI_SHARED_ENVIRONMENT=false")
+			assert.NotContains(vars, "CI_DISPOSABLE_ENVIRONMENT=false")
+		})
+	}
 }
