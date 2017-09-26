@@ -156,8 +156,6 @@ func createServiceConfig(c *cli.Context) (svcConfig *service.Config) {
 }
 
 func RunServiceControl(c *cli.Context) {
-	logrus.Warningln("Since GitLab Runner 10.0 this command is marked as DEPRECATED and will be removed in one of the upcoming releases")
-
 	svcConfig := createServiceConfig(c)
 
 	s, err := service_helpers.New(&NullService{}, svcConfig)
