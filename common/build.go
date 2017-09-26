@@ -470,6 +470,25 @@ func (b *Build) GetAllVariables() JobVariables {
 	return b.allVariables
 }
 
+// GetRemoteURL checks if the default clone URL is overwritten by the runner
+// configuration option: 'CloneURL'. If it is, we use that to create the clone
+// URL.
+func (b *Build) GetRemoteURL() string {
+	cloneURL := strings.TrimRight(b.Runner.CloneURL, "/")
+
+	if !strings.HasPrefix(cloneURL, "http") {
+		return b.GitInfo.RepoURL
+	}
+
+	variables := b.GetAllVariables()
+	ciJobToken := variables.Get("CI_JOB_TOKEN")
+	ciProjectPath := variables.Get("CI_PROJECT_PATH")
+
+	splits := strings.SplitAfterN(cloneURL, "://", 2)
+
+	return fmt.Sprintf("%sgitlab-ci-token:%s@%s/%s.git", splits[0], ciJobToken, splits[1], ciProjectPath)
+}
+
 func (b *Build) GetGitDepth() string {
 	return b.GetAllVariables().Get("GIT_DEPTH")
 }

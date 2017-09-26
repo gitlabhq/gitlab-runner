@@ -486,3 +486,44 @@ func TestSharedEnvVariables(t *testing.T) {
 		})
 	}
 }
+
+func TestGetRemoteURL(t *testing.T) {
+	testCases := []struct {
+		runner RunnerSettings
+		result string
+	}{
+		{
+			runner: RunnerSettings{
+				CloneURL: "http://test.local/",
+			},
+			result: "http://gitlab-ci-token:1234567@test.local/h5bp/html5-boilerplate.git",
+		},
+		{
+			runner: RunnerSettings{
+				CloneURL: "https://test.local",
+			},
+			result: "https://gitlab-ci-token:1234567@test.local/h5bp/html5-boilerplate.git",
+		},
+		{
+			runner: RunnerSettings{},
+			result: "http://fallback.url",
+		},
+	}
+
+	for _, tc := range testCases {
+		build := &Build{
+			Runner: &RunnerConfig{
+				RunnerSettings: tc.runner,
+			},
+			allVariables: JobVariables{
+				JobVariable{Key: "CI_JOB_TOKEN", Value: "1234567"},
+				JobVariable{Key: "CI_PROJECT_PATH", Value: "h5bp/html5-boilerplate"},
+			},
+			JobResponse: JobResponse{
+				GitInfo: GitInfo{RepoURL: "http://fallback.url"},
+			},
+		}
+
+		assert.Equal(t, tc.result, build.GetRemoteURL())
+	}
+}
