@@ -100,3 +100,13 @@ func TestBuildSection(t *testing.T) {
 		assert.Equal(t, tc.delay, firstSection.Duration(), "case %d: wrong duration")
 	}
 }
+
+func TestBuildSectionSkipMetrics(t *testing.T) {
+	parser := newSectionParser()
+
+	section := BuildSection{Name: "SkipMetrics", SkipMetrics: true, Run: func() error { return nil }}
+	section.RunAndCollectMetrics(parser)
+
+	assert.Nil(t, parser.Error)
+	assert.Equal(t, 0, len(parser.Sections))
+}

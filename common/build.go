@@ -171,8 +171,9 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	}
 
 	section := helpers.BuildSection{
-		Name: string(buildStage),
-		Run:  func() error { return executor.Run(cmd) },
+		Name:        string(buildStage),
+		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		Run:         func() error { return executor.Run(cmd) },
 	}
 	return section.RunAndCollectMetrics(&b.logger)
 }

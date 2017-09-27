@@ -10,8 +10,9 @@ type RawLogger interface {
 }
 
 type BuildSection struct {
-	Name string
-	Run  func() error
+	Name        string
+	SkipMetrics bool
+	Run         func() error
 }
 
 const (
@@ -24,6 +25,10 @@ func nowUnixUTC() int64 {
 }
 
 func (s *BuildSection) timestamp(format string, logger RawLogger) {
+	if s.SkipMetrics {
+		return
+	}
+
 	sectionLine := fmt.Sprintf(format, nowUnixUTC(), s.Name)
 	logger.SendRawLog(sectionLine)
 }
