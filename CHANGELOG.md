@@ -1,3 +1,6 @@
+v 10.0.1 (2017-09-27)
+- Remove deprecation message from service management commands !699
+
 v 10.0.0 (2017-09-22)
 
 > **Note:** With 10.0, we've moved repository from https://gitlab.com/gitlab-org/gitlab-ci-multi-runner
