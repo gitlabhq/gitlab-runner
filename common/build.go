@@ -80,6 +80,7 @@ type Build struct {
 	CurrentState BuildRuntimeState
 
 	executorStageResolver func() ExecutorStage
+	allVariables          JobVariables
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -429,7 +430,12 @@ func (b *Build) GetGitTLSVariables() JobVariables {
 	return variables
 }
 
-func (b *Build) GetAllVariables() (variables JobVariables) {
+func (b *Build) GetAllVariables() JobVariables {
+	if b.allVariables != nil {
+		return b.allVariables
+	}
+
+	variables := make(JobVariables, 0)
 	if b.Runner != nil {
 		variables = append(variables, b.Runner.GetVariables()...)
 	}
@@ -443,7 +449,8 @@ func (b *Build) GetAllVariables() (variables JobVariables) {
 		variables = append(variables, JobVariable{Key: "CI_DISPOSABLE_ENVIRONMENT", Value: "true", Public: true, Internal: true, File: false})
 	}
 
-	return variables.Expand()
+	b.allVariables = variables.Expand()
+	return b.allVariables
 }
 
 func (b *Build) GetGitDepth() string {
