@@ -18,7 +18,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if err != nil {
 		return err
 	}
-	options.Build.SharedEnv = true
 
 	s.Println("Using SSH executor...")
 	if s.BuildShell.PassFile {
@@ -85,6 +84,7 @@ func init() {
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
+		features.Shared = true
 	}
 
 	common.RegisterExecutor("ssh", executors.DefaultExecutorProvider{

@@ -60,21 +60,20 @@ const (
 type Build struct {
 	JobResponse `yaml:",inline"`
 
-	SystemInterrupt chan os.Signal `json:"-" yaml:"-"`
-	RootDir         string         `json:"-" yaml:"-"`
-	BuildDir        string         `json:"-" yaml:"-"`
-	CacheDir        string         `json:"-" yaml:"-"`
-	Hostname        string         `json:"-" yaml:"-"`
-	Runner          *RunnerConfig  `json:"runner"`
-	ExecutorData    ExecutorData
+	SystemInterrupt  chan os.Signal `json:"-" yaml:"-"`
+	RootDir          string         `json:"-" yaml:"-"`
+	BuildDir         string         `json:"-" yaml:"-"`
+	CacheDir         string         `json:"-" yaml:"-"`
+	Hostname         string         `json:"-" yaml:"-"`
+	Runner           *RunnerConfig  `json:"runner"`
+	ExecutorData     ExecutorData
+	ExecutorFeatures FeaturesInfo `json:"-" yaml:"-"`
 
 	// Unique ID for all running builds on this runner
 	RunnerID int `json:"runner_id"`
 
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
-
-	SharedEnv bool
 
 	CurrentStage BuildStage
 	CurrentState BuildRuntimeState
@@ -385,6 +384,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return errors.New("executor not found")
 	}
 
+	provider.GetFeatures(&b.ExecutorFeatures)
+
 	executor, err = b.retryCreateExecutor(options, provider, logger)
 	if err == nil {
 		err = b.run(context, executor)
@@ -430,6 +431,10 @@ func (b *Build) GetGitTLSVariables() JobVariables {
 	return variables
 }
 
+func (b *Build) IsSharedEnv() bool {
+	return b.ExecutorFeatures.Shared
+}
+
 func (b *Build) GetAllVariables() JobVariables {
 	if b.allVariables != nil {
 		return b.allVariables
@@ -443,7 +448,7 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
 
-	if b.SharedEnv {
+	if b.IsSharedEnv() {
 		variables = append(variables, JobVariable{Key: "CI_SHARED_ENVIRONMENT", Value: "true", Public: true, Internal: true, File: false})
 	} else {
 		variables = append(variables, JobVariable{Key: "CI_DISPOSABLE_ENVIRONMENT", Value: "true", Public: true, Internal: true, File: false})

@@ -26,7 +26,7 @@ var (
 
 const SSH_SERVER_PRIVATE_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIJCgNhsvCiKATDBXmRYHQfXIatKKOXGrmBLEVtGZtVv7oAoGCCqGSM49\nAwEHoUQDQgAE+36GvpVV34STGaV+YU4HHXCtJjburfo8IQDVTgLRwAkoLqLIl1cO\nduKDmdmeG/n66BNH1rJUkXFfEr4OYbZH5g==\n-----END EC PRIVATE KEY-----"
 
-func TestPrepareSharedEnv(t *testing.T) {
+func TestPrepare(t *testing.T) {
 	runnerConfig := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Executor: "ssh",
@@ -64,8 +64,14 @@ func TestPrepareSharedEnv(t *testing.T) {
 		Context: context.TODO(),
 	}
 
-	assert.False(t, build.SharedEnv)
 	err = e.Prepare(prepareOptions)
 	assert.NoError(t, err)
-	assert.True(t, build.SharedEnv)
+}
+
+func TestSharedEnv(t *testing.T) {
+	provider := common.GetExecutor("ssh")
+	features := &common.FeaturesInfo{}
+
+	provider.GetFeatures(features)
+	assert.True(t, features.Shared)
 }

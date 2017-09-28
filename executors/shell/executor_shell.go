@@ -49,7 +49,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if err != nil {
 		return err
 	}
-	options.Build.SharedEnv = true
 
 	s.Println("Using Shell executor...")
 	return nil
@@ -155,6 +154,7 @@ func init() {
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
+		features.Shared = true
 	}
 
 	common.RegisterExecutor("shell", executors.DefaultExecutorProvider{

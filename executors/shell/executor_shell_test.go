@@ -52,7 +52,7 @@ func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) e
 
 func runBuild(t *testing.T, build *common.Build) error {
 	err := runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
-	assert.True(t, build.SharedEnv)
+	assert.True(t, build.IsSharedEnv())
 	return err
 }
 

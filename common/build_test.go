@@ -27,6 +27,7 @@ func TestBuildRun(t *testing.T) {
 
 	// Create executor only once
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// We run everything once
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
@@ -64,6 +65,7 @@ func TestRetryPrepare(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Times(3)
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -104,6 +106,7 @@ func TestPrepareFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Times(3)
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -135,6 +138,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Times(1)
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -166,6 +170,7 @@ func TestRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -201,6 +206,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -239,6 +245,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -277,6 +284,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -322,6 +330,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -359,6 +368,7 @@ func TestRunWrongAttempts(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e)
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -394,6 +404,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 
 	// Create executor only once
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// We run everything once
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
@@ -452,7 +463,9 @@ func TestSharedEnvVariables(t *testing.T) {
 	for _, shared := range [...]bool{true, false} {
 		t.Run(fmt.Sprintf("Value:%v", shared), func(t *testing.T) {
 			assert := assert.New(t)
-			build := Build{SharedEnv: shared}
+			build := Build{
+				ExecutorFeatures: FeaturesInfo{Shared: shared},
+			}
 			vars := build.GetAllVariables().StringList()
 
 			assert.NotNil(vars)
