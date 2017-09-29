@@ -407,6 +407,17 @@ func (b *Build) GetDefaultVariables() JobVariables {
 	}
 }
 
+func (b *Build) GetSharedEnvVariable() JobVariable {
+	env := JobVariable{Value: "true", Public: true, Internal: true, File: false}
+	if b.IsSharedEnv() {
+		env.Key = "CI_SHARED_ENVIRONMENT"
+	} else {
+		env.Key = "CI_DISPOSABLE_ENVIRONMENT"
+	}
+
+	return env
+}
+
 func (b *Build) GetCITLSVariables() JobVariables {
 	variables := JobVariables{}
 	if b.TLSCAChain != "" {
@@ -447,12 +458,7 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, b.GetDefaultVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
-
-	if b.IsSharedEnv() {
-		variables = append(variables, JobVariable{Key: "CI_SHARED_ENVIRONMENT", Value: "true", Public: true, Internal: true, File: false})
-	} else {
-		variables = append(variables, JobVariable{Key: "CI_DISPOSABLE_ENVIRONMENT", Value: "true", Public: true, Internal: true, File: false})
-	}
+	variables = append(variables, b.GetSharedEnvVariable())
 
 	b.allVariables = variables.Expand()
 	return b.allVariables
