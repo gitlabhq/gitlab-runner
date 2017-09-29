@@ -51,7 +51,9 @@ func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) e
 }
 
 func runBuild(t *testing.T, build *common.Build) error {
-	return runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
+	err := runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
+	assert.True(t, build.IsSharedEnv())
+	return err
 }
 
 func runBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {
@@ -423,7 +425,7 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 	})
 }
 
-func TestBuildWithDebugTrace(t *testing.T) {
+func TestBuildWithoutDebugTrace(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -434,14 +436,23 @@ func TestBuildWithDebugTrace(t *testing.T) {
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.NotRegexp(t, `[^$] echo Hello World`, out)
+	})
+}
+func TestBuildWithDebugTrace(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "true"})
 
-		out, err = runBuildReturningOutput(t, build)
+		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Regexp(t, `[^$] echo Hello World`, out)
 	})
 }
+
 func TestBuildMultilineCommand(t *testing.T) {
 	multilineBuild, err := common.GetMultilineBashBuild()
 	assert.NoError(t, err)

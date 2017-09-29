@@ -84,6 +84,7 @@ func init() {
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
+		features.Shared = true
 	}
 
 	common.RegisterExecutor("ssh", executors.DefaultExecutorProvider{

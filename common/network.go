@@ -48,6 +48,7 @@ type FeaturesInfo struct {
 	Services  bool `json:"services"`
 	Artifacts bool `json:"features"`
 	Cache     bool `json:"cache"`
+	Shared    bool `json:"shared"`
 }
 
 type RegisterRunnerRequest struct {

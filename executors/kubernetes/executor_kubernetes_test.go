@@ -769,6 +769,7 @@ func TestPrepare(t *testing.T) {
 			err := e.Prepare(prepareOptions)
 
 			if err != nil {
+				assert.False(t, test.Build.IsSharedEnv())
 				if test.Error {
 					assert.Error(t, err)
 				} else {
