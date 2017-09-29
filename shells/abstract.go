@@ -314,11 +314,7 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 		return err
 	}
 
-	if err = b.writeSubmoduleUpdateCmds(w, info); err != nil {
-		return err
-	}
-
-	return nil
+	return b.writeSubmoduleUpdateCmds(w, info)
 }
 
 func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
