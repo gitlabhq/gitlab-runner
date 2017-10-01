@@ -147,11 +147,17 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", args...)
 
 	// Update / initialize submodules
-	args = []string{"submodule", "update", "--init"}
+	updateArgs := []string{"submodule", "update", "--init"}
+	foreachArgs := []string{"submodule", "foreach"}
 	if recursive {
-		args = append(args, "--recursive")
+		updateArgs = append(updateArgs, "--recursive")
+		foreachArgs = append(foreachArgs, "--recursive")
 	}
-	w.Command("git", args...)
+
+	// Clean changed files in submodules
+	// "git submodule update --force" option not supported in Git 1.7.1 (shipped with CentOS 6)
+	w.Command("git", append(foreachArgs, "git", "reset", "--hard")...)
+	w.Command("git", updateArgs...)
 }
 
 func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, file string) {
