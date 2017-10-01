@@ -5,8 +5,8 @@ RUN apk add --no-cache bash ca-certificates git miniperl \
 
 RUN cd /tmp && \
 	apk add --no-cache -U openssl && \
-	wget https://github.com/git-lfs/git-lfs/releases/download/v2.1.1/git-lfs-linux-amd64-2.1.1.tar.gz && \
-	tar zxf git-lfs-linux-amd64-2.1.1.tar.gz && \
+	wget https://github.com/git-lfs/git-lfs/releases/download/v2.3.1/git-lfs-linux-amd64-2.3.1.tar.gz && \
+	tar zxf git-lfs-linux-amd64-2.3.1.tar.gz && \
 	mv git-lfs-*/git-lfs /usr/bin/ && \
 	git lfs install && \
 	apk del --purge openssl && \
