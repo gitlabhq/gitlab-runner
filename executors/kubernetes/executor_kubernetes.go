@@ -252,6 +252,13 @@ func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
 		})
 	}
 
+	for _, mount := range s.Config.Kubernetes.Volumes.EmptyDirs {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+		})
+	}
+
 	return
 }
 
@@ -323,6 +330,17 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 						Name: volume.Name,
 					},
 					Items: items,
+				},
+			},
+		})
+	}
+
+	for _, volume := range s.Config.Kubernetes.Volumes.EmptyDirs {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{
+					Medium: api.StorageMedium(volume.Medium),
 				},
 			},
 		})

@@ -113,6 +113,9 @@ func TestVolumeMounts(t *testing.T) {
 							PVCs: []common.KubernetesPVC{
 								{Name: "PVC", MountPath: "/path/to/whatever"},
 							},
+							EmptyDirs: []common.KubernetesEmptyDir{
+								{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
+							},
 						},
 					},
 				},
@@ -124,6 +127,7 @@ func TestVolumeMounts(t *testing.T) {
 				{Name: "repo"},
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
 				{Name: "PVC", MountPath: "/path/to/whatever"},
+				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
 			},
 		},
 		{
@@ -216,6 +220,9 @@ func TestVolumes(t *testing.T) {
 							Secrets: []common.KubernetesSecret{
 								{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true, Items: map[string]string{"secret_1": "/path/to/secret_1"}},
 							},
+							EmptyDirs: []common.KubernetesEmptyDir{
+								{Name: "emptyDir", MountPath: "/path/to/empty/dir", Medium: "Memory"},
+							},
 						},
 					},
 				},
@@ -228,6 +235,7 @@ func TestVolumes(t *testing.T) {
 				{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
 				{Name: "host-path", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
 				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
+				{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
 				{
 					Name: "ConfigMap",
 					VolumeSource: api.VolumeSource{
@@ -769,6 +777,7 @@ func TestPrepare(t *testing.T) {
 			err := e.Prepare(prepareOptions)
 
 			if err != nil {
+				assert.False(t, test.Build.IsSharedEnv())
 				if test.Error {
 					assert.Error(t, err)
 				} else {

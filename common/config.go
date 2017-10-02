@@ -167,6 +167,7 @@ type KubernetesVolumes struct {
 	PVCs       []KubernetesPVC       `toml:"pvc" description:"The persistent volume claims that will be mounted"`
 	ConfigMaps []KubernetesConfigMap `toml:"config_map" description:"The config maps which will be mounted as volumes"`
 	Secrets    []KubernetesSecret    `toml:"secret" description:"The secret maps which will be mounted"`
+	EmptyDirs  []KubernetesEmptyDir  `toml:"empty_dir" description:"The empty dirs which will be mounted"`
 }
 
 type KubernetesConfigMap struct {
@@ -194,6 +195,12 @@ type KubernetesSecret struct {
 	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	ReadOnly  bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	Items     map[string]string `toml:"items,omitempty" description:"Key-to-path mapping for keys from the secret that should be used."`
+}
+
+type KubernetesEmptyDir struct {
+	Name      string `toml:"name" json:"name" description:"The name of the volume and EmptyDir to use"`
+	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	Medium    string `toml:"medium,omitempty" description:"Set to 'Memory' to have a tmpfs"`
 }
 
 type RunnerCredentials struct {

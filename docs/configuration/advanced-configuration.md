@@ -47,7 +47,6 @@ This defines one runner entry.
 | `builds_dir`         | directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
 | `cache_dir`          | directory where build caches will be stored in context of selected executor (Locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
 | `environment`        | append or overwrite environment variables |
-| `disable_verbose`    | don't print run commands |
 | `request_concurrency` | limit number of concurrent requests for new jobs from GitLab (default 1) |
 | `output_limit`       | set maximum build log size in kilobytes, by default set to 4096 (4MB) |
 | `pre_clone_script`   | commands to be executed on the runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
@@ -66,7 +65,6 @@ Example:
   builds_dir = ""
   shell = ""
   environment = ["ENV=value", "LC_ALL=en_US.UTF-8"]
-  disable_verbose = false
 ```
 
 ## The EXECUTORS

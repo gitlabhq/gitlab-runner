@@ -84,6 +84,7 @@ func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job
 
 	//ExecutorProvider
 	p.On("Create").Return(&e).Times(maxBuilds)
+	p.On("GetFeatures", mock.Anything).Times(maxBuilds)
 	p.On("Acquire", mock.Anything).Return(&common.MockExecutorData{}, nil).Times(maxBuilds)
 	p.On("Release", mock.Anything, mock.Anything).Return(nil).Times(maxBuilds)
 

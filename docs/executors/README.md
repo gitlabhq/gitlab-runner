@@ -52,7 +52,7 @@ a build environment with dependent [services], like MySQL.
 
 The **Docker Machine** is a special version of the **Docker** executor
 with support for auto-scaling. It works like the normal **Docker** executor
- ut with build hosts created on demand by _Docker Machine_.
+but with build hosts created on demand by _Docker Machine_.
 
 ---
 

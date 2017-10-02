@@ -192,6 +192,10 @@ concurrent = 4
       read_only = true
       [runners.kubernetes.volumes.secret.items]
         "secret_1" = "relative/path/to/secret_1_file"
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "empty_dir"
+      mount_path = "/path/to/empty_dir"
+      medium = "Memory"
 ```
 
 ### Host Path volumes
@@ -265,6 +269,16 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 > **Notice**: If a non-existing key will be used then job will fail on Pod creation stage.
 
+### Empty Dir volumes
+
+[_emptyDir_ volume][k8s-empty-dir-volume-docs] configuration instructs Kubernetes to mount an empty directory inside of the container.
+
+| Option     | Type    | Required | Description |
+|------------|---------|----------|-------------|
+| name       | string  | yes      | The name of the volume |
+| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| medium     | String  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
+
 ## Using Docker in your builds
 
 There are a couple of caveats when using docker in your builds while running on
@@ -321,3 +335,4 @@ on other nodes.
 [k8s-pvc-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim
 [k8s-secret-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#secret
 [k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configmap/
+[k8s-empty-dir-volume-docs]:https://kubernetes.io/docs/concepts/storage/volumes/#emptydir

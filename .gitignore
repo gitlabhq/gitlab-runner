@@ -17,4 +17,4 @@ artifacts
 tmp/gitlab-test
 
 # Ignore the generated binary
-./gitlab-runner
+/gitlab-runner

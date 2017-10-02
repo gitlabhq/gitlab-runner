@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -26,6 +27,7 @@ func TestBuildRun(t *testing.T) {
 
 	// Create executor only once
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// We run everything once
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
@@ -63,6 +65,7 @@ func TestRetryPrepare(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Times(3)
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -103,6 +106,7 @@ func TestPrepareFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Times(3)
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -134,6 +138,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Times(1)
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -165,6 +170,7 @@ func TestRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -200,6 +206,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -238,6 +245,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -276,6 +284,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -321,6 +330,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -358,6 +368,7 @@ func TestRunWrongAttempts(t *testing.T) {
 
 	// Create executor
 	p.On("Create").Return(&e)
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -393,6 +404,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 
 	// Create executor only once
 	p.On("Create").Return(&e).Once()
+	p.On("GetFeatures", mock.Anything).Once()
 
 	// We run everything once
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
@@ -445,4 +457,32 @@ func TestDebugTrace(t *testing.T) {
 		JobResponse: successfulBuild,
 	}
 	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
+}
+
+func TestSharedEnvVariables(t *testing.T) {
+	for _, shared := range [...]bool{true, false} {
+		t.Run(fmt.Sprintf("Value:%v", shared), func(t *testing.T) {
+			assert := assert.New(t)
+			build := Build{
+				ExecutorFeatures: FeaturesInfo{Shared: shared},
+			}
+			vars := build.GetAllVariables().StringList()
+
+			assert.NotNil(vars)
+
+			present := "CI_SHARED_ENVIRONMENT=true"
+			absent := "CI_DISPOSABLE_ENVIRONMENT=true"
+			if !shared {
+				tmp := present
+				present = absent
+				absent = tmp
+			}
+
+			assert.Contains(vars, present)
+			assert.NotContains(vars, absent)
+			// we never expose false
+			assert.NotContains(vars, "CI_SHARED_ENVIRONMENT=false")
+			assert.NotContains(vars, "CI_DISPOSABLE_ENVIRONMENT=false")
+		})
+	}
 }

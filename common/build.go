@@ -60,13 +60,14 @@ const (
 type Build struct {
 	JobResponse `yaml:",inline"`
 
-	SystemInterrupt chan os.Signal `json:"-" yaml:"-"`
-	RootDir         string         `json:"-" yaml:"-"`
-	BuildDir        string         `json:"-" yaml:"-"`
-	CacheDir        string         `json:"-" yaml:"-"`
-	Hostname        string         `json:"-" yaml:"-"`
-	Runner          *RunnerConfig  `json:"runner"`
-	ExecutorData    ExecutorData
+	SystemInterrupt  chan os.Signal `json:"-" yaml:"-"`
+	RootDir          string         `json:"-" yaml:"-"`
+	BuildDir         string         `json:"-" yaml:"-"`
+	CacheDir         string         `json:"-" yaml:"-"`
+	Hostname         string         `json:"-" yaml:"-"`
+	Runner           *RunnerConfig  `json:"runner"`
+	ExecutorData     ExecutorData
+	ExecutorFeatures FeaturesInfo `json:"-" yaml:"-"`
 
 	// Unique ID for all running builds on this runner
 	RunnerID int `json:"runner_id"`
@@ -79,6 +80,7 @@ type Build struct {
 
 	executorStageResolver func() ExecutorStage
 	logger                BuildLogger
+	allVariables          JobVariables
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -388,6 +390,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return errors.New("executor not found")
 	}
 
+	provider.GetFeatures(&b.ExecutorFeatures)
+
 	executor, err = b.retryCreateExecutor(options, provider, b.logger)
 	if err == nil {
 		err = b.run(context, executor)
@@ -407,6 +411,17 @@ func (b *Build) GetDefaultVariables() JobVariables {
 		{Key: "CI_PROJECT_DIR", Value: b.FullProjectDir(), Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER", Value: "yes", Public: true, Internal: true, File: false},
 	}
+}
+
+func (b *Build) GetSharedEnvVariable() JobVariable {
+	env := JobVariable{Value: "true", Public: true, Internal: true, File: false}
+	if b.IsSharedEnv() {
+		env.Key = "CI_SHARED_ENVIRONMENT"
+	} else {
+		env.Key = "CI_DISPOSABLE_ENVIRONMENT"
+	}
+
+	return env
 }
 
 func (b *Build) GetCITLSVariables() JobVariables {
@@ -433,14 +448,26 @@ func (b *Build) GetGitTLSVariables() JobVariables {
 	return variables
 }
 
-func (b *Build) GetAllVariables() (variables JobVariables) {
+func (b *Build) IsSharedEnv() bool {
+	return b.ExecutorFeatures.Shared
+}
+
+func (b *Build) GetAllVariables() JobVariables {
+	if b.allVariables != nil {
+		return b.allVariables
+	}
+
+	variables := make(JobVariables, 0)
 	if b.Runner != nil {
 		variables = append(variables, b.Runner.GetVariables()...)
 	}
 	variables = append(variables, b.GetDefaultVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
-	return variables.Expand()
+	variables = append(variables, b.GetSharedEnvVariable())
+
+	b.allVariables = variables.Expand()
+	return b.allVariables
 }
 
 func (b *Build) GetGitDepth() string {
