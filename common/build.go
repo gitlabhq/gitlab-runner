@@ -14,6 +14,7 @@ import (
 	"github.com/Sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
 type GitStrategy int
@@ -421,11 +422,11 @@ func (b *Build) GetSharedEnvVariable() JobVariable {
 func (b *Build) GetCITLSVariables() JobVariables {
 	variables := JobVariables{}
 	if b.TLSCAChain != "" {
-		variables = append(variables, JobVariable{"CI_SERVER_TLS_CA_FILE", b.TLSCAChain, true, true, true})
+		variables = append(variables, JobVariable{tls.VariableCAFile, b.TLSCAChain, true, true, true})
 	}
 	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
-		variables = append(variables, JobVariable{"CI_SERVER_TLS_CERT_FILE", b.TLSAuthCert, true, true, true})
-		variables = append(variables, JobVariable{"CI_SERVER_TLS_KEY_FILE", b.TLSAuthKey, true, true, true})
+		variables = append(variables, JobVariable{tls.VariableCertFile, b.TLSAuthCert, true, true, true})
+		variables = append(variables, JobVariable{tls.VariableKeyFile, b.TLSAuthKey, true, true, true})
 	}
 	return variables
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
 type gitConfigDestination string
@@ -53,11 +54,11 @@ func (b *AbstractShell) gitSSLConfig(w ShellWriter, build *common.Build) (conf m
 	for _, variable := range build.GetCITLSVariables() {
 		var configKey, configValue string
 		switch variable.Key {
-		case "CI_SERVER_TLS_CA_FILE":
+		case tls.VariableCAFile:
 			configKey = "sslCAInfo"
-		case "CI_SERVER_TLS_CERT_FILE":
+		case tls.VariableCertFile:
 			configKey = "sslCert"
-		case "CI_SERVER_TLS_KEY_FILE":
+		case tls.VariableKeyFile:
 			configKey = "sslKey"
 		default:
 			continue
