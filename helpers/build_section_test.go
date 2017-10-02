@@ -91,7 +91,7 @@ func TestBuildSection(t *testing.T) {
 		parser := newSectionParser()
 
 		section := BuildSection{Name: tc.name, Run: func() error { time.Sleep(tc.delay); return tc.error }}
-		section.RunAndCollectMetrics(parser)
+		section.Execute(parser)
 
 		assert.Nil(t, parser.Error, "case %d: Error: %s", num, parser.Error)
 		assert.Equal(t, 1, len(parser.Sections), "case %d: wrong number of sections detected", num)
@@ -105,7 +105,7 @@ func TestBuildSectionSkipMetrics(t *testing.T) {
 	parser := newSectionParser()
 
 	section := BuildSection{Name: "SkipMetrics", SkipMetrics: true, Run: func() error { return nil }}
-	section.RunAndCollectMetrics(parser)
+	section.Execute(parser)
 
 	assert.Nil(t, parser.Error)
 	assert.Equal(t, 0, len(parser.Sections))

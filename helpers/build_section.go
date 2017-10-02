@@ -41,7 +41,7 @@ func (s *BuildSection) end(logger RawLogger) {
 	s.timestamp(traceSectionEnd, logger)
 }
 
-func (s *BuildSection) RunAndCollectMetrics(logger RawLogger) error {
+func (s *BuildSection) Execute(logger RawLogger) error {
 	s.start(logger)
 	defer s.end(logger)
 

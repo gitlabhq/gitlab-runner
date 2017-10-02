@@ -175,7 +175,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run:         func() error { return executor.Run(cmd) },
 	}
-	return section.RunAndCollectMetrics(&b.logger)
+	return section.Execute(&b.logger)
 }
 
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
