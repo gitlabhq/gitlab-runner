@@ -12,9 +12,16 @@ type BuildLogger struct {
 	entry *logrus.Entry
 }
 
+func (e *BuildLogger) SendRawLog(args ...interface{}) {
+	if e.log != nil {
+		fmt.Fprint(e.log, args...)
+	}
+}
+
 func (e *BuildLogger) sendLog(logger func(args ...interface{}), logPrefix string, args ...interface{}) {
 	if e.log != nil {
-		fmt.Fprint(e.log, logPrefix+fmt.Sprintln(args...)+helpers.ANSI_RESET)
+		e.SendRawLog(logPrefix + fmt.Sprintln(args...))
+		e.SendRawLog(helpers.ANSI_RESET)
 
 		if e.log.IsStdout() {
 			return

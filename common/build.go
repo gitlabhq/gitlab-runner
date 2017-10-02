@@ -79,6 +79,7 @@ type Build struct {
 	CurrentState BuildRuntimeState
 
 	executorStageResolver func() ExecutorStage
+	logger                BuildLogger
 	allVariables          JobVariables
 }
 
@@ -171,7 +172,12 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		cmd.Predefined = true
 	}
 
-	return executor.Run(cmd)
+	section := helpers.BuildSection{
+		Name:        string(buildStage),
+		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		Run:         func() error { return executor.Run(cmd) },
+	}
+	return section.Execute(&b.logger)
 }
 
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
@@ -345,20 +351,20 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	var executor Executor
 
-	logger := NewBuildLogger(trace, b.Log())
-	logger.Println(fmt.Sprintf("Running with %s\n  on %s (%s)", AppVersion.Line(), b.Runner.Name, b.Runner.ShortDescription()))
+	b.logger = NewBuildLogger(trace, b.Log())
+	b.logger.Println(fmt.Sprintf("Running with %s\n  on %s (%s)", AppVersion.Line(), b.Runner.Name, b.Runner.ShortDescription()))
 
 	b.CurrentState = BuildRunStatePending
 
 	defer func() {
 		if _, ok := err.(*BuildError); ok {
-			logger.SoftErrorln("Job failed:", err)
+			b.logger.SoftErrorln("Job failed:", err)
 			trace.Fail(err)
 		} else if err != nil {
-			logger.Errorln("Job failed (system failure):", err)
+			b.logger.Errorln("Job failed (system failure):", err)
 			trace.Fail(err)
 		} else {
-			logger.Infoln("Job succeeded")
+			b.logger.Infoln("Job succeeded")
 			trace.Success()
 		}
 		if executor != nil {
@@ -386,7 +392,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	provider.GetFeatures(&b.ExecutorFeatures)
 
-	executor, err = b.retryCreateExecutor(options, provider, logger)
+	executor, err = b.retryCreateExecutor(options, provider, b.logger)
 	if err == nil {
 		err = b.run(context, executor)
 	}
