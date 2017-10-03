@@ -1,5 +1,6 @@
 /*
- * Minio Go Library for Amazon S3 Compatible Cloud Storage (C) 2015 Minio, Inc.
+ * Minio Go Library for Amazon S3 Compatible Cloud Storage
+ * (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +22,14 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"strings"
 	"sync"
+
+	"github.com/minio/minio-go/pkg/credentials"
+	"github.com/minio/minio-go/pkg/s3signer"
+	"github.com/minio/minio-go/pkg/s3utils"
 )
 
-// bucketLocationCache - Provides simple mechansim to hold bucket
+// bucketLocationCache - Provides simple mechanism to hold bucket
 // locations in memory.
 type bucketLocationCache struct {
 	// mutex is used for handling the concurrent
@@ -66,18 +70,29 @@ func (r *bucketLocationCache) Delete(bucketName string) {
 	delete(r.items, bucketName)
 }
 
-// getBucketLocation - Get location for the bucketName from location map cache.
+// GetBucketLocation - get location for the bucket name from location cache, if not
+// fetch freshly by making a new request.
+func (c Client) GetBucketLocation(bucketName string) (string, error) {
+	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
+		return "", err
+	}
+	return c.getBucketLocation(bucketName)
+}
+
+// getBucketLocation - Get location for the bucketName from location map cache, if not
+// fetch freshly by making a new request.
 func (c Client) getBucketLocation(bucketName string) (string, error) {
-	if location, ok := c.bucketLocCache.Get(bucketName); ok {
-		return location, nil
+	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
+		return "", err
 	}
 
-	if isAmazonChinaEndpoint(c.endpointURL) {
-		// For china specifically we need to set everything to
-		// cn-north-1 for now, there is no easier way until AWS S3
-		// provides a cleaner compatible API across "us-east-1" and
-		// China region.
-		return "cn-north-1", nil
+	// Region set then no need to fetch bucket location.
+	if c.region != "" {
+		return c.region, nil
+	}
+
+	if location, ok := c.bucketLocCache.Get(bucketName); ok {
+		return location, nil
 	}
 
 	// Initialize a new request.
@@ -109,7 +124,7 @@ func processBucketLocationResponse(resp *http.Response, bucketName string) (buck
 			// For access denied error, it could be an anonymous
 			// request. Move forward and let the top level callers
 			// succeed if possible based on their policy.
-			if errResp.Code == "AccessDenied" && strings.Contains(errResp.Message, "Access Denied") {
+			if errResp.Code == "AccessDenied" {
 				return "us-east-1", nil
 			}
 			return "", err
@@ -160,16 +175,48 @@ func (c Client) getBucketLocationRequest(bucketName string) (*http.Request, erro
 	// Set UserAgent for the request.
 	c.setUserAgent(req)
 
-	// Set sha256 sum for signature calculation only with signature version '4'.
-	if c.signature.isV4() {
-		req.Header.Set("X-Amz-Content-Sha256", hex.EncodeToString(sum256([]byte{})))
+	// Get credentials from the configured credentials provider.
+	value, err := c.credsProvider.Get()
+	if err != nil {
+		return nil, err
 	}
 
-	// Sign the request.
-	if c.signature.isV4() {
-		req = signV4(*req, c.accessKeyID, c.secretAccessKey, "us-east-1")
-	} else if c.signature.isV2() {
-		req = signV2(*req, c.accessKeyID, c.secretAccessKey)
+	var (
+		signerType      = value.SignerType
+		accessKeyID     = value.AccessKeyID
+		secretAccessKey = value.SecretAccessKey
+		sessionToken    = value.SessionToken
+	)
+
+	// Custom signer set then override the behavior.
+	if c.overrideSignerType != credentials.SignatureDefault {
+		signerType = c.overrideSignerType
 	}
+
+	// If signerType returned by credentials helper is anonymous,
+	// then do not sign regardless of signerType override.
+	if value.SignerType == credentials.SignatureAnonymous {
+		signerType = credentials.SignatureAnonymous
+	}
+
+	if signerType.IsAnonymous() {
+		return req, nil
+	}
+
+	if signerType.IsV2() {
+		req = s3signer.SignV2(*req, accessKeyID, secretAccessKey)
+		return req, nil
+	}
+
+	// Set sha256 sum for signature calculation only with signature version '4'.
+	var contentSha256 string
+	if c.secure {
+		contentSha256 = unsignedPayload
+	} else {
+		contentSha256 = hex.EncodeToString(sum256([]byte{}))
+	}
+
+	req.Header.Set("X-Amz-Content-Sha256", contentSha256)
+	req = s3signer.SignV4(*req, accessKeyID, secretAccessKey, sessionToken, "us-east-1")
 	return req, nil
 }

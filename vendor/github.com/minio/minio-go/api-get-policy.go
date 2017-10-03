@@ -17,31 +17,62 @@
 package minio
 
 import (
-	"io"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"sort"
+
+	"github.com/minio/minio-go/pkg/policy"
+	"github.com/minio/minio-go/pkg/s3utils"
 )
 
 // GetBucketPolicy - get bucket policy at a given path.
-func (c Client) GetBucketPolicy(bucketName, objectPrefix string) (bucketPolicy BucketPolicy, err error) {
+func (c Client) GetBucketPolicy(bucketName, objectPrefix string) (bucketPolicy policy.BucketPolicy, err error) {
 	// Input validation.
-	if err := isValidBucketName(bucketName); err != nil {
-		return BucketPolicyNone, err
+	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
+		return policy.BucketPolicyNone, err
 	}
-	if err := isValidObjectPrefix(objectPrefix); err != nil {
-		return BucketPolicyNone, err
+	if err := s3utils.CheckValidObjectNamePrefix(objectPrefix); err != nil {
+		return policy.BucketPolicyNone, err
 	}
-	policy, err := c.getBucketPolicy(bucketName, objectPrefix)
+	policyInfo, err := c.getBucketPolicy(bucketName)
 	if err != nil {
-		return BucketPolicyNone, err
+		errResponse := ToErrorResponse(err)
+		if errResponse.Code == "NoSuchBucketPolicy" {
+			return policy.BucketPolicyNone, nil
+		}
+		return policy.BucketPolicyNone, err
 	}
-	return identifyPolicyType(policy, bucketName, objectPrefix), nil
+	return policy.GetPolicy(policyInfo.Statements, bucketName, objectPrefix), nil
 }
 
-// Request server for policy.
-func (c Client) getBucketPolicy(bucketName string, objectPrefix string) (BucketAccessPolicy, error) {
+// ListBucketPolicies - list all policies for a given prefix and all its children.
+func (c Client) ListBucketPolicies(bucketName, objectPrefix string) (bucketPolicies map[string]policy.BucketPolicy, err error) {
+	// Input validation.
+	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
+		return map[string]policy.BucketPolicy{}, err
+	}
+	if err := s3utils.CheckValidObjectNamePrefix(objectPrefix); err != nil {
+		return map[string]policy.BucketPolicy{}, err
+	}
+	policyInfo, err := c.getBucketPolicy(bucketName)
+	if err != nil {
+		errResponse := ToErrorResponse(err)
+		if errResponse.Code == "NoSuchBucketPolicy" {
+			return map[string]policy.BucketPolicy{}, nil
+		}
+		return map[string]policy.BucketPolicy{}, err
+	}
+	return policy.GetPolicies(policyInfo.Statements, bucketName), nil
+}
+
+// Default empty bucket access policy.
+var emptyBucketAccessPolicy = policy.BucketAccessPolicy{
+	Version: "2012-10-17",
+}
+
+// Request server for current bucket policy.
+func (c Client) getBucketPolicy(bucketName string) (policy.BucketAccessPolicy, error) {
 	// Get resources properly escaped and lined up before
 	// using them in http request.
 	urlValues := make(url.Values)
@@ -49,44 +80,28 @@ func (c Client) getBucketPolicy(bucketName string, objectPrefix string) (BucketA
 
 	// Execute GET on bucket to list objects.
 	resp, err := c.executeMethod("GET", requestMetadata{
-		bucketName:  bucketName,
-		queryValues: urlValues,
+		bucketName:         bucketName,
+		queryValues:        urlValues,
+		contentSHA256Bytes: emptySHA256,
 	})
 
 	defer closeResponse(resp)
 	if err != nil {
-		return BucketAccessPolicy{}, err
+		return emptyBucketAccessPolicy, err
 	}
-	return processBucketPolicyResponse(bucketName, resp)
 
-}
-
-// processes the GetPolicy http response from the server.
-func processBucketPolicyResponse(bucketName string, resp *http.Response) (BucketAccessPolicy, error) {
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			errResponse := httpRespToErrorResponse(resp, bucketName, "")
-			if ToErrorResponse(errResponse).Code == "NoSuchBucketPolicy" {
-				return BucketAccessPolicy{Version: "2012-10-17"}, nil
-			}
-			return BucketAccessPolicy{}, errResponse
+			return emptyBucketAccessPolicy, httpRespToErrorResponse(resp, bucketName, "")
 		}
 	}
-	// Read access policy up to maxAccessPolicySize.
-	// http://docs.aws.amazon.com/AmazonS3/latest/dev/access-policy-language-overview.html
-	// bucket policies are limited to 20KB in size, using a limit reader.
-	bucketPolicyBuf, err := ioutil.ReadAll(io.LimitReader(resp.Body, maxAccessPolicySize))
+
+	bucketPolicyBuf, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return BucketAccessPolicy{}, err
+		return emptyBucketAccessPolicy, err
 	}
-	policy, err := unMarshalBucketPolicy(bucketPolicyBuf)
-	if err != nil {
-		return BucketAccessPolicy{}, err
-	}
-	// Sort the policy actions and resources for convenience.
-	for _, statement := range policy.Statements {
-		sort.Strings(statement.Actions)
-		sort.Strings(statement.Resources)
-	}
-	return policy, nil
+
+	policy := policy.BucketAccessPolicy{}
+	err = json.Unmarshal(bucketPolicyBuf, &policy)
+	return policy, err
 }

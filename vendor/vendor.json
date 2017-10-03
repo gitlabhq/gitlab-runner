@@ -771,10 +771,11 @@
 			"revision": "c12348ce28de40eed0136aa2b644d0ee0650e56c"
 		},
 		{
-			"checksumSHA1": "2U9NHIz+Zd7WwBkU84fKDk4OEk4=",
-			"comment": "v1.0.0-94-ge9fd7b8",
+			"checksumSHA1": "wU+t3PuZkLcNmS47J775XC54p2c=",
+			"comment": "3.0.3",
 			"path": "github.com/minio/minio-go",
-			"revision": "e9fd7b820d9a87122e159439ca034472040a43ce"
+			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
+			"revisionTime": "2017-09-12T21:15:23Z"
 		},
 		{
 			"checksumSHA1": "P77+l5Pc0uBc1xQvBU67O642LvU=",
