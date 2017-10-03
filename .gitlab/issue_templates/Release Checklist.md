@@ -6,6 +6,9 @@ Release blog post MR: **LINK_HERE**
 
 Runner entries need to be added to blog post until: **DEADLINE_FOR_RUNNER_ITEMS_ADDITION_INTO_BLOG_POST_HERE**
 
+Technical description of the release, with commands examples, can be found at:
+https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how_to_release_runner.md
+
 ## Before 7th
 
 - [ ] chose a release manager
