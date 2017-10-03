@@ -681,6 +681,12 @@
 			"revision": "aa0c862057666179de291b67d9f093d12b5a8473"
 		},
 		{
+			"checksumSHA1": "87LEfpY9cOk9CP7pWyIbmQ/6enU=",
+			"path": "github.com/go-ini/ini",
+			"revision": "20b96f641a5ea98f2f8619ff4f3e061cff4833bd",
+			"revisionTime": "2017-08-13T05:15:16Z"
+		},
+		{
 			"checksumSHA1": "dyojUOIWcH5VOLo2R7VMqF0bttg=",
 			"comment": "v0.2-61-gf20a144",
 			"path": "github.com/gogo/protobuf/proto",
@@ -771,9 +777,51 @@
 			"revision": "c12348ce28de40eed0136aa2b644d0ee0650e56c"
 		},
 		{
+			"checksumSHA1": "q8VfSvQ6fZY+QwtlMPtQsJrNews=",
+			"path": "github.com/minio/go-homedir",
+			"revision": "21304a94172ae3a09dee2cd86a12fb6f842138c7",
+			"revisionTime": "2016-02-15T11:55:11Z"
+		},
+		{
 			"checksumSHA1": "wU+t3PuZkLcNmS47J775XC54p2c=",
 			"comment": "3.0.3",
 			"path": "github.com/minio/minio-go",
+			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
+			"revisionTime": "2017-09-12T21:15:23Z"
+		},
+		{
+			"checksumSHA1": "qPt3l9ZUjG0J4oZNTSrKy17rts0=",
+			"path": "github.com/minio/minio-go/pkg/credentials",
+			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
+			"revisionTime": "2017-09-12T21:15:23Z"
+		},
+		{
+			"checksumSHA1": "pggIpSePizRBQ7ybhB0CuaSQydw=",
+			"path": "github.com/minio/minio-go/pkg/encrypt",
+			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
+			"revisionTime": "2017-09-12T21:15:23Z"
+		},
+		{
+			"checksumSHA1": "3tl2ehmod/EzXE9o9WJ5HM2AQPE=",
+			"path": "github.com/minio/minio-go/pkg/policy",
+			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
+			"revisionTime": "2017-09-12T21:15:23Z"
+		},
+		{
+			"checksumSHA1": "iEpQa89Q4IbHhfMW1qYJMOy9jN4=",
+			"path": "github.com/minio/minio-go/pkg/s3signer",
+			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
+			"revisionTime": "2017-09-12T21:15:23Z"
+		},
+		{
+			"checksumSHA1": "P9p0KiZWh9shIFSqTaIeY4/KYXo=",
+			"path": "github.com/minio/minio-go/pkg/s3utils",
+			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
+			"revisionTime": "2017-09-12T21:15:23Z"
+		},
+		{
+			"checksumSHA1": "maUy+dbN6VfTTnfErrAW2lLit1w=",
+			"path": "github.com/minio/minio-go/pkg/set",
 			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
 			"revisionTime": "2017-09-12T21:15:23Z"
 		},
