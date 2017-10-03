@@ -4,13 +4,19 @@ GitLab Runner Release manager: **MENTION_HERE**
 
 Release blog post MR: **LINK_HERE**
 
-Runner entries need to be added to blog post until: **BLOG_POST_DEADLINE_HERE**
+Runner entries need to be added to blog post until: **DEADLINE_FOR_RUNNER_ITEMS_ADDITION_INTO_BLOG_POST_HERE**
 
 ## Before 7th
 
 - [ ] chose a release manager
 - [ ] link release blog post's MR
 - [ ] set deadline for _add entries to release blog post_
+
+      Please check what deadline is set for `General Contributions` section in the release blog post
+      Merge Request. It should be 6th working day before the 22nd. In that case we can set our
+      deadline for 7th working day before 22nd, however if the deadline from the MR is earlier, then
+      use the eraliest one.
+
 - [ ] Update the `X.Y.` and `X-Y-` to a specific release version
 - [ ] Add the ~release label to the issue
 - [ ] Add the %X.Y milestone to the issue
@@ -28,7 +34,7 @@ Runner entries need to be added to blog post until: **BLOG_POST_DEADLINE_HERE**
 _New features_ window is closed - things not merged into `master` up to
 this day, will be released with next release.
 
-## 7 working days before 22th (**BLOG_POST_DEADLINE_HERE**)
+## 7 working days before 22th (**DEADLINE_FOR_RUNNER_ITEMS_ADDITION_INTO_BLOG_POST_HERE**)
 
 - [ ] add entries to release blog post
     - [ ] add release entry:
