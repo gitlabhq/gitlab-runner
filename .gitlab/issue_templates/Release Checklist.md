@@ -76,8 +76,6 @@ if the only RC version was the _RC1_ released near 7th day of month.
     - [ ] tag stable version
 - [ ] Before 15:00 UTC
     - [ ] deploy stable version to all production Runners
-    - [ ] open next patch release issue: _add link here_
-    - [ ] open next stable release issue: _add link here_
 
 
 **RC release template**
