@@ -38,6 +38,7 @@ func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, wh
 		return
 	}
 
+	repoURL.Path = ""
 	host := repoURL.String()
 	variables := build.GetCITLSVariables()
 	args := append([]string{"config"}, where...)
