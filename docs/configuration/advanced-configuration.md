@@ -52,6 +52,7 @@ This defines one runner entry.
 | `pre_clone_script`   | commands to be executed on the runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `pre_build_script`   | commands to be executed on the runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `post_build_script`  | commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `clone_url`	       | Overwrite the URL for the GitLab instance. Used if the runner can't connect to GitLab on the URL GitLab exposes itself. |
 
 Example:
 
@@ -65,7 +66,19 @@ Example:
   builds_dir = ""
   shell = ""
   environment = ["ENV=value", "LC_ALL=en_US.UTF-8"]
+  clone_url = "http://gitlab.example.local"
 ```
+
+### How `clone_url` works
+
+In cases where the GitLab instance is exposed to an URL which can't be used
+by the runner, a `clone_url` can be configured. For example; GitLab is exposed
+to `https://gitlab.example.com`, but the runner can't reach that because of
+a firewall setup. If the runner can reach the node on `192.168.1.23`, 
+the `clone_url` should be set to `"http://192.168.1.23`.
+
+Only if the `clone_url` is set, the runner will construct a clone URL in the form
+of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
 ## The EXECUTORS
 
