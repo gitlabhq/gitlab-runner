@@ -25,6 +25,7 @@ func main() {
 	}()
 
 	formatter.SetRunnerFormatter()
+	cli_helpers.AddSecretsCleanupLogHook()
 
 	app := cli.NewApp()
 	app.Name = path.Base(os.Args[0])
