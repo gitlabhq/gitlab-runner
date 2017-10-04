@@ -466,3 +466,34 @@ func TestBuildMultilineCommand(t *testing.T) {
 	assert.Contains(t, out, "Hello World")
 	assert.Contains(t, out, "collapsed multi-line command")
 }
+func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteBrokenTLSBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Runner.URL = "https://gitlab.com"
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.Error(t, err)
+		assert.Contains(t, out, "Cloning repository")
+		assert.NotContains(t, out, "Updating/initializing submodules")
+	})
+}
+
+func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Runner.URL = "https://gitlab.com"
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Updating/initializing submodules")
+	})
+}

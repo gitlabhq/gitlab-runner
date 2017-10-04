@@ -783,3 +783,67 @@ func TestDocker1_13Compatibility(t *testing.T) {
 
 	testDockerVersion(t, "1.13")
 }
+
+func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteBrokenTLSBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				URL: "https://gitlab.com",
+			},
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "alpine",
+				},
+			},
+		},
+	}
+
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	assert.Error(t, err)
+	out := buffer.String()
+	assert.Contains(t, out, "Cloning repository")
+	assert.NotContains(t, out, "Updating/initializing submodules")
+}
+
+func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				URL: "https://gitlab.com",
+			},
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "alpine",
+				},
+			},
+		},
+	}
+
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	assert.NoError(t, err)
+	out := buffer.String()
+	assert.Contains(t, out, "Cloning repository")
+	assert.Contains(t, out, "Updating/initializing submodules")
+}
