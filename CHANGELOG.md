@@ -1,5 +1,6 @@
 v 9.4.3 (2017-10-04)
 - Hide tokens from URLs printed in job's trace !708
+- Add handling of non-existing images for Docker >= 17.07 !664
 
 v 9.4.2 (2017-08-02)
 - Fix usage of one image for multiple services in one job !639
