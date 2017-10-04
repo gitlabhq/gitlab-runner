@@ -13,13 +13,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
-type gitConfigDestination string
-
-const (
-	gitConfigLocal  gitConfigDestination = "--local"
-	gitConfigGlobal gitConfigDestination = "--global"
-)
-
 type AbstractShell struct {
 }
 
@@ -38,7 +31,7 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 	}
 }
 
-func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where gitConfigDestination) {
+func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
 	repoURL, err := url.Parse(build.Runner.URL)
 	if err != nil {
 		w.Warning("git SSL config: Can't parse repository URL. %s", err)
@@ -47,7 +40,7 @@ func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, wh
 
 	host := repoURL.String()
 	variables := build.GetCITLSVariables()
-	args := append([]string{"config"}, strings.SplitN(string(where), " ", 2)...)
+	args := append([]string{"config"}, where...)
 
 	for variable, config := range map[string]string{
 		tls.VariableCAFile:   "sslCAInfo",
@@ -74,8 +67,7 @@ func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projec
 	templateFile := path.Join(templateDir, "config")
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
 	if build.IsSharedEnv() {
-		template := gitConfigDestination(fmt.Sprintf("-f %s", templateFile))
-		b.writeGitSSLConfig(w, build, template)
+		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
 	}
 
 	if depth := build.GetGitDepth(); depth != "" {
@@ -102,7 +94,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	w.Command("git", "config", "fetch.recurseSubmodules", "false")
 
 	if build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, build, gitConfigLocal)
+		b.writeGitSSLConfig(w, build, []string{"--local"})
 	}
 
 	// Remove .git/{index,shallow}.lock files from .git, which can fail the fetch command
@@ -346,7 +338,7 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 	b.writeExports(w, info)
 
 	if !info.Build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, info.Build, gitConfigGlobal)
+		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
 	}
 
 	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
