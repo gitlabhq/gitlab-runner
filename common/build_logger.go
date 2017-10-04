@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 type BuildLogger struct {
@@ -14,7 +16,8 @@ type BuildLogger struct {
 
 func (e *BuildLogger) sendLog(logger func(args ...interface{}), logPrefix string, args ...interface{}) {
 	if e.log != nil {
-		fmt.Fprint(e.log, logPrefix+fmt.Sprintln(args...)+helpers.ANSI_RESET)
+		logLine := url_helpers.ScrubSecrets(logPrefix + fmt.Sprintln(args...) + helpers.ANSI_RESET)
+		fmt.Fprint(e.log, logLine)
 
 		if e.log.IsStdout() {
 			return
