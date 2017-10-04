@@ -9,6 +9,8 @@ stages:
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/old-releases:ci-1.8
   GOROOT: /usr/local/go
+  ARTIFACTS_S3_BUCKET: gitlab-ci-multi-runner-downloads
+  PACKAGE_CLOUD: runner/gitlab-ci-multi-runner
 
 image: $CI_IMAGE
 
@@ -125,7 +127,7 @@ integration windows:
   - if ( $LASTEXITCODE -ne 0 ) { exit $LASTEXITCODE }
   allow_failure: true
   only:
-  - /.*/@gitlab-org/gitlab-ci-multi-runner
+  - /.*/@gitlab-org/gitlab-runner
   tags:
   - integration
   - windows
@@ -208,18 +210,18 @@ package-rpm: *packages
 
 .release_development: &release_development
   only:
-  - branches@gitlab-org/gitlab-ci-multi-runner
+  - branches@gitlab-org/gitlab-runner
   except:
-  - master@gitlab-org/gitlab-ci-multi-runner
+  - master@gitlab-org/gitlab-runner
 
 .release_bleeding_edge: &release_bleeding_edge
   only:
-  - master@gitlab-org/gitlab-ci-multi-runner
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
+  - master@gitlab-org/gitlab-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+\Z/@gitlab-org/gitlab-runner
 
 .release_stable: &release_stable
   only:
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-ci-multi-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-runner
 
 development S3:
   <<: *release_s3
