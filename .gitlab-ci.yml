@@ -9,8 +9,6 @@ stages:
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/old-releases:ci-1.8
   GOROOT: /usr/local/go
-  ARTIFACTS_S3_BUCKET: gitlab-ci-multi-runner-downloads
-  PACKAGE_CLOUD: runner/gitlab-ci-multi-runner
 
 image: $CI_IMAGE
 
@@ -201,12 +199,12 @@ package-rpm: *packages
 .release_s3: &release_s3
   <<: *release
   script:
-  - make release_s3
+  - ARTIFACTS_S3_BUCKET=gitlab-ci-multi-runner-downloads make release_s3
 
 .release_packagecloud: &release_packagecloud
   <<: *release
   script:
-  - make release_packagecloud
+  - PACKAGE_CLOUD=runner/gitlab-ci-multi-runner make release_packagecloud
 
 .release_development: &release_development
   only:
