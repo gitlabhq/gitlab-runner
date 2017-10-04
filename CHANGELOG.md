@@ -1,3 +1,6 @@
+v 10.0.2 (2017-10-04)
+- Hide tokens from URLs printed in job's trace !708
+
 v 10.0.1 (2017-09-27)
 - Remove deprecation message from service management commands !699
 
