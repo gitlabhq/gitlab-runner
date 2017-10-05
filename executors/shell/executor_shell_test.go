@@ -466,6 +466,7 @@ func TestBuildMultilineCommand(t *testing.T) {
 	assert.Contains(t, out, "Hello World")
 	assert.Contains(t, out, "collapsed multi-line command")
 }
+
 func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteBrokenTLSBuild()

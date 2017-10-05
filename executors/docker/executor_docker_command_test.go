@@ -292,10 +292,9 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 		},
 	}
 
-	var buf []byte
-	buffer := bytes.NewBuffer(buf)
+	var buffer bytes.Buffer
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	str := buffer.String()
 
@@ -323,10 +322,9 @@ func TestDockerCommandOutput(t *testing.T) {
 		},
 	}
 
-	var buf []byte
-	buffer := bytes.NewBuffer(buf)
+	var buffer bytes.Buffer
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 
 	re, err := regexp.Compile("(?m)^Cloning into '/builds/gitlab-org/gitlab-test'...")
@@ -481,10 +479,9 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 }
 
 func runTestJobWithOutput(t *testing.T, build *common.Build) (output string) {
-	var buf []byte
-	buffer := bytes.NewBuffer(buf)
+	var buffer bytes.Buffer
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 
 	output = buffer.String()
@@ -806,10 +803,9 @@ func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
 		},
 	}
 
-	var buf []byte
-	buffer := bytes.NewBuffer(buf)
+	var buffer bytes.Buffer
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.Error(t, err)
 	out := buffer.String()
 	assert.Contains(t, out, "Cloning repository")
@@ -838,10 +834,9 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 		},
 	}
 
-	var buf []byte
-	buffer := bytes.NewBuffer(buf)
+	var buffer bytes.Buffer
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: buffer})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
 	assert.Contains(t, out, "Cloning repository")
