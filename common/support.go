@@ -1,19 +1,22 @@
 package common
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/big"
+	"net/http"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/tevino/abool"
 )
 
 const repoRemoteURL = "https://gitlab.com/gitlab-org/gitlab-test.git"
@@ -21,6 +24,15 @@ const repoSHA = "6907208d755b60ebeacb2e9dfea74c92c3449a1f"
 const repoBeforeSHA = "c347ca2e140aa667b968e51ed0ffe055501fe4f4"
 const repoRefName = "master"
 const repoRefType = RefTypeBranch
+
+var (
+	gitLabComChain        string
+	gitLabComChainFetched *abool.AtomicBool
+)
+
+func init() {
+	gitLabComChainFetched = abool.New()
+}
 
 func GetSuccessfulBuild() (JobResponse, error) {
 	return getLocalBuildResponse("echo Hello World")
@@ -87,12 +99,12 @@ func GetRemoteBrokenTLSBuild() (job JobResponse, err error) {
 }
 
 func GetRemoteGitLabComTLSBuild() (job JobResponse, err error) {
-	cert, err := ioutil.ReadFile(path.Join("..", "..", "tests", "gitlab.pem"))
+	cert, err := getGitLabComTLSChain()
 	if err != nil {
 		return
 	}
 
-	return getRemoteCustomTLSBuild(string(cert))
+	return getRemoteCustomTLSBuild(cert)
 }
 
 func getRemoteCustomTLSBuild(chain string) (job JobResponse, err error) {
@@ -211,4 +223,30 @@ func buildSnakeOilCert() (string, error) {
 	certificate := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 
 	return string(certificate), nil
+}
+
+func getGitLabComTLSChain() (string, error) {
+	if gitLabComChainFetched.IsSet() {
+		return gitLabComChain, nil
+	}
+
+	resp, err := http.Head("https://gitlab.com/users/sign_in")
+	if err != nil {
+		return "", err
+	}
+
+	var buff bytes.Buffer
+	for _, certs := range resp.TLS.VerifiedChains {
+		for _, cert := range certs {
+			err = pem.Encode(&buff, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
+	gitLabComChain = buff.String()
+	gitLabComChainFetched.Set()
+
+	return gitLabComChain, nil
 }
