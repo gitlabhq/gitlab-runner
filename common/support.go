@@ -1,11 +1,19 @@
 package common
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"math/big"
 	"os"
 	"path"
 	"runtime"
 	"strings"
+	"time"
 )
 
 const repoRemoteURL = "https://gitlab.com/gitlab-org/gitlab-test.git"
@@ -67,6 +75,38 @@ func GetMultilineBashBuild() (JobResponse, error) {
 		-c 'echo Hello World'
 fi
 `)
+}
+
+func GetRemoteBrokenTLSBuild() (job JobResponse, err error) {
+	invalidCert, err := buildSnakeOilCert()
+	if err != nil {
+		return
+	}
+
+	return getRemoteCustomTLSBuild(invalidCert)
+}
+
+func GetRemoteGitLabComTLSBuild() (job JobResponse, err error) {
+	cert, err := ioutil.ReadFile(path.Join("..", "..", "tests", "gitlab.pem"))
+	if err != nil {
+		return
+	}
+
+	return getRemoteCustomTLSBuild(string(cert))
+}
+
+func getRemoteCustomTLSBuild(chain string) (job JobResponse, err error) {
+	job, err = getRemoteBuildResponse("echo Hello World")
+	if err != nil {
+		return
+	}
+
+	job.TLSCAChain = chain
+	job.Variables = append(job.Variables,
+		JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
+		JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+
+	return
 }
 
 func getRemoteBuildResponse(commands ...string) (response JobResponse, err error) {
@@ -138,4 +178,37 @@ func getLocalRepoURL() (string, error) {
 	}
 
 	return localRepoURL, nil
+}
+
+func buildSnakeOilCert() (string, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		return "", err
+	}
+
+	notBefore := time.Now()
+	notAfter := notBefore.Add(time.Hour)
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Snake Oil Co"},
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return "", err
+	}
+
+	certificate := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+
+	return string(certificate), nil
 }

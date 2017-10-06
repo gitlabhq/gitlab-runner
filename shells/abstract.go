@@ -3,12 +3,14 @@ package shells
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
 type AbstractShell struct {
@@ -29,10 +31,33 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 	}
 }
 
-func (b *AbstractShell) writeGitExports(w ShellWriter, info common.ShellScriptInfo) {
-	for _, variable := range info.Build.GetGitTLSVariables() {
-		w.Variable(variable)
+func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
+	repoURL, err := url.Parse(build.Runner.URL)
+	if err != nil {
+		w.Warning("git SSL config: Can't parse repository URL. %s", err)
+		return
 	}
+
+	repoURL.Path = ""
+	host := repoURL.String()
+	variables := build.GetCITLSVariables()
+	args := append([]string{"config"}, where...)
+
+	for variable, config := range map[string]string{
+		tls.VariableCAFile:   "sslCAInfo",
+		tls.VariableCertFile: "sslCert",
+		tls.VariableKeyFile:  "sslKey",
+	} {
+		if variables.Get(variable) == "" {
+			continue
+		}
+
+		key := fmt.Sprintf("http.%s.%s", host, config)
+		value := w.TmpFile(variable)
+		w.Command("git", append(args, key, value)...)
+	}
+
+	return
 }
 
 func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
@@ -40,7 +65,11 @@ func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projec
 	args := []string{"clone", "--no-checkout", build.GetRemoteURL(), projectDir, "--template", templateDir}
 
 	w.RmDir(projectDir)
-	w.Command("git", "config", "-f", path.Join(templateDir, "config"), "fetch.recurseSubmodules", "false")
+	templateFile := path.Join(templateDir, "config")
+	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
+	if build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
+	}
 
 	if depth := build.GetGitDepth(); depth != "" {
 		w.Notice("Cloning repository for %s with git depth set to %s...", build.GitInfo.Ref, depth)
@@ -64,6 +93,10 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	}
 	w.Cd(projectDir)
 	w.Command("git", "config", "fetch.recurseSubmodules", "false")
+
+	if build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, build, []string{"--local"})
+	}
 
 	// Remove .git/{index,shallow}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
@@ -304,7 +337,10 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 
 func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
-	b.writeGitExports(w, info)
+
+	if !info.Build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
+	}
 
 	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
 		b.writeCommands(w, info.PreCloneScript)
