@@ -34,6 +34,10 @@ https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/657 for more details.
 - Mark exec and service-management commands as DEPRECATED !679
 - Fix support for `tmpfs` in docker executor config !680
 
+v 9.5.1 (2017-10-04)
+- Hide tokens from URLs printed in job's trace !708
+- Add handling of non-existing images for Docker >= 17.07 !664
+
 v 9.5.0 (2017-08-22)
 - Fix allowed_images behavior !635
 - Cleanup formatting on windows upgrade details !637
@@ -53,6 +57,17 @@ v 9.5.0 (2017-08-22)
 - Add support for tmpfs on the job container !654
 - Include note about volume path on OSX !648
 - Start using 'toc' in yaml frontmatter to explicitly disable it !644
+
+v 9.4.3 (2017-10-04)
+- Hide tokens from URLs printed in job's trace !708
+- Add handling of non-existing images for Docker >= 17.07 !664
+
+v 9.4.2 (2017-08-02)
+- Fix usage of one image for multiple services in one job !639
+- Fix services usage when service name is using variable !641
+
+v 9.4.1 (2017-07-25)
+- Fix allowed_images behavior !635
 
 v 9.4.0 (2017-07-22)
 - Use Go 1.8 for CI !620
@@ -92,6 +107,9 @@ v 9.3.0 (2017-06-22)
 - Added ref of Docker app installation !612
 - Update linux-repository.md !615
 
+v 9.2.2 (2017-07-04)
+- Fix VirtualBox and Parallels executors registration bugs !589
+
 v 9.2.1 (2017-06-17)
 - Fix regression introduced in the way how `exec` parses `.gitlab-ci.yml` !535
 - Fix another regression on docker-machine credentials usage !610
@@ -126,6 +144,9 @@ that even in edge cases you can always rely on them.
 - Add support for kubernetes service account and override on gitlab-ci.yaml !554
 - Restore cache before artifacts !577
 - Fix link to the LICENSE file. !579
+
+v 9.1.3 (2017-07-04)
+- Fix VirtualBox and Parallels executors registration bugs !589
 
 v 9.1.2 (2017-06-17)
 - Print proper message when cache upload operation fails !556
@@ -208,6 +229,9 @@ v 9.0.0
 - Limit number of concurrent requests to builds/register.json !518
 - Remove deprecated kubernetes executor configuration fields !521
 - Drop Kubernetes executor 'experimental' notice !525
+
+v 1.11.5 (2017-07-04)
+- Fix VirtualBox and Parallels executors registration bugs !589
 
 v 1.11.4 (2017-04-28)
 - Fixes test that was failing 1.11.3 release
