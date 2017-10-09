@@ -31,7 +31,7 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
 - [ ] add **vX.Y.0-rc.1** CHANGELOG entries
 - [ ] tag and push **vX.Y.0-rc.1**
 - [ ] create and push `X-Y-stable` branch
-- [ ] checkout to `master`, update `VERSION` file to `X.Y.0` and push `master`
+- [ ] checkout to `master`, update `VERSION` file to `X.Y+1.0` and push `master`
 - [ ] deploy **vX.Y.0-rc.1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 
 _New features_ window is closed - things not merged into `master` up to
