@@ -1,4 +1,8 @@
-# Manual installation and configuration on GNU/Linux
+---
+last_updated: 2017-10-09
+---
+
+# Install GitLab Runner manually on GNU/Linux
 
 If you don't want to use a [deb/rpm repository](linux-repository.md) to install
 GitLab Runner, or your GNU/Linux OS is not among the supported ones, you can
@@ -9,11 +13,20 @@ some of the most common problems with GitLab Runner.
 
 ## Install
 
+CAUTION: **Important:**
+With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
+want to install a version older than GitLab Runner 10, [visit the old docs](old.md).
+
 1. Simply download one of the binaries for your system:
 
     ```sh
-    sudo wget -O /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-386
+    # Linux x86-64
     sudo wget -O /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64
+
+    # Linux x86
+    sudo wget -O /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-386
+
+    # Linux arm
     sudo wget -O /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-arm
     ```
 
@@ -38,7 +51,6 @@ some of the most common problems with GitLab Runner.
     sudo useradd --comment 'GitLab Runner' --create-home gitlab-runner --shell /bin/bash
     ```
 
-1. [Register the Runner](../register/index.md)
 1. Install and run as service:
 
     ```sh
@@ -46,12 +58,14 @@ some of the most common problems with GitLab Runner.
     sudo gitlab-runner start
     ```
 
-    >**Note**
-    If `gitlab-runner` is installed and run as service (what is described
-    in this page), it will run as root, but will execute jobs as user specified by
-    the `install` command. This means that some of the job functions like cache and
-    artifacts will need to execute `/usr/local/bin/gitlab-runner` command,
-    therefore the user under which jobs are run, needs to have access to the executable.
+1. [Register the Runner](../register/index.md)
+
+NOTE: **Note**
+If `gitlab-runner` is installed and run as service (what is described
+in this page), it will run as root, but will execute jobs as user specified by
+the `install` command. This means that some of the job functions like cache and
+artifacts will need to execute `/usr/local/bin/gitlab-runner` command,
+therefore the user under which jobs are run, needs to have access to the executable.
 
 ## Update
 

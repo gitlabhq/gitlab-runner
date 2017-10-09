@@ -1,4 +1,8 @@
-# Install on Windows
+---
+last_updated: 2017-10-09
+---
+
+# Install GitLab Runner on Windows
 
 To install and run GitLab Runner on Windows you need:
 * Git installed
@@ -6,6 +10,10 @@ To install and run GitLab Runner on Windows you need:
   account rather than the Built-in System Account
 
 ## Installation
+
+CAUTION: **Important:**
+With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
+want to install a version older than GitLab Runner 10, [visit the old docs](old.md).
 
 1. Create a folder somewhere in your system, ex.: `C:\GitLab-Runner`.
 1. Download the binary for [x86][]  or [amd64][] and put it into the folder you

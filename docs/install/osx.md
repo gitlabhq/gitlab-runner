@@ -1,9 +1,17 @@
-# Install on macOS
+---
+last_updated: 2017-10-09
+---
+
+# Install GitLab Runner on macOS
 
 In the future there will be a brew package, but for now you have to manually
 download the macOS binary.
 
 ## Installation
+
+CAUTION: **Important:**
+With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
+want to install a version older than GitLab Runner 10, [visit the old docs](old.md).
 
 1. Download the binary for your system:
 

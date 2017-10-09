@@ -1,5 +1,6 @@
 ---
 toc: false
+last_updated: 2017-10-09
 ---
 
 # GitLab Runner
@@ -51,30 +52,23 @@ CAUTION: **Important:**
 GitLab Runner >= 9.0 requires GitLab's API v4 endpoints, which were introduced
 in GitLab CE/EE 9.0. Because of this change, GitLab Runner >= 9.0 requires
 GitLab CE/EE >= 9.0 and will not work with older GitLab versions.
-The old API used by GitLab Runner was deprecated in August 2017 and with this
+The old API used by GitLab Runner was deprecated in August 2017 and with this,
 the v1.11.x version of GitLab Runner is deprecated as well.
 
 In the following table you can see the compatibility chart between GitLab and
 GitLab Runner.
 
-|          | 8.16.x (01.2017) | 8.17.x (02.2017) | 9.0.x (03.2017) | 9.1.x (04.2017) | 9.2.x (05.2017) | 9.3.x (06.2017) | 9.4.x (07.2017) | 9.5.x (08.2017) | 10.0.x (09.2017) |
-|:---------|:----------------:|:----------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|
-| v1.10.x  | Y, s             | Y, s             | Y, s            | Y, **u**        | Y, **u**        | Y, **u**        | Y, **u**        | Y, **u**        | **N**, **u**    |
-| v1.11.x  | Y                | Y, s             | Y, s            | Y, s            | Y, s            | Y, s            | Y, s            | Y, s            | **N**, **u**    |
-| v9.0.x   | **N**            | **N**            | Y, s            | Y, s            | Y, s            | Y, **u**        | Y, **u**        | Y, **u**        | Y, **u**        |
-| v9.1.x   | **N**            | **N**            | Y               | Y, s            | Y, s            | Y, s            | Y, **u**        | Y, **u**        | Y, **u**        |
-| v9.2.x   | **N**            | **N**            | Y               | Y               | Y, s            | Y, s            | Y, s            | Y, **u**        | Y, **u**        |
-| v9.3.x   | **N**            | **N**            | Y               | Y               | Y               | Y, s            | Y, s            | Y, s            | Y, **u**        |
-| v9.4.x   | **N**            | **N**            | Y               | Y               | Y               | Y               | Y, s            | Y, s            | Y, s            |
-| v9.5.x   | **N**            | **N**            | Y               | Y               | Y               | Y               | Y               | Y, s            | Y, s            |
-| v10.0.x  | **N**            | **N**            | Y               | Y               | Y               | Y               | Y               | Y               | Y, s            |
-
-**Legend**
-
-* Y - specified Runner version is/will be working with specified GitLab version
-* N - specified Runner version is/will not be working with specified GitLab version
-* s - specified Runner version is supported
-* u - specified Runner version is not supported
+|GitLab Runner / GitLab | 9.0.x (03.2017) | 9.1.x (04.2017) | 9.2.x (05.2017) | 9.3.x (06.2017) | 9.4.x (07.2017) | 9.5.x (08.2017) | 10.0.x (09.2017) |
+|:---------------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:----------------:|
+| v1.10.x  |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✗                |
+| v1.11.x  |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✗                |
+| v9.0.x   |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✓                |
+| v9.1.x   |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✓                |
+| v9.2.x   |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✓                |
+| v9.3.x   |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✓                |
+| v9.4.x   |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✓                |
+| v9.5.x   |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✓                |
+| v10.0.x  |  ✓               | ✓               | ✓               | ✓               | ✓               | ✓               | ✓                |
 
 ## [Install GitLab Runner](install/index.md)
 

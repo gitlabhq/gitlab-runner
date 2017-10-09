@@ -1,3 +1,7 @@
+---
+last_updated: 2017-10-09
+---
+
 # Install GitLab Runner using the official GitLab repositories
 
 The currently supported distributions are:
@@ -17,7 +21,8 @@ using the Runner. [Read how to install Docker for your distribution](https://doc
 
 CAUTION: **Important:**
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
-to [upgrade to the new version](#upgrading-to-gitlab-runner-10).
+to [upgrade to the new version](#upgrading-to-gitlab-runner-10). If you want
+to install a version older than GitLab Runner 10, [visit the old docs](old.md).
 
 To install the Runner:
 
@@ -103,11 +108,6 @@ You can manually download the packages from the following URL:
 
 ## Upgrading to GitLab Runner 10
 
-In GitLab Runner 10, the name of the executable was named from `gitlab-ci-multi-runner`
-to just `gitlab-runner`. With that change, GitLab Runner
-[has a new home](https://gitlab.com/gitlab-org/gitlab-runner) and the package
-repository [was renamed as well](https://packages.gitlab.com/runner/gitlab-runner).
-
 To upgrade GitLab Runner from a version older than 10.0:
 
 1. Remove the old repository:
@@ -122,18 +122,5 @@ To upgrade GitLab Runner from a version older than 10.0:
 
 1. Follow the same steps when [installing the Runner](#installing-the-runner),
    **without registering it** and using the new repository.
-
-## Old GitLab Runner URLs
-
-For versions older than 10.0, replace the repository URLs in the install section
-with the following:
-
-```bash
-# For Debian/Ubuntu
-curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | sudo bash
-
-# For RHEL/CentOS
-curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.rpm.sh | sudo bash
-```
 
 [docker executor]: ../executors/docker.md
