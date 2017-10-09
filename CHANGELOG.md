@@ -1,3 +1,16 @@
+v 10.1.0-rc.1 (2017-10-09)
+- Allow customizing go test flags with TESTFLAGS variable !688
+- Clarify that cloning a runner could be considered an attack vector !658
+- Remove disable_verbose from docs !692
+- Add info about pre 10.0 releases !691
+- Update BurntSushi/toml for MIT-license !695
+- Expose if running in a disposable environment !690
+- Adds EmptyDir support for k8s volumes !660
+- Update git-lfs to 2.3.1 !703
+- Collect metrics on build stages !689
+- Construct git remote URL based on configuration !698
+- Set git SSL information only for gitlab host !687
+
 v 10.0.0-rc.1 (2017-09-14)
 
 > **Note:** With 10.0, we've moved repository from https://gitlab.com/gitlab-org/gitlab-ci-multi-runner
