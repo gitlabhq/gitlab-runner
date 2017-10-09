@@ -17,13 +17,13 @@ PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd'
 S3_UPLOAD_PATH ?= master
 DEB_PLATFORMS ?= debian/wheezy debian/jessie debian/stretch debian/buster \
-    ubuntu/precise ubuntu/trusty ubuntu/utopic ubuntu/vivid ubuntu/wily ubuntu/xenial ubuntu/yakkety ubuntu/zesty \
+    ubuntu/trusty ubuntu/xenial ubuntu/zesty ubuntu/artful \
     raspbian/wheezy raspbian/jessie raspbian/stretch raspbian/buster \
-    linuxmint/petra linuxmint/qiana linuxmint/rebecca linuxmint/rafaela linuxmint/rosa linuxmint/sarah linuxmint/serena
+    linuxmint/qiana linuxmint/rebecca linuxmint/rafaela linuxmint/rosa linuxmint/sarah linuxmint/serena linuxmint/sonya
 DEB_ARCHS ?= amd64 i386 armel armhf
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
-    fedora/20 fedora/21 fedora/22 fedora/23 fedora/24 fedora/25
+    fedora/25 fedora/26
 RPM_ARCHS ?= x86_64 i686 arm armhf
 COMMON_PACKAGE_NAMESPACE=$(shell go list ./common)
 
