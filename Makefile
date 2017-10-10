@@ -16,6 +16,7 @@ PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd'
 S3_UPLOAD_PATH ?= master
+# Keep in sync with docs/install/linux-repository.md
 DEB_PLATFORMS ?= debian/wheezy debian/jessie debian/stretch debian/buster \
     ubuntu/trusty ubuntu/xenial ubuntu/zesty ubuntu/artful \
     raspbian/wheezy raspbian/jessie raspbian/stretch raspbian/buster \
