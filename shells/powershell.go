@@ -88,10 +88,14 @@ func (b *PsWriter) buildCommand(command string, arguments ...string) string {
 	return "& " + strings.Join(list, " ")
 }
 
+func (b *PsWriter) TmpFile(name string) string {
+	filePath := b.Absolute(path.Join(b.TemporaryPath, name))
+	return helpers.ToBackslash(filePath)
+}
+
 func (b *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
-		variableFile := b.Absolute(path.Join(b.TemporaryPath, variable.Key))
-		variableFile = helpers.ToBackslash(variableFile)
+		variableFile := b.TmpFile(variable.Key)
 		b.Line(fmt.Sprintf("md %s -Force | out-null", psQuote(helpers.ToBackslash(b.TemporaryPath))))
 		b.Line(fmt.Sprintf("Set-Content %s -Value %s -Encoding UTF8 -Force", psQuote(variableFile), psQuoteVariable(variable.Value)))
 		b.Line("$" + variable.Key + "=" + psQuote(variableFile))

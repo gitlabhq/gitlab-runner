@@ -78,9 +78,13 @@ func (b *BashWriter) buildCommand(command string, arguments ...string) string {
 	return strings.Join(list, " ")
 }
 
+func (b *BashWriter) TmpFile(name string) string {
+	return b.Absolute(path.Join(b.TemporaryPath, name))
+}
+
 func (b *BashWriter) Variable(variable common.JobVariable) {
 	if variable.File {
-		variableFile := b.Absolute(path.Join(b.TemporaryPath, variable.Key))
+		variableFile := b.TmpFile(variable.Key)
 		b.Line(fmt.Sprintf("mkdir -p %q", helpers.ToSlash(b.TemporaryPath)))
 		b.Line(fmt.Sprintf("echo -n %s > %q", helpers.ShellEscape(variable.Value), variableFile))
 		b.Line(fmt.Sprintf("export %s=%q", helpers.ShellEscape(variable.Key), variableFile))
