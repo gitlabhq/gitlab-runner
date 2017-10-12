@@ -45,7 +45,7 @@ To install the Runner:
 1. Add GitLab's official repository:
 
     ```bash
-    # For Debian/Ubuntu
+    # For Debian/Ubuntu/Mint
     curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
 
     # For RHEL/CentOS/Fedora
@@ -77,7 +77,7 @@ To install the Runner:
    install a specific version:
 
     ```bash
-    # For Debian/Ubuntu
+    # For Debian/Ubuntu/Mint
     sudo apt-get install gitlab-runner
 
     # For RHEL/CentOS/Fedora
@@ -109,7 +109,7 @@ some of the most common problems with GitLab Runner.
 Simply execute to install latest version:
 
 ```bash
-# For Debian/Ubuntu
+# For Debian/Ubuntu/Mint
 sudo apt-get update
 sudo apt-get install gitlab-runner
 
@@ -129,10 +129,10 @@ To upgrade GitLab Runner from a version older than 10.0:
 1. Remove the old repository:
 
     ```
-    # For Debian/Ubuntu
+    # For Debian/Ubuntu/Mint
     sudo rm /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list
 
-    # For RHEL/CentOS
+    # For RHEL/CentOS/Fedora
     sudo rm /etc/yum.repos.d/runner_gitlab-ci-multi-runner.repo
     ```
 
