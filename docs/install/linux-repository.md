@@ -1,5 +1,5 @@
 ---
-last_updated: 2017-10-09
+last_updated: 2017-10-12
 ---
 
 # Install GitLab Runner using the official GitLab repositories
@@ -138,5 +138,15 @@ To upgrade GitLab Runner from a version older than 10.0:
 
 1. Follow the same steps when [installing the Runner](#installing-the-runner),
    **without registering it** and using the new repository.
+
+1. For RHEL/CentOS/Fedora, run:
+
+    ```
+    sudo /usr/share/gitlab-runner/post-install
+    ```
+
+    CAUTION: **Important:** If you don't run the above command, you will be left
+    with no service file. Follow [issue #2786](https://gitlab.com/gitlab-org/gitlab-runner/issues/2786)
+    for more information.
 
 [docker executor]: ../executors/docker.md
