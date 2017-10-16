@@ -12,7 +12,7 @@ describes some of the most common problems with GitLab Runner.
 CAUTION: **Important:**
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
 to [upgrade to the new version](#upgrading-to-gitlab-runner-10). If you want
-to install a version older than GitLab Runner 10, [visit the old docs](old.md).
+to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
 ## Installing GitLab Runner
 
@@ -137,7 +137,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
 ## Upgrading to GitLab Runner 10
 
-To upgrade GitLab Runner from a version older than 10.0:
+To upgrade GitLab Runner from a version prior to 10.0:
 
 1. Stop the Runner:
 

@@ -15,7 +15,7 @@ some of the most common problems with GitLab Runner.
 
 CAUTION: **Important:**
 With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
-want to install a version older than GitLab Runner 10, [visit the old docs](old.md).
+want to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
 1. Simply download one of the binaries for your system:
 

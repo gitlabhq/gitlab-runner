@@ -11,7 +11,7 @@ download the macOS binary.
 
 CAUTION: **Important:**
 With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
-want to install a version older than GitLab Runner 10, [visit the old docs](old.md).
+want to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
 1. Download the binary for your system:
 

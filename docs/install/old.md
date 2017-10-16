@@ -15,7 +15,7 @@ repository [was renamed as well](https://packages.gitlab.com/runner/gitlab-runne
 
 ## Using the Linux repository
 
-For versions **older than 10.0**, the repository URLs are:
+For versions **prior to 10.0**, the repository URLs are:
 
 ```bash
 # For Debian/Ubuntu
