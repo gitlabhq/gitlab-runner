@@ -1,6 +1,10 @@
-# Bleeding edge releases
+---
+last_updated: 2017-10-09
+---
 
->**Note:**
+# GitLab Runner bleeding edge releases
+
+CAUTION: **Warning:**
 These are the latest, probably untested releases of GitLab Runner built straight
 from `master` branch. Use at your own risk.
 
