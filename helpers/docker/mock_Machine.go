@@ -20,6 +20,13 @@ func (m *MockMachine) Provision(name string) error {
 
 	return r0
 }
+func (m *MockMachine) Stop(name string) error {
+	ret := m.Called(name)
+
+	r0 := ret.Error(0)
+
+	return r0
+}
 func (m *MockMachine) Remove(name string) error {
 	ret := m.Called(name)
 

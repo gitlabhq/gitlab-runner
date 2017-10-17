@@ -90,6 +90,7 @@ type testMachine struct {
 
 	Created chan bool
 	Removed chan bool
+	Stopped chan bool
 }
 
 func (m *testMachine) Create(driver, name string, opts ...string) error {
@@ -112,6 +113,12 @@ func (m *testMachine) Provision(name string) error {
 		return errors.New("Failed to provision")
 	}
 	m.machines = append(m.machines, name)
+	return nil
+}
+
+func (m *testMachine) Stop(name string) error {
+	m.Stopped <- true
+
 	return nil
 }
 
@@ -221,6 +228,7 @@ func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
 		machines: machine,
 		Created:  make(chan bool, 10),
 		Removed:  make(chan bool, 10),
+		Stopped:  make(chan bool, 10),
 	}
 	p := newMachineProvider("docker_machines", "docker")
 	p.machine = t
@@ -383,6 +391,7 @@ func TestMachinePreCreateMode(t *testing.T) {
 	assert.NoError(t, err)
 	p.Release(config, d)
 
+	<-m.Stopped
 	<-m.Removed
 	assertIdleMachines(t, p, 1, "it should downscale to single machine")
 

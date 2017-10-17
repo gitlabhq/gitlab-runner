@@ -168,16 +168,32 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 		WithField("created", time.Since(details.Created)).
 		WithField("used", time.Since(details.Used)).
 		WithField("reason", details.Reason).
+		Warningln("Stopping machine")
+
+	err = m.machine.Stop(details.Name)
+	if err != nil {
+		logrus.WithField("name", details.Name).
+			WithField("created", time.Since(details.Created)).
+			WithField("used", time.Since(details.Used)).
+			WithField("reason", details.Reason).
+			WithError(err).
+			Errorln("Error while stopping machine")
+	}
+
+	logrus.WithField("name", details.Name).
+		WithField("created", time.Since(details.Created)).
+		WithField("used", time.Since(details.Used)).
+		WithField("reason", details.Reason).
 		Warningln("Removing machine")
 
 	err = m.machine.Remove(details.Name)
-	if err == nil {
-		return nil
+	if err != nil {
+		details.RetryCount++
+		time.Sleep(removeRetryInterval)
+		return err
 	}
 
-	details.RetryCount++
-	time.Sleep(removeRetryInterval)
-	return err
+	return nil
 }
 
 func (m *machineProvider) finalizeRemoval(details *machineDetails) {
