@@ -1,4 +1,4 @@
-v 10.1.0-rc.1 (2017-10-09)
+v 10.1.0 (2017-10-22)
 - Allow customizing go test flags with TESTFLAGS variable !688
 - Clarify that cloning a runner could be considered an attack vector !658
 - Remove disable_verbose from docs !692
