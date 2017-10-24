@@ -52,7 +52,7 @@ func getCacheObjectName(build *common.Build, cache *common.CacheConfig, key stri
 }
 
 func getCacheStorageClient(cache *common.CacheConfig) (scl *minio.Client, err error) {
-	scl, err = minio.New(cache.ServerAddress, cache.AccessKey, cache.SecretKey, cache.Insecure)
+	scl, err = minio.New(cache.ServerAddress, cache.AccessKey, cache.SecretKey, !cache.Insecure)
 	if err != nil {
 		logrus.Warningln(err)
 		return
