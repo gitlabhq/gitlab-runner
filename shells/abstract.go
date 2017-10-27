@@ -98,10 +98,11 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 		b.writeGitSSLConfig(w, build, []string{"--local"})
 	}
 
-	// Remove .git/{index,shallow}.lock files from .git, which can fail the fetch command
+	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
 	w.RmFile(".git/index.lock")
 	w.RmFile(".git/shallow.lock")
+	w.RmFile(".git/HEAD.lock")
 
 	w.IfFile(".git/hooks/post-checkout")
 	w.RmFile(".git/hooks/post-checkout")
