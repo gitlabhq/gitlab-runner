@@ -142,6 +142,7 @@ This defines the Docker Container parameters.
 | `allowed_services`          | specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `pull_policy`               | specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 | `sysctls`                   | specify the sysctl options |
+| `helper_image`              | [ADVANCED] Override the default helper image used to clone repos and upload artifacts |
 
 Example:
 
