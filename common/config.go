@@ -79,6 +79,7 @@ type DockerConfig struct {
 	Tmpfs                  map[string]string `toml:"tmpfs,omitempty" json:"tmpfs" long:"tmpfs" env:"DOCKER_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in the main container, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
 	ServicesTmpfs          map[string]string `toml:"services_tmpfs,omitempty" json:"services_tmpfs" long:"services-tmpfs" env:"DOCKER_SERVICES_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in all the service containers, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
 	SysCtls                DockerSysCtls     `toml:"sysctls,omitempty" json:"sysctls" long:"sysctls" env:"DOCKER_SYSCTLS" description:"Sysctl options, a toml table/json object of key=value. Value is expected to be a string."`
+	HelperImage            string            `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"DOCKER_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 }
 
 type DockerMachine struct {

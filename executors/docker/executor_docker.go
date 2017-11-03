@@ -211,6 +211,11 @@ func (s *executor) getArchitecture() string {
 }
 
 func (s *executor) getPrebuiltImage() (*types.ImageInspect, error) {
+	if imageNameFromConfig := s.Config.Docker.HelperImage; imageNameFromConfig != "" {
+		s.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
+		return s.getDockerImage(imageNameFromConfig)
+	}
+
 	architecture := s.getArchitecture()
 	if architecture == "" {
 		return nil, errors.New("unsupported docker architecture")

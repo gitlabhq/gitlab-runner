@@ -842,3 +842,33 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 	assert.Contains(t, out, "Cloning repository")
 	assert.Contains(t, out, "Updating/initializing submodules")
 }
+
+func TestDockerCommandWithHelperImageConfig(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	helperImageConfig := "gitlab/gitlab-runner-helper:x86_64-64eea86c"
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:       "alpine",
+					HelperImage: helperImageConfig,
+				},
+			},
+		},
+	}
+
+	var buffer bytes.Buffer
+	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	assert.NoError(t, err)
+	out := buffer.String()
+	assert.Contains(t, out, "Pulling docker image "+helperImageConfig)
+	assert.Contains(t, out, "Using docker image sha256:bbd86c6ba107ae2feb8dbf9024df4b48597c44e1b584a3d901bba91f7fc500e3 for predefined container...")
+}
