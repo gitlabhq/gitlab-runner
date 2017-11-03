@@ -182,6 +182,24 @@ func TestBuildWithShallowLock(t *testing.T) {
 	})
 }
 
+func TestBuildWithHeadLock(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+
+		build.JobResponse.AllowGitFetch = true
+		ioutil.WriteFile(build.BuildDir+"/.git/HEAD.lock", []byte{}, os.ModeSticky)
+
+		err = runBuild(t, build)
+		assert.NoError(t, err)
+	})
+}
+
 func TestBuildWithGitLFSHook(t *testing.T) {
 	onEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
