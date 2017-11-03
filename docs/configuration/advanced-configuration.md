@@ -127,7 +127,7 @@ This defines the Docker Container parameters.
 | `cap_drop`                  | drop additional Linux capabilities from the container |
 | `security_opt`              | set security options (--security-opt in docker run), takes a list of ':' separated key/values |
 | `devices`                   | share additional host devices with the container |
-| `disable_cache`             | disable automatic |
+| `disable_cache`             | disable use of automatically created (i.e., not mapped to a host directory) cache volumes |
 | `network_mode`              | add container to a custom network |
 | `wait_for_services_timeout` | specify how long to wait for docker services, set to 0 to disable, default: 30 |
 | `cache_dir`                 | specify where Docker caches should be stored (this can be absolute or relative to current working directory) |
