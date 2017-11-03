@@ -14,7 +14,7 @@ end
 
 starting_point = ENV['STARTING_POINT']
 if !starting_point || starting_point.empty?
-  starting_point = `git describe --tags --abbrev=0 --match "v[0-9].[0-9].[0-9]"`.strip
+  starting_point = `git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*"`.strip
 
   STDERR.puts "STARTING_POINT variable not set, using autodiscovered: #{starting_point}"
 end
