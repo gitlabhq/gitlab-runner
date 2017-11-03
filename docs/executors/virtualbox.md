@@ -32,6 +32,7 @@ the `[[runners]]` section in
 1. If Windows VM, see [Checklist for Windows VMs](#checklist-for-windows-vms)
 1. Install the OpenSSH server
 1. Install all other dependencies required by your build
+1. If you want to upload job artifacts, install `gitlab-runner` inside the VM 
 1. Log out and shutdown the virtual machine
 
 It's completely fine to use automation tools like Vagrant to provision the
@@ -59,6 +60,7 @@ When a new build is started:
 1. The Runner creates a snapshot of the running virtual machine (this is done
    to speed up any next builds)
 1. The Runner connects to the virtual machine and executes a build
+1. If enabled, artifacts upload is done using the `gitlab-runner` binary *inside* the virtual machine.
 1. The Runner stops or shutdowns the virtual machine
 
 ## Checklist for Windows VMs
