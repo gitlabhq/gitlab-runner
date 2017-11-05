@@ -1,9 +1,10 @@
 package clihelpers
 
 import (
-	"strings"
-	"reflect"
 	"github.com/urfave/cli"
+	"reflect"
+	"regexp"
+	"strings"
 )
 
 type StructFieldValue struct {
@@ -26,6 +27,9 @@ func (s StructFieldValue) Set(val string) error {
 }
 
 func (s StructFieldValue) String() string {
+	if !s.value.IsValid() {
+		return ""
+	}
 	if s.value.Kind() == reflect.Ptr && s.value.IsNil() {
 		return ""
 	}
@@ -41,16 +45,16 @@ func (f StructFieldFlag) String() string {
 	if sf, ok := f.Value.(StructFieldValue); ok {
 		if sf.IsBoolFlag() {
 			flag := &cli.BoolFlag{
-				Name: f.Name,
-				Usage: f.Usage,
+				Name:   f.Name,
+				Usage:  f.Usage,
 				EnvVar: f.EnvVar,
 			}
 			return flag.String()
 		} else {
 			flag := &cli.StringFlag{
-				Name: f.Name,
-				Value: sf.String(),
-				Usage: f.Usage,
+				Name:   f.Name,
+				Value:  sf.String(),
+				Usage:  f.Usage,
 				EnvVar: f.EnvVar,
 			}
 			return flag.String()
@@ -59,6 +63,8 @@ func (f StructFieldFlag) String() string {
 		return f.GenericFlag.String()
 	}
 }
+
+var reName = regexp.MustCompile(`{(\w+)}`)
 
 func getStructFieldFlag(field reflect.StructField, fieldValue reflect.Value, ns []string) []cli.Flag {
 	var names []string
@@ -80,7 +86,7 @@ func getStructFieldFlag(field reflect.StructField, fieldValue reflect.Value, ns 
 			field: field,
 			value: fieldValue,
 		},
-		Usage: field.Tag.Get("description"),
+		Usage:  reName.ReplaceAllString(field.Tag.Get("description"), "`$1`"),
 		EnvVar: field.Tag.Get("env"),
 	}
 	return []cli.Flag{StructFieldFlag{GenericFlag: flag}}
@@ -142,6 +148,6 @@ func getFlagsForValue(value reflect.Value, ns []string) []cli.Flag {
 	return flags
 }
 
-func GetFlagsFromStruct(data interface{}, ns... string) []cli.Flag {
+func GetFlagsFromStruct(data interface{}, ns ...string) []cli.Flag {
 	return getFlagsForValue(reflect.ValueOf(data), ns)
 }
