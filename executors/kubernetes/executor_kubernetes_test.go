@@ -1136,6 +1136,33 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						PodAnnotations: map[string]string{
+							"test":    "annotation",
+							"another": "annotation",
+							"var":     "$test",
+						},
+					},
+				},
+			},
+			Variables: []common.JobVariable{
+				{Key: "test", Value: "sometestvar"},
+			},
+			PrepareFn: func(t *testing.T, test testDef, e *executor) {
+				e.podAnnotations = e.getPodAnnotations(&common.Build{})
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"test":    "annotation",
+					"another": "annotation",
+					"var":     "sometestvar",
+				}, pod.ObjectMeta.Annotations)
+			},
+		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
 						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
@@ -1508,6 +1535,42 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not match")
+}
+
+func TestGetPodAnnotations(t *testing.T) {
+
+	exec := executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Executor: "kubernetes",
+					Kubernetes: &common.KubernetesConfig{
+						PodAnnotationsOverwriteAllowed: "true",
+						PodAnnotations: map[string]string{
+							"key1": "val1",
+							"key2": "val2",
+							"key3": "val3",
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Variables: []common.JobVariable{
+						{Key: "KUBERNETES_POD_ANNOTATIONS_1", Value: "overwritekey1=overwriteval1"},
+						{Key: "KUBERNETES_POD_ANNOTATIONS_2", Value: "overwritekey2=overwriteval2"},
+						{Key: "KUBERNETES_POD_ANNOTATIONS_3", Value: "overwritekey3=overwriteval3"},
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, map[string]string{
+		"overwritekey1": "overwriteval1",
+		"overwritekey2": "overwriteval2",
+		"overwritekey3": "overwriteval3",
+	}, exec.getPodAnnotations(exec.Build))
 }
 
 type FakeReadCloser struct {

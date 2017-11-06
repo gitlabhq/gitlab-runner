@@ -40,6 +40,7 @@ type executor struct {
 	options     *kubernetesOptions
 
 	configurationOverwrites *overwrites
+	podAnnotations          map[string]string
 	buildLimits             api.ResourceList
 	serviceLimits           api.ResourceList
 	helperLimits            api.ResourceList
@@ -100,6 +101,8 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if err = s.prepareOverwrites(options.Build.Variables); err != nil {
 		return err
 	}
+
+	s.podAnnotations = s.getPodAnnotations(options.Build)
 
 	s.prepareOptions(options.Build)
 
@@ -386,9 +389,15 @@ func (s *executor) setupBuildPod() error {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
 		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, service, s.serviceRequests, s.serviceLimits)
 	}
+
 	labels := make(map[string]string)
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
 		labels[k] = s.Build.Variables.ExpandValue(v)
+	}
+
+	annotations := make(map[string]string)
+	for key, val := range s.podAnnotations {
+		annotations[key] = s.Build.Variables.ExpandValue(val)
 	}
 
 	var imagePullSecrets []api.LocalObjectReference
@@ -406,6 +415,7 @@ func (s *executor) setupBuildPod() error {
 			GenerateName: s.Build.ProjectUniqueName(),
 			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       labels,
+			Annotations:  annotations,
 		},
 		Spec: api.PodSpec{
 			Volumes:            s.getVolumes(),
@@ -516,6 +526,27 @@ func (s *executor) checkDefaults() error {
 	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
 
 	return nil
+}
+
+func (s *executor) getPodAnnotations(job *common.Build) map[string]string {
+	if s.Config.Kubernetes.PodAnnotationsOverwriteAllowed == "" {
+		s.Debugln("Configuration entry 'pod_annotations_overwrite_allowed' is empty, disabling override.")
+		return s.Config.Kubernetes.PodAnnotations
+	}
+	annotations := make(map[string]string)
+	for _, variable := range job.GetAllVariables() {
+		if strings.Contains(variable.Key, "KUBERNETES_POD_ANNOTATIONS_") {
+			//spit value on '='
+			if strings.Contains(variable.Value, "=") {
+				str := strings.Split(variable.Value, "=")
+				annotations[str[0]] = str[1]
+			}
+		}
+	}
+	if len(annotations) == 0 {
+		return s.Config.Kubernetes.PodAnnotations
+	}
+	return annotations
 }
 
 func createFn() common.Executor {
