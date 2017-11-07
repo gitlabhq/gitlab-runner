@@ -11,9 +11,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var numBuildsDesc = prometheus.NewDesc("ci_runner_builds", "The current number of running builds.", []string{"state", "stage", "executor_stage"}, nil)
+var numBuildsDesc = prometheus.NewDesc(
+	"ci_runner_builds",
+	"The current number of running builds.",
+	[]string{"runner", "state", "stage", "executor_stage"},
+	nil,
+)
 
 type statePermutation struct {
+	runner        string
 	buildState    common.BuildRuntimeState
 	buildStage    common.BuildStage
 	executorStage common.ExecutorStage
@@ -21,6 +27,7 @@ type statePermutation struct {
 
 func newStatePermutationFromBuild(build *common.Build) statePermutation {
 	return statePermutation{
+		runner:        build.Runner.ShortDescription(),
 		buildState:    build.CurrentState,
 		buildStage:    build.CurrentStage,
 		executorStage: build.CurrentExecutorStage(),
@@ -191,6 +198,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			numBuildsDesc,
 			prometheus.GaugeValue,
 			float64(count),
+			state.runner,
 			string(state.buildState),
 			string(state.buildStage),
 			string(state.executorStage),
