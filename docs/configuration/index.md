@@ -1,3 +1,7 @@
+---
+comments: false
+---
+
 # Configuring GitLab Runner
 
 Below you can find some specific documentation on configuring GitLab Runner, the

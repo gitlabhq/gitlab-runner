@@ -1,3 +1,7 @@
+---
+comments: false
+---
+
 # Install GitLab Runner
 
 GitLab Runner can be installed and used on GNU/Linux, macOS, FreeBSD, and Windows.

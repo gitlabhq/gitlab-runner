@@ -1,3 +1,7 @@
+---
+comments: false
+---
+
 # How to release GitLab Runner
 
 Permission to push to `master` branch at https://gitlab.com/gitlab-org/gitlab-runner.git
