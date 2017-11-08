@@ -1,3 +1,7 @@
+---
+comments: false
+---
+
 # GitLab Runner release process
 
 To handle the growth of this project, in `v1.6` we've introduced a release process correlated

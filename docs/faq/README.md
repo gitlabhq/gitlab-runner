@@ -1,4 +1,4 @@
-# FAQ
+# GitLab Runner FAQ
 
 Some Frequently Asked Questions about GitLab Runner.
 
