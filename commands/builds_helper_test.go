@@ -12,12 +12,19 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+var fakeRunner = &common.RunnerConfig{
+	RunnerCredentials: common.RunnerCredentials{
+		Token: "a1b2c3d4e5f6",
+	},
+}
+
 func TestBuildsHelperCollect(t *testing.T) {
 	ch := make(chan prometheus.Metric, 50)
 	b := &buildsHelper{}
 	b.builds = append(b.builds, &common.Build{
 		CurrentState: common.BuildRunStatePending,
 		CurrentStage: common.BuildStagePrepare,
+		Runner:       fakeRunner,
 	})
 	b.Collect(ch)
 	assert.Len(t, ch, 1)
