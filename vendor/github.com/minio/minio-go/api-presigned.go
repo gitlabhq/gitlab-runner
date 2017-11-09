@@ -20,14 +20,18 @@ import (
 	"errors"
 	"net/url"
 	"time"
+
+	"github.com/minio/minio-go/pkg/s3signer"
+	"github.com/minio/minio-go/pkg/s3utils"
 )
 
-// supportedGetReqParams - supported request parameters for GET
-// presigned request.
+// supportedGetReqParams - supported request parameters for GET presigned request.
 var supportedGetReqParams = map[string]struct{}{
 	"response-expires":             {},
 	"response-content-type":        {},
 	"response-cache-control":       {},
+	"response-content-language":    {},
+	"response-content-encoding":    {},
 	"response-content-disposition": {},
 }
 
@@ -38,10 +42,10 @@ func (c Client) presignURL(method string, bucketName string, objectName string, 
 	if method == "" {
 		return nil, ErrInvalidArgument("method cannot be empty.")
 	}
-	if err := isValidBucketName(bucketName); err != nil {
+	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
 		return nil, err
 	}
-	if err := isValidObjectName(objectName); err != nil {
+	if err := s3utils.CheckValidObjectName(objectName); err != nil {
 		return nil, err
 	}
 	if err := isValidExpiry(expires); err != nil {
@@ -66,8 +70,7 @@ func (c Client) presignURL(method string, bucketName string, objectName string, 
 				return nil, ErrInvalidArgument(k + " unsupported request parameter for presigned GET.")
 			}
 		}
-		// Save the request parameters to be used in presigning for
-		// GET request.
+		// Save the request parameters to be used in presigning for GET request.
 		reqMetadata.queryValues = reqParams
 	}
 
@@ -81,17 +84,33 @@ func (c Client) presignURL(method string, bucketName string, objectName string, 
 }
 
 // PresignedGetObject - Returns a presigned URL to access an object
-// without credentials. Expires maximum is 7days - ie. 604800 and
-// minimum is 1. Additionally you can override a set of response
-// headers using the query parameters.
+// data without credentials. URL can have a maximum expiry of
+// upto 7days or a minimum of 1sec. Additionally you can override
+// a set of response headers using the query parameters.
 func (c Client) PresignedGetObject(bucketName string, objectName string, expires time.Duration, reqParams url.Values) (u *url.URL, err error) {
 	return c.presignURL("GET", bucketName, objectName, expires, reqParams)
 }
 
-// PresignedPutObject - Returns a presigned URL to upload an object without credentials.
-// Expires maximum is 7days - ie. 604800 and minimum is 1.
+// PresignedHeadObject - Returns a presigned URL to access object
+// metadata without credentials. URL can have a maximum expiry of
+// upto 7days or a minimum of 1sec. Additionally you can override
+// a set of response headers using the query parameters.
+func (c Client) PresignedHeadObject(bucketName string, objectName string, expires time.Duration, reqParams url.Values) (u *url.URL, err error) {
+	return c.presignURL("HEAD", bucketName, objectName, expires, reqParams)
+}
+
+// PresignedPutObject - Returns a presigned URL to upload an object
+// without credentials. URL can have a maximum expiry of upto 7days
+// or a minimum of 1sec.
 func (c Client) PresignedPutObject(bucketName string, objectName string, expires time.Duration) (u *url.URL, err error) {
 	return c.presignURL("PUT", bucketName, objectName, expires, nil)
+}
+
+// Presign - returns a presigned URL for any http method of your choice
+// along with custom request params. URL can have a maximum expiry of
+// upto 7days or a minimum of 1sec.
+func (c Client) Presign(method string, bucketName string, objectName string, expires time.Duration, reqParams url.Values) (u *url.URL, err error) {
+	return c.presignURL(method, bucketName, objectName, expires, reqParams)
 }
 
 // PresignedPostPolicy - Returns POST urlString, form data to upload an object.
@@ -119,21 +138,38 @@ func (c Client) PresignedPostPolicy(p *PostPolicy) (u *url.URL, formData map[str
 		return nil, nil, err
 	}
 
+	// Get credentials from the configured credentials provider.
+	credValues, err := c.credsProvider.Get()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		signerType      = credValues.SignerType
+		sessionToken    = credValues.SessionToken
+		accessKeyID     = credValues.AccessKeyID
+		secretAccessKey = credValues.SecretAccessKey
+	)
+
+	if signerType.IsAnonymous() {
+		return nil, nil, ErrInvalidArgument("Presigned operations are not supported for anonymous credentials")
+	}
+
 	// Keep time.
 	t := time.Now().UTC()
 	// For signature version '2' handle here.
-	if c.signature.isV2() {
+	if signerType.IsV2() {
 		policyBase64 := p.base64()
 		p.formData["policy"] = policyBase64
 		// For Google endpoint set this value to be 'GoogleAccessId'.
-		if isGoogleEndpoint(c.endpointURL) {
-			p.formData["GoogleAccessId"] = c.accessKeyID
+		if s3utils.IsGoogleEndpoint(c.endpointURL) {
+			p.formData["GoogleAccessId"] = accessKeyID
 		} else {
 			// For all other endpoints set this value to be 'AWSAccessKeyId'.
-			p.formData["AWSAccessKeyId"] = c.accessKeyID
+			p.formData["AWSAccessKeyId"] = accessKeyID
 		}
 		// Sign the policy.
-		p.formData["signature"] = postPresignSignatureV2(policyBase64, c.secretAccessKey)
+		p.formData["signature"] = s3signer.PostPresignSignatureV2(policyBase64, secretAccessKey)
 		return u, p.formData, nil
 	}
 
@@ -156,7 +192,7 @@ func (c Client) PresignedPostPolicy(p *PostPolicy) (u *url.URL, formData map[str
 	}
 
 	// Add a credential policy.
-	credential := getCredential(c.accessKeyID, location, t)
+	credential := s3signer.GetCredential(accessKeyID, location, t)
 	if err = p.addNewPolicy(policyCondition{
 		matchType: "eq",
 		condition: "$x-amz-credential",
@@ -165,13 +201,27 @@ func (c Client) PresignedPostPolicy(p *PostPolicy) (u *url.URL, formData map[str
 		return nil, nil, err
 	}
 
+	if sessionToken != "" {
+		if err = p.addNewPolicy(policyCondition{
+			matchType: "eq",
+			condition: "$x-amz-security-token",
+			value:     sessionToken,
+		}); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	// Get base64 encoded policy.
 	policyBase64 := p.base64()
+
 	// Fill in the form data.
 	p.formData["policy"] = policyBase64
 	p.formData["x-amz-algorithm"] = signV4Algorithm
 	p.formData["x-amz-credential"] = credential
 	p.formData["x-amz-date"] = t.Format(iso8601DateFormat)
-	p.formData["x-amz-signature"] = postPresignSignatureV4(policyBase64, t, c.secretAccessKey, location)
+	if sessionToken != "" {
+		p.formData["x-amz-security-token"] = sessionToken
+	}
+	p.formData["x-amz-signature"] = s3signer.PostPresignSignatureV4(policyBase64, t, secretAccessKey, location)
 	return u, p.formData, nil
 }
