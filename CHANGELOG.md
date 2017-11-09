@@ -1,3 +1,15 @@
+v 10.2.0-rc.1 (2017-11-09)
+- Update supported platforms !712
+- Fix typo in Kubernetes runner docs !714
+- Add info on upgrading to Runner 10 !709
+- Add some documentation for disable_cache configuration option !713
+- Remove .git/HEAD.lock before git fetch !722
+- Add helper_image option to docker executor config !723
+- Add notes about gitlab-runner inside the VM being used for uploads !719
+- Fix panic when global flags are passed as command flags !726
+- Update minio go library to v3.0.3 !707
+- Label ci_runner_builds metric with runner short token !729
+
 v 10.1.0 (2017-10-22)
 - Allow customizing go test flags with TESTFLAGS variable !688
 - Clarify that cloning a runner could be considered an attack vector !658
