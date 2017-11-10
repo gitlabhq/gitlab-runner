@@ -43,6 +43,12 @@ installed. The Docker Machine driver plugin installation and configuration is
 out of the scope of this documentation. For more details please read the
 [Docker Machine documentation][docker-machine-docs].
 
+## Supported cloud providers
+
+The autoscale mechanism is based on [Docker Machine](https://docs.docker.com/machine/overview/).
+All supported virtualization/cloud provider parameters, are available at the
+[Docker Machine drivers documentation](https://docs.docker.com/machine/drivers/).
+
 ## Runner configuration
 
 In this section we will describe only the significant parameters from the
@@ -54,7 +60,7 @@ and [GitLab Runner - Advanced Configuration][runner-configuration].
 
 | Parameter    | Value   | Description |
 |--------------|---------|-------------|
-| `concurrent` | integer | Limits how many jobs globally can be run concurrently. This is the most upper limit of number of jobs using _all_ defined runners, local and autoscale. Together with `limit` (from [`[[runners]]` section](#runners-options)) and `IdleCount` (from [`[runners.machine]` section](advanced-configuration.md#the-runnersmachine-section)) it affects the upper limit of created machines. |
+| `concurrent` | integer | Limits how many jobs globally can be run concurrently. This is the most upper limit of number of jobs using _all_ defined runners, local and autoscale. Together with `limit` (from [`[[runners]]` section](#runners-options)) and `IdleCount` (from [`[runners.machine]` section][runners-machine]) it affects the upper limit of created machines. |
 
 ### `[[runners]]` options
 
@@ -66,12 +72,12 @@ and [GitLab Runner - Advanced Configuration][runner-configuration].
 ### `[runners.machine]` options
 
 Configuration parameters details can be found
-in [GitLab Runner - Advanced Configuration - The runners.machine section](advanced-configuration.md#the-runnersmachine-section).
+in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section][runners-machine].
 
 ### `[runners.cache]` options
 
 Configuration parameters details can be found
-in [GitLab Runner - Advanced Configuration - The runners.cache section](advanced-configuration.md#the-runnerscache-section)
+in [GitLab Runner - Advanced Configuration - The `[runners.cache]` section][runners-cache]
 
 ### Additional configuration information
 
@@ -279,7 +285,7 @@ the `OffPeakPeriods` pattern is fulfilled then it switches back to
 `IdleCount` and `IdleTime` settings.
 
 More information about syntax of `OffPeakPeriods` patterns can be found
-in [GitLab Runner - Advanced Configuration - The runners.machine section](advanced-configuration.md#the-runnersmachine-section).
+in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section][runners-machine].
 
 ## Distributed runners caching
 
@@ -358,7 +364,7 @@ Read how to [install your own Docker registry server][registry-server].
 
 ## A complete example of `config.toml`
 
-The `config.toml` below uses the `digitalocean` Docker Machine driver:
+The `config.toml` below uses the [`digitalocean` Docker Machine driver](https://docs.docker.com/machine/drivers/digital-ocean/):
 
 ```bash
 concurrent = 50   # All registered Runners can run up to 50 concurrent builds
@@ -405,19 +411,14 @@ Note that the `MachineOptions` parameter contains options for the `digitalocean`
 driver which is used by Docker Machine to spawn machines hosted on Digital Ocean,
 and one option for Docker Machine itself (`engine-registry-mirror`).
 
-## What are the supported cloud providers
-
-The autoscale mechanism currently is based on Docker Machine. Advanced
-configuration options, including virtualization/cloud provider parameters, are
-available at the [Docker Machine documentation][docker-machine-driver].
-
 [cache]: http://doc.gitlab.com/ce/ci/yaml/README.html#cache
+[caching]: ../install/autoscaling.md#install-the-cache-server
 [runner-installation]: ../install/autoscaling.md
 [runner-configuration]: index.md
 [docker-machine-docs]: https://docs.docker.com/machine/
 [docker-machine-driver]: https://docs.docker.com/machine/drivers/
 [docker-machine-installation]: https://docs.docker.com/machine/install-machine/
-[runners-cache]: advanced-configuration.md#the-runnerscache-section
+[runners-cache]: advanced-configuration.md#the-runners-cache-section
+[runners-machine]: advanced-configuration.md#the-runners-machine-section
 [registry]: https://docs.docker.com/docker-trusted-registry/overview/
-[caching]: ../install/autoscaling.md#install-the-cache-server
 [registry-server]: ../install/autoscaling.md#install-docker-registry

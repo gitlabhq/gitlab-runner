@@ -74,7 +74,7 @@ Example:
 In cases where the GitLab instance is exposed to an URL which can't be used
 by the runner, a `clone_url` can be configured. For example; GitLab is exposed
 to `https://gitlab.example.com`, but the runner can't reach that because of
-a firewall setup. If the runner can reach the node on `192.168.1.23`, 
+a firewall setup. If the runner can reach the node on `192.168.1.23`,
 the `clone_url` should be set to `"http://192.168.1.23`.
 
 Only if the `clone_url` is set, the runner will construct a clone URL in the form
@@ -92,8 +92,8 @@ There are a couple of available executors currently.
 | `ssh`         | run build remotely with SSH - this requires the presence of `[runners.ssh]` |
 | `parallels`   | run build using Parallels VM, but connect to it with SSH - this requires the presence of `[runners.parallels]` and `[runners.ssh]` |
 | `virtualbox`  | run build using VirtualBox VM, but connect to it with SSH - this requires the presence of `[runners.virtualbox]` and `[runners.ssh]` |
-| `docker+machine` | like `docker`, but uses [auto-scaled docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
-| `docker-ssh+machine` | like `docker-ssh`, but uses [auto-scaled docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
+| `docker+machine` | like `docker`, but uses [auto-scaled Docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
+| `docker-ssh+machine` | like `docker-ssh`, but uses [auto-scaled Docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
 | `kubernetes` | run build using Kubernetes Pods - this requires the presence of `[runners.kubernetes]` |
 
 ## The SHELLS
@@ -107,7 +107,7 @@ There are a couple of available shells that can be run on different platforms.
 | `cmd`         | generate Windows Batch script. All commands are executed in Batch context (default for Windows) |
 | `powershell`  | generate Windows PowerShell script. All commands are executed in PowerShell context |
 
-## The [runners.docker] section
+## The `[runners.docker]` section
 
 This defines the Docker Container parameters.
 
@@ -175,7 +175,7 @@ Example:
     "net.ipv4.ip_forward" = "1"
 ```
 
-### Volumes in the [runners.docker] section
+### Volumes in the `[runners.docker]` section
 
 You can find the complete guide of Docker volume usage
 [here](https://docs.docker.com/userguide/dockervolumes/).
@@ -299,7 +299,7 @@ which comes from your private docker registry. In that case set
   allowed_images = ["my.registry.tld:5000/*:*"]
 ```
 
-## The [runners.parallels] section
+## The `[runners.parallels]` section
 
 This defines the Parallels parameters.
 
@@ -318,7 +318,7 @@ Example:
   disable_snapshots = false
 ```
 
-## The [runners.virtualbox] section
+## The `[runners.virtualbox]` section
 
 This defines the VirtualBox parameters. This executor relies on
 `vboxmanage` as executable to control VirtualBox machines so you have to adjust
@@ -340,7 +340,7 @@ Example:
   disable_snapshots = false
 ```
 
-## The [runners.ssh] section
+## The `[runners.ssh]` section
 
 This defines the SSH connection parameters.
 
@@ -363,7 +363,7 @@ Example:
   identity_file = ""
 ```
 
-## The [runners.machine] section
+## The `[runners.machine]` section
 
 >**Note:**
 Added in GitLab Runner v1.1.0.
@@ -425,7 +425,7 @@ Like in the standard cron configuration file, the fields can contain single
 values, ranges, lists and asterisks. A detailed description of the syntax
 can be found [here][cronvendor].
 
-## The [runners.cache] section
+## The `[runners.cache]` section
 
 >**Note:**
 Added in GitLab Runner v1.1.0.
@@ -463,7 +463,7 @@ Example:
 > **Note:** For Amazon's S3 service the `ServerAddress` should always be `s3.amazonaws.com`. Minio S3 client will
 > get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
 
-## The [runners.kubernetes] section
+## The `[runners.kubernetes]` section
 
 > **Note:**
 > Added in GitLab Runner v1.6.0
@@ -506,7 +506,7 @@ single script that deploys to multiple servers or you can create many scripts.
 It depends on what you'd like to do.
 
 [TOML]: https://github.com/toml-lang/toml
-[Docker Engine]: https://www.docker.com/docker-engine
+[Docker Engine]: https://docs.docker.com/engine/
 [yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#image-and-services
 [ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy

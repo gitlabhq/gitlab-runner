@@ -89,7 +89,7 @@ more in [Distributed runners caching][caching].
 
 ## Configure GitLab Runner
 
-1. Register a GitLab Runner, selecting the `docker+machine` executor (Look into [runners documentation](http://doc.gitlab.com/ce/ci/runners/README.html) to learn how to obtain a token):
+1. Register a GitLab Runner, selecting the `docker+machine` executor ([learn how to obtain a token](https://docs.gitlab.com/ee/ci/runners/)):
 
     ```bash
     sudo gitlab-runner register
