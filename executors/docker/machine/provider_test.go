@@ -116,7 +116,7 @@ func (m *testMachine) Provision(name string) error {
 	return nil
 }
 
-func (m *testMachine) Stop(name string) error {
+func (m *testMachine) Stop(name string, timeout time.Duration) error {
 	m.Stopped <- true
 
 	return nil

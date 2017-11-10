@@ -118,8 +118,8 @@ func (m *machineCommand) Provision(name string) error {
 	return cmd.Run()
 }
 
-func (m *machineCommand) Stop(name string) error {
-	ctx, ctxCancelFn := context.WithTimeout(context.Background(), 30*time.Second)
+func (m *machineCommand) Stop(name string, timeout time.Duration) error {
+	ctx, ctxCancelFn := context.WithTimeout(context.Background(), timeout)
 	defer ctxCancelFn()
 
 	cmd := exec.CommandContext(ctx, "docker-machine", "stop", name)

@@ -1,6 +1,10 @@
 package docker_helpers
 
-import "github.com/stretchr/testify/mock"
+import (
+	"time"
+
+	"github.com/stretchr/testify/mock"
+)
 
 type MockMachine struct {
 	mock.Mock
@@ -20,8 +24,8 @@ func (m *MockMachine) Provision(name string) error {
 
 	return r0
 }
-func (m *MockMachine) Stop(name string) error {
-	ret := m.Called(name)
+func (m *MockMachine) Stop(name string, timeout time.Duration) error {
+	ret := m.Called(name, timeout)
 
 	r0 := ret.Error(0)
 

@@ -164,7 +164,7 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 
 	details.logger().
 		Warningln("Stopping machine")
-	err = m.machine.Stop(details.Name)
+	err = m.machine.Stop(details.Name, machineStopCommandTimeout)
 	if err != nil {
 		details.logger().
 			WithError(err).
