@@ -47,7 +47,10 @@ together with GitLab CE and GitLab EE projects.
     - deploy stable version to `docker-ci-X.gitlap.com` and `shared-runners-manager-X.gitlab.com`
     - announce the new release in _GitLab's release blog post_
     - open the _new features_ window for the next release
-    - start the `pick-into-stable` strategy for the `X-Y-stable` branch
+    - all MRs that are meant to go into the upcoming release should have the
+      correct milestone assigned _and_ the `Pick into X.Y` label where `X.Y` is
+      equal to the milestone, so that release managers can find and pick them.
+      Merge requests without this label will not be merged into the stable branch.
 
 ### Supported releases
 
@@ -81,10 +84,9 @@ them - they will be planned for one of the upcoming releases.
 
 For release planning we use the [_milestones_][runner-milestones] feature.
 
-Each issue or merge request planned for a release will be assigned to
-one of `vX.Y` milestones. This rule will be very important after
-releasing the version when the `pick-into-stable` strategy will be used to
-merge changes into the release stable branch.
+If a merge request is to be picked into more than one release it will need one
+`Pick into X.Y` label per release where the merge request should be back-ported
+to.
 
 After releasing a version, the `vX.Y` milestone will be still used to assign
 issues and merge requests related to support process (bugs, security fixes, etc.).
@@ -118,7 +120,9 @@ For a particular change:
   - assign the MR to a milestone related to the oldest version in which the bug exists
   - choose a good, descriptive title for the MR since it will be automatically
     inserted in the `CHANGELOG` before doing the release
-  - assign the `pick-into-stable` label
+  - if a merge request is to be picked into more than one release it will need one
+    `Pick into X.Y` label per release where the merge request should be back-ported
+    to.
   - merge the feature branch into `master`
   - after the branch is merged into `master`, cherry-pick the merge commit to each
     `X-Y-stable` branch starting from the branch related to the assigned
@@ -129,12 +133,14 @@ For a particular change:
   - assign the MR to a milestone related to the oldest version in which the bug exists
   - choose a good, descriptive title for the MR since it will be automatically
     inserted in the `CHANGELOG` before doing the release
-  - assign the `pick-into-stable` label
+  - if a merge request is to be picked into more than one release it will need one
+    `Pick into X.Y` label per release where the merge request should be back-ported
+    to.
   - merge the feature branch into the assigned `X-Y-stable` branch
   - after the branch is merged into the assigned `X-Y-stable` branch,
-    cherry-pick the merge and commit to each `X-Y-stable` branch starting from
-    the branch related to the assigned milestone up to the latest release before
-    the MR target
+    cherry-pick the merge and commit to each `X-Y-stable` branch corresponding
+    to the `Pick into X.Y` labels assigned. Remove each label once picked into
+    their respective stable branches.
 
 For each `X-Y-stable` branch - if the release should be published:
 
