@@ -72,7 +72,8 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 		err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 		for i := 0; i < 3 && err != nil; i++ {
 			details.RetryCount++
-			logrus.WithField("name", details.Name).WithError(err).
+			logrus.WithField("name", details.Name).
+				WithError(err).
 				Warningln("Machine creation failed, trying to provision")
 			time.Sleep(provisionRetryInterval)
 			err = m.machine.Provision(details.Name)
@@ -150,10 +151,7 @@ func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details 
 
 func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 	if !m.machine.Exist(details.Name) {
-		logrus.WithField("name", details.Name).
-			WithField("created", time.Since(details.Created)).
-			WithField("used", time.Since(details.Used)).
-			WithField("reason", details.Reason).
+		details.logger().
 			Warningln("Skipping machine removal, because it doesn't exist")
 		return nil
 	}
@@ -164,20 +162,25 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 		defer m.stuckRemoveLock.Unlock()
 	}
 
-	logrus.WithField("name", details.Name).
-		WithField("created", time.Since(details.Created)).
-		WithField("used", time.Since(details.Used)).
-		WithField("reason", details.Reason).
-		Warningln("Removing machine")
-
-	err = m.machine.Remove(details.Name)
-	if err == nil {
-		return nil
+	details.logger().
+		Warningln("Stopping machine")
+	err = m.machine.Stop(details.Name, machineStopCommandTimeout)
+	if err != nil {
+		details.logger().
+			WithError(err).
+			Warningln("Error while stopping machine")
 	}
 
-	details.RetryCount++
-	time.Sleep(removeRetryInterval)
-	return err
+	details.logger().
+		Warningln("Removing machine")
+	err = m.machine.Remove(details.Name)
+	if err != nil {
+		details.RetryCount++
+		time.Sleep(removeRetryInterval)
+		return err
+	}
+
+	return nil
 }
 
 func (m *machineProvider) finalizeRemoval(details *machineDetails) {
@@ -192,10 +195,7 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 	defer m.lock.Unlock()
 	delete(m.details, details.Name)
 
-	logrus.WithField("name", details.Name).
-		WithField("created", time.Since(details.Created)).
-		WithField("used", time.Since(details.Used)).
-		WithField("reason", details.Reason).
+	details.logger().
 		WithField("now", time.Now()).
 		WithField("retries", details.RetryCount).
 		Infoln("Machine removed")
@@ -215,12 +215,11 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	details.Reason = fmt.Sprint(reason...)
 	details.State = machineStateRemoving
 	details.RetryCount = 0
-	logrus.WithField("name", machineName).
-		WithField("created", time.Since(details.Created)).
-		WithField("used", time.Since(details.Used)).
-		WithField("reason", details.Reason).
+
+	details.logger().
 		WithField("now", time.Now()).
-		Warningln("Removing machine")
+		Warningln("Requesting machine removal")
+
 	details.Used = time.Now()
 	details.writeDebugInformation()
 

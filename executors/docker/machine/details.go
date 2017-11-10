@@ -63,4 +63,14 @@ func (m *machineDetails) writeDebugInformation() {
 	ioutil.WriteFile("machines/"+details.Details.Name+".yml", []byte(data), 0600)
 }
 
+func (m *machineDetails) logger() *logrus.Entry {
+	return logrus.WithFields(logrus.Fields{
+		"name":      m.Name,
+		"created":   time.Since(m.Created),
+		"used":      time.Since(m.Used),
+		"usedCount": m.UsedCount,
+		"reason":    m.Reason,
+	})
+}
+
 type machinesDetails map[string]*machineDetails

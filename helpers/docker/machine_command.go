@@ -2,6 +2,7 @@ package docker_helpers
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/machine/commands/mcndirs"
@@ -108,6 +110,23 @@ func (m *machineCommand) Provision(name string) error {
 
 	fields := logrus.Fields{
 		"operation": "provision",
+		"name":      name,
+	}
+	stdoutLogWriter(cmd, fields)
+	stderrLogWriter(cmd, fields)
+
+	return cmd.Run()
+}
+
+func (m *machineCommand) Stop(name string, timeout time.Duration) error {
+	ctx, ctxCancelFn := context.WithTimeout(context.Background(), timeout)
+	defer ctxCancelFn()
+
+	cmd := exec.CommandContext(ctx, "docker-machine", "stop", name)
+	cmd.Env = os.Environ()
+
+	fields := logrus.Fields{
+		"operation": "stop",
 		"name":      name,
 	}
 	stdoutLogWriter(cmd, fields)
