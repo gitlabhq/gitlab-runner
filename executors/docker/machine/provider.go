@@ -168,7 +168,7 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 	if err != nil {
 		details.logger().
 			WithError(err).
-			Errorln("Error while stopping machine")
+			Warningln("Error while stopping machine")
 	}
 
 	details.logger().
