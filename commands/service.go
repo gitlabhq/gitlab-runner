@@ -39,13 +39,18 @@ func (s *ServiceLogHook) Fire(entry *logrus.Entry) error {
 		return nil
 	}
 
+	msg, err := entry.String()
+	if err != nil {
+		return err
+	}
+
 	switch entry.Level {
 	case logrus.PanicLevel, logrus.FatalLevel, logrus.ErrorLevel:
-		s.Error(entry.String())
+		s.Error(msg)
 	case logrus.WarnLevel:
-		s.Warning(entry.String())
+		s.Warning(msg)
 	case logrus.InfoLevel:
-		s.Info(entry.String())
+		s.Info(msg)
 	}
 
 	return nil
