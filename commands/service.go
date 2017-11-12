@@ -47,6 +47,7 @@ func (s *ServiceLogHook) Fire(entry *logrus.Entry) error {
 	case logrus.InfoLevel:
 		s.Info(entry.String())
 	}
+
 	return nil
 }
 
