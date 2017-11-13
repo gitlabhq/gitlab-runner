@@ -195,6 +195,9 @@ complexity:
 	    -e "/executors/parallels/" \
 	    -e "/executors/virtualbox/")
 
+check_race_conditions: executors/docker/bindata.go
+	@./scripts/check_race_conditions $(OUR_PACKAGES)
+
 test: executors/docker/bindata.go
 	# Running tests...
 	@go test $(OUR_PACKAGES) $(TESTFLAGS)

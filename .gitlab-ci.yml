@@ -144,6 +144,13 @@ integration windows:
   - integration
   - windows
 
+race conditions detector:
+  <<: *docker
+  stage: test
+  script:
+  - source ci/touch_make_dependencies
+  - make check_race_conditions
+
 #
 # Build stage
 #
