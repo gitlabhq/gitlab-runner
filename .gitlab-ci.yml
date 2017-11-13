@@ -5,6 +5,7 @@ stages:
 - build
 - package
 - release
+- cleanup
 
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8-1
@@ -12,7 +13,18 @@ variables:
 
 image: $CI_IMAGE
 
+before_script:
+- source ci/prepare
+
+# Skip all jobs except the ones that begin with 'docs/'.
+# Used for commits including ONLY documentation changes.
+# https://docs.gitlab.com/ce/development/writing_documentation.html#testing
+.except_docs: &except_docs
+  except:
+    - /(^docs[\/-].*|.*-docs$)/
+
 .docker: &docker
+  <<: *except_docs
   services:
   - docker:dind
   variables: &docker_variables
@@ -68,6 +80,7 @@ bindata:
     expire_in: 7d
 
 clone test repo:
+  <<: *except_docs
   stage: prebuild
   script:
   - mkdir tmp
@@ -84,6 +97,7 @@ clone test repo:
 #
 
 codequality:
+  <<: *except_docs
   stage: test
   image: docker:git
   services:
@@ -108,6 +122,7 @@ unit tests (no race):
 
 unit tests:
   <<: *docker
+  <<: *except_docs
   stage: test
   allow_failure: true
   script:
@@ -128,6 +143,7 @@ docs check links:
     - bundle exec nanoc check internal_links
 
 integration windows:
+  <<: *except_docs
   stage: test
   before_script:
   - $GODIR = "$env:GOPATH\src\gitlab.com\gitlab-org"
@@ -177,6 +193,7 @@ git 1.7.1:
 #
 
 .binaries: &binaries
+  <<: *except_docs
   stage: build
   script:
   - source ci/touch_make_dependencies
@@ -189,16 +206,54 @@ git 1.7.1:
   tags:
   - docker
 
+# Review docs base
+.review-docs: &review-docs
+  image: registry.gitlab.com/nolith/gitlab-trigger-build-docs:v0.0.1
+  cache: {}
+  dependencies: []
+  before_script: []
+  variables:
+    GIT_STRATEGY: none
+  when: manual
+  only:
+    - branches
+
 binaries darwin/386 darwin/amd64: *binaries
 binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
 binaries linux/386 linux/amd64 linux/arm: *binaries
 binaries windows/386 windows/amd64: *binaries
+
+# Trigger a docs build in gitlab-docs
+# Useful to preview the docs changes live
+review-docs-deploy:
+  <<: *review-docs
+  stage: build
+  environment:
+    name: review-docs/$CI_COMMIT_REF_NAME
+    # DOCS_REVIEW_APPS_DOMAIN and DOCS_GITLAB_REPO_SUFFIX are secret variables
+    # Discussion: https://gitlab.com/gitlab-org/gitlab-ce/merge_requests/14236/diffs#note_40140693
+    url: http://preview-$CI_COMMIT_REF_SLUG.$DOCS_REVIEW_APPS_DOMAIN/$DOCS_GITLAB_REPO_SUFFIX
+    on_stop: review-docs-cleanup
+  script:
+    - gitlab-trigger-build-docs deploy
+
+# Cleanup remote environment of gitlab-docs
+review-docs-cleanup:
+  <<: *review-docs
+  stage: cleanup
+  environment:
+    name: review-docs/$CI_COMMIT_REF_NAME
+    action: stop
+  script:
+    - gitlab-trigger-build-docs cleanup
+
 
 #
 # Package stage
 #
 
 .packages: &packages
+  <<: *except_docs
   stage: package
   script:
   - mkdir -p out/docker
@@ -261,6 +316,7 @@ package-rpm: *packages
   - branches@gitlab-org/gitlab-runner
   except:
   - master@gitlab-org/gitlab-runner
+  - /(^docs[\/-].*|.*-docs$)/
 
 .release_bleeding_edge: &release_bleeding_edge
   only:
