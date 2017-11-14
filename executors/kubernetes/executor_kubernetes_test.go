@@ -397,7 +397,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "",
+				configurationOverwrites: &overwrites{Namespace: "default"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -460,7 +460,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				serviceAccountOverwrite: "not-default",
+				configurationOverwrites: &overwrites{Namespace: "default", ServiceAccount: "not-default"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -533,7 +533,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "namespacee",
+				configurationOverwrites: &overwrites{Namespace: "namespacee"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -568,7 +568,7 @@ func TestPrepare(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Host:                           "test-server",
 						Namespace:                      "namespace",
-						ServiceAccount:                 "default",
+						ServiceAccount:                 "a_service_account",
 						ServiceAccountOverwriteAllowed: ".*",
 						NamespaceOverwriteAllowed:      "^n.*?e$",
 						ServiceCPULimit:                "100m",
@@ -607,7 +607,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "namespacee",
+				configurationOverwrites: &overwrites{Namespace: "namespacee", ServiceAccount: "a_service_account"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -665,13 +665,13 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "",
-				serviceLimits:      api.ResourceList{},
-				buildLimits:        api.ResourceList{},
-				helperLimits:       api.ResourceList{},
-				serviceRequests:    api.ResourceList{},
-				buildRequests:      api.ResourceList{},
-				helperRequests:     api.ResourceList{},
+				configurationOverwrites: &overwrites{Namespace: "namespace"},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 		{
@@ -698,13 +698,13 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "",
-				serviceLimits:      api.ResourceList{},
-				buildLimits:        api.ResourceList{},
-				helperLimits:       api.ResourceList{},
-				serviceRequests:    api.ResourceList{},
-				buildRequests:      api.ResourceList{},
-				helperRequests:     api.ResourceList{},
+				configurationOverwrites: &overwrites{Namespace: "default"},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 		{
@@ -749,13 +749,13 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				namespaceOverwrite: "",
-				serviceLimits:      api.ResourceList{},
-				buildLimits:        api.ResourceList{},
-				helperLimits:       api.ResourceList{},
-				serviceRequests:    api.ResourceList{},
-				buildRequests:      api.ResourceList{},
-				helperRequests:     api.ResourceList{},
+				configurationOverwrites: &overwrites{Namespace: "default"},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 	}
@@ -954,7 +954,9 @@ func TestSetupCredentials(t *testing.T) {
 		}
 
 		executed = false
-		err := ex.setupCredentials()
+		err := ex.prepareOverwrites(make(common.JobVariables, 0))
+		assert.NoError(t, err)
+		err = ex.setupCredentials()
 		assert.NoError(t, err)
 		if test.VerifyFn != nil {
 			assert.True(t, executed)
@@ -1199,7 +1201,9 @@ func TestSetupBuildPod(t *testing.T) {
 		}
 
 		executed = false
-		err := ex.setupBuildPod()
+		err := ex.prepareOverwrites(make(common.JobVariables, 0))
+		assert.NoError(t, err, "error preparing overwrites: %s")
+		err = ex.setupBuildPod()
 		assert.NoError(t, err, "error setting up build pod: %s")
 		assert.True(t, executed)
 	}

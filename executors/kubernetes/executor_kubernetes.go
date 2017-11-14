@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -40,8 +39,7 @@ type executor struct {
 	credentials *api.Secret
 	options     *kubernetesOptions
 
-	namespaceOverwrite      string
-	serviceAccountOverwrite string
+	configurationOverwrites *overwrites
 	buildLimits             api.ResourceList
 	serviceLimits           api.ResourceList
 	helperLimits            api.ResourceList
@@ -103,11 +101,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return err
 	}
 
-	if err = s.overwriteNamespace(options.Build); err != nil {
-		return err
-	}
-
-	if err = s.overwriteServiceAccount(options.Build); err != nil {
+	if err = s.prepareOverwrites(options.Build.Variables); err != nil {
 		return err
 	}
 
@@ -374,12 +368,12 @@ func (s *executor) setupCredentials() error {
 
 	secret := api.Secret{}
 	secret.GenerateName = s.Build.ProjectUniqueName()
-	secret.Namespace = s.Config.Kubernetes.Namespace
+	secret.Namespace = s.configurationOverwrites.Namespace
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
-	s.credentials, err = s.kubeClient.Secrets(s.Config.Kubernetes.Namespace).Create(&secret)
+	s.credentials, err = s.kubeClient.Secrets(s.configurationOverwrites.Namespace).Create(&secret)
 	if err != nil {
 		return err
 	}
@@ -407,15 +401,15 @@ func (s *executor) setupBuildPod() error {
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
-	pod, err := s.kubeClient.Pods(s.Config.Kubernetes.Namespace).Create(&api.Pod{
+	pod, err := s.kubeClient.Pods(s.configurationOverwrites.Namespace).Create(&api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
-			Namespace:    s.Config.Kubernetes.Namespace,
+			Namespace:    s.configurationOverwrites.Namespace,
 			Labels:       labels,
 		},
 		Spec: api.PodSpec{
 			Volumes:            s.getVolumes(),
-			ServiceAccountName: s.Config.Kubernetes.ServiceAccount,
+			ServiceAccountName: s.configurationOverwrites.ServiceAccount,
 			RestartPolicy:      api.RestartPolicyNever,
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
@@ -481,6 +475,17 @@ func (s *executor) runInContainer(ctx context.Context, name string, command []st
 	return errc
 }
 
+func (s *executor) prepareOverwrites(variables common.JobVariables) error {
+	values, err := createOverwrites(s.Config.Kubernetes, variables, s.BuildLogger)
+	if err != nil {
+		return err
+	}
+
+	s.configurationOverwrites = values
+
+	return nil
+}
+
 func (s *executor) prepareOptions(job *common.Build) {
 	s.options = &kubernetesOptions{}
 	s.options.Image = job.Image
@@ -504,77 +509,13 @@ func (s *executor) checkDefaults() error {
 		}
 	}
 
-	if s.Config.Kubernetes.Namespace == "" {
+	if s.configurationOverwrites.Namespace == "" {
 		s.Warningln("Namespace is empty, therefore assuming 'default'.")
-		s.Config.Kubernetes.Namespace = "default"
+		s.configurationOverwrites.Namespace = "default"
 	}
 
-	s.Println("Using Kubernetes namespace:", s.Config.Kubernetes.Namespace)
+	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.Namespace)
 
-	return nil
-}
-
-// overwriteNamespace checks for variable in order to overwrite the configured
-// namespace, as long as it complies to validation regular-expression, when
-// expression is empty the overwrite is disabled.
-func (s *executor) overwriteNamespace(job *common.Build) error {
-	if s.Config.Kubernetes.NamespaceOverwriteAllowed == "" {
-		s.Debugln("Configuration entry 'namespace_overwrite_allowed' is empty, using configured namespace.")
-		return nil
-	}
-
-	// looking for namespace overwrite variable, and expanding for interpolation
-	s.namespaceOverwrite = job.Variables.Expand().Get("KUBERNETES_NAMESPACE_OVERWRITE")
-	if s.namespaceOverwrite == "" {
-		return nil
-	}
-
-	if err := overwriteRegexCheck(s.Config.Kubernetes.NamespaceOverwriteAllowed, s.namespaceOverwrite); err != nil {
-		return err
-	}
-
-	s.Println("Overwritting configured namespace, from", s.Config.Kubernetes.Namespace, "to", s.namespaceOverwrite)
-	s.Config.Kubernetes.Namespace = s.namespaceOverwrite
-
-	return nil
-}
-
-// overwriteSercviceAccount checks for variable in order to overwrite the configured
-// service account, as long as it complies to validation regular-expression, when
-// expression is empty the overwrite is disabled.
-func (s *executor) overwriteServiceAccount(job *common.Build) error {
-	if s.Config.Kubernetes.ServiceAccountOverwriteAllowed == "" {
-		s.Debugln("Configuration entry 'service_account_overwrite_allowed' is empty, disabling override.")
-		return nil
-	}
-
-	s.serviceAccountOverwrite = job.Variables.Expand().Get("KUBERNETES_SERVICE_ACCOUNT_OVERWRITE")
-	if s.serviceAccountOverwrite == "" {
-		return nil
-	}
-
-	if err := overwriteRegexCheck(s.Config.Kubernetes.ServiceAccountOverwriteAllowed, s.serviceAccountOverwrite); err != nil {
-		return err
-	}
-
-	s.Println("Overwritting configured ServiceAccount, from", s.Config.Kubernetes.ServiceAccount, "to", s.serviceAccountOverwrite)
-	s.Config.Kubernetes.ServiceAccount = s.serviceAccountOverwrite
-
-	return nil
-}
-
-//overwriteRegexCheck check if the regex provided for overwriting a config field matches the
-//paramether provided, returns error if doesn't match
-func overwriteRegexCheck(regex, value string) error {
-	var err error
-	var r *regexp.Regexp
-	if r, err = regexp.Compile(regex); err != nil {
-		return err
-	}
-
-	if match := r.MatchString(value); !match {
-		return fmt.Errorf("Provided value %s does not match regex %s", value, regex)
-	}
 	return nil
 }
 
