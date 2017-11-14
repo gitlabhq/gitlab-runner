@@ -28,6 +28,8 @@ data:
 
 Where `image` (optional) is the default Docker image to run jobs on top of.
 
+**Notice:** You should have obitained `token` using `gitlab-runner register` beforehand which is different from `registration token` in runners page.
+
 
 Then create a `Deployment` or `ReplicationController` which uses the `ConfigMap`.
 This is an example of a `Deployment`:
