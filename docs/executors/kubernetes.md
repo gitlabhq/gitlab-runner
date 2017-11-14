@@ -12,15 +12,14 @@ are as follows:
 - The build container is `build`
 - The services containers are `svc-X` where `X` is `[0-9]+`
 
-Please note, that as services and containers are running in the same Kubernetes
-pod, they see are all sharing the same localhost.
-Following restrictions are then applicable, compared to the usual docker based
-gitlab-ci services.
+Note that when services and containers are running in the same Kubernetes
+pod, they are all sharing the same localhost address. The following restrictions
+are then applicable:
 
-- The services are *not* accessible via their dns name, you need to use localhost
+- The services are *not* accessible via their DNS name, you need to use localhost
   instead.
-- You cannot use several services using the same port (e.g. you cannot have two
-  mysql services at the same time)
+- You cannot use several services using the same port (e.g., you cannot have two
+  `mysql` services at the same time).
 
 ## Workflow
 
