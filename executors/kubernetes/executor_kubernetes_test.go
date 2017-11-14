@@ -802,6 +802,52 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
+// This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583
+func TestPrepareIssue2583(t *testing.T) {
+	namespace := "my_namespace"
+	serviceAccount := "my_account"
+
+	runnerConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "kubernetes",
+			Kubernetes: &common.KubernetesConfig{
+				Image:                          "an/image:latest",
+				Namespace:                      namespace,
+				NamespaceOverwriteAllowed:      ".*",
+				ServiceAccount:                 serviceAccount,
+				ServiceAccountOverwriteAllowed: ".*",
+			},
+		},
+	}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			Variables: []common.JobVariable{
+				{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+				{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "sa"},
+			},
+		},
+		Runner: &common.RunnerConfig{},
+	}
+
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executorOptions,
+		},
+	}
+
+	prepareOptions := common.ExecutorPrepareOptions{
+		Config:  runnerConfig,
+		Build:   build,
+		Context: context.TODO(),
+	}
+
+	err := e.Prepare(prepareOptions)
+	assert.NoError(t, err)
+	assert.Equal(t, namespace, runnerConfig.Kubernetes.Namespace)
+	assert.Equal(t, serviceAccount, runnerConfig.Kubernetes.ServiceAccount)
+}
+
 func TestSetupCredentials(t *testing.T) {
 	version := testapi.Default.GroupVersion().Version
 	codec := testapi.Default.Codec()
