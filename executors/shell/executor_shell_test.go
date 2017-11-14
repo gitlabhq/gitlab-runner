@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -440,6 +441,45 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 		assert.NotContains(t, out, "Updating/initializing submodules...")
 		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
 		assert.Contains(t, out, "Skipping Git submodules setup")
+	})
+}
+
+func TestBuildWithGitSubmoduleModified(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Updating/initializing submodules...")
+
+		// modify submodule and commit
+		modifySubmoduleBeforeCommit := "commited change"
+		ioutil.WriteFile(build.BuildDir+"/gitlab-grack/README.md", []byte(modifySubmoduleBeforeCommit), os.ModeSticky)
+		_, err = exec.Command("git", "-C", build.BuildDir+"/gitlab-grack", "add", "README.md").Output()
+		assert.NoError(t, err)
+		_, err = exec.Command("git", "-C", build.BuildDir+"/gitlab-grack", "-c", "user.name='test'", "-c", "user.email='test@example.org'", "commit", "-m", "modify submodule").Output()
+		assert.NoError(t, err)
+		_, err = exec.Command("git", "-C", build.BuildDir, "add", "gitlab-grack").Output()
+		assert.NoError(t, err)
+		_, err = exec.Command("git", "-C", build.BuildDir, "-c", "user.name='test'", "-c", "user.email='test@example.org'", "commit", "-m", "modify submodule").Output()
+		assert.NoError(t, err)
+
+		// modify submodule without commit before second build
+		modifySubmoduleAfterCommit := "not commited change"
+		ioutil.WriteFile(build.BuildDir+"/gitlab-grack/README.md", []byte(modifySubmoduleAfterCommit), os.ModeSticky)
+
+		build.JobResponse.AllowGitFetch = true
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Your local changes to the following files would be overwritten by checkout")
+		assert.NotContains(t, out, "Please commit your changes or stash them before you switch branches")
+		assert.NotContains(t, out, "Aborting")
+		assert.Contains(t, out, "Updating/initializing submodules...")
 	})
 }
 
