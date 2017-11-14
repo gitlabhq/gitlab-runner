@@ -804,6 +804,10 @@ func TestPrepare(t *testing.T) {
 
 // This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583
 func TestPrepareIssue2583(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
 	namespace := "my_namespace"
 	serviceAccount := "my_account"
 
