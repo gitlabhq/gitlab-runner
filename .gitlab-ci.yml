@@ -93,8 +93,19 @@ static code analysis:
   tags:
   - docker
 
+unit tests (no race):
+  stage: test
+  script:
+  - source ci/touch_make_dependencies
+  - make test
+  tags:
+  - docker
+
 unit tests:
   stage: test
+  variables:
+    TESTFLAGS: -cover -race
+  allow_failure: true
   script:
   - source ci/touch_make_dependencies
   - make test
