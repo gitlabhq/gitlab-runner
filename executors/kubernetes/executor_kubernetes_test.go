@@ -449,7 +449,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
+						{Key: ServiceAccountOverwrite, Value: "not-default"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -522,7 +522,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
+						{Key: ServiceAccountOverwrite, Value: "not-default"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -596,7 +596,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
+						{Key: NamespaceOverwrite, Value: "namespacee"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -654,7 +654,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+						{Key: NamespaceOverwrite, Value: "namespace"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -827,8 +827,8 @@ func TestPrepareIssue2583(t *testing.T) {
 	build := &common.Build{
 		JobResponse: common.JobResponse{
 			Variables: []common.JobVariable{
-				{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
-				{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "sa"},
+				{Key: NamespaceOverwrite, Value: "namespace"},
+				{Key: ServiceAccountOverwrite, Value: "sa"},
 			},
 		},
 		Runner: &common.RunnerConfig{},
@@ -1417,7 +1417,7 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 				Name: "test-image",
 			},
 			Variables: []common.JobVariable{
-				{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+				{Key: NamespaceOverwrite, Value: "namespace"},
 			},
 		},
 		Runner: &common.RunnerConfig{
@@ -1451,7 +1451,7 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 				Name: "test-image",
 			},
 			Variables: []common.JobVariable{
-				{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "service-account"},
+				{Key: ServiceAccountOverwrite, Value: "service-account"},
 			},
 		},
 		Runner: &common.RunnerConfig{
