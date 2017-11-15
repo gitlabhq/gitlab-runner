@@ -29,30 +29,30 @@ concurrent = 4
 log_level = "warning"
 ```
 
-## The [[runners]] section
+## The `[[runners]]` section
 
 This defines one runner entry.
 
 | Setting | Description |
 | ------- | ----------- |
-| `name`               | not used, just informatory |
-| `url`                | CI URL |
-| `token`              | runner token |
-| `tls-ca-file`        | file containing the certificates to verify the peer when using HTTPS |
-| `tls-cert-file`      | file containing the certificate to authenticate with the peer when using HTTPS |
-| `tls-key-file`       | file containing the private key to authenticate with the peer when using HTTPS |
-| `limit`              | limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
-| `executor`           | select how a project should be built, see next section |
-| `shell`              | the name of shell to generate the script (default value is platform dependent) |
-| `builds_dir`         | directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
-| `cache_dir`          | directory where build caches will be stored in context of selected executor (Locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
-| `environment`        | append or overwrite environment variables |
-| `request_concurrency` | limit number of concurrent requests for new jobs from GitLab (default 1) |
-| `output_limit`       | set maximum build log size in kilobytes, by default set to 4096 (4MB) |
-| `pre_clone_script`   | commands to be executed on the runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `pre_build_script`   | commands to be executed on the runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `post_build_script`  | commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `clone_url`	       | Overwrite the URL for the GitLab instance. Used if the runner can't connect to GitLab on the URL GitLab exposes itself. |
+| `name`               | The Runner's description, just informatory |
+| `url`                | GitLab URL |
+| `token`              | The Runner's special token (not to be confused with the registration token) |
+| `tls-ca-file`        | File containing the certificates to verify the peer when using HTTPS |
+| `tls-cert-file`      | File containing the certificate to authenticate with the peer when using HTTPS |
+| `tls-key-file`       | File containing the private key to authenticate with the peer when using HTTPS |
+| `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
+| `executor`           | Select how a project should be built, see next section |
+| `shell`              | The name of shell to generate the script (default value is platform dependent) |
+| `builds_dir`         | Directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
+| `cache_dir`          | Directory where build caches will be stored in context of selected executor (locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
+| `environment`        | Append or overwrite environment variables |
+| `request_concurrency` | Limit number of concurrent requests for new jobs from GitLab (default 1) |
+| `output_limit`       | Set maximum build log size in kilobytes, by default set to 4096 (4MB) |
+| `pre_clone_script`   | Commands to be executed on the Runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `pre_build_script`   | Commands to be executed on the Runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `post_build_script`  | Commands to be executed on the Runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `clone_url`	       | Overwrite the URL for the GitLab instance. Used if the Runner can't connect to GitLab on the URL GitLab exposes itself. |
 
 Example:
 
@@ -113,34 +113,34 @@ This defines the Docker Container parameters.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `host`                      | specify custom Docker endpoint, by default `DOCKER_HOST` environment is used or `unix:///var/run/docker.sock` |
-| `hostname`                  | specify custom hostname for Docker container |
-| `tls_cert_path`             | when set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
-| `image`                     | use this image to run builds |
-| `cpuset_cpus`               | string value containing the cgroups CpusetCpus to use |
-| `cpus`                      | number of CPUs (available in docker 1.13 or later) |
-| `dns`                       | a list of DNS servers for the container to use |
-| `dns_search`                | a list of DNS search domains |
-| `privileged`                | make container run in Privileged mode (insecure) |
+| `host`                      | Specify custom Docker endpoint, by default `DOCKER_HOST` environment is used or `unix:///var/run/docker.sock` |
+| `hostname`                  | Specify custom hostname for Docker container |
+| `tls_cert_path`             | When set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
+| `image`                     | Use this image to run builds |
+| `cpuset_cpus`               | String value containing the cgroups CpusetCpus to use |
+| `cpus`                      | Number of CPUs (available in docker 1.13 or later) |
+| `dns`                       | A list of DNS servers for the container to use |
+| `dns_search`                | A list of DNS search domains |
+| `privileged`                | Make container run in Privileged mode (insecure) |
 | `userns_mode`               | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in docker 1.10 or later) |
-| `cap_add`                   | add additional Linux capabilities to the container |
-| `cap_drop`                  | drop additional Linux capabilities from the container |
-| `security_opt`              | set security options (--security-opt in docker run), takes a list of ':' separated key/values |
-| `devices`                   | share additional host devices with the container |
-| `disable_cache`             | disable use of automatically created (i.e., not mapped to a host directory) cache volumes |
-| `network_mode`              | add container to a custom network |
-| `wait_for_services_timeout` | specify how long to wait for docker services, set to 0 to disable, default: 30 |
-| `cache_dir`                 | specify where Docker caches should be stored (this can be absolute or relative to current working directory) |
-| `volumes`                   | specify additional volumes that should be mounted (same syntax as Docker -v option) |
-| `extra_hosts`               | specify hosts that should be defined in container environment |
-| `shm_size`                  | specify shared memory size for images (in bytes) |
-| `volumes_from`              | specify a list of volumes to inherit from another container in the form <code>\<container name\>[:\<ro&#124;rw\>]</code> |
-| `volume_driver`             | specify the volume driver to use for the container |
-| `links`                     | specify containers which should be linked with building container |
-| `services`                  | specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
-| `allowed_images`            | specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `allowed_services`          | specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `pull_policy`               | specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
+| `cap_add`                   | Add additional Linux capabilities to the container |
+| `cap_drop`                  | Drop additional Linux capabilities from the container |
+| `security_opt`              | Set security options (--security-opt in docker run), takes a list of ':' separated key/values |
+| `devices`                   | Share additional host devices with the container |
+| `cache_dir`                 | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
+| `disable_cache`             | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the Runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
+| `network_mode`              | Add container to a custom network |
+| `wait_for_services_timeout` | Specify how long to wait for docker services, set to 0 to disable, default: 30 |
+| `volumes`                   | Specify additional volumes that should be mounted (same syntax as Docker's `-v` flag) |
+| `extra_hosts`               | Specify hosts that should be defined in container environment |
+| `shm_size`                  | Specify shared memory size for images (in bytes) |
+| `volumes_from`              | Specify a list of volumes to inherit from another container in the form <code>\<container name\>[:\<ro&#124;rw\>]</code> |
+| `volume_driver`             | Specify the volume driver to use for the container |
+| `links`                     | Specify containers which should be linked with building container |
+| `services`                  | Specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
+| `allowed_images`            | Specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
+| `allowed_services`          | Specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
+| `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 | `sysctls`                   | specify the sysctl options |
 | `helper_image`              | [ADVANCED] Override the default helper image used to clone repos and upload artifacts |
 
