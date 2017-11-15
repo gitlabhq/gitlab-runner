@@ -59,7 +59,7 @@ Read more in [Distributed registry mirroring][registry].
 
 >**Note:**
 You can use any other S3-compatible server, including [Amazon S3][S3]. Read
-more in [Distributed runners caching][caching].
+more in [Distributed Runners caching][caching].
 
 1. Login to a dedicated machine where the cache server will be running
 1. Make sure that Docker Engine is installed on that machine
@@ -100,11 +100,11 @@ more in [Distributed runners caching][caching].
     ```bash
     Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
     https://gitlab.com
-    Please enter the gitlab-ci token for this runner
+    Please enter the gitlab-ci token for this Runner
     xxx
-    Please enter the gitlab-ci description for this runner
+    Please enter the gitlab-ci description for this Runner
     my-autoscale-runner
-    INFO[0034] fcf5c619 Registering runner... succeeded
+    INFO[0034] fcf5c619 Registering Runner... succeeded
     Please enter the executor: shell, docker, docker-ssh, docker+machine, docker-ssh+machine, ssh?
     docker+machine
     Please enter the Docker image (eg. ruby:2.1):
@@ -158,9 +158,9 @@ more in [Distributed runners caching][caching].
 ## Upgrading the Runner
 
 1. Ensure your operating system isn't configured to automatically restart the
-   runner if it exits (which is the default configuration on some platforms).
+   Runner if it exits (which is the default configuration on some platforms).
 
-1. Stop the runner:
+1. Stop the Runner:
 
     ```bash
     killall -SIGQUIT gitlab-runner
@@ -185,7 +185,7 @@ more in [Distributed runners caching][caching].
 ## Manage the Docker Machines
 
 1. Ensure your operating system isn't configured to automatically restart the
-   runner if it exits (which is the default configuration on some platforms).
+   Runner if it exits (which is the default configuration on some platforms).
 
 1. Stop the Runner:
 
