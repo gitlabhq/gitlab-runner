@@ -14,11 +14,11 @@ func buildOverwriteVariables(namespace, serviceAccount string) common.JobVariabl
 	variables := make(common.JobVariables, 2)
 
 	if namespace != "" {
-		variables = append(variables, common.JobVariable{Key: NamespaceOverwrite, Value: namespace})
+		variables = append(variables, common.JobVariable{Key: NamespaceOverwriteVariableName, Value: namespace})
 	}
 
 	if serviceAccount != "" {
-		variables = append(variables, common.JobVariable{Key: ServiceAccountOverwrite, Value: serviceAccount})
+		variables = append(variables, common.JobVariable{Key: ServiceAccountOverwriteVariableName, Value: serviceAccount})
 	}
 
 	return variables
@@ -53,14 +53,14 @@ func TestOverwrites(t *testing.T) {
 			Config: overwritesAllowedConfig,
 			NamespaceOverwriteVariableValue:      "my_namespace",
 			ServiceAccountOverwriteVariableValue: "my_service_account",
-			Expected: &overwrites{Namespace: "my_namespace", ServiceAccount: "my_service_account"},
+			Expected: &overwrites{namespace: "my_namespace", serviceAccount: "my_service_account"},
 		},
 		{
 			Name:   "No overwrites allowed",
 			Config: &common.KubernetesConfig{Namespace: "my_namespace", ServiceAccount: "my_service_account"},
 			NamespaceOverwriteVariableValue:      "another_namespace",
 			ServiceAccountOverwriteVariableValue: "another_service_account",
-			Expected: &overwrites{Namespace: "my_namespace", ServiceAccount: "my_service_account"},
+			Expected: &overwrites{namespace: "my_namespace", serviceAccount: "my_service_account"},
 		},
 		{
 			Name: "Namespace failure",

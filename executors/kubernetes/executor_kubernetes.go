@@ -368,12 +368,12 @@ func (s *executor) setupCredentials() error {
 
 	secret := api.Secret{}
 	secret.GenerateName = s.Build.ProjectUniqueName()
-	secret.Namespace = s.configurationOverwrites.Namespace
+	secret.Namespace = s.configurationOverwrites.namespace
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
-	s.credentials, err = s.kubeClient.Secrets(s.configurationOverwrites.Namespace).Create(&secret)
+	s.credentials, err = s.kubeClient.Secrets(s.configurationOverwrites.namespace).Create(&secret)
 	if err != nil {
 		return err
 	}
@@ -401,15 +401,15 @@ func (s *executor) setupBuildPod() error {
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
-	pod, err := s.kubeClient.Pods(s.configurationOverwrites.Namespace).Create(&api.Pod{
+	pod, err := s.kubeClient.Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
 		ObjectMeta: api.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
-			Namespace:    s.configurationOverwrites.Namespace,
+			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       labels,
 		},
 		Spec: api.PodSpec{
 			Volumes:            s.getVolumes(),
-			ServiceAccountName: s.configurationOverwrites.ServiceAccount,
+			ServiceAccountName: s.configurationOverwrites.serviceAccount,
 			RestartPolicy:      api.RestartPolicyNever,
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
 			Containers: append([]api.Container{
@@ -509,12 +509,12 @@ func (s *executor) checkDefaults() error {
 		}
 	}
 
-	if s.configurationOverwrites.Namespace == "" {
+	if s.configurationOverwrites.namespace == "" {
 		s.Warningln("Namespace is empty, therefore assuming 'default'.")
-		s.configurationOverwrites.Namespace = "default"
+		s.configurationOverwrites.namespace = "default"
 	}
 
-	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.Namespace)
+	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
 
 	return nil
 }

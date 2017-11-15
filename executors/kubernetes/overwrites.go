@@ -8,17 +8,17 @@ import (
 )
 
 const (
-	NamespaceOverwrite      = "KUBERNETES_NAMESPACE_OVERWRITE"
-	ServiceAccountOverwrite = "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE"
+	NamespaceOverwriteVariableName      = "KUBERNETES_NAMESPACE_OVERWRITE"
+	ServiceAccountOverwriteVariableName = "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE"
 )
 
 type overwrites struct {
-	Namespace      string
-	ServiceAccount string
+	namespace      string
+	serviceAccount string
 }
 
 func createOverwrites(config *common.KubernetesConfig, variables common.JobVariables, logger common.BuildLogger) (*overwrites, error) {
-	o := &overwrites{Namespace: config.Namespace, ServiceAccount: config.ServiceAccount}
+	o := &overwrites{namespace: config.Namespace, serviceAccount: config.ServiceAccount}
 
 	if err := o.overwriteNamespace(config.NamespaceOverwriteAllowed, variables, logger); err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (o *overwrites) overwriteNamespace(regex string, variables common.JobVariab
 	}
 
 	// looking for namespace overwrite variable, and expanding for interpolation
-	namespaceOverwrite := variables.Expand().Get(NamespaceOverwrite)
+	namespaceOverwrite := variables.Expand().Get(NamespaceOverwriteVariableName)
 	if namespaceOverwrite == "" {
 		return nil
 	}
@@ -50,8 +50,8 @@ func (o *overwrites) overwriteNamespace(regex string, variables common.JobVariab
 		return err
 	}
 
-	logger.Println("Overwritting configured namespace, from", o.Namespace, "to", namespaceOverwrite)
-	o.Namespace = namespaceOverwrite
+	logger.Println("Overwritting configured namespace, from", o.namespace, "to", namespaceOverwrite)
+	o.namespace = namespaceOverwrite
 
 	return nil
 }
@@ -65,7 +65,7 @@ func (o *overwrites) overwriteServiceAccount(regex string, variables common.JobV
 		return nil
 	}
 
-	serviceAccountOverwrite := variables.Expand().Get(ServiceAccountOverwrite)
+	serviceAccountOverwrite := variables.Expand().Get(ServiceAccountOverwriteVariableName)
 	if serviceAccountOverwrite == "" {
 		return nil
 	}
@@ -74,8 +74,8 @@ func (o *overwrites) overwriteServiceAccount(regex string, variables common.JobV
 		return err
 	}
 
-	logger.Println("Overwritting configured ServiceAccount, from", o.ServiceAccount, "to", serviceAccountOverwrite)
-	o.ServiceAccount = serviceAccountOverwrite
+	logger.Println("Overwritting configured ServiceAccount, from", o.serviceAccount, "to", serviceAccountOverwrite)
+	o.serviceAccount = serviceAccountOverwrite
 
 	return nil
 }

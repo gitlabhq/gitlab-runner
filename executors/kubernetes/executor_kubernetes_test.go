@@ -397,7 +397,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{Namespace: "default"},
+				configurationOverwrites: &overwrites{namespace: "default"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -449,7 +449,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: ServiceAccountOverwrite, Value: "not-default"},
+						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -460,7 +460,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{Namespace: "default", ServiceAccount: "not-default"},
+				configurationOverwrites: &overwrites{namespace: "default", serviceAccount: "not-default"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -522,7 +522,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: ServiceAccountOverwrite, Value: "not-default"},
+						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -533,7 +533,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{Namespace: "namespacee"},
+				configurationOverwrites: &overwrites{namespace: "namespacee"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -596,7 +596,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: NamespaceOverwrite, Value: "namespacee"},
+						{Key: NamespaceOverwriteVariableName, Value: "namespacee"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -607,7 +607,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{Namespace: "namespacee", ServiceAccount: "a_service_account"},
+				configurationOverwrites: &overwrites{namespace: "namespacee", serviceAccount: "a_service_account"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -654,7 +654,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: NamespaceOverwrite, Value: "namespace"},
+						{Key: NamespaceOverwriteVariableName, Value: "namespace"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -665,7 +665,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{Namespace: "namespace"},
+				configurationOverwrites: &overwrites{namespace: "namespace"},
 				serviceLimits:           api.ResourceList{},
 				buildLimits:             api.ResourceList{},
 				helperLimits:            api.ResourceList{},
@@ -698,7 +698,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{Namespace: "default"},
+				configurationOverwrites: &overwrites{namespace: "default"},
 				serviceLimits:           api.ResourceList{},
 				buildLimits:             api.ResourceList{},
 				helperLimits:            api.ResourceList{},
@@ -749,7 +749,7 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: &overwrites{Namespace: "default"},
+				configurationOverwrites: &overwrites{namespace: "default"},
 				serviceLimits:           api.ResourceList{},
 				buildLimits:             api.ResourceList{},
 				helperLimits:            api.ResourceList{},
@@ -827,8 +827,8 @@ func TestPrepareIssue2583(t *testing.T) {
 	build := &common.Build{
 		JobResponse: common.JobResponse{
 			Variables: []common.JobVariable{
-				{Key: NamespaceOverwrite, Value: "namespace"},
-				{Key: ServiceAccountOverwrite, Value: "sa"},
+				{Key: NamespaceOverwriteVariableName, Value: "namespace"},
+				{Key: ServiceAccountOverwriteVariableName, Value: "sa"},
 			},
 		},
 		Runner: &common.RunnerConfig{},
@@ -1417,7 +1417,7 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 				Name: "test-image",
 			},
 			Variables: []common.JobVariable{
-				{Key: NamespaceOverwrite, Value: "namespace"},
+				{Key: NamespaceOverwriteVariableName, Value: "namespace"},
 			},
 		},
 		Runner: &common.RunnerConfig{
@@ -1451,7 +1451,7 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 				Name: "test-image",
 			},
 			Variables: []common.JobVariable{
-				{Key: ServiceAccountOverwrite, Value: "service-account"},
+				{Key: ServiceAccountOverwriteVariableName, Value: "service-account"},
 			},
 		},
 		Runner: &common.RunnerConfig{
