@@ -23,8 +23,8 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Mint         | rafaela | April 2019         |
 | Mint         | rebecca | April 2019         |
 | Mint         | qiana   | April 2019         |
-| REHL/CentOS  | 7       | June 2024          |
-| REHL/CentOS  | 6       | November 2020      |
+| RHEL/CentOS  | 7       | June 2024          |
+| RHEL/CentOS  | 6       | November 2020      |
 | Fedora       | 25      |                    |
 | Fedora       | 26      |                    |
 
