@@ -514,7 +514,7 @@ SSH client to connect to the build container.
 Docker-ssh then connects to the SSH server that is running inside the container
 using its internal IP.
 
-This executor is no longer maintained and will be removed in near future.
+This executor is no longer maintained and will be removed in the near future.
 
 [Docker Fundamentals]: https://docs.docker.com/engine/understanding-docker/
 [docker engine]: https://www.docker.com/products/docker-engine

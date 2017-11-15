@@ -12,9 +12,9 @@ bastion for all the machines it creates.
 
 ## Overview
 
-When this feature is enabled and configured properly, builds are executed on
-machines created _on demand_. Those machines, after the build is finished, can
-wait to run the next builds or can be removed after the configured `IdleTime`.
+When this feature is enabled and configured properly, jobs are executed on
+machines created _on demand_. Those machines, after the job is finished, can
+wait to run the next jobs or can be removed after the configured `IdleTime`.
 In case of many cloud providers this helps to utilize the cost of already used
 instances.
 
@@ -23,7 +23,7 @@ on GitLab.com for the [GitLab Community Edition][ce] project:
 
 ![Real life example of autoscaling](img/autoscale-example.png)
 
-Each machine on the chart is an independent cloud instance, running build jobs
+Each machine on the chart is an independent cloud instance, running jobs
 inside of Docker containers.
 
 [ce]: https://gitlab.com/gitlab-org/gitlab-ce
@@ -82,12 +82,12 @@ in [GitLab Runner - Advanced Configuration - The `[runners.cache]` section][runn
 ### Additional configuration information
 
 There is also a special mode, when you set `IdleCount = 0`. In this mode,
-machines are **always** created **on-demand** before each build (if there is no
-available machine in _Idle_ state). After the build is finished, the autoscaling
+machines are **always** created **on-demand** before each job (if there is no
+available machine in _Idle_ state). After the job is finished, the autoscaling
 algorithm works
 [the same as it is described below](#autoscaling-algorithm-and-parameters).
-The machine is waiting for the next builds, and if no one is executed, after
-the `IdleTime` period, the machine is removed. If there are no builds, there
+The machine is waiting for the next jobs, and if no one is executed, after
+the `IdleTime` period, the machine is removed. If there are no jobs, there
 are no machines in _Idle_ state.
 
 ## Autoscaling algorithm and parameters
@@ -95,7 +95,7 @@ are no machines in _Idle_ state.
 The autoscaling algorithm is based on three main parameters: `IdleCount`,
 `IdleTime` and `limit`.
 
-We say that each machine that does not run a build is in _Idle_ state. When
+We say that each machine that does not run a job is in _Idle_ state. When
 GitLab Runner is in autoscale mode, it monitors all machines and ensures that
 there is always an `IdleCount` of machines in _Idle_ state.
 
@@ -120,36 +120,36 @@ autoscale parameters:
     (...)
 ```
 
-At the beginning, when no builds are queued, GitLab Runner starts two machines
+At the beginning, when no jobs are queued, GitLab Runner starts two machines
 (`IdleCount = 2`), and sets them in _Idle_ state. Notice that we have also set 
 `IdleTime` to 30 minutes (`IdleTime = 1800`).
 
-Now, let's assume that 5 builds are queued in GitLab CI. The first 2 builds are
+Now, let's assume that 5 jobs are queued in GitLab CI. The first 2 jobs are
 sent to the _Idle_ machines of which we have two. GitLab Runner now notices that 
 the number of _Idle_ is less than `IdleCount` (`0 < 2`), so it starts 2 new 
-machines. Then, the next 2 builds from the queue are sent to those newly created 
+machines. Then, the next 2 jobs from the queue are sent to those newly created 
 machines. Again, the number of _Idle_ machines is less than `IdleCount`, so 
-GitLab Runner starts 2 new machines and the last queued build is sent to one of 
+GitLab Runner starts 2 new machines and the last queued job is sent to one of 
 the _Idle_ machines.
 
 We now have 1 _Idle_ machine, so GitLab Runner starts another 1 new machine to
-satisfy `IdleCount`. Because there are no new builds in queue, those two
+satisfy `IdleCount`. Because there are no new jobs in queue, those two
 machines stay in _Idle_ state and GitLab Runner is satisfied.
 
 ---
 
 **This is what happened:**
-We had 2 machines, waiting in _Idle_ state for new builds. After the 5 builds
+We had 2 machines, waiting in _Idle_ state for new jobs. After the 5 jobs
 where queued, new machines were created, so in total we had 7 machines. Five of
-them were running builds, and 2 were in _Idle_ state, waiting for the next
-builds.
+them were running jobs, and 2 were in _Idle_ state, waiting for the next
+jobs.
 
 The algorithm will still work in the same way; GitLab Runner will create a new
-_Idle_ machine for each machine used for the build execution until `IdleCount`
+_Idle_ machine for each machine used for the job execution until `IdleCount`
 is satisfied. Those machines will be created up to the number defined by
 `limit` parameter. If GitLab Runner notices that there is a `limit` number of
-total created machines, it will stop autoscaling, and new builds will need to
-wait in the build queue until machines start returning to _Idle_ state.
+total created machines, it will stop autoscaling, and new jobs will need to
+wait in the job queue until machines start returning to _Idle_ state.
 
 In the above example we will always have two idle machines. The `IdleTime`
 applies only when we are over the `IdleCount`, then we try to reduce the number
@@ -158,11 +158,11 @@ of machines to `IdleCount`.
 ---
 
 **Scaling down:**
-After the build is finished, the machine is set to _Idle_ state and is waiting
-for the next builds to be executed. Let's suppose that we have no new builds in
+After the job is finished, the machine is set to _Idle_ state and is waiting
+for the next jobs to be executed. Let's suppose that we have no new jobs in
 the queue. After the time designated by `IdleTime` passes, the _Idle_ machines
 will be removed. In our example, after 30 minutes, all machines will be removed
-(each machine after 30 minutes from when last build execution ended) and GitLab
+(each machine after 30 minutes from when last job execution ended) and GitLab
 Runner will start to keep an `IdleCount` of _Idle_ machines running, just like
 at the beginning of the example.
 
@@ -172,16 +172,16 @@ So, to sum up:
 
 1. We start the Runner
 2. Runner creates 2 idle machines
-3. Runner picks one build
+3. Runner picks one job
 4. Runner creates one more machine to fulfill the strong requirement of always
    having the two idle machines
-5. Build finishes, we have 3 idle machines
+5. Job finishes, we have 3 idle machines
 6. When one of the three idle machines goes over `IdleTime` from the time when
-   last time it picked the build it will be removed
+   last time it picked the job it will be removed
 7. The Runner will always have at least 2 idle machines waiting for fast
-   picking of the builds
+   picking of the jobs
 
-Below you can see a comparison chart of builds statuses and machines statuses
+Below you can see a comparison chart of jobs statuses and machines statuses
 in time:
 
 ![Autoscale state chart](img/autoscale-state-chart.png)
@@ -192,10 +192,10 @@ There doesn't exist a magic equation that will tell you what to set `limit` or
 `concurrent` to. Act according to your needs. Having `IdleCount` of _Idle_
 machines is a speedup feature. You don't need to wait 10s/20s/30s for the
 instance to be created. But as a user, you'd want all your machines (for which
-you need to pay) to be running builds, not stay in _Idle_ state. So you should
+you need to pay) to be running jobs, not stay in _Idle_ state. So you should
 have `concurrent` and `limit` set to values that will run the maximum count of
 machines you are willing to pay for. As for `IdleCount`, it should be set to a
-value that will generate a minimum amount of _not used_ machines when the build
+value that will generate a minimum amount of _not used_ machines when the job
 queue is empty.
 
 Let's assume the following example:
@@ -211,8 +211,8 @@ concurrent=20
 
 In the above scenario the total amount of machines we could have is 30. The
 `limit` of total machines (building and idle) can be 40. We can have 10 idle
-machines but the `concurrent` builds are 20. So in total we can have 20
-concurrent machines running builds and 10 idle, summing up to 30.
+machines but the `concurrent` jobs are 20. So in total we can have 20
+concurrent machines running jobs and 10 idle, summing up to 30.
 
 But what happens if the `limit` is less than the total amount of machines that
 could be created? The example below explains that case:
@@ -226,7 +226,7 @@ concurrent=20
     IdleCount = 10
 ```
 
-In this example we will have at most 20 concurrent builds, and at most 25
+In this example we will have at most 20 concurrent jobs, and at most 25
 machines created. In the worst case scenario regarding idle machines, we will
 not be able to have 10 idle machines, but only 5, because the `limit` is 25.
 
@@ -245,7 +245,7 @@ from Monday to Friday at 12am-9am and 6pm-11pm and whole Saturday and Sunday -
 no one is working. These time periods we're naming here as _Off Peak_.
 
 Organizations where _Off Peak_ time periods occurs probably don't want
-to pay for the _Idle_ machines when it's certain that no builds will be
+to pay for the _Idle_ machines when it's certain that no jobs will be
 executed in this time. Especially when `IdleCount` is set to a big number.
 
 In the `v1.7` version of the Runner we've added the support for _Off Peak_
@@ -289,13 +289,13 @@ in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section][ru
 
 ## Distributed runners caching
 
-To speed up your builds, GitLab Runner provides a [cache mechanism][cache]
+To speed up your jobs, GitLab Runner provides a [cache mechanism][cache]
 where selected directories and/or files are saved and shared between subsequent
-builds.
+jobs.
 
-This is working fine when builds are run on the same host, but when you start
-using the Runners autoscale feature, most of your builds will be running on a
-new (or almost new) host, which will execute each build in a new Docker
+This is working fine when jobs are run on the same host, but when you start
+using the Runners autoscale feature, most of your jobs will be running on a
+new (or almost new) host, which will execute each job in a new Docker
 container. In that case, you will not be able to take advantage of the cache
 feature.
 
@@ -332,7 +332,7 @@ Read how to [install your own caching server][caching].
 
 ## Distributed Docker registry mirroring
 
-To speed up builds executed inside of Docker containers, you can use the [Docker
+To speed up jobs executed inside of Docker containers, you can use the [Docker
 registry mirroring service][registry]. This will provide a proxy between your
 Docker machines and all used registries. Images will be downloaded once by the
 registry mirror. On each new host, or on an existing host where the image is
@@ -367,16 +367,16 @@ Read how to [install your own Docker registry server][registry-server].
 The `config.toml` below uses the [`digitalocean` Docker Machine driver](https://docs.docker.com/machine/drivers/digital-ocean/):
 
 ```bash
-concurrent = 50   # All registered Runners can run up to 50 concurrent builds
+concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
 
 [[runners]]
   url = "https://gitlab.com"
   token = "RUNNER_TOKEN"             # Note this is different from the registration token used by `gitlab-runner register`
   name = "autoscale-runner"
   executor = "docker+machine"        # This Runner is using the 'docker+machine' executor
-  limit = 10                         # This Runner can execute up to 10 builds (created machines)
+  limit = 10                         # This Runner can execute up to 10 jobs (created machines)
   [runners.docker]
-    image = "ruby:2.1"               # The default image used for builds is 'ruby:2.1'
+    image = "ruby:2.1"               # The default image used for jobs is 'ruby:2.1'
   [runners.machine]
     OffPeakPeriods = [               # Set the Off Peak time mode on for:
       "* * 0-9,18-23 * * mon-fri *", # - Monday to Friday for 12am to 9am and 6pm to 11pm
@@ -386,7 +386,7 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent builds
     OffPeakIdleTime = 1200           # Each machine can be in Idle state up to 1200 seconds (after this it will be removed) - when Off Peak time mode is on
     IdleCount = 5                    # There must be 5 machines in Idle state - when Off Peak time mode is off
     IdleTime = 600                   # Each machine can be in Idle state up to 600 seconds (after this it will be removed) - when Off Peak time mode is off
-    MaxBuilds = 100                  # Each machine can handle up to 100 builds in a row (after this it will be removed)
+    Maxjobs = 100                    # Each machine can handle up to 100 jobs in a row (after this it will be removed)
     MachineName = "auto-scale-%s"    # Each machine will have a unique name ('%s' is required)
     MachineDriver = "digitalocean"   # Docker Machine is using the 'digitalocean' driver
     MachineOptions = [
