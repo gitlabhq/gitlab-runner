@@ -1,0 +1,32 @@
+---
+engines:
+  gofmt:
+    enabled: true
+  golint:
+    enabled: true
+    checks:
+      GoLint/Comments/PackageComments:
+        enabled: false
+  govet:
+    enabled: true
+  gocyclo:
+    enabled: true
+    config:
+      over: 9
+    exclude_paths:
+    - vendor/
+    - helpers/shell_escape.go
+    - executors/kubernetes/executor_kubernetes_test.go
+    - executors/kubernetes/util_test.go
+    - executors/kubernetes/exec_test.go
+    - executors/parallels/
+    - executors/virtualbox/
+  fixme:
+    enabled: false
+  shellcheck:
+    enabled: false
+ratings:
+  paths:
+  - "**.go"
+exclude_paths:
+- vendor/
