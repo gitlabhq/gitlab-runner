@@ -117,6 +117,7 @@ docs check links:
 
 codequality:
   stage: test
+  before_script: []
   script:
     # Add custom code climate engines
     - docker pull registry.gitlab.com/nolith/codeclimate-gocyclo && docker tag registry.gitlab.com/nolith/codeclimate-gocyclo codeclimate/codeclimante-gocyclo
