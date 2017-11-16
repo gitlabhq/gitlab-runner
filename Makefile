@@ -39,7 +39,7 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PA
 GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED := 0
 
-all: deps verify build
+all: deps build
 
 help:
 	# Commands:
