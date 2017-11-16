@@ -5,7 +5,11 @@ engines:
   golint:
     enabled: true
     checks:
-      GoLint/Comments/PackageComments:
+      GoLint/Comments/DocComments:
+        enabled: false
+      GoLint/Naming/MixedCaps:
+        enabled: false
+      GoLint/Naming/PackageNames:
         enabled: false
   govet:
     enabled: true
