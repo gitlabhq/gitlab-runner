@@ -40,6 +40,7 @@ type executor struct {
 	credentials *api.Secret
 	options     *kubernetesOptions
 
+	bearerToken             string
 	namespaceOverwrite      string
 	serviceAccountOverwrite string
 	buildLimits             api.ResourceList
@@ -108,6 +109,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	if err = s.overwriteServiceAccount(options.Build); err != nil {
+		return err
+	}
+
+	if err = s.setBearerToken(options.Build); err != nil {
 		return err
 	}
 
@@ -575,6 +580,23 @@ func overwriteRegexCheck(regex, value string) error {
 	if match := r.MatchString(value); !match {
 		return fmt.Errorf("Provided value %s does not match regex %s", value, regex)
 	}
+	return nil
+}
+
+func (s *executor) setBearerToken(job *common.Build) error {
+	if !s.Config.Kubernetes.BearerTokenOverwriteAllowed {
+		s.Debugln("Configuration entry 'bearer_token_overwrite_allowed' is false, disabling override.")
+		return nil
+	}
+
+	s.bearerToken= job.Variables.Expand().Get("KUBERNETES_BEARER_TOKEN_OVERWRITE")
+	if s.serviceAccountOverwrite == "" {
+		return nil
+	}
+
+	s.Println("Setting bearer tokento m", s.bearerToken)
+	s.Config.Kubernetes.BearerToken = s.bearerToken
+
 	return nil
 }
 
