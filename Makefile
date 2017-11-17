@@ -209,7 +209,7 @@ mocks: FORCE
 	go get github.com/vektra/mockery/.../
 	rm -rf ./mocks ./helpers/docker/mocks ./common/mocks ./helpers/service/mocks
 	find . -type f -name 'mock_*' -delete
-	mockery -dir=$(GOPATH)/src/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name=Interface
+	mockery -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
 	mockery -dir=./common -all -inpkg
 	mockery -dir=./helpers/docker -all -inpkg
 
