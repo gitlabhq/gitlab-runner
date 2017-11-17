@@ -590,8 +590,8 @@ func (s *executor) setBearerToken(job *common.Build) error {
 		return nil
 	}
 
-	s.bearerToken = job.Variables.Expand().Get("KUBERNETES_BEARER_TOKEN_OVERWRITE")
-	if s.serviceAccountOverwrite == "" {
+	s.bearerToken = job.Variables.Expand().Get("KUBERNETES_BEARER_TOKEN")
+	if s.bearerToken == "" {
 		return nil
 	}
 
