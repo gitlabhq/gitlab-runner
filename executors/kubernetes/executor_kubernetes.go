@@ -583,6 +583,7 @@ func overwriteRegexCheck(regex, value string) error {
 	return nil
 }
 
+//setBearerToken check if setting bearer token is allowed then sets the token for client call.
 func (s *executor) setBearerToken(job *common.Build) error {
 	if !s.Config.Kubernetes.BearerTokenOverwriteAllowed {
 		s.Debugln("Configuration entry 'bearer_token_overwrite_allowed' is false, disabling override.")

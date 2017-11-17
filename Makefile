@@ -186,7 +186,7 @@ lint:
 
 complexity:
 	# Checking code complexity
-	@gocyclo -over 9 $(shell find . -name '*.go' | grep -v \
+	@gocyclo -over 10 $(shell find . -name '*.go' | grep -v \
 	    -e "/vendor/" \
 	    -e "/helpers/shell_escape.go" \
 	    -e "/executors/kubernetes/executor_kubernetes_test.go" \
