@@ -5,7 +5,6 @@ REVISION := $(shell git rev-parse --short=8 HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
 BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
 TESTFLAGS ?= -cover
-CODECLIMATE_FORMAT ?= text
 
 LATEST_STABLE_TAG := $(shell git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" --sort=-v:refname | awk '!/rc/' | head -n 1)
 export IS_LATEST :=
@@ -81,14 +80,7 @@ deps:
 	go install cmd/vet
 
 codequality:
-	@docker pull registry.gitlab.com/nolith/codeclimate-gocyclo > /dev/null
-	@docker tag registry.gitlab.com/nolith/codeclimate-gocyclo codeclimate/codeclimante-gocyclo > /dev/null
-	@docker run --rm --tty --env CODECLIMATE_CODE="$(PWD)" \
-		--volume "$(PWD)":/code \
-		--volume "$(PWD)/.codeclimate-global.yml":/config.yml \
-		--volume /var/run/docker.sock:/var/run/docker.sock \
-		--volume /tmp/cc:/tmp/cc \
-		codeclimate/codeclimate:0.69.0 analyze -f $(CODECLIMATE_FORMAT)
+	./scripts/codequality analyze --dev
 
 out/docker/prebuilt-x86_64.tar.xz: $(GO_FILES)
 	# Create directory

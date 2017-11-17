@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -eo pipefail
+
+code_path=$(pwd)
+
+docker pull registry.gitlab.com/nolith/codeclimate-gocyclo > /dev/null
+docker tag registry.gitlab.com/nolith/codeclimate-gocyclo codeclimate/codeclimate-gocyclo > /dev/null
+exec docker run --rm --tty --env CODECLIMATE_CODE="$code_path" \
+	--volume "$code_path":/code \
+	--volume "$code_path/.codeclimate-global.yml":/config.yml \
+	--volume /var/run/docker.sock:/var/run/docker.sock \
+	--volume /tmp/cc:/tmp/cc \
+	codeclimate/codeclimate:0.70.1 "$@"

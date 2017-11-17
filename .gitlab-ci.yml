@@ -95,10 +95,9 @@ codequality:
     CODECLIMATE_FORMAT: json
   cache: {}
   dependencies: []
-  before_script:
-    - apk add -U make
+  before_script: []
   script:
-    - make codequality > codeclimate.json
+    - ./scripts/codequality analyze -f json --dev | tee codeclimate.json
   artifacts:
     paths: [codeclimate.json]
     expire_in: 1 week

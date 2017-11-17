@@ -1,5 +1,10 @@
 ---
-engines:
+version: "2"
+plugins:
+  structure:
+    enabled: false
+  duplication:
+    enabled: false
   gofmt:
     enabled: true
   golint:
@@ -17,7 +22,7 @@ engines:
     enabled: true
     config:
       over: 9
-    exclude_paths:
+    exclude_patterns:
     - vendor/
     - helpers/shell_escape.go
     - executors/kubernetes/executor_kubernetes_test.go
@@ -29,8 +34,5 @@ engines:
     enabled: false
   shellcheck:
     enabled: false
-ratings:
-  paths:
-  - "**.go"
-exclude_paths:
+exclude_patterns:
 - vendor/
