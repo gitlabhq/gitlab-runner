@@ -92,14 +92,13 @@ codequality:
     - docker:dind
   variables:
     DOCKER_DRIVER: overlay2
+    CODECLIMATE_FORMAT: json
   cache: {}
   dependencies: []
-  before_script: []
+  before_script:
+    - apk add -U make
   script:
-    # Add custom code climate engines
-    - docker pull registry.gitlab.com/nolith/codeclimate-gocyclo && docker tag registry.gitlab.com/nolith/codeclimate-gocyclo codeclimate/codeclimante-gocyclo
-    # Run code climate
-    - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate analyze -f json > codeclimate.json
+    - make codequality > codeclimate.json
   artifacts:
     paths: [codeclimate.json]
     expire_in: 1 week
