@@ -424,7 +424,7 @@ func TestPrepare(t *testing.T) {
 						Host:                           "test-server",
 						ServiceAccount:                 "default",
 						ServiceAccountOverwriteAllowed: ".*",
-						BearerTokenOverwriteAllowed:    true
+						BearerTokenOverwriteAllowed:    true,
 						ServiceCPULimit:                "100m",
 						ServiceMemoryLimit:             "200Mi",
 						CPULimit:                       "1.5",
@@ -463,7 +463,7 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				serviceAccountOverwrite: "not-default",
-				bearerToken: "not-default",
+				bearerToken:             "not-default",
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
