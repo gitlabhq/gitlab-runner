@@ -595,7 +595,7 @@ func (s *executor) setBearerToken(job *common.Build) error {
 		return nil
 	}
 
-	s.Println("Setting bearer tokento m", s.bearerToken)
+	s.Println("Setting bearer token to ", s.bearerToken)
 	s.Config.Kubernetes.BearerToken = s.bearerToken
 
 	return nil

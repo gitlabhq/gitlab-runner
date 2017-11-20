@@ -424,6 +424,7 @@ func TestPrepare(t *testing.T) {
 						Host:                           "test-server",
 						ServiceAccount:                 "default",
 						ServiceAccountOverwriteAllowed: ".*",
+						BearerTokenOverwriteAllowed:    true
 						ServiceCPULimit:                "100m",
 						ServiceMemoryLimit:             "200Mi",
 						CPULimit:                       "1.5",
@@ -450,6 +451,7 @@ func TestPrepare(t *testing.T) {
 					},
 					Variables: []common.JobVariable{
 						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
+						{Key: "KUBERNETES_BEARER_TOKEN", Value: "not-default"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -461,6 +463,7 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				serviceAccountOverwrite: "not-default",
+				bearerToken: "not-default",
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
