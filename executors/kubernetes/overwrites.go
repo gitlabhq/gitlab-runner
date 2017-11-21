@@ -52,7 +52,7 @@ func (o *overwrites) evaluateOverwrite(fieldName, value, regex, overwriteValue s
 		return value, err
 	}
 
-	logger.Println(fmt.Sprintf("Overvriting configured %s, from %q to %q", fieldName, value, overwriteValue))
+	logger.Println(fmt.Sprintf("%q overwritten with %q", fieldName, overwriteValue))
 
 	return overwriteValue, nil
 }

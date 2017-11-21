@@ -482,7 +482,6 @@ func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 	}
 
 	s.configurationOverwrites = values
-
 	return nil
 }
 
