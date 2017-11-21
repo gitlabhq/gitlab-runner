@@ -104,6 +104,7 @@ unit tests (no race):
 unit tests:
   stage: test
   variables:
+    CGO_ENABLED: 1
     TESTFLAGS: -cover -race
   allow_failure: true
   script:

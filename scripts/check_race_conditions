@@ -6,12 +6,12 @@
 max=33
 
 tmpfile=$(mktemp)
-CGO_ENABLED=1 go test -race "$@" 2>&1 | tee -a $tmpfile
+CGO_ENABLED=1 TESTFLAGS="-race" make test 2>&1 | tee -a "$tmpfile"
 
-cnt=$(grep -c -e "^WARNING: DATA RACE$" $tmpfile)
+cnt=$(grep -c -e "^WARNING: DATA RACE$" "$tmpfile")
 echo "Found ${cnt} race conditions. Maximum allowed value is ${max}"
 
-rm $tmpfile 2>/dev/null || true
+rm "$tmpfile" 2>/dev/null || true
 
 if [ "$cnt" -gt "$max" ]; then
   echo "Race conditions count increased"
