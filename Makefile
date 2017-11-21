@@ -37,7 +37,7 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PA
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
               -s -w
 GO_FILES ?= $(shell find . -name '*.go')
-export CGO_ENABLED := 0
+export CGO_ENABLED ?= 0
 
 all: deps verify build
 
@@ -194,6 +194,9 @@ complexity:
 	    -e "/executors/kubernetes/exec_test.go" \
 	    -e "/executors/parallels/" \
 	    -e "/executors/virtualbox/")
+
+check_race_conditions: executors/docker/bindata.go
+	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
 test: executors/docker/bindata.go
 	# Running tests...

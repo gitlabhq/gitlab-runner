@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# This is the number of race conditions detected on master.
+# This number is not allowed to increase, and it has to be lowered when we
+# fix existing race conditions
+max=33
+
+tmpfile=$(mktemp)
+CGO_ENABLED=1 TESTFLAGS="-race" make test 2>&1 | tee -a "$tmpfile"
+
+cnt=$(grep -c -e "^WARNING: DATA RACE$" "$tmpfile")
+echo "Found ${cnt} race conditions. Maximum allowed value is ${max}"
+
+rm "$tmpfile" 2>/dev/null || true
+
+if [ "$cnt" -gt "$max" ]; then
+  echo "Race conditions count increased"
+  exit 1
+fi

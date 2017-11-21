@@ -93,8 +93,20 @@ static code analysis:
   tags:
   - docker
 
+unit tests (no race):
+  stage: test
+  script:
+  - source ci/touch_make_dependencies
+  - make test
+  tags:
+  - docker
+
 unit tests:
   stage: test
+  variables:
+    CGO_ENABLED: 1
+    TESTFLAGS: -cover -race
+  allow_failure: true
   script:
   - source ci/touch_make_dependencies
   - make test
@@ -143,6 +155,13 @@ integration windows:
   tags:
   - integration
   - windows
+
+race conditions detector:
+  <<: *docker
+  stage: test
+  script:
+  - source ci/touch_make_dependencies
+  - make check_race_conditions
 
 #
 # Build stage
