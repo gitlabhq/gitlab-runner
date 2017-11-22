@@ -1,12 +1,15 @@
 stages:
   - triage
 
-gitlab-triage:
+image: ruby:2.4-alpine
+
+before_script:
+  - gem install gitlab-triage --no-doc
+
+run:triage:
   stage: triage
-  image: ruby:2.4-alpine
   script:
-    - gem install gitlab-triage --no-doc
     - gitlab-triage --token $API_TOKEN --project-id $CI_PROJECT_PATH
+  retry: 2
   only:
     - schedules
-
