@@ -1,4 +1,4 @@
-v 10.2.0-rc.1 (2017-11-09)
+v 10.2.0 (2017-11-22)
 - Update supported platforms !712
 - Fix typo in Kubernetes runner docs !714
 - Add info on upgrading to Runner 10 !709
