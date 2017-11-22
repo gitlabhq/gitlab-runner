@@ -14,4 +14,4 @@ exec docker run --rm $docker_tty --env CODECLIMATE_CODE="$code_path" \
 	--volume "$code_path":/code \
 	--volume /var/run/docker.sock:/var/run/docker.sock \
 	--volume /tmp/cc:/tmp/cc \
-	codeclimate/codeclimate:0.70.1 "$@"
+	codeclimate/codeclimate:0.70.3 "$@"
