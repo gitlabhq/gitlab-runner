@@ -28,6 +28,13 @@ data:
 
 Where `image` (optional) is the default Docker image to run jobs on top of.
 
+>**Note:**
+The `token` can be found in `/etc/gitlab-runner/config.toml` and should
+have been generated after registering the Runner. It's not to be confused
+with the registration token that can be found under your project's
+**Settings > CI/CD > Runners settings**.
+
+
 
 Then create a `Deployment` or `ReplicationController` which uses the `ConfigMap`.
 This is an example of a `Deployment`:

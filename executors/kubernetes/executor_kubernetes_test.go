@@ -397,7 +397,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "",
+				configurationOverwrites: &overwrites{namespace: "default"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -450,8 +450,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
-						{Key: "KUBERNETES_BEARER_TOKEN", Value: "not-default"},
+						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -462,8 +461,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				serviceAccountOverwrite: "not-default",
-				bearerToken:             "not-default",
+				configurationOverwrites: &overwrites{namespace: "default", serviceAccount: "not-default"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -525,7 +523,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "not-default"},
+						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -536,7 +534,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "namespacee",
+				configurationOverwrites: &overwrites{namespace: "namespacee"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -571,7 +569,7 @@ func TestPrepare(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Host:                           "test-server",
 						Namespace:                      "namespace",
-						ServiceAccount:                 "default",
+						ServiceAccount:                 "a_service_account",
 						ServiceAccountOverwriteAllowed: ".*",
 						NamespaceOverwriteAllowed:      "^n.*?e$",
 						ServiceCPULimit:                "100m",
@@ -599,7 +597,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespacee"},
+						{Key: NamespaceOverwriteVariableName, Value: "namespacee"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -610,7 +608,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "namespacee",
+				configurationOverwrites: &overwrites{namespace: "namespacee", serviceAccount: "a_service_account"},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -657,7 +655,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+						{Key: NamespaceOverwriteVariableName, Value: "namespace"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -668,13 +666,13 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "",
-				serviceLimits:      api.ResourceList{},
-				buildLimits:        api.ResourceList{},
-				helperLimits:       api.ResourceList{},
-				serviceRequests:    api.ResourceList{},
-				buildRequests:      api.ResourceList{},
-				helperRequests:     api.ResourceList{},
+				configurationOverwrites: &overwrites{namespace: "namespace"},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 		{
@@ -701,13 +699,13 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				namespaceOverwrite: "",
-				serviceLimits:      api.ResourceList{},
-				buildLimits:        api.ResourceList{},
-				helperLimits:       api.ResourceList{},
-				serviceRequests:    api.ResourceList{},
-				buildRequests:      api.ResourceList{},
-				helperRequests:     api.ResourceList{},
+				configurationOverwrites: &overwrites{namespace: "default"},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 		{
@@ -752,13 +750,13 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				namespaceOverwrite: "",
-				serviceLimits:      api.ResourceList{},
-				buildLimits:        api.ResourceList{},
-				helperLimits:       api.ResourceList{},
-				serviceRequests:    api.ResourceList{},
-				buildRequests:      api.ResourceList{},
-				helperRequests:     api.ResourceList{},
+				configurationOverwrites: &overwrites{namespace: "default"},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 	}
@@ -803,6 +801,56 @@ func TestPrepare(t *testing.T) {
 			assert.Equal(t, test.Expected, e)
 		})
 	}
+}
+
+// This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583
+func TestPrepareIssue2583(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	namespace := "my_namespace"
+	serviceAccount := "my_account"
+
+	runnerConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "kubernetes",
+			Kubernetes: &common.KubernetesConfig{
+				Image:                          "an/image:latest",
+				Namespace:                      namespace,
+				NamespaceOverwriteAllowed:      ".*",
+				ServiceAccount:                 serviceAccount,
+				ServiceAccountOverwriteAllowed: ".*",
+			},
+		},
+	}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			Variables: []common.JobVariable{
+				{Key: NamespaceOverwriteVariableName, Value: "namespace"},
+				{Key: ServiceAccountOverwriteVariableName, Value: "sa"},
+			},
+		},
+		Runner: &common.RunnerConfig{},
+	}
+
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executorOptions,
+		},
+	}
+
+	prepareOptions := common.ExecutorPrepareOptions{
+		Config:  runnerConfig,
+		Build:   build,
+		Context: context.TODO(),
+	}
+
+	err := e.Prepare(prepareOptions)
+	assert.NoError(t, err)
+	assert.Equal(t, namespace, runnerConfig.Kubernetes.Namespace)
+	assert.Equal(t, serviceAccount, runnerConfig.Kubernetes.ServiceAccount)
 }
 
 func TestSetupCredentials(t *testing.T) {
@@ -911,7 +959,9 @@ func TestSetupCredentials(t *testing.T) {
 		}
 
 		executed = false
-		err := ex.setupCredentials()
+		err := ex.prepareOverwrites(make(common.JobVariables, 0))
+		assert.NoError(t, err)
+		err = ex.setupCredentials()
 		assert.NoError(t, err)
 		if test.VerifyFn != nil {
 			assert.True(t, executed)
@@ -1156,7 +1206,9 @@ func TestSetupBuildPod(t *testing.T) {
 		}
 
 		executed = false
-		err := ex.setupBuildPod()
+		err := ex.prepareOverwrites(make(common.JobVariables, 0))
+		assert.NoError(t, err, "error preparing overwrites: %s")
+		err = ex.setupBuildPod()
 		assert.NoError(t, err, "error setting up build pod: %s")
 		assert.True(t, executed)
 	}
@@ -1366,7 +1418,7 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 				Name: "test-image",
 			},
 			Variables: []common.JobVariable{
-				{Key: "KUBERNETES_NAMESPACE_OVERWRITE", Value: "namespace"},
+				{Key: NamespaceOverwriteVariableName, Value: "namespace"},
 			},
 		},
 		Runner: &common.RunnerConfig{
@@ -1400,7 +1452,7 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 				Name: "test-image",
 			},
 			Variables: []common.JobVariable{
-				{Key: "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE", Value: "service-account"},
+				{Key: ServiceAccountOverwriteVariableName, Value: "service-account"},
 			},
 		},
 		Runner: &common.RunnerConfig{

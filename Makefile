@@ -37,7 +37,7 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PA
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
               -s -w
 GO_FILES ?= $(shell find . -name '*.go')
-export CGO_ENABLED := 0
+export CGO_ENABLED ?= 0
 
 all: deps verify build
 
@@ -195,6 +195,9 @@ complexity:
 	    -e "/executors/parallels/" \
 	    -e "/executors/virtualbox/")
 
+check_race_conditions: executors/docker/bindata.go
+	@./scripts/check_race_conditions $(OUR_PACKAGES)
+
 test: executors/docker/bindata.go
 	# Running tests...
 	@go test $(OUR_PACKAGES) $(TESTFLAGS)
@@ -209,7 +212,7 @@ mocks: FORCE
 	go get github.com/vektra/mockery/.../
 	rm -rf ./mocks ./helpers/docker/mocks ./common/mocks ./helpers/service/mocks
 	find . -type f -name 'mock_*' -delete
-	mockery -dir=$(GOPATH)/src/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name=Interface
+	mockery -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
 	mockery -dir=./common -all -inpkg
 	mockery -dir=./helpers/docker -all -inpkg
 
