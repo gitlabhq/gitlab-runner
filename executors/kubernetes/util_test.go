@@ -29,12 +29,14 @@ func TestGetKubeClientConfig(t *testing.T) {
 			Error:    true,
 		},
 		{
-			CertFile: "crt",
-			KeyFile:  "key",
-			CAFile:   "ca",
-			Host:     "host",
+			CertFile:     "crt",
+			KeyFile:      "key",
+			CAFile:       "ca",
+			Host:         "host",
+			BearerToken:  "bearerToken",
 			Expected: &restclient.Config{
 				Host: "host",
+				BearerToken: "bearerToken",
 				TLSClientConfig: restclient.TLSClientConfig{
 					CertFile: "crt",
 					KeyFile:  "key",
@@ -55,6 +57,9 @@ func TestGetKubeClientConfig(t *testing.T) {
 			CertFile: test.CertFile,
 			KeyFile:  test.KeyFile,
 			CAFile:   test.CAFile,
+		},
+		&overwrites{
+			bearerToken: test.BearerToken
 		})
 
 		if err != nil && !test.Error {

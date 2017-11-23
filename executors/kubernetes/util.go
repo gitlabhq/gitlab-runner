@@ -22,7 +22,7 @@ func init() {
 	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
 }
 
-func getKubeClientConfig(config *common.KubernetesConfig) (*restclient.Config, error) {
+func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
 	switch {
 	case len(config.CertFile) > 0:
 		if len(config.KeyFile) == 0 || len(config.CAFile) == 0 {
@@ -37,9 +37,9 @@ func getKubeClientConfig(config *common.KubernetesConfig) (*restclient.Config, e
 			},
 		}, nil
 
-	case len(config.BearerToken) > 0:
+	case len(overwrites.bearerToken) > 0:
 		return &restclient.Config {
-			BearerToken: config.BearerToken
+			BearerToken: overwrites.bearerToken,
 		}, nil
 
 	case len(config.Host) > 0:
@@ -62,8 +62,8 @@ func getKubeClientConfig(config *common.KubernetesConfig) (*restclient.Config, e
 	}
 }
 
-func getKubeClient(config *common.KubernetesConfig) (*client.Client, error) {
-	restConfig, err := getKubeClientConfig(config)
+func getKubeClient(config *common.KubernetesConfig, overwrites *overwites) (*client.Client, error) {
+	restConfig, err := getKubeClientConfig(config, overwrites)
 	if err != nil {
 		return nil, err
 	}

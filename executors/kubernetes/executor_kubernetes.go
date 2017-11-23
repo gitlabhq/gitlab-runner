@@ -101,16 +101,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return err
 	}
 
-	options.Config.Kubernetes = s.appyOverwrites(options.Config.Kubernetes);
-
-	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes); err != nil {
-		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
-	}
-
 	s.prepareOptions(options.Build)
 
 	if err = s.checkDefaults(); err != nil {
 		return err
+	}
+
+	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes, s.configurationOverwrites); err != nil {
+		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
 	s.Println("Using Kubernetes executor with image", s.options.Image.Name, "...")
@@ -450,7 +448,7 @@ func (s *executor) runInContainer(ctx context.Context, name string, command []st
 			return
 		}
 
-		config, err := getKubeClientConfig(s.Config.Kubernetes)
+		config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
 
 		if err != nil {
 			errc <- err
@@ -485,13 +483,6 @@ func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 
 	s.configurationOverwrites = values
 	return nil
-}
-
-func (s *executor) applyOverwrites(config common.KuernetesConfig) (*common.KubernetesConfig) {
-	if len(s.configurationOverwrites.bearerToken) > 0 {
-		config.BearerToken = s.configurationOverwrites.bearerToken
-	}
-	return config
 }
 
 func (s *executor) prepareOptions(job *common.Build) {
