@@ -39,7 +39,7 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PA
 GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED ?= 0
 
-all: deps verify build
+all: deps build
 
 help:
 	# Commands:
@@ -51,12 +51,8 @@ help:
 	# make docker - build docker dependencies
 	#
 	# Testing commands:
-	# make verify - run fmt, complexity, test and lint
-	# make fmt - check source formatting
 	# make test - run project tests
-	# make lint - check project code style
-	# make vet - examine code and report suspicious constructs
-	# make complexity - check code complexity
+	# make codequality - run code quality analysis
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -74,10 +70,6 @@ version: FORCE
 	@echo RPM platforms: $(RPM_PLATFORMS)
 	@echo IS_LATEST: $(IS_LATEST)
 
-verify: static_code_analysis test
-
-static_code_analysis: fmt vet lint complexity
-
 deps:
 	# Installing dependencies...
 	go get -u github.com/golang/lint/golint
@@ -86,6 +78,9 @@ deps:
 	go get github.com/fzipp/gocyclo
 	go get -u github.com/jteeuwen/go-bindata/...
 	go install cmd/vet
+
+codequality:
+	./scripts/codequality analyze --dev
 
 out/docker/prebuilt-x86_64.tar.xz: $(GO_FILES)
 	# Create directory
@@ -171,29 +166,6 @@ build_simple:
 		-o "out/binaries/$(NAME)"
 
 build_current: executors/docker/bindata.go build_simple
-
-fmt:
-	# Checking project code formatting...
-	@go fmt $(OUR_PACKAGES) | awk '{if (NF > 0) {if (NR == 1) print "Please run go fmt for:"; print "- "$$1}} END {if (NF > 0) {if (NR > 0) exit 1}}'
-
-vet:
-	# Checking for suspicious constructs...
-	@go vet $(OUR_PACKAGES)
-
-lint:
-	# Checking project code style...
-	@golint ./... | ( ! grep -v -e "^vendor/" -e "be unexported" -e "don't use an underscore in package name" -e "ALL_CAPS" )
-
-complexity:
-	# Checking code complexity
-	@gocyclo -over 9 $(shell find . -name '*.go' | grep -v \
-	    -e "/vendor/" \
-	    -e "/helpers/shell_escape.go" \
-	    -e "/executors/kubernetes/executor_kubernetes_test.go" \
-	    -e "/executors/kubernetes/util_test.go" \
-	    -e "/executors/kubernetes/exec_test.go" \
-	    -e "/executors/parallels/" \
-	    -e "/executors/virtualbox/")
 
 check_race_conditions: executors/docker/bindata.go
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
