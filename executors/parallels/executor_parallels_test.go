@@ -16,7 +16,7 @@ import (
 const prlImage = "ubuntu-runner"
 const prlCtl = "prlctl"
 
-var prlSshConfig = &ssh.Config{
+var prlSSHConfig = &ssh.Config{
 	User:     "vagrant",
 	Password: "vagrant",
 }
@@ -47,7 +47,7 @@ func TestParallelsSuccessRun(t *testing.T) {
 					BaseName:         prlImage,
 					DisableSnapshots: true,
 				},
-				SSH: prlSshConfig,
+				SSH: prlSSHConfig,
 			},
 		},
 	}
@@ -72,7 +72,7 @@ func TestParallelsBuildFail(t *testing.T) {
 					BaseName:         prlImage,
 					DisableSnapshots: true,
 				},
-				SSH: prlSshConfig,
+				SSH: prlSSHConfig,
 			},
 		},
 	}
@@ -96,7 +96,7 @@ func TestParallelsMissingImage(t *testing.T) {
 					BaseName:         "non-existing-image",
 					DisableSnapshots: true,
 				},
-				SSH: prlSshConfig,
+				SSH: prlSSHConfig,
 			},
 		},
 	}
@@ -144,7 +144,7 @@ func TestParallelsBuildAbort(t *testing.T) {
 					BaseName:         prlImage,
 					DisableSnapshots: true,
 				},
-				SSH: prlSshConfig,
+				SSH: prlSSHConfig,
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
@@ -182,7 +182,7 @@ func TestParallelsBuildCancel(t *testing.T) {
 					BaseName:         prlImage,
 					DisableSnapshots: true,
 				},
-				SSH: prlSshConfig,
+				SSH: prlSSHConfig,
 			},
 		},
 	}
