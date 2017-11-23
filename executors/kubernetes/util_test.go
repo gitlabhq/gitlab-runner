@@ -59,7 +59,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 			CAFile:   test.CAFile,
 		},
 		&overwrites{
-			bearerToken: test.BearerToken
+			bearerToken: test.BearerToken,
 		})
 
 		if err != nil && !test.Error {

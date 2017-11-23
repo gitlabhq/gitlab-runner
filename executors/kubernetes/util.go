@@ -62,7 +62,7 @@ func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites
 	}
 }
 
-func getKubeClient(config *common.KubernetesConfig, overwrites *overwites) (*client.Client, error) {
+func getKubeClient(config *common.KubernetesConfig, overwrites *overwrites) (*client.Client, error) {
 	restConfig, err := getKubeClientConfig(config, overwrites)
 	if err != nil {
 		return nil, err

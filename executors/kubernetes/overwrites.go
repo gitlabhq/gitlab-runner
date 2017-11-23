@@ -39,7 +39,7 @@ func createOverwrites(config *common.KubernetesConfig, variables common.JobVaria
 	}
 
 	bearerToken := variables.Expand().Get(BearerAccountVariableName)
-	if config.ServiceAccountOverwriteAllowed && bearerToken != nil {
+	if config.ServiceAccountOverwriteAllowed && bearerToken != "" {
 		o.bearerToken = bearerToken
 	}
 
