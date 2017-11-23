@@ -16,7 +16,7 @@ import (
 const vboxImage = "ubuntu-runner"
 const vboxManage = "vboxmanage"
 
-var vboxSshConfig = &ssh.Config{
+var vboxSSHConfig = &ssh.Config{
 	User:     "vagrant",
 	Password: "vagrant",
 }
@@ -47,7 +47,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 					BaseName:         vboxImage,
 					DisableSnapshots: true,
 				},
-				SSH: vboxSshConfig,
+				SSH: vboxSSHConfig,
 			},
 		},
 	}
@@ -72,7 +72,7 @@ func TestVirtualBoxBuildFail(t *testing.T) {
 					BaseName:         vboxImage,
 					DisableSnapshots: true,
 				},
-				SSH: vboxSshConfig,
+				SSH: vboxSSHConfig,
 			},
 		},
 	}
@@ -96,7 +96,7 @@ func TestVirtualBoxMissingImage(t *testing.T) {
 					BaseName:         "non-existing-image",
 					DisableSnapshots: true,
 				},
-				SSH: vboxSshConfig,
+				SSH: vboxSSHConfig,
 			},
 		},
 	}
@@ -144,7 +144,7 @@ func TestVirtualBoxBuildAbort(t *testing.T) {
 					BaseName:         vboxImage,
 					DisableSnapshots: true,
 				},
-				SSH: vboxSshConfig,
+				SSH: vboxSSHConfig,
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
@@ -182,7 +182,7 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 					BaseName:         vboxImage,
 					DisableSnapshots: true,
 				},
-				SSH: vboxSshConfig,
+				SSH: vboxSSHConfig,
 			},
 		},
 	}
