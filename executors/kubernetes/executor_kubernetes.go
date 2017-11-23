@@ -89,10 +89,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes); err != nil {
-		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
-	}
-
 	if err = s.setupResources(); err != nil {
 		return err
 	}
@@ -105,8 +101,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return err
 	}
 
-	if err = s.setBearerToken(options.Build); err != nil {
-		return err
+	options.Config.Kubernetes = s.appyOverwrites(options.Config.Kubernetes);
+
+	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes); err != nil {
+		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
 	s.prepareOptions(options.Build)
@@ -489,6 +487,13 @@ func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 	return nil
 }
 
+func (s *executor) applyOverwrites(config common.KuernetesConfig) (*common.KubernetesConfig) {
+	if len(s.configurationOverwrites.bearerToken) > 0 {
+		config.BearerToken = s.configurationOverwrites.bearerToken
+	}
+	return config
+}
+
 func (s *executor) prepareOptions(job *common.Build) {
 	s.options = &kubernetesOptions{}
 	s.options.Image = job.Image
@@ -518,24 +523,6 @@ func (s *executor) checkDefaults() error {
 	}
 
 	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
-
-	return nil
-}
-
-//setBearerToken check if setting bearer token is allowed then sets the token for client call.
-func (s *executor) setBearerToken(job *common.Build) error {
-	if !s.Config.Kubernetes.BearerTokenOverwriteAllowed {
-		s.Debugln("Configuration entry 'bearer_token_overwrite_allowed' is false, disabling override.")
-		return nil
-	}
-
-	s.bearerToken = job.Variables.Expand().Get("KUBERNETES_BEARER_TOKEN")
-	if s.bearerToken == "" {
-		return nil
-	}
-
-	s.Println("Setting bearer token to ", s.bearerToken)
-	s.Config.Kubernetes.BearerToken = s.bearerToken
 
 	return nil
 }
