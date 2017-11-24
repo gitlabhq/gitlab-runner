@@ -43,7 +43,7 @@ all: deps build
 
 help:
 	# Commands:
-	# make all => deps verify build
+	# make all => deps build
 	# make version - show information about current version
 	#
 	# Development commands:
