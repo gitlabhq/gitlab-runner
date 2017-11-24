@@ -20,7 +20,7 @@ import (
 
 func TestGetKubeClientConfig(t *testing.T) {
 	tests := []struct {
-		CertFile, KeyFile, CAFile, Host string
+		CertFile, KeyFile, CAFile, Host, BearerToken string
 		Error                           bool
 		Expected                        *restclient.Config
 	}{
@@ -29,13 +29,13 @@ func TestGetKubeClientConfig(t *testing.T) {
 			Error:    true,
 		},
 		{
-			CertFile:     "crt",
-			KeyFile:      "key",
-			CAFile:       "ca",
-			Host:         "host",
-			BearerToken:  "bearerToken",
+			CertFile:    "crt",
+			KeyFile:     "key",
+			CAFile:      "ca",
+			Host:        "host",
+			BearerToken: "bearerToken",
 			Expected: &restclient.Config{
-				Host: "host",
+				Host:        "host",
 				BearerToken: "bearerToken",
 				TLSClientConfig: restclient.TLSClientConfig{
 					CertFile: "crt",
