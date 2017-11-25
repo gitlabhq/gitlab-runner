@@ -21,8 +21,8 @@ import (
 func TestGetKubeClientConfig(t *testing.T) {
 	tests := []struct {
 		CertFile, KeyFile, CAFile, Host, BearerToken string
-		Error                           bool
-		Expected                        *restclient.Config
+		Error                                        bool
+		Expected                                     *restclient.Config
 	}{
 		{
 			CertFile: "test",
@@ -58,9 +58,9 @@ func TestGetKubeClientConfig(t *testing.T) {
 			KeyFile:  test.KeyFile,
 			CAFile:   test.CAFile,
 		},
-		&overwrites{
-			bearerToken: test.BearerToken,
-		})
+			&overwrites{
+				bearerToken: test.BearerToken,
+			})
 
 		if err != nil && !test.Error {
 			t.Errorf("expected error, but instead received: %v", rcConf)
