@@ -85,13 +85,22 @@ clone test repo:
 # Test stage
 #
 
-static code analysis:
+codequality:
   stage: test
+  image: docker:git
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    CODECLIMATE_FORMAT: json
+  cache: {}
+  dependencies: []
+  before_script: []
   script:
-  - source ci/touch_make_dependencies
-  - make static_code_analysis
-  tags:
-  - docker
+    - ./scripts/codequality analyze -f json --dev | tee codeclimate.json
+  artifacts:
+    paths: [codeclimate.json]
+    expire_in: 1 week
 
 unit tests (no race):
   stage: test
