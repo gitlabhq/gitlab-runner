@@ -39,6 +39,7 @@ func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites
 
 	case len(overwrites.bearerToken) > 0:
 		return &restclient.Config{
+			Host:        config.Host,
 			BearerToken: overwrites.bearerToken,
 		}, nil
 

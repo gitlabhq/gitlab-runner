@@ -29,14 +29,12 @@ func TestGetKubeClientConfig(t *testing.T) {
 			Error:    true,
 		},
 		{
-			CertFile:    "crt",
-			KeyFile:     "key",
-			CAFile:      "ca",
-			Host:        "host",
-			BearerToken: "bearerToken",
+			CertFile: "crt",
+			KeyFile:  "key",
+			CAFile:   "ca",
+			Host:     "host",
 			Expected: &restclient.Config{
-				Host:        "host",
-				BearerToken: "bearerToken",
+				Host: "host",
 				TLSClientConfig: restclient.TLSClientConfig{
 					CertFile: "crt",
 					KeyFile:  "key",
@@ -48,6 +46,14 @@ func TestGetKubeClientConfig(t *testing.T) {
 			Host: "host",
 			Expected: &restclient.Config{
 				Host: "host",
+			},
+		},
+		{
+			Host:        "host",
+			BearerToken: "bearerToken",
+			Expected: &restclient.Config{
+				Host:        "host",
+				BearerToken: "bearerToken",
 			},
 		},
 	}
