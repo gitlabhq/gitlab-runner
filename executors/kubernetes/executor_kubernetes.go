@@ -533,7 +533,7 @@ func (s *executor) getPodAnnotations(job *common.Build) map[string]string {
 		s.Debugln("Configuration entry 'pod_annotations_overwrite_allowed' is empty, disabling override.")
 		return s.Config.Kubernetes.PodAnnotations
 	}
-	annotations := make(map[string]string)
+	annotations := s.Config.Kubernetes.PodAnnotations
 	for _, variable := range job.GetAllVariables() {
 		if strings.Contains(variable.Key, "KUBERNETES_POD_ANNOTATIONS_") {
 			//spit value on '='

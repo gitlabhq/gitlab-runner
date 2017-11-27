@@ -1550,6 +1550,7 @@ func TestGetPodAnnotations(t *testing.T) {
 							"key1": "val1",
 							"key2": "val2",
 							"key3": "val3",
+							"key4": "defaultval4",
 						},
 					},
 				},
@@ -1557,9 +1558,10 @@ func TestGetPodAnnotations(t *testing.T) {
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
 					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_POD_ANNOTATIONS_1", Value: "overwritekey1=overwriteval1"},
-						{Key: "KUBERNETES_POD_ANNOTATIONS_2", Value: "overwritekey2=overwriteval2"},
-						{Key: "KUBERNETES_POD_ANNOTATIONS_3", Value: "overwritekey3=overwriteval3"},
+						{Key: "KUBERNETES_POD_ANNOTATIONS_1", Value: "key1=overwriteval1"},
+						{Key: "KUBERNETES_POD_ANNOTATIONS_2", Value: "key2=overwriteval2"},
+						{Key: "KUBERNETES_POD_ANNOTATIONS_3", Value: "key3=overwriteval3"},
+						{Key: "KUBERNETES_POD_ANNOTATIONS_4", Value: "key5=appendedval5"},
 					},
 				},
 			},
@@ -1567,9 +1569,11 @@ func TestGetPodAnnotations(t *testing.T) {
 	}
 
 	assert.Equal(t, map[string]string{
-		"overwritekey1": "overwriteval1",
-		"overwritekey2": "overwriteval2",
-		"overwritekey3": "overwriteval3",
+		"key1": "overwriteval1",
+		"key2": "overwriteval2",
+		"key3": "overwriteval3",
+		"key4": "defaultval4",
+		"key5": "appendedval5",
 	}, exec.getPodAnnotations(exec.Build))
 }
 
