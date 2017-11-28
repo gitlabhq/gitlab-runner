@@ -43,7 +43,7 @@ func TestPrepare(t *testing.T) {
 	}
 
 	sshConfig := runnerConfig.RunnerSettings.SSH
-	server, err := NewMockServer(sshConfig.User, sshConfig.Password, []byte(SSH_SERVER_PRIVATE_KEY))
+	server, err := NewStubServer(sshConfig.User, sshConfig.Password, []byte(SSH_SERVER_PRIVATE_KEY))
 	assert.NoError(t, err)
 
 	port, err := server.Start()
