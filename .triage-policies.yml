@@ -127,6 +127,8 @@ resource_rules:
           state: opened
           labels:
             - Deliverable
+          forbidden_labels:
+            - CI/CD
         actions:
           labels:
             - CI/CD
@@ -135,6 +137,8 @@ resource_rules:
           state: opened
           labels:
             - Stretch
+          forbidden_labels:
+            - CI/CD
           actions:
             labels:
               - CI/CD
