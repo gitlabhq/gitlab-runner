@@ -39,6 +39,8 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PA
 GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED ?= 0
 
+MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
+
 all: deps build
 
 help:
@@ -184,9 +186,9 @@ mocks: FORCE
 	go get github.com/vektra/mockery/.../
 	rm -rf ./helpers/service/mocks
 	find . -type f -name 'mock_*' -delete
-	mockery -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
-	mockery -dir=./common -all -inpkg
-	mockery -dir=./helpers/docker -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
+	mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./helpers/docker -all -inpkg
 
 test-docker:
 	make test-docker-image IMAGE=centos:6 TYPE=rpm
