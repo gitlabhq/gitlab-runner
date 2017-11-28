@@ -33,7 +33,7 @@ push () {
 
 
 build() {
-    echo "Building image"
+    echo "Building image: ${BUILD_IMAGE}"
     docker build \
            --cache-from ${BUILD_IMAGE} \
            -t ${BUILD_IMAGE} \
