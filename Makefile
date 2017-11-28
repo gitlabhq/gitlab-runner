@@ -182,7 +182,7 @@ dockerfiles:
 
 mocks: FORCE
 	go get github.com/vektra/mockery/.../
-	rm -rf ./mocks ./helpers/docker/mocks ./common/mocks ./helpers/service/mocks
+	rm -rf ./helpers/service/mocks
 	find . -type f -name 'mock_*' -delete
 	mockery -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
 	mockery -dir=./common -all -inpkg
