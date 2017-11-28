@@ -339,9 +339,16 @@ release_packagecloud:
 	# Releasing to https://packages.gitlab.com/runner/
 	@./ci/release_packagecloud "$$CI_JOB_NAME"
 
-release_s3: prepare_zoneinfo prepare_index
+release_s3: prepare_windows_zip prepare_zoneinfo prepare_index
 	# Releasing to S3
 	@./ci/release_s3
+
+prepare_windows_zip:
+	# Prepare ZIP archives for Windows *.exe files
+	@cd out/binaries/; \
+	for file in $$(find * -type f -name "*windows*.exe" | sed 's/.exe$$//'); do \
+		zip $${file}.zip $${file}.exe; \
+	done
 
 prepare_zoneinfo:
 	# preparing the zoneinfo file
