@@ -20,17 +20,9 @@ run:triage:
   only:
     - schedules
 
-run:triage:dry-run:
+dry-run:triage:
   <<: *triage
-  stage: triage
   variables:
     TRIAGE_OPTS: "--dry-run"
   except:
     - schedules
-
-run:triage:dry-run:debug:
-  <<: *triage
-  stage: triage
-  variables:
-    TRIAGE_OPTS: "--dry-run --debug"
-  when: manual

@@ -139,9 +139,9 @@ resource_rules:
             - Stretch
           forbidden_labels:
             - CI/CD
-          actions:
-            labels:
-              - CI/CD
+        actions:
+          labels:
+            - CI/CD
 
   merge_requests:
     rules: []
