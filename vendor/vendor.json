@@ -361,7 +361,7 @@
 			"revisionTime": "2017-01-17T09:00:55Z"
 		},
 		{
-			"checksumSHA1": "nyiTxTOUETr1n3DOISNNwAQDMMo=",
+			"checksumSHA1": "9AgPOnsprS/JRUlWRU42XU+6vf4=",
 			"path": "github.com/docker/docker/pkg/archive",
 			"revision": "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178",
 			"revisionTime": "2017-01-17T09:00:55Z"
@@ -766,7 +766,7 @@
 			"revision": "77ed1c8a01217656d2080ad51981f6e99adaa177"
 		},
 		{
-			"checksumSHA1": "LJA9zeZ+AZS9LHDacPd9OemVRDk=",
+			"checksumSHA1": "g+afVQQVopBLiLB5pFZp/8s6aBs=",
 			"path": "github.com/kardianos/osext",
 			"revision": "c2c54e542fb797ad986b31721e1baedf214ca413"
 		},
@@ -783,7 +783,7 @@
 			"revisionTime": "2016-02-15T11:55:11Z"
 		},
 		{
-			"checksumSHA1": "wU+t3PuZkLcNmS47J775XC54p2c=",
+			"checksumSHA1": "dAaxF00/ko7zHudzt0oJ1am3bA0=",
 			"comment": "3.0.3",
 			"path": "github.com/minio/minio-go",
 			"revision": "4e0f567303d4cc90ceb055a451959fb9fc391fb9",
@@ -1074,7 +1074,7 @@
 			"revision": "3b966c7f301c0c71c53d94dc632a62df0a682cd7"
 		},
 		{
-			"checksumSHA1": "MXF5BCS3JjmGSfZXH1dWvyWXaSQ=",
+			"checksumSHA1": "spZwGCnoK4f2VOlryT9HHud2fgM=",
 			"path": "golang.org/x/sys/unix",
 			"revision": "042a8f53ce82bbe081222da955159491e32146a0",
 			"revisionTime": "2016-04-06T05:52:57Z"
