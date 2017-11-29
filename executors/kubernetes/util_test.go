@@ -20,20 +20,25 @@ import (
 
 func TestGetKubeClientConfig(t *testing.T) {
 	tests := []struct {
-		CertFile, KeyFile, CAFile, Host, BearerToken string
-		Error                                        bool
-		Expected                                     *restclient.Config
+		config     *common.KubernetesConfig
+		overwrites *overwrites
+		error      bool
+		expected   *restclient.Config
 	}{
 		{
-			CertFile: "test",
-			Error:    true,
+			config: &common.KubernetesConfig{
+				CertFile: "test",
+			},
+			error: true,
 		},
 		{
-			CertFile: "crt",
-			KeyFile:  "key",
-			CAFile:   "ca",
-			Host:     "host",
-			Expected: &restclient.Config{
+			config: &common.KubernetesConfig{
+				CertFile: "crt",
+				KeyFile:  "key",
+				CAFile:   "ca",
+				Host:     "host",
+			},
+			expected: &restclient.Config{
 				Host: "host",
 				TLSClientConfig: restclient.TLSClientConfig{
 					CertFile: "crt",
@@ -43,15 +48,21 @@ func TestGetKubeClientConfig(t *testing.T) {
 			},
 		},
 		{
-			Host: "host",
-			Expected: &restclient.Config{
+			config: &common.KubernetesConfig{
+				Host: "host",
+			},
+			expected: &restclient.Config{
 				Host: "host",
 			},
 		},
 		{
-			Host:        "host",
-			BearerToken: "bearerToken",
-			Expected: &restclient.Config{
+			config: &common.KubernetesConfig{
+				Host: "host",
+			},
+			overwrites: &overwrites{
+				bearerToken: "bearerToken",
+			},
+			expected: &restclient.Config{
 				Host:        "host",
 				BearerToken: "bearerToken",
 			},
@@ -59,22 +70,22 @@ func TestGetKubeClientConfig(t *testing.T) {
 	}
 	for _, test := range tests {
 		rcConf, err := getKubeClientConfig(&common.KubernetesConfig{
-			Host:     test.Host,
-			CertFile: test.CertFile,
-			KeyFile:  test.KeyFile,
-			CAFile:   test.CAFile,
+			Host:     test.config.Host,
+			CertFile: test.config.CertFile,
+			KeyFile:  test.config.KeyFile,
+			CAFile:   test.config.CAFile,
 		},
 			&overwrites{
-				bearerToken: test.BearerToken,
+				bearerToken: test.overwrites.bearerToken,
 			})
 
-		if err != nil && !test.Error {
+		if err != nil && !test.error {
 			t.Errorf("expected error, but instead received: %v", rcConf)
 			continue
 		}
 
-		if !reflect.DeepEqual(rcConf, test.Expected) {
-			t.Errorf("expected: '%v', got: '%v'", test.Expected, rcConf)
+		if !reflect.DeepEqual(rcConf, test.expected) {
+			t.Errorf("expected: '%v', got: '%v'", test.expected, rcConf)
 			continue
 		}
 	}

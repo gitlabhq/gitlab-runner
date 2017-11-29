@@ -86,6 +86,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
     it disables the service account overwrite feature
+- `bearer-token`: Default bearer token used to launch build pods.
 - `bearer_token_overwrite_allowed`: Boolean to allow projects to specify a bearer token that will be used to create the build pod.
 - `volumes`: configured through the config file, the list of volumes that will be mounted in the build container. [Read more about using volumes.](#using-volumes)
 

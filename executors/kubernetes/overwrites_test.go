@@ -10,8 +10,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func buildOverwriteVariables(namespace, serviceAccount string) common.JobVariables {
-	variables := make(common.JobVariables, 2)
+func buildOverwriteVariables(namespace, serviceAccount, bearerToken string) common.JobVariables {
+	variables := make(common.JobVariables, 3)
 
 	if namespace != "" {
 		variables = append(variables, common.JobVariable{Key: NamespaceOverwriteVariableName, Value: namespace})
@@ -19,6 +19,10 @@ func buildOverwriteVariables(namespace, serviceAccount string) common.JobVariabl
 
 	if serviceAccount != "" {
 		variables = append(variables, common.JobVariable{Key: ServiceAccountOverwriteVariableName, Value: serviceAccount})
+	}
+
+	if bearerToken != "" {
+		variables = append(variables, common.JobVariable{Key: BearerTokenVariableName, Value: bearerToken})
 	}
 
 	return variables
@@ -33,6 +37,7 @@ func TestOverwrites(t *testing.T) {
 	overwritesAllowedConfig := &common.KubernetesConfig{
 		NamespaceOverwriteAllowed:      ".*",
 		ServiceAccountOverwriteAllowed: ".*",
+		BearerTokenOverwriteAllowed:    true,
 	}
 
 	tests := []struct {
@@ -40,6 +45,7 @@ func TestOverwrites(t *testing.T) {
 		Config                               *common.KubernetesConfig
 		NamespaceOverwriteVariableValue      string
 		ServiceAccountOverwriteVariableValue string
+		BearerTokenOverwriteVariableValue    string
 		Expected                             *overwrites
 		Error                                bool
 	}{
@@ -53,14 +59,28 @@ func TestOverwrites(t *testing.T) {
 			Config: overwritesAllowedConfig,
 			NamespaceOverwriteVariableValue:      "my_namespace",
 			ServiceAccountOverwriteVariableValue: "my_service_account",
-			Expected: &overwrites{namespace: "my_namespace", serviceAccount: "my_service_account"},
+			BearerTokenOverwriteVariableValue:    "my_bearer_token",
+			Expected: &overwrites{
+				namespace:      "my_namespace",
+				serviceAccount: "my_service_account",
+				bearerToken:    "my_bearer_token",
+			},
 		},
 		{
-			Name:   "No overwrites allowed",
-			Config: &common.KubernetesConfig{Namespace: "my_namespace", ServiceAccount: "my_service_account"},
+			Name: "No overwrites allowed",
+			Config: &common.KubernetesConfig{
+				Namespace:      "my_namespace",
+				ServiceAccount: "my_service_account",
+				BearerToken:    "my_bearer_token",
+			},
 			NamespaceOverwriteVariableValue:      "another_namespace",
 			ServiceAccountOverwriteVariableValue: "another_service_account",
-			Expected: &overwrites{namespace: "my_namespace", serviceAccount: "my_service_account"},
+			BearerTokenOverwriteVariableValue:    "another_bearer_token",
+			Expected: &overwrites{
+				namespace:      "my_namespace",
+				serviceAccount: "my_service_account",
+				bearerToken:    "my_bearer_token",
+			},
 		},
 		{
 			Name: "Namespace failure",
@@ -78,13 +98,24 @@ func TestOverwrites(t *testing.T) {
 			ServiceAccountOverwriteVariableValue: "my_service_account",
 			Error: true,
 		},
+		{
+			Name: "BearerToken failure",
+			Config: &common.KubernetesConfig{
+				BearerTokenOverwriteAllowed: false,
+			},
+			BearerTokenOverwriteVariableValue: "my_bearer_token",
+			Error: true,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			assert := assert.New(t)
 
-			values, err := createOverwrites(test.Config, buildOverwriteVariables(test.NamespaceOverwriteVariableValue, test.ServiceAccountOverwriteVariableValue), logger)
+			values, err := createOverwrites(test.Config, buildOverwriteVariables(
+				test.NamespaceOverwriteVariableValue,
+				test.ServiceAccountOverwriteVariableValue,
+				test.BearerTokenOverwriteVariableValue), logger)
 			if test.Error {
 				assert.Error(err)
 				assert.Contains(err.Error(), "does not match")

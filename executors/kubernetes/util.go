@@ -38,6 +38,9 @@ func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites
 		}, nil
 
 	case len(overwrites.bearerToken) > 0:
+		if len(config.Host) == 0 {
+			return nil, fmt.Errorf("host must be specified when using token based auth")
+		}
 		return &restclient.Config{
 			Host:        config.Host,
 			BearerToken: overwrites.bearerToken,
