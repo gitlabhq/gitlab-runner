@@ -10,6 +10,8 @@ code_path=$(pwd)
 
 docker pull registry.gitlab.com/nolith/codeclimate-gocyclo > /dev/null
 docker tag registry.gitlab.com/nolith/codeclimate-gocyclo codeclimate/codeclimate-gocyclo > /dev/null
+docker pull registry.gitlab.com/nolith/codeclimate-goimports > /dev/null
+docker tag registry.gitlab.com/nolith/codeclimate-goimports codeclimate/codeclimate-goimports > /dev/null
 exec docker run --rm $docker_tty --env CODECLIMATE_CODE="$code_path" \
 	--volume "$code_path":/code \
 	--volume /var/run/docker.sock:/var/run/docker.sock \

@@ -18,6 +18,10 @@ plugins:
         enabled: false
   govet:
     enabled: true
+  goimports:
+    enabled: true
+    config:
+      local: gitlab.com/gitlab-org/gitlab-runner/
   gocyclo:
     enabled: true
     config:
