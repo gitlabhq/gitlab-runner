@@ -45,7 +45,7 @@ func TestOverwrites(t *testing.T) {
 		Config                               *common.KubernetesConfig
 		NamespaceOverwriteVariableValue      string
 		ServiceAccountOverwriteVariableValue string
-		BearerTokenOverwriteVariableValue    string
+		BearerTokenVariableName              string
 		Expected                             *overwrites
 		Error                                bool
 	}{
@@ -59,7 +59,7 @@ func TestOverwrites(t *testing.T) {
 			Config: overwritesAllowedConfig,
 			NamespaceOverwriteVariableValue:      "my_namespace",
 			ServiceAccountOverwriteVariableValue: "my_service_account",
-			BearerTokenOverwriteVariableValue:    "my_bearer_token",
+			BearerTokenVariableName:              "my_bearer_token",
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
@@ -75,7 +75,7 @@ func TestOverwrites(t *testing.T) {
 			},
 			NamespaceOverwriteVariableValue:      "another_namespace",
 			ServiceAccountOverwriteVariableValue: "another_service_account",
-			BearerTokenOverwriteVariableValue:    "another_bearer_token",
+			BearerTokenVariableName:              "another_bearer_token",
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
@@ -98,14 +98,6 @@ func TestOverwrites(t *testing.T) {
 			ServiceAccountOverwriteVariableValue: "my_service_account",
 			Error: true,
 		},
-		{
-			Name: "BearerToken failure",
-			Config: &common.KubernetesConfig{
-				BearerTokenOverwriteAllowed: false,
-			},
-			BearerTokenOverwriteVariableValue: "my_bearer_token",
-			Error: true,
-		},
 	}
 
 	for _, test := range tests {
@@ -115,7 +107,7 @@ func TestOverwrites(t *testing.T) {
 			values, err := createOverwrites(test.Config, buildOverwriteVariables(
 				test.NamespaceOverwriteVariableValue,
 				test.ServiceAccountOverwriteVariableValue,
-				test.BearerTokenOverwriteVariableValue), logger)
+				test.BearerTokenVariableName), logger)
 			if test.Error {
 				assert.Error(err)
 				assert.Contains(err.Error(), "does not match")

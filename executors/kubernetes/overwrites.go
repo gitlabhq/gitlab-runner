@@ -44,11 +44,6 @@ func createOverwrites(config *common.KubernetesConfig, variables common.JobVaria
 		return nil, err
 	}
 
-	bearerToken := variables.Expand().Get(BearerTokenVariableName)
-	if config.BearerTokenOverwriteAllowed && bearerToken != "" {
-		o.bearerToken = bearerToken
-	}
-
 	return o, nil
 }
 

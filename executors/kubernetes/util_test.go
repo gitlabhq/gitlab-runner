@@ -29,7 +29,8 @@ func TestGetKubeClientConfig(t *testing.T) {
 			config: &common.KubernetesConfig{
 				CertFile: "test",
 			},
-			error: true,
+			overwrites: &overwrites{},
+			error:      true,
 		},
 		{
 			config: &common.KubernetesConfig{
@@ -38,6 +39,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 				CAFile:   "ca",
 				Host:     "host",
 			},
+			overwrites: &overwrites{},
 			expected: &restclient.Config{
 				Host: "host",
 				TLSClientConfig: restclient.TLSClientConfig{
@@ -51,6 +53,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 			config: &common.KubernetesConfig{
 				Host: "host",
 			},
+			overwrites: &overwrites{},
 			expected: &restclient.Config{
 				Host: "host",
 			},
