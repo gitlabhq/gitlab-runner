@@ -1,6 +1,6 @@
 {
 	"comment": "",
-	"ignore": "test",
+	"ignore": "test appengine",
 	"package": [
 		{
 			"checksumSHA1": "U0dcMjJghtkeDI0oFpZa0pMt8yI=",
@@ -1049,12 +1049,12 @@
 			"revision": "f2499483f923065a842d38eb4c7f1927e6fc6e6d"
 		},
 		{
-			"checksumSHA1": "yNdgWHw0jfiNAO9E7IfrbyiuKVc=",
+			"checksumSHA1": "4q+J7KldqFG28gkuEdHTyHgNcz4=",
 			"path": "golang.org/x/oauth2",
 			"revision": "3b966c7f301c0c71c53d94dc632a62df0a682cd7"
 		},
 		{
-			"checksumSHA1": "ZCSsdKKU9ph2DWSvMjziDZu1No4=",
+			"checksumSHA1": "Ml9aUD6MMJOwU2ZndUEWjQZA6cs=",
 			"path": "golang.org/x/oauth2/google",
 			"revision": "3b966c7f301c0c71c53d94dc632a62df0a682cd7"
 		},
@@ -1115,7 +1115,7 @@
 			"revision": "e951d3868b377b14f4e60efa3a301532ee3c1ebf"
 		},
 		{
-			"checksumSHA1": "4lEP/dEWOMb4r2Aehu0D9iBDgIU=",
+			"checksumSHA1": "nIvWnGCGLhBjir1hKLjZZwug/wg=",
 			"path": "google.golang.org/appengine/internal",
 			"revision": "e951d3868b377b14f4e60efa3a301532ee3c1ebf"
 		},
