@@ -1,211 +1,180 @@
 package network
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-const successID = 4
-const cancelID = 5
-const retryID = 6
+var (
+	jobConfig      = common.RunnerConfig{}
+	jobCredentials = &common.JobCredentials{ID: -1}
+	jobOutputLimit = common.RunnerConfig{OutputLimit: 1}
 
-var jobConfig = common.RunnerConfig{}
-var jobOutputLimit = common.RunnerConfig{OutputLimit: 1}
+	noTrace *string
+)
 
-type updateTraceNetwork struct {
-	common.MockNetwork
-	state common.JobState
-	trace *string
-	count int
-}
+func TestJobTraceUpdateSucceeded(t *testing.T) {
+	traceMessage := "test content"
+	traceMatcher := mock.MatchedBy(func(trace *string) bool { return trace != nil && *trace == traceMessage })
+	patchTraceMatcher := mock.MatchedBy(func(tracePatch common.JobTracePatch) bool {
+		return tracePatch.Offset() == 0 && string(tracePatch.Patch()) == traceMessage
+	})
 
-func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string) common.UpdateState {
-	switch id {
-	case successID:
-		m.count++
-		m.state = state
-		m.trace = trace
-		return common.UpdateSucceeded
+	tests := []struct {
+		name     string
+		jobState common.JobState
+	}{
+		{name: "Success", jobState: common.Success},
+		{name: "Fail", jobState: common.Failed},
+	}
 
-	case cancelID:
-		m.count++
-		return common.UpdateAbort
+	for idx, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			jobCredentials := &common.JobCredentials{ID: idx}
+			net := new(common.MockNetwork)
+			net.On("UpdateJob", jobConfig, jobCredentials, idx, common.Running, noTrace).Return(common.UpdateSucceeded).Once()
+			net.On("PatchTrace", jobConfig, jobCredentials, patchTraceMatcher).Return(common.UpdateSucceeded).Run(func(_ mock.Arguments) { wg.Done() })
+			net.On("UpdateJob", jobConfig, jobCredentials, idx, test.jobState, traceMatcher).Return(common.UpdateSucceeded)
 
-	case retryID:
-		if state != common.Running {
-			m.count++
-			if m.count >= 5 {
-				m.state = state
-				m.trace = trace
-				return common.UpdateSucceeded
+			b := newJobTrace(net, jobConfig, jobCredentials)
+			// speed up execution time
+			b.traceUpdateInterval = 10 * time.Millisecond
+			wg.Add(1)
+
+			b.start()
+			fmt.Fprint(b, traceMessage)
+			wg.Wait()
+
+			switch test.jobState {
+			case common.Success:
+				b.Success()
+			case common.Failed:
+				b.Fail(errors.New("test"))
 			}
-		}
-		return common.UpdateFailed
 
-	default:
-		return common.UpdateFailed
+			net.AssertExpectations(t)
+		})
 	}
-}
-
-func (m *updateTraceNetwork) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) common.UpdateState {
-	switch jobCredentials.ID {
-	case successID:
-		m.count++
-
-		buffer := &bytes.Buffer{}
-		if m.trace != nil {
-			buffer = bytes.NewBufferString(*m.trace)
-		}
-
-		buffer.Write(tracePatch.Patch())
-
-		newTrace := buffer.String()
-		m.trace = &newTrace
-
-		return common.UpdateSucceeded
-
-	case cancelID:
-		m.count++
-		return common.UpdateAbort
-
-	default:
-		return common.UpdateFailed
-	}
-}
-
-func TestJobTraceSuccess(t *testing.T) {
-	u := &updateTraceNetwork{}
-	jobCredentials := &common.JobCredentials{
-		ID: successID,
-	}
-	b := newJobTrace(u, jobConfig, jobCredentials)
-	b.start()
-	fmt.Fprint(b, "test content")
-	b.Success()
-	assert.Equal(t, "test content", *u.trace)
-	assert.Equal(t, common.Success, u.state)
-}
-
-func TestJobTraceFailure(t *testing.T) {
-	u := &updateTraceNetwork{}
-	jobCredentials := &common.JobCredentials{
-		ID: successID,
-	}
-	b := newJobTrace(u, jobConfig, jobCredentials)
-	b.start()
-	fmt.Fprint(b, "test content")
-	b.Fail(errors.New("test"))
-	assert.Equal(t, "test content", *u.trace)
-	assert.Equal(t, common.Failed, u.state)
 }
 
 func TestIgnoreStatusChange(t *testing.T) {
-	u := &updateTraceNetwork{}
-	jobCredentials := &common.JobCredentials{
-		ID: successID,
-	}
-	b := newJobTrace(u, jobConfig, jobCredentials)
+	net := new(common.MockNetwork)
+	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded)
+
+	b := newJobTrace(net, jobConfig, jobCredentials)
+	// prevent any UpdateJob before `b.Success()` call
+	b.traceUpdateInterval = 25 * time.Second
+
 	b.start()
 	b.Success()
 	b.Fail(errors.New("test"))
-	assert.Equal(t, common.Success, u.state)
+
+	net.AssertExpectations(t)
 }
 
 func TestJobAbort(t *testing.T) {
-	traceUpdateInterval = 0
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	u := &updateTraceNetwork{}
-	jobCredentials := &common.JobCredentials{
-		ID: cancelID,
-	}
-	b := newJobTrace(u, jobConfig, jobCredentials)
+	net := new(common.MockNetwork)
+	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Running, noTrace).Return(common.UpdateAbort)
+	net.On("PatchTrace", jobConfig, jobCredentials, mock.AnythingOfType("*network.tracePatch")).Return(common.UpdateAbort)
+	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateAbort)
+
+	b := newJobTrace(net, jobConfig, jobCredentials)
+	// force immediate call to `UpdateJob`
+	b.traceUpdateInterval = 0
 	b.SetCancelFunc(cancel)
+
 	b.start()
 	assert.NotNil(t, <-ctx.Done(), "should abort the job")
 	b.Success()
+
+	net.AssertExpectations(t)
 }
 
 func TestJobOutputLimit(t *testing.T) {
-	traceUpdateInterval = 5 * time.Second
+	assert := assert.New(t)
+	traceMessage := "abcde"
 
-	u := &updateTraceNetwork{}
-	jobCredentials := &common.JobCredentials{
-		ID: successID,
-	}
-	b := newJobTrace(u, jobOutputLimit, jobCredentials)
+	net := new(common.MockNetwork)
+	b := newJobTrace(net, jobOutputLimit, jobCredentials)
+	// prevent any UpdateJob before `b.Success()` call
+	b.traceUpdateInterval = 25 * time.Second
+
+	net.On("UpdateJob", jobOutputLimit, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded).Run(func(args mock.Arguments) {
+		if trace, ok := args.Get(4).(*string); ok {
+			expectedLogLimitExceededMsg := b.jobLogLimitExceededMessage()
+			bytesLimit := b.logLimitBytes + len(expectedLogLimitExceededMsg)
+			traceSize := len(*trace)
+
+			assert.Equal(bytesLimit, traceSize, "the trace should be exaclty %v bytes", bytesLimit)
+			assert.Contains(*trace, traceMessage)
+			assert.Contains(*trace, b.jobLogLimitExceededMessage())
+		} else {
+			assert.FailNow("Unexpected type on UpdateJob trace parameter")
+		}
+	})
+
 	b.start()
-
 	// Write 5k to the buffer
 	for i := 0; i < 1024; i++ {
-		fmt.Fprint(b, "abcde")
+		fmt.Fprint(b, traceMessage)
 	}
 	b.Success()
 
-	t.Logf("Trace length: %d", len(*u.trace))
-
-	assert.True(t, len(*u.trace) < 2000, "the output should be less than 2000 bytes")
-	assert.Contains(t, *u.trace, "Job's log exceeded limit")
+	net.AssertExpectations(t)
 }
 
 func TestJobFinishRetry(t *testing.T) {
-	traceFinishRetryInterval = time.Microsecond
+	net := new(common.MockNetwork)
+	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateFailed).Times(5)
+	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded).Once()
 
-	u := &updateTraceNetwork{}
-	jobCredentials := &common.JobCredentials{
-		ID: retryID,
-	}
-	b := newJobTrace(u, jobOutputLimit, jobCredentials)
+	b := newJobTrace(net, jobConfig, jobCredentials)
+	b.traceFinishRetryInterval = time.Microsecond
+
 	b.start()
 	b.Success()
-	assert.Equal(t, 5, u.count, "it should retry a few times")
-	assert.Equal(t, common.Success, u.state)
+
+	net.AssertExpectations(t)
 }
 
 func TestJobForceSend(t *testing.T) {
-	traceUpdateInterval = 0
-	traceForceSendInterval = time.Minute
+	var wg sync.WaitGroup
+	traceMessage := "test content"
+	firstPatchMatcher := mock.MatchedBy(func(tracePatch common.JobTracePatch) bool {
+		return tracePatch.Offset() == 0 && string(tracePatch.Patch()) == traceMessage
+	})
+	nextEmptyPatchMatcher := mock.MatchedBy(func(tracePatch common.JobTracePatch) bool {
+		return tracePatch.Offset() == len(traceMessage) && string(tracePatch.Patch()) == ""
+	})
 
-	u := &updateTraceNetwork{}
-	jobCredentials := &common.JobCredentials{
-		ID: successID,
-	}
-	b := newJobTrace(u, jobOutputLimit, jobCredentials)
+	wg.Add(1)
+	net := new(common.MockNetwork)
+	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Running, noTrace).Return(common.UpdateSucceeded).Once()
+	net.On("PatchTrace", jobConfig, jobCredentials, firstPatchMatcher).Return(common.UpdateSucceeded).Once()
+	net.On("PatchTrace", jobConfig, jobCredentials, nextEmptyPatchMatcher).Return(common.UpdateSucceeded).Run(func(_ mock.Arguments) { wg.Done() })
+	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded).Once()
+	defer net.AssertExpectations(t)
+
+	b := newJobTrace(net, jobConfig, jobCredentials)
+
+	b.traceUpdateInterval = 500 * time.Microsecond
+	b.traceForceSendInterval = 4 * b.traceUpdateInterval
 	b.start()
 	defer b.Success()
 
-	fmt.Fprint(b, "test")
-
-	started := time.Now()
-	for time.Since(started) < time.Second {
-		if u.trace != nil &&
-			*u.trace == "test" {
-			u.count = 0
-			break
-		}
-	}
-	assert.True(t, u.count == 0, "it didn't update the trace yet")
-	assert.Equal(t, common.Running, u.state)
-
-	traceForceSendInterval = 0
-
-	started = time.Now()
-	for time.Since(started) < time.Second {
-		if u.count > 0 {
-			break
-		}
-	}
-	assert.True(t, u.count > 0, "it forcefully update trace more then once")
-	assert.Equal(t, "test", *u.trace)
-	assert.Equal(t, common.Running, u.state)
+	fmt.Fprint(b, traceMessage)
+	wg.Wait()
 }

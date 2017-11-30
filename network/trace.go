@@ -14,10 +14,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-var traceUpdateInterval = common.UpdateInterval
-var traceForceSendInterval = common.ForceTraceSentInterval
-var traceFinishRetryInterval = common.UpdateRetryInterval
-
 type tracePatch struct {
 	trace  bytes.Buffer
 	offset int
@@ -69,7 +65,7 @@ type clientJobTrace struct {
 	config         common.RunnerConfig
 	jobCredentials *common.JobCredentials
 	id             int
-	limit          int64
+	logLimitBytes  int
 	cancelFunc     context.CancelFunc
 
 	log      bytes.Buffer
@@ -80,6 +76,10 @@ type clientJobTrace struct {
 	sentTrace int
 	sentTime  time.Time
 	sentState common.JobState
+
+	traceUpdateInterval      time.Duration
+	traceForceSendInterval   time.Duration
+	traceFinishRetryInterval time.Duration
 }
 
 func (c *clientJobTrace) Success() {
@@ -128,25 +128,20 @@ func (c *clientJobTrace) finish() {
 		if c.fullUpdate() != common.UpdateFailed {
 			return
 		}
-		time.Sleep(traceFinishRetryInterval)
+		time.Sleep(c.traceFinishRetryInterval)
 	}
 }
 
-func (c *clientJobTrace) writeRune(r rune, limit int) (n int, err error) {
+func (c *clientJobTrace) writeRune(r rune) (n int, err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	n, err = c.log.WriteRune(r)
-	if c.log.Len() < limit {
+	if c.log.Len() < c.logLimitBytes {
 		return
 	}
 
-	output := fmt.Sprintf("\n%sJob's log exceeded limit of %v bytes.%s\n",
-		helpers.ANSI_BOLD_RED,
-		limit,
-		helpers.ANSI_RESET,
-	)
-	c.log.WriteString(output)
+	c.log.WriteString(c.jobLogLimitExceededMessage())
 	err = io.EOF
 	return
 }
@@ -155,13 +150,10 @@ func (c *clientJobTrace) process(pipe *io.PipeReader) {
 	defer pipe.Close()
 
 	stopped := false
-	limit := c.config.OutputLimit
-	if limit == 0 {
-		limit = common.DefaultOutputLimit
-	}
-	limit *= 1024
-
 	reader := bufio.NewReader(pipe)
+
+	c.setupLogLimit()
+
 	for {
 		r, s, err := reader.ReadRune()
 		if s <= 0 {
@@ -170,7 +162,7 @@ func (c *clientJobTrace) process(pipe *io.PipeReader) {
 			// ignore symbols if job log exceeded limit
 			continue
 		} else if err == nil {
-			_, err = c.writeRune(r, limit)
+			_, err = c.writeRune(r)
 			if err == io.EOF {
 				stopped = true
 			}
@@ -189,7 +181,7 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 
 	if c.sentState == state &&
 		c.sentTrace == trace.Len() &&
-		time.Since(c.sentTime) < traceForceSendInterval {
+		time.Since(c.sentTime) < c.traceForceSendInterval {
 		return common.UpdateSucceeded
 	}
 
@@ -248,7 +240,7 @@ func (c *clientJobTrace) fullUpdate() common.UpdateState {
 
 	if c.sentState == state &&
 		c.sentTrace == len(trace) &&
-		time.Since(c.sentTime) < traceForceSendInterval {
+		time.Since(c.sentTime) < c.traceForceSendInterval {
 		return common.UpdateSucceeded
 	}
 
@@ -274,7 +266,7 @@ func (c *clientJobTrace) abort() bool {
 func (c *clientJobTrace) watch() {
 	for {
 		select {
-		case <-time.After(traceUpdateInterval):
+		case <-time.After(c.traceUpdateInterval):
 			state := c.incrementalUpdate()
 			if state == common.UpdateAbort && c.abort() {
 				<-c.finished
@@ -288,11 +280,27 @@ func (c *clientJobTrace) watch() {
 	}
 }
 
+func (c *clientJobTrace) setupLogLimit() {
+	c.logLimitBytes = c.config.OutputLimit
+	if c.logLimitBytes == 0 {
+		c.logLimitBytes = common.DefaultOutputLimit
+	}
+	// configuration values are expressed in KB
+	c.logLimitBytes *= 1024
+}
+
+func (c *clientJobTrace) jobLogLimitExceededMessage() string {
+	return fmt.Sprintf("\n%sJob's log exceeded limit of %v bytes.%s\n", helpers.ANSI_BOLD_RED, c.logLimitBytes, helpers.ANSI_RESET)
+}
+
 func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentials *common.JobCredentials) *clientJobTrace {
 	return &clientJobTrace{
-		client:         client,
-		config:         config,
-		jobCredentials: jobCredentials,
-		id:             jobCredentials.ID,
+		client:                   client,
+		config:                   config,
+		jobCredentials:           jobCredentials,
+		id:                       jobCredentials.ID,
+		traceUpdateInterval:      common.UpdateInterval,
+		traceForceSendInterval:   common.ForceTraceSentInterval,
+		traceFinishRetryInterval: common.UpdateRetryInterval,
 	}
 }
