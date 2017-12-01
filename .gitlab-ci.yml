@@ -145,20 +145,16 @@ docker executor:
 
 integration windows:
   stage: test
+  variables:
+    GOROOT: "C:/go/"
+    GOPATH: "C:/gopath"
   before_script:
-  - $GODIR = "$env:GOPATH\src\gitlab.com\gitlab-org"
-  - $target_path = "$GODIR\gitlab-runner"
-  - $current_path = pwd
-  - md $GODIR -Force
-  - if (Test-Path $target_path) { cmd /c rmdir $target_path }
-  - cmd /c mklink /D $target_path $current_path
-  - cd $GODIR\gitlab-runner
+  - .\ci\prepare.ps1
   script:
   - $packages = (go list ./... | findstr -v "\/vendor\/" | Out-String | %{$_ -replace "\r\n"," "})
   - $testCommand = "go test $packages"
   - Invoke-Expression $testCommand
-  - if ( $LASTEXITCODE -ne 0 ) { exit $LASTEXITCODE }
-  allow_failure: true
+  - exit $LASTEXITCODE
   only:
   - /.*/@gitlab-org/gitlab-runner
   tags:
