@@ -131,7 +131,7 @@ To ensure only designated service accounts will be used during CI runs, inform t
 
 ### Setting Bearer Token to be Used When Making Kubernetes API calls
 
-In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods.  This will allow project owners to use project secret variables to specify a bearer token.
+In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods.  This will allow project owners to use project secret variables to specify a bearer token.  When specifying the bearer token, it is required that you set the `Host` config keyword.
 ``` yaml
 variables:
   KUBERNETES_BEARER_TOKEN: thebearertokenfromanothernamespace
