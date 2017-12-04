@@ -7,7 +7,7 @@ stages:
 - release
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner:ci-1.8
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8-1
   GOROOT: /usr/local/go
 
 image: $CI_IMAGE
@@ -19,7 +19,7 @@ before_script:
   services:
   - docker:dind
   variables:
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner:ci-1.8
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8-1
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
   tags:
@@ -40,7 +40,7 @@ before_script:
 prepare ci image:
   <<: *image_builder
   variables:
-    BULD_IMAGE: $CI_IMAGE
+    BUILD_IMAGE: $CI_IMAGE
     BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile
   only:
   - /\Adocker-ci-image\/.*/
