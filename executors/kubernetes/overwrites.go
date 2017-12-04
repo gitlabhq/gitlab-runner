@@ -12,8 +12,8 @@ const (
 	NamespaceOverwriteVariableName = "KUBERNETES_NAMESPACE_OVERWRITE"
 	// ServiceAccountOverwriteVariableName is the key for the JobVariable containing user overwritten ServiceAccount
 	ServiceAccountOverwriteVariableName = "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE"
-	// BearerTokenVariableName is the key for the JobVariable containing user overwritten BearerToken
-	BearerTokenVariableName = "KUBERNETES_BEARER_TOKEN"
+	// BearerTokenOverwriteVariableValue is the key for the JobVariable containing user overwritten BearerToken
+	BearerTokenOverwriteVariableValue = "KUBERNETES_BEARER_TOKEN"
 )
 
 type overwrites struct {
@@ -38,7 +38,7 @@ func createOverwrites(config *common.KubernetesConfig, variables common.JobVaria
 		return nil, err
 	}
 
-	bearerTokenOverwrite := variables.Expand().Get(BearerTokenVariableName)
+	bearerTokenOverwrite := variables.Expand().Get(BearerTokenOverwriteVariableValue)
 	o.bearerToken, err = o.evaluateBoolControlledOverwrite("BearerToken", config.BearerToken, config.BearerTokenOverwriteAllowed, bearerTokenOverwrite, logger)
 	if err != nil {
 		return nil, err

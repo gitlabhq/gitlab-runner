@@ -22,7 +22,7 @@ func buildOverwriteVariables(namespace, serviceAccount, bearerToken string) comm
 	}
 
 	if bearerToken != "" {
-		variables = append(variables, common.JobVariable{Key: BearerTokenVariableName, Value: bearerToken})
+		variables = append(variables, common.JobVariable{Key: BearerTokenOverwriteVariableValue, Value: bearerToken})
 	}
 
 	return variables
@@ -45,7 +45,7 @@ func TestOverwrites(t *testing.T) {
 		Config                               *common.KubernetesConfig
 		NamespaceOverwriteVariableValue      string
 		ServiceAccountOverwriteVariableValue string
-		BearerTokenVariableName              string
+		BearerTokenOverwriteVariableValue    string
 		Expected                             *overwrites
 		Error                                bool
 	}{
@@ -59,7 +59,7 @@ func TestOverwrites(t *testing.T) {
 			Config: overwritesAllowedConfig,
 			NamespaceOverwriteVariableValue:      "my_namespace",
 			ServiceAccountOverwriteVariableValue: "my_service_account",
-			BearerTokenVariableName:              "my_bearer_token",
+			BearerTokenOverwriteVariableValue:    "my_bearer_token",
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
@@ -75,7 +75,7 @@ func TestOverwrites(t *testing.T) {
 			},
 			NamespaceOverwriteVariableValue:      "another_namespace",
 			ServiceAccountOverwriteVariableValue: "another_service_account",
-			BearerTokenVariableName:              "another_bearer_token",
+			BearerTokenOverwriteVariableValue:    "another_bearer_token",
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
@@ -104,10 +104,8 @@ func TestOverwrites(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			assert := assert.New(t)
 
-			values, err := createOverwrites(test.Config, buildOverwriteVariables(
-				test.NamespaceOverwriteVariableValue,
-				test.ServiceAccountOverwriteVariableValue,
-				test.BearerTokenVariableName), logger)
+			variables := buildOverwriteVariables(test.NamespaceOverwriteVariableValue, test.ServiceAccountOverwriteVariableValue, test.BearerTokenOverwriteVariableValue)
+			values, err := createOverwrites(test.Config, variables, logger)
 			if test.Error {
 				assert.Error(err)
 				assert.Contains(err.Error(), "does not match")
