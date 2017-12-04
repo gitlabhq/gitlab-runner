@@ -217,7 +217,7 @@ Or by configuring the environment variable before the `register` command:
     export REGISTER_NON_INTERACTIVE=true
     gitlab-runner register
     
-> **Note:** Boolean parameters must be passed in the command line with ```--key={true|false}```.
+> **Note:** Boolean parameters must be passed in the command line with `--key={true|false}`.
 
 ### gitlab-runner list
 
