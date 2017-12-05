@@ -68,7 +68,12 @@ func (o *overwrites) evaluateOverwrite(fieldName, value, regex, overwriteValue s
 		return value, err
 	}
 
-	logger.Println(fmt.Sprintf("%q overwritten with %q", fieldName, overwriteValue))
+	logValue := overwriteValue
+	if fieldName == "BearerToken" {
+		logValue = logValue[0:14] + "XXXXXXXX..."
+	}
+
+	logger.Println(fmt.Sprintf("%q overwritten with %q", fieldName, logValue))
 
 	return overwriteValue, nil
 }

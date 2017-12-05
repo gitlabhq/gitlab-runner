@@ -18,6 +18,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+var inClusterConfig = restclient.InClusterConfig
+
 func init() {
 	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
 }
@@ -39,13 +41,15 @@ func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites
 
 	case len(config.Host) > 0:
 		return &restclient.Config{
-			Host:        config.Host,
-			BearerToken: overwrites.bearerToken,
+			Host: config.Host,
 		}, nil
 
 	default:
 		// Try in cluster config first
-		if inClusterCfg, err := restclient.InClusterConfig(); err == nil {
+		if inClusterCfg, err := inClusterConfig(); err == nil {
+			if len(overwrites.bearerToken) > 0 {
+				inClusterCfg.BearerToken = overwrites.bearerToken
+			}
 			return inClusterCfg, nil
 		}
 		config, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()

@@ -19,6 +19,14 @@ import (
 )
 
 func TestGetKubeClientConfig(t *testing.T) {
+
+	oldInClusterConifg := inClusterConfig
+	defer func() { inClusterConfig = oldInClusterConifg }()
+
+	inClusterConfig = func() (*restclient.Config, error) {
+		return &restclient.Config{}, nil
+	}
+
 	tests := []struct {
 		config     *common.KubernetesConfig
 		overwrites *overwrites
@@ -59,14 +67,11 @@ func TestGetKubeClientConfig(t *testing.T) {
 			},
 		},
 		{
-			config: &common.KubernetesConfig{
-				Host: "host",
-			},
+			config: &common.KubernetesConfig{},
 			overwrites: &overwrites{
 				bearerToken: "bearerToken",
 			},
 			expected: &restclient.Config{
-				Host:        "host",
 				BearerToken: "bearerToken",
 			},
 		},
