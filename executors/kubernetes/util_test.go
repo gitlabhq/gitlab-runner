@@ -19,37 +19,62 @@ import (
 )
 
 func TestGetKubeClientConfig(t *testing.T) {
+	originalInClusterConfig := inClusterConfig
+	originalDefaultKubectlConfig := defaultKubectlConfig
+	defer func() {
+		inClusterConfig = originalInClusterConfig
+		defaultKubectlConfig = originalDefaultKubectlConfig
+	}()
 
-	oldInClusterConifg := inClusterConfig
-	defer func() { inClusterConfig = oldInClusterConifg }()
+	completeConfig := &restclient.Config{
+		Host:        "host",
+		BearerToken: "token",
+		TLSClientConfig: restclient.TLSClientConfig{
+			CAFile: "ca",
+		},
+	}
 
-	inClusterConfig = func() (*restclient.Config, error) {
-		return &restclient.Config{}, nil
+	noConfigAvailable := func() (*restclient.Config, error) {
+		return nil, fmt.Errorf("config not available")
+	}
+
+	aConfig := func() (*restclient.Config, error) {
+		return completeConfig, nil
 	}
 
 	tests := []struct {
-		config     *common.KubernetesConfig
-		overwrites *overwrites
-		error      bool
-		expected   *restclient.Config
+		name                 string
+		config               *common.KubernetesConfig
+		overwrites           *overwrites
+		inClusterConfig      kubeConfigProvider
+		defaultKubectlConfig kubeConfigProvider
+		error                bool
+		expected             *restclient.Config
 	}{
 		{
+			name: "Incomplete cert based auth outside cluster",
 			config: &common.KubernetesConfig{
+				Host:     "host",
 				CertFile: "test",
 			},
-			overwrites: &overwrites{},
-			error:      true,
+			inClusterConfig:      noConfigAvailable,
+			defaultKubectlConfig: noConfigAvailable,
+			overwrites:           &overwrites{},
+			error:                true,
 		},
 		{
+			name: "Complete cert based auth take precendece over in cluster config",
 			config: &common.KubernetesConfig{
 				CertFile: "crt",
 				KeyFile:  "key",
 				CAFile:   "ca",
-				Host:     "host",
+				Host:     "another_host",
 			},
-			overwrites: &overwrites{},
+			overwrites:           &overwrites{},
+			inClusterConfig:      aConfig,
+			defaultKubectlConfig: aConfig,
 			expected: &restclient.Config{
-				Host: "host",
+				Host: "another_host",
 				TLSClientConfig: restclient.TLSClientConfig{
 					CertFile: "crt",
 					KeyFile:  "key",
@@ -58,44 +83,73 @@ func TestGetKubeClientConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "User provided configuration take precedence",
 			config: &common.KubernetesConfig{
-				Host: "host",
+				Host:   "another_host",
+				CAFile: "ca",
 			},
-			overwrites: &overwrites{},
+			overwrites: &overwrites{
+				bearerToken: "another_token",
+			},
+			inClusterConfig:      aConfig,
+			defaultKubectlConfig: aConfig,
 			expected: &restclient.Config{
-				Host: "host",
+				Host:        "another_host",
+				BearerToken: "another_token",
+				TLSClientConfig: restclient.TLSClientConfig{
+					CAFile: "ca",
+				},
 			},
 		},
 		{
+			name:                 "InCluster config",
+			config:               &common.KubernetesConfig{},
+			overwrites:           &overwrites{},
+			inClusterConfig:      aConfig,
+			defaultKubectlConfig: noConfigAvailable,
+			expected:             completeConfig,
+		},
+		{
+			name:                 "Default cluster config",
+			config:               &common.KubernetesConfig{},
+			overwrites:           &overwrites{},
+			inClusterConfig:      noConfigAvailable,
+			defaultKubectlConfig: aConfig,
+			expected:             completeConfig,
+		},
+		{
+			name:   "Overwrites works also in cluster",
 			config: &common.KubernetesConfig{},
 			overwrites: &overwrites{
 				bearerToken: "bearerToken",
 			},
+			inClusterConfig:      aConfig,
+			defaultKubectlConfig: noConfigAvailable,
 			expected: &restclient.Config{
+				Host:        "host",
 				BearerToken: "bearerToken",
+				TLSClientConfig: restclient.TLSClientConfig{
+					CAFile: "ca",
+				},
 			},
 		},
 	}
 	for _, test := range tests {
-		rcConf, err := getKubeClientConfig(&common.KubernetesConfig{
-			Host:     test.config.Host,
-			CertFile: test.config.CertFile,
-			KeyFile:  test.config.KeyFile,
-			CAFile:   test.config.CAFile,
-		},
-			&overwrites{
-				bearerToken: test.overwrites.bearerToken,
-			})
+		t.Run(test.name, func(t *testing.T) {
+			inClusterConfig = test.inClusterConfig
+			defaultKubectlConfig = test.defaultKubectlConfig
 
-		if err != nil && !test.error {
-			t.Errorf("expected error, but instead received: %v", rcConf)
-			continue
-		}
+			rcConf, err := getKubeClientConfig(test.config, &overwrites{bearerToken: test.overwrites.bearerToken})
 
-		if !reflect.DeepEqual(rcConf, test.expected) {
-			t.Errorf("expected: '%v', got: '%v'", test.expected, rcConf)
-			continue
-		}
+			if err != nil && !test.error {
+				t.Errorf("expected error, but instead received: %v", rcConf)
+				return
+			}
+
+			if !reflect.DeepEqual(rcConf, test.expected) {
+				t.Errorf("expected: '%v', got: '%v'", test.expected, rcConf)
+			}
+		})
 	}
 }
 
