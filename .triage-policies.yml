@@ -122,21 +122,9 @@ resource_rules:
           comment: |
             Closing this issue down in accordance with our [Issue Triage Policies](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/.triage-policies.yml). Please reopen the issue if you feel that the issue is still relevant. Thanks!
 
-      - name: Assign CI/CD label to Deliverable issues
+      - name: Assign CI/CD label to open issues
         conditions:
           state: opened
-          labels:
-            - Deliverable
-          forbidden_labels:
-            - CI/CD
-        actions:
-          labels:
-            - CI/CD
-      - name: Assign CI/CD label to Stretch issues
-        conditions:
-          state: opened
-          labels:
-            - Stretch
           forbidden_labels:
             - CI/CD
         actions:
@@ -144,4 +132,12 @@ resource_rules:
             - CI/CD
 
   merge_requests:
-    rules: []
+    rules:
+      - name: Assign CI/CD label to open merge requests
+        conditions:
+          state: opened
+          forbidden_labels:
+            - CI/CD
+        actions:
+          labels:
+            - CI/CD
