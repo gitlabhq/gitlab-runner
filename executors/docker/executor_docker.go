@@ -141,11 +141,7 @@ func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 		options.RegistryAuth, _ = docker_helpers.EncodeAuthConfig(ac)
 	}
 
-	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
 	if err := s.client.ImagePullBlocking(s.Context, ref, options); err != nil {
-		if errorRegexp.MatchString(err.Error()) {
-			return nil, &common.BuildError{Inner: err}
-		}
 		return nil, err
 	}
 
@@ -184,6 +180,9 @@ func (s *executor) getDockerImage(imageName string) (*types.ImageInspect, error)
 
 	newImage, err := s.pullDockerImage(imageName, authConfig)
 	if err != nil {
+		if docker_helpers.IsErrNotFound(err) {
+			return nil, &common.BuildError{Inner: err}
+		}
 		return nil, err
 	}
 	return newImage, nil
