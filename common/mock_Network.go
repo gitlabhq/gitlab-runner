@@ -111,11 +111,11 @@ func (_m *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
 
 // UpdateJob provides a mock function with given fields: config, jobCredentials, id, state, trace
 func (_m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string, failureReason JobFailureReason) UpdateState {
-	ret := _m.Called(config, jobCredentials, id, state, trace)
+	ret := _m.Called(config, jobCredentials, id, state, trace, failureReason)
 
 	var r0 UpdateState
-	if rf, ok := ret.Get(0).(func(RunnerConfig, *JobCredentials, int, JobState, *string) UpdateState); ok {
-		r0 = rf(config, jobCredentials, id, state, trace)
+	if rf, ok := ret.Get(0).(func(RunnerConfig, *JobCredentials, int, JobState, *string, JobFailureReason) UpdateState); ok {
+		r0 = rf(config, jobCredentials, id, state, trace, failureReason)
 	} else {
 		r0 = ret.Get(0).(UpdateState)
 	}
