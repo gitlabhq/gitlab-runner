@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -564,28 +565,28 @@ func TestUpdateJob(t *testing.T) {
 
 	var state UpdateState
 
-	state = c.UpdateJob(config, jobCredentials, 10, "running", &trace, "")
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, 10, "forbidden", &trace, "")
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "forbidden", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state, "Update should be aborted if the state is forbidden")
 
-	state = c.UpdateJob(config, jobCredentials, 10, "other", &trace, "")
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "other", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(config, jobCredentials, 4, "state", &trace, "")
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown job")
 
-	state = c.UpdateJob(brokenConfig, jobCredentials, 4, "state", &trace, "")
+	state = c.UpdateJob(brokenConfig, jobCredentials, UpdateJobInfo{ID: 4, State: "state", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state)
 
-	state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "script_failure")
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: "script_failure"})
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "unknown_failure_reason")
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: "unknown_failure_reason"})
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "")
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 }
 

@@ -306,6 +306,13 @@ func (j *JobCredentials) GetToken() string {
 	return j.Token
 }
 
+type UpdateJobInfo struct {
+	ID            int
+	State         JobState
+	Trace         *string
+	FailureReason JobFailureReason
+}
+
 type JobTrace interface {
 	io.Writer
 	Success()
@@ -327,7 +334,7 @@ type Network interface {
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig) (*JobResponse, bool)
-	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string, failureReason JobFailureReason) UpdateState
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState

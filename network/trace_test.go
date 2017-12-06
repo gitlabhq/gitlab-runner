@@ -28,13 +28,13 @@ type updateTraceNetwork struct {
 	failureReason common.JobFailureReason
 }
 
-func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string, failureReason common.JobFailureReason) common.UpdateState {
-	switch id {
+func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, jobInfo common.UpdateJobInfo) common.UpdateState {
+	switch jobInfo.ID {
 	case successID:
 		m.count++
-		m.state = state
-		m.failureReason = failureReason
-		m.trace = trace
+		m.state = jobInfo.State
+		m.failureReason = jobInfo.FailureReason
+		m.trace = jobInfo.Trace
 		return common.UpdateSucceeded
 
 	case cancelID:
@@ -42,12 +42,12 @@ func (m *updateTraceNetwork) UpdateJob(config common.RunnerConfig, jobCredential
 		return common.UpdateAbort
 
 	case retryID:
-		if state != common.Running {
+		if jobInfo.State != common.Running {
 			m.count++
 			if m.count >= 5 {
-				m.state = state
-				m.failureReason = failureReason
-				m.trace = trace
+				m.state = jobInfo.State
+				m.failureReason = jobInfo.FailureReason
+				m.trace = jobInfo.Trace
 				return common.UpdateSucceeded
 			}
 		}
