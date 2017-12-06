@@ -528,7 +528,8 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	case "running":
 		w.WriteHeader(http.StatusOK)
 	case "failed":
-		if req["failure_reason"].(JobFailureReason) == ScriptFailure {
+		failureReason, ok := req["failure_reason"].(string)
+		if ok && JobFailureReason(failureReason) == ScriptFailure {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
@@ -561,11 +562,13 @@ func TestUpdateJob(t *testing.T) {
 	trace := "trace"
 	c := NewGitLabClient()
 
-	state := c.UpdateJob(config, jobCredentials, 10, "running", &trace, "")
+	var state UpdateState
+
+	state = c.UpdateJob(config, jobCredentials, 10, "running", &trace, "")
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
 	state = c.UpdateJob(config, jobCredentials, 10, "forbidden", &trace, "")
-	assert.Equal(t, UpdateAbort, state, "Update should if the state is forbidden")
+	assert.Equal(t, UpdateAbort, state, "Update should be aborted if the state is forbidden")
 
 	state = c.UpdateJob(config, jobCredentials, 10, "other", &trace, "")
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
@@ -576,11 +579,14 @@ func TestUpdateJob(t *testing.T) {
 	state = c.UpdateJob(brokenConfig, jobCredentials, 4, "state", &trace, "")
 	assert.Equal(t, UpdateAbort, state)
 
-	// state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "script_failure")
-	// assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
+	state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "script_failure")
+	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	// state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "xxxxx")
-	// assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
+	state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "unknown_failure_reason")
+	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
+
+	state = c.UpdateJob(config, jobCredentials, 10, "failed", &trace, "")
+	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 }
 
 var patchToken = "token"
