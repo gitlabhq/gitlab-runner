@@ -86,6 +86,8 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
     it disables the service account overwrite feature
+- `bearer-token`: Default bearer token used to launch build pods.
+- `bearer_token_overwrite_allowed`: Boolean to allow projects to specify a bearer token that will be used to create the build pod.
 - `volumes`: configured through the config file, the list of volumes that will be mounted in the build container. [Read more about using volumes.](#using-volumes)
 
 ### Configuring executor Service Account
@@ -127,6 +129,14 @@ To ensure only designated service accounts will be used during CI runs, inform t
  `service_account_overwrite_allowed` or set the environment variable `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED`
  with proper regular expression. When left empty the overwrite behaviour is disabled.
 
+### Setting Bearer Token to be Used When Making Kubernetes API calls
+
+In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods.  This will allow project owners to use project secret variables to specify a bearer token.  When specifying the bearer token, it is required that you set the `Host` config keyword.
+``` yaml
+variables:
+  KUBERNETES_BEARER_TOKEN: thebearertokenfromanothernamespace
+```
+
 ## Define keywords in the config toml
 
 Each of the keywords can be defined in the `config.toml` for the gitlab runner.
@@ -148,6 +158,7 @@ concurrent = 4
     ca_file = "/etc/ssl/kubernetes/ca.crt"
     namespace = "gitlab"
     namespace_overwrite_allowed = "ci-.*"
+    bearer_token_overwrite_allowed = true
     privileged = true
     cpu_limit = "1"
     memory_limit = "1Gi"
@@ -335,7 +346,7 @@ the limits imposed on the docker build containers spawned by kubernetes.
 
 One way to help minimize the exposure of the host's kernel to any build container
 when running in privileged mode or by exposing `/var/run/docker.sock` is to use
-the `node_selector` option to set one or more labels that have to match a node 
+the `node_selector` option to set one or more labels that have to match a node
 before any containers are deployed to it. For example build containers may only run
 on nodes that are labeled with `role=ci` while running all other production services
 on other nodes.

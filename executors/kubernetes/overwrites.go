@@ -12,30 +12,46 @@ const (
 	NamespaceOverwriteVariableName = "KUBERNETES_NAMESPACE_OVERWRITE"
 	// ServiceAccountOverwriteVariableName is the key for the JobVariable containing user overwritten ServiceAccount
 	ServiceAccountOverwriteVariableName = "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE"
+	// BearerTokenOverwriteVariableValue is the key for the JobVariable containing user overwritten BearerToken
+	BearerTokenOverwriteVariableValue = "KUBERNETES_BEARER_TOKEN"
 )
 
 type overwrites struct {
 	namespace      string
 	serviceAccount string
+	bearerToken    string
 }
 
 func createOverwrites(config *common.KubernetesConfig, variables common.JobVariables, logger common.BuildLogger) (*overwrites, error) {
 	var err error
 	o := &overwrites{}
 
-	namespaceRegex := variables.Expand().Get(NamespaceOverwriteVariableName)
-	o.namespace, err = o.evaluateOverwrite("Namespace", config.Namespace, config.NamespaceOverwriteAllowed, namespaceRegex, logger)
+	namespaceOverwrite := variables.Expand().Get(NamespaceOverwriteVariableName)
+	o.namespace, err = o.evaluateOverwrite("Namespace", config.Namespace, config.NamespaceOverwriteAllowed, namespaceOverwrite, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceAccountRegex := variables.Expand().Get(ServiceAccountOverwriteVariableName)
-	o.serviceAccount, err = o.evaluateOverwrite("ServiceAccount", config.ServiceAccount, config.ServiceAccountOverwriteAllowed, serviceAccountRegex, logger)
+	serviceAccountOverwrite := variables.Expand().Get(ServiceAccountOverwriteVariableName)
+	o.serviceAccount, err = o.evaluateOverwrite("ServiceAccount", config.ServiceAccount, config.ServiceAccountOverwriteAllowed, serviceAccountOverwrite, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	bearerTokenOverwrite := variables.Expand().Get(BearerTokenOverwriteVariableValue)
+	o.bearerToken, err = o.evaluateBoolControlledOverwrite("BearerToken", config.BearerToken, config.BearerTokenOverwriteAllowed, bearerTokenOverwrite, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return o, nil
+}
+
+func (o *overwrites) evaluateBoolControlledOverwrite(fieldName, value string, canOverride bool, overwriteValue string, logger common.BuildLogger) (string, error) {
+	if canOverride {
+		return o.evaluateOverwrite(fieldName, value, ".+", overwriteValue, logger)
+	}
+	return o.evaluateOverwrite(fieldName, value, "", overwriteValue, logger)
 }
 
 func (o *overwrites) evaluateOverwrite(fieldName, value, regex, overwriteValue string, logger common.BuildLogger) (string, error) {
@@ -52,7 +68,12 @@ func (o *overwrites) evaluateOverwrite(fieldName, value, regex, overwriteValue s
 		return value, err
 	}
 
-	logger.Println(fmt.Sprintf("%q overwritten with %q", fieldName, overwriteValue))
+	logValue := overwriteValue
+	if fieldName == "BearerToken" {
+		logValue = "XXXXXXXX..."
+	}
+
+	logger.Println(fmt.Sprintf("%q overwritten with %q", fieldName, logValue))
 
 	return overwriteValue, nil
 }

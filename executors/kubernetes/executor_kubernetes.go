@@ -89,10 +89,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes); err != nil {
-		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
-	}
-
 	if err = s.setupResources(); err != nil {
 		return err
 	}
@@ -109,6 +105,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	if err = s.checkDefaults(); err != nil {
 		return err
+	}
+
+	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes, s.configurationOverwrites); err != nil {
+		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
 	}
 
 	s.Println("Using Kubernetes executor with image", s.options.Image.Name, "...")
@@ -448,7 +448,7 @@ func (s *executor) runInContainer(ctx context.Context, name string, command []st
 			return
 		}
 
-		config, err := getKubeClientConfig(s.Config.Kubernetes)
+		config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
 
 		if err != nil {
 			errc <- err

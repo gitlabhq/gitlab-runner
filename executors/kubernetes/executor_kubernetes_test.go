@@ -424,6 +424,7 @@ func TestPrepare(t *testing.T) {
 						Host:                           "test-server",
 						ServiceAccount:                 "default",
 						ServiceAccountOverwriteAllowed: ".*",
+						BearerTokenOverwriteAllowed:    true,
 						ServiceCPULimit:                "100m",
 						ServiceMemoryLimit:             "200Mi",
 						CPULimit:                       "1.5",

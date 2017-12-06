@@ -18,47 +18,78 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+type kubeConfigProvider func() (*restclient.Config, error)
+
+var (
+	// inClusterConfig parses kubernets configuration reading in cluster values
+	inClusterConfig kubeConfigProvider = restclient.InClusterConfig
+	// defaultKubectlConfig parses kubectl configuration ad loads the default cluster
+	defaultKubectlConfig kubeConfigProvider = loadDefaultKubectlConfig
+)
+
 func init() {
 	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
 }
 
-func getKubeClientConfig(config *common.KubernetesConfig) (*restclient.Config, error) {
-	switch {
-	case len(config.CertFile) > 0:
+func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites) (kubeConfig *restclient.Config, err error) {
+	if len(config.Host) > 0 {
+		kubeConfig, err = getOutClusterClientConfig(config)
+	} else {
+		kubeConfig, err = guessClientConfig()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	//apply overwrites
+	kubeConfig.BearerToken = string(overwrites.bearerToken)
+
+	return kubeConfig, nil
+}
+
+func getOutClusterClientConfig(config *common.KubernetesConfig) (*restclient.Config, error) {
+	kubeConfig := &restclient.Config{
+		Host:        config.Host,
+		BearerToken: config.BearerToken,
+		TLSClientConfig: restclient.TLSClientConfig{
+			CAFile: config.CAFile,
+		},
+	}
+
+	// certificate based auth
+	if len(config.CertFile) > 0 {
 		if len(config.KeyFile) == 0 || len(config.CAFile) == 0 {
 			return nil, fmt.Errorf("ca file, cert file and key file must be specified when using file based auth")
 		}
-		return &restclient.Config{
-			Host: config.Host,
-			TLSClientConfig: restclient.TLSClientConfig{
-				CertFile: config.CertFile,
-				KeyFile:  config.KeyFile,
-				CAFile:   config.CAFile,
-			},
-		}, nil
 
-	case len(config.Host) > 0:
-		return &restclient.Config{
-			Host: config.Host,
-		}, nil
-
-	default:
-		// Try in cluster config first
-		if inClusterCfg, err := restclient.InClusterConfig(); err == nil {
-			return inClusterCfg, nil
-		}
-		config, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
-		if err != nil {
-			return nil, err
-		}
-
-		clientConfig := clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{})
-		return clientConfig.ClientConfig()
+		kubeConfig.TLSClientConfig.CertFile = config.CertFile
+		kubeConfig.TLSClientConfig.KeyFile = config.KeyFile
 	}
+
+	return kubeConfig, nil
 }
 
-func getKubeClient(config *common.KubernetesConfig) (*client.Client, error) {
-	restConfig, err := getKubeClientConfig(config)
+func guessClientConfig() (*restclient.Config, error) {
+	// Try in cluster config first
+	if inClusterCfg, err := inClusterConfig(); err == nil {
+		return inClusterCfg, nil
+	}
+
+	// in cluster config failed. Reading default kubectl config
+	return defaultKubectlConfig()
+}
+
+func loadDefaultKubectlConfig() (*restclient.Config, error) {
+	config, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+	if err != nil {
+		return nil, err
+	}
+
+	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
+}
+
+func getKubeClient(config *common.KubernetesConfig, overwrites *overwrites) (*client.Client, error) {
+	restConfig, err := getKubeClientConfig(config, overwrites)
 	if err != nil {
 		return nil, err
 	}
