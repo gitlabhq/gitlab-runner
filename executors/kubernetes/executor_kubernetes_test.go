@@ -274,80 +274,118 @@ func TestVolumes(t *testing.T) {
 	}
 }
 
+func fakeKubeDeleteResponse(status int) *http.Response {
+	codec := testapi.Default.Codec()
+
+	body := objBody(codec, &unversioned.Status{Code: int32(status)})
+	return &http.Response{StatusCode: status, Body: body, Header: map[string][]string{
+		"Content-Type": []string{"application/json"},
+	}}
+}
+
 func TestCleanup(t *testing.T) {
 	version := testapi.Default.GroupVersion().Version
 	codec := testapi.Default.Codec()
 
+	objectMeta := api.ObjectMeta{Name: "test-resource", Namespace: "test-ns"}
+
 	tests := []struct {
-		Pod        *api.Pod
-		ClientFunc func(*http.Request) (*http.Response, error)
-		Error      bool
+		Name        string
+		Pod         *api.Pod
+		Credentials *api.Secret
+		ClientFunc  func(*http.Request) (*http.Response, error)
+		Error       bool
 	}{
 		{
-			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: "test-ns",
-				},
-			},
+			Name: "Proper Cleanup",
+			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/pods/test-pod":
-					return &http.Response{StatusCode: http.StatusOK, Body: FakeReadCloser{
-						Reader: strings.NewReader(""),
-					}}, nil
+				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
+					return fakeKubeDeleteResponse(http.StatusOK), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
 				}
 			},
 		},
 		{
-			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: "test-ns",
-				},
-			},
+			Name: "Delete failure",
+			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				return nil, fmt.Errorf("delete failed")
+			},
+			Error: true,
+		},
+		{
+			Name: "POD already deleted",
+			Pod:  &api.Pod{ObjectMeta: objectMeta},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
+					return fakeKubeDeleteResponse(http.StatusNotFound), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+			Error: true,
+		},
+		{
+			Name:        "POD creation failed, Secretes provided",
+			Pod:         nil, // a failed POD create request will cause a nil Pod
+			Credentials: &api.Secret{ObjectMeta: objectMeta},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/secrets/test-resource":
+					return fakeKubeDeleteResponse(http.StatusNotFound), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
 			},
 			Error: true,
 		},
 	}
 
 	for _, test := range tests {
-		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
-		fakeClient := fake.RESTClient{
-			Codec:  codec,
-			Client: fake.CreateHTTPClient(test.ClientFunc),
-		}
-		c.Client = fakeClient.Client
+		t.Run(test.Name, func(t *testing.T) {
+			c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
+			fakeClient := fake.RESTClient{
+				Codec:  codec,
+				Client: fake.CreateHTTPClient(test.ClientFunc),
+			}
+			c.Client = fakeClient.Client
 
-		ex := executor{
-			kubeClient: c,
-			pod:        test.Pod,
-		}
-		errored := false
-		buildTrace := FakeBuildTrace{
-			testWriter{
-				call: func(b []byte) (int, error) {
-					if test.Error && !errored {
-						if s := string(b); strings.Contains(s, "Error cleaning up") {
-							errored = true
-						} else {
-							t.Errorf("expected failure. got: '%s'", string(b))
+			ex := executor{
+				kubeClient:  c,
+				pod:         test.Pod,
+				credentials: test.Credentials,
+			}
+			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
+			errored := false
+			buildTrace := FakeBuildTrace{
+				testWriter{
+					call: func(b []byte) (int, error) {
+						if !errored {
+							if s := string(b); strings.Contains(s, "Error cleaning up") {
+								errored = true
+							} else if test.Error {
+								t.Errorf("expected failure. got: '%s'", string(b))
+							}
 						}
-					}
-					return len(b), nil
+						return len(b), nil
+					},
 				},
-			},
-		}
-		ex.AbstractExecutor.Trace = buildTrace
-		ex.AbstractExecutor.BuildLogger = common.NewBuildLogger(buildTrace, logrus.WithFields(logrus.Fields{}))
-		ex.Cleanup()
-		if test.Error && !errored {
-			t.Errorf("expected cleanup to error but it didn't")
-		}
+			}
+			ex.AbstractExecutor.Trace = buildTrace
+			ex.AbstractExecutor.BuildLogger = common.NewBuildLogger(buildTrace, logrus.WithFields(logrus.Fields{}))
+
+			ex.Cleanup()
+
+			if test.Error && !errored {
+				t.Errorf("expected cleanup to fail but it didn't")
+			} else if !test.Error && errored {
+				t.Errorf("expected cleanup not to fail but it did")
+			}
+		})
 	}
 }
 

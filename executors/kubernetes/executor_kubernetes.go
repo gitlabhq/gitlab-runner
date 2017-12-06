@@ -161,7 +161,7 @@ func (s *executor) Cleanup() {
 		}
 	}
 	if s.credentials != nil {
-		err := s.kubeClient.Secrets(s.pod.Namespace).Delete(s.credentials.Name)
+		err := s.kubeClient.Secrets(s.configurationOverwrites.namespace).Delete(s.credentials.Name)
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
