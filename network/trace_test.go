@@ -22,9 +22,42 @@ var (
 	noTrace *string
 )
 
+func matchJobState(jobInfo common.UpdateJobInfo, id int, state common.JobState, failureReason common.JobFailureReason) bool {
+	if jobInfo.ID != id {
+		return false
+	}
+	if jobInfo.State != state {
+		return false
+	}
+	if jobInfo.FailureReason != failureReason {
+		return false
+	}
+	return true
+}
+
+func generateJobInfoMatcher(id int, state common.JobState, trace *string, failureReason common.JobFailureReason) interface{} {
+	return mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
+		if jobInfo.Trace == nil && trace != nil {
+			return false
+		}
+		if jobInfo.Trace != nil && trace == nil {
+			return false
+		}
+		if jobInfo.Trace != nil && trace != nil && *jobInfo.Trace != *trace {
+			return false
+		}
+		return matchJobState(jobInfo, id, state, failureReason)
+	})
+}
+
+func generateJobInfoMatcherWithAnyTrace(id int, state common.JobState, failureReason common.JobFailureReason) interface{} {
+	return mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
+		return matchJobState(jobInfo, id, state, failureReason)
+	})
+}
+
 func TestJobTraceUpdateSucceeded(t *testing.T) {
 	traceMessage := "test content"
-	traceMatcher := mock.MatchedBy(func(trace *string) bool { return trace != nil && *trace == traceMessage })
 	patchTraceMatcher := mock.MatchedBy(func(tracePatch common.JobTracePatch) bool {
 		return tracePatch.Offset() == 0 && string(tracePatch.Patch()) == traceMessage
 	})
@@ -41,8 +74,11 @@ func TestJobTraceUpdateSucceeded(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var wg sync.WaitGroup
 			jobCredentials := &common.JobCredentials{ID: idx}
+
 			net := new(common.MockNetwork)
-			net.On("UpdateJob", jobConfig, jobCredentials, idx, common.Running, noTrace, common.JobFailureReason("")).Return(common.UpdateSucceeded).Once()
+
+			firstUpdateMatcher := generateJobInfoMatcher(idx, common.Running, noTrace, common.NoneFailure)
+			net.On("UpdateJob", jobConfig, jobCredentials, firstUpdateMatcher).Return(common.UpdateSucceeded).Once()
 			net.On("PatchTrace", jobConfig, jobCredentials, patchTraceMatcher).Return(common.UpdateSucceeded).Run(func(_ mock.Arguments) { wg.Done() })
 
 			var expectedFailureReason common.JobFailureReason
@@ -52,7 +88,8 @@ func TestJobTraceUpdateSucceeded(t *testing.T) {
 			case common.Failed:
 				expectedFailureReason = common.JobFailureReason("script_failure")
 			}
-			net.On("UpdateJob", jobConfig, jobCredentials, idx, test.jobState, traceMatcher, expectedFailureReason).Return(common.UpdateSucceeded)
+			secondUpdateMatcher := generateJobInfoMatcher(idx, test.jobState, &traceMessage, expectedFailureReason)
+			net.On("UpdateJob", jobConfig, jobCredentials, secondUpdateMatcher).Return(common.UpdateSucceeded)
 
 			b := newJobTrace(net, jobConfig, jobCredentials)
 			// speed up execution time
@@ -76,8 +113,10 @@ func TestJobTraceUpdateSucceeded(t *testing.T) {
 }
 
 func TestIgnoreStatusChange(t *testing.T) {
+	jobInfoMatcher := generateJobInfoMatcherWithAnyTrace(jobCredentials.ID, common.Success, common.NoneFailure)
+
 	net := new(common.MockNetwork)
-	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string"), common.JobFailureReason("")).Return(common.UpdateSucceeded)
+	net.On("UpdateJob", jobConfig, jobCredentials, jobInfoMatcher).Return(common.UpdateSucceeded)
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
 	// prevent any UpdateJob before `b.Success()` call
@@ -94,10 +133,13 @@ func TestJobAbort(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	firstUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, noTrace, common.NoneFailure)
+	secondUpdateMatcher := generateJobInfoMatcherWithAnyTrace(jobCredentials.ID, common.Success, common.NoneFailure)
+
 	net := new(common.MockNetwork)
-	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Running, noTrace).Return(common.UpdateAbort)
+	net.On("UpdateJob", jobConfig, jobCredentials, firstUpdateMatcher).Return(common.UpdateAbort)
 	net.On("PatchTrace", jobConfig, jobCredentials, mock.AnythingOfType("*network.tracePatch")).Return(common.UpdateAbort)
-	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateAbort)
+	net.On("UpdateJob", jobConfig, jobCredentials, secondUpdateMatcher).Return(common.UpdateAbort)
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
 	// force immediate call to `UpdateJob`
@@ -120,8 +162,11 @@ func TestJobOutputLimit(t *testing.T) {
 	// prevent any UpdateJob before `b.Success()` call
 	b.updateInterval = 25 * time.Second
 
-	net.On("UpdateJob", jobOutputLimit, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded).Run(func(args mock.Arguments) {
-		if trace, ok := args.Get(4).(*string); ok {
+	updateMatcher := generateJobInfoMatcherWithAnyTrace(jobCredentials.ID, common.Success, common.NoneFailure)
+	net.On("UpdateJob", jobOutputLimit, jobCredentials, updateMatcher).Return(common.UpdateSucceeded).Run(func(args mock.Arguments) {
+		if updateInfo, ok := args.Get(2).(common.UpdateJobInfo); ok {
+			trace := updateInfo.Trace
+
 			expectedLogLimitExceededMsg := b.limitExceededMessage()
 			bytesLimit := b.bytesLimit + len(expectedLogLimitExceededMsg)
 			traceSize := len(*trace)
@@ -130,7 +175,7 @@ func TestJobOutputLimit(t *testing.T) {
 			assert.Contains(*trace, traceMessage)
 			assert.Contains(*trace, b.limitExceededMessage())
 		} else {
-			assert.FailNow("Unexpected type on UpdateJob trace parameter")
+			assert.FailNow("Unexpected type on UpdateJob jobInfo parameter")
 		}
 	})
 
@@ -145,9 +190,11 @@ func TestJobOutputLimit(t *testing.T) {
 }
 
 func TestJobFinishRetry(t *testing.T) {
+	updateMatcher := generateJobInfoMatcherWithAnyTrace(jobCredentials.ID, common.Success, common.NoneFailure)
+
 	net := new(common.MockNetwork)
-	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateFailed).Times(5)
-	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded).Once()
+	net.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).Return(common.UpdateFailed).Times(5)
+	net.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).Return(common.UpdateSucceeded).Once()
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
 	b.finishRetryInterval = time.Microsecond
@@ -167,13 +214,16 @@ func TestJobForceSend(t *testing.T) {
 	nextEmptyPatchMatcher := mock.MatchedBy(func(tracePatch common.JobTracePatch) bool {
 		return tracePatch.Offset() == len(traceMessage) && string(tracePatch.Patch()) == ""
 	})
+	firstUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, noTrace, common.NoneFailure)
+	secondUpdateMatcher := generateJobInfoMatcherWithAnyTrace(jobCredentials.ID, common.Success, common.NoneFailure)
 
 	wg.Add(1)
+
 	net := new(common.MockNetwork)
-	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Running, noTrace).Return(common.UpdateSucceeded).Once()
+	net.On("UpdateJob", jobConfig, jobCredentials, firstUpdateMatcher).Return(common.UpdateSucceeded).Once()
 	net.On("PatchTrace", jobConfig, jobCredentials, firstPatchMatcher).Return(common.UpdateSucceeded).Once()
 	net.On("PatchTrace", jobConfig, jobCredentials, nextEmptyPatchMatcher).Return(common.UpdateSucceeded).Run(func(_ mock.Arguments) { wg.Done() })
-	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded).Once()
+	net.On("UpdateJob", jobConfig, jobCredentials, secondUpdateMatcher).Return(common.UpdateSucceeded).Once()
 	defer net.AssertExpectations(t)
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
