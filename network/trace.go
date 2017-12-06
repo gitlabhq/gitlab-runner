@@ -84,7 +84,7 @@ type clientJobTrace struct {
 }
 
 func (c *clientJobTrace) Success() {
-	c.Fail(nil, "")
+	c.Fail(nil, common.NoneFailure)
 }
 
 func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {

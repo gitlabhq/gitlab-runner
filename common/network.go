@@ -21,9 +21,8 @@ const (
 	Success JobState = "success"
 )
 
-// Those syntax have to be identical with
-// CommitStatus.failure_reasons in Gitlab-CE/EE
 const (
+	NoneFailure         JobFailureReason = ""
 	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 )
