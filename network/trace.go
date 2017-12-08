@@ -189,8 +189,8 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 
 	if c.sentState != state {
 		jobInfo := common.UpdateJobInfo{
-			ID: c.id,
-			State: state,
+			ID:            c.id,
+			State:         state,
 			FailureReason: c.failureReason,
 		}
 		c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
@@ -225,9 +225,9 @@ func (c *clientJobTrace) resendPatch(id int, config common.RunnerConfig, jobCred
 		fullTrace := c.log.String()
 
 		jobInfo := common.UpdateJobInfo{
-			ID: c.id,
-			State: c.state,
-			Trace: &fullTrace,
+			ID:            c.id,
+			State:         c.state,
+			Trace:         &fullTrace,
 			FailureReason: c.failureReason,
 		}
 
@@ -259,9 +259,9 @@ func (c *clientJobTrace) fullUpdate() common.UpdateState {
 	}
 
 	jobInfo := common.UpdateJobInfo{
-		ID: c.id,
-		State: state,
-		Trace: &trace,
+		ID:            c.id,
+		State:         state,
+		Trace:         &trace,
 		FailureReason: c.failureReason,
 	}
 
