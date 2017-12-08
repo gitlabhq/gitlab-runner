@@ -449,9 +449,7 @@ func isEmpty(object interface{}) bool {
 	objValue := reflect.ValueOf(object)
 
 	switch objValue.Kind() {
-	case reflect.Map:
-		fallthrough
-	case reflect.Slice, reflect.Chan:
+	case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
 		{
 			return (objValue.Len() == 0)
 		}
@@ -886,6 +884,8 @@ func toFloat(x interface{}) (float64, bool) {
 		xf = float64(xn)
 	case float64:
 		xf = float64(xn)
+	case time.Duration:
+		xf = float64(xn)
 	default:
 		xok = false
 	}
@@ -970,7 +970,7 @@ func InEpsilon(t TestingT, expected, actual interface{}, epsilon float64, msgAnd
 	}
 	if actualEpsilon > epsilon {
 		return Fail(t, fmt.Sprintf("Relative error is too high: %#v (expected)\n"+
-			"        < %#v (actual)", actualEpsilon, epsilon), msgAndArgs...)
+			"        < %#v (actual)", epsilon, actualEpsilon), msgAndArgs...)
 	}
 
 	return true

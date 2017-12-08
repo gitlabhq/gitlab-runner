@@ -940,16 +940,16 @@
 			"revision": "cbeaeb16a013161a98496fad62933b1d21786672"
 		},
 		{
-			"checksumSHA1": "Rbe7jAiIJ1fugtTHlyMdHb3CiEQ=",
+			"checksumSHA1": "mGbTYZ8dHVTiPTTJu3ktp+84pPI=",
 			"path": "github.com/stretchr/testify/assert",
-			"revision": "b1f989447a57594c728884458a39abf3a73447f7",
-			"revisionTime": "2017-07-13T17:13:24Z"
+			"revision": "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f",
+			"revisionTime": "2017-08-14T20:04:35Z"
 		},
 		{
-			"checksumSHA1": "o+jsS/rxceTym4M3reSPfrPxaio=",
+			"checksumSHA1": "hs0IfAV4wNExbAXc0aUU9V2SuFc=",
 			"path": "github.com/stretchr/testify/mock",
-			"revision": "b1f989447a57594c728884458a39abf3a73447f7",
-			"revisionTime": "2017-07-13T17:13:24Z"
+			"revision": "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f",
+			"revisionTime": "2017-08-14T20:04:35Z"
 		},
 		{
 			"checksumSHA1": "7vs6dSc1PPGBKyzb/SCIyeMJPLQ=",
