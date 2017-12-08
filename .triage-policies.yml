@@ -120,7 +120,7 @@ resource_rules:
             - markglenfletcher
           status: close
           comment: |
-            Closing this issue down in accordance with our [Issue Triage Policies](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/.triage-policies.yml). Please reopen the issue if you feel that the issue is still relevant. Thanks!
+            Closing this issue down in accordance with our [Issue Triage Policies](https://gitlab.com/gitlab-org/gitlab-runner/blob/gl-gitlab-triage-policies/.triage-policies.yml). Please reopen the issue if you feel that the issue is still relevant. Thanks!
 
       - name: Assign CI/CD label to open issues
         conditions:
