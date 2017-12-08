@@ -150,55 +150,14 @@ You can start hacking GitLab-Runner code. If you are interested you can use Inte
 
 ## Managing build dependencies
 
-GitLab Runner uses [Govendor](https://github.com/kardianos/govendor) to manage
+GitLab Runner uses [dep](https://github.com/golang/dep) to manage
 its dependencies - they get checked into the repository under the `vendor/` directory,
-with a manifest stored in `vendor/vendor.json`.
+with a manifest stored in `Godep.toml` and in `Godep.lock` lockfile.
 
 If your contribution adds, removes or updates any dependencies to the runner,
-please ensure the vendored copies updated in lock-step.
+please ensure the vendored copies is updated with the appropriate `dep ensure` command.
 
-**For added/removed dependencies:**
-
-1. Run `go get [package]` (if you haven't done this already) to download required package into your `$GOPATH`.
-   Repeat this for any added package.
-
-1. Commit all added changes and stash/remove all uncommited changes to have a clean working directory.
-
-1. Execute
-
-    ```bash
-    $ make update_govendor_dependencies
-    ```
-
-    This task will:
-    * remove all unused packages with,
-    * add all missing or external packages (packages that are not stored in vendor but can be found in `$GOPATH`),
-    * show git status and ask if changes in `vendor/` or done properly,
-    * show diff of `vendor/vendor.json` and ask if it is done properly,
-    * add and commit changes in `vendor/` directory.
-
-**For dependencies that need update:**
-
-1. Run `go get -u [package]` (if you haven't done this already) to upload selected package present in your `$GOPATH`
-   or download it if it's not present.
-
-    If you want to use specific version then go to the package directory in your `$GOPATH` and checkout it to this
-    version, e.g.:
-
-    ```bash
-    $ cd $GOPATH/src/github.com/docker/docker/client
-    $ git checkout v1.13.0
-    ```
-
-    Repeat this for any added package.
-
-1. Execute
-
-    ```bash
-    $ make update_govendor_dependencies
-    ```
-
-    This task will behave just like described above.
+Don't add dependency from upstream master branch when version tags are available.
 
 ## Troubleshooting
 

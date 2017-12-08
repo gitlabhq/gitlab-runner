@@ -55,11 +55,10 @@ export CGO_ENABLED ?= 0
 
 
 # Development Tools
-GOVENDOR = $(GOPATH_BIN)/govendor
 GOX = $(GOPATH_BIN)/gox
 GOBINDATA = $(GOPATH_BIN)/go-bindata
 MOCKERY = $(GOPATH_BIN)/mockery
-DEVELOPMENT_TOOLS = $(GOVENDOR) $(GOX) $(GOBINDATA) $(MOCKERY)
+DEVELOPMENT_TOOLS = $(GOX) $(GOBINDATA) $(MOCKERY)
 
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
 
@@ -398,10 +397,6 @@ development_setup:
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 
-update_govendor_dependencies: $(GOVENDOR)
-	# updating vendor/ dependencies
-	@./scripts/update-govendor-dependencies
-
 # local GOPATH
 $(GOPATH_SETUP): $(PKG_BUILD_DIR)
 	mkdir -p $(GOPATH_BIN)
@@ -412,9 +407,6 @@ $(PKG_BUILD_DIR):
 	ln -s ../../../.. $@
 
 # development tools
-$(GOVENDOR): $(GOPATH_SETUP)
-	go get github.com/kardianos/govendor
-
 $(GOX): $(GOPATH_SETUP)
 	go get github.com/mitchellh/gox
 
