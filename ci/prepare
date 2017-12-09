@@ -1,5 +1,0 @@
-# Bootstrap golang runner
-GODIR=$GOPATH/src/gitlab.com/gitlab-org/gitlab-runner
-mkdir -p "$(dirname "$GODIR")"
-ln -sfv "$(pwd -P)" "$GODIR"
-cd "$GODIR"

@@ -15,6 +15,7 @@ dockerfiles/ubuntu/checksums.sha256
 tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
+/.gopath/
 
 # Ignore the generated binary
 /gitlab-runner

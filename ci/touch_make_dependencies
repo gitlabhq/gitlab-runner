@@ -1,4 +1,4 @@
-for file in $(find out/* -type f); do
+for file in $(find out/* .gopath/* .gopath/.ok -type f); do
     touch $file
 done
 

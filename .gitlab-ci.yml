@@ -12,9 +12,6 @@ variables:
 
 image: $CI_IMAGE
 
-before_script:
-- source ci/prepare
-
 .docker: &docker
   services:
   - docker:dind
@@ -33,7 +30,6 @@ before_script:
   <<: *docker
   stage: prepare
   image: docker:git
-  before_script: []
   script:
   - source ./ci/build_ci_image
 
@@ -67,6 +63,8 @@ bindata:
     - out/docker/prebuilt-x86_64.tar.xz
     - out/docker/prebuilt-arm.tar.xz
     - executors/docker/bindata.go
+    - .gopath/bin
+    - .gopath/.ok
     expire_in: 7d
 
 clone test repo:
@@ -95,7 +93,6 @@ codequality:
     CODECLIMATE_FORMAT: json
   cache: {}
   dependencies: []
-  before_script: []
   script:
     - ./scripts/codequality analyze -f json --dev | tee codeclimate.json
   artifacts:
@@ -103,31 +100,25 @@ codequality:
     expire_in: 1 week
 
 unit tests (no race):
+  <<: *docker
   stage: test
   script:
-  - source ci/touch_make_dependencies
-  - make test
-  tags:
-  - docker
+    - source ci/touch_make_dependencies
+    - make test
 
 unit tests:
+  <<: *docker
   stage: test
-  variables:
-    CGO_ENABLED: 1
-    TESTFLAGS: -cover -race
   allow_failure: true
   script:
-  - source ci/touch_make_dependencies
-  - make test
-  tags:
-  - docker
+    - source ci/touch_make_dependencies
+    - CGO_ENABLED=1 TESTFLAGS="-cover -race" make test
 
 docs check links:
   image: "registry.gitlab.com/gitlab-org/gitlab-build-images:nanoc-bootstrap-ruby-2.4-alpine"
   stage: test
   cache: {}
   dependencies: []
-  before_script: []
   script:
     - mv docs/ /nanoc/content/
     - cd /nanoc
@@ -135,13 +126,6 @@ docs check links:
     - bundle exec nanoc
     # Check the internal links
     - bundle exec nanoc check internal_links
-
-docker executor:
-  <<: *docker
-  stage: test
-  script:
-  - source ci/touch_make_dependencies
-  - go test -cover ./executors/docker/
 
 integration windows:
   stage: test
