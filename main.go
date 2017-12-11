@@ -55,7 +55,5 @@ func main() {
 		logrus.Fatalln("Command", command, "not found.")
 	}
 
-	if err := app.Run(os.Args); err != nil {
-		logrus.Fatal(err)
-	}
+	if err := app.Run(os.Args); err != nil {logrus.Fatal(err)}
 }
