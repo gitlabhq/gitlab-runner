@@ -111,6 +111,10 @@ codequality:
 # Test stage
 #
 
+#
+# Test stage
+#
+
 unit tests (no race):
   stage: test
   script:
