@@ -1,3 +1,12 @@
+v 10.3.0-rc.1 (2017-12-10)
+- Stop Docker Machine before removing it !718
+- add `--checkout --force` options to `git submodule update --init` !704
+- Fix trailing "<nil>" in syslog logging !734
+- Fix kubernetes executor job overwritten variables behaviour !739
+- Add zip archive for windows release files !760
+- Add kubernetes executor connection with service account, bearer token can also be overwritten !744
+- Fix SIGSEGV in kubernetes executor Cleanup !769
+
 v 10.2.0 (2017-11-22)
 - Update supported platforms !712
 - Fix typo in Kubernetes runner docs !714
