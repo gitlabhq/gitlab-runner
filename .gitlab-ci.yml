@@ -5,6 +5,7 @@ stages:
 - build
 - package
 - release
+- quality
 
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8-1
@@ -82,11 +83,11 @@ clone test repo:
     expire_in: 7d
 
 #
-# Test stage
+# Quality stage
 #
 
 codequality:
-  stage: test
+  stage: quality
   image: docker:git
   services:
     - docker:dind
@@ -98,9 +99,17 @@ codequality:
   before_script: []
   script:
     - ./scripts/codequality analyze -f json --dev | tee codeclimate.json
+    # Until https://gitlab.com/gitlab-org/gitlab-ee/issues/2547 will be ready
+    # we have to fail the job manually
+    - '[ "$(head codeclimate.json)" = "[]" ] || exit 1'
   artifacts:
     paths: [codeclimate.json]
     expire_in: 1 week
+    when: always
+
+#
+# Test stage
+#
 
 unit tests (no race):
   stage: test
