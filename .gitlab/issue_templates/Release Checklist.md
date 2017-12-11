@@ -24,15 +24,15 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
 - [ ] Add the ~release label to the issue
 - [ ] Add the %X.Y milestone to the issue
 
-## First working day after 7th - **vX.Y.0-rc.1 release**
+## First working day after 7th - **vX.Y.0-rc1 release**
 
 - [ ] check if Pipeline for `master` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/master)
     - [ ] add all required fixes to make `master` Pipeline passing
-- [ ] add **vX.Y.0-rc.1** CHANGELOG entries
-- [ ] tag and push **vX.Y.0-rc.1**
+- [ ] add **vX.Y.0-rc1** CHANGELOG entries
+- [ ] tag and push **vX.Y.0-rc1**
 - [ ] create and push `X-Y-stable` branch
 - [ ] checkout to `master`, update `VERSION` file to `X.Y+1.0` and push `master`
-- [ ] deploy **vX.Y.0-rc.1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] deploy **vX.Y.0-rc1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 
 _New features_ window is closed - things not merged into `master` up to
 this day, will be released with next release.
@@ -67,15 +67,15 @@ if the only RC version was the _RC1_ released near 7th day of month.
 
 - [ ] check if Pipeline for `X-Y-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/X-Y-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/X-Y-stable)
     - [ ] add all required fixes to make `X-Y-stable` Pipeline passing
-- [ ] add **vX.Y.0-rc.Z** CHANGELOG entries
-- [ ] tag **vX.Y.0-rc.Z**
-- [ ] deploy **vX.Y.0-rc.Z** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] add **vX.Y.0-rcZ** CHANGELOG entries
+- [ ] tag **vX.Y.0-rcZ**
+- [ ] deploy **vX.Y.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 
 ## At 22th - the release day
 
 - [ ] Before 12:00 UTC
     - [ ] add last entries to changelog
-    - [ ] merge all RC.x CHANGELOG entries into release entry
+    - [ ] merge all RCx CHANGELOG entries into release entry
     - [ ] tag stable version
 - [ ] Before 15:00 UTC
     - [ ] deploy stable version to all production Runners
@@ -83,7 +83,7 @@ if the only RC version was the _RC1_ released near 7th day of month.
 
 **RC release template**
 
-There should be at least one RC version between RC.1 and stable release. If there are any
+There should be at least one RC version between RC1 and stable release. If there are any
 important changes merged into stable branch (like bug/security fixes) the RC should be
 prepared and deployed as soon as possible. For a less important changes (documentation,
 simple fixes of typos etc.) the RC can wait a little.
@@ -92,11 +92,11 @@ When deciding to release a new RC version, please update the checklist using the
 template:
 
 ```markdown
-## At _day here_ - **vX.Y.0-rc.Z** release
+## At _day here_ - **vX.Y.0-rcZ** release
 
 - [ ] check if Pipeline for `X-Y-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/X-Y-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/X-Y-stable)
     - [ ] add all required fixes to make `X-Y-stable` Pipeline passing
-- [ ] add **vX.Y.0-rc.Z** CHANGELOG entries
-- [ ] tag **vX.Y.0-rc.Z**
-- [ ] deploy **vX.Y.0-rc.Z** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] add **vX.Y.0-rcZ** CHANGELOG entries
+- [ ] tag **vX.Y.0-rcZ**
+- [ ] deploy **vX.Y.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 ```
