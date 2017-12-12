@@ -10,7 +10,7 @@ import (
 	cryptoSSH "golang.org/x/crypto/ssh"
 )
 
-type MockSSHServer struct {
+type StubSSHServer struct {
 	User     string
 	Password string
 	Config   *cryptoSSH.ServerConfig
@@ -19,8 +19,8 @@ type MockSSHServer struct {
 	shouldExit *abool.AtomicBool
 }
 
-func NewMockServer(user, pass string, privateKey []byte) (*MockSSHServer, error) {
-	server := &MockSSHServer{
+func NewStubServer(user, pass string, privateKey []byte) (*StubSSHServer, error) {
+	server := &StubSSHServer{
 		User:     user,
 		Password: pass,
 		Config: &cryptoSSH.ServerConfig{
@@ -45,7 +45,7 @@ func NewMockServer(user, pass string, privateKey []byte) (*MockSSHServer, error)
 	return server, nil
 }
 
-func (s *MockSSHServer) Start() (int, error) {
+func (s *StubSSHServer) Start() (int, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:")
 	if err != nil {
 		return 0, err
@@ -63,11 +63,11 @@ func (s *MockSSHServer) Start() (int, error) {
 	return strconv.Atoi(address[1])
 }
 
-func (s *MockSSHServer) Stop() {
+func (s *StubSSHServer) Stop() {
 	s.stop <- true
 }
 
-func (s *MockSSHServer) mainLoop(listener net.Listener) {
+func (s *StubSSHServer) mainLoop(listener net.Listener) {
 	for {
 		if s.shouldExit.IsSet() {
 			return

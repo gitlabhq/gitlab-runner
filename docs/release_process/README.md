@@ -15,12 +15,12 @@ together with GitLab CE and GitLab EE projects.
 ### Stable release timeline
 
 - 12th day of a month:
-    - tag first RC version on `master` branch, e.g., `v1.6.0-rc.1`
+    - tag first RC version on `master` branch, e.g., `v1.6.0-rc1`
     - deploy the RC version to `docker-ci-X.gitlap.com`
       (each next RC version until the next date should be deployed to those hosts)
 
 - 17th day of a month:
-    - tag next RC version on `master` branch, e.g., `v1.6.0-rc.2`
+    - tag next RC version on `master` branch, e.g., `v1.6.0-rc2`
     - deploy the current RC version to `shared-runners-manager-X.gitlab.com`
       (each next RC version until the next date should be deployed to those hosts)
 
@@ -37,7 +37,7 @@ together with GitLab CE and GitLab EE projects.
         > if it's still not _production ready_!
 
 - 21th day of a month:
-    - tag last RC version, e.g., `v1.6.0-rc.5`
+    - tag last RC version, e.g., `v1.6.0-rc5`
 
 - 22nd day of a month:
     - update the `CHANGELOG` file with entries for current release
