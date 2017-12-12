@@ -39,7 +39,9 @@ func TestGetKubeClientConfig(t *testing.T) {
 	}
 
 	aConfig := func() (*restclient.Config, error) {
-		return completeConfig, nil
+		config := *completeConfig
+		return &config, nil
+
 	}
 
 	tests := []struct {
@@ -139,7 +141,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 			inClusterConfig = test.inClusterConfig
 			defaultKubectlConfig = test.defaultKubectlConfig
 
-			rcConf, err := getKubeClientConfig(test.config, &overwrites{bearerToken: test.overwrites.bearerToken})
+			rcConf, err := getKubeClientConfig(test.config, test.overwrites)
 
 			if err != nil && !test.error {
 				t.Errorf("expected error, but instead received: %v", rcConf)
