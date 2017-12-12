@@ -65,7 +65,7 @@ type clientJobTrace struct {
 	config         common.RunnerConfig
 	jobCredentials *common.JobCredentials
 	id             int
-	logLimitBytes  int
+	bytesLimit     int
 	cancelFunc     context.CancelFunc
 
 	log      bytes.Buffer
@@ -77,9 +77,9 @@ type clientJobTrace struct {
 	sentTime  time.Time
 	sentState common.JobState
 
-	traceUpdateInterval      time.Duration
-	traceForceSendInterval   time.Duration
-	traceFinishRetryInterval time.Duration
+	updateInterval      time.Duration
+	forceSendInterval   time.Duration
+	finishRetryInterval time.Duration
 }
 
 func (c *clientJobTrace) Success() {
@@ -128,7 +128,7 @@ func (c *clientJobTrace) finish() {
 		if c.fullUpdate() != common.UpdateFailed {
 			return
 		}
-		time.Sleep(c.traceFinishRetryInterval)
+		time.Sleep(c.finishRetryInterval)
 	}
 }
 
@@ -137,11 +137,11 @@ func (c *clientJobTrace) writeRune(r rune) (n int, err error) {
 	defer c.lock.Unlock()
 
 	n, err = c.log.WriteRune(r)
-	if c.log.Len() < c.logLimitBytes {
+	if c.log.Len() < c.bytesLimit {
 		return
 	}
 
-	c.log.WriteString(c.jobLogLimitExceededMessage())
+	c.log.WriteString(c.limitExceededMessage())
 	err = io.EOF
 	return
 }
@@ -181,7 +181,7 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 
 	if c.sentState == state &&
 		c.sentTrace == trace.Len() &&
-		time.Since(c.sentTime) < c.traceForceSendInterval {
+		time.Since(c.sentTime) < c.forceSendInterval {
 		return common.UpdateSucceeded
 	}
 
@@ -240,7 +240,7 @@ func (c *clientJobTrace) fullUpdate() common.UpdateState {
 
 	if c.sentState == state &&
 		c.sentTrace == len(trace) &&
-		time.Since(c.sentTime) < c.traceForceSendInterval {
+		time.Since(c.sentTime) < c.forceSendInterval {
 		return common.UpdateSucceeded
 	}
 
@@ -266,7 +266,7 @@ func (c *clientJobTrace) abort() bool {
 func (c *clientJobTrace) watch() {
 	for {
 		select {
-		case <-time.After(c.traceUpdateInterval):
+		case <-time.After(c.updateInterval):
 			state := c.incrementalUpdate()
 			if state == common.UpdateAbort && c.abort() {
 				<-c.finished
@@ -281,26 +281,26 @@ func (c *clientJobTrace) watch() {
 }
 
 func (c *clientJobTrace) setupLogLimit() {
-	c.logLimitBytes = c.config.OutputLimit
-	if c.logLimitBytes == 0 {
-		c.logLimitBytes = common.DefaultOutputLimit
+	c.bytesLimit = c.config.OutputLimit
+	if c.bytesLimit == 0 {
+		c.bytesLimit = common.DefaultOutputLimit
 	}
 	// configuration values are expressed in KB
-	c.logLimitBytes *= 1024
+	c.bytesLimit *= 1024
 }
 
-func (c *clientJobTrace) jobLogLimitExceededMessage() string {
-	return fmt.Sprintf("\n%sJob's log exceeded limit of %v bytes.%s\n", helpers.ANSI_BOLD_RED, c.logLimitBytes, helpers.ANSI_RESET)
+func (c *clientJobTrace) limitExceededMessage() string {
+	return fmt.Sprintf("\n%sJob's log exceeded limit of %v bytes.%s\n", helpers.ANSI_BOLD_RED, c.bytesLimit, helpers.ANSI_RESET)
 }
 
 func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentials *common.JobCredentials) *clientJobTrace {
 	return &clientJobTrace{
-		client:                   client,
-		config:                   config,
-		jobCredentials:           jobCredentials,
-		id:                       jobCredentials.ID,
-		traceUpdateInterval:      common.UpdateInterval,
-		traceForceSendInterval:   common.ForceTraceSentInterval,
-		traceFinishRetryInterval: common.UpdateRetryInterval,
+		client:              client,
+		config:              config,
+		jobCredentials:      jobCredentials,
+		id:                  jobCredentials.ID,
+		updateInterval:      common.UpdateInterval,
+		forceSendInterval:   common.ForceTraceSentInterval,
+		finishRetryInterval: common.UpdateRetryInterval,
 	}
 }

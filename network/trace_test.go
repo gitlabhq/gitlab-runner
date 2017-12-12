@@ -48,7 +48,7 @@ func TestJobTraceUpdateSucceeded(t *testing.T) {
 
 			b := newJobTrace(net, jobConfig, jobCredentials)
 			// speed up execution time
-			b.traceUpdateInterval = 10 * time.Millisecond
+			b.updateInterval = 10 * time.Millisecond
 			wg.Add(1)
 
 			b.start()
@@ -73,7 +73,7 @@ func TestIgnoreStatusChange(t *testing.T) {
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
 	// prevent any UpdateJob before `b.Success()` call
-	b.traceUpdateInterval = 25 * time.Second
+	b.updateInterval = 25 * time.Second
 
 	b.start()
 	b.Success()
@@ -93,7 +93,7 @@ func TestJobAbort(t *testing.T) {
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
 	// force immediate call to `UpdateJob`
-	b.traceUpdateInterval = 0
+	b.updateInterval = 0
 	b.SetCancelFunc(cancel)
 
 	b.start()
@@ -110,17 +110,17 @@ func TestJobOutputLimit(t *testing.T) {
 	net := new(common.MockNetwork)
 	b := newJobTrace(net, jobOutputLimit, jobCredentials)
 	// prevent any UpdateJob before `b.Success()` call
-	b.traceUpdateInterval = 25 * time.Second
+	b.updateInterval = 25 * time.Second
 
 	net.On("UpdateJob", jobOutputLimit, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded).Run(func(args mock.Arguments) {
 		if trace, ok := args.Get(4).(*string); ok {
-			expectedLogLimitExceededMsg := b.jobLogLimitExceededMessage()
-			bytesLimit := b.logLimitBytes + len(expectedLogLimitExceededMsg)
+			expectedLogLimitExceededMsg := b.limitExceededMessage()
+			bytesLimit := b.bytesLimit + len(expectedLogLimitExceededMsg)
 			traceSize := len(*trace)
 
 			assert.Equal(bytesLimit, traceSize, "the trace should be exaclty %v bytes", bytesLimit)
 			assert.Contains(*trace, traceMessage)
-			assert.Contains(*trace, b.jobLogLimitExceededMessage())
+			assert.Contains(*trace, b.limitExceededMessage())
 		} else {
 			assert.FailNow("Unexpected type on UpdateJob trace parameter")
 		}
@@ -142,7 +142,7 @@ func TestJobFinishRetry(t *testing.T) {
 	net.On("UpdateJob", jobConfig, jobCredentials, jobCredentials.ID, common.Success, mock.AnythingOfType("*string")).Return(common.UpdateSucceeded).Once()
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
-	b.traceFinishRetryInterval = time.Microsecond
+	b.finishRetryInterval = time.Microsecond
 
 	b.start()
 	b.Success()
@@ -170,8 +170,8 @@ func TestJobForceSend(t *testing.T) {
 
 	b := newJobTrace(net, jobConfig, jobCredentials)
 
-	b.traceUpdateInterval = 500 * time.Microsecond
-	b.traceForceSendInterval = 4 * b.traceUpdateInterval
+	b.updateInterval = 500 * time.Microsecond
+	b.forceSendInterval = 4 * b.updateInterval
 	b.start()
 	defer b.Success()
 
