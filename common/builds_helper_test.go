@@ -26,7 +26,8 @@ func TestBuildsHelperCollect(t *testing.T) {
 	}
 
 	b.AddBuild(build)
-	b.RecordFailure(build, RunnerSystemFailure)
+	jobFailureError := build.createJobFailureError(nil)
+	b.RecordFailure(build, jobFailureError, RunnerSystemFailure)
 
 	ch := make(chan prometheus.Metric, 50)
 	b.Collect(ch)

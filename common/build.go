@@ -58,6 +58,22 @@ const (
 	BuildStageUploadArtifacts   BuildStage = "upload_artifacts"
 )
 
+type JobFailureError struct {
+	internal error
+
+	BuildState    BuildRuntimeState
+	BuildStage    BuildStage
+	ExecutorStage ExecutorStage
+}
+
+func (jfe *JobFailureError) Error() string {
+	return jfe.internal.Error()
+}
+
+func (jfe *JobFailureError) IsNil() bool {
+	return jfe.internal == nil
+}
+
 type Build struct {
 	JobResponse `yaml:",inline"`
 
@@ -196,7 +212,7 @@ func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executo
 	return
 }
 
-func (b *Build) executeScript(ctx context.Context, executor Executor) error {
+func (b *Build) executeScript(ctx context.Context, executor Executor) *JobFailureError {
 	// Prepare stage
 	err := b.executeStage(ctx, BuildStagePrepare, executor)
 
@@ -233,7 +249,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	if jobState != nil {
 		err = jobState
 	}
-	return err
+	return b.createJobFailureError(err)
 }
 
 func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {
@@ -272,10 +288,10 @@ func (b *Build) handleError(err error) error {
 	}
 }
 
-func (b *Build) run(ctx context.Context, executor Executor) (err error) {
+func (b *Build) run(ctx context.Context, executor Executor) (err *JobFailureError) {
 	b.CurrentState = BuildRunRuntimeRunning
 
-	buildFinish := make(chan error, 1)
+	buildFinish := make(chan *JobFailureError, 1)
 
 	runContext, runCancel := context.WithCancel(context.Background())
 	defer runCancel()
@@ -289,11 +305,11 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	b.Log().Debugln("Waiting for signals...")
 	select {
 	case <-ctx.Done():
-		err = b.handleError(ctx.Err())
+		err = b.createJobFailureError(b.handleError(ctx.Err()))
 
 	case signal := <-b.SystemInterrupt:
-		err = fmt.Errorf("aborted: %v", signal)
 		b.CurrentState = BuildRunRuntimeTerminated
+		err = b.createJobFailureError(fmt.Errorf("aborted: %v", signal))
 
 	case err = <-buildFinish:
 		b.CurrentState = BuildRunRuntimeFinished
@@ -308,28 +324,28 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	return err
 }
 
-func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider ExecutorProvider, logger BuildLogger) (executor Executor, err error) {
+func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider ExecutorProvider, logger BuildLogger) (executor Executor, err *JobFailureError) {
 	for tries := 0; tries < PreparationRetries; tries++ {
 		executor = provider.Create()
 		if executor == nil {
-			err = errors.New("failed to create executor")
+			err = b.createJobFailureError(errors.New("failed to create executor"))
 			return
 		}
 
 		b.executorStageResolver = executor.GetCurrentStage
 
-		err = executor.Prepare(options)
-		if err == nil {
+		err = b.createJobFailureError(executor.Prepare(options))
+		if err.IsNil() {
 			break
 		}
 		if executor != nil {
 			executor.Cleanup()
 			executor = nil
 		}
-		if _, ok := err.(*BuildError); ok {
+		if _, ok := err.internal.(*BuildError); ok {
 			break
 		} else if options.Context.Err() != nil {
-			return nil, b.handleError(options.Context.Err())
+			return nil, b.createJobFailureError(b.handleError(options.Context.Err()))
 		}
 
 		logger.SoftErrorln("Preparation failed:", err)
@@ -349,7 +365,18 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 	return b.executorStageResolver()
 }
 
+func (b *Build) createJobFailureError(err error) *JobFailureError {
+	return &JobFailureError{
+		internal:      err,
+		BuildState:    b.CurrentState,
+		BuildStage:    b.CurrentStage,
+		ExecutorStage: b.CurrentExecutorStage(),
+	}
+}
+
 func (b *Build) Run(globalConfig *Config, trace JobTrace, bh *BuildsHelper) (err error) {
+	jobFailureError := &JobFailureError{}
+
 	var executor Executor
 
 	b.logger = NewBuildLogger(trace, b.Log())
@@ -358,18 +385,21 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace, bh *BuildsHelper) (err
 	b.CurrentState = BuildRunStatePending
 
 	defer func() {
-		if _, ok := err.(*BuildError); ok {
-			b.logger.SoftErrorln("Job failed:", err)
-			trace.Fail(err, ScriptFailure)
-			bh.RecordFailure(b, ScriptFailure)
-		} else if err != nil {
-			b.logger.Errorln("Job failed (system failure):", err)
-			trace.Fail(err, RunnerSystemFailure)
-			bh.RecordFailure(b, RunnerSystemFailure)
+		if !jobFailureError.IsNil() {
+			if _, ok := jobFailureError.internal.(*BuildError); ok {
+				b.logger.SoftErrorln("Job failed:", jobFailureError)
+				trace.Fail(jobFailureError, ScriptFailure)
+				bh.RecordFailure(b, jobFailureError, ScriptFailure)
+			} else if jobFailureError != nil {
+				b.logger.Errorln("Job failed (system failure):", jobFailureError)
+				trace.Fail(jobFailureError, RunnerSystemFailure)
+				bh.RecordFailure(b, jobFailureError, RunnerSystemFailure)
+			}
 		} else {
 			b.logger.Infoln("Job succeeded")
 			trace.Success()
 		}
+
 		if executor != nil {
 			executor.Cleanup()
 		}
@@ -395,14 +425,17 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace, bh *BuildsHelper) (err
 
 	provider.GetFeatures(&b.ExecutorFeatures)
 
-	executor, err = b.retryCreateExecutor(options, provider, b.logger)
-	if err == nil {
-		err = b.run(context, executor)
+	executor, jobFailureError = b.retryCreateExecutor(options, provider, b.logger)
+
+	if jobFailureError.IsNil() {
+		jobFailureError = b.run(context, executor)
 	}
+
+	err = jobFailureError.internal
 	if executor != nil {
 		executor.Finish(err)
 	}
-	return err
+	return
 }
 
 func (b *Build) String() string {

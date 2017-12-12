@@ -45,11 +45,16 @@ type failurePermutation struct {
 	reason JobFailureReason
 }
 
-func newFailurePermutation(job *Build, reason JobFailureReason) failurePermutation {
+func newFailurePermutation(job *Build, failureError *JobFailureError, reason JobFailureReason) failurePermutation {
 	failurePerm := failurePermutation{
 		reason: reason,
 	}
-	failurePerm.statePermutation = newStatePermutationFromBuild(job)
+	failurePerm.statePermutation = statePermutation{
+		runner:        job.Runner.ShortDescription(),
+		buildState:    failureError.BuildState,
+		buildStage:    failureError.BuildStage,
+		executorStage: failureError.ExecutorStage,
+	}
 
 	return failurePerm
 }
@@ -182,11 +187,11 @@ func (b *BuildsHelper) RemoveBuild(deleteBuild *Build) bool {
 	return false
 }
 
-func (b *BuildsHelper) RecordFailure(job *Build, reason JobFailureReason) {
+func (b *BuildsHelper) RecordFailure(job *Build, failureError *JobFailureError, reason JobFailureReason) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	failure := newFailurePermutation(job, reason)
+	failure := newFailurePermutation(job, failureError, reason)
 
 	if len(b.buildFailures) == 0 {
 		b.buildFailures = make(map[failurePermutation]int)

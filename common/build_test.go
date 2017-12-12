@@ -30,11 +30,13 @@ func TestBuildRun(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// We run everything once
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	e.On("Finish", nil).Return().Once()
 	e.On("Cleanup").Return().Once()
 
 	// Run script successfully
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(nil)
 
@@ -68,6 +70,7 @@ func TestRetryPrepare(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Times(4)
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("prepare failed")).Twice()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -109,7 +112,7 @@ func TestPrepareFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
-	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Times(3)
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("prepare failed")).Times(3)
 	e.On("Cleanup").Return().Times(3)
@@ -180,6 +183,7 @@ func TestRunFailure(t *testing.T) {
 	e.On("Cleanup").Return().Once()
 
 	// Fail a build script
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(errors.New("build fail"))
 	e.On("Finish", errors.New("build fail")).Return().Once()
@@ -212,7 +216,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
-	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Twice()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -252,7 +256,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
-	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Twice()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -292,7 +296,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
-	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Twice()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -339,13 +343,13 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
-	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Twice()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(nil).Times(2)
+	e.On("Run", mock.Anything).Return(nil).Twice()
 	e.On("Run", mock.Anything).Return(errors.New("build fail")).Times(3)
 	e.On("Finish", errors.New("build fail")).Return().Once()
 
@@ -378,7 +382,7 @@ func TestRunWrongAttempts(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
-	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Twice()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -415,6 +419,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// We run everything once
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Twice()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	e.On("Finish", mock.Anything).Return().Twice()
 	e.On("Cleanup").Return().Twice()
