@@ -1,16 +1,30 @@
+.common_conditions:
+  open: &open
+    state: opened
+  no_milestone: &no_milestone
+    <<: *open
+    milestone:
+      - No Milestone
+  backlog: &backlog
+    <<: *open
+    milestone:
+      - Backlog
+.common_actions:
+  scheduling_mismatch: &scheduling_mismatch
+    mention:
+      - bikebilly
+
 resource_rules:
   issues:
     rules:
       - name: Mark stale issues with no milestone for closure
         conditions:
+          <<: *no_milestone
           date:
             attribute: updated_at
             condition: older_than
             interval_type: months
             interval: 12
-          milestone:
-            - No Milestone
-          state: opened
         actions:
           labels:
             - awaiting feedback
@@ -69,6 +83,7 @@ resource_rules:
 
       - name: Mark stale bugs for closure
         conditions:
+          <<: *no_milestone
           date:
             attribute: updated_at
             condition: older_than
@@ -76,9 +91,6 @@ resource_rules:
             interval: 6
           labels:
             - bug
-          milestone:
-            - No Milestone
-          state: opened
         actions:
           labels:
             - awaiting feedback
@@ -130,6 +142,53 @@ resource_rules:
         actions:
           labels:
             - CI/CD
+
+      #
+      # scheduling mismatches
+      #
+
+      - name: Remove ~Deliverable from %Backlog
+        conditions:
+          <<: *backlog
+          labels: [ Deliverable ]
+        actions:
+          <<: *scheduling_mismatch
+          remove_labels: [ Deliverable ]
+      - name: Remove ~Deliverable from Unscheduled
+        conditions:
+          <<: *no_milestone
+          labels: [ Deliverable ]
+        actions:
+          <<: *scheduling_mismatch
+          remove_labels: [ Deliverable ]
+      - name: Remove ~Stretch from %Backlog
+        conditions:
+          <<: *backlog
+          labels: [ Stretch ]
+        actions:
+          <<: *scheduling_mismatch
+          remove_labels: [ Stretch ]
+      - name: Remove ~Stretch from Unscheduled
+        conditions:
+          <<: *no_milestone
+          labels: [ Stretch ]
+        actions:
+          <<: *scheduling_mismatch
+          remove_labels: [ Stretch ]
+      - name: Remove ~"Next Patch Release" from %Backlog
+        conditions:
+          <<: *backlog
+          labels: [ "Next Patch Release" ]
+        actions:
+          <<: *scheduling_mismatch
+          remove_labels: [ "Next Patch Release" ]
+      - name: Remove ~"Next Patch Release" from Unscheduled
+        conditions:
+          <<: *no_milestone
+          labels: [ "Next Patch Release" ]
+        actions:
+          <<: *scheduling_mismatch
+          remove_labels: [ "Next Patch Release" ]
 
   merge_requests:
     rules:
