@@ -1,3 +1,6 @@
+v 10.3.0-rc2 (2017-12-11)
+- new RC naming schema !780
+
 v 10.3.0-rc.1 (2017-12-10)
 - Stop Docker Machine before removing it !718
 - add `--checkout --force` options to `git submodule update --init` !704
