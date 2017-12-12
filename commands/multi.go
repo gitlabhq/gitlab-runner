@@ -33,7 +33,7 @@ type RunCommand struct {
 	network common.Network
 	healthHelper
 
-	buildsHelper buildsHelper
+	buildsHelper *common.BuildsHelper
 
 	ServiceName      string `short:"n" long:"service" description:"Use different names for different services"`
 	WorkingDirectory string `short:"d" long:"working-directory" description:"Specify custom working directory"`
@@ -66,7 +66,7 @@ type RunCommand struct {
 }
 
 func (mr *RunCommand) log() *log.Entry {
-	return log.WithField("builds", mr.buildsHelper.buildsCount())
+	return log.WithField("builds", mr.buildsHelper.BuildsCount())
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
@@ -99,10 +99,10 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 }
 
 func (mr *RunCommand) requestJob(runner *common.RunnerConfig) (*common.JobResponse, bool) {
-	if !mr.buildsHelper.acquireRequest(runner) {
+	if !mr.buildsHelper.AcquireRequest(runner) {
 		return nil, false
 	}
-	defer mr.buildsHelper.releaseRequest(runner)
+	defer mr.buildsHelper.ReleaseRequest(runner)
 
 	jobData, healthy := mr.network.RequestJob(*runner)
 	mr.makeHealthy(runner.UniqueID(), healthy)
@@ -123,12 +123,12 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	defer provider.Release(runner, context)
 
 	// Acquire build slot
-	if !mr.buildsHelper.acquireBuild(runner) {
+	if !mr.buildsHelper.AcquireBuild(runner) {
 		mr.log().WithField("runner", runner.ShortDescription()).
 			Debugln("Failed to request job: runner limit meet")
 		return
 	}
-	defer mr.buildsHelper.releaseBuild(runner)
+	defer mr.buildsHelper.ReleaseBuild(runner)
 
 	// Receive a new build
 	jobData, result := mr.requestJob(runner)
@@ -158,8 +158,8 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	}
 
 	// Add build to list of builds to assign numbers
-	mr.buildsHelper.addBuild(build)
-	defer mr.buildsHelper.removeBuild(build)
+	mr.buildsHelper.AddBuild(build)
+	defer mr.buildsHelper.RemoveBuild(build)
 
 	// Process the same runner by different worker again
 	// to speed up taking the builds
@@ -172,7 +172,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	}
 
 	// Process a build
-	return build.Run(mr.config, trace)
+	return build.Run(mr.config, trace, mr.buildsHelper)
 }
 
 func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan *common.RunnerConfig) {
@@ -345,7 +345,7 @@ func (mr *RunCommand) runWait() {
 func (mr *RunCommand) serveMetrics() {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
-	registry.MustRegister(&mr.buildsHelper)
+	registry.MustRegister(mr.buildsHelper)
 	// Metrics about catched errors
 	registry.MustRegister(&mr.prometheusLogHook)
 	// Metrics about the program's build version.
@@ -536,6 +536,7 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 
 func init() {
 	common.RegisterCommand2("run", "run multi runner service", &RunCommand{
+		buildsHelper:      &common.BuildsHelper{},
 		ServiceName:       defaultServiceName,
 		network:           network.NewGitLabClient(),
 		prometheusLogHook: prometheus_helper.NewLogHook(),

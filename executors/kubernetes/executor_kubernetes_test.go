@@ -1270,7 +1270,7 @@ func TestKubernetesSuccessRun(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	assert.NoError(t, err)
 }
 
@@ -1293,7 +1293,7 @@ func TestKubernetesNoRootImage(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	assert.NoError(t, err)
 }
 
@@ -1315,7 +1315,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 	}
 	build.Image.Name = "docker:git"
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "Error executing in Docker Container: 1")
@@ -1339,7 +1339,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 	}
 	build.Image.Name = "some/non-existing/image"
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "image pull failed")
@@ -1363,7 +1363,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 	}
 	build.Image.Name = "docker:missing-tag"
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "image pull failed")
@@ -1400,7 +1400,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -1437,7 +1437,7 @@ func TestKubernetesBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	err = build.Run(&common.Config{}, trace, &common.BuildsHelper{})
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
 }
@@ -1471,7 +1471,7 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 	}
 	build.Image.Name = "docker:git"
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not match")
 }
@@ -1505,7 +1505,7 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 	}
 	build.Image.Name = "docker:git"
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not match")
 }

@@ -52,7 +52,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	assert.NoError(t, err, "Make sure that you have done 'make -C tests/ubuntu virtualbox'")
 }
 
@@ -77,7 +77,7 @@ func TestVirtualBoxBuildFail(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "Process exited with: 1")
@@ -101,7 +101,7 @@ func TestVirtualBoxMissingImage(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Could not find a registered machine named")
 }
@@ -123,7 +123,7 @@ func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Missing SSH config")
 }
@@ -162,7 +162,7 @@ func TestVirtualBoxBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout}, &common.BuildsHelper{})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -201,7 +201,7 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	err = build.Run(&common.Config{}, trace, &common.BuildsHelper{})
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
 }

@@ -48,7 +48,7 @@ func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) e
 	})
 	defer timeoutTimer.Stop()
 
-	return build.Run(&common.Config{}, trace)
+	return build.Run(&common.Config{}, trace, &common.BuildsHelper{})
 }
 
 func runBuild(t *testing.T, build *common.Build) error {

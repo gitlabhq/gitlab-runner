@@ -50,7 +50,7 @@ func TestBuildRun(t *testing.T) {
 			},
 		},
 	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.NoError(t, err)
 }
 
@@ -91,7 +91,7 @@ func TestRetryPrepare(t *testing.T) {
 			},
 		},
 	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.NoError(t, err)
 }
 
@@ -109,6 +109,7 @@ func TestPrepareFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("prepare failed")).Times(3)
 	e.On("Cleanup").Return().Times(3)
@@ -125,7 +126,7 @@ func TestPrepareFailure(t *testing.T) {
 			},
 		},
 	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.EqualError(t, err, "prepare failed")
 }
 
@@ -141,6 +142,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(&BuildError{}).Times(1)
 	e.On("Cleanup").Return().Times(1)
@@ -157,7 +159,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 			},
 		},
 	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.IsType(t, err, &BuildError{})
 }
 
@@ -173,6 +175,7 @@ func TestRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return().Once()
 
@@ -193,7 +196,7 @@ func TestRunFailure(t *testing.T) {
 			},
 		},
 	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.EqualError(t, err, "build fail")
 }
 
@@ -209,6 +212,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -232,7 +236,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	}
 
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.EqualError(t, err, "build fail")
 }
 
@@ -248,6 +252,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -271,7 +276,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	}
 
 	build.Variables = append(build.Variables, JobVariable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.EqualError(t, err, "build fail")
 }
 
@@ -287,6 +292,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -317,7 +323,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.EqualError(t, err, "upload fail")
 }
 
@@ -333,6 +339,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -356,7 +363,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	}
 
 	build.Variables = append(build.Variables, JobVariable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.EqualError(t, err, "build fail")
 }
 
@@ -371,6 +378,7 @@ func TestRunWrongAttempts(t *testing.T) {
 	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
+	e.On("GetCurrentStage").Return(ExecutorStage("")).Once()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	e.On("Cleanup").Return()
 
@@ -394,7 +402,7 @@ func TestRunWrongAttempts(t *testing.T) {
 	}
 
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.EqualError(t, err, "Number of attempts out of the range [1, 10] for stage: get_sources")
 }
 
@@ -432,7 +440,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 	}
 
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout}, &BuildsHelper{})
 	assert.NoError(t, err)
 }
 

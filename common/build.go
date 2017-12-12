@@ -349,7 +349,7 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 	return b.executorStageResolver()
 }
 
-func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
+func (b *Build) Run(globalConfig *Config, trace JobTrace, bh *BuildsHelper) (err error) {
 	var executor Executor
 
 	b.logger = NewBuildLogger(trace, b.Log())
@@ -361,9 +361,11 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		if _, ok := err.(*BuildError); ok {
 			b.logger.SoftErrorln("Job failed:", err)
 			trace.Fail(err, ScriptFailure)
+			bh.RecordFailure(b, ScriptFailure)
 		} else if err != nil {
 			b.logger.Errorln("Job failed (system failure):", err)
 			trace.Fail(err, RunnerSystemFailure)
+			bh.RecordFailure(b, RunnerSystemFailure)
 		} else {
 			b.logger.Infoln("Job succeeded")
 			trace.Success()

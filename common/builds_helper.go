@@ -1,12 +1,10 @@
-package commands
+package common
 
 import (
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -18,14 +16,21 @@ var numBuildsDesc = prometheus.NewDesc(
 	nil,
 )
 
+var numBuildFailuresDesc = prometheus.NewDesc(
+	"ci_runner_failed_jobs_total",
+	"Total number of failed jobs",
+	[]string{"runner", "state", "stage", "executor_stage", "failure_reason"},
+	nil,
+)
+
 type statePermutation struct {
 	runner        string
-	buildState    common.BuildRuntimeState
-	buildStage    common.BuildStage
-	executorStage common.ExecutorStage
+	buildState    BuildRuntimeState
+	buildStage    BuildStage
+	executorStage ExecutorStage
 }
 
-func newStatePermutationFromBuild(build *common.Build) statePermutation {
+func newStatePermutationFromBuild(build *Build) statePermutation {
 	return statePermutation{
 		runner:        build.Runner.ShortDescription(),
 		buildState:    build.CurrentState,
@@ -34,18 +39,34 @@ func newStatePermutationFromBuild(build *common.Build) statePermutation {
 	}
 }
 
+type failurePermutation struct {
+	statePermutation
+
+	reason JobFailureReason
+}
+
+func newFailurePermutation(job *Build, reason JobFailureReason) failurePermutation {
+	failurePerm := failurePermutation{
+		reason: reason,
+	}
+	failurePerm.statePermutation = newStatePermutationFromBuild(job)
+
+	return failurePerm
+}
+
 type runnerCounter struct {
 	builds   int
 	requests int
 }
 
-type buildsHelper struct {
-	counters map[string]*runnerCounter
-	builds   []*common.Build
-	lock     sync.Mutex
+type BuildsHelper struct {
+	counters      map[string]*runnerCounter
+	builds        []*Build
+	buildFailures map[failurePermutation]int
+	lock          sync.Mutex
 }
 
-func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCounter {
+func (b *BuildsHelper) getRunnerCounter(runner *RunnerConfig) *runnerCounter {
 	if b.counters == nil {
 		b.counters = make(map[string]*runnerCounter)
 	}
@@ -58,7 +79,7 @@ func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCoun
 	return counter
 }
 
-func (b *buildsHelper) acquireBuild(runner *common.RunnerConfig) bool {
+func (b *BuildsHelper) AcquireBuild(runner *RunnerConfig) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -73,7 +94,7 @@ func (b *buildsHelper) acquireBuild(runner *common.RunnerConfig) bool {
 	return true
 }
 
-func (b *buildsHelper) releaseBuild(runner *common.RunnerConfig) bool {
+func (b *BuildsHelper) ReleaseBuild(runner *RunnerConfig) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -85,7 +106,7 @@ func (b *buildsHelper) releaseBuild(runner *common.RunnerConfig) bool {
 	return false
 }
 
-func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
+func (b *BuildsHelper) AcquireRequest(runner *RunnerConfig) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -99,7 +120,7 @@ func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
 	return true
 }
 
-func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig) bool {
+func (b *BuildsHelper) ReleaseRequest(runner *RunnerConfig) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -111,7 +132,7 @@ func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig) bool {
 	return false
 }
 
-func (b *buildsHelper) addBuild(build *common.Build) {
+func (b *BuildsHelper) AddBuild(build *Build) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -148,7 +169,7 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 	return
 }
 
-func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
+func (b *BuildsHelper) RemoveBuild(deleteBuild *Build) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -161,14 +182,31 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	return false
 }
 
-func (b *buildsHelper) buildsCount() int {
+func (b *BuildsHelper) RecordFailure(job *Build, reason JobFailureReason) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	failure := newFailurePermutation(job, reason)
+
+	if len(b.buildFailures) == 0 {
+		b.buildFailures = make(map[failurePermutation]int)
+	}
+
+	if _, ok := b.buildFailures[failure]; ok {
+		b.buildFailures[failure]++
+	} else {
+		b.buildFailures[failure] = 1
+	}
+}
+
+func (b *BuildsHelper) BuildsCount() int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	return len(b.builds)
 }
 
-func (b *buildsHelper) statesAndStages() map[statePermutation]int {
+func (b *BuildsHelper) statesAndStages() map[statePermutation]int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -185,12 +223,13 @@ func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 }
 
 // Describe implements prometheus.Collector.
-func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
+func (b *BuildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	ch <- numBuildsDesc
+	ch <- numBuildFailuresDesc
 }
 
 // Collect implements prometheus.Collector.
-func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
+func (b *BuildsHelper) Collect(ch chan<- prometheus.Metric) {
 	data := b.statesAndStages()
 
 	for state, count := range data {
@@ -204,9 +243,22 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			string(state.executorStage),
 		)
 	}
+
+	for failure, count := range b.buildFailures {
+		ch <- prometheus.MustNewConstMetric(
+			numBuildFailuresDesc,
+			prometheus.CounterValue,
+			float64(count),
+			failure.runner,
+			string(failure.buildState),
+			string(failure.buildStage),
+			string(failure.executorStage),
+			string(failure.reason),
+		)
+	}
 }
 
-func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
+func (b *BuildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain")
 
 	var jobs []string
