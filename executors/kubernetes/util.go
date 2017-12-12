@@ -42,7 +42,9 @@ func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites
 	}
 
 	//apply overwrites
-	kubeConfig.BearerToken = string(overwrites.bearerToken)
+	if len(overwrites.bearerToken) > 0 {
+		kubeConfig.BearerToken = string(overwrites.bearerToken)
+	}
 
 	return kubeConfig, nil
 }
