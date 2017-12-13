@@ -4,14 +4,19 @@ import (
 	"context"
 	"io"
 	"os"
+	"sync"
 )
 
 type Trace struct {
 	Writer     io.Writer
 	CancelFunc context.CancelFunc
+	mutex      sync.Mutex
 }
 
 func (s *Trace) Write(p []byte) (n int, err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if s.Writer == nil {
 		return 0, os.ErrInvalid
 	}
