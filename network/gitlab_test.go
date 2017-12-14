@@ -504,6 +504,25 @@ func TestRequestJob(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]interface{}) {
+	switch req["state"].(string) {
+	case "running":
+		w.WriteHeader(http.StatusOK)
+	case "failed":
+		failureReason, ok := req["failure_reason"].(string)
+		if ok && (JobFailureReason(failureReason) == ScriptFailure ||
+			JobFailureReason(failureReason) == RunnerSystemFailure) {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	case "forbidden":
+		w.WriteHeader(http.StatusForbidden)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
 func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/jobs/10" {
 		w.WriteHeader(http.StatusNotFound)
@@ -525,21 +544,7 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.Equal(t, "token", req["token"])
 	assert.Equal(t, "trace", req["trace"])
 
-	switch req["state"].(string) {
-	case "running":
-		w.WriteHeader(http.StatusOK)
-	case "failed":
-		failureReason, ok := req["failure_reason"].(string)
-		if ok && JobFailureReason(failureReason) == ScriptFailure {
-			w.WriteHeader(http.StatusOK)
-		} else {
-			w.WriteHeader(http.StatusBadRequest)
-		}
-	case "forbidden":
-		w.WriteHeader(http.StatusForbidden)
-	default:
-		w.WriteHeader(http.StatusBadRequest)
-	}
+	setStateForUpdateJobHandlerResponse(w, req)
 }
 
 func TestUpdateJob(t *testing.T) {
