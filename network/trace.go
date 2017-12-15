@@ -81,6 +81,8 @@ type clientJobTrace struct {
 	updateInterval      time.Duration
 	forceSendInterval   time.Duration
 	finishRetryInterval time.Duration
+
+	failuresCollector common.FailuresCollector
 }
 
 func (c *clientJobTrace) Success() {
@@ -89,18 +91,19 @@ func (c *clientJobTrace) Success() {
 
 func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {
 	c.lock.Lock()
+
 	if c.state != common.Running {
 		c.lock.Unlock()
 		return
 	}
+
 	if err == nil {
 		c.state = common.Success
 	} else {
-		c.state = common.Failed
-		c.failureReason = failureReason
+		c.setFailure(failureReason)
 	}
-	c.lock.Unlock()
 
+	c.lock.Unlock()
 	c.finish()
 }
 
@@ -108,8 +111,20 @@ func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	c.cancelFunc = cancelFunc
 }
 
+func (c *clientJobTrace) SetFailuresCollector(fc common.FailuresCollector) {
+	c.failuresCollector = fc
+}
+
 func (c *clientJobTrace) IsStdout() bool {
 	return false
+}
+
+func (c *clientJobTrace) setFailure(reason common.JobFailureReason) {
+	c.state = common.Failed
+	c.failureReason = reason
+	if c.failuresCollector != nil {
+		c.failuresCollector.RecordFailure(reason, c.config.ShortDescription())
+	}
 }
 
 func (c *clientJobTrace) start() {

@@ -33,6 +33,8 @@ func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	s.CancelFunc = cancelFunc
 }
 
+func (s *Trace) SetFailuresCollector(fc FailuresCollector) {}
+
 func (s *Trace) IsStdout() bool {
 	return true
 }
