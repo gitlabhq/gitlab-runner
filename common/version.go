@@ -43,6 +43,14 @@ func (v *AppVersionInfo) UserAgent() string {
 	return fmt.Sprintf("%s %s (%s; %s; %s/%s)", v.Name, v.Version, v.Branch, v.GOVersion, v.OS, v.Architecture)
 }
 
+func (v *AppVersionInfo) Variables() JobVariables {
+	return JobVariables{
+		{Key: "CI_RUNNER_VERSION", Value: v.Version, Public: true, Internal: true, File: false},
+		{Key: "CI_RUNNER_REVISION", Value: v.Revision, Public: true, Internal: true, File: false},
+		{Key: "CI_RUNNER_EXECUTABLE_ARCH", Value: fmt.Sprintf("%s/%s", v.OS, v.Architecture), Public: true, Internal: true, File: false},
+	}
+}
+
 func (v *AppVersionInfo) Extended() string {
 	version := fmt.Sprintf("Version:      %s\n", v.Version)
 	version += fmt.Sprintf("Git revision: %s\n", v.Revision)
