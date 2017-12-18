@@ -172,6 +172,20 @@ race conditions detector:
   - source ci/touch_make_dependencies
   - make check_race_conditions
 
+git 1.7.1:
+  image: centos:6
+  stage: test
+  variables:
+    GOROOT: /usr/local/go
+    GOPATH: /go
+    CGO_ENABLED: 0
+  script:
+    - yum install -y -q git && git version
+    - curl https://storage.googleapis.com/golang/go1.8.5.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+    - export PATH=${GOROOT}/bin:$PATH
+    - source ci/touch_make_dependencies
+    - go test -v gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
+
 #
 # Build stage
 #
