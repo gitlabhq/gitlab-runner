@@ -21,7 +21,7 @@ type failurePermutation struct {
 }
 
 type FailuresCollector struct {
-	lock sync.Mutex
+	lock sync.RWMutex
 
 	failures map[failurePermutation]int64
 }
@@ -47,6 +47,9 @@ func (fc *FailuresCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (fc *FailuresCollector) Collect(ch chan<- prometheus.Metric) {
+	fc.lock.RLock()
+	defer fc.lock.RUnlock()
+
 	for failure, number := range fc.failures {
 		ch <- prometheus.MustNewConstMetric(
 			numJobFailuresDesc,
