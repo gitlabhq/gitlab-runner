@@ -222,17 +222,18 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	}
 }
 
-func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, id int, state common.JobState, trace *string) common.UpdateState {
+func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *common.JobCredentials, jobInfo common.UpdateJobInfo) common.UpdateState {
 	request := common.UpdateJobRequest{
-		Info:  n.getRunnerVersion(config),
-		Token: jobCredentials.Token,
-		State: state,
-		Trace: trace,
+		Info:          n.getRunnerVersion(config),
+		Token:         jobCredentials.Token,
+		State:         jobInfo.State,
+		FailureReason: jobInfo.FailureReason,
+		Trace:         jobInfo.Trace,
 	}
 
-	log := config.Log().WithField("job", id)
+	log := config.Log().WithField("job", jobInfo.ID)
 
-	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", id), http.StatusOK, &request, nil)
+	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", jobInfo.ID), http.StatusOK, &request, nil)
 	switch result {
 	case http.StatusOK:
 		log.Debugln("Submitting job to coordinator...", "ok")

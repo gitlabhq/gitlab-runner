@@ -12,12 +12,19 @@ type UpdateState int
 type UploadState int
 type DownloadState int
 type JobState string
+type JobFailureReason string
 
 const (
 	Pending JobState = "pending"
 	Running JobState = "running"
 	Failed  JobState = "failed"
 	Success JobState = "success"
+)
+
+const (
+	NoneFailure         JobFailureReason = ""
+	ScriptFailure       JobFailureReason = "script_failure"
+	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 )
 
 const (
@@ -263,10 +270,11 @@ func (j *JobResponse) RepoCleanURL() string {
 }
 
 type UpdateJobRequest struct {
-	Info  VersionInfo `json:"info,omitempty"`
-	Token string      `json:"token,omitempty"`
-	State JobState    `json:"state,omitempty"`
-	Trace *string     `json:"trace,omitempty"`
+	Info          VersionInfo      `json:"info,omitempty"`
+	Token         string           `json:"token,omitempty"`
+	State         JobState         `json:"state,omitempty"`
+	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
+	Trace         *string          `json:"trace,omitempty"`
 }
 
 type JobCredentials struct {
@@ -298,11 +306,23 @@ func (j *JobCredentials) GetToken() string {
 	return j.Token
 }
 
+type UpdateJobInfo struct {
+	ID            int
+	State         JobState
+	Trace         *string
+	FailureReason JobFailureReason
+}
+
+type FailuresCollector interface {
+	RecordFailure(reason JobFailureReason, runnerDescription string)
+}
+
 type JobTrace interface {
 	io.Writer
 	Success()
-	Fail(err error)
+	Fail(err error, failureReason JobFailureReason)
 	SetCancelFunc(cancelFunc context.CancelFunc)
+	SetFailuresCollector(fc FailuresCollector)
 	IsStdout() bool
 }
 
@@ -319,7 +339,7 @@ type Network interface {
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig) (*JobResponse, bool)
-	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, id int, state JobState, trace *string) UpdateState
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState

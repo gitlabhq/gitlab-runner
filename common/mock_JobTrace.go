@@ -13,8 +13,8 @@ type MockJobTrace struct {
 }
 
 // Fail provides a mock function with given fields: err
-func (_m *MockJobTrace) Fail(err error) {
-	_m.Called(err)
+func (_m *MockJobTrace) Fail(err error, failureReason JobFailureReason) {
+	_m.Called(err, failureReason)
 }
 
 // IsStdout provides a mock function with given fields:

@@ -1522,10 +1522,11 @@ type FakeBuildTrace struct {
 	testWriter
 }
 
-func (f FakeBuildTrace) Success()                                    {}
-func (f FakeBuildTrace) Fail(error)                                  {}
-func (f FakeBuildTrace) Notify(func())                               {}
-func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc) {}
+func (f FakeBuildTrace) Success()                                              {}
+func (f FakeBuildTrace) Fail(err error, failureReason common.JobFailureReason) {}
+func (f FakeBuildTrace) Notify(func())                                         {}
+func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)           {}
+func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)      {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }

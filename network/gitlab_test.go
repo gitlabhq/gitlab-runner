@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -503,6 +504,25 @@ func TestRequestJob(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]interface{}) {
+	switch req["state"].(string) {
+	case "running":
+		w.WriteHeader(http.StatusOK)
+	case "failed":
+		failureReason, ok := req["failure_reason"].(string)
+		if ok && (JobFailureReason(failureReason) == ScriptFailure ||
+			JobFailureReason(failureReason) == RunnerSystemFailure) {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	case "forbidden":
+		w.WriteHeader(http.StatusForbidden)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
 func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/jobs/10" {
 		w.WriteHeader(http.StatusNotFound)
@@ -524,14 +544,7 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.Equal(t, "token", req["token"])
 	assert.Equal(t, "trace", req["trace"])
 
-	switch req["state"].(string) {
-	case "running":
-		w.WriteHeader(http.StatusOK)
-	case "forbidden":
-		w.WriteHeader(http.StatusForbidden)
-	default:
-		w.WriteHeader(http.StatusBadRequest)
-	}
+	setStateForUpdateJobHandlerResponse(w, req)
 }
 
 func TestUpdateJob(t *testing.T) {
@@ -555,20 +568,31 @@ func TestUpdateJob(t *testing.T) {
 	trace := "trace"
 	c := NewGitLabClient()
 
-	state := c.UpdateJob(config, jobCredentials, 10, "running", &trace)
+	var state UpdateState
+
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, 10, "forbidden", &trace)
-	assert.Equal(t, UpdateAbort, state, "Update should if the state is forbidden")
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "forbidden", Trace: &trace, FailureReason: ""})
+	assert.Equal(t, UpdateAbort, state, "Update should be aborted if the state is forbidden")
 
-	state = c.UpdateJob(config, jobCredentials, 10, "other", &trace)
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "other", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(config, jobCredentials, 4, "state", &trace)
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown job")
 
-	state = c.UpdateJob(brokenConfig, jobCredentials, 4, "state", &trace)
+	state = c.UpdateJob(brokenConfig, jobCredentials, UpdateJobInfo{ID: 4, State: "state", Trace: &trace, FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state)
+
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: "script_failure"})
+	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
+
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: "unknown_failure_reason"})
+	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
+
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: ""})
+	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 }
 
 var patchToken = "token"

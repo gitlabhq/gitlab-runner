@@ -68,10 +68,11 @@ type clientJobTrace struct {
 	bytesLimit     int
 	cancelFunc     context.CancelFunc
 
-	log      bytes.Buffer
-	lock     sync.RWMutex
-	state    common.JobState
-	finished chan bool
+	log           bytes.Buffer
+	lock          sync.RWMutex
+	state         common.JobState
+	failureReason common.JobFailureReason
+	finished      chan bool
 
 	sentTrace int
 	sentTime  time.Time
@@ -80,25 +81,29 @@ type clientJobTrace struct {
 	updateInterval      time.Duration
 	forceSendInterval   time.Duration
 	finishRetryInterval time.Duration
+
+	failuresCollector common.FailuresCollector
 }
 
 func (c *clientJobTrace) Success() {
-	c.Fail(nil)
+	c.Fail(nil, common.NoneFailure)
 }
 
-func (c *clientJobTrace) Fail(err error) {
+func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {
 	c.lock.Lock()
+
 	if c.state != common.Running {
 		c.lock.Unlock()
 		return
 	}
+
 	if err == nil {
 		c.state = common.Success
 	} else {
-		c.state = common.Failed
+		c.setFailure(failureReason)
 	}
-	c.lock.Unlock()
 
+	c.lock.Unlock()
 	c.finish()
 }
 
@@ -106,8 +111,20 @@ func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	c.cancelFunc = cancelFunc
 }
 
+func (c *clientJobTrace) SetFailuresCollector(fc common.FailuresCollector) {
+	c.failuresCollector = fc
+}
+
 func (c *clientJobTrace) IsStdout() bool {
 	return false
+}
+
+func (c *clientJobTrace) setFailure(reason common.JobFailureReason) {
+	c.state = common.Failed
+	c.failureReason = reason
+	if c.failuresCollector != nil {
+		c.failuresCollector.RecordFailure(reason, c.config.ShortDescription())
+	}
 }
 
 func (c *clientJobTrace) start() {
@@ -186,7 +203,12 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 	}
 
 	if c.sentState != state {
-		c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, nil)
+		jobInfo := common.UpdateJobInfo{
+			ID:            c.id,
+			State:         state,
+			FailureReason: c.failureReason,
+		}
+		c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
 		c.sentState = state
 	}
 
@@ -217,7 +239,14 @@ func (c *clientJobTrace) resendPatch(id int, config common.RunnerConfig, jobCred
 		config.Log().Warningln(id, "Full job update is needed")
 		fullTrace := c.log.String()
 
-		return c.client.UpdateJob(c.config, jobCredentials, c.id, c.state, &fullTrace)
+		jobInfo := common.UpdateJobInfo{
+			ID:            c.id,
+			State:         c.state,
+			Trace:         &fullTrace,
+			FailureReason: c.failureReason,
+		}
+
+		return c.client.UpdateJob(c.config, jobCredentials, jobInfo)
 	}
 
 	config.Log().Warningln(id, "Resending trace patch due to range mismatch")
@@ -244,14 +273,21 @@ func (c *clientJobTrace) fullUpdate() common.UpdateState {
 		return common.UpdateSucceeded
 	}
 
-	upload := c.client.UpdateJob(c.config, c.jobCredentials, c.id, state, &trace)
-	if upload == common.UpdateSucceeded {
+	jobInfo := common.UpdateJobInfo{
+		ID:            c.id,
+		State:         state,
+		Trace:         &trace,
+		FailureReason: c.failureReason,
+	}
+
+	update := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
+	if update == common.UpdateSucceeded {
 		c.sentTrace = len(trace)
 		c.sentState = state
 		c.sentTime = time.Now()
 	}
 
-	return upload
+	return update
 }
 
 func (c *clientJobTrace) abort() bool {
