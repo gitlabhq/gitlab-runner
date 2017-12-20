@@ -10,8 +10,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func buildOverwriteVariables(namespace, serviceAccount, bearerToken string) common.JobVariables {
-	variables := make(common.JobVariables, 3)
+func buildOverwriteVariables(namespace, serviceAccount, bearerToken string, podAnnotations map[string]string) common.JobVariables {
+	variables := make(common.JobVariables, 4)
 
 	if namespace != "" {
 		variables = append(variables, common.JobVariable{Key: NamespaceOverwriteVariableName, Value: namespace})
@@ -25,6 +25,9 @@ func buildOverwriteVariables(namespace, serviceAccount, bearerToken string) comm
 		variables = append(variables, common.JobVariable{Key: BearerTokenOverwriteVariableValue, Value: bearerToken})
 	}
 
+	for k, v := range podAnnotations {
+		variables = append(variables, common.JobVariable{Key: k, Value: v})
+	}
 	return variables
 }
 
@@ -38,6 +41,15 @@ func TestOverwrites(t *testing.T) {
 		NamespaceOverwriteAllowed:      ".*",
 		ServiceAccountOverwriteAllowed: ".*",
 		BearerTokenOverwriteAllowed:    true,
+		PodAnnotationsOverwriteAllowed: ".*",
+		PodAnnotations: map[string]string{
+			"test1":                     "test1",
+			"test2":                     "test2",
+			"test3":                     "test3",
+			"org.gitlab/runner-version": "v10.4.0",
+			"org.gitlab/gitlab-host":    "https://gitlab.example.com",
+			"iam.amazonaws.com/role":    "arn:aws:iam::123456789012:role/",
+		},
 	}
 
 	tests := []struct {
@@ -46,6 +58,7 @@ func TestOverwrites(t *testing.T) {
 		NamespaceOverwriteVariableValue      string
 		ServiceAccountOverwriteVariableValue string
 		BearerTokenOverwriteVariableValue    string
+		PodAnnotationsOverwriteValues        map[string]string
 		Expected                             *overwrites
 		Error                                bool
 	}{
@@ -60,10 +73,25 @@ func TestOverwrites(t *testing.T) {
 			NamespaceOverwriteVariableValue:      "my_namespace",
 			ServiceAccountOverwriteVariableValue: "my_service_account",
 			BearerTokenOverwriteVariableValue:    "my_bearer_token",
+			PodAnnotationsOverwriteValues: map[string]string{
+				"KUBERNETES_POD_ANNOTATIONS_1":            "test3=test3=1",
+				"KUBERNETES_POD_ANNOTATIONS_2":            "test4=test4",
+				"KUBERNETES_POD_ANNOTATIONS_gilabversion": "org.gitlab/runner-version=v10.4.0-override",
+				"KUBERNETES_POD_ANNOTATIONS_kube2iam":     "iam.amazonaws.com/role=arn:aws:iam::kjcbs;dkjbck=jxzweopiu:role/",
+			},
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
 				bearerToken:    "my_bearer_token",
+				podAnnotations: map[string]string{
+					"test1":                     "test1",
+					"test2":                     "test2",
+					"test3":                     "test3=1",
+					"test4":                     "test4",
+					"org.gitlab/runner-version": "v10.4.0-override",
+					"org.gitlab/gitlab-host":    "https://gitlab.example.com",
+					"iam.amazonaws.com/role":    "arn:aws:iam::kjcbs;dkjbck=jxzweopiu:role/",
+				},
 			},
 		},
 		{
@@ -72,14 +100,26 @@ func TestOverwrites(t *testing.T) {
 				Namespace:      "my_namespace",
 				ServiceAccount: "my_service_account",
 				BearerToken:    "my_bearer_token",
+				PodAnnotations: map[string]string{
+					"test1": "test1",
+					"test2": "test2",
+				},
 			},
 			NamespaceOverwriteVariableValue:      "another_namespace",
 			ServiceAccountOverwriteVariableValue: "another_service_account",
 			BearerTokenOverwriteVariableValue:    "another_bearer_token",
+			PodAnnotationsOverwriteValues: map[string]string{
+				"KUBERNETES_POD_ANNOTATIONS_1": "test3=test3",
+				"KUBERNETES_POD_ANNOTATIONS_2": "test4=test4",
+			},
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
 				bearerToken:    "my_bearer_token",
+				podAnnotations: map[string]string{
+					"test1": "test1",
+					"test2": "test2",
+				},
 			},
 		},
 		{
@@ -98,13 +138,32 @@ func TestOverwrites(t *testing.T) {
 			ServiceAccountOverwriteVariableValue: "my_service_account",
 			Error: true,
 		},
+		{
+			Name: "PodAnnotations failure",
+			Config: &common.KubernetesConfig{
+				PodAnnotationsOverwriteAllowed: "not-a-match",
+			},
+			PodAnnotationsOverwriteValues: map[string]string{
+				"KUBERNETES_POD_ANNOTATIONS_1": "test1=test1",
+			},
+			Error: true,
+		},
+		{
+			Name: "PodAnnotations malformed key",
+			Config: &common.KubernetesConfig{
+				PodAnnotationsOverwriteAllowed: ".*",
+			},
+			PodAnnotationsOverwriteValues: map[string]string{
+				"KUBERNETES_POD_ANNOTATIONS_1": "test1",
+			},
+			Error: true,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			assert := assert.New(t)
-
-			variables := buildOverwriteVariables(test.NamespaceOverwriteVariableValue, test.ServiceAccountOverwriteVariableValue, test.BearerTokenOverwriteVariableValue)
+			variables := buildOverwriteVariables(test.NamespaceOverwriteVariableValue, test.ServiceAccountOverwriteVariableValue, test.BearerTokenOverwriteVariableValue, test.PodAnnotationsOverwriteValues)
 			values, err := createOverwrites(test.Config, variables, logger)
 			if test.Error {
 				assert.Error(err)

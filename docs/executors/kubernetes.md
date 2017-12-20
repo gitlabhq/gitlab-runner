@@ -82,7 +82,10 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status. [Default: 3]
 - `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]
 - `pod_labels`: A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion.
-- `pod_annotations`: A set of annotations to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build.
+- `pod_annotations`: A set of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build.
+- `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
+  the pod annotations overwrite environment variable. When empty,
+    it disables the pod annotations overwrite feature
 - `service-account`: default service account to be used for making kubernetes api calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
@@ -138,16 +141,15 @@ variables:
   KUBERNETES_BEARER_TOKEN: thebearertokenfromanothernamespace
 ```
 
-## Overwritting Pod Annottions
-Additionally, Kubernetes pod annotations can be overwritten on the `.gitlab-ci.yml` file, by using `KUBERNETES_POD_ANNOTATIONS_*` for variables and `key=value` for the value. The pod annotaions will be overwritten to the `key=value`. Also, multiple annotations can be applied. For example:
-```
+### Overwriting pod annotations
+
+Additionally, Kubernetes pod annotations can be overwritten on the `.gitlab-ci.yml` file, by using `KUBERNETES_POD_ANNOTATIONS_*` for variables and `key=value` for the value. The pod annotations will be overwritten to the `key=value`. Also, multiple annotations can be applied. For example:
+``` yaml
  variables:
    KUBERNETES_POD_ANNOTATIONS_1: "Key1=Val1"
    KUBERNETES_POD_ANNOTATIONS_2: "Key2=Val2"
    KUBERNETES_POD_ANNOTATIONS_3: "Key3=Val3"
 ```
-
-The environment variable `KUBERNETES_POD_ANNOTATIONS_OVERWRITE_ALLOWED` for the runner needs to be set in order for any pod annotations to be overwritten in the build
 
 ## Define keywords in the config toml
 

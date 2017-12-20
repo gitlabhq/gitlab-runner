@@ -1145,18 +1145,15 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Variables: []common.JobVariable{
-				{Key: "test", Value: "sometestvar"},
-			},
-			PrepareFn: func(t *testing.T, test testDef, e *executor) {
-				e.podAnnotations = e.getPodAnnotations(&common.Build{})
-			},
 			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				assert.Equal(t, map[string]string{
 					"test":    "annotation",
 					"another": "annotation",
 					"var":     "sometestvar",
 				}, pod.ObjectMeta.Annotations)
+			},
+			Variables: []common.JobVariable{
+				{Key: "test", Value: "sometestvar"},
 			},
 		},
 		{
@@ -1535,46 +1532,6 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not match")
-}
-
-func TestGetPodAnnotations(t *testing.T) {
-
-	exec := executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Executor: "kubernetes",
-					Kubernetes: &common.KubernetesConfig{
-						PodAnnotationsOverwriteAllowed: "true",
-						PodAnnotations: map[string]string{
-							"key1": "val1",
-							"key2": "val2",
-							"key3": "val3",
-							"key4": "defaultval4",
-						},
-					},
-				},
-			},
-			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Variables: []common.JobVariable{
-						{Key: "KUBERNETES_POD_ANNOTATIONS_1", Value: "key1=overwriteval1"},
-						{Key: "KUBERNETES_POD_ANNOTATIONS_2", Value: "key2=overwriteval2"},
-						{Key: "KUBERNETES_POD_ANNOTATIONS_3", Value: "key3=overwriteval3"},
-						{Key: "KUBERNETES_POD_ANNOTATIONS_4", Value: "key5=appendedval5"},
-					},
-				},
-			},
-		},
-	}
-
-	assert.Equal(t, map[string]string{
-		"key1": "overwriteval1",
-		"key2": "overwriteval2",
-		"key3": "overwriteval3",
-		"key4": "defaultval4",
-		"key5": "appendedval5",
-	}, exec.getPodAnnotations(exec.Build))
 }
 
 type FakeReadCloser struct {
