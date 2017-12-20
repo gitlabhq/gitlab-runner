@@ -1,7 +1,7 @@
 package docker_test
 
 import (
-	"bytes"
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,16 +11,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-version"
+	version "github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	common_test "gitlab.com/gitlab-org/gitlab-runner/common/test"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-
-	"golang.org/x/net/context"
 )
 
 func TestDockerCommandSuccessRun(t *testing.T) {
@@ -42,7 +41,7 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -65,7 +64,7 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -88,7 +87,7 @@ func TestDockerCommandBuildFail(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "exit code 1")
@@ -124,7 +123,7 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -161,7 +160,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, &common.BuildError{}, err)
 
@@ -189,7 +188,7 @@ func TestDockerCommandMissingTag(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -227,7 +226,7 @@ func TestDockerCommandBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -250,11 +249,9 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 		},
 	}
 
-	trace := &common.Trace{Writer: os.Stdout}
-
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.CancelFunc()
+		build.Cancel()
 	})
 	defer abortTimer.Stop()
 
@@ -264,7 +261,8 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	trace := &common.Trace{Writer: os.Stdout}
+	err = build.Run(trace.Context(), &common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
 }
@@ -292,15 +290,11 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 		},
 	}
 
-	var buffer bytes.Buffer
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
-	assert.NoError(t, err)
-	str := buffer.String()
+	out := runTestJobWithOutput(t, build)
 
 	re, err := regexp.Compile("(?m)Conflict. The container name [^ ]+ is already in use by container")
 	require.NoError(t, err)
-	assert.NotRegexp(t, re, str, "Both service containers should be started and use different name")
+	assert.NotRegexp(t, re, out, "Both service containers should be started and use different name")
 }
 
 func TestDockerCommandOutput(t *testing.T) {
@@ -322,14 +316,11 @@ func TestDockerCommandOutput(t *testing.T) {
 		},
 	}
 
-	var buffer bytes.Buffer
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
-	assert.NoError(t, err)
+	out := runTestJobWithOutput(t, build)
 
 	re, err := regexp.Compile("(?m)^Cloning into '/builds/gitlab-org/gitlab-test'...")
 	assert.NoError(t, err)
-	assert.Regexp(t, re, buffer.String())
+	assert.Regexp(t, re, out)
 }
 
 func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
@@ -382,7 +373,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 			Key: "GIT_STRATEGY", Value: strategy,
 		})
 
-		err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+		err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 		assert.NoError(t, err)
 	}
 }
@@ -472,20 +463,19 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 			build.Services = example.services
 			build.Variables = append(build.Variables, example.variables...)
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 			assert.NoError(t, err)
 		})
 	}
 }
 
-func runTestJobWithOutput(t *testing.T, build *common.Build) (output string) {
-	var buffer bytes.Buffer
+func runTestJobWithOutput(t *testing.T, build *common.Build) string {
+	trace := common_test.NewStubJobTrace()
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	err := build.Run(trace.Context(), &common.Config{}, trace)
 	assert.NoError(t, err)
 
-	output = buffer.String()
-	return
+	return trace.Read()
 }
 
 func TestCacheInContainer(t *testing.T) {
@@ -705,7 +695,7 @@ func testDockerVersion(t *testing.T, version string) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -803,11 +793,10 @@ func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
 		},
 	}
 
-	var buffer bytes.Buffer
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	trace := common_test.NewStubJobTrace()
+	err = build.Run(trace.Context(), &common.Config{}, trace)
 	assert.Error(t, err)
-	out := buffer.String()
+	out := trace.Read()
 	assert.Contains(t, out, "Cloning repository")
 	assert.NotContains(t, out, "Updating/initializing submodules")
 }
@@ -834,11 +823,7 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 		},
 	}
 
-	var buffer bytes.Buffer
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
-	assert.NoError(t, err)
-	out := buffer.String()
+	out := runTestJobWithOutput(t, build)
 	assert.Contains(t, out, "Cloning repository")
 	assert.Contains(t, out, "Updating/initializing submodules")
 }
@@ -865,10 +850,7 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 		},
 	}
 
-	var buffer bytes.Buffer
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
-	assert.NoError(t, err)
-	out := buffer.String()
+	out := runTestJobWithOutput(t, build)
 	assert.Contains(t, out, "Pulling docker image "+helperImageConfig)
 	assert.Contains(t, out, "Using docker image sha256:bbd86c6ba107ae2feb8dbf9024df4b48597c44e1b584a3d901bba91f7fc500e3 for predefined container...")
 }

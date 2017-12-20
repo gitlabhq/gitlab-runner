@@ -1,7 +1,6 @@
 package shell_test
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -12,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	common_test "gitlab.com/gitlab-org/gitlab-runner/common/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
@@ -41,14 +41,14 @@ func onEachShell(t *testing.T, f func(t *testing.T, shell string)) {
 	})
 }
 
-func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) error {
+func runBuildWithTrace(t *testing.T, build *common.Build, trace common.JobTrace) error {
 	timeoutTimer := time.AfterFunc(10*time.Second, func() {
 		t.Log("Timed out")
 		t.FailNow()
 	})
 	defer timeoutTimer.Stop()
 
-	return build.Run(&common.Config{}, trace)
+	return build.Run(trace.Context(), &common.Config{}, trace)
 }
 
 func runBuild(t *testing.T, build *common.Build) error {
@@ -58,9 +58,9 @@ func runBuild(t *testing.T, build *common.Build) error {
 }
 
 func runBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {
-	buf := bytes.NewBuffer(nil)
-	err := runBuildWithTrace(t, build, &common.Trace{Writer: buf})
-	output := buf.String()
+	trace := common_test.NewStubJobTrace()
+	err := runBuildWithTrace(t, build, trace)
+	output := trace.Read()
 	t.Log(output)
 
 	return output, err
@@ -130,14 +130,13 @@ func TestBuildCancel(t *testing.T) {
 		build, cleanup := newBuild(t, longRunningBuild, shell)
 		defer cleanup()
 
-		trace := &common.Trace{Writer: os.Stdout}
-
 		cancelTimer := time.AfterFunc(time.Second, func() {
 			t.Log("Cancel")
-			trace.CancelFunc()
+			build.Cancel()
 		})
 		defer cancelTimer.Stop()
 
+		trace := &common.Trace{Writer: os.Stdout}
 		err = runBuildWithTrace(t, build, trace)
 		assert.EqualError(t, err, "canceled")
 		assert.IsType(t, err, &common.BuildError{})

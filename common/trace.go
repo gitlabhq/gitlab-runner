@@ -8,9 +8,8 @@ import (
 )
 
 type Trace struct {
-	Writer     io.Writer
-	CancelFunc context.CancelFunc
-	mutex      sync.Mutex
+	Writer io.Writer
+	mutex  sync.Mutex
 }
 
 func (s *Trace) Write(p []byte) (n int, err error) {
@@ -29,12 +28,12 @@ func (s *Trace) Success() {
 func (s *Trace) Fail(err error, failureReason JobFailureReason) {
 }
 
-func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {
-	s.CancelFunc = cancelFunc
-}
-
 func (s *Trace) SetFailuresCollector(fc FailuresCollector) {}
 
 func (s *Trace) IsStdout() bool {
 	return true
+}
+
+func (s *Trace) Context() context.Context {
+	return context.Background()
 }

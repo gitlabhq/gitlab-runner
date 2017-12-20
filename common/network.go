@@ -321,9 +321,9 @@ type JobTrace interface {
 	io.Writer
 	Success()
 	Fail(err error, failureReason JobFailureReason)
-	SetCancelFunc(cancelFunc context.CancelFunc)
 	SetFailuresCollector(fc FailuresCollector)
 	IsStdout() bool
+	Context() context.Context
 }
 
 type JobTracePatch interface {

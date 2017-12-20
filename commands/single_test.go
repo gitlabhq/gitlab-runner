@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"syscall"
@@ -74,8 +73,7 @@ func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job
 
 	//Network
 	jobData := common.JobResponse{}
-	_, cancel := context.WithCancel(context.Background())
-	jobTrace := common.Trace{Writer: ioutil.Discard, CancelFunc: cancel}
+	jobTrace := common.Trace{Writer: ioutil.Discard}
 	mockNetwork.On("RequestJob", mock.Anything).Return(&jobData, true).Times(maxBuilds)
 	processJob := mockNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(&jobTrace).Times(maxBuilds)
 	if job != nil {
@@ -105,7 +103,6 @@ func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job
 		e.AssertExpectations(t)
 		p.AssertExpectations(t)
 		mockNetwork.AssertExpectations(t)
-		cancel()
 	}
 
 	return single, cleanup

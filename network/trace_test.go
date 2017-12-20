@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -130,9 +129,6 @@ func TestIgnoreStatusChange(t *testing.T) {
 }
 
 func TestJobAbort(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	firstUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, noTrace, common.NoneFailure)
 	secondUpdateMatcher := generateJobInfoMatcherWithAnyTrace(jobCredentials.ID, common.Success, common.NoneFailure)
 
@@ -144,7 +140,7 @@ func TestJobAbort(t *testing.T) {
 	b := newJobTrace(net, jobConfig, jobCredentials)
 	// force immediate call to `UpdateJob`
 	b.updateInterval = 0
-	b.SetCancelFunc(cancel)
+	ctx := b.Context()
 
 	b.start()
 	assert.NotNil(t, <-ctx.Done(), "should abort the job")

@@ -1,45 +1,18 @@
-package common
+package common_test
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	test "gitlab.com/gitlab-org/gitlab-runner/common/test"
 )
 
-type fakeJobTrace struct {
-	buffer *bytes.Buffer
-}
-
-func (fjt *fakeJobTrace) Success()                                       {}
-func (fjt *fakeJobTrace) Fail(err error, failureReason JobFailureReason) {}
-func (fjt *fakeJobTrace) SetCancelFunc(cancelFunc context.CancelFunc)    {}
-func (fjt *fakeJobTrace) SetFailuresCollector(fc FailuresCollector)      {}
-func (fjt *fakeJobTrace) IsStdout() bool                                 { return false }
-
-func (fjt *fakeJobTrace) Write(p []byte) (n int, err error) {
-	return fjt.buffer.Write(p)
-}
-
-func (fjt *fakeJobTrace) Read() string {
-	return fjt.buffer.String()
-}
-
-func newFakeJobTrace() *fakeJobTrace {
-	fjt := &fakeJobTrace{
-		buffer: bytes.NewBuffer([]byte{}),
-	}
-
-	return fjt
-}
-
-func newBuildLogger(testName string, jt JobTrace) BuildLogger {
-	return BuildLogger{
-		log:   jt,
-		entry: logrus.WithField("test", testName),
-	}
+func newBuildLogger(testName string, jt common.JobTrace) common.BuildLogger {
+	return common.NewBuildLogger(jt, logrus.WithField("test", testName))
 }
 
 func runOnHijackedLogrusOutput(t *testing.T, handler func(t *testing.T, output *bytes.Buffer)) {
@@ -54,7 +27,7 @@ func runOnHijackedLogrusOutput(t *testing.T, handler func(t *testing.T, output *
 
 func TestLogLineWithoutSecret(t *testing.T) {
 	runOnHijackedLogrusOutput(t, func(t *testing.T, output *bytes.Buffer) {
-		jt := newFakeJobTrace()
+		jt := test.NewStubJobTrace()
 		l := newBuildLogger("log-line-without-secret", jt)
 
 		l.Errorln("Fatal: Get http://localhost/?id=123")
@@ -65,7 +38,7 @@ func TestLogLineWithoutSecret(t *testing.T) {
 
 func TestLogLineWithSecret(t *testing.T) {
 	runOnHijackedLogrusOutput(t, func(t *testing.T, output *bytes.Buffer) {
-		jt := newFakeJobTrace()
+		jt := test.NewStubJobTrace()
 		l := newBuildLogger("log-line-with-secret", jt)
 
 		l.Errorln("Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234")

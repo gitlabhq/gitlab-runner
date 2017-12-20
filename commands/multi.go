@@ -176,7 +176,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	}
 
 	// Process a build
-	return build.Run(mr.config, trace)
+	return build.Run(trace.Context(), mr.config, trace)
 }
 
 func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan *common.RunnerConfig) {

@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"k8s.io/kubernetes/pkg/client/unversioned/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	common_test "gitlab.com/gitlab-org/gitlab-runner/common/test"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
@@ -360,30 +360,17 @@ func TestCleanup(t *testing.T) {
 				credentials: test.Credentials,
 			}
 			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
-			errored := false
-			buildTrace := FakeBuildTrace{
-				testWriter{
-					call: func(b []byte) (int, error) {
-						if !errored {
-							if s := string(b); strings.Contains(s, "Error cleaning up") {
-								errored = true
-							} else if test.Error {
-								t.Errorf("expected failure. got: '%s'", string(b))
-							}
-						}
-						return len(b), nil
-					},
-				},
-			}
+			buildTrace := common_test.NewStubJobTrace()
 			ex.AbstractExecutor.Trace = buildTrace
 			ex.AbstractExecutor.BuildLogger = common.NewBuildLogger(buildTrace, logrus.WithFields(logrus.Fields{}))
 
 			ex.Cleanup()
 
-			if test.Error && !errored {
-				t.Errorf("expected cleanup to fail but it didn't")
-			} else if !test.Error && errored {
-				t.Errorf("expected cleanup not to fail but it did")
+			expectedErrorMessage := "Error cleaning up"
+			if test.Error {
+				assert.Contains(t, buildTrace.Read(), expectedErrorMessage, "expected cleanup to fail but it didn't")
+			} else {
+				assert.NotContains(t, buildTrace.Read(), expectedErrorMessage, "expected cleanup not to fail but it did")
 			}
 		})
 	}
@@ -1270,7 +1257,7 @@ func TestKubernetesSuccessRun(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -1293,7 +1280,7 @@ func TestKubernetesNoRootImage(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -1315,7 +1302,7 @@ func TestKubernetesBuildFail(t *testing.T) {
 	}
 	build.Image.Name = "docker:git"
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "Error executing in Docker Container: 1")
@@ -1339,7 +1326,7 @@ func TestKubernetesMissingImage(t *testing.T) {
 	}
 	build.Image.Name = "some/non-existing/image"
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "image pull failed")
@@ -1363,7 +1350,7 @@ func TestKubernetesMissingTag(t *testing.T) {
 	}
 	build.Image.Name = "docker:missing-tag"
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "image pull failed")
@@ -1400,7 +1387,7 @@ func TestKubernetesBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -1423,11 +1410,9 @@ func TestKubernetesBuildCancel(t *testing.T) {
 	}
 	build.Image.Name = "docker:git"
 
-	trace := &common.Trace{Writer: os.Stdout}
-
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.CancelFunc()
+		build.Cancel()
 	})
 	defer abortTimer.Stop()
 
@@ -1437,7 +1422,8 @@ func TestKubernetesBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	trace := &common.Trace{Writer: os.Stdout}
+	err = build.Run(trace.Context(), &common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
 }
@@ -1471,9 +1457,10 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 	}
 	build.Image.Name = "docker:git"
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	trace := common_test.NewStubJobTrace()
+	err := build.Run(trace.Context(), &common.Config{}, trace)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not match")
+	assert.Contains(t, trace.Read(), "does not match")
 }
 
 func TestOverwriteServiceAccountNotMatch(t *testing.T) {
@@ -1505,9 +1492,10 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 	}
 	build.Image.Name = "docker:git"
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	trace := common_test.NewStubJobTrace()
+	err := build.Run(trace.Context(), &common.Config{}, trace)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not match")
+	assert.Contains(t, trace.Read(), "does not match")
 }
 
 type FakeReadCloser struct {
@@ -1516,17 +1504,4 @@ type FakeReadCloser struct {
 
 func (f FakeReadCloser) Close() error {
 	return nil
-}
-
-type FakeBuildTrace struct {
-	testWriter
-}
-
-func (f FakeBuildTrace) Success()                                              {}
-func (f FakeBuildTrace) Fail(err error, failureReason common.JobFailureReason) {}
-func (f FakeBuildTrace) Notify(func())                                         {}
-func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)           {}
-func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)      {}
-func (f FakeBuildTrace) IsStdout() bool {
-	return false
 }

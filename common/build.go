@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/tevino/abool"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
@@ -82,6 +83,21 @@ type Build struct {
 	executorStageResolver func() ExecutorStage
 	logger                BuildLogger
 	allVariables          JobVariables
+
+	running abool.AtomicBool
+	cancel  context.CancelFunc
+}
+
+func (b *Build) IsRunning() bool {
+	return b.running.IsSet()
+}
+
+func (b *Build) Cancel() {
+	if !b.running.IsSet() {
+		return
+	}
+
+	b.cancel()
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -272,6 +288,25 @@ func (b *Build) handleError(err error) error {
 	}
 }
 
+func (b *Build) prepareExecutor(ctx context.Context, globalConfig *Config, trace JobTrace) (Executor, error) {
+	options := ExecutorPrepareOptions{
+		Config:  b.Runner,
+		Build:   b,
+		Trace:   trace,
+		User:    globalConfig.User,
+		Context: ctx,
+	}
+
+	provider := GetExecutor(b.Runner.Executor)
+	if provider == nil {
+		return nil, errors.New("executor not found")
+	}
+
+	provider.GetFeatures(&b.ExecutorFeatures)
+
+	return b.retryCreateExecutor(options, provider, b.logger)
+}
+
 func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	b.CurrentState = BuildRunRuntimeRunning
 
@@ -308,35 +343,50 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	return err
 }
 
-func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider ExecutorProvider, logger BuildLogger) (executor Executor, err error) {
+func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider ExecutorProvider, logger BuildLogger) (Executor, error) {
 	for tries := 0; tries < PreparationRetries; tries++ {
-		executor = provider.Create()
+		executor := provider.Create()
 		if executor == nil {
-			err = errors.New("failed to create executor")
-			return
+			return nil, errors.New("failed to create executor")
 		}
 
 		b.executorStageResolver = executor.GetCurrentStage
 
-		err = executor.Prepare(options)
-		if err == nil {
-			break
-		}
-		if executor != nil {
+		if err := executor.Prepare(options); err != nil {
 			executor.Cleanup()
-			executor = nil
-		}
-		if _, ok := err.(*BuildError); ok {
-			break
-		} else if options.Context.Err() != nil {
-			return nil, b.handleError(options.Context.Err())
-		}
 
-		logger.SoftErrorln("Preparation failed:", err)
-		logger.Infoln("Will be retried in", PreparationRetryInterval, "...")
-		time.Sleep(PreparationRetryInterval)
+			if _, ok := err.(*BuildError); ok {
+				return nil, err
+			}
+
+			if options.Context.Err() != nil {
+				return nil, b.handleError(options.Context.Err())
+			}
+
+			logger.SoftErrorln("Preparation failed:", err)
+			// skip waiting on last attempt
+			if tries+1 < PreparationRetries {
+				logger.Infoln("Will be retried in", PreparationRetryInterval, "...")
+				time.Sleep(PreparationRetryInterval)
+			}
+		} else {
+			return executor, nil
+		}
 	}
-	return
+
+	return nil, fmt.Errorf("executor preparation failed %v times", PreparationRetries)
+}
+
+func (b *Build) logRunFailure(err error, trace JobTrace) {
+	if _, ok := err.(*BuildError); ok {
+		b.logger.SoftErrorln("Job failed:", err)
+		trace.Fail(err, ScriptFailure)
+	} else if err != nil {
+		b.logger.Errorln("Job failed (system failure):", err)
+		trace.Fail(err, RunnerSystemFailure)
+	}
+
+	b.running.UnSet()
 }
 
 func (b *Build) CurrentExecutorStage() ExecutorStage {
@@ -349,58 +399,36 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 	return b.executorStageResolver()
 }
 
-func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
-	var executor Executor
-
+func (b *Build) Run(ctx context.Context, globalConfig *Config, trace JobTrace) error {
 	b.logger = NewBuildLogger(trace, b.Log())
 	b.logger.Println(fmt.Sprintf("Running with %s\n  on %s (%s)", AppVersion.Line(), b.Runner.Name, b.Runner.ShortDescription()))
 
 	b.CurrentState = BuildRunStatePending
 
-	defer func() {
-		if _, ok := err.(*BuildError); ok {
-			b.logger.SoftErrorln("Job failed:", err)
-			trace.Fail(err, ScriptFailure)
-		} else if err != nil {
-			b.logger.Errorln("Job failed (system failure):", err)
-			trace.Fail(err, RunnerSystemFailure)
-		} else {
-			b.logger.Infoln("Job succeeded")
-			trace.Success()
-		}
-		if executor != nil {
-			executor.Cleanup()
-		}
-	}()
-
-	context, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
+	context, cancel := context.WithTimeout(ctx, b.GetBuildTimeout())
 	defer cancel()
 
-	trace.SetCancelFunc(cancel)
+	b.cancel = cancel
+	b.running.Set()
 
-	options := ExecutorPrepareOptions{
-		Config:  b.Runner,
-		Build:   b,
-		Trace:   trace,
-		User:    globalConfig.User,
-		Context: context,
+	executor, err := b.prepareExecutor(context, globalConfig, trace)
+	if err != nil {
+		b.logRunFailure(err, trace)
+		return err
+	}
+	defer executor.Cleanup()
+
+	err = b.run(context, executor)
+	executor.Finish(err)
+	if err != nil {
+		b.logRunFailure(err, trace)
+		return err
 	}
 
-	provider := GetExecutor(b.Runner.Executor)
-	if provider == nil {
-		return errors.New("executor not found")
-	}
-
-	provider.GetFeatures(&b.ExecutorFeatures)
-
-	executor, err = b.retryCreateExecutor(options, provider, b.logger)
-	if err == nil {
-		err = b.run(context, executor)
-	}
-	if executor != nil {
-		executor.Finish(err)
-	}
-	return err
+	b.logger.Infoln("Job succeeded")
+	trace.Success()
+	b.running.UnSet()
+	return nil
 }
 
 func (b *Build) String() string {

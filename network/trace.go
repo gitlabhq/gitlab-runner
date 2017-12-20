@@ -61,12 +61,14 @@ func newTracePatch(trace bytes.Buffer, offset int) (*tracePatch, error) {
 type clientJobTrace struct {
 	*io.PipeWriter
 
+	context    context.Context
+	cancelFunc context.CancelFunc
+
 	client         common.Network
 	config         common.RunnerConfig
 	jobCredentials *common.JobCredentials
 	id             int
 	bytesLimit     int
-	cancelFunc     context.CancelFunc
 
 	log           bytes.Buffer
 	lock          sync.RWMutex
@@ -83,6 +85,10 @@ type clientJobTrace struct {
 	finishRetryInterval time.Duration
 
 	failuresCollector common.FailuresCollector
+}
+
+func (c *clientJobTrace) Context() context.Context {
+	return c.context
 }
 
 func (c *clientJobTrace) Success() {
@@ -105,10 +111,6 @@ func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) 
 
 	c.lock.Unlock()
 	c.finish()
-}
-
-func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
-	c.cancelFunc = cancelFunc
 }
 
 func (c *clientJobTrace) SetFailuresCollector(fc common.FailuresCollector) {
@@ -330,7 +332,11 @@ func (c *clientJobTrace) limitExceededMessage() string {
 }
 
 func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentials *common.JobCredentials) *clientJobTrace {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &clientJobTrace{
+		context:             ctx,
+		cancelFunc:          cancel,
 		client:              client,
 		config:              config,
 		jobCredentials:      jobCredentials,

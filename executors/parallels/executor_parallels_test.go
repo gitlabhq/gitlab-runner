@@ -1,6 +1,7 @@
 package parallels_test
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -52,7 +53,7 @@ func TestParallelsSuccessRun(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err, "Make sure that you have done 'make -C tests/ubuntu parallels'")
 }
 
@@ -77,7 +78,7 @@ func TestParallelsBuildFail(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "Process exited with: 1")
@@ -101,7 +102,7 @@ func TestParallelsMissingImage(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Could not find a registered machine named")
 }
@@ -123,7 +124,7 @@ func TestParallelsMissingSSHCredentials(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Missing SSH config")
 }
@@ -162,7 +163,7 @@ func TestParallelsBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -187,11 +188,9 @@ func TestParallelsBuildCancel(t *testing.T) {
 		},
 	}
 
-	trace := &common.Trace{Writer: os.Stdout}
-
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.CancelFunc()
+		build.Cancel()
 	})
 	defer abortTimer.Stop()
 
@@ -201,7 +200,8 @@ func TestParallelsBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	trace := &common.Trace{Writer: os.Stdout}
+	err = build.Run(trace.Context(), &common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
 }

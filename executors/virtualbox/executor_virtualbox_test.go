@@ -1,6 +1,7 @@
 package virtualbox_test
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	common_test "gitlab.com/gitlab-org/gitlab-runner/common/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 )
@@ -52,7 +54,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err, "Make sure that you have done 'make -C tests/ubuntu virtualbox'")
 }
 
@@ -77,7 +79,7 @@ func TestVirtualBoxBuildFail(t *testing.T) {
 		},
 	}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "Process exited with: 1")
@@ -101,9 +103,10 @@ func TestVirtualBoxMissingImage(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	trace := common_test.NewStubJobTrace()
+	err := build.Run(trace.Context(), &common.Config{}, trace)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Could not find a registered machine named")
+	assert.Contains(t, trace.Read(), "Could not find a registered machine named")
 }
 
 func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
@@ -123,9 +126,10 @@ func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
 		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	trace := common_test.NewStubJobTrace()
+	err := build.Run(trace.Context(), &common.Config{}, trace)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Missing SSH config")
+	assert.Contains(t, trace.Read(), "Missing SSH config")
 }
 
 func TestVirtualBoxBuildAbort(t *testing.T) {
@@ -162,7 +166,7 @@ func TestVirtualBoxBuildAbort(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "aborted: interrupt")
 }
 
@@ -187,11 +191,9 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 		},
 	}
 
-	trace := &common.Trace{Writer: os.Stdout}
-
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.CancelFunc()
+		build.Cancel()
 	})
 	defer abortTimer.Stop()
 
@@ -201,7 +203,8 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	trace := &common.Trace{Writer: os.Stdout}
+	err = build.Run(trace.Context(), &common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.EqualError(t, err, "canceled")
 }
