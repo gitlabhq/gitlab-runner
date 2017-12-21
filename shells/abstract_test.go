@@ -36,7 +36,7 @@ func TestWriteGitSSLConfig(t *testing.T) {
 	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"), tls.VariableCertFile).Once()
 	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"), tls.VariableKeyFile).Once()
 
-	shell.writeGitSSLConfig(mockWriter, build, make([]string, 0))
+	shell.writeGitSSLConfig(mockWriter, build, nil)
 
 	mockWriter.AssertExpectations(t)
 }
