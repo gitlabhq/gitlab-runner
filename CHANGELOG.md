@@ -1,3 +1,6 @@
+v 10.3.0-rc4 (2017-12-21)
+- Do not use `git config --local` as it's not available in git v1.7.1 !790
+
 v 10.3.0-rc3 (2017-12-13)
 - Fix regression wiping out kubernetes executor bearer token !785
 
