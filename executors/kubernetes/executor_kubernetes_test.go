@@ -1136,6 +1136,30 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						PodAnnotations: map[string]string{
+							"test":    "annotation",
+							"another": "annotation",
+							"var":     "$test",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"test":    "annotation",
+					"another": "annotation",
+					"var":     "sometestvar",
+				}, pod.ObjectMeta.Annotations)
+			},
+			Variables: []common.JobVariable{
+				{Key: "test", Value: "sometestvar"},
+			},
+		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
 						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
