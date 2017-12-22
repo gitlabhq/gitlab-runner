@@ -1,13 +1,6 @@
-v 10.3.0-rc4 (2017-12-21)
+v 10.3.0 (2017-12-22)
 - Do not use `git config --local` as it's not available in git v1.7.1 !790
-
-v 10.3.0-rc3 (2017-12-13)
-- Fix regression wiping out kubernetes executor bearer token !785
-
-v 10.3.0-rc2 (2017-12-11)
 - new RC naming schema !780
-
-v 10.3.0-rc.1 (2017-12-10)
 - Stop Docker Machine before removing it !718
 - add `--checkout --force` options to `git submodule update --init` !704
 - Fix trailing "<nil>" in syslog logging !734
