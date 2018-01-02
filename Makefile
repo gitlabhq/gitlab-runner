@@ -294,7 +294,7 @@ packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
 
 packagecloud-deps:
 	# Installing packagecloud dependencies...
-	gem install package_cloud --no-ri --no-rdoc
+	gem install package_cloud --version "~> 0.3.0" --no-ri --no-rdoc
 
 packagecloud-deb:
 	# Sending Debian compatible packages...
