@@ -39,8 +39,8 @@ this day, will be released with next release.
 
 ## 7 working days before 22th (**DEADLINE_FOR_RUNNER_ITEMS_ADDITION_INTO_BLOG_POST_HERE**)
 
-- [ ] add entries to release blog post
-    - [ ] add release entry:
+- [ ] prepare entries for the release blog post. Items can be generated with `./scripts/changelog2releasepost | less`
+- [ ] add release entry:
 
     Add description to the `SECONDARY FEATURES` list using following template:
 
@@ -55,7 +55,7 @@ this day, will be released with next release.
 
         ##### Most interesting changes:
 
-        * __Title__ ([merge request](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/__ID__))
+        * [__Title__](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/__ID__)
 
         List of all changes can be found in GitLab Runner's [CHANGELOG](https://gitlab.com/gitlab-org/gitlab-runner/blob/vX.Y.0/CHANGELOG.md).
     ```
