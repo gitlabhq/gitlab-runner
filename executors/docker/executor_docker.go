@@ -19,6 +19,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/mattn/go-zglob"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -971,7 +972,7 @@ func (s *executor) disconnectNetwork(ctx context.Context, id string) error {
 
 func (s *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalImages []string) error {
 	for _, allowedImage := range allowedImages {
-		ok, _ := filepath.Match(allowedImage, image)
+		ok, _ := zglob.Match(allowedImage, image)
 		if ok {
 			return nil
 		}
