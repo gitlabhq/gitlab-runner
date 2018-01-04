@@ -72,6 +72,61 @@ func TestParseDeviceStringFour(t *testing.T) {
 	assert.Error(t, err)
 }
 
+type testAllowedImageDescription struct {
+	allowed        bool
+	image          string
+	allowed_images []string
+}
+
+var testAllowedImages = []testAllowedImageDescription{
+	{true, "ruby", []string{"*"}},
+	{true, "ruby:2.1", []string{"*"}},
+	{true, "ruby:latest", []string{"*"}},
+	{true, "library/ruby", []string{"*/*"}},
+	{true, "library/ruby:2.1", []string{"*/*"}},
+	{true, "library/ruby:2.1", []string{"*/*:*"}},
+	{true, "my.registry.tld/library/ruby", []string{"my.registry.tld/*/*"}},
+	{true, "my.registry.tld/library/ruby:2.1", []string{"my.registry.tld/*/*:*"}},
+	{true, "my.registry.tld/group/subgroup/ruby", []string{"my.registry.tld/*/*/*"}},
+	{true, "my.registry.tld/group/subgroup/ruby:2.1", []string{"my.registry.tld/*/*/*:*"}},
+	{true, "ruby", []string{"**/*"}},
+	{true, "ruby:2.1", []string{"**/*"}},
+	{true, "ruby:latest", []string{"**/*"}},
+	{true, "library/ruby", []string{"**/*"}},
+	{true, "library/ruby:2.1", []string{"**/*"}},
+	{true, "library/ruby:2.1", []string{"**/*:*"}},
+	{true, "my.registry.tld/library/ruby", []string{"my.registry.tld/**/*"}},
+	{true, "my.registry.tld/library/ruby:2.1", []string{"my.registry.tld/**/*:*"}},
+	{true, "my.registry.tld/group/subgroup/ruby", []string{"my.registry.tld/**/*"}},
+	{true, "my.registry.tld/group/subgroup/ruby:2.1", []string{"my.registry.tld/**/*:*"}},
+	{false, "library/ruby", []string{"*"}},
+	{false, "library/ruby:2.1", []string{"*"}},
+	{false, "my.registry.tld/ruby", []string{"*"}},
+	{false, "my.registry.tld/ruby:2.1", []string{"*"}},
+	{false, "my.registry.tld/library/ruby", []string{"*"}},
+	{false, "my.registry.tld/library/ruby:2.1", []string{"*"}},
+	{false, "my.registry.tld/group/subgroup/ruby", []string{"*"}},
+	{false, "my.registry.tld/group/subgroup/ruby:2.1", []string{"*"}},
+	{false, "library/ruby", []string{"*/*:*"}},
+	{false, "my.registry.tld/group/subgroup/ruby", []string{"my.registry.tld/*/*"}},
+	{false, "my.registry.tld/group/subgroup/ruby:2.1", []string{"my.registry.tld/*/*:*"}},
+	{false, "library/ruby", []string{"**/*:*"}},
+}
+
+func TestVerifyAllowedImage(t *testing.T) {
+	e := executor{}
+
+	for _, test := range testAllowedImages {
+		err := e.verifyAllowedImage(test.image, "", test.allowed_images, []string{})
+
+		if err != nil && test.allowed {
+			t.Errorf("%q must be allowed by %q", test.image, test.allowed_images)
+		} else if err == nil && !test.allowed {
+			t.Errorf("%q must not be allowed by %q", test.image, test.allowed_images)
+		}
+	}
+}
+
 type testServiceDescription struct {
 	description string
 	image       string
