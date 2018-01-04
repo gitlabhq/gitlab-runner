@@ -20,7 +20,12 @@ _docker() {
 
 build() {
     echo -e "\033[1mBuilding image: \033[32m${1}\033[0m"
-    _docker build -t "${1}" "${2}"
+    _docker build \
+        --cache-from "${3}" \
+        --build-arg DOCKER_MACHINE_VERSION="${DOCKER_MACHINE_VERSION}" \
+        --build-arg DUMB_INIT_VERSION="${DUMB_INIT_VERSION}" \
+        -t "${1}" \
+        "${2}"
 }
 
 import() {
@@ -39,6 +44,11 @@ tag_latest() {
     fi
 
     tag "${@}"
+}
+
+pull() {
+    echo -e "\033[1mPulling image: \033[32m${1}\033[0m"
+    _docker pull "${1}"
 }
 
 push() {
@@ -82,19 +92,31 @@ logout() {
     _docker logout "${1}"
 }
 
-cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/
-cp dockerfiles/checksums.sha256 dockerfiles/ubuntu
-cp out/binaries/gitlab-runner-linux-amd64 dockerfiles/alpine
-cp dockerfiles/checksums.sha256 dockerfiles/alpine
+echo "${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine" >> dockerfiles/checksums
+echo "${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init" >> dockerfiles/checksums
+cat dockerfiles/checksums
 
-build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu
-build "gitlab/gitlab-runner:alpine-${ref_tag}" dockerfiles/alpine
+cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/
+cp dockerfiles/checksums dockerfiles/ubuntu
+cp out/binaries/gitlab-runner-linux-amd64 dockerfiles/alpine
+cp dockerfiles/checksums dockerfiles/alpine
+
+pull gitlab/gitlab-runner:ubuntu
+pull gitlab/gitlab-runner:alpine
+
+build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu gitlab/gitlab-runner:ubuntu
+build "gitlab/gitlab-runner:alpine-${ref_tag}" dockerfiles/alpine gitlab/gitlab-runner:alpine
 
 tag "gitlab/gitlab-runner:ubuntu-${ref_tag}" "gitlab/gitlab-runner:${ref_tag}"
 
 tag_latest "gitlab/gitlab-runner:ubuntu-${ref_tag}" gitlab/gitlab-runner:ubuntu
 tag_latest "gitlab/gitlab-runner:ubuntu-${ref_tag}" gitlab/gitlab-runner:latest
 tag_latest "gitlab/gitlab-runner:alpine-${ref_tag}" gitlab/gitlab-runner:alpine
+
+if [[ -z "${PUBLISH_IMAGES}" ]] || [[ "${PUBLISH_IMAGES}" != "true" ]]; then
+    echo "Skipping images pushing"
+    exit 0
+fi
 
 if [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
     tag "gitlab/gitlab-runner:ubuntu-${ref_tag}" "${CI_REGISTRY_IMAGE}:ubuntu-${ref_tag}"
@@ -118,6 +140,11 @@ if [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
 
         logout "${CI_REGISTRY}"
     fi
+fi
+
+if [[ -z "${PUSH_TO_DOCKER_HUB}" ]] || [[ "${PUSH_TO_DOCKER_HUB}" != "true" ]]; then
+    echo "Skipping push to Docker Hub"
+    exit 0
 fi
 
 if [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then

@@ -14,7 +14,7 @@ ARG DOCKER_MACHINE_VERSION=0.13.0
 ARG DUMB_INIT_VERSION=1.0.2
 
 COPY gitlab-runner-linux-amd64 /usr/bin/gitlab-runner
-COPY checksums.sha256 /tmp/
+COPY checksums /tmp/
 RUN chmod +x /usr/bin/gitlab-runner && \
     ln -s /usr/bin/gitlab-runner /usr/bin/gitlab-ci-multi-runner && \
     gitlab-runner --version && \
@@ -26,7 +26,7 @@ RUN chmod +x /usr/bin/gitlab-runner && \
     wget -q https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_amd64 -O /usr/bin/dumb-init && \
     chmod +x /usr/bin/dumb-init && \
     dumb-init --version && \
-    sha256sum -c -w /tmp/checksums.sha256
+    sha256sum -c -w /tmp/checksums
 
 COPY entrypoint /
 RUN chmod +x /entrypoint

@@ -10,7 +10,7 @@ ARG DOCKER_MACHINE_VERSION=0.13.0
 ARG DUMB_INIT_VERSION=1.0.2
 
 COPY gitlab-runner_amd64.deb /tmp/
-COPY checksums.sha256 /tmp/
+COPY checksums /tmp/
 RUN dpkg -i /tmp/gitlab-runner_amd64.deb; \
     apt-get update &&  \
     apt-get -f install -y && \
@@ -26,7 +26,7 @@ RUN dpkg -i /tmp/gitlab-runner_amd64.deb; \
     wget -q https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_amd64 -O /usr/bin/dumb-init && \
     chmod +x /usr/bin/dumb-init && \
     dumb-init --version && \
-    sha256sum --check --strict /tmp/checksums.sha256
+    sha256sum --check --strict /tmp/checksums
 
 COPY entrypoint /
 RUN chmod +x /entrypoint
