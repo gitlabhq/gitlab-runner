@@ -26,20 +26,44 @@ RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
     fedora/25 fedora/26
 RPM_ARCHS ?= x86_64 i686 arm armhf
-COMMON_PACKAGE_NAMESPACE=$(shell go list ./common)
+
+PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
+COMMON_PACKAGE_NAMESPACE=$(PKG)/common
+
+BUILD_DIR := $(CURDIR)
+TARGET_DIR := $(BUILD_DIR)/out
+
+ORIGINAL_GOPATH = $(shell echo $$GOPATH)
+LOCAL_GOPATH := $(CURDIR)/.gopath
+GOPATH_SETUP := $(LOCAL_GOPATH)/.ok
+GOPATH_BIN := $(LOCAL_GOPATH)/bin
+PKG_BUILD_DIR := $(LOCAL_GOPATH)/src/$(PKG)
+
+export GOPATH = $(LOCAL_GOPATH)
+export PATH := $(GOPATH_BIN):$(PATH)
 
 # Packages in vendor/ are included in ./...
 # https://github.com/golang/go/issues/11659
-OUR_PACKAGES=$(shell go list ./... | grep -v '/vendor/')
+OUR_PACKAGES=$(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
               -s -w
-GO_FILES ?= $(shell find . -name '*.go')
+GO_FILES ?= $(shell find . -name '*.go' | grep -v './.gopath/')
 export CGO_ENABLED ?= 0
 
+
+# Development Tools
+GOVENDOR = $(GOPATH_BIN)/govendor
+GOX = $(GOPATH_BIN)/gox
+GOBINDATA = $(GOPATH_BIN)/go-bindata
+MOCKERY = $(GOPATH_BIN)/mockery
+DEVELOPMENT_TOOLS = $(GOVENDOR) $(GOX) $(GOBINDATA) $(MOCKERY)
+
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
+
+.PHONY: clean version mocks
 
 all: deps build
 
@@ -63,7 +87,7 @@ help:
 	# make packagecloud - send all packages to packagecloud
 	# make packagecloud-yank - remove specific version from packagecloud
 
-version: FORCE
+version:
 	@echo Current version: $(VERSION)
 	@echo Current revision: $(REVISION)
 	@echo Current branch: $(BRANCH)
@@ -72,19 +96,12 @@ version: FORCE
 	@echo RPM platforms: $(RPM_PLATFORMS)
 	@echo IS_LATEST: $(IS_LATEST)
 
-deps:
-	# Installing dependencies...
-	go get -u github.com/golang/lint/golint
-	go get github.com/mitchellh/gox
-	go get golang.org/x/tools/cmd/cover
-	go get github.com/fzipp/gocyclo
-	go get -u github.com/jteeuwen/go-bindata/...
-	go install cmd/vet
+deps: $(DEVELOPMENT_TOOLS)
 
 codequality:
 	./scripts/codequality analyze --dev
 
-out/docker/prebuilt-x86_64.tar.xz: $(GO_FILES)
+out/docker/prebuilt-x86_64.tar.xz: $(GO_FILES) $(GOX)
 	# Create directory
 	mkdir -p out/docker
 
@@ -93,7 +110,7 @@ ifneq (, $(shell docker info))
 	gox -osarch=linux/amd64 \
 		-ldflags "$(GO_LDFLAGS)" \
 		-output="dockerfiles/build/gitlab-runner-helper" \
-		./apps/gitlab-runner-helper
+		$(PKG)/apps/gitlab-runner-helper
 
 	# Build docker images
 	docker build -t gitlab/gitlab-runner-helper:x86_64-$(REVISION) -f dockerfiles/build/Dockerfile.x86_64 dockerfiles/build
@@ -112,7 +129,7 @@ else
 		https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz
 endif
 
-out/docker/prebuilt-arm.tar.xz: $(GO_FILES)
+out/docker/prebuilt-arm.tar.xz: $(GO_FILES) $(GOX)
 	# Create directory
 	mkdir -p out/docker
 
@@ -121,7 +138,7 @@ ifneq (, $(shell docker info))
 	gox -osarch=linux/arm \
 		-ldflags "$(GO_LDFLAGS)" \
 		-output="dockerfiles/build/gitlab-runner-helper" \
-		./apps/gitlab-runner-helper
+		$(PKG)/apps/gitlab-runner-helper
 
 	# Build docker images
 	docker build -t gitlab/gitlab-runner-helper:arm-$(REVISION) -f dockerfiles/build/Dockerfile.arm dockerfiles/build
@@ -140,7 +157,7 @@ else
 		https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz
 endif
 
-executors/docker/bindata.go: out/docker/prebuilt-x86_64.tar.xz out/docker/prebuilt-arm.tar.xz
+executors/docker/bindata.go: out/docker/prebuilt-x86_64.tar.xz out/docker/prebuilt-arm.tar.xz $(GOBINDATA)
 	# Generating embedded data
 	go-bindata \
 		-pkg docker \
@@ -155,17 +172,19 @@ executors/docker/bindata.go: out/docker/prebuilt-x86_64.tar.xz out/docker/prebui
 
 docker: executors/docker/bindata.go
 
-build: executors/docker/bindata.go
+build: executors/docker/bindata.go $(GOX)
 	# Building $(NAME) in version $(VERSION) for $(BUILD_PLATFORMS)
 	gox $(BUILD_PLATFORMS) \
 		-ldflags "$(GO_LDFLAGS)" \
-		-output="out/binaries/$(NAME)-{{.OS}}-{{.Arch}}"
+		-output="out/binaries/$(NAME)-{{.OS}}-{{.Arch}}" \
+		$(PKG)
 
-build_simple:
+build_simple: $(GOPATH_SETUP)
 	# Building $(NAME) in version $(VERSION) for current platform
 	go build \
 		-ldflags "$(GO_LDFLAGS)" \
-		-o "out/binaries/$(NAME)"
+		-o "out/binaries/$(NAME)" \
+		$(PKG)
 
 build_current: executors/docker/bindata.go build_simple
 
@@ -174,21 +193,21 @@ check_race_conditions: executors/docker/bindata.go
 
 test: executors/docker/bindata.go
 	# Running tests...
-	@go test $(OUR_PACKAGES) $(TESTFLAGS)
+	go test $(OUR_PACKAGES) $(TESTFLAGS)
 
 install: executors/docker/bindata.go
-	go install --ldflags="$(GO_LDFLAGS)"
+	go install --ldflags="$(GO_LDFLAGS)" $(PKG)
 
 dockerfiles:
 	make -C dockerfiles all
 
-mocks: FORCE
-	go get github.com/vektra/mockery/.../
+# We rely on user GOPATH 'cause mockery seems not to be able to find dependencies in vendor directory
+mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f -name 'mock_*' -delete
-	mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
-	mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./helpers/docker -all -inpkg
+	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
+	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./helpers/docker -all -inpkg
+	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
 
 test-docker:
 	make test-docker-image IMAGE=centos:6 TYPE=rpm
@@ -379,8 +398,33 @@ development_setup:
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 
-update_govendor_dependencies:
+update_govendor_dependencies: $(GOVENDOR)
 	# updating vendor/ dependencies
 	@./scripts/update-govendor-dependencies
 
-FORCE:
+# local GOPATH
+$(GOPATH_SETUP): $(PKG_BUILD_DIR)
+	mkdir -p $(GOPATH_BIN)
+	touch $@
+
+$(PKG_BUILD_DIR):
+	mkdir -p $(@D)
+	ln -s ../../../.. $@
+
+# development tools
+$(GOVENDOR): $(GOPATH_SETUP)
+	go get github.com/kardianos/govendor
+
+$(GOX): $(GOPATH_SETUP)
+	go get github.com/mitchellh/gox
+
+$(GOBINDATA): $(GOPATH_SETUP)
+	go get github.com/jteeuwen/go-bindata/...
+
+$(MOCKERY): $(GOPATH_SETUP)
+	go get github.com/vektra/mockery/.../
+
+clean:
+	-$(RM) -rf $(LOCAL_GOPATH)
+	-$(RM) executors/docker/bindata.go
+	-$(RM) -rf $(TARGET_DIR)
