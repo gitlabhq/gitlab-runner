@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -91,9 +92,14 @@ type testMachine struct {
 	Created chan bool
 	Removed chan bool
 	Stopped chan bool
+
+	mutex sync.Mutex
 }
 
 func (m *testMachine) Create(driver, name string, opts ...string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if strings.Contains(name, "second-fail") {
 		if !m.second {
 			m.second = true
@@ -109,6 +115,9 @@ func (m *testMachine) Create(driver, name string, opts ...string) error {
 }
 
 func (m *testMachine) Provision(name string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if strings.Contains(name, "provision-fail") || strings.Contains(name, "second-fail") {
 		return errors.New("Failed to provision")
 	}
@@ -123,6 +132,9 @@ func (m *testMachine) Stop(name string, timeout time.Duration) error {
 }
 
 func (m *testMachine) Remove(name string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if name == "remove-fail" {
 		return errors.New("failed to remove")
 	}
@@ -139,6 +151,9 @@ func (m *testMachine) Remove(name string) error {
 }
 
 func (m *testMachine) Exist(name string) bool {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	for _, machine := range m.machines {
 		if machine == name {
 			return true
@@ -148,6 +163,9 @@ func (m *testMachine) Exist(name string) bool {
 }
 
 func (m *testMachine) List() (machines []string, err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	return m.machines, nil
 }
 
