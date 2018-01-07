@@ -776,6 +776,7 @@ func (s *executor) createContainer(containerType string, imageDefinition common.
 		},
 		DNS:           s.Config.Docker.DNS,
 		DNSSearch:     s.Config.Docker.DNSSearch,
+		Runtime:       s.Config.Docker.Runtime,
 		Privileged:    s.Config.Docker.Privileged,
 		UsernsMode:    container.UsernsMode(s.Config.Docker.UsernsMode),
 		CapAdd:        s.Config.Docker.CapAdd,
