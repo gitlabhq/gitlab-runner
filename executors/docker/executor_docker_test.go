@@ -1019,6 +1019,18 @@ func TestDockerUserNSSetting(t *testing.T) {
 
 }
 
+func TestDockerRuntimeSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		Runtime: "runc",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "runc", hostConfig.Runtime)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
 func TestDockerSysctlsSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		SysCtls: map[string]string{

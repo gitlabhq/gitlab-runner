@@ -115,6 +115,7 @@ This defines the Docker Container parameters.
 | --------- | ----------- |
 | `host`                      | specify custom Docker endpoint, by default `DOCKER_HOST` environment is used or `unix:///var/run/docker.sock` |
 | `hostname`                  | specify custom hostname for Docker container |
+| `runtime`                   | specify a runtime for Docker container |
 | `tls_cert_path`             | when set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
 | `image`                     | use this image to run builds |
 | `cpuset_cpus`               | string value containing the cgroups CpusetCpus to use |
