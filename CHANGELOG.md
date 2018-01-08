@@ -1,3 +1,16 @@
+v 10.4.0-rc1 (2018-01-08)
+- Add (overwritable) pod annotations for the kubernetes executor !666
+- docker.allowed_images can use glob syntax in config.toml !721
+- Added docker runtime support !764
+- Send `failure_reason` when updating job statues (GitLab API endpoint) !675
+- Do not use `git config --local` as it's not available in git v1.7.1 !790
+- Use local GOPATH in Makefile !779
+- Move Bleeding Edge release from ubuntu/yakkety to ububut/artful !797
+- Fix data race in commands package unit tests !787
+- Fix data race in function common.(*Trace).Write() !784
+- Fix data races in executor/docker package !800
+- Fix data races in network package !775
+
 v 10.3.0 (2017-12-22)
 - Do not use `git config --local` as it's not available in git v1.7.1 !790
 - new RC naming schema !780
