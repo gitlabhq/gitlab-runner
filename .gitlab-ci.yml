@@ -163,12 +163,14 @@ git 1.7.1:
     GOROOT: /usr/local/go
     GOPATH: /go
     CGO_ENABLED: 0
-  script:
+    OUR_PACKAGES: gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
+  before_script:
     - yum install -y -q git && git version
     - curl https://storage.googleapis.com/golang/go1.8.5.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
     - export PATH=${GOROOT}/bin:$PATH
     - source ci/touch_make_dependencies
-    - go test -v gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
+  script:
+    - make test
 
 #
 # Build stage
