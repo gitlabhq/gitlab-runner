@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +15,29 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
+
+func gitInDir(dir string, args ...string) ([]byte, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+
+	return cmd.Output()
+}
+
+func skipOnGit17x(t *testing.T) bool {
+	out, err := gitInDir("", "version")
+	if err != nil {
+		t.Fatal("Can't detect git version", err)
+		return true
+	}
+
+	version := string(out)
+	if strings.Contains(version, "git version 1.7.") {
+		t.Skip("Git 1.7.x detected", version)
+		return true
+	}
+
+	return false
+}
 
 func onEachShell(t *testing.T, f func(t *testing.T, shell string)) {
 	t.Run("bash", func(t *testing.T) {
@@ -384,6 +408,10 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 }
 
 func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
+	if skipOnGit17x(t) {
+		return
+	}
+
 	onEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -457,21 +485,33 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Updating/initializing submodules...")
 
+		submoduleDir := filepath.Join(build.BuildDir, "gitlab-grack")
+		submoduleReadme := filepath.Join(submoduleDir, "README.md")
+
 		// modify submodule and commit
 		modifySubmoduleBeforeCommit := "commited change"
-		ioutil.WriteFile(build.BuildDir+"/gitlab-grack/README.md", []byte(modifySubmoduleBeforeCommit), os.ModeSticky)
-		_, err = exec.Command("git", "-C", build.BuildDir+"/gitlab-grack", "add", "README.md").Output()
+		ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleBeforeCommit), os.ModeSticky)
+		_, err = gitInDir(submoduleDir, "add", "README.md")
 		assert.NoError(t, err)
-		_, err = exec.Command("git", "-C", build.BuildDir+"/gitlab-grack", "-c", "user.name='test'", "-c", "user.email='test@example.org'", "commit", "-m", "modify submodule").Output()
+		_, err = gitInDir(submoduleDir, "config", "user.name", "test")
 		assert.NoError(t, err)
-		_, err = exec.Command("git", "-C", build.BuildDir, "add", "gitlab-grack").Output()
+		_, err = gitInDir(submoduleDir, "config", "user.email", "test@example.org")
 		assert.NoError(t, err)
-		_, err = exec.Command("git", "-C", build.BuildDir, "-c", "user.name='test'", "-c", "user.email='test@example.org'", "commit", "-m", "modify submodule").Output()
+		_, err = gitInDir(submoduleDir, "commit", "-m", "modify submodule")
+		assert.NoError(t, err)
+
+		_, err = gitInDir(build.BuildDir, "add", "gitlab-grack")
+		assert.NoError(t, err)
+		_, err = gitInDir(build.BuildDir, "config", "user.name", "test")
+		assert.NoError(t, err)
+		_, err = gitInDir(build.BuildDir, "config", "user.email", "test@example.org")
+		assert.NoError(t, err)
+		_, err = gitInDir(build.BuildDir, "commit", "-m", "modify submodule")
 		assert.NoError(t, err)
 
 		// modify submodule without commit before second build
 		modifySubmoduleAfterCommit := "not commited change"
-		ioutil.WriteFile(build.BuildDir+"/gitlab-grack/README.md", []byte(modifySubmoduleAfterCommit), os.ModeSticky)
+		ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleAfterCommit), os.ModeSticky)
 
 		build.JobResponse.AllowGitFetch = true
 		out, err = runBuildReturningOutput(t, build)
@@ -526,6 +566,10 @@ func TestBuildMultilineCommand(t *testing.T) {
 }
 
 func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
+	if skipOnGit17x(t) {
+		return
+	}
+
 	onEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteBrokenTLSBuild()
 		assert.NoError(t, err)
@@ -554,5 +598,29 @@ func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Cloning repository")
 		assert.Contains(t, out, "Updating/initializing submodules")
+	})
+}
+
+// TestBuildWithGitSSLAndStrategyFetch describes issue https://gitlab.com/gitlab-org/gitlab-runner/issues/2991
+func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
+	onEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Cloning repository")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Fetching changes")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		assert.Contains(t, out, "pre-clone-script")
 	})
 }
