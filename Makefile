@@ -44,7 +44,7 @@ export PATH := $(GOPATH_BIN):$(PATH)
 
 # Packages in vendor/ are included in ./...
 # https://github.com/golang/go/issues/11659
-OUR_PACKAGES=$(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
+OUR_PACKAGES ?= $(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
