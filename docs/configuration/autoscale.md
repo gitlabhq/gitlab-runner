@@ -250,7 +250,7 @@ periods.
 **How it is working?**
 
 Configuration of _Off Peak_ is done by four parameters: `OffPeakPeriods`,
-`OffPeakIdleCount`, `OffPeakIdleCount` and `OffPeakIdleTime`. The
+`OffPeakTimezone`, `OffPeakIdleCount` and `OffPeakIdleTime`. The
 `OffPeakPeriods` setting contains an array of cron-style patterns defining
 when the _Off Peak_ time mode should be set on. For example:
 
