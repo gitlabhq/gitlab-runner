@@ -107,7 +107,13 @@ func (n *client) addTLSCA(tlsConfig *tls.Config) {
 
 		data, err := ioutil.ReadFile(file)
 		if err == nil {
-			pool := x509.NewCertPool()
+			pool, err := x509.SystemCertPool()
+			if err != nil {
+				logrus.Warningln("Failed to load system CertPool:", err)
+			}
+			if pool == nil {
+				pool = x509.NewCertPool()
+			}
 			if pool.AppendCertsFromPEM(data) {
 				tlsConfig.RootCAs = pool
 				n.caData = data
