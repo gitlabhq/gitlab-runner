@@ -6,8 +6,11 @@ RUN apt-get update -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+ARG DOCKER_MACHINE_VERSION=0.13.0
+ARG DUMB_INIT_VERSION=1.0.2
+
 COPY gitlab-runner_amd64.deb /tmp/
-COPY checksums.sha256 /tmp/
+COPY checksums /tmp/
 RUN dpkg -i /tmp/gitlab-runner_amd64.deb; \
     apt-get update &&  \
     apt-get -f install -y && \
@@ -17,13 +20,13 @@ RUN dpkg -i /tmp/gitlab-runner_amd64.deb; \
     gitlab-runner --version && \
     mkdir -p /etc/gitlab-runner/certs && \
     chmod -R 700 /etc/gitlab-runner && \
-    wget -q https://github.com/docker/machine/releases/download/v0.12.2/docker-machine-Linux-x86_64 -O /usr/bin/docker-machine && \
+    wget -q https://github.com/docker/machine/releases/download/v${DOCKER_MACHINE_VERSION}/docker-machine-Linux-x86_64 -O /usr/bin/docker-machine && \
     chmod +x /usr/bin/docker-machine && \
     docker-machine --version && \
-    wget -q https://github.com/Yelp/dumb-init/releases/download/v1.0.2/dumb-init_1.0.2_amd64 -O /usr/bin/dumb-init && \
+    wget -q https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_amd64 -O /usr/bin/dumb-init && \
     chmod +x /usr/bin/dumb-init && \
     dumb-init --version && \
-    sha256sum --check --strict /tmp/checksums.sha256
+    sha256sum --check --strict /tmp/checksums
 
 COPY entrypoint /
 RUN chmod +x /entrypoint

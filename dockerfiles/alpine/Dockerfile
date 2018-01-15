@@ -9,22 +9,24 @@ RUN apk add --update \
     openssl \
     tzdata \
     wget
-    
+
+ARG DOCKER_MACHINE_VERSION=0.13.0
+ARG DUMB_INIT_VERSION=1.0.2
 
 COPY gitlab-runner-linux-amd64 /usr/bin/gitlab-runner
-COPY checksums.sha256 /tmp/
+COPY checksums /tmp/
 RUN chmod +x /usr/bin/gitlab-runner && \
     ln -s /usr/bin/gitlab-runner /usr/bin/gitlab-ci-multi-runner && \
     gitlab-runner --version && \
     mkdir -p /etc/gitlab-runner/certs && \
     chmod -R 700 /etc/gitlab-runner && \
-    wget -q https://github.com/docker/machine/releases/download/v0.12.2/docker-machine-Linux-x86_64 -O /usr/bin/docker-machine && \
+    wget -q https://github.com/docker/machine/releases/download/v${DOCKER_MACHINE_VERSION}/docker-machine-Linux-x86_64 -O /usr/bin/docker-machine && \
     chmod +x /usr/bin/docker-machine && \
     docker-machine --version && \
-    wget -q https://github.com/Yelp/dumb-init/releases/download/v1.0.2/dumb-init_1.0.2_amd64 -O /usr/bin/dumb-init && \
+    wget -q https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_amd64 -O /usr/bin/dumb-init && \
     chmod +x /usr/bin/dumb-init && \
     dumb-init --version && \
-    sha256sum -c -w /tmp/checksums.sha256
+    sha256sum -c -w /tmp/checksums
 
 COPY entrypoint /
 RUN chmod +x /entrypoint
