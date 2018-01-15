@@ -74,7 +74,7 @@ Runner support, for example either Ubuntu, Debian, CentOS or RHEL will work fine
 Install the prerequisites:
 
 1. Log in to your server
-1. [Install GitLab Runner from the official GitLab repository](../../install/linux-repository.html)
+1. [Install GitLab Runner from the official GitLab repository](../../install/linux-repository.md)
 1. [Install Docker](https://docs.docker.com/engine/installation/#server)
 1. [Install Docker Machine](https://docs.docker.com/machine/install-machine/)
 
@@ -85,8 +85,8 @@ Now that the Runner is installed, it's time to register it.
 Before configuring the GitLab Runner, you need to first register it, so that
 it connects with your GitLab instance:
 
-1. [Obtain a Runner token](https://docs.gitlab.com/ee/ci/runners/README.html)
-1. [Register the Runner](../../register/index.html#gnu-linux)
+1. [Obtain a Runner token](https://docs.gitlab.com/ee/ci/runners/)
+1. [Register the Runner](../../register/index.md#gnu-linux)
 1. When asked the executor type, enter `docker+machine`
 
 You can now move on to the most important part, configuring the GitLab Runner.
@@ -131,7 +131,7 @@ you register the Runner for the first time.
 
 `limit` sets the maximum number of machines (running and idle) that this Runner
 will spawn. For more info check the [relationship between `limit`, `concurrent`
-and `IdleCount`](https://docs.gitlab.com/runner/configuration/autoscale.html#how-concurrent-limit-and-idlecount-generate-the-upper-limit-of-running-machines).
+and `IdleCount`](../autoscale.md#how-concurrent-limit-and-idlecount-generate-the-upper-limit-of-running-machines).
 
 Example:
 
@@ -144,13 +144,13 @@ Example:
   limit = 20
 ```
 
-[Read more](../advanced-configuration.html#the-runners-section)
+[Read more](../advanced-configuration.md#the-runners-section)
 about all the options you can use under `[[runners]]`.
 
 ### The `runners.docker` section
 
 In the `[runners.docker]` section you can define the default Docker image to
-be used by the child Runners if it's not defined in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html).
+be used by the child Runners if it's not defined in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/).
 By using `privileged = true`, all Runners will be able to run
 [Docker in Docker](https://docs.gitlab.com/ce/ci/docker/using_docker_build.html#use-docker-in-docker-executor)
 which is useful if you plan to build your own Docker images via GitLab CI/CD.
@@ -274,7 +274,7 @@ VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
 but it’s something to consider if you've got a more complex configuration. Read
 more in [Docker docs about VPC connectivity](https://docs.docker.com/machine/drivers/aws/#vpc-connectivity).
 
-[Read more](https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-machine-section)
+[Read more](../advanced-configuration.md#the-runners-machine-section)
 about all the options you can use under `[runners.machine]`.
 
 ### Getting it all together
