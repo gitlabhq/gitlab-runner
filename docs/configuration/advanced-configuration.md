@@ -18,7 +18,7 @@ This defines global settings of GitLab Runner.
 | ------- | ----------- |
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
 | `log_level`      | Log level (options: debug, info, warn, error, fatal, panic). Note that this setting has lower priority than log-level set by command line argument --debug, -l or --log-level |
-| `check_interval` | defines in seconds how often to check GitLab for a new builds |
+| `check_interval` | defines the interval length, in seconds, between new jobs check. The default value is `3`; if set to `0` or lower, the default value will be used. |
 | `sentry_dsn`     | enable tracking of all system level errors to sentry |
 | `metrics_server` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
 
