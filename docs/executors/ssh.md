@@ -42,6 +42,9 @@ Where:
 To overwrite the `~/builds` directory, specify the `builds_dir` options under
 `[[runners]]` section in [`config.toml`][toml].
 
+If you want to upload job artifacts, install `gitlab-runner` on the host you are
+connecting to via SSH.
+
 ## Security
 
 The SSH executor is susceptible to MITM attacks (man-in-the-middle), because of
