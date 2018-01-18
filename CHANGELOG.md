@@ -1,3 +1,6 @@
+v 10.4.0-rc2 (2018-01-18)
+- Always load OS certificate pool when evaluating TLS connections !804
+
 v 10.4.0-rc1 (2018-01-08)
 - Add (overwritable) pod annotations for the kubernetes executor !666
 - docker.allowed_images can use glob syntax in config.toml !721
