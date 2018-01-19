@@ -105,6 +105,13 @@ func (s *RegisterCommand) askDocker() {
 		s.Docker = &common.DockerConfig{}
 	}
 	s.Docker.Image = s.ask("docker-image", "Please enter the default Docker image (e.g. ruby:2.1):")
+
+	for _, volume := range s.Docker.Volumes {
+		parts := strings.Split(volume, ":")
+		if parts[len(parts)-1] == "/cache" {
+			return
+		}
+	}
 	s.Docker.Volumes = append(s.Docker.Volumes, "/cache")
 }
 
