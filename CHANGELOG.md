@@ -11,6 +11,9 @@ v 10.4.0-rc1 (2018-01-08)
 - Fix data races in executor/docker package !800
 - Fix data races in network package !775
 
+v 10.3.1 (2018-01-22)
+- Always load OS certificate pool when evaluating TLS connections !804
+
 v 10.3.0 (2017-12-22)
 - Do not use `git config --local` as it's not available in git v1.7.1 !790
 - new RC naming schema !780
