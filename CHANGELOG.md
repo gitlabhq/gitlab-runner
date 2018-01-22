@@ -1,3 +1,7 @@
+v 10.2.1 (2018-01-22)
+- Do not use `git config --local` as it's not available in git v1.7.1 !790
+- Always load OS certificate pool when evaluating TLS connections !804
+
 v 10.2.0 (2017-11-22)
 - Update supported platforms !712
 - Fix typo in Kubernetes runner docs !714
