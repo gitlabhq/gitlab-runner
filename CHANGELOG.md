@@ -1,3 +1,7 @@
+v 10.1.1 (2018-01-22)
+- Do not use `git config --local` as it's not available in git v1.7.1 !790
+- Always load OS certificate pool when evaluating TLS connections !804
+
 v 10.1.0 (2017-10-22)
 - Allow customizing go test flags with TESTFLAGS variable !688
 - Clarify that cloning a runner could be considered an attack vector !658
