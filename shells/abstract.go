@@ -95,7 +95,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	w.Command("git", "config", "fetch.recurseSubmodules", "false")
 
 	if build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, build, []string{"--local"})
+		b.writeGitSSLConfig(w, build, nil)
 	}
 
 	// Remove .git/{index,shallow}.lock files from .git, which can fail the fetch command
