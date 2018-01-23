@@ -137,6 +137,7 @@ docs check links:
   stage: test
   cache: {}
   dependencies: []
+  before_script: []
   script:
     - mv docs/ /nanoc/content/
     - cd /nanoc
