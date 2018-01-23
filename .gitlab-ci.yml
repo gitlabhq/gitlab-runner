@@ -291,6 +291,7 @@ package-rpm: *packages
 
 .release_docker_images: &release_docker_images
   <<: *docker
+  <<: *except_docs
   stage: release
   variables: &release_docker_images_variables
     <<: *docker_variables
