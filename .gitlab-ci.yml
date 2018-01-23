@@ -13,9 +13,6 @@ variables:
 
 image: $CI_IMAGE
 
-before_script:
-- source ci/prepare
-
 # Skip all jobs except the ones that begin and end with 'docs'.
 # Used for commits including ONLY documentation changes.
 # https://docs.gitlab.com/ce/development/writing_documentation.html#testing
@@ -40,7 +37,6 @@ before_script:
 
 .image_builder: &image_builder
   <<: *docker
-  <<: *except_docs
   stage: prepare
   image: docker:git
   script:
@@ -68,7 +64,6 @@ prepare alpine-no-root image:
 
 bindata:
   <<: *docker
-  <<: *except_docs
   stage: prebuild
   script:
   - make docker
@@ -117,7 +112,6 @@ codequality:
 
 unit tests (no race):
   <<: *docker
-  <<: *except_docs
   stage: test
   script:
     - source ci/touch_make_dependencies
@@ -125,7 +119,6 @@ unit tests (no race):
 
 unit tests:
   <<: *docker
-  <<: *except_docs
   stage: test
   allow_failure: true
   script:
@@ -171,7 +164,6 @@ integration windows:
 
 race conditions detector:
   <<: *docker
-  <<: *except_docs
   stage: test
   script:
   - source ci/touch_make_dependencies
@@ -291,7 +283,6 @@ package-rpm: *packages
 
 .release_docker_images: &release_docker_images
   <<: *docker
-  <<: *except_docs
   stage: release
   variables: &release_docker_images_variables
     <<: *docker_variables
@@ -308,6 +299,7 @@ package-rpm: *packages
   - release
 
 .release: &release
+  <<: *except_docs
   stage: release
   before_script:
   - source ci/touch_make_dependencies
@@ -357,6 +349,7 @@ development docker images:
   - branches
   except:
   - master
+  - /(^docs[\/-].*|.*-docs$)/
   tags:
   - docker
 
