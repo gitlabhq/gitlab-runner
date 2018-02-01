@@ -3,29 +3,28 @@ package common
 import (
 	"fmt"
 	"runtime"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/urfave/cli"
 )
 
 var NAME = "gitlab-runner"
-var VERSION = "dev"
+var VERSION = "development version"
 var REVISION = "HEAD"
 var BRANCH = "HEAD"
-var BUILT = "now"
+var BUILT = "unknown"
 
 var AppVersion AppVersionInfo
 
 type AppVersionInfo struct {
-	Name         string    `json:"name"`
-	Version      string    `json:"version"`
-	Revision     string    `json:"revision"`
-	Branch       string    `json:"branch"`
-	GOVersion    string    `json:"go_version"`
-	BuiltAt      time.Time `json:"built_at"`
-	OS           string    `json:"os"`
-	Architecture string    `json:"architecture"`
+	Name         string `json:"name"`
+	Version      string `json:"version"`
+	Revision     string `json:"revision"`
+	Branch       string `json:"branch"`
+	GOVersion    string `json:"go_version"`
+	BuiltAt      string `json:"built_at"`
+	OS           string `json:"os"`
+	Architecture string `json:"architecture"`
 }
 
 func (v *AppVersionInfo) Printer(c *cli.Context) {
@@ -49,7 +48,7 @@ func (v *AppVersionInfo) Extended() string {
 	version += fmt.Sprintf("Git revision: %s\n", v.Revision)
 	version += fmt.Sprintf("Git branch:   %s\n", v.Branch)
 	version += fmt.Sprintf("GO version:   %s\n", v.GOVersion)
-	version += fmt.Sprintf("Built:        %s\n", v.BuiltAt.Format(time.RFC1123Z))
+	version += fmt.Sprintf("Built:        %s\n", v.BuiltAt)
 	version += fmt.Sprintf("OS/Arch:      %s/%s\n", v.OS, v.Architecture)
 
 	return version
@@ -63,7 +62,7 @@ func (v *AppVersionInfo) NewMetricsCollector() *prometheus.GaugeVec {
 		"revision":     v.Revision,
 		"branch":       v.Branch,
 		"go_version":   v.GOVersion,
-		"built_at":     v.BuiltAt.String(),
+		"built_at":     v.BuiltAt,
 		"os":           v.OS,
 		"architecture": v.Architecture,
 	}
@@ -84,18 +83,13 @@ func (v *AppVersionInfo) NewMetricsCollector() *prometheus.GaugeVec {
 }
 
 func init() {
-	builtAt := time.Now()
-	if BUILT != "now" {
-		builtAt, _ = time.Parse(time.RFC3339, BUILT)
-	}
-
 	AppVersion = AppVersionInfo{
 		Name:         NAME,
 		Version:      VERSION,
 		Revision:     REVISION,
 		Branch:       BRANCH,
 		GOVersion:    runtime.Version(),
-		BuiltAt:      builtAt,
+		BuiltAt:      BUILT,
 		OS:           runtime.GOOS,
 		Architecture: runtime.GOARCH,
 	}
