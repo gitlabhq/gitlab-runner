@@ -188,6 +188,14 @@ build_simple: $(GOPATH_SETUP)
 
 build_current: executors/docker/bindata.go build_simple
 
+build_current_docker: RUNNER_BINARY ?= out/binaries/$(NAME)
+build_current_docker:
+	make release_docker_images RUNNER_BINARY=$(RUNNER_BINARY)
+
+build_current_deb: RUNNER_BINARY ?= out/binaries/$(NAME)
+build_current_deb:
+	make package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64 RUNNER_BINARY=$(RUNNER_BINARY)
+
 check_race_conditions: executors/docker/bindata.go
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
@@ -256,6 +264,7 @@ package-rpm: package-deps package-prepare
 	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=arm
 	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=armhf
 
+package-deb-fpm: RUNNER_BINARY ?= out/binaries/$(NAME)-linux-$(ARCH)
 package-deb-fpm:
 	@mkdir -p out/deb/
 	fpm -s dir -t deb -n $(PACKAGE_NAME) -v $(VERSION) \
@@ -282,8 +291,9 @@ package-deb-fpm:
 		--deb-suggests docker-engine \
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-runner
+		$(RUNNER_BINARY)=/usr/bin/gitlab-runner
 
+package-rpm-fpm: RUNNER_BINARY ?= out/binaries/$(NAME)-linux-$(ARCH)
 package-rpm-fpm:
 	@mkdir -p out/rpm/
 	fpm -s dir -t rpm -n $(PACKAGE_NAME) -v $(VERSION) \
@@ -307,7 +317,7 @@ package-rpm-fpm:
 		--depends tar \
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-runner
+		$(RUNNER_BINARY)=/usr/bin/gitlab-runner
 
 packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
 
@@ -379,6 +389,7 @@ prepare_index:
 	# Preparing index file
 	@./ci/prepare_index
 
+release_docker_images: RUNNER_BINARY ?= out/binaries/gitlab-runner-linux-amd64
 release_docker_images:
 	# Releasing Docker images
 	@./ci/release_docker_images

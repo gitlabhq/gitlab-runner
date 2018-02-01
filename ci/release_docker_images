@@ -2,6 +2,13 @@
 
 set -eo pipefail
 
+DOCKER_MACHINE_VERSION=${DOCKER_MACHINE_VERSION:-0.13.0}
+DOCKER_MACHINE_CHECKSUM=${DOCKER_MACHINE_CHECKSUM:-8f5310eb9e04e71b44c80c0ccebd8a85be56266b4170b4a6ac6223f7b5640df9}
+DUMB_INIT_VERSION=${DUMB_INIT_VERSION:-1.0.2}
+DUMB_INIT_CHECKSUM=${DUMB_INIT_CHECKSUM:-a8defac40aaca2ca0896c7c5adbc241af60c7c3df470c1a4c469a860bd805429}
+
+RUNNER_BINARY=${RUNNER_BINARY:-out/binaries/gitlab-runner-linux-amd64}
+
 IS_LATEST=${IS_LATEST:-}
 ref_tag=${CI_COMMIT_REF_NAME:-master}
 
@@ -92,13 +99,14 @@ logout() {
     _docker logout "${1}"
 }
 
+echo -n > dockerfiles/checksums
 echo "${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine" >> dockerfiles/checksums
 echo "${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init" >> dockerfiles/checksums
 cat dockerfiles/checksums
 
-cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/
+cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/gitlab-runner_amd64.deb
 cp dockerfiles/checksums dockerfiles/ubuntu
-cp out/binaries/gitlab-runner-linux-amd64 dockerfiles/alpine
+cp ${RUNNER_BINARY} dockerfiles/alpine/gitlab-runner-linux-amd64
 cp dockerfiles/checksums dockerfiles/alpine
 
 pull gitlab/gitlab-runner:ubuntu
