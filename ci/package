@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+create_package() {
+    local packageType=${1}
+    shift
+
+    local customOptions
+    read -r -a customOptions <<< "${@}"
+
+	mkdir -p "out/${packageType}/"
+
+    fpm \
+		--package "out/${packageType}/${PACKAGE_NAME}_${PACKAGE_ARCH}.${packageType}" \
+		--force \
+		--input-type dir \
+		--output-type "${packageType}" \
+		\
+		--name "${PACKAGE_NAME}" \
+		--description "GitLab Runner" \
+		--version "${VERSION}" \
+		--url https://gitlab.com/gitlab-org/gitlab-runner \
+		--maintainer "GitLab Inc. <support@gitlab.com>" \
+		--license "MIT" \
+		--vendor "GitLab Inc." \
+		--architecture "${PACKAGE_ARCH}" \
+		\
+		--conflicts "${PACKAGE_NAME}-beta" \
+		--conflicts gitlab-ci-multi-runner \
+		--conflicts gitlab-ci-multi-runner-beta \
+		--provides gitlab-ci-multi-runner \
+		--replaces gitlab-ci-multi-runner \
+		\
+		--depends git \
+		--depends curl \
+		--depends tar \
+		\
+		${customOptions[@]} \
+		\
+		--after-install "packaging/scripts/postinst.${packageType}" \
+		--before-remove "packaging/scripts/prerm.${packageType}" \
+		\
+		packaging/root/=/ \
+		"${RUNNER_BINARY}=/usr/lib/gitlab-runner/gitlab-runner" \
+		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
+}
+
+create_deb() {
+    local options=()
+    options+=("--depends ca-certificates")
+    options+=("--category admin")
+    options+=("--deb-priority optional")
+    options+=("--deb-compression bzip2")
+    options+=("--deb-suggests docker-engine")
+
+    create_package deb "${options[@]}"
+
+    if [ -n "${GPG_KEYID}" ]; then
+        dpkg-sig \
+            -g "--no-tty --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}'" \
+			-k "${GPG_KEYID}" \
+			--sign builder
+			"out/deb/${PACKAGE_NAME}_${PACKAGE_ARCH}.deb"
+	fi
+}
+
+create_rpm() {
+    local options=()
+    options+=("--rpm-compression bzip2")
+    options+=("--rpm-os linux")
+
+    create_package rpm "${options[@]}"
+
+    if [ -n "${GPG_KEYID}" ] ; then
+		echo "yes" | setsid rpm \
+			--define "_gpg_name ${GPG_KEYID}" \
+			--define "_signature gpg" \
+			--define "__gpg_check_password_cmd /bin/true" \
+			--define "__gpg_sign_cmd %{__gpg} gpg --batch --no-armor --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}' --no-secmem-warning -u '%{_gpg_name}' --sign --detach-sign --output %{__signature_filename} %{__plaintext_filename}" \
+			--addsign "out/rpm/${PACKAGE_NAME}_${PACKAGE_ARCH}.rpm"
+	fi
+
+}
+
+case "${1}" in
+    deb)
+        create_deb
+        ;;
+    rpm)
+        create_rpm
+        ;;
+    *)
+        echo "Usage: ${0} (deb|rpm)"
+        ;;
+esac

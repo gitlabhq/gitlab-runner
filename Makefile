@@ -1,5 +1,5 @@
 NAME ?= gitlab-runner
-PACKAGE_NAME ?= $(NAME)
+export PACKAGE_NAME ?= $(NAME)
 export VERSION := $(shell ./ci/version)
 REVISION := $(shell git rev-parse --short=8 HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
@@ -68,6 +68,8 @@ MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mocke
 all: deps helper-docker build
 
 include Makefile.runner_helper.mk
+include Makefile.build.mk
+include Makefile.package.mk
 
 help:
 	# Commands:
@@ -104,21 +106,6 @@ deps: $(DEVELOPMENT_TOOLS)
 codequality:
 	./scripts/codequality analyze --dev
 
-build: $(GOX)
-	# Building $(NAME) in version $(VERSION) for $(BUILD_PLATFORMS)
-	gox $(BUILD_PLATFORMS) \
-		-ldflags "$(GO_LDFLAGS)" \
-		-output="out/binaries/$(NAME)-{{.OS}}-{{.Arch}}" \
-		$(PKG)
-
-build_simple: $(GOPATH_SETUP)
-	# Building $(NAME) in version $(VERSION) for current platform
-	go build \
-		-ldflags "$(GO_LDFLAGS)" \
-		-o "out/binaries/$(NAME)" \
-		$(PKG)
-
-build_current: helper-docker build_simple
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
@@ -190,97 +177,6 @@ build-and-deploy-binary:
 	make build BUILD_PLATFORMS="-os=linux -arch=amd64"
 	scp out/binaries/$(PACKAGE_NAME)-linux-amd64 $(SERVER):/usr/bin/gitlab-runner
 
-package: package-deps package-prepare package-deb package-rpm
-
-package-deps:
-	# Installing packaging dependencies...
-	which fpm 1>/dev/null || gem install rake fpm --no-ri --no-rdoc
-
-package-prepare:
-	chmod 755 packaging/root/usr/share/gitlab-runner/
-	chmod 755 packaging/root/usr/share/gitlab-runner/*
-
-package-deb: package-deps package-prepare
-	# Building Debian compatible packages...
-	make package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64
-	make package-deb-fpm ARCH=386 PACKAGE_ARCH=i386
-	make package-deb-fpm ARCH=arm PACKAGE_ARCH=armel
-	make package-deb-fpm ARCH=arm PACKAGE_ARCH=armhf
-
-package-rpm: package-deps package-prepare
-	# Building RedHat compatible packages...
-	make package-rpm-fpm ARCH=amd64 PACKAGE_ARCH=amd64
-	make package-rpm-fpm ARCH=386 PACKAGE_ARCH=i686
-	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=arm
-	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=armhf
-
-package-deb-fpm:
-	@mkdir -p out/deb/
-	fpm -s dir -t deb -n $(PACKAGE_NAME) -v $(VERSION) \
-		-p out/deb/$(PACKAGE_NAME)_$(PACKAGE_ARCH).deb \
-		--deb-priority optional --category admin \
-		--force \
-		--deb-compression bzip2 \
-		--after-install packaging/scripts/postinst.deb \
-		--before-remove packaging/scripts/prerm.deb \
-		--url https://gitlab.com/gitlab-org/gitlab-runner \
-		--description "GitLab Runner" \
-		-m "GitLab Inc. <support@gitlab.com>" \
-		--license "MIT" \
-		--vendor "GitLab Inc." \
-		--conflicts $(PACKAGE_NAME)-beta \
-		--conflicts gitlab-ci-multi-runner \
-		--conflicts gitlab-ci-multi-runner-beta \
-		--provides gitlab-ci-multi-runner \
-		--replaces gitlab-ci-multi-runner \
-		--depends ca-certificates \
-		--depends git \
-		--depends curl \
-		--depends tar \
-		--deb-suggests docker-engine \
-		-a $(PACKAGE_ARCH) \
-		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/lib/gitlab-runner/gitlab-runner \
-		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
-	@if [ -n "$(GPG_KEYID)" ]; then \
-		dpkg-sig -g "--no-tty --digest-algo 'sha512' --passphrase '$(GPG_PASSPHRASE)'" \
-			-k $(GPG_KEYID) --sign builder "out/deb/$(PACKAGE_NAME)_$(PACKAGE_ARCH).deb" ;\
-	fi
-
-package-rpm-fpm:
-	@mkdir -p out/rpm/
-	fpm -s dir -t rpm -n $(PACKAGE_NAME) -v $(VERSION) \
-		-p out/rpm/$(PACKAGE_NAME)_$(PACKAGE_ARCH).rpm \
-		--rpm-compression bzip2 --rpm-os linux \
-		--force \
-		--after-install packaging/scripts/postinst.rpm \
-		--before-remove packaging/scripts/prerm.rpm \
-		--url https://gitlab.com/gitlab-org/gitlab-runner \
-		--description "GitLab Runner" \
-		-m "GitLab Inc. <support@gitlab.com>" \
-		--license "MIT" \
-		--vendor "GitLab Inc." \
-		--conflicts $(PACKAGE_NAME)-beta \
-		--conflicts gitlab-ci-multi-runner \
-		--conflicts gitlab-ci-multi-runner-beta \
-		--provides gitlab-ci-multi-runner \
-		--replaces gitlab-ci-multi-runner \
-		--depends git \
-		--depends curl \
-		--depends tar \
-		-a $(PACKAGE_ARCH) \
-		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/lib/gitlab-runner/gitlab-runner \
-		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
-	@if [ -n "$(GPG_KEYID)" ] ; then \
-		echo "yes" | setsid rpm \
-			--define "_gpg_name $(GPG_KEYID)" \
-			--define "_signature gpg" \
-			--define "__gpg_check_password_cmd /bin/true" \
-			--define "__gpg_sign_cmd %{__gpg} gpg --batch --no-armor --digest-algo 'sha512' --passphrase '$(GPG_PASSPHRASE)' --no-secmem-warning -u '%{_gpg_name}' --sign --detach-sign --output %{__signature_filename} %{__plaintext_filename}" \
-			--addsign out/rpm/$(PACKAGE_NAME)_$(PACKAGE_ARCH).rpm ;\
-	fi
-
 packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
 
 packagecloud-deps:
@@ -350,6 +246,7 @@ prepare_index:
 	# Preparing index file
 	@./ci/prepare_index
 
+release_docker_images: export RUNNER_BINARY := out/binaries/gitlab-runner-linux-amd64
 release_docker_images:
 	# Releasing Docker images
 	@./ci/release_docker_images
