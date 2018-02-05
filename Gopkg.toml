@@ -229,8 +229,8 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "github.com/minio/go-homedir"
-  revision = "21304a94172ae3a09dee2cd86a12fb6f842138c7"
-    
+  revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
+
 [[override]]
   name = "github.com/opencontainers/runc"
   revision = "94dc520a5732126985fec249f80c91b9e0601815"
