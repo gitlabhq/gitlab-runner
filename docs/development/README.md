@@ -5,13 +5,13 @@
 ### For Debian/Ubuntu
 ```bash
 apt-get install -y mercurial git-core wget make
-wget https://storage.googleapis.com/golang/go1.7.1.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.9.4.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 ### For OSX using binary package
 ```bash
-wget https://storage.googleapis.com/golang/go1.7.1.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.9.4.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
@@ -22,13 +22,13 @@ brew install go
 
 ### For OSX using installation package
 ```
-wget https://storage.googleapis.com/golang/go1.7.1.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.9.4.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
 ### For FreeBSD
 ```
-pkg install go-1.7.1 gmake git mercurial
+pkg install go-1.9.4 gmake git mercurial
 ```
 
 ## 2. Install Docker Engine
@@ -37,9 +37,9 @@ The Docker Engine is required to create pre-built image that is embedded into ru
 
 Make sure that on machine that is running your Docker Engine you have a `binfmt_misc`.
 This is required to be able to build ARM images that are embedded into GitLab Runner binary.
- 
+
 * For Debian/Ubuntu it's sufficient to execute:
-    
+
     ```
     apt-get install binfmt-support qemu-user-static
     ```
@@ -50,13 +50,13 @@ This is required to be able to build ARM images that are embedded into GitLab Ru
 
     ```
     #!/bin/sh
-    
+
     set -xe
-    
+
     /sbin/modprobe binfmt_misc
-    
+
     mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
-    
+
     # Support for ARM binaries through Qemu:
     { echo ':arm:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-arm-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
     { echo ':armeb:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-armeb-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
