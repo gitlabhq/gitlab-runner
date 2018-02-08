@@ -1,9 +1,20 @@
-[![Build Status](https://travis-ci.org/cloudfoundry-incubator/candiedyaml.svg)](https://travis-ci.org/cloudfoundry-incubator/candiedyaml)
 [![GoDoc](https://godoc.org/github.com/cloudfoundry-incubator/candiedyaml?status.svg)](https://godoc.org/github.com/cloudfoundry-incubator/candiedyaml)
 
 
 candiedyaml
 ===========
+
+-----
+
+DEPRECATION NOTICE
+------------------
+
+The `candiedyaml` library is no longer under active development and will soon
+be moved to the [cloudfoundry-attic](https://github.com/cloudfoundry-attic)
+GitHub organization. We recommend the use of an alternative library such as
+[`gopkg.in/yaml.v2`](https://gopkg.in/yaml.v2) instead.
+
+-----
 
 YAML for Go
 
