@@ -235,7 +235,7 @@ package: package-deps package-prepare package-deb package-rpm
 
 package-deps:
 	# Installing packaging dependencies...
-	gem install fpm --no-ri --no-rdoc
+	gem install rake fpm --no-ri --no-rdoc
 
 package-prepare:
 	chmod 755 packaging/root/usr/share/gitlab-runner/
