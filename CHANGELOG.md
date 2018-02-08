@@ -1,3 +1,12 @@
+v 10.5.0-rc1 (2018-02-08)
+- Fix git 1.7.1 compatibility in executors/shell package tests !791
+- Always load OS certificate pool when evaluating TLS connections !804
+- Do not add /cache volume if already provided by the user during gitlab-runner register !807
+- Change confusing Built value for development version !821
+- docs: explain valid values for check_interval !801
+- docs: Fix OffPeak variables list !806
+- docs: Add note about gitlab-runner on the SSH host being used for uploads !817
+
 v 10.4.0 (2018-01-22)
 - Always load OS certificate pool when evaluating TLS connections !804
 - Add (overwritable) pod annotations for the kubernetes executor !666
