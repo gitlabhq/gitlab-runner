@@ -2,6 +2,7 @@ package docker_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -19,8 +20,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-
-	"golang.org/x/net/context"
 )
 
 func TestDockerCommandSuccessRun(t *testing.T) {
@@ -129,14 +128,11 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 }
 
 func isDockerOlderThan17_07(t *testing.T) bool {
-	cmd := exec.Command("docker", "version")
+	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
 	output, err := cmd.Output()
 	require.NoError(t, err, "docker version should return output")
 
-	r := regexp.MustCompile(`(?ms)Server:\s*\n\s+Version:\s+([^\n]+)$`)
-	v := r.FindStringSubmatch(string(output))[1]
-
-	localVersion, err := version.NewVersion(v)
+	localVersion, err := version.NewVersion(strings.TrimSpace(string(output)))
 	require.NoError(t, err)
 
 	checkedVersion, err := version.NewVersion("17.07.0-ce")
