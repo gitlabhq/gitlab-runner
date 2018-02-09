@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -39,6 +40,8 @@ const (
 	DockerExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
 	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 )
+
+var DockerPrebuiltImagesPath = "out/docker/"
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
@@ -229,7 +232,8 @@ func (s *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		return &image, nil
 	}
 
-	data, err := Asset("prebuilt-" + architecture + prebuiltImageExtension)
+	prebuiltImageFile := DockerPrebuiltImagesPath + "prebuilt-" + architecture + prebuiltImageExtension
+	file, err := os.OpenFile(prebuiltImageFile, os.O_RDONLY, 0600)
 	if err != nil {
 		return nil, fmt.Errorf("Unsupported architecture: %s: %q", architecture, err.Error())
 	}
@@ -238,7 +242,7 @@ func (s *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 	ref := prebuiltImageName
 	source := types.ImageImportSource{
-		Source:     bytes.NewBuffer(data),
+		Source:     file,
 		SourceName: "-",
 	}
 	options := types.ImageImportOptions{

@@ -62,7 +62,6 @@ bindata:
     paths:
     - out/docker/prebuilt-x86_64.tar.xz
     - out/docker/prebuilt-arm.tar.xz
-    - executors/docker/bindata.go
     - .gopath/bin
     - .gopath/.ok
     expire_in: 7d

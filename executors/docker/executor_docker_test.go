@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,6 +25,13 @@ import (
 
 	"golang.org/x/net/context"
 )
+
+func TestMain(m *testing.M) {
+	DockerPrebuiltImagesPath = "../../out/docker/"
+
+	flag.Parse()
+	os.Exit(m.Run())
+}
 
 // ImagePullOptions contains the RegistryAuth which is inferred from the docker
 // configuration for the user, so just mock it out here.
