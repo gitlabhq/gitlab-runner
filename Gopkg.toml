@@ -22,12 +22,8 @@
 
 ignored = ["test", "appengine"]
 
-# mimic govendor behaviour - not yet shipped in 0.3.2
-# [prune]
-#   non-go = true
-#   unused-packages = true
-#   go-tests = true
-
+[prune]
+  non-go = true
 
 [[constraint]]
   name = "github.com/BurntSushi/toml"
