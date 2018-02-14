@@ -52,11 +52,19 @@ func getCacheObjectName(build *common.Build, cache *common.CacheConfig, key stri
 	return path.Join(cache.Path, runnerSegment, "project", strconv.Itoa(build.JobInfo.ProjectID), key)
 }
 
+type fakeIAMCredentialsProvider interface {
+	credentials.Provider
+}
+
+var iamFactory = func() *credentials.Credentials {
+	return credentials.NewIAM("")
+}
+
 func getCacheStorageClient(cache *common.CacheConfig) (scl *minio.Client, err error) {
-	// If the server address or credentials aren't specified then use IAM
-	// instance profile credentials and talk to "real" S3.
+	 //If the server address or credentials aren't specified then use IAM
+	 //instance profile credentials and talk to "real" S3.
 	if cache.ServerAddress == "" || cache.AccessKey == "" || cache.SecretKey == "" {
-		iam := credentials.NewIAM("")
+		iam := iamFactory()
 		scl, err = minio.NewWithCredentials("s3.amazonaws.com", iam, true, "")
 	} else {
 		scl, err = minio.New(cache.ServerAddress, cache.AccessKey, cache.SecretKey, !cache.Insecure)
