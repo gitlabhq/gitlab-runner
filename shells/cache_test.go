@@ -3,6 +3,7 @@ package shells
 import (
 	"testing"
 
+	"github.com/minio/minio-go/pkg/credentials"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -18,6 +19,20 @@ func defaultS3CacheFactory() *common.CacheConfig {
 		BucketName:     "test",
 		BucketLocation: "location",
 	}
+}
+
+func iamS3CacheFactory(t *testing.T) (*common.CacheConfig, *mockFakeIAMCredentialsProvider) {
+	cacheConfig := defaultS3CacheFactory()
+	cacheConfig.ServerAddress = ""
+	cacheConfig.AccessKey = ""
+	cacheConfig.SecretKey = ""
+
+	iamProvider := &mockFakeIAMCredentialsProvider{}
+	iamFactory = func() *credentials.Credentials {
+		return credentials.New(iamProvider)
+	}
+
+	return cacheConfig, iamProvider
 }
 
 func defaults3CacheBuild(cacheConfig *common.CacheConfig) *common.Build {
@@ -49,6 +64,27 @@ func TestS3CacheUploadURL(t *testing.T) {
 	require.NotNil(t, url)
 	assert.Equal(t, s3Cache.ServerAddress, url.Host)
 	assert.Regexp(t, "^https://", url)
+	assert.Contains(t, url.String(), "X-Amz-Credential=access%2F")
+}
+
+func TestS3CacheUploadURLForIamCredentials(t *testing.T) {
+	s3Cache, iamProvider := iamS3CacheFactory(t)
+
+	fakeValue := credentials.Value{
+		AccessKeyID:     "access-from-iam",
+		SecretAccessKey: "secret-from-iam",
+	}
+	iamProvider.On("Retrieve").Return(fakeValue, nil).Once()
+	iamProvider.On("IsExpired").Return(false)
+	defer iamProvider.AssertExpectations(t)
+
+	s3Cache.Insecure = false
+	s3CacheBuild := defaults3CacheBuild(s3Cache)
+	url := getCacheUploadURL(s3CacheBuild, "key")
+	require.NotNil(t, url)
+	assert.Equal(t, "test.s3.amazonaws.com", url.Host)
+	assert.Regexp(t, "^https://", url)
+	assert.Contains(t, url.String(), "X-Amz-Credential=access-from-iam%2F")
 }
 
 func TestS3CacheUploadInsecureURL(t *testing.T) {
