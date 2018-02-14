@@ -74,7 +74,7 @@ Example:
 In cases where the GitLab instance is exposed to an URL which can't be used
 by the runner, a `clone_url` can be configured. For example; GitLab is exposed
 to `https://gitlab.example.com`, but the runner can't reach that because of
-a firewall setup. If the runner can reach the node on `192.168.1.23`,
+a firewall setup. If the runner can reach the node on `192.168.1.23`, 
 the `clone_url` should be set to `"http://192.168.1.23`.
 
 Only if the `clone_url` is set, the runner will construct a clone URL in the form
@@ -463,9 +463,6 @@ Example:
 
 > **Note:** For Amazon's S3 service the `ServerAddress` should always be `s3.amazonaws.com`. Minio S3 client will
 > get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
-
-> **Note:** If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified then the S3 client will use the
-> IAM instance profile available to the instance.
 
 ## The [runners.kubernetes] section
 
