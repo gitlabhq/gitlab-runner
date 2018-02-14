@@ -148,6 +148,7 @@ integration windows:
   variables:
     GOROOT: "C:/go/"
     GOPATH: "C:/gopath"
+    GIT_STRATEGY: fetch
   before_script:
   - .\ci\prepare.ps1
   script:
