@@ -5,6 +5,8 @@ package helpers
 import (
 	"os/exec"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 func SetProcessGroup(cmd *exec.Cmd) {
@@ -22,7 +24,7 @@ func KillProcessGroup(cmd *exec.Cmd) {
 	process := cmd.Process
 	if process != nil {
 		if process.Pid > 0 {
-			syscall.Kill(-process.Pid, syscall.SIGKILL)
+			unix.Kill(-process.Pid, unix.SIGKILL)
 		} else {
 			// doing normal kill
 			process.Kill()

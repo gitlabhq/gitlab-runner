@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
-	"syscall"
 	"testing"
 
 	"github.com/Sirupsen/logrus"
@@ -31,12 +30,6 @@ func createTestDirectory(t *testing.T) string {
 	err := os.Mkdir("test_directory", 0711)
 	assert.NoError(t, err)
 	return "test_directory"
-}
-
-func createTestPipe(t *testing.T) string {
-	err := syscall.Mkfifo("test_pipe", 0600)
-	assert.NoError(t, err)
-	return "test_pipe"
 }
 
 func createTestGitPathFile(t *testing.T) string {

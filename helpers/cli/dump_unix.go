@@ -6,15 +6,15 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"syscall"
 
 	"github.com/Sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 func watchForGoroutinesDump() {
 	// On USR1 dump stacks of all go routines
 	dumpStacks := make(chan os.Signal, 1)
-	signal.Notify(dumpStacks, syscall.SIGUSR1)
+	signal.Notify(dumpStacks, unix.SIGUSR1)
 	for _ = range dumpStacks {
 		buf := make([]byte, 1<<20)
 		runtime.Stack(buf, true)
