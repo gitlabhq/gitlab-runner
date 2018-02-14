@@ -401,8 +401,9 @@ exiting.  The default of `0` means that the runner has no timeout and will wait 
 
 ### gitlab-runner exec
 
-> **Note:** Starting with GitLab Runner 10.0, the `exec` command is **deprecated**
-and will be removed in one of the upcoming releases.
+> Notice, tha `exec` command is currently very limited in its functionality
+in comparison to normal usage of GitLab CI. For more details please check the
+[limitations of `gitlab-runner exec`](#limitations-of-gitlab-runner-exec) section.
 
 This command allows you to run builds locally, trying to replicate the CI
 environment as much as possible. It doesn't need to connect to GitLab, instead
@@ -442,9 +443,24 @@ If you want to use the `docker` executor with the `exec` command, use that in
 context of `docker-machine shell` or `boot2docker shell`. This is required to
 properly map your local directory to the directory inside the Docker container.
 
-### Limitations of `gitlab-runner exec`
+#### Limitations of `gitlab-runner exec`
 
-Some of the features may or may not work, like: `cache` or `artifacts`.
+With current implementation of `exec` some of the features of GitLab CI will
+not work or may work partially.
+
+We're currently thinking about how to replace current `exec` implementation,
+to make fully compatible with all features. Please track [the issue][exec-replacement-issue]
+for more details.
+
+**Compatibility table**
+
+| GitLab CI feature | Available with `exec` |
+|-------------------|-----------------------|
+| artifacts         | no                    |
+| cache             | partially             |
+| environments      | no                    |
+
+**Other requirements and limitations**
 
 `gitlab-runner exec docker` can only be used when Docker is installed locally.
 This is needed because GitLab Runner is using host-bind volumes to access the
@@ -486,3 +502,5 @@ administrator privileges:
   The simplest way is to write `Command Prompt` in the Windows search field,
   right click and select `Run as administrator`. You will be asked to confirm
   that you want to execute the elevated command prompt.
+
+[exec-replacement-issue]: https://gitlab.com/gitlab-org/gitlab-runner/issues/2797

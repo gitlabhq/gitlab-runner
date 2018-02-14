@@ -95,7 +95,7 @@ func (c *ExecCommand) getTimeout() int {
 }
 
 func (c *ExecCommand) Execute(context *cli.Context) {
-	logrus.Warningln("Since GitLab Runner 10.0 this command is marked as DEPRECATED and will be removed in one of upcoming releases")
+	logrus.Warningln("Notice that Exec command functionality is limited. Please check the documentation for more information")
 
 	wd, err := os.Getwd()
 	if err != nil {
