@@ -11,8 +11,7 @@ import (
 
 type commandExecutor struct {
 	executor
-	predefinedContainer *types.ContainerJSON
-	buildContainer      *types.ContainerJSON
+	buildContainer *types.ContainerJSON
 }
 
 func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -27,40 +26,65 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("Script is not compatible with Docker")
 	}
 
-	prebuildImage, err := s.getPrebuiltImage()
+	_, err = s.getPrebuiltImage()
 	if err != nil {
 		return err
 	}
 
-	buildImage := common.Image{
-		Name: prebuildImage.ID,
-	}
-
-	// Start pre-build container which will git clone changes
-	s.predefinedContainer, err = s.createContainer("predefined", buildImage, common.ContainerCommandBuild, []string{prebuildImage.ID})
-	if err != nil {
-		return err
-	}
-
-	// Start build container which will run actual build
-	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
+	_, err = s.getBuildImage()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
-	s.SetCurrentStage(DockerExecutorStageRun)
+func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON, error) {
+	prebuildImage, err := s.getPrebuiltImage()
+	if err != nil {
+		return nil, err
+	}
 
+	buildImage := common.Image{
+		Name: prebuildImage.ID,
+	}
+
+	containerJSON, err := s.createContainer("predefined", buildImage, common.ContainerCommandBuild, []string{prebuildImage.ID})
+	if err != nil {
+		return nil, err
+	}
+
+	return containerJSON, err
+}
+
+func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
+	if s.buildContainer == nil {
+		var err error
+
+		// Start build container which will run actual build
+		s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s.buildContainer, nil
+}
+
+func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	var runOn *types.ContainerJSON
+	var err error
 	if cmd.Predefined {
-		runOn = s.predefinedContainer
+		runOn, err = s.requestNewPredefinedContainer()
 	} else {
-		runOn = s.buildContainer
+		runOn, err = s.requestBuildContainer()
+	}
+	if err != nil {
+		return err
 	}
 
 	s.Debugln("Executing on", runOn.Name, "the", cmd.Script)
+
+	s.SetCurrentStage(DockerExecutorStageRun)
 
 	return s.watchContainer(cmd.Context, runOn.ID, bytes.NewBufferString(cmd.Script))
 }
