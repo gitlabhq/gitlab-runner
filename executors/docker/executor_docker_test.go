@@ -203,7 +203,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Once()
 
 	c.On("ImageInspectWithRaw", e.Context, imageName).
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Twice()
 
 	c.On("ContainerRemove", e.Context, containerName, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
@@ -290,7 +290,7 @@ func TestDockerForExistingImage(t *testing.T) {
 		Once()
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
 	image, err := e.pullDockerImage("existing", nil)
@@ -372,7 +372,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
 	image, err := e.getDockerImage("existing")
@@ -398,7 +398,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Once()
 
 	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
 	image, err := e.getDockerImage("not-existing")
@@ -406,7 +406,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	assert.NotNil(t, image)
 
 	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
 	// It shouldn't execute the pull for second time
@@ -424,7 +424,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
 	options := buildImagePullOptions(e, "existing:latest")
@@ -433,7 +433,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 		Once()
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
 	image, err := e.getDockerImage("existing")
@@ -450,7 +450,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
 	options := buildImagePullOptions(e, "existing:lastest")
@@ -472,7 +472,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "to-pull").
-		Return(types.ImageInspect{}, nil, nil).
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
 	options := buildImagePullOptions(e, "to-pull")
