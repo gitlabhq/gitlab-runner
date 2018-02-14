@@ -128,11 +128,14 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 }
 
 func isDockerOlderThan17_07(t *testing.T) bool {
-	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
-	output, err := cmd.Output()
-	require.NoError(t, err, "docker version should return output")
+	client, err := docker_helpers.New(
+		docker_helpers.DockerCredentials{}, docker.DockerAPIVersion)
+	require.NoError(t, err, "should be able to connect to docker")
 
-	localVersion, err := version.NewVersion(strings.TrimSpace(string(output)))
+	types, err := client.Info(context.Background())
+	require.NoError(t, err, "should be able to get docker info")
+
+	localVersion, err := version.NewVersion(types.ServerVersion)
 	require.NoError(t, err)
 
 	checkedVersion, err := version.NewVersion("17.07.0-ce")
@@ -648,7 +651,7 @@ func waitForDocker(credentials docker_helpers.DockerCredentials) error {
 	}
 
 	for i := 0; i < 20; i++ {
-		_, err = client.Info(context.TODO())
+		_, err = client.Info(context.Background())
 		if err == nil {
 			break
 		}
@@ -866,5 +869,44 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 	assert.NoError(t, err)
 	out := buffer.String()
 	assert.Contains(t, out, "Pulling docker image "+helperImageConfig)
-	assert.Contains(t, out, "Using docker image sha256:bbd86c6ba107ae2feb8dbf9024df4b48597c44e1b584a3d901bba91f7fc500e3 for predefined container...")
+	assert.Contains(t, out, "Using docker image sha256:bbd86c6ba107ae2feb8dbf9024df4b48597c44e1b584a3d901bba91f7fc500e3 for gitlab/gitlab-runner-helper:x86_64-64eea86c ...")
+}
+
+func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuildWithAfterScript()
+
+	// This scripts removes self-created containers that do exit
+	// It will fail if: cannot be removed, or no containers is found
+	// It is assuming that name of each runner created container starts
+	// with `runner-doprune-`
+	successfulBuild.Steps[0].Script = common.StepScript{
+		"docker ps -a -f status=exited | grep runner-doprune-",
+		"docker rm $(docker ps -a -f status=exited | grep runner-doprune- | awk '{print $1}')",
+	}
+
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				Token: "doprune",
+			},
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "docker:git",
+					Volumes: []string{
+						"/var/run/docker.sock:/var/run/docker.sock",
+					},
+				},
+			},
+		},
+	}
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
 }
