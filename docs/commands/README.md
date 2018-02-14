@@ -401,8 +401,9 @@ exiting.  The default of `0` means that the runner has no timeout and will wait 
 
 ### gitlab-runner exec
 
-> **Note:** Starting with GitLab Runner 10.0, the `exec` command is **deprecated**
-and will be removed in one of the upcoming releases.
+> Notice: Not all features of `.gitlab-ci.yml` are supported by `exec`. Please
+check what exactly is supported in the [limitations of `gitlab-runner exec`](#limitations-of-gitlab-runner-exec)
+section.
 
 This command allows you to run builds locally, trying to replicate the CI
 environment as much as possible. It doesn't need to connect to GitLab, instead
@@ -442,9 +443,64 @@ If you want to use the `docker` executor with the `exec` command, use that in
 context of `docker-machine shell` or `boot2docker shell`. This is required to
 properly map your local directory to the directory inside the Docker container.
 
-### Limitations of `gitlab-runner exec`
+#### Limitations of `gitlab-runner exec`
 
-Some of the features may or may not work, like: `cache` or `artifacts`.
+With current implementation of `exec` some of the features of GitLab CI will
+not work or may work partially.
+
+We're currently thinking about how to replace current `exec` implementation,
+to make fully compatible with all features. Please track [the issue][exec-replacement-issue]
+for more details.
+
+**Compatibility table - features based on `.gitlab-ci.yml`**
+
+| GitLab CI feature | Available with `exec` | Comments |
+|-------------------|-----------------------|----------|
+| image             | yes                   | extended configuration (`name`, `entrypoint`) are also supported |
+| services          | yes                   | extended configuration (`name`, `alias`, `entrypoint`, `command`) are also supported |
+| stages            | no                    | `exec` can only run one job, independently from others |
+| before_script     | yes                   | supports both global and job-level `before_script` |
+| after_script      | partially             | global `after_script` is not supported, only job-level `after_script`; only commands are taken in consideration, `when` is hardcoded to `always` |
+| variables         | yes                   | Supports default (partially), global and job-level variables; default variables are pre-set as can be seen in https://gitlab.com/gitlab-org/gitlab-runner/blob/master/helpers/gitlab_ci_yaml_parser/parser.go#L147 |
+| artifacts         | no                    |          |
+| cache             | partially             | Regarding the specific configuration it may or may not work as expected |
+| cache:policy      | no                    |          |
+| environment       | no                    |          |
+| only              | no                    |          |
+| except            | no                    |          |
+| `allow_failure`   | no                    | `exec` just exits with the result of job; it's callers responsibility to decide if failure is OK or not |
+| tags              | no                    |          |
+| when              | no                    |          |
+| dependencies      | no                    |          |
+| coverage          | no                    |          |
+| retry             | no                    |          |
+| hidden keys       | no                    | If explicitly asked to run, `exec` will try to run such job |
+| YAML features     | yes                   | Anchors (`&`), aliases (`*`), map merging (`<<`) are part of YAML specification and are handled by the parser |
+| pages             | partially             | Job's script will be executed if explicitly asked, but it doesn't affect pages state, which is managed by GitLab |
+
+**Compatibility table - features based on variables**
+
+| GitLab CI feature          | Available with `exec` | Comments |
+|----------------------------|-----------------------|----------|
+| GIT_STRATEGY               | yes                   |          |
+| GIT_CHECKOUT               | yes                   |          |
+| GIT_SUBMODULE_STRATEGY     | yes                   |          |
+| GET_SOURCES_ATTEMPTS       | yes                   |          |
+| ARTIFACT_DOWNLOAD_ATTEMPTS | no                    | artifacts are not supported |
+| RESTORE_CACHE_ATTEMPTS     | yes                   |          |
+| GIT_DEPTH                  | yes                   |          |
+
+**Compatibility table - other features**
+
+| GitLab CI feature | Available with `exec` | Comments |
+|-------------------|-----------------------|----------|
+| Secret Variables  | no                    |          |
+| triggers          | no                    |          |
+| schedules         | no                    |          |
+| job timeout       | no                    | hardcoded to 1 hour |
+| `[ci skip]`       | no                    |          |
+
+**Other requirements and limitations**
 
 `gitlab-runner exec docker` can only be used when Docker is installed locally.
 This is needed because GitLab Runner is using host-bind volumes to access the
@@ -486,3 +542,5 @@ administrator privileges:
   The simplest way is to write `Command Prompt` in the Windows search field,
   right click and select `Run as administrator`. You will be asked to confirm
   that you want to execute the elevated command prompt.
+
+[exec-replacement-issue]: https://gitlab.com/gitlab-org/gitlab-runner/issues/2797
