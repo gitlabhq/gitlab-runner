@@ -1,3 +1,8 @@
+v 10.5.0-rc2 (2018-02-15)
+- Always prefer creating new containers when running with Docker Executor !818
+- Improve output of /debug/jobs/list !826
+- Fix panic running docker package tests !828
+
 v 10.5.0-rc1 (2018-02-08)
 - Fix git 1.7.1 compatibility in executors/shell package tests !791
 - Always load OS certificate pool when evaluating TLS connections !804

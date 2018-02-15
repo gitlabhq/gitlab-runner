@@ -42,6 +42,18 @@ func GetRemoteSuccessfulBuild() (JobResponse, error) {
 	return getRemoteBuildResponse("echo Hello World")
 }
 
+func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
+	jobResponse, err := getRemoteBuildResponse("echo Hello World")
+	jobResponse.Steps = append(jobResponse.Steps,
+		Step{
+			Name:   StepNameAfterScript,
+			Script: []string{"echo Hello World"},
+			When:   StepWhenAlways,
+		},
+	)
+	return jobResponse, err
+}
+
 func GetRemoteSuccessfulBuildWithDumpedVariables() (response JobResponse, err error) {
 	variableName := "test_dump"
 	variableValue := "test"

@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"errors"
 	"fmt"
@@ -25,8 +26,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-
-	"golang.org/x/net/context"
 )
 
 const (
@@ -44,16 +43,22 @@ var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
 type executor struct {
 	executors.AbstractExecutor
-	client      docker_helpers.Client
-	failures    []string // IDs of containers that have failed in some way
-	builds      []string // IDs of successfully created build containers
-	services    []*types.Container
-	caches      []string // IDs of cache containers
-	info        types.Info
-	binds       []string
-	volumesFrom []string
-	devices     []container.DeviceMapping
-	links       []string
+	client docker_helpers.Client
+	info   types.Info
+
+	temporary []string // IDs of containers that should be removed
+
+	builds   []string // IDs of successfully created build containers
+	services []*types.Container
+	caches   []string // IDs of cache containers
+
+	binds []string
+	links []string
+
+	devices []container.DeviceMapping
+
+	usedImages     map[string]string
+	usedImagesLock sync.RWMutex
 }
 
 func (s *executor) getServiceVariables() []string {
@@ -154,7 +159,7 @@ func (s *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 	return &image, err
 }
 
-func (s *executor) getDockerImage(imageName string) (*types.ImageInspect, error) {
+func (s *executor) getDockerImage(imageName string) (image *types.ImageInspect, err error) {
 	pullPolicy, err := s.Config.Docker.PullPolicy.Get()
 	if err != nil {
 		return nil, err
@@ -163,31 +168,52 @@ func (s *executor) getDockerImage(imageName string) (*types.ImageInspect, error)
 	authConfig := s.getAuthConfig(imageName)
 
 	s.Debugln("Looking for image", imageName, "...")
-	image, _, err := s.client.ImageInspectWithRaw(s.Context, imageName)
+	existingImage, _, err := s.client.ImageInspectWithRaw(s.Context, imageName)
+
+	// Return early if we already used that image
+	if err == nil && s.wasImageUsed(imageName, existingImage.ID) {
+		return &existingImage, nil
+	}
+
+	defer func() {
+		if err == nil {
+			s.markImageAsUsed(imageName, image.ID)
+		}
+	}()
 
 	// If never is specified then we return what inspect did return
 	if pullPolicy == common.PullPolicyNever {
-		return &image, err
+		return &existingImage, err
 	}
 
 	if err == nil {
 		// Don't pull image that is passed by ID
-		if image.ID == imageName {
-			return &image, nil
+		if existingImage.ID == imageName {
+			return &existingImage, nil
 		}
 
 		// If not-present is specified
 		if pullPolicy == common.PullPolicyIfNotPresent {
 			s.Println("Using locally found image version due to if-not-present pull policy")
-			return &image, err
+			return &existingImage, err
 		}
 	}
 
-	newImage, err := s.pullDockerImage(imageName, authConfig)
+	return s.pullDockerImage(imageName, authConfig)
+}
+
+func (s *executor) expandAndGetDockerImage(imageName string, allowedImages []string) (*types.ImageInspect, error) {
+	imageName, err := s.expandImageName(imageName, allowedImages)
 	if err != nil {
 		return nil, err
 	}
-	return newImage, nil
+
+	image, err := s.getDockerImage(imageName)
+	if err != nil {
+		return nil, err
+	}
+
+	return image, nil
 }
 
 func (s *executor) getArchitecture() string {
@@ -258,6 +284,21 @@ func (s *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	return &image, err
 }
 
+func (s *executor) getBuildImage() (*types.ImageInspect, error) {
+	imageName, err := s.expandImageName(s.Build.Image.Name, []string{})
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch image
+	image, err := s.getDockerImage(imageName)
+	if err != nil {
+		return nil, err
+	}
+
+	return image, nil
+}
+
 func (s *executor) getAbsoluteContainerPath(dir string) string {
 	if path.IsAbs(dir) {
 		return dir
@@ -319,7 +360,7 @@ func (s *executor) createCacheVolume(containerName, containerPath string) (strin
 	resp, err := s.client.ContainerCreate(s.Context, config, hostConfig, nil, containerName)
 	if err != nil {
 		if resp.ID != "" {
-			s.failures = append(s.failures, resp.ID)
+			s.temporary = append(s.temporary, resp.ID)
 		}
 		return "", err
 	}
@@ -327,14 +368,14 @@ func (s *executor) createCacheVolume(containerName, containerPath string) (strin
 	s.Debugln("Starting cache container", resp.ID, "...")
 	err = s.client.ContainerStart(s.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
-		s.failures = append(s.failures, resp.ID)
+		s.temporary = append(s.temporary, resp.ID)
 		return "", err
 	}
 
 	s.Debugln("Waiting for cache container", resp.ID, "...")
 	err = s.waitForContainer(resp.ID)
 	if err != nil {
-		s.failures = append(s.failures, resp.ID)
+		s.temporary = append(s.temporary, resp.ID)
 		return "", err
 	}
 
@@ -387,7 +428,7 @@ func (s *executor) addCacheVolume(containerPath string) error {
 	}
 
 	s.Debugln("Using container", containerID, "as cache", containerPath, "...")
-	s.volumesFrom = append(s.volumesFrom, containerID)
+	s.caches = append(s.caches, containerID)
 	return nil
 }
 
@@ -439,7 +480,7 @@ func (s *executor) createBuildVolume() error {
 	}
 
 	s.caches = append(s.caches, id)
-	s.volumesFrom = append(s.volumesFrom, id)
+	s.temporary = append(s.temporary, id)
 
 	return nil
 }
@@ -521,14 +562,28 @@ func (s *executor) bindDevices() (err error) {
 	return nil
 }
 
-func (s *executor) printUsedDockerImageID(imageName, imageID, containerType, containerTypeName string) {
-	var line string
-	if imageName == imageID {
-		line = fmt.Sprintf("Using docker image %s for %s %s...", imageName, containerTypeName, containerType)
-	} else {
-		line = fmt.Sprintf("Using docker image %s ID=%s for %s %s...", imageName, imageID, containerTypeName, containerType)
+func (s *executor) wasImageUsed(imageName, imageID string) bool {
+	s.usedImagesLock.RLock()
+	defer s.usedImagesLock.RUnlock()
+
+	if s.usedImages[imageName] == imageID {
+		return true
 	}
-	s.Println(line)
+	return false
+}
+
+func (s *executor) markImageAsUsed(imageName, imageID string) {
+	s.usedImagesLock.Lock()
+	defer s.usedImagesLock.Unlock()
+
+	if s.usedImages == nil {
+		s.usedImages = make(map[string]string)
+	}
+	s.usedImages[imageName] = imageID
+
+	if imageName != imageID {
+		s.Println("Using docker image", imageID, "for", imageName, "...")
+	}
 }
 
 func (s *executor) splitServiceAndVersion(serviceDescription string) (service, version, imageName string, linkNames []string) {
@@ -571,8 +626,6 @@ func (s *executor) createService(serviceIndex int, service, version, image strin
 		return nil, err
 	}
 
-	s.printUsedDockerImageID(image, serviceImage.ID, "service", service)
-
 	serviceSlug := strings.Replace(service, "/", "__", -1)
 	containerName := fmt.Sprintf("%s-%s-%d", s.Build.ProjectUniqueName(), serviceSlug, serviceIndex)
 
@@ -598,7 +651,7 @@ func (s *executor) createService(serviceIndex int, service, version, image strin
 		NetworkMode:   container.NetworkMode(s.Config.Docker.NetworkMode),
 		Binds:         s.binds,
 		ShmSize:       s.Config.Docker.ShmSize,
-		VolumesFrom:   s.volumesFrom,
+		VolumesFrom:   s.caches,
 		Tmpfs:         s.Config.Docker.ServicesTmpfs,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -614,7 +667,7 @@ func (s *executor) createService(serviceIndex int, service, version, image strin
 	s.Debugln("Starting service container", resp.ID, "...")
 	err = s.client.ContainerStart(s.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
-		s.failures = append(s.failures, resp.ID)
+		s.temporary = append(s.temporary, resp.ID)
 		return nil, err
 	}
 
@@ -698,6 +751,7 @@ func (s *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 			}
 			s.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
 			s.services = append(s.services, container)
+			s.temporary = append(s.temporary, container.ID)
 		}
 		linksMap[linkName] = container
 	}
@@ -725,26 +779,34 @@ func (s *executor) createServices() (err error) {
 	return
 }
 
+func (s *executor) getValidContainers(containers []string) []string {
+	var newContainers []string
+
+	for _, container := range containers {
+		if _, err := s.client.ContainerInspect(s.Context, container); err == nil {
+			newContainers = append(newContainers, container)
+		}
+	}
+
+	return newContainers
+}
+
 func (s *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
-	imageName, err := s.expandImageName(imageDefinition.Name, allowedInternalImages)
+	image, err := s.expandAndGetDockerImage(imageDefinition.Name, allowedInternalImages)
 	if err != nil {
 		return nil, err
 	}
-
-	// Fetch image
-	image, err := s.getDockerImage(imageName)
-	if err != nil {
-		return nil, err
-	}
-
-	s.printUsedDockerImageID(imageName, image.ID, "container", containerType)
 
 	hostname := s.Config.Docker.Hostname
 	if hostname == "" {
 		hostname = s.Build.ProjectUniqueName()
 	}
 
-	containerName := s.Build.ProjectUniqueName() + "-" + containerType
+	// Always create unique, but sequential name
+	containerIndex := len(s.builds)
+	containerName := s.Build.ProjectUniqueName() + "-" +
+		containerType + "-" + strconv.Itoa(containerIndex)
+
 	config := &container.Config{
 		Image:        image.ID,
 		Hostname:     hostname,
@@ -768,6 +830,15 @@ func (s *executor) createContainer(containerType string, imageDefinition common.
 		return nil, err
 	}
 
+	// By default we use caches container,
+	// but in later phases we hook to previous build container
+	volumesFrom := s.caches
+	if len(s.builds) > 0 {
+		volumesFrom = []string{
+			s.builds[len(s.builds)-1],
+		}
+	}
+
 	hostConfig := &container.HostConfig{
 		Resources: container.Resources{
 			CpusetCpus: s.Config.Docker.CPUSetCPUs,
@@ -789,7 +860,7 @@ func (s *executor) createContainer(containerType string, imageDefinition common.
 		Binds:         s.binds,
 		ShmSize:       s.Config.Docker.ShmSize,
 		VolumeDriver:  s.Config.Docker.VolumeDriver,
-		VolumesFrom:   append(s.Config.Docker.VolumesFrom, s.volumesFrom...),
+		VolumesFrom:   append(s.Config.Docker.VolumesFrom, volumesFrom...),
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},
@@ -804,18 +875,19 @@ func (s *executor) createContainer(containerType string, imageDefinition common.
 	resp, err := s.client.ContainerCreate(s.Context, config, hostConfig, nil, containerName)
 	if err != nil {
 		if resp.ID != "" {
-			s.failures = append(s.failures, resp.ID)
+			s.temporary = append(s.temporary, resp.ID)
 		}
 		return nil, err
 	}
 
 	inspect, err := s.client.ContainerInspect(s.Context, resp.ID)
 	if err != nil {
-		s.failures = append(s.failures, resp.ID)
+		s.temporary = append(s.temporary, resp.ID)
 		return nil, err
 	}
 
 	s.builds = append(s.builds, resp.ID)
+	s.temporary = append(s.temporary, resp.ID)
 	return &inspect, nil
 }
 
@@ -1130,20 +1202,8 @@ func (s *executor) Cleanup() {
 		}()
 	}
 
-	for _, failureID := range s.failures {
-		remove(failureID)
-	}
-
-	for _, service := range s.services {
-		remove(service.ID)
-	}
-
-	for _, cacheID := range s.caches {
-		remove(cacheID)
-	}
-
-	for _, buildID := range s.builds {
-		remove(buildID)
+	for _, temporaryID := range s.temporary {
+		remove(temporaryID)
 	}
 
 	wg.Wait()

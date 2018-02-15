@@ -542,6 +542,10 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 		return nil
 	}
 
+	if len(afterScriptStep.Script) == 0 {
+		return nil
+	}
+
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
