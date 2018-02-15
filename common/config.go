@@ -260,7 +260,7 @@ type RunnerConfig struct {
 }
 
 type Config struct {
-	MetricsServerAddress string          `toml:"metrics_server,omitempty" json:"metrics_server"`
+	MetricsServerAddress string          `toml:"listen_address,omitempty" json:"listen_address"`
 	Concurrent           int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval        int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
 	LogLevel             *string         `toml:"log_level" json:"log_level" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`

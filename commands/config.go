@@ -70,7 +70,7 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 type configOptionsWithMetricsServer struct {
 	configOptions
 
-	MetricsServerAddress string `long:"metrics-server" env:"METRICS_SERVER" description:"Metrics server listening address"`
+	MetricsServerAddress string `long:"listen_address" env:"METRICS_SERVER" description:"Metrics / pprof server listening address"`
 }
 
 func (c *configOptionsWithMetricsServer) metricsServerAddress() (string, error) {

@@ -379,7 +379,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 	serverAddress, err := mr.metricsServerAddress()
 
 	if err != nil {
-		mr.log().Errorf("invalid metrics server address: %s", err.Error())
+		mr.log().Errorf("invalid listen address: %s", err.Error())
 		return
 	}
 
