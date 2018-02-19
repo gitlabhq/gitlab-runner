@@ -18,7 +18,7 @@ image: $CI_IMAGE
 # https://docs.gitlab.com/ce/development/writing_documentation.html#testing
 .except_docs: &except_docs
   except:
-    - /(^docs[\/-].*|.*-docs$)/
+  - /(^docs[\/-].*|.*-docs$)/
 
 .docker: &docker
   <<: *except_docs
