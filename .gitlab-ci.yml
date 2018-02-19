@@ -7,7 +7,7 @@ stages:
 - release
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8-1
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8-2
   GOROOT: /usr/local/go
 
 image: $CI_IMAGE
@@ -16,7 +16,7 @@ image: $CI_IMAGE
   services:
   - docker:dind
   variables: &docker_variables
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8-1
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8-2
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
   tags:
