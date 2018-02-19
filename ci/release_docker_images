@@ -3,15 +3,19 @@
 set -eo pipefail
 
 IS_LATEST=${IS_LATEST:-}
-ref_tag=${CI_COMMIT_REF_NAME:-master}
 
-REVISION=${REVISION:-}
-if [[ -z "${REVISION}" ]]; then
-  REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
+ref_tag=${CI_COMMIT_TAG}
+if [[ -z "${ref_tag}" ]]; then
+    ref_tag=${CI_COMMIT_REF_SLUG:-master}
 fi
 
 if [[ "${ref_tag}" = "master" ]]; then
     ref_tag=bleeding
+fi
+
+REVISION=${REVISION:-}
+if [[ -z "${REVISION}" ]]; then
+  REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
 fi
 
 _docker() {
