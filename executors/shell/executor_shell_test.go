@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -23,20 +24,37 @@ func gitInDir(dir string, args ...string) ([]byte, error) {
 	return cmd.Output()
 }
 
-func skipOnGit17x(t *testing.T) bool {
+func skipOnGit(t *testing.T, constraints string) bool {
 	out, err := gitInDir("", "version")
 	if err != nil {
 		t.Fatal("Can't detect git version", err)
 		return true
 	}
 
-	version := string(out)
-	if strings.Contains(version, "git version 1.7.") {
-		t.Skip("Git 1.7.x detected", version)
+	gitVersionOut := string(out)
+	split := strings.SplitN(gitVersionOut, " ", 3)
+	if len(split) < 3 {
+		t.Fatal("Can't extract git version from", gitVersionOut)
 		return true
 	}
 
-	return false
+	gitVersion, err := version.NewVersion(strings.TrimSpace(split[2]))
+	if err != nil {
+		t.Fatal("Can't detect git version", err)
+		return true
+	}
+
+	rules, err := version.NewConstraint(constraints)
+	if err != nil {
+		t.Fatal("Invalid constraint", err)
+		return true
+	}
+
+	return rules.Check(gitVersion)
+}
+
+func skipOnGit17x(t *testing.T) bool {
+	return skipOnGit(t, "< 1.8")
 }
 
 func onEachShell(t *testing.T, f func(t *testing.T, shell string)) {
@@ -566,7 +584,7 @@ func TestBuildMultilineCommand(t *testing.T) {
 }
 
 func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
-	if skipOnGit17x(t) {
+	if skipOnGit17x(t) || skipOnGit(t, ">= 2.10.2") {
 		return
 	}
 
