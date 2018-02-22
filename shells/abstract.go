@@ -218,6 +218,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		// Skip extraction if no cache is defined
 		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 		if cacheKey == "" {
+			w.Notice("Skipping cache extraction due to empty cache key")
 			continue
 		}
 
@@ -431,6 +432,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		// Skip archiving if no cache is defined
 		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 		if cacheKey == "" {
+			w.Notice("Skipping cache archiving due to empty cache key")
 			continue
 		}
 
