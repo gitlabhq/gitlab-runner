@@ -1,11 +1,8 @@
-v 10.5.0-rc2 (2018-02-15)
+v 10.5.0 (2018-02-22)
 - Always prefer creating new containers when running with Docker Executor !818
 - Improve output of /debug/jobs/list !826
 - Fix panic running docker package tests !828
-
-v 10.5.0-rc1 (2018-02-08)
 - Fix git 1.7.1 compatibility in executors/shell package tests !791
-- Always load OS certificate pool when evaluating TLS connections !804
 - Do not add /cache volume if already provided by the user during gitlab-runner register !807
 - Change confusing Built value for development version !821
 - docs: explain valid values for check_interval !801
