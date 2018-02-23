@@ -1,4 +1,4 @@
-package tartest
+package main
 
 import (
 	"io"
@@ -11,7 +11,7 @@ import (
 	ourTar "github.com/vbatts/tar-split/archive/tar"
 )
 
-var testfile = "./archive/tar/testdata/sparse-formats.tar"
+var testfile = "../../archive/tar/testdata/sparse-formats.tar"
 
 func BenchmarkUpstreamTar(b *testing.B) {
 	for n := 0; n < b.N; n++ {
