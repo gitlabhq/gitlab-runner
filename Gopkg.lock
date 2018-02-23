@@ -407,13 +407,14 @@
   revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
 
 [[projects]]
+  branch = "master"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "ebdfc6da46522d58825777cf1f90490a5b1ef1d8"
+  revision = "89604d197083d4781071d3c65855d24ecfb0a563"
 
 [[projects]]
   name = "github.com/prometheus/procfs"
@@ -423,8 +424,7 @@
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
-  version = "v1.0.4"
+  revision = "8c0189d9f6bbf301e5d055d34268156b317016af"
 
 [[projects]]
   name = "github.com/spf13/pflag"
@@ -467,7 +467,7 @@
     "tar/asm",
     "tar/storage"
   ]
-  revision = "bd4c5d64c3e9297f410025a3b1bd0c58f659e721"
+  revision = "e4899282720706fae5fde9dc1ee80bc3fefe10c2"
 
 [[projects]]
   branch = "master"
@@ -668,6 +668,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b349c15b6c9e31af0ef664ae2a29e4393d1fe5594157ab9f3c3b37df1bc05df9"
+  inputs-digest = "939f1b5ce3950726f1d4d6749b4877f8feafa7ccc9eb10c274bcfd951a4378df"
   solver-name = "gps-cdcl"
   solver-version = 1

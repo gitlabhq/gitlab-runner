@@ -22,7 +22,7 @@ func TestServiceLogHook(t *testing.T) {
 	}
 
 	mockServiceLogger := new(mocks.Logger)
-	mockServiceLogger.On("Info", "level=info msg=test \n").Return(nil)
+	mockServiceLogger.On("Info", "level=info msg=test\n").Return(nil)
 
 	logHook := &ServiceLogHook{mockServiceLogger, logrus.InfoLevel}
 
