@@ -5,7 +5,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/ayufan/golang-kardianos-service"
 	"github.com/urfave/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/common"

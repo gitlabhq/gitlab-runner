@@ -3,7 +3,7 @@ package prometheus
 import (
 	"sync/atomic"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

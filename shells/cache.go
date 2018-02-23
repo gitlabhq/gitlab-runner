@@ -13,7 +13,7 @@ import (
 	"github.com/minio/minio-go"
 	"github.com/minio/minio-go/pkg/credentials"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 

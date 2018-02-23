@@ -6,7 +6,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/getsentry/raven-go"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"

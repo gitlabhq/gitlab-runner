@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func createZipDirectoryEntry(archive *zip.Writer, fh *zip.FileHeader) error {
