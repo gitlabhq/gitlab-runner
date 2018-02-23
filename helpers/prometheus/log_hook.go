@@ -3,8 +3,8 @@ package prometheus
 import (
 	"sync/atomic"
 
-	"github.com/sirupsen/logrus"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 )
 
 var numErrorsDesc = prometheus.NewDesc("ci_runner_errors", "The  number of catched errors.", []string{"level"}, nil)
