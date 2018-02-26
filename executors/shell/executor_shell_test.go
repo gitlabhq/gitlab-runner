@@ -370,7 +370,7 @@ func TestBuildWithGitStrategyCloneNoCheckout(t *testing.T) {
 		out, err = runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Cloning repository")
-		assert.Contains(t, out, "Skippping Git checkout")
+		assert.Contains(t, out, "Skipping Git checkout")
 		assert.Contains(t, out, "pre-clone-script")
 	})
 }
