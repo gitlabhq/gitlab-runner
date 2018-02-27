@@ -317,7 +317,7 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 	if info.Build.GetGitCheckout() {
 		b.writeCheckoutCmd(w, build)
 	} else {
-		w.Notice("Skippping Git checkout")
+		w.Notice("Skipping Git checkout")
 	}
 
 	return nil
