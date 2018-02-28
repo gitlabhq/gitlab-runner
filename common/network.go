@@ -59,12 +59,13 @@ type FeaturesInfo struct {
 }
 
 type RegisterRunnerRequest struct {
-	Info        VersionInfo `json:"info,omitempty"`
-	Token       string      `json:"token,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Tags        string      `json:"tag_list,omitempty"`
-	RunUntagged bool        `json:"run_untagged"`
-	Locked      bool        `json:"locked"`
+	Info           VersionInfo `json:"info,omitempty"`
+	Token          string      `json:"token,omitempty"`
+	Description    string      `json:"description,omitempty"`
+	Tags           string      `json:"tag_list,omitempty"`
+	RunUntagged    bool        `json:"run_untagged"`
+	Locked         bool        `json:"locked"`
+	MaximumTimeout int         `json:"maximum_timeout,omitempty"`
 }
 
 type RegisterRunnerResponse struct {
@@ -335,7 +336,7 @@ type JobTracePatch interface {
 }
 
 type Network interface {
-	RegisterRunner(config RunnerCredentials, description, tags string, runUntagged, locked bool) *RegisterRunnerResponse
+	RegisterRunner(config RunnerCredentials, description, tags string, runUntagged, locked bool, maxTimeout int) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig) (*JobResponse, bool)

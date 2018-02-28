@@ -93,15 +93,16 @@ func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string
 	return c.doJSON(uri, method, statusCode, request, response)
 }
 
-func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged, locked bool) *common.RegisterRunnerResponse {
+func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, description, tags string, runUntagged, locked bool, maxTimeout int) *common.RegisterRunnerResponse {
 	// TODO: pass executor
 	request := common.RegisterRunnerRequest{
-		Token:       runner.Token,
-		Description: description,
-		Info:        n.getRunnerVersion(common.RunnerConfig{}),
-		Locked:      locked,
-		RunUntagged: runUntagged,
-		Tags:        tags,
+		Token:          runner.Token,
+		Description:    description,
+		Info:           n.getRunnerVersion(common.RunnerConfig{}),
+		Locked:         locked,
+		RunUntagged:    runUntagged,
+		Tags:           tags,
+		MaximumTimeout: maxTimeout,
 	}
 
 	var response common.RegisterRunnerResponse

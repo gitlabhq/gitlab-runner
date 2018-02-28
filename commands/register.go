@@ -28,6 +28,7 @@ type RegisterCommand struct {
 	RegistrationToken string `short:"r" long:"registration-token" env:"REGISTRATION_TOKEN" description:"Runner's registration token"`
 	RunUntagged       bool   `long:"run-untagged" env:"REGISTER_RUN_UNTAGGED" description:"Register to run untagged builds; defaults to 'true' when 'tag-list' is empty"`
 	Locked            bool   `long:"locked" env:"REGISTER_LOCKED" description:"Lock Runner for current project, defaults to 'true'"`
+	MaxTimeout        int    `long:"maximum-timeout" env:"REGISTER_MAXIMUM_TIMEOUT" description:"What is the maximum timeout (in seconds) that will be set for job when using this Runner"`
 
 	common.RunnerConfig
 }
@@ -169,7 +170,7 @@ func (s *RegisterCommand) askRunner() {
 			log.Panicf("Failed to parse option 'locked': %v", err)
 		}
 
-		result := s.network.RegisterRunner(s.RunnerCredentials, s.Name, s.TagList, s.RunUntagged, locked)
+		result := s.network.RegisterRunner(s.RunnerCredentials, s.Name, s.TagList, s.RunUntagged, locked, s.MaxTimeout)
 		if result == nil {
 			log.Panicln("Failed to register this runner. Perhaps you are having network problems")
 		}

@@ -56,13 +56,13 @@ func (_m *MockNetwork) ProcessJob(config RunnerConfig, buildCredentials *JobCred
 	return r0
 }
 
-// RegisterRunner provides a mock function with given fields: config, description, tags, runUntagged, locked
-func (_m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string, runUntagged bool, locked bool) *RegisterRunnerResponse {
-	ret := _m.Called(config, description, tags, runUntagged, locked)
+// RegisterRunner provides a mock function with given fields: config, description, tags, runUntagged, locked, maxTimeout
+func (_m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string, runUntagged bool, locked bool, maxTimeout int) *RegisterRunnerResponse {
+	ret := _m.Called(config, description, tags, runUntagged, locked, maxTimeout)
 
 	var r0 *RegisterRunnerResponse
-	if rf, ok := ret.Get(0).(func(RunnerCredentials, string, string, bool, bool) *RegisterRunnerResponse); ok {
-		r0 = rf(config, description, tags, runUntagged, locked)
+	if rf, ok := ret.Get(0).(func(RunnerCredentials, string, string, bool, bool, int) *RegisterRunnerResponse); ok {
+		r0 = rf(config, description, tags, runUntagged, locked, maxTimeout)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*RegisterRunnerResponse)
@@ -109,7 +109,7 @@ func (_m *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
 	return r0
 }
 
-// UpdateJob provides a mock function with given fields: config, jobCredentials, id, state, trace
+// UpdateJob provides a mock function with given fields: config, jobCredentials, jobInfo
 func (_m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState {
 	ret := _m.Called(config, jobCredentials, jobInfo)
 
