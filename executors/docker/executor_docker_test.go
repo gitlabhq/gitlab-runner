@@ -941,6 +941,42 @@ func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *com
 	assert.NoError(t, err, "Should create service container without errors")
 }
 
+func TestDockerMemorySetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		Memory: "42m",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, int64(44040192), hostConfig.Memory)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+func TestDockerMemorySwapSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		MemorySwap: "2g",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, int64(2147483648), hostConfig.MemorySwap)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+func TestDockerMemoryReservationSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		MemoryReservation: "64m",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, int64(67108864), hostConfig.MemoryReservation)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
 func TestDockerCPUSSetting(t *testing.T) {
 	examples := []struct {
 		cpus     string

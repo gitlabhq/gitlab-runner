@@ -577,7 +577,7 @@ v 1.6.0
 - Pass all configured CA certificates to builds !299
 - Use git-init templates (clone) and git config without --global (fetch) to disable recurseSubmodules !314
 - Improve docker machine logging !234
-- Add posibility to specify a list of volumes to inherit from another container !236
+- Add possibility to specify a list of volumes to inherit from another container !236
 - Fix range mismatch handling error while patch tracing !319
 - Add docker+machine and kubernetes executors to "I'm not sure" part of executors README.md !320
 - Remove ./git/index.lock before fetching !316
@@ -649,7 +649,7 @@ v 1.3.1
 
 v 1.3.0
 - Add incremental build trace update
-- Add posibility to specify CpusetCpus, Dns and DnsSearch for docker containers created by runners
+- Add possibility to specify CpusetCpus, Dns and DnsSearch for docker containers created by runners
 - Add a custom `User-Agent` header with version number and runtime information (go version, platform, os)
 - Add artifacts expiration handling
 - Add artifacts handling for failed builds

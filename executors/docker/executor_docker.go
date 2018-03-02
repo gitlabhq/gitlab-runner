@@ -841,9 +841,12 @@ func (s *executor) createContainer(containerType string, imageDefinition common.
 
 	hostConfig := &container.HostConfig{
 		Resources: container.Resources{
-			CpusetCpus: s.Config.Docker.CPUSetCPUs,
-			NanoCPUs:   nanoCPUs,
-			Devices:    s.devices,
+			Memory:            s.Config.Docker.GetMemory(),
+			MemorySwap:        s.Config.Docker.GetMemorySwap(),
+			MemoryReservation: s.Config.Docker.GetMemoryReservation(),
+			CpusetCpus:        s.Config.Docker.CPUSetCPUs,
+			NanoCPUs:          nanoCPUs,
+			Devices:           s.devices,
 		},
 		DNS:           s.Config.Docker.DNS,
 		DNSSearch:     s.Config.Docker.DNSSearch,
