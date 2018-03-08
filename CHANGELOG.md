@@ -1,3 +1,15 @@
+v 10.6.0-rc1 (2018-03-08)
+- Add CI_RUNNER_VERSION, CI_RUNNER_REVISION, and CI_RUNNER_EXECUTABLE_ARCH job environment variables !788
+- Always prefer creating new containers when running with Docker Executor !818
+- Use IAM instance profile credentials for S3 caching !646
+- exec command is no longer deprecated !834
+- Print a notice when skipping cache operation due to empty cache key !842
+- Switch to Go 1.9.4 !827
+- Move dependencies to dep !813
+- Improve output of /debug/jobs/list !826
+- Fix panic running docker package tests !828
+- Fixed typo in console output !845
+
 v 10.5.0 (2018-02-22)
 - Always prefer creating new containers when running with Docker Executor !818
 - Improve output of /debug/jobs/list !826
