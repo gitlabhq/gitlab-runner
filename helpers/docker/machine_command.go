@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/machine/commands/mcndirs"
+	"github.com/sirupsen/logrus"
 )
 
 type logWriter struct {

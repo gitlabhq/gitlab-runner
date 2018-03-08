@@ -1,41 +1,41 @@
-package cli_helpers
+package cli_helpers_test
 
 import (
-	"bytes"
 	"testing"
 
-	"github.com/Sirupsen/logrus"
+	logrus_test "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 )
 
-func runOnHijackedLogrusOutput(t *testing.T, handler func(t *testing.T, output *bytes.Buffer)) {
-	oldOutput := logrus.StandardLogger().Out
-	defer func() { logrus.StandardLogger().Out = oldOutput }()
-
-	buf := bytes.NewBuffer([]byte{})
-	logrus.StandardLogger().Out = buf
-
-	oldHooks := logrus.LevelHooks{}
-	for level, hooks := range logrus.StandardLogger().Hooks {
-		oldHooks[level] = hooks
+func TestSecretsCleanupHook(t *testing.T) {
+	tests := []struct {
+		name     string
+		message  string
+		expected string
+	}{
+		{
+			name:     "With Secrets",
+			message:  "Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234",
+			expected: "Get http://localhost/?id=123&X-Amz-Signature=[FILTERED]&private_token=[FILTERED]",
+		},
+		{
+			name:     "No Secrets",
+			message:  "Fatal: Get http://localhost/?id=123",
+			expected: "Get http://localhost/?id=123",
+		},
 	}
-	defer func() { logrus.StandardLogger().Hooks = oldHooks }()
 
-	AddSecretsCleanupLogHook()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			logger, hook := logrus_test.NewNullLogger()
+			logger.AddHook(&cli_helpers.SecretsCleanupHook{})
 
-	handler(t, buf)
-}
-
-func TestSecretsCleanupHookWithoutSecrets(t *testing.T) {
-	runOnHijackedLogrusOutput(t, func(t *testing.T, output *bytes.Buffer) {
-		logrus.Errorln("Fatal: Get http://localhost/?id=123")
-		assert.Contains(t, output.String(), `Get http://localhost/?id=123`)
-	})
-}
-
-func TestSecretsCleanupHookWithSecrets(t *testing.T) {
-	runOnHijackedLogrusOutput(t, func(t *testing.T, output *bytes.Buffer) {
-		logrus.Errorln("Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234")
-		assert.Contains(t, output.String(), `Get http://localhost/?id=123&X-Amz-Signature=[FILTERED]&private_token=[FILTERED]`)
-	})
+			logger.Errorln(test.message)
+			entry := hook.LastEntry()
+			assert.NotNil(t, entry)
+			assert.Contains(t, entry.Message, test.expected)
+		})
+	}
 }

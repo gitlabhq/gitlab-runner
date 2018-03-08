@@ -1,8 +1,8 @@
 package service_helpers
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/ayufan/golang-kardianos-service"
+	log "github.com/sirupsen/logrus"
 )
 
 func New(i service.Interface, c *service.Config) (service.Service, error) {

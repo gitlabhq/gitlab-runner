@@ -94,13 +94,12 @@ func TestRoundTrip(t *testing.T) {
 	var b bytes.Buffer
 	tw := NewWriter(&b)
 	hdr := &Header{
-		Name:    "file.txt",
-		Uid:     1 << 21, // too big for 8 octal digits
-		Size:    int64(len(data)),
-		ModTime: time.Now(),
+		Name: "file.txt",
+		Uid:  1 << 21, // too big for 8 octal digits
+		Size: int64(len(data)),
+		// https://github.com/golang/go/commit/0e3355903d2ebcf5ee9e76096f51ac9a116a9dbb#diff-d7bf2a98d7b57b6ff754ca406f1b7581R105
+		ModTime: time.Now().AddDate(0, 0, 0).Round(1 * time.Second),
 	}
-	// tar only supports second precision.
-	hdr.ModTime = hdr.ModTime.Add(-time.Duration(hdr.ModTime.Nanosecond()) * time.Nanosecond)
 	if err := tw.WriteHeader(hdr); err != nil {
 		t.Fatalf("tw.WriteHeader: %v", err)
 	}

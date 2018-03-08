@@ -31,21 +31,26 @@ ignored = ["test", "appengine"]
   revision = "a368813c5e648fee92e5f6c30e3944ff9d5e8895"
 
 [[constraint]]
-  name = "github.com/Sirupsen/logrus"
-	revision = "4b6ea7319e214d98c938f12692336f7ca9348d6b"
+  name = "github.com/sirupsen/logrus"
+  # version = "1.0.4"
+  # 1.0.4 has a race condition on panic in logrous hooks taht is triggere by our test suite
+  revision = "8c0189d9f6bbf301e5d055d34268156b317016af"
 
 [[constraint]]
   branch = "master"
   name = "github.com/ayufan/golang-kardianos-service"
 
+# temporary fork to handle Sirupsen -> sirupsen
 [[constraint]]
   name = "github.com/docker/distribution"
-  revision = "325b0804fef3a66309d962357aac3c2ce3f4d329"
+  branch = "gitlab-runner"
+  source = "github.com/nolith/docker-distribution"
 
+# temporary fork to handle Sirupsen -> sirupsen
 [[constraint]]
   name = "github.com/docker/docker"
-  # version = "1.13.0"
-  revision = "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"
+  branch = "gitlab-runner"
+  source = "github.com/nolith/moby"
 
 [[constraint]]
   name = "github.com/docker/go-connections"
@@ -80,15 +85,9 @@ ignored = ["test", "appengine"]
   name = "github.com/kardianos/osext"
   revision = "c2c54e542fb797ad986b31721e1baedf214ca413"
 
-# minio introduces a main package with build +ignore
-# that depends on downcased "github.com/sirupsen/logrus"
-# this constraint points to a fork that removes such file
 [[constraint]]
   name = "github.com/minio/minio-go"
-  # version = "3.0.3"
-  # revision = "4e0f567303d4cc90ceb055a451959fb9fc391fb9"
-  version = "3.0.3-nolith"
-  source = "https://github.com/nolith/minio-go"
+  version = "3.0.3"
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
@@ -145,7 +144,7 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "github.com/Azure/go-ansiterm"
-  revision = "fa152c58bc15761d0200cb75fe958b89a9d4888e"
+  revision = "19f72df4d05d31cbe1c56bfc8045c96babff6c7e"
 
 [[override]]
   name = "github.com/Microsoft/go-winio"
@@ -227,9 +226,11 @@ ignored = ["test", "appengine"]
   name = "github.com/minio/go-homedir"
   revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
 
+# temporary fork to hanled Sirupsen -> sirupsen
 [[override]]
   name = "github.com/opencontainers/runc"
-  revision = "94dc520a5732126985fec249f80c91b9e0601815"
+  branch = "gitlab-runner"
+  source = "github.com/nolith/runc"
 
 [[override]]
   name = "github.com/opencontainers/runtime-spec"
@@ -238,10 +239,6 @@ ignored = ["test", "appengine"]
 [[override]]
   name = "github.com/pborman/uuid"
   revision = "c55201b036063326c5b1b89ccfe45a184973d073"
-
-[[override]]
-  name = "github.com/prometheus/common"
-  revision = "ebdfc6da46522d58825777cf1f90490a5b1ef1d8"
 
 [[override]]
   name = "github.com/prometheus/procfs"
@@ -261,7 +258,7 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "github.com/vbatts/tar-split"
-  revision = "bd4c5d64c3e9297f410025a3b1bd0c58f659e721"
+  revision = "e4899282720706fae5fde9dc1ee80bc3fefe10c2"
 
 [[override]]
   name = "golang.org/x/oauth2"

@@ -15,7 +15,7 @@
     ".",
     "winterm"
   ]
-  revision = "fa152c58bc15761d0200cb75fe958b89a9d4888e"
+  revision = "19f72df4d05d31cbe1c56bfc8045c96babff6c7e"
 
 [[projects]]
   name = "github.com/BurntSushi/toml"
@@ -26,11 +26,6 @@
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
   revision = "ce2922f643c8fd76b46cadc7f404a06282678b34"
-
-[[projects]]
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  revision = "4b6ea7319e214d98c938f12692336f7ca9348d6b"
 
 [[projects]]
   branch = "master"
@@ -100,9 +95,12 @@
     "registry/storage/cache/memory",
     "uuid"
   ]
-  revision = "325b0804fef3a66309d962357aac3c2ce3f4d329"
+  revision = "6a0c7a03ee37ea118efd05a325c3632ddcc85b83"
+  source = "github.com/nolith/docker-distribution"
+  version = "v2.6.0-sirupsen"
 
 [[projects]]
+  branch = "gitlab-runner"
   name = "github.com/docker/docker"
   packages = [
     "api/types",
@@ -157,7 +155,8 @@
     "reference",
     "registry"
   ]
-  revision = "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"
+  revision = "cb78f21fab72a626e313e095816c74d7dbfe2083"
+  source = "github.com/nolith/moby"
 
 [[projects]]
   name = "github.com/docker/docker-credential-helpers"
@@ -215,6 +214,12 @@
     "spdy"
   ]
   revision = "449fdfce4d962303d702fec724ef0ad181c92528"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  revision = "bb3d318650d48840a39aa21a027c6630e198e626"
 
 [[projects]]
   name = "github.com/emicklei/go-restful"
@@ -347,11 +352,11 @@
     "pkg/s3utils",
     "pkg/set"
   ]
-  revision = "dadd8d26f79abf80dea812132099217e06f56936"
-  source = "https://github.com/nolith/minio-go"
-  version = "3.0.3-nolith"
+  revision = "4e0f567303d4cc90ceb055a451959fb9fc391fb9"
+  version = "3.0.3"
 
 [[projects]]
+  branch = "gitlab-runner"
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/cgroups",
@@ -362,7 +367,8 @@
     "libcontainer/user",
     "libcontainer/utils"
   ]
-  revision = "94dc520a5732126985fec249f80c91b9e0601815"
+  revision = "fd48010b807f3c267c19f8f14ca6dca2370d0b54"
+  source = "github.com/nolith/runc"
 
 [[projects]]
   name = "github.com/opencontainers/runtime-spec"
@@ -401,18 +407,24 @@
   revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
 
 [[projects]]
+  branch = "master"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "ebdfc6da46522d58825777cf1f90490a5b1ef1d8"
+  revision = "89604d197083d4781071d3c65855d24ecfb0a563"
 
 [[projects]]
   name = "github.com/prometheus/procfs"
   packages = ["."]
   revision = "abf152e5f3e97f2fafac028d2cc06c1feb87ffa5"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "8c0189d9f6bbf301e5d055d34268156b317016af"
 
 [[projects]]
   name = "github.com/spf13/pflag"
@@ -455,7 +467,7 @@
     "tar/asm",
     "tar/storage"
   ]
-  revision = "bd4c5d64c3e9297f410025a3b1bd0c58f659e721"
+  revision = "e4899282720706fae5fde9dc1ee80bc3fefe10c2"
 
 [[projects]]
   branch = "master"
@@ -467,7 +479,8 @@
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
-    "ssh"
+    "ssh",
+    "ssh/terminal"
   ]
   revision = "1f22c0103821b9390939b6776727195525381532"
 
@@ -655,6 +668,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2d8b8c2053ee6bb6e3ab53240b8dbb2ac4b2bb3621b9e35efe142a4cc15795ad"
+  inputs-digest = "939f1b5ce3950726f1d4d6749b4877f8feafa7ccc9eb10c274bcfd951a4378df"
   solver-name = "gps-cdcl"
   solver-version = 1

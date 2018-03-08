@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/tevino/abool"
 	"github.com/urfave/cli"
 

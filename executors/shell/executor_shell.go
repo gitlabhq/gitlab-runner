@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 
 	"fmt"
-	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/osext"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"

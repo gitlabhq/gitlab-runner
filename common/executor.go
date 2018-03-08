@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type ExecutorData interface{}

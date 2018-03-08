@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/service/mocks"
 )
@@ -22,7 +22,7 @@ func TestServiceLogHook(t *testing.T) {
 	}
 
 	mockServiceLogger := new(mocks.Logger)
-	mockServiceLogger.On("Info", "level=info msg=test \n").Return(nil)
+	mockServiceLogger.On("Info", "level=info msg=test\n").Return(nil)
 
 	logHook := &ServiceLogHook{mockServiceLogger, logrus.InfoLevel}
 
