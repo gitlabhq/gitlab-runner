@@ -30,18 +30,9 @@ inside of Docker containers.
 
 ## System requirements
 
-To use the autoscale feature, the system which will host the Runner must have:
-
-- GitLab Runner executable - installation guide can be found in
-  [GitLab Runner Documentation][runner-installation]
-- Docker Machine executable - installation guide can be found in
-  [Docker Machine documentation][docker-machine-installation]
-
-If you need to use any virtualization/cloud providers that aren't handled by
-Docker's Machine internal drivers, the appropriate driver plugin must be
-installed. The Docker Machine driver plugin installation and configuration is
-out of the scope of this documentation. For more details please read the
-[Docker Machine documentation][docker-machine-docs].
+At this point you should have
+[installed all the requirements](../executors/docker_machine.md#preparing-the-environment).
+If not, make sure to do it before going over the configuration.
 
 ## Supported cloud providers
 
@@ -52,9 +43,8 @@ All supported virtualization/cloud provider parameters, are available at the
 ## Runner configuration
 
 In this section we will describe only the significant parameters from the
-autoscale feature point of view. For more configurations details please read
-the [GitLab Runner - Installation][runner-installation]
-and [GitLab Runner - Advanced Configuration][runner-configuration].
+autoscale feature point of view. For more configurations details read the
+[advanced configuration](advanced-configuration.md).
 
 ### Runner global options
 
@@ -304,7 +294,7 @@ Runners cache feature was introduced.
 
 It uses any S3-compatible server to share the cache between used Docker hosts.
 When restoring and archiving the cache, GitLab Runner will query the S3 server
-and will download or upload the archive.
+and will download or upload the archive respectively.
 
 To enable distributed caching, you have to define it in `config.toml` using the
 [`[runners.cache]` directive][runners-cache]:
@@ -326,11 +316,44 @@ To enable distributed caching, you have to define it in `config.toml` using the
 
 The S3 URLs follow the structure `http(s)://<ServerAddress>/<BucketName>/<Path>/runner/<runner-id>/project/<id>/<cache-key>`.
 
-To share the cache between two or more runners, set the `Shared` flag to true. That will remove the runner token from the S3 URL (`runner/<runner-id>`) and all configured runners will share the same cache. Remember that you can also set `Path` to separate caches between runners when cache sharing is enabled.
+To share the cache between two or more Runners, set the `Shared` flag to true.
+That will remove the runner token from the S3 URL (`runner/<runner-id>`) and
+all configured Runners will share the same cache. Remember that you can also
+set `Path` to separate caches between Runners when cache sharing is enabled.
 
-Read how to [install your own caching server][caching].
+### Install your own cache server
 
-## Distributed Docker registry mirroring
+If you don't want to use a SaaS S3 server, you can install your own
+S3-compatible caching server:
+
+1. Login to a dedicated machine where the cache server will be running.
+1. Make sure that Docker Engine is installed on that machine.
+1. Start [minio], a simple S3-compatible server written in Go:
+
+    ```bash
+    docker run -it --restart always -p 9005:9000 \
+            -v /.minio:/root/.minio -v /export:/export \
+            --name minio \
+            minio/minio:latest server /export
+    ```
+
+    You can modify the port `9005` to expose the cache server on different port.
+
+1. Check the IP address of the server:
+
+    ```bash
+    hostname --ip-address
+    ```
+
+1. Your cache server will be available at `MY_CACHE_IP:9005`.
+1. Read the Access and Secret Key of minio with: `sudo cat /.minio/config.json`.
+1. Create a bucket that will be used by the Runner: `sudo mkdir /export/runner`.
+   `runner` is the name of the bucket in that case. If you choose a different
+   bucket then it will be different.
+1. All caches will be stored in the `/export` directory.
+1. Configure `config.toml` as [described above](#distributed-runners-caching).
+
+## Distributed container registry mirroring
 
 To speed up jobs executed inside of Docker containers, you can use the [Docker
 registry mirroring service][registry]. This will provide a proxy between your
@@ -360,7 +383,36 @@ Where `10.11.12.13:12345` is the IP address and port where your registry mirror
 is listening for connections from the Docker service. It must be accessible for
 each host created by Docker Machine.
 
-Read how to [install your own Docker registry server][registry-server].
+### Install a proxy container registry
+
+1. Login to a dedicated machine where the container registry proxy will be running.
+1. Make sure that Docker Engine is installed on this machine.
+1. Create a new container registry:
+
+    ```bash
+    docker run -d -p 6000:5000 \
+        -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io \
+        --restart always \
+        --name registry registry:2
+    ```
+
+    You can modify the port number (`6000`) to expose Docker registry on a
+    different port.
+
+1. Check the IP address of the server:
+
+    ```bash
+    hostname --ip-address
+    ```
+
+    You should preferably choose the private networking IP address. The private
+    networking is usually the fastest solution for internal communication
+    between machines of a single provider (DigitalOcean, AWS, Azure, etc,)
+    Usually the private networking is also not accounted to your monthly
+    bandwidth limit.
+
+1. The container registry will be accessible under `YOUR_REGISTRY_IP:6000`.
+1. Configure `config.toml` as [described above](#distributed-container-registry-mirroring).
 
 ## A complete example of `config.toml`
 
@@ -411,14 +463,10 @@ Note that the `MachineOptions` parameter contains options for the `digitalocean`
 driver which is used by Docker Machine to spawn machines hosted on Digital Ocean,
 and one option for Docker Machine itself (`engine-registry-mirror`).
 
-[cache]: http://doc.gitlab.com/ce/ci/yaml/README.html#cache
-[caching]: ../install/autoscaling.md#install-the-cache-server
-[runner-installation]: ../install/autoscaling.md
-[runner-configuration]: index.md
+[cache]: https://docs.gitlab.com/ee/ci/yaml/README.html#cache
 [docker-machine-docs]: https://docs.docker.com/machine/
 [docker-machine-driver]: https://docs.docker.com/machine/drivers/
 [docker-machine-installation]: https://docs.docker.com/machine/install-machine/
 [runners-cache]: advanced-configuration.md#the-runners-cache-section
 [runners-machine]: advanced-configuration.md#the-runners-machine-section
 [registry]: https://docs.docker.com/docker-trusted-registry/overview/
-[registry-server]: ../install/autoscaling.md#install-docker-registry

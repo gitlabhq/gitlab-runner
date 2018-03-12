@@ -10,7 +10,7 @@ To jump into the specific documentation of each executor, visit:
 
 - [Shell](shell.md)
 - [Docker](docker.md)
-- [Docker Machine (auto-scaling)](../install/autoscaling.md)
+- [Docker Machine (auto-scaling)](docker_machine.md)
 - [Parallels](parallels.md)
 - [VirtualBox](virtualbox.md)
 - [SSH](ssh.md)
