@@ -279,6 +279,9 @@ in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section][ru
 
 ## Distributed runners caching
 
+NOTE: **Note:**
+Read how to [install your own cache server](../install/registry_and_cache_servers.md#install-your-own-cache-server).
+
 To speed up your jobs, GitLab Runner provides a [cache mechanism][cache]
 where selected directories and/or files are saved and shared between subsequent
 jobs.
@@ -321,39 +324,10 @@ That will remove the runner token from the S3 URL (`runner/<runner-id>`) and
 all configured Runners will share the same cache. Remember that you can also
 set `Path` to separate caches between Runners when cache sharing is enabled.
 
-### Install your own cache server
-
-If you don't want to use a SaaS S3 server, you can install your own
-S3-compatible caching server:
-
-1. Login to a dedicated machine where the cache server will be running.
-1. Make sure that Docker Engine is installed on that machine.
-1. Start [minio], a simple S3-compatible server written in Go:
-
-    ```bash
-    docker run -it --restart always -p 9005:9000 \
-            -v /.minio:/root/.minio -v /export:/export \
-            --name minio \
-            minio/minio:latest server /export
-    ```
-
-    You can modify the port `9005` to expose the cache server on different port.
-
-1. Check the IP address of the server:
-
-    ```bash
-    hostname --ip-address
-    ```
-
-1. Your cache server will be available at `MY_CACHE_IP:9005`.
-1. Read the Access and Secret Key of minio with: `sudo cat /.minio/config.json`.
-1. Create a bucket that will be used by the Runner: `sudo mkdir /export/runner`.
-   `runner` is the name of the bucket in that case. If you choose a different
-   bucket then it will be different.
-1. All caches will be stored in the `/export` directory.
-1. Configure `config.toml` as [described above](#distributed-runners-caching).
-
 ## Distributed container registry mirroring
+
+NOTE: **Note:**
+Read how to [install a container registry](../install/registry_and_cache_servers.md#install-a-proxy-container-registry).
 
 To speed up jobs executed inside of Docker containers, you can use the [Docker
 registry mirroring service][registry]. This will provide a proxy between your
@@ -382,37 +356,6 @@ the configuration in `config.toml`:
 Where `10.11.12.13:12345` is the IP address and port where your registry mirror
 is listening for connections from the Docker service. It must be accessible for
 each host created by Docker Machine.
-
-### Install a proxy container registry
-
-1. Login to a dedicated machine where the container registry proxy will be running.
-1. Make sure that Docker Engine is installed on this machine.
-1. Create a new container registry:
-
-    ```bash
-    docker run -d -p 6000:5000 \
-        -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io \
-        --restart always \
-        --name registry registry:2
-    ```
-
-    You can modify the port number (`6000`) to expose Docker registry on a
-    different port.
-
-1. Check the IP address of the server:
-
-    ```bash
-    hostname --ip-address
-    ```
-
-    You should preferably choose the private networking IP address. The private
-    networking is usually the fastest solution for internal communication
-    between machines of a single provider (DigitalOcean, AWS, Azure, etc,)
-    Usually the private networking is also not accounted to your monthly
-    bandwidth limit.
-
-1. The container registry will be accessible under `YOUR_REGISTRY_IP:6000`.
-1. Configure `config.toml` as [described above](#distributed-container-registry-mirroring).
 
 ## A complete example of `config.toml`
 
@@ -469,4 +412,4 @@ and one option for Docker Machine itself (`engine-registry-mirror`).
 [docker-machine-installation]: https://docs.docker.com/machine/install-machine/
 [runners-cache]: advanced-configuration.md#the-runners-cache-section
 [runners-machine]: advanced-configuration.md#the-runners-machine-section
-[registry]: https://docs.docker.com/docker-trusted-registry/overview/
+[registry]: https://docs.docker.com/registry/
