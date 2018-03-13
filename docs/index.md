@@ -115,11 +115,12 @@ To jump into the specific documentation of each executor, visit:
 
 - [Advanced configuration options](configuration/advanced-configuration.md) Learn how to use the [TOML][] configuration file that GitLab Runner uses.
 - [Use self-signed certificates](configuration/tls-self-signed.md) Configure certificates that are used to verify TLS peer when connecting to the GitLab server.
-- [Auto-scaling using Docker machine](configuration/autoscale.md) Execute jobs on machines that are created on demand using Docker machine.
+- [Autoscaling using Docker machine](configuration/autoscale.md) Execute jobs on machines that are created on demand using Docker machine.
 - [Autoscaling GitLab Runner on AWS](configuration/runner_autoscale_aws/index.md)
+- [The init system of GitLab Runner](configuration/init.md) Learn how the Runner installs its init service files based on your operating system.
 - [Supported shells](shells/README.md) Learn what shell script generators are supported that allow to execute builds on different systems.
 - [Security considerations](security/index.md) Be aware of potential security implications when running your jobs with GitLab Runner.
-- [Runner monitoring](monitoring/README.md) Learn how to monitor Runner's behavior.
+- [Runner monitoring](monitoring/README.md) Learn how to monitor the Runner's behavior.
 - [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup) A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
 
 ## Troubleshooting
