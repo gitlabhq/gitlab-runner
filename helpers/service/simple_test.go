@@ -22,6 +22,6 @@ func TestStart(t *testing.T) {
 	mi.On("Start", s).Return(errExample)
 
 	err := s.Run()
-	assert.Equal(t, err, errExample)
+	assert.Equal(t, errExample, err)
 	mi.AssertExpectations(t)
 }

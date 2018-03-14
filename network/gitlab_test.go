@@ -493,7 +493,7 @@ func TestRequestJob(t *testing.T) {
 	res, ok = c.RequestJob(noJobsToken)
 	assert.Nil(t, res)
 	assert.True(t, ok, "If no jobs, runner is healthy")
-	assert.Equal(t, c.getLastUpdate(&noJobsToken.RunnerCredentials), "a nice timestamp", "Last-Update should be set")
+	assert.Equal(t, "a nice timestamp", c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should be set")
 
 	res, ok = c.RequestJob(invalidToken)
 	assert.Nil(t, res)

@@ -1181,20 +1181,20 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				require.Len(t, pod.Spec.Containers, 3)
 
-				assert.Equal(t, pod.Spec.Containers[0].Name, "build")
-				assert.Equal(t, pod.Spec.Containers[0].Image, "test-image")
-				assert.Equal(t, pod.Spec.Containers[0].Command, []string{"/init", "run"})
+				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
+				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
+				assert.Equal(t, []string{"/init", "run"}, pod.Spec.Containers[0].Command)
 				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
 
-				assert.Equal(t, pod.Spec.Containers[1].Name, "helper")
-				assert.Equal(t, pod.Spec.Containers[1].Image, "custom/helper-image")
+				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
+				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
 				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
-				assert.Equal(t, pod.Spec.Containers[2].Name, "svc-0")
-				assert.Equal(t, pod.Spec.Containers[2].Image, "test-service")
-				assert.Equal(t, pod.Spec.Containers[2].Command, []string{"/init", "run"})
-				assert.Equal(t, pod.Spec.Containers[2].Args, []string{"application", "--debug"})
+				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
+				assert.Equal(t, "test-service", pod.Spec.Containers[2].Image)
+				assert.Equal(t, []string{"/init", "run"}, pod.Spec.Containers[2].Command)
+				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[2].Args)
 			},
 		},
 	}

@@ -37,9 +37,9 @@ func TestParseDeviceStringOne(t *testing.T) {
 	device, err := e.parseDeviceString("/dev/kvm")
 
 	assert.NoError(t, err)
-	assert.Equal(t, device.PathOnHost, "/dev/kvm")
-	assert.Equal(t, device.PathInContainer, "/dev/kvm")
-	assert.Equal(t, device.CgroupPermissions, "rwm")
+	assert.Equal(t, "/dev/kvm", device.PathOnHost)
+	assert.Equal(t, "/dev/kvm", device.PathInContainer)
+	assert.Equal(t, "rwm", device.CgroupPermissions)
 }
 
 func TestParseDeviceStringTwo(t *testing.T) {
@@ -48,9 +48,9 @@ func TestParseDeviceStringTwo(t *testing.T) {
 	device, err := e.parseDeviceString("/dev/kvm:/devices/kvm")
 
 	assert.NoError(t, err)
-	assert.Equal(t, device.PathOnHost, "/dev/kvm")
-	assert.Equal(t, device.PathInContainer, "/devices/kvm")
-	assert.Equal(t, device.CgroupPermissions, "rwm")
+	assert.Equal(t, "/dev/kvm", device.PathOnHost)
+	assert.Equal(t, "/devices/kvm", device.PathInContainer)
+	assert.Equal(t, "rwm", device.CgroupPermissions)
 }
 
 func TestParseDeviceStringThree(t *testing.T) {
@@ -59,9 +59,9 @@ func TestParseDeviceStringThree(t *testing.T) {
 	device, err := e.parseDeviceString("/dev/kvm:/devices/kvm:r")
 
 	assert.NoError(t, err)
-	assert.Equal(t, device.PathOnHost, "/dev/kvm")
-	assert.Equal(t, device.PathInContainer, "/devices/kvm")
-	assert.Equal(t, device.CgroupPermissions, "r")
+	assert.Equal(t, "/dev/kvm", device.PathOnHost)
+	assert.Equal(t, "/devices/kvm", device.PathInContainer)
+	assert.Equal(t, "r", device.CgroupPermissions)
 }
 
 func TestParseDeviceStringFour(t *testing.T) {
