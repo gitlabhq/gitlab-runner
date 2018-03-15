@@ -10,8 +10,8 @@ RUN apk add --update \
     tzdata \
     wget
 
-ARG DOCKER_MACHINE_VERSION=0.13.0
-ARG DUMB_INIT_VERSION=1.0.2
+ARG DOCKER_MACHINE_VERSION
+ARG DUMB_INIT_VERSION
 
 COPY gitlab-runner-linux-amd64 /usr/bin/gitlab-runner
 COPY checksums /tmp/

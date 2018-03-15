@@ -6,8 +6,8 @@ RUN apt-get update -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-ARG DOCKER_MACHINE_VERSION=0.13.0
-ARG DUMB_INIT_VERSION=1.0.2
+ARG DOCKER_MACHINE_VERSION
+ARG DUMB_INIT_VERSION
 
 COPY gitlab-runner_amd64.deb /tmp/
 COPY checksums /tmp/
