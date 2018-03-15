@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
+	units "github.com/docker/go-units"
 	log "github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -53,6 +54,9 @@ type DockerConfig struct {
 	Hostname               string            `toml:"hostname,omitempty" json:"hostname" long:"hostname" env:"DOCKER_HOSTNAME" description:"Custom container hostname"`
 	Image                  string            `toml:"image" json:"image" long:"image" env:"DOCKER_IMAGE" description:"Docker image to be used"`
 	Runtime                string            `toml:"runtime,omitempty" json:"runtime" long:"runtime" env:"DOCKER_RUNTIME" description:"Docker runtime to be used"`
+	Memory                 string            `toml:"memory,omitempty" json:"memory" long:"memory" env:"DOCKER_MEMORY" description:"Memory limit (format: <number>[<unit>]). Unit can be one of b, k, m, or g. Minimum is 4M."`
+	MemorySwap             string            `toml:"memory_swap,omitempty" json:"memory_swap" long:"memory-swap" env:"DOCKER_MEMORY_SWAP" description:"Total memory limit (memory + swap, format: <number>[<unit>]). Unit can be one of b, k, m, or g."`
+	MemoryReservation      string            `toml:"memory_reservation,omitempty" json:"memory_reservation" long:"memory-reservation" env:"DOCKER_MEMORY_RESERVATION" description:"Memory soft limit (format: <number>[<unit>]). Unit can be one of b, k, m, or g."`
 	CPUSetCPUs             string            `toml:"cpuset_cpus,omitempty" json:"cpuset_cpus" long:"cpuset-cpus" env:"DOCKER_CPUSET_CPUS" description:"String value containing the cgroups CpusetCpus to use"`
 	CPUS                   string            `toml:"cpus,omitempty" json:"cpus" long:"cpus" env:"DOCKER_CPUS" description:"Number of CPUs"`
 	DNS                    []string          `toml:"dns,omitempty" json:"dns" long:"dns" env:"DOCKER_DNS" description:"A list of DNS servers for the container to use"`
@@ -284,6 +288,31 @@ func (c *DockerConfig) GetNanoCPUs() (int64, error) {
 	nano, _ := cpu.Mul(cpu, big.NewRat(1e9, 1)).Float64()
 
 	return int64(nano), nil
+}
+
+func (c *DockerConfig) getMemoryBytes(size string, fieldName string) int64 {
+	if size == "" {
+		return 0
+	}
+
+	bytes, err := units.RAMInBytes(size)
+	if err != nil {
+		log.Fatalf("Error parsing docker %s: %s", fieldName, err)
+	}
+
+	return bytes
+}
+
+func (c *DockerConfig) GetMemory() int64 {
+	return c.getMemoryBytes(c.Memory, "memory")
+}
+
+func (c *DockerConfig) GetMemorySwap() int64 {
+	return c.getMemoryBytes(c.MemorySwap, "memory_swap")
+}
+
+func (c *DockerConfig) GetMemoryReservation() int64 {
+	return c.getMemoryBytes(c.MemoryReservation, "memory_reservation")
 }
 
 func (c *KubernetesConfig) GetHelperImage() string {

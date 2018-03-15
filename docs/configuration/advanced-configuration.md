@@ -118,6 +118,9 @@ This defines the Docker Container parameters.
 | `runtime`                   | Specify a runtime for Docker container |
 | `tls_cert_path`             | When set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
 | `image`                     | Use this image to run builds |
+| `memory`                    | String value containing the memory limit |
+| `memory_swap`               | String value containing the total memory limit |
+| `memory_reservation`        | String value containing the memory soft limit |
 | `cpuset_cpus`               | String value containing the cgroups CpusetCpus to use |
 | `cpus`                      | Number of CPUs (available in docker 1.13 or later) |
 | `dns`                       | A list of DNS servers for the container to use |
@@ -153,6 +156,9 @@ Example:
   hostname = ""
   tls_cert_path = "/Users/ayufan/.boot2docker/certs"
   image = "ruby:2.1"
+  memory = "128m"
+  memory_swap = "256m"
+  memory_reservation = "64m"
   cpuset_cpus = "0,1"
   dns = ["8.8.8.8"]
   dns_search = [""]
