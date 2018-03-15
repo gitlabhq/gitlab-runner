@@ -13,11 +13,11 @@ func TestVariablesJSON(t *testing.T) {
 
 	err := json.Unmarshal(data, &x)
 	assert.NoError(t, err)
-	assert.Equal(t, x.Key, "FOO")
-	assert.Equal(t, x.Value, "bar")
-	assert.Equal(t, x.Public, true)
-	assert.Equal(t, x.Internal, false) // cannot be set from the network
-	assert.Equal(t, x.File, true)
+	assert.Equal(t, "FOO", x.Key)
+	assert.Equal(t, "bar", x.Value)
+	assert.Equal(t, true, x.Public)
+	assert.Equal(t, false, x.Internal) // cannot be set from the network
+	assert.Equal(t, true, x.File)
 }
 
 func TestVariableString(t *testing.T) {
@@ -72,10 +72,10 @@ func TestVariablesExpansion(t *testing.T) {
 
 	expanded := all.Expand()
 	assert.Len(t, expanded, 4)
-	assert.Equal(t, expanded.Get("key"), "value_of_value_of_$undefined")
-	assert.Equal(t, expanded.Get("public"), "value_of_")
-	assert.Equal(t, expanded.Get("private"), "value_of_value_of_$undefined")
-	assert.Equal(t, expanded.ExpandValue("${public} ${private}"), "value_of_ value_of_value_of_$undefined")
+	assert.Equal(t, "value_of_value_of_$undefined", expanded.Get("key"))
+	assert.Equal(t, "value_of_", expanded.Get("public"))
+	assert.Equal(t, "value_of_value_of_$undefined", expanded.Get("private"))
+	assert.Equal(t, "value_of_ value_of_value_of_$undefined", expanded.ExpandValue("${public} ${private}"))
 }
 
 func TestSpecialVariablesExpansion(t *testing.T) {
@@ -88,8 +88,8 @@ func TestSpecialVariablesExpansion(t *testing.T) {
 
 	expanded := all.Expand()
 	assert.Len(t, expanded, 4)
-	assert.Equal(t, expanded.Get("key"), "$")
-	assert.Equal(t, expanded.Get("key2"), "/dsa")
-	assert.Equal(t, expanded.Get("key3"), "aabb")
-	assert.Equal(t, expanded.Get("key4"), "aabb")
+	assert.Equal(t, "$", expanded.Get("key"))
+	assert.Equal(t, "/dsa", expanded.Get("key2"))
+	assert.Equal(t, "aabb", expanded.Get("key3"))
+	assert.Equal(t, "aabb", expanded.Get("key4"))
 }
