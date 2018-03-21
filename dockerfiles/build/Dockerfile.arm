@@ -1,4 +1,4 @@
-FROM multiarch/alpine:armhf-v3.4
+FROM multiarch/alpine:armhf-v3.6
 
 RUN apk add --update bash ca-certificates git miniperl \
 	&& ln -s miniperl /usr/bin/perl
