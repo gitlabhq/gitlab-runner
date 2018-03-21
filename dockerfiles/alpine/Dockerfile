@@ -1,4 +1,4 @@
-FROM alpine
+FROM alpine:3.7
 
 RUN adduser -D -S -h /home/gitlab-runner gitlab-runner
 
