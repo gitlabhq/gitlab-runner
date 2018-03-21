@@ -1,3 +1,7 @@
+v 10.6.0-rc2 (2018-03-21)
+- Upgrade docker-machine to v0.14.0 !850
+- Upgrade helper image to alpine 3.6 !859
+
 v 10.6.0-rc1 (2018-03-08)
 - Add CI_RUNNER_VERSION, CI_RUNNER_REVISION, and CI_RUNNER_EXECUTABLE_ARCH job environment variables !788
 - Always prefer creating new containers when running with Docker Executor !818
