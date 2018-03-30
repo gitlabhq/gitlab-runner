@@ -1218,10 +1218,23 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
+type serviceHealthCheckError struct {
+	Inner error
+	Logs  string
+}
+
+func (e *serviceHealthCheckError) Error() string {
+	if e.Inner == nil {
+		return "serviceHealthCheckError"
+	}
+
+	return e.Inner.Error()
+}
+
 func (s *executor) runServiceHealthCheckContainer(service *types.Container, timeout time.Duration) error {
 	waitImage, err := s.getPrebuiltImage()
 	if err != nil {
-		return err
+		return fmt.Errorf("getPrebuiltImage: %v", err)
 	}
 
 	containerName := service.Names[0] + "-wait-for-service"
@@ -1242,12 +1255,12 @@ func (s *executor) runServiceHealthCheckContainer(service *types.Container, time
 	s.Debugln("Waiting for service container", containerName, "to be up and running...")
 	resp, err := s.client.ContainerCreate(s.Context, config, hostConfig, nil, containerName)
 	if err != nil {
-		return err
+		return fmt.Errorf("ContainerCreate: %v", err)
 	}
 	defer s.removeContainer(s.Context, resp.ID)
 	err = s.client.ContainerStart(s.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("ContainerStart: %v", err)
 	}
 
 	waitResult := make(chan error, 1)
@@ -1258,9 +1271,19 @@ func (s *executor) runServiceHealthCheckContainer(service *types.Container, time
 	// these are warnings and they don't make the build fail
 	select {
 	case err := <-waitResult:
-		return err
+		if err == nil {
+			return nil
+		}
+
+		return &serviceHealthCheckError{
+			Inner: err,
+			Logs:  s.readContainerLogs(resp.ID),
+		}
 	case <-time.After(timeout):
-		return fmt.Errorf("service %v did timeout", containerName)
+		return &serviceHealthCheckError{
+			Inner: fmt.Errorf("service %q timeout", containerName),
+			Logs:  s.readContainerLogs(resp.ID),
+		}
 	}
 }
 
@@ -1274,8 +1297,30 @@ func (s *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	buffer.WriteString(helpers.ANSI_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + service.Names[0] + " probably didn't start properly.\n")
 	buffer.WriteString("\n")
-	buffer.WriteString(strings.TrimSpace(err.Error()) + "\n")
+	buffer.WriteString("Health check error:\n")
+	buffer.WriteString(strings.TrimSpace(err.Error()))
+	buffer.WriteString("\n")
 
+	if healtCheckErr, ok := err.(*serviceHealthCheckError); ok {
+		buffer.WriteString("\n")
+		buffer.WriteString("Health check container logs:\n")
+		buffer.WriteString(healtCheckErr.Logs)
+		buffer.WriteString("\n")
+	}
+
+	buffer.WriteString("\n")
+	buffer.WriteString("Service container logs:\n")
+	buffer.WriteString(s.readContainerLogs(service.ID))
+	buffer.WriteString("\n")
+
+	buffer.WriteString("\n")
+	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
+	buffer.WriteString("\n")
+	io.Copy(s.Trace, &buffer)
+	return err
+}
+
+func (s *executor) readContainerLogs(containerID string) string {
 	var containerBuffer bytes.Buffer
 
 	options := types.ContainerLogsOptions{
@@ -1284,22 +1329,13 @@ func (s *executor) waitForServiceContainer(service *types.Container, timeout tim
 		Timestamps: true,
 	}
 
-	hijacked, err := s.client.ContainerLogs(s.Context, service.ID, options)
-	if err == nil {
-		defer hijacked.Close()
-		stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
-		if containerLog := containerBuffer.String(); containerLog != "" {
-			buffer.WriteString("\n")
-			buffer.WriteString(strings.TrimSpace(containerLog))
-			buffer.WriteString("\n")
-		}
-	} else {
-		buffer.WriteString(strings.TrimSpace(err.Error()) + "\n")
+	hijacked, err := s.client.ContainerLogs(s.Context, containerID, options)
+	if err != nil {
+		return strings.TrimSpace(err.Error())
 	}
+	defer hijacked.Close()
 
-	buffer.WriteString("\n")
-	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
-	buffer.WriteString("\n")
-	io.Copy(s.Trace, &buffer)
-	return err
+	stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
+	containerLog := containerBuffer.String()
+	return strings.TrimSpace(containerLog)
 }
