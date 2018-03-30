@@ -55,8 +55,9 @@ resource_rules:
             condition: older_than
             interval_type: months
             interval: 3
-          labels:
-            - No Label
+          forbidden_labels:
+            - bug
+            - feature proposal
           state: opened
         actions:
           labels:
@@ -71,7 +72,7 @@ resource_rules:
 
             We are automatically labelling this issue for attention as it meets the following criteria:
             * No activity in the past 3 months
-            * Unlabelled
+            * Not labeled as ~bug or ~"feature proposal"
 
             We'd like to ask you to help us out and determine whether this issue should be stay open or be closed.
 
