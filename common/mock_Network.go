@@ -56,13 +56,13 @@ func (_m *MockNetwork) ProcessJob(config RunnerConfig, buildCredentials *JobCred
 	return r0
 }
 
-// RegisterRunner provides a mock function with given fields: config, description, tags, runUntagged, locked, maxTimeout
-func (_m *MockNetwork) RegisterRunner(config RunnerCredentials, description string, tags string, runUntagged bool, locked bool, maxTimeout int) *RegisterRunnerResponse {
-	ret := _m.Called(config, description, tags, runUntagged, locked, maxTimeout)
+// RegisterRunner provides a mock function with given fields: config, parameters
+func (_m *MockNetwork) RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse {
+	ret := _m.Called(config, parameters)
 
 	var r0 *RegisterRunnerResponse
-	if rf, ok := ret.Get(0).(func(RunnerCredentials, string, string, bool, bool, int) *RegisterRunnerResponse); ok {
-		r0 = rf(config, description, tags, runUntagged, locked, maxTimeout)
+	if rf, ok := ret.Get(0).(func(RunnerCredentials, RegisterRunnerParameters) *RegisterRunnerResponse); ok {
+		r0 = rf(config, parameters)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*RegisterRunnerResponse)
