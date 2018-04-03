@@ -1246,7 +1246,7 @@ func (s *executor) runServiceHealthCheckContainer(service *types.Container, time
 	}
 	hostConfig := &container.HostConfig{
 		RestartPolicy: neverRestartPolicy,
-		Links:         []string{service.Names[0] + ":" + service.Names[0]},
+		Links:         []string{service.Names[0] + ":service"},
 		NetworkMode:   container.NetworkMode(s.Config.Docker.NetworkMode),
 		LogConfig: container.LogConfig{
 			Type: "json-file",
