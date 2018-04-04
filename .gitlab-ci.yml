@@ -8,7 +8,7 @@ stages:
 - cleanup
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.5-0
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0
   GOROOT: /usr/local/go
 
 image: $CI_IMAGE
@@ -25,7 +25,7 @@ image: $CI_IMAGE
   services:
   - docker:dind
   variables: &docker_variables
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.5-0
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
   tags:
@@ -224,7 +224,7 @@ git 1.7.1:
     OUR_PACKAGES: gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
   before_script:
     - yum install -y -q git && git version
-    - curl https://storage.googleapis.com/golang/go1.8.5.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+    - curl https://storage.googleapis.com/golang/go1.8.7.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
     - export PATH=${GOROOT}/bin:$PATH
     - source ci/touch_make_dependencies
   script:

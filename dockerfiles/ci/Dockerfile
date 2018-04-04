@@ -1,4 +1,4 @@
-FROM golang:1.8.5
+FROM golang:1.8.7
 
 # Install required dependencies
 RUN apt-get update -yq
