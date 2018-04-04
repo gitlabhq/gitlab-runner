@@ -140,21 +140,21 @@ func TestRegisterRunner(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res := c.RegisterRunner(validToken, "test", "tags", true, true)
+	res := c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true})
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
 	}
 
-	res = c.RegisterRunner(validToken, "invalid description", "tags", true, true)
+	res = c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "invalid description", Tags: "tags", RunUntagged: true, Locked: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(invalidToken, "test", "tags", true, true)
+	res = c.RegisterRunner(invalidToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(otherToken, "test", "tags", true, true)
+	res = c.RegisterRunner(otherToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(brokenCredentials, "test", "tags", true, true)
+	res = c.RegisterRunner(brokenCredentials, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true})
 	assert.Nil(t, res)
 }
 
