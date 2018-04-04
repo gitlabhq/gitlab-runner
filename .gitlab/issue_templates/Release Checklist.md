@@ -2,10 +2,11 @@
 /label ~release
 /label ~Deliverable
 /milestone %"X.Y"
+/assign MENTION_RELEASE_MANAGER_HERE
 
 # GitLab Runner X.Y release checklist
 
-GitLab Runner Release manager: **MENTION_HERE**
+GitLab Runner Release manager: **MENTION_RELEASE_MANAGER_HERE**
 
 Release blog post MR: **LINK_HERE**
 
