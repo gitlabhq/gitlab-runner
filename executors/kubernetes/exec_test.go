@@ -20,18 +20,14 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"testing"
 
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/testapi"
-	"k8s.io/kubernetes/pkg/api/unversioned"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	"k8s.io/kubernetes/pkg/client/unversioned/fake"
-	"k8s.io/kubernetes/pkg/runtime"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/rest/fake"
 )
 
 type fakeRemoteExecutor struct {
@@ -47,10 +43,10 @@ func (f *fakeRemoteExecutor) Execute(method string, url *url.URL, config *restcl
 }
 
 func TestExec(t *testing.T) {
-	version := testapi.Default.GroupVersion().Version
+	version, codec := testVersionAndCodec()
 	tests := []struct {
 		name, version, podPath, execPath, container string
-		pod                                         *api.Pod
+		pod                                         *apiv1.Pod
 		tty, execErr                                bool
 	}{
 		{
@@ -78,29 +74,22 @@ func TestExec(t *testing.T) {
 		},
 	}
 
-	codec := testapi.Default.Codec()
-
 	for _, test := range tests {
 		// Create a fake kubeClient
-		fakeClient := fake.RESTClient{
-			Codec: codec,
-			Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-				switch p, m := req.URL.Path, req.Method; {
-				case p == test.podPath && m == "GET":
-					body := objBody(codec, test.pod)
-					return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
-						"Content-Type": []string{"application/json"},
-					}}, nil
-				default:
-					// Ensures no GET is performed when deleting by name
-					t.Errorf("%s: unexpected request: %s %#v\n%#v", test.name, req.Method, req.URL, req)
-					return nil, fmt.Errorf("unexpected request")
-				}
-			}),
-		}
-		c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: test.version}}})
-		c.Client = fakeClient.Client
-		c.ExtensionsClient.Client = fakeClient.Client
+		fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+			switch p, m := req.URL.Path, req.Method; {
+			case p == test.podPath && m == "GET":
+				body := objBody(codec, test.pod)
+				return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
+					"Content-Type": []string{"application/json"},
+				}}, nil
+			default:
+				// Ensures no GET is performed when deleting by name
+				t.Errorf("%s: unexpected request: %s %#v\n%#v", test.name, req.Method, req.URL, req)
+				return nil, fmt.Errorf("unexpected request")
+			}
+		})
+		c := testKubernetesClient(version, fakeClient)
 
 		ex := &fakeRemoteExecutor{}
 		if test.execErr {
@@ -145,24 +134,20 @@ func TestExec(t *testing.T) {
 	}
 }
 
-func execPod() *api.Pod {
-	return &api.Pod{
-		ObjectMeta: api.ObjectMeta{Name: "foo", Namespace: "test", ResourceVersion: "10"},
-		Spec: api.PodSpec{
-			RestartPolicy: api.RestartPolicyAlways,
-			DNSPolicy:     api.DNSClusterFirst,
-			Containers: []api.Container{
+func execPod() *apiv1.Pod {
+	return &apiv1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test", ResourceVersion: "10"},
+		Spec: apiv1.PodSpec{
+			RestartPolicy: apiv1.RestartPolicyAlways,
+			DNSPolicy:     apiv1.DNSClusterFirst,
+			Containers: []apiv1.Container{
 				{
 					Name: "bar",
 				},
 			},
 		},
-		Status: api.PodStatus{
-			Phase: api.PodRunning,
+		Status: apiv1.PodStatus{
+			Phase: apiv1.PodRunning,
 		},
 	}
-}
-
-func objBody(codec runtime.Codec, obj runtime.Object) io.ReadCloser {
-	return ioutil.NopCloser(bytes.NewReader([]byte(runtime.EncodeOrDie(codec, obj))))
 }
