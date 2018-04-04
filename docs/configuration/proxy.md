@@ -39,7 +39,7 @@ world won't be able to.
     ip -4 -oneline addr show dev docker0
     ```
 
-    This is usually `172.17.0.1`, let's call it `docker_ip`.
+    This is usually `172.17.0.1`, let's call it `docker0_interface_ip`.
 
 1. Open the config file for CNTLM (`/etc/cntlm.conf`). Enter your username,
    password, domain and proxy hosts, and configure the `Listen` IP address
@@ -51,7 +51,7 @@ world won't be able to.
     Password     password
     Proxy        10.0.0.41:8080
     Proxy        10.0.0.42:8080
-    Listen       172.17.0.1:3128
+    Listen       172.17.0.1:3128 # Change to your docker0 interface IP
     ```
 
 1. Save the changes and restart its service:
@@ -72,8 +72,8 @@ The service file should look like this:
 
 ```ini
 [Service]
-Environment="HTTP_PROXY=http://docker_ip:3128/"
-Environment="HTTPS_PROXY=http://docker_ip:3128/"
+Environment="HTTP_PROXY=http://docker0_interface_ip:3128/"
+Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
 ```
 
 ## Adding Proxy variables to the Runner config
@@ -94,8 +94,8 @@ This is basically the same as adding the proxy to the Docker service above:
 
     ```ini
     [Service]
-    Environment="HTTP_PROXY=http://docker_ip:3128/"
-    Environment="HTTPS_PROXY=http://docker_ip:3128/"
+    Environment="HTTP_PROXY=http://docker0_interface_ip:3128/"
+    Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
     ```
 
 1. Save the file and flush changes:
@@ -119,7 +119,7 @@ This is basically the same as adding the proxy to the Docker service above:
       You should see:
 
       ```ini
-      Environment=HTTP_PROXY=http://docker_ip:3128/ HTTPS_PROXY=http://docker_ip:3128/
+      Environment=HTTP_PROXY=http://docker0_interface_ip:3128/ HTTPS_PROXY=http://docker0_interface_ip:3128/
       ```
 
 ## Adding the proxy to the Docker containers
@@ -133,9 +133,9 @@ following to the `[[runners]]` section:
 
 ```toml
 pre_clone_script = "git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY"
-environment = ["HTTPS_PROXY=docker_ip:3128", "HTTP_PROXY=docker_ip:3128"]
+environment = ["HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
 ```
 
-Where `docker_ip` is the IP address of the `docker0` interface. You need to
+Where `docker0_interface_ip` is the IP address of the `docker0` interface. You need to
 be able to reach it from within the Docker containers, so it's important to set
 it right.
