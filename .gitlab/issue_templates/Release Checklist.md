@@ -1,3 +1,8 @@
+/label ~"CI/CD"
+/label ~release
+/label ~Deliverable
+/milestone %"X.Y"
+
 # GitLab Runner X.Y release checklist
 
 GitLab Runner Release manager: **MENTION_HERE**
@@ -21,8 +26,6 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
       use the eraliest one.
 
 - [ ] Update the `X.Y.` and `X-Y-` to a specific release version
-- [ ] Add the ~release label to the issue
-- [ ] Add the %X.Y milestone to the issue
 
 ## First working day after 7th - **vX.Y.0-rc1 release**
 
