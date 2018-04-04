@@ -1,5 +1,5 @@
 # This image is used to create bleeding edge docker image and is not compatible with any other image
-FROM golang:1.9.4
+FROM golang:1.8.7
 
 # Copy sources
 COPY . /go/src/gitlab.com/gitlab-org/gitlab-runner
