@@ -12,7 +12,7 @@ type MockJobTrace struct {
 	mock.Mock
 }
 
-// Fail provides a mock function with given fields: err
+// Fail provides a mock function with given fields: err, failureReason
 func (_m *MockJobTrace) Fail(err error, failureReason JobFailureReason) {
 	_m.Called(err, failureReason)
 }
@@ -34,6 +34,11 @@ func (_m *MockJobTrace) IsStdout() bool {
 // SetCancelFunc provides a mock function with given fields: cancelFunc
 func (_m *MockJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	_m.Called(cancelFunc)
+}
+
+// SetFailuresCollector provides a mock function with given fields: fc
+func (_m *MockJobTrace) SetFailuresCollector(fc FailuresCollector) {
+	_m.Called(fc)
 }
 
 // Success provides a mock function with given fields:
