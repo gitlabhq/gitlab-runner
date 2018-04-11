@@ -1,3 +1,18 @@
+v 10.7.0-rc1 (2018-04-11)
+- Rename Sirupsen/logrus library !843
+- Refer to gitlab versions as libre, starter, premium, and ultimate !851
+- Fix assert.Equal parameter order !854
+- Upgrade docker-machine to v0.14.0 !850
+- Refactor autoscale docs !733
+- Add possibility to specify memory in Docker containers !847
+- Upgrade helper image to alpine 3.6 !859
+- Update docker images bases to alpine:3.7 and ubuntu:16:04 !860
+- Verify git-lfs checksum !796
+- Improve services health check !867
+- Add proxy documentation !623
+- Downgrade go to 1.8.7 !869
+- Add support for max_job_timeout parameter in registration !846
+
 v 10.6.0 (2018-03-22)
 - Upgrade docker-machine to v0.14.0 !850
 - Upgrade helper image to alpine 3.6 !859
