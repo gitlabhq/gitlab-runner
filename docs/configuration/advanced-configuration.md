@@ -743,6 +743,34 @@ which is based on its compilation data. After updating the Runner to a new versi
 Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
 before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
 
+## The `[runners.custom_build_dir]` section
+
+NOTE: **Note:**
+[Introduced][gitlab-runner-876] in Gitlab Runner 11.1
+
+This section defines [custom build directories][custom-build-dir-docs] parameters.
+
+Please notice, that the feature - if not configured explicitly - will be
+enabled by default for `kubernetes`, `docker`, `docker-ssh`, `docker+machine`
+and `docker-ssh+machine` executors. It will be disabled by default for all other
+executors.
+
+The feature will be also disabled when _shared_ environments (`shell`, `ssh`
+executors and all `docker*` executors when working directory is mounted
+as host volume shared between jobs) will be used together with `concurrent = 1`
+set in global section.
+
+| Parameter | Type    | Description |
+|-----------|---------|-------------|
+| `enable`  | boolean | Allow user to define a custom build directory for a job |
+
+Example:
+
+```bash
+[runners.custom_build_dir]
+  enable = true
+```
+
 ## Note
 
 If you'd like to deploy to multiple servers using GitLab CI, you can create a
@@ -758,3 +786,5 @@ It depends on what you'd like to do.
 [priv-example]: https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry
 [variable]: https://docs.gitlab.com/ee/ci/variables/#variables
 [cronvendor]: https://github.com/gorhill/cronexpr#implementation
+[gitlab-runner-876]: https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/876
+[custom-build-dir-docs]: https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories

@@ -83,8 +83,9 @@ func (s *sshExecutor) Cleanup() {
 
 func init() {
 	options := executors.ExecutorOptions{
-		DefaultBuildsDir: "builds",
-		SharedBuildsDir:  false,
+		DefaultCustomBuildsDirEnabled: true,
+		DefaultBuildsDir:              "builds",
+		SharedBuildsDir:               false,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
 			Type:          common.LoginShell,

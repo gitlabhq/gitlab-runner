@@ -156,15 +156,29 @@ func (b *Build) FullProjectDir() string {
 	return helpers.ToSlash(b.BuildDir)
 }
 
-func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
+func (b *Build) TmpProjectDir() string {
+	return helpers.ToSlash(b.BuildDir) + ".tmp"
+}
+
+func (b *Build) StartBuild(rootDir, cacheDir string, customDirAllowed, sharedDir bool) error {
 	b.RootDir = rootDir
-	b.BuildDir = path.Join(rootDir, b.ProjectUniqueDir(sharedDir))
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
+
+	// Job Specific build dir
+	b.BuildDir = b.GetAllVariables().Get("GIT_CLONE_PATH")
+	if b.BuildDir != "" && !customDirAllowed {
+		return errors.New("setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature")
+	}
+
+	if b.BuildDir == "" {
+		b.BuildDir = path.Join(rootDir, b.ProjectUniqueDir(sharedDir))
+	}
 
 	// invalidate variables cache:
 	// as some variables are based on dynamic
 	// state after build starts
 	b.allVariables = nil
+	return nil
 }
 
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {

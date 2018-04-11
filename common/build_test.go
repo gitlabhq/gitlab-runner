@@ -93,7 +93,7 @@ func TestBuildPredefinedVariables(t *testing.T) {
 	// We run everything once
 	e.On("Prepare", mock.Anything).
 		Return(func(options ExecutorPrepareOptions) error {
-			options.Build.StartBuild("/root/dir", "/cache/dir", false)
+			options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
 			return nil
 		}).Once()
 	e.On("Finish", nil).Return().Once()
@@ -901,6 +901,125 @@ func TestIsFeatureFlagOn(t *testing.T) {
 	}
 }
 
+func TestStartBuild(t *testing.T) {
+	type startBuildArgs struct {
+		rootDir        string
+		cacheDir       string
+		customBuildDir bool
+		sharedDir      bool
+	}
+
+	tests := []struct {
+		name             string
+		args             startBuildArgs
+		jobVariables     JobVariables
+		expectedBuildDir string
+		expectedCacheDir string
+		expectedError    bool
+	}{
+		{
+			name: "no job specific build dir with no shared dir",
+			args: startBuildArgs{
+				rootDir:        "/build",
+				cacheDir:       "/cache",
+				customBuildDir: true,
+				sharedDir:      false,
+			},
+			jobVariables:     JobVariables{},
+			expectedBuildDir: "/build/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		{
+			name: "no job specified build dir with shared dir",
+			args: startBuildArgs{
+				rootDir:        "/builds",
+				cacheDir:       "/cache",
+				customBuildDir: true,
+				sharedDir:      true,
+			},
+			jobVariables:     JobVariables{},
+			expectedBuildDir: "/builds/1234/0/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		{
+			name: "job specific build dir with no shared dir",
+			args: startBuildArgs{
+				rootDir:        "/builds",
+				cacheDir:       "/cache",
+				customBuildDir: true,
+				sharedDir:      false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/go/src/gitlab.com/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		{
+			name: "job specific build dir with shared dir",
+			args: startBuildArgs{
+				rootDir:        "/builds",
+				cacheDir:       "/cache",
+				customBuildDir: true,
+				sharedDir:      true,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/go/src/gitlab.com/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		{
+			name: "custom build disabled",
+			args: startBuildArgs{
+				rootDir:        "/builds",
+				cacheDir:       "/cache",
+				customBuildDir: false,
+				sharedDir:      false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/builds/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			build := Build{
+				JobResponse: JobResponse{
+					GitInfo: GitInfo{
+						RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
+					},
+					Variables: tt.jobVariables,
+				},
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "1234",
+					},
+				},
+			}
+
+			err := build.StartBuild(tt.args.rootDir, tt.args.cacheDir, tt.args.customBuildDir, tt.args.sharedDir)
+			if tt.expectedError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedBuildDir, build.BuildDir)
+			assert.Equal(t, tt.args.rootDir, build.RootDir)
+			assert.Equal(t, tt.expectedCacheDir, build.CacheDir)
+		})
+	}
+}
+
 func TestWaitForTerminal(t *testing.T) {
 	cases := []struct {
 		name                   string
@@ -1106,6 +1225,64 @@ func TestGitCleanFlags(t *testing.T) {
 
 			result := build.GetGitCleanFlags()
 			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestDefaultVariables(t *testing.T) {
+	tests := []struct {
+		name          string
+		jobVariables  JobVariables
+		rootDir       string
+		key           string
+		expectedValue string
+	}{
+		{
+			name:          "get default CI_SERVER value",
+			jobVariables:  JobVariables{},
+			rootDir:       "/builds",
+			key:           "CI_SERVER",
+			expectedValue: "yes",
+		},
+		{
+			name:          "get default CI_PROJECT_DIR value",
+			jobVariables:  JobVariables{},
+			rootDir:       "/builds",
+			key:           "CI_PROJECT_DIR",
+			expectedValue: "/builds/test-namespace/test-repo",
+		},
+		{
+			name: "get overwritten CI_PROJECT_DIR value",
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/gitlab-org/gitlab-runner", Public: true},
+			},
+			rootDir:       "/builds",
+			key:           "CI_PROJECT_DIR",
+			expectedValue: "/go/src/gitlab.com/gitlab-org/gitlab-runner",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			build := Build{
+				JobResponse: JobResponse{
+					GitInfo: GitInfo{
+						RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
+					},
+					Variables: test.jobVariables,
+				},
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "1234",
+					},
+				},
+			}
+
+			err := build.StartBuild(test.rootDir, "/cache", true, false)
+			assert.NoError(t, err)
+
+			variable := build.GetAllVariables().Get(test.key)
+			assert.Equal(t, test.expectedValue, variable)
 		})
 	}
 }

@@ -241,7 +241,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 
 func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &BashWriter{
-		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
+		TemporaryPath: info.Build.TmpProjectDir(),
 	}
 
 	if buildStage == common.BuildStagePrepare {
