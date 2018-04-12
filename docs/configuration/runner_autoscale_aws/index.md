@@ -405,6 +405,6 @@ You can read the following use cases from which this tutorial was (heavily)
 influenced:
 
 - [HumanGeo - Scaling GitLab CI](http://blog.thehumangeo.com/gitlab-autoscale-runners.html)
-- [subtrakt Health - Autoscale GitLab CI Runners and save 90% on EC2 costs](https://substrakthealth.com/news/gitlab-ci-cost-savings/)
+- [Substrakt Health - Autoscale GitLab CI Runners and save 90% on EC2 costs](https://substrakthealth.com/news/gitlab-ci-cost-savings/)
 
 [spot]: https://aws.amazon.com/ec2/spot/
