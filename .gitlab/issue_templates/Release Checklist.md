@@ -49,7 +49,7 @@ this day, will be released with next release.
 
     ```markdown
     - name: GitLab Runner X.Y
-      available_in: [libre, starter, premium, ultimate]
+      available_in: [core, starter, premium, ultimate]
       documentation_link: 'https://docs.gitlab.com/runner'
       documentation_text: "Read through the documentation on GitLab Runner"
       description: |
