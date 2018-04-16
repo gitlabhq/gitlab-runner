@@ -86,7 +86,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
   the pod annotations overwrite environment variable. When empty,
     it disables the pod annotations overwrite feature
-- `service-account`: default service account to be used for making kubernetes api calls.
+- `service_account`: default service account to be used for making kubernetes api calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
     it disables the service account overwrite feature
