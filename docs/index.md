@@ -76,7 +76,7 @@ information on the different installation methods:
 - [Install using GitLab's repository for Debian/Ubuntu/CentOS/RedHat (preferred)](install/linux-repository.md)
 - [Install on GNU/Linux manually (advanced)](install/linux-manually.md)
 - [Install on macOS](install/osx.md)
-- [Install on Windows)](install/windows.md)
+- [Install on Windows](install/windows.md)
 - [Install as a Docker service](install/docker.md)
 - [Install in autoscaling mode using Docker machine](executors/docker_machine.md)
 - [Install on FreeBSD](install/freebsd.md)
