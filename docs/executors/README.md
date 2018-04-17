@@ -40,10 +40,9 @@ you decide.
 #### SSH Executor
 
 The **SSH** executor is added for completeness. It's the least supported
-executor from all of the already mentioned ones. It makes GitLab Runner to
-connect to some external server and run the builds there. We have some success
-stories from organizations using that executor, but generally we advise to use
-any of the above.
+among all executors. It makes GitLab Runner to connect to some external server
+and run the builds there. We have some success stories from organizations using
+that executor, but generally we advise to use any other.
 
 #### Shell Executor
 
