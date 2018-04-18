@@ -203,7 +203,7 @@ dockerfiles:
 # We rely on user GOPATH 'cause mockery seems not to be able to find dependencies in vendor directory
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
-	find . -type f -name 'mock_*' -delete
+	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./helpers/docker -all -inpkg
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
