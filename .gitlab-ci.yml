@@ -157,6 +157,7 @@ codequality:
 unit tests (no race):
   <<: *docker
   stage: test
+  retry: 2
   script:
     - source ci/touch_make_dependencies
     - make test
