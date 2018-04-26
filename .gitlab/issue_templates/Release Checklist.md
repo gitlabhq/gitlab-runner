@@ -1,16 +1,16 @@
 /label ~"CI/CD"
 /label ~release
 /label ~Deliverable
-/milestone %"X.Y"
-/assign MENTION_RELEASE_MANAGER_HERE
+/milestone %"{{.Major}}.{{.Minor}}"
+/assign @{{.ReleaseManagerHandle}}
 
-# GitLab Runner X.Y release checklist
+# GitLab Runner {{.Major}}.{{.Minor}} release checklist
 
-GitLab Runner Release manager: **MENTION_RELEASE_MANAGER_HERE**
+GitLab Runner Release manager: **@{{.ReleaseManagerHandle}}**
 
-Release blog post MR: **LINK_HERE**
+Release blog post MR: **gitlab-com/www-gitlab-com!{{.ReleaseBlogPostMR}}**
 
-Runner entries need to be added to blog post until: **DEADLINE_FOR_RUNNER_ITEMS_ADDITION_INTO_BLOG_POST_HERE**
+Runner entries need to be added to blog post until: **{{.ReleaseBlogPostDeadline}}**
 
 Technical description of the release, with commands examples, can be found at:
 https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how_to_release_runner.md
@@ -26,22 +26,22 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
       deadline for 7th working day before 22nd, however if the deadline from the MR is earlier, then
       use the eraliest one.
 
-- [ ] Update the `X.Y.` and `X-Y-` to a specific release version
+- [ ] Update the `.Major` and `.Minor` to a specific release version
 
-## First working day after 7th - **vX.Y.0-rc1 release**
+## First working day after 7th - **v{{.Major}}.{{.Minor}}.0-rc1 release**
 
 - [ ] check if Pipeline for `master` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/master)
     - [ ] add all required fixes to make `master` Pipeline passing
-- [ ] add **vX.Y.0-rc1** CHANGELOG entries
-- [ ] tag and push **vX.Y.0-rc1**
-- [ ] create and push `X-Y-stable` branch
-- [ ] checkout to `master`, update `VERSION` file to `X.Y+1.0` and push `master`
-- [ ] deploy **vX.Y.0-rc1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] add **v{{.Major}}.{{.Minor}}.0-rc1** CHANGELOG entries
+- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rc1**
+- [ ] create and push `{{.Major}}-{{.Minor}}-stable` branch
+- [ ] checkout to `master`, update `VERSION` file to `{{.Major}}.{{inc .Minor}}.0` and push `master`
+- [ ] deploy **v{{.Major}}.{{.Minor}}.0-rc1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 
 _New features_ window is closed - things not merged into `master` up to
 this day, will be released with next release.
 
-## 7 working days before 22th (**DEADLINE_FOR_RUNNER_ITEMS_ADDITION_INTO_BLOG_POST_HERE**)
+## 7 working days before 22th (**{{.ReleaseBlogPostDeadline}}**)
 
 - [ ] prepare entries for the release blog post. Items can be generated with `./scripts/changelog2releasepost | less`
 - [ ] add release entry:
@@ -49,19 +49,19 @@ this day, will be released with next release.
     Add description to the `SECONDARY FEATURES` list using following template:
 
     ```markdown
-    - name: GitLab Runner X.Y
+    - name: GitLab Runner {{.Major}}.{{.Minor}}
       available_in: [core, starter, premium, ultimate]
       documentation_link: 'https://docs.gitlab.com/runner'
-      documentation_text: "Read through the documentation on GitLab Runner"
+      documentation_text: "Read through the documentation of GitLab Runner"
       description: |
-        We're also releasing GitLab Runner X.Y today! GitLab Runner is the open source project
+        We're also releasing GitLab Runner {{.Major}}.{{.Minor}} today! GitLab Runner is the open source project
         that is used to run your CI/CD jobs and send the results back to GitLab.
 
         ##### Most interesting changes:
 
         * [__Title__](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/__ID__)
 
-        List of all changes can be found in GitLab Runner's [CHANGELOG](https://gitlab.com/gitlab-org/gitlab-runner/blob/vX.Y.0/CHANGELOG.md).
+        List of all changes can be found in GitLab Runner's [CHANGELOG](https://gitlab.com/gitlab-org/gitlab-runner/blob/v{{.Major}}.{{.Minor}}.0/CHANGELOG.md).
     ```
 
 ## At 20th - next RC release
@@ -69,11 +69,11 @@ this day, will be released with next release.
 At this day we should release an RC version, if there was no RC recently - especially
 if the only RC version was the _RC1_ released near 7th day of month.
 
-- [ ] check if Pipeline for `X-Y-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/X-Y-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/X-Y-stable)
-    - [ ] add all required fixes to make `X-Y-stable` Pipeline passing
-- [ ] add **vX.Y.0-rcZ** CHANGELOG entries
-- [ ] tag **vX.Y.0-rcZ**
-- [ ] deploy **vX.Y.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] check if Pipeline for `{{.Major}}-{{.Minor}}-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/{{.Major}}-{{.Minor}}-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/{{.Major}}-{{.Minor}}-stable)
+    - [ ] add all required fixes to make `{{.Major}}-{{.Minor}}-stable` Pipeline passing
+- [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries
+- [ ] tag **v{{.Major}}.{{.Minor}}.0-rcZ**
+- [ ] deploy **v{{.Major}}.{{.Minor}}.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 
 ## At 22th - the release day
 
@@ -96,11 +96,11 @@ When deciding to release a new RC version, please update the checklist using the
 template:
 
 ```markdown
-## At _day here_ - **vX.Y.0-rcZ** release
+## At _day here_ - **v{{.Major}}.{{.Minor}}.0-rcZ** release
 
-- [ ] check if Pipeline for `X-Y-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/X-Y-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/X-Y-stable)
-    - [ ] add all required fixes to make `X-Y-stable` Pipeline passing
-- [ ] add **vX.Y.0-rcZ** CHANGELOG entries
-- [ ] tag **vX.Y.0-rcZ**
-- [ ] deploy **vX.Y.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] check if Pipeline for `{{.Major}}-{{.Minor}}-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/{{.Major}}-{{.Minor}}-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/{{.Major}}-{{.Minor}}-stable)
+    - [ ] add all required fixes to make `{{.Major}}-{{.Minor}}-stable` Pipeline passing
+- [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries
+- [ ] tag **v{{.Major}}.{{.Minor}}.0-rcZ**
+- [ ] deploy **v{{.Major}}.{{.Minor}}.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 ```

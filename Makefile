@@ -394,6 +394,16 @@ check-tags-in-changelog:
 		echo "$$tag:   \t $$state"; \
 	done
 
+prepare_release_checklist_issue: opts ?= ""
+prepare_release_checklist_issue: major := $(shell cat VERSION | awk -F'.' '{print $$1}')
+prepare_release_checklist_issue: minor := $(shell cat VERSION | awk -F'.' '{print $$2}')
+prepare_release_checklist_issue:
+	@go run ./scripts/prepare_release_checklist_issue.go \
+		-issue-template-file ".gitlab/issue_templates/Release Checklist.md" \
+		-major $(major) \
+		-minor $(minor) \
+		$(opts)
+
 development_setup:
 	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/gitlab-test.git tmp/gitlab-test
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
