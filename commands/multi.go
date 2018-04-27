@@ -350,6 +350,8 @@ func (mr *RunCommand) serveMetrics() {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
+	// Metrics about API connections
+	registry.MustRegister(mr.network)
 	// Metrics about jobs failures
 	registry.MustRegister(mr.failuresCollector)
 	// Metrics about catched errors
