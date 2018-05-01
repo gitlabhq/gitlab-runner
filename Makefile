@@ -19,7 +19,7 @@ S3_UPLOAD_PATH ?= master
 
 # Keep in sync with docs/install/linux-repository.md
 DEB_PLATFORMS ?= debian/wheezy debian/jessie debian/stretch debian/buster \
-    ubuntu/trusty ubuntu/xenial ubuntu/zesty ubuntu/artful \
+    ubuntu/trusty ubuntu/xenial ubuntu/artful ubuntu/bionic \
     raspbian/wheezy raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/qiana linuxmint/rebecca linuxmint/rafaela linuxmint/rosa linuxmint/sarah linuxmint/serena linuxmint/sonya
 DEB_ARCHS ?= amd64 i386 armel armhf

@@ -12,8 +12,8 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Debian       | stretch | approx. 2022          |
 | Debian       | jessie  | June 2020             |
 | Debian       | wheezy  | May 2018              |
-| Ubuntu       | artful  |                       |
-| Ubuntu       | zesty   | January 2018          |
+| Ubuntu       | bionic  | April 2023            |
+| Ubuntu       | artful  | July 2018             |
 | Ubuntu       | xenial  | April 2021            |
 | Ubuntu       | trusty  | April 2019            |
 | Mint         | sonya   | approx. 2021          |
@@ -25,7 +25,7 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Mint         | qiana   | April 2019            |
 | RHEL/CentOS  | 7       | June 2024             |
 | RHEL/CentOS  | 6       | November 2020         |
-| Fedora       | 28      |                       |
+| Fedora       | 28      | approx. May 2019      |
 | Fedora       | 27      | approx. November 2018 |
 | Fedora       | 26      | approx. June 2018     |
 
