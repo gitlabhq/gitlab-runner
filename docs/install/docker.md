@@ -104,7 +104,7 @@ gitlab/gitlab-runner    alpine              7c431ac8f30f        13 hours ago    
 
 **Alpine Linux image is designed to use only Docker as the method of spawning runners.**
 
-The original `gitlab/gitlab-runner:latest` is based on Ubuntu 14.04 LTS.
+The original `gitlab/gitlab-runner:latest` is based on Ubuntu 16.04 LTS.
 
 ## SELinux
 
