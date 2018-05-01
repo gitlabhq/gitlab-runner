@@ -2,6 +2,50 @@
 
 This is how you can run GitLab Runner inside a Docker container.
 
+## General GitLab Runner Docker image usage
+
+GitLab Runner Docker images (both based on Ubuntu and [Alpine linux](#alpine-linux))
+are designed as a wrappers around the standard `gitlab-runner` command, that normally
+would be available locally, when GitLab Runner would be installed directly on the host.
+
+The general rule is that every GitLab Runner command, that normally would be executed
+as:
+
+```bash
+$ gitlab-runner [Runner command and options...]
+```
+
+can be executed with:
+
+```bash
+$ docker run [chosen docker options...] gitlab/gitlab-runner [Runner command and options...]
+```
+
+For example, getting the top-level help information for GitLab Runner command could be
+executed as:
+
+```bash
+$ docker run --rm -t -i gitlab/gitlab-runner --help
+NAME:
+   gitlab-runner - a GitLab Runner
+
+USAGE:
+   gitlab-runner [global options] command [command options] [arguments...]
+
+VERSION:
+   10.7.0 (7c273476)
+
+(...)
+```
+
+So, in short, the `gitlab-runner` part of the command is replaced with `docker run [docker options]
+gitlab/gitlab-runner`, while the rest of Runner's command stays as it is described in other
+pages of GitLab Runner documentation.
+
+The only difference is that the `gitlab-runner` command is executed inside of a Docker container,
+with all advantages and limitations that Docker generates in differenc to a locally executed
+command).
+
 ## Docker image installation and configuration
 
 1. Install Docker first:
