@@ -122,6 +122,37 @@ you need to use the same method for mounting you data volume as you
 did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
 `--volumes-from gitlab-runner`).
 
+## Reading GitLab Runner logs
+
+When GitLab Runner is started as a foreground task (whether it's a locally installed binary or
+inside of a Docker Container), the logs are printed to the standard output. When
+GitLan Runner is started as a system service (e.g. with Systemd), the logs are in most
+cases logged through Syslog or other system logging mechanism.
+
+With GitLab Runner started as a Docker based service, since `gitlab-runner ...` command is
+the main process of the container, the logs can be read using `docker logs` command.
+
+For example, if GitLab Runner was started with following command:
+
+```bash
+docker run -d --name gitlab-runner --restart always \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+  gitlab/gitlab-runner:latest
+```
+
+you may get the logs with
+
+```bash
+docker logs gitlab-runner
+```
+
+where `gitlab-runner` is the name of the container, set with `--name gitlab-runner` by
+the first command.
+
+You may find moure information about handling containers logs at [Docker documentation
+page](https://docs.docker.com/engine/reference/commandline/logs).
+
 ## Installing trusted SSL server certificates
 
 If your GitLab CI server is using self-signed SSL certificates then you should
