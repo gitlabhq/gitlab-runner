@@ -1,3 +1,6 @@
+v 10.6.1 (2018-05-02)
+- Create package for ubuntu/bionic !891
+
 v 10.6.0 (2018-03-22)
 - Upgrade docker-machine to v0.14.0 !850
 - Upgrade helper image to alpine 3.6 !859
