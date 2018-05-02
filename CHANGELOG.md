@@ -1,3 +1,6 @@
+v 10.7.1 (2018-05-02)
+- Create package for ubuntu/bionic !891
+
 v 10.7.0 (2018-04-22)
 - Rename Sirupsen/logrus library !843
 - Refer to gitlab versions as libre, starter, premium, and ultimate !851
