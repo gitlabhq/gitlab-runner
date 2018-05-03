@@ -4,28 +4,29 @@ This is how you can run GitLab Runner inside a Docker container.
 
 ## General GitLab Runner Docker image usage
 
-GitLab Runner Docker images (both based on Ubuntu and [Alpine linux](#alpine-linux))
-are designed as a wrappers around the standard `gitlab-runner` command, that normally
-would be available locally, when GitLab Runner would be installed directly on the host.
+GitLab Runner Docker images (both based on Ubuntu and [Alpine Linux](#alpine-linux))
+are designed as wrappers around the standard `gitlab-runner` command, like if
+GitLab Runner was installed directly on the host.
 
-The general rule is that every GitLab Runner command, that normally would be executed
+The general rule is that every GitLab Runner command that normally would be executed
 as:
 
 ```bash
-$ gitlab-runner [Runner command and options...]
+gitlab-runner [Runner command and options...]
 ```
 
 can be executed with:
 
 ```bash
-$ docker run [chosen docker options...] gitlab/gitlab-runner [Runner command and options...]
+docker run [chosen docker options...] gitlab/gitlab-runner [Runner command and options...]
 ```
 
 For example, getting the top-level help information for GitLab Runner command could be
 executed as:
 
 ```bash
-$ docker run --rm -t -i gitlab/gitlab-runner --help
+docker run --rm -t -i gitlab/gitlab-runner --help
+
 NAME:
    gitlab-runner - a GitLab Runner
 
@@ -38,13 +39,11 @@ VERSION:
 (...)
 ```
 
-So, in short, the `gitlab-runner` part of the command is replaced with `docker run [docker options]
-gitlab/gitlab-runner`, while the rest of Runner's command stays as it is described in other
-pages of GitLab Runner documentation.
-
-The only difference is that the `gitlab-runner` command is executed inside of a Docker container,
-with all advantages and limitations that Docker generates in differenc to a locally executed
-command).
+In short, the `gitlab-runner` part of the command is replaced with
+`docker run [docker options] gitlab/gitlab-runner`, while the rest of Runner's
+command stays as it is described in the [register documentation](../register/index.md).
+The only difference is that the `gitlab-runner` command is executed inside of a
+Docker container.
 
 ## Docker image installation and configuration
 
@@ -64,7 +63,8 @@ command).
       gitlab/gitlab-runner:latest
     ```
 
-    *On OSX, substitute the path "/Users/Shared" for "/srv".*
+    TIP: **Tip:**
+    On macOS, use `/Users/Shared` instead of `/srv`.
 
     Or, you can use a config container to mount your custom data volume:
 
@@ -73,23 +73,18 @@ command).
         -v /etc/gitlab-runner \
         busybox:latest \
         /bin/true
+    ```
 
+    And then, run the Runner:
+
+    ```bash
     docker run -d --name gitlab-runner --restart always \
+        -v /var/run/docker.sock:/var/run/docker.sock \
         --volumes-from gitlab-runner-config \
         gitlab/gitlab-runner:latest
     ```
 
-    If you plan on using Docker as the method of spawning Runners, you will need to
-    mount your docker socket like this:
-
-    ```bash
-    docker run -d --name gitlab-runner --restart always \
-      -v /var/run/docker.sock:/var/run/docker.sock \
-      -v /srv/gitlab-runner/config:/etc/gitlab-runner \
-      gitlab/gitlab-runner:latest
-    ```
-
-1. [Register the Runner](../register/index.md)
+1. [Register the Runner](../register/index.md#docker)
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
@@ -117,8 +112,8 @@ docker run -d --name gitlab-runner --restart always \
   gitlab/gitlab-runner:latest
 ```
 
->**Note**:
-you need to use the same method for mounting you data volume as you
+NOTE: **Note:**
+You need to use the same method for mounting you data volume as you
 did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
 `--volumes-from gitlab-runner`).
 
@@ -126,13 +121,13 @@ did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
 
 When GitLab Runner is started as a foreground task (whether it's a locally installed binary or
 inside of a Docker Container), the logs are printed to the standard output. When
-GitLan Runner is started as a system service (e.g. with Systemd), the logs are in most
+GitLab Runner is started as a system service (e.g. with Systemd), the logs are in most
 cases logged through Syslog or other system logging mechanism.
 
-With GitLab Runner started as a Docker based service, since `gitlab-runner ...` command is
-the main process of the container, the logs can be read using `docker logs` command.
+With GitLab Runner started as a Docker based service, since the `gitlab-runner ...` command is
+the main process of the container, the logs can be read using the `docker logs` command.
 
-For example, if GitLab Runner was started with following command:
+For example, if GitLab Runner was started with the following command:
 
 ```bash
 docker run -d --name gitlab-runner --restart always \
@@ -141,7 +136,7 @@ docker run -d --name gitlab-runner --restart always \
   gitlab/gitlab-runner:latest
 ```
 
-you may get the logs with
+you may get the logs with:
 
 ```bash
 docker logs gitlab-runner
@@ -150,7 +145,7 @@ docker logs gitlab-runner
 where `gitlab-runner` is the name of the container, set with `--name gitlab-runner` by
 the first command.
 
-You may find moure information about handling containers logs at [Docker documentation
+You may find more information about handling container logs at the [Docker documentation
 page](https://docs.docker.com/engine/reference/commandline/logs).
 
 ## Installing trusted SSL server certificates
