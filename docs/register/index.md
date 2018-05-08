@@ -394,8 +394,8 @@ sudo gitlab-runner register \
   --docker-image alpine:3 \
   --description "docker-runner" \
   --tag-list "docker,aws" \
-  --run-untagged "true" \
-  --locked "false" \
+  --run-untagged \
+  --locked="false" \
 ```
 
 If you're running the Runner in a Docker container, the `register` command would
@@ -410,12 +410,8 @@ docker run --rm -t -i -v /path/to/config:/etc/gitlab-runner --name gitlab-runner
   --registration-token "PROJECT_REGISTRATION_TOKEN" \
   --description "docker-runner" \
   --tag-list "docker,aws" \
-  --run-untagged "true" \
-  --locked "false"
+  --run-untagged \
+  --locked="false"
 ```
-
-NOTE: **Note:**
-Make sure the `--executor`, `--docker-image`, `--url`, `--registration-token`
-are the first you define, otherwise the registration will fail.
 
 [tags]: https://docs.gitlab.com/ce/ci/runners/#using-tags
