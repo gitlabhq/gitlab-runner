@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/prometheus/client_golang/prometheus"
-
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
@@ -342,8 +340,6 @@ type JobTracePatch interface {
 }
 
 type Network interface {
-	prometheus.Collector
-
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool

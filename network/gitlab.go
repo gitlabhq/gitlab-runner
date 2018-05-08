@@ -44,12 +44,12 @@ type apiRequestStatusPermutation struct {
 	status   int
 }
 
-type apiRequestStatusesMap struct {
+type ApiRequestStatusesMap struct {
 	internal map[apiRequestStatusPermutation]int
 	lock     sync.RWMutex
 }
 
-func (arspm *apiRequestStatusesMap) append(runnerID string, endpoint APIEndpoint, status int) {
+func (arspm *ApiRequestStatusesMap) Append(runnerID string, endpoint APIEndpoint, status int) {
 	arspm.lock.Lock()
 	defer arspm.lock.Unlock()
 
@@ -62,17 +62,30 @@ func (arspm *apiRequestStatusesMap) append(runnerID string, endpoint APIEndpoint
 	arspm.internal[permutation]++
 }
 
-func (arspm *apiRequestStatusesMap) read(handler func(apiRequestStatusPermutation, int)) {
+// Describe implements prometheus.Collector.
+func (arspm *ApiRequestStatusesMap) Describe(ch chan<- *prometheus.Desc) {
+	ch <- apiRequestStatuses
+}
+
+// Collect implements prometheus.Collector.
+func (arspm *ApiRequestStatusesMap) Collect(ch chan<- prometheus.Metric) {
 	arspm.lock.RLock()
 	defer arspm.lock.RUnlock()
 
 	for permutation, count := range arspm.internal {
-		handler(permutation, count)
+		ch <- prometheus.MustNewConstMetric(
+			apiRequestStatuses,
+			prometheus.CounterValue,
+			float64(count),
+			permutation.runnerID,
+			string(permutation.endpoint),
+			strconv.Itoa(permutation.status),
+		)
 	}
 }
 
-func newAPIRequestStatusesMap() *apiRequestStatusesMap {
-	return &apiRequestStatusesMap{
+func NewAPIRequestStatusesMap() *ApiRequestStatusesMap {
+	return &ApiRequestStatusesMap{
 		internal: make(map[apiRequestStatusPermutation]int),
 	}
 }
@@ -81,7 +94,7 @@ type GitLabClient struct {
 	clients map[string]*client
 	lock    sync.Mutex
 
-	requestsStatusesMap *apiRequestStatusesMap
+	requestsStatusesMap *ApiRequestStatusesMap
 }
 
 func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err error) {
@@ -254,7 +267,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	var response common.JobResponse
 	result, statusText, tlsData := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", http.StatusCreated, &request, &response)
 
-	n.requestsStatusesMap.append(config.RunnerCredentials.ShortDescription(), APIEndpointRequestJob, result)
+	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointRequestJob, result)
 
 	switch result {
 	case http.StatusCreated:
@@ -292,7 +305,7 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 
 	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", jobInfo.ID), http.StatusOK, &request, nil)
 
-	n.requestsStatusesMap.append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, result)
+	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, result)
 
 	switch result {
 	case http.StatusOK:
@@ -326,7 +339,7 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *co
 
 	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
 
-	n.requestsStatusesMap.append(config.RunnerCredentials.ShortDescription(), APIEndpointPatchTrace, response.StatusCode)
+	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointPatchTrace, response.StatusCode)
 
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
@@ -513,34 +526,18 @@ func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifacts
 	}
 }
 
-// Describe implements prometheus.Collector.
-func (n *GitLabClient) Describe(ch chan<- *prometheus.Desc) {
-	ch <- apiRequestStatuses
-}
-
-// Collect implements prometheus.Collector.
-func (n *GitLabClient) Collect(ch chan<- prometheus.Metric) {
-	n.requestsStatusesMap.read(func(permutation apiRequestStatusPermutation, count int) {
-		ch <- prometheus.MustNewConstMetric(
-			apiRequestStatuses,
-			prometheus.CounterValue,
-			float64(count),
-			permutation.runnerID,
-			string(permutation.endpoint),
-			strconv.Itoa(permutation.status),
-		)
-
-	})
-}
-
 func (n *GitLabClient) ProcessJob(config common.RunnerConfig, jobCredentials *common.JobCredentials) common.JobTrace {
 	trace := newJobTrace(n, config, jobCredentials)
 	trace.start()
 	return trace
 }
 
-func NewGitLabClient() *GitLabClient {
+func NewGitLabClientWithRequestStatusesMap(rsMap *ApiRequestStatusesMap) *GitLabClient {
 	return &GitLabClient{
-		requestsStatusesMap: newAPIRequestStatusesMap(),
+		requestsStatusesMap: rsMap,
 	}
+}
+
+func NewGitLabClient() *GitLabClient {
+	return NewGitLabClientWithRequestStatusesMap(NewAPIRequestStatusesMap())
 }

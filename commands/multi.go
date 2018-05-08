@@ -43,7 +43,8 @@ type RunCommand struct {
 	sentryLogHook     sentry.LogHook
 	prometheusLogHook prometheus_helper.LogHook
 
-	failuresCollector *prometheus_helper.FailuresCollector
+	failuresCollector               *prometheus_helper.FailuresCollector
+	networkRequestStatusesCollector prometheus.Collector
 
 	// abortBuilds is used to abort running builds
 	abortBuilds chan os.Signal
@@ -351,7 +352,7 @@ func (mr *RunCommand) serveMetrics() {
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
 	// Metrics about API connections
-	registry.MustRegister(mr.network)
+	registry.MustRegister(mr.networkRequestStatusesCollector)
 	// Metrics about jobs failures
 	registry.MustRegister(mr.failuresCollector)
 	// Metrics about catched errors
@@ -543,10 +544,13 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 }
 
 func init() {
+	requestStatusesCollector := network.NewAPIRequestStatusesMap()
+
 	common.RegisterCommand2("run", "run multi runner service", &RunCommand{
-		ServiceName:       defaultServiceName,
-		network:           network.NewGitLabClient(),
-		prometheusLogHook: prometheus_helper.NewLogHook(),
-		failuresCollector: prometheus_helper.NewFailuresCollector(),
+		ServiceName:                     defaultServiceName,
+		network:                         network.NewGitLabClientWithRequestStatusesMap(requestStatusesCollector),
+		networkRequestStatusesCollector: requestStatusesCollector,
+		prometheusLogHook:               prometheus_helper.NewLogHook(),
+		failuresCollector:               prometheus_helper.NewFailuresCollector(),
 	})
 }
