@@ -140,21 +140,21 @@ func TestRegisterRunner(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res := c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true})
+	res := c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
 	}
 
-	res = c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "invalid description", Tags: "tags", RunUntagged: true, Locked: true})
+	res = c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "invalid description", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(invalidToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true})
+	res = c.RegisterRunner(invalidToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(otherToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true})
+	res = c.RegisterRunner(otherToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(brokenCredentials, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true})
+	res = c.RegisterRunner(brokenCredentials, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
 	assert.Nil(t, res)
 }
 

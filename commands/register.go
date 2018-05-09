@@ -29,6 +29,7 @@ type RegisterCommand struct {
 	RunUntagged       bool   `long:"run-untagged" env:"REGISTER_RUN_UNTAGGED" description:"Register to run untagged builds; defaults to 'true' when 'tag-list' is empty"`
 	Locked            bool   `long:"locked" env:"REGISTER_LOCKED" description:"Lock Runner for current project, defaults to 'true'"`
 	MaximumTimeout    int    `long:"maximum-timeout" env:"REGISTER_MAXIMUM_TIMEOUT" description:"What is the maximum timeout (in seconds) that will be set for job when using this Runner"`
+	Paused            bool   `long:"paused" env:"REGISTER_PAUSED" description:"Set Runner to be paused, defaults to 'false'"`
 
 	common.RunnerConfig
 }
@@ -170,12 +171,18 @@ func (s *RegisterCommand) askRunner() {
 			log.Panicf("Failed to parse option 'locked': %v", err)
 		}
 
+		paused, err := strconv.ParseBool(s.ask("paused", "Whether to set Runner to be paused [true/false]:", true))
+		if err != nil {
+			log.Panicf("Failed to parse option 'paused': %v", err)
+		}
+
 		parameters := common.RegisterRunnerParameters{
 			Description:    s.Name,
 			Tags:           s.TagList,
 			Locked:         locked,
 			RunUntagged:    s.RunUntagged,
 			MaximumTimeout: s.MaximumTimeout,
+			Active:         !paused,
 		}
 
 		result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
@@ -306,6 +313,7 @@ func init() {
 			},
 		},
 		Locked:  true,
+		Paused:  false,
 		network: network.NewGitLabClient(),
 	})
 }
