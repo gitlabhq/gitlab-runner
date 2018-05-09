@@ -67,6 +67,15 @@ To register a Runner under GNU/Linux:
     [true]: true
     ```
 
+1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
+   Useful when you want to update Runner's configuration on GitLab side before
+   giving jobs access to it:
+
+    ```
+    Whether to set Runner to be paused [true/false]:
+    [true]: true
+    ```
+
 1. Enter the [Runner executor](../executors/README.md):
 
     ```
@@ -135,6 +144,15 @@ To register a Runner under macOS:
 
     ```
     Whether to lock Runner to current project [true/false]:
+    [true]: true
+    ```
+
+1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
+   Useful when you want to update Runner's configuration on GitLab side before
+   giving jobs access to it:
+
+    ```
+    Whether to set Runner to be paused [true/false]:
     [true]: true
     ```
 
@@ -207,6 +225,15 @@ To register a Runner under Windows:
 
     ```
     Whether to lock Runner to current project [true/false]:
+    [true]: true
+    ```
+
+1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
+   Useful when you want to update Runner's configuration on GitLab side before
+   giving jobs access to it:
+
+    ```
+    Whether to set Runner to be paused [true/false]:
     [true]: true
     ```
 
@@ -284,6 +311,15 @@ To register a Runner under FreeBSD:
     [true]: true
     ```
 
+1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
+   Useful when you want to update Runner's configuration on GitLab side before
+   giving jobs access to it:
+
+    ```
+    Whether to set Runner to be paused [true/false]:
+    [true]: true
+    ```
+
 1. Enter the [Runner executor](../executors/README.md):
 
     ```
@@ -353,6 +389,15 @@ To register a Runner using a Docker container:
 
     ```
     Whether to lock Runner to current project [true/false]:
+    [true]: true
+    ```
+
+1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
+   Useful when you want to update Runner's configuration on GitLab side before
+   giving jobs access to it:
+
+    ```
+    Whether to set Runner to be paused [true/false]:
     [true]: true
     ```
 
