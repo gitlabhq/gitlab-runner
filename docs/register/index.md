@@ -2,7 +2,7 @@
 
 Registering a Runner is the process that binds the Runner with a GitLab instance.
 
-## Prerequisites
+## Requirements
 
 Before registering a Runner, you need to first:
 
@@ -303,10 +303,11 @@ To register a Runner under FreeBSD:
 
 To register a Runner using a Docker container:
 
-1. Run the following command:
+1. Run the following command which will mount the Runner's config directory
+   under `/path/to/config`:
 
     ```sh
-    docker exec -it gitlab-runner gitlab-runner register
+    docker run --rm -t -i -v /path/to/config:/etc/gitlab-runner --name gitlab-runner gitlab/gitlab-runner register
     ```
 
 1. Enter your GitLab instance URL:
@@ -369,5 +370,48 @@ To register a Runner using a Docker container:
     Please enter the Docker image (eg. ruby:2.1):
     alpine:latest
     ```
+
+## One-line registration command
+
+If you want to use the non-interactive mode to register a Runner, you can
+either use the `register` subcommands or use their equivalent environment
+variables.
+
+To see a list of all the `register` subcommands, use:
+
+```sh
+gitlab-runner register -h
+```
+
+To register a Runner using the most common options, you would do:
+
+```sh
+sudo gitlab-runner register \
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --registration-token "PROJECT_REGISTRATION_TOKEN" \
+  --executor "docker" \
+  --docker-image alpine:3 \
+  --description "docker-runner" \
+  --tag-list "docker,aws" \
+  --run-untagged \
+  --locked="false" \
+```
+
+If you're running the Runner in a Docker container, the `register` command would
+look like:
+
+```sh
+docker run --rm -t -i -v /path/to/config:/etc/gitlab-runner --name gitlab-runner gitlab/gitlab-runner register \
+  --non-interactive \
+  --executor "docker" \
+  --docker-image alpine:3 \
+  --url "https://gitlab.com/" \
+  --registration-token "PROJECT_REGISTRATION_TOKEN" \
+  --description "docker-runner" \
+  --tag-list "docker,aws" \
+  --run-untagged \
+  --locked="false"
+```
 
 [tags]: https://docs.gitlab.com/ce/ci/runners/#using-tags
