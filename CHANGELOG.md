@@ -1,4 +1,4 @@
-v 10.7.0-rc1 (2018-04-11)
+v 10.7.0 (2018-04-22)
 - Rename Sirupsen/logrus library !843
 - Refer to gitlab versions as libre, starter, premium, and ultimate !851
 - Fix assert.Equal parameter order !854
