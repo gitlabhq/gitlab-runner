@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -14,6 +15,20 @@ var numBuildsDesc = prometheus.NewDesc(
 	"ci_runner_builds",
 	"The current number of running builds.",
 	[]string{"runner", "state", "stage", "executor_stage"},
+	nil,
+)
+
+var requestConcurrencyDesc = prometheus.NewDesc(
+	"ci_runner_request_concurrency",
+	"The current number of concurrent requests for a new job",
+	[]string{"runner"},
+	nil,
+)
+
+var requestConcurrencyExceededDesc = prometheus.NewDesc(
+	"ci_runner_request_concurrency_exceeded_total",
+	"Counter tracking exceeding of request concurrency",
+	[]string{"runner"},
 	nil,
 )
 
@@ -36,6 +51,8 @@ func newStatePermutationFromBuild(build *common.Build) statePermutation {
 type runnerCounter struct {
 	builds   int
 	requests int
+
+	requestConcurrencyExceeded int
 }
 
 type buildsHelper struct {
@@ -91,6 +108,8 @@ func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
 	counter := b.getRunnerCounter(runner)
 
 	if counter.requests >= runner.GetRequestConcurrency() {
+		counter.requestConcurrencyExceeded++
+
 		return false
 	}
 
@@ -183,16 +202,29 @@ func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 	return data
 }
 
+func (b *buildsHelper) runnersCounters() map[string]*runnerCounter {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	data := make(map[string]*runnerCounter)
+	for token, counter := range b.counters {
+		data[helpers.ShortenToken(token)] = counter
+	}
+
+	return data
+}
+
 // Describe implements prometheus.Collector.
 func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	ch <- numBuildsDesc
+	ch <- requestConcurrencyDesc
+	ch <- requestConcurrencyExceededDesc
 }
 
 // Collect implements prometheus.Collector.
 func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
-	data := b.statesAndStages()
-
-	for state, count := range data {
+	builds := b.statesAndStages()
+	for state, count := range builds {
 		ch <- prometheus.MustNewConstMetric(
 			numBuildsDesc,
 			prometheus.GaugeValue,
@@ -201,6 +233,23 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			string(state.buildState),
 			string(state.buildStage),
 			string(state.executorStage),
+		)
+	}
+
+	counters := b.runnersCounters()
+	for runner, counter := range counters {
+		ch <- prometheus.MustNewConstMetric(
+			requestConcurrencyDesc,
+			prometheus.GaugeValue,
+			float64(counter.requests),
+			runner,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			requestConcurrencyExceededDesc,
+			prometheus.CounterValue,
+			float64(counter.requestConcurrencyExceeded),
+			runner,
 		)
 	}
 }

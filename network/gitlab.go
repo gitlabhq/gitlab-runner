@@ -14,16 +14,87 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 const clientError = -100
 
+var apiRequestStatuses = prometheus.NewDesc(
+	"ci_runner_api_request_statuses_total",
+	"The total number of api requests, partitioned by runner, endpoint and status.",
+	[]string{"runner", "endpoint", "status"},
+	nil,
+)
+
+type APIEndpoint string
+
+const (
+	APIEndpointRequestJob        APIEndpoint = "request_job"
+	APIEndpointUpdateJob         APIEndpoint = "update_job"
+	APIEndpointPatchTrace        APIEndpoint = "patch_trace"
+)
+
+type apiRequestStatusPermutation struct {
+	runnerID string
+	endpoint APIEndpoint
+	status   int
+}
+
+type ApiRequestStatusesMap struct {
+	internal map[apiRequestStatusPermutation]int
+	lock     sync.RWMutex
+}
+
+func (arspm *ApiRequestStatusesMap) Append(runnerID string, endpoint APIEndpoint, status int) {
+	arspm.lock.Lock()
+	defer arspm.lock.Unlock()
+
+	permutation := apiRequestStatusPermutation{runnerID: runnerID, endpoint: endpoint, status: status}
+
+	if _, ok := arspm.internal[permutation]; !ok {
+		arspm.internal[permutation] = 0
+	}
+
+	arspm.internal[permutation]++
+}
+
+// Describe implements prometheus.Collector.
+func (arspm *ApiRequestStatusesMap) Describe(ch chan<- *prometheus.Desc) {
+	ch <- apiRequestStatuses
+}
+
+// Collect implements prometheus.Collector.
+func (arspm *ApiRequestStatusesMap) Collect(ch chan<- prometheus.Metric) {
+	arspm.lock.RLock()
+	defer arspm.lock.RUnlock()
+
+	for permutation, count := range arspm.internal {
+		ch <- prometheus.MustNewConstMetric(
+			apiRequestStatuses,
+			prometheus.CounterValue,
+			float64(count),
+			permutation.runnerID,
+			string(permutation.endpoint),
+			strconv.Itoa(permutation.status),
+		)
+	}
+}
+
+func NewAPIRequestStatusesMap() *ApiRequestStatusesMap {
+	return &ApiRequestStatusesMap{
+		internal: make(map[apiRequestStatusPermutation]int),
+	}
+}
+
 type GitLabClient struct {
 	clients map[string]*client
 	lock    sync.Mutex
+
+	requestsStatusesMap *ApiRequestStatusesMap
 }
 
 func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err error) {
@@ -196,6 +267,8 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobRespon
 	var response common.JobResponse
 	result, statusText, tlsData := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", http.StatusCreated, &request, &response)
 
+	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointRequestJob, result)
+
 	switch result {
 	case http.StatusCreated:
 		config.Log().WithFields(logrus.Fields{
@@ -231,6 +304,9 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 	log := config.Log().WithField("job", jobInfo.ID)
 
 	result, statusText, _ := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", jobInfo.ID), http.StatusOK, &request, nil)
+
+	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, result)
+
 	switch result {
 	case http.StatusOK:
 		log.Debugln("Submitting job to coordinator...", "ok")
@@ -262,6 +338,9 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *co
 	request := bytes.NewReader(tracePatch.Patch())
 
 	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
+
+	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointPatchTrace, response.StatusCode)
+
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
 		return common.UpdateFailed
@@ -453,6 +532,12 @@ func (n *GitLabClient) ProcessJob(config common.RunnerConfig, jobCredentials *co
 	return trace
 }
 
+func NewGitLabClientWithRequestStatusesMap(rsMap *ApiRequestStatusesMap) *GitLabClient {
+	return &GitLabClient{
+		requestsStatusesMap: rsMap,
+	}
+}
+
 func NewGitLabClient() *GitLabClient {
-	return &GitLabClient{}
+	return NewGitLabClientWithRequestStatusesMap(NewAPIRequestStatusesMap())
 }
