@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -157,32 +156,15 @@ func (s *RegisterCommand) askRunner() {
 
 		if s.TagList == "" {
 			s.RunUntagged = true
-		} else {
-			runUntagged, err := strconv.ParseBool(s.ask("run-untagged", "Whether to run untagged builds [true/false]:", true))
-			if err != nil {
-				log.Panicf("Failed to parse option 'run-untagged': %v", err)
-			} else {
-				s.RunUntagged = runUntagged
-			}
-		}
-
-		locked, err := strconv.ParseBool(s.ask("locked", "Whether to lock the Runner to current project [true/false]:", true))
-		if err != nil {
-			log.Panicf("Failed to parse option 'locked': %v", err)
-		}
-
-		paused, err := strconv.ParseBool(s.ask("paused", "Whether to set Runner to be paused [true/false]:", true))
-		if err != nil {
-			log.Panicf("Failed to parse option 'paused': %v", err)
 		}
 
 		parameters := common.RegisterRunnerParameters{
 			Description:    s.Name,
 			Tags:           s.TagList,
-			Locked:         locked,
+			Locked:         s.Locked,
 			RunUntagged:    s.RunUntagged,
 			MaximumTimeout: s.MaximumTimeout,
-			Active:         !paused,
+			Active:         !s.Paused,
 		}
 
 		result := s.network.RegisterRunner(s.RunnerCredentials, parameters)

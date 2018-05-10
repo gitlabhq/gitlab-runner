@@ -50,32 +50,6 @@ To register a Runner under GNU/Linux:
     my-tag,another-tag
     ```
 
-1. Choose whether the Runner should pick up jobs that do not [have tags][tags],
-   you can change this later in GitLab's UI (defaults to false):
-
-    ```
-    Whether to run untagged jobs [true/false]:
-    [false]: true
-    ```
-
-1. Choose whether to lock the Runner to the current project, you can change
-   this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   true):
-
-    ```
-    Whether to lock Runner to current project [true/false]:
-    [true]: true
-    ```
-
-1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
-   Useful when you want to update Runner's configuration on GitLab side before
-   giving jobs access to it:
-
-    ```
-    Whether to set Runner to be paused [true/false]:
-    [true]: true
-    ```
-
 1. Enter the [Runner executor](../executors/README.md):
 
     ```
@@ -128,32 +102,6 @@ To register a Runner under macOS:
     ```
     Please enter the gitlab-ci tags for this runner (comma separated):
     my-tag,another-tag
-    ```
-
-1. Choose whether the Runner should pick up jobs that do not [have tags][tags],
-   you can change this later in GitLab's UI (defaults to false):
-
-    ```
-    Whether to run untagged jobs [true/false]:
-    [false]: true
-    ```
-
-1. Choose whether to lock the Runner to the current project, you can change
-   this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   true):
-
-    ```
-    Whether to lock Runner to current project [true/false]:
-    [true]: true
-    ```
-
-1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
-   Useful when you want to update Runner's configuration on GitLab side before
-   giving jobs access to it:
-
-    ```
-    Whether to set Runner to be paused [true/false]:
-    [true]: true
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
@@ -209,32 +157,6 @@ To register a Runner under Windows:
     ```
     Please enter the gitlab-ci tags for this runner (comma separated):
     my-tag,another-tag
-    ```
-
-1. Choose whether the Runner should pick up jobs that do not [have tags][tags],
-   you can change this later in GitLab's UI (defaults to false):
-
-    ```
-    Whether to run untagged jobs [true/false]:
-    [false]: true
-    ```
-
-1. Choose whether to lock the Runner to the current project, you can change
-   this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   true):
-
-    ```
-    Whether to lock Runner to current project [true/false]:
-    [true]: true
-    ```
-
-1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
-   Useful when you want to update Runner's configuration on GitLab side before
-   giving jobs access to it:
-
-    ```
-    Whether to set Runner to be paused [true/false]:
-    [true]: true
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
@@ -294,32 +216,6 @@ To register a Runner under FreeBSD:
     my-tag,another-tag
     ```
 
-1. Choose whether the Runner should pick up jobs that do not [have tags][tags],
-   you can change this later in GitLab's UI (defaults to false):
-
-    ```
-    Whether to run untagged jobs [true/false]:
-    [false]: true
-    ```
-
-1. Choose whether to lock the Runner to the current project, you can change
-   this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   false):
-
-    ```
-    Whether to lock Runner to current project [true/false]:
-    [true]: true
-    ```
-
-1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
-   Useful when you want to update Runner's configuration on GitLab side before
-   giving jobs access to it:
-
-    ```
-    Whether to set Runner to be paused [true/false]:
-    [true]: true
-    ```
-
 1. Enter the [Runner executor](../executors/README.md):
 
     ```
@@ -373,32 +269,6 @@ To register a Runner using a Docker container:
     ```
     Please enter the gitlab-ci tags for this runner (comma separated):
     my-tag,another-tag
-    ```
-
-1. Choose whether the Runner should pick up jobs that do not [have tags][tags],
-   you can change this later in GitLab's UI (defaults to false):
-
-    ```
-    Whether to run untagged jobs [true/false]:
-    [false]: true
-    ```
-
-1. Choose whether to lock the Runner to the current project, you can change
-   this later in GitLab's UI. Useful when the Runner is specific (defaults to
-   true):
-
-    ```
-    Whether to lock Runner to current project [true/false]:
-    [true]: true
-    ```
-
-1. Choose whether to pause the Runner, you can change this later in GitLab's UI.
-   Useful when you want to update Runner's configuration on GitLab side before
-   giving jobs access to it:
-
-    ```
-    Whether to set Runner to be paused [true/false]:
-    [true]: true
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
