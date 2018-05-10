@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 
 RUN apt-get update -y && \
     apt-get upgrade -y && \
-    apt-get install -y ca-certificates wget apt-transport-https vim nano && \
+    apt-get install -y ca-certificates wget apt-transport-https vim nano tzdata && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
