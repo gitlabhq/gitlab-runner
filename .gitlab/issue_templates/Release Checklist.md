@@ -32,10 +32,33 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
 
 - [ ] check if Pipeline for `master` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/master)
     - [ ] add all required fixes to make `master` Pipeline passing
-- [ ] add **v{{.Major}}.{{.Minor}}.0-rc1** CHANGELOG entries
-- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rc1**
-- [ ] create and push `{{.Major}}-{{.Minor}}-stable` branch
-- [ ] checkout to `master`, update `VERSION` file to `{{.Major}}.{{inc .Minor}}.0` and push `master`
+- [ ] `git checkout master && git pull` in your local working copy!
+- [ ] add **v{{.Major}}.{{.Minor}}.0-rc1** CHANGELOG entries and commit
+
+    ```bash
+    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rc1
+    ```
+
+- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rc1**:
+
+    ```bash
+    git tag -s v{{.Major}}.{{.Minor}}.0-rc1 -m "Version v{{.Major}}.{{.Minor}}.0-rc1"; git push origin v{{.Major}}.{{.Minor}}.0-rc1
+    ```
+
+- [ ] create and push `{{.Major}}-{{.Minor}}-stable` branch:
+
+    ```bash
+    git checkout -b {{.Major}}-{{.Minor}}-stable; git push -u origin {{.Major}}-{{.Minor}}-stable
+    ```
+
+- [ ] checkout to `master`, update `VERSION` file to `{{.Major}}.{{inc .Minor}}.0` and push `master`:
+
+    ```bash
+    git checkout master; echo -n "{{.Major}}.{{inc .Minor}}.0" > VERSION; git add VERSION; git commit -m "Bump version to {{.Major}}.{{inc .Minor}}.0"; git push
+    ```
+
+- [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rc1` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rc1/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rc1)
+    - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rc1` passing
 - [ ] deploy **v{{.Major}}.{{.Minor}}.0-rc1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 
 _New features_ window is closed - things not merged into `master` up to
@@ -71,17 +94,48 @@ if the only RC version was the _RC1_ released near 7th day of month.
 
 - [ ] check if Pipeline for `{{.Major}}-{{.Minor}}-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/{{.Major}}-{{.Minor}}-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/{{.Major}}-{{.Minor}}-stable)
     - [ ] add all required fixes to make `{{.Major}}-{{.Minor}}-stable` Pipeline passing
-- [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries
-- [ ] tag **v{{.Major}}.{{.Minor}}.0-rcZ**
+- [ ] `git checkout {{.Major}}-{{.Minor}}-stable && git pull` in your local working copy!
+- [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries and commit
+
+    ```bash
+    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rcZ
+    ```
+
+- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ**:
+
+    ```bash
+    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ"; git push origin v{{.Major}}.{{.Minor}}.0-rcZ
+    ```
+
+- [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
+    - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rcZ` passing
 - [ ] deploy **v{{.Major}}.{{.Minor}}.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 
 ## At 22th - the release day
 
 - [ ] Before 12:00 UTC
-    - [ ] add last entries to changelog
-    - [ ] merge all RCx CHANGELOG entries into release entry
-    - [ ] tag stable version
+    - [ ] `git checkout {{.Major}}-{{.Minor}}-stable && git pull` in your local working copy!
+    - [ ] merge all RCx CHANGELOG entries into release entry and commit
+
+    ```bash
+    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0
+    ```
+
+    - [ ] tag and push **v{{.Major}}.{{.Minor}}.0**:
+
+        ```bash
+        git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0"; git push origin v{{.Major}}.{{.Minor}}.0
+        ```
+
+    - [ ] checkout to `master` and merge `{{.Major}}-{{.Minor}}-stable` into `master` (only this one time, to update CHANGELOG.md and make the tag available for ./scripts/prepare-changelog-entries.rb in next stable release), push `master`:
+
+        ```bash
+        git checkout master; git merge --no-ff {{.Major}}-{{.Minor}}-stable; git push
+        ```
+
 - [ ] Before 15:00 UTC
+    - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0)
+        - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0` passing
     - [ ] deploy stable version to all production Runners
 
 
@@ -100,7 +154,20 @@ template:
 
 - [ ] check if Pipeline for `{{.Major}}-{{.Minor}}-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/{{.Major}}-{{.Minor}}-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/{{.Major}}-{{.Minor}}-stable)
     - [ ] add all required fixes to make `{{.Major}}-{{.Minor}}-stable` Pipeline passing
-- [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries
-- [ ] tag **v{{.Major}}.{{.Minor}}.0-rcZ**
+- [ ] `git checkout {{.Major}}-{{.Minor}}-stable && git pull` in your local working copy!
+- [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries and commit
+
+    ```bash
+    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rcZ
+    ```
+
+- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ**:
+
+    ```bash
+    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ"; git push origin v{{.Major}}.{{.Minor}}.0-rcZ
+    ```
+
+- [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
+    - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rcZ` passing
 - [ ] deploy **v{{.Major}}.{{.Minor}}.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
 ```
