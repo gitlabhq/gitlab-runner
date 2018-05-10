@@ -1,3 +1,18 @@
+v 10.8.0-rc1 (2018-04-11)
+- Fix type in Substrakt Health company name !875
+- Rename libre to core !879
+- Correct hanging parenthesis in index.md !882
+- Update interfaces mocks !871
+- Rename keyword in kubernetes executor documentation !880
+- Temporary add 'retry: 2' for 'unit tests (no race)' job !885
+- Update docs/executors/README.md !881
+- Add support for fedora/27 and fedora/28 packages !883
+- Update supported distribution releases !887
+- Automatize release checklist issue creation !870
+- Change docs license to CC BY-SA 4.0 !893
+- Update Docker installation method docs !890
+- Add new metrics related to jobs requesting and API usage !886
+
 v 10.7.0 (2018-04-22)
 - Rename Sirupsen/logrus library !843
 - Refer to gitlab versions as libre, starter, premium, and ultimate !851
