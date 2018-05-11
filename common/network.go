@@ -64,6 +64,7 @@ type RegisterRunnerParameters struct {
 	RunUntagged    bool   `json:"run_untagged"`
 	Locked         bool   `json:"locked"`
 	MaximumTimeout int    `json:"maximum_timeout,omitempty"`
+	Active         bool   `json:"active"`
 }
 
 type RegisterRunnerRequest struct {

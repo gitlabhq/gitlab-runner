@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -29,6 +28,7 @@ type RegisterCommand struct {
 	RunUntagged       bool   `long:"run-untagged" env:"REGISTER_RUN_UNTAGGED" description:"Register to run untagged builds; defaults to 'true' when 'tag-list' is empty"`
 	Locked            bool   `long:"locked" env:"REGISTER_LOCKED" description:"Lock Runner for current project, defaults to 'true'"`
 	MaximumTimeout    int    `long:"maximum-timeout" env:"REGISTER_MAXIMUM_TIMEOUT" description:"What is the maximum timeout (in seconds) that will be set for job when using this Runner"`
+	Paused            bool   `long:"paused" env:"REGISTER_PAUSED" description:"Set Runner to be paused, defaults to 'false'"`
 
 	common.RunnerConfig
 }
@@ -156,26 +156,15 @@ func (s *RegisterCommand) askRunner() {
 
 		if s.TagList == "" {
 			s.RunUntagged = true
-		} else {
-			runUntagged, err := strconv.ParseBool(s.ask("run-untagged", "Whether to run untagged builds [true/false]:", true))
-			if err != nil {
-				log.Panicf("Failed to parse option 'run-untagged': %v", err)
-			} else {
-				s.RunUntagged = runUntagged
-			}
-		}
-
-		locked, err := strconv.ParseBool(s.ask("locked", "Whether to lock the Runner to current project [true/false]:", true))
-		if err != nil {
-			log.Panicf("Failed to parse option 'locked': %v", err)
 		}
 
 		parameters := common.RegisterRunnerParameters{
 			Description:    s.Name,
 			Tags:           s.TagList,
-			Locked:         locked,
+			Locked:         s.Locked,
 			RunUntagged:    s.RunUntagged,
 			MaximumTimeout: s.MaximumTimeout,
+			Active:         !s.Paused,
 		}
 
 		result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
@@ -306,6 +295,7 @@ func init() {
 			},
 		},
 		Locked:  true,
+		Paused:  false,
 		network: network.NewGitLabClient(),
 	})
 }
