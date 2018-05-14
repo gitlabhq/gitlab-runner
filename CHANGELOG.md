@@ -1,3 +1,6 @@
+v 10.7.2 (2018-05-14)
+- Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
+
 v 10.7.1 (2018-05-02)
 - Create package for ubuntu/bionic !891
 
