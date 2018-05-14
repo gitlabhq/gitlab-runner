@@ -1,4 +1,7 @@
-v 10.8.0-rc1 (2018-04-11)
+v 10.8.0-rc2 (2018-05-14)
+- Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
+
+v 10.8.0-rc1 (2018-05-11)
 - Fix type in Substrakt Health company name !875
 - Rename libre to core !879
 - Correct hanging parenthesis in index.md !882
