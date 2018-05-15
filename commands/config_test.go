@@ -22,19 +22,19 @@ const (
 	configurationFromConfig metricsServerConfigurationType = "from-config"
 )
 
-func testMetricsServerSetting(t *testing.T, exampleName string, example metricsServerTestExample, testType metricsServerConfigurationType) {
+func testListenAddressSetting(t *testing.T, exampleName string, example metricsServerTestExample, testType metricsServerConfigurationType) {
 	t.Run(fmt.Sprintf("%s-%s", exampleName, testType), func(t *testing.T) {
-		cfg := configOptionsWithMetricsServer{}
+		cfg := configOptionsWithListenAddress{}
 		cfg.config = &common.Config{}
 		if example.setAddress {
 			if testType == configurationFromCli {
-				cfg.MetricsServerAddress = example.address
+				cfg.ListenAddress = example.address
 			} else {
-				cfg.config.MetricsServerAddress = example.address
+				cfg.config.ListenAddress = example.address
 			}
 		}
 
-		address, err := cfg.metricsServerAddress()
+		address, err := cfg.listenAddress()
 		assert.Equal(t, example.expectedAddress, address)
 		if example.errorIsExpected {
 			assert.Error(t, err)
@@ -55,7 +55,7 @@ func TestMetricsServer(t *testing.T) {
 	}
 
 	for exampleName, example := range examples {
-		testMetricsServerSetting(t, exampleName, example, configurationFromCli)
-		testMetricsServerSetting(t, exampleName, example, configurationFromConfig)
+		testListenAddressSetting(t, exampleName, example, configurationFromCli)
+		testListenAddressSetting(t, exampleName, example, configurationFromConfig)
 	}
 }

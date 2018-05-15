@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
@@ -67,18 +69,15 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 	return nil, fmt.Errorf("Could not find a runner with the name '%s'", name)
 }
 
-type configOptionsWithMetricsServer struct {
+type configOptionsWithListenAddress struct {
 	configOptions
 
-	MetricsServerAddress string `long:"metrics-server" env:"METRICS_SERVER" description:"Metrics server listening address"`
+	MetricsServerAddress string `long:"metrics-server" env:"METRICS_SERVER" description:"(DEPRECATED) Metrics / pprof server listening address"` //DEPRECATED
+	ListenAddress        string `long:"listen-address" env:"LISTEN_ADDRESS" description:"Metrics / pprof server listening address"`
 }
 
-func (c *configOptionsWithMetricsServer) metricsServerAddress() (string, error) {
-	address := c.config.MetricsServerAddress
-
-	if c.MetricsServerAddress != "" {
-		address = c.MetricsServerAddress
-	}
+func (c *configOptionsWithListenAddress) listenAddress() (string, error) {
+	address := c.listenOrMetricsServerAddress()
 
 	if address == "" {
 		return "", nil
@@ -93,6 +92,20 @@ func (c *configOptionsWithMetricsServer) metricsServerAddress() (string, error) 
 		return fmt.Sprintf("%s:%d", address, common.DefaultMetricsServerPort), nil
 	}
 	return address, nil
+}
+
+func (c *configOptionsWithListenAddress) listenOrMetricsServerAddress() string {
+	if c.ListenAddress != "" {
+		return c.ListenAddress
+	}
+
+	if c.MetricsServerAddress != "" {
+		logrus.Warnln("'metrics-server' command line option is deprecated and will be removed in one of future releases; please use 'listen-address' instead")
+
+		return c.MetricsServerAddress
+	}
+
+	return c.config.ListenOrServerMetricAddress()
 }
 
 func init() {

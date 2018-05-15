@@ -264,15 +264,17 @@ type RunnerConfig struct {
 }
 
 type Config struct {
-	MetricsServerAddress string          `toml:"metrics_server,omitempty" json:"metrics_server"`
-	Concurrent           int             `toml:"concurrent" json:"concurrent"`
-	CheckInterval        int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
-	LogLevel             *string         `toml:"log_level" json:"log_level" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
-	User                 string          `toml:"user,omitempty" json:"user"`
-	Runners              []*RunnerConfig `toml:"runners" json:"runners"`
-	SentryDSN            *string         `toml:"sentry_dsn"`
-	ModTime              time.Time       `toml:"-"`
-	Loaded               bool            `toml:"-"`
+	MetricsServerAddress string `toml:"metrics_server,omitempty" json:"metrics_server"` // DEPRECATED
+	ListenAddress        string `toml:"listen_address,omitempty" json:"listen_address"`
+
+	Concurrent    int             `toml:"concurrent" json:"concurrent"`
+	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
+	LogLevel      *string         `toml:"log_level" json:"log_level" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
+	User          string          `toml:"user,omitempty" json:"user"`
+	Runners       []*RunnerConfig `toml:"runners" json:"runners"`
+	SentryDSN     *string         `toml:"sentry_dsn"`
+	ModTime       time.Time       `toml:"-"`
+	Loaded        bool            `toml:"-"`
 }
 
 func (c *DockerConfig) GetNanoCPUs() (int64, error) {
@@ -514,4 +516,14 @@ func (c *Config) GetCheckInterval() time.Duration {
 		return time.Duration(c.CheckInterval) * time.Second
 	}
 	return CheckInterval
+}
+
+func (c *Config) ListenOrServerMetricAddress() string {
+	if c.ListenAddress != "" {
+		return c.ListenAddress
+	}
+
+	log.Warnln("'metrics_server' configuration entry is deprecated and will be removed in one of future releases; please use 'listen_address' instead")
+
+	return c.MetricsServerAddress
 }

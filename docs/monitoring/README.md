@@ -198,8 +198,8 @@ GitLab Runner process and should not be publicly available!
 
 The metrics HTTP server can be configured in two ways:
 
-- with a `metrics_server` global configuration option in `config.toml` file,
-- with a `--metrics-server` command line option for the `run` command.
+- with a `listen_address` global configuration option in `config.toml` file,
+- with a `--listen-address` command line option for the `run` command.
 
 In both cases the option accepts a string with the format `[host]:<port>`,
 where:
@@ -207,7 +207,7 @@ where:
 - `host` can be an IP address or a host name,
 - `port` is a valid TCP port or symbolic service name (like `http`). We recommend to use port `9252` which is already [allocated in Prometheus](https://github.com/prometheus/prometheus/wiki/Default-port-allocations).
 
-If the metrics server address does not contain a port, it will default to `9252`.
+If the listen address does not contain a port, it will default to `9252`.
 
 Examples of addresses:
 
