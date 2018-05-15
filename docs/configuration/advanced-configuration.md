@@ -29,6 +29,27 @@ concurrent = 4
 log_level = "warning"
 ```
 
+### How `check_interval` works
+
+If there is more than one `[[runners]]` sections in `config.toml`, the interval between requests to GitLab are
+more frequent than one could expect. GitLab Runner contains a loop that constantly schedules a request that
+should be made for a runner (understood as the worker that stays behind `[[runners]]` section) against GitLab
+installation configured for it.
+
+GitLab Runner tries to ensure, that subsequent requests for one runner will be done in specified interval.
+For that the value of `check_interval` is divided by the number of `[[runners]]` sections. The loop next
+iterates over all sections, schedules a request for each of them and sleeping for the calculated amount
+of time.
+
+That means that if one would set `check_intarval = 10`, then before two subsequent requests for `runner-1`
+there will be at least 10 seconds. And for `runner-2` there will be also a 10 seconds intervla between two
+subsequent requests. But overall, GitLab Runner will generate two requests, each one after 5 seconds.
+
+Please remember, that in `config.toml` we can connect each `[[runners]]` entry with a different GitLab
+installation. If `check_interval` would be handled globally, then - if one would set it to 1 minute,
+and would add 10 `[[runners]]`, each one connected to a different GitLab instance, it would and with
+a 10 minutes interval between asking each of GitLab instances for a new job!
+
 ## The `[[runners]]` section
 
 This defines one runner entry.
