@@ -372,7 +372,7 @@ It accepts the following parameters.
 | `--working-directory` | the current directory | Specify the root directory where all data will be stored when builds will be run with the **shell** executor |
 | `--user`    | the current user | Specify the user that will be used to execute builds |
 | `--syslog`  | `false` | Send all logs to SysLog (Unix) or EventLog (Windows) |
-| `--metrics-server` | empty | Address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
+| `--listen-address` | empty | Address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
 
 ### gitlab-runner run-single
 

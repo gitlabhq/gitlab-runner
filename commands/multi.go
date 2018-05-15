@@ -29,7 +29,7 @@ import (
 )
 
 type RunCommand struct {
-	configOptionsWithMetricsServer
+	configOptionsWithListenAddress
 	network common.Network
 	healthHelper
 
@@ -379,21 +379,21 @@ func (mr *RunCommand) serveDebugData() {
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
-	serverAddress, err := mr.metricsServerAddress()
+	listenAddress, err := mr.listenAddress()
 
 	if err != nil {
-		mr.log().Errorf("invalid metrics server address: %s", err.Error())
+		mr.log().Errorf("invalid listen address: %s", err.Error())
 		return
 	}
 
-	if serverAddress == "" {
+	if listenAddress == "" {
 		log.Infoln("Metrics server disabled")
 		return
 	}
 
 	// We separate out the listener creation here so that we can return an error if
 	// the provided address is invalid or there is some other listener error.
-	listener, err := net.Listen("tcp", serverAddress)
+	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -405,7 +405,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 	mr.serveMetrics()
 	mr.serveDebugData()
 
-	log.Infoln("Metrics server listening at", serverAddress)
+	log.Infoln("Metrics server listening at", listenAddress)
 }
 
 func (mr *RunCommand) Run() {
