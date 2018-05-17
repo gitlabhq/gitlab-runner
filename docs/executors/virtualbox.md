@@ -28,6 +28,8 @@ the `[[runners]]` section in
    add VirtualBox installation folder (e.g. `C:\Program Files\Oracle\VirtualBox`)
    to `PATH` environment variable
 1. Import or create a new virtual machine in VirtualBox
+2. config Network Adapter 1 as "NAT" (that's currently the only way the gitlab-runner is able to connect over ssh into the guest)
+3. (optional) config another Network Adapter as "Bridged networking" to get acces to the internet from the guest (for example)
 1. Log into the new virtual machine
 1. If Windows VM, see [Checklist for Windows VMs](#checklist-for-windows-vms)
 1. Install the OpenSSH server
