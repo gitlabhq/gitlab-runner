@@ -338,13 +338,12 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *co
 	request := bytes.NewReader(tracePatch.Patch())
 
 	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
-
-	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointPatchTrace, response.StatusCode)
-
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
 		return common.UpdateFailed
 	}
+
+	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointPatchTrace, response.StatusCode)
 
 	defer response.Body.Close()
 	defer io.Copy(ioutil.Discard, response.Body)
