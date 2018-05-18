@@ -780,6 +780,17 @@ func TestJobFailedStatePatchTrace(t *testing.T) {
 	assert.Equal(t, UpdateAbort, state)
 }
 
+func TestPatchTraceCantConnect(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {}
+
+	server, client, config := getPatchServer(t, handler)
+	server.Close()
+
+	tracePatch := getTracePatch(patchTraceString, 0)
+	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	assert.Equal(t, UpdateFailed, state)
+}
+
 func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
 		w.WriteHeader(http.StatusNotFound)
