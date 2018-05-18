@@ -1,3 +1,6 @@
+v 10.8.0-rc3 (2018-05-18)
+- Fix panic on PatchTrace execution !905
+
 v 10.8.0-rc2 (2018-05-14)
 - Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
 
