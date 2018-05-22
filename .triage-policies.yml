@@ -135,15 +135,27 @@ resource_rules:
           comment: |
             Closing this issue down in accordance with our [Issue Triage Policies](https://gitlab.com/gitlab-org/gitlab-runner/blob/gl-gitlab-triage-policies/.triage-policies.yml). Please reopen the issue if you feel that the issue is still relevant. Thanks!
 
-      - name: Assign CI/CD label to open issues
+      - name: Assign CI/CD label to deliverables
         conditions:
           state: opened
+          labels:
+            - Deliverable
           forbidden_labels:
             - CI/CD
         actions:
           labels:
             - CI/CD
 
+      - name: Assign CI/CD label to stretch
+        conditions:
+          state: opened
+          labels:
+            - Stretch
+          forbidden_labels:
+            - CI/CD
+        actions:
+          labels:
+            - CI/CD
       #
       # scheduling mismatches
       #
@@ -191,13 +203,3 @@ resource_rules:
           <<: *scheduling_mismatch
           remove_labels: [ "Next Patch Release" ]
 
-  merge_requests:
-    rules:
-      - name: Assign CI/CD label to open merge requests
-        conditions:
-          state: opened
-          forbidden_labels:
-            - CI/CD
-        actions:
-          labels:
-            - CI/CD
