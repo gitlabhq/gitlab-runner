@@ -132,6 +132,7 @@ func (c *clientJobTrace) start() {
 	c.PipeWriter = writer
 	c.finished = make(chan bool)
 	c.state = common.Running
+	c.sentState = common.Running
 	go c.process(reader)
 	go c.watch()
 }
