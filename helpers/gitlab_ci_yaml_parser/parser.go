@@ -157,7 +157,7 @@ func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) (def
 		{Key: "CI_JOB_STAGE", Value: job.JobInfo.Stage, Public: true, Internal: true, File: false},
 		{Key: "CI_JOB_TOKEN", Value: job.Token, Public: true, Internal: true, File: false},
 		{Key: "CI_REPOSITORY_URL", Value: job.GitInfo.RepoURL, Public: true, Internal: true, File: false},
-		{Key: "CI_COMMIT_REF", Value: job.GitInfo.Sha, Public: true, Internal: true, File: false},
+		{Key: "CI_COMMIT_SHA", Value: job.GitInfo.Sha, Public: true, Internal: true, File: false},
 		{Key: "CI_COMMIT_BEFORE_SHA", Value: job.GitInfo.BeforeSha, Public: true, Internal: true, File: false},
 		{Key: "CI_COMMIT_REF_NAME", Value: job.GitInfo.Ref, Public: true, Internal: true, File: false},
 	}
