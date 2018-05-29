@@ -248,7 +248,7 @@ func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
 		Removed:  make(chan bool, 10),
 		Stopped:  make(chan bool, 10),
 	}
-	p := newMachineProvider("docker_machines", "docker")
+	p := newMachineProvider("docker+machine", "docker")
 	p.machine = t
 	return p, t
 }

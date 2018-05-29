@@ -9,7 +9,7 @@ import (
 )
 
 var numJobFailuresDesc = prometheus.NewDesc(
-	"ci_runner_failed_jobs_total",
+	"gitlab_runner_failed_jobs_total",
 	"Total number of failed jobs",
 	[]string{"runner", "failure_reason"},
 	nil,

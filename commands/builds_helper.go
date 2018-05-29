@@ -12,21 +12,21 @@ import (
 )
 
 var numBuildsDesc = prometheus.NewDesc(
-	"ci_runner_builds",
+	"gitlab_runner_jobs",
 	"The current number of running builds.",
 	[]string{"runner", "state", "stage", "executor_stage"},
 	nil,
 )
 
 var requestConcurrencyDesc = prometheus.NewDesc(
-	"ci_runner_request_concurrency",
+	"gitlab_runner_request_concurrency",
 	"The current number of concurrent requests for a new job",
 	[]string{"runner"},
 	nil,
 )
 
 var requestConcurrencyExceededDesc = prometheus.NewDesc(
-	"ci_runner_request_concurrency_exceeded_total",
+	"gitlab_runner_request_concurrency_exceeded_total",
 	"Counter tracking exceeding of request concurrency",
 	[]string{"runner"},
 	nil,

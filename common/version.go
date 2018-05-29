@@ -81,7 +81,7 @@ func (v *AppVersionInfo) NewMetricsCollector() *prometheus.GaugeVec {
 
 	buildInfo := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "ci_runner_version_info",
+			Name: "gitlab_runner_version_info",
 			Help: "A metric with a constant '1' value labeled by different build stats fields.",
 		},
 		labelNames,

@@ -428,22 +428,30 @@ func newMachineProvider(name, executor string) *machineProvider {
 		provider: provider,
 		totalActions: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "ci_" + name + "_provider_actions_total",
+				Name: "gitlab_runner_autoscaling_actions_total",
 				Help: "The total number of actions executed by the provider.",
+				ConstLabels: prometheus.Labels{
+					"executor": name,
+				},
 			},
 			[]string{"action"},
 		),
 		currentStatesDesc: prometheus.NewDesc(
-			"ci_"+name+"_provider_machine_states",
+			"gitlab_runner_autoscaling_machine_states",
 			"The current number of machines per state in this provider.",
 			[]string{"state"},
-			nil,
+			prometheus.Labels{
+				"executor": name,
+			},
 		),
 		creationHistogram: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
-				Name:    "ci_" + name + "_provider_machine_creation_duration_seconds",
+				Name:    "gitlab_runner_autoscaling_machine_creation_duration_seconds",
 				Help:    "Histogram of machine creation time.",
 				Buckets: prometheus.ExponentialBuckets(30, 1.25, 10),
+				ConstLabels: prometheus.Labels{
+					"executor": name,
+				},
 			},
 		),
 	}
