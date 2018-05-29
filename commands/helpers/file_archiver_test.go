@@ -11,6 +11,7 @@ import (
 )
 
 const fileArchiverUntrackedFile = "untracked_test_file.txt"
+const fileArchiverUntrackedUnicodeFile = "неотслеживаемый_тестовый_файл.txt"
 const fileArchiverArchiveZipFile = "archive.zip"
 const fileArchiverOtherFile = "other_test_file.txt"
 const fileArchiverNotExistingFile = "not_existing_file.txt"
@@ -32,6 +33,19 @@ func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
 	assert.Len(t, f.sortedFiles(), 2)
 	assert.Contains(t, f.sortedFiles(), artifactsTestArchivedFile)
 	assert.Contains(t, f.sortedFiles(), artifactsTestArchivedFile2)
+}
+
+func TestCacheArchiverAddingUntrackedUnicodeFiles(t *testing.T) {
+	ioutil.WriteFile(fileArchiverUntrackedUnicodeFile, nil, 0600)
+	defer os.Remove(fileArchiverUntrackedUnicodeFile)
+
+	f := fileArchiver{
+		Untracked: true,
+	}
+	err := f.enumerate()
+	assert.NoError(t, err)
+	assert.Len(t, f.sortedFiles(), 1)
+	assert.Contains(t, f.sortedFiles(), fileArchiverUntrackedUnicodeFile)
 }
 
 func TestCacheArchiverAddingFile(t *testing.T) {
