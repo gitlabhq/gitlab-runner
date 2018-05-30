@@ -99,11 +99,11 @@ func closeKubeClient(client *kubernetes.Clientset) bool {
 	if client == nil {
 		return false
 	}
-	coreClient := client.CoreV1().RESTClient().(*restclient.RESTClient).Client
-	if coreClient == nil || coreClient.Transport == nil {
+	rest, ok := client.CoreV1().RESTClient().(*restclient.RESTClient)
+	if !ok || rest.Client == nil || rest.Client.Transport == nil {
 		return false
 	}
-	if transport, _ := coreClient.Transport.(*http.Transport); transport != nil {
+	if transport, ok := rest.Client.Transport.(*http.Transport); ok {
 		transport.CloseIdleConnections()
 		return true
 	}
