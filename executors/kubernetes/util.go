@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"golang.org/x/net/context"
-	apiv1 "k8s.io/api/core/v1"
+	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -110,13 +110,13 @@ func closeKubeClient(client *kubernetes.Clientset) bool {
 	return false
 }
 
-func isRunning(pod *apiv1.Pod) (bool, error) {
+func isRunning(pod *api.Pod) (bool, error) {
 	switch pod.Status.Phase {
-	case apiv1.PodRunning:
+	case api.PodRunning:
 		return true, nil
-	case apiv1.PodSucceeded:
+	case api.PodSucceeded:
 		return false, fmt.Errorf("pod already succeeded before it begins running")
-	case apiv1.PodFailed:
+	case api.PodFailed:
 		return false, fmt.Errorf("pod status is failed")
 	default:
 		return false, nil
@@ -125,14 +125,14 @@ func isRunning(pod *apiv1.Pod) (bool, error) {
 
 type podPhaseResponse struct {
 	done  bool
-	phase apiv1.PodPhase
+	phase api.PodPhase
 	err   error
 }
 
-func getPodPhase(c *kubernetes.Clientset, pod *apiv1.Pod, out io.Writer) podPhaseResponse {
+func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseResponse {
 	pod, err := c.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
 	if err != nil {
-		return podPhaseResponse{true, apiv1.PodUnknown, err}
+		return podPhaseResponse{true, api.PodUnknown, err}
 	}
 
 	ready, err := isRunning(pod)
@@ -158,7 +158,7 @@ func getPodPhase(c *kubernetes.Clientset, pod *apiv1.Pod, out io.Writer) podPhas
 		case "ErrImagePull", "ImagePullBackOff":
 			err = fmt.Errorf("image pull failed: %s", container.State.Waiting.Message)
 			err = &common.BuildError{Inner: err}
-			return podPhaseResponse{true, apiv1.PodUnknown, err}
+			return podPhaseResponse{true, api.PodUnknown, err}
 		}
 	}
 
@@ -167,7 +167,7 @@ func getPodPhase(c *kubernetes.Clientset, pod *apiv1.Pod, out io.Writer) podPhas
 
 }
 
-func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *apiv1.Pod, out io.Writer) <-chan podPhaseResponse {
+func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
 	errc := make(chan podPhaseResponse)
 	go func() {
 		defer close(errc)
@@ -184,7 +184,7 @@ func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *apiv1.Pod, out io.Writer
 // reached.
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
-func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *apiv1.Pod, out io.Writer, config *common.KubernetesConfig) (apiv1.PodPhase, error) {
+func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {
@@ -196,17 +196,17 @@ func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *apiv1.
 			}
 			return r.phase, r.err
 		case <-ctx.Done():
-			return apiv1.PodUnknown, ctx.Err()
+			return api.PodUnknown, ctx.Err()
 		}
 	}
-	return apiv1.PodUnknown, errors.New("timedout waiting for pod to start")
+	return api.PodUnknown, errors.New("timedout waiting for pod to start")
 }
 
 // limits takes a string representing CPU & memory limits,
 // and returns a ResourceList with appropriately scaled Quantity
 // values for Kubernetes. This allows users to write "500m" for CPU,
 // and "50Mi" for memory (etc.)
-func limits(cpu, memory string) (apiv1.ResourceList, error) {
+func limits(cpu, memory string) (api.ResourceList, error) {
 	var rCPU, rMem resource.Quantity
 	var err error
 
@@ -222,21 +222,21 @@ func limits(cpu, memory string) (apiv1.ResourceList, error) {
 	}
 
 	if rCPU, err = parse(cpu); err != nil {
-		return apiv1.ResourceList{}, nil
+		return api.ResourceList{}, nil
 	}
 
 	if rMem, err = parse(memory); err != nil {
-		return apiv1.ResourceList{}, nil
+		return api.ResourceList{}, nil
 	}
 
-	l := make(apiv1.ResourceList)
+	l := make(api.ResourceList)
 
 	q := resource.Quantity{}
 	if rCPU != q {
-		l[apiv1.ResourceCPU] = rCPU
+		l[api.ResourceCPU] = rCPU
 	}
 	if rMem != q {
-		l[apiv1.ResourceMemory] = rMem
+		l[api.ResourceMemory] = rMem
 	}
 
 	return l, nil
@@ -244,10 +244,10 @@ func limits(cpu, memory string) (apiv1.ResourceList, error) {
 
 // buildVariables converts a common.BuildVariables into a list of
 // kubernetes EnvVar objects
-func buildVariables(bv common.JobVariables) []apiv1.EnvVar {
-	e := make([]apiv1.EnvVar, len(bv))
+func buildVariables(bv common.JobVariables) []api.EnvVar {
+	e := make([]api.EnvVar, len(bv))
 	for i, b := range bv {
-		e[i] = apiv1.EnvVar{
+		e[i] = api.EnvVar{
 			Name:  b.Key,
 			Value: b.Value,
 		}

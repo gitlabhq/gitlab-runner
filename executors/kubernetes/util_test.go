@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"golang.org/x/net/context"
-	apiv1 "k8s.io/api/core/v1"
+	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -166,17 +166,17 @@ func TestWaitForPodRunning(t *testing.T) {
 
 	tests := []struct {
 		Name         string
-		Pod          *apiv1.Pod
+		Pod          *api.Pod
 		Config       *common.KubernetesConfig
 		ClientFunc   func(*http.Request) (*http.Response, error)
-		PodEndPhase  apiv1.PodPhase
+		PodEndPhase  api.PodPhase
 		Retries      int
 		Error        bool
 		ExactRetries bool
 	}{
 		{
 			Name: "ensure function retries until ready",
-			Pod: &apiv1.Pod{
+			Pod: &api.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
@@ -186,19 +186,19 @@ func TestWaitForPodRunning(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
-					pod := &apiv1.Pod{
+					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
-						Status: apiv1.PodStatus{
-							Phase: apiv1.PodPending,
+						Status: api.PodStatus{
+							Phase: api.PodPending,
 						},
 					}
 
 					if retries > 1 {
-						pod.Status.Phase = apiv1.PodRunning
-						pod.Status.ContainerStatuses = []apiv1.ContainerStatus{
+						pod.Status.Phase = api.PodRunning
+						pod.Status.ContainerStatuses = []api.ContainerStatus{
 							{
 								Ready: false,
 							},
@@ -206,8 +206,8 @@ func TestWaitForPodRunning(t *testing.T) {
 					}
 
 					if retries > 2 {
-						pod.Status.Phase = apiv1.PodRunning
-						pod.Status.ContainerStatuses = []apiv1.ContainerStatus{
+						pod.Status.Phase = api.PodRunning
+						pod.Status.ContainerStatuses = []api.ContainerStatus{
 							{
 								Ready: true,
 							},
@@ -223,12 +223,12 @@ func TestWaitForPodRunning(t *testing.T) {
 					return nil, fmt.Errorf("unexpected request")
 				}
 			},
-			PodEndPhase: apiv1.PodRunning,
+			PodEndPhase: api.PodRunning,
 			Retries:     2,
 		},
 		{
 			Name: "ensure function errors if pod already succeeded",
-			Pod: &apiv1.Pod{
+			Pod: &api.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
@@ -238,13 +238,13 @@ func TestWaitForPodRunning(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
-					pod := &apiv1.Pod{
+					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
-						Status: apiv1.PodStatus{
-							Phase: apiv1.PodSucceeded,
+						Status: api.PodStatus{
+							Phase: api.PodSucceeded,
 						},
 					}
 					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
@@ -257,11 +257,11 @@ func TestWaitForPodRunning(t *testing.T) {
 				}
 			},
 			Error:       true,
-			PodEndPhase: apiv1.PodSucceeded,
+			PodEndPhase: api.PodSucceeded,
 		},
 		{
 			Name: "ensure function returns error if pod unknown",
-			Pod: &apiv1.Pod{
+			Pod: &api.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
@@ -271,12 +271,12 @@ func TestWaitForPodRunning(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				return nil, fmt.Errorf("error getting pod")
 			},
-			PodEndPhase: apiv1.PodUnknown,
+			PodEndPhase: api.PodUnknown,
 			Error:       true,
 		},
 		{
 			Name: "ensure poll parameters work correctly",
-			Pod: &apiv1.Pod{
+			Pod: &api.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
@@ -290,7 +290,7 @@ func TestWaitForPodRunning(t *testing.T) {
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
-					pod := &apiv1.Pod{
+					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
@@ -309,7 +309,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					return nil, fmt.Errorf("unexpected request")
 				}
 			},
-			PodEndPhase:  apiv1.PodUnknown,
+			PodEndPhase:  api.PodUnknown,
 			Retries:      3,
 			Error:        true,
 			ExactRetries: true,
@@ -383,14 +383,14 @@ func testVersionAndCodec() (version string, codec runtime.Codec) {
 
 	scheme.AddIgnoredConversionType(&metav1.TypeMeta{}, &metav1.TypeMeta{})
 	scheme.AddKnownTypes(
-		apiv1.SchemeGroupVersion,
-		&apiv1.Pod{},
+		api.SchemeGroupVersion,
+		&api.Pod{},
 		&metav1.Status{},
 	)
 
 	codecs := runtimeserializer.NewCodecFactory(scheme)
-	codec = codecs.LegacyCodec(apiv1.SchemeGroupVersion)
-	version = apiv1.SchemeGroupVersion.Version
+	codec = codecs.LegacyCodec(api.SchemeGroupVersion)
+	version = api.SchemeGroupVersion.Version
 
 	return
 }

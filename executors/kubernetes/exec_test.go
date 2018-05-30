@@ -24,7 +24,7 @@ import (
 	"net/url"
 	"testing"
 
-	apiv1 "k8s.io/api/core/v1"
+	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
@@ -46,7 +46,7 @@ func TestExec(t *testing.T) {
 	version, codec := testVersionAndCodec()
 	tests := []struct {
 		name, version, podPath, execPath, container string
-		pod                                         *apiv1.Pod
+		pod                                         *api.Pod
 		tty, execErr                                bool
 	}{
 		{
@@ -134,20 +134,20 @@ func TestExec(t *testing.T) {
 	}
 }
 
-func execPod() *apiv1.Pod {
-	return &apiv1.Pod{
+func execPod() *api.Pod {
+	return &api.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test", ResourceVersion: "10"},
-		Spec: apiv1.PodSpec{
-			RestartPolicy: apiv1.RestartPolicyAlways,
-			DNSPolicy:     apiv1.DNSClusterFirst,
-			Containers: []apiv1.Container{
+		Spec: api.PodSpec{
+			RestartPolicy: api.RestartPolicyAlways,
+			DNSPolicy:     api.DNSClusterFirst,
+			Containers: []api.Container{
 				{
 					Name: "bar",
 				},
 			},
 		},
-		Status: apiv1.PodStatus{
-			Phase: apiv1.PodRunning,
+		Status: api.PodStatus{
+			Phase: api.PodRunning,
 		},
 	}
 }

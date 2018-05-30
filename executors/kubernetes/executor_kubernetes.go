@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"golang.org/x/net/context"
-	apiv1 "k8s.io/api/core/v1"
+	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -36,17 +36,17 @@ type executor struct {
 	executors.AbstractExecutor
 
 	kubeClient  *kubernetes.Clientset
-	pod         *apiv1.Pod
-	credentials *apiv1.Secret
+	pod         *api.Pod
+	credentials *api.Secret
 	options     *kubernetesOptions
 
 	configurationOverwrites *overwrites
-	buildLimits             apiv1.ResourceList
-	serviceLimits           apiv1.ResourceList
-	helperLimits            apiv1.ResourceList
-	buildRequests           apiv1.ResourceList
-	serviceRequests         apiv1.ResourceList
-	helperRequests          apiv1.ResourceList
+	buildLimits             api.ResourceList
+	serviceLimits           api.ResourceList
+	helperLimits            api.ResourceList
+	buildRequests           api.ResourceList
+	serviceRequests         api.ResourceList
+	helperRequests          api.ResourceList
 	pullPolicy              common.KubernetesPullPolicy
 }
 
@@ -171,7 +171,7 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) buildContainer(name, image string, imageDefinition common.Image, requests, limits apiv1.ResourceList, command ...string) apiv1.Container {
+func (s *executor) buildContainer(name, image string, imageDefinition common.Image, requests, limits api.ResourceList, command ...string) api.Container {
 	privileged := false
 	if s.Config.Kubernetes != nil {
 		privileged = s.Config.Kubernetes.Privileged
@@ -187,36 +187,36 @@ func (s *executor) buildContainer(name, image string, imageDefinition common.Ima
 		command = imageDefinition.Entrypoint
 	}
 
-	return apiv1.Container{
+	return api.Container{
 		Name:            name,
 		Image:           image,
-		ImagePullPolicy: apiv1.PullPolicy(s.pullPolicy),
+		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
 		Command:         command,
 		Args:            args,
 		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
-		Resources: apiv1.ResourceRequirements{
+		Resources: api.ResourceRequirements{
 			Limits:   limits,
 			Requests: requests,
 		},
 		VolumeMounts: s.getVolumeMounts(),
-		SecurityContext: &apiv1.SecurityContext{
+		SecurityContext: &api.SecurityContext{
 			Privileged: &privileged,
 		},
 		Stdin: true,
 	}
 }
 
-func (s *executor) getVolumeMounts() (mounts []apiv1.VolumeMount) {
+func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
 	path := strings.Split(s.Build.BuildDir, "/")
 	path = path[:len(path)-1]
 
-	mounts = append(mounts, apiv1.VolumeMount{
+	mounts = append(mounts, api.VolumeMount{
 		Name:      "repo",
 		MountPath: strings.Join(path, "/"),
 	})
 
 	for _, mount := range s.Config.Kubernetes.Volumes.HostPaths {
-		mounts = append(mounts, apiv1.VolumeMount{
+		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
 			ReadOnly:  mount.ReadOnly,
@@ -224,7 +224,7 @@ func (s *executor) getVolumeMounts() (mounts []apiv1.VolumeMount) {
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.Secrets {
-		mounts = append(mounts, apiv1.VolumeMount{
+		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
 			ReadOnly:  mount.ReadOnly,
@@ -232,7 +232,7 @@ func (s *executor) getVolumeMounts() (mounts []apiv1.VolumeMount) {
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.PVCs {
-		mounts = append(mounts, apiv1.VolumeMount{
+		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
 			ReadOnly:  mount.ReadOnly,
@@ -240,7 +240,7 @@ func (s *executor) getVolumeMounts() (mounts []apiv1.VolumeMount) {
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.ConfigMaps {
-		mounts = append(mounts, apiv1.VolumeMount{
+		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
 			ReadOnly:  mount.ReadOnly,
@@ -248,7 +248,7 @@ func (s *executor) getVolumeMounts() (mounts []apiv1.VolumeMount) {
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.EmptyDirs {
-		mounts = append(mounts, apiv1.VolumeMount{
+		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
 		})
@@ -257,11 +257,11 @@ func (s *executor) getVolumeMounts() (mounts []apiv1.VolumeMount) {
 	return
 }
 
-func (s *executor) getVolumes() (volumes []apiv1.Volume) {
-	volumes = append(volumes, apiv1.Volume{
+func (s *executor) getVolumes() (volumes []api.Volume) {
+	volumes = append(volumes, api.Volume{
 		Name: "repo",
-		VolumeSource: apiv1.VolumeSource{
-			EmptyDir: &apiv1.EmptyDirVolumeSource{},
+		VolumeSource: api.VolumeSource{
+			EmptyDir: &api.EmptyDirVolumeSource{},
 		},
 	})
 
@@ -272,10 +272,10 @@ func (s *executor) getVolumes() (volumes []apiv1.Volume) {
 			path = volume.MountPath
 		}
 
-		volumes = append(volumes, apiv1.Volume{
+		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
-			VolumeSource: apiv1.VolumeSource{
-				HostPath: &apiv1.HostPathVolumeSource{
+			VolumeSource: api.VolumeSource{
+				HostPath: &api.HostPathVolumeSource{
 					Path: path,
 				},
 			},
@@ -283,15 +283,15 @@ func (s *executor) getVolumes() (volumes []apiv1.Volume) {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.Secrets {
-		items := []apiv1.KeyToPath{}
+		items := []api.KeyToPath{}
 		for key, path := range volume.Items {
-			items = append(items, apiv1.KeyToPath{Key: key, Path: path})
+			items = append(items, api.KeyToPath{Key: key, Path: path})
 		}
 
-		volumes = append(volumes, apiv1.Volume{
+		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
-			VolumeSource: apiv1.VolumeSource{
-				Secret: &apiv1.SecretVolumeSource{
+			VolumeSource: api.VolumeSource{
+				Secret: &api.SecretVolumeSource{
 					SecretName: volume.Name,
 					Items:      items,
 				},
@@ -300,10 +300,10 @@ func (s *executor) getVolumes() (volumes []apiv1.Volume) {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.PVCs {
-		volumes = append(volumes, apiv1.Volume{
+		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
-			VolumeSource: apiv1.VolumeSource{
-				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+			VolumeSource: api.VolumeSource{
+				PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{
 					ClaimName: volume.Name,
 					ReadOnly:  volume.ReadOnly,
 				},
@@ -312,16 +312,16 @@ func (s *executor) getVolumes() (volumes []apiv1.Volume) {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.ConfigMaps {
-		items := []apiv1.KeyToPath{}
+		items := []api.KeyToPath{}
 		for key, path := range volume.Items {
-			items = append(items, apiv1.KeyToPath{Key: key, Path: path})
+			items = append(items, api.KeyToPath{Key: key, Path: path})
 		}
 
-		volumes = append(volumes, apiv1.Volume{
+		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
-			VolumeSource: apiv1.VolumeSource{
-				ConfigMap: &apiv1.ConfigMapVolumeSource{
-					LocalObjectReference: apiv1.LocalObjectReference{
+			VolumeSource: api.VolumeSource{
+				ConfigMap: &api.ConfigMapVolumeSource{
+					LocalObjectReference: api.LocalObjectReference{
 						Name: volume.Name,
 					},
 					Items: items,
@@ -331,11 +331,11 @@ func (s *executor) getVolumes() (volumes []apiv1.Volume) {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.EmptyDirs {
-		volumes = append(volumes, apiv1.Volume{
+		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
-			VolumeSource: apiv1.VolumeSource{
-				EmptyDir: &apiv1.EmptyDirVolumeSource{
-					Medium: apiv1.StorageMedium(volume.Medium),
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{
+					Medium: api.StorageMedium(volume.Medium),
 				},
 			},
 		})
@@ -371,12 +371,12 @@ func (s *executor) setupCredentials() error {
 		return err
 	}
 
-	secret := apiv1.Secret{}
+	secret := api.Secret{}
 	secret.GenerateName = s.Build.ProjectUniqueName()
 	secret.Namespace = s.configurationOverwrites.namespace
-	secret.Type = apiv1.SecretTypeDockercfg
+	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
-	secret.Data[apiv1.DockerConfigKey] = dockerCfgContent
+	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
 	s.credentials, err = s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Create(&secret)
 	if err != nil {
@@ -386,7 +386,7 @@ func (s *executor) setupCredentials() error {
 }
 
 func (s *executor) setupBuildPod() error {
-	services := make([]apiv1.Container, len(s.options.Services))
+	services := make([]api.Container, len(s.options.Services))
 	for i, service := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
 		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, service, s.serviceRequests, s.serviceLimits)
@@ -402,29 +402,29 @@ func (s *executor) setupBuildPod() error {
 		annotations[key] = s.Build.Variables.ExpandValue(val)
 	}
 
-	var imagePullSecrets []apiv1.LocalObjectReference
+	var imagePullSecrets []api.LocalObjectReference
 	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
-		imagePullSecrets = append(imagePullSecrets, apiv1.LocalObjectReference{Name: imagePullSecret})
+		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})
 	}
 
 	if s.credentials != nil {
-		imagePullSecrets = append(imagePullSecrets, apiv1.LocalObjectReference{Name: s.credentials.Name})
+		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
-	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&apiv1.Pod{
+	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
 			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       labels,
 			Annotations:  annotations,
 		},
-		Spec: apiv1.PodSpec{
+		Spec: api.PodSpec{
 			Volumes:            s.getVolumes(),
 			ServiceAccountName: s.configurationOverwrites.serviceAccount,
-			RestartPolicy:      apiv1.RestartPolicyNever,
+			RestartPolicy:      api.RestartPolicyNever,
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
-			Containers: append([]apiv1.Container{
+			Containers: append([]api.Container{
 				// TODO use the build and helper template here
 				s.buildContainer("build", buildImage, s.options.Image, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
 				s.buildContainer("helper", s.Config.Kubernetes.GetHelperImage(), common.Image{}, s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
@@ -455,7 +455,7 @@ func (s *executor) runInContainer(ctx context.Context, name string, command []st
 			return
 		}
 
-		if status != apiv1.PodRunning {
+		if status != api.PodRunning {
 			errc <- fmt.Errorf("pod failed to enter running state: %s", status)
 			return
 		}

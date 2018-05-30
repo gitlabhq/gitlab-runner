@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	apiv1 "k8s.io/api/core/v1"
+	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest/fake"
@@ -35,38 +35,38 @@ var (
 func TestLimits(t *testing.T) {
 	tests := []struct {
 		CPU, Memory string
-		Expected    apiv1.ResourceList
+		Expected    api.ResourceList
 	}{
 		{
 			CPU:    "100m",
 			Memory: "100Mi",
-			Expected: apiv1.ResourceList{
-				apiv1.ResourceCPU:    resource.MustParse("100m"),
-				apiv1.ResourceMemory: resource.MustParse("100Mi"),
+			Expected: api.ResourceList{
+				api.ResourceCPU:    resource.MustParse("100m"),
+				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
 		},
 		{
 			CPU: "100m",
-			Expected: apiv1.ResourceList{
-				apiv1.ResourceCPU: resource.MustParse("100m"),
+			Expected: api.ResourceList{
+				api.ResourceCPU: resource.MustParse("100m"),
 			},
 		},
 		{
 			Memory: "100Mi",
-			Expected: apiv1.ResourceList{
-				apiv1.ResourceMemory: resource.MustParse("100Mi"),
+			Expected: api.ResourceList{
+				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
 		},
 		{
 			CPU:      "100j",
-			Expected: apiv1.ResourceList{},
+			Expected: api.ResourceList{},
 		},
 		{
 			Memory:   "100j",
-			Expected: apiv1.ResourceList{},
+			Expected: api.ResourceList{},
 		},
 		{
-			Expected: apiv1.ResourceList{},
+			Expected: api.ResourceList{},
 		},
 	}
 
@@ -82,7 +82,7 @@ func TestVolumeMounts(t *testing.T) {
 		RunnerConfig common.RunnerConfig
 		Build        *common.Build
 
-		Expected []apiv1.VolumeMount
+		Expected []api.VolumeMount
 	}{
 		{
 			GlobalConfig: &common.Config{},
@@ -94,7 +94,7 @@ func TestVolumeMounts(t *testing.T) {
 			Build: &common.Build{
 				Runner: &common.RunnerConfig{},
 			},
-			Expected: []apiv1.VolumeMount{
+			Expected: []api.VolumeMount{
 				{Name: "repo"},
 			},
 		},
@@ -120,7 +120,7 @@ func TestVolumeMounts(t *testing.T) {
 			Build: &common.Build{
 				Runner: &common.RunnerConfig{},
 			},
-			Expected: []apiv1.VolumeMount{
+			Expected: []api.VolumeMount{
 				{Name: "repo"},
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
 				{Name: "PVC", MountPath: "/path/to/whatever"},
@@ -150,7 +150,7 @@ func TestVolumeMounts(t *testing.T) {
 			Build: &common.Build{
 				Runner: &common.RunnerConfig{},
 			},
-			Expected: []apiv1.VolumeMount{
+			Expected: []api.VolumeMount{
 				{Name: "repo"},
 				{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
@@ -182,7 +182,7 @@ func TestVolumes(t *testing.T) {
 		RunnerConfig common.RunnerConfig
 		Build        *common.Build
 
-		Expected []apiv1.Volume
+		Expected []api.Volume
 	}{
 		{
 			GlobalConfig: &common.Config{},
@@ -194,8 +194,8 @@ func TestVolumes(t *testing.T) {
 			Build: &common.Build{
 				Runner: &common.RunnerConfig{},
 			},
-			Expected: []apiv1.Volume{
-				{Name: "repo", VolumeSource: apiv1.VolumeSource{EmptyDir: &apiv1.EmptyDirVolumeSource{}}},
+			Expected: []api.Volume{
+				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
 		{
@@ -227,27 +227,27 @@ func TestVolumes(t *testing.T) {
 			Build: &common.Build{
 				Runner: &common.RunnerConfig{},
 			},
-			Expected: []apiv1.Volume{
-				{Name: "repo", VolumeSource: apiv1.VolumeSource{EmptyDir: &apiv1.EmptyDirVolumeSource{}}},
-				{Name: "docker", VolumeSource: apiv1.VolumeSource{HostPath: &apiv1.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
-				{Name: "host-path", VolumeSource: apiv1.VolumeSource{HostPath: &apiv1.HostPathVolumeSource{Path: "/path/one"}}},
-				{Name: "PVC", VolumeSource: apiv1.VolumeSource{PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
-				{Name: "emptyDir", VolumeSource: apiv1.VolumeSource{EmptyDir: &apiv1.EmptyDirVolumeSource{Medium: "Memory"}}},
+			Expected: []api.Volume{
+				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
+				{Name: "host-path", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
+				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
+				{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
 				{
 					Name: "ConfigMap",
-					VolumeSource: apiv1.VolumeSource{
-						ConfigMap: &apiv1.ConfigMapVolumeSource{
-							LocalObjectReference: apiv1.LocalObjectReference{Name: "ConfigMap"},
-							Items:                []apiv1.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
+					VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap"},
+							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
 						},
 					},
 				},
 				{
 					Name: "secret",
-					VolumeSource: apiv1.VolumeSource{
-						Secret: &apiv1.SecretVolumeSource{
+					VolumeSource: api.VolumeSource{
+						Secret: &api.SecretVolumeSource{
 							SecretName: "secret",
-							Items:      []apiv1.KeyToPath{{Key: "secret_1", Path: "/path/to/secret_1"}},
+							Items:      []api.KeyToPath{{Key: "secret_1", Path: "/path/to/secret_1"}},
 						},
 					},
 				},
@@ -287,14 +287,14 @@ func TestCleanup(t *testing.T) {
 
 	tests := []struct {
 		Name        string
-		Pod         *apiv1.Pod
-		Credentials *apiv1.Secret
+		Pod         *api.Pod
+		Credentials *api.Secret
 		ClientFunc  func(*http.Request) (*http.Response, error)
 		Error       bool
 	}{
 		{
 			Name: "Proper Cleanup",
-			Pod:  &apiv1.Pod{ObjectMeta: objectMeta},
+			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
@@ -306,7 +306,7 @@ func TestCleanup(t *testing.T) {
 		},
 		{
 			Name: "Delete failure",
-			Pod:  &apiv1.Pod{ObjectMeta: objectMeta},
+			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				return nil, fmt.Errorf("delete failed")
 			},
@@ -314,7 +314,7 @@ func TestCleanup(t *testing.T) {
 		},
 		{
 			Name: "POD already deleted",
-			Pod:  &apiv1.Pod{ObjectMeta: objectMeta},
+			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
@@ -328,7 +328,7 @@ func TestCleanup(t *testing.T) {
 		{
 			Name:        "POD creation failed, Secretes provided",
 			Pod:         nil, // a failed POD create request will cause a nil Pod
-			Credentials: &apiv1.Secret{ObjectMeta: objectMeta},
+			Credentials: &api.Secret{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/secrets/test-resource":
@@ -425,21 +425,21 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("100m"),
-					apiv1.ResourceMemory: resource.MustParse("200Mi"),
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
 				},
-				buildLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("1.5"),
-					apiv1.ResourceMemory: resource.MustParse("4Gi"),
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
-				helperLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("50m"),
-					apiv1.ResourceMemory: resource.MustParse("100Mi"),
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
-				serviceRequests: apiv1.ResourceList{},
-				buildRequests:   apiv1.ResourceList{},
-				helperRequests:  apiv1.ResourceList{},
+				serviceRequests: api.ResourceList{},
+				buildRequests:   api.ResourceList{},
+				helperRequests:  api.ResourceList{},
 				pullPolicy:      "IfNotPresent",
 			},
 		},
@@ -489,29 +489,29 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{namespace: "default", serviceAccount: "not-default"},
-				serviceLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("100m"),
-					apiv1.ResourceMemory: resource.MustParse("200Mi"),
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
 				},
-				buildLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("1.5"),
-					apiv1.ResourceMemory: resource.MustParse("4Gi"),
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
-				helperLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("50m"),
-					apiv1.ResourceMemory: resource.MustParse("100Mi"),
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
-				serviceRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("99m"),
-					apiv1.ResourceMemory: resource.MustParse("5Mi"),
+				serviceRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("99m"),
+					api.ResourceMemory: resource.MustParse("5Mi"),
 				},
-				buildRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("1"),
-					apiv1.ResourceMemory: resource.MustParse("1.5Gi"),
+				buildRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1"),
+					api.ResourceMemory: resource.MustParse("1.5Gi"),
 				},
-				helperRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("0.5m"),
-					apiv1.ResourceMemory: resource.MustParse("42Mi"),
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
 				},
 			},
 			Error: false,
@@ -562,29 +562,29 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{namespace: "namespacee"},
-				serviceLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("100m"),
-					apiv1.ResourceMemory: resource.MustParse("200Mi"),
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
 				},
-				buildLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("1.5"),
-					apiv1.ResourceMemory: resource.MustParse("4Gi"),
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
-				helperLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("50m"),
-					apiv1.ResourceMemory: resource.MustParse("100Mi"),
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
-				serviceRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("99m"),
-					apiv1.ResourceMemory: resource.MustParse("5Mi"),
+				serviceRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("99m"),
+					api.ResourceMemory: resource.MustParse("5Mi"),
 				},
-				buildRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("1"),
-					apiv1.ResourceMemory: resource.MustParse("1.5Gi"),
+				buildRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1"),
+					api.ResourceMemory: resource.MustParse("1.5Gi"),
 				},
-				helperRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("0.5m"),
-					apiv1.ResourceMemory: resource.MustParse("42Mi"),
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
 				},
 			},
 			Error: true,
@@ -636,29 +636,29 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{namespace: "namespacee", serviceAccount: "a_service_account"},
-				serviceLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("100m"),
-					apiv1.ResourceMemory: resource.MustParse("200Mi"),
+				serviceLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("100m"),
+					api.ResourceMemory: resource.MustParse("200Mi"),
 				},
-				buildLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("1.5"),
-					apiv1.ResourceMemory: resource.MustParse("4Gi"),
+				buildLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1.5"),
+					api.ResourceMemory: resource.MustParse("4Gi"),
 				},
-				helperLimits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("50m"),
-					apiv1.ResourceMemory: resource.MustParse("100Mi"),
+				helperLimits: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("50m"),
+					api.ResourceMemory: resource.MustParse("100Mi"),
 				},
-				serviceRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("99m"),
-					apiv1.ResourceMemory: resource.MustParse("5Mi"),
+				serviceRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("99m"),
+					api.ResourceMemory: resource.MustParse("5Mi"),
 				},
-				buildRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("1"),
-					apiv1.ResourceMemory: resource.MustParse("1.5Gi"),
+				buildRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("1"),
+					api.ResourceMemory: resource.MustParse("1.5Gi"),
 				},
-				helperRequests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("0.5m"),
-					apiv1.ResourceMemory: resource.MustParse("42Mi"),
+				helperRequests: api.ResourceList{
+					api.ResourceCPU:    resource.MustParse("0.5m"),
+					api.ResourceMemory: resource.MustParse("42Mi"),
 				},
 			},
 			Error: true,
@@ -694,12 +694,12 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{namespace: "namespace"},
-				serviceLimits:           apiv1.ResourceList{},
-				buildLimits:             apiv1.ResourceList{},
-				helperLimits:            apiv1.ResourceList{},
-				serviceRequests:         apiv1.ResourceList{},
-				buildRequests:           apiv1.ResourceList{},
-				helperRequests:          apiv1.ResourceList{},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 		{
@@ -727,12 +727,12 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits:           apiv1.ResourceList{},
-				buildLimits:             apiv1.ResourceList{},
-				helperLimits:            apiv1.ResourceList{},
-				serviceRequests:         apiv1.ResourceList{},
-				buildRequests:           apiv1.ResourceList{},
-				helperRequests:          apiv1.ResourceList{},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 		{
@@ -778,12 +778,12 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits:           apiv1.ResourceList{},
-				buildLimits:             apiv1.ResourceList{},
-				helperLimits:            apiv1.ResourceList{},
-				serviceRequests:         apiv1.ResourceList{},
-				buildRequests:           apiv1.ResourceList{},
-				helperRequests:          apiv1.ResourceList{},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
 			},
 		},
 	}
@@ -885,7 +885,7 @@ func TestSetupCredentials(t *testing.T) {
 
 	type testDef struct {
 		Credentials []common.Credentials
-		VerifyFn    func(*testing.T, testDef, *apiv1.Secret)
+		VerifyFn    func(*testing.T, testDef, *api.Secret)
 	}
 	tests := []testDef{
 		{
@@ -901,9 +901,9 @@ func TestSetupCredentials(t *testing.T) {
 					Password: "password",
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, secret *apiv1.Secret) {
-				assert.Equal(t, apiv1.SecretTypeDockercfg, secret.Type)
-				assert.NotEmpty(t, secret.Data[apiv1.DockerConfigKey])
+			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
+				assert.Equal(t, api.SecretTypeDockercfg, secret.Type)
+				assert.NotEmpty(t, secret.Data[api.DockerConfigKey])
 			},
 		},
 		{
@@ -931,7 +931,7 @@ func TestSetupCredentials(t *testing.T) {
 				return
 			}
 
-			p := new(apiv1.Secret)
+			p := new(api.Secret)
 
 			err = json.Unmarshal(podBytes, p)
 
@@ -997,7 +997,7 @@ func TestSetupBuildPod(t *testing.T) {
 		RunnerConfig common.RunnerConfig
 		Options      *kubernetesOptions
 		PrepareFn    func(*testing.T, testDef, *executor)
-		VerifyFn     func(*testing.T, testDef, *apiv1.Pod)
+		VerifyFn     func(*testing.T, testDef, *api.Pod)
 		Variables    []common.JobVariable
 	}
 	tests := []testDef{
@@ -1013,7 +1013,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *apiv1.Pod) {
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.NodeSelector, pod.Spec.NodeSelector)
 			},
 		},
@@ -1026,14 +1026,14 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			PrepareFn: func(t *testing.T, test testDef, e *executor) {
-				e.credentials = &apiv1.Secret{
+				e.credentials = &api.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "job-credentials",
 					},
 				}
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *apiv1.Pod) {
-				secrets := []apiv1.LocalObjectReference{{Name: "job-credentials"}}
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				secrets := []api.LocalObjectReference{{Name: "job-credentials"}}
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
@@ -1048,8 +1048,8 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *apiv1.Pod) {
-				secrets := []apiv1.LocalObjectReference{{Name: "docker-registry-credentials"}}
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				secrets := []api.LocalObjectReference{{Name: "docker-registry-credentials"}}
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
@@ -1061,7 +1061,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *apiv1.Pod) {
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				hasHelper := false
 				for _, c := range pod.Spec.Containers {
 					if c.Name == "helper" {
@@ -1080,7 +1080,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *apiv1.Pod) {
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				for _, c := range pod.Spec.Containers {
 					if c.Name == "helper" {
 						assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.HelperImage, c.Image)
@@ -1101,7 +1101,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *apiv1.Pod) {
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				assert.Equal(t, map[string]string{
 					"test":    "label",
 					"another": "label",
@@ -1125,7 +1125,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *apiv1.Pod) {
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				assert.Equal(t, map[string]string{
 					"test":    "annotation",
 					"another": "annotation",
@@ -1158,7 +1158,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *apiv1.Pod) {
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
 				require.Len(t, pod.Spec.Containers, 3)
 
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
@@ -1190,7 +1190,7 @@ func TestSetupBuildPod(t *testing.T) {
 				return
 			}
 
-			p := new(apiv1.Pod)
+			p := new(api.Pod)
 
 			err = json.Unmarshal(podBytes, p)
 

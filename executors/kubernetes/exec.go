@@ -24,7 +24,7 @@ import (
 	"net/url"
 
 	log "github.com/sirupsen/logrus"
-	apiv1 "k8s.io/api/core/v1"
+	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -77,7 +77,7 @@ func (p *ExecOptions) Run() error {
 		return err
 	}
 
-	if pod.Status.Phase != apiv1.PodRunning {
+	if pod.Status.Phase != api.PodRunning {
 		return fmt.Errorf("Pod '%s' (on namespace '%s') is not running and cannot execute commands; current phase is '%s'",
 			p.PodName, p.Namespace, pod.Status.Phase)
 	}
@@ -101,7 +101,7 @@ func (p *ExecOptions) Run() error {
 		Namespace(pod.Namespace).
 		SubResource("exec").
 		Param("container", containerName)
-	req.VersionedParams(&apiv1.PodExecOptions{
+	req.VersionedParams(&api.PodExecOptions{
 		Container: containerName,
 		Command:   p.Command,
 		Stdin:     stdin != nil,
