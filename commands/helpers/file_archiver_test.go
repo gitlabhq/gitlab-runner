@@ -4,12 +4,14 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	"time"
+	"github.com/stretchr/testify/require"
 )
 
 const fileArchiverUntrackedFile = "untracked_test_file.txt"
+const fileArchiverArchiveZipFile = "archive.zip"
 const fileArchiverOtherFile = "other_test_file.txt"
 const fileArchiverNotExistingFile = "not_existing_file.txt"
 const fileArchiverAbsoluteFile = "/absolute.txt"
@@ -70,9 +72,61 @@ func TestFileArchiverToAddNotExistingFile(t *testing.T) {
 }
 
 func TestFileArchiverChanged(t *testing.T) {
-	ioutil.WriteFile(fileArchiverOtherFile, nil, 0600)
-	defer os.Remove(fileArchiverOtherFile)
+	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
+	defer os.Remove(fileArchiverUntrackedFile)
 
+	now := time.Now()
+	require.NoError(t, os.Chtimes(fileArchiverUntrackedFile, now, now.Add(-time.Second)))
+
+	f := fileArchiver{
+		Paths: []string{fileArchiverUntrackedFile},
+	}
+	err := f.enumerate()
+	require.NoError(t, err)
+	assert.Len(t, f.sortedFiles(), 1)
+	assert.False(t, f.isChanged(now.Add(time.Minute)))
+	assert.True(t, f.isChanged(now.Add(-time.Minute)))
+}
+
+func TestFileArchiverFileIsNotChanged(t *testing.T) {
+	now := time.Now()
+
+	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
+	defer os.Remove(fileArchiverUntrackedFile)
+
+	ioutil.WriteFile(fileArchiverArchiveZipFile, nil, 0600)
+	defer os.Remove(fileArchiverArchiveZipFile)
+
+	f := fileArchiver{
+		Paths: []string{fileArchiverUntrackedFile},
+	}
+	err := f.enumerate()
+	require.NoError(t, err)
+
+	require.NoError(t, os.Chtimes(fileArchiverUntrackedFile, now, now.Add(-time.Second)))
+	assert.False(t, f.isFileChanged(fileArchiverArchiveZipFile), "should return false if file was modified before the listed file")
+}
+
+func TestFileArchiverFileIsChanged(t *testing.T) {
+	now := time.Now()
+
+	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
+	defer os.Remove(fileArchiverUntrackedFile)
+
+	ioutil.WriteFile(fileArchiverArchiveZipFile, nil, 0600)
+	defer os.Remove(fileArchiverArchiveZipFile)
+
+	f := fileArchiver{
+		Paths: []string{fileArchiverUntrackedFile},
+	}
+	err := f.enumerate()
+	require.NoError(t, err)
+
+	require.NoError(t, os.Chtimes(fileArchiverArchiveZipFile, now, now.Add(-time.Minute)))
+	assert.True(t, f.isFileChanged(fileArchiverArchiveZipFile), "should return true if file was modified")
+}
+
+func TestFileArchiverFileDoesNotExist(t *testing.T) {
 	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
 	defer os.Remove(fileArchiverUntrackedFile)
 
@@ -80,13 +134,7 @@ func TestFileArchiverChanged(t *testing.T) {
 		Paths: []string{fileArchiverUntrackedFile},
 	}
 	err := f.enumerate()
-	assert.NoError(t, err)
-	assert.Len(t, f.sortedFiles(), 1)
-	assert.False(t, f.isChanged(time.Now().Add(time.Minute)))
-	assert.True(t, f.isChanged(time.Now().Add(-time.Minute)))
+	require.NoError(t, err)
 
-	assert.False(t, f.isFileChanged(fileArchiverOtherFile), "should return false if file was modified before the listed file")
-	os.Chtimes(fileArchiverOtherFile, time.Now(), time.Now().Add(-time.Minute))
-	assert.True(t, f.isFileChanged(fileArchiverOtherFile), "should return true if file was modified")
 	assert.True(t, f.isFileChanged(fileArchiverNotExistingFile), "should return true if file doesn't exist")
 }
