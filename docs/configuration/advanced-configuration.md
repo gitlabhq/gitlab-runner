@@ -29,6 +29,39 @@ concurrent = 4
 log_level = "warning"
 ```
 
+### How `check_interval` works
+
+If there is more than one `[[runners]]` section in `config.toml` (let's call them workers),
+the interval between requests to GitLab are more frequent than one could expect. GitLab Runner
+contains a loop that constantly schedules a request that should be made for a worker against
+the GitLab instance it's configured for.
+
+GitLab Runner tries to ensure that subsequent requests for one worker will be done in the specified interval,
+so the value of `check_interval` is divided by the number of the `[[runners]]` sections. The loop will next
+iterate over all sections, schedule a request for each of them, and will sleep for the calculated amount
+of time. Things get interesting when the workers are tied to a different GitLab instance.
+Consider the following example.
+
+If one would set `check_interval = 10`, and there were 2 workers in total (`runner-1` and `runner-2`),
+a subsequent request would be made each 10 seconds. The loop would look like:
+
+1. Get `check_interval` value (`10s`)
+1. Get list of workers (`runner-1`, `runner-2`)
+1. Calculate the sleep interval (`10s / 2 = 5s`)
+1. Start an infinite loop:
+  1. Request a job for `runner-1`
+  1. Sleep for `5s`
+  1. Request a job for `runner-2`
+  1. Sleep for `5s`
+  1. Repeat
+
+So, a request from the Runner's process is made each 5s. If `runner-1` and `runner-2` are connected to the same
+GitLab instance, it means that the request to this GitLab instance will receive a new request from this Runner
+also each 5s. But as you can see, between the first request for `runner-1` and second request for `runner-1`
+there are two sleeps taking 5s, so finally it's ~10s between subsequent requests for `runner-1`. The same goes
+for `runner-2`. If you define more workers, the sleep interval will be smaller, but a request for a worker will
+be repeated after all requests for the other workers + their sleeps are called.
+
 ## The `[[runners]]` section
 
 This defines one runner entry.
@@ -44,6 +77,7 @@ This defines one runner entry.
 | `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
 | `executor`           | Select how a project should be built, see next section |
 | `shell`              | The name of shell to generate the script (default value is platform dependent) |
+| `builds_dir`         | Directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
 | `builds_dir`         | Directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
 | `cache_dir`          | Directory where build caches will be stored in context of selected executor (locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
 | `environment`        | Append or overwrite environment variables |
@@ -501,7 +535,6 @@ Example:
 	cert_file = "/etc/ssl/kubernetes/api.crt"
 	key_file = "/etc/ssl/kubernetes/api.key"
 	ca_file = "/etc/ssl/kubernetes/ca.crt"
-	namespace = "gitlab"
 	image = "golang:1.8"
 	privileged = true
 	image_pull_secrets = ["docker-registry-credentials"]
