@@ -76,6 +76,10 @@ Read the [FAQ](https://docs.gitlab.com/runner/faq/).
 
 See [https://docs.gitlab.com/runner/#advanced-configuration](https://docs.gitlab.com/runner/#advanced-configuration).
 
+## Development
+
+See [https://docs.gitlab.com/runner/development/](https://docs.gitlab.com/runner/development/).
+
 ## Changelog
 
 Visit the [Changelog](CHANGELOG.md) to view recent changes.
