@@ -284,6 +284,10 @@ package-deb-fpm:
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
 		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-runner
+	@if [ ! -z "$(GPG_PASSPHRASE)" ]; then \
+		dpkg-sig -g "--no-tty --digest-algo 'sha512' --passphrase '$(GPG_PASSPHRASE)'" \
+	  	-k $(GPG_KEYID) --sign builder "out/deb/$(PACKAGE_NAME)_$(PACKAGE_ARCH).deb" ;\
+	fi
 
 package-rpm-fpm:
 	@mkdir -p out/rpm/
@@ -309,6 +313,15 @@ package-rpm-fpm:
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
 		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-runner
+	@if [ ! -z "$(GPG_PASSPHRASE)" ] ; then \
+		echo "yes" | setsid rpm \
+			--define "_gpg_name $(GPG_KEYID)" \
+			--define "_signature gpg" \
+			--define "__gpg_check_password_cmd /bin/true" \
+			--define "__gpg_sign_cmd %{__gpg} gpg --batch --no-armor --digest-algo 'sha512' --passphrase '$(GPG_PASSPHRASE)' --no-secmem-warning -u '%{_gpg_name}' --sign --detach-sign --output %{__signature_filename} %{__plaintext_filename}" \
+			--addsign out/rpm/$(PACKAGE_NAME)_$(PACKAGE_ARCH).rpm ;\
+	fi
+
 
 packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
 
