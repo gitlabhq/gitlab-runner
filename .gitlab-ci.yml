@@ -263,6 +263,13 @@ binaries windows/386 windows/amd64: *binaries
   <<: *except_docs
   stage: package
   script:
+  - |
+    # checking GPG signing support
+    if [ ! -z "$GPG_PASSPHRASE" ] && [ ! -z "$GPG_KEY_LOCATION" ]; then
+      AWS_ACCESS_KEY_ID="$GPG_AWS_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$GPG_AWS_SECRET_ACCESS_KEY" ./scripts/s3get "$GPG_KEY_LOCATION" | gpg --batch --no-tty --allow-secret-key-import --import -
+    else
+      echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
+    fi
   - source ci/touch_make_dependencies
   - make ${CI_JOB_NAME}
   artifacts:
