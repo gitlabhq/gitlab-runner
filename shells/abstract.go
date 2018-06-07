@@ -19,6 +19,7 @@ type AbstractShell struct {
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Artifacts = true
 	features.Cache = true
+	features.ArtifactsFormat = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
@@ -498,6 +499,10 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptIn
 			info.Build.Token,
 			"--id",
 			strconv.Itoa(info.Build.ID),
+			"--format",
+			string(artifacts.Format),
+			"--type",
+			artifacts.Type,
 		}
 
 		// Create list of files to archive

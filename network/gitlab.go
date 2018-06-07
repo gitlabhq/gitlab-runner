@@ -33,9 +33,9 @@ var apiRequestStatuses = prometheus.NewDesc(
 type APIEndpoint string
 
 const (
-	APIEndpointRequestJob        APIEndpoint = "request_job"
-	APIEndpointUpdateJob         APIEndpoint = "update_job"
-	APIEndpointPatchTrace        APIEndpoint = "patch_trace"
+	APIEndpointRequestJob APIEndpoint = "request_job"
+	APIEndpointUpdateJob  APIEndpoint = "update_job"
+	APIEndpointPatchTrace APIEndpoint = "patch_trace"
 )
 
 type apiRequestStatusPermutation struct {
@@ -394,7 +394,7 @@ func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Read
 	return nil
 }
 
-func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
+func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, options common.ArtifactsOptions) common.UploadState {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
@@ -403,15 +403,21 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 	go func() {
 		defer pw.Close()
 		defer mpw.Close()
-		err := n.createArtifactsForm(mpw, reader, baseName)
+		err := n.createArtifactsForm(mpw, reader, options.BaseName)
 		if err != nil {
 			pw.CloseWithError(err)
 		}
 	}()
 
 	query := url.Values{}
-	if expireIn != "" {
-		query.Set("expire_in", expireIn)
+	if options.ExpireIn != "" {
+		query.Set("expire_in", options.ExpireIn)
+	}
+	if options.Format != "" {
+		query.Set("format", string(options.Format))
+	}
+	if options.Type != "" {
+		query.Set("type", options.Type)
 	}
 
 	headers := make(http.Header)
@@ -473,8 +479,10 @@ func (n *GitLabClient) UploadArtifacts(config common.JobCredentials, artifactsFi
 		return common.UploadFailed
 	}
 
-	baseName := filepath.Base(artifactsFile)
-	return n.UploadRawArtifacts(config, file, baseName, "")
+	options := common.ArtifactsOptions{
+		BaseName: filepath.Base(artifactsFile),
+	}
+	return n.UploadRawArtifacts(config, file, options)
 }
 
 func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {

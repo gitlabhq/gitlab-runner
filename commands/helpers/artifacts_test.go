@@ -39,7 +39,7 @@ func (m *testNetwork) DownloadArtifacts(config common.JobCredentials, artifactsF
 	return m.downloadState
 }
 
-func (m *testNetwork) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
+func (m *testNetwork) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, options common.ArtifactsOptions) common.UploadState {
 	m.uploadCalled++
 
 	if m.uploadState == common.UploadSucceeded {

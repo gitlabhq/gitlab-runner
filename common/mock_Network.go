@@ -137,13 +137,13 @@ func (_m *MockNetwork) UploadArtifacts(config JobCredentials, artifactsFile stri
 	return r0
 }
 
-// UploadRawArtifacts provides a mock function with given fields: config, reader, baseName, expireIn
-func (_m *MockNetwork) UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState {
-	ret := _m.Called(config, reader, baseName, expireIn)
+// UploadRawArtifacts provides a mock function with given fields: config, reader, options
+func (_m *MockNetwork) UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState {
+	ret := _m.Called(config, reader, options)
 
 	var r0 UploadState
-	if rf, ok := ret.Get(0).(func(JobCredentials, io.Reader, string, string) UploadState); ok {
-		r0 = rf(config, reader, baseName, expireIn)
+	if rf, ok := ret.Get(0).(func(JobCredentials, io.Reader, ArtifactsOptions) UploadState); ok {
+		r0 = rf(config, reader, options)
 	} else {
 		r0 = ret.Get(0).(UploadState)
 	}

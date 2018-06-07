@@ -50,12 +50,13 @@ const (
 )
 
 type FeaturesInfo struct {
-	Variables bool `json:"variables"`
-	Image     bool `json:"image"`
-	Services  bool `json:"services"`
-	Artifacts bool `json:"features"`
-	Cache     bool `json:"cache"`
-	Shared    bool `json:"shared"`
+	Variables       bool `json:"variables"`
+	Image           bool `json:"image"`
+	Services        bool `json:"services"`
+	Artifacts       bool `json:"artifacts"`
+	Cache           bool `json:"cache"`
+	Shared          bool `json:"shared"`
+	ArtifactsFormat bool `json:"artifacts_format"`
 }
 
 type RegisterRunnerParameters struct {
@@ -190,12 +191,21 @@ func (when ArtifactWhen) OnFailure() bool {
 	return when == ArtifactWhenOnFailure || when == ArtifactWhenAlways
 }
 
+type ArtifactFormat string
+
+const (
+	ArtifactFormatZip ArtifactFormat = "zip"
+	ArtifactFormatRaw ArtifactFormat = "raw"
+)
+
 type Artifact struct {
-	Name      string        `json:"name"`
-	Untracked bool          `json:"untracked"`
-	Paths     ArtifactPaths `json:"paths"`
-	When      ArtifactWhen  `json:"when"`
-	ExpireIn  string        `json:"expire_in"`
+	Name      string         `json:"name"`
+	Untracked bool           `json:"untracked"`
+	Paths     ArtifactPaths  `json:"paths"`
+	When      ArtifactWhen   `json:"when"`
+	Type      string         `json:"type"`
+	Format    ArtifactFormat `json:"format"`
+	ExpireIn  string         `json:"expire_in"`
 }
 
 func (a Artifact) ShouldUpload(state error) bool {
@@ -319,6 +329,13 @@ type UpdateJobInfo struct {
 	FailureReason JobFailureReason
 }
 
+type ArtifactsOptions struct {
+	BaseName string
+	ExpireIn string
+	Format   ArtifactFormat
+	Type     string
+}
+
 type FailuresCollector interface {
 	RecordFailure(reason JobFailureReason, runnerDescription string)
 }
@@ -348,7 +365,7 @@ type Network interface {
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
-	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
+	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
 	UploadArtifacts(config JobCredentials, artifactsFile string) UploadState
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) JobTrace
 }

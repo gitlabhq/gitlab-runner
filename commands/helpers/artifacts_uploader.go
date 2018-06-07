@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -22,24 +23,59 @@ type ArtifactsUploaderCommand struct {
 	retryHelper
 	network common.Network
 
-	Name     string `long:"name" description:"The name of the archive"`
-	ExpireIn string `long:"expire-in" description:"When to expire artifacts"`
+	Name     string                `long:"name" description:"The name of the archive"`
+	ExpireIn string                `long:"expire-in" description:"When to expire artifacts"`
+	Format   common.ArtifactFormat `long:"format" description:"Format of generated artifacts"`
+	Type     string                `long:"type" description:"Type of generated artifacts"`
+}
+
+func (c *ArtifactsUploaderCommand) generateZipArchive(w *io.PipeWriter) {
+	err := archives.CreateZipArchive(w, c.sortedFiles())
+	w.CloseWithError(err)
+}
+
+func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, error) {
+	artifactsName := path.Base(c.Name)
+
+	switch c.Format {
+	case common.ArtifactFormatZip, "":
+		pr, pw := io.Pipe()
+		go c.generateZipArchive(pw)
+		return artifactsName + ".zip", pr, nil
+
+	case common.ArtifactFormatRaw:
+		if len(c.files) == 0 {
+			return "", nil, errors.New("no file to upload")
+		}
+		if len(c.files) > 1 {
+			return "", nil, errors.New("raw format accepts only single file to upload")
+		}
+
+		file, err := os.Open(c.sortedFiles()[0])
+		return artifactsName, file, err
+
+	default:
+		return "", nil, fmt.Errorf("unsupported archive format: %s", c.Format)
+	}
 }
 
 func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
-	pr, pw := io.Pipe()
-	defer pr.Close()
+	artifactsName, stream, err := c.createReadStream()
+	if err != nil {
+		return false, err
+	}
+	defer stream.Close()
 
 	// Create the archive
-	go func() {
-		err := archives.CreateZipArchive(pw, c.sortedFiles())
-		pw.CloseWithError(err)
-	}()
-
-	artifactsName := path.Base(c.Name) + ".zip"
+	options := common.ArtifactsOptions{
+		BaseName: artifactsName,
+		ExpireIn: c.ExpireIn,
+		Format:   c.Format,
+		Type:     c.Type,
+	}
 
 	// Upload the data
-	switch c.network.UploadRawArtifacts(c.JobCredentials, pr, artifactsName, c.ExpireIn) {
+	switch c.network.UploadRawArtifacts(c.JobCredentials, stream, options) {
 	case common.UploadSucceeded:
 		return false, nil
 	case common.UploadForbidden:
