@@ -12,6 +12,6 @@ type Machine interface {
 	List() (machines []string, err error)
 	Exist(name string) bool
 
-	CanConnect(name string) bool
+	CanConnect(name string, force bool) bool
 	Credentials(name string) (DockerCredentials, error)
 }

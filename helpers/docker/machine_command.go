@@ -235,12 +235,12 @@ func (m *machineCommand) Exist(name string) bool {
 	return cmd.Run() == nil
 }
 
-func (m *machineCommand) CanConnect(name string) bool {
+func (m *machineCommand) CanConnect(name string, force bool) bool {
 	m.cacheLock.RLock()
 	cachedInfo, ok := m.cache[name]
 	m.cacheLock.RUnlock()
 
-	if ok && time.Now().Before(cachedInfo.expires) {
+	if ok && !force && time.Now().Before(cachedInfo.expires) {
 		return cachedInfo.canConnect
 	}
 
@@ -251,7 +251,7 @@ func (m *machineCommand) CanConnect(name string) bool {
 
 	m.cacheLock.Lock()
 	m.cache[name] = machineInfo{
-		expires:    time.Now().Add(1 * time.Minute),
+		expires:    time.Now().Add(5 * time.Minute),
 		canConnect: true,
 	}
 	m.cacheLock.Unlock()
@@ -270,7 +270,7 @@ func (m *machineCommand) canConnect(name string) bool {
 }
 
 func (m *machineCommand) Credentials(name string) (dc DockerCredentials, err error) {
-	if !m.CanConnect(name) {
+	if !m.CanConnect(name, true) {
 		err = errors.New("Can't connect")
 		return
 	}
