@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+coverMode="count"
+
+if [[ ${TESTFLAGS} = *"-cover"* ]]; then
+    rm -rf ".cover/"
+    mkdir -p ".cover"
+
+    if [[ ${TESTFLAGS} = *"-race"* ]]; then
+        coverMode="atomic"
+    fi
+
+    echo "Starting go tests with coverprofile in ${coverMode} mode"
+
+    for pkg in ${OUR_PACKAGES}; do
+        profileFile=".cover/$(echo ${pkg} | tr "/" "-").cover"
+
+        go test -covermode="${coverMode}" -coverprofile="${profileFile}" ${TESTFLAGS} -v ${pkg}
+    done
+
+    echo "mode: ${coverMode}" > coverprofile.txt
+    grep -h -v "^mode:" .cover/*.cover >> coverprofile.txt
+
+    echo "Generating coverprofile.html file"
+    go tool cover -o coverprofile.html -html=coverprofile.txt
+    go tool cover -o coverprofile.func.txt -func=coverprofile.txt
+    grep total coverprofile.func.txt || true
+fi

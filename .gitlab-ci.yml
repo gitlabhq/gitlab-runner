@@ -156,8 +156,18 @@ code_quality:
     paths: [gl-code-quality-report.json]
     expire_in: 1 week
 
+.unit_tests: &unit_tests
+  coverage: /total:\s+\(statements\)\s+\d+.\d+\%/
+  artifacts:
+    paths:
+    - coverprofile.html
+    - coverprofile.txt
+    - coverprofile.func.txt
+    expire_in: 1 week
+
 unit tests (no race):
   <<: *docker
+  <<: *unit_tests
   stage: test
   retry: 2
   script:
@@ -169,6 +179,7 @@ unit tests (no race):
 
 unit tests:
   <<: *docker
+  <<: *unit_tests
   stage: test
   allow_failure: true
   script:
