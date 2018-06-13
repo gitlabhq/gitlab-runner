@@ -1,3 +1,17 @@
+v 11.0.0-rc1 (2018-06-13)
+- Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
+- Add --paused option to register command !896
+- Start rename of "metrics server" config !838
+- Update virtualbox.md temporary fix for #2981 !889
+- Fix panic on PatchTrace execution !905
+- Do not send first PUT !908
+- Rename CI_COMMIT_REF to CI_COMMIT_SHA !911
+- Fix test file archiver tests !915
+- Document how check_interval works !903
+- Add link to development guide in readme !918
+- Explain gitlab-runner workflow labels !921
+- Change Prometheus metrics names !912
+
 v 10.8.0 (2018-05-22)
 - Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
 - Fix type in Substrakt Health company name !875
