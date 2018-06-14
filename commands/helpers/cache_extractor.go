@@ -15,7 +15,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/archives"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/formatter"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 type CacheExtractorCommand struct {
@@ -42,6 +41,7 @@ func (c *CacheExtractorCommand) download() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	defer file.Close()
 	defer os.Remove(file.Name())
 
 	resp, err := c.getClient().Get(c.URL)
@@ -72,7 +72,11 @@ func (c *CacheExtractorCommand) download() (bool, error) {
 	}
 	os.Chtimes(file.Name(), time.Now(), date)
 
-	file.Close()
+	err = file.Close()
+	if err != nil {
+		return false, err
+	}
+
 	err = os.Rename(file.Name(), c.File)
 	if err != nil {
 		return false, err
