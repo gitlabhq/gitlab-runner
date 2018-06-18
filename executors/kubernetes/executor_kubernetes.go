@@ -9,6 +9,7 @@ import (
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	// Register all available authentication methods
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
