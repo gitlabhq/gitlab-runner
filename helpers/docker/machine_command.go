@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/machine/commands/mcndirs"
@@ -77,6 +78,14 @@ func stderrLogWriter(cmd *exec.Cmd, fields logrus.Fields) {
 }
 
 type machineCommand struct {
+	cache     map[string]machineInfo
+	cacheLock sync.RWMutex
+}
+
+type machineInfo struct {
+	expires time.Time
+
+	canConnect bool
 }
 
 func (m *machineCommand) Create(driver, name string, opts ...string) error {
@@ -146,7 +155,14 @@ func (m *machineCommand) Remove(name string) error {
 	stdoutLogWriter(cmd, fields)
 	stderrLogWriter(cmd, fields)
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	m.cacheLock.Lock()
+	delete(m.cache, name)
+	m.cacheLock.Unlock()
+	return nil
 }
 
 func (m *machineCommand) List() (hostNames []string, err error) {
@@ -219,7 +235,30 @@ func (m *machineCommand) Exist(name string) bool {
 	return cmd.Run() == nil
 }
 
-func (m *machineCommand) CanConnect(name string) bool {
+func (m *machineCommand) CanConnect(name string, skipCache bool) bool {
+	m.cacheLock.RLock()
+	cachedInfo, ok := m.cache[name]
+	m.cacheLock.RUnlock()
+
+	if ok && !skipCache && time.Now().Before(cachedInfo.expires) {
+		return cachedInfo.canConnect
+	}
+
+	canConnect := m.canConnect(name)
+	if !canConnect {
+		return false // we only cache positive hits. Machines usually do not disconnect.
+	}
+
+	m.cacheLock.Lock()
+	m.cache[name] = machineInfo{
+		expires:    time.Now().Add(5 * time.Minute),
+		canConnect: true,
+	}
+	m.cacheLock.Unlock()
+	return true
+}
+
+func (m *machineCommand) canConnect(name string) bool {
 	// Execute docker-machine config which actively ask the machine if it is up and online
 	cmd := exec.Command("docker-machine", "config", name)
 	cmd.Env = os.Environ()
@@ -231,7 +270,7 @@ func (m *machineCommand) CanConnect(name string) bool {
 }
 
 func (m *machineCommand) Credentials(name string) (dc DockerCredentials, err error) {
-	if !m.CanConnect(name) {
+	if !m.CanConnect(name, true) {
 		err = errors.New("Can't connect")
 		return
 	}
@@ -245,5 +284,7 @@ func (m *machineCommand) Credentials(name string) (dc DockerCredentials, err err
 }
 
 func NewMachineCommand() Machine {
-	return &machineCommand{}
+	return &machineCommand{
+		cache: map[string]machineInfo{},
+	}
 }

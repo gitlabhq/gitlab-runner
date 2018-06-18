@@ -102,7 +102,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	return
 }
 
-func (m *machineProvider) findFreeMachine(machines ...string) (details *machineDetails) {
+func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (details *machineDetails) {
 	// Enumerate all machines in reverse order, to always take the newest machines first
 	for idx := range machines {
 		name := machines[len(machines)-idx-1]
@@ -112,7 +112,7 @@ func (m *machineProvider) findFreeMachine(machines ...string) (details *machineD
 		}
 
 		// Check if node is running
-		canConnect := m.machine.CanConnect(name)
+		canConnect := m.machine.CanConnect(name, skipCache)
 		if !canConnect {
 			m.remove(name, "machine is unavailable")
 			continue
@@ -128,7 +128,7 @@ func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *mach
 	if err != nil {
 		return
 	}
-	details = m.findFreeMachine(machines...)
+	details = m.findFreeMachine(true, machines...)
 	if details == nil {
 		var errCh chan error
 		details, errCh = m.create(config, machineStateAcquired)
@@ -327,7 +327,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 	machinesData.writeDebugInformation()
 
 	// Try to find a free machine
-	details := m.findFreeMachine(validMachines...)
+	details := m.findFreeMachine(false, validMachines...)
 	if details != nil {
 		data = details
 		return
@@ -343,7 +343,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorData) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
 	// Find a new machine
 	details, _ := data.(*machineDetails)
-	if details == nil || !details.canBeUsed() || !m.machine.CanConnect(details.Name) {
+	if details == nil || !details.canBeUsed() || !m.machine.CanConnect(details.Name, true) {
 		details, err = m.retryUseMachine(config)
 		if err != nil {
 			return

@@ -12,13 +12,13 @@ type MockMachine struct {
 	mock.Mock
 }
 
-// CanConnect provides a mock function with given fields: name
-func (_m *MockMachine) CanConnect(name string) bool {
-	ret := _m.Called(name)
+// CanConnect provides a mock function with given fields: name, skipCache
+func (_m *MockMachine) CanConnect(name string, skipCache bool) bool {
+	ret := _m.Called(name, skipCache)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(string) bool); ok {
-		r0 = rf(name)
+	if rf, ok := ret.Get(0).(func(string, bool) bool); ok {
+		r0 = rf(name, skipCache)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}

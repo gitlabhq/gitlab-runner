@@ -169,7 +169,7 @@ func (m *testMachine) List() (machines []string, err error) {
 	return m.machines, nil
 }
 
-func (m *testMachine) CanConnect(name string) bool {
+func (m *testMachine) CanConnect(name string, skipCache bool) bool {
 	if strings.Contains(name, "no-can-connect") {
 		return false
 	}
@@ -276,21 +276,21 @@ func TestMachineDetails(t *testing.T) {
 
 func TestMachineFindFree(t *testing.T) {
 	p, tm := testMachineProvider("no-can-connect")
-	d1 := p.findFreeMachine()
+	d1 := p.findFreeMachine(false)
 	assert.Nil(t, d1, "no machines, return nil")
 
-	d2 := p.findFreeMachine("machine1")
+	d2 := p.findFreeMachine(false, "machine1")
 	assert.NotNil(t, d2, "acquire one machine")
 
-	d3 := p.findFreeMachine("machine1")
+	d3 := p.findFreeMachine(false, "machine1")
 	assert.Nil(t, d3, "fail to acquire that machine")
 
-	d4 := p.findFreeMachine("machine1", "machine2")
+	d4 := p.findFreeMachine(false, "machine1", "machine2")
 	assert.NotNil(t, d4, "acquire a new machine")
 	assert.NotEqual(t, d2, d4, "and it's a different machine")
 
 	assert.Len(t, tm.machines, 1, "has one machine")
-	d5 := p.findFreeMachine("machine1", "no-can-connect")
+	d5 := p.findFreeMachine(false, "machine1", "no-can-connect")
 	assert.Nil(t, d5, "fails to acquire machine to which he can't connect")
 }
 
