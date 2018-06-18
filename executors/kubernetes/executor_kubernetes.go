@@ -6,9 +6,11 @@ import (
 	"strings"
 
 	"golang.org/x/net/context"
-	"k8s.io/kubernetes/pkg/api"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	"k8s.io/kubernetes/pkg/credentialprovider"
+	api "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	// Register all available authentication methods
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -34,7 +36,7 @@ type kubernetesOptions struct {
 type executor struct {
 	executors.AbstractExecutor
 
-	kubeClient  *client.Client
+	kubeClient  *kubernetes.Clientset
 	pod         *api.Pod
 	credentials *api.Secret
 	options     *kubernetesOptions
@@ -143,7 +145,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 
 	select {
 	case err := <-s.runInContainer(ctx, containerName, containerCommand, cmd.Script):
-		if err != nil && strings.Contains(err.Error(), "executing in Docker Container") {
+		if err != nil && strings.Contains(err.Error(), "command terminated with exit code") {
 			return &common.BuildError{Inner: err}
 		}
 		return err
@@ -155,13 +157,13 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 
 func (s *executor) Cleanup() {
 	if s.pod != nil {
-		err := s.kubeClient.Pods(s.pod.Namespace).Delete(s.pod.Name, nil)
+		err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Delete(s.pod.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
 		}
 	}
 	if s.credentials != nil {
-		err := s.kubeClient.Secrets(s.configurationOverwrites.namespace).Delete(s.credentials.Name)
+		err := s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Delete(s.credentials.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
@@ -343,15 +345,19 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 	return
 }
 
+type dockerConfigEntry struct {
+	Username, Password string
+}
+
 func (s *executor) setupCredentials() error {
-	authConfigs := make(map[string]credentialprovider.DockerConfigEntry)
+	authConfigs := make(map[string]dockerConfigEntry)
 
 	for _, credentials := range s.Build.Credentials {
 		if credentials.Type != "registry" {
 			continue
 		}
 
-		authConfigs[credentials.URL] = credentialprovider.DockerConfigEntry{
+		authConfigs[credentials.URL] = dockerConfigEntry{
 			Username: credentials.Username,
 			Password: credentials.Password,
 		}
@@ -373,7 +379,7 @@ func (s *executor) setupCredentials() error {
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
-	s.credentials, err = s.kubeClient.Secrets(s.configurationOverwrites.namespace).Create(&secret)
+	s.credentials, err = s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Create(&secret)
 	if err != nil {
 		return err
 	}
@@ -407,8 +413,8 @@ func (s *executor) setupBuildPod() error {
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
-	pod, err := s.kubeClient.Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
-		ObjectMeta: api.ObjectMeta{
+	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
+		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
 			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       labels,
