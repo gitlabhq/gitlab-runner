@@ -102,7 +102,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	return
 }
 
-func (m *machineProvider) findFreeMachine(force bool, machines ...string) (details *machineDetails) {
+func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (details *machineDetails) {
 	// Enumerate all machines in reverse order, to always take the newest machines first
 	for idx := range machines {
 		name := machines[len(machines)-idx-1]
@@ -112,7 +112,7 @@ func (m *machineProvider) findFreeMachine(force bool, machines ...string) (detai
 		}
 
 		// Check if node is running
-		canConnect := m.machine.CanConnect(name, force)
+		canConnect := m.machine.CanConnect(name, skipCache)
 		if !canConnect {
 			m.remove(name, "machine is unavailable")
 			continue

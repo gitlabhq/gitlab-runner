@@ -235,12 +235,12 @@ func (m *machineCommand) Exist(name string) bool {
 	return cmd.Run() == nil
 }
 
-func (m *machineCommand) CanConnect(name string, force bool) bool {
+func (m *machineCommand) CanConnect(name string, skipCache bool) bool {
 	m.cacheLock.RLock()
 	cachedInfo, ok := m.cache[name]
 	m.cacheLock.RUnlock()
 
-	if ok && !force && time.Now().Before(cachedInfo.expires) {
+	if ok && !skipCache && time.Now().Before(cachedInfo.expires) {
 		return cachedInfo.canConnect
 	}
 

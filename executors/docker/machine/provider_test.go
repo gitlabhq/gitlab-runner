@@ -169,7 +169,7 @@ func (m *testMachine) List() (machines []string, err error) {
 	return m.machines, nil
 }
 
-func (m *testMachine) CanConnect(name string, force bool) bool {
+func (m *testMachine) CanConnect(name string, skipCache bool) bool {
 	if strings.Contains(name, "no-can-connect") {
 		return false
 	}
