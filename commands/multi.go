@@ -547,8 +547,8 @@ func init() {
 	requestStatusesCollector := network.NewAPIRequestStatusesMap()
 
 	common.RegisterCommand2("run", "run multi runner service", &RunCommand{
-		ServiceName:                     defaultServiceName,
-		network:                         network.NewGitLabClientWithRequestStatusesMap(requestStatusesCollector),
+		ServiceName: defaultServiceName,
+		network:     network.NewGitLabClientWithRequestStatusesMap(requestStatusesCollector),
 		networkRequestStatusesCollector: requestStatusesCollector,
 		prometheusLogHook:               prometheus_helper.NewLogHook(),
 		failuresCollector:               prometheus_helper.NewFailuresCollector(),
