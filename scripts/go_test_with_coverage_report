@@ -2,29 +2,152 @@
 
 set -eo pipefail
 
+testsDefinitions="testsdefinitions.txt"
+
+TESTFLAGS=${TESTFLAGS:-"-cover"}
+PARALLEL_TESTS_LIMIT=${PARALLEL_TESTS_LIMIT:-10}
+
+SUITE_TOTAL=${SUITE_TOTAL:-1}
+SUITE_INDEX=${SUITE_INDEX:-0}
+
+output="regular"
 coverMode="count"
 
-if [[ ${TESTFLAGS} = *"-cover"* ]]; then
-    rm -rf ".cover/"
-    mkdir -p ".cover"
+if [[ ${TESTFLAGS} = *"-race"* ]]; then
+    output="race"
+    coverMode="atomic"
+fi
 
-    if [[ ${TESTFLAGS} = *"-race"* ]]; then
-        coverMode="atomic"
-    fi
+printMessage() {
+  echo -e "\033[1m${@}\033[0m"
+}
 
-    echo "Starting go tests with coverprofile in ${coverMode} mode"
+joinBy() {
+    local IFS="${1}"
+    shift
+    echo "${*}"
+}
+
+prepareTestCommands() {
+    [[ ! -f ${testsDefinitions} ]] || rm ${testsDefinitions}
 
     for pkg in ${OUR_PACKAGES}; do
-        profileFile=".cover/$(echo ${pkg} | tr "/" "-").cover"
+        testIndex=0
+        runTests=()
 
-        go test -covermode="${coverMode}" -coverprofile="${profileFile}" ${TESTFLAGS} -v ${pkg}
+        tests=$(go test -list "Test.*" ${pkg} | grep "^Test" || echo "")
+
+        if [[ -z "${tests}" ]]; then
+            continue
+        fi
+
+        counter=0
+        for test in ${tests}; do
+            counter=$((counter+1))
+            runTests+=("${test}")
+
+            if [[ ${counter} -ge ${PARALLEL_TESTS_LIMIT} ]]; then
+                if [[ ${#runTests[@]} -gt 0 ]]; then
+                    echo ${pkg} ${testIndex} $(joinBy "|" "${runTests[@]}") | tee -a ${testsDefinitions}
+                fi
+
+                counter=0
+                runTests=()
+
+                testIndex=$((testIndex+1))
+            fi
+        done
+
+        if [[ ${#runTests[@]} -gt 0 ]]; then
+            echo ${pkg} ${testIndex} $(joinBy "|" "${runTests[@]}") | tee -a ${testsDefinitions}
+        fi
+    done
+}
+
+executeTestCommand() {
+    local pkg=${1}
+    local index=${2}
+    local runTests=${3}
+
+    local options=""
+
+    local pkgSlug=$(echo ${pkg} | tr "/" "-")
+
+    if [[ ${TESTFLAGS} = *"-cover"* ]]; then
+        mkdir -p ".cover"
+        mkdir -p ".testoutput"
+
+        printMessage "\n\n--- Starting part ${index} of go tests of '${pkg}' package with coverprofile in '${coverMode}' mode:\n"
+
+        profileFile=".cover/${pkgSlug}.${index}.${coverMode}.cover.txt"
+        options="-covermode=${coverMode} -coverprofile=${profileFile}"
+    else
+        echo "Starting go test"
+    fi
+
+    testOutputFile=".testoutput/${pkgSlug}.${index}.${output}.output.txt"
+
+    exitCode=0
+    go test ${options} ${TESTFLAGS} -v ${pkg} -run "${runTests}" 2>&1 | tee ${testOutputFile} || exitCode=1
+
+    return $exitCode
+}
+
+executeTestPart() {
+    rm -rf ".cover/"
+    rm -rf ".testoutput/"
+
+    numberOfDefinitions=$(cat ${testsDefinitions} | wc -l)
+    executionSize=$((numberOfDefinitions/SUITE_TOTAL+1))
+    executionOffset=$((SUITE_INDEX*executionSize+1))
+
+    printMessage "Number of definitions: ${numberOfDefinitions}"
+    printMessage "Suite size: ${SUITE_TOTAL}"
+    printMessage "Suite index: ${SUITE_INDEX}"
+
+    printMessage "Execution size: ${executionSize}"
+    printMessage "Execution offset: ${executionOffset}"
+
+    exitCode=0
+    tail -n +${executionOffset} ${testsDefinitions} | head -n ${executionSize} | while read pkg index tests; do
+        executeTestCommand ${pkg} ${index} ${tests} || exitCode=1
     done
 
-    echo "mode: ${coverMode}" > coverprofile.txt
-    grep -h -v "^mode:" .cover/*.cover >> coverprofile.txt
+    exit $exitCode
+}
 
-    echo "Generating coverprofile.html file"
-    go tool cover -o coverprofile.html -html=coverprofile.txt
-    go tool cover -o coverprofile.func.txt -func=coverprofile.txt
-    grep total coverprofile.func.txt || true
-fi
+computeCoverageReport() {
+    local reportDirectory="out/coverage"
+    local sourceFile="${reportDirectory}/coverprofile.${output}.source.txt"
+    local htmlReportFile="${reportDirectory}/coverprofile.${output}.html"
+    local textReportFile="${reportDirectory}/coverprofile.${output}.txt"
+
+    mkdir -p ${reportDirectory}
+
+    echo "mode: ${coverMode}" > ${sourceFile}
+    grep -h -v -e "^mode:" -e "executors/docker/bindata.go" .cover/*.${coverMode}.cover.txt >> ${sourceFile}
+
+    printMessage "Generating HTML coverage report"
+    go tool cover -o ${htmlReportFile} -html=${sourceFile}
+    printMessage "Generating TXT coverage report"
+    go tool cover -o ${textReportFile} -func=${sourceFile}
+
+    printMessage "General coverage percentage:"
+    total=$(grep "total" "${textReportFile}" || echo "")
+
+    if [[ -n "${total}" ]]; then
+        echo "${output} ${total}"
+    fi
+}
+
+case "$1" in
+    prepare)
+        prepareTestCommands
+        ;;
+    execute)
+        executeTestPart
+        ;;
+    coverage)
+        computeCoverageReport
+        ;;
+esac

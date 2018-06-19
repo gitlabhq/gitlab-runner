@@ -17,11 +17,11 @@ artifacts
 tmp/gitlab-test
 /.gopath/
 
+testsdefinitions.txt
+/.testoutput/
 /.cover/
+
 codeclimate.json
-coverprofile.html
-coverprofile.txt
-coverprofile.func.txt
 
 # Ignore the generated binary
 /gitlab-runner

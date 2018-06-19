@@ -123,7 +123,19 @@ check_race_conditions:
 
 test: $(PKG_BUILD_DIR) docker
 	# Running tests...
-	@./scripts/go_test_with_coverage_report
+	go test $(OUR_PACKAGES) $(TESTFLAGS)
+
+parallel_test_prepare: $(GOPATH_SETUP)
+	# Preparing test commands
+	@./scripts/go_test_with_coverage_report prepare
+
+parallel_test_execute: $(GOPATH_SETUP)
+	# executing tests
+	@./scripts/go_test_with_coverage_report execute
+
+parallel_test_coverage_report: $(GOPATH_SETUP)
+	# Preparing coverage report
+	@./scripts/go_test_with_coverage_report coverage
 
 install:
 	go install --ldflags="$(GO_LDFLAGS)" $(PKG)
