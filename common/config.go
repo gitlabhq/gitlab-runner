@@ -523,7 +523,9 @@ func (c *Config) ListenOrServerMetricAddress() string {
 		return c.ListenAddress
 	}
 
-	log.Warnln("'metrics_server' configuration entry is deprecated and will be removed in one of future releases; please use 'listen_address' instead")
+	if c.MetricsServerAddress != "" {
+		log.Warnln("'metrics_server' configuration entry is deprecated and will be removed in one of future releases; please use 'listen_address' instead")
+	}
 
 	return c.MetricsServerAddress
 }
