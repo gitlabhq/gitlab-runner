@@ -35,7 +35,8 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -81,7 +82,8 @@ func TestDockerCommandBuildFail(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -207,7 +209,8 @@ func TestDockerCommandBuildAbort(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -243,7 +246,8 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -285,7 +289,8 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -315,7 +320,8 @@ func TestDockerCommandOutput(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -338,7 +344,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 
 	commands := []string{
 		"docker info",
-		"docker run -v $(pwd):$(pwd) -w $(pwd) alpine touch test",
+		"docker run -v $(pwd):$(pwd) -w $(pwd) busybox touch test",
 		"cat test",
 	}
 
@@ -358,6 +364,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 					Executor: "docker",
 					Docker: &common.DockerConfig{
 						Image:      "alpine",
+						PullPolicy: common.PullPolicyIfNotPresent,
 						Privileged: true,
 					},
 				},
@@ -401,6 +408,7 @@ func getTestDockerJob(t *testing.T) *common.Build {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 					Privileged: true,
 				},
 			},
@@ -516,8 +524,9 @@ func TestCacheInContainer(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:   "alpine",
-					Volumes: []string{"/cache"},
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
+					Volumes:    []string{"/cache"},
 				},
 			},
 		},
@@ -569,6 +578,7 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:           "alpine",
+					PullPolicy:      common.PullPolicyIfNotPresent,
 					AllowedServices: []string{"alpine"},
 				},
 			},
@@ -602,6 +612,7 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:           "alpine",
+					PullPolicy:      common.PullPolicyIfNotPresent,
 					AllowedServices: []string{"alpine"},
 				},
 			},
@@ -697,6 +708,7 @@ func testDockerVersion(t *testing.T, version string) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:             "alpine",
+					PullPolicy:        common.PullPolicyIfNotPresent,
 					DockerCredentials: credentials,
 					CPUS:              "0.1",
 				},
@@ -796,7 +808,8 @@ func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -827,7 +840,8 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "alpine",
+					Image:      "alpine",
+					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -898,7 +912,8 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image: "docker:git",
+					Image:      "docker:git",
+					PullPolicy: common.PullPolicyIfNotPresent,
 					Volumes: []string{
 						"/var/run/docker.sock:/var/run/docker.sock",
 					},

@@ -160,6 +160,9 @@ unit tests (no race):
   retry: 2
   script:
     - source ci/touch_make_dependencies
+    - docker pull alpine
+    - docker pull docker:dind
+    - docker pull docker:git
     - make test
 
 unit tests:
