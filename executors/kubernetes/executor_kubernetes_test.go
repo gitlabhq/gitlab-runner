@@ -1226,6 +1226,39 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						NodeTolerations: map[string]string{
+							"node-role.kubernetes.io/master": "NoSchedule",
+							"custom.toleration=value":        "NoSchedule",
+							"empty.value=":                   "PreferNoSchedule",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
+					Key:      "custom.toleration",
+					Operator: api.TolerationOpEqual,
+					Value:    "value",
+					Effect:   api.TaintEffectNoSchedule,
+				})
+				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
+					Key:      "empty.value",
+					Operator: api.TolerationOpExists,
+					Effect:   api.TaintEffectPreferNoSchedule,
+				})
+				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
+					Key:      "node-role.kubernetes.io/master",
+					Operator: api.TolerationOpExists,
+					Effect:   api.TaintEffectNoSchedule,
+				})
+				assert.Equal(t, len(pod.Spec.Tolerations), 3)
+			},
+		},
+		{
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
 						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
