@@ -25,7 +25,7 @@ The following contents has to be considered as an extension over [gitlab-ce cont
 
 We have some additional labels plus those defined in [gitlab-ce workflow labels](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/CONTRIBUTING.md#workflow-labels) 
 
-- Additional subjects: ~cache, ~executors
+- Additional subjects: ~cache, ~executors, ~"git operations"
 - OS: ~"os::Linux" ~"os::MacOSX" ~"os:FreeBSD" ~"os::Windows" 
 - executor: ~"executor::docker" ~"executor::kubernetes" ~"executor::docker\-machine" ~"executor::docker\-machine" ~"executor::shell" ~"executor::parallels" ~"executor::virtualbox" 
 
