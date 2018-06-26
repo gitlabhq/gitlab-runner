@@ -1,19 +1,24 @@
 package kubernetes
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
 	"golang.org/x/net/context"
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/testapi"
-	"k8s.io/kubernetes/pkg/api/unversioned"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	"k8s.io/kubernetes/pkg/client/unversioned/fake"
+	api "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -156,8 +161,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 }
 
 func TestWaitForPodRunning(t *testing.T) {
-	version := testapi.Default.GroupVersion().Version
-	codec := testapi.Default.Codec()
+	version, codec := testVersionAndCodec()
 	retries := 0
 
 	tests := []struct {
@@ -173,7 +177,7 @@ func TestWaitForPodRunning(t *testing.T) {
 		{
 			Name: "ensure function retries until ready",
 			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -183,7 +187,7 @@ func TestWaitForPodRunning(t *testing.T) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
 					pod := &api.Pod{
-						ObjectMeta: api.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
@@ -225,7 +229,7 @@ func TestWaitForPodRunning(t *testing.T) {
 		{
 			Name: "ensure function errors if pod already succeeded",
 			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -235,7 +239,7 @@ func TestWaitForPodRunning(t *testing.T) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
 					pod := &api.Pod{
-						ObjectMeta: api.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
@@ -258,7 +262,7 @@ func TestWaitForPodRunning(t *testing.T) {
 		{
 			Name: "ensure function returns error if pod unknown",
 			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -273,7 +277,7 @@ func TestWaitForPodRunning(t *testing.T) {
 		{
 			Name: "ensure poll parameters work correctly",
 			Pod: &api.Pod{
-				ObjectMeta: api.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
@@ -287,7 +291,7 @@ func TestWaitForPodRunning(t *testing.T) {
 				switch p, m := req.URL.Path, req.Method; {
 				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
 					pod := &api.Pod{
-						ObjectMeta: api.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
 							Namespace: "test-ns",
 						},
@@ -315,12 +319,8 @@ func TestWaitForPodRunning(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			retries = 0
-			c := client.NewOrDie(&restclient.Config{ContentConfig: restclient.ContentConfig{GroupVersion: &unversioned.GroupVersion{Version: version}}})
-			fakeClient := fake.RESTClient{
-				Codec:  codec,
-				Client: fake.CreateHTTPClient(test.ClientFunc),
-			}
-			c.Client = fakeClient.Client
+			c := testKubernetesClient(version, fake.CreateHTTPClient(test.ClientFunc))
+
 			fw := testWriter{
 				call: func(b []byte) (int, error) {
 					if retries < test.Retries {
@@ -357,4 +357,40 @@ type testWriter struct {
 
 func (t testWriter) Write(b []byte) (int, error) {
 	return t.call(b)
+}
+
+func objBody(codec runtime.Codec, obj runtime.Object) io.ReadCloser {
+	return ioutil.NopCloser(bytes.NewReader([]byte(runtime.EncodeOrDie(codec, obj))))
+}
+
+func testKubernetesClient(version string, httpClient *http.Client) *kubernetes.Clientset {
+	conf := restclient.Config{
+		ContentConfig: restclient.ContentConfig{
+			GroupVersion: &schema.GroupVersion{Version: version},
+		},
+	}
+	kube := kubernetes.NewForConfigOrDie(&conf)
+	fakeClient := fake.RESTClient{Client: httpClient}
+	kube.Core().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
+	kube.Extensions().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
+
+	return kube
+}
+
+// minimal port from k8s.io/kubernetes/pkg/testapi
+func testVersionAndCodec() (version string, codec runtime.Codec) {
+	scheme := runtime.NewScheme()
+
+	scheme.AddIgnoredConversionType(&metav1.TypeMeta{}, &metav1.TypeMeta{})
+	scheme.AddKnownTypes(
+		api.SchemeGroupVersion,
+		&api.Pod{},
+		&metav1.Status{},
+	)
+
+	codecs := runtimeserializer.NewCodecFactory(scheme)
+	codec = codecs.LegacyCodec(api.SchemeGroupVersion)
+	version = api.SchemeGroupVersion.Version
+
+	return
 }

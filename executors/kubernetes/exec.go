@@ -24,11 +24,12 @@ import (
 	"net/url"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	"k8s.io/kubernetes/pkg/client/unversioned/remotecommand"
-	remotecommandserver "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
+	api "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // RemoteExecutor defines the interface accepted by the Exec command - provided for test stubbing
@@ -40,11 +41,16 @@ type RemoteExecutor interface {
 type DefaultRemoteExecutor struct{}
 
 func (*DefaultRemoteExecutor) Execute(method string, url *url.URL, config *restclient.Config, stdin io.Reader, stdout, stderr io.Writer, tty bool) error {
-	exec, err := remotecommand.NewExecutor(config, method, url)
+	exec, err := remotecommand.NewSPDYExecutor(config, method, url)
 	if err != nil {
 		return err
 	}
-	return exec.Stream(remotecommandserver.SupportedStreamingProtocols, stdin, stdout, stderr, tty)
+	return exec.Stream(remotecommand.StreamOptions{
+		Stdin:  stdin,
+		Stdout: stdout,
+		Stderr: stderr,
+		Tty:    tty,
+	})
 }
 
 // ExecOptions declare the arguments accepted by the Exec command
@@ -60,13 +66,13 @@ type ExecOptions struct {
 	Err io.Writer
 
 	Executor RemoteExecutor
-	Client   *client.Client
+	Client   *kubernetes.Clientset
 	Config   *restclient.Config
 }
 
 // Run executes a validated remote execution against a pod.
 func (p *ExecOptions) Run() error {
-	pod, err := p.Client.Pods(p.Namespace).Get(p.PodName)
+	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -89,7 +95,7 @@ func (p *ExecOptions) Run() error {
 	}
 
 	// TODO: consider abstracting into a client invocation or client helper
-	req := p.Client.RESTClient.Post().
+	req := p.Client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
@@ -101,7 +107,7 @@ func (p *ExecOptions) Run() error {
 		Stdin:     stdin != nil,
 		Stdout:    p.Out != nil,
 		Stderr:    p.Err != nil,
-	}, api.ParameterCodec)
+	}, scheme.ParameterCodec)
 
 	return p.Executor.Execute("POST", req.URL(), p.Config, stdin, p.Out, p.Err, false)
 }

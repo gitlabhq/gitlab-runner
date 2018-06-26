@@ -44,12 +44,12 @@ type apiRequestStatusPermutation struct {
 	status   int
 }
 
-type ApiRequestStatusesMap struct {
+type APIRequestStatusesMap struct {
 	internal map[apiRequestStatusPermutation]int
 	lock     sync.RWMutex
 }
 
-func (arspm *ApiRequestStatusesMap) Append(runnerID string, endpoint APIEndpoint, status int) {
+func (arspm *APIRequestStatusesMap) Append(runnerID string, endpoint APIEndpoint, status int) {
 	arspm.lock.Lock()
 	defer arspm.lock.Unlock()
 
@@ -63,12 +63,12 @@ func (arspm *ApiRequestStatusesMap) Append(runnerID string, endpoint APIEndpoint
 }
 
 // Describe implements prometheus.Collector.
-func (arspm *ApiRequestStatusesMap) Describe(ch chan<- *prometheus.Desc) {
+func (arspm *APIRequestStatusesMap) Describe(ch chan<- *prometheus.Desc) {
 	ch <- apiRequestStatuses
 }
 
 // Collect implements prometheus.Collector.
-func (arspm *ApiRequestStatusesMap) Collect(ch chan<- prometheus.Metric) {
+func (arspm *APIRequestStatusesMap) Collect(ch chan<- prometheus.Metric) {
 	arspm.lock.RLock()
 	defer arspm.lock.RUnlock()
 
@@ -84,8 +84,8 @@ func (arspm *ApiRequestStatusesMap) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func NewAPIRequestStatusesMap() *ApiRequestStatusesMap {
-	return &ApiRequestStatusesMap{
+func NewAPIRequestStatusesMap() *APIRequestStatusesMap {
+	return &APIRequestStatusesMap{
 		internal: make(map[apiRequestStatusPermutation]int),
 	}
 }
@@ -94,7 +94,7 @@ type GitLabClient struct {
 	clients map[string]*client
 	lock    sync.Mutex
 
-	requestsStatusesMap *ApiRequestStatusesMap
+	requestsStatusesMap *APIRequestStatusesMap
 }
 
 func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err error) {
@@ -539,7 +539,7 @@ func (n *GitLabClient) ProcessJob(config common.RunnerConfig, jobCredentials *co
 	return trace
 }
 
-func NewGitLabClientWithRequestStatusesMap(rsMap *ApiRequestStatusesMap) *GitLabClient {
+func NewGitLabClientWithRequestStatusesMap(rsMap *APIRequestStatusesMap) *GitLabClient {
 	return &GitLabClient{
 		requestsStatusesMap: rsMap,
 	}

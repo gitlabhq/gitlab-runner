@@ -157,6 +157,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	// Clean changed files in submodules
 	// "git submodule update --force" option not supported in Git 1.7.1 (shipped with CentOS 6)
+	w.Command("git", append(foreachArgs, "git", "clean", "-ffxd")...)
 	w.Command("git", append(foreachArgs, "git", "reset", "--hard")...)
 	w.Command("git", updateArgs...)
 }

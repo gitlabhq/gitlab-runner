@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"golang.org/x/net/context"
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/resource"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	clientcmd "k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
-	clientcmdapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
+	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -26,10 +26,6 @@ var (
 	// defaultKubectlConfig parses kubectl configuration ad loads the default cluster
 	defaultKubectlConfig kubeConfigProvider = loadDefaultKubectlConfig
 )
-
-func init() {
-	clientcmd.DefaultCluster = clientcmdapi.Cluster{}
-}
 
 func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites) (kubeConfig *restclient.Config, err error) {
 	if len(config.Host) > 0 {
@@ -90,20 +86,24 @@ func loadDefaultKubectlConfig() (*restclient.Config, error) {
 	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
-func getKubeClient(config *common.KubernetesConfig, overwrites *overwrites) (*client.Client, error) {
+func getKubeClient(config *common.KubernetesConfig, overwrites *overwrites) (*kubernetes.Clientset, error) {
 	restConfig, err := getKubeClientConfig(config, overwrites)
 	if err != nil {
 		return nil, err
 	}
 
-	return client.New(restConfig)
+	return kubernetes.NewForConfig(restConfig)
 }
 
-func closeKubeClient(client *client.Client) bool {
-	if client == nil || client.Client == nil || client.Client.Transport == nil {
+func closeKubeClient(client *kubernetes.Clientset) bool {
+	if client == nil {
 		return false
 	}
-	if transport, _ := client.Client.Transport.(*http.Transport); transport != nil {
+	rest, ok := client.CoreV1().RESTClient().(*restclient.RESTClient)
+	if !ok || rest.Client == nil || rest.Client.Transport == nil {
+		return false
+	}
+	if transport, ok := rest.Client.Transport.(*http.Transport); ok {
 		transport.CloseIdleConnections()
 		return true
 	}
@@ -129,8 +129,8 @@ type podPhaseResponse struct {
 	err   error
 }
 
-func getPodPhase(c *client.Client, pod *api.Pod, out io.Writer) podPhaseResponse {
-	pod, err := c.Pods(pod.Namespace).Get(pod.Name)
+func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseResponse {
+	pod, err := c.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
@@ -167,7 +167,7 @@ func getPodPhase(c *client.Client, pod *api.Pod, out io.Writer) podPhaseResponse
 
 }
 
-func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
+func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
 	errc := make(chan podPhaseResponse)
 	go func() {
 		defer close(errc)
@@ -184,7 +184,7 @@ func triggerPodPhaseCheck(c *client.Client, pod *api.Pod, out io.Writer) <-chan 
 // reached.
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
-func waitForPodRunning(ctx context.Context, c *client.Client, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
+func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {

@@ -1,4 +1,4 @@
-v 11.0.0-rc1 (2018-06-13)
+v 11.0.0 (2018-06-22)
 - Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
 - Add --paused option to register command !896
 - Start rename of "metrics server" config !838
