@@ -500,9 +500,9 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptIn
 			info.Build.Token,
 			"--id",
 			strconv.Itoa(info.Build.ID),
-			"--format",
+			"--artifact-format",
 			string(artifacts.Format),
-			"--type",
+			"--artifact-type",
 			artifacts.Type,
 		}
 
@@ -528,6 +528,14 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptIn
 
 		if artifacts.ExpireIn != "" {
 			args = append(args, "--expire-in", artifacts.ExpireIn)
+		}
+
+		if artifacts.Format != "" {
+			args = append(args, "--artifact-format", string(artifacts.Format))
+		}
+
+		if artifacts.Type != "" {
+			args = append(args, "--artifact-type", artifacts.Type)
 		}
 
 		b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {

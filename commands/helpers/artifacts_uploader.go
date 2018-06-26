@@ -25,8 +25,8 @@ type ArtifactsUploaderCommand struct {
 
 	Name     string                `long:"name" description:"The name of the archive"`
 	ExpireIn string                `long:"expire-in" description:"When to expire artifacts"`
-	Format   common.ArtifactFormat `long:"format" description:"Format of generated artifacts"`
-	Type     string                `long:"type" description:"Type of generated artifacts"`
+	Format   common.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
+	Type     string                `long:"artifact-type" description:"Type of generated artifacts"`
 }
 
 func (c *ArtifactsUploaderCommand) generateZipArchive(w *io.PipeWriter) {
@@ -49,6 +49,11 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 		}
 		if len(c.files) > 1 {
 			return "", nil, errors.New("raw format accepts only single file to upload")
+		}
+
+		for k := range c.files {
+			artifactsName = k
+			break
 		}
 
 		file, err := os.Open(c.sortedFiles()[0])

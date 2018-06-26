@@ -203,8 +203,8 @@ type Artifact struct {
 	Untracked bool           `json:"untracked"`
 	Paths     ArtifactPaths  `json:"paths"`
 	When      ArtifactWhen   `json:"when"`
-	Type      string         `json:"type"`
-	Format    ArtifactFormat `json:"format"`
+	Type      string         `json:"artifact_type"`
+	Format    ArtifactFormat `json:"artifact_format"`
 	ExpireIn  string         `json:"expire_in"`
 }
 

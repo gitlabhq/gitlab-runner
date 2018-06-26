@@ -414,10 +414,10 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 		query.Set("expire_in", options.ExpireIn)
 	}
 	if options.Format != "" {
-		query.Set("format", string(options.Format))
+		query.Set("artifact_format", string(options.Format))
 	}
 	if options.Type != "" {
-		query.Set("type", options.Type)
+		query.Set("artifact_type", options.Type)
 	}
 
 	headers := make(http.Header)
