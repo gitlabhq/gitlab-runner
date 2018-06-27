@@ -62,16 +62,14 @@ prepare alpine-no-root image:
 # Prebuild stage
 #
 
-bindata:
+helper images:
   <<: *docker
   stage: prebuild
   script:
   - make docker
   artifacts:
     paths:
-    - out/docker/prebuilt-x86_64.tar.xz
-    - out/docker/prebuilt-arm.tar.xz
-    - executors/docker/bindata.go
+    - out/helper-images/
     - .gopath/bin
     - .gopath/.ok
     expire_in: 7d
@@ -265,10 +263,6 @@ binaries windows/386 windows/amd64: *binaries
   <<: *except_docs
   stage: package
   script:
-  - mkdir -p out/docker
-  - touch out/docker/prebuilt-x86_64.tar.xz
-  - touch out/docker/prebuilt-arm.tar.xz
-  - touch executors/docker/bindata.go
   - source ci/touch_make_dependencies
   - make ${CI_JOB_NAME}
   artifacts:

@@ -4,11 +4,10 @@ config.toml
 out
 builds/
 commands/helpers/archive.zip
-executors/docker/bindata.go
 dockerfiles/checksums
 dockerfiles/alpine/gitlab-runner-linux-amd64
 dockerfiles/alpine/checksums
-dockerfiles/build/gitlab-runner-helper
+dockerfiles/build/binaries/gitlab-runner-helper.*
 dockerfiles/ubuntu/gitlab-runner_amd64.deb
 dockerfiles/ubuntu/checksums
 .idea/

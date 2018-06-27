@@ -5,5 +5,5 @@ RUN apk add --no-cache bash ca-certificates git git-lfs miniperl \
 
 RUN git lfs install
 
-COPY ./ /usr/bin
-
+COPY ./scripts/ /usr/bin
+COPY ./binaries/gitlab-runner-helper.x86_64 /usr/bin/gitlab-runner-helper
