@@ -1,11 +1,13 @@
 package helpers
 
 import (
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -34,6 +36,34 @@ func (c *ArtifactsUploaderCommand) generateZipArchive(w *io.PipeWriter) {
 	w.CloseWithError(err)
 }
 
+func (c *ArtifactsUploaderCommand) writeGzipFile(w *io.PipeWriter, fileInfo os.FileInfo) error {
+	gz := gzip.NewWriter(w)
+	gz.Header.Name = filepath.Base(fileInfo.Name())
+	gz.Header.Comment = fileInfo.Name()
+	gz.Header.ModTime = fileInfo.ModTime()
+	defer gz.Close()
+
+	file, err := os.Open(fileInfo.Name())
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(gz, file)
+	return err
+}
+
+func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
+	var err error
+	for _, fileInfo := range c.files {
+		err = c.writeGzipFile(w, fileInfo)
+		if err != nil {
+			break
+		}
+	}
+	w.CloseWithError(err)
+}
+
 func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, error) {
 	artifactsName := path.Base(c.Name)
 
@@ -43,12 +73,9 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 		go c.generateZipArchive(pw)
 		return artifactsName + ".zip", pr, nil
 
-	case common.ArtifactFormatRaw:
+	case common.ArtifactFormatGzip:
 		if len(c.files) == 0 {
 			return "", nil, errors.New("no file to upload")
-		}
-		if len(c.files) > 1 {
-			return "", nil, errors.New("raw format accepts only single file to upload")
 		}
 
 		for k := range c.files {
@@ -56,8 +83,9 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 			break
 		}
 
-		file, err := os.Open(c.sortedFiles()[0])
-		return artifactsName, file, err
+		pr, pw := io.Pipe()
+		go c.generateGzipStream(pw)
+		return artifactsName + ".gz", pr, nil
 
 	default:
 		return "", nil, fmt.Errorf("unsupported archive format: %s", c.Format)
