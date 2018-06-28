@@ -116,7 +116,7 @@ build_simple: $(GOPATH_SETUP)
 		-o "out/binaries/$(NAME)" \
 		$(PKG)
 
-build_current: build_simple
+build_current: docker build_simple
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
