@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -20,7 +21,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/kardianos/osext"
 	"github.com/mattn/go-zglob"
+	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -38,6 +41,8 @@ const (
 	DockerExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
 	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 )
+
+var DockerPrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
@@ -59,6 +64,18 @@ type executor struct {
 
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
+}
+
+func init() {
+	runnerFolder, err := osext.ExecutableFolder()
+	if err != nil {
+		logrus.Errorln("Docker executor: unable to detect gitlab-runner folder, prebuilt image helpers will be loaded from DockerHub.", err)
+	}
+
+	DockerPrebuiltImagesPaths = []string{
+		filepath.Join(runnerFolder, "helper-images"),
+		filepath.Join(runnerFolder, "out/helper-images"),
+	}
 }
 
 func (e *executor) getServiceVariables() []string {
@@ -237,6 +254,38 @@ func (e *executor) getArchitecture() string {
 	}
 }
 
+func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect, error) {
+	file, err := os.OpenFile(path, os.O_RDONLY, 0600)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("Cannot load prebuilt image: %s: %q", path, err.Error())
+	}
+	defer file.Close()
+
+	e.Debugln("Loading prebuilt image...")
+
+	source := types.ImageImportSource{
+		Source:     file,
+		SourceName: "-",
+	}
+	options := types.ImageImportOptions{Tag: tag}
+
+	if err := e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
+		return nil, fmt.Errorf("Failed to import image: %s", err)
+	}
+
+	image, _, err := e.client.ImageInspectWithRaw(e.Context, ref+":"+tag)
+	if err != nil {
+		e.Debugln("Inspecting imported image", ref, "failed:", err)
+		return nil, err
+	}
+
+	return &image, err
+}
+
 func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	if imageNameFromConfig := e.Config.Docker.HelperImage; imageNameFromConfig != "" {
 		e.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
@@ -248,40 +297,35 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		return nil, errors.New("unsupported docker architecture")
 	}
 
-	imageName := prebuiltImageName + ":" + architecture + "-" + common.REVISION
+	revision := "latest"
+	if common.REVISION != "HEAD" {
+		revision = common.REVISION
+	}
+
+	// Try to find already loaded prebuilt image
+	tag := fmt.Sprintf("%s-%s", architecture, revision)
+	imageName := fmt.Sprintf("%s:%s", prebuiltImageName, tag)
 	e.Debugln("Looking for prebuilt image", imageName, "...")
 	image, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
 	if err == nil {
 		return &image, nil
 	}
 
-	data, err := Asset("prebuilt-" + architecture + prebuiltImageExtension)
-	if err != nil {
-		return nil, fmt.Errorf("Unsupported architecture: %s: %q", architecture, err.Error())
+	// Try to load prebuilt image from local filesystem
+	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
+		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
+		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
+		if err != nil {
+			e.Debugln("Failed to load prebuilt image from:", dockerPrebuiltImageFilePath, "error:", err)
+			continue
+		}
+
+		return image, err
 	}
 
-	e.Debugln("Loading prebuilt image...")
-
-	ref := prebuiltImageName
-	source := types.ImageImportSource{
-		Source:     bytes.NewBuffer(data),
-		SourceName: "-",
-	}
-	options := types.ImageImportOptions{
-		Tag: architecture + "-" + common.REVISION,
-	}
-
-	if err := e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
-		return nil, fmt.Errorf("Failed to import image: %s", err)
-	}
-
-	image, _, err = e.client.ImageInspectWithRaw(e.Context, imageName)
-	if err != nil {
-		e.Debugln("Inspecting imported image", imageName, "failed:", err)
-		return nil, err
-	}
-
-	return &image, err
+	// Fallback to getting image from DockerHub
+	e.Debugln("Loading image from registry:", imageName)
+	return e.getDockerImage(imageName)
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {
@@ -629,7 +673,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	serviceSlug := strings.Replace(service, "/", "__", -1)
 	containerName := fmt.Sprintf("%s-%s-%d", e.Build.ProjectUniqueName(), serviceSlug, serviceIndex)
 
-	// this will fail potentially some builds if there'e name collision
+	// this will fail potentially some builds if there's name collision
 	e.removeContainer(e.Context, containerName)
 
 	config := &container.Config{
@@ -871,7 +915,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		Sysctls: e.Config.Docker.SysCtls,
 	}
 
-	// this will fail potentially some builds if there'e name collision
+	// this will fail potentially some builds if there's name collision
 	e.removeContainer(e.Context, containerName)
 
 	e.Debugln("Creating container", containerName, "...")
@@ -1072,7 +1116,7 @@ func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []
 		return nil
 	}
 
-	e.Println("Please check runner'e configuration: http://doc.gitlab.com/ci/docker/using_docker_images.html#overwrite-image-and-services")
+	e.Println("Please check runner's configuration: http://doc.gitlab.com/ci/docker/using_docker_images.html#overwrite-image-and-services")
 	return errors.New("invalid image")
 }
 

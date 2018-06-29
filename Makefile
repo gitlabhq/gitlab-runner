@@ -57,15 +57,16 @@ export CGO_ENABLED ?= 0
 
 # Development Tools
 GOX = $(GOPATH_BIN)/gox
-GOBINDATA = $(GOPATH_BIN)/go-bindata
 MOCKERY = $(GOPATH_BIN)/mockery
-DEVELOPMENT_TOOLS = $(GOX) $(GOBINDATA) $(MOCKERY)
+DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
 
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
 
 .PHONY: clean version mocks
 
-all: deps build
+all: deps docker build
+
+include Makefile.docker.mk
 
 help:
 	# Commands:
@@ -101,78 +102,7 @@ deps: $(DEVELOPMENT_TOOLS)
 codequality:
 	./scripts/codequality analyze --dev
 
-out/docker/prebuilt-x86_64.tar.xz: $(GO_FILES) $(GOX)
-	# Create directory
-	mkdir -p out/docker
-
-ifneq (, $(shell docker info))
-	# Building gitlab-runner-helper
-	gox -osarch=linux/amd64 \
-		-ldflags "$(GO_LDFLAGS)" \
-		-output="dockerfiles/build/gitlab-runner-helper" \
-		$(PKG)/apps/gitlab-runner-helper
-
-	# Build docker images
-	docker build -t gitlab/gitlab-runner-helper:x86_64-$(REVISION) -f dockerfiles/build/Dockerfile.x86_64 dockerfiles/build
-	-docker rm -f gitlab-runner-prebuilt-x86_64-$(REVISION)
-	docker create --name=gitlab-runner-prebuilt-x86_64-$(REVISION) gitlab/gitlab-runner-helper:x86_64-$(REVISION) /bin/sh
-	docker export -o out/docker/prebuilt-x86_64.tar gitlab-runner-prebuilt-x86_64-$(REVISION)
-	docker rm -f gitlab-runner-prebuilt-x86_64-$(REVISION)
-	xz -f -9 out/docker/prebuilt-x86_64.tar
-else
-	$(warning =============================================)
-	$(warning WARNING: downloading prebuilt docker images that will be embedded in gitlab-runner)
-	$(warning WARNING: to use images compiled from your code install Docker Engine)
-	$(warning WARNING: and remove out/docker/prebuilt-x86_64.tar.xz)
-	$(warning =============================================)
-	curl -o out/docker/prebuilt-x86_64.tar.xz \
-		https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz
-endif
-
-out/docker/prebuilt-arm.tar.xz: $(GO_FILES) $(GOX)
-	# Create directory
-	mkdir -p out/docker
-
-ifneq (, $(shell docker info))
-	# Building gitlab-runner-helper
-	gox -osarch=linux/arm \
-		-ldflags "$(GO_LDFLAGS)" \
-		-output="dockerfiles/build/gitlab-runner-helper" \
-		$(PKG)/apps/gitlab-runner-helper
-
-	# Build docker images
-	docker build -t gitlab/gitlab-runner-helper:arm-$(REVISION) -f dockerfiles/build/Dockerfile.arm dockerfiles/build
-	-docker rm -f gitlab-runner-prebuilt-arm-$(REVISION)
-	docker create --name=gitlab-runner-prebuilt-arm-$(REVISION) gitlab/gitlab-runner-helper:arm-$(REVISION) /bin/sh
-	docker export -o out/docker/prebuilt-arm.tar gitlab-runner-prebuilt-arm-$(REVISION)
-	docker rm -f gitlab-runner-prebuilt-arm-$(REVISION)
-	xz -f -9 out/docker/prebuilt-arm.tar
-else
-	$(warning =============================================)
-	$(warning WARNING: downloading prebuilt docker images that will be embedded in gitlab-runner)
-	$(warning WARNING: to use images compiled from your code install Docker Engine)
-	$(warning WARNING: and remove out/docker/prebuilt-arm.tar.xz)
-	$(warning =============================================)
-	curl -o out/docker/prebuilt-arm.tar.xz \
-		https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz
-endif
-
-executors/docker/bindata.go: out/docker/prebuilt-x86_64.tar.xz out/docker/prebuilt-arm.tar.xz $(GOBINDATA)
-	# Generating embedded data
-	go-bindata \
-		-pkg docker \
-		-nocompress \
-		-nomemcopy \
-		-nometadata \
-		-prefix out/docker/ \
-		-o executors/docker/bindata.go \
-		out/docker/prebuilt-x86_64.tar.xz \
-		out/docker/prebuilt-arm.tar.xz
-	go fmt executors/docker/bindata.go
-
-docker: executors/docker/bindata.go
-
-build: executors/docker/bindata.go $(GOX)
+build: $(GOX)
 	# Building $(NAME) in version $(VERSION) for $(BUILD_PLATFORMS)
 	gox $(BUILD_PLATFORMS) \
 		-ldflags "$(GO_LDFLAGS)" \
@@ -186,16 +116,16 @@ build_simple: $(GOPATH_SETUP)
 		-o "out/binaries/$(NAME)" \
 		$(PKG)
 
-build_current: executors/docker/bindata.go build_simple
+build_current: docker build_simple
 
-check_race_conditions: executors/docker/bindata.go
+check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
-test: executors/docker/bindata.go
+test: $(PKG_BUILD_DIR) docker
 	# Running tests...
 	go test $(OUR_PACKAGES) $(TESTFLAGS)
 
-install: executors/docker/bindata.go
+install:
 	go install --ldflags="$(GO_LDFLAGS)" $(PKG)
 
 dockerfiles:
@@ -237,7 +167,7 @@ package: package-deps package-prepare package-deb package-rpm
 
 package-deps:
 	# Installing packaging dependencies...
-	gem install rake fpm --no-ri --no-rdoc
+	which fpm 1>/dev/null || gem install rake fpm --no-ri --no-rdoc
 
 package-prepare:
 	chmod 755 packaging/root/usr/share/gitlab-runner/
@@ -283,7 +213,8 @@ package-deb-fpm:
 		--deb-suggests docker-engine \
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-runner
+		out/binaries/$(NAME)-linux-$(ARCH)=/usr/lib/gitlab-runner/gitlab-runner \
+		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
 
 package-rpm-fpm:
 	@mkdir -p out/rpm/
@@ -308,7 +239,8 @@ package-rpm-fpm:
 		--depends tar \
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/bin/gitlab-runner
+		out/binaries/$(NAME)-linux-$(ARCH)=/usr/lib/gitlab-runner/gitlab-runner \
+		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
 
 packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
 
@@ -365,12 +297,11 @@ release_s3: prepare_windows_zip prepare_zoneinfo prepare_index
 	# Releasing to S3
 	@./ci/release_s3
 
-prepare_windows_zip:
-	# Prepare ZIP archives for Windows *.exe files
-	@cd out/binaries/; \
-	for file in $$(find * -type f -name "*windows*.exe" | sed 's/.exe$$//'); do \
-		zip $${file}.zip $${file}.exe; \
-	done
+out/binaries/gitlab-runner-windows-%.zip: out/binaries/gitlab-runner-windows-%.exe
+	zip --junk-paths $@ $<
+	cd out/ && zip -r ../$@ helper-images
+
+prepare_windows_zip: out/binaries/gitlab-runner-windows-386.zip out/binaries/gitlab-runner-windows-amd64.zip
 
 prepare_zoneinfo:
 	# preparing the zoneinfo file
@@ -422,13 +353,9 @@ $(PKG_BUILD_DIR):
 $(GOX): $(GOPATH_SETUP)
 	go get github.com/mitchellh/gox
 
-$(GOBINDATA): $(GOPATH_SETUP)
-	go get github.com/jteeuwen/go-bindata/...
-
 $(MOCKERY): $(GOPATH_SETUP)
 	go get github.com/vektra/mockery/.../
 
 clean:
 	-$(RM) -rf $(LOCAL_GOPATH)
-	-$(RM) executors/docker/bindata.go
 	-$(RM) -rf $(TARGET_DIR)

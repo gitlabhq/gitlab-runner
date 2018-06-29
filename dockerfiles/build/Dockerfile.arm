@@ -3,4 +3,5 @@ FROM multiarch/alpine:armhf-v3.7
 RUN apk add --update bash ca-certificates git miniperl \
 	&& ln -s miniperl /usr/bin/perl
 
-COPY ./ /usr/bin
+COPY ./scripts/ /usr/bin
+COPY ./binaries/gitlab-runner-helper.arm /usr/bin/gitlab-runner-helper
