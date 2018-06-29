@@ -147,6 +147,8 @@ func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
 	b.CurrentStage = buildStage
 
+	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
+
 	shell := executor.Shell()
 	if shell == nil {
 		return errors.New("No shell defined")
