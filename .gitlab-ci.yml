@@ -11,6 +11,9 @@ variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0
   GOROOT: /usr/local/go
 
+before_script:
+  - unset GPG_KEY
+
 image: $CI_IMAGE
 
 # Skip all jobs except the ones that begin and end with 'docs'.
@@ -91,6 +94,7 @@ clone test repo:
 .review-docs: &review-docs
   image: ruby:2.4-alpine
   before_script:
+    - unset GPG_KEY
     - gem install gitlab --no-doc
     # We need to download the script rather than clone the repo since the
     # review-docs-cleanup job will not be able to run when the branch gets
@@ -176,7 +180,8 @@ docs check links:
   stage: test
   cache: {}
   dependencies: []
-  before_script: []
+  before_script:
+    - unset GPG_KEY
   script:
     - mv docs/ /nanoc/content/
     - cd /nanoc
@@ -225,6 +230,7 @@ git 1.7.1:
     CGO_ENABLED: 0
     OUR_PACKAGES: gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
   before_script:
+    - unset GPG_KEY
     - yum install -y -q git && git version
     - curl https://storage.googleapis.com/golang/go1.8.7.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
     - export PATH=${GOROOT}/bin:$PATH
@@ -262,6 +268,16 @@ binaries windows/386 windows/amd64: *binaries
 .packages: &packages
   <<: *except_docs
   stage: package
+  before_script:
+  - |
+    # checking GPG signing support
+    if [ -n "$GPG_KEY" ]; then
+      echo "$GPG_KEY" | gpg --batch --no-tty --allow-secret-key-import --import -
+      unset GPG_KEY
+      export GPG_KEYID=$(gpg --with-colon --list-secret-keys | head -n1 | cut -d : -f 5)
+    else
+      echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
+    fi
   script:
   - source ci/touch_make_dependencies
   - make ${CI_JOB_NAME}
@@ -301,6 +317,7 @@ package-rpm: *packages
   <<: *except_docs
   stage: release
   before_script:
+  - unset GPG_KEY
   - source ci/touch_make_dependencies
   tags:
   - release
