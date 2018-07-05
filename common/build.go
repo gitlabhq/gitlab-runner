@@ -48,14 +48,15 @@ const (
 type BuildStage string
 
 const (
-	BuildStagePrepare           BuildStage = "prepare_script"
-	BuildStageGetSources        BuildStage = "get_sources"
-	BuildStageRestoreCache      BuildStage = "restore_cache"
-	BuildStageDownloadArtifacts BuildStage = "download_artifacts"
-	BuildStageUserScript        BuildStage = "build_script"
-	BuildStageAfterScript       BuildStage = "after_script"
-	BuildStageArchiveCache      BuildStage = "archive_cache"
-	BuildStageUploadArtifacts   BuildStage = "upload_artifacts"
+	BuildStagePrepare                  BuildStage = "prepare_script"
+	BuildStageGetSources               BuildStage = "get_sources"
+	BuildStageRestoreCache             BuildStage = "restore_cache"
+	BuildStageDownloadArtifacts        BuildStage = "download_artifacts"
+	BuildStageUserScript               BuildStage = "build_script"
+	BuildStageAfterScript              BuildStage = "after_script"
+	BuildStageArchiveCache             BuildStage = "archive_cache"
+	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
+	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
 )
 
 type Build struct {
@@ -182,18 +183,11 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 }
 
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
-	var uploadError error
-
-	for _, artifact := range b.JobResponse.Artifacts {
-		if artifact.ShouldUpload(state) {
-			uploadError = b.executeStage(ctx, BuildStageUploadArtifacts, executor)
-		}
-		if uploadError != nil {
-			err = uploadError
-		}
+	if state == nil {
+		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts, executor)
+	} else {
+		return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor)
 	}
-
-	return
 }
 
 func (b *Build) executeScript(ctx context.Context, executor Executor) error {

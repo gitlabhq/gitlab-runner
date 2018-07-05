@@ -486,12 +486,16 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 	return nil
 }
 
-func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo) {
+func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) {
 	if info.Build.Runner.URL == "" {
 		return
 	}
 
 	for _, artifacts := range info.Build.Artifacts {
+		if artifacts.When.OnSuccess() != onSuccess {
+			continue
+		}
+
 		args := []string{
 			"artifacts-uploader",
 			"--url",
@@ -578,25 +582,35 @@ func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.Shell
 	return b.cacheArchiver(w, info)
 }
 
-func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
 	// Upload artifacts
-	b.uploadArtifacts(w, info)
+	b.uploadArtifacts(w, info, true)
+	return
+}
+
+func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+
+	// Upload artifacts
+	b.uploadArtifacts(w, info, false)
 	return
 }
 
 func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {
 	methods := map[common.BuildStage]func(ShellWriter, common.ShellScriptInfo) error{
-		common.BuildStagePrepare:           b.writePrepareScript,
-		common.BuildStageGetSources:        b.writeGetSourcesScript,
-		common.BuildStageRestoreCache:      b.writeRestoreCacheScript,
-		common.BuildStageDownloadArtifacts: b.writeDownloadArtifactsScript,
-		common.BuildStageUserScript:        b.writeUserScript,
-		common.BuildStageAfterScript:       b.writeAfterScript,
-		common.BuildStageArchiveCache:      b.writeArchiveCacheScript,
-		common.BuildStageUploadArtifacts:   b.writeUploadArtifactsScript,
+		common.BuildStagePrepare:                  b.writePrepareScript,
+		common.BuildStageGetSources:               b.writeGetSourcesScript,
+		common.BuildStageRestoreCache:             b.writeRestoreCacheScript,
+		common.BuildStageDownloadArtifacts:        b.writeDownloadArtifactsScript,
+		common.BuildStageUserScript:               b.writeUserScript,
+		common.BuildStageAfterScript:              b.writeAfterScript,
+		common.BuildStageArchiveCache:             b.writeArchiveCacheScript,
+		common.BuildStageUploadOnSuccessArtifacts: b.writeUploadArtifactsOnSuccessScript,
+		common.BuildStageUploadOnFailureArtifacts: b.writeUploadArtifactsOnFailureScript,
 	}
 
 	fn := methods[buildStage]

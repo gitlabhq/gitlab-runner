@@ -208,10 +208,6 @@ type Artifact struct {
 	ExpireIn  string         `json:"expire_in"`
 }
 
-func (a Artifact) ShouldUpload(state error) bool {
-	return (state == nil && a.When.OnSuccess()) || (state != nil && a.When.OnFailure())
-}
-
 type Artifacts []Artifact
 
 type Cache struct {
