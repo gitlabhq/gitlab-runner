@@ -65,27 +65,20 @@ func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
 }
 
 func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, error) {
-	artifactsName := path.Base(c.Name)
-
 	switch c.Format {
 	case common.ArtifactFormatZip, "":
 		pr, pw := io.Pipe()
 		go c.generateZipArchive(pw)
-		return artifactsName + ".zip", pr, nil
+		return path.Base(c.Name) + ".zip", pr, nil
 
 	case common.ArtifactFormatGzip:
 		if len(c.files) == 0 {
 			return "", nil, errors.New("no file to upload")
 		}
 
-		for k := range c.files {
-			artifactsName = k
-			break
-		}
-
 		pr, pw := io.Pipe()
 		go c.generateGzipStream(pw)
-		return artifactsName + ".gz", pr, nil
+		return c.Name + ".gz", pr, nil
 
 	default:
 		return "", nil, fmt.Errorf("unsupported archive format: %s", c.Format)

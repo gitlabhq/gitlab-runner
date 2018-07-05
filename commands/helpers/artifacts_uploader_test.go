@@ -6,9 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"io/ioutil"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"io/ioutil"
 )
 
 var UploaderCredentials = common.JobCredentials{
