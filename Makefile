@@ -215,7 +215,7 @@ package-deb-fpm:
 		packaging/root/=/ \
 		out/binaries/$(NAME)-linux-$(ARCH)=/usr/lib/gitlab-runner/gitlab-runner \
 		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
-	@if [ ! -z "$(GPG_PASSPHRASE)" ]; then \
+	@if [ -n "$(GPG_KEYID)" ]; then \
 		dpkg-sig -g "--no-tty --digest-algo 'sha512' --passphrase '$(GPG_PASSPHRASE)'" \
 			-k $(GPG_KEYID) --sign builder "out/deb/$(PACKAGE_NAME)_$(PACKAGE_ARCH).deb" ;\
 	fi
@@ -245,7 +245,7 @@ package-rpm-fpm:
 		packaging/root/=/ \
 		out/binaries/$(NAME)-linux-$(ARCH)=/usr/lib/gitlab-runner/gitlab-runner \
 		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
-	@if [ ! -z "$(GPG_PASSPHRASE)" ] ; then \
+	@if [ -n "$(GPG_KEYID)" ] ; then \
 		echo "yes" | setsid rpm \
 			--define "_gpg_name $(GPG_KEYID)" \
 			--define "_signature gpg" \
