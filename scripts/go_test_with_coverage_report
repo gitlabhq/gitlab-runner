@@ -19,7 +19,7 @@ if [[ ${TESTFLAGS} = *"-race"* ]]; then
 fi
 
 printMessage() {
-  echo -e "\033[1m${@}\033[0m"
+  echo -e "\\033[1m${*}\\033[0m"
 }
 
 joinBy() {
@@ -29,26 +29,30 @@ joinBy() {
 }
 
 prepareTestCommands() {
+    local definitions
+
     [[ ! -f ${testsDefinitions} ]] || rm ${testsDefinitions}
 
     for pkg in ${OUR_PACKAGES}; do
-        testIndex=0
-        runTests=()
+        local testIndex=0
+        local runTests=()
 
-        tests=$(go test -list "Test.*" ${pkg} | grep "^Test" || echo "")
+        local tests
+        tests=$(go test -list "Test.*" "${pkg}" | grep "^Test" || echo "")
 
         if [[ -z "${tests}" ]]; then
             continue
         fi
 
-        counter=0
+        local counter=0
         for test in ${tests}; do
             counter=$((counter+1))
             runTests+=("${test}")
 
             if [[ ${counter} -ge ${PARALLEL_TESTS_LIMIT} ]]; then
                 if [[ ${#runTests[@]} -gt 0 ]]; then
-                    echo ${pkg} ${testIndex} $(joinBy "|" "${runTests[@]}") | tee -a ${testsDefinitions}
+                    definitions=$(joinBy "|" "${runTests[@]}")
+                    echo "${pkg} ${testIndex} ${definitions}" | tee -a ${testsDefinitions}
                 fi
 
                 counter=0
@@ -59,7 +63,8 @@ prepareTestCommands() {
         done
 
         if [[ ${#runTests[@]} -gt 0 ]]; then
-            echo ${pkg} ${testIndex} $(joinBy "|" "${runTests[@]}") | tee -a ${testsDefinitions}
+            definitions=$(joinBy "|" "${runTests[@]}")
+            echo "${pkg} ${testIndex} ${definitions}" | tee -a ${testsDefinitions}
         fi
     done
 }
@@ -67,17 +72,18 @@ prepareTestCommands() {
 executeTestCommand() {
     local pkg=${1}
     local index=${2}
-    local runTests=${3}
+    local runTestsList=${3}
 
     local options=""
 
-    local pkgSlug=$(echo ${pkg} | tr "/" "-")
+    local pkgSlug
+    pkgSlug=$(echo "${pkg}" | tr "/" "-")
 
     if [[ ${TESTFLAGS} = *"-cover"* ]]; then
         mkdir -p ".cover"
         mkdir -p ".testoutput"
 
-        printMessage "\n\n--- Starting part ${index} of go tests of '${pkg}' package with coverprofile in '${coverMode}' mode:\n"
+        printMessage "\\n\\n--- Starting part ${index} of go tests of '${pkg}' package with coverprofile in '${coverMode}' mode:\\n"
 
         profileFile=".cover/${pkgSlug}.${index}.${coverMode}.cover.txt"
         options="-covermode=${coverMode} -coverprofile=${profileFile}"
@@ -88,7 +94,8 @@ executeTestCommand() {
     testOutputFile=".testoutput/${pkgSlug}.${index}.${output}.output.txt"
 
     exitCode=0
-    go test ${options} ${TESTFLAGS} -v ${pkg} -run "${runTests}" 2>&1 | tee ${testOutputFile} || exitCode=1
+    # shellcheck disable=SC2086
+    go test ${options} ${TESTFLAGS} -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=1
 
     return $exitCode
 }
@@ -97,7 +104,7 @@ executeTestPart() {
     rm -rf ".cover/"
     rm -rf ".testoutput/"
 
-    numberOfDefinitions=$(cat ${testsDefinitions} | wc -l)
+    numberOfDefinitions=$(< "${testsDefinitions}" wc -l)
     executionSize=$((numberOfDefinitions/SUITE_TOTAL+1))
     executionOffset=$((SUITE_INDEX*executionSize+1))
 
@@ -109,9 +116,9 @@ executeTestPart() {
     printMessage "Execution offset: ${executionOffset}"
 
     exitCode=0
-    tail -n +${executionOffset} ${testsDefinitions} | head -n ${executionSize} | while read pkg index tests; do
-        executeTestCommand ${pkg} ${index} ${tests} || exitCode=1
-    done
+    while read -r pkg index tests; do
+        executeTestCommand "${pkg}" "${index}" "${tests}" || exitCode=1
+    done < <(tail -n +${executionOffset} ${testsDefinitions} | head -n ${executionSize})
 
     exit $exitCode
 }
