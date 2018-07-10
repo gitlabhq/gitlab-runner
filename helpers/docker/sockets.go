@@ -8,13 +8,12 @@ import (
 	"github.com/docker/go-connections/sockets"
 )
 
-// Why 32? See https://github.com/docker/docker/pull/8035.
-const defaultTimeout = 32 * time.Second
+const defaultTimeout = 300 * time.Second
 const defaultKeepAlive = 10 * time.Second
-const defaultTLSHandshakeTimeout = 10 * time.Second
-const defaultResponseHeaderTimeout = 30 * time.Second
-const defaultExpectContinueTimeout = 30 * time.Second
-const defaultIdleConnTimeout = time.Minute
+const defaultTLSHandshakeTimeout = 60 * time.Second
+const defaultResponseHeaderTimeout = 120 * time.Second
+const defaultExpectContinueTimeout = 120 * time.Second
+const defaultIdleConnTimeout = 10 * time.Second
 
 // configureTransport configures the specified Transport according to the
 // specified proto and addr.
