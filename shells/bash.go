@@ -85,6 +85,10 @@ func (b *BashWriter) TmpFile(name string) string {
 	return b.Absolute(path.Join(b.TemporaryPath, name))
 }
 
+func (b *BashWriter) EnvVariableKey(name string) string {
+	return fmt.Sprintf("$%s", name)
+}
+
 func (b *BashWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)

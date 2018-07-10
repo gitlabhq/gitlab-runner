@@ -9,7 +9,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
-	"gitlab.com/gitlab-org/gitlab-runner/shells/mocks"
 )
 
 func TestWriteGitSSLConfig(t *testing.T) {
@@ -30,14 +29,14 @@ func TestWriteGitSSLConfig(t *testing.T) {
 		},
 	}
 
-	mockWriter := new(mocks.ShellWriter)
-	mockWriter.On("TmpFile", tls.VariableCAFile).Return(tls.VariableCAFile).Once()
-	mockWriter.On("TmpFile", tls.VariableCertFile).Return(tls.VariableCertFile).Once()
-	mockWriter.On("TmpFile", tls.VariableKeyFile).Return(tls.VariableKeyFile).Once()
+	mockWriter := new(MockShellWriter)
+	mockWriter.On("EnvVariableKey", tls.VariableCAFile).Return("VariableCAFile").Once()
+	mockWriter.On("EnvVariableKey", tls.VariableCertFile).Return("VariableCertFile").Once()
+	mockWriter.On("EnvVariableKey", tls.VariableKeyFile).Return("VariableKeyFile").Once()
 
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCAInfo"), tls.VariableCAFile).Once()
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"), tls.VariableCertFile).Once()
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"), tls.VariableKeyFile).Once()
+	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCAInfo"), "VariableCAFile").Once()
+	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"), "VariableCertFile").Once()
+	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"), "VariableKeyFile").Once()
 
 	shell.writeGitSSLConfig(mockWriter, build, nil)
 
@@ -97,7 +96,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		Build:         build,
 	}
 
-	mockWriter := new(mocks.ShellWriter)
+	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything)
@@ -157,7 +156,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		Build:         build,
 	}
 
-	mockWriter := new(mocks.ShellWriter)
+	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything)
