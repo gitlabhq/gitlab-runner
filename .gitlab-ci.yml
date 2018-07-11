@@ -151,6 +151,8 @@ tests definitions:
     paths:
     - testsdefinitions.txt
     expire_in: 7d
+  tags:
+  - gitlab-org
 
 #
 # Test stage
