@@ -848,15 +848,16 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{
-		PullPolicy: common.PullPolicyAlways,
+		PullPolicy: common.PullPolicyIfNotPresent,
 	}
 
-	e.Trace = &common.Trace{Writer: os.Stdout}
+	output := bytes.NewBufferString("")
+	e.Trace = &common.Trace{Writer: output}
 
 	err := e.connectDocker()
 	assert.NoError(t, err)
 
-	container, err := e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	container, err := e.createContainer("build", common.Image{Name: common.TestAlpineImage}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err)
 	assert.NotNil(t, container)
 
@@ -868,13 +869,13 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	go func() {
 		err = e.watchContainer(e.Context, container.ID, input)
 		assert.NoError(t, err)
-		t.Log(err)
 		finished <- true
 		wg.Done()
 	}()
 
 	select {
 	case <-finished:
+		assert.Equal(t, "script\n", output.String())
 	case <-time.After(15 * time.Second):
 		t.Error("Container script not finished")
 	}

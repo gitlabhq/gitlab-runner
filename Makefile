@@ -129,13 +129,17 @@ parallel_test_prepare: $(GOPATH_SETUP)
 	# Preparing test commands
 	@./scripts/go_test_with_coverage_report prepare
 
-parallel_test_execute: $(GOPATH_SETUP)
+parallel_test_execute: $(GOPATH_SETUP) pull_images_for_tests
 	# executing tests
 	@./scripts/go_test_with_coverage_report execute
 
 parallel_test_coverage_report: $(GOPATH_SETUP)
 	# Preparing coverage report
 	@./scripts/go_test_with_coverage_report coverage
+
+pull_images_for_tests: $(GOPATH_SETUP)
+	# Pulling images required for some tests
+	@go run ./scripts/pull-images-for-tests/main.go
 
 install:
 	go install --ldflags="$(GO_LDFLAGS)" $(PKG)

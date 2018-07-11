@@ -181,9 +181,6 @@ code_quality:
     - export SUITE_INDEX=${JOB_NAME[-2]}
     - export SUITE_TOTAL=${JOB_NAME[-1]}
     - source ci/touch_make_dependencies
-    - docker pull alpine
-    - docker pull docker:dind
-    - docker pull docker:git
     - make parallel_test_execute
   artifacts:
     paths:
