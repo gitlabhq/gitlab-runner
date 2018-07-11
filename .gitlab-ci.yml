@@ -307,7 +307,7 @@ race conditions detector:
     - out/binaries/
     expire_in: 7d
   tags:
-  - docker
+  - gitlab-org
 
 binaries darwin/386 darwin/amd64: *binaries
 binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
@@ -340,7 +340,7 @@ binaries windows/386 windows/amd64: *binaries
     - out/rpm/
     expire_in: 7d
   tags:
-  - docker
+  - gitlab-org
 
 package-deb: *packages
 package-rpm: *packages
