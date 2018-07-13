@@ -1,3 +1,18 @@
+v 11.1.0-rc1 (2018-06-13)
+- Unify receivers used for 'executor' struct in ./executors/docker/ !926
+- Update Release Checklist template !898
+- Cache the connectivity of live Docker Machine instances !909
+- Update kubernetes vendor to 1.10 !877
+- Upgrade helper image alpine 3.7 !917
+- Detect possible misplaced boolean on command line !932
+- Log 'metrics_server' deprecation not only when the setting is used !939
+- Speed-up ./executor/docker/executor_docker_command_test.go tests !937
+- Remove go-bindata !831
+- Fix the release of helper images script !946
+- Sign RPM and DEB packages !922
+- Improve docker timeouts !963
+- Wrap all docker errors !964
+
 v 11.0.0 (2018-06-22)
 - Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
 - Add --paused option to register command !896
