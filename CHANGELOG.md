@@ -1,3 +1,6 @@
+v 10.8.1 (2018-07-16)
+- Fix support for Unicode variable values when Windows+PowerShell are used !960
+
 v 10.8.0 (2018-05-22)
 - Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
 - Fix type in Substrakt Health company name !875
