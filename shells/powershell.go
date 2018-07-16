@@ -220,6 +220,8 @@ func (b *PsWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
 
+	// write BOM
+	io.WriteString(w, "\xef\xbb\xbf")
 	if trace {
 		io.WriteString(w, "Set-PSDebug -Trace 2\r\n")
 	}
