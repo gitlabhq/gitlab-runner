@@ -1,3 +1,6 @@
+v 10.7.3 (2018-07-16)
+- Fix support for Unicode variable values when Windows+PowerShell are used !960
+
 v 10.7.2 (2018-05-14)
 - Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
 
