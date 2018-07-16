@@ -1,3 +1,6 @@
+v 10.8.2 (2018-07-16)
+- Fix alpine:3.6 and wget problem
+
 v 10.8.1 (2018-07-16)
 - Fix support for Unicode variable values when Windows+PowerShell are used !960
 
