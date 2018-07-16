@@ -1,3 +1,6 @@
+v 11.0.1 (2018-07-16)
+- Fix support for Unicode variable values when Windows+PowerShell are used !960
+
 v 11.0.0 (2018-06-22)
 - Resolve "Invalid OffPeakPeriods value, no such file or directory." !897
 - Add --paused option to register command !896
