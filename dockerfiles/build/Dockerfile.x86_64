@@ -8,7 +8,7 @@ ARG GIT_LFS_SHA256=6ea96cf57fba70c425c470c248d0f770f86d3f3ccf5bc3ef6c46fb47c8081
 
 
 RUN cd /tmp && \
-	apk add --no-cache -t wget deps openssl && \
+	apk add --no-cache -t deps wget openssl && \
 	wget https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VER}/git-lfs-linux-amd64-${GIT_LFS_VER}.tar.gz && \
 	echo "${GIT_LFS_SHA256}  git-lfs-linux-amd64-${GIT_LFS_VER}.tar.gz" | sha256sum -cw && \
 	tar zxf git-lfs-linux-amd64-${GIT_LFS_VER}.tar.gz && \
