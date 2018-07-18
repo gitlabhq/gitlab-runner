@@ -36,26 +36,4 @@ func TestCacheCheckPolicy(t *testing.T) {
 
 		assert.Equal(t, tc.expected, result, "case %d: %s", num, tc.description)
 	}
-
-}
-
-func TestArtifact_ShouldUpload(t *testing.T) {
-	examples := []struct {
-		when     ArtifactWhen
-		stateOK  bool
-		expected bool
-	}{
-		{when: "", stateOK: true, expected: true},
-		{when: ArtifactWhenOnSuccess, stateOK: true, expected: true},
-		{when: ArtifactWhenOnFailure, stateOK: true, expected: false},
-		{when: ArtifactWhenAlways, stateOK: true, expected: true},
-		{when: "", stateOK: false, expected: false},
-		{when: ArtifactWhenOnSuccess, stateOK: false, expected: false},
-		{when: ArtifactWhenOnFailure, stateOK: false, expected: true},
-		{when: ArtifactWhenAlways, stateOK: false, expected: true},
-	}
-
-	for _, example := range examples {
-		// doTestArtifactShouldUpload(t, example.when, example.stateOK, example.expected)
-	}
 }
