@@ -50,13 +50,13 @@ const (
 )
 
 type FeaturesInfo struct {
-	Variables       bool `json:"variables"`
-	Image           bool `json:"image"`
-	Services        bool `json:"services"`
-	Artifacts       bool `json:"artifacts"`
-	Cache           bool `json:"cache"`
-	Shared          bool `json:"shared"`
-	ArtifactsFormat bool `json:"artifacts_format"`
+	Variables               bool `json:"variables"`
+	Image                   bool `json:"image"`
+	Services                bool `json:"services"`
+	Artifacts               bool `json:"artifacts"`
+	Cache                   bool `json:"cache"`
+	Shared                  bool `json:"shared"`
+	UploadMultipleArtifacts bool `json:"upload_multiple_artifacts"`
 }
 
 type RegisterRunnerParameters struct {

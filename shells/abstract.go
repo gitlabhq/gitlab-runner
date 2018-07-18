@@ -18,8 +18,8 @@ type AbstractShell struct {
 
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Artifacts = true
+	features.UploadMultipleArtifacts = true
 	features.Cache = true
-	features.ArtifactsFormat = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
