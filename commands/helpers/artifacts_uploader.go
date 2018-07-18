@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -18,6 +17,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/formatter"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
+
+const DefaultUploadName = "default"
 
 type ArtifactsUploaderCommand struct {
 	common.JobCredentials
@@ -69,16 +70,21 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 		return "", nil, nil
 	}
 
+	name := filepath.Base(c.Name)
+	if name == "" || name == "." {
+		name = DefaultUploadName
+	}
+
 	switch c.Format {
-	case common.ArtifactFormatZip, "":
+	case common.ArtifactFormatZip, common.ArtifactFormatDefault:
 		pr, pw := io.Pipe()
 		go c.generateZipArchive(pw)
-		return path.Base(c.Name) + ".zip", pr, nil
+		return name + ".zip", pr, nil
 
 	case common.ArtifactFormatGzip:
 		pr, pw := io.Pipe()
 		go c.generateGzipStream(pw)
-		return c.Name + ".gz", pr, nil
+		return name + ".gz", pr, nil
 
 	default:
 		return "", nil, fmt.Errorf("unsupported archive format: %s", c.Format)

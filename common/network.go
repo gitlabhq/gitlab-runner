@@ -194,8 +194,9 @@ func (when ArtifactWhen) OnFailure() bool {
 type ArtifactFormat string
 
 const (
-	ArtifactFormatZip  ArtifactFormat = "zip"
-	ArtifactFormatGzip ArtifactFormat = "gzip"
+	ArtifactFormatDefault ArtifactFormat = ""
+	ArtifactFormatZip     ArtifactFormat = "zip"
+	ArtifactFormatGzip    ArtifactFormat = "gzip"
 )
 
 type Artifact struct {

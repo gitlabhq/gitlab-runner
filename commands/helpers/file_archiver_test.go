@@ -18,16 +18,20 @@ const fileArchiverAbsoluteFile = "/absolute.txt"
 const fileArchiverRelativeFile = "../../../relative.txt"
 
 func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
-	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
-	defer os.Remove(fileArchiverUntrackedFile)
+	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	defer os.Remove(artifactsTestArchivedFile)
+
+	ioutil.WriteFile(artifactsTestArchivedFile2, nil, 0600)
+	defer os.Remove(artifactsTestArchivedFile2)
 
 	f := fileArchiver{
 		Untracked: true,
 	}
 	err := f.enumerate()
 	assert.NoError(t, err)
-	assert.Len(t, f.sortedFiles(), 1)
-	assert.Contains(t, f.sortedFiles(), fileArchiverUntrackedFile)
+	assert.Len(t, f.sortedFiles(), 2)
+	assert.Contains(t, f.sortedFiles(), artifactsTestArchivedFile)
+	assert.Contains(t, f.sortedFiles(), artifactsTestArchivedFile2)
 }
 
 func TestCacheArchiverAddingFile(t *testing.T) {
