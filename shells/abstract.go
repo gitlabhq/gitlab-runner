@@ -492,8 +492,14 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptIn
 	}
 
 	for _, artifacts := range info.Build.Artifacts {
-		if artifacts.When.OnSuccess() != onSuccess {
-			continue
+		if onSuccess {
+			if !artifacts.When.OnSuccess() {
+				continue
+			}
+		} else {
+			if !artifacts.When.OnFailure() {
+				continue
+			}
 		}
 
 		args := []string{
