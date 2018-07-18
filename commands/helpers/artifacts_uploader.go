@@ -65,6 +65,10 @@ func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
 }
 
 func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, error) {
+	if len(c.files) == 0 {
+		return "", nil, nil
+	}
+
 	switch c.Format {
 	case common.ArtifactFormatZip, "":
 		pr, pw := io.Pipe()
@@ -72,10 +76,6 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 		return path.Base(c.Name) + ".zip", pr, nil
 
 	case common.ArtifactFormatGzip:
-		if len(c.files) == 0 {
-			return "", nil, errors.New("no file to upload")
-		}
-
 		pr, pw := io.Pipe()
 		go c.generateGzipStream(pw)
 		return c.Name + ".gz", pr, nil
@@ -89,6 +89,10 @@ func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
 	artifactsName, stream, err := c.createReadStream()
 	if err != nil {
 		return false, err
+	}
+	if stream == nil {
+		logrus.Errorln("No files to upload")
+		return false, nil
 	}
 	defer stream.Close()
 
