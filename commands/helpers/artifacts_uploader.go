@@ -37,14 +37,14 @@ func (c *ArtifactsUploaderCommand) generateZipArchive(w *io.PipeWriter) {
 	w.CloseWithError(err)
 }
 
-func (c *ArtifactsUploaderCommand) writeGzipFile(w *io.PipeWriter, fileInfo os.FileInfo) error {
+func (c *ArtifactsUploaderCommand) writeGzipFile(w *io.PipeWriter, fileName string, fileInfo os.FileInfo) error {
 	gz := gzip.NewWriter(w)
-	gz.Header.Name = filepath.Base(fileInfo.Name())
-	gz.Header.Comment = fileInfo.Name()
+	gz.Header.Name = fileInfo.Name()
+	gz.Header.Comment = fileName
 	gz.Header.ModTime = fileInfo.ModTime()
 	defer gz.Close()
 
-	file, err := os.Open(fileInfo.Name())
+	file, err := os.Open(fileName)
 	if err != nil {
 		return err
 	}
@@ -56,12 +56,13 @@ func (c *ArtifactsUploaderCommand) writeGzipFile(w *io.PipeWriter, fileInfo os.F
 
 func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
 	var err error
-	for _, fileInfo := range c.files {
-		err = c.writeGzipFile(w, fileInfo)
+	for fileName, fileInfo := range c.files {
+		err = c.writeGzipFile(w, fileName, fileInfo)
 		if err != nil {
 			break
 		}
 	}
+
 	w.CloseWithError(err)
 }
 
