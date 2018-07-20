@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync"
@@ -454,35 +453,6 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 		log.WithField("status", res.Status).Warningln("Uploading artifacts to coordinator...", "failed")
 		return common.UploadFailed
 	}
-}
-
-func (n *GitLabClient) UploadArtifacts(config common.JobCredentials, artifactsFile string) common.UploadState {
-	log := logrus.WithFields(logrus.Fields{
-		"id":    config.ID,
-		"token": helpers.ShortenToken(config.Token),
-	})
-
-	file, err := os.Open(artifactsFile)
-	if err != nil {
-		log.WithError(err).Errorln("Uploading artifacts to coordinator...", "error")
-		return common.UploadFailed
-	}
-	defer file.Close()
-
-	fi, err := file.Stat()
-	if err != nil {
-		log.WithError(err).Errorln("Uploading artifacts to coordinator...", "error")
-		return common.UploadFailed
-	}
-	if fi.IsDir() {
-		log.WithField("error", "cannot upload directories").Errorln("Uploading artifacts to coordinator...", "error")
-		return common.UploadFailed
-	}
-
-	options := common.ArtifactsOptions{
-		BaseName: filepath.Base(artifactsFile),
-	}
-	return n.UploadRawArtifacts(config, file, options)
 }
 
 func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {

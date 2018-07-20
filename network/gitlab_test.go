@@ -3,7 +3,6 @@ package network
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -816,13 +815,59 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 	body, err := ioutil.ReadAll(file)
 	assert.NoError(t, err)
 
-	if string(body) != "content" {
+	switch string(body) {
+	case "too-large":
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
-	} else {
+		return
+
+	case "content":
 		w.WriteHeader(http.StatusCreated)
+		return
+
+	case "zip":
+		if r.FormValue("artifact_format") == "zip" {
+			w.WriteHeader(http.StatusCreated)
+			return
+		}
+
+	case "gzip":
+		if r.FormValue("artifact_format") == "gzip" {
+			w.WriteHeader(http.StatusCreated)
+			return
+		}
+
+	case "junit":
+		if r.FormValue("artifact_type") == "junit" {
+			w.WriteHeader(http.StatusCreated)
+			return
+		}
 	}
+
+	w.WriteHeader(http.StatusBadRequest)
 }
 
+func uploadArtifacts(client *GitLabClient, config JobCredentials, artifactsFile, artifactType string, artifactFormat ArtifactFormat) UploadState {
+	file, err := os.Open(artifactsFile)
+	if err != nil {
+		return UploadFailed
+	}
+	defer file.Close()
+
+	fi, err := file.Stat()
+	if err != nil {
+		return UploadFailed
+	}
+	if fi.IsDir() {
+		return UploadFailed
+	}
+
+	options := ArtifactsOptions{
+		BaseName: filepath.Base(artifactsFile),
+		Format:   artifactFormat,
+		Type:     artifactType,
+	}
+	return client.UploadRawArtifacts(config, file, options)
+}
 func TestArtifactsUpload(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		testArtifactsUploadHandler(w, r, t)
@@ -844,23 +889,35 @@ func TestArtifactsUpload(t *testing.T) {
 
 	tempFile, err := ioutil.TempFile("", "artifacts")
 	assert.NoError(t, err)
-	defer tempFile.Close()
+	tempFile.Close()
 	defer os.Remove(tempFile.Name())
 
 	c := NewGitLabClient()
 
-	fmt.Fprint(tempFile, "content")
-	state := c.UploadArtifacts(config, tempFile.Name())
+	ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600)
+	state := uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded")
 
-	fmt.Fprint(tempFile, "too large")
-	state = c.UploadArtifacts(config, tempFile.Name())
+	ioutil.WriteFile(tempFile.Name(), []byte("too-large"), 0600)
+	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadTooLarge, state, "Artifacts should be not uploaded, because of too large archive")
 
-	state = c.UploadArtifacts(config, "not/existing/file")
+	ioutil.WriteFile(tempFile.Name(), []byte("zip"), 0600)
+	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatZip)
+	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as zip")
+
+	ioutil.WriteFile(tempFile.Name(), []byte("gzip"), 0600)
+	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatGzip)
+	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
+
+	ioutil.WriteFile(tempFile.Name(), []byte("junit"), 0600)
+	state = uploadArtifacts(c, config, tempFile.Name(), "junit", ArtifactFormatGzip)
+	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as zip")
+
+	state = uploadArtifacts(c, config, "not/existing/file", "", ArtifactFormatDefault)
 	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
 
-	state = c.UploadArtifacts(invalidToken, tempFile.Name())
+	state = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
 }
 

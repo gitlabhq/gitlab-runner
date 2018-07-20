@@ -123,20 +123,6 @@ func (_m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredent
 	return r0
 }
 
-// UploadArtifacts provides a mock function with given fields: config, artifactsFile
-func (_m *MockNetwork) UploadArtifacts(config JobCredentials, artifactsFile string) UploadState {
-	ret := _m.Called(config, artifactsFile)
-
-	var r0 UploadState
-	if rf, ok := ret.Get(0).(func(JobCredentials, string) UploadState); ok {
-		r0 = rf(config, artifactsFile)
-	} else {
-		r0 = ret.Get(0).(UploadState)
-	}
-
-	return r0
-}
-
 // UploadRawArtifacts provides a mock function with given fields: config, reader, options
 func (_m *MockNetwork) UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState {
 	ret := _m.Called(config, reader, options)

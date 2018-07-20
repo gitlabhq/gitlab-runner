@@ -363,6 +363,5 @@ type Network interface {
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
-	UploadArtifacts(config JobCredentials, artifactsFile string) UploadState
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) JobTrace
 }
