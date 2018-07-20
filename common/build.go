@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path"
@@ -162,9 +163,12 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		return nil
 	}
 
+	log.Println("executeStage", buildStage, script)
+
 	cmd := ExecutorCommand{
 		Context: ctx,
 		Script:  script,
+		Stage:   buildStage,
 	}
 
 	switch buildStage {
@@ -185,9 +189,9 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
 	if state == nil {
 		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts, executor)
-	} else {
-		return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor)
 	}
+
+	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor)
 }
 
 func (b *Build) executeScript(ctx context.Context, executor Executor) error {
@@ -220,14 +224,15 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
 	}
 
-	jobState := err
-	err = b.executeUploadArtifacts(ctx, jobState, executor)
+	uploadError := b.executeUploadArtifacts(ctx, err, executor)
 
-	// Use job's error if set
-	if jobState != nil {
-		err = jobState
+	// Use job's error as most important
+	if err != nil {
+		return err
 	}
-	return err
+
+	// Otherwise, use uploadError
+	return uploadError
 }
 
 func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {
