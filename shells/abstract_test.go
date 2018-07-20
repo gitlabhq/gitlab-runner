@@ -195,11 +195,6 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
-		"--path", "default").Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
-		"--url", gitlabURL,
-		"--token", "token",
-		"--id", "1000",
 		"--path", "on-failure").Once()
 	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
