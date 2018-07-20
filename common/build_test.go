@@ -36,7 +36,14 @@ func TestBuildRun(t *testing.T) {
 
 	// Run script successfully
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(nil)
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
 
 	RegisterExecutor("build-run-test", &p)
 
@@ -167,7 +174,7 @@ func matchBuildStage(buildStage BuildStage) interface{} {
 	})
 }
 
-func TestRunFailure(t *testing.T) {
+func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	e := MockExecutor{}
 	defer e.AssertExpectations(t)
 
@@ -184,7 +191,13 @@ func TestRunFailure(t *testing.T) {
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(errors.New("build fail"))
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(errors.New("build fail")).Once()
+	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	e.On("Finish", errors.New("build fail")).Return().Once()
 
 	RegisterExecutor("build-run-run-failure", &p)

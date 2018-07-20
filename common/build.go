@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"path"
@@ -162,8 +161,6 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	if script == "" {
 		return nil
 	}
-
-	log.Println("executeStage", buildStage, script)
 
 	cmd := ExecutorCommand{
 		Context: ctx,
