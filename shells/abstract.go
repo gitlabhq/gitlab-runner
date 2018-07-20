@@ -486,10 +486,13 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 	return nil
 }
 
-func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) {
+func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) {
 	if info.Build.Runner.URL == "" {
 		return
 	}
+
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
 
 	for _, artifacts := range info.Build.Artifacts {
 		if onSuccess {
@@ -510,10 +513,6 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptIn
 			info.Build.Token,
 			"--id",
 			strconv.Itoa(info.Build.ID),
-			"--artifact-format",
-			string(artifacts.Format),
-			"--artifact-type",
-			artifacts.Type,
 		}
 
 		// Create list of files to archive
@@ -589,20 +588,12 @@ func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.Shell
 }
 
 func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeExports(w, info)
-	b.writeCdBuildDir(w, info)
-
-	// Upload artifacts
-	b.uploadArtifacts(w, info, true)
+	b.writeUploadArtifacts(w, info, true)
 	return
 }
 
 func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeExports(w, info)
-	b.writeCdBuildDir(w, info)
-
-	// Upload artifacts
-	b.uploadArtifacts(w, info, false)
+	b.writeUploadArtifacts(w, info, false)
 	return
 }
 
