@@ -1,4 +1,5 @@
-v 11.1.0-rc1 (2018-06-13)
+v 11.1.0 (2018-07-22)
+- Fix support for Unicode variable values when Windows+PowerShell are used !960
 - Unify receivers used for 'executor' struct in ./executors/docker/ !926
 - Update Release Checklist template !898
 - Cache the connectivity of live Docker Machine instances !909
