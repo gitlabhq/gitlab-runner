@@ -139,7 +139,7 @@ review-docs-cleanup:
 # Test stage
 #
 
-codequality:
+code_quality:
   <<: *except_docs
   stage: test
   image: docker:git
@@ -151,9 +151,9 @@ codequality:
   cache: {}
   dependencies: []
   script:
-    - ./scripts/codequality analyze -f json --dev | tee codeclimate.json
+    - ./scripts/codequality analyze -f json --dev | tee gl-code-quality-report.json
   artifacts:
-    paths: [codeclimate.json]
+    paths: [gl-code-quality-report.json]
     expire_in: 1 week
 
 unit tests (no race):
