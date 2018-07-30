@@ -40,6 +40,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 		TLSClientConfig: restclient.TLSClientConfig{
 			CAFile: "ca",
 		},
+		UserAgent: common.AppVersion.UserAgent(),
 	}
 
 	noConfigAvailable := func() (*restclient.Config, error) {
@@ -90,6 +91,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 					KeyFile:  "key",
 					CAFile:   "ca",
 				},
+				UserAgent: common.AppVersion.UserAgent(),
 			},
 		},
 		{
@@ -109,6 +111,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 				TLSClientConfig: restclient.TLSClientConfig{
 					CAFile: "ca",
 				},
+				UserAgent: common.AppVersion.UserAgent(),
 			},
 		},
 		{
@@ -141,6 +144,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 				TLSClientConfig: restclient.TLSClientConfig{
 					CAFile: "ca",
 				},
+				UserAgent: common.AppVersion.UserAgent(),
 			},
 		},
 	}
