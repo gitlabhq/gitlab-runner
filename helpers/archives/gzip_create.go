@@ -2,11 +2,18 @@ package archives
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 func writeGzipFile(w io.Writer, fileName string, fileInfo os.FileInfo) error {
+	if !fileInfo.Mode().IsRegular() {
+		return fmt.Errorf("the %q is not a regular file", fileName)
+	}
+
 	gz := gzip.NewWriter(w)
 	gz.Header.Name = fileInfo.Name()
 	gz.Header.Comment = fileName
@@ -25,8 +32,11 @@ func writeGzipFile(w io.Writer, fileName string, fileInfo os.FileInfo) error {
 
 func CreateGzipArchive(w io.Writer, fileNames []string) error {
 	for _, fileName := range fileNames {
-		fi, err := os.Stat(fileName)
-		if err != nil {
+		fi, err := os.Lstat(fileName)
+		if os.IsNotExist(err) {
+			logrus.Warningln("File ignored:", err)
+			continue
+		} else if err != nil {
 			return err
 		}
 
