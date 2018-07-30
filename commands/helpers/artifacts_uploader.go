@@ -55,14 +55,7 @@ func (c *ArtifactsUploaderCommand) writeGzipFile(w *io.PipeWriter, fileName stri
 }
 
 func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
-	var err error
-	for fileName, fileInfo := range c.files {
-		err = c.writeGzipFile(w, fileName, fileInfo)
-		if err != nil {
-			break
-		}
-	}
-
+	err := archives.CreateGzipArchive(w, c.sortedFiles())
 	w.CloseWithError(err)
 }
 
