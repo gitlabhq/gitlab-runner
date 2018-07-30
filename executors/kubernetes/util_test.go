@@ -6,11 +6,14 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"golang.org/x/net/context"
+
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -148,14 +151,13 @@ func TestGetKubeClientConfig(t *testing.T) {
 
 			rcConf, err := getKubeClientConfig(test.config, test.overwrites)
 
-			if err != nil && !test.error {
-				t.Errorf("expected error, but instead received: %v", rcConf)
-				return
+			if test.error {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 
-			if !reflect.DeepEqual(rcConf, test.expected) {
-				t.Errorf("expected: '%v', got: '%v'", test.expected, rcConf)
-			}
+			assert.Equal(t, test.expected, rcConf)
 		})
 	}
 }
