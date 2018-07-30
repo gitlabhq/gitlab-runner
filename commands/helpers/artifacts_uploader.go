@@ -2,9 +2,10 @@ package helpers
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -16,30 +17,77 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
+const DefaultUploadName = "default"
+
 type ArtifactsUploaderCommand struct {
 	common.JobCredentials
 	fileArchiver
 	retryHelper
 	network common.Network
 
-	Name     string `long:"name" description:"The name of the archive"`
-	ExpireIn string `long:"expire-in" description:"When to expire artifacts"`
+	Name     string                `long:"name" description:"The name of the archive"`
+	ExpireIn string                `long:"expire-in" description:"When to expire artifacts"`
+	Format   common.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
+	Type     string                `long:"artifact-type" description:"Type of generated artifacts"`
+}
+
+func (c *ArtifactsUploaderCommand) generateZipArchive(w *io.PipeWriter) {
+	err := archives.CreateZipArchive(w, c.sortedFiles())
+	w.CloseWithError(err)
+}
+
+func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
+	err := archives.CreateGzipArchive(w, c.sortedFiles())
+	w.CloseWithError(err)
+}
+
+func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, error) {
+	if len(c.files) == 0 {
+		return "", nil, nil
+	}
+
+	name := filepath.Base(c.Name)
+	if name == "" || name == "." {
+		name = DefaultUploadName
+	}
+
+	switch c.Format {
+	case common.ArtifactFormatZip, common.ArtifactFormatDefault:
+		pr, pw := io.Pipe()
+		go c.generateZipArchive(pw)
+		return name + ".zip", pr, nil
+
+	case common.ArtifactFormatGzip:
+		pr, pw := io.Pipe()
+		go c.generateGzipStream(pw)
+		return name + ".gz", pr, nil
+
+	default:
+		return "", nil, fmt.Errorf("unsupported archive format: %s", c.Format)
+	}
 }
 
 func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
-	pr, pw := io.Pipe()
-	defer pr.Close()
+	artifactsName, stream, err := c.createReadStream()
+	if err != nil {
+		return false, err
+	}
+	if stream == nil {
+		logrus.Errorln("No files to upload")
+		return false, nil
+	}
+	defer stream.Close()
 
 	// Create the archive
-	go func() {
-		err := archives.CreateZipArchive(pw, c.sortedFiles())
-		pw.CloseWithError(err)
-	}()
-
-	artifactsName := path.Base(c.Name) + ".zip"
+	options := common.ArtifactsOptions{
+		BaseName: artifactsName,
+		ExpireIn: c.ExpireIn,
+		Format:   c.Format,
+		Type:     c.Type,
+	}
 
 	// Upload the data
-	switch c.network.UploadRawArtifacts(c.JobCredentials, pr, artifactsName, c.ExpireIn) {
+	switch c.network.UploadRawArtifacts(c.JobCredentials, stream, options) {
 	case common.UploadSucceeded:
 		return false, nil
 	case common.UploadForbidden:

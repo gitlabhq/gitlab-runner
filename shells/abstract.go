@@ -18,6 +18,7 @@ type AbstractShell struct {
 
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Artifacts = true
+	features.UploadMultipleArtifacts = true
 	features.Cache = true
 }
 
@@ -485,12 +486,25 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 	return nil
 }
 
-func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptInfo) {
+func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) {
 	if info.Build.Runner.URL == "" {
 		return
 	}
 
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+
 	for _, artifacts := range info.Build.Artifacts {
+		if onSuccess {
+			if !artifacts.When.OnSuccess() {
+				continue
+			}
+		} else {
+			if !artifacts.When.OnFailure() {
+				continue
+			}
+		}
+
 		args := []string{
 			"artifacts-uploader",
 			"--url",
@@ -523,6 +537,14 @@ func (b *AbstractShell) uploadArtifacts(w ShellWriter, info common.ShellScriptIn
 
 		if artifacts.ExpireIn != "" {
 			args = append(args, "--expire-in", artifacts.ExpireIn)
+		}
+
+		if artifacts.Format != "" {
+			args = append(args, "--artifact-format", string(artifacts.Format))
+		}
+
+		if artifacts.Type != "" {
+			args = append(args, "--artifact-type", artifacts.Type)
 		}
 
 		b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
@@ -565,25 +587,27 @@ func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.Shell
 	return b.cacheArchiver(w, info)
 }
 
-func (b *AbstractShell) writeUploadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeExports(w, info)
-	b.writeCdBuildDir(w, info)
+func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	b.writeUploadArtifacts(w, info, true)
+	return
+}
 
-	// Upload artifacts
-	b.uploadArtifacts(w, info)
+func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	b.writeUploadArtifacts(w, info, false)
 	return
 }
 
 func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {
 	methods := map[common.BuildStage]func(ShellWriter, common.ShellScriptInfo) error{
-		common.BuildStagePrepare:           b.writePrepareScript,
-		common.BuildStageGetSources:        b.writeGetSourcesScript,
-		common.BuildStageRestoreCache:      b.writeRestoreCacheScript,
-		common.BuildStageDownloadArtifacts: b.writeDownloadArtifactsScript,
-		common.BuildStageUserScript:        b.writeUserScript,
-		common.BuildStageAfterScript:       b.writeAfterScript,
-		common.BuildStageArchiveCache:      b.writeArchiveCacheScript,
-		common.BuildStageUploadArtifacts:   b.writeUploadArtifactsScript,
+		common.BuildStagePrepare:                  b.writePrepareScript,
+		common.BuildStageGetSources:               b.writeGetSourcesScript,
+		common.BuildStageRestoreCache:             b.writeRestoreCacheScript,
+		common.BuildStageDownloadArtifacts:        b.writeDownloadArtifactsScript,
+		common.BuildStageUserScript:               b.writeUserScript,
+		common.BuildStageAfterScript:              b.writeAfterScript,
+		common.BuildStageArchiveCache:             b.writeArchiveCacheScript,
+		common.BuildStageUploadOnSuccessArtifacts: b.writeUploadArtifactsOnSuccessScript,
+		common.BuildStageUploadOnFailureArtifacts: b.writeUploadArtifactsOnFailureScript,
 	}
 
 	fn := methods[buildStage]

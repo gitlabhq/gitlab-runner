@@ -50,12 +50,13 @@ const (
 )
 
 type FeaturesInfo struct {
-	Variables bool `json:"variables"`
-	Image     bool `json:"image"`
-	Services  bool `json:"services"`
-	Artifacts bool `json:"features"`
-	Cache     bool `json:"cache"`
-	Shared    bool `json:"shared"`
+	Variables               bool `json:"variables"`
+	Image                   bool `json:"image"`
+	Services                bool `json:"services"`
+	Artifacts               bool `json:"artifacts"`
+	Cache                   bool `json:"cache"`
+	Shared                  bool `json:"shared"`
+	UploadMultipleArtifacts bool `json:"upload_multiple_artifacts"`
 }
 
 type RegisterRunnerParameters struct {
@@ -190,16 +191,22 @@ func (when ArtifactWhen) OnFailure() bool {
 	return when == ArtifactWhenOnFailure || when == ArtifactWhenAlways
 }
 
-type Artifact struct {
-	Name      string        `json:"name"`
-	Untracked bool          `json:"untracked"`
-	Paths     ArtifactPaths `json:"paths"`
-	When      ArtifactWhen  `json:"when"`
-	ExpireIn  string        `json:"expire_in"`
-}
+type ArtifactFormat string
 
-func (a Artifact) ShouldUpload(state error) bool {
-	return (state == nil && a.When.OnSuccess()) || (state != nil && a.When.OnFailure())
+const (
+	ArtifactFormatDefault ArtifactFormat = ""
+	ArtifactFormatZip     ArtifactFormat = "zip"
+	ArtifactFormatGzip    ArtifactFormat = "gzip"
+)
+
+type Artifact struct {
+	Name      string         `json:"name"`
+	Untracked bool           `json:"untracked"`
+	Paths     ArtifactPaths  `json:"paths"`
+	When      ArtifactWhen   `json:"when"`
+	Type      string         `json:"artifact_type"`
+	Format    ArtifactFormat `json:"artifact_format"`
+	ExpireIn  string         `json:"expire_in"`
 }
 
 type Artifacts []Artifact
@@ -319,6 +326,13 @@ type UpdateJobInfo struct {
 	FailureReason JobFailureReason
 }
 
+type ArtifactsOptions struct {
+	BaseName string
+	ExpireIn string
+	Format   ArtifactFormat
+	Type     string
+}
+
 type FailuresCollector interface {
 	RecordFailure(reason JobFailureReason, runnerDescription string)
 }
@@ -348,7 +362,6 @@ type Network interface {
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
-	UploadRawArtifacts(config JobCredentials, reader io.Reader, baseName string, expireIn string) UploadState
-	UploadArtifacts(config JobCredentials, artifactsFile string) UploadState
+	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) JobTrace
 }

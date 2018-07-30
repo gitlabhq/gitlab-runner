@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync"
@@ -394,7 +393,7 @@ func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Read
 	return nil
 }
 
-func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, baseName string, expireIn string) common.UploadState {
+func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, options common.ArtifactsOptions) common.UploadState {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
@@ -403,15 +402,21 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 	go func() {
 		defer pw.Close()
 		defer mpw.Close()
-		err := n.createArtifactsForm(mpw, reader, baseName)
+		err := n.createArtifactsForm(mpw, reader, options.BaseName)
 		if err != nil {
 			pw.CloseWithError(err)
 		}
 	}()
 
 	query := url.Values{}
-	if expireIn != "" {
-		query.Set("expire_in", expireIn)
+	if options.ExpireIn != "" {
+		query.Set("expire_in", options.ExpireIn)
+	}
+	if options.Format != "" {
+		query.Set("artifact_format", string(options.Format))
+	}
+	if options.Type != "" {
+		query.Set("artifact_type", options.Type)
 	}
 
 	headers := make(http.Header)
@@ -448,33 +453,6 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 		log.WithField("status", res.Status).Warningln("Uploading artifacts to coordinator...", "failed")
 		return common.UploadFailed
 	}
-}
-
-func (n *GitLabClient) UploadArtifacts(config common.JobCredentials, artifactsFile string) common.UploadState {
-	log := logrus.WithFields(logrus.Fields{
-		"id":    config.ID,
-		"token": helpers.ShortenToken(config.Token),
-	})
-
-	file, err := os.Open(artifactsFile)
-	if err != nil {
-		log.WithError(err).Errorln("Uploading artifacts to coordinator...", "error")
-		return common.UploadFailed
-	}
-	defer file.Close()
-
-	fi, err := file.Stat()
-	if err != nil {
-		log.WithError(err).Errorln("Uploading artifacts to coordinator...", "error")
-		return common.UploadFailed
-	}
-	if fi.IsDir() {
-		log.WithField("error", "cannot upload directories").Errorln("Uploading artifacts to coordinator...", "error")
-		return common.UploadFailed
-	}
-
-	baseName := filepath.Base(artifactsFile)
-	return n.UploadRawArtifacts(config, file, baseName, "")
 }
 
 func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {

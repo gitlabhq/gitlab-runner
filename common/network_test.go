@@ -1,7 +1,6 @@
 package common
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,43 +35,5 @@ func TestCacheCheckPolicy(t *testing.T) {
 		}
 
 		assert.Equal(t, tc.expected, result, "case %d: %s", num, tc.description)
-	}
-
-}
-
-func doTestArtifactShouldUpload(t *testing.T, when ArtifactWhen, stateOK, expected bool) {
-	artifact := Artifact{When: when}
-
-	var state error
-	if !stateOK {
-		state = errors.New("Build error")
-	}
-
-	result := artifact.ShouldUpload(state)
-	if expected {
-		assert.True(t, result, "ShouldUpload should return true for when=%v and state=%v", when, state)
-	} else {
-		assert.False(t, result, "ShouldUpload should return false for when=%v and state=%v", when, state)
-	}
-}
-
-func TestArtifact_ShouldUpload(t *testing.T) {
-	examples := []struct {
-		when     ArtifactWhen
-		stateOK  bool
-		expected bool
-	}{
-		{when: "", stateOK: true, expected: true},
-		{when: ArtifactWhenOnSuccess, stateOK: true, expected: true},
-		{when: ArtifactWhenOnFailure, stateOK: true, expected: false},
-		{when: ArtifactWhenAlways, stateOK: true, expected: true},
-		{when: "", stateOK: false, expected: false},
-		{when: ArtifactWhenOnSuccess, stateOK: false, expected: false},
-		{when: ArtifactWhenOnFailure, stateOK: false, expected: true},
-		{when: ArtifactWhenAlways, stateOK: false, expected: true},
-	}
-
-	for _, example := range examples {
-		doTestArtifactShouldUpload(t, example.when, example.stateOK, example.expected)
 	}
 }

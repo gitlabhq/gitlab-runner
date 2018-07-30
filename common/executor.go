@@ -10,6 +10,7 @@ type ExecutorData interface{}
 
 type ExecutorCommand struct {
 	Script     string
+	Stage      BuildStage
 	Predefined bool
 	Context    context.Context
 }

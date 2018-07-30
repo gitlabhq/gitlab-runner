@@ -48,14 +48,15 @@ const (
 type BuildStage string
 
 const (
-	BuildStagePrepare           BuildStage = "prepare_script"
-	BuildStageGetSources        BuildStage = "get_sources"
-	BuildStageRestoreCache      BuildStage = "restore_cache"
-	BuildStageDownloadArtifacts BuildStage = "download_artifacts"
-	BuildStageUserScript        BuildStage = "build_script"
-	BuildStageAfterScript       BuildStage = "after_script"
-	BuildStageArchiveCache      BuildStage = "archive_cache"
-	BuildStageUploadArtifacts   BuildStage = "upload_artifacts"
+	BuildStagePrepare                  BuildStage = "prepare_script"
+	BuildStageGetSources               BuildStage = "get_sources"
+	BuildStageRestoreCache             BuildStage = "restore_cache"
+	BuildStageDownloadArtifacts        BuildStage = "download_artifacts"
+	BuildStageUserScript               BuildStage = "build_script"
+	BuildStageAfterScript              BuildStage = "after_script"
+	BuildStageArchiveCache             BuildStage = "archive_cache"
+	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
+	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
 )
 
 type Build struct {
@@ -164,6 +165,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	cmd := ExecutorCommand{
 		Context: ctx,
 		Script:  script,
+		Stage:   buildStage,
 	}
 
 	switch buildStage {
@@ -182,18 +184,11 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 }
 
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
-	var uploadError error
-
-	for _, artifact := range b.JobResponse.Artifacts {
-		if artifact.ShouldUpload(state) {
-			uploadError = b.executeStage(ctx, BuildStageUploadArtifacts, executor)
-		}
-		if uploadError != nil {
-			err = uploadError
-		}
+	if state == nil {
+		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts, executor)
 	}
 
-	return
+	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor)
 }
 
 func (b *Build) executeScript(ctx context.Context, executor Executor) error {
@@ -226,14 +221,15 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
 	}
 
-	jobState := err
-	err = b.executeUploadArtifacts(ctx, jobState, executor)
+	uploadError := b.executeUploadArtifacts(ctx, err, executor)
 
-	// Use job's error if set
-	if jobState != nil {
-		err = jobState
+	// Use job's error as most important
+	if err != nil {
+		return err
 	}
-	return err
+
+	// Otherwise, use uploadError
+	return uploadError
 }
 
 func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {
