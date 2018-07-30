@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
-
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/mocks"
@@ -44,44 +44,48 @@ func TestWriteGitSSLConfig(t *testing.T) {
 	mockWriter.AssertExpectations(t)
 }
 
+func getJobResponseWithMultipleArtifacts(t *testing.T) common.JobResponse {
+	return common.JobResponse{
+		ID:    1000,
+		Token: "token",
+		Artifacts: common.Artifacts{
+			common.Artifact{
+				Paths: []string{"default"},
+			},
+			common.Artifact{
+				Paths: []string{"on-success"},
+				When:  common.ArtifactWhenOnSuccess,
+			},
+			common.Artifact{
+				Paths: []string{"on-failure"},
+				When:  common.ArtifactWhenOnFailure,
+			},
+			common.Artifact{
+				Paths: []string{"always"},
+				When:  common.ArtifactWhenAlways,
+			},
+			common.Artifact{
+				Paths:  []string{"zip-archive"},
+				When:   common.ArtifactWhenAlways,
+				Format: common.ArtifactFormatZip,
+				Type:   "archive",
+			},
+			common.Artifact{
+				Paths:  []string{"gzip-junit"},
+				When:   common.ArtifactWhenAlways,
+				Format: common.ArtifactFormatGzip,
+				Type:   "junit",
+			},
+		},
+	}
+}
+
 func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 	gitlabURL := "https://example.com:3443"
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		JobResponse: common.JobResponse{
-			ID:    1000,
-			Token: "token",
-			Artifacts: common.Artifacts{
-				common.Artifact{
-					Paths: []string{"default"},
-				},
-				common.Artifact{
-					Paths: []string{"on-success"},
-					When:  common.ArtifactWhenOnSuccess,
-				},
-				common.Artifact{
-					Paths: []string{"on-failure"},
-					When:  common.ArtifactWhenOnFailure,
-				},
-				common.Artifact{
-					Paths: []string{"always"},
-					When:  common.ArtifactWhenAlways,
-				},
-				common.Artifact{
-					Paths:  []string{"zip-archive"},
-					When:   common.ArtifactWhenAlways,
-					Format: common.ArtifactFormatZip,
-					Type:   "archive",
-				},
-				common.Artifact{
-					Paths:  []string{"gzip-junit"},
-					When:   common.ArtifactWhenAlways,
-					Format: common.ArtifactFormatGzip,
-					Type:   "junit",
-				},
-			},
-		},
+		JobResponse: getJobResponseWithMultipleArtifacts(t),
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: gitlabURL,
@@ -141,39 +145,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		JobResponse: common.JobResponse{
-			ID:    1000,
-			Token: "token",
-			Artifacts: common.Artifacts{
-				common.Artifact{
-					Paths: []string{"default"},
-				},
-				common.Artifact{
-					Paths: []string{"on-success"},
-					When:  common.ArtifactWhenOnSuccess,
-				},
-				common.Artifact{
-					Paths: []string{"on-failure"},
-					When:  common.ArtifactWhenOnFailure,
-				},
-				common.Artifact{
-					Paths: []string{"always"},
-					When:  common.ArtifactWhenAlways,
-				},
-				common.Artifact{
-					Paths:  []string{"zip-archive"},
-					When:   common.ArtifactWhenAlways,
-					Format: common.ArtifactFormatZip,
-					Type:   "archive",
-				},
-				common.Artifact{
-					Paths:  []string{"gzip-junit"},
-					When:   common.ArtifactWhenAlways,
-					Format: common.ArtifactFormatGzip,
-					Type:   "junit",
-				},
-			},
-		},
+		JobResponse: getJobResponseWithMultipleArtifacts(t),
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: gitlabURL,

@@ -912,7 +912,7 @@ func TestArtifactsUpload(t *testing.T) {
 
 	ioutil.WriteFile(tempFile.Name(), []byte("junit"), 0600)
 	state = uploadArtifacts(c, config, tempFile.Name(), "junit", ArtifactFormatGzip)
-	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as zip")
+	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
 
 	state = uploadArtifacts(c, config, "not/existing/file", "", ArtifactFormatDefault)
 	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
