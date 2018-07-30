@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -35,23 +34,6 @@ type ArtifactsUploaderCommand struct {
 func (c *ArtifactsUploaderCommand) generateZipArchive(w *io.PipeWriter) {
 	err := archives.CreateZipArchive(w, c.sortedFiles())
 	w.CloseWithError(err)
-}
-
-func (c *ArtifactsUploaderCommand) writeGzipFile(w *io.PipeWriter, fileName string, fileInfo os.FileInfo) error {
-	gz := gzip.NewWriter(w)
-	gz.Header.Name = fileInfo.Name()
-	gz.Header.Comment = fileName
-	gz.Header.ModTime = fileInfo.ModTime()
-	defer gz.Close()
-
-	file, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(gz, file)
-	return err
 }
 
 func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
