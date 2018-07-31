@@ -23,7 +23,7 @@ GitLab Runner provides these options:
     > **Note:** You may need to concatenate the intermediate and server certificate
       for the chain to be properly identified.
 3. GitLab Runner exposes `tls-ca-file` option during registration and in [`config.toml`](advanced-configuration.md)
-which allows you to specify custom file with certificates. This file will be read every time when runner tries to
+under the `[[runners]]` section which allows you to specify a custom file with certificates. This file will be read every time when runner tries to
 access the GitLab server.
 
 ## Git cloning
