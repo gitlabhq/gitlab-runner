@@ -76,7 +76,7 @@ Read the [FAQ](https://docs.gitlab.com/runner/faq/).
 
 See [https://docs.gitlab.com/runner/#advanced-configuration](https://docs.gitlab.com/runner/#advanced-configuration).
 
-## Development
+## Building and development
 
 See [https://docs.gitlab.com/runner/development/](https://docs.gitlab.com/runner/development/).
 
