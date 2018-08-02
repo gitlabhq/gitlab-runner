@@ -5,3 +5,5 @@ RUN apk add --update bash ca-certificates git miniperl \
 
 COPY ./scripts/ /usr/bin
 COPY ./binaries/gitlab-runner-helper.arm /usr/bin/gitlab-runner-helper
+
+RUN echo 'hosts: files dns' >> /etc/nsswitch.conf
