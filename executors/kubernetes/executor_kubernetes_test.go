@@ -1256,13 +1256,15 @@ func TestKubernetesSuccessRun(t *testing.T) {
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
-	successfulBuild.Image.Name = "docker:git"
+	successfulBuild.Image.Name = common.TestDockerGitImage
 	build := &common.Build{
 		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
 			},
 		},
 	}
@@ -1279,13 +1281,15 @@ func TestKubernetesNoRootImage(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
 
 	assert.NoError(t, err)
-	successfulBuild.Image.Name = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root"
+	successfulBuild.Image.Name = common.TestAlpineNoRootImage
 	build := &common.Build{
 		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
 			},
 		},
 	}
@@ -1305,12 +1309,14 @@ func TestKubernetesBuildFail(t *testing.T) {
 		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
 			},
 		},
 	}
-	build.Image.Name = "docker:git"
+	build.Image.Name = common.TestDockerGitImage
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
@@ -1377,13 +1383,15 @@ func TestKubernetesBuildAbort(t *testing.T) {
 		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Image.Name = "docker:git"
+	build.Image.Name = common.TestDockerGitImage
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
@@ -1412,13 +1420,15 @@ func TestKubernetesBuildCancel(t *testing.T) {
 		JobResponse: failedBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Image.Name = "docker:git"
+	build.Image.Name = common.TestDockerGitImage
 
 	trace := &common.Trace{Writer: os.Stdout}
 
@@ -1461,12 +1471,13 @@ func TestOverwriteNamespaceNotMatch(t *testing.T) {
 				Executor: "kubernetes",
 				Kubernetes: &common.KubernetesConfig{
 					NamespaceOverwriteAllowed: "^not_a_match$",
+					PullPolicy:                common.PullPolicyIfNotPresent,
 				},
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Image.Name = "docker:git"
+	build.Image.Name = common.TestDockerGitImage
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -1495,12 +1506,13 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 				Executor: "kubernetes",
 				Kubernetes: &common.KubernetesConfig{
 					ServiceAccountOverwriteAllowed: "^not_a_match$",
+					PullPolicy:                     common.PullPolicyIfNotPresent,
 				},
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
 	}
-	build.Image.Name = "docker:git"
+	build.Image.Name = common.TestDockerGitImage
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)

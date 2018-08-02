@@ -2,6 +2,7 @@ stages:
 - prepare
 - prebuild
 - test
+- coverage
 - build
 - package
 - release
@@ -29,7 +30,7 @@ image: $CI_IMAGE
   - docker:dind
   variables: &docker_variables
     CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0
-    DOCKER_DRIVER: overlay
+    DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2375
   tags:
   - docker
@@ -135,6 +136,24 @@ review-docs-cleanup:
   script:
     - ./trigger-build-docs cleanup
 
+tests definitions:
+  stage: prebuild
+  # Using Go 1.10, because the `go test -list` is unavailable in <1.9
+  # and it's much faster in 1.10. And since there is no real test execution
+  # in this step, the version difference doesn't matter
+  image: golang:1.10
+  script:
+  - apt update
+  - apt install make
+  - source ci/touch_make_dependencies
+  - make parallel_test_prepare
+  artifacts:
+    paths:
+    - testsdefinitions.txt
+    expire_in: 7d
+  tags:
+  - gitlab-org
+
 #
 # Test stage
 #
@@ -154,26 +173,43 @@ code_quality:
     - ./scripts/codequality analyze -f json --dev | tee gl-code-quality-report.json
   artifacts:
     paths: [gl-code-quality-report.json]
-    expire_in: 1 week
+    expire_in: 7d
 
-unit tests (no race):
+.unit_tests: &unit_tests
   <<: *docker
   stage: test
-  retry: 2
   script:
+    - JOB_NAME=( $CI_JOB_NAME )
+    - export SUITE_INDEX=${JOB_NAME[-2]}
+    - export SUITE_TOTAL=${JOB_NAME[-1]}
     - source ci/touch_make_dependencies
-    - docker pull alpine
-    - docker pull docker:dind
-    - docker pull docker:git
-    - make test
+    - make parallel_test_execute
+  artifacts:
+    paths:
+      - .cover/*
+      - .testoutput/*
+    when: always
+    expire_in: 7d
 
-unit tests:
-  <<: *docker
-  stage: test
+.unit_tests_with_race: &unit_tests_with_race
+  <<: *unit_tests
   allow_failure: true
-  script:
-    - source ci/touch_make_dependencies
-    - CGO_ENABLED=1 TESTFLAGS="-cover -race" make test
+  variables:
+    <<: *docker_variables
+    CGO_ENABLED: "1"
+    TESTFLAGS: "-cover -race"
+
+unit tests 0 5: *unit_tests
+unit tests 1 5: *unit_tests
+unit tests 2 5: *unit_tests
+unit tests 3 5: *unit_tests
+unit tests 4 5: *unit_tests
+
+unit tests with race 0 5: *unit_tests_with_race
+unit tests with race 1 5: *unit_tests_with_race
+unit tests with race 2 5: *unit_tests_with_race
+unit tests with race 3 5: *unit_tests_with_race
+unit tests with race 4 5: *unit_tests_with_race
 
 docs check links:
   image: "registry.gitlab.com/gitlab-org/gitlab-build-images:nanoc-bootstrap-ruby-2.4-alpine"
@@ -213,13 +249,6 @@ integration windows:
   - integration
   - windows
 
-race conditions detector:
-  <<: *docker
-  stage: test
-  script:
-  - source ci/touch_make_dependencies
-  - make check_race_conditions
-
 git 1.7.1:
   <<: *except_docs
   image: centos:6
@@ -239,6 +268,30 @@ git 1.7.1:
     - make test
 
 #
+# Coverage stage
+#
+
+test coverage report: &test_coverage_report
+  stage: coverage
+  image: golang:1.10
+  coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
+  script:
+    - source ci/touch_make_dependencies
+    - make parallel_test_coverage_report
+    - make parallel_test_coverage_report TESTFLAGS="-cover -race"
+  artifacts:
+    paths:
+      - out/coverage/*
+    expire_in: 7d
+
+race conditions detector:
+  stage: coverage
+  image: golang:1.10
+  script:
+  - source ci/touch_make_dependencies
+  - make check_race_conditions
+
+#
 # Build stage
 #
 
@@ -254,7 +307,7 @@ git 1.7.1:
     - out/binaries/
     expire_in: 7d
   tags:
-  - docker
+  - gitlab-org
 
 binaries darwin/386 darwin/amd64: *binaries
 binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
@@ -287,7 +340,7 @@ binaries windows/386 windows/amd64: *binaries
     - out/rpm/
     expire_in: 7d
   tags:
-  - docker
+  - gitlab-org
 
 package-deb: *packages
 package-rpm: *packages

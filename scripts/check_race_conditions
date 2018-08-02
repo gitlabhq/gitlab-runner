@@ -5,15 +5,18 @@
 # fix existing race conditions
 max=33
 
-tmpfile=$(mktemp)
-CGO_ENABLED=1 TESTFLAGS="-race" make test 2>&1 | tee -a "$tmpfile"
+tmpFile=$(mktemp)
 
-cnt=$(grep -c -e "^WARNING: DATA RACE$" "$tmpfile")
+find .testoutput/
+
+grep -E "^WARNING: DATA RACE$" .testoutput/*.race.output.txt > ${tmpFile}
+
+cnt=$(cat ${tmpFile} | wc -l)
 echo "Found ${cnt} race conditions. Maximum allowed value is ${max}"
 
-rm "$tmpfile" 2>/dev/null || true
+rm "$tmpFile" 2>/dev/null || true
 
-if [ "$cnt" -gt "$max" ]; then
+if [ "${cnt}" -gt "${max}" ]; then
   echo "Race conditions count increased"
   exit 1
 fi

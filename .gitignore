@@ -17,5 +17,11 @@ artifacts
 tmp/gitlab-test
 /.gopath/
 
+testsdefinitions.txt
+/.testoutput/
+/.cover/
+
+codeclimate.json
+
 # Ignore the generated binary
 /gitlab-runner

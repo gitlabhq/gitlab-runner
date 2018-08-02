@@ -35,7 +35,7 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
@@ -54,13 +54,15 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
 
 	assert.NoError(t, err)
-	successfulBuild.Image.Name = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root"
+	successfulBuild.Image.Name = common.TestAlpineNoRootImage
 	build := &common.Build{
 		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
-				Docker:   &common.DockerConfig{},
+				Docker: &common.DockerConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
 			},
 		},
 	}
@@ -82,7 +84,7 @@ func TestDockerCommandBuildFail(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
@@ -104,12 +106,12 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 	successfulBuild.Image = common.Image{Name: "$IMAGE_NAME"}
 	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
 		Key:      "IMAGE_NAME",
-		Value:    "alpine",
+		Value:    common.TestAlpineImage,
 		Public:   true,
 		Internal: false,
 		File:     false,
 	})
-	successfulBuild.Services = append(successfulBuild.Services, common.Image{Name: "docker:dind"})
+	successfulBuild.Services = append(successfulBuild.Services, common.Image{Name: common.TestDockerDindImage})
 	assert.NoError(t, err)
 	build := &common.Build{
 		JobResponse: successfulBuild,
@@ -117,9 +119,10 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					AllowedImages:   []string{"alpine"},
-					AllowedServices: []string{"docker:dind"},
+					AllowedImages:   []string{common.TestAlpineImage},
+					AllowedServices: []string{common.TestDockerDindImage},
 					Privileged:      true,
+					PullPolicy:      common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -209,7 +212,7 @@ func TestDockerCommandBuildAbort(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
@@ -246,7 +249,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
@@ -279,8 +282,8 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	successfulBuild.Services = common.Services{
-		{Name: "alpine", Alias: "service-1"},
-		{Name: "alpine", Alias: "service-2"},
+		{Name: common.TestAlpineImage, Alias: "service-1"},
+		{Name: common.TestAlpineImage, Alias: "service-2"},
 	}
 	assert.NoError(t, err)
 	build := &common.Build{
@@ -289,7 +292,7 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
@@ -320,7 +323,7 @@ func TestDockerCommandOutput(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
@@ -363,7 +366,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Executor: "docker",
 					Docker: &common.DockerConfig{
-						Image:      "alpine",
+						Image:      common.TestAlpineImage,
 						PullPolicy: common.PullPolicyIfNotPresent,
 						Privileged: true,
 					},
@@ -378,10 +381,10 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 				AllowFailure: false,
 			},
 		}
-		build.Image.Name = "docker:git"
+		build.Image.Name = common.TestDockerGitImage
 		build.Services = common.Services{
 			common.Image{
-				Name: "docker:dind",
+				Name: common.TestDockerDindImage,
 			},
 		}
 		build.Variables = append(build.Variables, common.JobVariable{
@@ -407,7 +410,7 @@ func getTestDockerJob(t *testing.T) *common.Build {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 					Privileged: true,
 				},
@@ -451,8 +454,8 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 			},
 			variables: common.JobVariables{
 				{Key: "DOCKER_HOST", Value: "tcp://my-docker-service:2375"},
-				{Key: "IMAGE_NAME", Value: "docker:git"},
-				{Key: "SERVICE_NAME", Value: "docker:dind"},
+				{Key: "IMAGE_NAME", Value: common.TestDockerGitImage},
+				{Key: "SERVICE_NAME", Value: common.TestDockerDindImage},
 			},
 		},
 		{
@@ -466,8 +469,8 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 			},
 			variables: common.JobVariables{
 				{Key: "DOCKER_HOST", Value: "tcp://docker:2375"},
-				{Key: "IMAGE_NAME", Value: "docker:git"},
-				{Key: "SERVICE_NAME", Value: "docker:dind"},
+				{Key: "IMAGE_NAME", Value: common.TestDockerGitImage},
+				{Key: "SERVICE_NAME", Value: common.TestDockerDindImage},
 			},
 		},
 	}
@@ -524,7 +527,7 @@ func TestCacheInContainer(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 					Volumes:    []string{"/cache"},
 				},
@@ -565,7 +568,7 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
 		Key:   "CI_REGISTRY_IMAGE",
-		Value: "alpine",
+		Value: common.TestAlpineImage,
 	})
 	successfulBuild.Image = common.Image{
 		Name: "$CI_REGISTRY_IMAGE",
@@ -577,9 +580,9 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:           "alpine",
+					Image:           common.TestAlpineImage,
 					PullPolicy:      common.PullPolicyIfNotPresent,
-					AllowedServices: []string{"alpine"},
+					AllowedServices: []string{common.TestAlpineImage},
 				},
 			},
 		},
@@ -599,7 +602,7 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
 		Key:   "CI_REGISTRY_IMAGE",
-		Value: "alpine",
+		Value: common.TestAlpineImage,
 	})
 	successfulBuild.Services = append(successfulBuild.Services, common.Image{
 		Name: "$CI_REGISTRY_IMAGE",
@@ -611,9 +614,9 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:           "alpine",
+					Image:           common.TestAlpineImage,
 					PullPolicy:      common.PullPolicyIfNotPresent,
-					AllowedServices: []string{"alpine"},
+					AllowedServices: []string{common.TestAlpineImage},
 				},
 			},
 		},
@@ -707,7 +710,7 @@ func testDockerVersion(t *testing.T, version string) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:             "alpine",
+					Image:             common.TestAlpineImage,
 					PullPolicy:        common.PullPolicyIfNotPresent,
 					DockerCredentials: credentials,
 					CPUS:              "0.1",
@@ -808,7 +811,7 @@ func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
@@ -840,7 +843,7 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "alpine",
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
@@ -871,8 +874,9 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:       "alpine",
+					Image:       common.TestAlpineImage,
 					HelperImage: helperImageConfig,
+					PullPolicy:  common.PullPolicyIfNotPresent,
 				},
 			},
 		},
@@ -882,7 +886,6 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
-	assert.Contains(t, out, "Pulling docker image "+helperImageConfig)
 	assert.Contains(t, out, "Using docker image sha256:bbd86c6ba107ae2feb8dbf9024df4b48597c44e1b584a3d901bba91f7fc500e3 for gitlab/gitlab-runner-helper:x86_64-64eea86c ...")
 }
 
@@ -912,7 +915,7 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:      "docker:git",
+					Image:      common.TestDockerGitImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 					Volumes: []string{
 						"/var/run/docker.sock:/var/run/docker.sock",

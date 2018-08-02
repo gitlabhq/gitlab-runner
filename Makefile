@@ -4,7 +4,7 @@ export VERSION := $(shell ./ci/version)
 REVISION := $(shell git rev-parse --short=8 HEAD || echo unknown)
 BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print $$2}' | sed 's|refs/remotes/origin/||' | sed 's|refs/heads/||' | sort | head -n 1)
 BUILT := $(shell date +%Y-%m-%dT%H:%M:%S%:z)
-TESTFLAGS ?= -cover
+export TESTFLAGS ?= -cover
 
 LATEST_STABLE_TAG := $(shell git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" --sort=-v:refname | awk '!/rc/' | head -n 1)
 export IS_LATEST :=
@@ -45,7 +45,7 @@ export PATH := $(GOPATH_BIN):$(PATH)
 
 # Packages in vendor/ are included in ./...
 # https://github.com/golang/go/issues/11659
-OUR_PACKAGES ?= $(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
+export OUR_PACKAGES ?= $(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
@@ -124,6 +124,22 @@ check_race_conditions:
 test: $(PKG_BUILD_DIR) docker
 	# Running tests...
 	go test $(OUR_PACKAGES) $(TESTFLAGS)
+
+parallel_test_prepare: $(GOPATH_SETUP)
+	# Preparing test commands
+	@./scripts/go_test_with_coverage_report prepare
+
+parallel_test_execute: $(GOPATH_SETUP) pull_images_for_tests
+	# executing tests
+	@./scripts/go_test_with_coverage_report execute
+
+parallel_test_coverage_report: $(GOPATH_SETUP)
+	# Preparing coverage report
+	@./scripts/go_test_with_coverage_report coverage
+
+pull_images_for_tests: $(GOPATH_SETUP)
+	# Pulling images required for some tests
+	@go run ./scripts/pull-images-for-tests/main.go
 
 install:
 	go install --ldflags="$(GO_LDFLAGS)" $(PKG)
