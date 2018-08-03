@@ -9,12 +9,13 @@ import (
 	"path/filepath"
 
 	"fmt"
+	"time"
+
 	"github.com/kardianos/osext"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"time"
 )
 
 type executor struct {
@@ -158,7 +159,8 @@ func init() {
 	}
 
 	common.RegisterExecutor("shell", executors.DefaultExecutorProvider{
-		Creator:         creator,
-		FeaturesUpdater: featuresUpdater,
+		Creator:          creator,
+		FeaturesUpdater:  featuresUpdater,
+		DefaultShellName: options.Shell.Shell,
 	})
 }

@@ -3,8 +3,9 @@ package executors
 import "gitlab.com/gitlab-org/gitlab-runner/common"
 
 type DefaultExecutorProvider struct {
-	Creator         func() common.Executor
-	FeaturesUpdater func(features *common.FeaturesInfo)
+	Creator          func() common.Executor
+	FeaturesUpdater  func(features *common.FeaturesInfo)
+	DefaultShellName string
 }
 
 func (e DefaultExecutorProvider) CanCreate() bool {
@@ -30,4 +31,8 @@ func (e DefaultExecutorProvider) GetFeatures(features *common.FeaturesInfo) {
 	if e.FeaturesUpdater != nil {
 		e.FeaturesUpdater(features)
 	}
+}
+
+func (e DefaultExecutorProvider) GetDefaultShell() string {
+	return e.DefaultShellName
 }

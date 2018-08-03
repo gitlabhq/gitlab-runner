@@ -134,11 +134,17 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 		Executor:     config.Executor,
 	}
 
+	var shellName = config.Shell
+
 	if executor := common.GetExecutor(config.Executor); executor != nil {
 		executor.GetFeatures(&info.Features)
+
+		if shellName == "" {
+			shellName = executor.GetDefaultShell()
+		}
 	}
 
-	if shell := common.GetShell(config.Shell); shell != nil {
+	if shell := common.GetShell(shellName); shell != nil {
 		shell.GetFeatures(&info.Features)
 	}
 

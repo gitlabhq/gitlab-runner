@@ -2,8 +2,10 @@ package common
 
 import (
 	"context"
+	"errors"
 
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type ExecutorData interface{}
@@ -47,7 +49,8 @@ type ExecutorProvider interface {
 	Create() Executor
 	Acquire(config *RunnerConfig) (ExecutorData, error)
 	Release(config *RunnerConfig, data ExecutorData) error
-	GetFeatures(features *FeaturesInfo)
+	GetFeatures(features *FeaturesInfo) error
+	GetDefaultShell() string
 }
 
 type BuildError struct {
@@ -64,8 +67,28 @@ func (b *BuildError) Error() string {
 
 var executors map[string]ExecutorProvider
 
+func validateExecutorProvider(provider ExecutorProvider) error {
+	if provider.GetDefaultShell() == "" {
+		return errors.New("default shell not implemented")
+	}
+
+	if provider.CanCreate() {
+		return errors.New("cannot create executor")
+	}
+
+	if provider.GetFeatures(&common.FeaturesInfo{}) != nil {
+		return errors.New("cannot get features")
+	}
+
+	return nil
+}
+
 func RegisterExecutor(executor string, provider ExecutorProvider) {
 	log.Debugln("Registering", executor, "executor...")
+
+	if err := validateExecutorProvider(provider); err != nil {
+		panic("Executor cannot be registered: " + err.Error())
+	}
 
 	if executors == nil {
 		executors = make(map[string]ExecutorProvider)
