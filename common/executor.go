@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type ExecutorData interface{}
@@ -76,7 +75,7 @@ func validateExecutorProvider(provider ExecutorProvider) error {
 		return errors.New("cannot create executor")
 	}
 
-	if provider.GetFeatures(&common.FeaturesInfo{}) != nil {
+	if provider.GetFeatures(&FeaturesInfo{}) != nil {
 		return errors.New("cannot get features")
 	}
 

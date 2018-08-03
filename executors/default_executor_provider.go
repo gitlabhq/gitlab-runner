@@ -1,6 +1,10 @@
 package executors
 
-import "gitlab.com/gitlab-org/gitlab-runner/common"
+import (
+	"errors"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+)
 
 type DefaultExecutorProvider struct {
 	Creator          func() common.Executor
@@ -27,10 +31,13 @@ func (e DefaultExecutorProvider) Release(config *common.RunnerConfig, data commo
 	return nil
 }
 
-func (e DefaultExecutorProvider) GetFeatures(features *common.FeaturesInfo) {
-	if e.FeaturesUpdater != nil {
-		e.FeaturesUpdater(features)
+func (e DefaultExecutorProvider) GetFeatures(features *common.FeaturesInfo) error {
+	if e.FeaturesUpdater == nil {
+		return errors.New("cannot evaluate features")
 	}
+
+	e.FeaturesUpdater(features)
+	return nil
 }
 
 func (e DefaultExecutorProvider) GetDefaultShell() string {

@@ -64,9 +64,32 @@ func (_m *MockExecutorProvider) Create() Executor {
 	return r0
 }
 
+// GetDefaultShell provides a mock function with given fields:
+func (_m *MockExecutorProvider) GetDefaultShell() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // GetFeatures provides a mock function with given fields: features
-func (_m *MockExecutorProvider) GetFeatures(features *FeaturesInfo) {
-	_m.Called(features)
+func (_m *MockExecutorProvider) GetFeatures(features *FeaturesInfo) error {
+	ret := _m.Called(features)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*FeaturesInfo) error); ok {
+		r0 = rf(features)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // Release provides a mock function with given fields: config, data

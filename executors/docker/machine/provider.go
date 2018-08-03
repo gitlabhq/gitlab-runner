@@ -405,8 +405,12 @@ func (m *machineProvider) CanCreate() bool {
 	return m.provider.CanCreate()
 }
 
-func (m *machineProvider) GetFeatures(features *common.FeaturesInfo) {
-	m.provider.GetFeatures(features)
+func (m *machineProvider) GetFeatures(features *common.FeaturesInfo) error {
+	return m.provider.GetFeatures(features)
+}
+
+func (m *machineProvider) GetDefaultShell() string {
+	return m.provider.GetDefaultShell()
 }
 
 func (m *machineProvider) Create() common.Executor {

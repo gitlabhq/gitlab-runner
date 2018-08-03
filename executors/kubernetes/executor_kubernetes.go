@@ -551,6 +551,6 @@ func init() {
 	common.RegisterExecutor("kubernetes", executors.DefaultExecutorProvider{
 		Creator:          createFn,
 		FeaturesUpdater:  featuresFn,
-		DefaultShellName: options.Shell.Shell,
+		DefaultShellName: executorOptions.Shell.Shell,
 	})
 }
