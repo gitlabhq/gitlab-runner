@@ -71,7 +71,7 @@ func validateExecutorProvider(provider ExecutorProvider) error {
 		return errors.New("default shell not implemented")
 	}
 
-	if provider.CanCreate() {
+	if !provider.CanCreate() {
 		return errors.New("cannot create executor")
 	}
 
