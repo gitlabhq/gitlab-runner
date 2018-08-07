@@ -342,7 +342,8 @@ func init() {
 	}
 
 	common.RegisterExecutor("parallels", executors.DefaultExecutorProvider{
-		Creator:         creator,
-		FeaturesUpdater: featuresUpdater,
+		Creator:          creator,
+		FeaturesUpdater:  featuresUpdater,
+		DefaultShellName: options.Shell.Shell,
 	})
 }

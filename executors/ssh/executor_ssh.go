@@ -88,7 +88,8 @@ func init() {
 	}
 
 	common.RegisterExecutor("ssh", executors.DefaultExecutorProvider{
-		Creator:         creator,
-		FeaturesUpdater: featuresUpdater,
+		Creator:          creator,
+		FeaturesUpdater:  featuresUpdater,
+		DefaultShellName: options.Shell.Shell,
 	})
 }

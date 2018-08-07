@@ -121,7 +121,8 @@ func init() {
 	}
 
 	common.RegisterExecutor("docker", executors.DefaultExecutorProvider{
-		Creator:         creator,
-		FeaturesUpdater: featuresUpdater,
+		Creator:          creator,
+		FeaturesUpdater:  featuresUpdater,
+		DefaultShellName: options.Shell.Shell,
 	})
 }

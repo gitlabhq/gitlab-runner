@@ -3,11 +3,12 @@ package virtualbox
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	vbox "gitlab.com/gitlab-org/gitlab-runner/helpers/virtualbox"
-	"time"
 )
 
 type executor struct {
@@ -321,7 +322,8 @@ func init() {
 	}
 
 	common.RegisterExecutor("virtualbox", executors.DefaultExecutorProvider{
-		Creator:         creator,
-		FeaturesUpdater: featuresUpdater,
+		Creator:          creator,
+		FeaturesUpdater:  featuresUpdater,
+		DefaultShellName: options.Shell.Shell,
 	})
 }

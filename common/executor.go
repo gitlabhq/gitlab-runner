@@ -2,6 +2,8 @@ package common
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -47,7 +49,8 @@ type ExecutorProvider interface {
 	Create() Executor
 	Acquire(config *RunnerConfig) (ExecutorData, error)
 	Release(config *RunnerConfig, data ExecutorData) error
-	GetFeatures(features *FeaturesInfo)
+	GetFeatures(features *FeaturesInfo) error
+	GetDefaultShell() string
 }
 
 type BuildError struct {
@@ -64,8 +67,28 @@ func (b *BuildError) Error() string {
 
 var executors map[string]ExecutorProvider
 
+func validateExecutorProvider(provider ExecutorProvider) error {
+	if provider.GetDefaultShell() == "" {
+		return errors.New("default shell not implemented")
+	}
+
+	if !provider.CanCreate() {
+		return errors.New("cannot create executor")
+	}
+
+	if err := provider.GetFeatures(&FeaturesInfo{}); err != nil {
+		return fmt.Errorf("cannot get features: %v", err)
+	}
+
+	return nil
+}
+
 func RegisterExecutor(executor string, provider ExecutorProvider) {
 	log.Debugln("Registering", executor, "executor...")
+
+	if err := validateExecutorProvider(provider); err != nil {
+		panic("Executor cannot be registered: " + err.Error())
+	}
 
 	if executors == nil {
 		executors = make(map[string]ExecutorProvider)
