@@ -93,6 +93,7 @@ type VersionInfo struct {
 	Platform     string       `json:"platform,omitempty"`
 	Architecture string       `json:"architecture,omitempty"`
 	Executor     string       `json:"executor,omitempty"`
+	Shell        string       `json:"shell,omitempty"`
 	Features     FeaturesInfo `json:"features"`
 }
 

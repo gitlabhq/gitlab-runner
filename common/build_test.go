@@ -26,8 +26,11 @@ func TestBuildRun(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor only once
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Once()
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// We run everything once
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
@@ -71,8 +74,11 @@ func TestRetryPrepare(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Times(3)
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -112,8 +118,11 @@ func TestPrepareFailure(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Times(3)
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -144,8 +153,11 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Times(1)
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -182,8 +194,11 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Once()
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -224,8 +239,11 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Once()
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -264,8 +282,11 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Once()
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -306,8 +327,11 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Once()
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -357,8 +381,11 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Once()
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -397,8 +424,11 @@ func TestRunWrongAttempts(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e)
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -433,8 +463,11 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 	p := MockExecutorProvider{}
 
 	// Create executor only once
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
 	p.On("Create").Return(&e).Once()
-	p.On("GetFeatures", mock.Anything).Once()
 
 	// We run everything once
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
@@ -981,4 +982,57 @@ func TestArtifactsDownload(t *testing.T) {
 
 	state = c.DownloadArtifacts(fileNotFoundTokenCredentials, artifactsFileName)
 	assert.Equal(t, DownloadNotFound, state, "Artifacts should be bit downloaded if it's not found")
+}
+
+func TestRunnerVersion(t *testing.T) {
+	c := NewGitLabClient()
+	info := c.getRunnerVersion(RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor: "my-executor",
+			Shell:    "my-shell",
+		},
+	})
+
+	assert.NotEmpty(t, info.Name)
+	assert.NotEmpty(t, info.Version)
+	assert.NotEmpty(t, info.Revision)
+	assert.NotEmpty(t, info.Platform)
+	assert.NotEmpty(t, info.Architecture)
+	assert.Equal(t, "my-executor", info.Executor)
+	assert.Equal(t, "my-shell", info.Shell)
+}
+
+func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testing.T) {
+	executorProvider := MockExecutorProvider{}
+	defer executorProvider.AssertExpectations(t)
+	executorProvider.On("GetDefaultShell").Return("my-default-executor-shell").Twice()
+	executorProvider.On("CanCreate").Return(true).Once()
+	executorProvider.On("GetFeatures", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		features := args[0].(*FeaturesInfo)
+		features.Shared = true
+	})
+	RegisterExecutor("my-test-executor", &executorProvider)
+
+	shell := MockShell{}
+	defer shell.AssertExpectations(t)
+	shell.On("GetName").Return("my-default-executor-shell")
+	shell.On("GetFeatures", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		features := args[0].(*FeaturesInfo)
+		features.Variables = true
+	})
+	RegisterShell(&shell)
+
+	c := NewGitLabClient()
+	info := c.getRunnerVersion(RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor: "my-test-executor",
+			Shell:    "",
+		},
+	})
+
+	assert.Equal(t, "my-test-executor", info.Executor)
+	assert.Equal(t, "my-default-executor-shell", info.Shell)
+	assert.False(t, info.Features.Artifacts, "dry-run that this is not enabled")
+	assert.True(t, info.Features.Shared, "feature is enabled by executor")
+	assert.True(t, info.Features.Variables, "feature is enabled by shell")
 }

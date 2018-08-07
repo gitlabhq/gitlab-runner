@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -75,8 +76,8 @@ func validateExecutorProvider(provider ExecutorProvider) error {
 		return errors.New("cannot create executor")
 	}
 
-	if provider.GetFeatures(&FeaturesInfo{}) != nil {
-		return errors.New("cannot get features")
+	if err := provider.GetFeatures(&FeaturesInfo{}); err != nil {
+		return fmt.Errorf("cannot get features: %v", err)
 	}
 
 	return nil
