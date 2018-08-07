@@ -9,14 +9,7 @@ import (
 type SecretsCleanupHook struct{}
 
 func (s *SecretsCleanupHook) Levels() []logrus.Level {
-	return []logrus.Level{
-		logrus.PanicLevel,
-		logrus.FatalLevel,
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-		logrus.InfoLevel,
-		logrus.DebugLevel,
-	}
+	return logrus.AllLevels
 }
 
 func (s *SecretsCleanupHook) Fire(entry *logrus.Entry) error {
