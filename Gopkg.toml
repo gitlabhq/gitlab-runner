@@ -32,9 +32,7 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
-  # version = "1.0.4"
-  # 1.0.4 has a race condition on panic in logrous hooks taht is triggere by our test suite
-  revision = "8c0189d9f6bbf301e5d055d34268156b317016af"
+  version = "1.0.6"
 
 [[constraint]]
   branch = "master"
