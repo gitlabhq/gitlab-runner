@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"io"
 	"path"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 const bashDetectShell = `if [ -x /usr/local/bin/bash ]; then
@@ -25,6 +26,8 @@ elif [ -x /usr/bin/sh ]; then
 	exec /usr/bin/sh $@
 elif [ -x /bin/sh ]; then
 	exec /bin/sh $@
+elif [ -x /busybox/sh ]; then
+	exec /busybox/sh $@
 else
 	echo shell not found
 	exit 1
