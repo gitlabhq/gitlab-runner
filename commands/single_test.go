@@ -113,7 +113,3 @@ func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job
 
 	return single, cleanup
 }
-
-func TestFailingTest(t *testing.T) {
-	t.Fatal("Dummy failure to test CI")
-}
