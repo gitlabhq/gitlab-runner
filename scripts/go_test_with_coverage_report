@@ -37,8 +37,7 @@ prepareTestCommands() {
         local testIndex=0
         local runTests=()
 
-        local tests
-        tests=$(go test -list "Test.*" "${pkg}" | grep "^Test" || echo "")
+        local tests=$(go test -list "Test.*" "${pkg}" | grep "^Test" || echo "")
 
         if [[ -z "${tests}" ]]; then
             continue
@@ -76,8 +75,7 @@ executeTestCommand() {
 
     local options=""
 
-    local pkgSlug
-    pkgSlug=$(echo "${pkg}" | tr "/" "-")
+    local pkgSlug=$(echo "${pkg}" | tr "/" "-")
 
     if [[ ${TESTFLAGS} = *"-cover"* ]]; then
         mkdir -p ".cover"
@@ -85,13 +83,13 @@ executeTestCommand() {
 
         printMessage "\\n\\n--- Starting part ${index} of go tests of '${pkg}' package with coverprofile in '${coverMode}' mode:\\n"
 
-        profileFile=".cover/${pkgSlug}.${index}.${coverMode}.cover.txt"
+        local profileFile=".cover/${pkgSlug}.${index}.${coverMode}.cover.txt"
         options="-covermode=${coverMode} -coverprofile=${profileFile}"
     else
         echo "Starting go test"
     fi
 
-    testOutputFile=".testoutput/${pkgSlug}.${index}.${output}.output.txt"
+    local testOutputFile=".testoutput/${pkgSlug}.${index}.${output}.output.txt"
 
     local exitCode=0
     # shellcheck disable=SC2086
@@ -104,9 +102,9 @@ executeTestPart() {
     rm -rf ".cover/"
     rm -rf ".testoutput/"
 
-    numberOfDefinitions=$(< "${testsDefinitions}" wc -l)
-    executionSize=$((numberOfDefinitions/SUITE_TOTAL+1))
-    executionOffset=$((SUITE_INDEX*executionSize+1))
+    local numberOfDefinitions=$(< "${testsDefinitions}" wc -l)
+    local executionSize=$((numberOfDefinitions/SUITE_TOTAL+1))
+    local executionOffset=$((SUITE_INDEX*executionSize+1))
 
     printMessage "Number of definitions: ${numberOfDefinitions}"
     printMessage "Suite size: ${SUITE_TOTAL}"
@@ -140,7 +138,7 @@ computeCoverageReport() {
     go tool cover -o ${textReportFile} -func=${sourceFile}
 
     printMessage "General coverage percentage:"
-    total=$(grep "total" "${textReportFile}" || echo "")
+    local total=$(grep "total" "${textReportFile}" || echo "")
 
     if [[ -n "${total}" ]]; then
         echo "${output} ${total}"
