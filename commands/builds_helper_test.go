@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -163,17 +164,27 @@ func getTestBuild() *common.Build {
 }
 
 type fakeResponseWriter struct {
-	output *bytes.Buffer
-	header http.Header
+	output     *bytes.Buffer
+	header     http.Header
+	statusCode int
 }
 
 func (w *fakeResponseWriter) Header() http.Header            { return w.header }
 func (w *fakeResponseWriter) Write(data []byte) (int, error) { return w.output.Write(data) }
-func (w *fakeResponseWriter) WriteHeader(statusCode int)     {}
+func (w *fakeResponseWriter) WriteHeader(statusCode int)     { w.statusCode = statusCode }
+
+func newFakeResponseWriter() *fakeResponseWriter {
+	return &fakeResponseWriter{
+		output: &bytes.Buffer{},
+		header: http.Header{},
+	}
+}
 
 type listJobsHandlerTest struct {
 	build          *common.Build
-	expectedOutput string
+	expectedOutput []string
+	expectedRegexp []*regexp.Regexp
+	expectedStatus int
 }
 
 func TestBuildsHandler_ListJobsHandler(t *testing.T) {
@@ -182,31 +193,41 @@ func TestBuildsHandler_ListJobsHandler(t *testing.T) {
 	tests := map[string]listJobsHandlerTest{
 		"no jobs": {
 			build:          nil,
-			expectedOutput: "",
+			expectedStatus: http.StatusOK,
 		},
 		"job exists": {
-			build:          build,
-			expectedOutput: fmt.Sprintf("url=https://gitlab.example.com/my-namespace/my-project/-/jobs/%d", build.ID),
+			build: build,
+			expectedOutput: []string{
+				fmt.Sprintf("url=https://gitlab.example.com/my-namespace/my-project/-/jobs/%d", build.ID),
+			},
+			expectedRegexp: []*regexp.Regexp{
+				regexp.MustCompile("duration=[0-9hms.]+"),
+			},
+			expectedStatus: http.StatusOK,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			writer := &fakeResponseWriter{
-				output: &bytes.Buffer{},
-				header: http.Header{},
-			}
+			writer := newFakeResponseWriter()
 
 			b := &buildsHelper{}
-
 			b.addBuild(test.build)
 			b.ListJobsHandler(writer, &http.Request{})
 
-			if test.expectedOutput == "" {
+			if len(test.expectedOutput) == 0 && len(test.expectedRegexp) == 0 {
 				assert.Empty(t, writer.output.String())
 			} else {
-				assert.Contains(t, writer.output.String(), test.expectedOutput)
+				for _, expectedOutput := range test.expectedOutput {
+					assert.Contains(t, writer.output.String(), expectedOutput)
+				}
+
+				for _, expectedRegexp := range test.expectedRegexp {
+					assert.Regexp(t, expectedRegexp, writer.output.String())
+				}
 			}
+
+			assert.Equal(t, test.expectedStatus, writer.statusCode)
 		})
 	}
 }

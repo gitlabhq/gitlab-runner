@@ -283,14 +283,15 @@ func CreateJobURL(projectURL string, jobID int) string {
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
 
 	for _, job := range b.builds {
 		url := CreateJobURL(job.RepoCleanURL(), job.ID)
 
 		fmt.Fprintf(
 			w,
-			"url=%s state=%s stage=%s executor_stage=%s\n",
-			url, job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(),
+			"url=%s state=%s stage=%s executor_stage=%s duration=%s\n",
+			url, job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(), job.Duration(),
 		)
 	}
 }
