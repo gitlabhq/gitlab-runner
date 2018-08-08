@@ -146,6 +146,10 @@ func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig) bool {
 }
 
 func (b *buildsHelper) addBuild(build *common.Build) {
+	if build == nil {
+		return
+	}
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
