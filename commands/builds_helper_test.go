@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"bytes"
+	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -152,6 +155,72 @@ func getTestBuild() *common.Build {
 	build.ID = testBuildCurrentID
 	build.Runner = &runner
 	build.JobInfo = jobInfo
+	build.GitInfo = common.GitInfo{
+		RepoURL: "https://gitlab.example.com/my-namespace/my-project.git",
+	}
 
 	return build
+}
+
+type fakeResponseWriter struct {
+	output *bytes.Buffer
+	header http.Header
+}
+
+func (w *fakeResponseWriter) Header() http.Header            { return w.header }
+func (w *fakeResponseWriter) Write(data []byte) (int, error) { return w.output.Write(data) }
+func (w *fakeResponseWriter) WriteHeader(statusCode int)     {}
+
+type listJobsHandlerTest struct {
+	build          *common.Build
+	expectedOutput string
+}
+
+func TestBuildsHandler_ListJobsHandler(t *testing.T) {
+	build := getTestBuild()
+
+	tests := map[string]listJobsHandlerTest{
+		"no jobs": {
+			build:          nil,
+			expectedOutput: "",
+		},
+		"job exists": {
+			build:          build,
+			expectedOutput: fmt.Sprintf("url=https://gitlab.example.com/my-namespace/my-project/-/jobs/%d", build.ID),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			writer := &fakeResponseWriter{
+				output: &bytes.Buffer{},
+				header: http.Header{},
+			}
+
+			b := &buildsHelper{}
+
+			b.addBuild(test.build)
+			b.ListJobsHandler(writer, &http.Request{})
+
+			if test.expectedOutput == "" {
+				assert.Empty(t, writer.output.String())
+			} else {
+				assert.Contains(t, writer.output.String(), test.expectedOutput)
+			}
+		})
+	}
+}
+
+func TestCreateJobURL(t *testing.T) {
+	testCases := map[string]string{
+		"http://gitlab.example.com/my-namespace/my-project.git":     "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
+		"http://gitlab.example.com/my-namespace/my-project":         "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
+		"http://gitlab.example.com/my-namespace/my.git.project.git": "http://gitlab.example.com/my-namespace/my.git.project/-/jobs/1",
+		"http://gitlab.example.com/my-namespace/my.git.project":     "http://gitlab.example.com/my-namespace/my.git.project/-/jobs/1",
+	}
+
+	for URL, expectedURL := range testCases {
+		jobURL := CreateJobURL(URL, 1)
+		assert.Equal(t, expectedURL, jobURL)
+	}
 }

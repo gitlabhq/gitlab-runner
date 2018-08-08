@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"regexp"
 	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -269,15 +270,23 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
+func CreateJobURL(projectURL string, jobID int) string {
+	r := regexp.MustCompile("(\\.git$)?")
+	URL := r.ReplaceAllString(projectURL, "")
+
+	return fmt.Sprintf("%s/-/jobs/%d", URL, jobID)
+}
+
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain")
 
 	for _, job := range b.builds {
+		url := CreateJobURL(job.RepoCleanURL(), job.ID)
+
 		fmt.Fprintf(
 			w,
-			"id=%d url=%s state=%s stage=%s executor_stage=%s\n",
-			job.ID, job.RepoCleanURL(),
-			job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(),
+			"url=%s state=%s stage=%s executor_stage=%s\n",
+			url, job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(),
 		)
 	}
 }
