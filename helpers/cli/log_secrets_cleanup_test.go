@@ -1,9 +1,10 @@
 package cli_helpers_test
 
 import (
+	"bytes"
 	"testing"
 
-	logrus_test "github.com/sirupsen/logrus/hooks/test"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
@@ -23,19 +24,21 @@ func TestSecretsCleanupHook(t *testing.T) {
 		{
 			name:     "No Secrets",
 			message:  "Fatal: Get http://localhost/?id=123",
-			expected: "Get http://localhost/?id=123",
+			expected: "Fatal: Get http://localhost/?id=123",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			logger, hook := logrus_test.NewNullLogger()
+			buffer := &bytes.Buffer{}
+
+			logger := logrus.New()
+			logger.Out = buffer
 			logger.AddHook(&cli_helpers.SecretsCleanupHook{})
 
 			logger.Errorln(test.message)
-			entry := hook.LastEntry()
-			assert.NotNil(t, entry)
-			assert.Contains(t, entry.Message, test.expected)
+
+			assert.Contains(t, buffer.String(), test.expected)
 		})
 	}
 }

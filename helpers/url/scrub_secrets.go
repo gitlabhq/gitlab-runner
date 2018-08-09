@@ -4,7 +4,7 @@ import (
 	"regexp"
 )
 
-var scrubRegexp = regexp.MustCompile(`(?im)([\?&]((?:private|authenticity|rss)[\-_]token)|X-AMZ-Signature)=[^&]*`)
+var scrubRegexp = regexp.MustCompile(`(?im)([\?&]((?:private|authenticity|rss)[\-_]token)|X-AMZ-Signature)=[^& ]*`)
 
 // ScrubSecrets replaces the content of any sensitive query string parameters
 // in an URL with `[FILTERED]`
