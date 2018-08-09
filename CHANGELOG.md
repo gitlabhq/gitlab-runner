@@ -1,3 +1,18 @@
+v 11.2.0-rc1 (2018-08-09)
+- Fix support for Unicode variable values when Windows+PowerShell are used !960
+- Update docs/executors/kubernetes.md !957
+- Fix missing code_quality widget !972
+- Add `artifact` format !923
+- Improve some k8s executor tests !980
+- Set useragent in Kubernetes API calls !977
+- Clarifying the tls-ca-file option is in the [[runners]] section !973
+- Update mocks !983
+- Add building to development heading !919
+- Add coverage report for unit tests !928
+- Add /etc/nsswitch.conf to helper on docker executor to read /etc/hosts when upload artifacts !951
+- Add busybox shell !900
+- Fix support for features for shells !989
+
 v 11.1.0 (2018-07-22)
 - Fix support for Unicode variable values when Windows+PowerShell are used !960
 - Unify receivers used for 'executor' struct in ./executors/docker/ !926
