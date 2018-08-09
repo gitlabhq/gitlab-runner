@@ -418,7 +418,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 	}
 
 	if listenAddress == "" {
-		log.Infoln("Metrics server disabled")
+		mr.log().Info("Listen address not defined, metrics server disabled")
 		return
 	}
 
@@ -426,19 +426,24 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 	// the provided address is invalid or there is some other listener error.
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
-		log.Fatalln(err)
+		mr.log().WithError(err).Fatal("Failed to create listener for metrics server")
 	}
 
 	mux := http.NewServeMux()
 
 	go func() {
-		log.Fatalln(http.Serve(listener, mux))
+		err := http.Serve(listener, mux)
+		if err != nil {
+			mr.log().WithError(err).Fatal("Metrics server terminated")
+		}
 	}()
 
 	mr.serveMetrics(mux)
 	mr.serveDebugData(mux)
 
-	log.Infoln("Metrics server listening at", listenAddress)
+	mr.log().
+		WithField("address", listenAddress).
+		Info("Metrics server listening")
 }
 
 func (mr *RunCommand) setupSessionServer() {
@@ -465,7 +470,7 @@ func (mr *RunCommand) setupSessionServer() {
 	go func() {
 		err := mr.sessionServer.Start()
 		if err != nil {
-			mr.log().Fatal(err)
+			mr.log().WithError(err).Fatal("Session server terminated")
 		}
 	}()
 
