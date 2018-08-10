@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -13,50 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
-
-type tracePatch struct {
-	trace  bytes.Buffer
-	offset int
-	limit  int
-}
-
-func (tp *tracePatch) Patch() []byte {
-	return tp.trace.Bytes()[tp.offset:tp.limit]
-}
-
-func (tp *tracePatch) Offset() int {
-	return tp.offset
-}
-
-func (tp *tracePatch) Limit() int {
-	return tp.limit
-}
-
-func (tp *tracePatch) SetNewOffset(newOffset int) {
-	tp.offset = newOffset
-}
-
-func (tp *tracePatch) ValidateRange() bool {
-	if tp.limit >= tp.offset {
-		return true
-	}
-
-	return false
-}
-
-func newTracePatch(trace bytes.Buffer, offset int) (*tracePatch, error) {
-	patch := &tracePatch{
-		trace:  trace,
-		offset: offset,
-		limit:  trace.Len(),
-	}
-
-	if !patch.ValidateRange() {
-		return nil, errors.New("Range is invalid, limit can't be less than offset")
-	}
-
-	return patch, nil
-}
 
 type clientJobTrace struct {
 	*io.PipeWriter
@@ -197,22 +152,26 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 	trace := c.log
 	c.lock.RUnlock()
 
-	if c.sentState == state &&
-		c.sentTrace == trace.Len() &&
-		time.Since(c.sentTime) < c.forceSendInterval {
-		return common.UpdateSucceeded
-	}
-
-	if c.sentState != state {
-		jobInfo := common.UpdateJobInfo{
-			ID:            c.id,
-			State:         state,
-			FailureReason: c.failureReason,
+	if c.sentTrace != trace.Len() {
+		result := c.sendPatch(trace)
+		if result != common.UpdateSucceeded {
+			return result
 		}
-		c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
-		c.sentState = state
 	}
 
+	if c.sentState != state || time.Since(c.sentTime) > c.forceSendInterval {
+		if state == common.Running { // we should only follow-up with Running!
+			result := c.sendUpdate(state)
+			if result != common.UpdateSucceeded {
+				return result
+			}
+		}
+	}
+
+	return common.UpdateSucceeded
+}
+
+func (c *clientJobTrace) sendPatch(trace bytes.Buffer) common.UpdateState {
 	tracePatch, err := newTracePatch(trace, c.sentTrace)
 	if err != nil {
 		c.config.Log().Errorln("Error while creating a tracePatch", err.Error())
@@ -228,7 +187,7 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 	}
 
 	if update == common.UpdateSucceeded {
-		c.sentTrace = tracePatch.Limit()
+		c.sentTrace = tracePatch.totalSize
 		c.sentTime = time.Now()
 	}
 
@@ -262,28 +221,46 @@ func (c *clientJobTrace) resendPatch(id int, config common.RunnerConfig, jobCred
 	return
 }
 
+func (c *clientJobTrace) sendUpdate(state common.JobState) common.UpdateState {
+	jobInfo := common.UpdateJobInfo{
+		ID:            c.id,
+		State:         state,
+		FailureReason: c.failureReason,
+	}
+
+	status := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
+	if status == common.UpdateSucceeded {
+		c.sentState = state
+		c.sentTime = time.Now()
+	}
+
+	return status
+}
+
 func (c *clientJobTrace) fullUpdate() common.UpdateState {
 	c.lock.RLock()
 	state := c.state
-	trace := c.log.String()
+	trace := c.log
 	c.lock.RUnlock()
 
-	if c.sentState == state &&
-		c.sentTrace == len(trace) &&
-		time.Since(c.sentTime) < c.forceSendInterval {
-		return common.UpdateSucceeded
+	if c.sentTrace != trace.Len() {
+		c.sendPatch(trace) // we don't care about sendPatch() result, in the worst case we will re-send the trace
 	}
 
 	jobInfo := common.UpdateJobInfo{
 		ID:            c.id,
 		State:         state,
-		Trace:         &trace,
 		FailureReason: c.failureReason,
+	}
+
+	if c.sentTrace != trace.Len() {
+		traceString := trace.String()
+		jobInfo.Trace = &traceString
 	}
 
 	update := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
 	if update == common.UpdateSucceeded {
-		c.sentTrace = len(trace)
+		c.sentTrace = trace.Len()
 		c.sentState = state
 		c.sentTime = time.Now()
 	}

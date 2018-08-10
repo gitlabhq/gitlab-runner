@@ -350,7 +350,7 @@ type JobTrace interface {
 type JobTracePatch interface {
 	Patch() []byte
 	Offset() int
-	Limit() int
+	TotalSize() int
 	SetNewOffset(newOffset int)
 	ValidateRange() bool
 }
