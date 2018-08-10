@@ -595,6 +595,67 @@ func TestUpdateJob(t *testing.T) {
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 }
 
+func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.Method != "PUT" {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
+	switch r.URL.Path {
+	case "/api/v4/jobs/10":
+	case "/api/v4/jobs/11":
+		w.Header().Set("Job-Status", "canceled")
+	case "/api/v4/jobs/12":
+		w.Header().Set("Job-Status", "failed")
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	assert.NoError(t, err)
+
+	var req map[string]interface{}
+	err = json.Unmarshal(body, &req)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "token", req["token"])
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func TestUpdateJobAsKeepAlive(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testUpdateJobKeepAliveHandler(w, r, t)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	config := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL: s.URL,
+		},
+	}
+
+	jobCredentials := &JobCredentials{
+		Token: "token",
+	}
+
+	c := NewGitLabClient()
+
+	var state UpdateState
+
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running"})
+	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
+
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 11, State: "running"})
+	assert.Equal(t, UpdateAbort, state, "Update should be aborted when Job-Status=canceled")
+
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 12, State: "running"})
+	assert.Equal(t, UpdateAbort, state, "Update should continue when Job-Status=failed")
+}
+
 var patchToken = "token"
 var patchTraceString = "trace trace trace"
 
@@ -674,8 +735,7 @@ func TestForbiddenPatchTrace(t *testing.T) {
 
 func TestPatchTrace(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		assert.Equal(t, patchTraceString[offset:limit], body)
-
+		assert.Equal(t, patchTraceString[offset:limit+1], body)
 		w.WriteHeader(http.StatusAccepted)
 	}
 
@@ -789,6 +849,136 @@ func TestPatchTraceCantConnect(t *testing.T) {
 	tracePatch := getTracePatch(patchTraceString, 0)
 	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
 	assert.Equal(t, UpdateFailed, state)
+}
+
+func TestPatchTraceUpdatedTrace(t *testing.T) {
+	sentTrace := 0
+	traceString := ""
+
+	updates := []struct {
+		traceUpdate             string
+		expectedContentRange    string
+		expectedContentLength   int64
+		expectedResult          UpdateState
+		shouldNotCallPatchTrace bool
+	}{
+		{traceUpdate: "test", expectedContentRange: "0-3", expectedContentLength: 4, expectedResult: UpdateSucceeded},
+		{traceUpdate: "", expectedResult: UpdateFailed, shouldNotCallPatchTrace: true},
+		{traceUpdate: " ", expectedContentRange: "4-4", expectedContentLength: 1, expectedResult: UpdateSucceeded},
+		{traceUpdate: "test", expectedContentRange: "5-8", expectedContentLength: 4, expectedResult: UpdateSucceeded},
+	}
+
+	for id, update := range updates {
+		t.Run(fmt.Sprintf("patch-%d", id+1), func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+				if update.shouldNotCallPatchTrace {
+					t.Error("PatchTrace endpoint should not be called")
+					return
+				}
+
+				if limit+1 <= len(traceString) {
+					assert.Equal(t, traceString[offset:limit+1], body)
+				}
+
+				assert.Equal(t, update.traceUpdate, body)
+				assert.Equal(t, update.expectedContentRange, r.Header.Get("Content-Range"))
+				assert.Equal(t, update.expectedContentLength, r.ContentLength)
+				w.WriteHeader(http.StatusAccepted)
+			}
+
+			server, client, config := getPatchServer(t, handler)
+			defer server.Close()
+
+			traceString += update.traceUpdate
+			tracePatch := getTracePatch(traceString, sentTrace)
+
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+			assert.Equal(t, update.expectedResult, result)
+
+			sentTrace = tracePatch.totalSize
+		})
+	}
+}
+
+func TestPatchTraceContentRangeAndLength(t *testing.T) {
+	tests := []struct {
+		name                    string
+		trace                   string
+		expectedContentRange    string
+		expectedContentLength   int64
+		expectedResult          UpdateState
+		shouldNotCallPatchTrace bool
+	}{
+		{name: "0 bytes", trace: "", expectedResult: UpdateFailed, shouldNotCallPatchTrace: true},
+		{name: "1 byte", trace: "1", expectedContentRange: "0-0", expectedContentLength: 1, expectedResult: UpdateSucceeded, shouldNotCallPatchTrace: false},
+		{name: "2 bytes", trace: "12", expectedContentRange: "0-1", expectedContentLength: 2, expectedResult: UpdateSucceeded, shouldNotCallPatchTrace: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+				if test.shouldNotCallPatchTrace {
+					t.Error("PatchTrace endpoint should not be called")
+					return
+				}
+
+				assert.Equal(t, test.expectedContentRange, r.Header.Get("Content-Range"))
+				assert.Equal(t, test.expectedContentLength, r.ContentLength)
+				w.WriteHeader(http.StatusAccepted)
+			}
+
+			server, client, config := getPatchServer(t, handler)
+			defer server.Close()
+
+			tracePatch := getTracePatch(test.trace, 0)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+		contentRange := r.Header.Get("Content-Range")
+		bytes := strings.Split(contentRange, "-")
+
+		startByte, err := strconv.Atoi(bytes[0])
+		require.NoError(t, err, "Should not set error when parsing Content-Range startByte component")
+
+		endByte, err := strconv.Atoi(bytes[1])
+		require.NoError(t, err, "Should not set error when parsing Content-Range endByte component")
+
+		assert.Equal(t, 0, startByte, "Content-Range should contain start byte as first field")
+		assert.Equal(t, len(patchTraceString)-1, endByte, "Content-Range should contain end byte as second field")
+
+		w.WriteHeader(http.StatusAccepted)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	tracePatch := getTracePatch(patchTraceString, 0)
+	client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+}
+
+func TestAbortedPatchTrace(t *testing.T) {
+	statuses := []string{"canceled", "failed"}
+
+	for _, status := range statuses {
+		t.Run(status, func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+				w.Header().Set("Job-Status", status)
+				w.WriteHeader(http.StatusAccepted)
+			}
+
+			server, client, config := getPatchServer(t, handler)
+			defer server.Close()
+
+			tracePatch := getTracePatch(patchTraceString, 0)
+			state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+			assert.Equal(t, UpdateAbort, state)
+		})
+	}
 }
 
 func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {

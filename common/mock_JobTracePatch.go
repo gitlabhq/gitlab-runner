@@ -11,20 +11,6 @@ type MockJobTracePatch struct {
 	mock.Mock
 }
 
-// Limit provides a mock function with given fields:
-func (_m *MockJobTracePatch) Limit() int {
-	ret := _m.Called()
-
-	var r0 int
-	if rf, ok := ret.Get(0).(func() int); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-
-	return r0
-}
-
 // Offset provides a mock function with given fields:
 func (_m *MockJobTracePatch) Offset() int {
 	ret := _m.Called()
@@ -58,6 +44,20 @@ func (_m *MockJobTracePatch) Patch() []byte {
 // SetNewOffset provides a mock function with given fields: newOffset
 func (_m *MockJobTracePatch) SetNewOffset(newOffset int) {
 	_m.Called(newOffset)
+}
+
+// TotalSize provides a mock function with given fields:
+func (_m *MockJobTracePatch) TotalSize() int {
+	ret := _m.Called()
+
+	var r0 int
+	if rf, ok := ret.Get(0).(func() int); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	return r0
 }
 
 // ValidateRange provides a mock function with given fields:

@@ -7,22 +7,9 @@ import (
 )
 
 type TracePatchResponse struct {
-	response *http.Response
+	*RemoteJobStateResponse
 
-	RemoteState string
 	RemoteRange string
-}
-
-func (p *TracePatchResponse) IsAborted() bool {
-	if p.RemoteState == "canceled" || p.RemoteState == "failed" {
-		return true
-	}
-
-	if p.response.StatusCode == http.StatusForbidden {
-		return true
-	}
-
-	return false
 }
 
 func (p *TracePatchResponse) NewOffset() int {
@@ -34,8 +21,7 @@ func (p *TracePatchResponse) NewOffset() int {
 
 func NewTracePatchResponse(response *http.Response) *TracePatchResponse {
 	return &TracePatchResponse{
-		response:    response,
-		RemoteState: response.Header.Get("Job-Status"),
-		RemoteRange: response.Header.Get("Range"),
+		RemoteJobStateResponse: NewRemoteJobStateResponse(response),
+		RemoteRange:            response.Header.Get("Range"),
 	}
 }
