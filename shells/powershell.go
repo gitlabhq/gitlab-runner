@@ -93,6 +93,10 @@ func (b *PsWriter) TmpFile(name string) string {
 	return helpers.ToBackslash(filePath)
 }
 
+func (b *PsWriter) EnvVariableKey(name string) string {
+	return fmt.Sprintf("$%s", name)
+}
+
 func (b *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)

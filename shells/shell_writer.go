@@ -3,6 +3,7 @@ package shells
 import "gitlab.com/gitlab-org/gitlab-runner/common"
 
 type ShellWriter interface {
+	EnvVariableKey(name string) string
 	Variable(variable common.JobVariable)
 	Command(command string, arguments ...string)
 	Line(text string)

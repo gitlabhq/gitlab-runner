@@ -106,6 +106,10 @@ func (b *CmdWriter) TmpFile(name string) string {
 	return helpers.ToBackslash(filePath)
 }
 
+func (b *CmdWriter) EnvVariableKey(name string) string {
+	return fmt.Sprintf("%%%s%%", name)
+}
+
 func (b *CmdWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
