@@ -1,4 +1,4 @@
-/label ~"CI/CD"
+/label ~"devops:verify"
 /label ~release
 /label ~Deliverable
 /milestone %"{{.Major}}.{{.Minor}}"
@@ -36,13 +36,13 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
 - [ ] add **v{{.Major}}.{{.Minor}}.0-rc1** CHANGELOG entries and commit
 
     ```bash
-    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rc1
+    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rc1" -S
     ```
 
 - [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rc1**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0-rc1 -m "Version v{{.Major}}.{{.Minor}}.0-rc1"; git push origin v{{.Major}}.{{.Minor}}.0-rc1
+    git tag -s v{{.Major}}.{{.Minor}}.0-rc1 -m "Version v{{.Major}}.{{.Minor}}.0-rc1" && git push origin v{{.Major}}.{{.Minor}}.0-rc1
     ```
 
 - [ ] create and push `{{.Major}}-{{.Minor}}-stable` branch:
@@ -54,7 +54,7 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
 - [ ] checkout to `master`, update `VERSION` file to `{{.Major}}.{{inc .Minor}}.0` and push `master`:
 
     ```bash
-    git checkout master; echo -n "{{.Major}}.{{inc .Minor}}.0" > VERSION; git add VERSION; git commit -m "Bump version to {{.Major}}.{{inc .Minor}}.0"; git push
+    git checkout master; echo -n "{{.Major}}.{{inc .Minor}}.0" > VERSION; git add VERSION; git commit -m "Bump version to {{.Major}}.{{inc .Minor}}.0" -S && git push
     ```
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rc1` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rc1/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rc1)
@@ -98,13 +98,13 @@ if the only RC version was the _RC1_ released near 7th day of month.
 - [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries and commit
 
     ```bash
-    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rcZ
+    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rcZ" -S
     ```
 
-- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ**:
+- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ** and **{{.Major}}-{{.Minor}}-stable**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ"; git push origin v{{.Major}}.{{.Minor}}.0-rcZ
+    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0-rcZ
     ```
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
@@ -121,7 +121,7 @@ if the only RC version was the _RC1_ released near 7th day of month.
     git add CHANGELOG.md && git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0" -S
     ```
 
-    - [ ] tag and push **v{{.Major}}.{{.Minor}}.0**:
+    - [ ] tag and push **v{{.Major}}.{{.Minor}}.0** and **{{.Major}}-{{.Minor}}-stable**:
 
         ```bash
         git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0
@@ -160,13 +160,13 @@ template:
 - [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries and commit
 
     ```bash
-    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rcZ
+    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0-rcZ" -S
     ```
 
-- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ**:
+- [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ** and **{{.Major}}-{{.Minor}}-stable**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ"; git push origin v{{.Major}}.{{.Minor}}.0-rcZ
+    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin  {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0-rcZ
     ```
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
