@@ -137,6 +137,7 @@ review-docs-cleanup:
     - ./trigger-build-docs cleanup
 
 tests definitions:
+  <<: *except_docs
   stage: prebuild
   # Using Go 1.10, because the `go test -list` is unavailable in <1.9
   # and it's much faster in 1.10. And since there is no real test execution
@@ -272,6 +273,7 @@ git 1.7.1:
 #
 
 test coverage report: &test_coverage_report
+  <<: *except_docs
   stage: coverage
   image: golang:1.10
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
@@ -285,6 +287,7 @@ test coverage report: &test_coverage_report
     expire_in: 7d
 
 race conditions detector:
+  <<: *except_docs
   stage: coverage
   image: golang:1.10
   script:
