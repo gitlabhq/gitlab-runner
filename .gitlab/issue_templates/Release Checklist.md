@@ -118,19 +118,21 @@ if the only RC version was the _RC1_ released near 7th day of month.
     - [ ] merge all RCx CHANGELOG entries into release entry and commit
 
     ```bash
-    git add CHANGELOG.md; git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0
+    git add CHANGELOG.md && git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0" -S
     ```
 
     - [ ] tag and push **v{{.Major}}.{{.Minor}}.0**:
 
         ```bash
-        git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0"; git push origin v{{.Major}}.{{.Minor}}.0
+        git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0
         ```
 
     - [ ] checkout to `master` and merge `{{.Major}}-{{.Minor}}-stable` into `master` (only this one time, to update CHANGELOG.md and make the tag available for ./scripts/prepare-changelog-entries.rb in next stable release), push `master`:
 
         ```bash
-        git checkout master; git merge --no-ff {{.Major}}-{{.Minor}}-stable; git push
+        git checkout master; git merge --no-ff {{.Major}}-{{.Minor}}-stable
+        # check that the only changes are in CHANGELOG.md
+        git push
         ```
 
 - [ ] Before 15:00 UTC
