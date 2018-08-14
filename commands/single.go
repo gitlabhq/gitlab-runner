@@ -68,7 +68,7 @@ func (r *RunSingleCommand) postBuild() {
 }
 
 func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) (err error) {
-	jobData, healthy := r.network.RequestJob(r.RunnerConfig)
+	jobData, healthy := r.network.RequestJob(r.RunnerConfig, nil)
 	if !healthy {
 		log.Println("Runner is not healthy!")
 		select {

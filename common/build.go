@@ -15,6 +15,8 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
+	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
 type GitStrategy int
@@ -79,6 +81,8 @@ type Build struct {
 
 	CurrentStage BuildStage
 	CurrentState BuildRuntimeState
+
+	Session *session.Session
 
 	executorStageResolver func() ExecutorStage
 	logger                BuildLogger
@@ -276,6 +280,10 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	runContext, runCancel := context.WithCancel(context.Background())
 	defer runCancel()
 
+	if term, ok := executor.(terminal.InteractiveTerminal); b.Session != nil && ok {
+		b.Session.SetInteractiveTerminal(term)
+	}
+
 	// Run build script
 	go func() {
 		buildFinish <- b.executeScript(runContext, executor)
@@ -335,6 +343,38 @@ func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider Exe
 	return
 }
 
+func (b *Build) waitForTerminal(timeout time.Duration) {
+	if b.Session == nil || !b.Session.Connected() {
+		return
+	}
+
+	b.logger.Infoln(
+		fmt.Sprintf(
+			"Terminal is connected, will time out in %s...",
+			timeout,
+		),
+	)
+
+	select {
+	case <-time.After(timeout):
+		err := fmt.Errorf(
+			"Terminal session timed out (maximum time allowed - %s)",
+			timeout,
+		)
+		b.logger.Infoln(err.Error())
+		b.Log().WithError(err).Debugln("Connection closed")
+		b.Session.TimeoutCh <- err
+	case err := <-b.Session.DisconnectCh:
+		b.logger.Infoln("Terminal disconnected")
+		b.Log().WithError(err).Debugln("Terminal disconnected")
+	case signal := <-b.SystemInterrupt:
+		err := fmt.Errorf("aborted: %v", signal)
+		b.logger.Infoln("Terminal disconnected")
+		b.Log().WithError(err).Debugln("Terminal disconnected")
+		b.Session.Kill()
+	}
+}
+
 func (b *Build) CurrentExecutorStage() ExecutorStage {
 	if b.executorStageResolver == nil {
 		b.executorStageResolver = func() ExecutorStage {
@@ -372,7 +412,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		}
 	}()
 
-	context, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
+	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
 
 	trace.SetCancelFunc(cancel)
@@ -382,7 +422,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		Build:   b,
 		Trace:   trace,
 		User:    globalConfig.User,
-		Context: context,
+		Context: ctx,
 	}
 
 	provider := GetExecutor(b.Runner.Executor)
@@ -394,7 +434,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	executor, err = b.retryCreateExecutor(options, provider, b.logger)
 	if err == nil {
-		err = b.run(context, executor)
+		err = b.run(ctx, executor)
+		b.waitForTerminal(globalConfig.SessionServer.GetSessionTimeout())
 	}
 	if executor != nil {
 		executor.Finish(err)

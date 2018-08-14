@@ -3,6 +3,9 @@ package shell_test
 import (
 	"bytes"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,11 +13,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
+)
+
+const (
+	TestTimeout = 10 * time.Second
 )
 
 func gitInDir(dir string, args ...string) ([]byte, error) {
@@ -83,14 +93,18 @@ func onEachShell(t *testing.T, f func(t *testing.T, shell string)) {
 	})
 }
 
-func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) error {
-	timeoutTimer := time.AfterFunc(10*time.Second, func() {
+func runBuildWithOptions(t *testing.T, build *common.Build, config *common.Config, trace *common.Trace) error {
+	timeoutTimer := time.AfterFunc(TestTimeout, func() {
 		t.Log("Timed out")
 		t.FailNow()
 	})
 	defer timeoutTimer.Stop()
 
-	return build.Run(&common.Config{}, trace)
+	return build.Run(config, trace)
+}
+
+func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) error {
+	return runBuildWithOptions(t, build, &common.Config{}, trace)
 }
 
 func runBuild(t *testing.T, build *common.Build) error {
@@ -126,6 +140,10 @@ func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
+		Session: &session.Session{
+			DisconnectCh: make(chan error),
+			TimeoutCh:    make(chan error),
+		},
 	}
 
 	cleanup := func() {
@@ -641,4 +659,97 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 		assert.Contains(t, out, "pre-clone-script")
 	})
+}
+
+func TestInteractiveTerminal(t *testing.T) {
+	cases := []struct {
+		app                string
+		shell              string
+		command            string
+		expectedStatusCode int
+	}{
+		{
+			app:                "bash",
+			shell:              "bash",
+			command:            "sleep 5",
+			expectedStatusCode: http.StatusSwitchingProtocols,
+		},
+		{
+			app:                "cmd.exe",
+			shell:              "cmd",
+			command:            "timeout 2",
+			expectedStatusCode: http.StatusInternalServerError,
+		},
+		{
+			app:                "powershell.exe",
+			shell:              "powershell",
+			command:            "Start-Sleep -s 2",
+			expectedStatusCode: http.StatusInternalServerError,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.shell, func(t *testing.T) {
+			if helpers.SkipIntegrationTests(t, c.app) {
+				t.Skip()
+			}
+
+			successfulBuild, err := common.GetLocalBuildResponse(c.command)
+			require.NoError(t, err)
+			build, cleanup := newBuild(t, successfulBuild, c.shell)
+			defer cleanup()
+			sess, err := session.NewSession(nil)
+			build.Session = sess
+			require.NoError(t, err)
+
+			buildOut := make(chan string)
+
+			go func() {
+				buf := bytes.NewBuffer(nil)
+				err := runBuildWithOptions(
+					t,
+					build,
+					&common.Config{SessionServer: common.SessionServer{SessionTimeout: 2}},
+					&common.Trace{Writer: buf},
+				)
+				require.NoError(t, err)
+
+				buildOut <- buf.String()
+			}()
+
+			// Wait until the build starts.
+			for build.Session.Mux() == nil {
+				time.Sleep(10 * time.Millisecond)
+			}
+
+			srv := httptest.NewServer(build.Session.Mux())
+			defer srv.Close()
+
+			u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: build.Session.Endpoint + "/exec"}
+			conn, resp, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{build.Session.Token}})
+			assert.NoError(t, err)
+			assert.Equal(t, resp.StatusCode, c.expectedStatusCode)
+
+			defer func() {
+				if conn != nil {
+					defer conn.Close()
+				}
+			}()
+
+			if c.expectedStatusCode == http.StatusSwitchingProtocols {
+				_, message, err := conn.ReadMessage()
+				assert.NoError(t, err)
+				assert.NotEmpty(t, string(message))
+
+				out := <-buildOut
+				t.Log(out)
+				assert.Contains(t, out, "Terminal is connected, will time out in 2s...")
+				return
+			}
+
+			out := <-buildOut
+			t.Log(out)
+			assert.NotContains(t, out, "Terminal is connected, will time out in 2s...")
+		})
+	}
 }

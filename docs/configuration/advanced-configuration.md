@@ -62,6 +62,35 @@ there are two sleeps taking 5s, so finally it's ~10s between subsequent requests
 for `runner-2`. If you define more workers, the sleep interval will be smaller, but a request for a worker will
 be repeated after all requests for the other workers + their sleeps are called.
 
+## The `[session_server]` section
+
+The session server allows the user to interact with jobs that the Runner is
+responsible for. A good example of this is the
+[interactive web terminal](https://docs.gitlab.com/ce/ci/interactive_web_terminal).
+
+Both `listen_address` and `advertise_address` should be provided in the form
+of `host:port`, where `host` may be an IP address (e.g., `127.0.0.1:8093`)
+or a domain (e.g., `my-runner.example.com:8093`). The Runner will create a
+TLS certificate automatically to have a secure connection.
+
+If you want to disable the session server, just delete the `[session_server]`
+section and terminal support will be disabled.
+
+| Setting | Description |
+| ------- | ----------- |
+| `listen_address` | An internal URL to be used for the session server. |
+| `advertise_address`| The URL that the Runner will expose to GitLab to be used to access the session server. Fallbacks to `listen_address` if not defined.   |
+| `session_timeout` | How long in seconds the session can stay active after the job completes (which will block the job from finishing), defaults to `1800` (30 minutes). |
+
+Example:
+
+```bash
+[session_server]
+  listen_address = "0.0.0.0:8093"
+  advertise_address = "gitlab.com:8093"
+  session_timeout = 1800
+```
+
 ## The `[[runners]]` section
 
 This defines one runner entry.

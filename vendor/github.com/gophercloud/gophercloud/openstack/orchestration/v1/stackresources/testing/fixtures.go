@@ -44,8 +44,8 @@ const FindOutput = `
 {
   "resources": [
   {
-	"description": "Some resource",
-	"attributes": {"SXSW": "atx"},
+  	"description": "Some resource",
+  	"attributes": {"SXSW": "atx"},
     "resource_name": "hello_world",
     "links": [
       {

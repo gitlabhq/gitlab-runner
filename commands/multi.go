@@ -5,27 +5,28 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	_ "net/http/pprof" // PPROF package adds everything itself inside its init() function
+	_ "net/http/pprof" // pprof package adds everything itself inside its init() function
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 	"time"
 
-	service "github.com/ayufan/golang-kardianos-service"
+	"github.com/ayufan/golang-kardianos-service"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/urfave/cli"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/sentry"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
 type RunCommand struct {
@@ -46,6 +47,8 @@ type RunCommand struct {
 	failuresCollector               *prometheus_helper.FailuresCollector
 	networkRequestStatusesCollector prometheus.Collector
 
+	sessionServer *session.Server
+
 	// abortBuilds is used to abort running builds
 	abortBuilds chan os.Signal
 
@@ -58,8 +61,9 @@ type RunCommand struct {
 	// stopSignals is to catch a signals notified to process: SIGTERM, SIGQUIT, Interrupt, Kill
 	stopSignals chan os.Signal
 
-	// stopSignal is used to preserve the signal that was used to stop the process
-	// In case this is SIGQUIT it makes to finish all buids
+	// stopSignal is used to preserve the signal that was used to stop the
+	// process In case this is SIGQUIT it makes to finish all builds and session
+	// server.
 	stopSignal os.Signal
 
 	// runFinished is used to notify that Run() did finish
@@ -101,13 +105,13 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 	}
 }
 
-func (mr *RunCommand) requestJob(runner *common.RunnerConfig) (*common.JobResponse, bool) {
+func (mr *RunCommand) requestJob(runner *common.RunnerConfig, sessionInfo *common.SessionInfo) (*common.JobResponse, bool) {
 	if !mr.buildsHelper.acquireRequest(runner) {
 		return nil, false
 	}
 	defer mr.buildsHelper.releaseRequest(runner)
 
-	jobData, healthy := mr.network.RequestJob(*runner)
+	jobData, healthy := mr.network.RequestJob(*runner, sessionInfo)
 	mr.makeHealthy(runner.UniqueID(), healthy)
 	return jobData, true
 }
@@ -133,8 +137,15 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	}
 	defer mr.buildsHelper.releaseBuild(runner)
 
+	var features common.FeaturesInfo
+	provider.GetFeatures(&features)
+	buildSession, sessionInfo, err := mr.createSession(features)
+	if err != nil {
+		return
+	}
+
 	// Receive a new build
-	jobData, result := mr.requestJob(runner)
+	jobData, result := mr.requestJob(runner, sessionInfo)
 	if !result {
 		mr.log().WithField("runner", runner.ShortDescription()).
 			Debugln("Failed to request job: runner requestConcurrency meet")
@@ -160,6 +171,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		Runner:          runner,
 		ExecutorData:    context,
 		SystemInterrupt: mr.abortBuilds,
+		Session:         buildSession,
 	}
 
 	// Add build to list of builds to assign numbers
@@ -178,6 +190,25 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	// Process a build
 	return build.Run(mr.config, trace)
+}
+
+func (mr *RunCommand) createSession(features common.FeaturesInfo) (*session.Session, *common.SessionInfo, error) {
+	if mr.sessionServer == nil || !features.Session {
+		return nil, nil, nil
+	}
+
+	sess, err := session.NewSession(mr.log())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sessionInfo := &common.SessionInfo{
+		URL:           mr.sessionServer.AdvertiseAddress + sess.Endpoint,
+		Certificate:   string(mr.sessionServer.CertificatePublicKey),
+		Authorization: sess.Token,
+	}
+
+	return sess, sessionInfo, err
 }
 
 func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan *common.RunnerConfig) {
@@ -347,7 +378,7 @@ func (mr *RunCommand) runWait() {
 	mr.stopSignal = <-mr.stopSignals
 }
 
-func (mr *RunCommand) serveMetrics() {
+func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
@@ -371,11 +402,11 @@ func (mr *RunCommand) serveMetrics() {
 		}
 	}
 
-	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 }
 
-func (mr *RunCommand) serveDebugData() {
-	http.Handle("/debug/jobs/list", http.HandlerFunc(mr.buildsHelper.ListJobsHandler))
+func (mr *RunCommand) serveDebugData(mux *http.ServeMux) {
+	mux.Handle("/debug/jobs/list", http.HandlerFunc(mr.buildsHelper.ListJobsHandler))
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
@@ -398,18 +429,54 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 		log.Fatalln(err)
 	}
 
+	mux := http.NewServeMux()
+
 	go func() {
-		log.Fatalln(http.Serve(listener, nil))
+		log.Fatalln(http.Serve(listener, mux))
 	}()
 
-	mr.serveMetrics()
-	mr.serveDebugData()
+	mr.serveMetrics(mux)
+	mr.serveDebugData(mux)
 
 	log.Infoln("Metrics server listening at", listenAddress)
 }
 
+func (mr *RunCommand) setupSessionServer() {
+	if mr.config.SessionServer.ListenAddress == "" {
+		mr.log().Info("Listen address not defined, session server disabled")
+		return
+	}
+
+	var err error
+	mr.sessionServer, err = session.NewServer(
+		session.ServerConfig{
+			AdvertiseAddress: mr.config.SessionServer.AdvertiseAddress,
+			ListenAddress:    mr.config.SessionServer.ListenAddress,
+			ShutdownTimeout:  common.ShutdownTimeout * time.Second,
+		},
+		mr.log(),
+		certificate.X509Generator{},
+		mr.buildsHelper.findSessionByURL,
+	)
+	if err != nil {
+		mr.log().WithError(err).Fatal("Failed to create session server")
+	}
+
+	go func() {
+		err := mr.sessionServer.Start()
+		if err != nil {
+			mr.log().Fatal(err)
+		}
+	}()
+
+	mr.log().
+		WithField("address", mr.config.SessionServer.ListenAddress).
+		Info("Session server listening")
+}
+
 func (mr *RunCommand) Run() {
 	mr.setupMetricsAndDebugServer()
+	mr.setupSessionServer()
 
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
@@ -481,6 +548,10 @@ func (mr *RunCommand) handleShutdown() error {
 	mr.log().Warningln("Requested service stop:", mr.stopSignal)
 
 	go mr.abortAllBuilds()
+
+	if mr.sessionServer != nil {
+		mr.sessionServer.Close()
+	}
 
 	// Wait for graceful shutdown or abort after timeout
 	for {

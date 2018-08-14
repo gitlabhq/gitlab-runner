@@ -25,6 +25,7 @@ const AfterScriptTimeout = 5 * time.Minute
 const DefaultMetricsServerPort = 9252
 const DefaultCacheRequestTimeout = 10
 const DefaultNetworkClientTimeout = 60 * time.Minute
+const DefaultSessionTimeout = 30 * time.Minute
 
 var PreparationRetryInterval = 3 * time.Second
 

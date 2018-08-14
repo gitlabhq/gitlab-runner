@@ -3,17 +3,24 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitlab-terminal"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	// Register all available authentication methods
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	restclient "k8s.io/client-go/rest"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
 var (
@@ -488,6 +495,91 @@ func (s *executor) runInContainer(ctx context.Context, name string, command []st
 	return errc
 }
 
+func (s *executor) Connect() (terminalsession.Conn, error) {
+	settings, err := s.getTerminalSettings()
+	if err != nil {
+		return nil, err
+	}
+
+	return terminalConn{settings: settings}, nil
+}
+
+type terminalConn struct {
+	settings *terminal.TerminalSettings
+}
+
+func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, disconnectCh chan error) {
+	proxy := terminal.NewWebSocketProxy(1) // one stopper: terminal exit handler
+
+	terminalsession.ProxyTerminal(
+		timeoutCh,
+		disconnectCh,
+		proxy.StopCh,
+		func() {
+			terminal.ProxyWebSocket(w, r, t.settings, proxy)
+		},
+	)
+}
+
+func (t terminalConn) Close() error {
+	return nil
+}
+
+func (s *executor) getTerminalSettings() (*terminal.TerminalSettings, error) {
+	config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
+	if err != nil {
+		return nil, err
+	}
+
+	wsURL, err := s.getTerminalWebSocketURL(config)
+	if err != nil {
+		return nil, err
+	}
+
+	caCert := ""
+	if len(config.CAFile) > 0 {
+		buf, err := ioutil.ReadFile(config.CAFile)
+		if err != nil {
+			return nil, err
+		}
+		caCert = string(buf)
+	}
+
+	term := &terminal.TerminalSettings{
+		Subprotocols:   []string{"channel.k8s.io"},
+		Url:            wsURL.String(),
+		Header:         http.Header{"Authorization": []string{"Bearer " + config.BearerToken}},
+		CAPem:          caCert,
+		MaxSessionTime: 0,
+	}
+
+	return term, nil
+}
+
+func (s *executor) getTerminalWebSocketURL(config *restclient.Config) (*url.URL, error) {
+	wsURL := s.kubeClient.CoreV1().RESTClient().Post().
+		Namespace(s.pod.Namespace).
+		Resource("pods").
+		Name(s.pod.Name).
+		SubResource("exec").
+		VersionedParams(&api.PodExecOptions{
+			Stdin:     true,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       true,
+			Container: "build",
+			Command:   []string{"sh", "-c", "bash || sh"},
+		}, scheme.ParameterCodec).URL()
+
+	if wsURL.Scheme == "https" {
+		wsURL.Scheme = "wss"
+	} else if wsURL.Scheme == "http" {
+		wsURL.Scheme = "ws"
+	}
+
+	return wsURL, nil
+}
+
 func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 	values, err := createOverwrites(s.Config.Kubernetes, variables, s.BuildLogger)
 	if err != nil {
@@ -545,6 +637,8 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Services = true
 	features.Artifacts = true
 	features.Cache = true
+	features.Session = true
+	features.Terminal = true
 }
 
 func init() {

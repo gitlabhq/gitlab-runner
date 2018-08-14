@@ -95,6 +95,7 @@ Supported features by different executors:
 | Absolute paths: caching, artifacts           | ✗    | ✗       | ✗          | ✗         | ✗      | ✓          |
 | Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          |
 | Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          |
+| Interactive Web terminal                     | ✗    | ✓ (bash)| ✗          | ✗         | ✗      | ✓          |
 
 Supported systems by different shells:
 
@@ -104,5 +105,14 @@ Supported systems by different shells:
 | Linux   | ✓ (default) | ✗             | ✗          |
 | OSX     | ✓ (default) | ✗             | ✗          |
 | FreeBSD | ✓ (default) | ✗             | ✗          |
+
+Supported systems for interactive web terminals by different shells:
+
+| Shells  | Bash        | Windows Batch | PowerShell |
+|:-------:|:-----------:|:-------------:|:----------:|
+| Windows | ✗           | ✗             | ✗          |
+| Linux   | ✓           | ✗             | ✗          |
+| OSX     | ✓           | ✗             | ✗          |
+| FreeBSD | ✓           | ✗             | ✗          |
 
 [services]: https://docs.gitlab.com/ce/ci/services/README.html

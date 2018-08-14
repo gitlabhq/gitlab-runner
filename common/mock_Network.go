@@ -72,13 +72,13 @@ func (_m *MockNetwork) RegisterRunner(config RunnerCredentials, parameters Regis
 	return r0
 }
 
-// RequestJob provides a mock function with given fields: config
-func (_m *MockNetwork) RequestJob(config RunnerConfig) (*JobResponse, bool) {
-	ret := _m.Called(config)
+// RequestJob provides a mock function with given fields: config, sessionInfo
+func (_m *MockNetwork) RequestJob(config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool) {
+	ret := _m.Called(config, sessionInfo)
 
 	var r0 *JobResponse
-	if rf, ok := ret.Get(0).(func(RunnerConfig) *JobResponse); ok {
-		r0 = rf(config)
+	if rf, ok := ret.Get(0).(func(RunnerConfig, *SessionInfo) *JobResponse); ok {
+		r0 = rf(config, sessionInfo)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*JobResponse)
@@ -86,8 +86,8 @@ func (_m *MockNetwork) RequestJob(config RunnerConfig) (*JobResponse, bool) {
 	}
 
 	var r1 bool
-	if rf, ok := ret.Get(1).(func(RunnerConfig) bool); ok {
-		r1 = rf(config)
+	if rf, ok := ret.Get(1).(func(RunnerConfig, *SessionInfo) bool); ok {
+		r1 = rf(config, sessionInfo)
 	} else {
 		r1 = ret.Get(1).(bool)
 	}

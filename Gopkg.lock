@@ -284,6 +284,12 @@
   revision = "599cba5e7b6137d46ddf58fb1765f5d928e69604"
 
 [[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
+
+[[projects]]
   name = "github.com/hashicorp/go-version"
   packages = ["."]
   revision = "03c5bf6be031b6dd45afec16b1cf94fc8938bc77"
@@ -314,6 +320,12 @@
   name = "github.com/kardianos/osext"
   packages = ["."]
   revision = "c2c54e542fb797ad986b31721e1baedf214ca413"
+
+[[projects]]
+  name = "github.com/kr/pty"
+  packages = ["."]
+  revision = "282ce0e5322c82529687d609ee670fac7c7d917c"
+  version = "v1.1.1"
 
 [[projects]]
   branch = "master"
@@ -470,6 +482,11 @@
   revision = "a7cf72d604cdf0af6031dd5d54a4e513abeff0d4"
 
 [[projects]]
+  name = "gitlab.com/gitlab-org/gitlab-terminal"
+  packages = ["."]
+  revision = "d523b4fd2bb3c8728724dce365809e09113430a9"
+
+[[projects]]
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
@@ -513,6 +530,22 @@
     "windows/svc/mgr"
   ]
   revision = "042a8f53ce82bbe081222da955159491e32146a0"
+
+[[projects]]
+  name = "golang.org/x/text"
+  packages = [
+    "encoding",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/unicode",
+    "internal/gen",
+    "internal/utf8internal",
+    "runes",
+    "transform",
+    "unicode/cldr"
+  ]
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"
@@ -698,6 +731,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2f7c08f6c7e538cf19f9a9835d18574927a03b07f30557ea80c97d7a6151a875"
+  inputs-digest = "a2c6b9459afdbd0f1d9b17239b350f28df28a2db1a704b88d424fba2636280de"
   solver-name = "gps-cdcl"
   solver-version = 1

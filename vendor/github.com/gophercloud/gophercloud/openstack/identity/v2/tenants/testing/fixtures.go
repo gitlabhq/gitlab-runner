@@ -111,7 +111,7 @@ func mockUpdateTenantResponse(t *testing.T) {
 {
     "tenant": {
 		    "name": "new_name",
-		    "description": "This is new name",
+	 	    "description": "This is new name",
 		    "enabled": true
     }
 }

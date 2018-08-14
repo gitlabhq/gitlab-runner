@@ -3,10 +3,12 @@ package commands
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -72,6 +74,19 @@ func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCoun
 		b.counters[runner.Token] = counter
 	}
 	return counter
+}
+
+func (b *buildsHelper) findSessionByURL(url string) *session.Session {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	for _, build := range b.builds {
+		if strings.HasPrefix(url, build.Session.Endpoint+"/") {
+			return build.Session
+		}
+	}
+
+	return nil
 }
 
 func (b *buildsHelper) acquireBuild(runner *common.RunnerConfig) bool {

@@ -39,7 +39,7 @@ Example of Get Availability Zone Information
 	}
 
 	for _, zoneInfo := range availabilityZoneInfo {
-		fmt.Printf("%+v\n", zoneInfo)
+  		fmt.Printf("%+v\n", zoneInfo)
 	}
 
 Example of Get Detailed Availability Zone Information
@@ -55,7 +55,7 @@ Example of Get Detailed Availability Zone Information
 	}
 
 	for _, zoneInfo := range availabilityZoneInfo {
-		fmt.Printf("%+v\n", zoneInfo)
+  		fmt.Printf("%+v\n", zoneInfo)
 	}
 */
 package availabilityzones
