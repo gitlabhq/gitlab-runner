@@ -41,4 +41,3 @@ func TestTracePatchEmptyPatch(t *testing.T) {
 
 	assert.Empty(t, tp.Patch())
 }
-

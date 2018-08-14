@@ -323,7 +323,7 @@ func TestFinalUpdateWithTrace(t *testing.T) {
 	b := newJobTrace(net, jobConfig, jobCredentials)
 
 	finalUpdateMatcher := mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
-		return *jobInfo.Trace == (traceMessage+traceMessage)
+		return *jobInfo.Trace == (traceMessage + traceMessage)
 	})
 
 	net.On("PatchTrace", jobConfig, jobCredentials, mock.Anything).Return(common.UpdateSucceeded).Once().Run(func(_ mock.Arguments) {

@@ -466,3 +466,17 @@ stable docker images:
   environment:
     name: stable/docker_images
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+static QA:
+  <<: *except_docs
+  stage: release
+  image: alpine:3.7
+  cache: {}
+  dependencies:
+  - code_quality
+  script: |
+    if [ "$(cat gl-code-quality-report.json)" != "[]" ] ; then
+      apk add -U --no-cache jq > /dev/null
+      jq -C . gl-code-quality-report.json
+      exit 1
+    fi
