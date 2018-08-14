@@ -485,6 +485,55 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 	return nil
 }
 
+func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) {
+	args := []string{
+		"artifacts-uploader",
+		"--url",
+		info.Build.Runner.URL,
+		"--token",
+		info.Build.Token,
+		"--id",
+		strconv.Itoa(info.Build.ID),
+	}
+
+	// Create list of files to archive
+	archiverArgs := []string{}
+	for _, path := range artifact.Paths {
+		archiverArgs = append(archiverArgs, "--path", path)
+	}
+
+	if artifact.Untracked {
+		archiverArgs = append(archiverArgs, "--untracked")
+	}
+
+	if len(archiverArgs) < 1 {
+		// Skip creating archive
+		return
+	}
+	args = append(args, archiverArgs...)
+
+	if artifact.Name != "" {
+		args = append(args, "--name", artifact.Name)
+	}
+
+	if artifact.ExpireIn != "" {
+		args = append(args, "--expire-in", artifact.ExpireIn)
+	}
+
+	if artifact.Format != "" {
+		args = append(args, "--artifact-format", string(artifact.Format))
+	}
+
+	if artifact.Type != "" {
+		args = append(args, "--artifact-type", artifact.Type)
+	}
+
+	b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
+		w.Notice("Uploading artifacts...")
+		w.Command(info.RunnerCommand, args...)
+	})
+}
+
 func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) {
 	if info.Build.Runner.URL == "" {
 		return
@@ -493,63 +542,18 @@ func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScr
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
-	for _, artifacts := range info.Build.Artifacts {
+	for _, artifact := range info.Build.Artifacts {
 		if onSuccess {
-			if !artifacts.When.OnSuccess() {
+			if !artifact.When.OnSuccess() {
 				continue
 			}
 		} else {
-			if !artifacts.When.OnFailure() {
+			if !artifact.When.OnFailure() {
 				continue
 			}
 		}
 
-		args := []string{
-			"artifacts-uploader",
-			"--url",
-			info.Build.Runner.URL,
-			"--token",
-			info.Build.Token,
-			"--id",
-			strconv.Itoa(info.Build.ID),
-		}
-
-		// Create list of files to archive
-		archiverArgs := []string{}
-		for _, path := range artifacts.Paths {
-			archiverArgs = append(archiverArgs, "--path", path)
-		}
-
-		if artifacts.Untracked {
-			archiverArgs = append(archiverArgs, "--untracked")
-		}
-
-		if len(archiverArgs) < 1 {
-			// Skip creating archive
-			continue
-		}
-		args = append(args, archiverArgs...)
-
-		if artifacts.Name != "" {
-			args = append(args, "--name", artifacts.Name)
-		}
-
-		if artifacts.ExpireIn != "" {
-			args = append(args, "--expire-in", artifacts.ExpireIn)
-		}
-
-		if artifacts.Format != "" {
-			args = append(args, "--artifact-format", string(artifacts.Format))
-		}
-
-		if artifacts.Type != "" {
-			args = append(args, "--artifact-type", artifacts.Type)
-		}
-
-		b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
-			w.Notice("Uploading artifacts...")
-			w.Command(info.RunnerCommand, args...)
-		})
+		b.writeUploadArtifact(w, info, artifact)
 	}
 }
 

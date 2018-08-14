@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -981,32 +982,8 @@ func TestAbortedPatchTrace(t *testing.T) {
 	}
 }
 
-func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
-	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusNotAcceptable)
-		return
-	}
-
-	if r.Header.Get("JOB-TOKEN") != "token" {
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	body, err := ioutil.ReadAll(file)
-	assert.NoError(t, err)
-
-	switch string(body) {
+func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Request, body string) {
+	switch body {
 	case "too-large":
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		return
@@ -1035,6 +1012,34 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 	}
 
 	w.WriteHeader(http.StatusBadRequest)
+}
+
+func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
+	if r.Header.Get("JOB-TOKEN") != "token" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	body, err := ioutil.ReadAll(file)
+	require.NoError(t, err)
+
+	checkTestArtifactsUploadHandlerContent(w, r, string(body))
 }
 
 func uploadArtifacts(client *GitLabClient, config JobCredentials, artifactsFile, artifactType string, artifactFormat ArtifactFormat) UploadState {

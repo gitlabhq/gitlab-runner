@@ -411,6 +411,24 @@ func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Read
 	return nil
 }
 
+func uploadRawArtifactsQuery(options common.ArtifactsOptions) url.Values {
+	q := url.Values{}
+
+	if options.ExpireIn != "" {
+		q.Set("expire_in", options.ExpireIn)
+	}
+
+	if options.Format != "" {
+		q.Set("artifact_format", string(options.Format))
+	}
+
+	if options.Type != "" {
+		q.Set("artifact_type", options.Type)
+	}
+
+	return q
+}
+
 func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, options common.ArtifactsOptions) common.UploadState {
 	pr, pw := io.Pipe()
 	defer pr.Close()
@@ -426,16 +444,7 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 		}
 	}()
 
-	query := url.Values{}
-	if options.ExpireIn != "" {
-		query.Set("expire_in", options.ExpireIn)
-	}
-	if options.Format != "" {
-		query.Set("artifact_format", string(options.Format))
-	}
-	if options.Type != "" {
-		query.Set("artifact_type", options.Type)
-	}
+	query := uploadRawArtifactsQuery(options)
 
 	headers := make(http.Header)
 	headers.Set("JOB-TOKEN", config.Token)
