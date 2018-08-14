@@ -8,15 +8,19 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,6 +34,10 @@ import (
 
 var (
 	TRUE = true
+)
+
+const (
+	TestTimeout = 15 * time.Second
 )
 
 func TestLimits(t *testing.T) {
@@ -1517,6 +1525,72 @@ func TestOverwriteServiceAccountNotMatch(t *testing.T) {
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not match")
+}
+
+func TestInteractiveTerminal(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	client, err := getKubeClient(&common.KubernetesConfig{}, &overwrites{})
+	require.NoError(t, err)
+	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
+	require.NoError(t, err)
+
+	successfulBuild, err := common.GetRemoteBuildResponse("sleep 5")
+	require.NoError(t, err)
+	successfulBuild.Image.Name = "docker:git"
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					BearerToken: string(secrets.Items[0].Data["token"]),
+				},
+			},
+		},
+	}
+
+	sess, err := session.NewSession(nil)
+	build.Session = sess
+
+	outBuffer := bytes.NewBuffer(nil)
+	outCh := make(chan string)
+
+	go func() {
+		err = build.Run(
+			&common.Config{
+				SessionServer: common.SessionServer{
+					SessionTimeout: 2,
+				},
+			},
+			&common.Trace{Writer: outBuffer},
+		)
+		require.NoError(t, err)
+
+		outCh <- outBuffer.String()
+	}()
+
+	for build.Session.Mux() == nil {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	time.Sleep(5 * time.Second)
+
+	srv := httptest.NewServer(build.Session.Mux())
+	defer srv.Close()
+
+	u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: build.Session.Endpoint + "/exec"}
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{build.Session.Token}})
+	defer conn.Close()
+	require.NoError(t, err)
+	assert.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
+
+	out := <-outCh
+	t.Log(out)
+
+	assert.Contains(t, out, "Terminal is connected, will time out in 2s...")
 }
 
 type FakeReadCloser struct {

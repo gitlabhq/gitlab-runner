@@ -3,16 +3,17 @@ package shell
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-
-	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/kardianos/osext"
 	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -156,6 +157,11 @@ func init() {
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
 		features.Shared = true
+
+		if runtime.GOOS != "windows" {
+			features.Session = true
+			features.Terminal = true
+		}
 	}
 
 	common.RegisterExecutor("shell", executors.DefaultExecutorProvider{

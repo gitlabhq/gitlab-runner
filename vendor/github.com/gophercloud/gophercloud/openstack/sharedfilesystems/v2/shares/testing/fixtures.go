@@ -146,9 +146,9 @@ var getExportLocationsResponse = `{
     "export_locations": [
         {
 		"path": "127.0.0.1:/var/lib/manila/mnt/share-9a922036-ad26-4d27-b955-7a1e285fa74d",
-		"share_instance_id": "011d21e2-fbc3-4e4a-9993-9ea223f73264",
+        	"share_instance_id": "011d21e2-fbc3-4e4a-9993-9ea223f73264",
 		"is_admin_only": false,
-		"id": "80ed63fc-83bc-4afc-b881-da4a345ac83d",
+        	"id": "80ed63fc-83bc-4afc-b881-da4a345ac83d",
 		"preferred": false
 	}
     ]

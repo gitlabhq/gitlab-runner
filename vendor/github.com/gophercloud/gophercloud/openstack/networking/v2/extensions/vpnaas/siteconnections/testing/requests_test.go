@@ -23,7 +23,7 @@ func TestCreate(t *testing.T) {
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestJSONRequest(t, r, `
 {
-
+    
     "ipsec_site_connection": {
         "psk": "secret",
         "initiator": "bi-directional",
@@ -37,7 +37,7 @@ func TestCreate(t *testing.T) {
         "peer_address": "172.24.4.233",
         "peer_id": "172.24.4.233",
         "name": "vpnconnection1"
-
+    
 }
 }      `)
 

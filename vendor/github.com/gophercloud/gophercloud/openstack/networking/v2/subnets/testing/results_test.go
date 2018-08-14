@@ -28,7 +28,7 @@ func TestHostRoute(t *testing.T) {
       "host_routes": [
         {
           "destination": "172.20.1.0/24",
-				"nexthop": "172.16.0.2"
+		  		"nexthop": "172.16.0.2"
         }
       ],
       "ip_version": 4,

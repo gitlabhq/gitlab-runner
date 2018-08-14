@@ -162,7 +162,7 @@ func TestDecodeYAML(t *testing.T) {
 	s := NewYAMLToJSONDecoder(bytes.NewReader([]byte(`---
 stuff: 1
 
----
+---   
   `)))
 	obj := generic{}
 	if err := s.Decode(&obj); err != nil {

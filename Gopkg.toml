@@ -280,3 +280,7 @@ ignored = ["test", "appengine"]
 [[override]]
   name = "google.golang.org/appengine"
   revision = "e951d3868b377b14f4e60efa3a301532ee3c1ebf"
+
+[[constraint]]
+  name = "gitlab.com/gitlab-org/gitlab-terminal"
+  revision = "d523b4fd2bb3c8728724dce365809e09113430a9"

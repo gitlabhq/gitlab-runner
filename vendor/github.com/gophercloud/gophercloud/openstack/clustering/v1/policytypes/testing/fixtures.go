@@ -74,7 +74,7 @@ const PolicyTypeBody = `
 const PolicyTypeDetailBody = `
 {
     "policy_type": {
-	"name": "senlin.policy.batch-1.0",
+    	"name": "senlin.policy.batch-1.0",
 		"schema": {
 		  "max_batch_size": {
 			"default": -1,

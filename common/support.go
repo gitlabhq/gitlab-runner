@@ -35,15 +35,15 @@ func init() {
 }
 
 func GetSuccessfulBuild() (JobResponse, error) {
-	return getLocalBuildResponse("echo Hello World")
+	return GetLocalBuildResponse("echo Hello World")
 }
 
 func GetRemoteSuccessfulBuild() (JobResponse, error) {
-	return getRemoteBuildResponse("echo Hello World")
+	return GetRemoteBuildResponse("echo Hello World")
 }
 
 func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
-	jobResponse, err := getRemoteBuildResponse("echo Hello World")
+	jobResponse, err := GetRemoteBuildResponse("echo Hello World")
 	jobResponse.Steps = append(jobResponse.Steps,
 		Step{
 			Name:   StepNameAfterScript,
@@ -58,7 +58,7 @@ func GetRemoteSuccessfulBuildWithDumpedVariables() (response JobResponse, err er
 	variableName := "test_dump"
 	variableValue := "test"
 
-	response, err = getRemoteBuildResponse(
+	response, err = GetRemoteBuildResponse(
 		fmt.Sprintf("[[ \"${%s}\" != \"\" ]]", variableName),
 		fmt.Sprintf("[[ $(cat $%s) == \"%s\" ]]", variableName, variableValue),
 	)
@@ -77,23 +77,23 @@ func GetRemoteSuccessfulBuildWithDumpedVariables() (response JobResponse, err er
 }
 
 func GetFailedBuild() (JobResponse, error) {
-	return getLocalBuildResponse("exit 1")
+	return GetLocalBuildResponse("exit 1")
 }
 
 func GetRemoteFailedBuild() (JobResponse, error) {
-	return getRemoteBuildResponse("exit 1")
+	return GetRemoteBuildResponse("exit 1")
 }
 
 func GetLongRunningBuild() (JobResponse, error) {
-	return getLocalBuildResponse("sleep 3600")
+	return GetLocalBuildResponse("sleep 3600")
 }
 
 func GetRemoteLongRunningBuild() (JobResponse, error) {
-	return getRemoteBuildResponse("sleep 3600")
+	return GetRemoteBuildResponse("sleep 3600")
 }
 
 func GetMultilineBashBuild() (JobResponse, error) {
-	return getRemoteBuildResponse(`if true; then
+	return GetRemoteBuildResponse(`if true; then
 	bash \
 		--login \
 		-c 'echo Hello World'
@@ -120,7 +120,7 @@ func GetRemoteGitLabComTLSBuild() (job JobResponse, err error) {
 }
 
 func getRemoteCustomTLSBuild(chain string) (job JobResponse, err error) {
-	job, err = getRemoteBuildResponse("echo Hello World")
+	job, err = GetRemoteBuildResponse("echo Hello World")
 	if err != nil {
 		return
 	}
@@ -133,7 +133,7 @@ func getRemoteCustomTLSBuild(chain string) (job JobResponse, err error) {
 	return
 }
 
-func getRemoteBuildResponse(commands ...string) (response JobResponse, err error) {
+func GetRemoteBuildResponse(commands ...string) (response JobResponse, err error) {
 	response = JobResponse{
 		GitInfo: GitInfo{
 			RepoURL:   repoRemoteURL,
@@ -155,7 +155,7 @@ func getRemoteBuildResponse(commands ...string) (response JobResponse, err error
 	return
 }
 
-func getLocalBuildResponse(commands ...string) (response JobResponse, err error) {
+func GetLocalBuildResponse(commands ...string) (response JobResponse, err error) {
 	localRepoURL, err := getLocalRepoURL()
 	if err != nil {
 		return

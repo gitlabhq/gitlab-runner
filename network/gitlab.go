@@ -261,11 +261,12 @@ func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
 	}
 }
 
-func (n *GitLabClient) RequestJob(config common.RunnerConfig) (*common.JobResponse, bool) {
+func (n *GitLabClient) RequestJob(config common.RunnerConfig, sessionInfo *common.SessionInfo) (*common.JobResponse, bool) {
 	request := common.JobRequest{
 		Info:       n.getRunnerVersion(config),
 		Token:      config.Token,
 		LastUpdate: n.getLastUpdate(&config.RunnerCredentials),
+		Session:    sessionInfo,
 	}
 
 	var response common.JobResponse

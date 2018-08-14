@@ -4,13 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
-	"time"
-
-	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	units "github.com/docker/go-units"
@@ -263,9 +262,17 @@ type RunnerConfig struct {
 	RunnerSettings
 }
 
+type SessionServer struct {
+	ListenAddress    string `toml:"listen_address,omitempty" json:"listen_address" description:"Address that the runner will communicate directly with"`
+	AdvertiseAddress string `toml:"advertise_address,omitempty" json:"advertise_address" description:"Address the runner will expose to the world to connect to the session server"`
+	SessionTimeout   int    `toml:"session_timeout,omitempty" json:"session_timeout" description:"How long a terminal session can be active after a build completes, in seconds"`
+}
+
 type Config struct {
 	MetricsServerAddress string `toml:"metrics_server,omitempty" json:"metrics_server"` // DEPRECATED
 	ListenAddress        string `toml:"listen_address,omitempty" json:"listen_address"`
+
+	SessionServer SessionServer `toml:"session_server,omitempty" json:"session_server"`
 
 	Concurrent    int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
@@ -275,6 +282,14 @@ type Config struct {
 	SentryDSN     *string         `toml:"sentry_dsn"`
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
+}
+
+func (c *SessionServer) GetSessionTimeout() time.Duration {
+	if c.SessionTimeout > 0 {
+		return time.Duration(c.SessionTimeout) * time.Second
+	}
+
+	return DefaultSessionTimeout
 }
 
 func (c *DockerConfig) GetNanoCPUs() (int64, error) {
@@ -445,6 +460,9 @@ func (c *RunnerConfig) GetVariables() JobVariables {
 func NewConfig() *Config {
 	return &Config{
 		Concurrent: 1,
+		SessionServer: SessionServer{
+			SessionTimeout: int(DefaultSessionTimeout.Seconds()),
+		},
 	}
 }
 

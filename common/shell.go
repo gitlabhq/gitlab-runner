@@ -2,7 +2,9 @@ package common
 
 import (
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 

@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -117,6 +118,23 @@ func TestBuildsHelperAcquireBuildUnlimited(t *testing.T) {
 
 	result = b.releaseBuild(&runner)
 	require.True(t, result)
+}
+
+func TestBuildsHelperFindSessionByURL(t *testing.T) {
+	sess, err := session.NewSession(nil)
+	require.NoError(t, err)
+	build := common.Build{
+		Session: sess,
+	}
+
+	h := &buildsHelper{}
+	h.addBuild(&build)
+
+	foundSession := h.findSessionByURL(sess.Endpoint + "/action")
+	assert.Equal(t, sess, foundSession)
+
+	foundSession = h.findSessionByURL("/session/hash/action")
+	assert.Nil(t, foundSession)
 }
 
 var testBuildCurrentID int

@@ -143,7 +143,7 @@ func MockCreateResponse(t *testing.T) {
 		th.TestJSONRequest(t, r, `
 {
     "volume": {
-	"name": "vol-001",
+    	"name": "vol-001",
         "size": 75
     }
 }

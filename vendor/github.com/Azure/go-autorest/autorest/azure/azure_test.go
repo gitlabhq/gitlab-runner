@@ -240,7 +240,7 @@ func TestWithErrorUnlessStatusCode_FoundAzureErrorWithDetails(t *testing.T) {
 		"error": {
 			"code": "InternalError",
 			"message": "Azure is having trouble right now.",
-			"details": [{"code": "conflict1", "message":"error message1"},
+			"details": [{"code": "conflict1", "message":"error message1"}, 
 						{"code": "conflict2", "message":"error message2"}]
 		}
 	}`

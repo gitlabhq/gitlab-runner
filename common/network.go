@@ -57,6 +57,8 @@ type FeaturesInfo struct {
 	Cache                   bool `json:"cache"`
 	Shared                  bool `json:"shared"`
 	UploadMultipleArtifacts bool `json:"upload_multiple_artifacts"`
+	Session                 bool `json:"session"`
+	Terminal                bool `json:"terminal"`
 }
 
 type RegisterRunnerParameters struct {
@@ -98,9 +100,16 @@ type VersionInfo struct {
 }
 
 type JobRequest struct {
-	Info       VersionInfo `json:"info,omitempty"`
-	Token      string      `json:"token,omitempty"`
-	LastUpdate string      `json:"last_update,omitempty"`
+	Info       VersionInfo  `json:"info,omitempty"`
+	Token      string       `json:"token,omitempty"`
+	LastUpdate string       `json:"last_update,omitempty"`
+	Session    *SessionInfo `json:"session,omitempty"`
+}
+
+type SessionInfo struct {
+	URL           string `json:"url,omitempty"`
+	Certificate   string `json:"certificate,omitempty"`
+	Authorization string `json:"authorization,omitempty"`
 }
 
 type JobInfo struct {
@@ -359,7 +368,7 @@ type Network interface {
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
-	RequestJob(config RunnerConfig) (*JobResponse, bool)
+	RequestJob(config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
