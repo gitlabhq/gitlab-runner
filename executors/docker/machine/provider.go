@@ -291,6 +291,10 @@ func (m *machineProvider) createMachines(config *common.RunnerConfig, data *mach
 			// Limit maximum number of machines
 			break
 		}
+		if data.Creating >= config.Machine.MaxGrowthRate && config.Machine.MaxGrowthRate > 0 {
+			// Prevent excessive growth in the number of machines
+			break
+		}
 		m.create(config, machineStateIdle)
 		data.Creating++
 	}
@@ -366,6 +370,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 		WithField("runner", config.ShortDescription()).
 		WithField("minIdleCount", config.Machine.GetIdleCount()).
 		WithField("maxMachines", config.Limit).
+		WithField("maxMachineCreate", config.Machine.MaxGrowthRate).
 		WithField("time", time.Now()).
 		Debugln("Docker Machine Details")
 	machinesData.writeDebugInformation()
