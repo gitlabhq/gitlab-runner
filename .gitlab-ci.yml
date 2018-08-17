@@ -258,10 +258,8 @@ integration windows:
   - cmd /c mklink /D $target_path $current_path
   - cd $GODIR\gitlab-runner
   script:
-  - $packages = (go list ./... | findstr -v "\/vendor\/" | Out-String | %{$_ -replace "\r\n"," "})
-  - $testCommand = "go test $packages"
-  - Invoke-Expression $testCommand
-  - if ( $LASTEXITCODE -ne 0 ) { exit $LASTEXITCODE }
+  - $script = Join-Path -Path "ci" -ChildPath "test_windows.ps1"
+  - Invoke-Expression $script
   allow_failure: true
   only:
   - /.*/@gitlab-org/gitlab-runner
