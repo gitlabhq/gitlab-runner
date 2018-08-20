@@ -17,6 +17,7 @@ type machineProvider struct {
 	name        string
 	machine     docker.Machine
 	details     machinesDetails
+	runners     runnersDetails
 	lock        sync.RWMutex
 	acquireLock sync.Mutex
 	// provider stores a real executor that is used to start run the builds
@@ -58,6 +59,25 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 	return details
 }
 
+var errNoConfig = errors.New("no runner config specified")
+
+func (m *machineProvider) runnerMachinesCoordinator(config *common.RunnerConfig) (*runnerMachinesCoordinator, error) {
+	if config == nil {
+		return nil, errNoConfig
+	}
+
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	details, ok := m.runners[config.GetToken()]
+	if !ok {
+		details = newRunnerMachinesCoordinator()
+		m.runners[config.GetToken()] = details
+	}
+
+	return details, nil
+}
+
 func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
 	name := newMachineName(config)
 	details := m.machineDetails(name, true)
@@ -67,8 +87,14 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	details.LastSeen = time.Now()
 	errCh := make(chan error, 1)
 
-	// Create machine asynchronously
-	go func() {
+	// Create machine with the required configuration asynchronously
+	runner, err := m.runnerMachinesCoordinator(config)
+	if err != nil {
+		errCh <- err
+		return nil, errCh
+	}
+
+	go runner.waitForGrowthCapacity(config.Machine.MaxGrowthRate, func() {
 		started := time.Now()
 		err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 		for i := 0; i < 3 && err != nil; i++ {
@@ -99,7 +125,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 			m.creationHistogram.Observe(creationTime.Seconds())
 		}
 		errCh <- err
-	}()
+	})
 
 	return details, errCh
 }
@@ -479,6 +505,7 @@ func newMachineProvider(name, executor string) *machineProvider {
 	return &machineProvider{
 		name:     name,
 		details:  make(machinesDetails),
+		runners:  make(runnersDetails),
 		machine:  docker.NewMachineCommand(),
 		provider: provider,
 		totalActions: prometheus.NewCounterVec(
