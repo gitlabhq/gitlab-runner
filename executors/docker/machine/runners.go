@@ -8,10 +8,14 @@ type runnerMachinesCoordinator struct {
 	growing        int
 	growthCondLock sync.Mutex
 	growthCond     *sync.Cond
+
+	available chan struct{}
 }
 
 func newRunnerMachinesCoordinator() *runnerMachinesCoordinator {
-	result := runnerMachinesCoordinator{}
+	result := runnerMachinesCoordinator{
+		available: make(chan struct{}),
+	}
 	result.growthCond = sync.NewCond(&result.growthCondLock)
 
 	return &result
@@ -34,6 +38,17 @@ func (r *runnerMachinesCoordinator) waitForGrowthCapacity(maxGrowth int, f func(
 	}()
 
 	f()
+}
+
+func (r *runnerMachinesCoordinator) availableMachineSignal() chan struct{} {
+	return r.available
+}
+
+func (r *runnerMachinesCoordinator) signalMachineAvailable() {
+	select {
+	case r.available <- struct{}{}:
+	default:
+	}
 }
 
 type runnersDetails map[string]*runnerMachinesCoordinator

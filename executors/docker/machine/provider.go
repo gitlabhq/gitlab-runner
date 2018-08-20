@@ -88,13 +88,13 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	errCh := make(chan error, 1)
 
 	// Create machine with the required configuration asynchronously
-	runner, err := m.runnerMachinesCoordinator(config)
+	coordinator, err := m.runnerMachinesCoordinator(config)
 	if err != nil {
 		errCh <- err
 		return nil, errCh
 	}
 
-	go runner.waitForGrowthCapacity(config.Machine.MaxGrowthRate, func() {
+	go coordinator.waitForGrowthCapacity(config.Machine.MaxGrowthRate, func() {
 		started := time.Now()
 		err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 		for i := 0; i < 3 && err != nil; i++ {
@@ -157,10 +157,27 @@ func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *mach
 		return
 	}
 	details = m.findFreeMachine(true, machines...)
-	if details == nil {
-		var errCh chan error
-		details, errCh = m.create(config, machineStateAcquired)
-		err = <-errCh
+	if details != nil {
+		return
+	}
+
+	coordinator, err := m.runnerMachinesCoordinator(config)
+	if err != nil {
+		return nil, err
+	}
+
+	newMachineDetails, errCh := m.create(config, machineStateIdle)
+
+	// Use either a free machine, or the created machine; whichever comes first.
+	for details == nil {
+		select {
+		case err = <-errCh:
+			newMachineDetails.State = machineStateAcquired
+			details = newMachineDetails
+			return
+		case <-coordinator.availableMachineSignal():
+			details = m.findFreeMachine(true, machines...)
+		}
 	}
 	return
 }
@@ -460,22 +477,40 @@ func (m *machineProvider) Use(
 func (m *machineProvider) Release(config *common.RunnerConfig, data common.ExecutorData) {
 	// Release machine
 	details, ok := data.(*machineDetails)
-	if ok {
-		// Mark last used time when is Used
-		if details.State == machineStateUsed {
-			details.Used = time.Now()
-		}
-
-		// Remove machine if we already used it
-		if config != nil && config.Machine != nil &&
-			config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
-			err := m.remove(details.Name, "Too many builds")
-			if err == nil {
-				return
-			}
-		}
-		details.State = machineStateIdle
+	if !ok {
+		return
 	}
+
+	// Mark last used time when is Used
+	if details.State == machineStateUsed {
+		details.Used = time.Now()
+	}
+
+	// Remove machine if we already used it
+	if config != nil && config.Machine != nil &&
+		config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
+		err := m.remove(details.Name, "Too many builds")
+		if err == nil {
+			return
+		}
+	}
+	details.State = machineStateIdle
+
+	// Signal pending builds that a new machine is available.
+	if err := m.signalRelease(config); err != nil {
+		return
+	}
+}
+
+func (m *machineProvider) signalRelease(config *common.RunnerConfig) error {
+	coordinator, err := m.runnerMachinesCoordinator(config)
+	if err != nil && err != errNoConfig {
+		return err
+	}
+	if err != errNoConfig {
+		coordinator.signalMachineAvailable()
+	}
+	return nil
 }
 
 func (m *machineProvider) CanCreate() bool {
