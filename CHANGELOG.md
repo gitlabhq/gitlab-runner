@@ -1,8 +1,4 @@
-v 11.2.0-rc2 (2018-08-09)
-- Fix logrus secrets cleanup !990
-- Fix test failure detection !993
-
-v 11.2.0-rc1 (2018-08-09)
+v 11.2.0 (2018-08-22)
 - Fix support for Unicode variable values when Windows+PowerShell are used !960
 - Update docs/executors/kubernetes.md !957
 - Fix missing code_quality widget !972
@@ -16,6 +12,8 @@ v 11.2.0-rc1 (2018-08-09)
 - Add /etc/nsswitch.conf to helper on docker executor to read /etc/hosts when upload artifacts !951
 - Add busybox shell !900
 - Fix support for features for shells !989
+- Fix logrus secrets cleanup !990
+- Fix test failure detection !993
 
 v 11.1.0 (2018-07-22)
 - Fix support for Unicode variable values when Windows+PowerShell are used !960
