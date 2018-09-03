@@ -139,6 +139,7 @@ if the only RC version was the _RC1_ released near 7th day of month.
     - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0)
         - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0` passing
     - [ ] deploy stable version to all production Runners
+    - [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to latest production version
 
 
 **RC release template**
