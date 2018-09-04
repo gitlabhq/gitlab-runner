@@ -462,6 +462,7 @@ func (b *Build) GetDefaultVariables() JobVariables {
 
 func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
 	return JobVariables{
+		{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "true", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
 	}
 }
 

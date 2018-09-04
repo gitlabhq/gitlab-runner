@@ -28,3 +28,6 @@ change hidden behind the feature flag disabled a corresponding environment varia
 
 | Feature flag                         | Default value | Deprecated | To be removed with | Description |
 |--------------------------------------|---------------|------------|--------------------|-------------|
+| `FF_K8S_USE_ENTRYPOINT_OVER_COMMAND` | `true`        | ✓          | 12.0               | Enables [the fix][mr-1010] for entrypoint configuration when `kubernetes` executor is used. |
+
+[mr-1010]: https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1010
