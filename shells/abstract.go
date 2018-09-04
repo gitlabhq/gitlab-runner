@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
@@ -237,7 +238,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		}
 
 		// Generate cache download address
-		if url := getCacheDownloadURL(info.Build, cacheKey); url != nil {
+		if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
 			args = append(args, "--url", url.String())
 		}
 
@@ -467,7 +468,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		args = append(args, archiverArgs...)
 
 		// Generate cache upload address
-		if url := getCacheUploadURL(info.Build, cacheKey); url != nil {
+		if url := cache.GetCacheUploadURL(info.Build, cacheKey); url != nil {
 			args = append(args, "--url", url.String())
 		}
 

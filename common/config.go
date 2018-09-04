@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 	log "github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -218,16 +218,41 @@ type RunnerCredentials struct {
 	TLSKeyFile  string `toml:"tls-key-file,omitempty" json:"tls-key-file" long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth when using HTTPS"`
 }
 
+type CacheGCSCredentials struct {
+	AccessID   string `toml:"AccessID,omitempty" long:"access-id" env:"CACHE_GCS_GOOGLE_ACCESS_ID" description:"ID of GCP Service Account used to access the storage"`
+	PrivateKey string `toml:"PrivateKey,omitempty" long:"private-key" env:"CACHE_GCS_PRIVATE_KEY" description:"Private key used to sign GCS requests"`
+}
+
+type CacheGCSConfig struct {
+	*CacheGCSCredentials
+	CredentialsFile string `toml:"CredentialsFile,omitempty" long:"credentials-file" env:"GOOGLE_APPLICATION_CREDENTIALS" description:"File with GCP credentials, containing AccessID and PrivateKey"`
+	BucketName      string `toml:"BucketName" long:"bucket-name" env:"CACHE_GCS_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
+}
+
+type CacheS3Config struct {
+	ServerAddress  string `toml:"ServerAddress,omitempty" long:"server-address" env:"CACHE_S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
+	AccessKey      string `toml:"AccessKey,omitempty" long:"access-key" env:"CACHE_S3_ACCESS_KEY" description:"S3 Access Key"`
+	SecretKey      string `toml:"SecretKey,omitempty" long:"secret-key" env:"CACHE_S3_SECRET_KEY" description:"S3 Secret Key"`
+	BucketName     string `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
+	BucketLocation string `toml:"BucketLocation,omitempty" long:"bucket-location" env:"CACHE_S3_BUCKET_LOCATION" description:"Name of S3 region"`
+	Insecure       bool   `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_CACHE_INSECURE" description:"Use insecure mode (without https)"`
+}
+
 type CacheConfig struct {
-	Type           string `toml:"Type,omitempty" long:"type" env:"CACHE_TYPE" description:"Select caching method: s3, to use S3 buckets"`
-	ServerAddress  string `toml:"ServerAddress,omitempty" long:"s3-server-address" env:"S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
-	AccessKey      string `toml:"AccessKey,omitempty" long:"s3-access-key" env:"S3_ACCESS_KEY" description:"S3 Access Key"`
-	SecretKey      string `toml:"SecretKey,omitempty" long:"s3-secret-key" env:"S3_SECRET_KEY" description:"S3 Secret Key"`
-	BucketName     string `toml:"BucketName,omitempty" long:"s3-bucket-name" env:"S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
-	BucketLocation string `toml:"BucketLocation,omitempty" long:"s3-bucket-location" env:"S3_BUCKET_LOCATION" description:"Name of S3 region"`
-	Insecure       bool   `toml:"Insecure,omitempty" long:"s3-insecure" env:"S3_CACHE_INSECURE" description:"Use insecure mode (without https)"`
-	Path           string `toml:"Path,omitempty" long:"s3-cache-path" env:"S3_CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
-	Shared         bool   `toml:"Shared,omitempty" long:"cache-shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
+	Type   string `toml:"Type,omitempty" long:"type" env:"CACHE_TYPE" description:"Select caching method"`
+	Path   string `toml:"Path,omitempty" long:"s3-cache-path" env:"S3_CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
+	Shared bool   `toml:"Shared,omitempty" long:"cache-shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
+
+	S3  *CacheS3Config  `toml:"s3,omitempty" json:"s3" namespace:"s3"`
+	GCS *CacheGCSConfig `toml:"gcs,omitempty" json:"gcs" namespace:"gcs"`
+
+	// TODO: Remove in 12.0
+	ServerAddress  string `toml:"ServerAddress,omitempty" long:"s3-server-address" env:"S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"` // DEPRECATED
+	AccessKey      string `toml:"AccessKey,omitempty" long:"s3-access-key" env:"S3_ACCESS_KEY" description:"S3 Access Key"`                                            // DEPRECATED
+	SecretKey      string `toml:"SecretKey,omitempty" long:"s3-secret-key" env:"S3_SECRET_KEY" description:"S3 Secret Key"`                                            // DEPRECATED
+	BucketName     string `toml:"BucketName,omitempty" long:"s3-bucket-name" env:"S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`         // DEPRECATED
+	BucketLocation string `toml:"BucketLocation,omitempty" long:"s3-bucket-location" env:"S3_BUCKET_LOCATION" description:"Name of S3 region"`                         // DEPRECATED
+	Insecure       bool   `toml:"Insecure,omitempty" long:"s3-insecure" env:"S3_CACHE_INSECURE" description:"Use insecure mode (without https)"`                       // DEPRECATED
 }
 
 type RunnerSettings struct {
@@ -282,6 +307,10 @@ type Config struct {
 	SentryDSN     *string         `toml:"sentry_dsn"`
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
+}
+
+func (c *CacheS3Config) ShouldUseIAMCredentials() bool {
+	return c.ServerAddress == "" || c.AccessKey == "" || c.SecretKey == ""
 }
 
 func (c *SessionServer) GetSessionTimeout() time.Duration {

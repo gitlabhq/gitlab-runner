@@ -497,44 +497,104 @@ can be found [here][cronvendor].
 
 ## The `[runners.cache]` section
 
->**Note:**
-Added in GitLab Runner v1.1.0.
+> Introduced in GitLab Runner 1.1.0.
 
 This defines the distributed cache feature. More details can be found
 in the [runners autoscale documentation](autoscale.md#distributed-runners-caching).
 
 | Parameter        | Type             | Description |
 |------------------|------------------|-------------|
-| `Type`           | string           | As of now, only S3-compatible services are supported, so only `s3` can be used. |
-| `ServerAddress`  | string           | A `host:port` to the used S3-compatible server. |
-| `AccessKey`      | string           | The access key specified for your S3 instance. |
-| `SecretKey`      | string           | The secret key specified for your S3 instance. |
-| `BucketName`     | string           | Name of the bucket where cache will be stored. |
-| `BucketLocation` | string           | Name of S3 region. |
-| `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Is set to `false` by default. |
+| `Type`           | string           | One of: `s3`, `gcs`. |
 | `Path`           | string           | Name of the path to prepend to the cache URL. |
 | `Shared`         | boolean          | Enables cache sharing between runners, `false` by default. |
 
+CAUTION: **Important:**
+With GitLab Runner 11.3.0, the configuration parameters related to S3 were moved to a dedicated `[runners.cache.s3]` section.
+The old format of the configuration with S3 configured directly in `[runners.cache]` section is still supported,
+but is deprecated with GitLab Runner 11.3.0. **This support will be removed in GitLab Runner 12.0.0**.
+
+### The `[runners.cache.s3]` section
+
+NOTE: **Note:**
+Moved from the `[runners.cache]` section in GitLab Runner 11.3.0.
+
+Allows to configure S3 storage for cache. This section contains settings related to S3, that previously were
+present globally in the `[runners.cache]` section.
+
+| Parameter        | Type             | Description |
+|------------------|------------------|-------------|
+| `ServerAddress`  | string           | A `host:port` to the used S3-compatible server. |
+| `AccessKey`      | string           | The access key specified for your S3 instance. |
+| `SecretKey`      | string           | The secret key specified for your S3 instance. |
+| `BucketName`     | string           | Name of the storage bucket where cache will be stored. |
+| `BucketLocation` | string           | Name of S3 region. |
+| `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Set to `false` by default. |
+
 Example:
 
-```bash
+```toml
 [runners.cache]
   Type = "s3"
-  ServerAddress = "s3.amazonaws.com"
-  AccessKey = "AMAZON_S3_ACCESS_KEY"
-  SecretKey = "AMAZON_S3_SECRET_KEY"
-  BucketName = "runners"
-  BucketLocation = "eu-west-1"
-  Insecure = false
   Path = "path/to/prefix"
   Shared = false
+  [runners.cache.s3]
+    ServerAddress = "s3.amazonaws.com"
+    AccessKey = "AMAZON_S3_ACCESS_KEY"
+    SecretKey = "AMAZON_S3_SECRET_KEY"
+    BucketName = "runners-cache"
+    BucketLocation = "eu-west-1"
+    Insecure = false
 ```
 
-> **Note:** For Amazon's S3 service the `ServerAddress` should always be `s3.amazonaws.com`. Minio S3 client will
-> get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
+NOTE: **Note:**
+For Amazon's S3 service, the `ServerAddress` should always be `s3.amazonaws.com`. The Minio S3 client will
+get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
 
-> **Note:** If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified then the S3 client will use the
-> IAM instance profile available to the instance.
+NOTE: **Note:**
+If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified, then the S3 client will use the
+IAM instance profile available to the instance.
+
+### The `[runners.cache.gcs]` section
+
+> Introduced in GitLab Runner 11.3.0.
+
+Configure native support for Google Cloud Storage. Read the
+[Google Cloud Storage Authentication documentation](https://cloud.google.com/storage/docs/authentication#service_accounts)
+to check where these values come from.
+
+| Parameter         | Type             | Description |
+|-------------------|------------------|-------------|
+| `CredentialsFile` | string           | Path to the Google JSON key file. Currently only the `service_account` type is supported. If configured, takes precedence over `AccessID` and `PrivateKey` configured directly in `config.toml`. |
+| `AccessID`        | string           | ID of GCP Service Account used to access the storage. |
+| `PrivateKey`      | string           | Private key used to sign GCS requests. |
+| `BucketName`      | string           | Name of the storage bucket where cache will be stored. |
+
+Examples:
+
+**Credentials configured directly in `config.toml` file:**
+
+```toml
+[runners.cache]
+  Type = "gcs"
+  Path = "path/to/prefix"
+  Shared = false
+  [runners.cache.gcs]
+    AccessID = "cache-access-account@test-project-123456.iam.gserviceaccount.com"
+    PrivateKey = "-----BEGIN PRIVATE KEY-----\nXXXXXX\n-----END PRIVATE KEY-----\n"
+    BucketName = "runners-cache"
+```
+
+**Credentials in JSON file downloaded from GCP:**
+
+```toml
+[runners.cache]
+  Type = "gcs"
+  Path = "path/to/prefix"
+  Shared = false
+  [runners.cache.gcs]
+    CredentialsFile = "/etc/gitlab-runner/service-account.json"
+    BucketName = "runners-cache"
+```
 
 ## The `[runners.kubernetes]` section
 

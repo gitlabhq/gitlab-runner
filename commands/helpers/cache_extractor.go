@@ -92,6 +92,8 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 		if err != nil {
 			logrus.Fatalln(err)
 		}
+	} else {
+		logrus.Infoln("No URL provided, cache will be not downloaded from shared cache server. Instead a local version of cache will be extracted.")
 	}
 
 	err := archives.ExtractZipFile(c.File)
