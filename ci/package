@@ -9,6 +9,20 @@ create_package() {
     local customOptions
     read -r -a customOptions <<< "${@}"
 
+    local uname_s
+    uname_s=$(uname -s)
+
+    if [[ "${uname_s}" == "Darwin" ]]; then
+        if ! which gtar >/dev/null 2>&1; then
+            echo
+            echo -e "\\033[31;1m"
+            echo "Seems that you're using Mac OS. In case of troubles with packaging ensure"
+            echo "that gnu-tar is installed. You can do this e.g. with 'brew install gnu-tar'"
+            echo -e "\\033[0m"
+            echo
+        fi
+    fi
+
 	mkdir -p "out/${packageType}/"
 
     fpm \
