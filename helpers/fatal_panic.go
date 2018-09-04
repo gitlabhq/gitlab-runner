@@ -24,22 +24,13 @@ func (s *fatalLogHook) Fire(e *logrus.Entry) error {
 }
 
 func MakeFatalToPanic() func() {
-	hook := &fatalLogHook{
-		output: logrus.StandardLogger().Out,
-	}
-	logrus.AddHook(hook)
+	logger := logrus.StandardLogger()
+	hooks := make(logrus.LevelHooks)
 
-	removeHook := func() {
-		for level, levelHooks := range logrus.StandardLogger().Hooks {
-			hooks := []logrus.Hook{}
-			for _, existingHook := range levelHooks {
-				if existingHook != hook {
-					hooks = append(hooks, existingHook)
-				}
-			}
-			logrus.StandardLogger().Hooks[level] = hooks
-		}
-	}
+	hooks.Add(&fatalLogHook{output: logger.Out})
+	oldHooks := logger.ReplaceHooks(hooks)
 
-	return removeHook
+	return func() {
+		logger.ReplaceHooks(oldHooks)
+	}
 }
