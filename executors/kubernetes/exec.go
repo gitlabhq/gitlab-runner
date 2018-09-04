@@ -47,14 +47,6 @@ func (*DefaultRemoteExecutor) Execute(method string, url *url.URL, config *restc
 		return err
 	}
 
-	runtime.ErrorHandlers = append(runtime.ErrorHandlers, func(err error) {
-		logrus.WithError(err).Error("K8S stream error")
-	})
-
-	runtime.PanicHandlers = append(runtime.PanicHandlers, func(r interface{}) {
-		logrus.Errorf("K8S stream panic: %v", r)
-	})
-
 	return exec.Stream(remotecommand.StreamOptions{
 		Stdin:  stdin,
 		Stdout: stdout,
@@ -120,4 +112,14 @@ func (p *ExecOptions) Run() error {
 	}, scheme.ParameterCodec)
 
 	return p.Executor.Execute("POST", req.URL(), p.Config, stdin, p.Out, p.Err, false)
+}
+
+func init() {
+	runtime.ErrorHandlers = append(runtime.ErrorHandlers, func(err error) {
+		logrus.WithError(err).Error("K8S stream error")
+	})
+
+	runtime.PanicHandlers = append(runtime.PanicHandlers, func(r interface{}) {
+		logrus.Errorf("K8S stream panic: %v", r)
+	})
 }
