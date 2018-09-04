@@ -150,8 +150,16 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	s.Debugln(fmt.Sprintf(
+		"Starting in container %q the command %q with script: %s",
+		containerName,
+		containerCommand,
+		cmd.Script,
+	))
+
 	select {
 	case err := <-s.runInContainer(ctx, containerName, containerCommand, cmd.Script):
+		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		if err != nil && strings.Contains(err.Error(), "command terminated with exit code") {
 			return &common.BuildError{Inner: err}
 		}

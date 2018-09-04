@@ -23,9 +23,10 @@ import (
 	"io"
 	"net/url"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
@@ -45,6 +46,7 @@ func (*DefaultRemoteExecutor) Execute(method string, url *url.URL, config *restc
 	if err != nil {
 		return err
 	}
+
 	return exec.Stream(remotecommand.StreamOptions{
 		Stdin:  stdin,
 		Stdout: stdout,
@@ -84,7 +86,7 @@ func (p *ExecOptions) Run() error {
 
 	containerName := p.ContainerName
 	if len(containerName) == 0 {
-		log.Infof("defaulting container name to '%s'", pod.Spec.Containers[0].Name)
+		logrus.Infof("defaulting container name to '%s'", pod.Spec.Containers[0].Name)
 		containerName = pod.Spec.Containers[0].Name
 	}
 
@@ -110,4 +112,14 @@ func (p *ExecOptions) Run() error {
 	}, scheme.ParameterCodec)
 
 	return p.Executor.Execute("POST", req.URL(), p.Config, stdin, p.Out, p.Err, false)
+}
+
+func init() {
+	runtime.ErrorHandlers = append(runtime.ErrorHandlers, func(err error) {
+		logrus.WithError(err).Error("K8S stream error")
+	})
+
+	runtime.PanicHandlers = append(runtime.PanicHandlers, func(r interface{}) {
+		logrus.Errorf("K8S stream panic: %v", r)
+	})
 }
