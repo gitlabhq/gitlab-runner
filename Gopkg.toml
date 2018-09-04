@@ -115,7 +115,7 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "golang.org/x/net"
-  revision = "f2499483f923065a842d38eb4c7f1927e6fc6e6d"
+  revision = "d0887baf81f4598189d4e12a37c6da86f0bba4d0"
 
 [[constraint]]
   # branch = "v2"
@@ -138,6 +138,17 @@ ignored = ["test", "appengine"]
   name = "github.com/mattn/go-zglob"
   branch = "master"
 
+[[constraint]]
+  name = "github.com/docker/go-units"
+  revision = "eb879ae3e2b84e2a142af415b679ddeda47ec71c"
+
+[[constraint]]
+  name = "cloud.google.com/go"
+  version = "v0.25.0"
+
+[[constraint]]
+  name = "gitlab.com/gitlab-org/gitlab-terminal"
+  revision = "d523b4fd2bb3c8728724dce365809e09113430a9"
 
 ##
 ## Refrain innovations ;)
@@ -146,10 +157,6 @@ ignored = ["test", "appengine"]
 [[override]]
   name = "github.com/Azure/go-autorest"
   revision = "d4e6b95c12a08b4de2d48b45d5b4d594e5d32fab"
-
-[[override]]
-  name = "cloud.google.com/go"
-  revision = "05253f6a829103296c351b643f6815aedd81a3fb"
 
 [[override]]
   name = "github.com/Azure/go-ansiterm"
@@ -176,10 +183,6 @@ ignored = ["test", "appengine"]
   revision = "4290f40c056686fcaa5c9caf02eac1dde9315adf"
 
 [[override]]
-  name = "github.com/docker/go-units"
-  revision = "eb879ae3e2b84e2a142af415b679ddeda47ec71c"
-
-[[override]]
   name = "github.com/docker/spdystream"
   revision = "449fdfce4d962303d702fec724ef0ad181c92528"
 
@@ -197,11 +200,11 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "github.com/gogo/protobuf"
-  revision = "f20a1444730c7d9949b880a0309e737d007def25"
+  version = "v1.1.0"
 
 [[override]]
   name = "github.com/golang/protobuf"
-  revision = "f592bd283e9ef86337a432eb50e592278c3d534d"
+  version = "v1.1.0"
 
 [[override]]
   name = "github.com/google/cadvisor"
@@ -271,16 +274,38 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "golang.org/x/oauth2"
-  revision = "3b966c7f301c0c71c53d94dc632a62df0a682cd7"
+  revision = "ef147856a6ddbb60760db74283d2424e98c87bff"
 
 [[override]]
   name = "golang.org/x/sys"
   revision = "042a8f53ce82bbe081222da955159491e32146a0"
 
 [[override]]
+  name = "golang.org/x/text"
+  version = "v0.3.0"
+
+[[override]]
+  name = "google.golang.org/api"
+  revision = "0025a57598c017c1b9f7bc916c4fb8ae77315f9c"
+
+[[override]]
   name = "google.golang.org/appengine"
   revision = "e951d3868b377b14f4e60efa3a301532ee3c1ebf"
 
-[[constraint]]
-  name = "gitlab.com/gitlab-org/gitlab-terminal"
-  revision = "d523b4fd2bb3c8728724dce365809e09113430a9"
+[[override]]
+  name = "google.golang.org/genproto"
+  revision = "2731d4fa720b67f9fe38e9051a2a9b38e4609260"
+
+[[override]]
+  name = "github.com/googleapis/gax-go"
+  version = "v2.0.0"
+
+[[override]]
+  name = "go.opencensus.io"
+  version = "v0.14.0"
+
+[[override]]
+  name = "google.golang.org/grpc"
+  # v1.14.0 introduced a compilation error with one of it dependencies,
+  # so forcing v1.13.0 which works
+  version = "=v1.13.0"

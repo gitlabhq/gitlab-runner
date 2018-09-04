@@ -10,6 +10,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/formatter"
 
+	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcs"
+	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"

@@ -295,8 +295,8 @@ feature.
 To overcome this issue, together with the autoscale feature, the distributed
 Runners cache feature was introduced.
 
-It uses any S3-compatible server to share the cache between used Docker hosts.
-When restoring and archiving the cache, GitLab Runner will query the S3 server
+It uses configured object storage server to share the cache between used Docker hosts.
+When restoring and archiving the cache, GitLab Runner will query the server
 and will download or upload the archive respectively.
 
 To enable distributed caching, you have to define it in `config.toml` using the
@@ -308,19 +308,21 @@ To enable distributed caching, you have to define it in `config.toml` using the
   executor = "docker+machine"
   [runners.cache]
     Type = "s3"
-    ServerAddress = "s3.example.com"
-    AccessKey = "access-key"
-    SecretKey = "secret-key"
-    BucketName = "runner"
-    Insecure = false
     Path = "path/to/prefix"
     Shared = false
+    [runners.cache.s3]
+      ServerAddress = "s3.example.com"
+      AccessKey = "access-key"
+      SecretKey = "secret-key"
+      BucketName = "runner"
+      Insecure = false
 ```
 
-The S3 URLs follow the structure `http(s)://<ServerAddress>/<BucketName>/<Path>/runner/<runner-id>/project/<id>/<cache-key>`.
+In the example above, the S3 URLs follow the structure
+`http(s)://<ServerAddress>/<BucketName>/<Path>/runner/<runner-id>/project/<id>/<cache-key>`.
 
 To share the cache between two or more Runners, set the `Shared` flag to true.
-That will remove the runner token from the S3 URL (`runner/<runner-id>`) and
+That will remove the runner token from the URL (`runner/<runner-id>`) and
 all configured Runners will share the same cache. Remember that you can also
 set `Path` to separate caches between Runners when cache sharing is enabled.
 

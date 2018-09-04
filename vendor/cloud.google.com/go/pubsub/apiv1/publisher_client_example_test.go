@@ -1,10 +1,10 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
+// Copyright 2018 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     https://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,8 @@ package pubsub_test
 import (
 	"cloud.google.com/go/pubsub/apiv1"
 	"golang.org/x/net/context"
-	googleapis_pubsub_v1 "google.golang.org/genproto/googleapis/pubsub/v1"
+	"google.golang.org/api/iterator"
+	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
 func ExampleNewPublisherClient() {
@@ -32,6 +33,40 @@ func ExampleNewPublisherClient() {
 	_ = c
 }
 
+func ExamplePublisherClient_SubscriptionIAM() {
+	ctx := context.Background()
+	c, err := pubsub.NewPublisherClient(ctx)
+	if err != nil {
+		// TODO: Handle error.
+	}
+
+	subscription := &pubsubpb.Subscription{}
+	h := c.SubscriptionIAM(subscription)
+	policy, err := h.Policy(ctx)
+	if err != nil {
+		// TODO: Handle error.
+	}
+	//TODO: Use the IAM policy
+	_ = policy
+}
+
+func ExamplePublisherClient_TopicIAM() {
+	ctx := context.Background()
+	c, err := pubsub.NewPublisherClient(ctx)
+	if err != nil {
+		// TODO: Handle error.
+	}
+
+	topic := &pubsubpb.Topic{}
+	h := c.TopicIAM(topic)
+	policy, err := h.Policy(ctx)
+	if err != nil {
+		// TODO: Handle error.
+	}
+	//TODO: Use the IAM policy
+	_ = policy
+}
+
 func ExamplePublisherClient_CreateTopic() {
 	ctx := context.Background()
 	c, err := pubsub.NewPublisherClient(ctx)
@@ -39,10 +74,28 @@ func ExamplePublisherClient_CreateTopic() {
 		// TODO: Handle error.
 	}
 
-	req := &googleapis_pubsub_v1.Topic{
-	// TODO: Fill request struct fields.
+	req := &pubsubpb.Topic{
+		// TODO: Fill request struct fields.
 	}
 	resp, err := c.CreateTopic(ctx, req)
+	if err != nil {
+		// TODO: Handle error.
+	}
+	// TODO: Use resp.
+	_ = resp
+}
+
+func ExamplePublisherClient_UpdateTopic() {
+	ctx := context.Background()
+	c, err := pubsub.NewPublisherClient(ctx)
+	if err != nil {
+		// TODO: Handle error.
+	}
+
+	req := &pubsubpb.UpdateTopicRequest{
+		// TODO: Fill request struct fields.
+	}
+	resp, err := c.UpdateTopic(ctx, req)
 	if err != nil {
 		// TODO: Handle error.
 	}
@@ -57,8 +110,8 @@ func ExamplePublisherClient_Publish() {
 		// TODO: Handle error.
 	}
 
-	req := &googleapis_pubsub_v1.PublishRequest{
-	// TODO: Fill request struct fields.
+	req := &pubsubpb.PublishRequest{
+		// TODO: Fill request struct fields.
 	}
 	resp, err := c.Publish(ctx, req)
 	if err != nil {
@@ -75,8 +128,8 @@ func ExamplePublisherClient_GetTopic() {
 		// TODO: Handle error.
 	}
 
-	req := &googleapis_pubsub_v1.GetTopicRequest{
-	// TODO: Fill request struct fields.
+	req := &pubsubpb.GetTopicRequest{
+		// TODO: Fill request struct fields.
 	}
 	resp, err := c.GetTopic(ctx, req)
 	if err != nil {
@@ -93,15 +146,17 @@ func ExamplePublisherClient_ListTopics() {
 		// TODO: Handle error.
 	}
 
-	req := &googleapis_pubsub_v1.ListTopicsRequest{
-	// TODO: Fill request struct fields.
+	req := &pubsubpb.ListTopicsRequest{
+		// TODO: Fill request struct fields.
 	}
 	it := c.ListTopics(ctx, req)
 	for {
 		resp, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
 		if err != nil {
 			// TODO: Handle error.
-			break
 		}
 		// TODO: Use resp.
 		_ = resp
@@ -115,15 +170,17 @@ func ExamplePublisherClient_ListTopicSubscriptions() {
 		// TODO: Handle error.
 	}
 
-	req := &googleapis_pubsub_v1.ListTopicSubscriptionsRequest{
-	// TODO: Fill request struct fields.
+	req := &pubsubpb.ListTopicSubscriptionsRequest{
+		// TODO: Fill request struct fields.
 	}
 	it := c.ListTopicSubscriptions(ctx, req)
 	for {
 		resp, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
 		if err != nil {
 			// TODO: Handle error.
-			break
 		}
 		// TODO: Use resp.
 		_ = resp
@@ -137,8 +194,8 @@ func ExamplePublisherClient_DeleteTopic() {
 		// TODO: Handle error.
 	}
 
-	req := &googleapis_pubsub_v1.DeleteTopicRequest{
-	// TODO: Fill request struct fields.
+	req := &pubsubpb.DeleteTopicRequest{
+		// TODO: Fill request struct fields.
 	}
 	err = c.DeleteTopic(ctx, req)
 	if err != nil {
