@@ -998,18 +998,51 @@ func TestSetupCredentials(t *testing.T) {
 	}
 }
 
+type setupBuildPodTestDef struct {
+	RunnerConfig common.RunnerConfig
+	Variables    []common.JobVariable
+	Options      *kubernetesOptions
+	PrepareFn    func(*testing.T, setupBuildPodTestDef, *executor)
+	VerifyFn     func(*testing.T, setupBuildPodTestDef, *api.Pod)
+}
+
+type setupBuildPodFakeRoundTripper struct {
+	t        *testing.T
+	test     setupBuildPodTestDef
+	executed bool
+}
+
+func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	rt.executed = true
+	podBytes, err := ioutil.ReadAll(req.Body)
+	if !assert.NoError(rt.t, err, "failed to read request body") {
+		return nil, err
+	}
+
+	p := new(api.Pod)
+	err = json.Unmarshal(podBytes, p)
+	if !assert.NoError(rt.t, err, "failed to read request body") {
+		return nil, err
+	}
+
+	rt.test.VerifyFn(rt.t, rt.test, p)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: FakeReadCloser{
+			Reader: bytes.NewBuffer(podBytes),
+		},
+	}
+	resp.Header = make(http.Header)
+	resp.Header.Add("Content-Type", "application/json")
+
+	return resp, nil
+}
+
 func TestSetupBuildPod(t *testing.T) {
 	version, _ := testVersionAndCodec()
 
-	type testDef struct {
-		RunnerConfig common.RunnerConfig
-		Options      *kubernetesOptions
-		PrepareFn    func(*testing.T, testDef, *executor)
-		VerifyFn     func(*testing.T, testDef, *api.Pod)
-		Variables    []common.JobVariable
-	}
-	tests := []testDef{
-		{
+	tests := map[string]setupBuildPodTestDef{
+		"passes node selector setting": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1021,11 +1054,11 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.NodeSelector, pod.Spec.NodeSelector)
 			},
 		},
-		{
+		"uses configured credentials": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1033,19 +1066,19 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			PrepareFn: func(t *testing.T, test testDef, e *executor) {
+			PrepareFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				e.credentials = &api.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "job-credentials",
 					},
 				}
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				secrets := []api.LocalObjectReference{{Name: "job-credentials"}}
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
-		{
+		"uses configured image pull secrets": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1056,12 +1089,12 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				secrets := []api.LocalObjectReference{{Name: "docker-registry-credentials"}}
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
-		{
+		"configures helper container": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1069,7 +1102,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				hasHelper := false
 				for _, c := range pod.Spec.Containers {
 					if c.Name == "helper" {
@@ -1079,7 +1112,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.True(t, hasHelper)
 			},
 		},
-		{
+		"uses configured helper image": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1088,7 +1121,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				for _, c := range pod.Spec.Containers {
 					if c.Name == "helper" {
 						assert.Equal(t, test.RunnerConfig.RunnerSettings.Kubernetes.HelperImage, c.Image)
@@ -1096,7 +1129,7 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 			},
 		},
-		{
+		"expands variables for pod labels": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1109,7 +1142,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Equal(t, map[string]string{
 					"test":    "label",
 					"another": "label",
@@ -1120,7 +1153,7 @@ func TestSetupBuildPod(t *testing.T) {
 				{Key: "test", Value: "sometestvar"},
 			},
 		},
-		{
+		"expands variables for pod annotations": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1133,7 +1166,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Equal(t, map[string]string{
 					"test":    "annotation",
 					"another": "annotation",
@@ -1144,7 +1177,24 @@ func TestSetupBuildPod(t *testing.T) {
 				{Key: "test", Value: "sometestvar"},
 			},
 		},
-		{
+		"expands variables for helper image": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image:${CI_RUNNER_REVISION}",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					if c.Name == "helper" {
+						assert.Equal(t, "custom/helper-image:HEAD", c.Image)
+					}
+				}
+			},
+		},
+		"supports extended docker configuration for image and services": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1166,7 +1216,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				require.Len(t, pod.Spec.Containers, 3)
 
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
@@ -1187,73 +1237,50 @@ func TestSetupBuildPod(t *testing.T) {
 		},
 	}
 
-	executed := false
-	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
-		return func(req *http.Request) (resp *http.Response, err error) {
-			executed = true
-			podBytes, err := ioutil.ReadAll(req.Body)
-
-			if err != nil {
-				t.Errorf("failed to read request body: %s", err.Error())
-				return
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			vars := test.Variables
+			if vars == nil {
+				vars = []common.JobVariable{}
 			}
 
-			p := new(api.Pod)
-
-			err = json.Unmarshal(podBytes, p)
-
-			if err != nil {
-				t.Errorf("error decoding pod: %s", err.Error())
-				return
+			options := test.Options
+			if options == nil {
+				options = &kubernetesOptions{}
 			}
 
-			test.VerifyFn(t, test, p)
+			rt := setupBuildPodFakeRoundTripper{
+				t:    t,
+				test: test,
+			}
 
-			resp = &http.Response{StatusCode: http.StatusOK, Body: FakeReadCloser{
-				Reader: bytes.NewBuffer(podBytes),
-			}}
-			resp.Header = make(http.Header)
-			resp.Header.Add("Content-Type", "application/json")
-
-			return
-		}
-	}
-
-	for _, test := range tests {
-		vars := test.Variables
-		if vars == nil {
-			vars = []common.JobVariable{}
-		}
-
-		options := test.Options
-		if options == nil {
-			options = &kubernetesOptions{}
-		}
-		ex := executor{
-			kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-			options:    options,
-			AbstractExecutor: executors.AbstractExecutor{
-				Config:     test.RunnerConfig,
-				BuildShell: &common.ShellConfiguration{},
-				Build: &common.Build{
-					JobResponse: common.JobResponse{
-						Variables: vars,
+			ex := executor{
+				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
+				options:    options,
+				AbstractExecutor: executors.AbstractExecutor{
+					Config:     test.RunnerConfig,
+					BuildShell: &common.ShellConfiguration{},
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							Variables: vars,
+						},
+						Runner: &test.RunnerConfig,
 					},
-					Runner: &test.RunnerConfig,
 				},
-			},
-		}
+			}
 
-		if test.PrepareFn != nil {
-			test.PrepareFn(t, test, &ex)
-		}
+			if test.PrepareFn != nil {
+				test.PrepareFn(t, test, &ex)
+			}
 
-		executed = false
-		err := ex.prepareOverwrites(make(common.JobVariables, 0))
-		assert.NoError(t, err, "error preparing overwrites: %s")
-		err = ex.setupBuildPod()
-		assert.NoError(t, err, "error setting up build pod: %s")
-		assert.True(t, executed)
+			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			assert.NoError(t, err, "error preparing overwrites")
+
+			err = ex.setupBuildPod()
+			assert.NoError(t, err, "error setting up build pod")
+
+			assert.True(t, rt.executed, "RoundTrip for kubernetes client should be executed")
+		})
 	}
 }
 

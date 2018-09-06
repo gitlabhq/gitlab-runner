@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -304,6 +305,35 @@ func TestDockerForExistingImage(t *testing.T) {
 	image, err := e.pullDockerImage("existing", nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
+}
+
+func TestHelperImageWithVariable(t *testing.T) {
+	c := new(docker_helpers.MockClient)
+	defer c.AssertExpectations(t)
+
+	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner:HEAD").
+		Return(types.ImageInspect{}, nil, errors.New("not found")).
+		Once()
+	c.On("ImagePullBlocking", mock.Anything, "gitlab/gitlab-runner:HEAD", mock.Anything).
+		Return(nil).
+		Once()
+	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner:HEAD").
+		Return(types.ImageInspect{ID: "helper-image"}, nil, nil).
+		Once()
+
+	e := executor{
+		client: c,
+	}
+
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{
+		HelperImage: "gitlab/gitlab-runner:${CI_RUNNER_REVISION}",
+	}
+
+	img, err := e.getPrebuiltImage()
+	assert.NoError(t, err)
+	require.NotNil(t, img)
+	assert.Equal(t, "helper-image", img.ID)
 }
 
 func (e *executor) setPolicyMode(pullPolicy common.DockerPullPolicy) {
