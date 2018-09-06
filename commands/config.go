@@ -72,8 +72,10 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 type configOptionsWithListenAddress struct {
 	configOptions
 
+	ListenAddress string `long:"listen-address" env:"LISTEN_ADDRESS" description:"Metrics / pprof server listening address"`
+
+	// TODO: Remove in 12.0
 	MetricsServerAddress string `long:"metrics-server" env:"METRICS_SERVER" description:"(DEPRECATED) Metrics / pprof server listening address"` //DEPRECATED
-	ListenAddress        string `long:"listen-address" env:"LISTEN_ADDRESS" description:"Metrics / pprof server listening address"`
 }
 
 func (c *configOptionsWithListenAddress) listenAddress() (string, error) {
@@ -99,6 +101,7 @@ func (c *configOptionsWithListenAddress) listenOrMetricsServerAddress() string {
 		return c.ListenAddress
 	}
 
+	// TODO: Remove in 12.0
 	if c.MetricsServerAddress != "" {
 		logrus.Warnln("'metrics-server' command line option is deprecated and will be removed in one of future releases; please use 'listen-address' instead")
 
