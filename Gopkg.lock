@@ -555,12 +555,15 @@
   revision = "abf152e5f3e97f2fafac028d2cc06c1feb87ffa5"
 
 [[projects]]
-  digest = "1:a3c8a86c096cb57ce6224ad9bf558fd15d11371f84f1f93cb2226b9de95445fc"
+  branch = "master"
+  digest = "1:bd1ebbb301e1a33a22f5e8026d64c7b48d8ed105790ab01f4ad8d3a9c28d8abf"
   name = "github.com/sirupsen/logrus"
-  packages = ["."]
+  packages = [
+    ".",
+    "hooks/test",
+  ]
   pruneopts = "N"
-  revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
-  version = "v1.0.6"
+  revision = "78fa2915c1fa231f62e0438da493688c21ca678e"
 
 [[projects]]
   digest = "1:e86042cb61313f9315878e33f2713cc1a1a1c29feeb04b64c164ed55266822d9"
@@ -1028,6 +1031,7 @@
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_model/go",
     "github.com/sirupsen/logrus",
+    "github.com/sirupsen/logrus/hooks/test",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
@@ -1044,6 +1048,7 @@
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/runtime/serializer",
+    "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth",
