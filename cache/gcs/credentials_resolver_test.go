@@ -63,7 +63,7 @@ func prepareStubbedCredentialsFile(t *testing.T, testCase credentialsResolverTes
 
 func getCredentialsConfig(accessID string, privateKey string) *common.CacheGCSConfig {
 	return &common.CacheGCSConfig{
-		CacheGCSCredentials: &common.CacheGCSCredentials{
+		CacheGCSCredentials: common.CacheGCSCredentials{
 			AccessID:   accessID,
 			PrivateKey: privateKey,
 		},

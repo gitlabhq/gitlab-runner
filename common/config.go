@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -219,14 +220,14 @@ type RunnerCredentials struct {
 }
 
 type CacheGCSCredentials struct {
-	AccessID   string `toml:"AccessID,omitempty" long:"access-id" env:"CACHE_GCS_GOOGLE_ACCESS_ID" description:"ID of GCP Service Account used to access the storage"`
+	AccessID   string `toml:"AccessID,omitempty" long:"access-id" env:"CACHE_GCS_ACCESS_ID" description:"ID of GCP Service Account used to access the storage"`
 	PrivateKey string `toml:"PrivateKey,omitempty" long:"private-key" env:"CACHE_GCS_PRIVATE_KEY" description:"Private key used to sign GCS requests"`
 }
 
 type CacheGCSConfig struct {
-	*CacheGCSCredentials
+	CacheGCSCredentials
 	CredentialsFile string `toml:"CredentialsFile,omitempty" long:"credentials-file" env:"GOOGLE_APPLICATION_CREDENTIALS" description:"File with GCP credentials, containing AccessID and PrivateKey"`
-	BucketName      string `toml:"BucketName" long:"bucket-name" env:"CACHE_GCS_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
+	BucketName      string `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_GCS_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
 }
 
 type CacheS3Config struct {
@@ -235,24 +236,26 @@ type CacheS3Config struct {
 	SecretKey      string `toml:"SecretKey,omitempty" long:"secret-key" env:"CACHE_S3_SECRET_KEY" description:"S3 Secret Key"`
 	BucketName     string `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
 	BucketLocation string `toml:"BucketLocation,omitempty" long:"bucket-location" env:"CACHE_S3_BUCKET_LOCATION" description:"Name of S3 region"`
-	Insecure       bool   `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_CACHE_INSECURE" description:"Use insecure mode (without https)"`
+	Insecure       bool   `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_INSECURE" description:"Use insecure mode (without https)"`
 }
 
 type CacheConfig struct {
 	Type   string `toml:"Type,omitempty" long:"type" env:"CACHE_TYPE" description:"Select caching method"`
-	Path   string `toml:"Path,omitempty" long:"s3-cache-path" env:"S3_CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
-	Shared bool   `toml:"Shared,omitempty" long:"cache-shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
+	Path   string `toml:"Path,omitempty" long:"path" env:"CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
+	Shared bool   `toml:"Shared,omitempty" long:"shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
 
 	S3  *CacheS3Config  `toml:"s3,omitempty" json:"s3" namespace:"s3"`
 	GCS *CacheGCSConfig `toml:"gcs,omitempty" json:"gcs" namespace:"gcs"`
 
 	// TODO: Remove in 12.0
-	ServerAddress  string `toml:"ServerAddress,omitempty" long:"s3-server-address" env:"S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"` // DEPRECATED
-	AccessKey      string `toml:"AccessKey,omitempty" long:"s3-access-key" env:"S3_ACCESS_KEY" description:"S3 Access Key"`                                            // DEPRECATED
-	SecretKey      string `toml:"SecretKey,omitempty" long:"s3-secret-key" env:"S3_SECRET_KEY" description:"S3 Secret Key"`                                            // DEPRECATED
-	BucketName     string `toml:"BucketName,omitempty" long:"s3-bucket-name" env:"S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`         // DEPRECATED
-	BucketLocation string `toml:"BucketLocation,omitempty" long:"s3-bucket-location" env:"S3_BUCKET_LOCATION" description:"Name of S3 region"`                         // DEPRECATED
-	Insecure       bool   `toml:"Insecure,omitempty" long:"s3-insecure" env:"S3_CACHE_INSECURE" description:"Use insecure mode (without https)"`                       // DEPRECATED
+	S3CachePath    string `toml:"-" long:"s3-cache-path" env:"S3_CACHE_PATH" description:"Name of the path to prepend to the cache URL. DEPRECATED"` // DEPRECATED
+	CacheShared    bool   `toml:"-" long:"cache-shared" description:"Enable cache sharing between runners. DEPRECATED"`                              // DEPRECATED
+	ServerAddress  string `toml:"ServerAddress,omitempty" description:"A host:port to the used S3-compatible server DEPRECATED"`                     // DEPRECATED
+	AccessKey      string `toml:"AccessKey,omitempty" description:"S3 Access Key DEPRECATED"`                                                        // DEPRECATED
+	SecretKey      string `toml:"SecretKey,omitempty" description:"S3 Secret Key DEPRECATED"`                                                        // DEPRECATED
+	BucketName     string `toml:"BucketName,omitempty" description:"Name of the bucket where cache will be stored DEPRECATED"`                       // DEPRECATED
+	BucketLocation string `toml:"BucketLocation,omitempty" description:"Name of S3 region DEPRECATED"`                                               // DEPRECATED
+	Insecure       bool   `toml:"Insecure,omitempty" description:"Use insecure mode (without https) DEPRECATED"`                                     // DEPRECATED
 }
 
 type RunnerSettings struct {
@@ -310,8 +313,128 @@ type Config struct {
 	Loaded        bool            `toml:"-"`
 }
 
+func getDeprecatedStringSetting(setting string, tomlField string, envVariable string, tomlReplacement string, envReplacement string) string {
+	if setting != "" {
+		log.Warningf("%s setting is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", tomlField, tomlReplacement)
+		return setting
+	}
+
+	value := os.Getenv(envVariable)
+	if value != "" {
+		log.Warningf("%s environment variables is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", envVariable, envReplacement)
+	}
+
+	return value
+}
+
+func getDeprecatedBoolSetting(setting bool, tomlField string, envVariable string, tomlReplacement string, envReplacement string) bool {
+	if setting {
+		log.Warningf("%s setting is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", tomlField, tomlReplacement)
+		return setting
+	}
+
+	value, _ := strconv.ParseBool(os.Getenv(envVariable))
+	if value {
+		log.Warningf("%s environment variables is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", envVariable, envReplacement)
+	}
+
+	return value
+}
+
 func (c *CacheS3Config) ShouldUseIAMCredentials() bool {
 	return c.ServerAddress == "" || c.AccessKey == "" || c.SecretKey == ""
+}
+
+func (c *CacheConfig) GetPath() string {
+	if c.Path != "" {
+		return c.Path
+	}
+
+	// TODO: Remove in 12.0
+	if c.S3CachePath != "" {
+		log.Warning("'--cache-s3-cache-path' command line option and `$S3_CACHE_PATH` environment variables are deprecated and will be removed in GitLab Runner 12.0. Please use '--cache-path' or '$CACHE_PATH' instead")
+	}
+
+	return c.S3CachePath
+}
+
+func (c *CacheConfig) GetShared() bool {
+	if c.Shared {
+		return c.Shared
+	}
+
+	// TODO: Remove in 12.0
+	if c.CacheShared {
+		log.Warning("'--cache-cache-shared' command line is deprecated and will be removed in GitLab Runner 12.0. Please use '--cache-shared' instead")
+	}
+
+	return c.CacheShared
+}
+
+// DEPRECATED
+// TODO: Remove in 12.0
+func (c *CacheConfig) GetServerAddress() string {
+	return getDeprecatedStringSetting(
+		c.ServerAddress,
+		"[runners.cache] ServerAddress",
+		"S3_SERVER_ADDRESS",
+		"[runners.cache.s3] ServerAddress",
+		"CACHE_S3_SERVER_ADDRESS")
+}
+
+// DEPRECATED
+// TODO: Remove in 12.0
+func (c *CacheConfig) GetAccessKey() string {
+	return getDeprecatedStringSetting(
+		c.AccessKey,
+		"[runners.cache] AccessKey",
+		"S3_ACCESS_KEY",
+		"[runners.cache.s3] AccessKey",
+		"CACHE_S3_ACCESS_KEY")
+}
+
+// DEPRECATED
+// TODO: Remove in 12.0
+func (c *CacheConfig) GetSecretKey() string {
+	return getDeprecatedStringSetting(
+		c.SecretKey,
+		"[runners.cache] SecretKey",
+		"S3_SECRET_KEY",
+		"[runners.cache.s3] SecretKey",
+		"CACHE_S3_SECRET_KEY")
+}
+
+// DEPRECATED
+// TODO: Remove in 12.0
+func (c *CacheConfig) GetBucketName() string {
+	return getDeprecatedStringSetting(
+		c.BucketName,
+		"[runners.cache] BucketName",
+		"S3_BUCKET_NAME",
+		"[runners.cache.s3] BucketName",
+		"CACHE_S3_BUCKET_NAME")
+}
+
+// DEPRECATED
+// TODO: Remove in 12.0
+func (c *CacheConfig) GetBucketLocation() string {
+	return getDeprecatedStringSetting(
+		c.BucketLocation,
+		"[runners.cache] BucketLocation",
+		"S3_BUCKET_LOCATION",
+		"[runners.cache.s3] BucketLocation",
+		"CACHE_S3_BUCKET_LOCATION")
+}
+
+// DEPRECATED
+// TODO: Remove in 12.0
+func (c *CacheConfig) GetInsecure() bool {
+	return getDeprecatedBoolSetting(
+		c.Insecure,
+		"[runners.cache] Insecure",
+		"S3_CACHE_INSECURE",
+		"[runners.cache.s3] Insecure",
+		"CACHE_S3_INSECURE")
 }
 
 func (c *SessionServer) GetSessionTimeout() time.Duration {

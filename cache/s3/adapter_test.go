@@ -132,7 +132,8 @@ func TestS3DeprecatedConfigFormatDetection(t *testing.T) {
 	url := adapter.GetDownloadURL()
 	assert.NotNil(t, url)
 
-	message, err := hook.LastEntry().String()
+	entries := hook.AllEntries()
+	message, err := entries[0].String()
 	require.NoError(t, err)
 	assert.Contains(t, message, "Runner uses S3 caching with deprecated configuration format")
 }

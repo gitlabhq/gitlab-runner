@@ -230,6 +230,45 @@ func (s *RegisterCommand) askExecutorOptions() {
 	}
 }
 
+// DEPRECATED
+// TODO: Remove in 12.0
+//
+// Writes cache configuration section using new syntax, even if
+// old CLI options/env variables were used.
+func (s *RegisterCommand) prepareCache() {
+	cache := s.RunnerConfig.Cache
+
+	// Called to log deprecated usage, if old cli options/env variables are used
+	cache.Path = cache.GetPath()
+	cache.Shared = cache.GetShared()
+
+	// Called to assign values and log deprecated usage, if old env variables are used
+	setStringIfUnset(&cache.S3.ServerAddress, cache.GetServerAddress())
+	setStringIfUnset(&cache.S3.AccessKey, cache.GetAccessKey())
+	setStringIfUnset(&cache.S3.SecretKey, cache.GetSecretKey())
+	setStringIfUnset(&cache.S3.BucketName, cache.GetBucketName())
+	setStringIfUnset(&cache.S3.BucketLocation, cache.GetBucketLocation())
+	setBoolIfUnset(&cache.S3.Insecure, cache.GetInsecure())
+}
+
+// TODO: Remove in 12.0
+func setStringIfUnset(setting *string, newSetting string) {
+	if *setting != "" {
+		return
+	}
+
+	*setting = newSetting
+}
+
+// TODO: Remove in 12.0
+func setBoolIfUnset(setting *bool, newSetting bool) {
+	if *setting {
+		return
+	}
+
+	*setting = newSetting
+}
+
 func (s *RegisterCommand) Execute(context *cli.Context) {
 	userModeWarning(true)
 
@@ -270,6 +309,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	s.askExecutor()
 	s.askExecutorOptions()
 	s.addRunner(&s.RunnerConfig)
+	s.prepareCache()
 	s.saveConfig()
 
 	log.Printf("Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!")
@@ -280,8 +320,8 @@ func getHostname() string {
 	return hostname
 }
 
-func init() {
-	common.RegisterCommand2("register", "register a new runner", &RegisterCommand{
+func newRegisterCommand() *RegisterCommand {
+	return &RegisterCommand{
 		RunnerConfig: common.RunnerConfig{
 			Name: getHostname(),
 			RunnerSettings: common.RunnerSettings{
@@ -297,5 +337,9 @@ func init() {
 		Locked:  true,
 		Paused:  false,
 		network: network.NewGitLabClient(),
-	})
+	}
+}
+
+func init() {
+	common.RegisterCommand2("register", "register a new runner", newRegisterCommand())
 }

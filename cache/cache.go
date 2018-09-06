@@ -26,11 +26,11 @@ func generateObjectName(build *common.Build, config *common.CacheConfig, key str
 	}
 
 	runnerSegment := ""
-	if !config.Shared {
+	if !config.GetShared() {
 		runnerSegment = path.Join("runner", build.Runner.ShortDescription())
 	}
 
-	return path.Join(config.Path, runnerSegment, "project", strconv.Itoa(build.JobInfo.ProjectID), key)
+	return path.Join(config.GetPath(), runnerSegment, "project", strconv.Itoa(build.JobInfo.ProjectID), key)
 }
 
 func onAdapter(build *common.Build, key string, handler func(adapter Adapter) *url.URL) *url.URL {
