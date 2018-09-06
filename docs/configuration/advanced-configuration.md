@@ -209,7 +209,7 @@ This defines the Docker Container parameters.
 | `allowed_services`          | Specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 | `sysctls`                   | specify the sysctl options |
-| `helper_image`              | [ADVANCED] Override the default helper image used to clone repos and upload artifacts |
+| `helper_image`              | [ADVANCED] Override the default helper image used to clone repos and upload artifacts. Read the [helper image](#helper-image) section for more details |
 
 Example:
 
@@ -630,6 +630,80 @@ Example:
 	[runners.kubernetes.node_selector]
 		gitlab = "true"
 ```
+
+## Helper image
+
+When one of `docker`, `docker+machine` or `kubernetes` executors is used, GitLab Runner uses a specific container
+to handle Git, artifacts and cache operations. This container is created from a special image, named `helper image`.
+
+The helper image is based on Alpine Linux and it's provided for amd64 and arm architectures. It contains
+a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner binary, that contains only a subset
+of available commands, as well as git, git-lfs, SSL certificates store and basic configuration of Alpine.
+
+When GitLab Runner is installed from the DEB/RPM packages, both images (`arm64` and `arm` based) are installed on the host.
+When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's git
+revision) is not found on Docker Engine, it is automatically loaded. It works like that for both
+`docker` and `docker+machine` executors.
+
+Things work a little different for the `kubernetes` executor or when GitLab Runner is installed manually. For manual
+installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor,the API of Kubernetes
+doesn't allow to load the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
+the helper image from Docker Hub, from GitLab's official repository `gitlab/gitlab-runner-helper` by using the Runner's
+revision and architecture for defining which tag should be downloaded.
+
+### Overriding the helper image
+
+In some cases, you may need to override the helper image. There are many reasons for doing this:
+
+1. **To speed up jobs execution**: In environments with slower internet connection, downloading over and over again the
+   same image from Docker Hub may generate a significant increase of a job's timings. Downloading the helper image from
+   a local registry (where the exact copy of `gitlab/gitlab-runner-helper:XYZ` is stored) may speed things up.
+
+1. **Security concerns**: Many people don't like to download external dependencies that were not checked before. There
+   might be a business rule to use only dependencies that were reviewed and stored in local repositories.
+
+1. **Build environments without internet access**: In some cases, jobs are being executed in an environment which has
+   a dedicated, closed network (this doesn't apply to the `kubernetes` executor where the image still needs to be downloaded
+   from an external registry that is available at least to the Kubernetes cluster).
+
+1. **Additional software**: Some users may want to install some additional software to the helper image, like
+   `openssh` to support submodules accessible via `git+ssh` instead of `git+http`.
+
+In any of the cases described above, it's possible to configure a custom image using the `helper_image` configuration field,
+that is available for the `docker`, `docker+machine` and `kubernetes` executors:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:tag"
+```
+
+Note that the version of the helper image should be considered as strictly coupled with the version of GitLab Runner.
+As it was described above, one of the main reasons of providing such images is that Runner is using the
+`gitlab-runner-helper` binary, and this binary is compiled from part of GitLab Runner sources which is using an internal
+API that is expected to be the same in both binaries.
+
+The Runner by default references to a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
+on the Runner's architecture and git revision. Starting with **GitLab Runner 11.3** it's possible to define the version
+of used image automatically, by using one of the
+[version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/11-3-stable/common/version.go#L48-50):
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:${CI_RUNNER_REVISION}"
+```
+
+With that configuration, GitLab Runner will instruct the executor to use the image in version `${CI_RUNNER_REVISION}`,
+which is based on its compilation data. After updating the Runner to a new version, this will ensure that the
+Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
+before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
 
 ## Note
 

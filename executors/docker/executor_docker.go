@@ -288,6 +288,8 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 
 func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	if imageNameFromConfig := e.Config.Docker.HelperImage; imageNameFromConfig != "" {
+		imageNameFromConfig = common.AppVersion.Variables().ExpandValue(imageNameFromConfig)
+
 		e.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
 		return e.getDockerImage(imageNameFromConfig)
 	}
