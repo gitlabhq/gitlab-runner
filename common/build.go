@@ -87,6 +87,8 @@ type Build struct {
 	executorStageResolver func() ExecutorStage
 	logger                BuildLogger
 	allVariables          JobVariables
+
+	startedAt time.Time
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -290,6 +292,8 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	go func() {
 		buildFinish <- b.executeScript(runContext, executor)
 	}()
+
+	b.startedAt = time.Now()
 
 	// Wait for signals: cancel, timeout, abort or finish
 	b.Log().Debugln("Waiting for signals...")
@@ -638,4 +642,8 @@ func (b *Build) GetCacheRequestTimeout() int {
 		return DefaultCacheRequestTimeout
 	}
 	return timeout
+}
+
+func (b *Build) Duration() time.Duration {
+	return time.Since(b.startedAt)
 }

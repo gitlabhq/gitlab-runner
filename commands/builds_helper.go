@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -145,6 +146,10 @@ func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig) bool {
 }
 
 func (b *buildsHelper) addBuild(build *common.Build) {
+	if build == nil {
+		return
+	}
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -270,8 +275,31 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain")
+	version := r.URL.Query().Get("v")
+	if version == "" {
+		version = "1"
+	}
 
+	handlers := map[string]http.HandlerFunc{
+		"1": b.listJobsHandlerV1,
+		"2": b.listJobsHandlerV2,
+	}
+
+	handler, ok := handlers[version]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Request version %q not supported", version)
+		return
+	}
+
+	w.Header().Add("X-List-Version", version)
+	w.Header().Add("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+
+	handler(w, r)
+}
+
+func (b *buildsHelper) listJobsHandlerV1(w http.ResponseWriter, r *http.Request) {
 	for _, job := range b.builds {
 		fmt.Fprintf(
 			w,
@@ -280,4 +308,24 @@ func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 			job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(),
 		)
 	}
+
+}
+
+func (b *buildsHelper) listJobsHandlerV2(w http.ResponseWriter, r *http.Request) {
+	for _, job := range b.builds {
+		url := CreateJobURL(job.RepoCleanURL(), job.ID)
+
+		fmt.Fprintf(
+			w,
+			"url=%s state=%s stage=%s executor_stage=%s duration=%s\n",
+			url, job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(), job.Duration(),
+		)
+	}
+}
+
+func CreateJobURL(projectURL string, jobID int) string {
+	r := regexp.MustCompile("(\\.git$)?")
+	URL := r.ReplaceAllString(projectURL, "")
+
+	return fmt.Sprintf("%s/-/jobs/%d", URL, jobID)
 }

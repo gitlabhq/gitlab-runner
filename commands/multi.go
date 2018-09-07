@@ -406,7 +406,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 }
 
 func (mr *RunCommand) serveDebugData(mux *http.ServeMux) {
-	mux.Handle("/debug/jobs/list", http.HandlerFunc(mr.buildsHelper.ListJobsHandler))
+	mux.HandleFunc("/debug/jobs/list", mr.buildsHelper.ListJobsHandler)
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
