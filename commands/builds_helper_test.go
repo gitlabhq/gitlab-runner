@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"testing"
 
@@ -141,6 +142,80 @@ func TestBuildsHelperFindSessionByURL(t *testing.T) {
 	assert.Nil(t, foundSession)
 }
 
+type listJobsHandlerVersioningTest struct {
+	URL             string
+	expectedVersion string
+	expectedCode    int
+}
+
+func TestBuildsHelper_ListJobsHandlerVersioning(t *testing.T) {
+	baseURL := "/test/url"
+
+	tests := map[string]listJobsHandlerVersioningTest{
+		"no version specified": {
+			URL:             baseURL,
+			expectedVersion: "1",
+			expectedCode:    http.StatusOK,
+		},
+		"version 1 specified": {
+			URL:             baseURL + "?v=1",
+			expectedVersion: "1",
+			expectedCode:    http.StatusOK,
+		},
+		"version 2 specified": {
+			URL:             baseURL + "?v=2",
+			expectedVersion: "2",
+			expectedCode:    http.StatusOK,
+		},
+		"unsupported version specified": {
+			URL:          baseURL + "?v=3",
+			expectedCode: http.StatusNotFound,
+		},
+	}
+
+	b := &buildsHelper{}
+	mux := http.NewServeMux()
+	mux.HandleFunc(baseURL, b.ListJobsHandler)
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, server.URL+test.URL, nil)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			assert.Equal(t, test.expectedCode, resp.StatusCode)
+
+			if test.expectedVersion != "" {
+				require.Contains(t, resp.Header, "X-List-Version")
+				assert.Equal(t, test.expectedVersion, resp.Header.Get("X-List-Version"))
+			}
+		})
+	}
+}
+
+type fakeResponseWriter struct {
+	output     *bytes.Buffer
+	header     http.Header
+	statusCode int
+}
+
+func (w *fakeResponseWriter) Header() http.Header            { return w.header }
+func (w *fakeResponseWriter) Write(data []byte) (int, error) { return w.output.Write(data) }
+func (w *fakeResponseWriter) WriteHeader(statusCode int)     { w.statusCode = statusCode }
+
+func newFakeResponseWriter() *fakeResponseWriter {
+	return &fakeResponseWriter{
+		output: &bytes.Buffer{},
+		header: http.Header{},
+	}
+}
+
 var testBuildCurrentID int
 
 func getTestBuild() *common.Build {
@@ -163,31 +238,15 @@ func getTestBuild() *common.Build {
 	return build
 }
 
-type fakeResponseWriter struct {
-	output     *bytes.Buffer
-	header     http.Header
-	statusCode int
-}
-
-func (w *fakeResponseWriter) Header() http.Header            { return w.header }
-func (w *fakeResponseWriter) Write(data []byte) (int, error) { return w.output.Write(data) }
-func (w *fakeResponseWriter) WriteHeader(statusCode int)     { w.statusCode = statusCode }
-
-func newFakeResponseWriter() *fakeResponseWriter {
-	return &fakeResponseWriter{
-		output: &bytes.Buffer{},
-		header: http.Header{},
-	}
-}
-
 type listJobsHandlerTest struct {
 	build          *common.Build
+	version        string
 	expectedOutput []string
 	expectedRegexp []*regexp.Regexp
 	expectedStatus int
 }
 
-func TestBuildsHandler_ListJobsHandler(t *testing.T) {
+func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 	build := getTestBuild()
 
 	tests := map[string]listJobsHandlerTest{
@@ -197,6 +256,14 @@ func TestBuildsHandler_ListJobsHandler(t *testing.T) {
 		},
 		"job exists": {
 			build: build,
+			expectedOutput: []string{
+				fmt.Sprintf("id=%d url=https://gitlab.example.com/my-namespace/my-project.git", build.ID),
+			},
+			expectedStatus: http.StatusOK,
+		},
+		"job exists v2": {
+			build:   build,
+			version: "2",
 			expectedOutput: []string{
 				fmt.Sprintf("url=https://gitlab.example.com/my-namespace/my-project/-/jobs/%d", build.ID),
 			},
@@ -211,9 +278,17 @@ func TestBuildsHandler_ListJobsHandler(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			writer := newFakeResponseWriter()
 
+			URL := "/"
+			if test.version != "" {
+				URL = fmt.Sprintf("/?v=%s", test.version)
+			}
+
+			req, err := http.NewRequest(http.MethodGet, URL, nil)
+			require.NoError(t, err)
+
 			b := &buildsHelper{}
 			b.addBuild(test.build)
-			b.ListJobsHandler(writer, &http.Request{})
+			b.ListJobsHandler(writer, req)
 
 			if len(test.expectedOutput) == 0 && len(test.expectedRegexp) == 0 {
 				assert.Empty(t, writer.output.String())
