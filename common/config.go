@@ -294,10 +294,11 @@ type SessionServer struct {
 }
 
 type Config struct {
-	MetricsServerAddress string `toml:"metrics_server,omitempty" json:"metrics_server"` // DEPRECATED
-	ListenAddress        string `toml:"listen_address,omitempty" json:"listen_address"`
-
+	ListenAddress string        `toml:"listen_address,omitempty" json:"listen_address"`
 	SessionServer SessionServer `toml:"session_server,omitempty" json:"session_server"`
+
+	// TODO: Remove in 12.0
+	MetricsServerAddress string `toml:"metrics_server,omitempty" json:"metrics_server"` // DEPRECATED
 
 	Concurrent    int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
@@ -570,6 +571,7 @@ func (c *Config) ListenOrServerMetricAddress() string {
 		return c.ListenAddress
 	}
 
+	// TODO: Remove in 12.0
 	if c.MetricsServerAddress != "" {
 		log.Warnln("'metrics_server' configuration entry is deprecated and will be removed in one of future releases; please use 'listen_address' instead")
 	}
