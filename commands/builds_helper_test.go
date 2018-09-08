@@ -24,7 +24,7 @@ var fakeRunner = &common.RunnerConfig{
 
 func TestBuildsHelperCollect(t *testing.T) {
 	ch := make(chan prometheus.Metric, 50)
-	b := &buildsHelper{}
+	b := newBuildsHelper()
 	b.builds = append(b.builds, &common.Build{
 		CurrentState: common.BuildRunStatePending,
 		CurrentStage: common.BuildStagePrepare,
@@ -39,7 +39,7 @@ func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 		RequestConcurrency: 2,
 	}
 
-	b := &buildsHelper{}
+	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
 	require.True(t, result)
 
@@ -64,7 +64,7 @@ func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 		RequestConcurrency: 0,
 	}
 
-	b := &buildsHelper{}
+	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
 	require.True(t, result)
 
@@ -92,7 +92,7 @@ func TestBuildsHelperAcquireBuildWithLimit(t *testing.T) {
 		Limit: 1,
 	}
 
-	b := &buildsHelper{}
+	b := newBuildsHelper()
 	result := b.acquireBuild(&runner)
 	require.True(t, result)
 
@@ -111,7 +111,7 @@ func TestBuildsHelperAcquireBuildUnlimited(t *testing.T) {
 		Limit: 0,
 	}
 
-	b := &buildsHelper{}
+	b := newBuildsHelper()
 	result := b.acquireBuild(&runner)
 	require.True(t, result)
 
@@ -130,9 +130,14 @@ func TestBuildsHelperFindSessionByURL(t *testing.T) {
 	require.NoError(t, err)
 	build := common.Build{
 		Session: sess,
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				Token: "abcd1234",
+			},
+		},
 	}
 
-	h := &buildsHelper{}
+	h := newBuildsHelper()
 	h.addBuild(&build)
 
 	foundSession := h.findSessionByURL(sess.Endpoint + "/action")
@@ -173,7 +178,7 @@ func TestBuildsHelper_ListJobsHandlerVersioning(t *testing.T) {
 		},
 	}
 
-	b := &buildsHelper{}
+	b := newBuildsHelper()
 	mux := http.NewServeMux()
 	mux.HandleFunc(baseURL, b.ListJobsHandler)
 
@@ -286,7 +291,7 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, URL, nil)
 			require.NoError(t, err)
 
-			b := &buildsHelper{}
+			b := newBuildsHelper()
 			b.addBuild(test.build)
 			b.ListJobsHandler(writer, req)
 
