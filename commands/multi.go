@@ -29,6 +29,22 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
+var (
+	concurrentDesc = prometheus.NewDesc(
+		"gitlab_runner_concurrent",
+		"The current value of concurrent setting",
+		nil,
+		nil,
+	)
+
+	limitDesc = prometheus.NewDesc(
+		"gitlab_runner_limit",
+		"The current value of concurrent setting",
+		[]string{"runner"},
+		nil,
+	)
+)
+
 type RunCommand struct {
 	configOptionsWithListenAddress
 	network common.Network
@@ -382,6 +398,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
+	registry.MustRegister(mr)
 	// Metrics about API connections
 	registry.MustRegister(mr.networkRequestStatusesCollector)
 	// Metrics about jobs failures
@@ -582,6 +599,32 @@ func (mr *RunCommand) Stop(s service.Service) (err error) {
 	}
 	err = mr.handleShutdown()
 	return
+}
+
+// Describe implements prometheus.Collector.
+func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
+	ch <- concurrentDesc
+	ch <- limitDesc
+}
+
+// Collect implements prometheus.Collector.
+func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
+	config := mr.config
+
+	ch <- prometheus.MustNewConstMetric(
+		concurrentDesc,
+		prometheus.GaugeValue,
+		float64(config.Concurrent),
+	)
+
+	for _, runner := range config.Runners {
+		ch <- prometheus.MustNewConstMetric(
+			limitDesc,
+			prometheus.GaugeValue,
+			float64(runner.Limit),
+			runner.ShortDescription(),
+		)
+	}
 }
 
 func (mr *RunCommand) Execute(context *cli.Context) {
