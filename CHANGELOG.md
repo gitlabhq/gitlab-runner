@@ -1,3 +1,29 @@
+v 11.3.0-rc1 (2018-09-11)
+- Fix logrus secrets cleanup !990
+- Fix test failure detection !993
+- Fix wrongly generated `Content-Range` header for `PATCH /api/v4/jobs/:id/trace` request !906
+- Improve and fix release checklist !940
+- Add ~"git operations" label to CONTRIBUTING guide !943
+- Disable few jobs for docs-/-docs branches !996
+- Update release checklist issue template !995
+- Fix HTTPS validation problem when ssh executor is used !962
+- Reduce complexity of reported methods !997
+- Update docker images to alpine:3.8 !984
+- Fail build in case of code_quality errors !986
+- Add initial support for CI Web Terminal !934
+- Make session and metrics server initialization logging consistent !994
+- Make prepare-changelog-entries.rb script compatible with GitLab APIv4 !927
+- Save compilation time always in UTC timezone !1000
+- Extend debug logging for k8s executor !949
+- Introduce GCS adapter for remote cache !968
+- Make configuration of helper image more dynamic !1005
+- Logrus upgrade - fix data race in helpers.MakeFatalToPanic() !1011
+- Add few TODOs to mark things that should be cleaned in 12.0 !1013
+- Update debug jobs list output !992
+- Remove duplicate build_dir setting !1015
+- Add step for updating Runner helm chart !1009
+- Clenup env, cli-options and deprecations of cache settings !1012
+
 v 11.2.0 (2018-08-22)
 - Fix support for Unicode variable values when Windows+PowerShell are used !960
 - Update docs/executors/kubernetes.md !957
