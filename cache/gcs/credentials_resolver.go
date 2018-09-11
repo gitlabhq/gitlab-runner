@@ -65,7 +65,7 @@ func (cr *defaultCredentialsResolver) readCredentialsFromFile() error {
 }
 
 func (cr *defaultCredentialsResolver) readCredentialsFromConfig() error {
-	if cr.config.CacheGCSCredentials == nil {
+	if cr.config.AccessID == "" || cr.config.PrivateKey == "" {
 		return fmt.Errorf("GCS config present, but credentials are not configured")
 	}
 

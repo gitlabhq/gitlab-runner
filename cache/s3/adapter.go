@@ -72,12 +72,12 @@ var deprecatedConfigHandler = func(config *common.CacheConfig) *common.CacheConf
 	logrus.Warningln("Runner uses S3 caching with deprecated configuration format. Support for deprecated format will be removed in GitLab Runner 12.0")
 
 	config.S3 = &common.CacheS3Config{
-		ServerAddress:  config.ServerAddress,
-		AccessKey:      config.AccessKey,
-		SecretKey:      config.SecretKey,
-		BucketName:     config.BucketName,
-		BucketLocation: config.BucketLocation,
-		Insecure:       config.Insecure,
+		ServerAddress:  config.GetServerAddress(),
+		AccessKey:      config.GetAccessKey(),
+		SecretKey:      config.GetSecretKey(),
+		BucketName:     config.GetBucketName(),
+		BucketLocation: config.GetBucketLocation(),
+		Insecure:       config.GetInsecure(),
 	}
 
 	return config
