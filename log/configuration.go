@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	FormatText = "text"
-	FormatJSON = "json"
+	FormatRunner = "runner"
+	FormatText   = "text"
+	FormatJSON   = "json"
 )
 
 var (
@@ -26,9 +27,9 @@ var (
 		},
 		cli.StringFlag{
 			Name:   "log-format",
-			Usage:  "Chose log format (options: text, json)",
+			Usage:  "Chose log format (options: runner, text, json)",
 			EnvVar: "LOG_FORMAT",
-			Value:  FormatText,
+			Value:  FormatRunner,
 		},
 		cli.StringFlag{
 			Name:   "log-level, l",
@@ -38,8 +39,9 @@ var (
 	}
 
 	formats = map[string]logrus.Formatter{
-		FormatText: new(logrus.TextFormatter),
-		FormatJSON: new(logrus.JSONFormatter),
+		FormatRunner: new(formatter.RunnerTextFormatter),
+		FormatText:   new(logrus.TextFormatter),
+		FormatJSON:   new(logrus.JSONFormatter),
 	}
 )
 
@@ -65,11 +67,6 @@ func ConfigureLogging(app *cli.App) {
 }
 
 func setupFormatter(cliCtx *cli.Context) {
-	if !cliCtx.IsSet("log-format") {
-		logrus.SetFormatter(new(formatter.RunnerTextFormatter))
-		return
-	}
-
 	format := cliCtx.String("log-format")
 	formatter, ok := formats[format]
 
