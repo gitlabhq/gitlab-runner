@@ -2,7 +2,7 @@ FROM alpine:3.8
 
 RUN adduser -D -S -h /home/gitlab-runner gitlab-runner
 
-RUN apk add --update \
+RUN apk add --no-cache \
     bash \
     ca-certificates \
     git \
