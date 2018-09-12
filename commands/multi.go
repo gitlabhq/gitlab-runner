@@ -638,25 +638,19 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 		},
 	}
 
-	service, err := service_helpers.New(mr, svcConfig)
+	svc, err := service_helpers.New(mr, svcConfig)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
 	if mr.Syslog {
-		logrus.SetFormatter(new(logrus.TextFormatter))
-		logger, err := service.SystemLogger(nil)
-		if err == nil {
-			logrus.AddHook(&ServiceLogHook{logger, logrus.InfoLevel})
-		} else {
-			logrus.Errorln(err)
-		}
+		cli_helpers.SetSystemLogger(svc)
 	}
 
 	logrus.AddHook(&mr.sentryLogHook)
 	logrus.AddHook(&mr.prometheusLogHook)
 
-	err = service.Run()
+	err = svc.Run()
 	if err != nil {
 		logrus.Fatalln(err)
 	}
