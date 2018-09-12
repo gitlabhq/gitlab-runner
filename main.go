@@ -49,7 +49,7 @@ func main() {
 		},
 	}
 	cli_helpers.LogRuntimePlatform(app)
-	cli_helpers.SetupLogLevelOptions(app)
+	cli_helpers.ConfigureLogging(app)
 	cli_helpers.SetupCPUProfile(app)
 	cli_helpers.FixHOME(app)
 	app.Commands = common.GetCommands()

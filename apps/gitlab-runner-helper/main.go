@@ -38,7 +38,7 @@ func main() {
 			Email: "support@gitlab.com",
 		},
 	}
-	cli_helpers.SetupLogLevelOptions(app)
+	cli_helpers.ConfigureLogging(app)
 	app.Commands = common.GetCommands()
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		logrus.Fatalln("Command", command, "not found")
