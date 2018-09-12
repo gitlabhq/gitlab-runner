@@ -5,6 +5,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/formatter"
 )
 
 const (
@@ -13,12 +15,10 @@ const (
 )
 
 var (
-	DefaultLogLevel   = logrus.InfoLevel
-	CustomLogLevelSet = false
-)
+	defaultLogLevel = logrus.InfoLevel
+	customLevelUsed = false
 
-func ConfigureLogging(app *cli.App) {
-	newFlags := []cli.Flag{
+	logFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:   "log-format",
 			Usage:  "Chose log format (options: text, json)",
@@ -36,59 +36,80 @@ func ConfigureLogging(app *cli.App) {
 			EnvVar: "LOG_LEVEL",
 		},
 	}
-	app.Flags = append(app.Flags, newFlags...)
+
+	formats = map[string]logrus.Formatter{
+		LogFormatText: new(logrus.TextFormatter),
+		LogFormatJSON: new(logrus.JSONFormatter),
+	}
+)
+
+func IsCustomLevelUsed() bool {
+	return customLevelUsed
+}
+
+func ConfigureLogging(app *cli.App) {
+	app.Flags = append(app.Flags, logFlags...)
 
 	appBefore := app.Before
-	// logs
-	app.Before = func(c *cli.Context) error {
+	app.Before = func(cliCtx *cli.Context) error {
 		logrus.SetOutput(os.Stderr)
-		logrus.SetLevel(DefaultLogLevel)
-		setFormat(c)
 
-		if c.IsSet("log-level") || c.IsSet("l") {
-			level, err := logrus.ParseLevel(c.String("log-level"))
-			if err != nil {
-				logrus.Fatalf(err.Error())
-			}
-
-			setCustomLevel(level)
-		} else if c.Bool("debug") {
-			setCustomLevel(logrus.DebugLevel)
-			go watchForGoroutinesDump()
-		}
+		setupFormatter(cliCtx)
+		setupLevel(cliCtx)
 
 		if appBefore != nil {
-			return appBefore(c)
+			return appBefore(cliCtx)
 		}
 		return nil
 	}
 }
 
-func setFormat(c *cli.Context) {
-	if !c.IsSet("log-format") {
+func setupFormatter(cliCtx *cli.Context) {
+	if !cliCtx.IsSet("log-format") {
+		logrus.SetFormatter(new(formatter.RunnerTextFormatter))
 		return
 	}
 
-	formats := map[string]logrus.Formatter{
-		LogFormatText: new(logrus.TextFormatter),
-		LogFormatJSON: new(logrus.JSONFormatter),
-	}
-
-	format := c.String("log-format")
-
+	format := cliCtx.String("log-format")
 	formatter, ok := formats[format]
+
 	if !ok {
-		formatNames := make([]string, 0)
-		for name := range formats {
-			formatNames = append(formatNames, name)
-		}
-		logrus.WithField("format", format).Fatalf("Unknown log format. Expected one of: %v", formatNames)
+		logrus.WithField("format", format).Fatalf("Unknown log format. Expected one of: %v", formatNames())
 	}
 
 	logrus.SetFormatter(formatter)
 }
 
-func setCustomLevel(level logrus.Level) {
-	logrus.SetLevel(level)
-	CustomLogLevelSet = true
+func formatNames() []string {
+	formatNames := make([]string, 0)
+	for name := range formats {
+		formatNames = append(formatNames, name)
+	}
+
+	return formatNames
+}
+
+func setupLevel(cliCtx *cli.Context) {
+	if cliCtx.IsSet("log-level") || cliCtx.IsSet("l") {
+		level, err := logrus.ParseLevel(cliCtx.String("log-level"))
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to parse log level")
+		}
+
+		logrus.SetLevel(level)
+		customLevelUsed = true
+
+		return
+	}
+
+	if cliCtx.Bool("debug") {
+		go watchForGoroutinesDump()
+
+		logrus.SetLevel(logrus.DebugLevel)
+		customLevelUsed = true
+
+		return
+	}
+
+	logrus.SetLevel(defaultLogLevel)
 }

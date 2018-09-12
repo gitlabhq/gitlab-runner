@@ -259,10 +259,10 @@ func (mr *RunCommand) loadConfig() error {
 	}
 
 	// Set log level
-	if !cli_helpers.CustomLogLevelSet && mr.config.LogLevel != nil {
+	if !cli_helpers.IsCustomLevelUsed() && mr.config.LogLevel != nil {
 		level, err := logrus.ParseLevel(*mr.config.LogLevel)
 		if err != nil {
-			logrus.Fatalf(err.Error())
+			logrus.WithError(err).Fatal("Failed to parse error level from configuration file")
 		}
 		logrus.SetLevel(level)
 	}
