@@ -15,7 +15,7 @@ import (
 	"github.com/ayufan/golang-kardianos-service"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -55,7 +55,7 @@ type RunCommand struct {
 	ServiceName      string `short:"n" long:"service" description:"Use different names for different services"`
 	WorkingDirectory string `short:"d" long:"working-directory" description:"Specify custom working directory"`
 	User             string `short:"u" long:"user" description:"Use specific user to execute shell scripts"`
-	Syslog           bool   `long:"syslog" description:"Log to syslog"`
+	Syslog           bool   `long:"syslog" description:"Log to system service logger" env:"LOG_SYSLOG"`
 
 	sentryLogHook     sentry.LogHook
 	prometheusLogHook prometheus_helper.LogHook
@@ -88,8 +88,8 @@ type RunCommand struct {
 	currentWorkers int
 }
 
-func (mr *RunCommand) log() *log.Entry {
-	return log.WithField("builds", mr.buildsHelper.buildsCount())
+func (mr *RunCommand) log() *logrus.Entry {
+	return logrus.WithField("builds", mr.buildsHelper.buildsCount())
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
@@ -140,7 +140,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	context, err := provider.Acquire(runner)
 	if err != nil {
-		log.Warningln("Failed to update executor", runner.Executor, "for", runner.ShortDescription(), err)
+		logrus.Warningln("Failed to update executor", runner.Executor, "for", runner.ShortDescription(), err)
 		return
 	}
 	defer provider.Release(runner, context)
@@ -260,11 +260,11 @@ func (mr *RunCommand) loadConfig() error {
 
 	// Set log level
 	if !cli_helpers.CustomLogLevelSet && mr.config.LogLevel != nil {
-		level, err := log.ParseLevel(*mr.config.LogLevel)
+		level, err := logrus.ParseLevel(*mr.config.LogLevel)
 		if err != nil {
-			log.Fatalf(err.Error())
+			logrus.Fatalf(err.Error())
 		}
-		log.SetLevel(level)
+		logrus.SetLevel(level)
 	}
 
 	// pass user to execute scripts as specific user
@@ -640,25 +640,25 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 
 	service, err := service_helpers.New(mr, svcConfig)
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 	}
 
 	if mr.Syslog {
-		log.SetFormatter(new(log.TextFormatter))
+		logrus.SetFormatter(new(logrus.TextFormatter))
 		logger, err := service.SystemLogger(nil)
 		if err == nil {
-			log.AddHook(&ServiceLogHook{logger, log.InfoLevel})
+			logrus.AddHook(&ServiceLogHook{logger, logrus.InfoLevel})
 		} else {
-			log.Errorln(err)
+			logrus.Errorln(err)
 		}
 	}
 
-	log.AddHook(&mr.sentryLogHook)
-	log.AddHook(&mr.prometheusLogHook)
+	logrus.AddHook(&mr.sentryLogHook)
+	logrus.AddHook(&mr.prometheusLogHook)
 
 	err = service.Run()
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 	}
 }
 
