@@ -21,10 +21,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/sentry"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/service"
+	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
@@ -259,7 +259,7 @@ func (mr *RunCommand) loadConfig() error {
 	}
 
 	// Set log level
-	if !cli_helpers.IsCustomLevelUsed() && mr.config.LogLevel != nil {
+	if !log.IsCustomLevelUsed() && mr.config.LogLevel != nil {
 		level, err := logrus.ParseLevel(*mr.config.LogLevel)
 		if err != nil {
 			logrus.WithError(err).Fatal("Failed to parse error level from configuration file")
@@ -644,7 +644,7 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 	}
 
 	if mr.Syslog {
-		cli_helpers.SetSystemLogger(svc)
+		log.SetSystemLogger(svc)
 	}
 
 	logrus.AddHook(&mr.sentryLogHook)

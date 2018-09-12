@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
+	"gitlab.com/gitlab-org/gitlab-runner/log"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
 )
@@ -40,8 +40,8 @@ func main() {
 		logrus.Fatalln("Command", command, "not found")
 	}
 
-	cli_helpers.ConfigureLogging(app)
-	cli_helpers.AddSecretsCleanupLogHook()
+	log.AddSecretsCleanupLogHook()
+	log.ConfigureLogging(app)
 
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatal(err)

@@ -1,4 +1,4 @@
-package cli_helpers
+package log
 
 import (
 	"os"
@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	LogFormatText = "text"
-	LogFormatJSON = "json"
+	FormatText = "text"
+	FormatJSON = "json"
 )
 
 var (
@@ -19,16 +19,16 @@ var (
 	customLevelUsed = false
 
 	logFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:   "log-format",
-			Usage:  "Chose log format (options: text, json)",
-			EnvVar: "LOG_FORMAT",
-			Value:  LogFormatText,
-		},
 		cli.BoolFlag{
 			Name:   "debug",
 			Usage:  "debug mode",
 			EnvVar: "DEBUG",
+		},
+		cli.StringFlag{
+			Name:   "log-format",
+			Usage:  "Chose log format (options: text, json)",
+			EnvVar: "LOG_FORMAT",
+			Value:  FormatText,
 		},
 		cli.StringFlag{
 			Name:   "log-level, l",
@@ -38,8 +38,8 @@ var (
 	}
 
 	formats = map[string]logrus.Formatter{
-		LogFormatText: new(logrus.TextFormatter),
-		LogFormatJSON: new(logrus.JSONFormatter),
+		FormatText: new(logrus.TextFormatter),
+		FormatJSON: new(logrus.JSONFormatter),
 	}
 )
 

@@ -1,4 +1,4 @@
-package cli_helpers
+package log
 
 import (
 	"github.com/sirupsen/logrus"
@@ -18,5 +18,5 @@ func (s *SecretsCleanupHook) Fire(entry *logrus.Entry) error {
 }
 
 func AddSecretsCleanupLogHook() {
-	logrus.AddHook(&SecretsCleanupHook{})
+	logrus.AddHook(new(SecretsCleanupHook))
 }

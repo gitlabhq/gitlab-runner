@@ -1,4 +1,4 @@
-package cli_helpers
+package log
 
 func watchForGoroutinesDump() {
 }

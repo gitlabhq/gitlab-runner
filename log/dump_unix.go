@@ -1,6 +1,6 @@
 // +build darwin dragonfly freebsd linux netbsd openbsd
 
-package cli_helpers
+package log
 
 import (
 	"os"

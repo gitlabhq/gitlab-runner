@@ -1,4 +1,4 @@
-package cli_helpers
+package log
 
 import (
 	"github.com/ayufan/golang-kardianos-service"
