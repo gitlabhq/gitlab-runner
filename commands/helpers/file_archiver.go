@@ -137,7 +137,7 @@ func (c *fileArchiver) processUntracked() {
 	found := 0
 
 	var output bytes.Buffer
-	cmd := exec.Command("git", "ls-files", "-o")
+	cmd := exec.Command("git", "ls-files", "-o", "-z")
 	cmd.Env = os.Environ()
 	cmd.Stdout = &output
 	cmd.Stderr = os.Stderr
@@ -146,14 +146,14 @@ func (c *fileArchiver) processUntracked() {
 	if err == nil {
 		reader := bufio.NewReader(&output)
 		for {
-			line, _, err := reader.ReadLine()
+			line, err := reader.ReadString(0)
 			if err == io.EOF {
 				break
 			} else if err != nil {
 				logrus.Warningln(err)
 				break
 			}
-			if c.process(string(line)) {
+			if c.process(line[:len(line)-1]) {
 				found++
 			}
 		}
