@@ -671,5 +671,6 @@ func init() {
 		networkRequestStatusesCollector: requestStatusesCollector,
 		prometheusLogHook:               prometheus_helper.NewLogHook(),
 		failuresCollector:               prometheus_helper.NewFailuresCollector(),
+		buildsHelper:                    newBuildsHelper(),
 	})
 }

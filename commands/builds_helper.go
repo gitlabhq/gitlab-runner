@@ -62,6 +62,8 @@ type buildsHelper struct {
 	counters map[string]*runnerCounter
 	builds   []*common.Build
 	lock     sync.Mutex
+
+	jobsTotal *prometheus.CounterVec
 }
 
 func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCounter {
@@ -183,6 +185,8 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 	}
 
 	b.builds = append(b.builds, build)
+	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription()).Inc()
+
 	return
 }
 
@@ -239,6 +243,8 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	ch <- numBuildsDesc
 	ch <- requestConcurrencyDesc
 	ch <- requestConcurrencyExceededDesc
+
+	b.jobsTotal.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -272,6 +278,8 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			runner,
 		)
 	}
+
+	b.jobsTotal.Collect(ch)
 }
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
@@ -328,4 +336,16 @@ func CreateJobURL(projectURL string, jobID int) string {
 	URL := r.ReplaceAllString(projectURL, "")
 
 	return fmt.Sprintf("%s/-/jobs/%d", URL, jobID)
+}
+
+func newBuildsHelper() buildsHelper {
+	return buildsHelper{
+		jobsTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "gitlab_runner_jobs_total",
+				Help: "Total number of handled jobs",
+			},
+			[]string{"runner"},
+		),
+	}
 }
