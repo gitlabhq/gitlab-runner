@@ -3,11 +3,14 @@ package shells
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go"
@@ -41,15 +44,34 @@ func (b *bucketLocationTripper) CancelRequest(req *http.Request) {
 	// Do nothing
 }
 
-func getCacheObjectName(build *common.Build, cache *common.CacheConfig, key string) string {
-	if key == "" {
-		return ""
-	}
+func generateBaseObjectName(build *common.Build, cache *common.CacheConfig) string {
 	runnerSegment := ""
 	if !cache.Shared {
 		runnerSegment = path.Join("runner", build.Runner.ShortDescription())
 	}
-	return path.Join(cache.Path, runnerSegment, "project", strconv.Itoa(build.JobInfo.ProjectID), key)
+
+	return path.Join(cache.Path, runnerSegment, "project", strconv.Itoa(build.JobInfo.ProjectID))
+}
+
+func getCacheObjectName(build *common.Build, cache *common.CacheConfig, key string) (string, error) {
+	if key == "" {
+		return "", nil
+	}
+
+	basePath := generateBaseObjectName(build, cache)
+	path := path.Join(basePath, key)
+
+	relative, err := filepath.Rel(basePath, path)
+	if err != nil {
+		return "", fmt.Errorf("cache path correctness check failed with: %v", err)
+	}
+
+	if strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("computed cache path outside of project bucket. Please remove `../` from cache key")
+	}
+
+	return path, nil
+
 }
 
 type fakeIAMCredentialsProvider interface {
@@ -80,7 +102,12 @@ func getCacheStorageClient(cache *common.CacheConfig) (scl *minio.Client, err er
 
 func getS3DownloadURL(build *common.Build, key string) (url *url.URL) {
 	cache := build.Runner.Cache
-	objectName := getCacheObjectName(build, cache, key)
+	objectName, err := getCacheObjectName(build, cache, key)
+	if err != nil {
+		logrus.WithError(err).Error("Error while generating cache bucket.")
+		return nil
+	}
+
 	if objectName == "" {
 		return
 	}
@@ -114,7 +141,12 @@ func getCacheDownloadURL(build *common.Build, key string) (url *url.URL) {
 
 func getS3UploadURL(build *common.Build, key string) (url *url.URL) {
 	cache := build.Runner.Cache
-	objectName := getCacheObjectName(build, cache, key)
+	objectName, err := getCacheObjectName(build, cache, key)
+	if err != nil {
+		logrus.WithError(err).Error("Error while generating cache bucket.")
+		return nil
+	}
+
 	if objectName == "" {
 		return
 	}
