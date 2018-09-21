@@ -1,4 +1,4 @@
-v 11.3.0-rc1 (2018-09-11)
+v 11.3.0 (2018-09-22)
 - Fix logrus secrets cleanup !990
 - Fix test failure detection !993
 - Fix wrongly generated `Content-Range` header for `PATCH /api/v4/jobs/:id/trace` request !906
