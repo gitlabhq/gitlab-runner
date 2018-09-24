@@ -1,3 +1,7 @@
+v 11.2.1 (2018-09-24)
+- Unable escaping project bucket in cache opearations !1030
+- Filter content of X-Amz-Credential from logs !1028
+
 v 11.2.0 (2018-08-22)
 - Fix support for Unicode variable values when Windows+PowerShell are used !960
 - Update docs/executors/kubernetes.md !957
