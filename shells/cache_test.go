@@ -120,53 +120,69 @@ func TestS3CacheDownloadInsecureURL(t *testing.T) {
 func TestGetCacheObjectNameWhenKeyIsEmptyResultIsAlsoEmpty(t *testing.T) {
 	s3Cache := defaultS3CacheFactory()
 	s3CacheBuild := defaults3CacheBuild(s3Cache)
-	url := getCacheObjectName(s3CacheBuild, s3Cache, "")
-	require.Empty(t, url)
+	url, err := getCacheObjectName(s3CacheBuild, s3Cache, "")
+	assert.NoError(t, err)
+	assert.Empty(t, url)
 }
 
 func TestGetCacheObjectName(t *testing.T) {
 	s3Cache := defaultS3CacheFactory()
 	s3CacheBuild := defaults3CacheBuild(s3Cache)
-	url := getCacheObjectName(s3CacheBuild, s3Cache, "key")
-	require.Equal(t, "runner/longtoke/project/10/key", url)
+	url, err := getCacheObjectName(s3CacheBuild, s3Cache, "key")
+	assert.NoError(t, err)
+	assert.Equal(t, "runner/longtoke/project/10/key", url)
 }
 
 func TestGetCacheObjectNameWhenPathIsSetThenUrlContainsIt(t *testing.T) {
 	s3Cache := defaultS3CacheFactory()
 	s3Cache.Path = "whatever"
 	s3CacheBuild := defaults3CacheBuild(s3Cache)
-	url := getCacheObjectName(s3CacheBuild, s3Cache, "key")
-	require.Equal(t, "whatever/runner/longtoke/project/10/key", url)
+	url, err := getCacheObjectName(s3CacheBuild, s3Cache, "key")
+	assert.NoError(t, err)
+	assert.Equal(t, "whatever/runner/longtoke/project/10/key", url)
 }
 
 func TestGetCacheObjectNameWhenPathHasMultipleSegmentIsSetThenUrlContainsIt(t *testing.T) {
 	s3Cache := defaultS3CacheFactory()
 	s3Cache.Path = "some/other/path/goes/here"
 	s3CacheBuild := defaults3CacheBuild(s3Cache)
-	url := getCacheObjectName(s3CacheBuild, s3Cache, "key")
-	require.Equal(t, "some/other/path/goes/here/runner/longtoke/project/10/key", url)
+	url, err := getCacheObjectName(s3CacheBuild, s3Cache, "key")
+	assert.NoError(t, err)
+	assert.Equal(t, "some/other/path/goes/here/runner/longtoke/project/10/key", url)
 }
 
 func TestGetCacheObjectNameWhenPathIsNotSetThenUrlDoesNotContainIt(t *testing.T) {
 	s3Cache := defaultS3CacheFactory()
 	s3Cache.Path = ""
 	s3CacheBuild := defaults3CacheBuild(s3Cache)
-	url := getCacheObjectName(s3CacheBuild, s3Cache, "key")
-	require.Equal(t, "runner/longtoke/project/10/key", url)
+	url, err := getCacheObjectName(s3CacheBuild, s3Cache, "key")
+	assert.NoError(t, err)
+	assert.Equal(t, "runner/longtoke/project/10/key", url)
 }
 
 func TestGetCacheObjectNameWhenSharedFlagIsFalseThenRunnerSegmentExistsInTheUrl(t *testing.T) {
 	s3Cache := defaultS3CacheFactory()
 	s3Cache.Shared = false
 	s3CacheBuild := defaults3CacheBuild(s3Cache)
-	url := getCacheObjectName(s3CacheBuild, s3Cache, "key")
-	require.Equal(t, "runner/longtoke/project/10/key", url)
+	url, err := getCacheObjectName(s3CacheBuild, s3Cache, "key")
+	assert.NoError(t, err)
+	assert.Equal(t, "runner/longtoke/project/10/key", url)
 }
 
 func TestGetCacheObjectNameWhenSharedFlagIsFalseThenRunnerSegmentShouldNotBePresent(t *testing.T) {
 	s3Cache := defaultS3CacheFactory()
 	s3Cache.Shared = true
 	s3CacheBuild := defaults3CacheBuild(s3Cache)
-	url := getCacheObjectName(s3CacheBuild, s3Cache, "key")
-	require.Equal(t, "project/10/key", url)
+	url, err := getCacheObjectName(s3CacheBuild, s3Cache, "key")
+	assert.NoError(t, err)
+	assert.Equal(t, "project/10/key", url)
+}
+
+func TestGetCacheObjectNameWhenKeyEscapesProjectBucket(t *testing.T) {
+	s3Cache := defaultS3CacheFactory()
+	s3CacheBuild := defaults3CacheBuild(s3Cache)
+
+	url, err := getCacheObjectName(s3CacheBuild, s3Cache, "../9/key")
+	assert.Empty(t, url)
+	assert.EqualError(t, err, "computed cache path outside of project bucket. Please remove `../` from cache key")
 }
