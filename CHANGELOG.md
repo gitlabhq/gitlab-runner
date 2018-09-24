@@ -1,3 +1,7 @@
+v 11.1.1 (2018-09-24)
+- Unable escaping project bucket in cache opearations !1030
+- Filter content of X-Amz-Credential from logs !1028
+
 v 11.1.0 (2018-07-22)
 - Fix support for Unicode variable values when Windows+PowerShell are used !960
 - Unify receivers used for 'executor' struct in ./executors/docker/ !926

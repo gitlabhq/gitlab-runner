@@ -26,14 +26,14 @@ exclude_mr_ids = []
 exclude_mr_ids = ENV['EXCLUDE_MR_IDS'].split(',').map(&:to_i) if ENV['EXCLUDE_MR_IDS']
 project_id = ENV['PROJECT_ID'] || 'gitlab-org%2Fgitlab-runner'
 
-base_url = URI("https://gitlab.com/api/v3/projects/#{project_id}/merge_requests/")
+base_url = URI("https://gitlab.com/api/v4/projects/#{project_id}/merge_requests")
 merge_requests = {}
 
 merge_request_ids_cmd = "git log #{starting_point}.. --first-parent | grep -E \"^\\s*See merge request (gitlab-org/gitlab-runner)?\![0-9]+$\" | grep -Eo \"[0-9]+$\" | xargs echo"
 merge_request_ids = `#{merge_request_ids_cmd}`.split(' ').map(&:to_i).reject{ |id| exclude_mr_ids.include?(id) }.reverse
 merge_request_ids.sort.each_slice(per_page).to_a.each do |part|
   query = part.map do |id|
-    "iid[]=#{id}"
+    "iids[]=#{id}"
   end
 
   query << "per_page=#{per_page}"
