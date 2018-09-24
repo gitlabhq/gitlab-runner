@@ -401,6 +401,16 @@ func (s *executor) setupCredentials() error {
 	return nil
 }
 
+func (s *executor) getSecurityContext() api.SecurityContext {
+	return api.SecurityContext{
+		FSGroup:             s.Config.Kubernetes.SecurityContext.FSGroup,
+		RunAsGroup:          s.Config.Kubernetes.SecurityContext.RunAsGroup,
+		RunAsNonRoot:        s.Config.Kubernetes.SecurityContext.RunAsNonRoot,
+		RunAsUser:           s.Config.Kubernetes.SecurityContext.RunAsUser,
+		SupplementalGroups:  s.Config.Kubernetes.SecurityContext.SupplementalGroups,
+	}
+}
+
 func (s *executor) setupBuildPod() error {
 	services := make([]api.Container, len(s.options.Services))
 	for i, service := range s.options.Services {
@@ -449,6 +459,7 @@ func (s *executor) setupBuildPod() error {
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
+			SecurityContext:               s.getSecurityContext()
 		},
 	})
 
