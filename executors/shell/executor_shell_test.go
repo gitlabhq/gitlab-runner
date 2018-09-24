@@ -728,7 +728,7 @@ func TestInteractiveTerminal(t *testing.T) {
 			u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: build.Session.Endpoint + "/exec"}
 			conn, resp, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{build.Session.Token}})
 			assert.NoError(t, err)
-			assert.Equal(t, resp.StatusCode, c.expectedStatusCode)
+			assert.Equal(t, c.expectedStatusCode, resp.StatusCode)
 
 			defer func() {
 				if conn != nil {
