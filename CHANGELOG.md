@@ -1,3 +1,7 @@
+v 11.3.1 (2018-09-24)
+- Filter content of X-Amz-Credential from logs !1028
+- Disable escaping project bucket in cache operations !1029
+
 v 11.3.0 (2018-09-22)
 - Fix logrus secrets cleanup !990
 - Fix test failure detection !993
