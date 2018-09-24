@@ -173,63 +173,92 @@ func defaultBuild(cacheConfig *common.CacheConfig) *common.Build {
 	}
 }
 
-func TestGenerateObjectNameWhenKeyIsEmptyResultIsAlsoEmpty(t *testing.T) {
-	cache := defaultCacheConfig()
-	cacheBuild := defaultBuild(cache)
+type generateObjectNameTestCase struct {
+	cache *common.CacheConfig
+	build *common.Build
 
-	url := generateObjectName(cacheBuild, cache, "")
-	assert.Empty(t, url)
+	key    string
+	path   string
+	shared bool
+
+	expectedObjectName string
+	expectedError      string
 }
 
-func TestGetCacheObjectName(t *testing.T) {
+func TestGenerateObjectName(t *testing.T) {
 	cache := defaultCacheConfig()
 	cacheBuild := defaultBuild(cache)
 
-	url := generateObjectName(cacheBuild, cache, "key")
-	assert.Equal(t, "runner/longtoke/project/10/key", url)
-}
+	tests := map[string]generateObjectNameTestCase{
+		"default usage": {
+			cache:              cache,
+			build:              cacheBuild,
+			key:                "key",
+			expectedObjectName: "runner/longtoke/project/10/key",
+		},
+		"empty key": {
+			cache:              cache,
+			build:              cacheBuild,
+			key:                "",
+			expectedObjectName: "",
+		},
+		"short path is set": {
+			cache:              cache,
+			build:              cacheBuild,
+			key:                "key",
+			path:               "whatever",
+			expectedObjectName: "whatever/runner/longtoke/project/10/key",
+		},
+		"multiple segment path is set": {
+			cache:              cache,
+			build:              cacheBuild,
+			key:                "key",
+			path:               "some/other/path/goes/here",
+			expectedObjectName: "some/other/path/goes/here/runner/longtoke/project/10/key",
+		},
+		"path is empty": {
+			cache:              cache,
+			build:              cacheBuild,
+			key:                "key",
+			path:               "",
+			expectedObjectName: "runner/longtoke/project/10/key",
+		},
+		"shared flag is set to true": {
+			cache:              cache,
+			build:              cacheBuild,
+			key:                "key",
+			shared:             true,
+			expectedObjectName: "project/10/key",
+		},
+		"shared flag is set to false": {
+			cache:              cache,
+			build:              cacheBuild,
+			key:                "key",
+			shared:             false,
+			expectedObjectName: "runner/longtoke/project/10/key",
+		},
+		"key escapes project namespace": {
+			cache:              cache,
+			build:              cacheBuild,
+			key:                "../9/key",
+			expectedObjectName: "",
+			expectedError:      "computed cache path outside of project bucket. Please remove `../` from cache key",
+		},
+	}
 
-func TestGetCacheObjectNameWhenPathIsSetThenUrlContainsIt(t *testing.T) {
-	cache := defaultCacheConfig()
-	cache.Path = "whatever"
-	cacheBuild := defaultBuild(cache)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cache.Path = test.path
+			cache.Shared = test.shared
 
-	url := generateObjectName(cacheBuild, cache, "key")
-	assert.Equal(t, "whatever/runner/longtoke/project/10/key", url)
-}
+			objectName, err := generateObjectName(test.build, test.cache, test.key)
 
-func TestGetCacheObjectNameWhenPathHasMultipleSegmentIsSetThenUrlContainsIt(t *testing.T) {
-	cache := defaultCacheConfig()
-	cache.Path = "some/other/path/goes/here"
-	cacheBuild := defaultBuild(cache)
-
-	url := generateObjectName(cacheBuild, cache, "key")
-	assert.Equal(t, "some/other/path/goes/here/runner/longtoke/project/10/key", url)
-}
-
-func TestGetCacheObjectNameWhenPathIsNotSetThenUrlDoesNotContainIt(t *testing.T) {
-	cache := defaultCacheConfig()
-	cache.Path = ""
-	cacheBuild := defaultBuild(cache)
-
-	url := generateObjectName(cacheBuild, cache, "key")
-	assert.Equal(t, "runner/longtoke/project/10/key", url)
-}
-
-func TestGetCacheObjectNameWhenSharedFlagIsFalseThenRunnerSegmentExistsInTheUrl(t *testing.T) {
-	cache := defaultCacheConfig()
-	cache.Shared = false
-	cacheBuild := defaultBuild(cache)
-
-	url := generateObjectName(cacheBuild, cache, "key")
-	assert.Equal(t, "runner/longtoke/project/10/key", url)
-}
-
-func TestGetCacheObjectNameWhenSharedFlagIsFalseThenRunnerSegmentShouldNotBePresent(t *testing.T) {
-	cache := defaultCacheConfig()
-	cache.Shared = true
-	cacheBuild := defaultBuild(cache)
-
-	url := generateObjectName(cacheBuild, cache, "key")
-	assert.Equal(t, "project/10/key", url)
+			assert.Equal(t, test.expectedObjectName, objectName)
+			if len(test.expectedError) == 0 {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, test.expectedError)
+			}
+		})
+	}
 }
