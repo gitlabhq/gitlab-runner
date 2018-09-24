@@ -118,6 +118,8 @@ func init() {
 		features.Variables = true
 		features.Image = true
 		features.Services = true
+		features.Session = true
+		features.Terminal = true
 	}
 
 	common.RegisterExecutor("docker", executors.DefaultExecutorProvider{

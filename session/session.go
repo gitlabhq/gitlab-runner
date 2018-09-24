@@ -2,6 +2,7 @@ package session
 
 import (
 	"net/http"
+	"reflect"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -166,7 +167,7 @@ func (s *Session) closeTerminalConn(conn terminal.Conn) {
 		s.log.WithError(err).Warn("Failed to close terminal connection")
 	}
 
-	if s.terminalConn == conn {
+	if reflect.DeepEqual(s.terminalConn, conn) {
 		s.terminalConn = nil
 	}
 }

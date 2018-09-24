@@ -1,23 +1,70 @@
 package terminal
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/gorilla/websocket"
-	"fmt"
-	"errors"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
 	// See doc/terminal.md for documentation of this subprotocol
-	subprotocols             = []string{"terminal.gitlab.com", "base64.terminal.gitlab.com"}
-	upgrader                 = &websocket.Upgrader{Subprotocols: subprotocols}
-	BrowserPingInterval      = 30 * time.Second
+	subprotocols        = []string{"terminal.gitlab.com", "base64.terminal.gitlab.com"}
+	upgrader            = &websocket.Upgrader{Subprotocols: subprotocols}
+	BrowserPingInterval = 30 * time.Second
 )
 
+// ProxyStream takes the given request, upgrades the connection to a WebSocket
+// connection, and also takes a dst ReadWriteCloser where a
+// bi-directional stream is set up, were the STDIN of the WebSocket it sent
+// dst and the STDOUT/STDERR of dst is written to the WebSocket
+// connection. The messages to the WebSocket are encoded into binary text.
+func ProxyStream(w http.ResponseWriter, r *http.Request, stream io.ReadWriteCloser, proxy *StreamProxy) {
+	clientAddr := getClientAddr(r) // We can't know the port with confidence
+
+	logger := log.WithFields(log.Fields{
+		"clientAddr": clientAddr,
+		"pkg":        "terminal",
+	})
+
+	clientConn, err := upgradeClient(w, r)
+	if err != nil {
+		logger.WithError(err).Error("failed to upgrade client connection to websocket")
+		return
+	}
+
+	defer func() {
+		err := clientConn.UnderlyingConn().Close()
+		if err != nil {
+			logger.WithError(err).Error("failed to close client connection")
+		}
+
+		err = stream.Close()
+		if err != nil {
+			logger.WithError(err).Error("failed to close stream")
+		}
+	}()
+
+	client := NewIOWrapper(clientConn)
+
+	// Regularly send ping messages to the browser to keep the websocket from
+	// being timed out by intervening proxies.
+	go pingLoop(client)
+
+	if err := proxy.Serve(client, stream); err != nil {
+		logger.WithError(err).Error("failed to proxy stream")
+	}
+}
+
+// ProxyWebSocket takes the given request, upgrades the connection to a
+// WebSocket connection. The terminal settings are used to connect to the
+// dst WebSocket connection where it establishes a bi-directional stream
+// between both web sockets.
 func ProxyWebSocket(w http.ResponseWriter, r *http.Request, terminal *TerminalSettings, proxy *WebSocketProxy) {
 	server, err := connectToServer(terminal, r)
 	if err != nil {
@@ -55,6 +102,10 @@ func ProxyWebSocket(w http.ResponseWriter, r *http.Request, terminal *TerminalSe
 	}
 }
 
+// ProxyFileDescriptor takes the given request, upgrades the connection to a
+// WebSocket connection. A bi-directional stream is opened between the WebSocket
+// and FileDescriptor that pipes the STDIN from the WebSocket to the
+// FileDescriptor , and STDERR/STDOUT back to the WebSocket.
 func ProxyFileDescriptor(w http.ResponseWriter, r *http.Request, fd *os.File, proxy *FileDescriptorProxy) {
 	clientConn, err := upgradeClient(w, r)
 	if err != nil {
