@@ -51,5 +51,4 @@ func SetSystemLogger(svc service.Service) {
 	} else {
 		logrus.Errorln(err)
 	}
-
 }

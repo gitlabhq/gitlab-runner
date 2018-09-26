@@ -27,7 +27,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:   "log-format",
-			Usage:  "Chose log format (options: runner, text, json)",
+			Usage:  "Choose log format (options: runner, text, json)",
 			EnvVar: "LOG_FORMAT",
 			Value:  FormatRunner,
 		},
