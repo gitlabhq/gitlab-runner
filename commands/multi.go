@@ -182,13 +182,8 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	trace.SetFailuresCollector(mr.failuresCollector)
 
 	// Create a new build
-	build := &common.Build{
-		JobResponse:     *jobData,
-		Runner:          runner,
-		ExecutorData:    context,
-		SystemInterrupt: mr.abortBuilds,
-		Session:         buildSession,
-	}
+	build := common.NewBuild(*jobData, runner, mr.abortBuilds, context)
+	build.Session = buildSession
 
 	// Add build to list of builds to assign numbers
 	mr.buildsHelper.addBuild(build)
