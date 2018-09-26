@@ -40,7 +40,7 @@ func main() {
 		logrus.Fatalln("Command", command, "not found")
 	}
 
-	log.AddSecretsCleanupLogHook()
+	log.AddSecretsCleanupLogHook(logrus.StandardLogger())
 	log.ConfigureLogging(app)
 
 	if err := app.Run(os.Args); err != nil {

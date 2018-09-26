@@ -32,7 +32,7 @@ func TestSecretsCleanupHook(t *testing.T) {
 
 			logger := logrus.New()
 			logger.Out = buffer
-			logger.AddHook(new(SecretsCleanupHook))
+			AddSecretsCleanupLogHook(logger)
 
 			logger.Errorln(test.message)
 
