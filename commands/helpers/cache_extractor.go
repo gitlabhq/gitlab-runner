@@ -35,15 +35,14 @@ func (c *CacheExtractorCommand) getClient() *CacheClient {
 	return c.client
 }
 
+func checkIfUpToDate(path string, resp *http.Response) (bool, time.Time) {
+	fi, _ := os.Lstat(path)
+	date, _ := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
+	return fi != nil && !date.After(fi.ModTime()), date
+}
+
 func (c *CacheExtractorCommand) download() (bool, error) {
 	os.MkdirAll(filepath.Dir(c.File), 0700)
-
-	file, err := ioutil.TempFile(filepath.Dir(c.File), "cache")
-	if err != nil {
-		return false, err
-	}
-	defer file.Close()
-	defer os.Remove(file.Name())
 
 	resp, err := c.getClient().Get(c.URL)
 	if err != nil {
@@ -59,12 +58,18 @@ func (c *CacheExtractorCommand) download() (bool, error) {
 		return retry, fmt.Errorf("Received: %s", resp.Status)
 	}
 
-	fi, _ := os.Lstat(c.File)
-	date, _ := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
-	if fi != nil && !date.After(fi.ModTime()) {
+	upToDate, date := checkIfUpToDate(c.File, resp)
+	if upToDate {
 		logrus.Infoln(filepath.Base(c.File), "is up to date")
 		return false, nil
 	}
+
+	file, err := ioutil.TempFile(filepath.Dir(c.File), "cache")
+	if err != nil {
+		return false, err
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
 
 	logrus.Infoln("Downloading", filepath.Base(c.File), "from", url_helpers.CleanURL(c.URL))
 	_, err = io.Copy(file, resp.Body)
