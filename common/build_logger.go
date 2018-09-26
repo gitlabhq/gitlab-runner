@@ -14,6 +14,10 @@ type BuildLogger struct {
 	entry *logrus.Entry
 }
 
+func (e *BuildLogger) WithFields(fields logrus.Fields) BuildLogger {
+	return NewBuildLogger(e.log, e.entry.WithFields(fields))
+}
+
 func (e *BuildLogger) SendRawLog(args ...interface{}) {
 	if e.log != nil {
 		fmt.Fprint(e.log, args...)
