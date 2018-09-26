@@ -5,8 +5,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/formatter"
 )
 
 const (
@@ -39,7 +37,7 @@ var (
 	}
 
 	formats = map[string]logrus.Formatter{
-		FormatRunner: new(formatter.RunnerTextFormatter),
+		FormatRunner: new(RunnerTextFormatter),
 		FormatText:   new(logrus.TextFormatter),
 		FormatJSON:   new(logrus.JSONFormatter),
 	}
