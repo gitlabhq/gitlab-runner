@@ -43,12 +43,11 @@ func (s *ServiceLogHook) Fire(entry *logrus.Entry) error {
 }
 
 func SetSystemLogger(svc service.Service) {
-	logrus.SetFormatter(new(logrus.TextFormatter))
-
 	logger, err := svc.SystemLogger(nil)
+
 	if err == nil {
-		logrus.AddHook(&ServiceLogHook{logger, logrus.InfoLevel})
+		logrus.AddHook(&ServiceLogHook{logger, logrus.GetLevel()})
 	} else {
-		logrus.Errorln(err)
+		logrus.WithError(err).Error("Error while setting up the system logger")
 	}
 }
