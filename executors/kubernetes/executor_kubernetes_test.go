@@ -1239,6 +1239,7 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
 						PodSecurityContext:   common.KubernetesSecurityContext{
 							FSGroup: 200,
 							RunAsGroup: 200,

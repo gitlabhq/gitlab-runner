@@ -86,6 +86,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
   the pod annotations overwrite environment variable. When empty,
     it disables the pod annotations overwrite feature
+- `pod_security_context`: Configured through the config file, This sets a pod security context for the build pod. [Read more about security context](#using-security-context)  
 - `service_account`: default service account to be used for making kubernetes api calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
@@ -313,6 +314,19 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | medium     | String  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
 
+## Using Security Context
+
+[Pod security][k8s-pod-security-policy] configuration instructs executor to set a pod security policy on the build pod.
+
+| Option     | Type    | Required | Description |
+|------------|---------|----------|-------------|
+| fsGroup | int | no | A special supplemental group that applies to all containers in a pod |
+| runAsGroup | int | no | The GID to run the entrypoint of the container process |
+| runAsNonRoot | int | no | Indicates that the container must run as a non-root user |
+| runAsUser | int | no | The UID to run the entrypoint of the container process |
+| supplementalGroups | int list | no | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
+
+
 ## Using Docker in your builds
 
 There are a couple of caveats when using docker in your builds while running on
@@ -370,4 +384,5 @@ on other nodes.
 [k8s-secret-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#secret
 [k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configmap/
 [k8s-empty-dir-volume-docs]:https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
+[k8s-pod-security-docs]:https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 [advanced-configuration-helper-image]: ../configuration/advanced-configuration.md#helper-image
