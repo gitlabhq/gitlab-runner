@@ -322,10 +322,12 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 |------------|---------|----------|-------------|
 | fsGroup | int | no | A special supplemental group that applies to all containers in a pod |
 | runAsGroup | int | no | The GID to run the entrypoint of the container process |
-| runAsNonRoot | int | no | Indicates that the container must run as a non-root user |
+| runAsNonRoot | boolean | no | Indicates that the container must run as a non-root user |
 | runAsUser | int | no | The UID to run the entrypoint of the container process |
 | supplementalGroups | int list | no | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
 
+Assigining  a security context to pods provides security to your Kubernetes cluster.  For this to work you'll need to provide a helper
+image that conforms to the policy you set here.
 
 ## Using Docker in your builds
 
