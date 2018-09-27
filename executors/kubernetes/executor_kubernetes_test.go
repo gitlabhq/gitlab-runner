@@ -1251,12 +1251,10 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Equal(t, map[string]int64{
-					"fsGroup": 200,
-					"runAsGroup": 200,
-					"runAsUser": 200,
-				}, pod.Spec.SecurityContext)
-				assert.Equal(t, true, pod.Spec.SecurityContext.RunAsNonRoot)
+				assert.Equal(t, 200, &pod.Spec.SecurityContext.FSGroup)
+				assert.Equal(t, 200, &pod.Spec.SecurityContext.RunAsGroup)
+				assert.Equal(t, 200, &pod.Spec.SecurityContext.RunAsUser)
+				assert.Equal(t, true, &pod.Spec.SecurityContext.RunAsNonRoot)
 				assert.Equal(t, []int64{200}, pod.Spec.SecurityContext.SupplementalGroups)
 			},
 		},

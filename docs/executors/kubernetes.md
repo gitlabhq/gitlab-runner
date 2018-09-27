@@ -316,7 +316,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 ## Using Security Context
 
-[Pod security][k8s-pod-security-policy] configuration instructs executor to set a pod security policy on the build pod.
+[Pod security context][k8s-pod-security-docs] configuration instructs executor to set a pod security policy on the build pod.
 
 | Option     | Type    | Required | Description |
 |------------|---------|----------|-------------|
