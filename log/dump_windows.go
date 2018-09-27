@@ -1,4 +1,4 @@
 package log
 
-func watchForGoroutinesDump() {
+func watchForGoroutinesDump(stopCh chan bool) {
 }

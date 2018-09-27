@@ -259,12 +259,9 @@ func (mr *RunCommand) loadConfig() error {
 	}
 
 	// Set log level
-	if !log.IsCustomLevelUsed() && mr.config.LogLevel != nil {
-		level, err := logrus.ParseLevel(*mr.config.LogLevel)
-		if err != nil {
-			logrus.WithError(err).Fatal("Failed to parse error level from configuration file")
-		}
-		logrus.SetLevel(level)
+	err = mr.updateLoggingConfiguration()
+	if err != nil {
+		return err
 	}
 
 	// pass user to execute scripts as specific user
@@ -285,6 +282,34 @@ func (mr *RunCommand) loadConfig() error {
 		}
 	} else {
 		mr.sentryLogHook = sentry.LogHook{}
+	}
+
+	return nil
+}
+
+func (mr *RunCommand) updateLoggingConfiguration() error {
+	reloadNeeded := false
+
+	if mr.config.LogLevel != nil && !log.Configuration().IsLevelSetWithCli() {
+		err := log.Configuration().SetLevel(*mr.config.LogLevel)
+		if err != nil {
+			return err
+		}
+
+		reloadNeeded = true
+	}
+
+	if mr.config.LogFormat != nil && !log.Configuration().IsFormatSetWithCli() {
+		err := log.Configuration().SetFormat(*mr.config.LogFormat)
+		if err != nil {
+			return err
+		}
+
+		reloadNeeded = true
+	}
+
+	if reloadNeeded {
+		log.Configuration().ReloadConfiguration()
 	}
 
 	return nil

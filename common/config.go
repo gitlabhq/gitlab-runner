@@ -306,6 +306,7 @@ type Config struct {
 	Concurrent    int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
 	LogLevel      *string         `toml:"log_level" json:"log_level" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
+	LogFormat     *string         `toml:"log_format" json:"log_format" description:"Define log format (one of: runner, text, json)"`
 	User          string          `toml:"user,omitempty" json:"user"`
 	Runners       []*RunnerConfig `toml:"runners" json:"runners"`
 	SentryDSN     *string         `toml:"sentry_dsn"`
