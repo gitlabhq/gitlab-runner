@@ -167,7 +167,7 @@ type KubernetesConfig struct {
 	ServiceAccountOverwriteAllowed string                     `toml:"service_account_overwrite_allowed" json:"service_account_overwrite_allowed" long:"service_account_overwrite_allowed" env:"KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_SERVICE_ACCOUNT' value"`
 	PodAnnotations                 map[string]string          `toml:"pod_annotations,omitempty" json:"pod_annotations" long:"pod-annotations" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create pods with the given annotations. Can be overwritten in build with KUBERNETES_POD_ANNOTATION_* varialbes"`
 	PodAnnotationsOverwriteAllowed string                     `toml:"pod_annotations_overwrite_allowed" json:"pod_annotations_overwrite_allowed" long:"pod_annotations_overwrite_allowed" env:"KUBERNETES_POD_ANNOTATIONS_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_POD_ANNOTATIONS_*' values"`
-	PodSecurityContext             KubernetesSecurityContext  `toml:"pod_security_context,omitempty" json:"pdpod_security_context" long:"pod-security-context" env:"POD_SECURITY_CONTEXT" description:"A security context attached to each build pod"`
+	PodSecurityContext             KubernetesSecurityContext  `toml:"pod_security_context,omitempty" json:"ppod_security_context" long:"pod-security-context" env:"POD_SECURITY_CONTEXT" description:"A security context attached to each build pod"`
 	Volumes                        KubernetesVolumes          `toml:"volumes"`
 }
 
@@ -213,11 +213,11 @@ type KubernetesEmptyDir struct {
 }
 
 type KubernetesSecurityContext struct {
-	FSGroup             int64 `toml:"fsGroup json:"fsGroup" description:"A special supplemental group that applies to all containers in a pod"`
-	RunAsGroup          int64 `toml:"runAsGroup json:"runAsGroup" description:"The GID to run the entrypoint of the container process"`
-	RunAsNonRoot        bool  `toml:"runAsNonRoot json:"runAsNonRoot" description:"Indicates that the container must run as a non-root user"`
-	RunAsUser           int64 `toml:"runAsUser json:"runAsUser" description:"The UID to run the entrypoint of the container process"`
-	SupplementalGroups  int64 `toml:"supplementalGroups json:"supplementalGroups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
+	FSGroup             int64 `toml:"fsGroup,omitempty" json:"fsGroup" description:"A special supplemental group that applies to all containers in a pod"`
+	RunAsGroup          int64 `toml:"runAsGroup,omitempty"p json:"runAsGroup" description:"The GID to run the entrypoint of the container process"`
+	RunAsNonRoot        bool  `toml:"runAsNonRoot,omitempty" json:"runAsNonRoot" description:"Indicates that the container must run as a non-root user"`
+	RunAsUser           int64 `toml:"runAsUser,omitempty" json:"runAsUser" description:"The UID to run the entrypoint of the container process"`
+	SupplementalGroups  []int64 `toml:"supplementalGroups,omitempty" json:"supplementalGroups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
 }
 
 type RunnerCredentials struct {

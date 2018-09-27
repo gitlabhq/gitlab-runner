@@ -1235,6 +1235,30 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[2].Args)
 			},
 		},
+		"supports pod security context": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						PodSecurityContext:   common.KubernetesSecurityContext{
+							FSGroup: 200,
+							RunAsGroup: 200,
+							RunAsNonRoot: true,
+							RunAsUser: 200,
+							SupplementalGroups: []int64{200},
+						}, 
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, map[string]int64{
+					"fsGroup": 200,
+					"runAsGroup": 200,
+					"runAsUser": 200,
+				}, pod.Spec.SecurityContext)
+				assert.Equal(t, true, pod.Spec.SecurityContext.RunAsNonRoot)
+				assert.Equal(t, []int64{200}, pod.Spec.SecurityContext.SupplementalGroups)
+			},
+		},
 	}
 
 	for testName, test := range tests {

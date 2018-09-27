@@ -401,13 +401,13 @@ func (s *executor) setupCredentials() error {
 	return nil
 }
 
-func (s *executor) getSecurityContext() api.SecurityContext {
-	return api.SecurityContext{
-		FSGroup:             s.Config.Kubernetes.SecurityContext.FSGroup,
-		RunAsGroup:          s.Config.Kubernetes.SecurityContext.RunAsGroup,
-		RunAsNonRoot:        s.Config.Kubernetes.SecurityContext.RunAsNonRoot,
-		RunAsUser:           s.Config.Kubernetes.SecurityContext.RunAsUser,
-		SupplementalGroups:  s.Config.Kubernetes.SecurityContext.SupplementalGroups,
+func (s *executor) getSecurityContext() *api.PodSecurityContext {
+	return &api.PodSecurityContext{
+		FSGroup:             &s.Config.Kubernetes.PodSecurityContext.FSGroup,
+		RunAsGroup:          &s.Config.Kubernetes.PodSecurityContext.RunAsGroup,
+		RunAsNonRoot:        &s.Config.Kubernetes.PodSecurityContext.RunAsNonRoot,
+		RunAsUser:           &s.Config.Kubernetes.PodSecurityContext.RunAsUser,
+		SupplementalGroups:  s.Config.Kubernetes.PodSecurityContext.SupplementalGroups,
 	}
 }
 
@@ -440,6 +440,8 @@ func (s *executor) setupBuildPod() error {
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
 	helperImage := common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.GetHelperImage())
 
+	securityContext := s.getSecurityContext()
+
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
@@ -459,7 +461,7 @@ func (s *executor) setupBuildPod() error {
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
-			SecurityContext:               s.getSecurityContext()
+			SecurityContext:               securityContext,
 		},
 	})
 
