@@ -214,7 +214,7 @@ type KubernetesEmptyDir struct {
 
 type KubernetesSecurityContext struct {
 	FSGroup            int64   `toml:"fsGroup,omitempty" json:"fsGroup" description:"A special supplemental group that applies to all containers in a pod"`
-	RunAsGroup         int64   `toml:"runAsGroup,omitempty"p json:"runAsGroup" description:"The GID to run the entrypoint of the container process"`
+	RunAsGroup         int64   `toml:"runAsGroup,omitempty" json:"runAsGroup" description:"The GID to run the entrypoint of the container process"`
 	RunAsNonRoot       bool    `toml:"runAsNonRoot,omitempty" json:"runAsNonRoot" description:"Indicates that the container must run as a non-root user"`
 	RunAsUser          int64   `toml:"runAsUser,omitempty" json:"runAsUser" description:"The UID to run the entrypoint of the container process"`
 	SupplementalGroups []int64 `toml:"supplementalGroups,omitempty" json:"supplementalGroups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
