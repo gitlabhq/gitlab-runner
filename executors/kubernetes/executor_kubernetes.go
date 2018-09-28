@@ -403,11 +403,11 @@ func (s *executor) setupCredentials() error {
 
 func (s *executor) getSecurityContext() *api.PodSecurityContext {
 	return &api.PodSecurityContext{
-		FSGroup:             &s.Config.Kubernetes.PodSecurityContext.FSGroup,
-		RunAsGroup:          &s.Config.Kubernetes.PodSecurityContext.RunAsGroup,
-		RunAsNonRoot:        &s.Config.Kubernetes.PodSecurityContext.RunAsNonRoot,
-		RunAsUser:           &s.Config.Kubernetes.PodSecurityContext.RunAsUser,
-		SupplementalGroups:  s.Config.Kubernetes.PodSecurityContext.SupplementalGroups,
+		FSGroup:            &s.Config.Kubernetes.PodSecurityContext.FSGroup,
+		RunAsGroup:         &s.Config.Kubernetes.PodSecurityContext.RunAsGroup,
+		RunAsNonRoot:       &s.Config.Kubernetes.PodSecurityContext.RunAsNonRoot,
+		RunAsUser:          &s.Config.Kubernetes.PodSecurityContext.RunAsUser,
+		SupplementalGroups: s.Config.Kubernetes.PodSecurityContext.SupplementalGroups,
 	}
 }
 
