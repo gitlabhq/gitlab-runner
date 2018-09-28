@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
@@ -20,7 +21,74 @@ type RunnerTextFormatter struct {
 }
 
 func (f *RunnerTextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	var keys = make([]string, 0, len(entry.Data))
+	b := new(bytes.Buffer)
+	f.printColored(b, entry)
+	b.WriteByte('\n')
+
+	return b.Bytes(), nil
+}
+
+func (f *RunnerTextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry) {
+	levelColor, resetColor, levelPrefix := f.getColorsAndPrefix(entry)
+	indentLength := 50 - len(levelPrefix)
+
+	fmt.Fprintf(b, "%s%s%-*s%s ", levelColor, levelPrefix, indentLength, entry.Message, resetColor)
+	for _, k := range f.prepareKeys(entry) {
+		v := entry.Data[k]
+		fmt.Fprintf(b, " %s%s%s=%v", levelColor, k, resetColor, v)
+	}
+}
+
+func (f *RunnerTextFormatter) getColorsAndPrefix(entry *logrus.Entry) (string, string, string) {
+	definitions := map[logrus.Level]struct {
+		color  string
+		prefix string
+	}{
+		logrus.DebugLevel: {
+			color: helpers.ANSI_BOLD_WHITE,
+		},
+		logrus.WarnLevel: {
+			color:  helpers.ANSI_YELLOW,
+			prefix: "WARNING: ",
+		},
+		logrus.ErrorLevel: {
+			color:  helpers.ANSI_BOLD_RED,
+			prefix: "ERROR: ",
+		},
+		logrus.FatalLevel: {
+			color:  helpers.ANSI_BOLD_RED,
+			prefix: "FATAL: ",
+		},
+		logrus.PanicLevel: {
+			color:  helpers.ANSI_BOLD_RED,
+			prefix: "PANIC: ",
+		},
+	}
+
+	color := ""
+	prefix := ""
+
+	definition, ok := definitions[entry.Level]
+	if ok {
+		if definition.color != "" {
+			color = definition.color
+		}
+
+		if definition.prefix != "" {
+			prefix = definition.prefix
+		}
+	}
+
+	if f.DisableColors {
+		return "", "", prefix
+	}
+
+	return color, helpers.ANSI_RESET, prefix
+}
+
+func (f *RunnerTextFormatter) prepareKeys(entry *logrus.Entry) []string {
+	keys := make([]string, 0, len(entry.Data))
+
 	for k := range entry.Data {
 		keys = append(keys, k)
 	}
@@ -29,48 +97,9 @@ func (f *RunnerTextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		sort.Strings(keys)
 	}
 
-	b := bytes.Buffer{}
-	f.printColored(&b, entry, keys)
-	b.WriteByte('\n')
-	return b.Bytes(), nil
-}
-
-func (f *RunnerTextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys []string) {
-	var levelColor, levelText string
-	switch entry.Level {
-	case logrus.DebugLevel:
-		levelColor = helpers.ANSI_BOLD_WHITE
-	case logrus.WarnLevel:
-		levelColor = helpers.ANSI_YELLOW
-		levelText = "WARNING: "
-	case logrus.ErrorLevel:
-		levelColor = helpers.ANSI_BOLD_RED
-		levelText = "ERROR: "
-	case logrus.FatalLevel:
-		levelColor = helpers.ANSI_BOLD_RED
-		levelText = "FATAL: "
-	case logrus.PanicLevel:
-		levelColor = helpers.ANSI_BOLD_RED
-		levelText = "PANIC: "
-	default:
-	}
-
-	resetColor := helpers.ANSI_RESET
-
-	if f.DisableColors {
-		levelColor = ""
-		resetColor = ""
-	}
-
-	indentLength := 50 - len(levelText)
-
-	fmt.Fprintf(b, "%s%s%-*s%s ", levelColor, levelText, indentLength, entry.Message, resetColor)
-	for _, k := range keys {
-		v := entry.Data[k]
-		fmt.Fprintf(b, " %s%s%s=%v", levelColor, k, resetColor, v)
-	}
+	return keys
 }
 
 func SetRunnerFormatter() {
-	logrus.SetFormatter(&RunnerTextFormatter{})
+	logrus.SetFormatter(new(RunnerTextFormatter))
 }
