@@ -11,20 +11,36 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func watchForGoroutinesDump(stopCh chan bool) {
-	dumpStacks := make(chan os.Signal, 1)
+func watchForGoroutinesDump(logger *logrus.Logger, stopCh chan bool) (chan bool, chan bool) {
+	dumpedCh := make(chan bool)
+	finishedCh := make(chan bool)
 
+	dumpStacksCh := make(chan os.Signal, 1)
 	// On USR1 dump stacks of all go routines
-	signal.Notify(dumpStacks, syscall.SIGUSR1)
+	signal.Notify(dumpStacksCh, syscall.SIGUSR1)
 
-	for {
-		select {
-		case <-dumpStacks:
-			buf := make([]byte, 1<<20)
-			len := runtime.Stack(buf, true)
-			logrus.Printf("=== received SIGUSR1 ===\n*** goroutine dump...\n%s\n*** end\n", buf[0:len])
-		case <-stopCh:
-			return
+	go func() {
+		for {
+			select {
+			case <-dumpStacksCh:
+				buf := make([]byte, 1<<20)
+				len := runtime.Stack(buf, true)
+				logger.Printf("=== received SIGUSR1 ===\n*** goroutine dump...\n%s\n*** end\n", buf[0:len])
+
+				nonBlockingSend(dumpedCh, true)
+			case <-stopCh:
+				close(finishedCh)
+				return
+			}
 		}
+	}()
+
+	return dumpedCh, finishedCh
+}
+
+func nonBlockingSend(ch chan bool, value bool) {
+	select {
+	case ch <- value:
+	default:
 	}
 }

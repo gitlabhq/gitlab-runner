@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	configuration = NewConfig()
+	configuration = NewConfig(logrus.StandardLogger())
 
 	logFlags = []cli.Flag{
 		cli.BoolFlag{
@@ -52,6 +52,7 @@ func formatNames() []string {
 }
 
 type Config struct {
+	logger *logrus.Logger
 	level  logrus.Level
 	format logrus.Formatter
 
@@ -120,8 +121,8 @@ func (l *Config) SetFormat(format string) error {
 }
 
 func (l *Config) ReloadConfiguration() {
-	logrus.SetFormatter(l.format)
-	logrus.SetLevel(l.level)
+	l.logger.SetFormatter(l.format)
+	l.logger.SetLevel(l.level)
 
 	if l.level == logrus.DebugLevel {
 		l.enableGoroutinesDump()
@@ -137,7 +138,7 @@ func (l *Config) enableGoroutinesDump() {
 
 	l.goroutinesDumpStopCh = make(chan bool)
 
-	watchForGoroutinesDump(l.goroutinesDumpStopCh)
+	watchForGoroutinesDump(l.logger, l.goroutinesDumpStopCh)
 }
 
 func (l *Config) disableGoroutinesDump() {
@@ -149,8 +150,9 @@ func (l *Config) disableGoroutinesDump() {
 	l.goroutinesDumpStopCh = nil
 }
 
-func NewConfig() *Config {
+func NewConfig(logger *logrus.Logger) *Config {
 	return &Config{
+		logger: logger,
 		level:  logrus.InfoLevel,
 		format: new(RunnerTextFormatter),
 	}
@@ -165,7 +167,7 @@ func ConfigureLogging(app *cli.App) {
 
 	appBefore := app.Before
 	app.Before = func(cliCtx *cli.Context) error {
-		logrus.SetOutput(os.Stderr)
+		Configuration().logger.SetOutput(os.Stderr)
 
 		err := Configuration().handleCliCtx(cliCtx)
 		if err != nil {

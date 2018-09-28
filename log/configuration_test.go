@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
@@ -11,9 +12,9 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-func prepareFakeConfiguration() func() {
+func prepareFakeConfiguration(logger *logrus.Logger) func() {
 	oldConfiguration := configuration
-	configuration = NewConfig()
+	configuration = NewConfig(logger)
 
 	return func() {
 		configuration = oldConfiguration
@@ -90,20 +91,22 @@ func TestHandleCliCtx(t *testing.T) {
 		},
 	}
 
-	for name, test := range tests {
+	for name, testCase := range tests {
 		t.Run(name, func(t *testing.T) {
-			defer prepareFakeConfiguration()()
+			logger, _ := test.NewNullLogger()
+
+			defer prepareFakeConfiguration(logger)()
 			defer helpers.MakeFatalToPanic()()
 
 			testFunc := func() {
-				testCommandRun(test.args...)
-				if test.expectedError == "" {
-					assert.Equal(t, test.expectedLevel, Configuration().level)
-					assert.Equal(t, test.expectedFormatter, Configuration().format)
-					assert.Equal(t, test.expectedLevelSetWithCli, Configuration().IsLevelSetWithCli())
-					assert.Equal(t, test.expectedFormatSetWithCli, Configuration().IsFormatSetWithCli())
+				testCommandRun(testCase.args...)
+				if testCase.expectedError == "" {
+					assert.Equal(t, testCase.expectedLevel, Configuration().level)
+					assert.Equal(t, testCase.expectedFormatter, Configuration().format)
+					assert.Equal(t, testCase.expectedLevelSetWithCli, Configuration().IsLevelSetWithCli())
+					assert.Equal(t, testCase.expectedFormatSetWithCli, Configuration().IsFormatSetWithCli())
 
-					if test.goroutinesDumpStopChExists {
+					if testCase.goroutinesDumpStopChExists {
 						assert.NotNil(t, Configuration().goroutinesDumpStopCh)
 					} else {
 						assert.Nil(t, Configuration().goroutinesDumpStopCh)
@@ -111,7 +114,7 @@ func TestHandleCliCtx(t *testing.T) {
 				}
 			}
 
-			if test.expectedError != "" {
+			if testCase.expectedError != "" {
 				var message *logrus.Entry
 				var ok bool
 
@@ -129,7 +132,7 @@ func TestHandleCliCtx(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Contains(t, panicMessage, "Error while setting up logging configuration")
-				assert.Contains(t, panicMessage, test.expectedError)
+				assert.Contains(t, panicMessage, testCase.expectedError)
 
 			} else {
 				assert.NotPanics(t, testFunc)
@@ -139,7 +142,9 @@ func TestHandleCliCtx(t *testing.T) {
 }
 
 func TestGoroutinesDumpDisabling(t *testing.T) {
-	config := new(Config)
+	logger, _ := test.NewNullLogger()
+
+	config := NewConfig(logger)
 	config.level = logrus.DebugLevel
 	config.ReloadConfiguration()
 	config.ReloadConfiguration()
