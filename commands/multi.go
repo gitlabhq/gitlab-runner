@@ -664,7 +664,7 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 	}
 
 	if mr.Syslog {
-		log.SetSystemLogger(svc)
+		log.SetSystemLogger(logrus.StandardLogger(), svc)
 	}
 
 	logrus.AddHook(&mr.sentryLogHook)
