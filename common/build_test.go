@@ -1,14 +1,15 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	"errors"
-
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -589,4 +590,74 @@ func TestGetRemoteURL(t *testing.T) {
 
 		assert.Equal(t, tc.result, build.GetRemoteURL())
 	}
+}
+
+type featureFlagOnTestCase struct {
+	value          string
+	expectedStatus bool
+	expectedError  bool
+}
+
+func TestIsFeatureFlagOn(t *testing.T) {
+	hook := test.NewGlobal()
+
+	tests := map[string]featureFlagOnTestCase{
+		"no value": {
+			value:          "",
+			expectedStatus: false,
+			expectedError:  false,
+		},
+		"true": {
+			value:          "true",
+			expectedStatus: true,
+			expectedError:  false,
+		},
+		"1": {
+			value:          "1",
+			expectedStatus: true,
+			expectedError:  false,
+		},
+		"false": {
+			value:          "false",
+			expectedStatus: false,
+			expectedError:  false,
+		},
+		"0": {
+			value:          "0",
+			expectedStatus: false,
+			expectedError:  false,
+		},
+		"invalid value": {
+			value:          "test",
+			expectedStatus: false,
+			expectedError:  true,
+		},
+	}
+
+	for name, testCase := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := new(Build)
+			build.Variables = JobVariables{
+				{Key: "FF_TEST_FEATURE", Value: testCase.value},
+			}
+
+			status := build.IsFeatureFlagOn("FF_TEST_FEATURE")
+			assert.Equal(t, testCase.expectedStatus, status)
+
+			entry := hook.LastEntry()
+			if testCase.expectedError {
+				require.NotNil(t, entry)
+
+				logrusOutput, err := entry.String()
+				require.NoError(t, err)
+
+				assert.Contains(t, logrusOutput, "Error while parsing the value of feature flag")
+			} else {
+				assert.Nil(t, entry)
+			}
+
+			hook.Reset()
+		})
+	}
+
 }
