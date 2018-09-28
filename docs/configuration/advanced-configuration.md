@@ -64,8 +64,9 @@ be repeated after all requests for the other workers + their sleeps are called.
 
 ## The `[session_server]` section
 
-The session server allows the user to interact with jobs that the Runner is
-responsible for. A good example of this is the
+The section `[session_server]` is a system runner level configuration, so it should be specified at the root level, 
+not per executor i.e. it should be outside `[[runners]]` section. The session server allows the user to interact 
+with jobs that the Runner is responsible for. A good example of this is the
 [interactive web terminal](https://docs.gitlab.com/ce/ci/interactive_web_terminal).
 
 Both `listen_address` and `advertise_address` should be provided in the form
@@ -87,7 +88,7 @@ Example:
 ```bash
 [session_server]
   listen_address = "0.0.0.0:8093"
-  advertise_address = "gitlab.com:8093"
+  advertise_address = "runner-host-name.tld:8093"
   session_timeout = 1800
 ```
 
