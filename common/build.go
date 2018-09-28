@@ -401,16 +401,21 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.CurrentState = BuildRunStatePending
 
 	defer func() {
+		logger := b.logger.WithFields(logrus.Fields{
+			"duration": b.Duration(),
+		})
+
 		if _, ok := err.(*BuildError); ok {
-			b.logger.SoftErrorln("Job failed:", err)
+			logger.SoftErrorln("Job failed:", err)
 			trace.Fail(err, ScriptFailure)
 		} else if err != nil {
-			b.logger.Errorln("Job failed (system failure):", err)
+			logger.Errorln("Job failed (system failure):", err)
 			trace.Fail(err, RunnerSystemFailure)
 		} else {
-			b.logger.Infoln("Job succeeded")
+			logger.Infoln("Job succeeded")
 			trace.Success()
 		}
+
 		if executor != nil {
 			executor.Cleanup()
 		}
