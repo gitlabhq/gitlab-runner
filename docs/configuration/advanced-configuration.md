@@ -176,26 +176,27 @@ This defines the Docker Container parameters.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `host`                      | Specify custom Docker endpoint, by default `DOCKER_HOST` environment is used or `unix:///var/run/docker.sock` |
-| `hostname`                  | Specify custom hostname for Docker container |
-| `runtime`                   | Specify a runtime for Docker container |
-| `tls_cert_path`             | When set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
-| `image`                     | Use this image to run builds |
-| `memory`                    | String value containing the memory limit |
-| `memory_swap`               | String value containing the total memory limit |
-| `memory_reservation`        | String value containing the memory soft limit |
-| `cpuset_cpus`               | String value containing the cgroups CpusetCpus to use |
-| `cpus`                      | Number of CPUs (available in docker 1.13 or later) |
-| `dns`                       | A list of DNS servers for the container to use |
-| `dns_search`                | A list of DNS search domains |
-| `privileged`                | Make container run in Privileged mode (insecure) |
-| `userns_mode`               | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in docker 1.10 or later) |
-| `cap_add`                   | Add additional Linux capabilities to the container |
-| `cap_drop`                  | Drop additional Linux capabilities from the container |
-| `security_opt`              | Set security options (--security-opt in docker run), takes a list of ':' separated key/values |
-| `devices`                   | Share additional host devices with the container |
-| `cache_dir`                 | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
-| `disable_cache`             | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the Runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
+| `host`                         | Specify custom Docker endpoint, by default `DOCKER_HOST` environment is used or `unix:///var/run/docker.sock` |
+| `hostname`                     | Specify custom hostname for Docker container |
+| `runtime`                      | Specify a runtime for Docker container |
+| `tls_cert_path`                | When set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
+| `image`                        | Use this image to run builds |
+| `memory`                       | String value containing the memory limit |
+| `memory_swap`                  | String value containing the total memory limit |
+| `memory_reservation`           | String value containing the memory soft limit |
+| `cpuset_cpus`                  | String value containing the cgroups CpusetCpus to use |
+| `cpus`                         | Number of CPUs (available in docker 1.13 or later) |
+| `dns`                          | A list of DNS servers for the container to use |
+| `dns_search`                   | A list of DNS search domains |
+| `privileged`                   | Make container run in Privileged mode (insecure) |
+| `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting |
+| `userns_mode`                  | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in docker 1.10 or later) |
+| `cap_add`                      | Add additional Linux capabilities to the container |
+| `cap_drop`                     | Drop additional Linux capabilities from the container |
+| `security_opt`                 | Set security options (--security-opt in docker run), takes a list of ':' separated key/values |
+| `devices`                      | Share additional host devices with the container |
+| `cache_dir`                    | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
+| `disable_cache`                | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the Runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
 | `network_mode`              | Add container to a custom network |
 | `wait_for_services_timeout` | Specify how long to wait for docker services, set to 0 to disable, default: 30 |
 | `volumes`                   | Specify additional volumes that should be mounted (same syntax as Docker's `-v` flag) |

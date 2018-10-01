@@ -132,6 +132,83 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	tests := []struct {
+		name     string
+		services bool
+		disabled bool
+	}{
+		{
+			name:     "Disabled - no services",
+			disabled: true,
+		},
+		{
+			name:     "Disabled - services",
+			disabled: true,
+			services: true,
+		},
+		{
+			name: "Enabled - no services",
+		},
+		{
+			name:     "Enabled - services",
+			services: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			successfulBuild, err := common.GetRemoteSuccessfulBuild()
+			require.NoError(t, err)
+
+			successfulBuild.Image.Entrypoint = []string{"/bin/sh", "-c", "echo 'image overwritten'"}
+
+			if test.services {
+				successfulBuild.Services = common.Services{
+					common.Image{
+						Name:       common.TestDockerDindImage,
+						Entrypoint: []string{"/bin/sh", "-c", "echo 'service overwritten'"},
+					},
+				}
+			}
+
+			build := &common.Build{
+				JobResponse: successfulBuild,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker: &common.DockerConfig{
+							Privileged:                 true,
+							Image:                      common.TestAlpineImage,
+							PullPolicy:                 common.PullPolicyIfNotPresent,
+							DisableEntrypointOverwrite: test.disabled,
+						},
+					},
+				},
+			}
+
+			var buffer bytes.Buffer
+			err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+			assert.NoError(t, err)
+			out := buffer.String()
+			if test.disabled {
+				assert.NotContains(t, out, "image overwritten")
+				assert.NotContains(t, out, "service overwritten")
+				assert.Contains(t, out, "Entrypoint override disabled")
+			} else {
+				assert.Contains(t, out, "image overwritten")
+				if test.services {
+					assert.Contains(t, out, "service overwritten")
+				}
+			}
+		})
+	}
+}
+
 func isDockerOlderThan17_07(t *testing.T) bool {
 	client, err := docker_helpers.New(
 		docker_helpers.DockerCredentials{}, docker.DockerAPIVersion)
