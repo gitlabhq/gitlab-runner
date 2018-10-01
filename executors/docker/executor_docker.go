@@ -687,9 +687,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	if len(serviceDefinition.Command) > 0 {
 		config.Cmd = serviceDefinition.Command
 	}
-	if len(serviceDefinition.Entrypoint) > 0 {
-		config.Entrypoint = serviceDefinition.Entrypoint
-	}
+	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
 
 	hostConfig := &container.HostConfig{
 		RestartPolicy: neverRestartPolicy,
@@ -867,9 +865,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		Env:          append(e.Build.GetAllVariables().StringList(), e.BuildShell.Environment...),
 	}
 
-	if len(imageDefinition.Entrypoint) > 0 {
-		config.Entrypoint = imageDefinition.Entrypoint
-	}
+	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
@@ -1138,6 +1134,18 @@ func (e *executor) expandImageName(imageName string, allowedInternalImages []str
 	}
 
 	return e.Config.Docker.Image, nil
+}
+
+func (e *executor) overwriteEntrypoint(image *common.Image) []string {
+	if len(image.Entrypoint) > 0 {
+		if !e.Config.Docker.DisableEntrypointOverwrite {
+			return image.Entrypoint
+		}
+
+		e.Warningln("Entrypoint override disabled")
+	}
+
+	return nil
 }
 
 func (e *executor) connectDocker() (err error) {
