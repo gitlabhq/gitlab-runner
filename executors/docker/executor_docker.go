@@ -983,11 +983,6 @@ func (e *executor) waitForContainer(id string) error {
 			continue
 		}
 
-		// If container has finished, kill session.
-		if e.Build.Session != nil {
-			e.Build.Session.Kill()
-		}
-
 		if container.State.ExitCode != 0 {
 			return &common.BuildError{
 				Inner: fmt.Errorf("exit code %d", container.State.ExitCode),

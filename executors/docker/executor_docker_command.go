@@ -86,6 +86,12 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 
 	s.SetCurrentStage(DockerExecutorStageRun)
 
+	defer func() {
+		if cmd.Stage == common.BuildStageUserScript && s.Build.Session != nil {
+			s.Build.Session.Kill()
+		}
+	}()
+
 	return s.watchContainer(cmd.Context, runOn.ID, bytes.NewBufferString(cmd.Script))
 }
 
