@@ -463,6 +463,12 @@ func (b *Build) GetDefaultVariables() JobVariables {
 	}
 }
 
+func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
+	return JobVariables{
+		{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "true", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
+	}
+}
+
 func (b *Build) GetSharedEnvVariable() JobVariable {
 	env := JobVariable{Value: "true", Public: true, Internal: true, File: false}
 	if b.IsSharedEnv() {
@@ -512,6 +518,7 @@ func (b *Build) GetAllVariables() JobVariables {
 		variables = append(variables, b.Runner.GetVariables()...)
 	}
 	variables = append(variables, b.GetDefaultVariables()...)
+	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
 	variables = append(variables, b.GetSharedEnvVariable())
@@ -659,4 +666,24 @@ func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt c
 		ExecutorData:    executorData,
 		createdAt:       time.Now(),
 	}
+}
+
+func (b *Build) IsFeatureFlagOn(name string) bool {
+	ffValue := b.GetAllVariables().Get(name)
+
+	if ffValue == "" {
+		return false
+	}
+
+	on, err := strconv.ParseBool(ffValue)
+	if err != nil {
+		logrus.WithError(err).
+			WithField("ffName", name).
+			WithField("ffValue", ffValue).
+			Error("Error while parsing the value of feature flag")
+
+		return false
+	}
+
+	return on
 }
