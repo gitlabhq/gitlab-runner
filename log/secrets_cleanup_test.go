@@ -1,4 +1,4 @@
-package cli_helpers_test
+package log
 
 import (
 	"bytes"
@@ -6,8 +6,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 )
 
 func TestSecretsCleanupHook(t *testing.T) {
@@ -34,7 +32,7 @@ func TestSecretsCleanupHook(t *testing.T) {
 
 			logger := logrus.New()
 			logger.Out = buffer
-			logger.AddHook(&cli_helpers.SecretsCleanupHook{})
+			AddSecretsCleanupLogHook(logger)
 
 			logger.Errorln(test.message)
 

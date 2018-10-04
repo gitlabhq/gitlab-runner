@@ -15,16 +15,16 @@ import (
 	"github.com/ayufan/golang-kardianos-service"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/sentry"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/service"
+	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
@@ -55,7 +55,7 @@ type RunCommand struct {
 	ServiceName      string `short:"n" long:"service" description:"Use different names for different services"`
 	WorkingDirectory string `short:"d" long:"working-directory" description:"Specify custom working directory"`
 	User             string `short:"u" long:"user" description:"Use specific user to execute shell scripts"`
-	Syslog           bool   `long:"syslog" description:"Log to syslog"`
+	Syslog           bool   `long:"syslog" description:"Log to system service logger" env:"LOG_SYSLOG"`
 
 	sentryLogHook     sentry.LogHook
 	prometheusLogHook prometheus_helper.LogHook
@@ -88,8 +88,8 @@ type RunCommand struct {
 	currentWorkers int
 }
 
-func (mr *RunCommand) log() *log.Entry {
-	return log.WithField("builds", mr.buildsHelper.buildsCount())
+func (mr *RunCommand) log() *logrus.Entry {
+	return logrus.WithField("builds", mr.buildsHelper.buildsCount())
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
@@ -140,7 +140,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	context, err := provider.Acquire(runner)
 	if err != nil {
-		log.Warningln("Failed to update executor", runner.Executor, "for", runner.ShortDescription(), err)
+		logrus.Warningln("Failed to update executor", runner.Executor, "for", runner.ShortDescription(), err)
 		return
 	}
 	defer provider.Release(runner, context)
@@ -254,12 +254,9 @@ func (mr *RunCommand) loadConfig() error {
 	}
 
 	// Set log level
-	if !cli_helpers.CustomLogLevelSet && mr.config.LogLevel != nil {
-		level, err := log.ParseLevel(*mr.config.LogLevel)
-		if err != nil {
-			log.Fatalf(err.Error())
-		}
-		log.SetLevel(level)
+	err = mr.updateLoggingConfiguration()
+	if err != nil {
+		return err
 	}
 
 	// pass user to execute scripts as specific user
@@ -280,6 +277,34 @@ func (mr *RunCommand) loadConfig() error {
 		}
 	} else {
 		mr.sentryLogHook = sentry.LogHook{}
+	}
+
+	return nil
+}
+
+func (mr *RunCommand) updateLoggingConfiguration() error {
+	reloadNeeded := false
+
+	if mr.config.LogLevel != nil && !log.Configuration().IsLevelSetWithCli() {
+		err := log.Configuration().SetLevel(*mr.config.LogLevel)
+		if err != nil {
+			return err
+		}
+
+		reloadNeeded = true
+	}
+
+	if mr.config.LogFormat != nil && !log.Configuration().IsFormatSetWithCli() {
+		err := log.Configuration().SetFormat(*mr.config.LogFormat)
+		if err != nil {
+			return err
+		}
+
+		reloadNeeded = true
+	}
+
+	if reloadNeeded {
+		log.Configuration().ReloadConfiguration()
 	}
 
 	return nil
@@ -633,27 +658,21 @@ func (mr *RunCommand) Execute(context *cli.Context) {
 		},
 	}
 
-	service, err := service_helpers.New(mr, svcConfig)
+	svc, err := service_helpers.New(mr, svcConfig)
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 	}
 
 	if mr.Syslog {
-		log.SetFormatter(new(log.TextFormatter))
-		logger, err := service.SystemLogger(nil)
-		if err == nil {
-			log.AddHook(&ServiceLogHook{logger, log.InfoLevel})
-		} else {
-			log.Errorln(err)
-		}
+		log.SetSystemLogger(svc)
 	}
 
-	log.AddHook(&mr.sentryLogHook)
-	log.AddHook(&mr.prometheusLogHook)
+	logrus.AddHook(&mr.sentryLogHook)
+	logrus.AddHook(&mr.prometheusLogHook)
 
-	err = service.Run()
+	err = svc.Run()
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 	}
 }
 

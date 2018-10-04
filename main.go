@@ -6,9 +6,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/formatter"
+	"gitlab.com/gitlab-org/gitlab-runner/log"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcs"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3"
@@ -35,8 +36,6 @@ func main() {
 		}
 	}()
 
-	formatter.SetRunnerFormatter()
-
 	app := cli.NewApp()
 	app.Name = path.Base(os.Args[0])
 	app.Usage = "a GitLab Runner"
@@ -48,16 +47,18 @@ func main() {
 			Email: "support@gitlab.com",
 		},
 	}
-	cli_helpers.LogRuntimePlatform(app)
-	cli_helpers.SetupLogLevelOptions(app)
-	cli_helpers.SetupCPUProfile(app)
-	cli_helpers.FixHOME(app)
 	app.Commands = common.GetCommands()
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		logrus.Fatalln("Command", command, "not found.")
 	}
 
+	cli_helpers.LogRuntimePlatform(app)
+	cli_helpers.SetupCPUProfile(app)
+	cli_helpers.FixHOME(app)
 	cli_helpers.WarnOnBool(os.Args)
+
+	log.ConfigureLogging(app)
+
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatal(err)
 	}

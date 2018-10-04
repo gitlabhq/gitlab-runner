@@ -306,10 +306,10 @@ service. Use them to install, uninstall, start and stop the runner service.
 
 All service related commands accept these arguments:
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--service` | `gitlab-runner` | Specify custom service name |
-| `--config` | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
+| Parameter   | Default                                           | Description |
+|-------------|---------------------------------------------------|-------------|
+| `--service` | `gitlab-runner`                                   | Specify custom service name |
+| `--config`  | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
 
 ### gitlab-runner install
 
@@ -319,12 +319,12 @@ arguments depending on which system it's run on.
 When run on **Windows** or as super-user, it accepts the `--user` flag which
 allows you to drop privileges of builds run with the **shell** executor.
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--service`      | `gitlab-runner` | Specify a custom name for the Runner |
+| Parameter             | Default               | Description |
+|-----------------------|-----------------------|-------------|
+| `--syslog`            | `true`                | Specify if the service should integrate with system logging service |
 | `--working-directory` | the current directory | Specify the root directory where all data will be stored when builds will be run with the **shell** executor |
-| `--user`              | `root` | Specify the user which will be used to execute builds |
-| `--password`          | none   | Specify the password for the user that will be used to execute the builds |
+| `--user`              | `root`                | Specify the user which will be used to execute builds |
+| `--password`          | none                  | Specify the password for the user that will be used to execute the builds |
 
 ### gitlab-runner uninstall
 
