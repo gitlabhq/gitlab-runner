@@ -78,19 +78,25 @@ release_docker_helper_images() {
     helper_image_x86_64_latest="gitlab/gitlab-runner-helper:x86_64-latest"
     helper_image_arm="gitlab/gitlab-runner-helper:arm-${REVISION}"
     helper_image_arm_latest="gitlab/gitlab-runner-helper:arm-latest"
+    helper_image_arm64="gitlab/gitlab-runner-helper:arm64-${REVISION}"
+    helper_image_arm64_latest="gitlab/gitlab-runner-helper:arm64-latest"
 
     import out/helper-images/prebuilt-x86_64.tar.xz ${helper_image_x86_64}
     import out/helper-images/prebuilt-arm.tar.xz ${helper_image_arm}
+    import out/helper-images/prebuilt-arm64.tar.xz ${helper_image_arm64}
 
     tag_latest ${helper_image_x86_64} ${helper_image_x86_64_latest}
     tag_latest ${helper_image_arm} ${helper_image_arm_latest}
+    tag_latest ${helper_image_arm64} ${helper_image_arm64_latest}
 
 
     push ${helper_image_x86_64}
     push ${helper_image_arm}
+    push ${helper_image_arm64}
 
     push_latest ${helper_image_x86_64_latest}
     push_latest ${helper_image_arm_latest}
+    push_latest ${helper_image_arm64_latest}
 }
 
 login() {

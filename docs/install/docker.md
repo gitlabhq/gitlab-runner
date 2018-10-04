@@ -177,6 +177,11 @@ may need to restart it for the changes to take effect.
 
 ## Docker images
 
+NOTE: **Note:**
+No arm/arm64 images are provided for GitLab Runner. See the [related
+issue](https://gitlab.com/gitlab-org/gitlab-runner/issues/4871) for more
+information.
+
 The following Docker images are available:
 
 - `gitlab/gitlab-runner:latest` based on Ubuntu.
