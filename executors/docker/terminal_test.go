@@ -1,9 +1,11 @@
 package docker
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -16,7 +18,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -172,4 +176,114 @@ func TestCommandExecutor_Connect(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
 	assert.IsType(t, terminalConn{}, conn)
+}
+
+type nopReader struct {
+}
+
+func (w *nopReader) Read(b []byte) (int, error) {
+	return len(b), nil
+}
+
+type nopConn struct {
+}
+
+func (nopConn) Read(b []byte) (n int, err error) {
+	return len(b), nil
+}
+
+func (nopConn) Write(b []byte) (n int, err error) {
+	return len(b), nil
+}
+
+func (nopConn) Close() error {
+	return nil
+}
+
+func (nopConn) LocalAddr() net.Addr {
+	return &net.TCPAddr{}
+}
+
+func (nopConn) RemoteAddr() net.Addr {
+	return &net.TCPAddr{}
+}
+
+func (nopConn) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (nopConn) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (nopConn) SetWriteDeadline(t time.Time) error {
+	return nil
+}
+
+func TestTerminalConn_Start(t *testing.T) {
+	c := &docker_helpers.MockClient{}
+
+	s := commandExecutor{
+		executor: executor{
+			AbstractExecutor: executors.AbstractExecutor{
+				Context: context.Background(),
+				BuildShell: &common.ShellConfiguration{
+					DockerCommand: []string{"/bin/sh"},
+				},
+			},
+			client: c,
+		},
+		buildContainer: &types.ContainerJSON{
+			ContainerJSONBase: &types.ContainerJSONBase{
+				ID: "1234",
+			},
+		},
+	}
+
+	c.On("ContainerInspect", mock.Anything, "1234").Return(types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			State: &types.ContainerState{
+				Running: true,
+			},
+		},
+	}, nil).Once()
+
+	c.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{
+		ID: "4321",
+	}, nil).Once()
+
+	c.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(types.HijackedResponse{
+		Conn:   nopConn{},
+		Reader: bufio.NewReader(&nopReader{}),
+	}, nil).Once()
+
+	c.On("ContainerInspect", mock.Anything, "1234").Return(types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			State: &types.ContainerState{
+				Running: false,
+			},
+		},
+	}, nil)
+
+	session, err := session.NewSession(nil)
+	require.NoError(t, err)
+	session.Token = "validToken"
+
+	session.SetInteractiveTerminal(&s)
+
+	srv := httptest.NewServer(session.Mux())
+
+	u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: session.Endpoint + "/exec"}
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{"validToken"}})
+
+	go func() {
+		for {
+			conn.WriteMessage(websocket.BinaryMessage, []byte("data"))
+			time.Sleep(time.Second)
+		}
+	}()
+
+	time.Sleep(5 * time.Second)
+
+	assert.False(t, session.Connected())
 }
