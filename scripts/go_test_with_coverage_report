@@ -37,7 +37,18 @@ prepareTestCommands() {
         local testIndex=0
         local runTests=()
 
-        local tests=$(go test -list "Test.*" "${pkg}" | grep "^Test" || echo "")
+        echo "Listing tests for ${pkg} package"
+
+        local tempFile=$(mktemp)
+        local exitCode=0
+        go test -list "Test.*" "${pkg}" > ${tempFile} || exitCode=1
+
+        local tests=$(grep "^Test" ${tempFile})
+        rm ${tempFile}
+
+        if [[ ${exitCode} -ne 0 ]]; then
+            exit ${exitCode}
+        fi
 
         if [[ -z "${tests}" ]]; then
             continue
