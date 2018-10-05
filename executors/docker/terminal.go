@@ -3,6 +3,8 @@ package docker
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -14,6 +16,27 @@ import (
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
+func (s *commandExecutor) watchForRunningBuildContainer(deadline time.Time) (string, error) {
+	for time.Since(deadline) < 0 {
+		if s.buildContainer == nil {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		containerID := s.buildContainer.ID
+		container, err := s.client.ContainerInspect(s.Context, containerID)
+		if err != nil {
+			return "", err
+		}
+
+		if container.State.Running {
+			return containerID, nil
+		}
+	}
+
+	return "", errors.New("timeout for waiting for build container")
+}
+
 func (s *commandExecutor) Connect() (terminalsession.Conn, error) {
 	// Waiting for the container to start,  is not ideal as it might be hiding a
 	// real issue and the user is not aware of it. Ideally, the runner should
@@ -23,57 +46,32 @@ func (s *commandExecutor) Connect() (terminalsession.Conn, error) {
 	// `gitlab-terminal` package. There are plans to improve this please take a
 	// look at https://gitlab.com/gitlab-org/gitlab-ce/issues/50384#proposal and
 	// https://gitlab.com/gitlab-org/gitlab-terminal/issues/4
-	containerStarted := make(chan struct{})
-	containerStartedErr := make(chan error)
-	go func() {
-		for {
-			if s.buildContainer == nil {
-				time.Sleep(10 * time.Millisecond)
-				continue
-			}
-
-			if s.buildContainer != nil {
-				container, err := s.client.ContainerInspect(s.Context, s.buildContainer.ID)
-				if err != nil {
-					containerStartedErr <- err
-					break
-				}
-
-				if container.State.Running {
-					containerStarted <- struct{}{}
-					break
-				}
-
-				continue
-			}
-		}
-	}()
-
-	ctx, cancel := context.WithTimeout(s.Context, waitForContainerTimeout)
-	defer cancel()
-
-	select {
-	case <-containerStarted:
-		return terminalConn{
-			logger:      &s.BuildLogger,
-			ctx:         s.Context,
-			client:      s.client,
-			containerID: s.buildContainer.ID,
-			shell:       s.BuildShell.DockerCommand,
-		}, nil
-	case err := <-containerStartedErr:
+	containerID, err := s.watchForRunningBuildContainer(time.Now().Add(waitForContainerTimeout))
+	if err != nil {
 		return nil, err
-	case <-ctx.Done():
-		s.Errorln("Timed out waiting for the container to start the terminal. Please retry")
-		return nil, errors.New("timeout for waiting for container")
 	}
+
+	ctx, cancelFn := context.WithCancel(s.Context)
+
+	return terminalConn{
+		logger:      &s.BuildLogger,
+		ctx:         ctx,
+		cancelFn:    cancelFn,
+		executor:    s,
+		client:      s.client,
+		containerID: containerID,
+		shell:       s.BuildShell.DockerCommand,
+	}, nil
 }
 
 type terminalConn struct {
-	logger *common.BuildLogger
-	ctx    context.Context
+	logger   *common.BuildLogger
+	ctx      context.Context
+	cancelFn func()
 
+	executor    *commandExecutor
 	client      docker_helpers.Client
+	tty         io.ReadWriteCloser
 	containerID string
 	shell       []string
 }
@@ -98,8 +96,22 @@ func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, d
 	}
 
 	dockerTTY := newDockerTTY(&resp)
-
 	proxy := terminal.NewStreamProxy(1) // one stopper: terminal exit handler
+
+	// wait for container to exit
+	go func() {
+		t.logger.Debugln("Waiting for the terminal container:", t.containerID)
+		err := t.executor.waitForContainer(t.ctx, t.containerID)
+		t.logger.Debugln("The terminal container:", t.containerID, "finished with:", err)
+
+		stopCh := proxy.GetStopCh()
+		if err != nil {
+			stopCh <- fmt.Errorf("Build container exited with %q", err)
+		} else {
+			stopCh <- fmt.Errorf("Build container exited")
+		}
+	}()
+
 	terminalsession.ProxyTerminal(
 		timeoutCh,
 		disconnectCh,
@@ -111,5 +123,8 @@ func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, d
 }
 
 func (t terminalConn) Close() error {
+	if t.cancelFn != nil {
+		t.cancelFn()
+	}
 	return nil
 }

@@ -167,7 +167,8 @@ func (s *Session) closeTerminalConn(conn terminal.Conn) {
 		s.log.WithError(err).Warn("Failed to close terminal connection")
 	}
 
-	if reflect.DeepEqual(s.terminalConn, conn) {
+	if reflect.ValueOf(s.terminalConn) == reflect.ValueOf(conn) {
+		s.log.Warningln("Closed active terminal connection")
 		s.terminalConn = nil
 	}
 }
