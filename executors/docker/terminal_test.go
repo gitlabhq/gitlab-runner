@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,11 +12,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
@@ -104,27 +109,70 @@ func TestInteractiveTerminal(t *testing.T) {
 	assert.Contains(t, unameResult, "Linux")
 }
 
-func TestInteractiveWebTerminalWaitForContainerTimeout(t *testing.T) {
-	successfulBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
+func TestCommandExecutor_Connect_Timeout(t *testing.T) {
+	c := &docker_helpers.MockClient{}
 
-	sess, err := session.NewSession(nil)
-	require.NoError(t, err)
-
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
+	s := commandExecutor{
+		executor: executor{
+			AbstractExecutor: executors.AbstractExecutor{
+				Context: context.Background(),
+			},
+			client: c,
+		},
+		buildContainer: &types.ContainerJSON{
+			ContainerJSONBase: &types.ContainerJSONBase{
+				ID: "1234",
 			},
 		},
-		Session: sess,
 	}
+	c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			State: &types.ContainerState{
+				Running: false,
+			},
+		},
+	}, nil)
 
+	buildLogWriter := bytes.NewBuffer(nil)
+	s.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: buildLogWriter}, logrus.NewEntry(logrus.New()))
+
+	conn, err := s.Connect()
+	assert.Error(t, err)
+	assert.Nil(t, conn)
+	assert.Contains(t, buildLogWriter.String(), "Timed out waiting for the container to start the terminal. Please retry")
+}
+
+func TestCommandExecutor_Connect(t *testing.T) {
+	c := &docker_helpers.MockClient{}
+
+	s := commandExecutor{
+		executor: executor{
+			AbstractExecutor: executors.AbstractExecutor{
+				Context: context.Background(),
+				BuildShell: &common.ShellConfiguration{
+					DockerCommand: []string{"/bin/sh"},
+				},
+			},
+			client: c,
+		},
+		buildContainer: &types.ContainerJSON{
+			ContainerJSONBase: &types.ContainerJSONBase{
+				ID: "1234",
+			},
+		},
+	}
+	c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			State: &types.ContainerState{
+				Running: true,
+			},
+		},
+	}, nil)
+
+	conn, err := s.Connect()
+	assert.NoError(t, err)
+	assert.NotNil(t, conn)
+	assert.IsType(t, terminalConn{}, conn)
 }
 
 func TestInteractiveWebTerminalAttachStrategy(t *testing.T) {

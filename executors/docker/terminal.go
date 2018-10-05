@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -34,6 +33,7 @@ func (s *commandExecutor) watchForRunningBuildContainer(deadline time.Time) (str
 		}
 	}
 
+	s.BuildLogger.Errorln("Timed out waiting for the container to start the terminal. Please retry")
 	return "", errors.New("timeout for waiting for build container")
 }
 
@@ -71,7 +71,6 @@ type terminalConn struct {
 
 	executor    *commandExecutor
 	client      docker_helpers.Client
-	tty         io.ReadWriteCloser
 	containerID string
 	shell       []string
 }
