@@ -52,8 +52,7 @@ func TestInteractiveTerminal(t *testing.T) {
 	// Start build
 	buildLogWriter := bytes.NewBuffer(nil)
 	go func() {
-		err = build.Run(&common.Config{}, &common.Trace{Writer: buildLogWriter})
-		require.NoError(t, err)
+		_ = build.Run(&common.Config{}, &common.Trace{Writer: buildLogWriter})
 	}()
 
 	buildStarted := make(chan struct{})
@@ -173,35 +172,4 @@ func TestCommandExecutor_Connect(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
 	assert.IsType(t, terminalConn{}, conn)
-}
-
-func TestInteractiveWebTerminalAttachStrategy(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
-
-	successfulBuild, err := common.GetRemoteSuccessfulBuild()
-	assert.NoError(t, err)
-
-	sess, err := session.NewSession(nil)
-	require.NoError(t, err)
-
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		Session: sess,
-	}
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	require.NoError(t, err)
-
-	require.False(t, build.Session.Connected())
 }
