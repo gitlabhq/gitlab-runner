@@ -56,7 +56,7 @@ func (s *commandExecutor) Connect() (terminalsession.Conn, error) {
 	// `gitlab-terminal` package. There are plans to improve this please take a
 	// look at https://gitlab.com/gitlab-org/gitlab-ce/issues/50384#proposal and
 	// https://gitlab.com/gitlab-org/gitlab-terminal/issues/4
-	containerID, err := s.watchForRunningBuildContainer(time.Now().Add(time.Second))
+	containerID, err := s.watchForRunningBuildContainer(time.Now().Add(waitForContainerTimeout))
 	if err != nil {
 		return nil, err
 	}
