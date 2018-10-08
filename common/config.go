@@ -66,6 +66,7 @@ type DockerConfig struct {
 	UsernsMode                 string            `toml:"userns_mode,omitempty" json:"userns_mode" long:"userns" env:"DOCKER_USERNS_MODE" description:"User namespace to use"`
 	CapAdd                     []string          `toml:"cap_add" json:"cap_add" long:"cap-add" env:"DOCKER_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                    []string          `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"DOCKER_CAP_DROP" description:"Drop Linux capabilities"`
+	OomKillDisable             bool              `toml:"oom_kill_disable,omitzero" json:"oom_kill_disable" long:"oom-kill-disable" env:"DOCKER_OOM_KILL_DISABLE" description:"Do not kill processes in a container if an out-of-memory (OOM) error occurs"`
 	SecurityOpt                []string          `toml:"security_opt" json:"security_opt" long:"security-opt" env:"DOCKER_SECURITY_OPT" description:"Security Options"`
 	Devices                    []string          `toml:"devices" json:"devices" long:"devices" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
 	DisableCache               bool              `toml:"disable_cache,omitzero" json:"disable_cache" long:"disable-cache" env:"DOCKER_DISABLE_CACHE" description:"Disable all container caching"`
@@ -485,6 +486,10 @@ func (c *DockerConfig) GetMemorySwap() int64 {
 
 func (c *DockerConfig) GetMemoryReservation() int64 {
 	return c.getMemoryBytes(c.MemoryReservation, "memory_reservation")
+}
+
+func (c *DockerConfig) GetOomKillDisable() *bool {
+	return &c.OomKillDisable
 }
 
 func (c *KubernetesConfig) GetHelperImage() string {
