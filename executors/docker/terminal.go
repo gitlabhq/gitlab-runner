@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
@@ -95,7 +96,7 @@ func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, d
 	exec, err := t.client.ContainerExecCreate(t.ctx, t.containerID, execConfig)
 	if err != nil {
 		t.logger.Errorln("Failed to create exec container for terminal:", err)
-		http.Error(w, "failed to create exec to build container", http.StatusInternalServerError)
+		http.Error(w, "failed to create exec for build container", http.StatusInternalServerError)
 		return
 	}
 

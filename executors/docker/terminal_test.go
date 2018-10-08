@@ -67,22 +67,22 @@ func TestInteractiveTerminal(t *testing.T) {
 		"Authorization": []string{build.Session.Token},
 	}
 
-	var retries int
 	var webSocket *websocket.Conn
-	for retries < 500 {
-		conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
-		if err != nil {
-			retries++
-			time.Sleep(50 * time.Millisecond)
-			continue
+	var resp *http.Response
+
+	started := time.Now()
+
+	for time.Since(started) < 25*time.Second {
+		webSocket, resp, err = websocket.DefaultDialer.Dial(u.String(), headers)
+		if err == nil {
+			break
 		}
 
-		require.NoError(t, err)
-		require.NotNil(t, conn)
-		require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
-		webSocket = conn
-		break
+		time.Sleep(50 * time.Millisecond)
 	}
+
+	require.NotNil(t, webSocket)
+	require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
 
 	defer webSocket.Close()
 
@@ -406,7 +406,15 @@ func TestTerminalConn_Start(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(5 * time.Second)
+	started := time.Now()
+
+	for time.Since(started) < 5*time.Second {
+		if !session.Connected() {
+			break
+		}
+
+		time.Sleep(50 * time.Microsecond)
+	}
 
 	assert.False(t, session.Connected())
 }
