@@ -179,17 +179,20 @@ func (fakeTerminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh,
 }
 
 func TestCloseTerminalConn(t *testing.T) {
-	conn := fakeTerminalConn{
+	conn := &fakeTerminalConn{
 		commands: []string{"command", "-c", "random"},
 	}
+
+	mockConn := new(terminal.MockConn)
+	mockConn.On("Close").Return(nil).Once()
 
 	sess, err := NewSession(nil)
 	sess.terminalConn = conn
 	require.NoError(t, err)
 
-	sess.closeTerminalConn(conn)
+	sess.closeTerminalConn(mockConn)
 	assert.NotNil(t, sess.terminalConn)
 
-	sess.closeTerminalConn(sess.terminalConn)
+	sess.closeTerminalConn(conn)
 	assert.Nil(t, sess.terminalConn)
 }

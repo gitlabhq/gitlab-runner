@@ -4,13 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -54,56 +52,47 @@ func TestInteractiveTerminal(t *testing.T) {
 	}
 
 	// Start build
-	buildLogWriter := bytes.NewBuffer(nil)
 	go func() {
-		_ = build.Run(&common.Config{}, &common.Trace{Writer: buildLogWriter})
+		_ = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	}()
-
-	buildStarted := make(chan struct{})
-	go func() {
-		for {
-			if buildLogWriter.Len() == 0 {
-				time.Sleep(1 * time.Second)
-				continue
-			}
-
-			ln, _ := buildLogWriter.ReadBytes('\n')
-
-			// Print out to the user to aid debugging
-			if len(ln) > 0 {
-				fmt.Fprint(os.Stdout, string(ln))
-			}
-
-			// We signal that the build has start and we can start using terminal.
-			if strings.Contains(string(ln), "sleep") {
-				buildStarted <- struct{}{}
-			}
-		}
-	}()
-
-	<-buildStarted
 
 	srv := httptest.NewServer(build.Session.Mux())
 	defer srv.Close()
 
-	u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: build.Session.Endpoint + "/exec"}
-	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{build.Session.Token}})
-	require.NoError(t, err)
+	u := url.URL{
+		Scheme: "ws",
+		Host:   srv.Listener.Addr().String(),
+		Path:   build.Session.Endpoint + "/exec",
+	}
+	headers := http.Header{
+		"Authorization": []string{build.Session.Token},
+	}
 
-	assert.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
-
-	defer func() {
-		if conn != nil {
-			defer conn.Close()
+	var retries int
+	var webSocket *websocket.Conn
+	for retries < 500 {
+		conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
+		if err != nil {
+			retries++
+			time.Sleep(50 * time.Millisecond)
+			continue
 		}
-	}()
 
-	err = conn.WriteMessage(websocket.BinaryMessage, []byte("uname\n"))
+		require.NoError(t, err)
+		require.NotNil(t, conn)
+		require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+		webSocket = conn
+		break
+	}
+
+	defer webSocket.Close()
+
+	err = webSocket.WriteMessage(websocket.BinaryMessage, []byte("uname\n"))
 	require.NoError(t, err)
 
 	var unameResult string
 	for i := 0; i < 3; i++ {
-		typ, b, err := conn.ReadMessage()
+		typ, b, err := webSocket.ReadMessage()
 		require.NoError(t, err)
 		assert.Equal(t, websocket.BinaryMessage, typ)
 		unameResult = string(b)
@@ -136,8 +125,8 @@ func TestCommandExecutor_Connect_Timeout(t *testing.T) {
 		},
 	}, nil)
 
-	buildLogWriter := bytes.NewBuffer(nil)
-	s.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: buildLogWriter}, logrus.NewEntry(logrus.New()))
+	var buildLogWriter bytes.Buffer
+	s.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: &buildLogWriter}, logrus.NewEntry(logrus.New()))
 
 	conn, err := s.Connect()
 	assert.Error(t, err)
@@ -273,12 +262,29 @@ func TestTerminalConn_Start(t *testing.T) {
 
 	srv := httptest.NewServer(session.Mux())
 
-	u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: session.Endpoint + "/exec"}
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{"validToken"}})
+	u := url.URL{
+		Scheme: "ws",
+		Host:   srv.Listener.Addr().String(),
+		Path:   session.Endpoint + "/exec",
+	}
+	headers := http.Header{
+		"Authorization": []string{"validToken"},
+	}
+
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
+	require.NoError(t, err)
+	require.NotNil(t, conn)
+	require.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
+
+	defer conn.Close()
 
 	go func() {
 		for {
-			conn.WriteMessage(websocket.BinaryMessage, []byte("data"))
+			err := conn.WriteMessage(websocket.BinaryMessage, []byte("data"))
+			if err != nil {
+				return
+			}
+
 			time.Sleep(time.Second)
 		}
 	}()
