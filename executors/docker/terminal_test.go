@@ -109,35 +109,6 @@ func TestInteractiveTerminal(t *testing.T) {
 	assert.Contains(t, string(tty), "Linux")
 }
 
-func TestCommandExecutor_Connect_Timeout(t *testing.T) {
-	c := &docker_helpers.MockClient{}
-
-	s := commandExecutor{
-		executor: executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				Context: context.Background(),
-				BuildShell: &common.ShellConfiguration{
-					DockerCommand: []string{"/bin/sh"},
-				},
-			},
-			client: c,
-		},
-		buildContainer: &types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{
-				ID: "1234",
-			},
-		},
-	}
-	c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
-				Running: false,
-			},
-		},
-	}, nil)
-
-}
-
 func TestCommandExecutor_Connect(t *testing.T) {
 	tests := []struct {
 		name                  string
