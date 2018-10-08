@@ -137,7 +137,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 			expectedErr:           errors.New("container not found"),
 		},
 		{
-			name: "Not build container",
+			name: "No build container",
 			buildContainerRunning: false,
 			hasBuildContainer:     false,
 			expectedErr:           buildContainerTerminalTimeout{},
@@ -147,6 +147,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			c := &docker_helpers.MockClient{}
+			defer c.AssertExpectations(t)
 
 			s := commandExecutor{
 				executor: executor{
@@ -166,15 +167,15 @@ func TestCommandExecutor_Connect(t *testing.T) {
 						ID: "1234",
 					},
 				}
-			}
 
-			c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
-						Running: test.buildContainerRunning,
+				c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
+					ContainerJSONBase: &types.ContainerJSONBase{
+						State: &types.ContainerState{
+							Running: test.buildContainerRunning,
+						},
 					},
-				},
-			}, test.containerInspectErr)
+				}, test.containerInspectErr)
+			}
 
 			conn, err := s.Connect()
 
@@ -213,6 +214,7 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			c := &docker_helpers.MockClient{}
+			defer c.AssertExpectations(t)
 
 			s := commandExecutor{
 				executor: executor{
@@ -242,12 +244,14 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 			c.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(
 				types.IDResponse{},
 				test.containerExecCreateErr,
-			)
+			).Once()
 
-			c.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(
-				types.HijackedResponse{},
-				test.containerExecAttachErr,
-			)
+			if test.containerExecCreateErr == nil {
+				c.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(
+					types.HijackedResponse{},
+					test.containerExecAttachErr,
+				).Once()
+			}
 
 			conn, err := s.Connect()
 			require.NoError(t, err)
@@ -308,6 +312,7 @@ func (nopConn) SetWriteDeadline(t time.Time) error {
 
 func TestTerminalConn_Start(t *testing.T) {
 	c := &docker_helpers.MockClient{}
+	defer c.AssertExpectations(t)
 
 	s := commandExecutor{
 		executor: executor{

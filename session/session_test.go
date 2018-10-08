@@ -184,6 +184,7 @@ func TestCloseTerminalConn(t *testing.T) {
 	}
 
 	mockConn := new(terminal.MockConn)
+	defer mockConn.AssertExpectations(t)
 	mockConn.On("Close").Return(nil).Once()
 
 	sess, err := NewSession(nil)
