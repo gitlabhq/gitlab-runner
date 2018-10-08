@@ -68,6 +68,7 @@ func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON,
 func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
 	s.Lock()
 	defer s.Unlock()
+
 	if s.buildContainer == nil {
 		var err error
 
