@@ -33,7 +33,6 @@ func (s *commandExecutor) watchForRunningBuildContainer(deadline time.Time) (str
 		}
 	}
 
-	s.BuildLogger.Errorln("Timed out waiting for the container to start the terminal. Please retry")
 	return "", errors.New("timeout for waiting for build container")
 }
 
@@ -87,14 +86,14 @@ func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, d
 	exec, err := t.client.ContainerExecCreate(t.ctx, t.containerID, execConfig)
 	if err != nil {
 		t.logger.Errorln("Failed to create exec container for terminal:", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, "failed to create exec to build container", http.StatusInternalServerError)
 		return
 	}
 
 	resp, err := t.client.ContainerExecAttach(t.ctx, exec.ID, execConfig)
 	if err != nil {
 		t.logger.Errorln("Failed to exec attach to container for terminal:", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, "failed to attach tty to build container", http.StatusInternalServerError)
 		return
 	}
 

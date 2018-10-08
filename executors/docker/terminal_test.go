@@ -2,7 +2,6 @@ package docker
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"net"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -109,6 +107,9 @@ func TestCommandExecutor_Connect_Timeout(t *testing.T) {
 		executor: executor{
 			AbstractExecutor: executors.AbstractExecutor{
 				Context: context.Background(),
+				BuildShell: &common.ShellConfiguration{
+					DockerCommand: []string{"/bin/sh"},
+				},
 			},
 			client: c,
 		},
@@ -126,46 +127,65 @@ func TestCommandExecutor_Connect_Timeout(t *testing.T) {
 		},
 	}, nil)
 
-	var buildLogWriter bytes.Buffer
-	s.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: &buildLogWriter}, logrus.NewEntry(logrus.New()))
-
-	conn, err := s.Connect()
-	assert.Error(t, err)
-	assert.Nil(t, conn)
-	assert.Contains(t, buildLogWriter.String(), "Timed out waiting for the container to start the terminal. Please retry")
 }
 
 func TestCommandExecutor_Connect(t *testing.T) {
-	c := &docker_helpers.MockClient{}
-
-	s := commandExecutor{
-		executor: executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				Context: context.Background(),
-				BuildShell: &common.ShellConfiguration{
-					DockerCommand: []string{"/bin/sh"},
-				},
-			},
-			client: c,
+	tests := []struct {
+		name                  string
+		buildContainerRunning bool
+	}{
+		{
+			name: "Connect Timeout",
+			buildContainerRunning: false,
 		},
-		buildContainer: &types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{
-				ID: "1234",
-			},
+		{
+			name: "Successful connect",
+			buildContainerRunning: true,
 		},
 	}
-	c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
-				Running: true,
-			},
-		},
-	}, nil)
 
-	conn, err := s.Connect()
-	assert.NoError(t, err)
-	assert.NotNil(t, conn)
-	assert.IsType(t, terminalConn{}, conn)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			c := &docker_helpers.MockClient{}
+
+			s := commandExecutor{
+				executor: executor{
+					AbstractExecutor: executors.AbstractExecutor{
+						Context: context.Background(),
+						BuildShell: &common.ShellConfiguration{
+							DockerCommand: []string{"/bin/sh"},
+						},
+					},
+					client: c,
+				},
+				buildContainer: &types.ContainerJSON{
+					ContainerJSONBase: &types.ContainerJSONBase{
+						ID: "1234",
+					},
+				},
+			}
+			c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						Running: test.buildContainerRunning,
+					},
+				},
+			}, nil)
+
+			conn, err := s.Connect()
+
+			if test.buildContainerRunning {
+				assert.NoError(t, err)
+				assert.NotNil(t, conn)
+				assert.IsType(t, terminalConn{}, conn)
+				return
+			}
+
+			assert.EqualError(t, err, "timeout for waiting for build container")
+			assert.Nil(t, conn)
+		})
+	}
+
 }
 
 func TestTerminalConn_FailToStart(t *testing.T) {
