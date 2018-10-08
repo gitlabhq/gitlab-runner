@@ -536,6 +536,7 @@ found in the separate [runners autoscale documentation](autoscale.md).
 
 | Parameter           | Description |
 |---------------------|-------------|
+| `MaxGrowthRate`     | The maximum number of machines that can be added to the runner in parallel. Defaults to 0 (no limit) |
 | `IdleCount`         | Number of machines, that need to be created and waiting in _Idle_ state. |
 | `IdleTime`          | Time (in seconds) for machine to be in _Idle_ state before it is removed. |
 | `[[runners.machine.autoscaling]]` | Multiple sections each containing overrides for autoscaling configuration. The last section with the expression matching the current time is selected. |
