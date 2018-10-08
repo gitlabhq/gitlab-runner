@@ -889,6 +889,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 			CpusetCpus:        e.Config.Docker.CPUSetCPUs,
 			NanoCPUs:          nanoCPUs,
 			Devices:           e.devices,
+			OomKillDisable:    e.Config.Docker.GetOomKillDisable(),
 		},
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
