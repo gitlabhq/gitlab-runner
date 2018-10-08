@@ -9,7 +9,7 @@ stages:
 - cleanup
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-1
   GOROOT: /usr/local/go
 
 before_script:
@@ -29,7 +29,7 @@ image: $CI_IMAGE
   services:
   - docker:dind
   variables: &docker_variables
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-1
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2375
   tags:
@@ -154,6 +154,25 @@ tests definitions:
     expire_in: 7d
   tags:
   - gitlab-org
+
+dep check:
+  <<: *except_docs
+  stage: prebuild
+  cache: {}
+  dependencies:
+  script:
+  - make dep_check
+
+dep status:
+  <<: *except_docs
+  stage: prebuild
+  cache: {}
+  dependencies:
+  script:
+  - make dep_status
+  only:
+    variables:
+    - $CI_DEP_STATUS_ENABLED
 
 #
 # Test stage
@@ -480,3 +499,4 @@ static QA:
       jq -C . gl-code-quality-report.json
       exit 1
     fi
+
