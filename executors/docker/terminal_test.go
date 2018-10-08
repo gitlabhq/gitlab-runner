@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -89,15 +90,23 @@ func TestInteractiveTerminal(t *testing.T) {
 	err = webSocket.WriteMessage(websocket.BinaryMessage, []byte("uname\n"))
 	require.NoError(t, err)
 
-	var unameResult string
-	for i := 0; i < 3; i++ {
+	readStarted := time.Now()
+	var tty []byte
+	for time.Since(readStarted) < 5*time.Second {
 		typ, b, err := webSocket.ReadMessage()
 		require.NoError(t, err)
-		assert.Equal(t, websocket.BinaryMessage, typ)
-		unameResult = string(b)
+		require.Equal(t, websocket.BinaryMessage, typ)
+		tty = append(tty, b...)
+
+		if strings.Contains(string(b), "Linux") {
+			break
+		}
+
+		time.Sleep(50 * time.Microsecond)
 	}
 
-	assert.Contains(t, unameResult, "Linux")
+	t.Log(string(tty))
+	assert.Contains(t, string(tty), "Linux")
 }
 
 func TestCommandExecutor_Connect_Timeout(t *testing.T) {
