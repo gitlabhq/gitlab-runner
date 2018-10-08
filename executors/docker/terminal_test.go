@@ -133,14 +133,34 @@ func TestCommandExecutor_Connect(t *testing.T) {
 	tests := []struct {
 		name                  string
 		buildContainerRunning bool
+		hasBuildContainer     bool
+		containerInspectErr   error
+		expectedErr           error
 	}{
 		{
 			name: "Connect Timeout",
 			buildContainerRunning: false,
+			hasBuildContainer:     true,
+			expectedErr:           buildContainerTerminalTimeout{},
 		},
 		{
 			name: "Successful connect",
 			buildContainerRunning: true,
+			hasBuildContainer:     true,
+			containerInspectErr:   nil,
+		},
+		{
+			name: "Container inspect failed",
+			buildContainerRunning: false,
+			hasBuildContainer:     true,
+			containerInspectErr:   errors.New("container not found"),
+			expectedErr:           errors.New("container not found"),
+		},
+		{
+			name: "Not build container",
+			buildContainerRunning: false,
+			hasBuildContainer:     false,
+			expectedErr:           buildContainerTerminalTimeout{},
 		},
 	}
 
@@ -158,19 +178,23 @@ func TestCommandExecutor_Connect(t *testing.T) {
 					},
 					client: c,
 				},
-				buildContainer: &types.ContainerJSON{
+			}
+
+			if test.hasBuildContainer {
+				s.buildContainer = &types.ContainerJSON{
 					ContainerJSONBase: &types.ContainerJSONBase{
 						ID: "1234",
 					},
-				},
+				}
 			}
+
 			c.On("ContainerInspect", s.Context, "1234").Return(types.ContainerJSON{
 				ContainerJSONBase: &types.ContainerJSONBase{
 					State: &types.ContainerState{
 						Running: test.buildContainerRunning,
 					},
 				},
-			}, nil)
+			}, test.containerInspectErr)
 
 			conn, err := s.Connect()
 
@@ -181,7 +205,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 				return
 			}
 
-			assert.EqualError(t, err, "timeout for waiting for build container")
+			assert.EqualError(t, err, test.expectedErr.Error())
 			assert.Nil(t, conn)
 		})
 	}
