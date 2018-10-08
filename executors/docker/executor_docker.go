@@ -419,7 +419,7 @@ func (e *executor) createCacheVolume(containerName, containerPath string) (strin
 	}
 
 	e.Debugln("Waiting for cache container", resp.ID, "...")
-	err = e.waitForContainer(resp.ID)
+	err = e.waitForContainer(e.Context, resp.ID)
 	if err != nil {
 		e.temporary = append(e.temporary, resp.ID)
 		return "", err
@@ -954,14 +954,14 @@ func (e *executor) killContainer(id string, waitCh chan error) (err error) {
 	}
 }
 
-func (e *executor) waitForContainer(id string) error {
+func (e *executor) waitForContainer(ctx context.Context, id string) error {
 	e.Debugln("Waiting for container", id, "...")
 
 	retries := 0
 
 	// Use active wait
-	for {
-		container, err := e.client.ContainerInspect(e.Context, id)
+	for ctx.Err() == nil {
+		container, err := e.client.ContainerInspect(ctx, id)
 		if err != nil {
 			if docker_helpers.IsErrNotFound(err) {
 				return err
@@ -992,6 +992,8 @@ func (e *executor) waitForContainer(id string) error {
 
 		return nil
 	}
+
+	return ctx.Err()
 }
 
 func (e *executor) watchContainer(ctx context.Context, id string, input io.Reader) (err error) {
@@ -1037,7 +1039,7 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 
 	waitCh := make(chan error, 1)
 	go func() {
-		waitCh <- e.waitForContainer(id)
+		waitCh <- e.waitForContainer(e.Context, id)
 	}()
 
 	select {
@@ -1320,7 +1322,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 
 	waitResult := make(chan error, 1)
 	go func() {
-		waitResult <- e.waitForContainer(resp.ID)
+		waitResult <- e.waitForContainer(e.Context, resp.ID)
 	}()
 
 	// these are warnings and they don't make the build fail

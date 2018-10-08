@@ -148,7 +148,7 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "gitlab.com/gitlab-org/gitlab-terminal"
-  revision = "d523b4fd2bb3c8728724dce365809e09113430a9"
+  revision = "5af59b871b1bcc3f4b733f6db0ff3b6e8b247b92"
 
 ##
 ## Refrain innovations ;)

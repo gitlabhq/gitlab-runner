@@ -624,11 +624,11 @@
   revision = "a7cf72d604cdf0af6031dd5d54a4e513abeff0d4"
 
 [[projects]]
-  digest = "1:a0d8ffbd3d159d9d2f43aaca906c5c16d65cec791c5ab3259194f0113d10ce5e"
+  digest = "1:3b5bf7524bfc4a050d46210fa51e7e92f2371dcf64d86f15a9d70e2ceea26db1"
   name = "gitlab.com/gitlab-org/gitlab-terminal"
   packages = ["."]
   pruneopts = "N"
-  revision = "d523b4fd2bb3c8728724dce365809e09113430a9"
+  revision = "5af59b871b1bcc3f4b733f6db0ff3b6e8b247b92"
 
 [[projects]]
   digest = "1:90a0e11d13444dbf388ada729d5a9b8c57355de59924cb402c2a7711c3c306e6"

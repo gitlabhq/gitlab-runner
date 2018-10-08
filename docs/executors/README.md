@@ -95,7 +95,7 @@ Supported features by different executors:
 | Absolute paths: caching, artifacts           | ✗    | ✗       | ✗          | ✗         | ✗      | ✓          |
 | Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          |
 | Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          |
-| Interactive Web terminal                     | ✗    | ✓ (bash)| ✗          | ✗         | ✗      | ✓          |
+| Interactive Web terminal                     | ✗    | ✓ (bash)| ✗          | ✗         | ✓      | ✓          |
 
 Supported systems by different shells:
 

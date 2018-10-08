@@ -166,3 +166,33 @@ func TestKillFailedToClose(t *testing.T) {
 	// Even though an error occurred closing it still is removed.
 	assert.Nil(t, sess.terminalConn)
 }
+
+type fakeTerminalConn struct {
+	commands []string
+}
+
+func (fakeTerminalConn) Close() error {
+	return nil
+}
+
+func (fakeTerminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, disconnectCh chan error) {
+}
+
+func TestCloseTerminalConn(t *testing.T) {
+	conn := &fakeTerminalConn{
+		commands: []string{"command", "-c", "random"},
+	}
+
+	mockConn := new(terminal.MockConn)
+	mockConn.On("Close").Return(nil).Once()
+
+	sess, err := NewSession(nil)
+	sess.terminalConn = conn
+	require.NoError(t, err)
+
+	sess.closeTerminalConn(mockConn)
+	assert.NotNil(t, sess.terminalConn)
+
+	sess.closeTerminalConn(conn)
+	assert.Nil(t, sess.terminalConn)
+}
