@@ -3,6 +3,7 @@ package docker
 import (
 	"bytes"
 	"errors"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -12,6 +13,14 @@ import (
 type commandExecutor struct {
 	executor
 	buildContainer *types.ContainerJSON
+	sync.Mutex
+}
+
+func (s *commandExecutor) getBuildContainer() *types.ContainerJSON {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.buildContainer
 }
 
 func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -57,6 +66,8 @@ func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON,
 }
 
 func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
+	s.Lock()
+	defer s.Unlock()
 	if s.buildContainer == nil {
 		var err error
 

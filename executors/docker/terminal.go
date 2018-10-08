@@ -27,12 +27,13 @@ func (buildContainerTerminalTimeout) Error() string {
 
 func (s *commandExecutor) watchForRunningBuildContainer(deadline time.Time) (string, error) {
 	for time.Since(deadline) < 0 {
-		if s.buildContainer == nil {
+		buildContainer := s.getBuildContainer()
+		if buildContainer == nil {
 			time.Sleep(time.Second)
 			continue
 		}
 
-		containerID := s.buildContainer.ID
+		containerID := buildContainer.ID
 		container, err := s.client.ContainerInspect(s.Context, containerID)
 		if err != nil {
 			return "", err
