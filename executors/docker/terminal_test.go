@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -165,6 +166,78 @@ func TestCommandExecutor_Connect(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
 	assert.IsType(t, terminalConn{}, conn)
+}
+
+func TestTerminalConn_FailToStart(t *testing.T) {
+	tests := []struct {
+		name                   string
+		containerExecCreateErr error
+		containerExecAttachErr error
+	}{
+		{
+			name: "Failed to create exec container",
+			containerExecCreateErr: errors.New("failed to create exec container"),
+			containerExecAttachErr: nil,
+		},
+		{
+			name: "Failed to attach exec container",
+			containerExecCreateErr: nil,
+			containerExecAttachErr: errors.New("failed to attach exec container"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			c := &docker_helpers.MockClient{}
+
+			s := commandExecutor{
+				executor: executor{
+					AbstractExecutor: executors.AbstractExecutor{
+						Context: context.Background(),
+						BuildShell: &common.ShellConfiguration{
+							DockerCommand: []string{"/bin/sh"},
+						},
+					},
+					client: c,
+				},
+				buildContainer: &types.ContainerJSON{
+					ContainerJSONBase: &types.ContainerJSONBase{
+						ID: "1234",
+					},
+				},
+			}
+
+			c.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						Running: true,
+					},
+				},
+			}, nil)
+
+			c.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(
+				types.IDResponse{},
+				test.containerExecCreateErr,
+			)
+
+			c.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(
+				types.HijackedResponse{},
+				test.containerExecAttachErr,
+			)
+
+			conn, err := s.Connect()
+			require.NoError(t, err)
+
+			timeoutCh := make(chan error)
+			disconnectCh := make(chan error)
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "wss://example.com/foo", nil)
+			conn.Start(w, req, timeoutCh, disconnectCh)
+
+			resp := w.Result()
+			assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		})
+	}
 }
 
 type nopReader struct {
