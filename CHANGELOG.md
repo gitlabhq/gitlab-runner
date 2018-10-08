@@ -1,3 +1,23 @@
+v11.4.0-rc1 (2018-10-08)
+- Do not create apk cache !1017
+- Handle untracked files with Unicode characters in filenames. !913
+- Add metrics with concurrent and limit values !1019
+- Add a gitlab_runner_jobs_total metric !1018
+- Add a job duration histogram metric !1025
+- Filter content of X-Amz-Credential from logs !1028
+- Disable escaping project bucket in cache operations !1029
+- Fix example for session_server and added the note about where this section should be placed !1035
+- Fix job duration counting !1033
+- Log duration on job finishing log line !1034
+- Allow disabling docker entrypoint overwrite !965
+- Fix command and args assignment when creating containers with K8S executor !1010
+- Support json logging !1020
+- Change image for docs link checking !1043
+- Fix command that prepares the definitions of tests !1044
+- Add OomKillDisable option to Docker executor !1042
+- Add docker support for interactive web terminal !1008
+- Add support docker machine web terminal support !1046
+
 v 11.3.0 (2018-09-22)
 - Fix logrus secrets cleanup !990
 - Fix test failure detection !993
