@@ -268,7 +268,7 @@ func (b *Build) handleError(err error) error {
 
 	case context.DeadlineExceeded:
 		b.CurrentState = BuildRunRuntimeTimedout
-		return &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout())}
+		return &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()), FailureReason: RunnerExecutionTimeout}
 
 	default:
 		b.CurrentState = BuildRunRuntimeFinished
@@ -405,9 +405,14 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 			"duration": b.Duration(),
 		})
 
-		if _, ok := err.(*BuildError); ok {
+		if buildError, ok := err.(*BuildError); ok {
 			logger.SoftErrorln("Job failed:", err)
-			trace.Fail(err, ScriptFailure)
+
+			if buildError.FailureReason == RunnerExecutionTimeout {
+				trace.Fail(err, RunnerExecutionTimeout)
+			} else {
+				trace.Fail(err, ScriptFailure)
+			}
 		} else if err != nil {
 			logger.Errorln("Job failed (system failure):", err)
 			trace.Fail(err, RunnerSystemFailure)

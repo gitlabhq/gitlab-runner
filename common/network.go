@@ -25,6 +25,7 @@ const (
 	NoneFailure         JobFailureReason = ""
 	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
+	RunnerExecutionTimeout JobFailureReason = "runner_execution_timeout"
 )
 
 const (
