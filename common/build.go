@@ -379,6 +379,34 @@ func (b *Build) waitForTerminal(timeout time.Duration) {
 	}
 }
 
+func (b *Build) setTraceStatus(trace JobTrace, err error) {
+	logger := b.logger.WithFields(logrus.Fields{
+		"duration": b.Duration(),
+	})
+
+	if err == nil {
+		logger.Infoln("Job succeeded")
+		trace.Success()
+
+		return
+	}
+
+	if buildError, ok := err.(*BuildError); ok {
+		logger.SoftErrorln("Job failed:", err)
+
+		failureReason := ScriptFailure
+		if buildError.FailureReason != ScriptFailure {
+			failureReason = buildError.FailureReason
+		}
+		trace.Fail(err, failureReason)
+
+		return
+	}
+
+	logger.Errorln("Job failed (system failure):", err)
+	trace.Fail(err, RunnerSystemFailure)
+}
+
 func (b *Build) CurrentExecutorStage() ExecutorStage {
 	if b.executorStageResolver == nil {
 		b.executorStageResolver = func() ExecutorStage {
@@ -401,25 +429,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.CurrentState = BuildRunStatePending
 
 	defer func() {
-		logger := b.logger.WithFields(logrus.Fields{
-			"duration": b.Duration(),
-		})
-
-		if buildError, ok := err.(*BuildError); ok {
-			logger.SoftErrorln("Job failed:", err)
-
-			if buildError.FailureReason == RunnerExecutionTimeout {
-				trace.Fail(err, RunnerExecutionTimeout)
-			} else {
-				trace.Fail(err, ScriptFailure)
-			}
-		} else if err != nil {
-			logger.Errorln("Job failed (system failure):", err)
-			trace.Fail(err, RunnerSystemFailure)
-		} else {
-			logger.Infoln("Job succeeded")
-			trace.Success()
-		}
+		b.setTraceStatus(trace, err)
 
 		if executor != nil {
 			executor.Cleanup()
