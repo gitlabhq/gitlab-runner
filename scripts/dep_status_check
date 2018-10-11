@@ -1,0 +1,17 @@
+#!/bin/bash
+
+pkgBuildDir="${1}"
+outDir="$(pwd)/out"
+reportFile="${outDir}/dep_status"
+
+mkdir -p "${outDir}"
+cd "${pkgBuildDir}"
+
+dep status -v -old -json > "${reportFile}"
+
+if [ "$(cat "${reportFile}")" == "[]" ] ; then
+    exit 0
+fi
+
+jq -C . "${reportFile}"
+exit 1

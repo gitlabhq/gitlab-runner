@@ -56,9 +56,10 @@ export CGO_ENABLED ?= 0
 
 
 # Development Tools
+DEP = $(GOPATH_BIN)/dep
 GOX = $(GOPATH_BIN)/gox
 MOCKERY = $(GOPATH_BIN)/mockery
-DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
+DEVELOPMENT_TOOLS = $(DEP) $(GOX) $(MOCKERY)
 
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
 
@@ -371,6 +372,12 @@ development_setup:
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 
+dep_check: $(DEP)
+	@cd $(PKG_BUILD_DIR) && $(DEP) check
+
+dep_status: $(DEP)
+	@./scripts/dep_status_check $(PKG_BUILD_DIR)
+
 # local GOPATH
 $(GOPATH_SETUP): $(PKG_BUILD_DIR)
 	mkdir -p $(GOPATH_BIN)
@@ -381,6 +388,9 @@ $(PKG_BUILD_DIR):
 	ln -s ../../../.. $@
 
 # development tools
+$(DEP): $(GOPATH_SETUP)
+	go get github.com/golang/dep/cmd/dep
+
 $(GOX): $(GOPATH_SETUP)
 	go get github.com/mitchellh/gox
 
