@@ -207,6 +207,7 @@ const (
 	ArtifactFormatDefault ArtifactFormat = ""
 	ArtifactFormatZip     ArtifactFormat = "zip"
 	ArtifactFormatGzip    ArtifactFormat = "gzip"
+	ArtifactFormatRaw     ArtifactFormat = "raw"
 )
 
 type Artifact struct {
