@@ -139,7 +139,10 @@ if the only RC version was the _RC1_ released near 7th day of month.
     - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0)
         - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0` passing
     - [ ] deploy stable version to all production Runners
-    - [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to latest production version
+    - [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to latest production version: [link to MR]
+
+- [ ] After helm chart MR is merged ([link to MR]):
+    - [ ] update Runner's chart version [used by GitLab](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/app/models/clusters/applications/runner.rb): [link to MR]
 
 
 **RC release template**
