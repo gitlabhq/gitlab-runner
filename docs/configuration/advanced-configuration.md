@@ -310,7 +310,7 @@ This will use `/path/to/bind/from/host` of the CI host inside the container at
 
 If you want to use private registries as a source of images for your builds,
 you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
-[secret variable]. It can be set in both GitLab Variables section of
+[variable]. It can be set in both GitLab Variables section of
 a project and in the `config.toml` file.
 
 For a detailed example, visit the [Using Docker images documentation][priv-example].
@@ -740,5 +740,5 @@ It depends on what you'd like to do.
 [ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
 [priv-example]: https://docs.gitlab.com/ce/ci/docker/using_docker_images.html#define-an-image-from-a-private-docker-registry
-[secret variable]: https://docs.gitlab.com/ce/ci/variables/#secret-variables
+[variable]: https://docs.gitlab.com/ce/ci/variables/#variables
 [cronvendor]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/vendor/github.com/gorhill/cronexpr/README.md
