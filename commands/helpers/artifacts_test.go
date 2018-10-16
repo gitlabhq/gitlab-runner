@@ -7,8 +7,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -101,8 +103,7 @@ func (m *testNetwork) consumeGzipUpload(config common.JobCredentials, reader io.
 }
 
 func (m *testNetwork) consumeRawUpload(config common.JobCredentials, reader io.Reader, options common.ArtifactsOptions) common.UploadState {
-	var buffer bytes.Buffer
-	io.Copy(&buffer, reader)
+	io.Copy(ioutil.Discard, reader)
 
 	m.uploadedFiles = append(m.uploadedFiles, "raw")
 	m.uploadFormat = common.ArtifactFormatRaw
@@ -132,4 +133,9 @@ func (m *testNetwork) UploadRawArtifacts(config common.JobCredentials, reader io
 	}
 
 	return m.uploadState
+}
+
+func writeTestFile(t *testing.T, fileName string) {
+	err := ioutil.WriteFile(fileName, nil, 0600)
+	require.NoError(t, err, "Writing file:", fileName)
 }

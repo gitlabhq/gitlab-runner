@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -39,7 +38,7 @@ func TestArtifactsUploaderTooLarge(t *testing.T) {
 		},
 	}
 
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
 	removeHook := helpers.MakeFatalToPanic()
@@ -64,7 +63,7 @@ func TestArtifactsUploaderForbidden(t *testing.T) {
 		},
 	}
 
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
 	removeHook := helpers.MakeFatalToPanic()
@@ -92,7 +91,7 @@ func TestArtifactsUploaderRetry(t *testing.T) {
 		},
 	}
 
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
 	removeHook := helpers.MakeFatalToPanic()
@@ -117,7 +116,7 @@ func TestArtifactsUploaderDefaultSucceeded(t *testing.T) {
 		},
 	}
 
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
 	cmd.Execute(nil)
@@ -142,7 +141,7 @@ func TestArtifactsUploaderZipSucceeded(t *testing.T) {
 		},
 	}
 
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
 	cmd.Execute(nil)
@@ -168,10 +167,10 @@ func TestArtifactsUploaderGzipSendsMultipleFiles(t *testing.T) {
 		},
 	}
 
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
-	ioutil.WriteFile(artifactsTestArchivedFile2, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile2)
 	defer os.Remove(artifactsTestArchivedFile)
 
 	cmd.Execute(nil)
@@ -198,7 +197,7 @@ func TestArtifactsUploaderRawSucceeded(t *testing.T) {
 		},
 	}
 
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
 	cmd.Execute(nil)
@@ -224,10 +223,10 @@ func TestArtifactsUploaderRawDoesNotSendMultipleFiles(t *testing.T) {
 		},
 	}
 
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
-	ioutil.WriteFile(artifactsTestArchivedFile2, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile2)
 	defer os.Remove(artifactsTestArchivedFile)
 
 	removeHook := helpers.MakeFatalToPanic()

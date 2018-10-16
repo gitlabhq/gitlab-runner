@@ -3,7 +3,6 @@ package helpers
 import (
 	"archive/zip"
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -47,7 +46,7 @@ func TestCacheExtractorValidArchive(t *testing.T) {
 func TestCacheExtractorForInvalidArchive(t *testing.T) {
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
-	ioutil.WriteFile(cacheExtractorArchive, nil, 0600)
+	writeTestFile(t, cacheExtractorArchive)
 	defer os.Remove(cacheExtractorArchive)
 
 	cmd := CacheExtractorCommand{
