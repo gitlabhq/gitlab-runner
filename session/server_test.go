@@ -128,6 +128,7 @@ func TestFailedToGenerateCertificate(t *testing.T) {
 	}
 
 	m := certificate.MockGenerator{}
+	defer m.AssertExpectations(t)
 	m.On("Generate", mock.Anything).Return(tls.Certificate{}, []byte{}, errors.New("something went wrong"))
 
 	_, err := NewServer(cfg, nil, &m, fakeSessionFinder)
