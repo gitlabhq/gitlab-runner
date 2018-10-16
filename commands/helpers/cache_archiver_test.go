@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,7 +18,7 @@ const cacheArchiverArchive = "archive.zip"
 const cacheArchiverTestArchivedFile = "archive_file"
 
 func TestCacheArchiverIsUpToDate(t *testing.T) {
-	ioutil.WriteFile(cacheArchiverTestArchivedFile, nil, 0600)
+	writeTestFile(t, cacheArchiverTestArchivedFile)
 	defer os.Remove(cacheArchiverTestArchivedFile)
 
 	defer os.Remove(cacheArchiverArchive)

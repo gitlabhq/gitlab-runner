@@ -57,6 +57,7 @@ type FeaturesInfo struct {
 	Cache                   bool `json:"cache"`
 	Shared                  bool `json:"shared"`
 	UploadMultipleArtifacts bool `json:"upload_multiple_artifacts"`
+	UploadRawArtifacts      bool `json:"upload_raw_artifacts"`
 	Session                 bool `json:"session"`
 	Terminal                bool `json:"terminal"`
 }
@@ -207,6 +208,7 @@ const (
 	ArtifactFormatDefault ArtifactFormat = ""
 	ArtifactFormatZip     ArtifactFormat = "zip"
 	ArtifactFormatGzip    ArtifactFormat = "gzip"
+	ArtifactFormatRaw     ArtifactFormat = "raw"
 )
 
 type Artifact struct {
