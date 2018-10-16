@@ -41,22 +41,13 @@ func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
 	w.CloseWithError(err)
 }
 
-func (c *ArtifactsUploaderCommand) generateRawStream(w *io.PipeWriter) {
-	if len(c.sortedFiles()) > 1 {
-		w.CloseWithError(errors.New("only single file supported"))
-		return
+func (c *ArtifactsUploaderCommand) openRawStream() (io.ReadCloser, error) {
+	fileNames := c.sortedFiles()
+	if len(fileNames) > 1 {
+		return nil, errors.New("only one file can be send as raw")
 	}
 
-	fileName := c.sortedFiles()[0]
-	file, err := os.Open(fileName)
-	if err != nil {
-		w.CloseWithError(err)
-		return
-	}
-	defer file.Close()
-
-	_, err = io.Copy(w, file)
-	w.CloseWithError(err)
+	return os.Open(fileNames[0])
 }
 
 func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, error) {
@@ -81,9 +72,8 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 		return name + ".gz", pr, nil
 
 	case common.ArtifactFormatRaw:
-		pr, pw := io.Pipe()
-		go c.generateRawStream(pw)
-		return name, pr, nil
+		file, err := c.openRawStream()
+		return name, file, err
 
 	default:
 		return "", nil, fmt.Errorf("unsupported archive format: %s", c.Format)

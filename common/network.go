@@ -57,6 +57,7 @@ type FeaturesInfo struct {
 	Cache                   bool `json:"cache"`
 	Shared                  bool `json:"shared"`
 	UploadMultipleArtifacts bool `json:"upload_multiple_artifacts"`
+	UploadRawArtifacts      bool `json:"upload_raw_artifacts"`
 	Session                 bool `json:"session"`
 	Terminal                bool `json:"terminal"`
 }

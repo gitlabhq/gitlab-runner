@@ -183,6 +183,61 @@ func TestArtifactsUploaderGzipSendsMultipleFiles(t *testing.T) {
 	assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile2)
 }
 
+func TestArtifactsUploaderRawSucceeded(t *testing.T) {
+	network := &testNetwork{
+		uploadState: common.UploadSucceeded,
+	}
+	cmd := ArtifactsUploaderCommand{
+		JobCredentials: UploaderCredentials,
+		Format:         common.ArtifactFormatRaw,
+		Name:           "my-release",
+		Type:           "my-type",
+		network:        network,
+		fileArchiver: fileArchiver{
+			Paths: []string{artifactsTestArchivedFile},
+		},
+	}
+
+	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	defer os.Remove(artifactsTestArchivedFile)
+
+	cmd.Execute(nil)
+	assert.Equal(t, 1, network.uploadCalled)
+	assert.Equal(t, common.ArtifactFormatRaw, network.uploadFormat)
+	assert.Equal(t, "my-release", network.uploadName)
+	assert.Equal(t, "my-type", network.uploadType)
+	assert.Contains(t, network.uploadedFiles, "raw")
+}
+
+func TestArtifactsUploaderRawDoesNotSendMultipleFiles(t *testing.T) {
+	network := &testNetwork{
+		uploadState: common.UploadSucceeded,
+	}
+	cmd := ArtifactsUploaderCommand{
+		JobCredentials: UploaderCredentials,
+		Format:         common.ArtifactFormatRaw,
+		Name:           "junit.xml",
+		Type:           "junit",
+		network:        network,
+		fileArchiver: fileArchiver{
+			Paths: []string{artifactsTestArchivedFile, artifactsTestArchivedFile2},
+		},
+	}
+
+	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	defer os.Remove(artifactsTestArchivedFile)
+
+	ioutil.WriteFile(artifactsTestArchivedFile2, nil, 0600)
+	defer os.Remove(artifactsTestArchivedFile)
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+
+	assert.Panics(t, func() {
+		cmd.Execute(nil)
+	})
+}
+
 func TestArtifactsUploaderNoFilesDoNotGenerateError(t *testing.T) {
 	network := &testNetwork{
 		uploadState: common.UploadSucceeded,

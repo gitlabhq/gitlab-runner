@@ -100,6 +100,15 @@ func (m *testNetwork) consumeGzipUpload(config common.JobCredentials, reader io.
 	return m.uploadState
 }
 
+func (m *testNetwork) consumeRawUpload(config common.JobCredentials, reader io.Reader, options common.ArtifactsOptions) common.UploadState {
+	var buffer bytes.Buffer
+	io.Copy(&buffer, reader)
+
+	m.uploadedFiles = append(m.uploadedFiles, "raw")
+	m.uploadFormat = common.ArtifactFormatRaw
+	return m.uploadState
+}
+
 func (m *testNetwork) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, options common.ArtifactsOptions) common.UploadState {
 	m.uploadCalled++
 
@@ -113,6 +122,9 @@ func (m *testNetwork) UploadRawArtifacts(config common.JobCredentials, reader io
 
 		case common.ArtifactFormatGzip:
 			return m.consumeGzipUpload(config, reader, options)
+
+		case common.ArtifactFormatRaw:
+			return m.consumeRawUpload(config, reader, options)
 
 		default:
 			return common.UploadForbidden
