@@ -167,10 +167,10 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 
 	RegisterExecutor("build-run-prepare-failure-on-build-error", &p)
 
-	successfulBuild, err := GetSuccessfulBuild()
+	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		JobResponse: successfulBuild,
+		JobResponse: failedBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-failure-on-build-error",
@@ -205,10 +205,10 @@ func TestPrepareFailureOnExecutionTimeout(t *testing.T) {
 
 	RegisterExecutor("build-run-prepare-failure-on-execution-timeout", &p)
 
-	successfulBuild, err := GetSuccessfulBuild()
+	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
 	build := &Build{
-		JobResponse: successfulBuild,
+		JobResponse: failedBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
 				Executor: "build-run-prepare-failure-on-execution-timeout",
