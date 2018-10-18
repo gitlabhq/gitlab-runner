@@ -294,6 +294,7 @@ git 1.7.1:
 .coverage_job: &coverage_job
   stage: coverage
   image: golang:1.10
+  when: always
 
 test coverage report: &test_coverage_report
   <<: *coverage_job
