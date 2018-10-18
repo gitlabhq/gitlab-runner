@@ -394,10 +394,11 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	if buildError, ok := err.(*BuildError); ok {
 		logger.SoftErrorln("Job failed:", err)
 
-		failureReason := ScriptFailure
-		if buildError.FailureReason != ScriptFailure {
-			failureReason = buildError.FailureReason
+		failureReason := buildError.FailureReason
+		if failureReason == "" {
+			failureReason = ScriptFailure
 		}
+
 		trace.Fail(err, failureReason)
 
 		return
