@@ -9,7 +9,7 @@ stages:
 - cleanup
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-1
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
   GOROOT: /usr/local/go
 
 before_script:
@@ -29,7 +29,7 @@ image: $CI_IMAGE
   services:
   - docker:dind
   variables: &docker_variables
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-1
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2375
   tags:
@@ -316,6 +316,7 @@ race conditions detector:
 
 test junit report:
   <<: *coverage_job
+  image: $CI_IMAGE
   script:
   - source ci/touch_make_dependencies
   - make parallel_test_junit_report

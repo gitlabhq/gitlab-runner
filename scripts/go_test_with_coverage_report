@@ -164,7 +164,6 @@ computeJUnitReport() {
 
     cat .testoutput/*.${output}.output.txt > "${concatenatedOutputFile}"
 
-    go get -u github.com/jstemmer/go-junit-report
     go-junit-report < "${concatenatedOutputFile}" > "${reportDirectory}/report.xml"
 }
 
