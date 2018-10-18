@@ -156,6 +156,18 @@ computeCoverageReport() {
     fi
 }
 
+computeJUnitReport() {
+    local reportDirectory="out/junit"
+    local concatenatedOutputFile="/tmp/test-output.txt"
+
+    mkdir -p "${reportDirectory}"
+
+    cat .testoutput/*.${output}.output.txt > "${concatenatedOutputFile}"
+
+    go get -u github.com/jstemmer/go-junit-report
+    go-junit-report < "${concatenatedOutputFile}" > "${reportDirectory}/report.xml"
+}
+
 case "$1" in
     prepare)
         prepareTestCommands
@@ -165,5 +177,8 @@ case "$1" in
         ;;
     coverage)
         computeCoverageReport
+        ;;
+    junit)
+        computeJUnitReport
         ;;
 esac

@@ -138,6 +138,10 @@ parallel_test_coverage_report: $(GOPATH_SETUP)
 	# Preparing coverage report
 	@./scripts/go_test_with_coverage_report coverage
 
+parallel_test_junit_report: $(GOPATH_SETUP)
+	# Preparing jUnit test report
+	@./scripts/go_test_with_coverage_report junit
+
 pull_images_for_tests: $(GOPATH_SETUP)
 	# Pulling images required for some tests
 	@go run ./scripts/pull-images-for-tests/main.go

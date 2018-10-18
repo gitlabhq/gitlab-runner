@@ -291,10 +291,12 @@ git 1.7.1:
 # Coverage stage
 #
 
-test coverage report: &test_coverage_report
-  <<: *except_docs
+.coverage_job: &coverage_job
   stage: coverage
   image: golang:1.10
+
+test coverage report: &test_coverage_report
+  <<: *coverage_job
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
   script:
     - source ci/touch_make_dependencies
@@ -306,12 +308,19 @@ test coverage report: &test_coverage_report
     expire_in: 7d
 
 race conditions detector:
-  <<: *except_docs
-  stage: coverage
-  image: golang:1.10
+  <<: *test_coverage_report
   script:
   - source ci/touch_make_dependencies
   - make check_race_conditions
+
+test junit report:
+  <<: *coverage_job
+  script:
+  - source ci/touch_make_dependencies
+  - make parallel_test_junit_report
+  artifacts:
+    reports:
+      junit: out/junit/report.xml
 
 #
 # Build stage
