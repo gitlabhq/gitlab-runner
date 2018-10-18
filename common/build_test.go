@@ -179,6 +179,48 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	}
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.IsType(t, err, &BuildError{})
+	if buildError, ok := err.(*BuildError); ok {
+		assert.Equal(t, buildError.FailureReason, ScriptFailure)
+	}
+}
+
+func TestPrepareFailureOnExecutionTimeout(t *testing.T) {
+	e := MockExecutor{}
+	defer e.AssertExpectations(t)
+
+	p := MockExecutorProvider{}
+	defer p.AssertExpectations(t)
+
+	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
+	p.On("Create").Return(&e).Times(1)
+
+	// Prepare plan
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(&BuildError{FailureReason: RunnerExecutionTimeout}).Times(1)
+	e.On("Cleanup").Return().Times(1)
+
+	RegisterExecutor("build-run-prepare-failure-on-execution-timeout", &p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		JobResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-prepare-failure-on-execution-timeout",
+			},
+		},
+	}
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.IsType(t, err, &BuildError{})
+	if buildError, ok := err.(*BuildError); ok {
+		assert.Equal(t, buildError.FailureReason, RunnerExecutionTimeout)
+	}
 }
 
 func matchBuildStage(buildStage BuildStage) interface{} {
