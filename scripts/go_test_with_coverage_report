@@ -41,10 +41,10 @@ prepareTestCommands() {
 
         local tempFile=$(mktemp)
         local exitCode=0
-        go test -list "Test.*" "${pkg}" > ${tempFile} || exitCode=1
+        go test -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
 
-        local tests=$(grep "^Test" ${tempFile})
-        rm ${tempFile}
+        local tests=$(grep "^Test" "${tempFile}")
+        rm "${tempFile}"
 
         if [[ ${exitCode} -ne 0 ]]; then
             exit ${exitCode}
@@ -138,7 +138,7 @@ computeCoverageReport() {
     local htmlReportFile="${reportDirectory}/coverprofile.${output}.html"
     local textReportFile="${reportDirectory}/coverprofile.${output}.txt"
 
-    mkdir -p ${reportDirectory}
+    mkdir -p "${reportDirectory}"
 
     echo "mode: ${coverMode}" > ${sourceFile}
     grep -h -v -e "^mode:" -e "executors/docker/bindata.go" .cover/*.${coverMode}.cover.txt >> ${sourceFile}
