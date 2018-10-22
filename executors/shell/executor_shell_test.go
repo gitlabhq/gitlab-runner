@@ -215,7 +215,8 @@ func TestBuildWithIndexLock(t *testing.T) {
 		assert.NoError(t, err)
 
 		build.JobResponse.AllowGitFetch = true
-		ioutil.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
+		err = ioutil.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
+		require.NoError(t, err)
 
 		err = runBuild(t, build)
 		assert.NoError(t, err)
@@ -236,7 +237,8 @@ func TestBuildWithShallowLock(t *testing.T) {
 		err = runBuild(t, build)
 		assert.NoError(t, err)
 
-		ioutil.WriteFile(build.BuildDir+"/.git/shallow.lock", []byte{}, os.ModeSticky)
+		err = ioutil.WriteFile(build.BuildDir+"/.git/shallow.lock", []byte{}, os.ModeSticky)
+		require.NoError(t, err)
 
 		err = runBuild(t, build)
 		assert.NoError(t, err)
@@ -254,7 +256,8 @@ func TestBuildWithHeadLock(t *testing.T) {
 		assert.NoError(t, err)
 
 		build.JobResponse.AllowGitFetch = true
-		ioutil.WriteFile(build.BuildDir+"/.git/HEAD.lock", []byte{}, os.ModeSticky)
+		err = ioutil.WriteFile(build.BuildDir+"/.git/HEAD.lock", []byte{}, os.ModeSticky)
+		require.NoError(t, err)
 
 		err = runBuild(t, build)
 		assert.NoError(t, err)
@@ -273,8 +276,10 @@ func TestBuildWithGitLFSHook(t *testing.T) {
 
 		gitLFSPostCheckoutHook := "#!/bin/sh\necho 'running git lfs hook' >&2\nexit 2\n"
 
-		os.MkdirAll(build.BuildDir+"/.git/hooks/", 0755)
-		ioutil.WriteFile(build.BuildDir+"/.git/hooks/post-checkout", []byte(gitLFSPostCheckoutHook), 0777)
+		err = os.MkdirAll(build.BuildDir+"/.git/hooks/", 0755)
+		require.NoError(t, err)
+		err = ioutil.WriteFile(build.BuildDir+"/.git/hooks/post-checkout", []byte(gitLFSPostCheckoutHook), 0777)
+		require.NoError(t, err)
 		build.JobResponse.AllowGitFetch = true
 
 		err = runBuild(t, build)
@@ -526,7 +531,8 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 
 		// modify submodule and commit
 		modifySubmoduleBeforeCommit := "commited change"
-		ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleBeforeCommit), os.ModeSticky)
+		err = ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleBeforeCommit), os.ModeSticky)
+		require.NoError(t, err)
 		_, err = gitInDir(submoduleDir, "add", "README.md")
 		assert.NoError(t, err)
 		_, err = gitInDir(submoduleDir, "config", "user.name", "test")
@@ -546,8 +552,9 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 		assert.NoError(t, err)
 
 		// modify submodule without commit before second build
-		modifySubmoduleAfterCommit := "not commited change"
-		ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleAfterCommit), os.ModeSticky)
+		modifySubmoduleAfterCommit := "not committed change"
+		err = ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleAfterCommit), os.ModeSticky)
+		require.NoError(t, err)
 
 		build.JobResponse.AllowGitFetch = true
 		out, err = runBuildReturningOutput(t, build)
