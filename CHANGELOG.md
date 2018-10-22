@@ -1,4 +1,4 @@
-v 11.4.0-rc1 (2018-10-08)
+v 11.4.0 (2018-10-22)
 - Do not create apk cache !1017
 - Handle untracked files with Unicode characters in filenames. !913
 - Add metrics with concurrent and limit values !1019
