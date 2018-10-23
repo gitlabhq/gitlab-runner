@@ -350,45 +350,60 @@ func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider Exe
 	return
 }
 
-func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) {
+func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) error {
 	if b.Session == nil || !b.Session.Connected() {
-		return
+		return nil
 	}
+
+	timeout = b.getTerminalTimeout(ctx, timeout)
 
 	b.logger.Infoln(
 		fmt.Sprintf(
 			"Terminal is connected, will time out in %s...",
-			timeout,
+			// TODO: switch to timeout.Round(time.Second) after upgrading to Go 1.9+
+			roundDuration(timeout, time.Second),
 		),
 	)
 
 	select {
 	case <-ctx.Done():
-		b.Log().Infoln("Build cancelled, killing session")
 		err := b.Session.Kill()
 		if err != nil {
 			b.Log().WithError(err).Warn("Failed to kill session")
 		}
+		return errors.New("build cancelled, killing session")
 	case <-time.After(timeout):
 		err := fmt.Errorf(
 			"Terminal session timed out (maximum time allowed - %s)",
-			timeout,
+			// TODO: switch to timeout.Round(time.Second) after upgrading to Go 1.9+
+			roundDuration(timeout, time.Second),
 		)
 		b.logger.Infoln(err.Error())
-		b.Log().WithError(err).Debugln("Connection closed")
 		b.Session.TimeoutCh <- err
+		return err
 	case err := <-b.Session.DisconnectCh:
 		b.logger.Infoln("Terminal disconnected")
-		b.Log().WithError(err).Debugln("Terminal disconnected")
+		return fmt.Errorf("terminal disconnected: %v", err)
 	case signal := <-b.SystemInterrupt:
-		err := fmt.Errorf("aborted: %v", signal)
 		b.logger.Infoln("Terminal disconnected")
-		b.Log().WithError(err).Debugln("Terminal disconnected")
-		err = b.Session.Kill()
+		err := b.Session.Kill()
 		if err != nil {
 			b.Log().WithError(err).Warn("Failed to kill session")
 		}
+		return fmt.Errorf("terminal disconnected by system signal: %v", signal)
 	}
+}
+
+// getTerminalTimeout checks if the the job timeout comes before the
+// configured terminal timeout.
+func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) time.Duration {
+	expiryTime, _ := ctx.Deadline()
+
+	if expiryTime.Before(time.Now().Add(timeout)) {
+		timeout = expiryTime.Sub(time.Now())
+	}
+
+	return timeout
 }
 
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
@@ -472,11 +487,15 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	executor, err = b.retryCreateExecutor(options, provider, b.logger)
 	if err == nil {
 		err = b.run(ctx, executor)
-		b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout())
+		if err := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); err != nil {
+			b.Log().WithError(err).Debug("Stopped waiting for terminal")
+		}
 	}
+
 	if executor != nil {
 		executor.Finish(err)
 	}
+
 	return err
 }
 
