@@ -5,12 +5,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type ServiceLogHook struct {
+type systemLogger interface {
 	service.Logger
+}
+
+type systemService interface {
+	service.Service
+}
+
+type SystemServiceLogHook struct {
+	systemLogger
 	Level logrus.Level
 }
 
-func (s *ServiceLogHook) Levels() []logrus.Level {
+func (s *SystemServiceLogHook) Levels() []logrus.Level {
 	return []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
@@ -20,7 +28,7 @@ func (s *ServiceLogHook) Levels() []logrus.Level {
 	}
 }
 
-func (s *ServiceLogHook) Fire(entry *logrus.Entry) error {
+func (s *SystemServiceLogHook) Fire(entry *logrus.Entry) error {
 	if entry.Level > s.Level {
 		return nil
 	}
@@ -42,12 +50,16 @@ func (s *ServiceLogHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-func SetSystemLogger(svc service.Service) {
+func SetSystemLogger(logrusLogger *logrus.Logger, svc systemService) {
 	logger, err := svc.SystemLogger(nil)
 
 	if err == nil {
-		logrus.AddHook(&ServiceLogHook{logger, logrus.GetLevel()})
+		hook := new(SystemServiceLogHook)
+		hook.systemLogger = logger
+		hook.Level = logrus.GetLevel()
+
+		logrusLogger.AddHook(hook)
 	} else {
-		logrus.WithError(err).Error("Error while setting up the system logger")
+		logrusLogger.WithError(err).Error("Error while setting up the system logger")
 	}
 }
