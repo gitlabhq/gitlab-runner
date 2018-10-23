@@ -39,11 +39,13 @@ prepareTestCommands() {
 
         echo "Listing tests for ${pkg} package"
 
-        local tempFile=$(mktemp)
+        local tempFile
+        tempFile=$(mktemp)
         local exitCode=0
         go test -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
 
-        local tests=$(grep "^Test" "${tempFile}")
+        local tests
+        tests=$(grep "^Test" "${tempFile}")
         rm "${tempFile}"
 
         if [[ ${exitCode} -ne 0 ]]; then
@@ -86,7 +88,9 @@ executeTestCommand() {
 
     local options=""
 
-    local pkgSlug=$(echo "${pkg}" | tr "/" "-")
+    local pkgSlug
+
+    pkgSlug=$(echo "${pkg}" | tr "/" "-")
 
     if [[ ${TESTFLAGS} = *"-cover"* ]]; then
         mkdir -p ".cover"
@@ -113,9 +117,13 @@ executeTestPart() {
     rm -rf ".cover/"
     rm -rf ".testoutput/"
 
-    local numberOfDefinitions=$(< "${testsDefinitions}" wc -l)
-    local executionSize=$((numberOfDefinitions/SUITE_TOTAL+1))
-    local executionOffset=$((SUITE_INDEX*executionSize+1))
+    local numberOfDefinitions
+    local executionSize
+    local executionOffset
+
+    numberOfDefinitions=$(< "${testsDefinitions}" wc -l)
+    executionSize=$((numberOfDefinitions/SUITE_TOTAL+1))
+    executionOffset=$((SUITE_INDEX*executionSize+1))
 
     printMessage "Number of definitions: ${numberOfDefinitions}"
     printMessage "Suite size: ${SUITE_TOTAL}"
@@ -149,7 +157,8 @@ computeCoverageReport() {
     go tool cover -o ${textReportFile} -func=${sourceFile}
 
     printMessage "General coverage percentage:"
-    local total=$(grep "total" "${textReportFile}" || echo "")
+    local total
+    total=$(grep "total" "${textReportFile}" || echo "")
 
     if [[ -n "${total}" ]]; then
         echo "${output} ${total}"
