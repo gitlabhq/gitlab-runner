@@ -45,7 +45,7 @@ prepareTestCommands() {
         go test -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
 
         local tests
-        tests=$(grep "^Test" "${tempFile}")
+        tests=$(grep "^Test" "${tempFile}" || true)
         rm "${tempFile}"
 
         if [[ ${exitCode} -ne 0 ]]; then
