@@ -368,6 +368,6 @@ on other nodes.
 [k8s-host-path-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 [k8s-pvc-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim
 [k8s-secret-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#secret
-[k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configmap/
+[k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
 [k8s-empty-dir-volume-docs]:https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
 [advanced-configuration-helper-image]: ../configuration/advanced-configuration.md#helper-image

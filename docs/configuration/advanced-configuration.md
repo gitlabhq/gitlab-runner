@@ -741,4 +741,4 @@ It depends on what you'd like to do.
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
 [priv-example]: https://docs.gitlab.com/ce/ci/docker/using_docker_images.html#define-an-image-from-a-private-docker-registry
 [variable]: https://docs.gitlab.com/ce/ci/variables/#variables
-[cronvendor]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/vendor/github.com/gorhill/cronexpr/README.md
+[cronvendor]: https://github.com/gorhill/cronexpr#implementation
