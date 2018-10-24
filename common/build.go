@@ -270,7 +270,7 @@ func (b *Build) handleError(err error) error {
 		b.CurrentState = BuildRunRuntimeTimedout
 		return &BuildError{
 			Inner:         fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()),
-			FailureReason: JobExecutionTimeout
+			FailureReason: JobExecutionTimeout,
 		}
 
 	default:
