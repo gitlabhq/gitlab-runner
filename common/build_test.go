@@ -200,7 +200,7 @@ func TestPrepareFailureOnExecutionTimeout(t *testing.T) {
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(&BuildError{FailureReason: RunnerExecutionTimeout}).Times(1)
+		Return(&BuildError{FailureReason: JobExecutionTimeout}).Times(1)
 	e.On("Cleanup").Return().Times(1)
 
 	RegisterExecutor("build-run-prepare-failure-on-execution-timeout", &p)
@@ -219,7 +219,7 @@ func TestPrepareFailureOnExecutionTimeout(t *testing.T) {
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.IsType(t, err, &BuildError{})
 	if buildError, ok := err.(*BuildError); ok {
-		assert.Equal(t, buildError.FailureReason, RunnerExecutionTimeout)
+		assert.Equal(t, buildError.FailureReason, JobExecutionTimeout)
 	}
 }
 

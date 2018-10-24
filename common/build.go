@@ -268,7 +268,7 @@ func (b *Build) handleError(err error) error {
 
 	case context.DeadlineExceeded:
 		b.CurrentState = BuildRunRuntimeTimedout
-		return &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()), FailureReason: RunnerExecutionTimeout}
+		return &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()), FailureReason: JobExecutionTimeout}
 
 	default:
 		b.CurrentState = BuildRunRuntimeFinished

@@ -22,10 +22,10 @@ const (
 )
 
 const (
-	NoneFailure            JobFailureReason = ""
-	ScriptFailure          JobFailureReason = "script_failure"
-	RunnerSystemFailure    JobFailureReason = "runner_system_failure"
-	RunnerExecutionTimeout JobFailureReason = "runner_execution_timeout"
+	NoneFailure         JobFailureReason = ""
+	ScriptFailure       JobFailureReason = "script_failure"
+	RunnerSystemFailure JobFailureReason = "runner_system_failure"
+	JobExecutionTimeout JobFailureReason = "job_execution_timeout"
 )
 
 const (
