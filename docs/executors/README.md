@@ -115,4 +115,4 @@ Supported systems for interactive web terminals by different shells:
 | OSX     | ✓           | ✗             | ✗          |
 | FreeBSD | ✓           | ✗             | ✗          |
 
-[services]: https://docs.gitlab.com/ce/ci/services/README.html
+[services]: https://docs.gitlab.com/ee/ci/services/README.html
