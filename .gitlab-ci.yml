@@ -292,6 +292,7 @@ git 1.7.1:
 #
 
 .coverage_job: &coverage_job
+  <<: *except_docs
   stage: coverage
   image: golang:1.10
   when: always
