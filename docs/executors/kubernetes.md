@@ -317,7 +317,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 There are a couple of caveats when using docker in your builds while running on
 a kubernetes cluster. Most of these issues are already discussed in the
-[**Using Docker Build**](https://docs.gitlab.com/ce/ci/docker/using_docker_build.html)
+[**Using Docker Build**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html)
 section of the gitlab-ci
 documentation but it is worth it to revisit them here as you might run into
 some slightly different things when running this on your cluster.

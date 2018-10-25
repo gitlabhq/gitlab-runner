@@ -68,7 +68,7 @@ be repeated after all requests for the other workers + their sleeps are called.
 The section `[session_server]` is a system runner level configuration, so it should be specified at the root level, 
 not per executor i.e. it should be outside `[[runners]]` section. The session server allows the user to interact 
 with jobs that the Runner is responsible for. A good example of this is the
-[interactive web terminal](https://docs.gitlab.com/ce/ci/interactive_web_terminal).
+[interactive web terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal).
 
 Both `listen_address` and `advertise_address` should be provided in the form
 of `host:port`, where `host` may be an IP address (e.g., `127.0.0.1:8093`)
@@ -736,9 +736,10 @@ It depends on what you'd like to do.
 
 [TOML]: https://github.com/toml-lang/toml
 [Docker Engine]: https://docs.docker.com/engine/
-[yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#image-and-services
-[ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
+[yaml-priv-reg]: https://docs.gitlab.com/ee/ci/yaml/README.html#image-and-services
+[ci-build-permissions-model]: https://docs.gitlab.com/ee/user/project/new_ci_build_permissions_model.html
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
-[priv-example]: https://docs.gitlab.com/ce/ci/docker/using_docker_images.html#define-an-image-from-a-private-docker-registry
-[variable]: https://docs.gitlab.com/ce/ci/variables/#variables
+
+[priv-example]: https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry
+[variable]: https://docs.gitlab.com/ee/ci/variables/#variables
 [cronvendor]: https://github.com/gorhill/cronexpr#implementation

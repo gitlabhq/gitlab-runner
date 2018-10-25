@@ -218,4 +218,4 @@ Some documentation tips:
     > need at least GitLab Runner v1.7.0 (not released yet) to work.
 
 [runner-milestones]: https://gitlab.com/gitlab-org/gitlab-runner/milestones
-[issue closing pattern]: https://docs.gitlab.com/ce/user/project/issues/automatic_issue_closing.html
+[issue closing pattern]: https://docs.gitlab.com/ee/user/project/issues/automatic_issue_closing.html
