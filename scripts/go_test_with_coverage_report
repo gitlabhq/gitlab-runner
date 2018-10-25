@@ -42,10 +42,12 @@ prepareTestCommands() {
         local tempFile
         tempFile=$(mktemp)
         local exitCode=0
+
         go test -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
 
         local tests
         tests=$(grep "^Test" "${tempFile}" || true)
+
         rm "${tempFile}"
 
         if [[ ${exitCode} -ne 0 ]]; then
@@ -89,7 +91,6 @@ executeTestCommand() {
     local options=""
 
     local pkgSlug
-
     pkgSlug=$(echo "${pkg}" | tr "/" "-")
 
     if [[ ${TESTFLAGS} = *"-cover"* ]]; then
@@ -118,11 +119,10 @@ executeTestPart() {
     rm -rf ".testoutput/"
 
     local numberOfDefinitions
-    local executionSize
-    local executionOffset
-
     numberOfDefinitions=$(< "${testsDefinitions}" wc -l)
+    local executionSize
     executionSize=$((numberOfDefinitions/SUITE_TOTAL+1))
+    local executionOffset
     executionOffset=$((SUITE_INDEX*executionSize+1))
 
     printMessage "Number of definitions: ${numberOfDefinitions}"
