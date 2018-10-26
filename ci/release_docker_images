@@ -50,11 +50,6 @@ tag_latest() {
     tag "${@}"
 }
 
-pull() {
-    echo -e "\033[1mPulling image: \033[32m${1}\033[0m"
-    _docker pull "${1}"
-}
-
 push() {
     echo -e "\033[1mPushing image: \033[32m${1}\033[0m"
     _docker push "${1}"
@@ -104,9 +99,6 @@ cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/
 cp dockerfiles/checksums dockerfiles/ubuntu
 cp out/binaries/gitlab-runner-linux-amd64 dockerfiles/alpine
 cp dockerfiles/checksums dockerfiles/alpine
-
-pull gitlab/gitlab-runner:ubuntu
-pull gitlab/gitlab-runner:alpine
 
 build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu gitlab/gitlab-runner:ubuntu
 build "gitlab/gitlab-runner:alpine-${ref_tag}" dockerfiles/alpine gitlab/gitlab-runner:alpine
