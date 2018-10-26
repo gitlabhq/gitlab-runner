@@ -1,3 +1,7 @@
+v 11.2.2 (2018-10-26)
+This release is created to rebuild official Docker images of GitLab Runner
+(including helper images) with new git version.
+
 v 11.2.1 (2018-09-24)
 - Unable escaping project bucket in cache opearations !1030
 - Filter content of X-Amz-Credential from logs !1028
