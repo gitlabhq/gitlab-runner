@@ -1,3 +1,7 @@
+v 11.4.1 (2018-10-26)
+This release is created to rebuild official Docker images of GitLab Runner
+(including helper images) with new git version.
+
 v 11.4.0 (2018-10-22)
 - Do not create apk cache !1017
 - Handle untracked files with Unicode characters in filenames. !913
