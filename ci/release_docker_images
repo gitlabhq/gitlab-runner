@@ -25,7 +25,7 @@ _docker() {
 build() {
     echo -e "\033[1mBuilding image: \033[32m${1}\033[0m"
     _docker build \
-        --cache-from "${3}" \
+        --no-cache \
         --build-arg DOCKER_MACHINE_VERSION="${DOCKER_MACHINE_VERSION}" \
         --build-arg DUMB_INIT_VERSION="${DUMB_INIT_VERSION}" \
         -t "${1}" \
@@ -48,11 +48,6 @@ tag_latest() {
     fi
 
     tag "${@}"
-}
-
-pull() {
-    echo -e "\033[1mPulling image: \033[32m${1}\033[0m"
-    _docker pull "${1}"
 }
 
 push() {
@@ -105,11 +100,8 @@ cp dockerfiles/checksums dockerfiles/ubuntu
 cp out/binaries/gitlab-runner-linux-amd64 dockerfiles/alpine
 cp dockerfiles/checksums dockerfiles/alpine
 
-pull gitlab/gitlab-runner:ubuntu
-pull gitlab/gitlab-runner:alpine
-
-build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu gitlab/gitlab-runner:ubuntu
-build "gitlab/gitlab-runner:alpine-${ref_tag}" dockerfiles/alpine gitlab/gitlab-runner:alpine
+build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu
+build "gitlab/gitlab-runner:alpine-${ref_tag}" dockerfiles/alpine
 
 tag "gitlab/gitlab-runner:ubuntu-${ref_tag}" "gitlab/gitlab-runner:${ref_tag}"
 
