@@ -575,7 +575,7 @@ get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-
 
 NOTE: **Note:**
 If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified, then the S3 client will use the
-IAM instance profile available to the instance.
+IAM instance profile available to the `gitlab-runner` instance. Beware if using the `docker+machine` executor, the cache is used from the `gitlab-runner` instance and **not** the [auto-scaled Docker machines](autoscale.md).
 
 ### The `[runners.cache.gcs]` section
 
