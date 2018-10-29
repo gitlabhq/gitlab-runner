@@ -1,8 +1,8 @@
 FROM golang:1.8.7
 
 # Install required dependencies
-RUN apt-get update -yq
-RUN apt-get install -yq locales make xz-utils \
+RUN apt-get update -yq && \
+    apt-get install -yq locales make xz-utils \
                         ruby ruby-dev python-pip \
                         dpkg-sig createrepo rpm \
                         zip libffi-dev jq
