@@ -5,7 +5,8 @@ RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
                         ruby ruby-dev python-pip \
                         dpkg-sig createrepo rpm \
-                        zip libffi-dev jq
+                        zip libffi-dev jq && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set default locale for the environment
 RUN echo "en_US UTF-8" > /etc/locale.gen; \
