@@ -24,7 +24,7 @@ RUN wget -q https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O /tmp
     rm -rf /tmp/*
 
 COPY Makefile* /tmp/
-RUN cd /tmp; \
-    make deps package-deps packagecloud-deps
+WORKDIR /tmp
+RUN make deps package-deps packagecloud-deps
 
 RUN go get -u github.com/jstemmer/go-junit-report
