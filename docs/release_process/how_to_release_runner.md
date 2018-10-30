@@ -116,5 +116,5 @@ are required to release the Runner.
     the CI/CD Pipeline for tag will pass. If the latest Pipeline for `master` was passing
     then following the process above there should be not changes that could fail the pipeline
     at this time. Any failures should be a temoprary failures related to CI infrastructure
-    and GitLab stability. In that case just retry te failing job.
+    and GitLab stability. In that case just retry the failing job.
 
