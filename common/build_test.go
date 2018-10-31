@@ -183,10 +183,10 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 }
 
 func TestJobFailure(t *testing.T) {
-	e := MockExecutor{}
+	e := new(MockExecutor)
 	defer e.AssertExpectations(t)
 
-	p := MockExecutorProvider{}
+	p := new(MockExecutorProvider)
 	defer p.AssertExpectations(t)
 
 	// Create executor
@@ -194,7 +194,7 @@ func TestJobFailure(t *testing.T) {
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
 
-	p.On("Create").Return(&e).Times(1)
+	p.On("Create").Return(e).Times(1)
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -207,7 +207,7 @@ func TestJobFailure(t *testing.T) {
 	e.On("Run", mock.Anything).Return(thrownErr)
 	e.On("Finish", thrownErr).Return().Once()
 
-	RegisterExecutor("build-run-job-failure", &p)
+	RegisterExecutor("build-run-job-failure", p)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
@@ -232,10 +232,10 @@ func TestJobFailure(t *testing.T) {
 }
 
 func TestJobFailureOnExecutionTimeout(t *testing.T) {
-	e := MockExecutor{}
+	e := new(MockExecutor)
 	defer e.AssertExpectations(t)
 
-	p := MockExecutorProvider{}
+	p := new(MockExecutorProvider)
 	defer p.AssertExpectations(t)
 
 	// Create executor
@@ -243,7 +243,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
 
-	p.On("Create").Return(&e).Times(1)
+	p.On("Create").Return(e).Times(1)
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -258,7 +258,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	e.On("Run", mock.Anything).Return(nil)
 	e.On("Finish", mock.Anything).Return().Once()
 
-	RegisterExecutor("build-run-job-failure-on-execution-timeout", &p)
+	RegisterExecutor("build-run-job-failure-on-execution-timeout", p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
