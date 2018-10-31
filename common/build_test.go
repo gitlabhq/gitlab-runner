@@ -207,7 +207,7 @@ func TestJobFailure(t *testing.T) {
 	e.On("Run", mock.Anything).Return(thrownErr)
 	e.On("Finish", thrownErr).Return().Once()
 
-	RegisterExecutor("build-run-prepare-failure-on-build-error", &p)
+	RegisterExecutor("build-run-job-failure", &p)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
@@ -215,7 +215,7 @@ func TestJobFailure(t *testing.T) {
 		JobResponse: failedBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
-				Executor: "build-run-prepare-failure-on-build-error",
+				Executor: "build-run-job-failure",
 			},
 		},
 	}
@@ -258,7 +258,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	e.On("Run", mock.Anything).Return(nil)
 	e.On("Finish", mock.Anything).Return().Once()
 
-	RegisterExecutor("build-run-prepare-failure-on-build-error", &p)
+	RegisterExecutor("build-run-job-failure-on-execution-timeout", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -269,7 +269,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 		JobResponse: successfulBuild,
 		Runner: &RunnerConfig{
 			RunnerSettings: RunnerSettings{
-				Executor: "build-run-prepare-failure-on-build-error",
+				Executor: "build-run-job-failure-on-execution-timeout",
 			},
 		},
 	}
