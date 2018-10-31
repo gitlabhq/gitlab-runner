@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -179,6 +180,111 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	}
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.IsType(t, err, &BuildError{})
+}
+
+func TestJobFailure(t *testing.T) {
+	e := new(MockExecutor)
+	defer e.AssertExpectations(t)
+
+	p := new(MockExecutorProvider)
+	defer p.AssertExpectations(t)
+
+	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
+	p.On("Create").Return(e).Times(1)
+
+	// Prepare plan
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Times(1)
+	e.On("Cleanup").Return().Times(1)
+
+	// Succeed a build script
+	thrownErr := &BuildError{Inner: errors.New("test error")}
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", mock.Anything).Return(thrownErr)
+	e.On("Finish", thrownErr).Return().Once()
+
+	RegisterExecutor("build-run-job-failure", p)
+
+	failedBuild, err := GetFailedBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		JobResponse: failedBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-job-failure",
+			},
+		},
+	}
+
+	trace := new(MockJobTrace)
+	defer trace.AssertExpectations(t)
+	trace.On("Write", mock.Anything).Return(0, nil)
+	trace.On("IsStdout").Return(true)
+	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("Fail", thrownErr, ScriptFailure).Once()
+
+	err = build.Run(&Config{}, trace)
+	require.IsType(t, &BuildError{}, err)
+}
+
+func TestJobFailureOnExecutionTimeout(t *testing.T) {
+	e := new(MockExecutor)
+	defer e.AssertExpectations(t)
+
+	p := new(MockExecutorProvider)
+	defer p.AssertExpectations(t)
+
+	// Create executor
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
+	p.On("Create").Return(e).Times(1)
+
+	// Prepare plan
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Times(1)
+	e.On("Cleanup").Return().Times(1)
+
+	// Succeed a build script
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", matchBuildStage(BuildStageUserScript)).Run(func(arguments mock.Arguments) {
+		time.Sleep(2 * time.Second)
+	}).Return(nil)
+	e.On("Run", mock.Anything).Return(nil)
+	e.On("Finish", mock.Anything).Return().Once()
+
+	RegisterExecutor("build-run-job-failure-on-execution-timeout", p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+
+	successfulBuild.RunnerInfo.Timeout = 1
+
+	build := &Build{
+		JobResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-job-failure-on-execution-timeout",
+			},
+		},
+	}
+
+	trace := new(MockJobTrace)
+	defer trace.AssertExpectations(t)
+	trace.On("Write", mock.Anything).Return(0, nil)
+	trace.On("IsStdout").Return(true)
+	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("Fail", mock.Anything, JobExecutionTimeout).Run(func(arguments mock.Arguments) {
+		assert.Error(t, arguments.Get(0).(error))
+	}).Once()
+
+	err = build.Run(&Config{}, trace)
+	require.IsType(t, &BuildError{}, err)
 }
 
 func matchBuildStage(buildStage BuildStage) interface{} {

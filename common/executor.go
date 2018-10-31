@@ -54,7 +54,8 @@ type ExecutorProvider interface {
 }
 
 type BuildError struct {
-	Inner error
+	Inner         error
+	FailureReason JobFailureReason
 }
 
 func (b *BuildError) Error() string {
