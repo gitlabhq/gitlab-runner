@@ -10,9 +10,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 )
 
 type ReleaseMetadata struct {
@@ -23,23 +25,202 @@ type ReleaseMetadata struct {
 	ReleaseBlogPostDeadline string
 }
 
-const GITLAB_RUNNER_PROJECT_ID = "gitlab-org/gitlab-runner"
+const (
+	GitLabRunnerProjectID = "gitlab-org/gitlab-runner"
+	WWWGitlabComProjectID = "gitlab-com/www-gitlab-com"
 
-var reader *bufio.Reader
-var releaseMetadata ReleaseMetadata
+	ReleasePostLabel = "release post"
 
-var templateFilePath = flag.String("issue-template-file", ".gitlab/issue_templates/Release Checklist.md", "Path to a file with issue template")
+	ReleaseManagerHandleEnvVariable = "GITLAB_RUNNER_RELEASE_MANAGER_HANDLE"
+	VersionFile                     = "./VERSION"
 
-var dryRun = flag.Bool("dry-run", false, "Show issue content instead of creating it in GitLab")
-var noInteractive = flag.Bool("no-interactive", false, "Don't ask, just try to work!")
+	LayoutDay = "2006-01-02"
+)
 
-var major = flag.String("major", "", "Major version number")
-var minor = flag.String("minor", "", "Minor version number")
-var releaseManagerHandle = flag.String("release-manager-handle", "", "GitLab.com handle of the release manager")
-var releaseBlogPostMR = flag.String("release-blog-post-mr", "", "ID of the Release Blog Post MR")
-var releaseBlogPostDeadline = flag.String("release-blog-post-deadline", "", "Deadline for adding Runner specific content to the Release Blog Post")
+var (
+	reader          *bufio.Reader
+	releaseMetadata ReleaseMetadata
+
+	defaultVersion      []string
+	defaultMergeRequest []string
+
+	templateFilePath = flag.String("issue-template-file", ".gitlab/issue_templates/Release Checklist.md", "Path to a file with issue template")
+
+	dryRun        = flag.Bool("dry-run", false, "Show issue content instead of creating it in GitLab")
+	noInteractive = flag.Bool("no-interactive", false, "Don't ask, just try to work!")
+
+	major                   = flag.String("major", detectVersion()[0], "Major version number")
+	minor                   = flag.String("minor", detectVersion()[1], "Minor version number")
+	releaseManagerHandle    = flag.String("release-manager-handle", defaultReleaseManagerHandle(), "GitLab.com handle of the release manager")
+	releaseBlogPostMR       = flag.String("release-blog-post-mr", detectBlogPostMergeRequest()[0], "ID of the Release Blog Post MR")
+	releaseBlogPostDeadline = flag.String("release-blog-post-deadline", detectReleaseMergeRequestDeadline(), "Deadline for adding Runner specific content to the Release Blog Post")
+)
+
+func detectVersion() []string {
+	if len(defaultVersion) > 0 {
+		return defaultVersion
+	}
+
+	fmt.Println("Auto-detecting version...")
+
+	content, err := ioutil.ReadFile(VersionFile)
+	if err != nil {
+		fmt.Printf("Error while reading version file %q: %v", VersionFile, err)
+
+		return []string{"", ""}
+	}
+
+	fmt.Printf("Found: %s\n", content)
+
+	defaultVersion = strings.Split(string(content), ".")
+
+	return defaultVersion
+}
+
+func defaultReleaseManagerHandle() string {
+	fmt.Println("Auto-detecting Release Manager handle...")
+
+	handle := os.Getenv(ReleaseManagerHandleEnvVariable)
+	fmt.Printf("Found: %s\n", handle)
+
+	return handle
+}
+
+type listMergeRequestsResponse []listMergeRequestsResponseEntry
+
+type listMergeRequestsResponseEntry struct {
+	ID          int    `json:"iid"`
+	WebURL      string `json:"web_url"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+func detectBlogPostMergeRequest() []string {
+	if len(defaultMergeRequest) > 0 {
+		return defaultMergeRequest
+	}
+
+	fmt.Println("Auto-detecting Release Post merge request...")
+
+	version := detectVersion()
+
+	q := url.Values{}
+	q.Add("labels", ReleasePostLabel)
+	q.Add("state", "opened")
+	q.Add("milestone", fmt.Sprintf("%s.%s", version[0], version[1]))
+
+	rawURL := fmt.Sprintf("https://gitlab.com/api/v4/projects/%s/merge_requests?%s", url.QueryEscape(WWWGitlabComProjectID), q.Encode())
+
+	findMergeRequestURL, err := url.Parse(rawURL)
+	if err != nil {
+		fmt.Printf("Error while parsing findMergeRequestURL: %v", err)
+
+		return []string{"", ""}
+	}
+
+	req, err := http.NewRequest(http.MethodGet, findMergeRequestURL.String(), nil)
+	if err != nil {
+		fmt.Printf("Error while creating HTTP Request: %v", err)
+
+		return []string{"", ""}
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("Error while requesting API endpoint: %v", err)
+
+		return []string{"", ""}
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Error while reading response body: %v", err)
+
+		return []string{"", ""}
+	}
+
+	var response listMergeRequestsResponse
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		fmt.Printf("Error while parsing response JSON: %v", err)
+
+		return []string{"", ""}
+	}
+
+	printEntry := func(entry listMergeRequestsResponseEntry) {
+		fmt.Printf("\t%-40q %s\n", entry.Title, entry.WebURL)
+	}
+
+	fmt.Println("Found following www-gitlab-com merge requests:")
+	for _, entry := range response {
+		printEntry(entry)
+	}
+
+	if len(response) < 1 {
+		fmt.Println("Release Post merge request was not auto-detected. Please enter the ID manually")
+
+		return []string{"", ""}
+	}
+
+	chosen := response[0]
+
+	fmt.Println("Choosing:")
+	printEntry(chosen)
+
+	r := regexp.MustCompile("gitlab.com/gitlab-com/www-gitlab-com/blob/release-\\d+-\\d+/data/release_posts/(\\d+)_(\\d+)_(\\d+)_gitlab_\\d+_\\d+_released.yml")
+	dateParts := r.FindStringSubmatch(chosen.Description)
+
+	defaultMergeRequest = []string{
+		strconv.Itoa(chosen.ID),
+		fmt.Sprintf("%s-%s-%s", dateParts[1], dateParts[2], dateParts[3]),
+	}
+
+	return defaultMergeRequest
+}
+
+func detectReleaseMergeRequestDeadline() string {
+	fmt.Println("Auto-detecting Release Post entry deadline...")
+
+	offsetMap := map[time.Weekday]int{
+		time.Monday:    -11,
+		time.Tuesday:   -11,
+		time.Wednesday: -9,
+		time.Thursday:  -9,
+		time.Friday:    -9,
+		time.Saturday:  -9,
+		time.Sunday:    -10,
+	}
+
+	date := detectBlogPostMergeRequest()[1]
+	if len(date) < 1 {
+		fmt.Println("Could not detect the date of Release...")
+
+		return ""
+	}
+
+	releaseDate, err := time.Parse(LayoutDay, date)
+	if err != nil {
+		fmt.Printf("Could not parse detected date %q: %v", date, err)
+
+		return ""
+	}
+
+	offset := offsetMap[releaseDate.Weekday()]
+
+	deadlineTime := releaseDate.Add(time.Duration(24*offset) * time.Hour)
+	deadline := deadlineTime.Format(LayoutDay)
+
+	fmt.Printf("Decided to use %q. Please adjust if required!\n", deadline)
+
+	return deadline
+}
 
 func main() {
+	fmt.Println()
+	fmt.Println("\nGitLab Runner release checklist issue generator")
+	fmt.Println()
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\n  %s [OPTIONS]\n\nOptions:\n", os.Args[0])
@@ -170,7 +351,7 @@ type createIssueResponse struct {
 }
 
 func postIssue(title, content string) {
-	newIssueURL := fmt.Sprintf("https://gitlab.com/api/v4/projects/%s/issues", url.QueryEscape(GITLAB_RUNNER_PROJECT_ID))
+	newIssueURL := fmt.Sprintf("https://gitlab.com/api/v4/projects/%s/issues", url.QueryEscape(GitLabRunnerProjectID))
 
 	options := &createIssueOptions{
 		Title:       title,

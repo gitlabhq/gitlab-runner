@@ -33,6 +33,18 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
 - [ ] check if Pipeline for `master` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/master)
     - [ ] add all required fixes to make `master` Pipeline passing
 - [ ] `git checkout master && git pull` in your local working copy!
+- [ ] prepare CHANGELOG entries
+
+    ```bash
+    ./scripts/prepare-changelog-entries.rb
+    ```
+
+    Copy the lines to the beginning of `CHANGELOG.md` file and add a proper header:
+
+    ```markdown
+    v{{.Major}}.{{.Minor}}.0-rc1 (TODAY_DATE_HERE)
+    ```
+
 - [ ] add **v{{.Major}}.{{.Minor}}.0-rc1** CHANGELOG entries and commit
 
     ```bash
@@ -92,9 +104,25 @@ this day, will be released with next release.
 At this day we should release an RC version, if there was no RC recently - especially
 if the only RC version was the _RC1_ released near 7th day of month.
 
+> **Notice:** If there was no new commits picked into `{{.Major}}-{{.Minor}}-stable` branch since
+previous RC, we can skip this step. There is no need in releasing and deploying an RC identical
+to the one that already exists.
+
 - [ ] check if Pipeline for `{{.Major}}-{{.Minor}}-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/{{.Major}}-{{.Minor}}-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/{{.Major}}-{{.Minor}}-stable)
     - [ ] add all required fixes to make `{{.Major}}-{{.Minor}}-stable` Pipeline passing
 - [ ] `git checkout {{.Major}}-{{.Minor}}-stable && git pull` in your local working copy!
+- [ ] prepare CHANGELOG entries
+
+    ```bash
+    ./scripts/prepare-changelog-entries.rb
+    ```
+
+    Copy the lines to the beginning of `CHANGELOG.md` file and add a proper header:
+
+    ```markdown
+    v{{.Major}}.{{.Minor}}.0-rcZ (TODAY_DATE_HERE)
+    ```
+
 - [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries and commit
 
     ```bash
@@ -113,39 +141,53 @@ if the only RC version was the _RC1_ released near 7th day of month.
 
 ## At 22th - the release day
 
-- [ ] Before 12:00 UTC
-    - [ ] `git checkout {{.Major}}-{{.Minor}}-stable && git pull` in your local working copy!
-    - [ ] merge all RCx CHANGELOG entries into release entry and commit
+#### Before 12:00 UTC
+
+- [ ] check if Pipeline for `{{.Major}}-{{.Minor}}-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/{{.Major}}-{{.Minor}}-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/{{.Major}}-{{.Minor}}-stable)
+    - [ ] add all required fixes to make `{{.Major}}-{{.Minor}}-stable` Pipeline passing
+- [ ] `git checkout {{.Major}}-{{.Minor}}-stable && git pull` in your local working copy!
+- [ ] merge all RCx CHANGELOG entries into release entry
+
+    Put a proper header at the begining:
+
+    ```markdown
+    v{{.Major}}.{{.Minor}}.0 (TODAY_DATE_HERE)
+    ```
+
+- [ ] add **v{{.Major}}.{{.Minor}}.0** CHANGELOG entries and commit
 
     ```bash
     git add CHANGELOG.md && git commit -m "Update CHANGELOG for v{{.Major}}.{{.Minor}}.0" -S
     ```
 
-    - [ ] tag and push **v{{.Major}}.{{.Minor}}.0** and **{{.Major}}-{{.Minor}}-stable**:
+- [ ] tag and push **v{{.Major}}.{{.Minor}}.0** and **{{.Major}}-{{.Minor}}-stable**:
 
-        ```bash
-        git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0
-        ```
+    ```bash
+    git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0
+    ```
 
-    - [ ] checkout to `master` and merge `{{.Major}}-{{.Minor}}-stable` into `master` (only this one time, to update CHANGELOG.md and make the tag available for ./scripts/prepare-changelog-entries.rb in next stable release), push `master`:
+- [ ] checkout to `master` and merge `{{.Major}}-{{.Minor}}-stable` into `master` (only this one time, to update CHANGELOG.md and make the tag available for ./scripts/prepare-changelog-entries.rb in next stable release), push `master`:
 
-        ```bash
-        git checkout master; git merge --no-ff {{.Major}}-{{.Minor}}-stable
-        # check that the only changes are in CHANGELOG.md
-        git push
-        ```
+    ```bash
+    git checkout master; git merge --no-ff {{.Major}}-{{.Minor}}-stable
+    # check that the only changes are in CHANGELOG.md
+    git push
+    ```
 
-- [ ] Before 15:00 UTC
-    - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0)
-        - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0` passing
-    - [ ] deploy stable version to all production Runners
-    - [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to latest production version: [link to MR]
+- [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to latest production version: [link to MR]
 
-- [ ] After helm chart MR is merged ([link to MR]):
-    - [ ] update Runner's chart version [used by GitLab](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/app/models/clusters/applications/runner.rb): [link to MR]
+#### Before 15:00 UTC
+
+- [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0)
+    - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0` passing
+- [ ] deploy stable version to all production Runners
+
+#### After helm chart MR is merged
+
+- [ ] update Runner's chart version [used by GitLab](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/app/models/clusters/applications/runner.rb): [link to MR]
 
 
-**RC release template**
+## RC release template
 
 There should be at least one RC version between RC1 and stable release. If there are any
 important changes merged into stable branch (like bug/security fixes) the RC should be
@@ -161,6 +203,18 @@ template:
 - [ ] check if Pipeline for `{{.Major}}-{{.Minor}}-stable` is passing: [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/{{.Major}}-{{.Minor}}-stable/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/{{.Major}}-{{.Minor}}-stable)
     - [ ] add all required fixes to make `{{.Major}}-{{.Minor}}-stable` Pipeline passing
 - [ ] `git checkout {{.Major}}-{{.Minor}}-stable && git pull` in your local working copy!
+- [ ] prepare CHANGELOG entries
+
+    ```bash
+    ./scripts/prepare-changelog-entries.rb
+    ```
+
+    Copy the lines to the beginning of `CHANGELOG.md` file and add a proper header:
+
+    ```markdown
+    v{{.Major}}.{{.Minor}}.0-rcZ (TODAY_DATE_HERE)
+    ```
+
 - [ ] add **v{{.Major}}.{{.Minor}}.0-rcZ** CHANGELOG entries and commit
 
     ```bash

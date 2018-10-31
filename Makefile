@@ -366,13 +366,9 @@ prepare_release_checklist_issue_dry_run:
 	make prepare_release_checklist_issue opts="-dry-run"
 
 prepare_release_checklist_issue: opts ?= ""
-prepare_release_checklist_issue: major := $(shell cat VERSION | awk -F'.' '{print $$1}')
-prepare_release_checklist_issue: minor := $(shell cat VERSION | awk -F'.' '{print $$2}')
 prepare_release_checklist_issue:
 	@go run ./scripts/prepare_release_checklist_issue.go \
 		-issue-template-file ".gitlab/issue_templates/Release Checklist.md" \
-		-major $(major) \
-		-minor $(minor) \
 		$(opts)
 
 development_setup:
