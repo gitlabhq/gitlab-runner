@@ -1222,7 +1222,7 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 			},
 		},
-		"supports extended docker configuration for image and services": {
+		"support setting kubernetes pod taint tolerations": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1235,7 +1235,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			VerifyFn: func(t *testing.T, test testDef, pod *api.Pod) {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
 					Key:      "custom.toleration",
 					Operator: api.TolerationOpEqual,
@@ -1255,7 +1255,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, len(pod.Spec.Tolerations), 3)
 			},
 		},
-		{
+		"supports extended docker configuration for image and services": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
