@@ -1,7 +1,7 @@
 ---
 toc: false
 comments: false
-last_updated: 2017-10-09
+last_updated: 2018-11-07
 ---
 
 # GitLab Runner
@@ -49,22 +49,11 @@ installed.
 
 ## Compatibility chart
 
-CAUTION: **Important:**
-GitLab Runner >= 9.0 requires GitLab's API v4 endpoints, which were introduced
-in GitLab CE/EE 9.0. Because of this change, GitLab Runner >= 9.0 requires
-GitLab CE/EE >= 9.0 and will not work with older GitLab versions.
-The old API used by GitLab Runner was deprecated in August 2017 and with this,
-the v1.11.x version of GitLab Runner is deprecated as well.
+The GitLab Runner version should be in sync with the GitLab version. While older
+Runners may still work with newer GitLab versions, and vice versa, in some cases,
+features may be not available or work properly if there's a version difference.
 
-In the following table you can see the compatibility chart between GitLab and
-GitLab Runner.
-
-| GitLab Runner / GitLab  | 9.x.y | 10.x.y  |
-| :---------------------: | :---: | :-----: |
-| v1.10.x                 | ✓     | ✗       |
-| v1.11.x                 | ✓     | ✗       |
-| v9.x.y                  | ✓     | ✓       |
-| v10.x.y                 | ✓     | ✓       |
+Backward incompatibility is allowed only for major version updates.
 
 ## [Install GitLab Runner](install/index.md)
 
