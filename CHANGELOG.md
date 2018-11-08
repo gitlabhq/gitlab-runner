@@ -1,3 +1,11 @@
+v11.5.0-rc1 (2018-11-08)
+- Support RAW artifacts !1057
+- Docs: changing secret variable to just variable in advanced-configuration.md !1055
+- Docs: Fixing some bad links in Runner docs. !1056
+- Docs: Updating Docs links from /ce to /ee !1061
+- Docs: Fixing Substrakt Health URL !1064
+- Add failure reason for execution timeout !1051
+
 v 11.4.0 (2018-10-22)
 - Do not create apk cache !1017
 - Handle untracked files with Unicode characters in filenames. !913
