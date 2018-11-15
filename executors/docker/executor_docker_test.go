@@ -1081,6 +1081,43 @@ func TestDockerTmpfsSetting(t *testing.T) {
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
+
+func TestDockerServicesDNSSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		DNS: []string{"2001:db8::1", "192.0.2.1"},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		require.Equal(t, dockerConfig.DNS, hostConfig.DNS)
+	}
+
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
+
+func TestDockerServicesDNSSearchSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		DNSSearch: []string{"mydomain.example"},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		require.Equal(t, dockerConfig.DNSSearch, hostConfig.DNSSearch)
+	}
+
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
+
+func TestDockerServicesExtraHostsSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		ExtraHosts: []string{"foo.example:2001:db8::1", "bar.example:192.0.2.1"},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		require.Equal(t, dockerConfig.ExtraHosts, hostConfig.ExtraHosts)
+	}
+
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
+
 func TestDockerUserNSSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		UsernsMode: "host",

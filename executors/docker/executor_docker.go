@@ -690,7 +690,10 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
 
 	hostConfig := &container.HostConfig{
+		DNS:           e.Config.Docker.DNS,
+		DNSSearch:     e.Config.Docker.DNSSearch,
 		RestartPolicy: neverRestartPolicy,
+		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    e.Config.Docker.Privileged,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
 		Binds:         e.binds,
