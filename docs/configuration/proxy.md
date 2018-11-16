@@ -155,8 +155,11 @@ TCP connection between `dockerd` from the dind container and `docker` client con
 It is also essential to specify the ports because otherwise a `docker push` will be blocked 
 as it originates from the IP mapped to docker but in that case it is meant to go through the proxy.
 
-Since `dockerd` from dind is initially started as a client on the host system by root, 
-the proxy variables can be set in `/root/.docker/config.json` like:
+When testing the communication of `dockerd` from dind and a `docker` client __locally__ 
+(as described here: https://hub.docker.com/_/docker/), 
+`dockerd` from dind is initially started as a client on the host system by root, 
+and the proxy variables are taken from `/root/.docker/config.json`, 
+which could look like:
 ```
 {
 	"proxies": {
@@ -168,14 +171,26 @@ the proxy variables can be set in `/root/.docker/config.json` like:
 	}
 }
 ```
-These will then enter as environment variables (lower and upper case) into the dind container 
-running `dockerd` and `docker` clients and will be picked up by any program 
-honouring the proxy settings from default environment variables, like 
-`wget`, `apt`, `apk`, `docker run` and even `docker build` 
-(avoiding problem as reported here: https://github.com/moby/moby/issues/24697#issuecomment-366680499). 
-So that it is neither necessary to provide these separately in `.gitlab-ci.yml` 
-nor for building docker images there.
-Note, that if the list needs to be extended, wildcards `*` only work for suffixes
+
+__However__, the container started for the execution of `.gitlab-ci.yml` scripts will have 
+the environment variables set by the settings of the gitlab-runner configuration (`/etc/gitlab-runner/config.toml`).
+These will then enter as environment variables (as is, in contrast to `.docker/config.json` of the local test above)
+into the dind containers running `dockerd` as a service and `docker` client executing `.gitlab-ci.yml`.
+There, these will be picked up by any program honouring the proxy settings from default environment variables, like 
+`wget`, `apt`, `apk`, `docker info` and `docker pull` but not by `docker run` or `docker build`
+(https://github.com/moby/moby/issues/24697#issuecomment-366680499). 
+`docker run` or `docker build` executed inside the container of the docker executor
+will look for the proxy settings in `$HOME/.docker/config.json`, 
+which is now inside the executor container (and initally empty) 
+and a `docker run` or `docker build` will have no proxy settings. In order to pass on the settings,
+a `$HOME/.docker/config.json` needs to be created in the executor container like:
+```
+before_script:
+  - mkdir $HOME/.docker/
+  - 'echo "{ \"proxies\": { \"default\": { \"httpProxy\": \"$HTTP_PROXY\", \"httpsProxy\": \"$HTTPS_PROXY\", \"noProxy\": \"$NO_PROXY\" } } }" > $HOME/.docker/config.json'
+```
+
+Note, that if the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes
 but not for prefixes or CIDR notation 
 (https://github.com/moby/moby/issues/9145) 
 (https://unix.stackexchange.com/questions/23452/set-a-network-range-in-the-no-proxy-environment-variable).
