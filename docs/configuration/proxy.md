@@ -139,3 +139,45 @@ environment = ["HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_inte
 Where `docker0_interface_ip` is the IP address of the `docker0` interface. You need to
 be able to reach it from within the Docker containers, so it's important to set
 it right.
+
+## NO_PROXY settings for dind as service
+
+When using the [docker-in-docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor), 
+i.e. in `.gitlab-ci.yml` something like:
+
+```
+services:
+   - docker:dind
+```
+it can be essential to specify `docker:2375,docker:2376` in the `NO_PROXY` 
+environment variable, otherwise it can happen that the proxy intercepts the 
+TCP connection between `dockerd` from the dind container and `docker` client container. 
+It is also essential to specify the ports because otherwise a `docker push` will be blocked 
+as it originates from the IP mapped to docker but in that case it is meant to go through the proxy.
+
+Since `dockerd` from dind is initially started as a client on the host system by root, 
+the proxy variables can be set in `/root/.docker/config.json` like:
+```
+{
+	"proxies": {
+   		"default": {
+			"httpProxy": "http://proxy:8080",
+			"httpsProxy": "http://proxy:8080",
+			"noProxy": "docker:2375,docker:2376"
+   		}
+	}
+}
+```
+These will then enter as environment variables (lower and upper case) into the dind container 
+running `dockerd` and `docker` clients and will be picked up by any program 
+honouring the proxy settings from default environment variables, like 
+`wget`, `apt`, `apk`, `docker run` and even `docker build` 
+(avoiding problem as reported here: https://github.com/moby/moby/issues/24697#issuecomment-366680499). 
+So that it is neither necessary to provide these separately in `.gitlab-ci.yml` 
+nor for building docker images there.
+Note, that if the list needs to be extended, wildcards `*` only work for suffixes
+but not for prefixes or CIDR notation 
+(https://github.com/moby/moby/issues/9145) 
+(https://unix.stackexchange.com/questions/23452/set-a-network-range-in-the-no-proxy-environment-variable).
+
+
