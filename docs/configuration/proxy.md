@@ -186,7 +186,7 @@ and a `docker run` or `docker build` will have no proxy settings. In order to pa
 a `$HOME/.docker/config.json` needs to be created in the executor container like:
 ```
 before_script:
-  - mkdir $HOME/.docker/
+  - mkdir -p $HOME/.docker/
   - 'echo "{ \"proxies\": { \"default\": { \"httpProxy\": \"$HTTP_PROXY\", \"httpsProxy\": \"$HTTPS_PROXY\", \"noProxy\": \"$NO_PROXY\" } } }" > $HOME/.docker/config.json'
 ```
 
@@ -196,7 +196,7 @@ configuration of the gitlab-runner (`/etc/gitlab-runner/config.toml`) that is ac
 
 ```
 [[runners]]
-  pre_build_script = "mkdir $HOME/.docker/ && echo \"{ \"proxies\": { \"default\": { \"httpProxy\": \"$HTTP_PROXY\", \"httpsProxy\": \"$HTTPS_PROXY\", \"noProxy\": \"$NO_PROXY\" } } }\" > $HOME/.docker/config.json && cat $HOME/.docker/config.json"
+  pre_build_script = "mkdir -p $HOME/.docker/ && echo \"{ \"proxies\": { \"default\": { \"httpProxy\": \"$HTTP_PROXY\", \"httpsProxy\": \"$HTTPS_PROXY\", \"noProxy\": \"$NO_PROXY\" } } }\" > $HOME/.docker/config.json"
 ```
 
 (Since this is the creation of a JSON file inside a TOML file and not YML anymore, do not escape the `:`!)
