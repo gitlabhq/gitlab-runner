@@ -190,6 +190,17 @@ before_script:
   - 'echo "{ \"proxies\": { \"default\": { \"httpProxy\": \"$HTTP_PROXY\", \"httpsProxy\": \"$HTTPS_PROXY\", \"noProxy\": \"$NO_PROXY\" } } }" > $HOME/.docker/config.json'
 ```
 
+Since additional lines in a `.gitlab-ci.yml` only needed in case of a proxy are confusing, 
+it is better to move the creation of the `$HOME/.docker/config.json` into the 
+configuration of the gitlab-runner (`/etc/gitlab-runner/config.toml`) that is actually effected:
+
+```
+[[runners]]
+  pre_build_script = "mkdir $HOME/.docker/ && echo \"{ \"proxies\": { \"default\": { \"httpProxy\": \"$HTTP_PROXY\", \"httpsProxy\": \"$HTTPS_PROXY\", \"noProxy\": \"$NO_PROXY\" } } }\" > $HOME/.docker/config.json && cat $HOME/.docker/config.json"
+```
+
+(Since this is the creation of a JSON file inside a TOML file and not YML anymore, do not escape the `:`!)
+
 Note, that if the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes
 but not for prefixes or CIDR notation 
 (https://github.com/moby/moby/issues/9145) 
