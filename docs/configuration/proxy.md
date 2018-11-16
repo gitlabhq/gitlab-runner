@@ -196,10 +196,12 @@ configuration of the gitlab-runner (`/etc/gitlab-runner/config.toml`) that is ac
 
 ```
 [[runners]]
-  pre_build_script = "mkdir -p $HOME/.docker/ && echo \"{ \"proxies\": { \"default\": { \"httpProxy\": \"$HTTP_PROXY\", \"httpsProxy\": \"$HTTPS_PROXY\", \"noProxy\": \"$NO_PROXY\" } } }\" > $HOME/.docker/config.json"
+  pre_build_script = "mkdir -p $HOME/.docker/ && echo \"{ \\\"proxies\\\": { \\\"default\\\": { \\\"httpProxy\\\": \\\"$HTTP_PROXY\\\", \\\"httpsProxy\\\": \\\"$HTTPS_PROXY\\\", \\\"noProxy\\\": \\\"$NO_PROXY\\\" } } }\" > $HOME/.docker/config.json"
 ```
 
-(Since this is the creation of a JSON file inside a TOML file and not YML anymore, do not escape the `:`!)
+(An additional level of escaping `"` is needed here because this is the creation of a 
+JSON file with a shell specified as a single string inside a TOML file, 
+and since it is not YML anymore, do not escape the `:` any more!)
 
 Note, that if the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes
 but not for prefixes or CIDR notation 
