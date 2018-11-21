@@ -283,7 +283,7 @@ git 1.7.1:
   image: golang:1.10
   when: always
 
-test coverage report: &test_coverage_report
+test coverage report:
   <<: *coverage_job
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
   script:
@@ -296,7 +296,7 @@ test coverage report: &test_coverage_report
     expire_in: 7d
 
 race conditions detector:
-  <<: *test_coverage_report
+  <<: *coverage_job
   script:
   - source ci/touch_make_dependencies
   - make check_race_conditions
