@@ -200,8 +200,8 @@ code_quality:
   stage: test
   script:
     - JOB_NAME=( $CI_JOB_NAME )
-    - export SUITE_INDEX=${JOB_NAME[-2]}
-    - export SUITE_TOTAL=${JOB_NAME[-1]}
+    - export CI_NODE_INDEX=${JOB_NAME[-2]}
+    - export CI_NODE_TOTAL=${JOB_NAME[-1]}
     - source ci/touch_make_dependencies
     - make parallel_test_execute
   artifacts:
