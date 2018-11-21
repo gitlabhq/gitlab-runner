@@ -195,13 +195,11 @@ code_quality:
     paths: [gl-code-quality-report.json]
     expire_in: 7d
 
-.unit_tests: &unit_tests
+unit test: &unit_tests
   <<: *docker
   stage: test
+  parallel: 5
   script:
-    - JOB_NAME=( $CI_JOB_NAME )
-    - export CI_NODE_INDEX=${JOB_NAME[-2]}
-    - export CI_NODE_TOTAL=${JOB_NAME[-1]}
     - source ci/touch_make_dependencies
     - make parallel_test_execute
   artifacts:
@@ -211,25 +209,13 @@ code_quality:
     when: always
     expire_in: 7d
 
-.unit_tests_with_race: &unit_tests_with_race
+unit test with race:
   <<: *unit_tests
   allow_failure: true
   variables:
     <<: *docker_variables
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
-
-unit tests 1 5: *unit_tests
-unit tests 2 5: *unit_tests
-unit tests 3 5: *unit_tests
-unit tests 4 5: *unit_tests
-unit tests 5 5: *unit_tests
-
-unit tests with race 1 5: *unit_tests_with_race
-unit tests with race 2 5: *unit_tests_with_race
-unit tests with race 3 5: *unit_tests_with_race
-unit tests with race 4 5: *unit_tests_with_race
-unit tests with race 5 5: *unit_tests_with_race
 
 docs check links:
   image: "registry.gitlab.com/gitlab-org/gitlab-build-images:gitlab-docs-lint"
