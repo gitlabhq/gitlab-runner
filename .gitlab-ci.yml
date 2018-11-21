@@ -219,17 +219,17 @@ code_quality:
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
 
-unit tests 0 5: *unit_tests
 unit tests 1 5: *unit_tests
 unit tests 2 5: *unit_tests
 unit tests 3 5: *unit_tests
 unit tests 4 5: *unit_tests
+unit tests 5 5: *unit_tests
 
-unit tests with race 0 5: *unit_tests_with_race
 unit tests with race 1 5: *unit_tests_with_race
 unit tests with race 2 5: *unit_tests_with_race
 unit tests with race 3 5: *unit_tests_with_race
 unit tests with race 4 5: *unit_tests_with_race
+unit tests with race 5 5: *unit_tests_with_race
 
 docs check links:
   image: "registry.gitlab.com/gitlab-org/gitlab-build-images:gitlab-docs-lint"

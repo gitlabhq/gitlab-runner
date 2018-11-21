@@ -122,8 +122,9 @@ executeTestPart() {
     numberOfDefinitions=$(< "${testsDefinitions}" wc -l)
     local executionSize
     executionSize=$((numberOfDefinitions/CI_NODE_TOTAL+1))
+    local nodeIndex=$((CI_NODE_INDEX-1))
     local executionOffset
-    executionOffset=$((CI_NODE_INDEX*executionSize+1))
+    executionOffset=$((nodeIndex*executionSize+1))
 
     printMessage "Number of definitions: ${numberOfDefinitions}"
     printMessage "Suite size: ${CI_NODE_TOTAL}"
