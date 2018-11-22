@@ -236,11 +236,14 @@ To register a Runner under FreeBSD:
 To register a Runner using a Docker container:
 
 1. Run the following command which will mount the Runner's config directory
-   under `/path/to/config`:
+   under `/srv/gitlab-runner/config`:
 
     ```sh
-    docker run --rm -t -i -v /path/to/config:/etc/gitlab-runner --name gitlab-runner gitlab/gitlab-runner register
+    docker run --rm -t -i -v /srv/gitlab-runner/config:/etc/gitlab-runner --name gitlab-runner gitlab/gitlab-runner register
     ```
+
+    NOTE: **Note:**
+    This will only register and then exit/destroy the container. 
 
 1. Enter your GitLab instance URL:
 
