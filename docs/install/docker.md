@@ -84,7 +84,13 @@ Docker container.
         gitlab/gitlab-runner:latest
     ```
 
-1. [Register the Runner](../register/index.md#docker)
+1. Register the Runner
+
+    ```bash
+    docker exec -it gitlab-runner gitlab-runner register
+    ```
+
+    NOTE: **Note:** For more information, see [Registering Runners](../register/index.md#docker).
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
