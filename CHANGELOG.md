@@ -1,4 +1,4 @@
-v11.5.0-rc1 (2018-11-08)
+v11.5.0 (2018-11-22)
 - Support RAW artifacts !1057
 - Docs: changing secret variable to just variable in advanced-configuration.md !1055
 - Docs: Fixing some bad links in Runner docs. !1056
