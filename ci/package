@@ -2,6 +2,20 @@
 
 set -eo pipefail
 
+check_macos_package() {
+    local binary="${1}"
+    local package="${2}"
+
+    if ! which "${binary}" >/dev/null 2>&1; then
+        echo
+        echo -e "\\033[31;1m"
+        echo "Seems that you're using Mac OS. In case of troubles with packaging ensure"
+        echo "that ${package} is installed. You can do this e.g. with 'brew install ${package}'"
+        echo -e "\\033[0m"
+        echo
+    fi
+}
+
 create_package() {
     local packageType=${1}
     shift
@@ -13,14 +27,8 @@ create_package() {
     uname_s=$(uname -s)
 
     if [[ "${uname_s}" == "Darwin" ]]; then
-        if ! which gtar >/dev/null 2>&1; then
-            echo
-            echo -e "\\033[31;1m"
-            echo "Seems that you're using Mac OS. In case of troubles with packaging ensure"
-            echo "that gnu-tar is installed. You can do this e.g. with 'brew install gnu-tar'"
-            echo -e "\\033[0m"
-            echo
-        fi
+        check_macos_package "gtar" "gnu-tar"
+        check_macos_package "rpmbuild" "rpm"
     fi
 
 	mkdir -p "out/${packageType}/"
