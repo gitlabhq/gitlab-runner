@@ -23,14 +23,14 @@ To register a Runner under GNU/Linux:
 
 1. Enter your GitLab instance URL:
 
-    ```
+    ```text
     Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
     https://gitlab.com
     ```
 
 1. Enter the token you obtained to register the Runner:
 
-    ```
+    ```text
     Please enter the gitlab-ci token for this runner
     xxx
     ```
@@ -38,21 +38,21 @@ To register a Runner under GNU/Linux:
 1. Enter a description for the Runner, you can change this later in GitLab's
    UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci description for this runner
     [hostame] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci tags for this runner (comma separated):
     my-tag,another-tag
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
 
-    ```
+    ```text
     Please enter the executor: ssh, docker+machine, docker-ssh+machine, kubernetes, docker, parallels, virtualbox, docker-ssh, shell:
     docker
     ```
@@ -60,7 +60,7 @@ To register a Runner under GNU/Linux:
 1. If you chose Docker as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
-    ```
+    ```text
     Please enter the Docker image (eg. ruby:2.1):
     alpine:latest
     ```
@@ -77,14 +77,14 @@ To register a Runner under macOS:
 
 1. Enter your GitLab instance URL:
 
-    ```
+    ```text
     Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
     https://gitlab.com
     ```
 
 1. Enter the token you obtained to register the Runner:
 
-    ```
+    ```text
     Please enter the gitlab-ci token for this runner
     xxx
     ```
@@ -92,21 +92,21 @@ To register a Runner under macOS:
 1. Enter a description for the Runner, you can change this later in GitLab's
    UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci description for this runner
     [hostame] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci tags for this runner (comma separated):
     my-tag,another-tag
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
 
-    ```
+    ```text
     Please enter the executor: ssh, docker+machine, docker-ssh+machine, kubernetes, docker, parallels, virtualbox, docker-ssh, shell:
     docker
     ```
@@ -114,7 +114,7 @@ To register a Runner under macOS:
 1. If you chose Docker as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
-    ```
+    ```text
     Please enter the Docker image (eg. ruby:2.1):
     alpine:latest
     ```
@@ -132,14 +132,14 @@ To register a Runner under Windows:
 
 1. Enter your GitLab instance URL:
 
-    ```
+    ```text
     Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
     https://gitlab.com
     ```
 
 1. Enter the token you obtained to register the Runner:
 
-    ```
+    ```text
     Please enter the gitlab-ci token for this runner
     xxx
     ```
@@ -147,21 +147,21 @@ To register a Runner under Windows:
 1. Enter a description for the Runner, you can change this later in GitLab's
    UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci description for this runner
     [hostame] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci tags for this runner (comma separated):
     my-tag,another-tag
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
 
-    ```
+    ```text
     Please enter the executor: ssh, docker+machine, docker-ssh+machine, kubernetes, docker, parallels, virtualbox, docker-ssh, shell:
     docker
     ```
@@ -169,7 +169,7 @@ To register a Runner under Windows:
 1. If you chose Docker as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
-    ```
+    ```text
     Please enter the Docker image (eg. ruby:2.1):
     alpine:latest
     ```
@@ -189,14 +189,14 @@ To register a Runner under FreeBSD:
 
 1. Enter your GitLab instance URL:
 
-    ```
+    ```text
     Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
     https://gitlab.com
     ```
 
 1. Enter the token you obtained to register the Runner:
 
-    ```
+    ```text
     Please enter the gitlab-ci token for this runner
     xxx
     ```
@@ -204,21 +204,21 @@ To register a Runner under FreeBSD:
 1. Enter a description for the Runner, you can change this later in GitLab's
    UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci description for this runner
     [hostame] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci tags for this runner (comma separated):
     my-tag,another-tag
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
 
-    ```
+    ```text
     Please enter the executor: ssh, docker+machine, docker-ssh+machine, kubernetes, docker, parallels, virtualbox, docker-ssh, shell:
     docker
     ```
@@ -226,7 +226,7 @@ To register a Runner under FreeBSD:
 1. If you chose Docker as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
-    ```
+    ```text
     Please enter the Docker image (eg. ruby:2.1):
     alpine:latest
     ```
@@ -243,18 +243,18 @@ To register a Runner using a Docker container:
     ```
 
     NOTE: **Note:**
-    This will only register and then exit/destroy the container. 
+    This will only register and then exit/destroy the container.
 
 1. Enter your GitLab instance URL:
 
-    ```
+    ```text
     Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com )
     https://gitlab.com
     ```
 
 1. Enter the token you obtained to register the Runner:
 
-    ```
+    ```text
     Please enter the gitlab-ci token for this runner
     xxx
     ```
@@ -262,21 +262,21 @@ To register a Runner using a Docker container:
 1. Enter a description for the Runner, you can change this later in GitLab's
    UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci description for this runner
     [hostame] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
 
-    ```
+    ```text
     Please enter the gitlab-ci tags for this runner (comma separated):
     my-tag,another-tag
     ```
 
 1. Enter the [Runner executor](../executors/README.md):
 
-    ```
+    ```text
     Please enter the executor: ssh, docker+machine, docker-ssh+machine, kubernetes, docker, parallels, virtualbox, docker-ssh, shell:
     docker
     ```
@@ -284,7 +284,7 @@ To register a Runner using a Docker container:
 1. If you chose Docker as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
-    ```
+    ```text
     Please enter the Docker image (eg. ruby:2.1):
     alpine:latest
     ```
