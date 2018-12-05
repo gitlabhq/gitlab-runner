@@ -243,7 +243,7 @@ To register a Runner using a Docker container:
     ```
 
     NOTE: **Note:**
-    This will only register and then exit/destroy the container.
+    This will only register the runner, and then exit and destroy the container.
 
 1. Enter your GitLab instance URL:
 
