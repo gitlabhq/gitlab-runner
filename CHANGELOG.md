@@ -1,3 +1,6 @@
+v11.5.1 (2018-12-06)
+- Make k8s object names DNS-1123 compatible !1105
+
 v11.5.0 (2018-11-22)
 - Support RAW artifacts !1057
 - Docs: changing secret variable to just variable in advanced-configuration.md !1055
