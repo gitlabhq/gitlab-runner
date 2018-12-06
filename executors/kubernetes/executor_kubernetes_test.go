@@ -892,15 +892,16 @@ func TestSetupCredentials(t *testing.T) {
 	version, _ := testVersionAndCodec()
 
 	type testDef struct {
-		Credentials []common.Credentials
-		VerifyFn    func(*testing.T, testDef, *api.Secret)
+		RunnerCredentials *common.RunnerCredentials
+		Credentials       []common.Credentials
+		VerifyFn          func(*testing.T, testDef, *api.Secret)
 	}
-	tests := []testDef{
-		{
+	tests := map[string]testDef{
+		"no credentials": {
 			// don't execute VerifyFn
 			VerifyFn: nil,
 		},
-		{
+		"registry credentials": {
 			Credentials: []common.Credentials{
 				{
 					Type:     "registry",
@@ -914,7 +915,7 @@ func TestSetupCredentials(t *testing.T) {
 				assert.NotEmpty(t, secret.Data[api.DockerConfigKey])
 			},
 		},
-		{
+		"other credentials": {
 			Credentials: []common.Credentials{
 				{
 					Type:     "other",
@@ -925,6 +926,22 @@ func TestSetupCredentials(t *testing.T) {
 			},
 			// don't execute VerifyFn
 			VerifyFn: nil,
+		},
+		"non-DNS-1123-compatible-token": {
+			RunnerCredentials: &common.RunnerCredentials{
+				Token: "ToK3_?OF",
+			},
+			Credentials: []common.Credentials{
+				{
+					Type:     "registry",
+					URL:      "http://example.com",
+					Username: "user",
+					Password: "password",
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
+				assertDNS1123Compatibility(t, secret.GetGenerateName())
+			},
 		},
 	}
 
@@ -962,39 +979,50 @@ func TestSetupCredentials(t *testing.T) {
 		}
 	}
 
-	for _, test := range tests {
-		ex := executor{
-			kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-			options:    &kubernetesOptions{},
-			AbstractExecutor: executors.AbstractExecutor{
-				Config: common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Kubernetes: &common.KubernetesConfig{
-							Namespace: "default",
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			ex := executor{
+				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
+				options:    &kubernetesOptions{},
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Kubernetes: &common.KubernetesConfig{
+								Namespace: "default",
+							},
 						},
 					},
-				},
-				BuildShell: &common.ShellConfiguration{},
-				Build: &common.Build{
-					JobResponse: common.JobResponse{
-						Variables:   []common.JobVariable{},
-						Credentials: test.Credentials,
+					BuildShell: &common.ShellConfiguration{},
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							Variables:   []common.JobVariable{},
+							Credentials: test.Credentials,
+						},
+						Runner: &common.RunnerConfig{},
 					},
-					Runner: &common.RunnerConfig{},
 				},
-			},
-		}
+			}
 
-		executed = false
-		err := ex.prepareOverwrites(make(common.JobVariables, 0))
-		assert.NoError(t, err)
-		err = ex.setupCredentials()
-		assert.NoError(t, err)
-		if test.VerifyFn != nil {
-			assert.True(t, executed)
-		} else {
-			assert.False(t, executed)
-		}
+			if test.RunnerCredentials != nil {
+				ex.Build.Runner = &common.RunnerConfig{
+					RunnerCredentials: *test.RunnerCredentials,
+				}
+			}
+
+			executed = false
+
+			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			assert.NoError(t, err)
+
+			err = ex.setupCredentials()
+			assert.NoError(t, err)
+
+			if test.VerifyFn != nil {
+				assert.True(t, executed)
+			} else {
+				assert.False(t, executed)
+			}
+		})
 	}
 }
 
@@ -1366,6 +1394,21 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "test-service-2", pod.Spec.Containers[4].Image)
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[4].Command)
 				assert.Equal(t, []string{"argument1", "argument2"}, pod.Spec.Containers[4].Args)
+			},
+		},
+		"non-DNS-1123-compatible-token": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerCredentials: common.RunnerCredentials{
+					Token: "ToK3_?OF",
+				},
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assertDNS1123Compatibility(t, pod.GetGenerateName())
 			},
 		},
 	}

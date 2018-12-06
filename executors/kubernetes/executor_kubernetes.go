@@ -393,6 +393,10 @@ type dockerConfigEntry struct {
 	Username, Password string
 }
 
+func (s *executor) projectUniqueName() string {
+	return makeDNS1123Compatible(s.Build.ProjectUniqueName())
+}
+
 func (s *executor) setupCredentials() error {
 	authConfigs := make(map[string]dockerConfigEntry)
 
@@ -417,7 +421,7 @@ func (s *executor) setupCredentials() error {
 	}
 
 	secret := api.Secret{}
-	secret.GenerateName = s.Build.ProjectUniqueName()
+	secret.GenerateName = s.projectUniqueName()
 	secret.Namespace = s.configurationOverwrites.namespace
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
@@ -461,7 +465,7 @@ func (s *executor) setupBuildPod() error {
 
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: s.Build.ProjectUniqueName(),
+			GenerateName: s.projectUniqueName(),
 			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       labels,
 			Annotations:  annotations,
