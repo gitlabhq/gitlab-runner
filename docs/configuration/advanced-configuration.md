@@ -733,10 +733,10 @@ of used image automatically, by using one of the
   executor = "docker"
   [runners.docker]
     (...)
-    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:${CI_RUNNER_REVISION}"
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-${CI_RUNNER_REVISION}"
 ```
 
-With that configuration, GitLab Runner will instruct the executor to use the image in version `${CI_RUNNER_REVISION}`,
+With that configuration, GitLab Runner will instruct the executor to use the image in version `x86_64-${CI_RUNNER_REVISION}`,
 which is based on its compilation data. After updating the Runner to a new version, this will ensure that the
 Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
 before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
