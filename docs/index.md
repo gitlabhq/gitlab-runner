@@ -113,6 +113,7 @@ To jump into the specific documentation of each executor, visit:
 - [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup) A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
 - [Configure GitLab Runner to run behind a proxy](configuration/proxy.md) Learn how to set up a Linux proxy and configure GitLab Runner. Especially useful for the Docker executor.
 - [Feature Flags](configuration/feature-flags.md) Learn how to use feature flags to get access to features in beta stage or to enable breaking changes before the full deprecation and replacement is handled.
+- [Configure Session Server](configuration/advanced-configuration.md#the-session_server-section) Learn how to configure a session server]
 
 ## Troubleshooting
 
