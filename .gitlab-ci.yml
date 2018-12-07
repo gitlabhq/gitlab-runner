@@ -9,7 +9,7 @@ stages:
 - cleanup
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
   GOROOT: /usr/local/go
 
 before_script:
@@ -29,7 +29,7 @@ image: $CI_IMAGE
   services:
   - docker:dind
   variables: &docker_variables
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2375
   tags:
@@ -155,6 +155,25 @@ tests definitions:
   tags:
   - gitlab-org
 
+dep check:
+  <<: *except_docs
+  stage: prebuild
+  cache: {}
+  dependencies:
+  script:
+  - make dep_check
+
+dep status:
+  <<: *except_docs
+  stage: prebuild
+  cache: {}
+  dependencies:
+  script:
+  - make dep_status
+  only:
+    variables:
+    - $CI_DEP_STATUS_ENABLED
+
 #
 # Test stage
 #
@@ -176,13 +195,11 @@ code_quality:
     paths: [gl-code-quality-report.json]
     expire_in: 7d
 
-.unit_tests: &unit_tests
+unit test: &unit_tests
   <<: *docker
   stage: test
+  parallel: 5
   script:
-    - JOB_NAME=( $CI_JOB_NAME )
-    - export SUITE_INDEX=${JOB_NAME[-2]}
-    - export SUITE_TOTAL=${JOB_NAME[-1]}
     - source ci/touch_make_dependencies
     - make parallel_test_execute
   artifacts:
@@ -192,7 +209,7 @@ code_quality:
     when: always
     expire_in: 7d
 
-.unit_tests_with_race: &unit_tests_with_race
+unit test with race:
   <<: *unit_tests
   allow_failure: true
   variables:
@@ -200,28 +217,16 @@ code_quality:
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
 
-unit tests 0 5: *unit_tests
-unit tests 1 5: *unit_tests
-unit tests 2 5: *unit_tests
-unit tests 3 5: *unit_tests
-unit tests 4 5: *unit_tests
-
-unit tests with race 0 5: *unit_tests_with_race
-unit tests with race 1 5: *unit_tests_with_race
-unit tests with race 2 5: *unit_tests_with_race
-unit tests with race 3 5: *unit_tests_with_race
-unit tests with race 4 5: *unit_tests_with_race
-
 docs check links:
-  image: "registry.gitlab.com/gitlab-org/gitlab-build-images:nanoc-bootstrap-ruby-2.4-alpine"
+  image: "registry.gitlab.com/gitlab-org/gitlab-build-images:gitlab-docs-lint"
   stage: test
   cache: {}
   dependencies: []
   before_script:
     - unset GPG_KEY
   script:
-    - mv docs/ /nanoc/content/
-    - cd /nanoc
+    - mv docs/ /tmp/gitlab-docs/content/
+    - cd /tmp/gitlab-docs
     # Build HTML from Markdown
     - bundle exec nanoc
     # Check the internal links
@@ -272,10 +277,14 @@ git 1.7.1:
 # Coverage stage
 #
 
-test coverage report: &test_coverage_report
+.coverage_job: &coverage_job
   <<: *except_docs
   stage: coverage
   image: golang:1.10
+  when: always
+
+test coverage report:
+  <<: *coverage_job
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
   script:
     - source ci/touch_make_dependencies
@@ -287,12 +296,20 @@ test coverage report: &test_coverage_report
     expire_in: 7d
 
 race conditions detector:
-  <<: *except_docs
-  stage: coverage
-  image: golang:1.10
+  <<: *coverage_job
   script:
   - source ci/touch_make_dependencies
   - make check_race_conditions
+
+test junit report:
+  <<: *coverage_job
+  image: $CI_IMAGE
+  script:
+  - source ci/touch_make_dependencies
+  - make parallel_test_junit_report
+  artifacts:
+    reports:
+      junit: out/junit/report.xml
 
 #
 # Build stage
@@ -480,3 +497,4 @@ static QA:
       jq -C . gl-code-quality-report.json
       exit 1
     fi
+

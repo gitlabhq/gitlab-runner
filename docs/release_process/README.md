@@ -14,43 +14,9 @@ together with GitLab CE and GitLab EE projects.
 
 ### Stable release timeline
 
-- 12th day of a month:
-    - tag first RC version on `master` branch, e.g., `v1.6.0-rc1`
-    - deploy the RC version to `docker-ci-X.gitlap.com`
-      (each next RC version until the next date should be deployed to those hosts)
-
-- 17th day of a month:
-    - tag next RC version on `master` branch, e.g., `v1.6.0-rc2`
-    - deploy the current RC version to `shared-runners-manager-X.gitlab.com`
-      (each next RC version until the next date should be deployed to those hosts)
-
-- 20th day of a month:
-    - close the _new features_ window.
-
-        From now on we're merging only features that are ready and are eventually
-        waiting for documentation or last fixes. After the _new features_ window
-        is closed, we will not merge any feature that wasn't discussed even if it
-        contains all needed changes (code, new tests, documentation) and for which
-        all tests are passing.
-
-        > There is nothing bad in moving a feature to the next release at this stage,
-        > if it's still not _production ready_!
-
-- 21th day of a month:
-    - tag last RC version, e.g., `v1.6.0-rc5`
-
-- 22nd day of a month:
-    - update the `CHANGELOG` file with entries for current release
-    - tag a stable version **on `master` branch**
-    - create the `X-Y-stable` on the current master
-    - increase version number in `VERSION` file
-    - deploy stable version to `docker-ci-X.gitlap.com` and `shared-runners-manager-X.gitlab.com`
-    - announce the new release in _GitLab's release blog post_
-    - open the _new features_ window for the next release
-    - all MRs that are meant to go into the upcoming release should have the
-      correct milestone assigned _and_ the `Pick into X.Y` label where `X.Y` is
-      equal to the milestone, so that release managers can find and pick them.
-      Merge requests without this label will not be merged into the stable branch.
+For a detailed timeline on how `gitlab-runner` is released and deployed, you
+can follow the [release check
+list](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/.gitlab/issue_templates/Release%20Checklist.md).
 
 ### Supported releases
 
@@ -218,4 +184,4 @@ Some documentation tips:
     > need at least GitLab Runner v1.7.0 (not released yet) to work.
 
 [runner-milestones]: https://gitlab.com/gitlab-org/gitlab-runner/milestones
-[issue closing pattern]: https://docs.gitlab.com/ce/user/project/issues/automatic_issue_closing.html
+[issue closing pattern]: https://docs.gitlab.com/ee/user/project/issues/automatic_issue_closing.html

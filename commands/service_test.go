@@ -1,34 +1,113 @@
 package commands
 
 import (
-	"os"
+	"fmt"
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/service/mocks"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-func TestServiceLogHook(t *testing.T) {
-	formatter := new(logrus.TextFormatter)
-	formatter.DisableColors = true
-	formatter.DisableTimestamp = true
+func newTestGetServiceArgumentsCommand(t *testing.T, expectedArgs []string) func(*cli.Context) {
+	return func(c *cli.Context) {
+		arguments := getServiceArguments(c)
 
-	logger := &logrus.Logger{
-		Formatter: formatter,
-		Hooks:     make(logrus.LevelHooks),
-		Level:     logrus.InfoLevel,
-		Out:       os.Stderr,
+		for _, arg := range expectedArgs {
+			assert.Contains(t, arguments, arg)
+		}
+	}
+}
+
+func testServiceCommandRun(t *testing.T, command func(*cli.Context), args ...string) {
+	app := cli.NewApp()
+	app.Commands = []cli.Command{
+		{
+			Name:   "test-command",
+			Action: command,
+			Flags:  getInstallFlags(),
+		},
 	}
 
-	mockServiceLogger := new(mocks.Logger)
-	mockServiceLogger.On("Info", "level=info msg=test\n").Return(nil)
+	args = append([]string{"binary", "test-command"}, args...)
+	app.Run(args)
+}
 
-	logHook := &ServiceLogHook{mockServiceLogger, logrus.InfoLevel}
+type getServiceArgumentsTestCase struct {
+	cliFlags     []string
+	expectedArgs []string
+}
 
-	logger.Hooks.Add(logHook)
+func TestGetServiceArguments(t *testing.T) {
+	tests := []getServiceArgumentsTestCase{
+		{
+			expectedArgs: []string{
+				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--config", getDefaultConfigFile(),
+				"--service", "gitlab-runner",
+				"--syslog",
+			},
+		},
+		{
+			cliFlags: []string{
+				"--config", "/tmp/config.toml",
+			},
+			expectedArgs: []string{
+				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--config", "/tmp/config.toml",
+				"--service", "gitlab-runner",
+				"--syslog",
+			},
+		},
+		{
+			cliFlags: []string{
+				"--working-directory", "/tmp",
+			},
+			expectedArgs: []string{
+				"--working-directory", "/tmp",
+				"--config", getDefaultConfigFile(),
+				"--service", "gitlab-runner",
+				"--syslog",
+			},
+		},
+		{
+			cliFlags: []string{
+				"--service", "gitlab-runner-service-name",
+			},
+			expectedArgs: []string{
+				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--config", getDefaultConfigFile(),
+				"--service", "gitlab-runner-service-name",
+				"--syslog",
+			},
+		},
+		{
+			cliFlags: []string{
+				"--syslog=true",
+			},
+			expectedArgs: []string{
+				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--config", getDefaultConfigFile(),
+				"--service", "gitlab-runner",
+				"--syslog",
+			},
+		},
+		{
+			cliFlags: []string{
+				"--syslog=false",
+			},
+			expectedArgs: []string{
+				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--config", getDefaultConfigFile(),
+				"--service", "gitlab-runner",
+			},
+		},
+	}
 
-	logger.Info("test")
-
-	mockServiceLogger.AssertExpectations(t)
+	for id, testCase := range tests {
+		t.Run(fmt.Sprintf("case-%d", id), func(t *testing.T) {
+			testServiceCommandRun(t, newTestGetServiceArgumentsCommand(t, testCase.expectedArgs), testCase.cliFlags...)
+		})
+	}
 }

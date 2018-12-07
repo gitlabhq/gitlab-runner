@@ -152,7 +152,7 @@ about all the options you can use under `[[runners]]`.
 In the `[runners.docker]` section you can define the default Docker image to
 be used by the child Runners if it's not defined in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/).
 By using `privileged = true`, all Runners will be able to run
-[Docker in Docker](https://docs.gitlab.com/ce/ci/docker/using_docker_build.html#use-docker-in-docker-executor)
+[Docker in Docker](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor)
 which is useful if you plan to build your own Docker images via GitLab CI/CD.
 
 Next, we use `disable_cache = true` to disable the Docker executor's inner
@@ -405,6 +405,6 @@ You can read the following use cases from which this tutorial was (heavily)
 influenced:
 
 - [HumanGeo - Scaling GitLab CI](http://blog.thehumangeo.com/gitlab-autoscale-runners.html)
-- [Substrakt Health - Autoscale GitLab CI Runners and save 90% on EC2 costs](https://substrakthealth.com/news/gitlab-ci-cost-savings/)
+- [Substrakt Health - Autoscale GitLab CI Runners and save 90% on EC2 costs](https://about.gitlab.com/2017/11/23/autoscale-ci-runners/)
 
 [spot]: https://aws.amazon.com/ec2/spot/

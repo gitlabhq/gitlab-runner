@@ -317,7 +317,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 There are a couple of caveats when using docker in your builds while running on
 a kubernetes cluster. Most of these issues are already discussed in the
-[**Using Docker Build**](https://docs.gitlab.com/ce/ci/docker/using_docker_build.html)
+[**Using Docker Build**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html)
 section of the gitlab-ci
 documentation but it is worth it to revisit them here as you might run into
 some slightly different things when running this on your cluster.
@@ -368,6 +368,6 @@ on other nodes.
 [k8s-host-path-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 [k8s-pvc-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim
 [k8s-secret-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#secret
-[k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configmap/
+[k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
 [k8s-empty-dir-volume-docs]:https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
 [advanced-configuration-helper-image]: ../configuration/advanced-configuration.md#helper-image

@@ -63,7 +63,8 @@ type buildsHelper struct {
 	builds   []*common.Build
 	lock     sync.Mutex
 
-	jobsTotal *prometheus.CounterVec
+	jobsTotal            *prometheus.CounterVec
+	jobDurationHistogram *prometheus.HistogramVec
 }
 
 func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCounter {
@@ -194,12 +195,16 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.jobDurationHistogram.WithLabelValues(deleteBuild.Runner.ShortDescription()).Observe(deleteBuild.Duration().Seconds())
+
 	for idx, build := range b.builds {
 		if build == deleteBuild {
 			b.builds = append(b.builds[0:idx], b.builds[idx+1:]...)
+
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -245,6 +250,7 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	ch <- requestConcurrencyExceededDesc
 
 	b.jobsTotal.Describe(ch)
+	b.jobDurationHistogram.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -280,6 +286,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	b.jobsTotal.Collect(ch)
+	b.jobDurationHistogram.Collect(ch)
 }
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
@@ -344,6 +351,14 @@ func newBuildsHelper() buildsHelper {
 			prometheus.CounterOpts{
 				Name: "gitlab_runner_jobs_total",
 				Help: "Total number of handled jobs",
+			},
+			[]string{"runner"},
+		),
+		jobDurationHistogram: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "gitlab_runner_job_duration_seconds",
+				Help:    "Histogram of job durations",
+				Buckets: []float64{30, 60, 300, 600, 1800, 3600, 7200, 10800, 18000, 36000},
 			},
 			[]string{"runner"},
 		),

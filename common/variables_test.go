@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVariablesJSON(t *testing.T) {
@@ -92,4 +93,61 @@ func TestSpecialVariablesExpansion(t *testing.T) {
 	assert.Equal(t, "/dsa", expanded.Get("key2"))
 	assert.Equal(t, "aabb", expanded.Get("key3"))
 	assert.Equal(t, "aabb", expanded.Get("key4"))
+}
+
+type multipleKeyUsagesTestCase struct {
+	variables     JobVariables
+	expectedValue string
+}
+
+func TestMultipleUsageOfAKey(t *testing.T) {
+	getVariable := func(value string) JobVariable {
+		return JobVariable{Key: "key", Value: value}
+	}
+
+	tests := map[string]multipleKeyUsagesTestCase{
+		"defined at job level": {
+			variables: JobVariables{
+				getVariable("from-job"),
+			},
+			expectedValue: "from-job",
+		},
+		"defined at default and job level": {
+			variables: JobVariables{
+				getVariable("from-default"),
+				getVariable("from-job"),
+			},
+			expectedValue: "from-job",
+		},
+		"defined at config, default and job level": {
+			variables: JobVariables{
+				getVariable("from-config"),
+				getVariable("from-default"),
+				getVariable("from-job"),
+			},
+			expectedValue: "from-job",
+		},
+		"defined at config and default level": {
+			variables: JobVariables{
+				getVariable("from-config"),
+				getVariable("from-default"),
+			},
+			expectedValue: "from-default",
+		},
+		"defined at config level": {
+			variables: JobVariables{
+				getVariable("from-config"),
+			},
+			expectedValue: "from-config",
+		},
+	}
+
+	for name, testCase := range tests {
+		t.Run(name, func(t *testing.T) {
+			for i := 0; i < 100; i++ {
+				require.Equal(t, testCase.expectedValue, testCase.variables.Get("key"))
+			}
+		})
+	}
+
 }

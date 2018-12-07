@@ -8,7 +8,7 @@ Before registering a Runner, you need to first:
 
 - [Install it](../install/index.md) on a server separate than where GitLab
   is installed on
-- [Obtain a token](https://docs.gitlab.com/ce/ci/runners/) for a shared or
+- [Obtain a token](https://docs.gitlab.com/ee/ci/runners/) for a shared or
   specific Runner via GitLab's interface
 
 ## GNU/Linux
@@ -329,4 +329,4 @@ docker run --rm -t -i -v /path/to/config:/etc/gitlab-runner --name gitlab-runner
   --locked="false"
 ```
 
-[tags]: https://docs.gitlab.com/ce/ci/runners/#using-tags
+[tags]: https://docs.gitlab.com/ee/ci/runners/#using-tags
