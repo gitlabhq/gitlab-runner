@@ -59,7 +59,6 @@ spec:
       - args:
         - run
         image: gitlab/gitlab-runner:latest
-        imagePullPolicy: Always
         name: gitlab-runner
         volumeMounts:
         - mountPath: /etc/gitlab-runner
