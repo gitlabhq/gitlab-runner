@@ -114,6 +114,13 @@ following commands support the following signals:
 | `run`, `exec`, `run-single` | **SIGQUIT** | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
 | `run` | **SIGHUP** | Force to reload configuration file |
 
+For example, to force a reload of the Runner's configuration file, run
+(all `gitlab-runner` processes will receive this signal):
+
+```bash
+sudo killall -SIGHUP gitlab-runner
+```
+
 If your operating system is configured to automatically restart the service if it fails (which is the default on some platforms) it may automatically restart the runner if it's shut down by the signals above.
 
 ## Commands overview
