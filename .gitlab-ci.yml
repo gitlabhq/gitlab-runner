@@ -217,20 +217,20 @@ unit test with race:
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
 
-docs check links:
-  image: "registry.gitlab.com/gitlab-org/gitlab-build-images:gitlab-docs-lint"
-  stage: test
-  cache: {}
-  dependencies: []
-  before_script:
-    - unset GPG_KEY
-  script:
-    - mv docs/ /tmp/gitlab-docs/content/
-    - cd /tmp/gitlab-docs
-    # Build HTML from Markdown
-    - bundle exec nanoc
-    # Check the internal links
-    - bundle exec nanoc check internal_links
+#docs check links:
+#  image: "registry.gitlab.com/gitlab-org/gitlab-build-images:gitlab-docs-lint"
+#  stage: test
+#  cache: {}
+#  dependencies: []
+#  before_script:
+#    - unset GPG_KEY
+#  script:
+#    - mv docs/ /tmp/gitlab-docs/content/
+#    - cd /tmp/gitlab-docs
+#    # Build HTML from Markdown
+#    - bundle exec nanoc
+#    # Check the internal links
+#    - bundle exec nanoc check internal_links
 
 integration windows:
   <<: *except_docs
