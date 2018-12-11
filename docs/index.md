@@ -28,15 +28,15 @@ installed.
 ## Features
 
 - Allows to run:
- - multiple jobs concurrently
- - use multiple tokens with multiple server (even per-project)
- - limit number of concurrent jobs per-token
+  - multiple jobs concurrently
+  - use multiple tokens with multiple server (even per-project)
+  - limit number of concurrent jobs per-token
 - Jobs can be run:
- - locally
- - using Docker containers
- - using Docker containers and executing job over SSH
- - using Docker containers with autoscaling on different clouds and virtualization hypervisors
- - connecting to remote SSH server
+  - locally
+  - using Docker containers
+  - using Docker containers and executing job over SSH
+  - using Docker containers with autoscaling on different clouds and virtualization hypervisors
+  - connecting to remote SSH server
 - Is written in Go and distributed as single binary without any other requirements
 - Supports Bash, Windows Batch and Windows PowerShell
 - Works on GNU/Linux, OS X and Windows (pretty much anywhere you can run Docker)
