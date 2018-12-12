@@ -365,7 +365,7 @@ the `node_selector` option to set one or more labels that have to match a node
 before any containers are deployed to it. For example build containers may only run
 on nodes that are labeled with `role=ci` while running all other production services
 on other nodes. Further separation of build containers can be achieved using node
-[taints][k8s-taints-and-tolerationn-docs]. This will dissallow other worloads
+[taints][k8s-taints-and-tolerationn-docs]. This will disallow other workloads
 from scheduling on the same nodes as the build containers without extra
 configuration.
 
