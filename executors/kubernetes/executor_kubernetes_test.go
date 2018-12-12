@@ -1231,11 +1231,17 @@ func TestSetupBuildPod(t *testing.T) {
 							"node-role.kubernetes.io/master": "NoSchedule",
 							"custom.toleration=value":        "NoSchedule",
 							"empty.value=":                   "PreferNoSchedule",
+							"onlyKey":                        "",
 						},
 					},
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
+					Key:      "node-role.kubernetes.io/master",
+					Operator: api.TolerationOpExists,
+					Effect:   api.TaintEffectNoSchedule,
+				})
 				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
 					Key:      "custom.toleration",
 					Operator: api.TolerationOpEqual,
@@ -1244,15 +1250,16 @@ func TestSetupBuildPod(t *testing.T) {
 				})
 				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
 					Key:      "empty.value",
-					Operator: api.TolerationOpExists,
+					Operator: api.TolerationOpEqual,
+					Value:    "",
 					Effect:   api.TaintEffectPreferNoSchedule,
 				})
 				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
-					Key:      "node-role.kubernetes.io/master",
+					Key:      "onlyKey",
 					Operator: api.TolerationOpExists,
-					Effect:   api.TaintEffectNoSchedule,
+					Effect:   "",
 				})
-				assert.Equal(t, len(pod.Spec.Tolerations), 3)
+				assert.Equal(t, len(pod.Spec.Tolerations), 4)
 			},
 		},
 		"supports extended docker configuration for image and services": {

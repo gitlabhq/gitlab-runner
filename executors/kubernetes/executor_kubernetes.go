@@ -475,7 +475,7 @@ func (s *executor) setupBuildPod() error {
 			ServiceAccountName: s.configurationOverwrites.serviceAccount,
 			RestartPolicy:      api.RestartPolicyNever,
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
-			Tolerations:        tolerationMapToTolerationConfig(s.Config.Kubernetes.NodeTolerations),
+			Tolerations:        s.getTolerations(),
 			Containers: append([]api.Container{
 				// TODO use the build and helper template here
 				s.buildContainer("build", buildImage, s.options.Image, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
@@ -495,23 +495,30 @@ func (s *executor) setupBuildPod() error {
 	return nil
 }
 
-func tolerationMapToTolerationConfig(tolerations map[string]string) (ret []api.Toleration) {
-	for toleration, effect := range tolerations {
-		parts := strings.Split(toleration, "=")
+func (s *executor) getTolerations() []api.Toleration {
+	var tolerations []api.Toleration
+
+	for toleration, effect := range s.Config.Kubernetes.NodeTolerations {
 		newToleration := api.Toleration{
-			Key:    parts[0],
 			Effect: api.TaintEffect(effect),
 		}
-		if len(parts) > 1 && parts[1] != "" {
+
+		if strings.Contains(toleration, "=") {
+			parts := strings.Split(toleration, "=")
+			newToleration.Key = parts[0]
+			if len(parts) > 1 {
+				newToleration.Value = parts[1]
+			}
 			newToleration.Operator = api.TolerationOpEqual
-			newToleration.Value = parts[1]
 		} else {
+			newToleration.Key = toleration
 			newToleration.Operator = api.TolerationOpExists
 		}
-		ret = append(ret, newToleration)
+
+		tolerations = append(tolerations, newToleration)
 	}
 
-	return ret
+	return tolerations
 }
 
 func (s *executor) runInContainer(ctx context.Context, name string, command []string, script string) <-chan error {
