@@ -88,7 +88,7 @@ type Build struct {
 	logger                BuildLogger
 	allVariables          JobVariables
 
-	startedAt time.Time
+	createdAt time.Time
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -268,7 +268,10 @@ func (b *Build) handleError(err error) error {
 
 	case context.DeadlineExceeded:
 		b.CurrentState = BuildRunRuntimeTimedout
-		return &BuildError{Inner: fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout())}
+		return &BuildError{
+			Inner:         fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()),
+			FailureReason: JobExecutionTimeout,
+		}
 
 	default:
 		b.CurrentState = BuildRunRuntimeFinished
@@ -292,8 +295,6 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	go func() {
 		buildFinish <- b.executeScript(runContext, executor)
 	}()
-
-	b.startedAt = time.Now()
 
 	// Wait for signals: cancel, timeout, abort or finish
 	b.Log().Debugln("Waiting for signals...")
@@ -381,6 +382,35 @@ func (b *Build) waitForTerminal(timeout time.Duration) {
 	}
 }
 
+func (b *Build) setTraceStatus(trace JobTrace, err error) {
+	logger := b.logger.WithFields(logrus.Fields{
+		"duration": b.Duration(),
+	})
+
+	if err == nil {
+		logger.Infoln("Job succeeded")
+		trace.Success()
+
+		return
+	}
+
+	if buildError, ok := err.(*BuildError); ok {
+		logger.SoftErrorln("Job failed:", err)
+
+		failureReason := buildError.FailureReason
+		if failureReason == "" {
+			failureReason = ScriptFailure
+		}
+
+		trace.Fail(err, failureReason)
+
+		return
+	}
+
+	logger.Errorln("Job failed (system failure):", err)
+	trace.Fail(err, RunnerSystemFailure)
+}
+
 func (b *Build) CurrentExecutorStage() ExecutorStage {
 	if b.executorStageResolver == nil {
 		b.executorStageResolver = func() ExecutorStage {
@@ -403,16 +433,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.CurrentState = BuildRunStatePending
 
 	defer func() {
-		if _, ok := err.(*BuildError); ok {
-			b.logger.SoftErrorln("Job failed:", err)
-			trace.Fail(err, ScriptFailure)
-		} else if err != nil {
-			b.logger.Errorln("Job failed (system failure):", err)
-			trace.Fail(err, RunnerSystemFailure)
-		} else {
-			b.logger.Infoln("Job succeeded")
-			trace.Success()
-		}
+		b.setTraceStatus(trace, err)
+
 		if executor != nil {
 			executor.Cleanup()
 		}
@@ -457,6 +479,12 @@ func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
 		{Key: "CI_PROJECT_DIR", Value: b.FullProjectDir(), Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER", Value: "yes", Public: true, Internal: true, File: false},
+	}
+}
+
+func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
+	return JobVariables{
+		{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "true", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
 	}
 }
 
@@ -509,6 +537,7 @@ func (b *Build) GetAllVariables() JobVariables {
 		variables = append(variables, b.Runner.GetVariables()...)
 	}
 	variables = append(variables, b.GetDefaultVariables()...)
+	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
 	variables = append(variables, b.GetSharedEnvVariable())
@@ -645,5 +674,35 @@ func (b *Build) GetCacheRequestTimeout() int {
 }
 
 func (b *Build) Duration() time.Duration {
-	return time.Since(b.startedAt)
+	return time.Since(b.createdAt)
+}
+
+func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt chan os.Signal, executorData ExecutorData) *Build {
+	return &Build{
+		JobResponse:     jobData,
+		Runner:          runnerConfig,
+		SystemInterrupt: systemInterrupt,
+		ExecutorData:    executorData,
+		createdAt:       time.Now(),
+	}
+}
+
+func (b *Build) IsFeatureFlagOn(name string) bool {
+	ffValue := b.GetAllVariables().Get(name)
+
+	if ffValue == "" {
+		return false
+	}
+
+	on, err := strconv.ParseBool(ffValue)
+	if err != nil {
+		logrus.WithError(err).
+			WithField("ffName", name).
+			WithField("ffValue", ffValue).
+			Error("Error while parsing the value of feature flag")
+
+		return false
+	}
+
+	return on
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/ayufan/golang-kardianos-service"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/service"
@@ -18,43 +19,6 @@ const (
 	defaultDisplayName = "GitLab Runner"
 	defaultDescription = "GitLab Runner"
 )
-
-type ServiceLogHook struct {
-	service.Logger
-	Level logrus.Level
-}
-
-func (s *ServiceLogHook) Levels() []logrus.Level {
-	return []logrus.Level{
-		logrus.PanicLevel,
-		logrus.FatalLevel,
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-		logrus.InfoLevel,
-	}
-}
-
-func (s *ServiceLogHook) Fire(entry *logrus.Entry) error {
-	if entry.Level > s.Level {
-		return nil
-	}
-
-	msg, err := entry.String()
-	if err != nil {
-		return err
-	}
-
-	switch entry.Level {
-	case logrus.PanicLevel, logrus.FatalLevel, logrus.ErrorLevel:
-		s.Error(msg)
-	case logrus.WarnLevel:
-		s.Warning(msg)
-	case logrus.InfoLevel:
-		s.Info(msg)
-	}
-
-	return nil
-}
 
 type NullService struct {
 }
@@ -115,7 +79,11 @@ func getServiceArguments(c *cli.Context) (arguments []string) {
 		arguments = append(arguments, "--service", sn)
 	}
 
-	arguments = append(arguments, "--syslog")
+	syslog := !c.IsSet("syslog") || c.Bool("syslog")
+	if syslog {
+		arguments = append(arguments, "--syslog")
+	}
+
 	return
 }
 
@@ -183,16 +151,18 @@ func RunServiceControl(c *cli.Context) {
 	}
 }
 
-func init() {
-	flags := []cli.Flag{
+func getFlags() []cli.Flag {
+	return []cli.Flag{
 		cli.StringFlag{
 			Name:  "service, n",
 			Value: defaultServiceName,
 			Usage: "Specify service name to use",
 		},
 	}
+}
 
-	installFlags := flags
+func getInstallFlags() []cli.Flag {
+	installFlags := getFlags()
 	installFlags = append(installFlags, cli.StringFlag{
 		Name:  "working-directory, d",
 		Value: helpers.GetCurrentWorkingDirectory(),
@@ -202,6 +172,10 @@ func init() {
 		Name:  "config, c",
 		Value: getDefaultConfigFile(),
 		Usage: "Specify custom config file",
+	})
+	installFlags = append(installFlags, cli.BoolFlag{
+		Name:  "syslog",
+		Usage: "Setup system logging integration",
 	})
 
 	if runtime.GOOS == "windows" {
@@ -222,6 +196,13 @@ func init() {
 			Usage: "Specify user-name to secure the runner",
 		})
 	}
+
+	return installFlags
+}
+
+func init() {
+	flags := getFlags()
+	installFlags := getInstallFlags()
 
 	common.RegisterCommand(cli.Command{
 		Name:   "install",

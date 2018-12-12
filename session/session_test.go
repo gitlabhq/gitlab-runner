@@ -64,15 +64,23 @@ func TestExec(t *testing.T) {
 			require.NoError(t, err)
 			session.Token = "validToken"
 
-			mockTerminalConn := terminal.MockConn{}
-			mockTerminalConn.On("Start", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Once()
-			mockTerminalConn.On("Close").Return(nil).Once()
+			mockTerminalConn := new(terminal.MockConn)
+			defer mockTerminalConn.AssertExpectations(t)
 
-			mockTerminal := terminal.MockInteractiveTerminal{}
-			mockTerminal.On("Connect").Return(&mockTerminalConn, c.connectionErr).Once()
+			if c.connectionErr == nil && c.authorization == "validToken" && c.isWebsocketUpgrade {
+				mockTerminalConn.On("Start", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Once()
+				mockTerminalConn.On("Close").Return(nil).Once()
+			}
+
+			mockTerminal := new(terminal.MockInteractiveTerminal)
+			defer mockTerminal.AssertExpectations(t)
+
+			if c.authorization == "validToken" && c.isWebsocketUpgrade {
+				mockTerminal.On("Connect").Return(mockTerminalConn, c.connectionErr).Once()
+			}
 
 			if c.attachTerminal {
-				session.SetInteractiveTerminal(&mockTerminal)
+				session.SetInteractiveTerminal(mockTerminal)
 			}
 
 			req := httptest.NewRequest(http.MethodPost, session.Endpoint+"/exec", nil)
@@ -99,14 +107,14 @@ func TestDoNotAllowMultipleConnections(t *testing.T) {
 	require.NoError(t, err)
 	session.Token = "validToken"
 
-	mockTerminalConn := terminal.MockConn{}
-	mockTerminalConn.On("Start", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Once()
-	mockTerminalConn.On("Close").Return().Once()
+	mockTerminalConn := new(terminal.MockConn)
+	defer mockTerminalConn.AssertExpectations(t)
 
-	mockTerminal := terminal.MockInteractiveTerminal{}
-	mockTerminal.On("Connect").Return(&mockTerminalConn, nil).Once()
+	mockTerminal := new(terminal.MockInteractiveTerminal)
+	defer mockTerminal.AssertExpectations(t)
+	mockTerminal.On("Connect").Return(mockTerminalConn, nil).Once()
 
-	session.SetInteractiveTerminal(&mockTerminal)
+	session.SetInteractiveTerminal(mockTerminal)
 
 	// Simulating another connection has already started.
 	conn, err := session.newTerminalConn()
@@ -141,10 +149,11 @@ func TestKill(t *testing.T) {
 	err = sess.Kill()
 	assert.NoError(t, err)
 
-	mockConn := terminal.MockConn{}
+	mockConn := new(terminal.MockConn)
+	defer mockConn.AssertExpectations(t)
 	mockConn.On("Close").Return(nil).Once()
 
-	sess.terminalConn = &mockConn
+	sess.terminalConn = mockConn
 
 	err = sess.Kill()
 	assert.NoError(t, err)
@@ -155,14 +164,46 @@ func TestKillFailedToClose(t *testing.T) {
 	sess, err := NewSession(nil)
 	require.NoError(t, err)
 
-	mockConn := terminal.MockConn{}
+	mockConn := new(terminal.MockConn)
+	defer mockConn.AssertExpectations(t)
 	mockConn.On("Close").Return(errors.New("some error")).Once()
 
-	sess.terminalConn = &mockConn
+	sess.terminalConn = mockConn
 
 	err = sess.Kill()
 	assert.Error(t, err)
 
 	// Even though an error occurred closing it still is removed.
+	assert.Nil(t, sess.terminalConn)
+}
+
+type fakeTerminalConn struct {
+	commands []string
+}
+
+func (fakeTerminalConn) Close() error {
+	return nil
+}
+
+func (fakeTerminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, disconnectCh chan error) {
+}
+
+func TestCloseTerminalConn(t *testing.T) {
+	conn := &fakeTerminalConn{
+		commands: []string{"command", "-c", "random"},
+	}
+
+	mockConn := new(terminal.MockConn)
+	defer mockConn.AssertExpectations(t)
+	mockConn.On("Close").Return(nil).Once()
+
+	sess, err := NewSession(nil)
+	sess.terminalConn = conn
+	require.NoError(t, err)
+
+	sess.closeTerminalConn(mockConn)
+	assert.NotNil(t, sess.terminalConn)
+
+	sess.closeTerminalConn(conn)
 	assert.Nil(t, sess.terminalConn)
 }

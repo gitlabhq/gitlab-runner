@@ -57,32 +57,33 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 		return
 	}
 
-	build = &common.Build{
-		JobResponse: common.JobResponse{
-			ID:            1,
-			Token:         "",
-			AllowGitFetch: false,
-			JobInfo: common.JobInfo{
-				Name:        "",
-				Stage:       "",
-				ProjectID:   1,
-				ProjectName: "",
-			},
-			GitInfo: common.GitInfo{
-				RepoURL:   repoURL,
-				Ref:       strings.TrimSpace(refName),
-				Sha:       strings.TrimSpace(sha),
-				BeforeSha: strings.TrimSpace(beforeSha),
-			},
-			RunnerInfo: common.RunnerInfo{
-				Timeout: c.getTimeout(),
-			},
+	jobResponse := common.JobResponse{
+		ID:            1,
+		Token:         "",
+		AllowGitFetch: false,
+		JobInfo: common.JobInfo{
+			Name:        "",
+			Stage:       "",
+			ProjectID:   1,
+			ProjectName: "",
 		},
-		Runner: &common.RunnerConfig{
-			RunnerSettings: c.RunnerSettings,
+		GitInfo: common.GitInfo{
+			RepoURL:   repoURL,
+			Ref:       strings.TrimSpace(refName),
+			Sha:       strings.TrimSpace(sha),
+			BeforeSha: strings.TrimSpace(beforeSha),
 		},
-		SystemInterrupt: abortSignal,
+		RunnerInfo: common.RunnerInfo{
+			Timeout: c.getTimeout(),
+		},
 	}
+
+	runner := &common.RunnerConfig{
+		RunnerSettings: c.RunnerSettings,
+	}
+
+	build = common.NewBuild(jobResponse, runner, abortSignal, nil)
+
 	return
 }
 

@@ -187,21 +187,13 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) buildContainer(name, image string, imageDefinition common.Image, requests, limits api.ResourceList, command ...string) api.Container {
+func (s *executor) buildContainer(name, image string, imageDefinition common.Image, requests, limits api.ResourceList, containerCommand ...string) api.Container {
 	privileged := false
 	if s.Config.Kubernetes != nil {
 		privileged = s.Config.Kubernetes.Privileged
 	}
 
-	if len(command) == 0 && len(imageDefinition.Command) > 0 {
-		command = imageDefinition.Command
-	}
-
-	var args []string
-	if len(imageDefinition.Entrypoint) > 0 {
-		args = command
-		command = imageDefinition.Entrypoint
-	}
+	command, args := s.getCommandAndArgs(imageDefinition, containerCommand...)
 
 	return api.Container{
 		Name:            name,
@@ -220,6 +212,43 @@ func (s *executor) buildContainer(name, image string, imageDefinition common.Ima
 		},
 		Stdin: true,
 	}
+}
+
+func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
+	if s.Build.IsFeatureFlagOn("FF_K8S_USE_ENTRYPOINT_OVER_COMMAND") {
+		return s.getCommandsAndArgsV2(imageDefinition, command...)
+	}
+
+	return s.getCommandsAndArgsV1(imageDefinition, command...)
+}
+
+// TODO: Remove in 12.0
+func (s *executor) getCommandsAndArgsV1(imageDefinition common.Image, command ...string) ([]string, []string) {
+	if len(command) == 0 && len(imageDefinition.Command) > 0 {
+		command = imageDefinition.Command
+	}
+
+	var args []string
+	if len(imageDefinition.Entrypoint) > 0 {
+		args = command
+		command = imageDefinition.Entrypoint
+	}
+
+	return command, args
+}
+
+// TODO: Make this the only proper way to setup command and args in 12.0
+func (s *executor) getCommandsAndArgsV2(imageDefinition common.Image, command ...string) ([]string, []string) {
+	if len(command) == 0 && len(imageDefinition.Entrypoint) > 0 {
+		command = imageDefinition.Entrypoint
+	}
+
+	var args []string
+	if len(imageDefinition.Command) > 0 {
+		args = imageDefinition.Command
+	}
+
+	return command, args
 }
 
 func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
@@ -364,6 +393,10 @@ type dockerConfigEntry struct {
 	Username, Password string
 }
 
+func (s *executor) projectUniqueName() string {
+	return makeDNS1123Compatible(s.Build.ProjectUniqueName())
+}
+
 func (s *executor) setupCredentials() error {
 	authConfigs := make(map[string]dockerConfigEntry)
 
@@ -388,7 +421,7 @@ func (s *executor) setupCredentials() error {
 	}
 
 	secret := api.Secret{}
-	secret.GenerateName = s.Build.ProjectUniqueName()
+	secret.GenerateName = s.projectUniqueName()
 	secret.Namespace = s.configurationOverwrites.namespace
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
@@ -444,7 +477,7 @@ func (s *executor) setupBuildPod() error {
 
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: s.Build.ProjectUniqueName(),
+			GenerateName: s.projectUniqueName(),
 			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       labels,
 			Annotations:  annotations,

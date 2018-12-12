@@ -1,7 +1,7 @@
 ---
 toc: false
 comments: false
-last_updated: 2017-10-09
+last_updated: 2018-11-07
 ---
 
 # GitLab Runner
@@ -28,15 +28,15 @@ installed.
 ## Features
 
 - Allows to run:
- - multiple jobs concurrently
- - use multiple tokens with multiple server (even per-project)
- - limit number of concurrent jobs per-token
+  - multiple jobs concurrently
+  - use multiple tokens with multiple server (even per-project)
+  - limit number of concurrent jobs per-token
 - Jobs can be run:
- - locally
- - using Docker containers
- - using Docker containers and executing job over SSH
- - using Docker containers with autoscaling on different clouds and virtualization hypervisors
- - connecting to remote SSH server
+  - locally
+  - using Docker containers
+  - using Docker containers and executing job over SSH
+  - using Docker containers with autoscaling on different clouds and virtualization hypervisors
+  - connecting to remote SSH server
 - Is written in Go and distributed as single binary without any other requirements
 - Supports Bash, Windows Batch and Windows PowerShell
 - Works on GNU/Linux, OS X and Windows (pretty much anywhere you can run Docker)
@@ -49,22 +49,11 @@ installed.
 
 ## Compatibility chart
 
-CAUTION: **Important:**
-GitLab Runner >= 9.0 requires GitLab's API v4 endpoints, which were introduced
-in GitLab CE/EE 9.0. Because of this change, GitLab Runner >= 9.0 requires
-GitLab CE/EE >= 9.0 and will not work with older GitLab versions.
-The old API used by GitLab Runner was deprecated in August 2017 and with this,
-the v1.11.x version of GitLab Runner is deprecated as well.
+The GitLab Runner version should be in sync with the GitLab version. While older
+Runners may still work with newer GitLab versions, and vice versa, in some cases,
+features may be not available or work properly if there's a version difference.
 
-In the following table you can see the compatibility chart between GitLab and
-GitLab Runner.
-
-| GitLab Runner / GitLab  | 9.x.y | 10.x.y  |
-| :---------------------: | :---: | :-----: |
-| v1.10.x                 | ✓     | ✗       |
-| v1.11.x                 | ✓     | ✗       |
-| v9.x.y                  | ✓     | ✓       |
-| v10.x.y                 | ✓     | ✓       |
+Backward incompatibility is allowed only for major version updates.
 
 ## [Install GitLab Runner](install/index.md)
 
@@ -123,6 +112,8 @@ To jump into the specific documentation of each executor, visit:
 - [Runner monitoring](monitoring/README.md) Learn how to monitor the Runner's behavior.
 - [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup) A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
 - [Configure GitLab Runner to run behind a proxy](configuration/proxy.md) Learn how to set up a Linux proxy and configure GitLab Runner. Especially useful for the Docker executor.
+- [Feature Flags](configuration/feature-flags.md) Learn how to use feature flags to get access to features in beta stage or to enable breaking changes before the full deprecation and replacement is handled.
+- [Configure Session Server](configuration/advanced-configuration.md#the-session_server-section) Learn how to configure a session server for interacting with jobs the Runner is responsible for.
 
 ## Troubleshooting
 

@@ -56,9 +56,10 @@ export CGO_ENABLED ?= 0
 
 
 # Development Tools
+DEP = $(GOPATH_BIN)/dep
 GOX = $(GOPATH_BIN)/gox
 MOCKERY = $(GOPATH_BIN)/mockery
-DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
+DEVELOPMENT_TOOLS = $(DEP) $(GOX) $(MOCKERY)
 
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
 
@@ -137,6 +138,10 @@ parallel_test_coverage_report: $(GOPATH_SETUP)
 	# Preparing coverage report
 	@./scripts/go_test_with_coverage_report coverage
 
+parallel_test_junit_report: $(GOPATH_SETUP)
+	# Preparing jUnit test report
+	@./scripts/go_test_with_coverage_report junit
+
 pull_images_for_tests: $(GOPATH_SETUP)
 	# Pulling images required for some tests
 	@go run ./scripts/pull-images-for-tests/main.go
@@ -151,11 +156,12 @@ dockerfiles:
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface|Logger)'
+	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./helpers/docker -all -inpkg
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./helpers/certificate -all -inpkg
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./cache -all -inpkg
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
+	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./log -all -inpkg
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./session -all -inpkg
 	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./shells -all -inpkg
 
@@ -356,20 +362,25 @@ check-tags-in-changelog:
 		echo "$$tag:   \t $$state"; \
 	done
 
+prepare_release_checklist_issue_dry_run:
+	make prepare_release_checklist_issue opts="-dry-run"
+
 prepare_release_checklist_issue: opts ?= ""
-prepare_release_checklist_issue: major := $(shell cat VERSION | awk -F'.' '{print $$1}')
-prepare_release_checklist_issue: minor := $(shell cat VERSION | awk -F'.' '{print $$2}')
 prepare_release_checklist_issue:
 	@go run ./scripts/prepare_release_checklist_issue.go \
 		-issue-template-file ".gitlab/issue_templates/Release Checklist.md" \
-		-major $(major) \
-		-minor $(minor) \
 		$(opts)
 
 development_setup:
 	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/gitlab-test.git tmp/gitlab-test
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
+
+dep_check: $(DEP)
+	@cd $(PKG_BUILD_DIR) && $(DEP) check
+
+dep_status: $(DEP)
+	@./scripts/dep_status_check $(PKG_BUILD_DIR)
 
 # local GOPATH
 $(GOPATH_SETUP): $(PKG_BUILD_DIR)
@@ -381,6 +392,9 @@ $(PKG_BUILD_DIR):
 	ln -s ../../../.. $@
 
 # development tools
+$(DEP): $(GOPATH_SETUP)
+	go get github.com/golang/dep/cmd/dep
+
 $(GOX): $(GOPATH_SETUP)
 	go get github.com/mitchellh/gox
 

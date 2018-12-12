@@ -17,7 +17,8 @@ This defines global settings of GitLab Runner.
 | Setting | Description |
 | ------- | ----------- |
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
-| `log_level`      | Log level (options: debug, info, warn, error, fatal, panic). Note that this setting has lower priority than log-level set by command line argument --debug, -l or --log-level |
+| `log_level`      | Log level (options: debug, info, warn, error, fatal, panic). Note that this setting has lower priority than level set by command line argument `--debug`, `-l` or `--log-level` |
+| `log_format`     | Log format (options: runner, text, json). Note that this setting has lower priority than format set by command line argument `--log-format` |
 | `check_interval` | defines the interval length, in seconds, between new jobs check. The default value is `3`; if set to `0` or lower, the default value will be used. |
 | `sentry_dsn`     | enable tracking of all system level errors to sentry |
 | `listen_address` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
@@ -64,9 +65,10 @@ be repeated after all requests for the other workers + their sleeps are called.
 
 ## The `[session_server]` section
 
-The session server allows the user to interact with jobs that the Runner is
-responsible for. A good example of this is the
-[interactive web terminal](https://docs.gitlab.com/ce/ci/interactive_web_terminal).
+The section `[session_server]` is a system runner level configuration, so it should be specified at the root level, 
+not per executor i.e. it should be outside `[[runners]]` section. The session server allows the user to interact 
+with jobs that the Runner is responsible for. A good example of this is the
+[interactive web terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal).
 
 Both `listen_address` and `advertise_address` should be provided in the form
 of `host:port`, where `host` may be an IP address (e.g., `127.0.0.1:8093`)
@@ -86,8 +88,8 @@ Example:
 
 ```bash
 [session_server]
-  listen_address = "0.0.0.0:8093"
-  advertise_address = "gitlab.com:8093"
+  listen_address = "0.0.0.0:8093" #  listen on all available interfaces on port 8093
+  advertise_address = "runner-host-name.tld:8093"
   session_timeout = 1800
 ```
 
@@ -175,26 +177,28 @@ This defines the Docker Container parameters.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `host`                      | Specify custom Docker endpoint, by default `DOCKER_HOST` environment is used or `unix:///var/run/docker.sock` |
-| `hostname`                  | Specify custom hostname for Docker container |
-| `runtime`                   | Specify a runtime for Docker container |
-| `tls_cert_path`             | When set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
-| `image`                     | Use this image to run builds |
-| `memory`                    | String value containing the memory limit |
-| `memory_swap`               | String value containing the total memory limit |
-| `memory_reservation`        | String value containing the memory soft limit |
-| `cpuset_cpus`               | String value containing the cgroups CpusetCpus to use |
-| `cpus`                      | Number of CPUs (available in docker 1.13 or later) |
-| `dns`                       | A list of DNS servers for the container to use |
-| `dns_search`                | A list of DNS search domains |
-| `privileged`                | Make container run in Privileged mode (insecure) |
-| `userns_mode`               | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in docker 1.10 or later) |
-| `cap_add`                   | Add additional Linux capabilities to the container |
-| `cap_drop`                  | Drop additional Linux capabilities from the container |
-| `security_opt`              | Set security options (--security-opt in docker run), takes a list of ':' separated key/values |
-| `devices`                   | Share additional host devices with the container |
-| `cache_dir`                 | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
-| `disable_cache`             | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the Runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
+| `host`                         | Specify custom Docker endpoint, by default `DOCKER_HOST` environment is used or `unix:///var/run/docker.sock` |
+| `hostname`                     | Specify custom hostname for Docker container |
+| `runtime`                      | Specify a runtime for Docker container |
+| `tls_cert_path`                | When set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
+| `image`                        | Use this image to run builds |
+| `memory`                       | String value containing the memory limit |
+| `memory_swap`                  | String value containing the total memory limit |
+| `memory_reservation`           | String value containing the memory soft limit |
+| `oom_kill_disable`             | Do not kill processes in a container if an out-of-memory (OOM) error occurs |
+| `cpuset_cpus`                  | String value containing the cgroups CpusetCpus to use |
+| `cpus`                         | Number of CPUs (available in docker 1.13 or later) |
+| `dns`                          | A list of DNS servers for the container to use |
+| `dns_search`                   | A list of DNS search domains |
+| `privileged`                   | Make container run in Privileged mode (insecure) |
+| `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting |
+| `userns_mode`                  | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in docker 1.10 or later) |
+| `cap_add`                      | Add additional Linux capabilities to the container |
+| `cap_drop`                     | Drop additional Linux capabilities from the container |
+| `security_opt`                 | Set security options (--security-opt in docker run), takes a list of ':' separated key/values |
+| `devices`                      | Share additional host devices with the container |
+| `cache_dir`                    | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
+| `disable_cache`                | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the Runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
 | `network_mode`              | Add container to a custom network |
 | `wait_for_services_timeout` | Specify how long to wait for docker services, set to 0 to disable, default: 30 |
 | `volumes`                   | Specify additional volumes that should be mounted (same syntax as Docker's `-v` flag) |
@@ -221,6 +225,7 @@ Example:
   memory = "128m"
   memory_swap = "256m"
   memory_reservation = "64m"
+  oom_kill_disable = false
   cpuset_cpus = "0,1"
   dns = ["8.8.8.8"]
   dns_search = [""]
@@ -305,7 +310,7 @@ This will use `/path/to/bind/from/host` of the CI host inside the container at
 
 If you want to use private registries as a source of images for your builds,
 you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
-[secret variable]. It can be set in both GitLab Variables section of
+[variable]. It can be set in both GitLab Variables section of
 a project and in the `config.toml` file.
 
 For a detailed example, visit the [Using Docker images documentation][priv-example].
@@ -512,6 +517,20 @@ With GitLab Runner 11.3.0, the configuration parameters related to S3 were moved
 The old format of the configuration with S3 configured directly in `[runners.cache]` section is still supported,
 but is deprecated with GitLab Runner 11.3.0. **This support will be removed in GitLab Runner 12.0.0**.
 
+NOTE: **Note:**
+The cache mechanism uses pre-signed URLs to upload and download cache. URLs are being signed by GitLab Runner on its **own instance**.
+No matter if the job's script - so also the cache upload/download script - are being executed on local or external
+machines (e.g. `shell` or `docker` executors are running their scripts on the same
+machine where GitLab Runner process is running, while `virtualbox` or `docker+machine`
+connects to a separate VM to execute the script). This is done for security reasons:
+minimizing the possibility of leaking the cache adapter's credentials.
+
+NOTE: **Note:**
+Previous note implies [S3 cache adapter](#the-runnerscaches3-section), if configured to use
+IAM instance profile, will use the profile attached with GitLab Runner's machine. 
+Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
+use the `CredentialsFile`, the file needs to be present on GitLab Runner's machine.
+
 Bellow is a table containing a summary of `config.toml`, cli options and ENV variables deprecations:
 
 | Setting             | TOML field                               | CLI option for `register`      | ENV for `register`                | deprecated TOML field               | deprecated CLI option   | deprecated ENV        |
@@ -529,7 +548,6 @@ Bellow is a table containing a summary of `config.toml`, cli options and ENV var
 | GCS.PrivateKey      | `[runners.cache.gcs] -> PrivateKey`      | `--cache-gcs-private-key`      | `$CACHE_GCS_PRIVATE_KEY`          |                                     |                         |                       |
 | GCS.CredentialsFile | `[runners.cache.gcs] -> CredentialsFile` | `--cache-gcs-credentials-file` | `$GOOGLE_APPLICATION_CREDENTIALS` |                                     |                         |                       |
 | GCS.BucketName      | `[runners.cache.gcs] -> BucketName`      | `--cache-gcs-bucket-name`      | `$CACHE_GCS_BUCKET_NAME`          |                                     |                         |                       |
-
 
 ### The `[runners.cache.s3]` section
 
@@ -570,7 +588,7 @@ get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-
 
 NOTE: **Note:**
 If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified, then the S3 client will use the
-IAM instance profile available to the instance.
+IAM instance profile available to the `gitlab-runner` instance.
 
 ### The `[runners.cache.gcs]` section
 
@@ -715,10 +733,10 @@ of used image automatically, by using one of the
   executor = "docker"
   [runners.docker]
     (...)
-    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:${CI_RUNNER_REVISION}"
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-${CI_RUNNER_REVISION}"
 ```
 
-With that configuration, GitLab Runner will instruct the executor to use the image in version `${CI_RUNNER_REVISION}`,
+With that configuration, GitLab Runner will instruct the executor to use the image in version `x86_64-${CI_RUNNER_REVISION}`,
 which is based on its compilation data. After updating the Runner to a new version, this will ensure that the
 Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
 before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
@@ -731,9 +749,10 @@ It depends on what you'd like to do.
 
 [TOML]: https://github.com/toml-lang/toml
 [Docker Engine]: https://docs.docker.com/engine/
-[yaml-priv-reg]: https://docs.gitlab.com/ce/ci/yaml/README.html#image-and-services
-[ci-build-permissions-model]: https://docs.gitlab.com/ce/user/project/new_ci_build_permissions_model.html
+[yaml-priv-reg]: https://docs.gitlab.com/ee/ci/yaml/README.html#image-and-services
+[ci-build-permissions-model]: https://docs.gitlab.com/ee/user/project/new_ci_build_permissions_model.html
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
-[priv-example]: https://docs.gitlab.com/ce/ci/docker/using_docker_images.html#define-an-image-from-a-private-docker-registry
-[secret variable]: https://docs.gitlab.com/ce/ci/variables/#secret-variables
-[cronvendor]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/vendor/github.com/gorhill/cronexpr/README.md
+
+[priv-example]: https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry
+[variable]: https://docs.gitlab.com/ee/ci/variables/#variables
+[cronvendor]: https://github.com/gorhill/cronexpr#implementation

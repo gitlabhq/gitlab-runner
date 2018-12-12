@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -19,10 +18,10 @@ const fileArchiverAbsoluteFile = "/absolute.txt"
 const fileArchiverRelativeFile = "../../../relative.txt"
 
 func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
-	ioutil.WriteFile(artifactsTestArchivedFile, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
 
-	ioutil.WriteFile(artifactsTestArchivedFile2, nil, 0600)
+	writeTestFile(t, artifactsTestArchivedFile2)
 	defer os.Remove(artifactsTestArchivedFile2)
 
 	f := fileArchiver{
@@ -36,7 +35,7 @@ func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
 }
 
 func TestCacheArchiverAddingUntrackedUnicodeFiles(t *testing.T) {
-	ioutil.WriteFile(fileArchiverUntrackedUnicodeFile, nil, 0600)
+	writeTestFile(t, fileArchiverUntrackedUnicodeFile)
 	defer os.Remove(fileArchiverUntrackedUnicodeFile)
 
 	f := fileArchiver{
@@ -49,7 +48,7 @@ func TestCacheArchiverAddingUntrackedUnicodeFiles(t *testing.T) {
 }
 
 func TestCacheArchiverAddingFile(t *testing.T) {
-	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
+	writeTestFile(t, fileArchiverUntrackedFile)
 	defer os.Remove(fileArchiverUntrackedFile)
 
 	f := fileArchiver{
@@ -90,7 +89,7 @@ func TestFileArchiverToAddNotExistingFile(t *testing.T) {
 }
 
 func TestFileArchiverChanged(t *testing.T) {
-	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
+	writeTestFile(t, fileArchiverUntrackedFile)
 	defer os.Remove(fileArchiverUntrackedFile)
 
 	now := time.Now()
@@ -109,10 +108,10 @@ func TestFileArchiverChanged(t *testing.T) {
 func TestFileArchiverFileIsNotChanged(t *testing.T) {
 	now := time.Now()
 
-	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
+	writeTestFile(t, fileArchiverUntrackedFile)
 	defer os.Remove(fileArchiverUntrackedFile)
 
-	ioutil.WriteFile(fileArchiverArchiveZipFile, nil, 0600)
+	writeTestFile(t, fileArchiverArchiveZipFile)
 	defer os.Remove(fileArchiverArchiveZipFile)
 
 	f := fileArchiver{
@@ -128,10 +127,10 @@ func TestFileArchiverFileIsNotChanged(t *testing.T) {
 func TestFileArchiverFileIsChanged(t *testing.T) {
 	now := time.Now()
 
-	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
+	writeTestFile(t, fileArchiverUntrackedFile)
 	defer os.Remove(fileArchiverUntrackedFile)
 
-	ioutil.WriteFile(fileArchiverArchiveZipFile, nil, 0600)
+	writeTestFile(t, fileArchiverArchiveZipFile)
 	defer os.Remove(fileArchiverArchiveZipFile)
 
 	f := fileArchiver{
@@ -145,7 +144,7 @@ func TestFileArchiverFileIsChanged(t *testing.T) {
 }
 
 func TestFileArchiverFileDoesNotExist(t *testing.T) {
-	ioutil.WriteFile(fileArchiverUntrackedFile, nil, 0600)
+	writeTestFile(t, fileArchiverUntrackedFile)
 	defer os.Remove(fileArchiverUntrackedFile)
 
 	f := fileArchiver{

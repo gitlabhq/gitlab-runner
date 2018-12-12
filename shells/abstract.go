@@ -20,6 +20,7 @@ type AbstractShell struct {
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Artifacts = true
 	features.UploadMultipleArtifacts = true
+	features.UploadRawArtifacts = true
 	features.Cache = true
 }
 

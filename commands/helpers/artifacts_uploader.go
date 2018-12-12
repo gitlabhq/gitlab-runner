@@ -13,7 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/archives"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/formatter"
+	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
@@ -41,6 +41,15 @@ func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
 	w.CloseWithError(err)
 }
 
+func (c *ArtifactsUploaderCommand) openRawStream() (io.ReadCloser, error) {
+	fileNames := c.sortedFiles()
+	if len(fileNames) > 1 {
+		return nil, errors.New("only one file can be send as raw")
+	}
+
+	return os.Open(fileNames[0])
+}
+
 func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, error) {
 	if len(c.files) == 0 {
 		return "", nil, nil
@@ -61,6 +70,10 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 		pr, pw := io.Pipe()
 		go c.generateGzipStream(pw)
 		return name + ".gz", pr, nil
+
+	case common.ArtifactFormatRaw:
+		file, err := c.openRawStream()
+		return name, file, err
 
 	default:
 		return "", nil, fmt.Errorf("unsupported archive format: %s", c.Format)
@@ -102,7 +115,7 @@ func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
 }
 
 func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
-	formatter.SetRunnerFormatter()
+	log.SetRunnerFormatter()
 
 	if len(c.URL) == 0 || len(c.Token) == 0 {
 		logrus.Fatalln("Missing runner credentials")

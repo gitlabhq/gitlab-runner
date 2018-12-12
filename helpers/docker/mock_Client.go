@@ -72,6 +72,48 @@ func (_m *MockClient) ContainerCreate(ctx context.Context, config *container.Con
 	return r0, r1
 }
 
+// ContainerExecAttach provides a mock function with given fields: ctx, execID, config
+func (_m *MockClient) ContainerExecAttach(ctx context.Context, execID string, config types.ExecConfig) (types.HijackedResponse, error) {
+	ret := _m.Called(ctx, execID, config)
+
+	var r0 types.HijackedResponse
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.ExecConfig) types.HijackedResponse); ok {
+		r0 = rf(ctx, execID, config)
+	} else {
+		r0 = ret.Get(0).(types.HijackedResponse)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, types.ExecConfig) error); ok {
+		r1 = rf(ctx, execID, config)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ContainerExecCreate provides a mock function with given fields: ctx, _a1, config
+func (_m *MockClient) ContainerExecCreate(ctx context.Context, _a1 string, config types.ExecConfig) (types.IDResponse, error) {
+	ret := _m.Called(ctx, _a1, config)
+
+	var r0 types.IDResponse
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.ExecConfig) types.IDResponse); ok {
+		r0 = rf(ctx, _a1, config)
+	} else {
+		r0 = ret.Get(0).(types.IDResponse)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, types.ExecConfig) error); ok {
+		r1 = rf(ctx, _a1, config)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ContainerInspect provides a mock function with given fields: ctx, containerID
 func (_m *MockClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
 	ret := _m.Called(ctx, containerID)

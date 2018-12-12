@@ -36,7 +36,7 @@ make use of the collected metrics, see Prometheus's [Getting
 started](https://prometheus.io/docs/introduction/getting_started/) guide. Also
 see the [Configuration](https://prometheus.io/docs/operating/configuration/)
 section for more details on how to configure Prometheus, as well as the section
-on [Alerting rules](https://prometheus.io/docs/alerting/rules/) and setting up
+on [Alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/) and setting up
 an [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) to
 dispatch alert notifications.
 

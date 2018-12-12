@@ -1,3 +1,49 @@
+v11.6.0-rc1 (2018-12-12)
+- Make compatibility chart super clear and remove old entries !1078
+- Add slack notification option for 'dep status' check failures !1072
+- Docker executor: use DNS, DNSSearch and ExtraHosts settings from configuration !1075
+- Fix some invalid links in documentation !1085
+- Fix SC2155 where shellcheck warns about errors !1063
+- Change parallel tests configuration ENV names !1095
+- Improve documentation of IAM instance profile usage for caching !1071
+- Remove duplicate builds_dir definition from docs !952
+- Make k8s object names DNS-1123 compatible !1105
+- Docs: working example of helper image with CI_RUNNER_REVISION !1032
+- Docs: omit ImagePullPolicy !1107
+- Disable the docs lint job for now !1112
+- Docs: comment about how listen_address works !1076
+- Fix the indented bullet points of the features list in documentation !1093
+- Add note on the branch naming for documentation changes !1113
+- Docs: add session-server link to advanced list in index !1108
+
+v11.5.0 (2018-11-22)
+- Support RAW artifacts !1057
+- Docs: changing secret variable to just variable in advanced-configuration.md !1055
+- Docs: Fixing some bad links in Runner docs. !1056
+- Docs: Updating Docs links from /ce to /ee !1061
+- Docs: Fixing Substrakt Health URL !1064
+- Add failure reason for execution timeout !1051
+
+v 11.4.0 (2018-10-22)
+- Do not create apk cache !1017
+- Handle untracked files with Unicode characters in filenames. !913
+- Add metrics with concurrent and limit values !1019
+- Add a gitlab_runner_jobs_total metric !1018
+- Add a job duration histogram metric !1025
+- Filter content of X-Amz-Credential from logs !1028
+- Disable escaping project bucket in cache operations !1029
+- Fix example for session_server and added the note about where this section should be placed !1035
+- Fix job duration counting !1033
+- Log duration on job finishing log line !1034
+- Allow disabling docker entrypoint overwrite !965
+- Fix command and args assignment when creating containers with K8S executor !1010
+- Support json logging !1020
+- Change image for docs link checking !1043
+- Fix command that prepares the definitions of tests !1044
+- Add OomKillDisable option to Docker executor !1042
+- Add docker support for interactive web terminal !1008
+- Add support docker machine web terminal support !1046
+
 v 11.3.0 (2018-09-22)
 - Fix logrus secrets cleanup !990
 - Fix test failure detection !993
