@@ -4,9 +4,9 @@ GitLab Runner implements a number of executors that can be used to run your
 builds in different scenarios. If you are not sure what to select, read the
 [I am not sure](#i-am-not-sure) section.
 Visit the [compatibility chart](#compatibility-chart) to find
-out what features each executor supports and what not.
+out what features each executor does and does not support.
 
-To jump into the specific documentation of each executor, visit:
+To jump into the specific documentation for each executor, visit:
 
 - [SSH](ssh.md)
 - [Shell](shell.md)
@@ -20,7 +20,7 @@ To jump into the specific documentation of each executor, visit:
 
 The executors support different platforms and methodologies for building a
 project. The table below shows the key facts for each executor which will help
-you decide.
+you decide which executor to use.
 
 | Executor                                          | SSH  | Shell   | VirtualBox | Parallels | Docker | Kubernetes |
 |:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|
@@ -37,37 +37,31 @@ you decide.
 
 ### I am not sure
 
-#### SSH Executor
-
-The **SSH** executor is added for completeness. It's the least supported
-among all executors. It makes GitLab Runner to connect to some external server
-and run the builds there. We have some success stories from organizations using
-that executor, but generally we advise to use any other.
-
 #### Shell Executor
 
 **Shell** is the simplest executor to configure. All required dependencies for
-your builds need to be installed manually on the machine that the Runner is
-installed.
+your builds need to be installed manually on the same machine that the Runner is
+installed on.
 
 #### Virtual Machine Executor (VirtualBox / Parallels)
 
-We also offer two full system virtualization options: **VirtualBox** and
-**Parallels**. This type of executor allows you to use an already created
-virtual machine, which will be cloned and used to run your build. It can prove
-useful if you want to run your builds on different Operating Systems since it
-allows to create virtual machines with Windows, Linux, OSX or FreeBSD and make
-GitLab Runner to connect to the virtual machine and run the build on it. Its
-usage can also be useful to reduce the cost of infrastructure.
+This type of executor allows you to use an already created virtual machine, which
+is cloned and used to run your build. We offer two full system virtualization
+options: **VirtualBox** and **Parallels**. They can prove useful if you want to run
+your builds on different operating systems, since it allows the creation of virtual
+machines on Windows, Linux, OSX or FreeBSD, then GitLab Runner connects to the
+virtual machine and runs the build on it. Its usage can also be useful for reducing
+infrastructure costs.
 
 #### Docker Executor
 
-A better way is to use **Docker** as it allows to have a clean build environment,
-with easy dependency management (all dependencies for building the project could
+A great option is to use **Docker** as it allows a clean build environment,
+with easy dependency management (all dependencies for building the project can
 be put in the Docker image). The Docker executor allows you to easily create
-a build environment with dependent [services], like MySQL.
+a build environment with dependent [services](https://docs.gitlab.com/ee/ci/services/README.html),
+like MySQL.
 
-##### Docker Machine
+#### Docker Machine
 
 The **Docker Machine** is a special version of the **Docker** executor
 with support for auto-scaling. It works like the normal **Docker** executor
@@ -75,10 +69,17 @@ but with build hosts created on demand by _Docker Machine_.
 
 #### Kubernetes Executor
 
-The **Kubernetes**  executor allows you to use an existing Kubernetes cluster
+The **Kubernetes** executor allows you to use an existing Kubernetes cluster
 for your builds. The executor will call the Kubernetes cluster API
-and create a new Pod (with build container and services containers) for
+and create a new Pod (with a build container and services containers) for
 each GitLab CI job.
+
+#### SSH Executor
+
+The **SSH** executor is added for completeness, but it's the least supported
+among all executors. It makes GitLab Runner connect to an external server
+and runs the builds there. We have some success stories from organizations using
+this executor, but usually we recommend using one of the other types.
 
 ## Compatibility chart
 
@@ -114,5 +115,3 @@ Supported systems for interactive web terminals by different shells:
 | Linux   | ✓           | ✗             | ✗          |
 | OSX     | ✓           | ✗             | ✗          |
 | FreeBSD | ✓           | ✗             | ✗          |
-
-[services]: https://docs.gitlab.com/ee/ci/services/README.html
