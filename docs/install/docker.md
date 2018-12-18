@@ -86,11 +86,9 @@ Docker container.
 
 1. Register the Runner:
 
-    ```bash
-    docker exec -it gitlab-runner gitlab-runner register
-    ```
-
-    NOTE: **Note:** For more information, see [Docker section of Registering Runners](../register/index.md#docker).
+    Follow the [Docker section of Registering Runners](../register/index.md#docker)
+    for instructions on registering the runner you just launched. It won't pick
+    up any jobs until it's registered.
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
