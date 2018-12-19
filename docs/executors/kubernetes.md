@@ -121,7 +121,7 @@ disabled.
 Additionally, Kubernetes service account can be overwritten on `.gitlab-ci.yml` file, by using the variable
 `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE`.
 
-This approach allow you to specify a service account that is attached to the namespace, usefull when dealing
+This approach allow you to specify a service account that is attached to the namespace, useful when dealing
 with complex RBAC configurations.
 ``` yaml
 variables:
