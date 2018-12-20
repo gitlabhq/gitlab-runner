@@ -237,7 +237,7 @@ These instructions are meant to be followed after [Run GitLab Runner in a contai
 In this section, you will launch an ephemeral `gitlab-runner` container to
 register the container that you created during install. After you finish
 registration, the resulting configuration will be written to your chosen config
-volume(e.g. `/srv/gitlab-runner/config`), and will be automatically loaded by
+volume (e.g. `/srv/gitlab-runner/config`), and will be automatically loaded by
 the runner using that config volume.
 
 To register a Runner using a Docker container:
@@ -250,7 +250,7 @@ To register a Runner using a Docker container:
 
     NOTE: **Note:**
     If you used a config volume other than `/srv/gitlab-runner/config` during
-    install, then you should update the above command with the correct volume.
+    install, then you should update the command with the correct volume.
 
 1. Enter your GitLab instance URL:
 
