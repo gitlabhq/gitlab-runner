@@ -54,7 +54,7 @@ func waitForInterrupts(finished *abool.AtomicBool, abortSignal chan os.Signal, d
 	case newSignal := <-interruptSignals:
 		log.Fatalln("forced exit:", newSignal)
 	case <-time.After(common.ShutdownTimeout * time.Second):
-		log.Fatalln("shutdown timedout")
+		log.Fatalln("shutdown timed out")
 	case <-doneSignal:
 	}
 }

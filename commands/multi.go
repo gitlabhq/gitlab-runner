@@ -630,7 +630,7 @@ func (mr *RunCommand) handleShutdown() error {
 			return fmt.Errorf("forced exit: %v", mr.stopSignal)
 
 		case <-time.After(common.ShutdownTimeout * time.Second):
-			return errors.New("shutdown timedout")
+			return errors.New("shutdown timed out")
 
 		case <-mr.runFinished:
 			// Everything finished we can exit now
