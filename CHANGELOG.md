@@ -1,4 +1,4 @@
-v11.6.0-rc1 (2018-12-12)
+v11.6.0 (2018-12-22)
 - Make compatibility chart super clear and remove old entries !1078
 - Add slack notification option for 'dep status' check failures !1072
 - Docker executor: use DNS, DNSSearch and ExtraHosts settings from configuration !1075
