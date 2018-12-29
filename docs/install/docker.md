@@ -115,7 +115,7 @@ docker run -d --name gitlab-runner --restart always \
 NOTE: **Note:**
 You need to use the same method for mounting you data volume as you
 did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
-`--volumes-from gitlab-runner`).
+`--volumes-from gitlab-runner-config`).
 
 ## Reading GitLab Runner logs
 
