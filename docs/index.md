@@ -39,12 +39,12 @@ installed.
   - connecting to remote SSH server
 - Is written in Go and distributed as single binary without any other requirements
 - Supports Bash, Windows Batch and Windows PowerShell
-- Works on GNU/Linux, OS X and Windows (pretty much anywhere you can run Docker)
+- Works on GNU/Linux, macOS and Windows (pretty much anywhere you can run Docker)
 - Allows to customize the job running environment
 - Automatic configuration reload without restart
 - Easy to use setup with support for Docker, Docker-SSH, Parallels or SSH running environments
 - Enables caching of Docker containers
-- Easy installation as a service for GNU/Linux, OSX and Windows
+- Easy installation as a service for GNU/Linux, macOS and Windows
 - Embedded Prometheus metrics HTTP server
 
 ## Compatibility chart
