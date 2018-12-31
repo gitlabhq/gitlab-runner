@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -627,6 +628,21 @@ func TestDebugTrace(t *testing.T) {
 		JobResponse: successfulBuild,
 	}
 	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
+}
+
+func TestDefaultEnvVariables(t *testing.T) {
+	assert := assert.New(t)
+	buildDir := "/tmp/test-build/dir"
+	build := Build{
+		BuildDir: buildDir,
+	}
+
+	vars := build.GetAllVariables().StringList()
+
+	assert.NotNil(vars)
+
+	assert.Contains(vars, "CI_PROJECT_DIR="+filepath.FromSlash(buildDir))
+	assert.Contains(vars, "CI_SERVER=yes")
 }
 
 func TestSharedEnvVariables(t *testing.T) {

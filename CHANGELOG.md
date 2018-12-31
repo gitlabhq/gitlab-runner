@@ -1,3 +1,6 @@
+v11.7.0 (2019-01-22)
+- Fix path separator for CI_PROJECT_DIR in Windows !1128
+
 v11.6.0 (2018-12-22)
 - Make compatibility chart super clear and remove old entries !1078
 - Add slack notification option for 'dep status' check failures !1072
