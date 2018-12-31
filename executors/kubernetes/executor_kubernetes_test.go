@@ -1237,29 +1237,32 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
-					Key:      "node-role.kubernetes.io/master",
-					Operator: api.TolerationOpExists,
-					Effect:   api.TaintEffectNoSchedule,
-				})
-				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
-					Key:      "custom.toleration",
-					Operator: api.TolerationOpEqual,
-					Value:    "value",
-					Effect:   api.TaintEffectNoSchedule,
-				})
-				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
-					Key:      "empty.value",
-					Operator: api.TolerationOpEqual,
-					Value:    "",
-					Effect:   api.TaintEffectPreferNoSchedule,
-				})
-				assert.Contains(t, pod.Spec.Tolerations, api.Toleration{
-					Key:      "onlyKey",
-					Operator: api.TolerationOpExists,
-					Effect:   "",
-				})
-				assert.Equal(t, len(pod.Spec.Tolerations), 4)
+				expectedTolerations := []api.Toleration{
+					{
+						Key:      "node-role.kubernetes.io/master",
+						Operator: api.TolerationOpExists,
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+						Key:      "custom.toleration",
+						Operator: api.TolerationOpEqual,
+						Value:    "value",
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+
+						Key:      "empty.value",
+						Operator: api.TolerationOpEqual,
+						Value:    "",
+						Effect:   api.TaintEffectPreferNoSchedule,
+					},
+					{
+						Key:      "onlyKey",
+						Operator: api.TolerationOpExists,
+						Effect:   "",
+					},
+				}
+				assert.ElementsMatch(t, expectedTolerations, pod.Spec.Tolerations)
 			},
 		},
 		"supports extended docker configuration for image and services": {
