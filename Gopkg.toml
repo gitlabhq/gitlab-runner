@@ -32,7 +32,7 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
-  branch = "master"
+  version = "1.2.0"
 
 [[constraint]]
   branch = "master"
