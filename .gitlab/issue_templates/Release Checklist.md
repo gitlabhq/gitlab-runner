@@ -191,7 +191,7 @@ to the one that already exists.
 - [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ** and **{{.Major}}-{{.Minor}}-stable**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0-rcZ
+    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin v{{.Major}}.{{.Minor}}.0-rcZ {{.Major}}-{{.Minor}}-stable
     ```
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
@@ -268,7 +268,7 @@ to the one that already exists.
 - [ ] tag and push **v{{.Major}}.{{.Minor}}.0** and **{{.Major}}-{{.Minor}}-stable**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0
+    git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0" && git push origin v{{.Major}}.{{.Minor}}.0 {{.Major}}-{{.Minor}}-stable
     ```
 
 - [ ] checkout to `master` and merge `{{.Major}}-{{.Minor}}-stable` into `master` (only this one time, to update CHANGELOG.md and make the tag available for ./scripts/prepare-changelog-entries.rb in next stable release), push `master`:
@@ -376,7 +376,7 @@ template:
 - [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ** and **{{.Major}}-{{.Minor}}-stable**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin  {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0-rcZ
+    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin v{{.Major}}.{{.Minor}}.0-rcZ {{.Major}}-{{.Minor}}-stable
     ```
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)

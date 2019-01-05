@@ -297,14 +297,19 @@ func main() {
 	}
 	flag.Parse()
 
+	if *noInteractive {
+		fmt.Println("Running in non-interactive mode.")
+	}
 	prepareMetadata()
 
 	content := prepareIssueContent()
 	title := prepareIssueTitle()
 
 	if *dryRun {
+		fmt.Println("Running in dry-run mode. No real changes will be done")
 		printIssue(title, content)
 	} else {
+		fmt.Println("Running in standard mode. A new issue will be created")
 		postIssue(title, content)
 	}
 }
