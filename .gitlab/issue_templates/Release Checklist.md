@@ -27,6 +27,7 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
       use the eraliest one.
 
 - [ ] Update the `.Major` and `.Minor` to a specific release version
+- [ ] Update the `.HelmChartMajor`, `.HelmChartMinor` and `.HelmChartPatch` to a specific release version
 
 ## First working day after 7th - **v{{.Major}}.{{.Minor}}.0-rc1 release**
 
@@ -72,13 +73,71 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rc1` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rc1/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rc1)
     - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rc1` passing
 - [ ] deploy **v{{.Major}}.{{.Minor}}.0-rc1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to use `v{{.Major}}.{{.Minor}}.0-rc1` version
+    - [ ] check if Pipeline for `master` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/master)
+        - [ ] add all required fixes to make `master` Pipeline passing
+    - [ ] go to your local working copy of https://gitlab.com/charts/gitlab-runner
+    - [ ] `git checkout master && git pull` in your local working copy!
+    - [ ] set Helm Chart to use `v{{.Major}}.{{.Minor}}.0-rc1` version of Runner
+        - [ ] create new branch, update Runner version and push the branch:
+
+            ```bash
+            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rc1 && sed "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rc1/" Chart.yaml && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rc1" -S && git push
+            ```
+
+        - [ ] create Merge Request pointing `master`: [link to MR here]
+        - [ ] manage to merge the MR
+    - [ ] check if Pipeline for `master` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/master)
+        - [ ] add all required fixes to make `master` Pipeline passing
+    - [ ] `git checkout master && git pull` in your local working copy!
+    - [ ] prepare CHANGELOG entries
+
+        ```bash
+        ./scripts/prepare-changelog-entries.rb
+        ```
+
+        Copy the lines to the beginning of `CHANGELOG.md` file and add a proper header:
+
+        ```markdown
+        ## v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1 (TODAY_DATE_HERE)
+        ```
+
+    - [ ] add **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1** CHANGELOG entries and commit
+
+        ```bash
+        git add CHANGELOG.md && git commit -m "Update CHANGELOG for v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1" -S
+        ```
+
+    - [ ] bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1`
+
+        ```bash
+        sed "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1" -S && git push
+        ```
+
+    - [ ] tag and push **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1**:
+
+        ```bash
+        git tag -s v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1 -m "Version v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1" && git push origin v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rc1
+        ```
+
+    - [ ] create and push `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` branch:
+
+        ```bash
+        git checkout -b {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable && git push -u origin {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable
+        ```
+
+    - [ ] checkout to `master`, bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{inc .HelmChartPatch}}-beta` and push `master`:
+
+        ```bash
+        git checkout master; sed "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{inc .HelmChartPatch}}-beta/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{inc .HelmChartPatch}}-beta" -S && git push
+        ```
 
 _New features_ window is closed - things not merged into `master` up to
 this day, will be released with next release.
 
 ## 7 working days before 22th (**{{.ReleaseBlogPostDeadline}}**)
 
-- [ ] prepare entries for the release blog post. Items can be generated with `./scripts/changelog2releasepost | less`
+- [ ] prepare GitLab Runner entries for the release blog post. Items can be generated with `./scripts/changelog2releasepost | less` (executed in Runner's local working copy directory)
 - [ ] add release entry:
 
     Add description to the `SECONDARY FEATURES` list using following template:
@@ -132,12 +191,58 @@ to the one that already exists.
 - [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ** and **{{.Major}}-{{.Minor}}-stable**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0-rcZ
+    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin v{{.Major}}.{{.Minor}}.0-rcZ {{.Major}}-{{.Minor}}-stable
     ```
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
     - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rcZ` passing
 - [ ] deploy **v{{.Major}}.{{.Minor}}.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to use `v{{.Major}}.{{.Minor}}.0-rcZ` version
+    - [ ] check if Pipeline for `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable)
+        - [ ] add all required fixes to make `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` Pipeline passing
+    - [ ] go to your local working copy of https://gitlab.com/charts/gitlab-runner
+    - [ ] `git checkout {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable && git pull` in your local working copy!
+    - [ ] set Helm Chart to use `v{{.Major}}.{{.Minor}}.0-rcZ` version of Runner
+        - [ ] create new branch, update Runner version and push the branch:
+
+            ```bash
+            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ && sed "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rcZ/" Chart.yaml && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rcZ" -S && git push
+            ```
+
+        - [ ] create Merge Request pointing `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable`: [link to MR here]
+        - [ ] manage to merge the MR
+    - [ ] check if Pipeline for `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable)
+        - [ ] add all required fixes to make `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` Pipeline passing
+    - [ ] `git checkout {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable && git pull` in your local working copy!
+    - [ ] prepare CHANGELOG entries
+
+        ```bash
+        ./scripts/prepare-changelog-entries.rb
+        ```
+
+        Copy the lines to the beginning of `CHANGELOG.md` file and add a proper header:
+
+        ```markdown
+        ## v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ (TODAY_DATE_HERE)
+        ```
+
+    - [ ] add **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ** CHANGELOG entries and commit
+
+        ```bash
+        git add CHANGELOG.md && git commit -m "Update CHANGELOG for v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ" -S
+        ```
+
+    - [ ] bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ`
+
+        ```bash
+        sed "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ" -S && git push
+        ```
+
+    - [ ] tag and push **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ** and **{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable**:
+
+        ```bash
+        git tag -s v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ -m "Version v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ" && git push origin v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable
+        ```
 
 ## At 22th - the release day
 
@@ -163,7 +268,7 @@ to the one that already exists.
 - [ ] tag and push **v{{.Major}}.{{.Minor}}.0** and **{{.Major}}-{{.Minor}}-stable**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0" && git push origin {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0
+    git tag -s v{{.Major}}.{{.Minor}}.0 -m "Version v{{.Major}}.{{.Minor}}.0" && git push origin v{{.Major}}.{{.Minor}}.0 {{.Major}}-{{.Minor}}-stable
     ```
 
 - [ ] checkout to `master` and merge `{{.Major}}-{{.Minor}}-stable` into `master` (only this one time, to update CHANGELOG.md and make the tag available for ./scripts/prepare-changelog-entries.rb in next stable release), push `master`:
@@ -174,17 +279,64 @@ to the one that already exists.
     git push
     ```
 
-- [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to latest production version: [link to MR]
+- [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to use `v{{.Major}}.{{.Minor}}.0` version
+    - [ ] check if Pipeline for `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable)
+        - [ ] add all required fixes to make `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` Pipeline passing
+    - [ ] go to your local working copy of https://gitlab.com/charts/gitlab-runner
+    - [ ] `git checkout {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable && git pull` in your local working copy!
+    - [ ] set Helm Chart to use `v{{.Major}}.{{.Minor}}.0` version of Runner
+        - [ ] create new branch, update Runner version and push the branch:
+
+            ```bash
+            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0 && sed "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0/" Chart.yaml && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0" -S && git push
+            ```
+
+        - [ ] create Merge Request pointing `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable`: [link to MR here]
+        - [ ] manage to merge the MR
+    - [ ] check if Pipeline for `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable)
+        - [ ] add all required fixes to make `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` Pipeline passing
+    - [ ] `git checkout {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable && git pull` in your local working copy!
+    - [ ] merge all RCx CHANGELOG entries into release entry
+
+        Put a proper header at the begining:
+
+        ```markdown
+        ## v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}} (TODAY_DATE_HERE)
+        ```
+
+    - [ ] add **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}** CHANGELOG entries and commit
+
+        ```bash
+        git add CHANGELOG.md && git commit -m "Update CHANGELOG for v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}" -S
+        ```
+
+    - [ ] bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}`
+
+        ```bash
+        sed "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}" -S && git push
+        ```
+
+    - [ ] tag and push **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}** and **{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable**:
+
+        ```bash
+        git tag -s v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}} -m "Version v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}" && git push origin v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}} {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable
+        ```
+
+    - [ ] checkout to `master` and merge `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` into `master` (only this one time, to update CHANGELOG.md and make the tag available for ./scripts/prepare-changelog-entries.rb in next stable release), push `master`:
+
+        ```bash
+        git checkout master; git merge --no-ff {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable
+        # check that the only changes are in CHANGELOG.md
+        git push
+        ```
+
+    - [ ] update Runner's chart version [used by GitLab](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/app/models/clusters/applications/runner.rb): [link to MR here]
 
 #### Before 15:00 UTC
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0)
     - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0` passing
 - [ ] deploy stable version to all production Runners
-
-#### After helm chart MR is merged
-
-- [ ] update Runner's chart version [used by GitLab](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/app/models/clusters/applications/runner.rb): [link to MR]
 
 
 ## RC release template
@@ -224,10 +376,56 @@ template:
 - [ ] tag and push **v{{.Major}}.{{.Minor}}.0-rcZ** and **{{.Major}}-{{.Minor}}-stable**:
 
     ```bash
-    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin  {{.Major}}-{{.Minor}}-stable v{{.Major}}.{{.Minor}}.0-rcZ
+    git tag -s v{{.Major}}.{{.Minor}}.0-rcZ -m "Version v{{.Major}}.{{.Minor}}.0-rcZ" && git push origin v{{.Major}}.{{.Minor}}.0-rcZ {{.Major}}-{{.Minor}}-stable
     ```
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
     - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rcZ` passing
 - [ ] deploy **v{{.Major}}.{{.Minor}}.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to use `v{{.Major}}.{{.Minor}}.0-rcZ` version
+    - [ ] check if Pipeline for `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable)
+        - [ ] add all required fixes to make `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` Pipeline passing
+    - [ ] go to your local working copy of https://gitlab.com/charts/gitlab-runner
+    - [ ] `git checkout {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable && git pull` in your local working copy!
+    - [ ] set Helm Chart to use `v{{.Major}}.{{.Minor}}.0-rcZ` version of Runner
+        - [ ] create new branch, update Runner version and push the branch:
+
+            ```bash
+            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ && sed "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rcZ/" Chart.yaml && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rcZ" -S && git push
+            ```
+
+        - [ ] create Merge Request pointing `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable`: [link to MR here]
+        - [ ] manage to merge the MR
+    - [ ] check if Pipeline for `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable)
+        - [ ] add all required fixes to make `{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable` Pipeline passing
+    - [ ] `git checkout {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable && git pull` in your local working copy!
+    - [ ] prepare CHANGELOG entries
+
+        ```bash
+        ./scripts/prepare-changelog-entries.rb
+        ```
+
+        Copy the lines to the beginning of `CHANGELOG.md` file and add a proper header:
+
+        ```markdown
+        ## v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ (TODAY_DATE_HERE)
+        ```
+
+    - [ ] add **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ** CHANGELOG entries and commit
+
+        ```bash
+        git add CHANGELOG.md && git commit -m "Update CHANGELOG for v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ" -S
+        ```
+
+    - [ ] bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ`
+
+        ```bash
+        sed "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ" -S && git push
+        ```
+
+    - [ ] tag and push **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ** and **{{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable**:
+
+        ```bash
+        git tag -s v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ -m "Version v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ" && git push origin v{{.HelmChartMajor}}.{{.HelmChartMinor}}.{{.HelmChartPatch}}-rcZ {{.HelmChartMajor}}-{{.HelmChartMinor}}-{{.HelmChartPatch}}-stable
+        ```
 ```
