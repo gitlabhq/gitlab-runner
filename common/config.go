@@ -10,11 +10,13 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/go-units"
 	log "github.com/sirupsen/logrus"
+	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -520,6 +522,32 @@ func (c *KubernetesConfig) GetPollInterval() int {
 	}
 
 	return c.PollInterval
+}
+
+func (c *KubernetesConfig) GetNodeTolerations() []api.Toleration {
+	var tolerations []api.Toleration
+
+	for toleration, effect := range c.NodeTolerations {
+		newToleration := api.Toleration{
+			Effect: api.TaintEffect(effect),
+		}
+
+		if strings.Contains(toleration, "=") {
+			parts := strings.Split(toleration, "=")
+			newToleration.Key = parts[0]
+			if len(parts) > 1 {
+				newToleration.Value = parts[1]
+			}
+			newToleration.Operator = api.TolerationOpEqual
+		} else {
+			newToleration.Key = toleration
+			newToleration.Operator = api.TolerationOpExists
+		}
+
+		tolerations = append(tolerations, newToleration)
+	}
+
+	return tolerations
 }
 
 func (c *DockerMachine) GetIdleCount() int {

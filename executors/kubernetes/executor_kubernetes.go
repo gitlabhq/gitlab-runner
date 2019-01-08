@@ -475,7 +475,7 @@ func (s *executor) setupBuildPod() error {
 			ServiceAccountName: s.configurationOverwrites.serviceAccount,
 			RestartPolicy:      api.RestartPolicyNever,
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
-			Tolerations:        s.getTolerations(),
+			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
 			Containers: append([]api.Container{
 				// TODO use the build and helper template here
 				s.buildContainer("build", buildImage, s.options.Image, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
@@ -493,32 +493,6 @@ func (s *executor) setupBuildPod() error {
 	s.pod = pod
 
 	return nil
-}
-
-func (s *executor) getTolerations() []api.Toleration {
-	var tolerations []api.Toleration
-
-	for toleration, effect := range s.Config.Kubernetes.NodeTolerations {
-		newToleration := api.Toleration{
-			Effect: api.TaintEffect(effect),
-		}
-
-		if strings.Contains(toleration, "=") {
-			parts := strings.Split(toleration, "=")
-			newToleration.Key = parts[0]
-			if len(parts) > 1 {
-				newToleration.Value = parts[1]
-			}
-			newToleration.Operator = api.TolerationOpEqual
-		} else {
-			newToleration.Key = toleration
-			newToleration.Operator = api.TolerationOpExists
-		}
-
-		tolerations = append(tolerations, newToleration)
-	}
-
-	return tolerations
 }
 
 func (s *executor) runInContainer(ctx context.Context, name string, command []string, script string) <-chan error {
