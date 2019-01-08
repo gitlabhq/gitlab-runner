@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -635,6 +636,18 @@ func TestDebugTrace(t *testing.T) {
 		JobResponse: successfulBuild,
 	}
 	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
+}
+
+func TestDefaultEnvVariables(t *testing.T) {
+	buildDir := "/tmp/test-build/dir"
+	build := Build{
+		BuildDir: buildDir,
+	}
+
+	vars := build.GetAllVariables().StringList()
+
+	assert.Contains(t, vars, "CI_PROJECT_DIR="+filepath.FromSlash(buildDir))
+	assert.Contains(t, vars, "CI_SERVER=yes")
 }
 
 func TestSharedEnvVariables(t *testing.T) {
