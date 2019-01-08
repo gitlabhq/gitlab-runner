@@ -631,7 +631,6 @@ func TestDebugTrace(t *testing.T) {
 }
 
 func TestDefaultEnvVariables(t *testing.T) {
-	assert := assert.New(t)
 	buildDir := "/tmp/test-build/dir"
 	build := Build{
 		BuildDir: buildDir,
@@ -639,10 +638,8 @@ func TestDefaultEnvVariables(t *testing.T) {
 
 	vars := build.GetAllVariables().StringList()
 
-	assert.NotNil(vars)
-
-	assert.Contains(vars, "CI_PROJECT_DIR="+filepath.FromSlash(buildDir))
-	assert.Contains(vars, "CI_SERVER=yes")
+	assert.Contains(t, vars, "CI_PROJECT_DIR="+filepath.FromSlash(buildDir))
+	assert.Contains(t, vars, "CI_SERVER=yes")
 }
 
 func TestSharedEnvVariables(t *testing.T) {
