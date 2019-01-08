@@ -1784,9 +1784,20 @@ func TestInteractiveTerminal(t *testing.T) {
 	srv := httptest.NewServer(build.Session.Mux())
 	defer srv.Close()
 
-	u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: build.Session.Endpoint + "/exec"}
-	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{build.Session.Token}})
-	defer conn.Close()
+	u := url.URL{
+		Scheme: "ws",
+		Host:   srv.Listener.Addr().String(),
+		Path:   build.Session.Endpoint + "/exec",
+	}
+	headers := http.Header{
+		"Authorization": []string{build.Session.Token},
+	}
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
+	defer func() {
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}()
 	require.NoError(t, err)
 	assert.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
 
