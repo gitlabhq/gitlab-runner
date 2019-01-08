@@ -1,3 +1,13 @@
+v11.7.0-rc1 (2019-01-08)
+- Docs: Cleaning up the executors doc !1114
+- Update to testify v1.2.2 !1119
+- Fix a typo in VirtualBox Executor docs !1124
+- Use the term `macOS` instead of `OS X` or `OSX` !1125
+- Update github.com/sirupsen/logrus dependency !1129
+- Docs update release checklist !1131
+- Kill session when build is cancelled !1058
+- Fix path separator for CI_PROJECT_DIR in Windows !1128
+
 v11.6.0 (2018-12-22)
 - Make compatibility chart super clear and remove old entries !1078
 - Add slack notification option for 'dep status' check failures !1072
