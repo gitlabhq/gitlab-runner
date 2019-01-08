@@ -1793,7 +1793,11 @@ func TestInteractiveTerminal(t *testing.T) {
 		"Authorization": []string{build.Session.Token},
 	}
 	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
-	defer conn.Close()
+	defer func() {
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}()
 	require.NoError(t, err)
 	assert.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
 
