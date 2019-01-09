@@ -18,7 +18,7 @@ Where:
 - `<namespace>` is the namespace where the project is stored on GitLab
 - `<project-name>` is the name of the project as it is stored on GitLab
 
-To overwrite the `~/builds` directory, specify the `builds_dir` option under
+To override the `~/builds` directory, specify the `builds_dir` option under
 the `[[runners]]` section in
 [`config.toml`](../configuration/advanced-configuration.md).
 

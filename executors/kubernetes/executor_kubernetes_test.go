@@ -1222,6 +1222,49 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 			},
 		},
+		"support setting kubernetes pod taint tolerations": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						NodeTolerations: map[string]string{
+							"node-role.kubernetes.io/master": "NoSchedule",
+							"custom.toleration=value":        "NoSchedule",
+							"empty.value=":                   "PreferNoSchedule",
+							"onlyKey":                        "",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				expectedTolerations := []api.Toleration{
+					{
+						Key:      "node-role.kubernetes.io/master",
+						Operator: api.TolerationOpExists,
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+						Key:      "custom.toleration",
+						Operator: api.TolerationOpEqual,
+						Value:    "value",
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+
+						Key:      "empty.value",
+						Operator: api.TolerationOpEqual,
+						Value:    "",
+						Effect:   api.TaintEffectPreferNoSchedule,
+					},
+					{
+						Key:      "onlyKey",
+						Operator: api.TolerationOpExists,
+						Effect:   "",
+					},
+				}
+				assert.ElementsMatch(t, expectedTolerations, pod.Spec.Tolerations)
+			},
+		},
 		"supports extended docker configuration for image and services": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1819,9 +1862,20 @@ func TestInteractiveTerminal(t *testing.T) {
 	srv := httptest.NewServer(build.Session.Mux())
 	defer srv.Close()
 
-	u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: build.Session.Endpoint + "/exec"}
-	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{build.Session.Token}})
-	defer conn.Close()
+	u := url.URL{
+		Scheme: "ws",
+		Host:   srv.Listener.Addr().String(),
+		Path:   build.Session.Endpoint + "/exec",
+	}
+	headers := http.Header{
+		"Authorization": []string{build.Session.Token},
+	}
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
+	defer func() {
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}()
 	require.NoError(t, err)
 	assert.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
 

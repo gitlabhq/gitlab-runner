@@ -1,16 +1,25 @@
 package common
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/session"
+	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
 func init() {
@@ -629,6 +638,18 @@ func TestDebugTrace(t *testing.T) {
 	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
 }
 
+func TestDefaultEnvVariables(t *testing.T) {
+	buildDir := "/tmp/test-build/dir"
+	build := Build{
+		BuildDir: buildDir,
+	}
+
+	vars := build.GetAllVariables().StringList()
+
+	assert.Contains(t, vars, "CI_PROJECT_DIR="+filepath.FromSlash(buildDir))
+	assert.Contains(t, vars, "CI_SERVER=yes")
+}
+
 func TestSharedEnvVariables(t *testing.T) {
 	for _, shared := range [...]bool{true, false} {
 		t.Run(fmt.Sprintf("Value:%v", shared), func(t *testing.T) {
@@ -765,5 +786,124 @@ func TestIsFeatureFlagOn(t *testing.T) {
 			hook.Reset()
 		})
 	}
+}
 
+func TestWaitForTerminal(t *testing.T) {
+	cases := []struct {
+		name                   string
+		cancelFn               func(ctxCancel context.CancelFunc, build *Build)
+		jobTimeout             int
+		waitForTerminalTimeout time.Duration
+		expectedErr            string
+	}{
+		{
+			name: "Cancel build",
+			cancelFn: func(ctxCancel context.CancelFunc, build *Build) {
+				ctxCancel()
+			},
+			jobTimeout:             3600,
+			waitForTerminalTimeout: time.Hour,
+			expectedErr:            "build cancelled, killing session",
+		},
+		{
+			name: "Terminal Timeout",
+			cancelFn: func(ctxCancel context.CancelFunc, build *Build) {
+				// noop
+			},
+			jobTimeout:             3600,
+			waitForTerminalTimeout: time.Second,
+			expectedErr:            "Terminal session timed out (maximum time allowed - 1s)",
+		},
+		{
+			name: "System Interrupt",
+			cancelFn: func(ctxCancel context.CancelFunc, build *Build) {
+				build.SystemInterrupt <- os.Interrupt
+			},
+			jobTimeout:             3600,
+			waitForTerminalTimeout: time.Hour,
+			expectedErr:            "terminal disconnected by system signal: interrupt",
+		},
+		{
+			name: "Terminal Disconnect",
+			cancelFn: func(ctxCancel context.CancelFunc, build *Build) {
+				build.Session.DisconnectCh <- errors.New("user disconnect")
+			},
+			jobTimeout:             3600,
+			waitForTerminalTimeout: time.Hour,
+			expectedErr:            "terminal disconnected: user disconnect",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			build := Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						Executor: "shell",
+					},
+				},
+				JobResponse: JobResponse{
+					RunnerInfo: RunnerInfo{
+						Timeout: c.jobTimeout,
+					},
+				},
+				SystemInterrupt: make(chan os.Signal),
+			}
+
+			trace := Trace{Writer: os.Stdout}
+			build.logger = NewBuildLogger(&trace, build.Log())
+			sess, err := session.NewSession(nil)
+			require.NoError(t, err)
+			build.Session = sess
+
+			srv := httptest.NewServer(build.Session.Mux())
+			defer srv.Close()
+
+			mockConn := terminal.MockConn{}
+			defer mockConn.AssertExpectations(t)
+			mockConn.On("Close").Maybe().Return(nil)
+			// On Start upgrade the web socket connection and wait for the
+			// timeoutCh to exit, to mock real work made on the websocket.
+			mockConn.On("Start", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				upgrader := &websocket.Upgrader{}
+				r := args[1].(*http.Request)
+				w := args[0].(http.ResponseWriter)
+
+				_, _ = upgrader.Upgrade(w, r, nil)
+				timeoutCh := args[2].(chan error)
+
+				<-timeoutCh
+			}).Once()
+
+			mockTerminal := terminal.MockInteractiveTerminal{}
+			defer mockTerminal.AssertExpectations(t)
+			mockTerminal.On("Connect").Return(&mockConn, nil)
+			sess.SetInteractiveTerminal(&mockTerminal)
+
+			u := url.URL{
+				Scheme: "ws",
+				Host:   srv.Listener.Addr().String(),
+				Path:   build.Session.Endpoint + "/exec",
+			}
+			headers := http.Header{
+				"Authorization": []string{build.Session.Token},
+			}
+
+			conn, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
+			require.NotNil(t, conn)
+			require.NoError(t, err)
+			defer conn.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), build.GetBuildTimeout())
+
+			errCh := make(chan error)
+			go func() {
+				errCh <- build.waitForTerminal(ctx, c.waitForTerminalTimeout)
+			}()
+
+			c.cancelFn(cancel, &build)
+
+			assert.EqualError(t, <-errCh, c.expectedErr)
+		})
+	}
 }
