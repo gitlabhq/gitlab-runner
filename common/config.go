@@ -10,11 +10,13 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/go-units"
 	log "github.com/sirupsen/logrus"
+	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -158,7 +160,8 @@ type KubernetesConfig struct {
 	HelperCPURequest               string               `toml:"helper_cpu_request,omitempty" json:"helper_cpu_request" long:"helper-cpu-request" env:"KUBERNETES_HELPER_CPU_REQUEST" description:"The CPU allocation requested for build helper containers"`
 	HelperMemoryRequest            string               `toml:"helper_memory_request,omitempty" json:"helper_memory_request" long:"helper-memory-request" env:"KUBERNETES_HELPER_MEMORY_REQUEST" description:"The amount of memory requested for build helper containers"`
 	PullPolicy                     KubernetesPullPolicy `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
-	NodeSelector                   map[string]string    `toml:"node_selector,omitempty" json:"node_selector" long:"node-selector" description:"A toml table/json object of key=value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key=value pairs."`
+	NodeSelector                   map[string]string    `toml:"node_selector,omitempty" json:"node_selector" long:"node-selector" env:"KUBERNETES_NODE_SELECTOR" description:"A toml table/json object of key=value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key=value pairs."`
+	NodeTolerations                map[string]string    `toml:"node_tolerations,omitempty" json:"node_tolerations" long:"node-tolerations" env:"KUBERNETES_NODE_TOLERATIONS" description:"A toml table/json object of key=value:effect. Value and effect are expected to be strings. When set, pods will tolerate the given taints. Only one toleration is supported through environment variable configuration."`
 	ImagePullSecrets               []string             `toml:"image_pull_secrets,omitempty" json:"image_pull_secrets" long:"image-pull-secrets" env:"KUBERNETES_IMAGE_PULL_SECRETS" description:"A list of image pull secrets that are used for pulling docker image"`
 	HelperImage                    string               `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 	TerminationGracePeriodSeconds  int64                `toml:"terminationGracePeriodSeconds,omitzero" json:"terminationGracePeriodSeconds" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal."`
@@ -519,6 +522,32 @@ func (c *KubernetesConfig) GetPollInterval() int {
 	}
 
 	return c.PollInterval
+}
+
+func (c *KubernetesConfig) GetNodeTolerations() []api.Toleration {
+	var tolerations []api.Toleration
+
+	for toleration, effect := range c.NodeTolerations {
+		newToleration := api.Toleration{
+			Effect: api.TaintEffect(effect),
+		}
+
+		if strings.Contains(toleration, "=") {
+			parts := strings.Split(toleration, "=")
+			newToleration.Key = parts[0]
+			if len(parts) > 1 {
+				newToleration.Value = parts[1]
+			}
+			newToleration.Operator = api.TolerationOpEqual
+		} else {
+			newToleration.Key = toleration
+			newToleration.Operator = api.TolerationOpExists
+		}
+
+		tolerations = append(tolerations, newToleration)
+	}
+
+	return tolerations
 }
 
 func (c *DockerMachine) GetIdleCount() int {

@@ -76,6 +76,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `helper_memory_request`: The amount of memory requested for build helper containers
 - `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set.
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
+- `node_tolerations`: A `table` of `key=value:Effect` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in kubernetes pod toleration configuration.
 - `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
 - `helper_image`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts. Read the [helper image][advanced-configuration-helper-image] section of _advanced configuration_ page for more details
 - `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
@@ -363,7 +364,10 @@ when running in privileged mode or by exposing `/var/run/docker.sock` is to use
 the `node_selector` option to set one or more labels that have to match a node
 before any containers are deployed to it. For example build containers may only run
 on nodes that are labeled with `role=ci` while running all other production services
-on other nodes.
+on other nodes. Further separation of build containers can be achieved using node
+[taints](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/).
+This will disallow other pods from scheduling on the same nodes as the
+build pods without extra configuration for the other pods.
 
 [k8s-host-path-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 [k8s-pvc-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim
