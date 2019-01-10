@@ -396,12 +396,13 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
         "engine-registry-mirror=http://10.11.12.13:12345"   # Docker Machine is using registry mirroring
     ]
   [runners.cache]
-    Type = "s3"   # The Runner is using a distributed cache with Amazon S3 service
-    ServerAddress = "s3-eu-west-1.amazonaws.com"
-    AccessKey = "AMAZON_S3_ACCESS_KEY"
-    SecretKey = "AMAZON_S3_SECRET_KEY"
-    BucketName = "runners"
-    Insecure = false
+    Type = "s3"
+    [runners.cache.s3]
+      ServerAddress = "s3-eu-west-1.amazonaws.com"
+      AccessKey = "AMAZON_S3_ACCESS_KEY"
+      SecretKey = "AMAZON_S3_SECRET_KEY"
+      BucketName = "runner"
+      Insecure = false
 ```
 
 Note that the `MachineOptions` parameter contains options for the `digitalocean`
