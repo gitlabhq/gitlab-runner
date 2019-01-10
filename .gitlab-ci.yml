@@ -175,8 +175,8 @@ tests definitions:
   # in this step, the version difference doesn't matter
   image: golang:1.10
   script:
-  - apt update
-  - apt install make
+  - apt-get update
+  - apt-get install -y make
   - source ci/touch_make_dependencies
   - make parallel_test_prepare
   artifacts:
