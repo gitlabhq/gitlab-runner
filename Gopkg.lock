@@ -588,7 +588,7 @@
   revision = "cbeaeb16a013161a98496fad62933b1d21786672"
 
 [[projects]]
-  digest = "1:ae3b843d6ecc9177b15a9445ac68efc37e12ecd7c36819f86c50a13120cf48f5"
+  digest = "1:af816109ede76072cf29dd2116e0cc386668690b81e5a4fc05ae10dfac22aee4"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
@@ -596,8 +596,8 @@
     "require",
   ]
   pruneopts = "N"
-  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
+  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:0e6bfd9ff4db873948cf1fe1a3727f893eb776440dd1085759bd6e8aa7f045e0"
