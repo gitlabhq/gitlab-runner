@@ -84,7 +84,9 @@ Docker container.
         gitlab/gitlab-runner:latest
     ```
 
-1. [Register the Runner](../register/index.md#docker)
+1. Register the runner you just launched by following the instructions in the
+    [Docker section of Registering Runners](../register/index.md#docker).
+    The runner won't pick up any jobs until it's registered.
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
