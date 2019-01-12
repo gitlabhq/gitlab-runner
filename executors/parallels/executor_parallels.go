@@ -265,10 +265,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	// Unable to open new session in this virtual machine.
 	// Make sure the latest version of Parallels Tools is installed in this virtual machine and it has finished booting
 	s.Debugln("Updating VM date...")
-	err = prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", "time.apple.com")
+	timeServer := s.Config.Parallels.TimeServer
+	if timeServer == "" {
+		timeServer = "time.apple.com"
+	}
+	err = prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", timeServer)
 	if err != nil {
 		s.Debugln("Could not run ntpdate command. Trying the sntp command instead...")
-		err = prl.TryExec(s.vmName, 20, "sudo", "sntp", "-S", "time.apple.com")
+		err = prl.TryExec(s.vmName, 20, "sudo", "sntp", "-S", timeServer)
 		if err != nil {
 			s.Println("Could not sync with timeserver!")
 			return err
