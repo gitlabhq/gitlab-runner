@@ -267,7 +267,12 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.Debugln("Updating VM date...")
 	err = prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", "time.apple.com")
 	if err != nil {
-		return err
+		s.Debugln("Could not run ntpdate command. Trying the sntp command instead...")
+		err = prl.TryExec(s.vmName, 20, "sudo", "sntp", "-S", "time.apple.com")
+		if err != nil {
+			s.Println("Could not sync with timeserver!")
+			return err
+		}
 	}
 
 	ipAddr, err := s.waitForIPAddress(s.vmName, 60)
