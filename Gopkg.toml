@@ -51,6 +51,10 @@ ignored = ["test", "appengine"]
   source = "github.com/nolith/moby"
 
 [[constraint]]
+  name = "github.com/docker/cli"
+  version = "18.09"
+
+[[constraint]]
   name = "github.com/docker/go-connections"
   version = "0.3.0"
 

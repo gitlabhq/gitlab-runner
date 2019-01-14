@@ -95,6 +95,18 @@
   version = "v3.2.0"
 
 [[projects]]
+  digest = "1:29743b7c656a61c4f8241af0438ccd27c2073219d71e7b1f128ff1b26dad969a"
+  name = "github.com/docker/cli"
+  packages = [
+    "cli/config/configfile",
+    "cli/config/credentials",
+    "opts",
+  ]
+  pruneopts = "N"
+  revision = "336b2a5cac7f83511e04ed35097fbcb91a5d7d4f"
+  version = "v18.09.1"
+
+[[projects]]
   branch = "gitlab-runner"
   digest = "1:11bec5b554bbb0a87800910944118abb243ec0cd99bf509f1ba25c339c89d84c"
   name = "github.com/docker/distribution"
@@ -136,8 +148,6 @@
     "api/types/time",
     "api/types/versions",
     "api/types/volume",
-    "cliconfig/configfile",
-    "cliconfig/credentials",
     "client",
     "daemon/graphdriver",
     "image",
@@ -1015,12 +1025,12 @@
     "cloud.google.com/go/storage",
     "github.com/BurntSushi/toml",
     "github.com/ayufan/golang-kardianos-service",
+    "github.com/docker/cli/cli/config/configfile",
+    "github.com/docker/cli/cli/config/credentials",
     "github.com/docker/distribution/reference",
     "github.com/docker/docker/api/types",
     "github.com/docker/docker/api/types/container",
     "github.com/docker/docker/api/types/network",
-    "github.com/docker/docker/cliconfig/configfile",
-    "github.com/docker/docker/cliconfig/credentials",
     "github.com/docker/docker/client",
     "github.com/docker/docker/pkg/homedir",
     "github.com/docker/docker/pkg/stdcopy",
