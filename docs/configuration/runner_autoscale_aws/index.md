@@ -1,5 +1,5 @@
 ---
-last_updated: 2017-11-24
+last_updated: 2019-01-11
 ---
 
 > **[Article Type](https://docs.gitlab.com/ee/development/writing_documentation.html#types-of-technical-articles):** Admin guide ||
@@ -30,6 +30,11 @@ powerful autoscaling machines.
 NOTE: **Note:**
 A familiarity with Amazon Web Services (AWS) is required as this is where most
 of the configuration will take place.
+
+TIP: **Tip:**
+We suggest a quick read through docker machine [`amazonec2` driver
+documentation](https://docs.docker.com/machine/drivers/aws/) to familiarize
+yourself with the parameters we will set later in this article.
 
 Your GitLab instance is going to need to talk to the Runners over the network,
 and that is something you need think about when configuring any AWS security
@@ -231,9 +236,10 @@ Here's an example of the `runners.machine` section:
       "amazonec2-region=us-central-1",
       "amazonec2-vpc-id=vpc-xxxxx",
       "amazonec2-subnet-id=subnet-xxxxx",
+      "amazonec2-zone=x",
       "amazonec2-use-private-address=true",
       "amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true",
-      "amazonec2-security-group=docker-machine-scaler",
+      "amazonec2-security-group=xxxxx",
       "amazonec2-instance-type=m4.2xlarge",
     ]
 ```
@@ -252,9 +258,10 @@ under `MachineOptions`. Below you can see the most common ones.
 | `amazonec2-region=eu-central-1` | The region to use when launching the instance. You can omit this entirely and the default `us-east-1` will be used. |
 | `amazonec2-vpc-id=vpc-xxxxx` | Your [VPC ID](https://docs.docker.com/machine/drivers/aws/#vpc-id) to launch the instance in. |
 | `amazonec2-subnet-id=subnet-xxxx` | The AWS VPC subnet ID. |
+| `amazonec2-zone=x` | If not specified, the [availability zone is `a`](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values), it needs to be set to the same availability zone as the specified subnet, for example when the zone is `eu-west-1b` it has to be `amazonec2-zone=b` |
 | `amazonec2-use-private-address=true` | Use the private IP address of Docker Machines, but still create a public IP address. Useful to keep the traffic internal and avoid extra costs.|
 | `amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true` | AWS extra tag key-value pairs, useful to identify the instances on the AWS console. The "Name" tag is set to the machine name by default. We set the "runner-manager-name" to match the Runner name set in `[[runners]]`, so that we can filter all the EC2 instances created by a specific manager setup. Read more about [using tags in AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html). |
-| `amazonec2-security-group=docker-machine-scaler` | AWS VPC security group name, see [AWS security groups](#aws-security-groups). |
+| `amazonec2-security-group=xxxx` | AWS VPC security group name, see [AWS security groups](#aws-security-groups). |
 | `amazonec2-instance-type=m4.2xlarge` | The instance type that the child Runners will run on. |
 
 TIP: **Tip:**
