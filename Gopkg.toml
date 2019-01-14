@@ -179,10 +179,6 @@ ignored = ["test", "appengine"]
   revision = "b7c53e02cd1a9a01500a58f22d83c6e964bc59db"
 
 [[override]]
-  name = "github.com/docker/engine-api"
-  revision = "4290f40c056686fcaa5c9caf02eac1dde9315adf"
-
-[[override]]
   name = "github.com/docker/spdystream"
   revision = "449fdfce4d962303d702fec724ef0ad181c92528"
 
