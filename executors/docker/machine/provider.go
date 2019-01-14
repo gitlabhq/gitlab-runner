@@ -81,10 +81,12 @@ func (m *machineProvider) runnerMachinesCoordinator(config *common.RunnerConfig)
 func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
 	name := newMachineName(config)
 	details := m.machineDetails(name, true)
+	m.lock.Lock()
 	details.State = machineStateCreating
 	details.UsedCount = 0
 	details.RetryCount = 0
 	details.LastSeen = time.Now()
+	m.lock.Unlock()
 	errCh := make(chan error, 1)
 
 	// Create machine with the required configuration asynchronously
@@ -113,8 +115,10 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 				Errorln("Machine creation failed")
 			_ = m.remove(details.Name, "Failed to create")
 		} else {
+			m.lock.Lock()
 			details.State = state
 			details.Used = time.Now()
+			m.lock.Unlock()
 			creationTime := time.Since(started)
 			logrus.WithField("duration", creationTime).
 				WithField("name", details.Name).
@@ -123,6 +127,10 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 				Infoln("Machine created")
 			m.totalActions.WithLabelValues("created").Inc()
 			m.creationHistogram.Observe(creationTime.Seconds())
+
+			// Signal that a new machine is available. When there's contention, there's no guarantee between the
+			// ordering of reading from errCh and the availability signal.
+			coordinator.signalMachineAvailable()
 		}
 		errCh <- err
 	})
@@ -151,14 +159,35 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 	return nil
 }
 
-func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
+func (m *machineProvider) prepareCreatedMachine(newMachineDetails *machineDetails, err error) (*machineDetails, error) {
+	m.lock.Lock()
+	if err == nil && newMachineDetails.canBeUsed() {
+		newMachineDetails.State = machineStateAcquired
+		m.lock.Unlock()
+	} else {
+		m.lock.Unlock()
+		newMachineDetails = nil
+		if err == nil {
+			// We're unlucky; the machine was snapped up by another job.
+			err = errors.New("unable to create new machine")
+		}
+	}
+
+	return newMachineDetails, err
+}
+
+func (m *machineProvider) findFreeExistingMachine(config *common.RunnerConfig) (*machineDetails, error) {
 	machines, err := m.loadMachines(config)
 	if err != nil {
-		return
+		return nil, err
 	}
-	details = m.findFreeMachine(true, machines...)
-	if details != nil {
-		return
+	return m.findFreeMachine(true, machines...), nil
+}
+
+func (m *machineProvider) useMachine(config *common.RunnerConfig) (*machineDetails, error) {
+	details, err := m.findFreeExistingMachine(config)
+	if err != nil || details != nil {
+		return details, err
 	}
 
 	coordinator, err := m.runnerMachinesCoordinator(config)
@@ -168,18 +197,18 @@ func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *mach
 
 	newMachineDetails, errCh := m.create(config, machineStateIdle)
 
-	// Use either a free machine, or the created machine; whichever comes first.
+	// Use either a free machine, or the created machine; whichever comes first. There's no guarantee that the created
+	// machine can be used by us because between the time the machine is created, and the acquisition of the machine,
+	// another goroutine may have found it via findFreeMachine and acquired it.
 	for details == nil {
 		select {
 		case err = <-errCh:
-			newMachineDetails.State = machineStateAcquired
-			details = newMachineDetails
-			return
+			return m.prepareCreatedMachine(newMachineDetails, err)
 		case <-coordinator.availableMachineSignal():
-			details = m.findFreeMachine(true, machines...)
+			details, err = m.findFreeExistingMachine(config)
 		}
 	}
-	return
+	return details, err
 }
 
 func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
