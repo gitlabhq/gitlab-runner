@@ -1,3 +1,6 @@
+v11.6.1 (2019-01-15)
+- Make new runner tokens compatible with docker-machine executor !1144
+
 v11.6.0 (2018-12-22)
 - Make compatibility chart super clear and remove old entries !1078
 - Add slack notification option for 'dep status' check failures !1072
