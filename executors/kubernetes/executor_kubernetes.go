@@ -20,6 +20,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
@@ -394,7 +395,7 @@ type dockerConfigEntry struct {
 }
 
 func (s *executor) projectUniqueName() string {
-	return makeDNS1123Compatible(s.Build.ProjectUniqueName())
+	return dns.MakeRFC1123Compatible(s.Build.ProjectUniqueName())
 }
 
 func (s *executor) setupCredentials() error {

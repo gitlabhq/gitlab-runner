@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -400,32 +399,4 @@ func testVersionAndCodec() (version string, codec runtime.Codec) {
 	version = api.SchemeGroupVersion.Version
 
 	return
-}
-
-func assertDNS1123Compatibility(t *testing.T, name string) {
-	dns1123MaxLength := 63
-	dns1123FormatRegexp := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
-
-	assert.True(t, len(name) <= dns1123MaxLength, "Name length needs to be shorter than %d", dns1123MaxLength)
-	assert.Regexp(t, dns1123FormatRegexp, name, "Name needs to be in DNS-1123 allowed format")
-}
-
-func TestMakeDNS1123Compatible(t *testing.T) {
-	examples := []struct {
-		name     string
-		expected string
-	}{
-		{name: "tOk3_?ofTHE-Runner", expected: "tok3ofthe-runner"},
-		{name: "----tOk3_?ofTHE-Runner", expected: "tok3ofthe-runner"},
-		{name: "very-long-token-----------------------------------------------end", expected: "very-long-token-----------------------------------------------e"},
-	}
-
-	for _, example := range examples {
-		t.Run(example.name, func(t *testing.T) {
-			name := makeDNS1123Compatible(example.name)
-
-			assert.Equal(t, example.expected, name)
-			assertDNS1123Compatibility(t, name)
-		})
-	}
 }
