@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 )
 
 func machineFormat(runner string, template string) string {
@@ -17,7 +18,7 @@ func machineFormat(runner string, template string) string {
 }
 
 func machineFilter(config *common.RunnerConfig) string {
-	return machineFormat(config.ShortDescription(), config.Machine.MachineName)
+	return machineFormat(dns.MakeRFC1123Compatible(config.ShortDescription()), config.Machine.MachineName)
 }
 
 func matchesMachineFilter(name, filter string) bool {
