@@ -20,7 +20,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,6 +29,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
 var (
@@ -940,7 +941,7 @@ func TestSetupCredentials(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
-				assertDNS1123Compatibility(t, secret.GetGenerateName())
+				dns_test.AssertRFC1123Compatibility(t, secret.GetGenerateName())
 			},
 		},
 	}
@@ -1408,7 +1409,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assertDNS1123Compatibility(t, pod.GetGenerateName())
+				dns_test.AssertRFC1123Compatibility(t, pod.GetGenerateName())
 			},
 		},
 	}
