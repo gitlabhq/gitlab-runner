@@ -2,29 +2,26 @@ package main
 
 import (
 	"net"
-	"os/exec"
 	"strings"
 
-	"github.com/docker/docker/pkg/integration/checker"
+	"github.com/docker/docker/integration-cli/checker"
 	"github.com/go-check/check"
+	"gotest.tools/icmd"
 )
 
 func (s *DockerSuite) TestCLIProxyDisableProxyUnixSock(c *check.C) {
-	testRequires(c, DaemonIsLinux)
-	testRequires(c, SameHostDaemon) // test is valid when DOCKER_HOST=unix://..
+	testRequires(c, DaemonIsLinux, testEnv.IsLocalDaemon)
 
-	cmd := exec.Command(dockerBinary, "info")
-	cmd.Env = appendBaseEnv(false, "HTTP_PROXY=http://127.0.0.1:9999")
-
-	out, _, err := runCommandWithOutput(cmd)
-	c.Assert(err, checker.IsNil, check.Commentf("%v", out))
-
+	icmd.RunCmd(icmd.Cmd{
+		Command: []string{dockerBinary, "info"},
+		Env:     appendBaseEnv(false, "HTTP_PROXY=http://127.0.0.1:9999"),
+	}).Assert(c, icmd.Success)
 }
 
 // Can't use localhost here since go has a special case to not use proxy if connecting to localhost
 // See https://golang.org/pkg/net/http/#ProxyFromEnvironment
 func (s *DockerDaemonSuite) TestCLIProxyProxyTCPSock(c *check.C) {
-	testRequires(c, SameHostDaemon)
+	testRequires(c, testEnv.IsLocalDaemon)
 	// get the IP to use to connect since we can't use localhost
 	addrs, err := net.InterfaceAddrs()
 	c.Assert(err, checker.IsNil)
@@ -40,14 +37,15 @@ func (s *DockerDaemonSuite) TestCLIProxyProxyTCPSock(c *check.C) {
 
 	c.Assert(ip, checker.Not(checker.Equals), "")
 
-	err = s.d.Start("-H", "tcp://"+ip+":2375")
-	c.Assert(err, checker.IsNil)
-	cmd := exec.Command(dockerBinary, "info")
-	cmd.Env = []string{"DOCKER_HOST=tcp://" + ip + ":2375", "HTTP_PROXY=127.0.0.1:9999"}
-	out, _, err := runCommandWithOutput(cmd)
-	c.Assert(err, checker.NotNil, check.Commentf("%v", out))
+	s.d.Start(c, "-H", "tcp://"+ip+":2375")
+
+	icmd.RunCmd(icmd.Cmd{
+		Command: []string{dockerBinary, "info"},
+		Env:     []string{"DOCKER_HOST=tcp://" + ip + ":2375", "HTTP_PROXY=127.0.0.1:9999"},
+	}).Assert(c, icmd.Expected{Error: "exit status 1", ExitCode: 1})
 	// Test with no_proxy
-	cmd.Env = append(cmd.Env, "NO_PROXY="+ip)
-	out, _, err = runCommandWithOutput(exec.Command(dockerBinary, "info"))
-	c.Assert(err, checker.IsNil, check.Commentf("%v", out))
+	icmd.RunCmd(icmd.Cmd{
+		Command: []string{dockerBinary, "info"},
+		Env:     []string{"DOCKER_HOST=tcp://" + ip + ":2375", "HTTP_PROXY=127.0.0.1:9999", "NO_PROXY=" + ip},
+	}).Assert(c, icmd.Success)
 }

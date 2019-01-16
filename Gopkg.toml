@@ -38,17 +38,13 @@ ignored = ["test", "appengine"]
   branch = "master"
   name = "github.com/ayufan/golang-kardianos-service"
 
-# temporary fork to handle Sirupsen -> sirupsen
 [[constraint]]
   name = "github.com/docker/distribution"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/docker-distribution"
+  version = "2.7"
 
-# temporary fork to handle Sirupsen -> sirupsen
 [[constraint]]
   name = "github.com/docker/docker"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/moby"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/docker/cli"

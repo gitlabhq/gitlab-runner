@@ -1,22 +1,30 @@
-package daemon
+package daemon // import "github.com/docker/docker/daemon"
 
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 
-	"github.com/docker/docker/api/errors"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/container"
 	"github.com/docker/docker/daemon/network"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/image"
+	"github.com/docker/docker/opts"
 	"github.com/docker/docker/pkg/signal"
 	"github.com/docker/docker/pkg/system"
 	"github.com/docker/docker/pkg/truncindex"
-	"github.com/docker/docker/runconfig/opts"
+	"github.com/docker/docker/runconfig"
+	volumemounts "github.com/docker/docker/volume/mounts"
 	"github.com/docker/go-connections/nat"
+	"github.com/opencontainers/selinux/go-selinux/label"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // GetContainer looks for a container using the provided information, which could be
@@ -28,7 +36,7 @@ import (
 //  If none of these searches succeed, an error is returned
 func (daemon *Daemon) GetContainer(prefixOrName string) (*container.Container, error) {
 	if len(prefixOrName) == 0 {
-		return nil, errors.NewBadRequestError(fmt.Errorf("No container name or ID supplied"))
+		return nil, errors.WithStack(invalidIdentifier(prefixOrName))
 	}
 
 	if containerByID := daemon.containers.Get(prefixOrName); containerByID != nil {
@@ -46,12 +54,21 @@ func (daemon *Daemon) GetContainer(prefixOrName string) (*container.Container, e
 	if indexError != nil {
 		// When truncindex defines an error type, use that instead
 		if indexError == truncindex.ErrNotExist {
-			err := fmt.Errorf("No such container: %s", prefixOrName)
-			return nil, errors.NewRequestNotFoundError(err)
+			return nil, containerNotFound(prefixOrName)
 		}
-		return nil, indexError
+		return nil, errdefs.System(indexError)
 	}
 	return daemon.containers.Get(containerID), nil
+}
+
+// checkContainer make sure the specified container validates the specified conditions
+func (daemon *Daemon) checkContainer(container *container.Container, conditions ...func(*container.Container) error) error {
+	for _, condition := range conditions {
+		if err := condition(container); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Exists returns a true if a container of the specified ID or name exists,
@@ -79,6 +96,9 @@ func (daemon *Daemon) load(id string) (*container.Container, error) {
 	if err := container.FromDisk(); err != nil {
 		return nil, err
 	}
+	if err := label.ReserveLabel(container.ProcessLabel); err != nil {
+		return nil, err
+	}
 
 	if container.ID != id {
 		return container, fmt.Errorf("Container %s is stored at %s", container.ID, id)
@@ -96,13 +116,17 @@ func (daemon *Daemon) Register(c *container.Container) error {
 		c.StreamConfig.NewNopInputPipe()
 	}
 
+	// once in the memory store it is visible to other goroutines
+	// grab a Lock until it has been checkpointed to avoid races
+	c.Lock()
+	defer c.Unlock()
+
 	daemon.containers.Add(c.ID, c)
 	daemon.idIndex.Add(c.ID)
-
-	return nil
+	return c.CheckpointTo(daemon.containersReplica)
 }
 
-func (daemon *Daemon) newContainer(name string, config *containertypes.Config, hostConfig *containertypes.HostConfig, imgID image.ID, managed bool) (*container.Container, error) {
+func (daemon *Daemon) newContainer(name string, operatingSystem string, config *containertypes.Config, hostConfig *containertypes.HostConfig, imgID image.ID, managed bool) (*container.Container, error) {
 	var (
 		id             string
 		err            error
@@ -117,7 +141,7 @@ func (daemon *Daemon) newContainer(name string, config *containertypes.Config, h
 		if config.Hostname == "" {
 			config.Hostname, err = os.Hostname()
 			if err != nil {
-				return nil, err
+				return nil, errdefs.System(err)
 			}
 		}
 	} else {
@@ -135,8 +159,8 @@ func (daemon *Daemon) newContainer(name string, config *containertypes.Config, h
 	base.ImageID = imgID
 	base.NetworkSettings = &network.Settings{IsAnonymousEndpoint: noExplicitName}
 	base.Name = name
-	base.Driver = daemon.GraphDriverName()
-
+	base.Driver = daemon.imageService.GraphDriverForOS(operatingSystem)
+	base.OS = operatingSystem
 	return base, err
 }
 
@@ -149,7 +173,7 @@ func (daemon *Daemon) GetByName(name string) (*container.Container, error) {
 	if name[0] != '/' {
 		fullName = "/" + name
 	}
-	id, err := daemon.nameIndex.Get(fullName)
+	id, err := daemon.containersReplica.Snapshot().GetID(fullName)
 	if err != nil {
 		return nil, fmt.Errorf("Could not find entity for %s", name)
 	}
@@ -183,7 +207,7 @@ func (daemon *Daemon) generateHostname(id string, config *containertypes.Config)
 func (daemon *Daemon) setSecurityOptions(container *container.Container, hostConfig *containertypes.HostConfig) error {
 	container.Lock()
 	defer container.Unlock()
-	return parseSecurityOpt(container, hostConfig)
+	return daemon.parseSecurityOpt(container, hostConfig)
 }
 
 func (daemon *Daemon) setHostConfig(container *container.Container, hostConfig *containertypes.HostConfig) error {
@@ -201,82 +225,157 @@ func (daemon *Daemon) setHostConfig(container *container.Container, hostConfig *
 		return err
 	}
 
-	// make sure links is not nil
-	// this ensures that on the next daemon restart we don't try to migrate from legacy sqlite links
-	if hostConfig.Links == nil {
-		hostConfig.Links = []string{}
-	}
-
+	runconfig.SetDefaultNetModeIfBlank(hostConfig)
 	container.HostConfig = hostConfig
-	return container.ToDisk()
+	return container.CheckpointTo(daemon.containersReplica)
 }
 
 // verifyContainerSettings performs validation of the hostconfig and config
 // structures.
-func (daemon *Daemon) verifyContainerSettings(hostConfig *containertypes.HostConfig, config *containertypes.Config, update bool) ([]string, error) {
-
+func (daemon *Daemon) verifyContainerSettings(platform string, hostConfig *containertypes.HostConfig, config *containertypes.Config, update bool) (warnings []string, err error) {
 	// First perform verification of settings common across all platforms.
-	if config != nil {
-		if config.WorkingDir != "" {
-			config.WorkingDir = filepath.FromSlash(config.WorkingDir) // Ensure in platform semantics
-			if !system.IsAbs(config.WorkingDir) {
-				return nil, fmt.Errorf("the working directory '%s' is invalid, it needs to be an absolute path", config.WorkingDir)
-			}
-		}
-
-		if len(config.StopSignal) > 0 {
-			_, err := signal.ParseSignal(config.StopSignal)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// Validate if Env contains empty variable or not (e.g., ``, `=foo`)
-		for _, env := range config.Env {
-			if _, err := opts.ValidateEnv(env); err != nil {
-				return nil, err
-			}
-		}
+	if err = validateContainerConfig(config, platform); err != nil {
+		return warnings, err
 	}
-
-	if hostConfig == nil {
-		return nil, nil
-	}
-
-	if hostConfig.AutoRemove && !hostConfig.RestartPolicy.IsNone() {
-		return nil, fmt.Errorf("can't create 'AutoRemove' container with restart policy")
-	}
-
-	for port := range hostConfig.PortBindings {
-		_, portStr := nat.SplitProtoPort(string(port))
-		if _, err := nat.ParsePort(portStr); err != nil {
-			return nil, fmt.Errorf("invalid port specification: %q", portStr)
-		}
-		for _, pb := range hostConfig.PortBindings[port] {
-			_, err := nat.NewPort(nat.SplitProtoPort(pb.HostPort))
-			if err != nil {
-				return nil, fmt.Errorf("invalid port specification: %q", pb.HostPort)
-			}
-		}
-	}
-
-	p := hostConfig.RestartPolicy
-
-	switch p.Name {
-	case "always", "unless-stopped", "no":
-		if p.MaximumRetryCount != 0 {
-			return nil, fmt.Errorf("maximum retry count cannot be used with restart policy '%s'", p.Name)
-		}
-	case "on-failure":
-		if p.MaximumRetryCount < 0 {
-			return nil, fmt.Errorf("maximum retry count cannot be negative")
-		}
-	case "":
-	// do nothing
-	default:
-		return nil, fmt.Errorf("invalid restart policy '%s'", p.Name)
+	if err := validateHostConfig(hostConfig, platform); err != nil {
+		return warnings, err
 	}
 
 	// Now do platform-specific verification
-	return verifyPlatformContainerSettings(daemon, hostConfig, config, update)
+	warnings, err = verifyPlatformContainerSettings(daemon, hostConfig, update)
+	for _, w := range warnings {
+		logrus.Warn(w)
+	}
+	return warnings, err
+}
+
+func validateContainerConfig(config *containertypes.Config, platform string) error {
+	if config == nil {
+		return nil
+	}
+	if err := translateWorkingDir(config, platform); err != nil {
+		return err
+	}
+	if len(config.StopSignal) > 0 {
+		if _, err := signal.ParseSignal(config.StopSignal); err != nil {
+			return err
+		}
+	}
+	// Validate if Env contains empty variable or not (e.g., ``, `=foo`)
+	for _, env := range config.Env {
+		if _, err := opts.ValidateEnv(env); err != nil {
+			return err
+		}
+	}
+	return validateHealthCheck(config.Healthcheck)
+}
+
+func validateHostConfig(hostConfig *containertypes.HostConfig, platform string) error {
+	if hostConfig == nil {
+		return nil
+	}
+	if hostConfig.AutoRemove && !hostConfig.RestartPolicy.IsNone() {
+		return errors.Errorf("can't create 'AutoRemove' container with restart policy")
+	}
+	// Validate mounts; check if host directories still exist
+	parser := volumemounts.NewParser(platform)
+	for _, cfg := range hostConfig.Mounts {
+		if err := parser.ValidateMountConfig(&cfg); err != nil {
+			return err
+		}
+	}
+	for _, extraHost := range hostConfig.ExtraHosts {
+		if _, err := opts.ValidateExtraHost(extraHost); err != nil {
+			return err
+		}
+	}
+	if err := validatePortBindings(hostConfig.PortBindings); err != nil {
+		return err
+	}
+	if err := validateRestartPolicy(hostConfig.RestartPolicy); err != nil {
+		return err
+	}
+	if !hostConfig.Isolation.IsValid() {
+		return errors.Errorf("invalid isolation '%s' on %s", hostConfig.Isolation, runtime.GOOS)
+	}
+	return nil
+}
+
+// validateHealthCheck validates the healthcheck params of Config
+func validateHealthCheck(healthConfig *containertypes.HealthConfig) error {
+	if healthConfig == nil {
+		return nil
+	}
+	if healthConfig.Interval != 0 && healthConfig.Interval < containertypes.MinimumDuration {
+		return errors.Errorf("Interval in Healthcheck cannot be less than %s", containertypes.MinimumDuration)
+	}
+	if healthConfig.Timeout != 0 && healthConfig.Timeout < containertypes.MinimumDuration {
+		return errors.Errorf("Timeout in Healthcheck cannot be less than %s", containertypes.MinimumDuration)
+	}
+	if healthConfig.Retries < 0 {
+		return errors.Errorf("Retries in Healthcheck cannot be negative")
+	}
+	if healthConfig.StartPeriod != 0 && healthConfig.StartPeriod < containertypes.MinimumDuration {
+		return errors.Errorf("StartPeriod in Healthcheck cannot be less than %s", containertypes.MinimumDuration)
+	}
+	return nil
+}
+
+func validatePortBindings(ports nat.PortMap) error {
+	for port := range ports {
+		_, portStr := nat.SplitProtoPort(string(port))
+		if _, err := nat.ParsePort(portStr); err != nil {
+			return errors.Errorf("invalid port specification: %q", portStr)
+		}
+		for _, pb := range ports[port] {
+			_, err := nat.NewPort(nat.SplitProtoPort(pb.HostPort))
+			if err != nil {
+				return errors.Errorf("invalid port specification: %q", pb.HostPort)
+			}
+		}
+	}
+	return nil
+}
+
+func validateRestartPolicy(policy containertypes.RestartPolicy) error {
+	switch policy.Name {
+	case "always", "unless-stopped", "no":
+		if policy.MaximumRetryCount != 0 {
+			return errors.Errorf("maximum retry count cannot be used with restart policy '%s'", policy.Name)
+		}
+	case "on-failure":
+		if policy.MaximumRetryCount < 0 {
+			return errors.Errorf("maximum retry count cannot be negative")
+		}
+	case "":
+		// do nothing
+		return nil
+	default:
+		return errors.Errorf("invalid restart policy '%s'", policy.Name)
+	}
+	return nil
+}
+
+// translateWorkingDir translates the working-dir for the target platform,
+// and returns an error if the given path is not an absolute path.
+func translateWorkingDir(config *containertypes.Config, platform string) error {
+	if config.WorkingDir == "" {
+		return nil
+	}
+	wd := config.WorkingDir
+	switch {
+	case runtime.GOOS != platform:
+		// LCOW. Force Unix semantics
+		wd = strings.Replace(wd, string(os.PathSeparator), "/", -1)
+		if !path.IsAbs(wd) {
+			return fmt.Errorf("the working directory '%s' is invalid, it needs to be an absolute path", config.WorkingDir)
+		}
+	default:
+		wd = filepath.FromSlash(wd) // Ensure in platform semantics
+		if !system.IsAbs(wd) {
+			return fmt.Errorf("the working directory '%s' is invalid, it needs to be an absolute path", config.WorkingDir)
+		}
+	}
+	config.WorkingDir = wd
+	return nil
 }

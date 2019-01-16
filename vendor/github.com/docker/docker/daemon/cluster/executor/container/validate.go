@@ -1,8 +1,8 @@
-package container
+package container // import "github.com/docker/docker/daemon/cluster/executor/container"
 
 import (
+	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/docker/swarmkit/api"
@@ -11,7 +11,8 @@ import (
 func validateMounts(mounts []api.Mount) error {
 	for _, mount := range mounts {
 		// Target must always be absolute
-		if !filepath.IsAbs(mount.Target) {
+		// except if target is Windows named pipe
+		if !filepath.IsAbs(mount.Target) && mount.Type != api.MountTypeNamedPipe {
 			return fmt.Errorf("invalid mount target, must be an absolute path: %s", mount.Target)
 		}
 
@@ -24,16 +25,17 @@ func validateMounts(mounts []api.Mount) error {
 			if !filepath.IsAbs(mount.Source) {
 				return fmt.Errorf("invalid bind mount source, must be an absolute path: %s", mount.Source)
 			}
-			if _, err := os.Stat(mount.Source); os.IsNotExist(err) {
-				return fmt.Errorf("invalid bind mount source, source path not found: %s", mount.Source)
-			}
 		case api.MountTypeVolume:
 			if filepath.IsAbs(mount.Source) {
 				return fmt.Errorf("invalid volume mount source, must not be an absolute path: %s", mount.Source)
 			}
 		case api.MountTypeTmpfs:
 			if mount.Source != "" {
-				return fmt.Errorf("invalid tmpfs source, source must be empty")
+				return errors.New("invalid tmpfs source, source must be empty")
+			}
+		case api.MountTypeNamedPipe:
+			if mount.Source == "" {
+				return errors.New("invalid npipe source, source must not be empty")
 			}
 		default:
 			return fmt.Errorf("invalid mount type: %s", mount.Type)

@@ -1,17 +1,10 @@
-package router
+package router // import "github.com/docker/docker/api/server/router"
 
 import (
-	"errors"
+	"context"
 	"net/http"
 
-	"golang.org/x/net/context"
-
-	apierrors "github.com/docker/docker/api/errors"
 	"github.com/docker/docker/api/server/httputils"
-)
-
-var (
-	errExperimentalFeature = errors.New("This experimental feature is disabled by default. Start the Docker daemon with --experimental in order to enable it.")
 )
 
 // ExperimentalRoute defines an experimental API route that can be enabled or disabled.
@@ -39,11 +32,19 @@ func (r *experimentalRoute) Disable() {
 	r.handler = experimentalHandler
 }
 
-func experimentalHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	return apierrors.NewErrorWithStatusCode(errExperimentalFeature, http.StatusNotImplemented)
+type notImplementedError struct{}
+
+func (notImplementedError) Error() string {
+	return "This experimental feature is disabled by default. Start the Docker daemon in experimental mode in order to enable it."
 }
 
-// Handler returns returns the APIFunc to let the server wrap it in middlewares.
+func (notImplementedError) NotImplemented() {}
+
+func experimentalHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	return notImplementedError{}
+}
+
+// Handler returns the APIFunc to let the server wrap it in middlewares.
 func (r *experimentalRoute) Handler() httputils.APIFunc {
 	return r.handler
 }
