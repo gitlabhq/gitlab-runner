@@ -273,10 +273,6 @@ ignored = ["test", "appengine"]
   revision = "ef147856a6ddbb60760db74283d2424e98c87bff"
 
 [[override]]
-  name = "golang.org/x/sys"
-  revision = "042a8f53ce82bbe081222da955159491e32146a0"
-
-[[override]]
   name = "golang.org/x/text"
   version = "v0.3.0"
 
