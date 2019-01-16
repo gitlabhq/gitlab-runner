@@ -430,7 +430,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	// Go-specific metrics about the process (GC stats, goroutines, etc.).
 	registry.MustRegister(prometheus.NewGoCollector())
 	// Go-unrelated process metrics (memory usage, file descriptors, etc.).
-	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+	registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 
 	// Register all executor provider collectors
 	for _, provider := range common.GetExecutorProviders() {
