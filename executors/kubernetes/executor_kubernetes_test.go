@@ -20,7 +20,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,6 +29,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
 var (
@@ -892,15 +893,16 @@ func TestSetupCredentials(t *testing.T) {
 	version, _ := testVersionAndCodec()
 
 	type testDef struct {
-		Credentials []common.Credentials
-		VerifyFn    func(*testing.T, testDef, *api.Secret)
+		RunnerCredentials *common.RunnerCredentials
+		Credentials       []common.Credentials
+		VerifyFn          func(*testing.T, testDef, *api.Secret)
 	}
-	tests := []testDef{
-		{
+	tests := map[string]testDef{
+		"no credentials": {
 			// don't execute VerifyFn
 			VerifyFn: nil,
 		},
-		{
+		"registry credentials": {
 			Credentials: []common.Credentials{
 				{
 					Type:     "registry",
@@ -914,7 +916,7 @@ func TestSetupCredentials(t *testing.T) {
 				assert.NotEmpty(t, secret.Data[api.DockerConfigKey])
 			},
 		},
-		{
+		"other credentials": {
 			Credentials: []common.Credentials{
 				{
 					Type:     "other",
@@ -925,6 +927,22 @@ func TestSetupCredentials(t *testing.T) {
 			},
 			// don't execute VerifyFn
 			VerifyFn: nil,
+		},
+		"non-DNS-1123-compatible-token": {
+			RunnerCredentials: &common.RunnerCredentials{
+				Token: "ToK3_?OF",
+			},
+			Credentials: []common.Credentials{
+				{
+					Type:     "registry",
+					URL:      "http://example.com",
+					Username: "user",
+					Password: "password",
+				},
+			},
+			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
+				dns_test.AssertRFC1123Compatibility(t, secret.GetGenerateName())
+			},
 		},
 	}
 
@@ -962,39 +980,50 @@ func TestSetupCredentials(t *testing.T) {
 		}
 	}
 
-	for _, test := range tests {
-		ex := executor{
-			kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-			options:    &kubernetesOptions{},
-			AbstractExecutor: executors.AbstractExecutor{
-				Config: common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Kubernetes: &common.KubernetesConfig{
-							Namespace: "default",
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			ex := executor{
+				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
+				options:    &kubernetesOptions{},
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Kubernetes: &common.KubernetesConfig{
+								Namespace: "default",
+							},
 						},
 					},
-				},
-				BuildShell: &common.ShellConfiguration{},
-				Build: &common.Build{
-					JobResponse: common.JobResponse{
-						Variables:   []common.JobVariable{},
-						Credentials: test.Credentials,
+					BuildShell: &common.ShellConfiguration{},
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							Variables:   []common.JobVariable{},
+							Credentials: test.Credentials,
+						},
+						Runner: &common.RunnerConfig{},
 					},
-					Runner: &common.RunnerConfig{},
 				},
-			},
-		}
+			}
 
-		executed = false
-		err := ex.prepareOverwrites(make(common.JobVariables, 0))
-		assert.NoError(t, err)
-		err = ex.setupCredentials()
-		assert.NoError(t, err)
-		if test.VerifyFn != nil {
-			assert.True(t, executed)
-		} else {
-			assert.False(t, executed)
-		}
+			if test.RunnerCredentials != nil {
+				ex.Build.Runner = &common.RunnerConfig{
+					RunnerCredentials: *test.RunnerCredentials,
+				}
+			}
+
+			executed = false
+
+			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			assert.NoError(t, err)
+
+			err = ex.setupCredentials()
+			assert.NoError(t, err)
+
+			if test.VerifyFn != nil {
+				assert.True(t, executed)
+			} else {
+				assert.False(t, executed)
+			}
+		})
 	}
 }
 
@@ -1194,6 +1223,49 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 			},
 		},
+		"support setting kubernetes pod taint tolerations": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						NodeTolerations: map[string]string{
+							"node-role.kubernetes.io/master": "NoSchedule",
+							"custom.toleration=value":        "NoSchedule",
+							"empty.value=":                   "PreferNoSchedule",
+							"onlyKey":                        "",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				expectedTolerations := []api.Toleration{
+					{
+						Key:      "node-role.kubernetes.io/master",
+						Operator: api.TolerationOpExists,
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+						Key:      "custom.toleration",
+						Operator: api.TolerationOpEqual,
+						Value:    "value",
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+
+						Key:      "empty.value",
+						Operator: api.TolerationOpEqual,
+						Value:    "",
+						Effect:   api.TaintEffectPreferNoSchedule,
+					},
+					{
+						Key:      "onlyKey",
+						Operator: api.TolerationOpExists,
+						Effect:   "",
+					},
+				}
+				assert.ElementsMatch(t, expectedTolerations, pod.Spec.Tolerations)
+			},
+		},
 		"supports extended docker configuration for image and services": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1366,6 +1438,21 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "test-service-2", pod.Spec.Containers[4].Image)
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[4].Command)
 				assert.Equal(t, []string{"argument1", "argument2"}, pod.Spec.Containers[4].Args)
+			},
+		},
+		"non-DNS-1123-compatible-token": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerCredentials: common.RunnerCredentials{
+					Token: "ToK3_?OF",
+				},
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				dns_test.AssertRFC1123Compatibility(t, pod.GetGenerateName())
 			},
 		},
 	}
@@ -1741,9 +1828,20 @@ func TestInteractiveTerminal(t *testing.T) {
 	srv := httptest.NewServer(build.Session.Mux())
 	defer srv.Close()
 
-	u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: build.Session.Endpoint + "/exec"}
-	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{build.Session.Token}})
-	defer conn.Close()
+	u := url.URL{
+		Scheme: "ws",
+		Host:   srv.Listener.Addr().String(),
+		Path:   build.Session.Endpoint + "/exec",
+	}
+	headers := http.Header{
+		"Authorization": []string{build.Session.Token},
+	}
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
+	defer func() {
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}()
 	require.NoError(t, err)
 	assert.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
 

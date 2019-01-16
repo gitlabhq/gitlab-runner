@@ -28,23 +28,23 @@ installed.
 ## Features
 
 - Allows to run:
- - multiple jobs concurrently
- - use multiple tokens with multiple server (even per-project)
- - limit number of concurrent jobs per-token
+  - multiple jobs concurrently
+  - use multiple tokens with multiple server (even per-project)
+  - limit number of concurrent jobs per-token
 - Jobs can be run:
- - locally
- - using Docker containers
- - using Docker containers and executing job over SSH
- - using Docker containers with autoscaling on different clouds and virtualization hypervisors
- - connecting to remote SSH server
+  - locally
+  - using Docker containers
+  - using Docker containers and executing job over SSH
+  - using Docker containers with autoscaling on different clouds and virtualization hypervisors
+  - connecting to remote SSH server
 - Is written in Go and distributed as single binary without any other requirements
 - Supports Bash, Windows Batch and Windows PowerShell
-- Works on GNU/Linux, OS X and Windows (pretty much anywhere you can run Docker)
+- Works on GNU/Linux, macOS and Windows (pretty much anywhere you can run Docker)
 - Allows to customize the job running environment
 - Automatic configuration reload without restart
 - Easy to use setup with support for Docker, Docker-SSH, Parallels or SSH running environments
 - Enables caching of Docker containers
-- Easy installation as a service for GNU/Linux, OSX and Windows
+- Easy installation as a service for GNU/Linux, macOS and Windows
 - Embedded Prometheus metrics HTTP server
 
 ## Compatibility chart
@@ -113,6 +113,7 @@ To jump into the specific documentation of each executor, visit:
 - [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup) A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
 - [Configure GitLab Runner to run behind a proxy](configuration/proxy.md) Learn how to set up a Linux proxy and configure GitLab Runner. Especially useful for the Docker executor.
 - [Feature Flags](configuration/feature-flags.md) Learn how to use feature flags to get access to features in beta stage or to enable breaking changes before the full deprecation and replacement is handled.
+- [Configure Session Server](configuration/advanced-configuration.md#the-session_server-section) Learn how to configure a session server for interacting with jobs the Runner is responsible for.
 
 ## Troubleshooting
 

@@ -39,6 +39,11 @@ try upgrading to the latest version. If the issue persists, reopen this issue
 or merge request with the relevant information.
 ```
 
+### Contributing to documentation
+
+If your contribution contains only documentation changes, you can speed up the CI process
+by following some branch naming conventions, as described in https://docs.gitlab.com/ce/development/documentation/index.html#branch-naming
+
 ## Documentation
 
 The documentation source files can be found under the [docs/](docs/) directory. You can
@@ -91,10 +96,8 @@ Visit the [Changelog](CHANGELOG.md) to view recent changes.
 
 ## Author
 
-```
-2014 - 2015   : [Kamil Trzciński](mailto:ayufan@ayufan.eu)
-2015 - now    : GitLab Inc. team and contributors
-```
+- 2014 - 2015   : [Kamil Trzciński](mailto:ayufan@ayufan.eu)
+- 2015 - now    : GitLab Inc. team and contributors
 
 ## License
 

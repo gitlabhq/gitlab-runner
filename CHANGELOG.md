@@ -1,3 +1,31 @@
+v11.7.0-rc1 (2019-01-08)
+- Docs: Cleaning up the executors doc !1114
+- Update to testify v1.2.2 !1119
+- Fix a typo in VirtualBox Executor docs !1124
+- Use the term `macOS` instead of `OS X` or `OSX` !1125
+- Update github.com/sirupsen/logrus dependency !1129
+- Docs update release checklist !1131
+- Kill session when build is cancelled !1058
+- Fix path separator for CI_PROJECT_DIR in Windows !1128
+
+v11.6.0 (2018-12-22)
+- Make compatibility chart super clear and remove old entries !1078
+- Add slack notification option for 'dep status' check failures !1072
+- Docker executor: use DNS, DNSSearch and ExtraHosts settings from configuration !1075
+- Fix some invalid links in documentation !1085
+- Fix SC2155 where shellcheck warns about errors !1063
+- Change parallel tests configuration ENV names !1095
+- Improve documentation of IAM instance profile usage for caching !1071
+- Remove duplicate builds_dir definition from docs !952
+- Make k8s object names DNS-1123 compatible !1105
+- Docs: working example of helper image with CI_RUNNER_REVISION !1032
+- Docs: omit ImagePullPolicy !1107
+- Disable the docs lint job for now !1112
+- Docs: comment about how listen_address works !1076
+- Fix the indented bullet points of the features list in documentation !1093
+- Add note on the branch naming for documentation changes !1113
+- Docs: add session-server link to advanced list in index !1108
+
 v11.5.0 (2018-11-22)
 - Support RAW artifacts !1057
 - Docs: changing secret variable to just variable in advanced-configuration.md !1055

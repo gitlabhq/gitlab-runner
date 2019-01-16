@@ -415,6 +415,14 @@
   revision = "c2c54e542fb797ad986b31721e1baedf214ca413"
 
 [[projects]]
+  digest = "1:4643b94ee9e1e291b3f35558faddf6882cb7c2c759a416c0427bc13c2b992a24"
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  pruneopts = "N"
+  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:e215f2f34720b08b497951d2193705d6c542766213627947b9f065f749821b53"
   name = "github.com/kr/pty"
   packages = ["."]
@@ -555,15 +563,15 @@
   revision = "abf152e5f3e97f2fafac028d2cc06c1feb87ffa5"
 
 [[projects]]
-  branch = "master"
-  digest = "1:bd1ebbb301e1a33a22f5e8026d64c7b48d8ed105790ab01f4ad8d3a9c28d8abf"
+  digest = "1:5f3253413123167546a72c2702f2c38980a5170b5d3d92ca074f8115dbc700da"
   name = "github.com/sirupsen/logrus"
   packages = [
     ".",
     "hooks/test",
   ]
   pruneopts = "N"
-  revision = "78fa2915c1fa231f62e0438da493688c21ca678e"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:e86042cb61313f9315878e33f2713cc1a1a1c29feeb04b64c164ed55266822d9"
@@ -580,7 +588,7 @@
   revision = "cbeaeb16a013161a98496fad62933b1d21786672"
 
 [[projects]]
-  digest = "1:41b23b4dd808ad26fbac40f014e05a541815f5475dc7c20065a1e468ed131fc5"
+  digest = "1:af816109ede76072cf29dd2116e0cc386668690b81e5a4fc05ae10dfac22aee4"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
@@ -588,7 +596,8 @@
     "require",
   ]
   pruneopts = "N"
-  revision = "b1f989447a57594c728884458a39abf3a73447f7"
+  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:0e6bfd9ff4db873948cf1fe1a3727f893eb776440dd1085759bd6e8aa7f045e0"

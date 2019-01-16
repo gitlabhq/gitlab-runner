@@ -66,7 +66,7 @@ To install the Runner:
     be done manually or automatically - will be done using the same source:
     >
     ```bash
-    cat > /etc/apt/preferences.d/pin-gitlab-runner.pref <<EOF
+    cat <<EOF | sudo tee /etc/apt/preferences.d/pin-gitlab-runner.pref
     Explanation: Prefer GitLab provided packages over the Debian native ones
     Package: gitlab-runner
     Pin: origin packages.gitlab.com

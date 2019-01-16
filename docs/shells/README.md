@@ -86,7 +86,7 @@ SET CI_COMMIT_REF_NAME=master
 SET CI_JOB_ID=1
 SET CI_REPOSITORY_URL=http://gitlab.example.com/group/project.git
 SET CI_PROJECT_ID=1
-SET CI_PROJECT_DIR=Z:/Gitlab/tests/test/builds/0/project-1
+SET CI_PROJECT_DIR=Z:\Gitlab\tests\test\builds\0\project-1
 SET CI_SERVER=yes
 SET CI_SERVER_NAME=GitLab CI
 SET CI_SERVER_VERSION=
@@ -100,7 +100,7 @@ echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERV
 SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
 echo Cloning repository...
 rd /s /q "C:\GitLab-Runner\builds\0\project-1" 2>NUL 1>NUL
-"git" "clone" "http://gitlab.example.com/group/project.git" "Z:/Gitlab/tests/test/builds/0/project-1"
+"git" "clone" "http://gitlab.example.com/group/project.git" "Z:\Gitlab\tests\test\builds\0\project-1"
 IF %errorlevel% NEQ 0 exit /b %errorlevel%
 
 cd /D "C:\GitLab-Runner\builds\0\project-1"
@@ -133,7 +133,7 @@ SET CI_COMMIT_REF_NAME=master
 SET CI_JOB_ID=1
 SET CI_REPOSITORY_URL=Z:\Gitlab\tests\test
 SET CI_PROJECT_ID=1
-SET CI_PROJECT_DIR=Z:/Gitlab/tests/test/builds/0/project-1
+SET CI_PROJECT_DIR=Z:\Gitlab\tests\test\builds\0\project-1
 SET CI_SERVER=yes
 SET CI_SERVER_NAME=GitLab CI
 SET CI_SERVER_VERSION=
@@ -160,7 +160,7 @@ SET CI_COMMIT_REF_NAME=master
 SET CI_JOB_ID=1
 SET CI_REPOSITORY_URL=Z:\Gitlab\tests\test
 SET CI_PROJECT_ID=1
-SET CI_PROJECT_DIR=Z:/Gitlab/tests/test/builds/0/project-1
+SET CI_PROJECT_DIR=Z:\Gitlab\tests\test\builds\0\project-1
 SET CI_SERVER=yes
 SET CI_SERVER_NAME=GitLab CI
 SET CI_SERVER_VERSION=
@@ -215,7 +215,7 @@ echo "Running on $env:computername..."
   $env:CI_REPOSITORY_URL=$CI_REPOSITORY_URL
   $CI_PROJECT_ID="1"
   $env:CI_PROJECT_ID=$CI_PROJECT_ID
-  $CI_PROJECT_DIR="Z:/Gitlab/tests/test/builds/0/project-1"
+  $CI_PROJECT_DIR="Z:\Gitlab\tests\test\builds\0\project-1"
   $env:CI_PROJECT_DIR=$CI_PROJECT_DIR
   $CI_SERVER="yes"
   $env:CI_SERVER=$CI_SERVER
@@ -244,7 +244,7 @@ echo "Running on $env:computername..."
     Remove-Item -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
   }
 
-  & "git" "clone" "https://gitlab.com/group/project.git" "Z:/Gitlab/tests/test/builds/0/project-1"
+  & "git" "clone" "https://gitlab.com/group/project.git" "Z:\Gitlab\tests\test\builds\0\project-1"
   if(!$?) { Exit $LASTEXITCODE }
 
   cd "C:\GitLab-Runner\builds\0\project-1"
@@ -285,7 +285,7 @@ if(!$?) { Exit $LASTEXITCODE }
   $env:CI_REPOSITORY_URL=$CI_REPOSITORY_URL
   $CI_PROJECT_ID="1"
   $env:CI_PROJECT_ID=$CI_PROJECT_ID
-  $CI_PROJECT_DIR="Z:/Gitlab/tests/test/builds/0/project-1"
+  $CI_PROJECT_DIR="Z:\Gitlab\tests\test\builds\0\project-1"
   $env:CI_PROJECT_DIR=$CI_PROJECT_DIR
   $CI_SERVER="yes"
   $env:CI_SERVER=$CI_SERVER
@@ -330,7 +330,7 @@ if(!$?) { Exit $LASTEXITCODE }
   $env:CI_REPOSITORY_URL=$CI_REPOSITORY_URL
   $CI_PROJECT_ID="1"
   $env:CI_PROJECT_ID=$CI_PROJECT_ID
-  $CI_PROJECT_DIR="Z:/Gitlab/tests/test/builds/0/project-1"
+  $CI_PROJECT_DIR="Z:\Gitlab\tests\test\builds\0\project-1"
   $env:CI_PROJECT_DIR=$CI_PROJECT_DIR
   $CI_SERVER="yes"
   $env:CI_SERVER=$CI_SERVER
