@@ -23,5 +23,9 @@ testsdefinitions.txt
 
 codeclimate.json
 
+# Ignore Visual Studio Code internals
+/.vscode
+/debug
+
 # Ignore the generated binary
-/gitlab-runner
+/gitlab-runner*

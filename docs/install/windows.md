@@ -16,18 +16,22 @@ With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
 want to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
 1. Create a folder somewhere in your system, ex.: `C:\GitLab-Runner`.
-1. Download the binary for [x86][]  or [amd64][] and put it into the folder you
+1. Download the binary for [x86][] or [amd64][] and put it into the folder you
    created. Rename the binary to `gitlab-runner.exe`.
    You can download a binary for every available version as described in
-   [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
-1. Run an [`Administrator`/elevated command prompt][prompt] (<kbd>WindowsKey</kbd>, search for "cmd", right click and run as admin).
+   [Bleeding Edge - download any other tagged
+   release](bleeding-edge.md#download-any-other-tagged-release).
+1. Run an [elevated command prompt][prompt]:
+   1. Press <kbd>Windows</kbd> key or click **Start** button.
+   1. Type `PowerShell`.
+   1. Right-click `Windows PowerShell`, and then select `Run as administrator`.
 1. [Register the Runner](../register/index.md).
 1. Install the Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
 
     **Run service using Built-in System Account**
 
-    ```bash
+    ```powershell
     gitlab-runner install
     gitlab-runner start
     ```
@@ -37,7 +41,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
     You have to enter a valid password for the current user account, because
     it's required to start the service by Windows:
 
-    ```bash
+    ```powershell
     gitlab-runner install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
     gitlab-runner start
     ```
@@ -55,9 +59,9 @@ Logs are stored in Windows Event Log.
 
 ## Update
 
-1. Stop the service (you need elevated command prompt as before):
+1. Stop the service (you need [elevated command prompt][prompt] as before):
 
-    ```bash
+    ```powershell
     cd C:\GitLab-Runner
     gitlab-runner stop
     ```
@@ -68,15 +72,15 @@ Logs are stored in Windows Event Log.
 
 1. Start the service:
 
-    ```bash
+    ```powershell
     gitlab-runner start
     ```
 
 ## Uninstall
 
-From elevated command prompt:
+From [elevated command prompt][prompt]:
 
-```bash
+```powershell
 cd C:\GitLab-Runner
 gitlab-runner stop
 gitlab-runner uninstall
@@ -91,7 +95,7 @@ some of the most common problems with GitLab Runner.
 
 If you encounter an error like _The account name is invalid_ try to add `.\` before the username:
 
-```shell
+```powershell
 gitlab-runner install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASSWORD"
 ```
 
@@ -107,4 +111,4 @@ on Microsoft's support website.
 
 [x86]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-386.exe
 [amd64]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-amd64.exe
-[prompt]: https://www.tenforums.com/tutorials/2790-elevated-command-prompt-open-windows-10-a.html
+[prompt]: https://docs.microsoft.com/en-us/powershell/scripting/setup/starting-windows-powershell#at-the-command-prompt
