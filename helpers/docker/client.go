@@ -1,12 +1,12 @@
 package docker_helpers
 
 import (
+	"context"
 	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"golang.org/x/net/context"
 )
 
 type Client interface {
@@ -23,7 +23,7 @@ type Client interface {
 	ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error
 	ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error)
 	ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error)
-	ContainerExecAttach(ctx context.Context, execID string, config types.ExecConfig) (types.HijackedResponse, error)
+	ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error)
 
 	NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error
 	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)

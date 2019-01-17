@@ -101,7 +101,9 @@ func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, d
 		return
 	}
 
-	resp, err := t.client.ContainerExecAttach(t.ctx, exec.ID, execConfig)
+	execStartCfg := types.ExecStartCheck{Tty: true}
+
+	resp, err := t.client.ContainerExecAttach(t.ctx, exec.ID, execStartCfg)
 	if err != nil {
 		t.logger.Errorln("Failed to exec attach to container for terminal:", err)
 		http.Error(w, "failed to attach tty to build container", http.StatusInternalServerError)
