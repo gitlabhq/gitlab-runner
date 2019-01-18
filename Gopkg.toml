@@ -159,10 +159,6 @@ ignored = ["test", "appengine"]
   revision = "d4e6b95c12a08b4de2d48b45d5b4d594e5d32fab"
 
 [[override]]
-  name = "github.com/Azure/go-ansiterm"
-  revision = "19f72df4d05d31cbe1c56bfc8045c96babff6c7e"
-
-[[override]]
   name = "github.com/Microsoft/go-winio"
   revision = "ce2922f643c8fd76b46cadc7f404a06282678b34"
 
