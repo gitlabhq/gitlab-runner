@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
@@ -210,8 +209,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 }
 
 func isDockerOlderThan17_07(t *testing.T) bool {
-	client, err := docker_helpers.New(
-		docker_helpers.DockerCredentials{}, docker.DockerAPIVersion)
+	client, err := docker_helpers.New(docker_helpers.DockerCredentials{}, "")
 	require.NoError(t, err, "should be able to connect to docker")
 
 	types, err := client.Info(context.Background())
@@ -736,7 +734,7 @@ func getDockerCredentials(id string) (credentials docker_helpers.DockerCredentia
 }
 
 func waitForDocker(credentials docker_helpers.DockerCredentials) error {
-	client, err := docker_helpers.New(credentials, docker.DockerAPIVersion)
+	client, err := docker_helpers.New(credentials, "")
 	if err != nil {
 		return err
 	}

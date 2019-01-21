@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const dockerAPIVersion = "1.18"
-
 func prepareDockerClientAndFakeServer(t *testing.T, handler http.HandlerFunc) (Client, *httptest.Server) {
 	server := httptest.NewServer(handler)
 
@@ -20,7 +18,7 @@ func prepareDockerClientAndFakeServer(t *testing.T, handler http.HandlerFunc) (C
 		TLSVerify: false,
 	}
 
-	client, err := New(credentials, dockerAPIVersion)
+	client, err := New(credentials, "")
 	require.NoError(t, err)
 
 	return client, server
@@ -37,5 +35,33 @@ func TestWrapError(t *testing.T) {
 
 	_, err := client.Info(ctx)
 	require.Error(t, err, "The request should respond with an error")
-	assert.Regexp(t, "\\(official_docker_client_test.go:38:\\d+s\\)", err.Error())
+	assert.Regexp(t, "\\(official_docker_client_test.go:\\d\\d:\\d+s\\)", err.Error())
+}
+
+func TestNew_Version(t *testing.T) {
+	cases := []struct {
+		version         string
+		host            string
+		expectedVersion string
+	}{
+		{
+			version:         "0.11",
+			expectedVersion: "0.11",
+		},
+		{
+			version:         "",
+			expectedVersion: DefaultAPIVersion,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.expectedVersion, func(t *testing.T) {
+			client, err := New(DockerCredentials{}, c.version)
+			require.NoError(t, err)
+
+			test, ok := client.(*officialDockerClient)
+			assert.True(t, ok)
+			assert.Equal(t, c.expectedVersion, test.client.ClientVersion())
+		})
+	}
 }
