@@ -21,6 +21,8 @@ testsdefinitions.txt
 /.testoutput/
 /.cover/
 
+/.vagrant/
+
 codeclimate.json
 
 # Ignore Visual Studio Code internals
