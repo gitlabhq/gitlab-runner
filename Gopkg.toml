@@ -229,11 +229,9 @@ ignored = ["test", "appengine"]
   name = "github.com/minio/go-homedir"
   revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
 
-# temporary fork to hanled Sirupsen -> sirupsen
 [[override]]
   name = "github.com/opencontainers/runc"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/runc"
+  branch = "master"
 
 [[override]]
   name = "github.com/opencontainers/runtime-spec"

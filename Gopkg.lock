@@ -523,13 +523,12 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "gitlab-runner"
-  digest = "1:75b40fc42638e16795927c70e04245019e3ac57ae1253b8e4b2b9f6e7b9c1842"
+  branch = "master"
+  digest = "1:37fa7939ecc94700a86a4658e769e5b298d38685b29c43e8100e10b123971cc4"
   name = "github.com/opencontainers/runc"
   packages = ["libcontainer/user"]
   pruneopts = "N"
-  revision = "fd48010b807f3c267c19f8f14ca6dca2370d0b54"
-  source = "github.com/nolith/runc"
+  revision = "c1e454b2a1bfb0f0ebd9e621a1433f98f9a8d4b0"
 
 [[projects]]
   digest = "1:5da5dc86bcd23e94befc0048ccd757fc1706ebd3aa6c0ca9575d8b9def1b8f26"

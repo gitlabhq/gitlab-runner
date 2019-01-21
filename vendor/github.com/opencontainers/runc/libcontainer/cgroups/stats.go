@@ -11,6 +11,7 @@ type ThrottlingData struct {
 	ThrottledTime uint64 `json:"throttled_time,omitempty"`
 }
 
+// CpuUsage denotes the usage of a CPU.
 // All CPU stats are aggregate since container inception.
 type CpuUsage struct {
 	// Total CPU time consumed.
@@ -47,13 +48,20 @@ type MemoryStats struct {
 	// usage of memory + swap
 	SwapUsage MemoryData `json:"swap_usage,omitempty"`
 	// usage of kernel memory
-	KernelUsage MemoryData        `json:"kernel_usage,omitempty"`
-	Stats       map[string]uint64 `json:"stats,omitempty"`
+	KernelUsage MemoryData `json:"kernel_usage,omitempty"`
+	// usage of kernel TCP memory
+	KernelTCPUsage MemoryData `json:"kernel_tcp_usage,omitempty"`
+	// if true, memory usage is accounted for throughout a hierarchy of cgroups.
+	UseHierarchy bool `json:"use_hierarchy"`
+
+	Stats map[string]uint64 `json:"stats,omitempty"`
 }
 
 type PidsStats struct {
 	// number of pids in the cgroup
 	Current uint64 `json:"current,omitempty"`
+	// active pids hard limit
+	Limit uint64 `json:"limit,omitempty"`
 }
 
 type BlkioStatEntry struct {
