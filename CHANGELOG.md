@@ -1,4 +1,4 @@
-v11.7.0-rc1 (2019-01-08)
+v11.7.0 (2019-01-22)
 - Docs: Cleaning up the executors doc !1114
 - Update to testify v1.2.2 !1119
 - Fix a typo in VirtualBox Executor docs !1124
@@ -7,6 +7,7 @@ v11.7.0-rc1 (2019-01-08)
 - Docs update release checklist !1131
 - Kill session when build is cancelled !1058
 - Fix path separator for CI_PROJECT_DIR in Windows !1128
+- Make new runner tokens compatible with docker-machine executor !1144
 
 v11.6.0 (2018-12-22)
 - Make compatibility chart super clear and remove old entries !1078
