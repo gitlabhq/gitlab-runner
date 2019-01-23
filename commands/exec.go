@@ -82,7 +82,7 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 		RunnerSettings: c.RunnerSettings,
 	}
 
-	build = common.NewBuild(jobResponse, runner, abortSignal, nil)
+	build, err = common.NewBuild(jobResponse, runner, abortSignal, nil)
 
 	return
 }
