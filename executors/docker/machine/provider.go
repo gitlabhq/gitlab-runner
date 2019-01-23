@@ -379,7 +379,7 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 	return
 }
 
-func (m *machineProvider) Release(config *common.RunnerConfig, data common.ExecutorData) error {
+func (m *machineProvider) Release(config *common.RunnerConfig, data common.ExecutorData) {
 	// Release machine
 	details, ok := data.(*machineDetails)
 	if ok {
@@ -393,12 +393,11 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 			config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
 			err := m.remove(details.Name, "Too many builds")
 			if err == nil {
-				return nil
+				return
 			}
 		}
 		details.State = machineStateIdle
 	}
-	return nil
 }
 
 func (m *machineProvider) CanCreate() bool {

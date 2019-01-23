@@ -564,8 +564,7 @@ func TestMachineReleaseIfInvalidDataArePassed(t *testing.T) {
 	assert.NotNil(t, nd)
 	assertTotalMachines(t, p, 1, "it creates one machine")
 
-	err = p.Release(nil, nd)
-	assert.NoError(t, err, "it should not fail")
+	p.Release(nil, nd)
 }
 
 func TestMachineCreationIfFailedToConnect(t *testing.T) {

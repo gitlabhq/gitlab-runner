@@ -48,7 +48,7 @@ type ExecutorProvider interface {
 	CanCreate() bool
 	Create() Executor
 	Acquire(config *RunnerConfig) (ExecutorData, error)
-	Release(config *RunnerConfig, data ExecutorData) error
+	Release(config *RunnerConfig, data ExecutorData)
 	GetFeatures(features *FeaturesInfo) error
 	GetDefaultShell() string
 }

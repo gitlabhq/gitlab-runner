@@ -216,21 +216,14 @@ func (mr *RunCommand) acquireRunnerResources(provider common.ExecutorProvider, r
 		return nil, func() {}, fmt.Errorf("failed to update executor: %v", err)
 	}
 
-	releaseProviderFn := func() {
-		err := provider.Release(runner, executorData)
-		if err != nil {
-			logrus.WithError(err).Error("Failed to release executor")
-		}
-	}
-
 	if !mr.buildsHelper.acquireBuild(runner) {
-		releaseProviderFn()
+		provider.Release(runner, executorData)
 		return nil, nil, errors.New("failed to request job, runner limit met")
 	}
 
 	releaseFn := func() {
 		mr.buildsHelper.releaseBuild(runner)
-		releaseProviderFn()
+		provider.Release(runner, executorData)
 	}
 
 	return executorData, releaseFn, nil

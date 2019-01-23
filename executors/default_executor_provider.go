@@ -27,9 +27,7 @@ func (e DefaultExecutorProvider) Acquire(config *common.RunnerConfig) (common.Ex
 	return nil, nil
 }
 
-func (e DefaultExecutorProvider) Release(config *common.RunnerConfig, data common.ExecutorData) error {
-	return nil
-}
+func (e DefaultExecutorProvider) Release(config *common.RunnerConfig, data common.ExecutorData) {}
 
 func (e DefaultExecutorProvider) GetFeatures(features *common.FeaturesInfo) error {
 	if e.FeaturesUpdater == nil {
