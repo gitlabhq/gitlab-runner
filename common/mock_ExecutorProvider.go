@@ -93,15 +93,6 @@ func (_m *MockExecutorProvider) GetFeatures(features *FeaturesInfo) error {
 }
 
 // Release provides a mock function with given fields: config, data
-func (_m *MockExecutorProvider) Release(config *RunnerConfig, data ExecutorData) error {
-	ret := _m.Called(config, data)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(*RunnerConfig, ExecutorData) error); ok {
-		r0 = rf(config, data)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
+func (_m *MockExecutorProvider) Release(config *RunnerConfig, data ExecutorData) {
+	_m.Called(config, data)
 }
