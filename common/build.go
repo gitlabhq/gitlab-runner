@@ -706,14 +706,20 @@ func (b *Build) Duration() time.Duration {
 	return time.Since(b.createdAt)
 }
 
-func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt chan os.Signal, executorData ExecutorData) *Build {
+func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt chan os.Signal, executorData ExecutorData) (*Build, error) {
+	// Attempt to perform a deep copy of the RunnerConfig
+	runnerConfigCopy, err := runnerConfig.DeepCopy()
+	if err != nil {
+		return nil, fmt.Errorf("deep copy of runner config failed: %v", err)
+	}
+
 	return &Build{
 		JobResponse:     jobData,
-		Runner:          runnerConfig,
+		Runner:          runnerConfigCopy,
 		SystemInterrupt: systemInterrupt,
 		ExecutorData:    executorData,
 		createdAt:       time.Now(),
-	}
+	}, nil
 }
 
 func (b *Build) IsFeatureFlagOn(name string) bool {

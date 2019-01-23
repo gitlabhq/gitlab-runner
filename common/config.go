@@ -3,6 +3,7 @@ package common
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -644,6 +645,23 @@ func (c *RunnerConfig) GetVariables() JobVariables {
 	}
 
 	return variables
+}
+
+// DeepCopy attempts to make a deep clone of the object
+func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
+	var r RunnerConfig
+
+	bytes, err := json.Marshal(c)
+	if err != nil {
+		return nil, fmt.Errorf("serialization of runner config failed: %v", err)
+	}
+
+	err = json.Unmarshal(bytes, &r)
+	if err != nil {
+		return nil, fmt.Errorf("deserialization of runner config failed: %v", err)
+	}
+
+	return &r, err
 }
 
 func NewConfig() *Config {

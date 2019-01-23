@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -73,6 +74,63 @@ func TestBuildRun(t *testing.T) {
 	}
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func TestBuildRunNoModifyConfig(t *testing.T) {
+	e := MockExecutor{}
+	defer e.AssertExpectations(t)
+
+	p := MockExecutorProvider{}
+	defer p.AssertExpectations(t)
+
+	// Create executor only once
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+	p.On("Create").Return(&e).Once()
+
+	// Attempt to modify the Config object
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(func(options ExecutorPrepareOptions) error {
+			options.Config.Docker.DockerCredentials.Host = "10.0.0.2"
+			return nil
+		}).Once()
+
+	// We run everything else once
+	e.On("Finish", nil).Return().Once()
+	e.On("Cleanup").Return().Once()
+
+	// Run script successfully
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+
+	RegisterExecutor("build-run-nomodify-test", &p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	rc := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor: "build-run-nomodify-test",
+			Docker: &DockerConfig{
+				DockerCredentials: docker_helpers.DockerCredentials{
+					Host: "10.0.0.1",
+				},
+			},
+		},
+	}
+	build, err := NewBuild(successfulBuild, rc, nil, nil)
+	assert.NoError(t, err)
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+	assert.Equal(t, "10.0.0.1", rc.Docker.DockerCredentials.Host)
 }
 
 func TestRetryPrepare(t *testing.T) {
