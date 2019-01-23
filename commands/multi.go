@@ -146,11 +146,6 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	executorData, releaseFn, err := mr.acquireRunnerResources(provider, runner)
 	if err != nil {
-		mr.log().WithFields(logrus.Fields{
-			"runner":   runner.ShortDescription(),
-			"executor": runner.Executor,
-		}).WithError(err).
-			Warn("Failed to acquire runner resource")
 		return
 	}
 	defer releaseFn()
@@ -262,7 +257,11 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 		case runner := <-runners:
 			err := mr.processRunner(id, runner, runners)
 			if err != nil {
-				logrus.WithError(err).Error("Failed to process runner")
+				mr.log().WithFields(logrus.Fields{
+					"runner":   runner.ShortDescription(),
+					"executor": runner.Executor,
+				}).WithError(err).
+					Error("Failed to process runner")
 			}
 
 			// force GC cycle after processing build
