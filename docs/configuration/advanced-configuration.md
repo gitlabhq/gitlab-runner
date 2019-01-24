@@ -299,12 +299,12 @@ This will use `/path/to/bind/from/host` of the CI host inside the container at
 ### Using a private container registry
 
 > **Notes:**
-- This feature requires GitLab Runner **1.8** or higher
-- For GitLab Runner versions **>= 0.6, <1.8** there was a partial
+>- This feature requires GitLab Runner **1.8** or higher
+>- For GitLab Runner versions **>= 0.6, <1.8** there was a partial
   support for using private registries, which required manual configuration
   of credentials on runner's host. We recommend to upgrade your Runner to
   at least version **1.8** if you want to use private registries.
-- Using private registries with the `if-not-present` pull policy may introduce
+>- Using private registries with the `if-not-present` pull policy may introduce
   [security implications][secpull]. To fully understand how pull policies work,
   read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
