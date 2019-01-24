@@ -27,7 +27,6 @@ type ReleaseMetadata struct {
 	ReleaseBlogPostDeadline string
 	HelmChartMajor          int
 	HelmChartMinor          int
-	HelmChartPatch          int
 }
 
 const (
@@ -66,7 +65,6 @@ var (
 
 	helmChartMajor = flag.String("helm-chart-major", detectHelmChartVersion()[0], "Major version number of GitLab Runner Helm Chart")
 	helmChartMinor = flag.String("helm-chart-minor", detectHelmChartVersion()[1], "Minor version number of GitLab Runner Helm Chart")
-	helmChartPatch = flag.String("helm-chart-patch", detectHelmChartVersion()[2], "Patch version number of GitLab Runner Helm Chart")
 )
 
 func detectVersion() []string {
@@ -337,12 +335,6 @@ func prepareMetadata() {
 
 	askOnce("Helm Chart Minor version number", helmChartMinor)
 	releaseMetadata.HelmChartMinor, err = strconv.Atoi(*helmChartMinor)
-	if err != nil {
-		panic(err)
-	}
-
-	askOnce("Helm Chart Patch version number", helmChartPatch)
-	releaseMetadata.HelmChartPatch, err = strconv.Atoi(*helmChartPatch)
 	if err != nil {
 		panic(err)
 	}
