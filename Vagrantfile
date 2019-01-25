@@ -8,7 +8,7 @@ Vagrant.configure('2') do |config|
 
     cfg.vm.synced_folder '.', 'C:\Go\src\gitlab.com\gitlab-org\gitlab-runner'
 
-    cfg.vm.provision 'shell', path: 'ci/vagrant.ps1'
+    cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/base.ps1'
   end
 
   config.vm.provider 'virtualbox' do |vb|
