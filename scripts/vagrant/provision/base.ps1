@@ -7,7 +7,7 @@ function Main
     [environment]::SetEnvironmentVariable("RUNNER_SRC", $srcFolder, "Machine")
     Install-Go($goVersion)
     Install-Git($gitVersion)
-    Install-SSH
+    Install-PSWindowsUpdate
 }
 
 function Install-Go([string]$version)
@@ -52,33 +52,17 @@ function Install-Git([string]$version)
     Remove-Item $dest
 }
 
-function Install-SSH
+# Install https://www.powershellgallery.com/packages/PSWindowsUpdate so tha we
+# can manually download windows update.
+function Install-PSWindowsUpdate 
 {
-    Write-Host "Enable Developer Mode"
-    # Create AppModelUnlock if it doesn't exist, required for enabling Developer Mode
-    $RegistryKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock"
-    if (-not(Test-Path -Path $RegistryKeyPath)) {
-        New-Item -Path $RegistryKeyPath -ItemType Directory -Force
-    }
+    Write-Output "Installing PSWindowsUpdate module"
+    # Make sure we can download from the Powershell Gallery https://www.powershellgallery.com/
+    Install-PackageProvider -Name NuGet -Force
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
-    # Add registry value to enable Developer Mode
-    New-ItemProperty -Path $RegistryKeyPath -Name AllowDevelopmentWithoutDevLicense -PropertyType DWORD -Value 1
-
-    $cap = Get-WindowsCapability -Online | ? Name -like "OpenSSH.Server*"
-    if (($cap.count -ne 0) -and ($cap[0].State -ne "Installed")) {
-        Write-Host "Install OpenSSH Server"
-        # Install the OpenSSH Server
-        Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
-        # Install the OpenSSHUtils helper module, which is needed to fix the ACL for ths host keys.
-        # Install-Module -Force OpenSSHUtils
-
-        Write-Host "Enable OpenSSH Server"
-        Start-Service sshd
-
-        Write-Host "Open OpenSSH Server port on firewall"
-        # Open firewall port
-        New-NetFirewallRule -Protocol TCP -LocalPort 22 -Direction Inbound -Action Allow -DisplayName SSH
-    }
+    # Install the actual module.
+    Install-Module -Name PSWindowsUpdate -Force
 }
 
 function GitHubRelease([string]$Project, [string]$Version = 'latest', [string]$File) {
