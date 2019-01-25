@@ -200,27 +200,6 @@ func (_m *MockClient) ContainerStart(ctx context.Context, containerID string, op
 	return r0
 }
 
-// ContainerWait provides a mock function with given fields: ctx, containerID
-func (_m *MockClient) ContainerWait(ctx context.Context, containerID string) (int64, error) {
-	ret := _m.Called(ctx, containerID)
-
-	var r0 int64
-	if rf, ok := ret.Get(0).(func(context.Context, string) int64); ok {
-		r0 = rf(ctx, containerID)
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, containerID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ImageImportBlocking provides a mock function with given fields: ctx, source, ref, options
 func (_m *MockClient) ImageImportBlocking(ctx context.Context, source types.ImageImportSource, ref string, options types.ImageImportOptions) error {
 	ret := _m.Called(ctx, source, ref, options)

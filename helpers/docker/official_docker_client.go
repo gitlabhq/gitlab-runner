@@ -89,12 +89,6 @@ func (c *officialDockerClient) ContainerStart(ctx context.Context, containerID s
 	return wrapError("ContainerCreate", err, started)
 }
 
-func (c *officialDockerClient) ContainerWait(ctx context.Context, containerID string) (int64, error) {
-	started := time.Now()
-	result, err := c.client.ContainerWait(ctx, containerID)
-	return result, wrapError("ContainerWait", err, started)
-}
-
 func (c *officialDockerClient) ContainerKill(ctx context.Context, containerID string, signal string) error {
 	started := time.Now()
 	err := c.client.ContainerKill(ctx, containerID, signal)
