@@ -1,0 +1,30 @@
+# escape=`
+
+FROM mcr.microsoft.com/windows/servercore:1809_amd64 as builder
+
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+
+ARG GIT_VERSION
+ARG GIT_VERSION_BUILD
+ARG GIT_LFS_VERSION
+
+RUN Invoke-Webrequest "https://github.com/git-for-windows/git/releases/download/v${Env:GIT_VERSION}.windows.${Env:GIT_VERSION_BUILD}/MinGit-${Env:GIT_VERSION}-64-bit.zip" -OutFile git.zip -UseBasicParsing
+RUN Expand-Archive -Path git.zip -DestinationPath git
+
+RUN Invoke-Webrequest "https://github.com/git-lfs/git-lfs/releases/download/v${Env:GIT_LFS_VERSION}/git-lfs-windows-amd64-v${Env:GIT_LFS_VERSION}.zip" -OutFile git-lfs.zip -UseBasicParsing
+RUN Expand-Archive -Path git-lfs.zip -DestinationPath git-lfs
+
+FROM mcr.microsoft.com/windows/nanoserver:1809_amd64
+
+USER ContainerAdministrator
+
+# https://github.com/StefanScherer/dockerfiles-windows/tree/master/golang-issue-21867
+COPY --from=builder ["/windows/system32/netapi32.dll", "/windows/system32/netapi32.dll"]
+
+COPY --from=builder ["git", "C:\\Program Files\\git"]
+COPY --from=builder ["git-lfs", "C:\\Program Files\\git-lfs"]
+RUN setx PATH "%PATH%;C:\Program Files\git\cmd;C:\Program Files\git-lfs;C:\Program Files\gitlab-runner-helper" /M
+
+RUN git lfs install --skip-repo
+
+COPY [".\\binaries\\gitlab-runner-helper.x86_64-windows.exe", "C:\\Program Files\\gitlab-runner-helper\\gitlab-runner-helper.exe"]
