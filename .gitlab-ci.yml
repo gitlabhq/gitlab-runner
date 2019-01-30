@@ -70,7 +70,7 @@ helper images:
   <<: *docker
   stage: prebuild
   script:
-  - make docker
+  - make helper-docker
   artifacts:
     paths:
     - out/helper-images/
