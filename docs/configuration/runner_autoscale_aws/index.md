@@ -1,5 +1,5 @@
 ---
-last_updated: 2019-01-11
+last_updated: 2019-01-28
 ---
 
 > **[Article Type](https://docs.gitlab.com/ee/development/writing_documentation.html#types-of-technical-articles):** Admin guide ||
@@ -189,17 +189,19 @@ In the following example, we use Amazon S3:
 ```toml
   [runners.cache]
     Type = "s3"
-    ServerAddress = "s3.amazonaws.com"
-    AccessKey = "<your AWS Access Key ID>"
-    SecretKey = "<your AWS Secret Access Key>"
-    BucketName = "<the bucket where your cache should be kept>"
-    BucketLocation = "us-east-1"
     Shared = true
+    [runners.cache.s3]
+      ServerAddress = "s3.amazonaws.com"
+      AccessKey = "<your AWS Access Key ID>"
+      SecretKey = "<your AWS Secret Access Key>"
+      BucketName = "<the bucket where your cache should be kept>"
+      BucketLocation = "us-east-1"
 ```
 
 Here's some more info to further explore the cache mechanism:
 
 - [Reference for `runners.cache`](../advanced-configuration.md#the-runners-cache-section)
+- [Reference for `runners.cache.s3`](../advanced-configuration.html#the-runnerscaches3-section)
 - [Deploying and using a cache server for GitLab Runner](../autoscale.md#distributed-runners-caching)
 - [How cache works](https://docs.gitlab.com/ee/ci/yaml/#cache)
 
@@ -304,12 +306,13 @@ check_interval = 0
     disable_cache = true
   [runners.cache]
     Type = "s3"
-    ServerAddress = "s3.amazonaws.com"
-    AccessKey = "<your AWS Access Key ID>"
-    SecretKey = "<your AWS Secret Access Key>"
-    BucketName = "<the bucket where your cache should be kept>"
-    BucketLocation = "us-east-1"
     Shared = true
+    [runners.cache.s3]
+      ServerAddress = "s3.amazonaws.com"
+      AccessKey = "<your AWS Access Key ID>"
+      SecretKey = "<your AWS Secret Access Key>"
+      BucketName = "<the bucket where your cache should be kept>"
+      BucketLocation = "us-east-1"
   [runners.machine]
     IdleCount = 1
     IdleTime = 1800
@@ -353,6 +356,20 @@ section, add the following:
 ```toml
     MachineOptions = [
       "amazonec2-request-spot-instance=true",
+      "amazonec2-spot-price=",
+    ]
+```
+
+In this configuration with an empty `amazonec2-spot-price`, AWS sets your 
+bidding price for a Spot instance to the default On-Demand price of that 
+instance class. If you omit the `amazonec2-spot-price` completely, Docker 
+Machine will set the bidding price to a default value of $0.50 per hour.
+
+You may further customize your Spot instance request:
+
+```toml
+    MachineOptions = [
+      "amazonec2-request-spot-instance=true",
       "amazonec2-spot-price=0.03",
       "amazonec2-block-duration-minutes=60"
     ]
@@ -376,7 +393,8 @@ costs of your infrastructure, you must be aware of the implications.
 
 Running CI jobs on Spot instances may increase the failure rates because of the
 Spot instances pricing model. If the price exceeds your bid, the existing Spot
-instances will be immediately terminated and all your jobs on that host will fail.
+instances will be terminated within two minutes and all your jobs on that host 
+will fail.
 
 As a consequence, the auto-scale Runner would fail to create new machines while
 it will continue to request new instances. This eventually will make 60 requests
