@@ -363,7 +363,8 @@ section, add the following:
 In this configuration with an empty `amazonec2-spot-price`, AWS sets your 
 bidding price for a Spot instance to the default On-Demand price of that 
 instance class. If you omit the `amazonec2-spot-price` completely, Docker 
-Machine will set the bidding price to a default value of $0.50 per hour.
+Machine will set the bidding price to a [default value of $0.50 per
+hour](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values).
 
 You may further customize your Spot instance request:
 
