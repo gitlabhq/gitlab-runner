@@ -10,13 +10,14 @@ unless Vagrant.has_plugin?('vagrant-reload')
 end
 
 Vagrant.configure('2') do |config|
-  config.vm.define 'win10' do |cfg|
+  config.vm.define 'windows_server', primary: true do |cfg|
     cfg.vm.box = 'StefanScherer/windows_2019_docker'
     cfg.vm.communicator = 'winrm'
 
     cfg.vm.synced_folder '.', 'C:\Go\src\gitlab.com\gitlab-org\gitlab-runner'
 
     cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/base.ps1'
+    cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/install_PSWindowsUpdate.ps1'
     cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/windows_update.ps1'
 
     # Restart the box to install the updates, and update again.
@@ -24,6 +25,17 @@ Vagrant.configure('2') do |config|
     cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/windows_update.ps1'
     cfg.vm.provision :reload
 
+    cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/enable_sshd.ps1'
+  end
+
+  config.vm.define 'windows_10', autostart: false do |cfg|
+    cfg.vm.box = 'StefanScherer/windows_10'
+    cfg.vm.communicator = 'winrm'
+
+    cfg.vm.synced_folder '.', 'C:\Go\src\gitlab.com\gitlab-org\gitlab-runner'
+
+    cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/base.ps1'
+    cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/enable_developer_mode.ps1'
     cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/enable_sshd.ps1'
   end
 

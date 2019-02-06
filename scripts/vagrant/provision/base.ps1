@@ -7,7 +7,6 @@ function Main
     [environment]::SetEnvironmentVariable("RUNNER_SRC", $srcFolder, "Machine")
     Install-Go($goVersion)
     Install-Git($gitVersion)
-    Install-PSWindowsUpdate
 }
 
 function Install-Go([string]$version)
@@ -50,19 +49,6 @@ function Install-Git([string]$version)
 
     Write-Host "done"
     Remove-Item $dest
-}
-
-# Install https://www.powershellgallery.com/packages/PSWindowsUpdate so tha we
-# can manually download windows update.
-function Install-PSWindowsUpdate 
-{
-    Write-Output "Installing PSWindowsUpdate module"
-    # Make sure we can download from the Powershell Gallery https://www.powershellgallery.com/
-    Install-PackageProvider -Name NuGet -Force
-    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-
-    # Install the actual module.
-    Install-Module -Name PSWindowsUpdate -Force
 }
 
 function GitHubRelease([string]$Project, [string]$Version = 'latest', [string]$File) {
