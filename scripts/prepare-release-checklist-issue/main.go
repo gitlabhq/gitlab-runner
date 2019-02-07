@@ -394,6 +394,9 @@ func prepareIssueContent() string {
 		"inc": func(i int) int {
 			return i + 1
 		},
+		"dec": func(i int) int {
+			return i - 1
+		},
 	})
 
 	tpl, err = tpl.Parse(string(data))
