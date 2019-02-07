@@ -531,4 +531,4 @@ This executor is no longer maintained and will be removed in the near future.
 [service-file]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/dockerfiles/build/scripts/gitlab-runner-service
 [privileged]: https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities
 [entry]: https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime
-[secpull]: ../security/index.md##usage-of-private-docker-images-with-if-not-present-pull-policy
+[secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
