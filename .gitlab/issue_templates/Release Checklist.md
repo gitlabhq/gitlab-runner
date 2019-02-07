@@ -82,7 +82,7 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
         - [ ] create new branch, update Runner version and push the branch:
 
             ```bash
-            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rc1 && sed -i "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rc1/" Chart.yaml && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rc1" -S && git push -u origin update-runner-to-{{.Major}}-{{.Minor}}-0-rc1
+            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rc1 && sed -i".bak" "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rc1/" Chart.yaml && rm Chart.yaml.bak && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rc1" -S && git push -u origin update-runner-to-{{.Major}}-{{.Minor}}-0-rc1
             ```
 
         - [ ] create Merge Request pointing `master`: [link to MR here]
@@ -111,7 +111,7 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
     - [ ] bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rc1`
 
         ```bash
-        sed -i "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rc1/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rc1" -S
+        sed -i".bak" "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rc1/" Chart.yaml && rm Chart.yaml.bak && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rc1" -S
         ```
 
     - [ ] tag and push **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rc1**:
@@ -129,7 +129,7 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
     - [ ] checkout to `master`, bump version of the Helm Chart to `{{.HelmChartMajor}}.{{inc .HelmChartMinor}}.0-beta` and push `master`:
 
         ```bash
-        git checkout master; sed -i "s/^version: .*/version: {{.HelmChartMajor}}.{{inc .HelmChartMinor}}.0-beta/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{inc .HelmChartMinor}}.0-beta" -S && git push
+        git checkout master; sed -i".bak" "s/^version: .*/version: {{.HelmChartMajor}}.{{inc .HelmChartMinor}}.0-beta/" Chart.yaml && rm Chart.yaml.bak &&  git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{inc .HelmChartMinor}}.0-beta" -S && git push
         ```
 
 _New features_ window is closed - things not merged into `master` up to
@@ -206,7 +206,7 @@ to the one that already exists.
         - [ ] create new branch, update Runner version and push the branch:
 
             ```bash
-            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ && sed -i "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rcZ/" Chart.yaml && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rcZ" -S && git push -u origin update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ
+            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ && sed -i".bak" "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rcZ/" Chart.yaml && rm Chart.yaml.bak && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rcZ" -S && git push -u origin update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ
             ```
 
         - [ ] create Merge Request pointing `{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable`: [link to MR here]
@@ -235,7 +235,7 @@ to the one that already exists.
     - [ ] bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ`
 
         ```bash
-        sed -i "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ" -S
+        sed -i".bak" "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ/" Chart.yaml && rm Chart.yaml.bak && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ" -S
         ```
 
     - [ ] tag and push **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ** and **{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable**:
@@ -288,7 +288,7 @@ to the one that already exists.
         - [ ] create new branch, update Runner version and push the branch:
 
             ```bash
-            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0 && sed -i "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0/" Chart.yaml && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0" -S && git push -u origin update-runner-to-{{.Major}}-{{.Minor}}-0
+            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0 && sed -i".bak" "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0/" Chart.yaml && rm Chart.yaml.bak && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0" -S && git push -u origin update-runner-to-{{.Major}}-{{.Minor}}-0
             ```
 
         - [ ] create Merge Request pointing `{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable`: [link to MR here]
@@ -313,7 +313,7 @@ to the one that already exists.
     - [ ] bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.0`
 
         ```bash
-        sed -i "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.0/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.0" -S
+        sed -i".bak" "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.0/" Chart.yaml && rm Chart.yaml.bak && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.0" -S
         ```
 
     - [ ] tag and push **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.0** and **{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable**:
@@ -514,7 +514,7 @@ template:
         - [ ] create new branch, update Runner version and push the branch:
 
             ```bash
-            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ && sed -i "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rcZ/" Chart.yaml && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rcZ" -S && git push -u origin update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ
+            git checkout -b update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ && sed -i".bak" "s/^appVersion: .*/appVersion: {{.Major}}.{{.Minor}}.0-rcZ/" Chart.yaml && rm Chart.yaml.bak && git add Chart.yaml && git commit -m "Bump used Runner version to {{.Major}}.{{.Minor}}.0-rcZ" -S && git push -u origin update-runner-to-{{.Major}}-{{.Minor}}-0-rcZ
             ```
 
         - [ ] create Merge Request pointing `{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable`: [link to MR here]
@@ -543,7 +543,7 @@ template:
     - [ ] bump version of the Helm Chart to `{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ`
 
         ```bash
-        sed -i "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ/" Chart.yaml && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ" -S
+        sed -i".bak" "s/^version: .*/version: {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ/" Chart.yaml && rm Chart.yaml.bak && git add Chart.yaml && git commit -m "Bump version to {{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ" -S
         ```
 
     - [ ] tag and push **v{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ** and **{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable**:
