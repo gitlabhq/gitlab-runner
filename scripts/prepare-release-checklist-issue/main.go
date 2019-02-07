@@ -224,26 +224,28 @@ func detectBlogPostMergeRequest() []string {
 		printEntry(entry)
 	}
 
-	if len(response) < 1 {
-		fmt.Println("Release Post merge request was not auto-detected. Please enter the ID manually")
+	for _, chosen := range response {
+		r := regexp.MustCompile("gitlab.com/gitlab-com/www-gitlab-com/blob/release-\\d+-\\d+/data/release_posts/(\\d+)_(\\d+)_(\\d+)_gitlab_\\d+_\\d+_released.yml")
+		dateParts := r.FindStringSubmatch(chosen.Description)
 
-		return []string{"", ""}
+		if len(dateParts) < 1 {
+			continue
+		}
+
+		fmt.Println("Choosing:")
+		printEntry(chosen)
+
+		detectedMergeRequest = []string{
+			strconv.Itoa(chosen.ID),
+			fmt.Sprintf("%s-%s-%s", dateParts[1], dateParts[2], dateParts[3]),
+		}
+
+		return detectedMergeRequest
 	}
 
-	chosen := response[0]
+	fmt.Println("Release Post merge request was not auto-detected. Please enter the ID manually")
 
-	fmt.Println("Choosing:")
-	printEntry(chosen)
-
-	r := regexp.MustCompile("gitlab.com/gitlab-com/www-gitlab-com/blob/release-\\d+-\\d+/data/release_posts/(\\d+)_(\\d+)_(\\d+)_gitlab_\\d+_\\d+_released.yml")
-	dateParts := r.FindStringSubmatch(chosen.Description)
-
-	detectedMergeRequest = []string{
-		strconv.Itoa(chosen.ID),
-		fmt.Sprintf("%s-%s-%s", dateParts[1], dateParts[2], dateParts[3]),
-	}
-
-	return detectedMergeRequest
+	return []string{"", ""}
 }
 
 func detectReleaseMergeRequestDeadline() string {
