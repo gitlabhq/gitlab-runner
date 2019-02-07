@@ -69,8 +69,8 @@ release_docker_helper_images() {
     helper_image_arm="gitlab/gitlab-runner-helper:arm-${REVISION}"
     helper_image_arm_latest="gitlab/gitlab-runner-helper:arm-latest"
 
-    import out/helper-images/prebuilt-x86_64.tar.xz ${helper_image_x86_64}
-    import out/helper-images/prebuilt-arm.tar.xz ${helper_image_arm}
+    import out/helper-images/prebuilt-linux_x86_64.tar.xz ${helper_image_x86_64}
+    import out/helper-images/prebuilt-linux_arm.tar.xz ${helper_image_arm}
 
     tag_latest ${helper_image_x86_64} ${helper_image_x86_64_latest}
     tag_latest ${helper_image_arm} ${helper_image_arm_latest}
