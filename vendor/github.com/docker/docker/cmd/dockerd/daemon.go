@@ -83,11 +83,6 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	if cli.Config, err = loadDaemonCliConfig(opts); err != nil {
 		return err
 	}
-
-	if err := configureDaemonLogs(cli.Config); err != nil {
-		return err
-	}
-
 	cli.configFile = &opts.configFile
 	cli.flags = opts.flags
 
@@ -99,10 +94,16 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		logrus.Warn("Running experimental build")
 	}
 
+	logrus.SetFormatter(&logrus.TextFormatter{
+		TimestampFormat: jsonmessage.RFC3339NanoFixed,
+		DisableColors:   cli.Config.RawLogs,
+		FullTimestamp:   true,
+	})
+
 	system.InitLCOW(cli.Config.Experimental)
 
 	if err := setDefaultUmask(); err != nil {
-		return err
+		return fmt.Errorf("Failed to set umask: %v", err)
 	}
 
 	// Create the daemon root before we create ANY other files (PID, or migrate keys)
@@ -118,7 +119,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	if cli.Pidfile != "" {
 		pf, err := pidfile.New(cli.Pidfile)
 		if err != nil {
-			return errors.Wrap(err, "failed to start daemon")
+			return fmt.Errorf("Error starting daemon: %v", err)
 		}
 		defer func() {
 			if err := pf.Remove(); err != nil {
@@ -129,13 +130,13 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	serverConfig, err := newAPIServerConfig(cli)
 	if err != nil {
-		return errors.Wrap(err, "failed to create API server")
+		return fmt.Errorf("Failed to create API server: %v", err)
 	}
 	cli.api = apiserver.New(serverConfig)
 
 	hosts, err := loadListeners(cli, serverConfig)
 	if err != nil {
-		return errors.Wrap(err, "failed to load listeners")
+		return fmt.Errorf("Failed to load listeners: %v", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -144,13 +145,13 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 			opts, err := cli.getContainerdDaemonOpts()
 			if err != nil {
 				cancel()
-				return errors.Wrap(err, "failed to generate containerd options")
+				return fmt.Errorf("Failed to generate containerd options: %v", err)
 			}
 
 			r, err := supervisor.Start(ctx, filepath.Join(cli.Config.Root, "containerd"), filepath.Join(cli.Config.ExecRoot, "containerd"), opts...)
 			if err != nil {
 				cancel()
-				return errors.Wrap(err, "failed to start containerd")
+				return fmt.Errorf("Failed to start containerd: %v", err)
 			}
 			cli.Config.ContainerdAddr = r.Address()
 
@@ -178,20 +179,20 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	d, err := daemon.NewDaemon(ctx, cli.Config, pluginStore)
 	if err != nil {
-		return errors.Wrap(err, "failed to start daemon")
+		return fmt.Errorf("Error starting daemon: %v", err)
 	}
 
 	d.StoreHosts(hosts)
 
-	// validate after NewDaemon has restored enabled plugins. Don't change order.
+	// validate after NewDaemon has restored enabled plugins. Dont change order.
 	if err := validateAuthzPlugins(cli.Config.AuthorizationPlugins, pluginStore); err != nil {
-		return errors.Wrap(err, "failed to validate authorization plugin")
+		return fmt.Errorf("Error validating authorization plugin: %v", err)
 	}
 
 	// TODO: move into startMetricsServer()
 	if cli.Config.MetricsAddress != "" {
 		if !d.HasExperimental() {
-			return errors.Wrap(err, "metrics-addr is only supported when experimental is enabled")
+			return fmt.Errorf("metrics-addr is only supported when experimental is enabled")
 		}
 		if err := startMetricsServer(cli.Config.MetricsAddress); err != nil {
 			return err
@@ -245,7 +246,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	cancel()
 
 	if errAPI != nil {
-		return errors.Wrap(errAPI, "shutting down due to ServeAPI error")
+		return fmt.Errorf("Shutting down due to ServeAPI error: %v", errAPI)
 	}
 
 	return nil
@@ -409,14 +410,14 @@ func loadDaemonCliConfig(opts *daemonOptions) (*config.Config, error) {
 	}
 
 	if flags.Changed("graph") && flags.Changed("data-root") {
-		return nil, errors.New(`cannot specify both "--graph" and "--data-root" option`)
+		return nil, fmt.Errorf(`cannot specify both "--graph" and "--data-root" option`)
 	}
 
 	if opts.configFile != "" {
 		c, err := config.MergeDaemonConfigurations(conf, flags, opts.configFile)
 		if err != nil {
 			if flags.Changed("config-file") || !os.IsNotExist(err) {
-				return nil, errors.Wrapf(err, "unable to configure the Docker daemon with file %s", opts.configFile)
+				return nil, fmt.Errorf("unable to configure the Docker daemon with file %s: %v", opts.configFile, err)
 			}
 		}
 		// the merged configuration can be nil if the config file didn't exist.
@@ -469,6 +470,9 @@ func loadDaemonCliConfig(opts *daemonOptions) (*config.Config, error) {
 	if conf.IsValueSet(FlagTLSVerify) {
 		conf.TLS = true
 	}
+
+	// ensure that the log level is the one set after merging configurations
+	setLogLevel(conf.LogLevel)
 
 	return conf, nil
 }
@@ -586,7 +590,7 @@ func loadListeners(cli *DaemonCli, serverConfig *apiserver.Config) ([]string, er
 	for i := 0; i < len(cli.Config.Hosts); i++ {
 		var err error
 		if cli.Config.Hosts[i], err = dopts.ParseHost(cli.Config.TLS, cli.Config.Hosts[i]); err != nil {
-			return nil, errors.Wrapf(err, "error parsing -H %s", cli.Config.Hosts[i])
+			return nil, fmt.Errorf("error parsing -H %s : %v", cli.Config.Hosts[i], err)
 		}
 
 		protoAddr := cli.Config.Hosts[i]
@@ -665,23 +669,4 @@ func validateAuthzPlugins(requestedPlugins []string, pg plugingetter.PluginGette
 func systemContainerdRunning() bool {
 	_, err := os.Lstat(containerddefaults.DefaultAddress)
 	return err == nil
-}
-
-// configureDaemonLogs sets the logrus logging level and formatting
-func configureDaemonLogs(conf *config.Config) error {
-	if conf.LogLevel != "" {
-		lvl, err := logrus.ParseLevel(conf.LogLevel)
-		if err != nil {
-			return fmt.Errorf("unable to parse logging level: %s", conf.LogLevel)
-		}
-		logrus.SetLevel(lvl)
-	} else {
-		logrus.SetLevel(logrus.InfoLevel)
-	}
-	logrus.SetFormatter(&logrus.TextFormatter{
-		TimestampFormat: jsonmessage.RFC3339NanoFixed,
-		DisableColors:   conf.RawLogs,
-		FullTimestamp:   true,
-	})
-	return nil
 }

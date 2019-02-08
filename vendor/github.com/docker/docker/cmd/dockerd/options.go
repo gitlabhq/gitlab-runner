@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/docker/docker/daemon/config"
 	"github.com/docker/docker/opts"
 	"github.com/docker/go-connections/tlsconfig"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 )
 
@@ -102,5 +104,19 @@ func (o *daemonOptions) SetDefaultOptions(flags *pflag.FlagSet) {
 				tlsOptions.KeyFile = ""
 			}
 		}
+	}
+}
+
+// setLogLevel sets the logrus logging level
+func setLogLevel(logLevel string) {
+	if logLevel != "" {
+		lvl, err := logrus.ParseLevel(logLevel)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to parse logging level: %s\n", logLevel)
+			os.Exit(1)
+		}
+		logrus.SetLevel(lvl)
+	} else {
+		logrus.SetLevel(logrus.InfoLevel)
 	}
 }

@@ -36,23 +36,23 @@ func TestCgroupDriverSystemdMemoryLimit(t *testing.T) {
 	}
 
 	d := daemon.New(t)
-	c := d.NewClientT(t)
-
+	client, err := d.NewClient()
+	assert.NilError(t, err)
 	d.StartWithBusybox(t, "--exec-opt", "native.cgroupdriver=systemd", "--iptables=false")
 	defer d.Stop(t)
 
 	const mem = 64 * 1024 * 1024 // 64 MB
 
 	ctx := context.Background()
-	ctrID := container.Create(t, ctx, c, func(ctr *container.TestContainerConfig) {
-		ctr.HostConfig.Resources.Memory = mem
+	ctrID := container.Create(t, ctx, client, func(c *container.TestContainerConfig) {
+		c.HostConfig.Resources.Memory = mem
 	})
-	defer c.ContainerRemove(ctx, ctrID, types.ContainerRemoveOptions{Force: true})
+	defer client.ContainerRemove(ctx, ctrID, types.ContainerRemoveOptions{Force: true})
 
-	err := c.ContainerStart(ctx, ctrID, types.ContainerStartOptions{})
+	err = client.ContainerStart(ctx, ctrID, types.ContainerStartOptions{})
 	assert.NilError(t, err)
 
-	s, err := c.ContainerInspect(ctx, ctrID)
+	s, err := client.ContainerInspect(ctx, ctrID)
 	assert.NilError(t, err)
 	assert.Equal(t, s.HostConfig.Memory, mem)
 }

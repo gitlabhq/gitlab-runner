@@ -42,7 +42,6 @@ func SwarmFromGRPC(c swarmapi.Cluster) types.Swarm {
 			RootRotationInProgress: c.RootCA.RootRotation != nil,
 			DefaultAddrPool:        c.DefaultAddressPool,
 			SubnetSize:             c.SubnetSize,
-			DataPathPort:           c.VXLANUDPPort,
 		},
 		JoinTokens: types.JoinTokens{
 			Worker:  c.RootCA.JoinTokens.Worker,

@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/docker/docker/internal/test/request"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 )
 
 func TestVersion(t *testing.T) {
-	defer setupTest(t)()
-	client := testEnv.APIClient()
+	client := request.NewAPIClient(t)
 
 	version, err := client.ServerVersion(context.Background())
 	assert.NilError(t, err)

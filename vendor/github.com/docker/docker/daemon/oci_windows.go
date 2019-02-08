@@ -332,30 +332,6 @@ func (daemon *Daemon) createSpecWindowsFields(c *container.Container, s *specs.S
 		s.Windows.CredentialSpec = cs
 	}
 
-	// Do we have any assigned devices?
-	if len(c.HostConfig.Devices) > 0 {
-		if isHyperV {
-			return errors.New("device assignment is not supported for HyperV containers")
-		}
-		if system.GetOSVersion().Build < 17763 {
-			return errors.New("device assignment requires Windows builds RS5 (17763+) or later")
-		}
-		for _, deviceMapping := range c.HostConfig.Devices {
-			srcParts := strings.SplitN(deviceMapping.PathOnHost, "/", 2)
-			if len(srcParts) != 2 {
-				return errors.New("invalid device assignment path")
-			}
-			if srcParts[0] != "class" {
-				return errors.Errorf("invalid device assignment type: '%s' should be 'class'", srcParts[0])
-			}
-			wd := specs.WindowsDevice{
-				ID:     srcParts[1],
-				IDType: srcParts[0],
-			}
-			s.Windows.Devices = append(s.Windows.Devices, wd)
-		}
-	}
-
 	return nil
 }
 
@@ -368,10 +344,10 @@ func (daemon *Daemon) createSpecLinuxFields(c *container.Container, s *specs.Spe
 	}
 	s.Root.Path = "rootfs"
 	s.Root.Readonly = c.HostConfig.ReadonlyRootfs
-	if err := oci.SetCapabilities(s, c.HostConfig.CapAdd, c.HostConfig.CapDrop, c.HostConfig.Privileged); err != nil {
+	if err := setCapabilities(s, c); err != nil {
 		return fmt.Errorf("linux spec capabilities: %v", err)
 	}
-	devPermissions, err := oci.AppendDevicePermissionsFromCgroupRules(nil, c.HostConfig.DeviceCgroupRules)
+	devPermissions, err := appendDevicePermissionsFromCgroupRules(nil, c.HostConfig.DeviceCgroupRules)
 	if err != nil {
 		return fmt.Errorf("linux runtime spec devices: %v", err)
 	}

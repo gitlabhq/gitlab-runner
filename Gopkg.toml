@@ -42,9 +42,14 @@ ignored = ["test", "appengine"]
   name = "github.com/docker/distribution"
   version = "2.7"
 
+# We are using `github.com/docker/engine` as source since it has tagged
+# versions, unlike `github.com/moby/moby`, please read
+# https://github.com/moby/moby/issues/38063#issuecomment-431324613 for a
+# detailed explanation.
 [[constraint]]
   name = "github.com/docker/docker"
-  branch = "master"
+  source = "github.com/docker/engine"
+  version = "18.09"
 
 [[constraint]]
   name = "github.com/docker/cli"

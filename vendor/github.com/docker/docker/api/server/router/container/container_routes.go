@@ -338,6 +338,9 @@ func (s *containerRouter) postContainersWait(ctx context.Context, w http.Respons
 		}
 	}
 
+	// Note: the context should get canceled if the client closes the
+	// connection since this handler has been wrapped by the
+	// router.WithCancel() wrapper.
 	waitC, err := s.backend.ContainerWait(ctx, vars["name"], waitCondition)
 	if err != nil {
 		return err
@@ -460,17 +463,6 @@ func (s *containerRouter) postContainersCreate(ctx context.Context, w http.Respo
 	// When using API 1.24 and under, the client is responsible for removing the container
 	if hostConfig != nil && versions.LessThan(version, "1.25") {
 		hostConfig.AutoRemove = false
-	}
-
-	if hostConfig != nil && versions.LessThan(version, "1.40") {
-		// Ignore BindOptions.NonRecursive because it was added in API 1.40.
-		for _, m := range hostConfig.Mounts {
-			if bo := m.BindOptions; bo != nil {
-				bo.NonRecursive = false
-			}
-		}
-		// Ignore KernelMemoryTCP because it was added in API 1.40.
-		hostConfig.KernelMemoryTCP = 0
 	}
 
 	ccr, err := s.backend.ContainerCreate(types.ContainerCreateConfig{

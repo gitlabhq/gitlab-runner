@@ -9,11 +9,13 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/internal/test/fakecontext"
+	"github.com/docker/docker/internal/test/request"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
@@ -23,7 +25,7 @@ import (
 func TestBuildWithRemoveAndForceRemove(t *testing.T) {
 	skip.If(t, testEnv.DaemonInfo.OSType == "windows", "FIXME")
 	defer setupTest(t)()
-
+	t.Parallel()
 	cases := []struct {
 		name                           string
 		dockerfile                     string
@@ -37,8 +39,8 @@ func TestBuildWithRemoveAndForceRemove(t *testing.T) {
 			RUN exit 0
 			RUN exit 0`,
 			numberOfIntermediateContainers: 2,
-			rm:                             false,
-			forceRm:                        false,
+			rm:      false,
+			forceRm: false,
 		},
 		{
 			name: "successful build with remove",
@@ -46,8 +48,8 @@ func TestBuildWithRemoveAndForceRemove(t *testing.T) {
 			RUN exit 0
 			RUN exit 0`,
 			numberOfIntermediateContainers: 0,
-			rm:                             true,
-			forceRm:                        false,
+			rm:      true,
+			forceRm: false,
 		},
 		{
 			name: "successful build with remove and force remove",
@@ -55,8 +57,8 @@ func TestBuildWithRemoveAndForceRemove(t *testing.T) {
 			RUN exit 0
 			RUN exit 0`,
 			numberOfIntermediateContainers: 0,
-			rm:                             true,
-			forceRm:                        true,
+			rm:      true,
+			forceRm: true,
 		},
 		{
 			name: "failed build with no removal",
@@ -64,8 +66,8 @@ func TestBuildWithRemoveAndForceRemove(t *testing.T) {
 			RUN exit 0
 			RUN exit 1`,
 			numberOfIntermediateContainers: 2,
-			rm:                             false,
-			forceRm:                        false,
+			rm:      false,
+			forceRm: false,
 		},
 		{
 			name: "failed build with remove",
@@ -73,8 +75,8 @@ func TestBuildWithRemoveAndForceRemove(t *testing.T) {
 			RUN exit 0
 			RUN exit 1`,
 			numberOfIntermediateContainers: 1,
-			rm:                             true,
-			forceRm:                        false,
+			rm:      true,
+			forceRm: false,
 		},
 		{
 			name: "failed build with remove and force remove",
@@ -82,12 +84,12 @@ func TestBuildWithRemoveAndForceRemove(t *testing.T) {
 			RUN exit 0
 			RUN exit 1`,
 			numberOfIntermediateContainers: 0,
-			rm:                             true,
-			forceRm:                        true,
+			rm:      true,
+			forceRm: true,
 		},
 	}
 
-	client := testEnv.APIClient()
+	client := request.NewAPIClient(t)
 	ctx := context.Background()
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -166,6 +168,12 @@ func TestBuildMultiStageParentConfig(t *testing.T) {
 	_, err = io.Copy(ioutil.Discard, resp.Body)
 	resp.Body.Close()
 	assert.NilError(t, err)
+
+	time.Sleep(30 * time.Second)
+
+	imgs, err := apiclient.ImageList(ctx, types.ImageListOptions{})
+	assert.NilError(t, err)
+	t.Log(imgs)
 
 	image, _, err := apiclient.ImageInspectWithRaw(ctx, "build1")
 	assert.NilError(t, err)

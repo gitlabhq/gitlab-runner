@@ -27,7 +27,7 @@ func TestBuildWithSession(t *testing.T) {
 	d.StartWithBusybox(t)
 	defer d.Stop(t)
 
-	client := d.NewClientT(t)
+	client := testEnv.APIClient()
 
 	dockerfile := `
 		FROM busybox

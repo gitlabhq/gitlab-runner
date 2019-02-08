@@ -62,10 +62,19 @@ func TestSecretList(t *testing.T) {
 	// create secret test1
 	secret1ID := createSecret(ctx, t, client, testName1, []byte("TESTINGDATA1"), map[string]string{"type": "production"})
 
+	names := func(entries []swarmtypes.Secret) []string {
+		var values []string
+		for _, entry := range entries {
+			values = append(values, entry.Spec.Name)
+		}
+		sort.Strings(values)
+		return values
+	}
+
 	// test by `secret ls`
 	entries, err := client.SecretList(ctx, types.SecretListOptions{})
 	assert.NilError(t, err)
-	assert.Check(t, is.DeepEqual(secretNamesFromList(entries), testNames))
+	assert.Check(t, is.DeepEqual(names(entries), testNames))
 
 	testCases := []struct {
 		filters  filters.Args
@@ -100,7 +109,7 @@ func TestSecretList(t *testing.T) {
 			Filters: tc.filters,
 		})
 		assert.NilError(t, err)
-		assert.Check(t, is.DeepEqual(secretNamesFromList(entries), tc.expected))
+		assert.Check(t, is.DeepEqual(names(entries), tc.expected))
 
 	}
 }
@@ -303,7 +312,7 @@ func TestTemplatedSecret(t *testing.T) {
 
 	var tasks []swarmtypes.Task
 	waitAndAssert(t, 60*time.Second, func(t *testing.T) bool {
-		tasks = swarm.GetRunningTasks(t, client, serviceID)
+		tasks = swarm.GetRunningTasks(t, d, serviceID)
 		return len(tasks) > 0
 	})
 
@@ -334,56 +343,6 @@ func TestTemplatedSecret(t *testing.T) {
 	assertAttachedStream(t, attach, "tmpfs on /run/secrets/templated_secret type tmpfs")
 }
 
-// Test case for 28884
-func TestSecretCreateResolve(t *testing.T) {
-	skip.If(t, testEnv.DaemonInfo.OSType != "linux")
-
-	defer setupTest(t)()
-	d := swarm.NewSwarm(t, testEnv)
-	defer d.Stop(t)
-	client := d.NewClientT(t)
-	defer client.Close()
-
-	ctx := context.Background()
-
-	testName := "test_secret_" + t.Name()
-	secretID := createSecret(ctx, t, client, testName, []byte("foo"), nil)
-
-	fakeName := secretID
-	fakeID := createSecret(ctx, t, client, fakeName, []byte("fake foo"), nil)
-
-	entries, err := client.SecretList(ctx, types.SecretListOptions{})
-	assert.NilError(t, err)
-	assert.Check(t, is.Contains(secretNamesFromList(entries), testName))
-	assert.Check(t, is.Contains(secretNamesFromList(entries), fakeName))
-
-	err = client.SecretRemove(ctx, secretID)
-	assert.NilError(t, err)
-
-	// Fake one will remain
-	entries, err = client.SecretList(ctx, types.SecretListOptions{})
-	assert.NilError(t, err)
-	assert.Assert(t, is.DeepEqual(secretNamesFromList(entries), []string{fakeName}))
-
-	// Remove based on name prefix of the fake one should not work
-	// as search is only done based on:
-	// - Full ID
-	// - Full Name
-	// - Partial ID (prefix)
-	err = client.SecretRemove(ctx, fakeName[:5])
-	assert.Assert(t, nil != err)
-	entries, err = client.SecretList(ctx, types.SecretListOptions{})
-	assert.NilError(t, err)
-	assert.Assert(t, is.DeepEqual(secretNamesFromList(entries), []string{fakeName}))
-
-	// Remove based on ID prefix of the fake one should succeed
-	err = client.SecretRemove(ctx, fakeID[:5])
-	assert.NilError(t, err)
-	entries, err = client.SecretList(ctx, types.SecretListOptions{})
-	assert.NilError(t, err)
-	assert.Assert(t, is.Equal(0, len(entries)))
-}
-
 func assertAttachedStream(t *testing.T, attach types.HijackedResponse, expect string) {
 	buf := bytes.NewBuffer(nil)
 	_, err := stdcopy.StdCopy(buf, buf, attach.Reader)
@@ -405,13 +364,4 @@ func waitAndAssert(t *testing.T, timeout time.Duration, f func(*testing.T) bool)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-}
-
-func secretNamesFromList(entries []swarmtypes.Secret) []string {
-	var values []string
-	for _, entry := range entries {
-		values = append(values, entry.Spec.Name)
-	}
-	sort.Strings(values)
-	return values
 }

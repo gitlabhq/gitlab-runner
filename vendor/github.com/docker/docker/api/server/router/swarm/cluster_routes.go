@@ -28,15 +28,10 @@ func (sr *swarmRouter) initCluster(ctx context.Context, w http.ResponseWriter, r
 		return errdefs.InvalidParameter(err)
 	}
 	version := httputils.VersionFromContext(ctx)
-
 	// DefaultAddrPool and SubnetSize were added in API 1.39. Ignore on older API versions.
 	if versions.LessThan(version, "1.39") {
 		req.DefaultAddrPool = nil
 		req.SubnetSize = 0
-	}
-	// DataPathPort was added in API 1.40. Ignore this option on older API versions.
-	if versions.LessThan(version, "1.40") {
-		req.DataPathPort = 0
 	}
 	nodeID, err := sr.backend.Init(req)
 	if err != nil {
@@ -209,23 +204,8 @@ func (sr *swarmRouter) createService(ctx context.Context, w http.ResponseWriter,
 	encodedAuth := r.Header.Get("X-Registry-Auth")
 	cliVersion := r.Header.Get("version")
 	queryRegistry := false
-	if cliVersion != "" {
-		if versions.LessThan(cliVersion, "1.30") {
-			queryRegistry = true
-		}
-		if versions.LessThan(cliVersion, "1.40") {
-			if service.TaskTemplate.ContainerSpec != nil {
-				// Sysctls for docker swarm services weren't supported before
-				// API version 1.40
-				service.TaskTemplate.ContainerSpec.Sysctls = nil
-			}
-
-			if service.TaskTemplate.Placement != nil {
-				// MaxReplicas for docker swarm services weren't supported before
-				// API version 1.40
-				service.TaskTemplate.Placement.MaxReplicas = 0
-			}
-		}
+	if cliVersion != "" && versions.LessThan(cliVersion, "1.30") {
+		queryRegistry = true
 	}
 
 	resp, err := sr.backend.CreateService(service, encodedAuth, queryRegistry)
@@ -261,23 +241,8 @@ func (sr *swarmRouter) updateService(ctx context.Context, w http.ResponseWriter,
 	flags.Rollback = r.URL.Query().Get("rollback")
 	cliVersion := r.Header.Get("version")
 	queryRegistry := false
-	if cliVersion != "" {
-		if versions.LessThan(cliVersion, "1.30") {
-			queryRegistry = true
-		}
-		if versions.LessThan(cliVersion, "1.40") {
-			if service.TaskTemplate.ContainerSpec != nil {
-				// Sysctls for docker swarm services weren't supported before
-				// API version 1.40
-				service.TaskTemplate.ContainerSpec.Sysctls = nil
-			}
-
-			if service.TaskTemplate.Placement != nil {
-				// MaxReplicas for docker swarm services weren't supported before
-				// API version 1.40
-				service.TaskTemplate.Placement.MaxReplicas = 0
-			}
-		}
+	if cliVersion != "" && versions.LessThan(cliVersion, "1.30") {
+		queryRegistry = true
 	}
 
 	resp, err := sr.backend.UpdateService(vars["id"], version, service, flags, queryRegistry)

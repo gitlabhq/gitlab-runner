@@ -9,7 +9,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	swarmtypes "github.com/docker/docker/api/types/swarm"
-	"github.com/docker/docker/client"
 	"github.com/docker/docker/internal/test/daemon"
 	"github.com/docker/docker/internal/test/environment"
 	"gotest.tools/assert"
@@ -67,27 +66,24 @@ type ServiceSpecOpt func(*swarmtypes.ServiceSpec)
 // CreateService creates a service on the passed in swarm daemon.
 func CreateService(t *testing.T, d *daemon.Daemon, opts ...ServiceSpecOpt) string {
 	t.Helper()
+	spec := defaultServiceSpec()
+	for _, o := range opts {
+		o(&spec)
+	}
 
 	client := d.NewClientT(t)
 	defer client.Close()
 
-	spec := CreateServiceSpec(t, opts...)
 	resp, err := client.ServiceCreate(context.Background(), spec, types.ServiceCreateOptions{})
 	assert.NilError(t, err, "error creating service")
 	return resp.ID
 }
 
-// CreateServiceSpec creates a default service-spec, and applies the provided options
-func CreateServiceSpec(t *testing.T, opts ...ServiceSpecOpt) swarmtypes.ServiceSpec {
-	t.Helper()
+func defaultServiceSpec() swarmtypes.ServiceSpec {
 	var spec swarmtypes.ServiceSpec
 	ServiceWithImage("busybox:latest")(&spec)
 	ServiceWithCommand([]string{"/bin/top"})(&spec)
 	ServiceWithReplicas(1)(&spec)
-
-	for _, o := range opts {
-		o(&spec)
-	}
 	return spec
 }
 
@@ -142,14 +138,6 @@ func ServiceWithReplicas(n uint64) ServiceSpecOpt {
 	}
 }
 
-// ServiceWithMaxReplicas sets the max replicas for the service
-func ServiceWithMaxReplicas(n uint64) ServiceSpecOpt {
-	return func(spec *swarmtypes.ServiceSpec) {
-		ensurePlacement(spec)
-		spec.TaskTemplate.Placement.MaxReplicas = n
-	}
-}
-
 // ServiceWithName sets the name of the service
 func ServiceWithName(name string) ServiceSpecOpt {
 	return func(spec *swarmtypes.ServiceSpec) {
@@ -172,25 +160,20 @@ func ServiceWithEndpoint(endpoint *swarmtypes.EndpointSpec) ServiceSpecOpt {
 	}
 }
 
-// ServiceWithSysctls sets the Sysctls option of the service's ContainerSpec.
-func ServiceWithSysctls(sysctls map[string]string) ServiceSpecOpt {
-	return func(spec *swarmtypes.ServiceSpec) {
-		ensureContainerSpec(spec)
-		spec.TaskTemplate.ContainerSpec.Sysctls = sysctls
-	}
-}
-
 // GetRunningTasks gets the list of running tasks for a service
-func GetRunningTasks(t *testing.T, c client.ServiceAPIClient, serviceID string) []swarmtypes.Task {
+func GetRunningTasks(t *testing.T, d *daemon.Daemon, serviceID string) []swarmtypes.Task {
 	t.Helper()
+	client := d.NewClientT(t)
+	defer client.Close()
 
-	tasks, err := c.TaskList(context.Background(), types.TaskListOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("service", serviceID),
-			filters.Arg("desired-state", "running"),
-		),
-	})
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("desired-state", "running")
+	filterArgs.Add("service", serviceID)
 
+	options := types.TaskListOptions{
+		Filters: filterArgs,
+	}
+	tasks, err := client.TaskList(context.Background(), options)
 	assert.NilError(t, err)
 	return tasks
 }
@@ -214,11 +197,5 @@ func ExecTask(t *testing.T, d *daemon.Daemon, task swarmtypes.Task, config types
 func ensureContainerSpec(spec *swarmtypes.ServiceSpec) {
 	if spec.TaskTemplate.ContainerSpec == nil {
 		spec.TaskTemplate.ContainerSpec = &swarmtypes.ContainerSpec{}
-	}
-}
-
-func ensurePlacement(spec *swarmtypes.ServiceSpec) {
-	if spec.TaskTemplate.Placement == nil {
-		spec.TaskTemplate.Placement = &swarmtypes.Placement{}
 	}
 }

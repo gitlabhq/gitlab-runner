@@ -7,7 +7,7 @@ import (
 
 	"github.com/docker/docker/errdefs"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/status"
+	"google.golang.org/grpc"
 )
 
 func errNotRunning(id string) error {
@@ -122,7 +122,7 @@ func (e startInvalidConfigError) Error() string {
 func (e startInvalidConfigError) InvalidParameter() {} // Is this right???
 
 func translateContainerdStartErr(cmd string, setExitCode func(int), err error) error {
-	errDesc := status.Convert(err).Message()
+	errDesc := grpc.ErrorDesc(err)
 	contains := func(s1, s2 string) bool {
 		return strings.Contains(strings.ToLower(s1), s2)
 	}

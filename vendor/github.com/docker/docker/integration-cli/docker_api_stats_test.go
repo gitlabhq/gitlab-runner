@@ -97,7 +97,7 @@ func (s *DockerSuite) TestAPIStatsStoppedContainerInGoroutines(c *check.C) {
 }
 
 func (s *DockerSuite) TestAPIStatsNetworkStats(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon)
+	testRequires(c, SameHostDaemon)
 
 	out := runSleepingContainer(c)
 	id := strings.TrimSpace(out)
@@ -165,7 +165,7 @@ func (s *DockerSuite) TestAPIStatsNetworkStats(c *check.C) {
 
 func (s *DockerSuite) TestAPIStatsNetworkStatsVersioning(c *check.C) {
 	// Windows doesn't support API versions less than 1.25, so no point testing 1.17 .. 1.21
-	testRequires(c, testEnv.IsLocalDaemon, DaemonIsLinux)
+	testRequires(c, SameHostDaemon, DaemonIsLinux)
 
 	out := runSleepingContainer(c)
 	id := strings.TrimSpace(out)
@@ -262,7 +262,7 @@ func jsonBlobHasGTE121NetworkStats(blob map[string]interface{}) bool {
 
 func (s *DockerSuite) TestAPIStatsContainerNotFound(c *check.C) {
 	testRequires(c, DaemonIsLinux)
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewEnvClient()
 	c.Assert(err, checker.IsNil)
 	defer cli.Close()
 

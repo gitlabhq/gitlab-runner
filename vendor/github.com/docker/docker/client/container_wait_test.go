@@ -65,7 +65,7 @@ func ExampleClient_ContainerWait_withTimeout() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, _ := NewClientWithOpts(FromEnv)
+	client, _ := NewEnvClient()
 	_, errC := client.ContainerWait(ctx, "container_id", "")
 	if err := <-errC; err != nil {
 		log.Fatal(err)

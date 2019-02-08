@@ -15,7 +15,7 @@ import (
 )
 
 func (s *DockerSuite) TestCpToContainerWithPermissions(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon, DaemonIsLinux)
+	testRequires(c, SameHostDaemon, DaemonIsLinux)
 
 	tmpDir := getTestDir(c, "test-cp-to-host-with-permissions")
 	defer os.RemoveAll(tmpDir)
@@ -39,7 +39,7 @@ func (s *DockerSuite) TestCpToContainerWithPermissions(c *check.C) {
 
 // Check ownership is root, both in non-userns and userns enabled modes
 func (s *DockerSuite) TestCpCheckDestOwnership(c *check.C) {
-	testRequires(c, DaemonIsLinux, testEnv.IsLocalDaemon)
+	testRequires(c, DaemonIsLinux, SameHostDaemon)
 	tmpVolDir := getTestDir(c, "test-cp-tmpvol")
 	containerID := makeTestContainer(c,
 		testContainerOptions{volumes: []string{fmt.Sprintf("%s:/tmpvol", tmpVolDir)}})

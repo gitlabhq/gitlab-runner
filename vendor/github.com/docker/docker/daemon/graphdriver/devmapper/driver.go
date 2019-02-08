@@ -16,6 +16,7 @@ import (
 	"github.com/docker/docker/pkg/locker"
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/go-units"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -128,7 +129,11 @@ func (d *Driver) Cleanup() error {
 		return err
 	}
 
-	return umountErr
+	if umountErr != nil {
+		return errors.Wrapf(umountErr, "error unmounting %s", d.home)
+	}
+
+	return nil
 }
 
 // CreateReadWrite creates a layer that is writable for use as a container

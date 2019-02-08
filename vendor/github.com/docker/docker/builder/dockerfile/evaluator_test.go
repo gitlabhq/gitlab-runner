@@ -2,7 +2,6 @@ package dockerfile // import "github.com/docker/docker/builder/dockerfile"
 
 import (
 	"os"
-	"runtime"
 	"testing"
 
 	"github.com/docker/docker/builder/remotecontext"
@@ -98,9 +97,7 @@ func initDispatchTestCases() []dispatchTestCase {
 }
 
 func TestDispatch(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		skip.If(t, os.Getuid() != 0, "skipping test that requires root")
-	}
+	skip.If(t, os.Getuid() != 0, "skipping test that requires root")
 	testCases := initDispatchTestCases()
 
 	for _, testCase := range testCases {

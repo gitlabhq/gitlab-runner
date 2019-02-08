@@ -15,6 +15,7 @@ func system(commands [][]string) error {
 		cmd := exec.Command(c[0], c[1:]...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		cmd.Env = os.Environ()
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -22,7 +23,7 @@ func system(commands [][]string) error {
 	return nil
 }
 
-func pushImage(_ *client.Client, remote, local string) error {
+func pushImage(unusedCli *client.Client, remote, local string) error {
 	// FIXME: eliminate os/exec (but it is hard to pass auth without os/exec ...)
 	return system([][]string{
 		{"docker", "image", "tag", local, remote},
@@ -30,7 +31,7 @@ func pushImage(_ *client.Client, remote, local string) error {
 	})
 }
 
-func deployStack(_ *client.Client, stackName, composeFilePath string) error {
+func deployStack(unusedCli *client.Client, stackName, composeFilePath string) error {
 	// FIXME: eliminate os/exec (but stack is implemented in CLI ...)
 	return system([][]string{
 		{"docker", "stack", "deploy",
@@ -40,7 +41,7 @@ func deployStack(_ *client.Client, stackName, composeFilePath string) error {
 	})
 }
 
-func hasStack(_ *client.Client, stackName string) bool {
+func hasStack(unusedCli *client.Client, stackName string) bool {
 	// FIXME: eliminate os/exec (but stack is implemented in CLI ...)
 	out, err := exec.Command("docker", "stack", "ls").CombinedOutput()
 	if err != nil {
@@ -50,7 +51,7 @@ func hasStack(_ *client.Client, stackName string) bool {
 	return strings.Contains(string(out), stackName)
 }
 
-func removeStack(_ *client.Client, stackName string) error {
+func removeStack(unusedCli *client.Client, stackName string) error {
 	// FIXME: eliminate os/exec (but stack is implemented in CLI ...)
 	if err := system([][]string{
 		{"docker", "stack", "rm", stackName},

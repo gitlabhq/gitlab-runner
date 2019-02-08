@@ -413,7 +413,7 @@ func (s *DockerDaemonSuite) TestDaemonIPv6Enabled(c *check.C) {
 // that running containers are given a link-local and global IPv6 address
 func (s *DockerDaemonSuite) TestDaemonIPv6FixedCIDR(c *check.C) {
 	// IPv6 setup is messing with local bridge address.
-	testRequires(c, testEnv.IsLocalDaemon)
+	testRequires(c, SameHostDaemon)
 	// Delete the docker0 bridge if its left around from previous daemon. It has to be recreated with
 	// ipv6 enabled
 	deleteInterface(c, "docker0")
@@ -440,7 +440,7 @@ func (s *DockerDaemonSuite) TestDaemonIPv6FixedCIDR(c *check.C) {
 // the running containers are given an IPv6 address derived from the MAC address and the ipv6 fixed CIDR
 func (s *DockerDaemonSuite) TestDaemonIPv6FixedCIDRAndMac(c *check.C) {
 	// IPv6 setup is messing with local bridge address.
-	testRequires(c, testEnv.IsLocalDaemon)
+	testRequires(c, SameHostDaemon)
 	// Delete the docker0 bridge if its left around from previous daemon. It has to be recreated with
 	// ipv6 enabled
 	deleteInterface(c, "docker0")
@@ -458,7 +458,7 @@ func (s *DockerDaemonSuite) TestDaemonIPv6FixedCIDRAndMac(c *check.C) {
 // TestDaemonIPv6HostMode checks that when the running a container with
 // network=host the host ipv6 addresses are not removed
 func (s *DockerDaemonSuite) TestDaemonIPv6HostMode(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon)
+	testRequires(c, SameHostDaemon)
 	deleteInterface(c, "docker0")
 
 	s.d.StartWithBusybox(c, "--ipv6", "--fixed-cidr-v6=2001:db8:2::/64")
@@ -572,7 +572,7 @@ func (s *DockerDaemonSuite) TestDaemonExitOnFailure(c *check.C) {
 			c.Fatalf("Expected daemon not to start, got %v", err)
 		}
 		// look in the log and make sure we got the message that daemon is shutting down
-		icmd.RunCommand("grep", "failed to start daemon", s.d.LogFileName()).Assert(c, icmd.Success)
+		icmd.RunCommand("grep", "Error starting daemon", s.d.LogFileName()).Assert(c, icmd.Success)
 	} else {
 		//if we didn't get an error and the daemon is running, this is a failure
 		c.Fatal("Conflicting options should cause the daemon to error out with a failure")
@@ -822,7 +822,7 @@ func (s *DockerDaemonSuite) TestDaemonDefaultGatewayIPv4ExplicitOutsideContainer
 }
 
 func (s *DockerDaemonSuite) TestDaemonDefaultNetworkInvalidClusterConfig(c *check.C) {
-	testRequires(c, DaemonIsLinux, testEnv.IsLocalDaemon)
+	testRequires(c, DaemonIsLinux, SameHostDaemon)
 
 	// Start daemon without docker0 bridge
 	defaultNetworkBridge := "docker0"
@@ -1770,7 +1770,7 @@ func (s *DockerDaemonSuite) TestBridgeIPIsExcludedFromAllocatorPool(c *check.C) 
 
 // Test daemon for no space left on device error
 func (s *DockerDaemonSuite) TestDaemonNoSpaceLeftOnDeviceError(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon, DaemonIsLinux, Network)
+	testRequires(c, SameHostDaemon, DaemonIsLinux, Network)
 
 	testDir, err := ioutil.TempDir("", "no-space-left-on-device-test")
 	c.Assert(err, checker.IsNil)
@@ -2203,7 +2203,7 @@ func (s *DockerDaemonSuite) TestDaemonDebugLog(c *check.C) {
 }
 
 func (s *DockerDaemonSuite) TestDaemonDiscoveryBackendConfigReload(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon, DaemonIsLinux)
+	testRequires(c, SameHostDaemon, DaemonIsLinux)
 
 	// daemon config file
 	daemonConfig := `{ "debug" : false }`
@@ -2274,7 +2274,7 @@ func (s *DockerDaemonSuite) TestDaemonMaxConcurrency(c *check.C) {
 
 // Test case for #20936, #22443
 func (s *DockerDaemonSuite) TestDaemonMaxConcurrencyWithConfigFile(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon, DaemonIsLinux)
+	testRequires(c, SameHostDaemon, DaemonIsLinux)
 
 	// daemon config file
 	configFilePath := "test.json"
@@ -2315,7 +2315,7 @@ func (s *DockerDaemonSuite) TestDaemonMaxConcurrencyWithConfigFile(c *check.C) {
 
 // Test case for #20936, #22443
 func (s *DockerDaemonSuite) TestDaemonMaxConcurrencyWithConfigFileReload(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon, DaemonIsLinux)
+	testRequires(c, SameHostDaemon, DaemonIsLinux)
 
 	// daemon config file
 	configFilePath := "test.json"
@@ -2387,7 +2387,7 @@ func (s *DockerDaemonSuite) TestBuildOnDisabledBridgeNetworkDaemon(c *check.C) {
 
 // Test case for #21976
 func (s *DockerDaemonSuite) TestDaemonDNSFlagsInHostMode(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon, DaemonIsLinux)
+	testRequires(c, SameHostDaemon, DaemonIsLinux)
 
 	s.d.StartWithBusybox(c, "--dns", "1.2.3.4", "--dns-search", "example.com", "--dns-opt", "timeout:3")
 
@@ -2485,7 +2485,7 @@ func (s *DockerDaemonSuite) TestRunWithRuntimeFromConfigFile(c *check.C) {
 
 	content, err := s.d.ReadLogFile()
 	c.Assert(err, checker.IsNil)
-	c.Assert(string(content), checker.Contains, `file configuration validation failed: runtime name 'runc' is reserved`)
+	c.Assert(string(content), checker.Contains, `file configuration validation failed (runtime name 'runc' is reserved)`)
 
 	// Check that we can select a default runtime
 	config = `
@@ -2643,7 +2643,7 @@ func (s *DockerDaemonSuite) TestDaemonRestartSaveContainerExitCode(c *check.C) {
 }
 
 func (s *DockerDaemonSuite) TestDaemonWithUserlandProxyPath(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon, DaemonIsLinux)
+	testRequires(c, SameHostDaemon, DaemonIsLinux)
 
 	dockerProxyPath, err := exec.LookPath("docker-proxy")
 	c.Assert(err, checker.IsNil)
@@ -2674,7 +2674,7 @@ func (s *DockerDaemonSuite) TestDaemonWithUserlandProxyPath(c *check.C) {
 
 // Test case for #22471
 func (s *DockerDaemonSuite) TestDaemonShutdownTimeout(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon)
+	testRequires(c, SameHostDaemon)
 	s.d.StartWithBusybox(c, "--shutdown-timeout=3")
 
 	_, err := s.d.Cmd("run", "-d", "busybox", "top")
@@ -2695,7 +2695,7 @@ func (s *DockerDaemonSuite) TestDaemonShutdownTimeout(c *check.C) {
 
 // Test case for #22471
 func (s *DockerDaemonSuite) TestDaemonShutdownTimeoutWithConfigFile(c *check.C) {
-	testRequires(c, testEnv.IsLocalDaemon)
+	testRequires(c, SameHostDaemon)
 
 	// daemon config file
 	configFilePath := "test.json"
@@ -2757,7 +2757,7 @@ func (s *DockerDaemonSuite) TestExecWithUserAfterLiveRestore(c *check.C) {
 }
 
 func (s *DockerDaemonSuite) TestRemoveContainerAfterLiveRestore(c *check.C) {
-	testRequires(c, DaemonIsLinux, overlayFSSupported, testEnv.IsLocalDaemon)
+	testRequires(c, DaemonIsLinux, overlayFSSupported, SameHostDaemon)
 	s.d.StartWithBusybox(c, "--live-restore", "--storage-driver", "overlay")
 	out, err := s.d.Cmd("run", "-d", "--name=top", "busybox", "top")
 	c.Assert(err, check.IsNil, check.Commentf("Output: %s", out))
@@ -2790,7 +2790,7 @@ func (s *DockerDaemonSuite) TestRemoveContainerAfterLiveRestore(c *check.C) {
 
 // #29598
 func (s *DockerDaemonSuite) TestRestartPolicyWithLiveRestore(c *check.C) {
-	testRequires(c, DaemonIsLinux, testEnv.IsLocalDaemon)
+	testRequires(c, DaemonIsLinux, SameHostDaemon)
 	s.d.StartWithBusybox(c, "--live-restore")
 
 	out, err := s.d.Cmd("run", "-d", "--restart", "always", "busybox", "top")
@@ -2903,6 +2903,67 @@ func (s *DockerDaemonSuite) TestShmSizeReload(c *check.C) {
 	c.Assert(strings.TrimSpace(out), check.Equals, fmt.Sprintf("%v", size))
 }
 
+// this is used to test both "private" and "shareable" daemon default ipc modes
+func testDaemonIpcPrivateShareable(d *daemon.Daemon, c *check.C, mustExist bool) {
+	name := "test-ipcmode"
+	_, err := d.Cmd("run", "-d", "--name", name, "busybox", "top")
+	c.Assert(err, checker.IsNil)
+
+	// get major:minor pair for /dev/shm from container's /proc/self/mountinfo
+	cmd := "awk '($5 == \"/dev/shm\") {printf $3}' /proc/self/mountinfo"
+	mm, err := d.Cmd("exec", "-i", name, "sh", "-c", cmd)
+	c.Assert(err, checker.IsNil)
+	c.Assert(mm, checker.Matches, "^[0-9]+:[0-9]+$")
+
+	exists, err := testIpcCheckDevExists(mm)
+	c.Assert(err, checker.IsNil)
+	c.Logf("[testDaemonIpcPrivateShareable] ipcdev: %v, exists: %v, mustExist: %v\n", mm, exists, mustExist)
+	c.Assert(exists, checker.Equals, mustExist)
+}
+
+// TestDaemonIpcModeShareable checks that --default-ipc-mode shareable works as intended.
+func (s *DockerDaemonSuite) TestDaemonIpcModeShareable(c *check.C) {
+	testRequires(c, DaemonIsLinux, SameHostDaemon)
+
+	s.d.StartWithBusybox(c, "--default-ipc-mode", "shareable")
+	testDaemonIpcPrivateShareable(s.d, c, true)
+}
+
+// TestDaemonIpcModePrivate checks that --default-ipc-mode private works as intended.
+func (s *DockerDaemonSuite) TestDaemonIpcModePrivate(c *check.C) {
+	testRequires(c, DaemonIsLinux, SameHostDaemon)
+
+	s.d.StartWithBusybox(c, "--default-ipc-mode", "private")
+	testDaemonIpcPrivateShareable(s.d, c, false)
+}
+
+// used to check if an IpcMode given in config works as intended
+func testDaemonIpcFromConfig(s *DockerDaemonSuite, c *check.C, mode string, mustExist bool) {
+	f, err := ioutil.TempFile("", "test-daemon-ipc-config")
+	c.Assert(err, checker.IsNil)
+	defer os.Remove(f.Name())
+
+	config := `{"default-ipc-mode": "` + mode + `"}`
+	_, err = f.WriteString(config)
+	c.Assert(f.Close(), checker.IsNil)
+	c.Assert(err, checker.IsNil)
+
+	s.d.StartWithBusybox(c, "--config-file", f.Name())
+	testDaemonIpcPrivateShareable(s.d, c, mustExist)
+}
+
+// TestDaemonIpcModePrivateFromConfig checks that "default-ipc-mode: private" config works as intended.
+func (s *DockerDaemonSuite) TestDaemonIpcModePrivateFromConfig(c *check.C) {
+	testRequires(c, DaemonIsLinux, SameHostDaemon)
+	testDaemonIpcFromConfig(s, c, "private", false)
+}
+
+// TestDaemonIpcModeShareableFromConfig checks that "default-ipc-mode: shareable" config works as intended.
+func (s *DockerDaemonSuite) TestDaemonIpcModeShareableFromConfig(c *check.C) {
+	testRequires(c, DaemonIsLinux, SameHostDaemon)
+	testDaemonIpcFromConfig(s, c, "shareable", true)
+}
+
 func testDaemonStartIpcMode(c *check.C, from, mode string, valid bool) {
 	d := daemon.New(c, dockerBinary, dockerdBinary, testdaemon.WithEnvironment(testEnv.Execution))
 	c.Logf("Checking IpcMode %s set from %s\n", mode, from)
@@ -2939,7 +3000,7 @@ func testDaemonStartIpcMode(c *check.C, from, mode string, valid bool) {
 // arguments for default IPC mode, and bails out with incorrect ones.
 // Both CLI option (--default-ipc-mode) and config parameter are tested.
 func (s *DockerDaemonSuite) TestDaemonStartWithIpcModes(c *check.C) {
-	testRequires(c, DaemonIsLinux, testEnv.IsLocalDaemon)
+	testRequires(c, DaemonIsLinux, SameHostDaemon)
 
 	ipcModes := []struct {
 		mode  string
@@ -3004,7 +3065,7 @@ func (s *DockerDaemonSuite) TestDaemonRestartIpcMode(c *check.C) {
 // TestFailedPluginRemove makes sure that a failed plugin remove does not block
 // the daemon from starting
 func (s *DockerDaemonSuite) TestFailedPluginRemove(c *check.C) {
-	testRequires(c, DaemonIsLinux, IsAmd64, testEnv.IsLocalDaemon)
+	testRequires(c, DaemonIsLinux, IsAmd64, SameHostDaemon)
 	d := daemon.New(c, dockerBinary, dockerdBinary)
 	d.Start(c)
 	cli, err := client.NewClient(d.Sock(), api.DefaultVersion, nil, nil)

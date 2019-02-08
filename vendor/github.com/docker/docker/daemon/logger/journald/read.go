@@ -164,10 +164,8 @@ import (
 func (s *journald) Close() error {
 	s.mu.Lock()
 	s.closed = true
-	for r := range s.readers {
-		r.ProducerGone()
-		delete(s.readers, r)
-
+	for reader := range s.readers.readers {
+		reader.ProducerGone()
 	}
 	s.mu.Unlock()
 	return nil
@@ -255,7 +253,7 @@ drain:
 
 func (s *journald) followJournal(logWatcher *logger.LogWatcher, j *C.sd_journal, pfd [2]C.int, cursor *C.char, untilUnixMicro uint64) *C.char {
 	s.mu.Lock()
-	s.readers[logWatcher] = struct{}{}
+	s.readers.readers[logWatcher] = logWatcher
 	if s.closed {
 		// the journald Logger is closed, presumably because the container has been
 		// reset.  So we shouldn't follow, because we'll never be woken up.  But we
@@ -292,7 +290,7 @@ func (s *journald) followJournal(logWatcher *logger.LogWatcher, j *C.sd_journal,
 		// Clean up.
 		C.close(pfd[0])
 		s.mu.Lock()
-		delete(s.readers, logWatcher)
+		delete(s.readers.readers, logWatcher)
 		s.mu.Unlock()
 		close(logWatcher.Msg)
 		newCursor <- cursor

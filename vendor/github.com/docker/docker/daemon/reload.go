@@ -84,26 +84,25 @@ func (daemon *Daemon) reloadDebug(conf *config.Config, attributes map[string]str
 func (daemon *Daemon) reloadMaxConcurrentDownloadsAndUploads(conf *config.Config, attributes map[string]string) {
 	// If no value is set for max-concurrent-downloads we assume it is the default value
 	// We always "reset" as the cost is lightweight and easy to maintain.
-	maxConcurrentDownloads := config.DefaultMaxConcurrentDownloads
 	if conf.IsValueSet("max-concurrent-downloads") && conf.MaxConcurrentDownloads != nil {
-		maxConcurrentDownloads = *conf.MaxConcurrentDownloads
+		*daemon.configStore.MaxConcurrentDownloads = *conf.MaxConcurrentDownloads
+	} else {
+		maxConcurrentDownloads := config.DefaultMaxConcurrentDownloads
+		daemon.configStore.MaxConcurrentDownloads = &maxConcurrentDownloads
 	}
-	daemon.configStore.MaxConcurrentDownloads = &maxConcurrentDownloads
 	logrus.Debugf("Reset Max Concurrent Downloads: %d", *daemon.configStore.MaxConcurrentDownloads)
 
 	// If no value is set for max-concurrent-upload we assume it is the default value
 	// We always "reset" as the cost is lightweight and easy to maintain.
-	maxConcurrentUploads := config.DefaultMaxConcurrentUploads
 	if conf.IsValueSet("max-concurrent-uploads") && conf.MaxConcurrentUploads != nil {
-		maxConcurrentUploads = *conf.MaxConcurrentUploads
+		*daemon.configStore.MaxConcurrentUploads = *conf.MaxConcurrentUploads
+	} else {
+		maxConcurrentUploads := config.DefaultMaxConcurrentUploads
+		daemon.configStore.MaxConcurrentUploads = &maxConcurrentUploads
 	}
-	daemon.configStore.MaxConcurrentUploads = &maxConcurrentUploads
 	logrus.Debugf("Reset Max Concurrent Uploads: %d", *daemon.configStore.MaxConcurrentUploads)
 
-	if daemon.imageService != nil {
-		daemon.imageService.UpdateConfig(&maxConcurrentDownloads, &maxConcurrentUploads)
-	}
-
+	daemon.imageService.UpdateConfig(conf.MaxConcurrentDownloads, conf.MaxConcurrentUploads)
 	// prepare reload event attributes with updatable configurations
 	attributes["max-concurrent-downloads"] = fmt.Sprintf("%d", *daemon.configStore.MaxConcurrentDownloads)
 	// prepare reload event attributes with updatable configurations
@@ -295,7 +294,7 @@ func (daemon *Daemon) reloadRegistryMirrors(conf *config.Config, attributes map[
 	return nil
 }
 
-// reloadLiveRestore updates configuration with live restore option
+// reloadLiveRestore updates configuration with live retore option
 // and updates the passed attributes
 func (daemon *Daemon) reloadLiveRestore(conf *config.Config, attributes map[string]string) error {
 	// update corresponding configuration

@@ -4,7 +4,7 @@
 package dockerversion // import "github.com/docker/docker/dockerversion"
 
 // Default build-time variable for library-import.
-// This file is overridden on build with build-time information.
+// This file is overridden on build with build-time informations.
 const (
 	GitCommit             = "library-import"
 	Version               = "library-import"

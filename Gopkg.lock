@@ -144,8 +144,7 @@
   version = "v2.7.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:f42dd37461aa6e799cbd6165311d1be69c670d62685fe325853a0363763d2b83"
+  digest = "1:2b83a7c64adb49e6068c189032bbdd63638abfa29ec108cb9a6d03dd58beebfe"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -182,7 +181,9 @@
     "registry/resumable",
   ]
   pruneopts = "N"
-  revision = "beef00cb2612754d73024fd89d417b3a7114f87f"
+  revision = "a79fabbfe84117696a19671f4aa88b82d0f64fc1"
+  source = "github.com/docker/engine"
+  version = "v18.09.1"
 
 [[projects]]
   digest = "1:ee3f6491ac8a1721b5fa9655da1f7a11e4ab56c0eaf8ffe79debaee49807cfab"

@@ -248,12 +248,20 @@ func (r *Root) Scope() string {
 	return volume.LocalScope
 }
 
+type validationError string
+
+func (e validationError) Error() string {
+	return string(e)
+}
+
+func (e validationError) InvalidParameter() {}
+
 func (r *Root) validateName(name string) error {
 	if len(name) == 1 {
-		return errdefs.InvalidParameter(errors.New("volume name is too short, names should be at least two alphanumeric characters"))
+		return validationError("volume name is too short, names should be at least two alphanumeric characters")
 	}
 	if !volumeNameRegex.MatchString(name) {
-		return errdefs.InvalidParameter(errors.Errorf("%q includes invalid characters for a local volume name, only %q are allowed. If you intended to pass a host directory, use absolute path", name, names.RestrictedNameChars))
+		return validationError(fmt.Sprintf("%q includes invalid characters for a local volume name, only %q are allowed. If you intended to pass a host directory, use absolute path", name, names.RestrictedNameChars))
 	}
 	return nil
 }
@@ -336,10 +344,19 @@ func (v *localVolume) unmount() error {
 	if v.opts != nil {
 		if err := mount.Unmount(v.path); err != nil {
 			if mounted, mErr := mount.Mounted(v.path); mounted || mErr != nil {
-				return errdefs.System(err)
+				return errdefs.System(errors.Wrapf(err, "error while unmounting volume path '%s'", v.path))
 			}
 		}
 		v.active.mounted = false
+	}
+	return nil
+}
+
+func validateOpts(opts map[string]string) error {
+	for opt := range opts {
+		if !validOpts[opt] {
+			return validationError(fmt.Sprintf("invalid option key: %q", opt))
+		}
 	}
 	return nil
 }

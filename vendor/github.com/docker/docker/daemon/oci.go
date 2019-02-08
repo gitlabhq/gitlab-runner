@@ -1,28 +1,27 @@
-package oci // import "github.com/docker/docker/oci"
+package daemon // import "github.com/docker/docker/daemon"
 
 import (
 	"fmt"
 	"regexp"
 	"strconv"
 
-	"github.com/docker/docker/oci/caps"
+	"github.com/docker/docker/container"
+	"github.com/docker/docker/daemon/caps"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 // nolint: gosimple
-var deviceCgroupRuleRegex = regexp.MustCompile("^([acb]) ([0-9]+|\\*):([0-9]+|\\*) ([rwm]{1,3})$")
+var (
+	deviceCgroupRuleRegex = regexp.MustCompile("^([acb]) ([0-9]+|\\*):([0-9]+|\\*) ([rwm]{1,3})$")
+)
 
-// SetCapabilities sets the provided capabilities on the spec
-// All capabilities are added if privileged is true
-func SetCapabilities(s *specs.Spec, add, drop []string, privileged bool) error {
-	var (
-		caplist []string
-		err     error
-	)
-	if privileged {
+func setCapabilities(s *specs.Spec, c *container.Container) error {
+	var caplist []string
+	var err error
+	if c.HostConfig.Privileged {
 		caplist = caps.GetAllCapabilities()
 	} else {
-		caplist, err = caps.TweakCapabilities(s.Process.Capabilities.Bounding, add, drop)
+		caplist, err = caps.TweakCapabilities(s.Process.Capabilities.Bounding, c.HostConfig.CapAdd, c.HostConfig.CapDrop)
 		if err != nil {
 			return err
 		}
@@ -40,8 +39,7 @@ func SetCapabilities(s *specs.Spec, add, drop []string, privileged bool) error {
 	return nil
 }
 
-// AppendDevicePermissionsFromCgroupRules takes rules for the devices cgroup to append to the default set
-func AppendDevicePermissionsFromCgroupRules(devPermissions []specs.LinuxDeviceCgroup, rules []string) ([]specs.LinuxDeviceCgroup, error) {
+func appendDevicePermissionsFromCgroupRules(devPermissions []specs.LinuxDeviceCgroup, rules []string) ([]specs.LinuxDeviceCgroup, error) {
 	for _, deviceCgroupRule := range rules {
 		ss := deviceCgroupRuleRegex.FindAllStringSubmatch(deviceCgroupRule, -1)
 		if len(ss[0]) != 5 {

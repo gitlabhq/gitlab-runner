@@ -42,7 +42,7 @@ func getCheckpointDir(checkDir, checkpointID, ctrName, ctrID, ctrCheckpointDir s
 	} else {
 		switch {
 		case err != nil:
-			err2 = fmt.Errorf("checkpoint %s does not exist for container %s", checkpointID, ctrName)
+			err2 = fmt.Errorf("checkpoint %s does not exists for container %s", checkpointID, ctrName)
 		case err == nil && stat.IsDir():
 			err2 = nil
 		case err == nil:
@@ -95,7 +95,7 @@ func (daemon *Daemon) CheckpointDelete(name string, config types.CheckpointDelet
 	}
 	checkpointDir, err := getCheckpointDir(config.CheckpointDir, config.CheckpointID, name, container.ID, container.CheckpointDir(), false)
 	if err == nil {
-		return os.RemoveAll(checkpointDir)
+		return os.RemoveAll(filepath.Join(checkpointDir, config.CheckpointID))
 	}
 	return err
 }

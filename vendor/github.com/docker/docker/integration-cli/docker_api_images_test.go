@@ -20,7 +20,7 @@ import (
 )
 
 func (s *DockerSuite) TestAPIImagesFilter(c *check.C) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewEnvClient()
 	c.Assert(err, checker.IsNil)
 	defer cli.Close()
 
@@ -88,7 +88,7 @@ func (s *DockerSuite) TestAPIImagesSaveAndLoad(c *check.C) {
 }
 
 func (s *DockerSuite) TestAPIImagesDelete(c *check.C) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewEnvClient()
 	c.Assert(err, checker.IsNil)
 	defer cli.Close()
 
@@ -112,7 +112,7 @@ func (s *DockerSuite) TestAPIImagesDelete(c *check.C) {
 }
 
 func (s *DockerSuite) TestAPIImagesHistory(c *check.C) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewEnvClient()
 	c.Assert(err, checker.IsNil)
 	defer cli.Close()
 
@@ -147,7 +147,7 @@ func (s *DockerSuite) TestAPIImagesImportBadSrc(c *check.C) {
 		}
 	}
 
-	testRequires(c, Network, testEnv.IsLocalDaemon)
+	testRequires(c, Network, SameHostDaemon)
 
 	server := httptest.NewServer(http.NewServeMux())
 	defer server.Close()

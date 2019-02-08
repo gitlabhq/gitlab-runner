@@ -76,7 +76,6 @@ type Daemon struct {
 	SwarmPort       int // FIXME(vdemeester) should probably not be exported
 	DefaultAddrPool []string
 	SubnetSize      uint32
-	DataPathPort    uint32
 	// cached information
 	CachedInfo types.Info
 }
@@ -113,13 +112,12 @@ func New(t testingT, ops ...func(*Daemon)) *Daemon {
 		}
 	}
 	d := &Daemon{
-		id:            id,
-		Folder:        daemonFolder,
-		Root:          daemonRoot,
-		storageDriver: storageDriver,
-		userlandProxy: userlandProxy,
-		// dxr stands for docker-execroot (shortened for avoiding unix(7) path length limitation)
-		execRoot:        filepath.Join(os.TempDir(), "dxr", id),
+		id:              id,
+		Folder:          daemonFolder,
+		Root:            daemonRoot,
+		storageDriver:   storageDriver,
+		userlandProxy:   userlandProxy,
+		execRoot:        filepath.Join(os.TempDir(), "docker-execroot", id),
 		dockerdBinary:   defaultDockerdBinary,
 		swarmListenAddr: defaultSwarmListenAddr,
 		SwarmPort:       DefaultSwarmPort,
@@ -204,7 +202,7 @@ func (d *Daemon) Start(t testingT, args ...string) {
 		ht.Helper()
 	}
 	if err := d.StartWithError(args...); err != nil {
-		t.Fatalf("failed to start daemon with arguments %v : %v", args, err)
+		t.Fatalf("Error starting daemon with arguments %v : %v", args, err)
 	}
 }
 
@@ -286,10 +284,7 @@ func (d *Daemon) StartWithLogFile(out *os.File, providedArgs ...string) error {
 
 	d.Wait = wait
 
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-	tick := ticker.C
-
+	tick := time.Tick(500 * time.Millisecond)
 	// make sure daemon is ready to receive requests
 	startTime := time.Now().Unix()
 	for {
@@ -427,9 +422,7 @@ func (d *Daemon) StopWithError() error {
 	}()
 
 	i := 1
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	tick := ticker.C
+	tick := time.Tick(time.Second)
 
 	if err := d.cmd.Process.Signal(os.Interrupt); err != nil {
 		if strings.Contains(err.Error(), "os: process already finished") {
@@ -559,7 +552,7 @@ func (d *Daemon) LoadBusybox(t assert.TestingT) {
 	if ht, ok := t.(test.HelperT); ok {
 		ht.Helper()
 	}
-	clientHost, err := client.NewClientWithOpts(client.FromEnv)
+	clientHost, err := client.NewEnvClient()
 	assert.NilError(t, err, "failed to create client")
 	defer clientHost.Close()
 
@@ -568,10 +561,11 @@ func (d *Daemon) LoadBusybox(t assert.TestingT) {
 	assert.NilError(t, err, "failed to download busybox")
 	defer reader.Close()
 
-	c := d.NewClientT(t)
-	defer c.Close()
+	client, err := d.NewClient()
+	assert.NilError(t, err, "failed to create client")
+	defer client.Close()
 
-	resp, err := c.ImageLoad(ctx, reader, true)
+	resp, err := client.ImageLoad(ctx, reader, true)
 	assert.NilError(t, err, "failed to load busybox")
 	defer resp.Body.Close()
 }
@@ -631,7 +625,7 @@ func (d *Daemon) queryRootDir() (string, error) {
 		return "", err
 	}
 
-	c := &http.Client{
+	client := &http.Client{
 		Transport: clientConfig.transport,
 	}
 
@@ -643,7 +637,7 @@ func (d *Daemon) queryRootDir() (string, error) {
 	req.URL.Host = clientConfig.addr
 	req.URL.Scheme = clientConfig.scheme
 
-	resp, err := c.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -671,8 +665,9 @@ func (d *Daemon) Info(t assert.TestingT) types.Info {
 	if ht, ok := t.(test.HelperT); ok {
 		ht.Helper()
 	}
-	c := d.NewClientT(t)
-	info, err := c.Info(context.Background())
+	apiclient, err := d.NewClient()
+	assert.NilError(t, err)
+	info, err := apiclient.Info(context.Background())
 	assert.NilError(t, err)
 	return info
 }

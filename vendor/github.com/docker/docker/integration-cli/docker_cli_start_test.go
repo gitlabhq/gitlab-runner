@@ -190,11 +190,10 @@ func (s *DockerSuite) TestStartReturnCorrectExitCode(c *check.C) {
 	dockerCmd(c, "create", "--restart=on-failure:2", "--name", "withRestart", "busybox", "sh", "-c", "exit 11")
 	dockerCmd(c, "create", "--rm", "--name", "withRm", "busybox", "sh", "-c", "exit 12")
 
-	out, exitCode, err := dockerCmdWithError("start", "-a", "withRestart")
+	_, exitCode, err := dockerCmdWithError("start", "-a", "withRestart")
 	c.Assert(err, checker.NotNil)
-	c.Assert(exitCode, checker.Equals, 11, check.Commentf("out: %s", out))
-
-	out, exitCode, err = dockerCmdWithError("start", "-a", "withRm")
+	c.Assert(exitCode, checker.Equals, 11)
+	_, exitCode, err = dockerCmdWithError("start", "-a", "withRm")
 	c.Assert(err, checker.NotNil)
-	c.Assert(exitCode, checker.Equals, 12, check.Commentf("out: %s", out))
+	c.Assert(exitCode, checker.Equals, 12)
 }

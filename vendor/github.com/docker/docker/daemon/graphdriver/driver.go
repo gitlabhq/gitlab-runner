@@ -253,11 +253,6 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 
 	// Check all registered drivers if no priority driver is found
 	for name, initFunc := range drivers {
-		if isDeprecated(name) {
-			// Deprecated storage-drivers are skipped in automatic selection, but
-			// can be selected through configuration.
-			continue
-		}
 		driver, err := initFunc(filepath.Join(config.Root, name), config.DriverOptions, config.UIDMaps, config.GIDMaps)
 		if err != nil {
 			if IsDriverNotSupported(err) {
@@ -319,7 +314,7 @@ func isEmptyDir(name string) bool {
 func isDeprecated(name string) bool {
 	switch name {
 	// NOTE: when deprecating a driver, update daemon.fillDriverInfo() accordingly
-	case "aufs", "devicemapper", "overlay":
+	case "devicemapper", "overlay":
 		return true
 	}
 	return false

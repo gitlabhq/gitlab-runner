@@ -458,7 +458,7 @@ func (s *DockerSuite) TestEventsResize(c *check.C) {
 	cID := strings.TrimSpace(out)
 	c.Assert(waitRun(cID), checker.IsNil)
 
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewEnvClient()
 	c.Assert(err, checker.IsNil)
 	defer cli.Close()
 
@@ -564,7 +564,7 @@ func (s *DockerRegistrySuite) TestEventsImageFilterPush(c *check.C) {
 
 func (s *DockerSuite) TestEventsFilterType(c *check.C) {
 	// FIXME(vdemeester) fails on e2e run
-	testRequires(c, testEnv.IsLocalDaemon)
+	testRequires(c, SameHostDaemon)
 	since := daemonUnixTime(c)
 	name := "labelfiltertest"
 	label := "io.docker.testing=image"

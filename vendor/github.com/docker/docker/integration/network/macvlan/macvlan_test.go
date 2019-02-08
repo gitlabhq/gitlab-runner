@@ -19,7 +19,7 @@ import (
 
 func TestDockerNetworkMacvlanPersistance(t *testing.T) {
 	// verify the driver automatically provisions the 802.1q link (dm-dummy0.60)
-	skip.If(t, testEnv.IsRemoteDaemon)
+	skip.If(t, testEnv.IsRemoteDaemon())
 	skip.If(t, !macvlanKernelSupport(), "Kernel doesn't support macvlan")
 
 	d := daemon.New(t)
@@ -30,19 +30,20 @@ func TestDockerNetworkMacvlanPersistance(t *testing.T) {
 	n.CreateMasterDummy(t, master)
 	defer n.DeleteInterface(t, master)
 
-	c := d.NewClientT(t)
+	client, err := d.NewClient()
+	assert.NilError(t, err)
 
 	netName := "dm-persist"
-	net.CreateNoError(t, context.Background(), c, netName,
+	net.CreateNoError(t, context.Background(), client, netName,
 		net.WithMacvlan("dm-dummy0.60"),
 	)
-	assert.Check(t, n.IsNetworkAvailable(c, netName))
+	assert.Check(t, n.IsNetworkAvailable(client, netName))
 	d.Restart(t)
-	assert.Check(t, n.IsNetworkAvailable(c, netName))
+	assert.Check(t, n.IsNetworkAvailable(client, netName))
 }
 
 func TestDockerNetworkMacvlan(t *testing.T) {
-	skip.If(t, testEnv.IsRemoteDaemon)
+	skip.If(t, testEnv.IsRemoteDaemon())
 	skip.If(t, !macvlanKernelSupport(), "Kernel doesn't support macvlan")
 
 	for _, tc := range []struct {
@@ -68,9 +69,11 @@ func TestDockerNetworkMacvlan(t *testing.T) {
 	} {
 		d := daemon.New(t)
 		d.StartWithBusybox(t)
-		c := d.NewClientT(t)
 
-		t.Run(tc.name, tc.test(c))
+		client, err := d.NewClient()
+		assert.NilError(t, err)
+
+		t.Run(tc.name, tc.test(client))
 
 		d.Stop(t)
 		// FIXME(vdemeester) clean network
