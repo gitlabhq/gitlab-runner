@@ -171,47 +171,8 @@ func detectBlogPostMergeRequest() []string {
 
 	version := detectVersion()
 
-	q := url.Values{}
-	q.Add("labels", ReleasePostLabel)
-	q.Add("state", "opened")
-	q.Add("milestone", fmt.Sprintf("%s.%s", version[0], version[1]))
-
-	rawURL := fmt.Sprintf("https://gitlab.com/api/v4/projects/%s/merge_requests?%s", url.QueryEscape(WWWGitlabComProjectID), q.Encode())
-
-	findMergeRequestURL, err := url.Parse(rawURL)
-	if err != nil {
-		fmt.Printf("Error while parsing findMergeRequestURL: %v", err)
-
-		return []string{"", ""}
-	}
-
-	req, err := http.NewRequest(http.MethodGet, findMergeRequestURL.String(), nil)
-	if err != nil {
-		fmt.Printf("Error while creating HTTP Request: %v", err)
-
-		return []string{"", ""}
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("Error while requesting API endpoint: %v", err)
-
-		return []string{"", ""}
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("Error while reading response body: %v", err)
-
-		return []string{"", ""}
-	}
-
-	var response listMergeRequestsResponse
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		fmt.Printf("Error while parsing response JSON: %v", err)
-
+	mergeRequests := listBlogPostMergeRequests(version)
+	if mergeRequests == nil {
 		return []string{"", ""}
 	}
 
@@ -220,11 +181,11 @@ func detectBlogPostMergeRequest() []string {
 	}
 
 	fmt.Println("Found following www-gitlab-com merge requests:")
-	for _, entry := range response {
+	for _, entry := range mergeRequests {
 		printEntry(entry)
 	}
 
-	for _, chosen := range response {
+	for _, chosen := range mergeRequests {
 		r := regexp.MustCompile("gitlab.com/gitlab-com/www-gitlab-com/blob/release-\\d+-\\d+/data/release_posts/(\\d+)_(\\d+)_(\\d+)_gitlab_\\d+_\\d+_released.yml")
 		dateParts := r.FindStringSubmatch(chosen.Description)
 
@@ -246,6 +207,55 @@ func detectBlogPostMergeRequest() []string {
 	fmt.Println("Release Post merge request was not auto-detected. Please enter the ID manually")
 
 	return []string{"", ""}
+}
+
+func listBlogPostMergeRequests(version []string) listMergeRequestsResponse {
+	q := url.Values{}
+	q.Add("labels", ReleasePostLabel)
+	q.Add("state", "opened")
+	q.Add("milestone", fmt.Sprintf("%s.%s", version[0], version[1]))
+
+	rawURL := fmt.Sprintf("https://gitlab.com/api/v4/projects/%s/merge_requests?%s", url.QueryEscape(WWWGitlabComProjectID), q.Encode())
+
+	findMergeRequestURL, err := url.Parse(rawURL)
+	if err != nil {
+		fmt.Printf("Error while parsing findMergeRequestURL: %v", err)
+
+		return nil
+	}
+
+	req, err := http.NewRequest(http.MethodGet, findMergeRequestURL.String(), nil)
+	if err != nil {
+		fmt.Printf("Error while creating HTTP Request: %v", err)
+
+		return nil
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("Error while requesting API endpoint: %v", err)
+
+		return nil
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Error while reading response body: %v", err)
+
+		return nil
+	}
+
+	var response listMergeRequestsResponse
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		fmt.Printf("Error while parsing response JSON: %v", err)
+
+		return nil
+	}
+
+	return response
 }
 
 func detectReleaseMergeRequestDeadline() string {
