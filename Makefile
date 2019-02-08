@@ -65,9 +65,9 @@ MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mocke
 
 .PHONY: clean version mocks
 
-all: deps helper-docker build
+all: deps docker build
 
-include Makefile.runner_helper.mk
+include Makefile.docker.mk
 
 help:
 	# Commands:
@@ -76,7 +76,7 @@ help:
 	#
 	# Development commands:
 	# make install - install the version suitable for your OS as gitlab-runner
-	# make helper-docker - build docker dependencies
+	# make docker - build docker dependencies
 	#
 	# Testing commands:
 	# make test - run project tests
@@ -117,12 +117,13 @@ build_simple: $(GOPATH_SETUP)
 		-o "out/binaries/$(NAME)" \
 		$(PKG)
 
-build_current: helper-docker build_simple
+build_current: docker build_simple
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
-test: $(PKG_BUILD_DIR) helper-docker
+test: $(PKG_BUILD_DIR) docker
+	# Running tests...
 	go test $(OUR_PACKAGES) $(TESTFLAGS)
 
 parallel_test_prepare: $(GOPATH_SETUP)
