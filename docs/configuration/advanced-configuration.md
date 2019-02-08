@@ -1,3 +1,7 @@
+---
+table_display_block: true
+---
+
 # Advanced configuration
 
 GitLab Runner configuration uses the [TOML][] format.
@@ -65,8 +69,8 @@ be repeated after all requests for the other workers + their sleeps are called.
 
 ## The `[session_server]` section
 
-The section `[session_server]` is a system runner level configuration, so it should be specified at the root level, 
-not per executor i.e. it should be outside `[[runners]]` section. The session server allows the user to interact 
+The section `[session_server]` is a system runner level configuration, so it should be specified at the root level,
+not per executor i.e. it should be outside `[[runners]]` section. The session server allows the user to interact
 with jobs that the Runner is responsible for. A good example of this is the
 [interactive web terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal).
 
@@ -527,7 +531,7 @@ minimizing the possibility of leaking the cache adapter's credentials.
 
 NOTE: **Note:**
 Previous note implies [S3 cache adapter](#the-runnerscaches3-section), if configured to use
-IAM instance profile, will use the profile attached with GitLab Runner's machine. 
+IAM instance profile, will use the profile attached with GitLab Runner's machine.
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
 use the `CredentialsFile`, the file needs to be present on GitLab Runner's machine.
 
