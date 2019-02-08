@@ -27,7 +27,6 @@ type ReleaseMetadata struct {
 	ReleaseBlogPostDeadline string
 	HelmChartMajor          int
 	HelmChartMinor          int
-	HelmChartPatch          int
 }
 
 const (
@@ -66,7 +65,6 @@ var (
 
 	helmChartMajor = flag.String("helm-chart-major", detectHelmChartVersion()[0], "Major version number of GitLab Runner Helm Chart")
 	helmChartMinor = flag.String("helm-chart-minor", detectHelmChartVersion()[1], "Minor version number of GitLab Runner Helm Chart")
-	helmChartPatch = flag.String("helm-chart-patch", detectHelmChartVersion()[2], "Patch version number of GitLab Runner Helm Chart")
 )
 
 func detectVersion() []string {
@@ -226,26 +224,28 @@ func detectBlogPostMergeRequest() []string {
 		printEntry(entry)
 	}
 
-	if len(response) < 1 {
-		fmt.Println("Release Post merge request was not auto-detected. Please enter the ID manually")
+	for _, chosen := range response {
+		r := regexp.MustCompile("gitlab.com/gitlab-com/www-gitlab-com/blob/release-\\d+-\\d+/data/release_posts/(\\d+)_(\\d+)_(\\d+)_gitlab_\\d+_\\d+_released.yml")
+		dateParts := r.FindStringSubmatch(chosen.Description)
 
-		return []string{"", ""}
+		if len(dateParts) < 1 {
+			continue
+		}
+
+		fmt.Println("Choosing:")
+		printEntry(chosen)
+
+		detectedMergeRequest = []string{
+			strconv.Itoa(chosen.ID),
+			fmt.Sprintf("%s-%s-%s", dateParts[1], dateParts[2], dateParts[3]),
+		}
+
+		return detectedMergeRequest
 	}
 
-	chosen := response[0]
+	fmt.Println("Release Post merge request was not auto-detected. Please enter the ID manually")
 
-	fmt.Println("Choosing:")
-	printEntry(chosen)
-
-	r := regexp.MustCompile("gitlab.com/gitlab-com/www-gitlab-com/blob/release-\\d+-\\d+/data/release_posts/(\\d+)_(\\d+)_(\\d+)_gitlab_\\d+_\\d+_released.yml")
-	dateParts := r.FindStringSubmatch(chosen.Description)
-
-	detectedMergeRequest = []string{
-		strconv.Itoa(chosen.ID),
-		fmt.Sprintf("%s-%s-%s", dateParts[1], dateParts[2], dateParts[3]),
-	}
-
-	return detectedMergeRequest
+	return []string{"", ""}
 }
 
 func detectReleaseMergeRequestDeadline() string {
@@ -341,12 +341,6 @@ func prepareMetadata() {
 		panic(err)
 	}
 
-	askOnce("Helm Chart Patch version number", helmChartPatch)
-	releaseMetadata.HelmChartPatch, err = strconv.Atoi(*helmChartPatch)
-	if err != nil {
-		panic(err)
-	}
-
 	askOnce("GitLab.com handle of the release manager", releaseManagerHandle)
 	releaseMetadata.ReleaseManagerHandle = *releaseManagerHandle
 
@@ -399,6 +393,9 @@ func prepareIssueContent() string {
 	tpl.Funcs(template.FuncMap{
 		"inc": func(i int) int {
 			return i + 1
+		},
+		"dec": func(i int) int {
+			return i - 1
 		},
 	})
 
