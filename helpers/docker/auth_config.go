@@ -11,9 +11,9 @@ import (
 	"path"
 	"strings"
 
+	"github.com/docker/cli/cli/config/configfile"
+	"github.com/docker/cli/cli/config/credentials"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/cliconfig/configfile"
-	"github.com/docker/docker/cliconfig/credentials"
 	"github.com/docker/docker/pkg/homedir"
 )
 

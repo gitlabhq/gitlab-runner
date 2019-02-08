@@ -38,17 +38,22 @@ ignored = ["test", "appengine"]
   branch = "master"
   name = "github.com/ayufan/golang-kardianos-service"
 
-# temporary fork to handle Sirupsen -> sirupsen
 [[constraint]]
   name = "github.com/docker/distribution"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/docker-distribution"
+  version = "2.7"
 
-# temporary fork to handle Sirupsen -> sirupsen
+# We are using `github.com/docker/engine` as source since it has tagged
+# versions, unlike `github.com/moby/moby`, please read
+# https://github.com/moby/moby/issues/38063#issuecomment-431324613 for a
+# detailed explanation.
 [[constraint]]
   name = "github.com/docker/docker"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/moby"
+  source = "github.com/docker/engine"
+  version = "18.09"
+
+[[constraint]]
+  name = "github.com/docker/cli"
+  version = "18.09"
 
 [[constraint]]
   name = "github.com/docker/go-connections"
@@ -229,11 +234,9 @@ ignored = ["test", "appengine"]
   name = "github.com/minio/go-homedir"
   revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
 
-# temporary fork to hanled Sirupsen -> sirupsen
 [[override]]
   name = "github.com/opencontainers/runc"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/runc"
+  branch = "master"
 
 [[override]]
   name = "github.com/opencontainers/runtime-spec"

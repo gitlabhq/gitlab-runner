@@ -1,6 +1,7 @@
 package docker_helpers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,7 +16,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 // The default API version used to create a new docker client.
@@ -125,7 +125,7 @@ func (c *officialDockerClient) ContainerExecCreate(ctx context.Context, containe
 	return resp, wrapError("ContainerExecCreate", err, started)
 }
 
-func (c *officialDockerClient) ContainerExecAttach(ctx context.Context, execID string, config types.ExecConfig) (types.HijackedResponse, error) {
+func (c *officialDockerClient) ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error) {
 	started := time.Now()
 	resp, err := c.client.ContainerExecAttach(ctx, execID, config)
 	return resp, wrapError("ContainerExecAttach", err, started)
@@ -210,14 +210,14 @@ func New(c DockerCredentials, apiVersion string) (Client, error) {
 }
 
 func newHTTPTransport(c DockerCredentials) (*http.Transport, error) {
-	proto, addr, _, err := client.ParseHost(c.Host)
+	url, err := client.ParseHostURL(c.Host)
 	if err != nil {
 		return nil, err
 	}
 
 	tr := &http.Transport{}
 
-	if err := configureTransport(tr, proto, addr); err != nil {
+	if err := configureTransport(tr, url.Scheme, url.Host); err != nil {
 		return nil, err
 	}
 

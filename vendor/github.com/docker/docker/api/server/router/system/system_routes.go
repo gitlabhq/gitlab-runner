@@ -1,15 +1,14 @@
-package system
+package system // import "github.com/docker/docker/api/server/router/system"
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"github.com/docker/docker/api"
-	"github.com/docker/docker/api/errors"
 	"github.com/docker/docker/api/server/httputils"
+	"github.com/docker/docker/api/server/router/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
@@ -17,7 +16,9 @@ import (
 	timetypes "github.com/docker/docker/api/types/time"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/pkg/ioutils"
-	"golang.org/x/net/context"
+	pkgerrors "github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 func optionsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
@@ -25,7 +26,11 @@ func optionsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request,
 	return nil
 }
 
-func pingHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+func (s *systemRouter) pingHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	builderVersion := build.BuilderVersion(*s.features)
+	if bv := builderVersion; bv != "" {
+		w.Header().Set("Builder-Version", string(bv))
+	}
 	_, err := w.Write([]byte{'O', 'K'})
 	return err
 }
@@ -35,8 +40,8 @@ func (s *systemRouter) getInfo(ctx context.Context, w http.ResponseWriter, r *ht
 	if err != nil {
 		return err
 	}
-	if s.clusterProvider != nil {
-		info.Swarm = s.clusterProvider.Info()
+	if s.cluster != nil {
+		info.Swarm = s.cluster.Info()
 	}
 
 	if versions.LessThan(httputils.VersionFromContext(ctx), "1.25") {
@@ -60,24 +65,76 @@ func (s *systemRouter) getInfo(ctx context.Context, w http.ResponseWriter, r *ht
 		old.SecurityOptions = nameOnlySecurityOptions
 		return httputils.WriteJSON(w, http.StatusOK, old)
 	}
+	if versions.LessThan(httputils.VersionFromContext(ctx), "1.39") {
+		if info.KernelVersion == "" {
+			info.KernelVersion = "<unknown>"
+		}
+		if info.OperatingSystem == "" {
+			info.OperatingSystem = "<unknown>"
+		}
+	}
 	return httputils.WriteJSON(w, http.StatusOK, info)
 }
 
 func (s *systemRouter) getVersion(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	info := s.backend.SystemVersion()
-	info.APIVersion = api.DefaultVersion
 
 	return httputils.WriteJSON(w, http.StatusOK, info)
 }
 
 func (s *systemRouter) getDiskUsage(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	du, err := s.backend.SystemDiskUsage()
-	if err != nil {
+	eg, ctx := errgroup.WithContext(ctx)
+
+	var du *types.DiskUsage
+	eg.Go(func() error {
+		var err error
+		du, err = s.backend.SystemDiskUsage(ctx)
+		return err
+	})
+
+	var builderSize int64 // legacy
+	eg.Go(func() error {
+		var err error
+		builderSize, err = s.fscache.DiskUsage(ctx)
+		if err != nil {
+			return pkgerrors.Wrap(err, "error getting fscache build cache usage")
+		}
+		return nil
+	})
+
+	var buildCache []*types.BuildCache
+	eg.Go(func() error {
+		var err error
+		buildCache, err = s.builder.DiskUsage(ctx)
+		if err != nil {
+			return pkgerrors.Wrap(err, "error getting build cache usage")
+		}
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
 		return err
 	}
 
+	for _, b := range buildCache {
+		builderSize += b.Size
+	}
+
+	du.BuilderSize = builderSize
+	du.BuildCache = buildCache
+
 	return httputils.WriteJSON(w, http.StatusOK, du)
 }
+
+type invalidRequestError struct {
+	Err error
+}
+
+func (e invalidRequestError) Error() string {
+	return e.Err.Error()
+}
+
+func (e invalidRequestError) InvalidParameter() {}
 
 func (s *systemRouter) getEvents(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	if err := httputils.ParseForm(r); err != nil {
@@ -99,7 +156,7 @@ func (s *systemRouter) getEvents(ctx context.Context, w http.ResponseWriter, r *
 	)
 	if !until.IsZero() {
 		if until.Before(since) {
-			return errors.NewBadRequestError(fmt.Errorf("`since` time (%s) cannot be after `until` time (%s)", r.Form.Get("since"), r.Form.Get("until")))
+			return invalidRequestError{fmt.Errorf("`since` time (%s) cannot be after `until` time (%s)", r.Form.Get("since"), r.Form.Get("until"))}
 		}
 
 		now := time.Now()
@@ -108,11 +165,11 @@ func (s *systemRouter) getEvents(ctx context.Context, w http.ResponseWriter, r *
 
 		if !onlyPastEvents {
 			dur := until.Sub(now)
-			timeout = time.NewTimer(dur).C
+			timeout = time.After(dur)
 		}
 	}
 
-	ef, err := filters.FromParam(r.Form.Get("filters"))
+	ef, err := filters.FromJSON(r.Form.Get("filters"))
 	if err != nil {
 		return err
 	}

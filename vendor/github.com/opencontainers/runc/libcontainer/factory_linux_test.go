@@ -7,12 +7,14 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"syscall"
 	"testing"
 
-	"github.com/docker/docker/pkg/mount"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runtime-spec/specs-go"
+
+	"golang.org/x/sys/unix"
 )
 
 func newTestRoot() (string, error) {
@@ -30,6 +32,32 @@ func TestFactoryNew(t *testing.T) {
 	}
 	defer os.RemoveAll(root)
 	factory, err := New(root, Cgroupfs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if factory == nil {
+		t.Fatal("factory should not be nil")
+	}
+	lfactory, ok := factory.(*LinuxFactory)
+	if !ok {
+		t.Fatal("expected linux factory returned on linux based systems")
+	}
+	if lfactory.Root != root {
+		t.Fatalf("expected factory root to be %q but received %q", root, lfactory.Root)
+	}
+
+	if factory.Type() != "libcontainer" {
+		t.Fatalf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer")
+	}
+}
+
+func TestFactoryNewIntelRdt(t *testing.T) {
+	root, rerr := newTestRoot()
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
+	defer os.RemoveAll(root)
+	factory, err := New(root, Cgroupfs, IntelRdtFs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +127,7 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if !found {
 		t.Fatalf("Factory Root is not listed in mounts list")
 	}
-	defer syscall.Unmount(root, syscall.MNT_DETACH)
+	defer unix.Unmount(root, unix.MNT_DETACH)
 }
 
 func TestFactoryLoadNotExists(t *testing.T) {
@@ -163,7 +191,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if err := marshal(filepath.Join(root, id, stateFilename), expectedState); err != nil {
 		t.Fatal(err)
 	}
-	factory, err := New(root, Cgroupfs)
+	factory, err := New(root, Cgroupfs, IntelRdtFs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,6 +230,6 @@ func marshal(path string, v interface{}) error {
 
 type unserializableHook struct{}
 
-func (unserializableHook) Run(configs.HookState) error {
+func (unserializableHook) Run(*specs.State) error {
 	return nil
 }
