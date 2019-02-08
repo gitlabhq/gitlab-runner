@@ -18,7 +18,7 @@ data:
 
     [[runners]]
       name = "Kubernetes Runner"
-      url = "https://gitlab.com/ci"
+      url = "https://gitlab.com"
       token = "...."
       executor = "kubernetes"
       [runners.kubernetes]
@@ -26,13 +26,19 @@ data:
         image = "busybox"
 ```
 
-Where `image` (optional) is the default Docker image to run jobs on top of.
+Where `image` (optional) is the default Docker image to run jobs on top of.  
+
+Put this config map in a file named `runner_config.yml` and run the command 
+`kubectl apply -f runner_config.yml`.
 
 >**Note:**
 The `token` can be found in `/etc/gitlab-runner/config.toml` and should
 have been generated after registering the Runner. It's not to be confused
 with the registration token that can be found under your project's
-**Settings > CI/CD > Runners settings**.
+**Settings > CI/CD > Runners settings**.  Alternatively, you can obtain the
+runner token using the GitLab API 
+`curl -X POST https://gitlab.com/api/v4/runners --form "token=<registration-token>"`
+where `<registration token>` is obtained from the **Settings > CI/CD > Runners settings**.
 
 
 
@@ -75,6 +81,9 @@ spec:
           path: /usr/share/ca-certificates/mozilla
         name: cacerts
 ```
+
+Put this deployment in a file named `runner_deployment.yml` and run the command 
+`kubectl apply -f runner_deployment.yml`.
 
 For more details see [Kubernetes executor](../executors/kubernetes.md)
 and the [[runners.kubernetes] section of advanced configuration](../configuration/advanced-configuration.md#the-runners-kubernetes-section).
