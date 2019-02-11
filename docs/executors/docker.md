@@ -13,6 +13,13 @@ run on your workstation. The added benefit is that you can test all the
 commands that we will explore later from your shell, rather than having to test
 them on a dedicated CI server.
 
+NOTE: **Note:**
+GitLab Runner uses Docker Engine API
+[v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
+Engine. Refer to the [API version
+matrix](https://docs.docker.com/develop/sdk/#api-version-matrix) for
+compatible versions of Docker.
+
 ## Workflow
 
 The Docker executor divides the build into multiple steps:
