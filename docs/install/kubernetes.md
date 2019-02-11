@@ -1,5 +1,8 @@
 # Run GitLab Runner on a Kubernetes cluster
 
+TIP: **Tip:**
+We also provide a [GitLab Runner Helm Chart](https://docs.gitlab.com/ce/install/kubernetes/gitlab_runner_chart.html)
+
 To get started with the GitLab CI Runner on Kubernetes you need to define
 resources that you can then push to the cluster with `kubectl`.
 
