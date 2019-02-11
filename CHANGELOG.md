@@ -1,3 +1,48 @@
+v11.8.0-rc1 (2019-02-11)
+- Kubernetes executor: add support for Node tolerations !941
+- Update logrus version to v1.3.0 !1137
+- Docs - Clarify Docker Runner Documentation !1097
+- Update github.com/stretchr/testify dependency !1141
+- Update LICENSE file !1132
+- Update example of cache config !1140
+- Update documentation for autoscaling on AWS !1142
+- Remove unnecessary dep constraint !1147
+- readme: make author block render md !999
+- Corrected note when using a config container to mount custom data volume. !1126
+- Fix typo in documentation of k8s executor. !1118
+- Make new runner tokens compatible with docker-machine executor !1144
+- docs: Use `sudo tee` for apt pinning. !1047
+- docs: fix indendation !1081
+- Updated hint on running Windows 10 shell as administrator !1136
+- Fixed typo in logged information !1074
+- Update registry_and_cache_servers.md !1098
+- Update golang.org/x/sys !1149
+- Refactor frontpage for grammar and style !1151
+- Update github.com/Azure/go-ansiterm dependency !1152
+- Testing on windows with vagrant !1003
+- Add fix for race condition in windows cache extraction !863
+- Consolidate docker API version definition !1154
+- Prevent Executors from modifying Runner configuration !1134
+- Update ExecutorProvider interface signature !1159
+- Update logging for processing multi runner !1160
+- Update kubernetes.md - fix typo for bearer_token !1162
+- Update github.com/prometheus/client_golang dep !1150
+- Remove ContainerWait from docker client !1155
+- Update advanced-configuration.md: Fix blockquote not reaching the entire note !1163
+- Fix docs review app URL !1169
+- docs: Add a helpful command to reload config !1106
+- Update AWS autoscale documentation !1166
+- Refactor dockerfiles !1068
+- Add link to AWS driver about default values !1171
+- Add support for fedora/29 packages !1082
+- Add windows server 2019 as default for windows development !1165
+- Docs: Fix bad anchor links in runner docs !1177
+- Improve documentation concerning proxy setting in the case of docker-in-docker-executor !1090
+- Add few fixes to Release Checklist template !1135
+- Set table to not display under TOC !1168
+- Update Docker client SDK !1148
+- docs: add GitLab Runner Helm Chart link !945
+
 v11.7.0 (2019-01-22)
 - Docs: Cleaning up the executors doc !1114
 - Update to testify v1.2.2 !1119
