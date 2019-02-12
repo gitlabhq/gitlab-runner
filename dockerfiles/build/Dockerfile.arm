@@ -1,4 +1,4 @@
-FROM multiarch/alpine:armhf-v3.8
+FROM multiarch/alpine:armhf-v3.9
 
 RUN apk add --no-cache bash ca-certificates git git-lfs miniperl \
 	&& ln -s miniperl /usr/bin/perl
