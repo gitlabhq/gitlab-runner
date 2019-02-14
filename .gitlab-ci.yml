@@ -35,6 +35,20 @@ image: $CI_IMAGE
   tags:
   - docker
 
+.windows1803: &windows1803
+  variables:
+    WINDOWS_VERSION: nanoserver1803
+  tags:
+  - windows-1803
+  - shell
+
+.windows1809: &windows1809
+  variables:
+    WINDOWS_VERSION: nanoserver1809
+  tags:
+  - windows-1809
+  - shell
+
 #
 # Prepare stage
 #
@@ -262,16 +276,12 @@ unit test with race:
   - /.*/@gitlab-org/gitlab-runner
 
 windows 1803 tests:
+  <<: *windows1803
   extends: .windows test
-  tags:
-  - windows-1803
-  - shell
 
 windows 1809 tests:
+  <<: *windows1809
   extends: .windows test
-  tags:
-  - windows-1809
-  - shell
 
 git 1.7.1:
   <<: *except_docs
@@ -404,6 +414,22 @@ package-rpm: *packages
   tags:
   - release
 
+.build_windows_docker_images:
+  <<: *except_docs
+  stage: release
+  variables:
+    PUSH_TO_DOCKER_HUB: "false"
+    GIT_VERSION: "2.21.0"
+    GIT_VERSION_BUILD: "1"
+    GIT_256_CHECKSUM: "bd91db55bd95eaa80687df28877e2df8c8858a0266e9c67331cfddba2735f25c"
+    GIT_LFS_VERSION: "2.7.1"
+    GIT_LFS_256_CHECKSUM: "5c12db9728b53cba23e5f58f4a53d88cb2132e82fa1de0f8a79ce9d112e4d396"
+  before_script:
+  - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
+  script:
+  - .\ci\build_release_windows_images.ps1
+
+
 .release: &release
   <<: *except_docs
   stage: release
@@ -460,6 +486,16 @@ development docker images:
   tags:
   - docker
 
+development nanoserver1803 helper docker image:
+  <<: *release_development
+  <<: *windows1803
+  extends: .build_windows_docker_images
+
+development nanoserver1809 helper docker image:
+  <<: *release_development
+  <<: *windows1809
+  extends: .build_windows_docker_images
+
 bleeding edge S3:
   <<: *release_s3
   <<: *release_bleeding_edge
@@ -479,6 +515,26 @@ bleeding edge docker images:
   <<: *release_bleeding_edge
   environment:
     name: bleeding_edge/docker_images
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+bleeding edge nanoserver1803 docker images:
+  <<: *release_bleeding_edge
+  <<: *windows1803
+  extends: .build_windows_docker_images
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+  environment:
+    name: bleeding_edge/docker_images/windows1803
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+bleeding edge nanoserver1809 docker images:
+  <<: *release_bleeding_edge
+  <<: *windows1809
+  extends: .build_windows_docker_images
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+  environment:
+    name: bleeding_edge/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable S3:
@@ -502,6 +558,26 @@ stable docker images:
     name: stable/docker_images
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
+stable nanoserver1803 docker images:
+  <<: *release_stable
+  <<: *windows1803
+  extends: .build_windows_docker_images
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+  environment:
+    name: stable/docker_images/windows1803
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable nanoserver1809 docker images:
+  <<: *release_stable
+  <<: *windows1809
+  extends: .build_windows_docker_images
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+  environment:
+    name: stable/docker_images/windows1809
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
 static QA:
   <<: *except_docs
   stage: release
@@ -515,4 +591,3 @@ static QA:
       jq -C . gl-code-quality-report.json
       exit 1
     fi
-
