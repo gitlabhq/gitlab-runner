@@ -19,9 +19,9 @@ import (
 	"github.com/tevino/abool"
 )
 
-const repoRemoteURL = "https://gitlab.com/gitlab-org/gitlab-test.git"
-const repoSHA = "6907208d755b60ebeacb2e9dfea74c92c3449a1f"
-const repoBeforeSHA = "c347ca2e140aa667b968e51ed0ffe055501fe4f4"
+const repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git"
+const repoSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"
+const repoBeforeSHA = "ca50079dac5293292f83a4d454922ba8db44e7a3"
 const repoRefName = "master"
 const repoRefType = RefTypeBranch
 
