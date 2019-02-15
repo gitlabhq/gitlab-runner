@@ -10,7 +10,7 @@ import (
 
 func TestVariablesJSON(t *testing.T) {
 	var x JobVariable
-	data := []byte(`{"key": "FOO", "value": "bar", "public": true, "internal": true, "file": true}`)
+	data := []byte(`{"key": "FOO", "value": "bar", "public": true, "internal": true, "file": true, "masked": true}`)
 
 	err := json.Unmarshal(data, &x)
 	assert.NoError(t, err)
@@ -19,17 +19,18 @@ func TestVariablesJSON(t *testing.T) {
 	assert.Equal(t, true, x.Public)
 	assert.Equal(t, false, x.Internal) // cannot be set from the network
 	assert.Equal(t, true, x.File)
+	assert.Equal(t, true, x.Masked)
 }
 
 func TestVariableString(t *testing.T) {
-	v := JobVariable{"key", "value", false, false, false}
+	v := JobVariable{Key: "key", Value: "value"}
 	assert.Equal(t, "key=value", v.String())
 }
 
 func TestPublicAndInternalVariables(t *testing.T) {
-	v1 := JobVariable{"key", "value", false, false, false}
-	v2 := JobVariable{"public", "value", true, false, false}
-	v3 := JobVariable{"private", "value", false, true, false}
+	v1 := JobVariable{Key: "key", Value: "value"}
+	v2 := JobVariable{Key: "public", Value: "value", Public: true}
+	v3 := JobVariable{Key: "private", Value: "value", Internal: true}
 	all := JobVariables{v1, v2, v3}
 	public := all.PublicOrInternal()
 	assert.NotContains(t, public, v1)
@@ -37,15 +38,24 @@ func TestPublicAndInternalVariables(t *testing.T) {
 	assert.Contains(t, public, v3)
 }
 
+func TestMaskedVariables(t *testing.T) {
+	v1 := JobVariable{Key: "key", Value: "key_value"}
+	v2 := JobVariable{Key: "masked", Value: "masked_value", Masked: true}
+	all := JobVariables{v1, v2}
+	masked := all.Masked()
+	assert.NotContains(t, masked, v1.Value)
+	assert.Contains(t, masked, v2.Value)
+}
+
 func TestListVariables(t *testing.T) {
-	v := JobVariables{{"key", "value", false, false, false}}
+	v := JobVariables{{Key: "key", Value: "value"}}
 	assert.Equal(t, []string{"key=value"}, v.StringList())
 }
 
 func TestGetVariable(t *testing.T) {
-	v1 := JobVariable{"key", "key_value", false, false, false}
-	v2 := JobVariable{"public", "public_value", true, false, false}
-	v3 := JobVariable{"private", "private_value", false, false, false}
+	v1 := JobVariable{Key: "key", Value: "key_value"}
+	v2 := JobVariable{Key: "public", Value: "public_value", Public: true}
+	v3 := JobVariable{Key: "private", Value: "private_value"}
 	all := JobVariables{v1, v2, v3}
 
 	assert.Equal(t, "public_value", all.Get("public"))
@@ -55,7 +65,7 @@ func TestGetVariable(t *testing.T) {
 func TestParseVariable(t *testing.T) {
 	v, err := ParseVariable("key=value=value2")
 	assert.NoError(t, err)
-	assert.Equal(t, JobVariable{"key", "value=value2", false, false, false}, v)
+	assert.Equal(t, JobVariable{Key: "key", Value: "value=value2"}, v)
 }
 
 func TestInvalidParseVariable(t *testing.T) {
@@ -65,10 +75,10 @@ func TestInvalidParseVariable(t *testing.T) {
 
 func TestVariablesExpansion(t *testing.T) {
 	all := JobVariables{
-		{"key", "value_of_$public", false, false, false},
-		{"public", "some_value", true, false, false},
-		{"private", "value_of_${public}", false, false, false},
-		{"public", "value_of_$undefined", true, false, false},
+		{Key: "key", Value: "value_of_$public"},
+		{Key: "public", Value: "some_value", Public: true},
+		{Key: "private", Value: "value_of_${public}"},
+		{Key: "public", Value: "value_of_$undefined", Public: true},
 	}
 
 	expanded := all.Expand()
@@ -81,10 +91,10 @@ func TestVariablesExpansion(t *testing.T) {
 
 func TestSpecialVariablesExpansion(t *testing.T) {
 	all := JobVariables{
-		{"key", "$$", false, false, false},
-		{"key2", "$/dsa", true, false, false},
-		{"key3", "aa$@bb", false, false, false},
-		{"key4", "aa${@}bb", false, false, false},
+		{Key: "key", Value: "$$"},
+		{Key: "key2", Value: "$/dsa", Public: true},
+		{Key: "key3", Value: "aa$@bb"},
+		{Key: "key4", Value: "aa${@}bb"},
 	}
 
 	expanded := all.Expand()
@@ -149,5 +159,4 @@ func TestMultipleUsageOfAKey(t *testing.T) {
 			}
 		})
 	}
-
 }

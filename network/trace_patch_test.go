@@ -1,7 +1,6 @@
 package network
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,8 +9,7 @@ import (
 var traceContent = "test content"
 
 func TestNewTracePatch(t *testing.T) {
-	trace := bytes.NewBufferString(traceContent)
-	tp, err := newTracePatch(*trace, 0)
+	tp, err := newTracePatch([]byte(traceContent), 0)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, tp.Offset())
@@ -20,14 +18,12 @@ func TestNewTracePatch(t *testing.T) {
 }
 
 func TestInvalidTracePatchInitialOffsetValue(t *testing.T) {
-	trace := bytes.NewBufferString("test")
-	_, err := newTracePatch(*trace, trace.Len()+10)
+	_, err := newTracePatch([]byte(traceContent), len(traceContent)+10)
 	assert.EqualError(t, err, "Range is invalid, limit can't be less than offset")
 }
 
 func TestTracePatch_PatchAfterSetNewOffset(t *testing.T) {
-	trace := bytes.NewBufferString(traceContent)
-	tp, err := newTracePatch(*trace, 0)
+	tp, err := newTracePatch([]byte(traceContent), 0)
 	assert.NoError(t, err)
 
 	tp.SetNewOffset(5)
@@ -35,8 +31,7 @@ func TestTracePatch_PatchAfterSetNewOffset(t *testing.T) {
 }
 
 func TestTracePatchEmptyPatch(t *testing.T) {
-	trace := bytes.NewBufferString(traceContent)
-	tp, err := newTracePatch(*trace, len(traceContent))
+	tp, err := newTracePatch([]byte(traceContent), len(traceContent))
 	assert.NoError(t, err)
 
 	assert.Empty(t, tp.Patch())

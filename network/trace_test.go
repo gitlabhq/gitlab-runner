@@ -181,16 +181,40 @@ func TestJobOutputLimit(t *testing.T) {
 	}
 	b.Success()
 
-	expectedLogLimitExceededMsg := b.limitExceededMessage()
-	bytesLimit := b.bytesLimit + len(expectedLogLimitExceededMsg)
-	trace := receivedTrace.String()
-	traceSize := len(trace)
+	expectedLogLimitExceededMsg := "Job's log exceeded limit of"
 
-	assert.Equal(bytesLimit, traceSize, "the trace should be exaclty %v bytes", bytesLimit)
-	assert.Contains(trace, traceMessage)
-	assert.Contains(trace, expectedLogLimitExceededMsg)
+	assert.Contains(receivedTrace.String(), traceMessage)
+	assert.Contains(receivedTrace.String(), expectedLogLimitExceededMsg)
 
 	net.AssertExpectations(t)
+}
+
+func TestJobMasking(t *testing.T) {
+	maskedValues := []string{"masked"}
+	traceMessage := "This string should be masked"
+
+	mockNetwork := new(common.MockNetwork)
+	defer mockNetwork.AssertExpectations(t)
+
+	// We disallow PatchTrace, as we want to receive fulltrace in UpdateJob
+	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, mock.Anything).
+		Return(common.UpdateFailed)
+
+	mockNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).
+		Return(common.UpdateSucceeded).
+		Run(func(args mock.Arguments) {
+			jobInfo, _ := args.Get(2).(common.UpdateJobInfo)
+			require.NotNil(t, jobInfo.Trace, "Trace should be set")
+			require.Equal(t, "This string should be [MASKED]", *jobInfo.Trace)
+		})
+
+	jobTrace := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	jobTrace.SetMasked(maskedValues)
+	jobTrace.start()
+
+	_, err := jobTrace.Write([]byte(traceMessage))
+	require.NoError(t, err)
+	jobTrace.Success()
 }
 
 func TestJobFinishRetry(t *testing.T) {
