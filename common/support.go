@@ -19,11 +19,21 @@ import (
 	"github.com/tevino/abool"
 )
 
-const repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git"
-const repoSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"
-const repoBeforeSHA = "ca50079dac5293292f83a4d454922ba8db44e7a3"
-const repoRefName = "master"
-const repoRefType = RefTypeBranch
+const (
+	repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git"
+
+	repoRefType = RefTypeBranch
+
+	repoSHA       = "91956efe32fb7bef54f378d90c9bd74c19025872"
+	repoBeforeSHA = "ca50079dac5293292f83a4d454922ba8db44e7a3"
+	repoRefName   = "master"
+
+	repoLFSSHA       = "2371dd05e426fca09b0d2ec5d9ed757559035e2f"
+	repoLFSBeforeSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"
+	repoLFSRefName   = "add-lfs-object"
+
+	FilesLFSFile1LFSsize = int64(2097152)
+)
 
 var (
 	gitLabComChain        string
@@ -34,12 +44,41 @@ func init() {
 	gitLabComChainFetched = abool.New()
 }
 
+func GetGitInfo(url string) GitInfo {
+	return GitInfo{
+		RepoURL:   url,
+		Sha:       repoSHA,
+		BeforeSha: repoBeforeSHA,
+		Ref:       repoRefName,
+		RefType:   repoRefType,
+		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
+	}
+}
+
+func GetLFSGitInfo(url string) GitInfo {
+	return GitInfo{
+		RepoURL:   url,
+		Sha:       repoLFSSHA,
+		BeforeSha: repoLFSBeforeSHA,
+		Ref:       repoLFSRefName,
+		RefType:   repoRefType,
+		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
+	}
+}
+
 func GetSuccessfulBuild() (JobResponse, error) {
 	return GetLocalBuildResponse("echo Hello World")
 }
 
 func GetRemoteSuccessfulBuild() (JobResponse, error) {
 	return GetRemoteBuildResponse("echo Hello World")
+}
+
+func GetRemoteSuccessfulLFSBuild() (JobResponse, error) {
+	response, err := GetRemoteBuildResponse("echo Hello World")
+	response.GitInfo = GetLFSGitInfo(repoRemoteURL)
+
+	return response, err
 }
 
 func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
@@ -135,14 +174,7 @@ func getRemoteCustomTLSBuild(chain string) (JobResponse, error) {
 
 func getBuildResponse(repoURL string, commands []string) JobResponse {
 	return JobResponse{
-		GitInfo: GitInfo{
-			RepoURL:   repoURL,
-			Sha:       repoSHA,
-			BeforeSha: repoBeforeSHA,
-			Ref:       repoRefName,
-			RefType:   repoRefType,
-			Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
-		},
+		GitInfo: GetGitInfo(repoURL),
 		Steps: Steps{
 			Step{
 				Name:         StepNameScript,

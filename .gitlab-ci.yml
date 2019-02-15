@@ -11,6 +11,12 @@ stages:
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
   GOROOT: /usr/local/go
+  # Following variables are used in some jobs to install specified software
+  DOCKER_MACHINE_VERSION: "0.14.0"
+  DUMB_INIT_VERSION: "1.0.2"
+  GIT_VERSION: "2.21.0"
+  GIT_VERSION_BUILD: "1"
+  GIT_LFS_VERSION: "2.7.1"
 
 before_script:
   - unset GPG_KEY
@@ -214,6 +220,11 @@ unit test: &unit_tests
   <<: *docker
   stage: test
   parallel: 5
+  variables:
+    <<: *docker_variables
+    GIT_LFS_256_CHECKSUM: 7be85238cbbb957ab25de52b60279d40ba40d3faa72eeb2cb9fa77d6d92381e5
+  before_script:
+    - ./ci/install_git_lfs
   script:
     - source ci/touch_make_dependencies
     - make parallel_test_execute
@@ -229,6 +240,7 @@ unit test with race:
   allow_failure: true
   variables:
     <<: *docker_variables
+    GIT_LFS_256_CHECKSUM: 7be85238cbbb957ab25de52b60279d40ba40d3faa72eeb2cb9fa77d6d92381e5
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
 
@@ -404,9 +416,7 @@ package-rpm: *packages
     <<: *docker_variables
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "true"
-    DOCKER_MACHINE_VERSION: "0.14.0"
     DOCKER_MACHINE_CHECKSUM: "a4c69bffb78d3cfe103b89dae61c3ea11cc2d1a91c4ff86e630c9ae88244db02"
-    DUMB_INIT_VERSION: "1.0.2"
     DUMB_INIT_CHECKSUM: "a8defac40aaca2ca0896c7c5adbc241af60c7c3df470c1a4c469a860bd805429"
   script:
   - source ci/touch_make_dependencies
@@ -419,10 +429,7 @@ package-rpm: *packages
   stage: release
   variables:
     PUSH_TO_DOCKER_HUB: "false"
-    GIT_VERSION: "2.21.0"
-    GIT_VERSION_BUILD: "1"
     GIT_256_CHECKSUM: "bd91db55bd95eaa80687df28877e2df8c8858a0266e9c67331cfddba2735f25c"
-    GIT_LFS_VERSION: "2.7.1"
     GIT_LFS_256_CHECKSUM: "5c12db9728b53cba23e5f58f4a53d88cb2132e82fa1de0f8a79ce9d112e4d396"
   before_script:
   - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }

@@ -36,37 +36,48 @@ func gitInDir(dir string, args ...string) ([]byte, error) {
 	return cmd.Output()
 }
 
-func skipOnGit(t *testing.T, constraints string) bool {
+func skipOnGitWithMessage(t *testing.T, constraints string, message string) {
 	out, err := gitInDir("", "version")
 	if err != nil {
 		t.Fatal("Can't detect git version", err)
-		return true
+		return
 	}
 
 	gitVersionOut := string(out)
 	split := strings.SplitN(gitVersionOut, " ", 3)
 	if len(split) < 3 {
 		t.Fatal("Can't extract git version from", gitVersionOut)
-		return true
+		return
 	}
 
 	gitVersion, err := version.NewVersion(strings.TrimSpace(split[2]))
 	if err != nil {
 		t.Fatal("Can't detect git version", err)
-		return true
+		return
 	}
 
 	rules, err := version.NewConstraint(constraints)
 	if err != nil {
 		t.Fatal("Invalid constraint", err)
-		return true
+		return
 	}
 
-	return rules.Check(gitVersion)
+	shouldSkip := rules.Check(gitVersion)
+	if shouldSkip {
+		t.Skipf("Git %q found, skipping the test; %s", constraints, message)
+	}
 }
 
-func skipOnGit17x(t *testing.T) bool {
-	return skipOnGit(t, "< 1.8")
+func skipIfGitDoesNotSupportLFS(t *testing.T) {
+	skipOnGitWithMessage(t, "< 1.8.2", "available git version doesn't support LFS")
+}
+
+func skipOnGit(t *testing.T, constraints string) {
+	skipOnGitWithMessage(t, constraints, "")
+}
+
+func skipOnGit17x(t *testing.T) {
+	skipOnGit(t, "< 1.8")
 }
 
 func runBuildWithOptions(t *testing.T, build *common.Build, config *common.Config, trace *common.Trace) error {
@@ -263,7 +274,21 @@ func TestBuildWithGitLFSHook(t *testing.T) {
 	})
 }
 
-func TestBuildWithGitStrategyNone(t *testing.T) {
+func assertLFSFileDownloaded(t *testing.T, build *common.Build) {
+	lfsFilePath := filepath.Join(build.FullProjectDir(), "files", "lfs", "file_1.lfs")
+	info, err := os.Stat(lfsFilePath)
+	require.NoError(t, err)
+	assert.Equal(t, common.FilesLFSFile1LFSsize, info.Size(), "invalid size of %q file", lfsFilePath)
+}
+
+func assertLFSFileNotDownloaded(t *testing.T, build *common.Build) {
+	lfsFilePath := filepath.Join(build.FullProjectDir(), "files", "lfs", "file_1.lfs")
+	_, err := os.Stat(lfsFilePath)
+	require.IsType(t, &os.PathError{}, err)
+	assert.Equal(t, lfsFilePath, err.(*os.PathError).Path)
+}
+
+func TestBuildWithGitStrategyNoneWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -282,7 +307,27 @@ func TestBuildWithGitStrategyNone(t *testing.T) {
 	})
 }
 
-func TestBuildWithGitStrategyFetch(t *testing.T) {
+func TestBuildWithGitStrategyNoneWithLFS(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Created fresh repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git repository setup")
+		assertLFSFileNotDownloaded(t, build)
+	})
+}
+
+func TestBuildWithGitStrategyFetchWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -305,7 +350,34 @@ func TestBuildWithGitStrategyFetch(t *testing.T) {
 	})
 }
 
-func TestBuildWithGitStrategyFetchNoCheckout(t *testing.T) {
+func TestBuildWithGitStrategyFetchWithLFS(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		assertLFSFileNotDownloaded(t, build)
+
+		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Fetching changes")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		assertLFSFileDownloaded(t, build)
+	})
+}
+
+func TestBuildWithGitStrategyFetchNoCheckoutWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -329,7 +401,35 @@ func TestBuildWithGitStrategyFetchNoCheckout(t *testing.T) {
 	})
 }
 
-func TestBuildWithGitStrategyClone(t *testing.T) {
+func TestBuildWithGitStrategyFetchNoCheckoutWithLFS(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+		assert.Contains(t, out, "Skipping Git checkout")
+		assertLFSFileNotDownloaded(t, build)
+
+		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git checkout")
+		assertLFSFileNotDownloaded(t, build)
+	})
+}
+
+func TestBuildWithGitStrategyCloneWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -351,7 +451,25 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 	})
 }
 
-func TestBuildWithGitStrategyCloneNoCheckout(t *testing.T) {
+func TestBuildWithGitStrategyCloneWithLFS(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+		assertLFSFileDownloaded(t, build)
+	})
+}
+
+func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -371,6 +489,26 @@ func TestBuildWithGitStrategyCloneNoCheckout(t *testing.T) {
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Skipping Git checkout")
 		assert.Contains(t, out, "pre-clone-script")
+	})
+}
+
+func TestBuildWithGitStrategyCloneNoCheckoutWithLFS(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+		assert.Contains(t, out, "Skipping Git checkout")
+		assertLFSFileNotDownloaded(t, build)
 	})
 }
 
@@ -425,9 +563,7 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 }
 
 func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
-	if skipOnGit17x(t) {
-		return
-	}
+	skipOnGit17x(t)
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
@@ -585,9 +721,8 @@ func TestBuildMultilineCommand(t *testing.T) {
 }
 
 func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
-	if skipOnGit17x(t) || skipOnGit(t, ">= 2.10.2") {
-		return
-	}
+	skipOnGit17x(t)
+	skipOnGit(t, ">= 2.10.2")
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteBrokenTLSBuild()
