@@ -2,8 +2,9 @@ package helpers
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDoRetryError(t *testing.T) {
@@ -12,9 +13,9 @@ func TestDoRetryError(t *testing.T) {
 	}
 
 	retryCount := 0
-	err := r.doRetry(func() (bool, error) {
+	err := r.doRetry(func() error {
 		retryCount++
-		return true, errors.New("error")
+		return retryableErr{err: errors.New("error")}
 	})
 	assert.Error(t, err)
 	assert.Equal(t, r.Retry+1, retryCount)
@@ -26,9 +27,9 @@ func TestDoRetry(t *testing.T) {
 	}
 
 	retryCount := 0
-	err := r.doRetry(func() (bool, error) {
+	err := r.doRetry(func() error {
 		retryCount++
-		return false, nil
+		return nil
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 1, retryCount)
