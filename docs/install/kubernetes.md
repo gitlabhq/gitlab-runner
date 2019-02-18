@@ -29,7 +29,7 @@ data:
         image = "busybox"
 ```
 
-Update the url and token with your values.  The parameter `image` is optional and is the default Docker image used to be used to run jobs.  
+Update the `url` and `token` with your values.  The parameter `image` is optional and is the default Docker image used to be used to run jobs.  
 
 >**Notes:**
 >* The `token` can be found in `/etc/gitlab-runner/config.toml` and should
@@ -39,7 +39,7 @@ with the registration token that can be found under your project's
 >* Alternatively, you can obtain the runner token using the GitLab API 
 `curl -X POST https://gitlab.com/api/v4/runners --form "token=<registration-token>"`
 where `<registration token>` is obtained from the **Settings > CI/CD > Runners settings**.  
->* It is not recommended to use the gitlab-managed-apps namespace for this runner, that namespace should be reserved for applications installed through the GitLab UI.
+>* It is not recommended to use the `gitlab-managed-apps` namespace for this runner, that namespace should be reserved for applications installed through the GitLab UI.
 
 
 ## Define the Runner `Deployment`
