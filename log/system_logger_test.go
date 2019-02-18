@@ -74,7 +74,13 @@ func TestServiceLogHook(t *testing.T) {
 }
 
 func TestServiceLogHookWithSpecifiedLevel(t *testing.T) {
-	entry := logrus.NewEntry(logrus.New())
+	// Disable colors to avoid any OS specific formatting.
+	formatter := &logrus.TextFormatter{DisableColors: true}
+
+	logger := logrus.New()
+	logger.Formatter = formatter
+
+	entry := logrus.NewEntry(logger)
 	entry.Message = "test message"
 
 	sysLogger := new(mockSystemLogger)

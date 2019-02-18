@@ -19,7 +19,7 @@ import (
 )
 
 // The default API version used to create a new docker client.
-const DefaultAPIVersion = "1.18"
+const DefaultAPIVersion = "1.25"
 
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.

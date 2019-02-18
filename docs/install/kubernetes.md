@@ -1,9 +1,16 @@
 # Run GitLab Runner on a Kubernetes cluster
 
+TIP: **Tip:**
+We also provide a [GitLab Runner Helm Chart](https://docs.gitlab.com/ce/install/kubernetes/gitlab_runner_chart.html)
+
 To install the GitLab CI Runner on Kubernetes there are several resources that need to be defined and then pushed to the cluster with `kubectl`.  This topic covers how to:
 1. Define the runner ConfigMap in a yaml file
 1. Define the runner Deployment yaml file
 1. Push the definitions to a Kubernetes cluster using `kubectl`
+
+
+To get started with the GitLab CI Runner on Kubernetes you need to define
+resources that you can then push to the cluster with `kubectl`.
 
 ## Define the Runner `ConfigMap`
 

@@ -201,7 +201,7 @@ func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *api.Po
 			return api.PodUnknown, ctx.Err()
 		}
 	}
-	return api.PodUnknown, errors.New("timedout waiting for pod to start")
+	return api.PodUnknown, errors.New("timed out waiting for pod to start")
 }
 
 // limits takes a string representing CPU & memory limits,
