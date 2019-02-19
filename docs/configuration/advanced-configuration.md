@@ -50,15 +50,15 @@ Consider the following example.
 If one would set `check_interval = 10`, and there were 2 workers in total (`runner-1` and `runner-2`),
 a subsequent request would be made each 10 seconds. The loop would look like:
 
-1. Get `check_interval` value (`10s`)
-1. Get list of workers (`runner-1`, `runner-2`)
-1. Calculate the sleep interval (`10s / 2 = 5s`)
+1. Get `check_interval` value (`10s`).
+1. Get list of workers (`runner-1`, `runner-2`).
+1. Calculate the sleep interval (`10s / 2 = 5s`).
 1. Start an infinite loop:
-  1. Request a job for `runner-1`
-  1. Sleep for `5s`
-  1. Request a job for `runner-2`
-  1. Sleep for `5s`
-  1. Repeat
+    1. Request a job for `runner-1`.
+    1. Sleep for `5s`.
+    1. Request a job for `runner-2`.
+    1. Sleep for `5s`.
+    1. Repeat.
 
 So, a request from the Runner's process is made each 5s. If `runner-1` and `runner-2` are connected to the same
 GitLab instance, it means that the request to this GitLab instance will receive a new request from this Runner
@@ -120,7 +120,7 @@ This defines one runner entry.
 | `pre_clone_script`   | Commands to be executed on the Runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `pre_build_script`   | Commands to be executed on the Runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `post_build_script`  | Commands to be executed on the Runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `clone_url`	       | Overwrite the URL for the GitLab instance. Used if the Runner can't connect to GitLab on the URL GitLab exposes itself. |
+| `clone_url`          | Overwrite the URL for the GitLab instance. Used if the Runner can't connect to GitLab on the URL GitLab exposes itself. |
 
 Example:
 
@@ -208,7 +208,7 @@ This defines the Docker Container parameters.
 | `volumes`                   | Specify additional volumes that should be mounted (same syntax as Docker's `-v` flag) |
 | `extra_hosts`               | Specify hosts that should be defined in container environment |
 | `shm_size`                  | Specify shared memory size for images (in bytes) |
-| `volumes_from`              | Specify a list of volumes to inherit from another container in the form <code>\<container name\>[:\<ro&#124;rw\>]</code> |
+| `volumes_from`              | Specify a list of volumes to inherit from another container in the form `\<container name\>[:\<ro&#124;rw\>]` |
 | `volume_driver`             | Specify the volume driver to use for the container |
 | `links`                     | Specify containers which should be linked with building container |
 | `services`                  | Specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
@@ -443,8 +443,7 @@ Example:
 
 ## The `[runners.machine]` section
 
->**Note:**
-Added in GitLab Runner v1.1.0.
+> Added in GitLab Runner v1.1.0.
 
 This defines the Docker Machine based autoscaling feature. More details can be
 found in the separate [runners autoscale documentation](autoscale.md).
@@ -535,7 +534,7 @@ IAM instance profile, will use the profile attached with GitLab Runner's machine
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
 use the `CredentialsFile`, the file needs to be present on GitLab Runner's machine.
 
-Bellow is a table containing a summary of `config.toml`, cli options and ENV variables deprecations:
+Below is a table containing a summary of `config.toml`, cli options and ENV variables deprecations:
 
 | Setting             | TOML field                               | CLI option for `register`      | ENV for `register`                | deprecated TOML field               | deprecated CLI option   | deprecated ENV        |
 |---------------------|------------------------------------------|--------------------------------|-----------------------------------|-------------------------------------|-------------------------|-----------------------|
@@ -638,7 +637,6 @@ Examples:
 
 ## The `[runners.kubernetes]` section
 
-> **Note:**
 > Added in GitLab Runner v1.6.0
 
 This defines the Kubernetes parameters.
