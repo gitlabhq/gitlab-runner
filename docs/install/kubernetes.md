@@ -1,16 +1,23 @@
 # Run GitLab Runner on a Kubernetes cluster
 
-TIP: **Tip:**
+**Tip:**
 We also provide a [GitLab Runner Helm Chart](https://docs.gitlab.com/ce/install/kubernetes/gitlab_runner_chart.html)
 
 To install the GitLab CI Runner on Kubernetes there are several resources that need to be defined and then pushed to the cluster with `kubectl`.  This topic covers how to:
+1. Register the new runner using the API
 1. Define the runner ConfigMap in a yaml file
 1. Define the runner Deployment yaml file
 1. Push the definitions to a Kubernetes cluster using `kubectl`
 
 
-To get started with the GitLab CI Runner on Kubernetes you need to define
-resources that you can then push to the cluster with `kubectl`.
+## Register the new runner using the API
+The runner must first be registered to your project (or group or instance) so that the runner token
+(not to be confused with the runner registration token) can be provided to the `ConfigMap` below.
+Use the [GitLab Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) to register
+the new runner, providing the registration token from the project, group or instance CI/CD settings as described in
+[Configuring GitLab Runners](https://docs.gitlab.com/ee/ci/runners/README.html).  The runner token is returned
+by the API runner registration command.
+
 
 ## Define the Runner `ConfigMap`
 
@@ -38,15 +45,8 @@ data:
 
 Update the `url` and `token` with your values.  The parameter `image` is optional and is the default Docker image used to be used to run jobs.  
 
->**Notes:**
->* The `token` can be found in `/etc/gitlab-runner/config.toml` and should
-have been generated after registering the Runner. It's not to be confused
-with the registration token that can be found under your project's
-**Settings > CI/CD > Runners settings**.  
->* Alternatively, you can obtain the runner token using the GitLab API 
-`curl -X POST https://gitlab.com/api/v4/runners --form "token=<registration-token>"`
-where `<registration token>` is obtained from the **Settings > CI/CD > Runners settings**.  
->* It is not recommended to use the `gitlab-managed-apps` namespace for this runner, that namespace should be reserved for applications installed through the GitLab UI.
+>**Note:**
+>It is not recommended to use the `gitlab-managed-apps` namespace for this runner, that namespace should be reserved for applications installed through the GitLab UI.
 
 
 ## Define the Runner `Deployment`
@@ -94,9 +94,11 @@ spec:
 
 Assuming that your kubectl context has already been set to the cluster in question, issue these commands:
 
-`kubectl apply -f runner_config.yml`.
+`kubectl apply -f runner_config.yml`
 
-`kubectl apply -f runner_deployment.yml`.
+`kubectl apply -f runner_deployment.yml`
+
+The new runner will now show up in the GitLab web UI at the appropriate level (instance, group or project)
 
 For more details see [Kubernetes executor](../executors/kubernetes.md)
 and the [[runners.kubernetes] section of advanced configuration](../configuration/advanced-configuration.md#the-runners-kubernetes-section).
