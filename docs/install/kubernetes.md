@@ -46,7 +46,7 @@ data:
 Update the `url` and `token` with your values.  The parameter `image` is optional and is the default Docker image used to be used to run jobs.  
 
 >**Note:**
->It is not recommended to use the `gitlab-managed-apps` namespace for this runner, that namespace should be reserved for applications installed through the GitLab UI.
+> Don't use the `gitlab-managed-apps` namespace for this runner. It should be reserved for applications installed through the GitLab UI.
 
 
 ## Define the Runner `Deployment`
