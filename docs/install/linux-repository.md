@@ -4,31 +4,36 @@ last_updated: 2017-10-12
 
 # Install GitLab Runner using the official GitLab repositories
 
+NOTE: **Note:**
+Any version that is marked as **_Deprecated_** is scheduled to be removed in
+GitLab 12.0. Please follow
+<https://gitlab.com/gitlab-org/gitlab-runner/issues/3473> for more details.
+
 We provide packages for the currently supported versions of Debian, Ubuntu, Mint, RHEL, Fedora, and CentOS.
 
-| Distribution | Version | End of Life date      |
-| ------------ | ------- | --------------------- |
-| Debian       | buster  |                       |
-| Debian       | stretch | approx. 2022          |
-| Debian       | jessie  | June 2020             |
-| Debian       | wheezy  | May 2018              |
-| Ubuntu       | bionic  | April 2023            |
-| Ubuntu       | artful  | July 2018             |
-| Ubuntu       | xenial  | April 2021            |
-| Ubuntu       | trusty  | April 2019            |
-| Mint         | sonya   | approx. 2021          |
-| Mint         | serena  | approx. 2021          |
-| Mint         | sarah   | approx. 2021          |
-| Mint         | rosa    | April 2019            |
-| Mint         | rafaela | April 2019            |
-| Mint         | rebecca | April 2019            |
-| Mint         | qiana   | April 2019            |
-| RHEL/CentOS  | 7       | June 2024             |
-| RHEL/CentOS  | 6       | November 2020         |
-| Fedora       | 29      | approx. November 2019 |
-| Fedora       | 28      | approx. May 2019      |
-| Fedora       | 27      | approx. November 2018 |
-| Fedora       | 26      | approx. June 2018     |
+| Distribution | Version                    | End of Life date      |
+|--------------|----------------------------|-----------------------|
+| Debian       | buster                     |                       |
+| Debian       | stretch                    | approx. 2022          |
+| Debian       | jessie                     | June 2020             |
+| Debian       | wheezy **_(Deprecated)_**  | May 2018              |
+| Ubuntu       | bionic                     | April 2023            |
+| Ubuntu       | artful **_(Deprecated)_**  | July 2018             |
+| Ubuntu       | xenial                     | April 2021            |
+| Ubuntu       | trusty **_(Deprecated)_**  | April 2019            |
+| Mint         | sonya                      | approx. 2021          |
+| Mint         | serena                     | approx. 2021          |
+| Mint         | sarah                      | approx. 2021          |
+| Mint         | rosa  **_(Deprecated)_**   | April 2019            |
+| Mint         | rafaela **_(Deprecated)_** | April 2019            |
+| Mint         | rebecca **_(Deprecated)_** | April 2019            |
+| Mint         | qiana **_(Deprecated)_**   | April 2019            |
+| RHEL/CentOS  | 7                          | June 2024             |
+| RHEL/CentOS  | 6                          | November 2020         |
+| Fedora       | 29                         | approx. November 2019 |
+| Fedora       | 28 **_(Deprecated)_**      | approx. May 2019      |
+| Fedora       | 27 **_(Deprecated)_**      | approx. November 2018 |
+| Fedora       | 26 **_(Deprecated)_**      | approx. June 2018     |
 
 ## Prerequisites
 
