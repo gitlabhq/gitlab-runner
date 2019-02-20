@@ -98,7 +98,7 @@ Assuming that your kubectl context has already been set to the cluster in questi
 
 `kubectl apply -f runner_deployment.yml`
 
-The new runner will now show up in the GitLab web UI at the appropriate level (instance, group or project)
+The new runner will now show up in the GitLab web UI at the appropriate level (instance, group or project).
 
 For more details see [Kubernetes executor](../executors/kubernetes.md)
 and the [[runners.kubernetes] section of advanced configuration](../configuration/advanced-configuration.md#the-runners-kubernetes-section).
