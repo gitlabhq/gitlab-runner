@@ -19,9 +19,12 @@ $InformationPreference = "Continue"
 #   Docker image.
 # - $Env:GIT_LFS_256_CHECKSUM - The checksum of the downloaded zip, usually
 #   found in the GitHub release page.
-# - $Env:DOCKER_HUB_USER - The user we want to log in with for docker hub.
-# - $Env:DOCKER_HUB_PASSWORD - The password we want to log in with for docker hub.
-# - $Env:PUSH_TO_DOCKER_HUB - If set to true, it will log in to the registry and
+# - $Env:IS_LATEST - When we want to tag current tag as the latest, this is usually
+#   used when we are tagging a release for the runner (which is not a patch
+#   release or RC)
+# - $Env:DOCKER_HUB_USER - The user we want to login with for docker hub.
+# - $Env:DOCKER_HUB_PASSWORD - The password we want to login with for docker hub.
+# - $Env:PUSH_TO_DOCKER_HUB - If set to true, it will login to the registry and
 #   push the tags.
 # ---------------------------------------------------------------------------
 $imagesBasePath = "dockerfiles\build\Dockerfile.x86_64"
@@ -46,6 +49,12 @@ function Main
     Connect-Registry
 
     Push-Tag $tag
+
+    if ($Env:IS_LATEST -eq "true")
+    {
+        Add-LatestTag $tag
+        Push-Latest
+    }
 
     Disconnect-Registry
 }
@@ -84,6 +93,26 @@ function Push-Tag($tag)
     & 'docker' push gitlab/gitlab-runner-helper:$tag
     if ($LASTEXITCODE -ne 0) {
         throw ("Failed to push docker image gitlab/gitlab-runner-helper:$tag" )
+    }
+}
+
+function Add-LatestTag($tag)
+{
+    Write-Information "Tag $tag as latest"
+
+    & 'docker' tag "gitlab/gitlab-runner-helper:$tag" "gitlab/gitlab-runner-helper:x86_64-latest-$Env:WINDOWS_VERSION"
+    if ($LASTEXITCODE -ne 0) {
+        throw ("Failed to tag gitlab/gitlab-runner-helper:$tag as latest image" )
+    }
+}
+
+function Push-Latest()
+{
+    Write-Information "Push latest tag"
+
+    & 'docker' push "gitlab/gitlab-runner-helper:x86_64-latest-$Env:WINDOWS_VERSION"
+    if ($LASTEXITCODE -ne 0) {
+        throw ("Failed to push image to registry" )
     }
 }
 
