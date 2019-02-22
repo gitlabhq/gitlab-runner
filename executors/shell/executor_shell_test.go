@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	TestTimeout = 10 * time.Second
+	TestTimeout = 20 * time.Second
 )
 
 func gitInDir(dir string, args ...string) ([]byte, error) {
