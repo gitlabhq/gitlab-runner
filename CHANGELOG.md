@@ -1,4 +1,4 @@
-v11.8.0-rc1 (2019-02-11)
+v11.8.0 (2019-02-22)
 - Kubernetes executor: add support for Node tolerations !941
 - Update logrus version to v1.3.0 !1137
 - Docs - Clarify Docker Runner Documentation !1097
