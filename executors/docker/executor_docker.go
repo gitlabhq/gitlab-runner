@@ -380,17 +380,21 @@ func (e *executor) getLabels(containerType string, otherLabels ...string) map[st
 
 // createCacheVolume returns the id of the created container, or an error
 func (e *executor) createCacheVolume(containerName, containerPath string) (string, error) {
-	// get busybox image
 	cacheImage, err := e.getPrebuiltImage()
 	if err != nil {
 		return "", err
 	}
 
+	cmd := []string{"gitlab-runner-helper", "cache-init", containerPath}
+	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
+	if e.checkOutdatedHelperImage() {
+		e.Debugln(common.FFDockerHelperImageV2, "is not set, falling back to old command")
+		cmd = []string{"gitlab-runner-cache", containerPath}
+	}
+
 	config := &container.Config{
 		Image: cacheImage.ID,
-		Cmd: []string{
-			"gitlab-runner-cache", containerPath,
-		},
+		Cmd:   cmd,
 		Volumes: map[string]struct{}{
 			containerPath: {},
 		},
@@ -1299,8 +1303,15 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 
 	containerName := service.Names[0] + "-wait-for-service"
 
+	cmd := []string{"gitlab-runner-helper", "health-check"}
+	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
+	if e.checkOutdatedHelperImage() {
+		e.Debugln(common.FFDockerHelperImageV2, "is not set, falling back to old command")
+		cmd = []string{"gitlab-runner-service"}
+	}
+
 	config := &container.Config{
-		Cmd:    []string{"gitlab-runner-service"},
+		Cmd:    cmd,
 		Image:  waitImage.ID,
 		Labels: e.getLabels("wait", "wait="+service.ID),
 	}
@@ -1398,4 +1409,8 @@ func (e *executor) readContainerLogs(containerID string) string {
 	stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
 	containerLog := containerBuffer.String()
 	return strings.TrimSpace(containerLog)
+}
+
+func (e *executor) checkOutdatedHelperImage() bool {
+	return !e.Build.IsFeatureFlagOn(common.FFDockerHelperImageV2) && e.Config.Docker.HelperImage != ""
 }

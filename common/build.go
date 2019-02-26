@@ -62,6 +62,10 @@ const (
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
 )
 
+const (
+	FFDockerHelperImageV2 string = "FF_DOCKER_HELPER_IMAGE_V2"
+)
+
 type Build struct {
 	JobResponse `yaml:",inline"`
 
