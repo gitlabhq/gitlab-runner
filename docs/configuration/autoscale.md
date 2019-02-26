@@ -111,15 +111,15 @@ autoscale parameters:
 ```
 
 At the beginning, when no jobs are queued, GitLab Runner starts two machines
-(`IdleCount = 2`), and sets them in _Idle_ state. Notice that we have also set 
+(`IdleCount = 2`), and sets them in _Idle_ state. Notice that we have also set
 `IdleTime` to 30 minutes (`IdleTime = 1800`).
 
 Now, let's assume that 5 jobs are queued in GitLab CI. The first 2 jobs are
-sent to the _Idle_ machines of which we have two. GitLab Runner now notices that 
-the number of _Idle_ is less than `IdleCount` (`0 < 2`), so it starts 2 new 
-machines. Then, the next 2 jobs from the queue are sent to those newly created 
-machines. Again, the number of _Idle_ machines is less than `IdleCount`, so 
-GitLab Runner starts 2 new machines and the last queued job is sent to one of 
+sent to the _Idle_ machines of which we have two. GitLab Runner now notices that
+the number of _Idle_ is less than `IdleCount` (`0 < 2`), so it starts 2 new
+machines. Then, the next 2 jobs from the queue are sent to those newly created
+machines. Again, the number of _Idle_ machines is less than `IdleCount`, so
+GitLab Runner starts 2 new machines and the last queued job is sent to one of
 the _Idle_ machines.
 
 We now have 1 _Idle_ machine, so GitLab Runner starts another 1 new machine to
@@ -413,6 +413,6 @@ and one option for Docker Machine itself (`engine-registry-mirror`).
 [docker-machine-docs]: https://docs.docker.com/machine/
 [docker-machine-driver]: https://docs.docker.com/machine/drivers/
 [docker-machine-installation]: https://docs.docker.com/machine/install-machine/
-[runners-cache]: advanced-configuration.md#the-runners-cache-section
-[runners-machine]: advanced-configuration.md#the-runners-machine-section
+[runners-cache]: advanced-configuration.md#the-runnerscache-section
+[runners-machine]: advanced-configuration.md#the-runnersmachine-section
 [registry]: https://docs.docker.com/registry/

@@ -51,7 +51,7 @@ Docker Machine will attempt to use a
 with rules for port `2376`, which is required for communication with the Docker
 daemon. Instead of relying on Docker, you can create a security group with the
 rules you need and provide that in the Runner options as we will
-[see below](#the-runners-machine-section). This way, you can customize it to your
+[see below](#the-runnersmachine-section). This way, you can customize it to your
 liking ahead of time based on your networking environment.
 
 ### AWS credentials
@@ -62,7 +62,7 @@ Create a new user with [policies](https://docs.aws.amazon.com/AWSEC2/latest/User
 for EC2 (AmazonEC2FullAccess) and S3 (AmazonS3FullAccess). To be more secure,
 you can disable console login for that user. Keep the tab open or copy paste the
 security credentials in an editor as we'll use them later during the
-[Runner configuration](#the-runners-machine-section).
+[Runner configuration](#the-runnersmachine-section).
 
 ## Prepare the bastion instance
 
@@ -91,7 +91,7 @@ Before configuring the GitLab Runner, you need to first register it, so that
 it connects with your GitLab instance:
 
 1. [Obtain a Runner token](https://docs.gitlab.com/ee/ci/runners/)
-1. [Register the Runner](../../register/index.md#gnu-linux)
+1. [Register the Runner](../../register/index.md#gnulinux)
 1. When asked the executor type, enter `docker+machine`
 
 You can now move on to the most important part, configuring the GitLab Runner.
@@ -173,7 +173,7 @@ Example:
     disable_cache = true
 ```
 
-[Read more](../advanced-configuration.md#the-runners-docker-section)
+[Read more](../advanced-configuration.md#the-runnersdocker-section)
 about all the options you can use under `[runners.docker]`.
 
 ### The `runners.cache` section
@@ -200,7 +200,7 @@ In the following example, we use Amazon S3:
 
 Here's some more info to further explore the cache mechanism:
 
-- [Reference for `runners.cache`](../advanced-configuration.md#the-runners-cache-section)
+- [Reference for `runners.cache`](../advanced-configuration.md#the-runnerscache-section)
 - [Reference for `runners.cache.s3`](../advanced-configuration.html#the-runnerscaches3-section)
 - [Deploying and using a cache server for GitLab Runner](../autoscale.md#distributed-runners-caching)
 - [How cache works](https://docs.gitlab.com/ee/ci/yaml/#cache)
@@ -283,7 +283,7 @@ VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
 but it’s something to consider if you've got a more complex configuration. Read
 more in [Docker docs about VPC connectivity](https://docs.docker.com/machine/drivers/aws/#vpc-connectivity).
 
-[Read more](../advanced-configuration.md#the-runners-machine-section)
+[Read more](../advanced-configuration.md#the-runnersmachine-section)
 about all the options you can use under `[runners.machine]`.
 
 ### Getting it all together
@@ -349,7 +349,7 @@ pricing, you can significantly reduce the cost of running your applications,
 grow your application’s compute capacity and throughput for the same budget,
 and enable new types of cloud computing applications.
 
-In addition to the [`runners.machine`](#the-runners-machine-section) options
+In addition to the [`runners.machine`](#the-runnersmachine-section) options
 you picked above, in `/etc/gitlab-runner/config.toml` under the `MachineOptions`
 section, add the following:
 
@@ -360,9 +360,9 @@ section, add the following:
     ]
 ```
 
-In this configuration with an empty `amazonec2-spot-price`, AWS sets your 
-bidding price for a Spot instance to the default On-Demand price of that 
-instance class. If you omit the `amazonec2-spot-price` completely, Docker 
+In this configuration with an empty `amazonec2-spot-price`, AWS sets your
+bidding price for a Spot instance to the default On-Demand price of that
+instance class. If you omit the `amazonec2-spot-price` completely, Docker
 Machine will set the bidding price to a [default value of $0.50 per
 hour](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values).
 
@@ -394,7 +394,7 @@ costs of your infrastructure, you must be aware of the implications.
 
 Running CI jobs on Spot instances may increase the failure rates because of the
 Spot instances pricing model. If the price exceeds your bid, the existing Spot
-instances will be terminated within two minutes and all your jobs on that host 
+instances will be terminated within two minutes and all your jobs on that host
 will fail.
 
 As a consequence, the auto-scale Runner would fail to create new machines while
