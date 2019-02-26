@@ -237,8 +237,8 @@ unit test with race:
 #    # Check the internal links
 #    - bundle exec nanoc check internal_links
 
-integration windows:
-  <<: *except_docs
+.windows test:
+  extends: .except_docs
   stage: test
   before_script:
   - $GODIR = "$env:GOPATH\src\gitlab.com\gitlab-org"
@@ -254,9 +254,18 @@ integration windows:
   allow_failure: true
   only:
   - /.*/@gitlab-org/gitlab-runner
+
+windows 1803 tests:
+  extends: .windows test
   tags:
-  - integration
-  - windows
+  - windows-1803
+  - shell
+
+windows 1809 tests:
+  extends: .windows test
+  tags:
+  - windows-1809
+  - shell
 
 git 1.7.1:
   <<: *except_docs
