@@ -75,6 +75,7 @@ help:
 	# make version - show information about current version
 	#
 	# Development commands:
+	# make build_simple - build executable for your arch and OS
 	# make install - install the version suitable for your OS as gitlab-runner
 	# make docker - build docker dependencies
 	#
