@@ -26,7 +26,7 @@ out of the scope of this documentation. For more details please read the
 
 ## Configuring GitLab Runner
 
-1. [Register a GitLab Runner](../register/index.md#gnu-linux) and select the
+1. [Register a GitLab Runner](../register/index.md#gnulinux) and select the
    `docker+machine` executor when asked.
 1. Edit [`config.toml`](../commands/README.md#configuration-file) and configure
    the Runner to use Docker machine. Visit the dedicated page covering detailed

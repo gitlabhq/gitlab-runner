@@ -1,6 +1,6 @@
 # Run GitLab Runner on a Kubernetes cluster
 
-TIP: **Tip:** 
+TIP: **Tip:**
 We also provide a [GitLab Runner Helm Chart](https://docs.gitlab.com/ce/install/kubernetes/gitlab_runner_chart.html).
 
 To install the GitLab CI Runner on Kubernetes there are several resources that need to be defined and then pushed to the cluster with `kubectl`.  This topic covers how to:
@@ -42,7 +42,7 @@ data:
         image = "busybox"
 ```
 
-Update the `url` and `token` with your values.  The parameter `image` is optional and is the default Docker image used to be used to run jobs.  
+Update the `url` and `token` with your values.  The parameter `image` is optional and is the default Docker image used to be used to run jobs.
 
 >**Note:**
 > Don't use the `gitlab-managed-apps` namespace for this runner. It should be reserved for applications installed through the GitLab UI.
@@ -100,4 +100,4 @@ Assuming that your kubectl context has already been set to the cluster in questi
 The new runner will now show up in the GitLab web UI at the appropriate level (instance, group or project).
 
 For more details see [Kubernetes executor](../executors/kubernetes.md)
-and the [[runners.kubernetes] section of advanced configuration](../configuration/advanced-configuration.md#the-runners-kubernetes-section).
+and the [[runners.kubernetes] section of advanced configuration](../configuration/advanced-configuration.md#the-runnerskubernetes-section).
