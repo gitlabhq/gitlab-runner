@@ -240,6 +240,7 @@ unit test with race:
 .windows test:
   extends: .except_docs
   stage: test
+  parallel: 3
   variables:
     GOROOT: "C:\\Go"
     PKG_NAMESPACE: gitlab.com\gitlab-org
@@ -248,14 +249,12 @@ unit test with race:
     PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
     PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
   before_script:
-  - cat testsdefinitions.txt
   - if (Test-Path $GOPATH) { Remove-Item -Force -Recurse $GOPATH }
   - New-Item $PKG_BASE_DIR -ItemType directory -Force
   - New-Item -ItemType SymbolicLink -Path $PKG_BUILD_DIR -Value $CI_PROJECT_DIR
   - cd $PKG_BUILD_DIR
   script:
-  - $script = Join-Path -Path "ci" -ChildPath "test_windows.ps1"
-  - powershell -File $script
+  - .\ci\test_windows.ps1
   after_script:
   - if (Test-Path $PKG_BUILD_DIR) { $(Get-Item $PKG_BUILD_DIR).Delete() }
   allow_failure: true
