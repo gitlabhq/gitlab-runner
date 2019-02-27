@@ -291,6 +291,10 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		imageNameFromConfig = common.AppVersion.Variables().ExpandValue(imageNameFromConfig)
 
 		e.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
+		if !e.Build.IsFeatureFlagOn(common.FFDockerHelperImageV2) {
+			e.Warningln("DEPRECATION: With gitlab-runner 12.0 we will change some tools inside the helper image, please make sure your image is compliant with the new API. https://gitlab.com/gitlab-org/gitlab-runner/issues/4013")
+		}
+
 		return e.getDockerImage(imageNameFromConfig)
 	}
 
