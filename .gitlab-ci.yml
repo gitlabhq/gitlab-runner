@@ -70,10 +70,11 @@ helper images:
   <<: *docker
   stage: prebuild
   script:
-  - make docker
+  - make helper-build helper-docker
   artifacts:
     paths:
     - out/helper-images/
+    - dockerfiles/build/binaries/*-windows.exe
     - .gopath/bin
     - .gopath/.ok
     expire_in: 7d
