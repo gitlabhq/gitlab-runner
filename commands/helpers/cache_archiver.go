@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -62,17 +61,7 @@ func (c *CacheArchiverCommand) upload() error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode/100 != 2 {
-		err = fmt.Errorf("received: %s", resp.Status)
-
-		if resp.StatusCode/100 == 5 {
-			err = retryableErr{err: err}
-		}
-
-		return err
-	}
-
-	return nil
+	return retryOnServerError(resp)
 }
 
 func (c *CacheArchiverCommand) Execute(*cli.Context) {

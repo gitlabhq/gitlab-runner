@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -44,23 +43,12 @@ func checkIfUpToDate(path string, resp *http.Response) (bool, time.Time) {
 func (c *CacheExtractorCommand) download() error {
 	os.MkdirAll(filepath.Dir(c.File), 0700)
 
-	resp, err := c.getClient().Get(c.URL)
+	resp, err := c.getCache()
 	if err != nil {
-		return retryableErr{err: err}
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return os.ErrNotExist
-	} else if resp.StatusCode/100 != 2 {
-		err = fmt.Errorf("received: %s", resp.Status)
-
-		if resp.StatusCode/100 == 5 {
-			err = retryableErr{err: err}
-		}
-
 		return err
 	}
+
+	defer resp.Body.Close()
 
 	upToDate, date := checkIfUpToDate(c.File, resp)
 	if upToDate {
@@ -93,6 +81,20 @@ func (c *CacheExtractorCommand) download() error {
 	}
 
 	return nil
+}
+
+func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
+	resp, err := c.getClient().Get(c.URL)
+	if err != nil {
+		return nil, retryableErr{err: err}
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		resp.Body.Close()
+		return nil, os.ErrNotExist
+	}
+
+	return resp, retryOnServerError(resp)
 }
 
 func (c *CacheExtractorCommand) Execute(context *cli.Context) {

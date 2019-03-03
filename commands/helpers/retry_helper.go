@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -35,6 +37,25 @@ func (r *retryHelper) doRetry(handler func() error) error {
 		logrus.WithError(err).Warningln("Retrying...")
 
 		err = handler()
+	}
+
+	return err
+}
+
+// retryOnServerError will take the response and check if the the error should
+// be of type retryableErr or not. When the status code is of 5xx it will be a
+// retryableErr.
+func retryOnServerError(resp *http.Response) error {
+	if resp.StatusCode/100 == 2 {
+		return nil
+	}
+
+	resp.Body.Close()
+
+	err := fmt.Errorf("received: %s", resp.Status)
+
+	if resp.StatusCode/100 == 5 {
+		err = retryableErr{err: err}
 	}
 
 	return err
