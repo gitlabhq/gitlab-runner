@@ -237,26 +237,41 @@ unit test with race:
 #    # Check the internal links
 #    - bundle exec nanoc check internal_links
 
-integration windows:
-  <<: *except_docs
+.windows test:
+  extends: .except_docs
   stage: test
+  parallel: 3
+  variables:
+    GOROOT: "C:\\Go"
+    PKG_NAMESPACE: gitlab.com\gitlab-org
+    PKG_NAME: gitlab-runner
+    GOPATH: "$CI_PROJECT_DIR\\.gopath"
+    PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
+    PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
   before_script:
-  - $GODIR = "$env:GOPATH\src\gitlab.com\gitlab-org"
-  - $target_path = "$GODIR\gitlab-runner"
-  - $current_path = pwd
-  - md $GODIR -Force
-  - if (Test-Path $target_path) { cmd /c rmdir $target_path }
-  - cmd /c mklink /D $target_path $current_path
-  - cd $GODIR\gitlab-runner
+  - if (Test-Path $GOPATH) { Remove-Item -Force -Recurse $GOPATH }
+  - New-Item $PKG_BASE_DIR -ItemType directory -Force
+  - New-Item -ItemType SymbolicLink -Path $PKG_BUILD_DIR -Value $CI_PROJECT_DIR
+  - cd $PKG_BUILD_DIR
   script:
-  - $script = Join-Path -Path "ci" -ChildPath "test_windows.ps1"
-  - Invoke-Expression $script
+  - .\ci\test_windows.ps1
+  after_script:
+  - if (Test-Path $PKG_BUILD_DIR) { $(Get-Item $PKG_BUILD_DIR).Delete() }
   allow_failure: true
   only:
   - /.*/@gitlab-org/gitlab-runner
+
+windows 1803 tests:
+  extends: .windows test
   tags:
-  - integration
-  - windows
+  - windows-1803
+  - shell
+
+windows 1809 tests:
+  extends: .windows test
+  tags:
+  - windows-1809
+  - shell
 
 git 1.7.1:
   <<: *except_docs
