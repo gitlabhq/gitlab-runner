@@ -1,4 +1,4 @@
-package shells
+package shells_test
 
 import (
 	"io/ioutil"
@@ -10,52 +10,60 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
-type TestShellWriter interface {
-	ShellWriter
+func runShell(t *testing.T, shell, cwd string, writer shellstest.ShellWriter) {
+	var extension string
+	var cmdArgs []string
 
-	Finish(trace bool) string
-	GetTemporaryPath() string
-}
+	switch shell {
+	case "bash":
+		extension = "sh"
 
-func onShell(t *testing.T, name, command, extension string, cmdArgs []string, writer TestShellWriter) {
-	const TestPath = "test-path"
+	case "cmd":
+		extension = "cmd"
+		cmdArgs = append(cmdArgs, "/Q", "/C")
 
-	t.Run(name, func(t *testing.T) {
-		scriptFile := filepath.Join(writer.GetTemporaryPath(), name+"-test-script."+extension)
+	case "powershell":
+		extension = "ps1"
+		cmdArgs = append(cmdArgs, "-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command")
 
-		testTmpDir := writer.MkTmpDir(name + "-mkdir-test")
-		writer.Cd(testTmpDir)
-		writer.MkDir(TestPath)
-		writer.MkDir(TestPath)
-		script := writer.Finish(false)
+	default:
+		require.FailNow(t, "unknown shell %q", shell)
+	}
 
-		err := ioutil.WriteFile(scriptFile, []byte(script), 0700)
-		require.NoError(t, err)
+	script := writer.Finish(false)
+	scriptFile := filepath.Join(cwd, shell+"-test-script."+extension)
+	err := ioutil.WriteFile(scriptFile, []byte(script), 0700)
+	require.NoError(t, err)
+	defer os.Remove(scriptFile)
 
-		if helpers.SkipIntegrationTests(t, command) {
-			t.Skip()
-		}
+	cmdArgs = append(cmdArgs, scriptFile)
+	cmd := exec.Command(shell, cmdArgs...)
+	cmd.Dir = cwd
 
-		cmdArgs = append(cmdArgs, scriptFile)
-		cmd := exec.Command(command, cmdArgs...)
-		err = cmd.Run()
-		assert.NoError(t, err)
-
-		createdPath := filepath.Join(testTmpDir, TestPath)
-		_, err = ioutil.ReadDir(createdPath)
-		assert.NoError(t, err)
-	})
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "output: %s", string(output))
 }
 
 func TestMkDir(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "test-shell-script")
-	defer os.RemoveAll(tmpDir)
-	require.NoError(t, err)
+	const TestPath = "test-path"
 
-	onShell(t, "bash", "bash", "sh", []string{}, &BashWriter{TemporaryPath: tmpDir})
-	onShell(t, "cmd", "cmd.exe", "cmd", []string{"/Q", "/C"}, &CmdWriter{TemporaryPath: tmpDir})
-	onShell(t, "powershell", "powershell.exe", "ps1", []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"}, &PsWriter{TemporaryPath: tmpDir})
+	tmpDir, err := ioutil.TempDir("", "runner-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shellstest.ShellWriter) {
+		testTmpDir := writer.MkTmpDir(shell + "-mkdir-test")
+		writer.Cd(testTmpDir)
+		writer.MkDir(TestPath)
+		writer.MkDir(TestPath)
+
+		runShell(t, shell, tmpDir, writer)
+
+		createdPath := filepath.Join(tmpDir, testTmpDir, TestPath)
+		_, err := ioutil.ReadDir(createdPath)
+		assert.NoError(t, err)
+	})
 }
