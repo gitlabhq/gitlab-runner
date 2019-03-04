@@ -72,7 +72,7 @@ https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/release_process/how
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rc1` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rc1/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rc1)
     - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rc1` passing
-- [ ] deploy **v{{.Major}}.{{.Minor}}.0-rc1** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] [deploy **v{{.Major}}.{{.Minor}}.0-rc1**][runner-deployment-runbook]
 - [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to use `v{{.Major}}.{{.Minor}}.0-rc1` version
     - [ ] check if Pipeline for `master` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/master)
         - [ ] add all required fixes to make `master` Pipeline passing
@@ -196,7 +196,7 @@ to the one that already exists.
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
     - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rcZ` passing
-- [ ] deploy **v{{.Major}}.{{.Minor}}.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] [deploy **v{{.Major}}.{{.Minor}}.0-rcZ**][runner-deployment-runbook]
 - [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to use `v{{.Major}}.{{.Minor}}.0-rcZ` version
     - [ ] check if Pipeline for `{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable)
         - [ ] add all required fixes to make `{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable` Pipeline passing
@@ -459,7 +459,7 @@ to the one that already exists.
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0)
     - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0` passing
-- [ ] deploy stable version to all production Runners
+- [ ] [deploy stable version to all production Runners][runner-deployment-runbook]
 
 
 ## RC release template
@@ -504,7 +504,7 @@ template:
 
 - [ ] wait for Pipeline for `v{{.Major}}.{{.Minor}}.0-rcZ` to pass [![pipeline status](https://gitlab.com/gitlab-org/gitlab-runner/badges/v{{.Major}}.{{.Minor}}.0-rcZ/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/v{{.Major}}.{{.Minor}}.0-rcZ)
     - [ ] add all required fixes to make `v{{.Major}}.{{.Minor}}.0-rcZ` passing
-- [ ] deploy **v{{.Major}}.{{.Minor}}.0-rcZ** (https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md)
+- [ ] [deploy **v{{.Major}}.{{.Minor}}.0-rcZ**][runner-deployment-runbook]
 - [ ] update runner [helm chart](https://gitlab.com/charts/gitlab-runner) to use `v{{.Major}}.{{.Minor}}.0-rcZ` version
     - [ ] check if Pipeline for `{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable` is passing: [![pipeline status](https://gitlab.com/charts/gitlab-runner/badges/{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable/pipeline.svg)](https://gitlab.com/charts/gitlab-runner/commits/{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable)
         - [ ] add all required fixes to make `{{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable` Pipeline passing
@@ -552,3 +552,5 @@ template:
         git tag -s v{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ -m "Version v{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ" && git push origin v{{.HelmChartMajor}}.{{.HelmChartMinor}}.0-rcZ {{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable
         ```
 ```
+
+[runner-deployment-runbook]: https://gitlab.com/gitlab-com/runbooks/blob/master/howto/update-gitlab-runner-on-managers.md
