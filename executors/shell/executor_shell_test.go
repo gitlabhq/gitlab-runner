@@ -2,6 +2,7 @@ package shell_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -300,7 +301,7 @@ func TestBuildWithGitStrategyNone(t *testing.T) {
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.NotContains(t, out, "pre-clone-script")
-		assert.NotContains(t, out, "Cloning repository")
+		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
 		assert.Contains(t, out, "Skipping Git repository setup")
 	})
@@ -318,7 +319,7 @@ func TestBuildWithGitStrategyFetch(t *testing.T) {
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
 		out, err = runBuildReturningOutput(t, build)
@@ -342,7 +343,7 @@ func TestBuildWithGitStrategyFetchNoCheckout(t *testing.T) {
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Skipping Git checkout")
 
 		out, err = runBuildReturningOutput(t, build)
@@ -365,11 +366,11 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 
 		out, err = runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 		assert.Contains(t, out, "pre-clone-script")
 	})
@@ -388,11 +389,11 @@ func TestBuildWithGitStrategyCloneNoCheckout(t *testing.T) {
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 
 		out, err = runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Skipping Git checkout")
 		assert.Contains(t, out, "pre-clone-script")
 	})
@@ -504,7 +505,7 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.NotContains(t, out, "Cloning repository")
+		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
 		assert.Contains(t, out, "Skipping Git repository setup")
 		assert.NotContains(t, out, "Updating/initializing submodules...")
@@ -623,7 +624,7 @@ func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.Error(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Updating/initializing submodules")
 	})
 }
@@ -639,7 +640,7 @@ func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Updating/initializing submodules")
 	})
 }
@@ -657,7 +658,7 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 
 		out, err := runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Cloning repository")
+		assert.Contains(t, out, "Created fresh repository")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
 		out, err = runBuildReturningOutput(t, build)
@@ -766,4 +767,48 @@ func TestInteractiveTerminal(t *testing.T) {
 			assert.NotContains(t, out, "Terminal is connected, will time out in 2s...")
 		})
 	}
+}
+
+// TODO: Remove in 12.0
+func TestBuildNoRefspecs(t *testing.T) {
+	strategies := []string{"clone", "fetch", "none"}
+	expectedOutputs := map[string]string{
+		"clone": "Cloning repository...",
+		"fetch": "Fetching changes...",
+		"none":  "Skipping Git repository setup",
+	}
+
+	onEachShell(t, func(t *testing.T, shell string) {
+		for _, strategy := range strategies {
+			t.Run(fmt.Sprintf("GIT_STRATEGY %s", strategy), func(t *testing.T) {
+				apiBuild, err := common.GetSuccessfulBuild()
+				assert.NoError(t, err)
+
+				apiBuild.GitInfo.Refspecs = []string{}
+				build, cleanup := newBuild(t, apiBuild, shell)
+				defer cleanup()
+
+				build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: strategy})
+
+				expectedOutput, ok := expectedOutputs[strategy]
+				require.True(t, ok, "missing expectancies for %s strategy", strategy)
+
+				err = runBuild(t, build)
+				require.NoError(t, err)
+
+				// run twice because script behavior changes based on build directory existence
+				out, err := runBuildReturningOutput(t, build)
+				require.NoError(t, err)
+				require.Contains(t, out, expectedOutput)
+
+				for s, notExpected := range expectedOutputs {
+					if s == strategy {
+						continue
+					}
+
+					require.NotContains(t, out, notExpected)
+				}
+			})
+		}
+	})
 }
