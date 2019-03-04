@@ -61,6 +61,7 @@ type FeaturesInfo struct {
 	UploadRawArtifacts      bool `json:"upload_raw_artifacts"`
 	Session                 bool `json:"session"`
 	Terminal                bool `json:"terminal"`
+	Refspecs                bool `json:"refspecs"`
 }
 
 type RegisterRunnerParameters struct {
@@ -134,6 +135,8 @@ type GitInfo struct {
 	Sha       string         `json:"sha"`
 	BeforeSha string         `json:"before_sha"`
 	RefType   GitInfoRefType `json:"ref_type"`
+	Refspecs  []string       `json:"refspecs"`
+	Depth     int            `json:"depth"`
 }
 
 type RunnerInfo struct {

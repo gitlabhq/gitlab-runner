@@ -410,7 +410,7 @@ func TestDockerCommandOutput(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 
-	re, err := regexp.Compile("(?m)^Cloning into '/builds/gitlab-org/gitlab-test'...")
+	re, err := regexp.Compile("(?m)^Initialized empty Git repository in /builds/gitlab-org/gitlab-test/.git/")
 	assert.NoError(t, err)
 	assert.Regexp(t, re, buffer.String())
 }
@@ -898,7 +898,7 @@ func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.Error(t, err)
 	out := buffer.String()
-	assert.Contains(t, out, "Cloning repository")
+	assert.Contains(t, out, "Created fresh repository")
 	assert.NotContains(t, out, "Updating/initializing submodules")
 }
 
@@ -930,7 +930,7 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
-	assert.Contains(t, out, "Cloning repository")
+	assert.Contains(t, out, "Created fresh repository")
 	assert.Contains(t, out, "Updating/initializing submodules")
 }
 

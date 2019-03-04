@@ -22,6 +22,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.UploadMultipleArtifacts = true
 	features.UploadRawArtifacts = true
 	features.Cache = true
+	features.Refspecs = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
@@ -62,11 +63,11 @@ func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, wh
 	return
 }
 
+// TODO: Remove in 12.0
 func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
 	templateDir := w.MkTmpDir("git-template")
 	args := []string{"clone", "--no-checkout", build.GetRemoteURL(), projectDir, "--template", templateDir}
 
-	w.RmDir(projectDir)
 	templateFile := path.Join(templateDir, "config")
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
 	if build.IsSharedEnv() {
@@ -84,6 +85,25 @@ func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projec
 	w.Cd(projectDir)
 }
 
+func (b *AbstractShell) writeGitCleanup(w ShellWriter) {
+	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
+	// The file can be left if previous build was terminated during git operation
+	w.RmFile(".git/index.lock")
+	w.RmFile(".git/shallow.lock")
+	w.RmFile(".git/HEAD.lock")
+
+	w.RmFile(".git/hooks/post-checkout")
+
+	w.Command("git", "clean", "-ffdx")
+	w.IfCmd("git", "diff", "--no-ext-diff", "--quiet", "--exit-code")
+	// git 1.7 cannot reset before a checkout, if no diffs we can avoid git reset
+	w.Print("Clean repository")
+	w.Else()
+	w.Command("git", "reset", "--hard")
+	w.EndIf()
+}
+
+// TODO: Remove in 12.0
 func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
 	depth := build.GetGitDepth()
 
@@ -100,18 +120,8 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 		b.writeGitSSLConfig(w, build, nil)
 	}
 
-	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
-	// The file can be left if previous build was terminated during git operation
-	w.RmFile(".git/index.lock")
-	w.RmFile(".git/shallow.lock")
-	w.RmFile(".git/HEAD.lock")
+	b.writeGitCleanup(w)
 
-	w.IfFile(".git/hooks/post-checkout")
-	w.RmFile(".git/hooks/post-checkout")
-	w.EndIf()
-
-	w.Command("git", "clean", "-ffdx")
-	w.Command("git", "reset", "--hard")
 	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
 	if depth != "" {
 		var refspec string
@@ -127,6 +137,45 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 	w.Else()
 	b.writeCloneCmd(w, build, projectDir)
 	w.EndIf()
+}
+
+func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
+	depth := build.GitInfo.Depth
+
+	// initializing
+	templateDir := w.MkTmpDir("git-template")
+	templateFile := path.Join(templateDir, "config")
+
+	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
+	if build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
+	}
+
+	w.Command("git", "init", projectDir, "--template", templateDir)
+	w.Cd(projectDir)
+
+	// fetching
+	if depth > 0 {
+		w.Notice("Fetching changes with git depth set to %d...", depth)
+	} else {
+		w.Notice("Fetching changes...")
+	}
+
+	// Add `git remote` or update existing
+	w.IfCmdWithOutput("git", "remote", "add", "origin", build.GetRemoteURL())
+	w.Notice("Created fresh repository.")
+	w.Else()
+	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
+	b.writeGitCleanup(w)
+	w.EndIf()
+
+	fetchArgs := []string{"fetch", "origin", "--prune"}
+	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
+	if depth > 0 {
+		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
+	}
+
+	w.Command("git", fetchArgs...)
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
@@ -302,14 +351,28 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 
 func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	build := info.Build
+	hasRefspecs := build.RefspecsAvailable()
 	projectDir := build.FullProjectDir()
 	gitDir := path.Join(build.FullProjectDir(), ".git")
 
+	if !hasRefspecs {
+		w.Warning("DEPRECATION: this GitLab server doesn't support refspecs, gitlab-runner 12.0 will no longer work with this version of GitLab")
+	}
+
 	switch info.Build.GetGitStrategy() {
 	case common.GitFetch:
-		b.writeFetchCmd(w, build, projectDir, gitDir)
+		if hasRefspecs {
+			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
+		} else {
+			b.writeFetchCmd(w, build, projectDir, gitDir)
+		}
 	case common.GitClone:
-		b.writeCloneCmd(w, build, projectDir)
+		w.RmDir(projectDir)
+		if hasRefspecs {
+			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
+		} else {
+			b.writeCloneCmd(w, build, projectDir)
+		}
 	case common.GitNone:
 		w.Notice("Skipping Git repository setup")
 		w.MkDir(projectDir)
