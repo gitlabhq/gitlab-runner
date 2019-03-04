@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -65,5 +66,29 @@ func TestMkDir(t *testing.T) {
 		createdPath := filepath.Join(tmpDir, testTmpDir, TestPath)
 		_, err := ioutil.ReadDir(createdPath)
 		assert.NoError(t, err)
+	})
+}
+
+func TestRmFile(t *testing.T) {
+	const TestPath = "test-path"
+
+	tmpDir, err := ioutil.TempDir("", "runner-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shellstest.ShellWriter) {
+		tmpFile := path.Join(tmpDir, TestPath)
+		err = ioutil.WriteFile(tmpFile, []byte{}, 0600)
+		require.NoError(t, err)
+
+		writer.RmFile(TestPath)
+
+		runShell(t, shell, tmpDir, writer)
+
+		_, err = os.Stat(tmpFile)
+		require.True(t, os.IsNotExist(err), "tmpFile not deleted")
+
+		// check if the file do not exist
+		runShell(t, shell, tmpDir, writer)
 	})
 }
