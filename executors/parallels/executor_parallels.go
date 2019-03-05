@@ -160,15 +160,15 @@ func (s *executor) updateGuestTime() error {
 		timeServer = "time.apple.com"
 	}
 
-	err := prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", timeServer)
+	// Check either ntpdate command exists or not before trying to execute it
+	// Starting from Mojave ntpdate was removed
+	_, err := prl.Exec(s.vmName, "which", "ntpdate")
 	if err != nil {
-		s.Debugln("Could not run ntpdate command. Trying the sntp command instead...")
-		err = prl.TryExec(s.vmName, 20, "sudo", "sntp", "-S", timeServer)
-		if err != nil {
-			return err
-		}
+		// Fallback to sntp
+		return prl.TryExec(s.vmName, 20, "sudo", "sntp", "-sS", timeServer)
 	}
-	return nil
+
+	return prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", timeServer)
 }
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
