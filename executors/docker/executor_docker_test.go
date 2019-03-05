@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
@@ -321,6 +322,11 @@ func TestHelperImageWithVariable(t *testing.T) {
 		Once()
 
 	e := executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Build: &common.Build{
+				JobResponse: common.JobResponse{},
+			},
+		},
 		client: c,
 	}
 
@@ -1154,6 +1160,201 @@ func TestDockerSysctlsSetting(t *testing.T) {
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+// TODO: Remove in 12.0
+func TestCreateCacheVolumeFeatureFlag(t *testing.T) {
+	cacheDir := "/cache"
+
+	cases := []struct {
+		name        string
+		variables   common.JobVariables
+		helperImage string
+		expectedCmd []string
+	}{
+		{
+			name:        "Helper image is not specified",
+			variables:   common.JobVariables{},
+			helperImage: "",
+			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		},
+		{
+			name: "Helper image is not specified and FF still turned on",
+			variables: common.JobVariables{
+				common.JobVariable{Key: common.FFDockerHelperImageV2, Value: "true"},
+			},
+			helperImage: "",
+			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		},
+		{
+			name:        "Helper image is specified",
+			variables:   common.JobVariables{},
+			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
+			expectedCmd: []string{"gitlab-runner-cache", cacheDir},
+		},
+		{
+			name: "Helper image is specified & FF variable is set to true",
+			variables: common.JobVariables{
+				common.JobVariable{Key: common.FFDockerHelperImageV2, Value: "true"},
+			},
+			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
+			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			helperImageID := fmt.Sprintf("%s-helperImage-%d", t.Name(), time.Now().Unix())
+			cacheContainerID := fmt.Sprintf("%s-cacheContainer-%d", t.Name(), time.Now().Unix())
+			containerName := fmt.Sprintf("%s-cacheContainerName-%d", t.Name(), time.Now().Unix())
+
+			mClient := docker_helpers.MockClient{}
+			defer mClient.AssertExpectations(t)
+			mClient.On("ImageInspectWithRaw", mock.Anything, mock.Anything).
+				Return(types.ImageInspect{ID: helperImageID}, nil, nil)
+			mClient.On("ContainerStart", mock.Anything, cacheContainerID, mock.Anything).Return(nil).Once()
+			mClient.On("ContainerInspect", mock.Anything, cacheContainerID).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						ExitCode: 0,
+					},
+				},
+			}, nil).Once()
+			if testCase.helperImage != "" {
+				mClient.On("ImagePullBlocking", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+			}
+
+			executor := setUpExecutorForFeatureFlag(testCase.variables, testCase.helperImage, &mClient)
+
+			expectedConfig := &container.Config{
+				Image: helperImageID,
+				Cmd:   testCase.expectedCmd,
+				Volumes: map[string]struct{}{
+					cacheDir: {},
+				},
+				Labels: executor.getLabels("cache", "cache.dir="+cacheDir),
+			}
+
+			mClient.On("ContainerCreate", mock.Anything, expectedConfig, mock.Anything, mock.Anything, containerName).
+				Return(container.ContainerCreateCreatedBody{ID: cacheContainerID}, nil).
+				Once()
+
+			_, err := executor.createCacheVolume(containerName, cacheDir)
+			assert.NoError(t, err)
+		})
+	}
+}
+
+// TODO: Remove in 12.0
+func TestRunServiceHealthCheckContainerFeatureFlag(t *testing.T) {
+	var cases = []struct {
+		name        string
+		variables   common.JobVariables
+		helperImage string
+		expectedCmd []string
+	}{
+		{
+			name:        "Helper image is not specified",
+			variables:   common.JobVariables{},
+			helperImage: "",
+			expectedCmd: []string{"gitlab-runner-helper", "health-check"},
+		},
+		{
+			name: "Helper image is not specified and FF still turned on",
+			variables: common.JobVariables{
+				common.JobVariable{Key: common.FFDockerHelperImageV2, Value: "true"},
+			},
+			helperImage: "",
+			expectedCmd: []string{"gitlab-runner-helper", "health-check"},
+		},
+		{
+			name:        "Helper image is specified",
+			variables:   common.JobVariables{},
+			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
+			expectedCmd: []string{"gitlab-runner-service"},
+		},
+		{
+			name: "Helper image is specified & FF variable is set to true",
+			variables: common.JobVariables{
+				common.JobVariable{Key: common.FFDockerHelperImageV2, Value: "true"},
+			},
+			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
+			expectedCmd: []string{"gitlab-runner-helper", "health-check"},
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			helperImageID := fmt.Sprintf("%s-helperImage-%d", t.Name(), time.Now().Unix())
+			containerID := fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix())
+			serviceContainerID := fmt.Sprintf("%s-wait-for-service", containerID)
+
+			mClient := docker_helpers.MockClient{}
+			defer mClient.AssertExpectations(t)
+			mClient.On("ImageInspectWithRaw", mock.Anything, mock.Anything).
+				Return(types.ImageInspect{ID: helperImageID}, nil, nil)
+			mClient.On("ContainerStart", mock.Anything, serviceContainerID, mock.Anything).Return(nil).Once()
+			mClient.On("ContainerInspect", mock.Anything, serviceContainerID).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						ExitCode: 0,
+					},
+				},
+			}, nil).Once()
+			mClient.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{}, nil).Once()
+			mClient.On("ContainerRemove", mock.Anything, serviceContainerID, mock.Anything).Return(nil).Once()
+			if testCase.helperImage != "" {
+				mClient.On("ImagePullBlocking", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+			}
+
+			executor := setUpExecutorForFeatureFlag(testCase.variables, testCase.helperImage, &mClient)
+
+			service := &types.Container{
+				ID:    containerID,
+				Names: []string{containerID},
+			}
+
+			expectedConfig := &container.Config{
+				Cmd:    testCase.expectedCmd,
+				Image:  helperImageID,
+				Labels: executor.getLabels("wait", "wait="+service.ID),
+			}
+
+			mClient.On("ContainerCreate", mock.Anything, expectedConfig, mock.Anything, mock.Anything, serviceContainerID).
+				Return(container.ContainerCreateCreatedBody{ID: serviceContainerID}, nil).
+				Once()
+
+			err := executor.runServiceHealthCheckContainer(service, time.Minute)
+			assert.NoError(t, err)
+		})
+	}
+}
+
+// TODO: Remove in 12.0
+func setUpExecutorForFeatureFlag(variables common.JobVariables, helperImage string, client docker_helpers.Client) executor {
+	return executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Docker: &common.DockerConfig{
+						HelperImage: helperImage,
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Variables: variables,
+				},
+				Runner: &common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "xxxxx",
+					},
+				},
+			},
+			Context: context.Background(),
+		},
+		client: client,
+	}
 }
 
 func init() {
