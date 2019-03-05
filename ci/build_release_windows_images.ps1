@@ -31,11 +31,6 @@ $imagesBasePath = "dockerfiles\build\Dockerfile.x86_64"
 
 function Main
 {
-    if (-not (Test-Path env:WINDOWS_VERSION))
-    {
-        throw '$Env:WINDOWS_VERSION is not set'
-    }
-
     $tag = Get-Tag
 
     Build-Image $tag
@@ -80,7 +75,7 @@ function Build-Image($tag)
         '--build-arg', "GIT_LFS_256_CHECKSUM=$Env:GIT_LFS_256_CHECKSUM"
     )
 
-    & 'docker' build -t "gitlab/gitlab-runner-helper:$tag" $buildArgs -f $dockerFile $context
+    & 'docker' build -t "gitlab/gitlab-runner-helper:$tag" --force-rm $buildArgs -f $dockerFile $context
     if ($LASTEXITCODE -ne 0) {
         throw ("Failed to build docker image" )
     }
@@ -136,4 +131,25 @@ function Disconnect-Registry
     }
 }
 
-Main
+Try
+{
+    if (-not (Test-Path env:WINDOWS_VERSION))
+    {
+        throw '$Env:WINDOWS_VERSION is not set'
+    }
+
+    Main
+} 
+Finally 
+{
+    if (-not (Test-Path env:SKIP_CLEANUP))
+    {
+        Write-Information "Cleaning up the build image"
+        $tag = Get-Tag
+
+        # We don't really care if these fail or not, clean up shouldn't fail
+        # the pipelines.
+        & 'docker' rmi -f gitlab/gitlab-runner-helper:$tag
+        & 'docker' image prune -f
+    }
+}
