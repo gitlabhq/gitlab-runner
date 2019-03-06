@@ -22,6 +22,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
+	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
 const (
@@ -66,32 +67,6 @@ func skipOnGit(t *testing.T, constraints string) bool {
 
 func skipOnGit17x(t *testing.T) bool {
 	return skipOnGit(t, "< 1.8")
-}
-
-func onEachShell(t *testing.T, f func(t *testing.T, shell string)) {
-	t.Run("bash", func(t *testing.T) {
-		if helpers.SkipIntegrationTests(t, "bash") {
-			t.Skip()
-		}
-
-		f(t, "bash")
-	})
-
-	t.Run("cmd.exe", func(t *testing.T) {
-		if helpers.SkipIntegrationTests(t, "cmd.exe") {
-			t.Skip()
-		}
-
-		f(t, "cmd")
-	})
-
-	t.Run("powershell.exe", func(t *testing.T) {
-		if helpers.SkipIntegrationTests(t, "powershell.exe") {
-			t.Skip()
-		}
-
-		f(t, "powershell")
-	})
 }
 
 func runBuildWithOptions(t *testing.T, build *common.Build, config *common.Config, trace *common.Trace) error {
@@ -155,7 +130,7 @@ func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (
 }
 
 func TestBuildSuccess(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -167,7 +142,7 @@ func TestBuildSuccess(t *testing.T) {
 }
 
 func TestBuildAbort(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		longRunningBuild, err := common.GetLongRunningBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, longRunningBuild, shell)
@@ -185,7 +160,7 @@ func TestBuildAbort(t *testing.T) {
 }
 
 func TestBuildCancel(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		longRunningBuild, err := common.GetLongRunningBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, longRunningBuild, shell)
@@ -206,7 +181,7 @@ func TestBuildCancel(t *testing.T) {
 }
 
 func TestBuildWithIndexLock(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -225,7 +200,7 @@ func TestBuildWithIndexLock(t *testing.T) {
 }
 
 func TestBuildWithShallowLock(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -247,7 +222,7 @@ func TestBuildWithShallowLock(t *testing.T) {
 }
 
 func TestBuildWithHeadLock(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -266,7 +241,7 @@ func TestBuildWithHeadLock(t *testing.T) {
 }
 
 func TestBuildWithGitLFSHook(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -289,7 +264,7 @@ func TestBuildWithGitLFSHook(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyNone(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -308,7 +283,7 @@ func TestBuildWithGitStrategyNone(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyFetch(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -331,7 +306,7 @@ func TestBuildWithGitStrategyFetch(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyFetchNoCheckout(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -355,7 +330,7 @@ func TestBuildWithGitStrategyFetchNoCheckout(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyClone(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -377,7 +352,7 @@ func TestBuildWithGitStrategyClone(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyCloneNoCheckout(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -402,7 +377,7 @@ func TestBuildWithGitStrategyCloneNoCheckout(t *testing.T) {
 func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 	for _, strategy := range []string{"none", ""} {
 		t.Run("strategy "+strategy, func(t *testing.T) {
-			onEachShell(t, func(t *testing.T, shell string) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 				successfulBuild, err := common.GetSuccessfulBuild()
 				assert.NoError(t, err)
 				build, cleanup := newBuild(t, successfulBuild, shell)
@@ -427,7 +402,7 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 }
 
 func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -454,7 +429,7 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 		return
 	}
 
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -477,7 +452,7 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 }
 
 func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -494,7 +469,7 @@ func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
 }
 
 func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -515,7 +490,7 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 }
 
 func TestBuildWithGitSubmoduleModified(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -568,7 +543,7 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 }
 
 func TestBuildWithoutDebugTrace(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -581,7 +556,7 @@ func TestBuildWithoutDebugTrace(t *testing.T) {
 	})
 }
 func TestBuildWithDebugTrace(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -614,7 +589,7 @@ func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
 		return
 	}
 
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteBrokenTLSBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -630,7 +605,7 @@ func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
 }
 
 func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
@@ -647,7 +622,7 @@ func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
 
 // TestBuildWithGitSSLAndStrategyFetch describes issue https://gitlab.com/gitlab-org/gitlab-runner/issues/2991
 func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
