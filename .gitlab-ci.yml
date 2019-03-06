@@ -224,6 +224,11 @@ unit test: &unit_tests
     <<: *docker_variables
     GIT_LFS_256_CHECKSUM: 7be85238cbbb957ab25de52b60279d40ba40d3faa72eeb2cb9fa77d6d92381e5
   before_script:
+    # This' script content as well as the definition of GIT_LFS_256_CHECKSUM should be moved to
+    # "prepare ci image". Git LFS should be installed inside of the CI image. Unfortunately, building
+    # this image is currently blocked because of https://gitlab.com/gitlab-org/gitlab-runner/issues/3946.
+    # After we will resolve this issue, we should update the CI configuration and move the Git LFS installation
+    # to the proper place.
     - ./ci/install_git_lfs
   script:
     - source ci/touch_make_dependencies
