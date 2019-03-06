@@ -62,6 +62,7 @@ type FeaturesInfo struct {
 	Session                 bool `json:"session"`
 	Terminal                bool `json:"terminal"`
 	Refspecs                bool `json:"refspecs"`
+	Masking                 bool `json:"masking"`
 }
 
 type RegisterRunnerParameters struct {
@@ -359,6 +360,7 @@ type JobTrace interface {
 	Fail(err error, failureReason JobFailureReason)
 	SetCancelFunc(cancelFunc context.CancelFunc)
 	SetFailuresCollector(fc FailuresCollector)
+	SetMasked(values []string)
 	IsStdout() bool
 }
 

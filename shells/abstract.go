@@ -23,6 +23,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.UploadRawArtifacts = true
 	features.Cache = true
 	features.Refspecs = true
+	features.Masking = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {

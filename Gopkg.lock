@@ -448,6 +448,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:26fa3ab93b25b864677e6e6ce8d94ea52d3d667344edbbe62f2236573741a0a1"
+  name = "github.com/markelog/trie"
+  packages = [
+    ".",
+    "node",
+  ]
+  pruneopts = "N"
+  revision = "098fa99650c08b308663e2b2f057eddf4fb83fa2"
+
+[[projects]]
+  branch = "master"
   digest = "1:6f2e6a8a38f1e3b7d579404f0420bdf7a11389f4dc2de93134a142da2bbdca05"
   name = "github.com/mattn/go-zglob"
   packages = [
@@ -1046,6 +1057,7 @@
     "github.com/jpillora/backoff",
     "github.com/kardianos/osext",
     "github.com/kr/pty",
+    "github.com/markelog/trie",
     "github.com/mattn/go-zglob",
     "github.com/minio/minio-go",
     "github.com/minio/minio-go/pkg/credentials",

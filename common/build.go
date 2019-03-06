@@ -473,6 +473,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	defer cancel()
 
 	trace.SetCancelFunc(cancel)
+	trace.SetMasked(b.GetAllVariables().Masked())
 
 	options := ExecutorPrepareOptions{
 		Config:  b.Runner,
@@ -532,28 +533,45 @@ func (b *Build) GetSharedEnvVariable() JobVariable {
 	return env
 }
 
-func (b *Build) GetCITLSVariables() JobVariables {
+func (b *Build) GetTLSVariables(caFile, certFile, keyFile string) JobVariables {
 	variables := JobVariables{}
+
 	if b.TLSCAChain != "" {
-		variables = append(variables, JobVariable{tls.VariableCAFile, b.TLSCAChain, true, true, true})
+		variables = append(variables, JobVariable{
+			Key:      caFile,
+			Value:    b.TLSCAChain,
+			Public:   true,
+			Internal: true,
+			File:     true,
+		})
 	}
+
 	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
-		variables = append(variables, JobVariable{tls.VariableCertFile, b.TLSAuthCert, true, true, true})
-		variables = append(variables, JobVariable{tls.VariableKeyFile, b.TLSAuthKey, true, true, true})
+		variables = append(variables, JobVariable{
+			Key:      certFile,
+			Value:    b.TLSAuthCert,
+			Public:   true,
+			Internal: true,
+			File:     true,
+		})
+
+		variables = append(variables, JobVariable{
+			Key:      keyFile,
+			Value:    b.TLSAuthKey,
+			Internal: true,
+			File:     true,
+		})
 	}
+
 	return variables
 }
 
+func (b *Build) GetCITLSVariables() JobVariables {
+	return b.GetTLSVariables(tls.VariableCAFile, tls.VariableCertFile, tls.VariableKeyFile)
+}
+
 func (b *Build) GetGitTLSVariables() JobVariables {
-	variables := JobVariables{}
-	if b.TLSCAChain != "" {
-		variables = append(variables, JobVariable{"GIT_SSL_CAINFO", b.TLSCAChain, true, true, true})
-	}
-	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
-		variables = append(variables, JobVariable{"GIT_SSL_CERT", b.TLSAuthCert, true, true, true})
-		variables = append(variables, JobVariable{"GIT_SSL_KEY", b.TLSAuthKey, true, true, true})
-	}
-	return variables
+	return b.GetTLSVariables("GIT_SSL_CAINFO", "GIT_SSL_CERT", "GIT_SSL_KEY")
 }
 
 func (b *Build) IsSharedEnv() bool {

@@ -154,6 +154,10 @@ ignored = ["test", "appengine"]
   name = "gitlab.com/gitlab-org/gitlab-terminal"
   revision = "5af59b871b1bcc3f4b733f6db0ff3b6e8b247b92"
 
+[[constraint]]
+  name = "github.com/markelog/trie"
+  branch = "master"
+
 ##
 ## Refrain innovations ;)
 ##

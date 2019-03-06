@@ -292,6 +292,7 @@ func TestJobFailure(t *testing.T) {
 	trace.On("Write", mock.Anything).Return(0, nil)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("SetMasked", mock.Anything).Once()
 	trace.On("Fail", thrownErr, ScriptFailure).Once()
 
 	err = build.Run(&Config{}, trace)
@@ -346,6 +347,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	trace.On("Write", mock.Anything).Return(0, nil)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("SetMasked", mock.Anything).Once()
 	trace.On("Fail", mock.Anything, JobExecutionTimeout).Run(func(arguments mock.Arguments) {
 		assert.Error(t, arguments.Get(0).(error))
 	}).Once()
@@ -680,7 +682,7 @@ func TestDebugTrace(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 
-	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{"CI_DEBUG_TRACE", "false", true, true, false})
+	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: "false", Public: true, Internal: true})
 	build = &Build{
 		JobResponse: successfulBuild,
 	}
@@ -689,7 +691,7 @@ func TestDebugTrace(t *testing.T) {
 	successfulBuild, err = GetSuccessfulBuild()
 	assert.NoError(t, err)
 
-	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{"CI_DEBUG_TRACE", "true", true, true, false})
+	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: "true", Public: true, Internal: true})
 	build = &Build{
 		JobResponse: successfulBuild,
 	}

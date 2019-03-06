@@ -1868,6 +1868,7 @@ func (f FakeBuildTrace) Fail(err error, failureReason common.JobFailureReason) {
 func (f FakeBuildTrace) Notify(func())                                         {}
 func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)           {}
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)      {}
+func (f FakeBuildTrace) SetMasked(masked []string)                             {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }

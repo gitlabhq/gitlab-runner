@@ -41,6 +41,11 @@ func (_m *MockJobTrace) SetFailuresCollector(fc FailuresCollector) {
 	_m.Called(fc)
 }
 
+// SetMasked provides a mock function with given fields: values
+func (_m *MockJobTrace) SetMasked(values []string) {
+	_m.Called(values)
+}
+
 // Success provides a mock function with given fields:
 func (_m *MockJobTrace) Success() {
 	_m.Called()

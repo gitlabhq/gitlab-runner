@@ -23,6 +23,9 @@ func (s *Trace) Write(p []byte) (n int, err error) {
 	return s.Writer.Write(p)
 }
 
+func (s *Trace) SetMasked(values []string) {
+}
+
 func (s *Trace) Success() {
 }
 

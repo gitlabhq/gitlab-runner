@@ -1,18 +1,17 @@
 package network
 
 import (
-	"bytes"
 	"errors"
 )
 
 type tracePatch struct {
-	trace     bytes.Buffer
+	trace     []byte
 	offset    int
 	totalSize int
 }
 
 func (tp *tracePatch) Patch() []byte {
-	return tp.trace.Bytes()[tp.offset:tp.totalSize]
+	return tp.trace[tp.offset:tp.totalSize]
 }
 
 func (tp *tracePatch) Offset() int {
@@ -35,11 +34,11 @@ func (tp *tracePatch) ValidateRange() bool {
 	return false
 }
 
-func newTracePatch(trace bytes.Buffer, offset int) (*tracePatch, error) {
+func newTracePatch(trace []byte, offset int) (*tracePatch, error) {
 	patch := &tracePatch{
 		trace:     trace,
 		offset:    offset,
-		totalSize: trace.Len(),
+		totalSize: len(trace),
 	}
 
 	if !patch.ValidateRange() {
