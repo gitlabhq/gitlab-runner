@@ -753,7 +753,7 @@ func TestBuildNoRefspecs(t *testing.T) {
 		"none":  "Skipping Git repository setup",
 	}
 
-	onEachShell(t, func(t *testing.T, shell string) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		for _, strategy := range strategies {
 			t.Run(fmt.Sprintf("GIT_STRATEGY %s", strategy), func(t *testing.T) {
 				apiBuild, err := common.GetSuccessfulBuild()
