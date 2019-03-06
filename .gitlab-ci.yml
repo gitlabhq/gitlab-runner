@@ -36,14 +36,14 @@ image: $CI_IMAGE
   - docker
 
 .windows1803: &windows1803
-  variables:
+  variables: &windows1803_variables
     WINDOWS_VERSION: nanoserver1803
   tags:
   - windows-1803
   - shell
 
 .windows1809: &windows1809
-  variables:
+  variables: &windows1809_variables
     WINDOWS_VERSION: nanoserver1809
   tags:
   - windows-1809
@@ -522,6 +522,7 @@ bleeding edge nanoserver1803 docker images:
   <<: *windows1803
   extends: .build_windows_docker_images
   variables:
+    <<: *windows1803_variables
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: bleeding_edge/docker_images/windows1803
@@ -532,6 +533,7 @@ bleeding edge nanoserver1809 docker images:
   <<: *windows1809
   extends: .build_windows_docker_images
   variables:
+    <<: *windows1809_variables
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: bleeding_edge/docker_images/windows1809
@@ -563,6 +565,7 @@ stable nanoserver1803 docker images:
   <<: *windows1803
   extends: .build_windows_docker_images
   variables:
+    <<: *windows1803_variables
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: stable/docker_images/windows1803
@@ -573,6 +576,7 @@ stable nanoserver1809 docker images:
   <<: *windows1809
   extends: .build_windows_docker_images
   variables:
+    <<: *windows1809_variables
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: stable/docker_images/windows1809
