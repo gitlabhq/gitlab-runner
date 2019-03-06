@@ -153,7 +153,8 @@ variables:
   KUBERNETES_POD_ANNOTATIONS_3: "Key3=Val3"
 ```
 
-Note that you need to have non-empty value of `pod_annotations_overwrite_allowed` to be able to override pod annotations via `.gitlab-ci.yml` file. 
+NOTE: **Note:**
+You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file. 
 See [the Keywords](https://docs.gitlab.com/runner/executors/kubernetes.html#the-keywords) for details.
 
 ## Define keywords in the config toml
