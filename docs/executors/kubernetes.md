@@ -145,12 +145,16 @@ variables:
 ### Overwriting pod annotations
 
 Additionally, Kubernetes pod annotations can be overwritten on the `.gitlab-ci.yml` file, by using `KUBERNETES_POD_ANNOTATIONS_*` for variables and `key=value` for the value. The pod annotations will be overwritten to the `key=value`. Also, multiple annotations can be applied. For example:
-``` yaml
- variables:
-   KUBERNETES_POD_ANNOTATIONS_1: "Key1=Val1"
-   KUBERNETES_POD_ANNOTATIONS_2: "Key2=Val2"
-   KUBERNETES_POD_ANNOTATIONS_3: "Key3=Val3"
+
+```yaml
+variables:
+  KUBERNETES_POD_ANNOTATIONS_1: "Key1=Val1"
+  KUBERNETES_POD_ANNOTATIONS_2: "Key2=Val2"
+  KUBERNETES_POD_ANNOTATIONS_3: "Key3=Val3"
 ```
+
+NOTE: **Note:**
+You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file. 
 
 ## Define keywords in the config toml
 
