@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 
 RUN apt-get update -y && \
     apt-get upgrade -y && \
-    apt-get install -y ca-certificates wget apt-transport-https vim nano tzdata && \
+    apt-get install -y ca-certificates wget apt-transport-https vim nano tzdata git curl && \
     rm -rf /var/lib/apt/lists/*
 
 ARG DOCKER_MACHINE_VERSION
