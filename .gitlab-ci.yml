@@ -455,6 +455,13 @@ package-rpm: *packages
   <<: *release
   script:
   - make release_s3
+  - |
+    # publish release on gitlab.com
+    if [[ -n "${CI_COMMIT_TAG}" ]]; then
+      ./ci/release_gitlab
+    else
+      echo -e "\033[0;31m****** gitlab publishing disabled ******\033[0m"
+    fi
 
 .release_packagecloud: &release_packagecloud
   <<: *release
