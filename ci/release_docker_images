@@ -92,7 +92,7 @@ logout() {
     _docker logout "${1}"
 }
 
-echo "${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine" >> dockerfiles/checksums
+echo "${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine" > dockerfiles/checksums
 echo "${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init" >> dockerfiles/checksums
 echo "${GIT_LFS_CHECKSUM}  /usr/bin/git-lfs" >> dockerfiles/checksums
 cat dockerfiles/checksums
