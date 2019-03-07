@@ -1353,7 +1353,8 @@ func setUpExecutorForFeatureFlag(variables common.JobVariables, helperImage stri
 			},
 			Context: context.Background(),
 		},
-		client: client,
+		client:      client,
+		helperImage: newUnixHelperImage("x86_64"),
 	}
 }
 

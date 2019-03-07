@@ -64,6 +64,15 @@ type executor struct {
 
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
+
+	helperImage helperImage
+}
+
+// helperImage provides information about the helper image that can be used to
+// pull from Docker Hub.
+type helperImage interface {
+	Architecture() string
+	Tag(revision string) (string, error)
 }
 
 func init() {
@@ -233,27 +242,6 @@ func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []str
 	return image, nil
 }
 
-func (e *executor) getArchitecture() string {
-	architecture := e.info.Architecture
-	switch architecture {
-	case "armv6l", "armv7l", "aarch64":
-		architecture = "arm"
-	case "amd64":
-		architecture = "x86_64"
-	}
-
-	if architecture != "" {
-		return architecture
-	}
-
-	switch runtime.GOARCH {
-	case "amd64":
-		return "x86_64"
-	default:
-		return runtime.GOARCH
-	}
-}
-
 func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect, error) {
 	file, err := os.OpenFile(path, os.O_RDONLY, 0600)
 	if err != nil {
@@ -298,18 +286,17 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		return e.getDockerImage(imageNameFromConfig)
 	}
 
-	architecture := e.getArchitecture()
-	if architecture == "" {
-		return nil, errors.New("unsupported docker architecture")
-	}
-
 	revision := "latest"
 	if common.REVISION != "HEAD" {
 		revision = common.REVISION
 	}
 
+	tag, err := e.helperImage.Tag(revision)
+	if err != nil {
+		return nil, err
+	}
+
 	// Try to find already loaded prebuilt image
-	tag := fmt.Sprintf("%s-%s", architecture, revision)
 	imageName := fmt.Sprintf("%s:%s", prebuiltImageName, tag)
 	e.Debugln("Looking for prebuilt image", imageName, "...")
 	image, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
@@ -318,6 +305,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	}
 
 	// Try to load prebuilt image from local filesystem
+	architecture := e.helperImage.Architecture()
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
@@ -1178,6 +1166,13 @@ func (e *executor) connectDocker() (err error) {
 }
 
 func (e *executor) createDependencies() (err error) {
+	switch runtime.GOOS {
+	case "windows":
+		e.helperImage = newWindowsHelperImage(e.info.OperatingSystem)
+	default:
+		e.helperImage = newUnixHelperImage(e.info.Architecture)
+	}
+
 	err = e.bindDevices()
 	if err != nil {
 		return err
