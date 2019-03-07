@@ -30,4 +30,6 @@ type ShellWriter interface {
 	Warning(fmt string, arguments ...interface{})
 	Error(fmt string, arguments ...interface{})
 	EmptyLine()
+
+	Finish(trace bool) string
 }
