@@ -408,6 +408,9 @@ package-rpm: *packages
     DOCKER_MACHINE_CHECKSUM: "a4c69bffb78d3cfe103b89dae61c3ea11cc2d1a91c4ff86e630c9ae88244db02"
     DUMB_INIT_VERSION: "1.0.2"
     DUMB_INIT_CHECKSUM: "a8defac40aaca2ca0896c7c5adbc241af60c7c3df470c1a4c469a860bd805429"
+    GIT_LFS_VERSION: "2.7.1"
+    GIT_LFS_CHECKSUM: "c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920"
+
   script:
   - source ci/touch_make_dependencies
   - make release_docker_images

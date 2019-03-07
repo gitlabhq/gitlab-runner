@@ -7,6 +7,7 @@ RUN apt-get update -y && \
 
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
+ARG GIT_LFS_VERSION
 
 COPY gitlab-runner_amd64.deb /tmp/
 COPY checksums /tmp/
@@ -24,6 +25,13 @@ RUN dpkg -i /tmp/gitlab-runner_amd64.deb; \
     wget -q https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_amd64 -O /usr/bin/dumb-init && \
     chmod +x /usr/bin/dumb-init && \
     dumb-init --version && \
+    wget -q https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz -O /tmp/git-lfs.tar.gz && \
+    mkdir /tmp/git-lfs && \
+    tar -xzf /tmp/git-lfs.tar.gz -C /tmp/git-lfs/ && \
+    mv /tmp/git-lfs/git-lfs /usr/bin/git-lfs && \
+    rm -rf /tmp/git-lfs* && \
+    git-lfs install --skip-repo && \
+    git-lfs version && \
     sha256sum --check --strict /tmp/checksums
 
 COPY entrypoint /
