@@ -82,9 +82,9 @@ func TestParseDeviceStringFour(t *testing.T) {
 }
 
 type testAllowedImageDescription struct {
-	allowed        bool
-	image          string
-	allowed_images []string
+	allowed       bool
+	image         string
+	allowedImages []string
 }
 
 var testAllowedImages = []testAllowedImageDescription{
@@ -126,12 +126,12 @@ func TestVerifyAllowedImage(t *testing.T) {
 	e := executor{}
 
 	for _, test := range testAllowedImages {
-		err := e.verifyAllowedImage(test.image, "", test.allowed_images, []string{})
+		err := e.verifyAllowedImage(test.image, "", test.allowedImages, []string{})
 
 		if err != nil && test.allowed {
-			t.Errorf("%q must be allowed by %q", test.image, test.allowed_images)
+			t.Errorf("%q must be allowed by %q", test.image, test.allowedImages)
 		} else if err == nil && !test.allowed {
-			t.Errorf("%q must not be allowed by %q", test.image, test.allowed_images)
+			t.Errorf("%q must not be allowed by %q", test.image, test.allowedImages)
 		}
 	}
 }
@@ -402,7 +402,7 @@ func TestDockerPolicyModeNever(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "existing", image.ID)
 
-	image, err = e.getDockerImage("not-existing")
+	_, err = e.getDockerImage("not-existing")
 	assert.Error(t, err)
 }
 
