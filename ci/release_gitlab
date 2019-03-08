@@ -49,6 +49,6 @@ release=$(cat <<EOS
 EOS
 )
 
-echo curl -f --header 'Content-Type: application/json' --header "PRIVATE-TOKEN: $DEPLOY_TOKEN" \
+curl -f --header 'Content-Type: application/json' --header "PRIVATE-TOKEN: $DEPLOY_TOKEN" \
     --data "$release" --request POST "$api/projects/$runner_id/releases"
 
