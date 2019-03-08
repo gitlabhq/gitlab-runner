@@ -1,3 +1,33 @@
+v11.9.0-rc1 (2019-03-08)
+- fix(parallels): use the newer sntp command to time sync !1145
+- Update docker API verion !1187
+- Update alpine images to alpine 3.9 !1197
+- Fix a typo in the description of the configuration option !1205
+- Document creation of Docker volumes passed with docker exec --docker-volumes !1120
+- Correct spelling of timed out in literals !1121
+- Fix spelling and other minor improvements !1207
+- Migrate service wait script to Go !1195
+- Docs update: Run runner on kubernetes !1185
+- Increase test timeout for shell executor !1214
+- Follow style convention for documentation !1213
+- Add test for runner build limit !1186
+- Migrate cache bash script to Go for helper image !1201
+- Document OS deprecations for 12.0 !1210
+- Fix anchors in Runner documentation !1216
+- Add `build_simple` to `help` make target !1212
+- Split `make docker` for GitLab Runner Helper !1188
+- Add windows Dockerfiles for gitlab-runner-helper !1167
+- Make Runner tests working on Windows with our CI Pipeline !1219
+- Fetch code from provided refspecs !1203
+- Check either ntpdate command exists or not before trying to execute it !1189
+- Deprecate helper image commands !1218
+- Add script for building windows helper image !1178
+- Fix ShellWriter.RmFile(string) for cmd shell !1226
+- Mask log trace !1204
+- Add note about pod annotations for more clarity !1220
+- Resolve memory allocation failure when cloning repos with LFS objects bigger than available RAM !1200
+- Release also on gitlab releases page !1232
+
 v11.8.0 (2019-02-22)
 - Kubernetes executor: add support for Node tolerations !941
 - Update logrus version to v1.3.0 !1137
