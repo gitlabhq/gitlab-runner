@@ -85,6 +85,20 @@ func (_m *MockShellWriter) Error(fmt string, arguments ...interface{}) {
 	_m.Called(_ca...)
 }
 
+// Finish provides a mock function with given fields: trace
+func (_m *MockShellWriter) Finish(trace bool) string {
+	ret := _m.Called(trace)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(bool) string); ok {
+		r0 = rf(trace)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // IfCmd provides a mock function with given fields: cmd, arguments
 func (_m *MockShellWriter) IfCmd(cmd string, arguments ...string) {
 	_va := make([]interface{}, len(arguments))

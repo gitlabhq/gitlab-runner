@@ -9,6 +9,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
+type shellWriterFactory func() shells.ShellWriter
+
 func OnEachShell(t *testing.T, f func(t *testing.T, shell string)) {
 	shells := []string{"bash", "cmd", "powershell"}
 
@@ -24,15 +26,15 @@ func OnEachShell(t *testing.T, f func(t *testing.T, shell string)) {
 	}
 }
 
-func OnEachShellWithWriter(t *testing.T, f func(t *testing.T, shell string, writer ShellWriter)) {
-	writers := map[string]ShellWriterFactory{
-		"bash": func() ShellWriter {
+func OnEachShellWithWriter(t *testing.T, f func(t *testing.T, shell string, writer shells.ShellWriter)) {
+	writers := map[string]shellWriterFactory{
+		"bash": func() shells.ShellWriter {
 			return &shells.BashWriter{}
 		},
-		"cmd": func() ShellWriter {
+		"cmd": func() shells.ShellWriter {
 			return &shells.CmdWriter{}
 		},
-		"powershell": func() ShellWriter {
+		"powershell": func() shells.ShellWriter {
 			return &shells.PsWriter{}
 		},
 	}

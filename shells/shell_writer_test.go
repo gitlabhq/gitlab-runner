@@ -11,10 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
-func runShell(t *testing.T, shell, cwd string, writer shellstest.ShellWriter) {
+func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) {
 	var extension string
 	var cmdArgs []string
 
@@ -55,7 +56,7 @@ func TestMkDir(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shellstest.ShellWriter) {
+	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
 		testTmpDir := writer.MkTmpDir(shell + "-mkdir-test")
 		writer.Cd(testTmpDir)
 		writer.MkDir(TestPath)
@@ -76,7 +77,7 @@ func TestRmFile(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shellstest.ShellWriter) {
+	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
 		tmpFile := path.Join(tmpDir, TestPath)
 		err = ioutil.WriteFile(tmpFile, []byte{}, 0600)
 		require.NoError(t, err)
