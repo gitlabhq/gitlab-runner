@@ -153,6 +153,11 @@ func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
 	b.RootDir = rootDir
 	b.BuildDir = path.Join(rootDir, b.ProjectUniqueDir(sharedDir))
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
+
+	// invalidate variables cache:
+	// as some variables are based on dynamic
+	// state after build starts
+	b.allVariables = nil
 }
 
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {

@@ -76,6 +76,59 @@ func TestBuildRun(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestBuildPredefinedVariables(t *testing.T) {
+	e := MockExecutor{}
+	defer e.AssertExpectations(t)
+
+	p := MockExecutorProvider{}
+	defer p.AssertExpectations(t)
+
+	// Create executor only once
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
+	p.On("Create").Return(&e).Once()
+
+	// We run everything once
+	e.On("Prepare", mock.Anything).
+		Return(func(options ExecutorPrepareOptions) error {
+			options.Build.StartBuild("/root/dir", "/cache/dir", false)
+			return nil
+		}).Once()
+	e.On("Finish", nil).Return().Once()
+	e.On("Cleanup").Return().Once()
+
+	// Run script successfully
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+
+	RegisterExecutor(t.Name(), &p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		JobResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: t.Name(),
+			},
+		},
+	}
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+
+	projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
+	assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
+}
+
 func TestBuildRunNoModifyConfig(t *testing.T) {
 	e := MockExecutor{}
 	defer e.AssertExpectations(t)
