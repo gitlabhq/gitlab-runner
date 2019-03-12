@@ -51,6 +51,7 @@ const (
 type BuildStage string
 
 const (
+	BuildStagePrepareExecutor          BuildStage = "prepare_executor"
 	BuildStagePrepare                  BuildStage = "prepare_script"
 	BuildStageGetSources               BuildStage = "get_sources"
 	BuildStageRestoreCache             BuildStage = "restore_cache"
@@ -495,7 +496,16 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	provider.GetFeatures(&b.ExecutorFeatures)
 
-	executor, err = b.retryCreateExecutor(options, provider, b.logger)
+	section := helpers.BuildSection{
+		Name:        string(BuildStagePrepareExecutor),
+		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		Run: func() error {
+			executor, err = b.retryCreateExecutor(options, provider, b.logger)
+			return err
+		},
+	}
+	err = section.Execute(&b.logger)
+
 	if err == nil {
 		err = b.run(ctx, executor)
 		if err := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); err != nil {
