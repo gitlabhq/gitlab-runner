@@ -1,3 +1,8 @@
+v11.9.0-rc2 (2019-03-13)
+
+- Fix CI_PROJECT_DIR handling !1241
+- Restore availability of pprof in the debug server !1242
+
 v11.9.0-rc1 (2019-03-08)
 - fix(parallels): use the newer sntp command to time sync !1145
 - Update docker API verion !1187
