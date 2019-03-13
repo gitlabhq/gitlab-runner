@@ -30,6 +30,14 @@ image: $CI_IMAGE
   except:
   - /(^docs[\/-].*|.*-docs$)/
 
+.windows_base:
+  variables: &windows_base_variables
+    PKG_NAMESPACE: gitlab.com\gitlab-org
+    PKG_NAME: gitlab-runner
+    GOPATH: "$CI_PROJECT_DIR\\.gopath"
+    PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
+    PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
+
 .docker: &docker
   <<: *except_docs
   services:
@@ -43,6 +51,7 @@ image: $CI_IMAGE
 
 .windows1803: &windows1803
   variables: &windows1803_variables
+    <<: *windows_base_variables
     WINDOWS_VERSION: nanoserver1803
   tags:
   - windows-1803
@@ -50,6 +59,7 @@ image: $CI_IMAGE
 
 .windows1809: &windows1809
   variables: &windows1809_variables
+    <<: *windows_base_variables
     WINDOWS_VERSION: nanoserver1809
   tags:
   - windows-1809
@@ -274,11 +284,6 @@ unit test with race:
   parallel: 3
   variables:
     GOROOT: "C:\\Go"
-    PKG_NAMESPACE: gitlab.com\gitlab-org
-    PKG_NAME: gitlab-runner
-    GOPATH: "$CI_PROJECT_DIR\\.gopath"
-    PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
-    PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
   before_script:
   - if (Test-Path $GOPATH) { Remove-Item -Force -Recurse $GOPATH }
   - New-Item $PKG_BASE_DIR -ItemType directory -Force
