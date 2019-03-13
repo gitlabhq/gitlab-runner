@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	_ "net/http/pprof" // pprof package adds everything itself inside its init() function
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
@@ -474,6 +474,14 @@ func (mr *RunCommand) serveDebugData(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/jobs/list", mr.buildsHelper.ListJobsHandler)
 }
 
+func (mr *RunCommand) servePprof(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+}
+
 func (mr *RunCommand) setupMetricsAndDebugServer() {
 	listenAddress, err := mr.listenAddress()
 
@@ -505,6 +513,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 
 	mr.serveMetrics(mux)
 	mr.serveDebugData(mux)
+	mr.servePprof(mux)
 
 	mr.log().
 		WithField("address", listenAddress).
