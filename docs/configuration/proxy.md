@@ -140,6 +140,20 @@ Where `docker0_interface_ip` is the IP address of the `docker0` interface. You n
 be able to reach it from within the Docker containers, so it's important to set
 it right.
 
+NOTE: **Note:**
+Environment variables names are case-sensitive, 
+some programs expect lower case `http_proxy`, `https_proxy`, (e.g. `wget`, `apt-get`)
+and other upper case `HTTP_PROXY`, `HTTPS_PROXY`, (e.g. `docker`)
+and some respect both (e.g. `apk`)
+see: 
+https://unix.stackexchange.com/questions/212894/whats-the-right-format-for-the-http-proxy-environment-variable-caps-or-no-ca#212972
+Add both variants to `/etc/gitlab-runner/config.toml` if needed, 
+e.g. in case `docker` and `apt-get` are both used in a `script:` of a `.gitlab-ci.yml`:
+
+```toml
+environment = ["https_proxy=docker0_interface_ip:3128", "http_proxy=docker0_interface_ip:3128", "HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
+```
+
 ## Proxy settings when using dind service
 
 When using the [docker-in-docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor) (dind), 
