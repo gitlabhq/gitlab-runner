@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -19,19 +18,19 @@ func Test_linuxHelperImage_Tag(t *testing.T) {
 			name:        "When dockerArch not specified we fallback to runtime arch",
 			dockerArch:  "",
 			revision:    "2923a43",
-			expectedTag: fmt.Sprintf("%s-%s", "x86_64", "2923a43"),
+			expectedTag: "x86_64-2923a43",
 		},
 		{
 			name:        "Docker runs on armv6l",
 			dockerArch:  "armv6l",
 			revision:    "2923a43",
-			expectedTag: fmt.Sprintf("%s-%s", "arm", "2923a43"),
+			expectedTag: "arm-2923a43",
 		},
 		{
 			name:        "Docker runs on amd64",
 			dockerArch:  "amd64",
 			revision:    "2923a43",
-			expectedTag: fmt.Sprintf("%s-%s", "x86_64", "2923a43"),
+			expectedTag: "x86_64-2923a43",
 		},
 	}
 
