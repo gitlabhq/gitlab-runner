@@ -45,3 +45,8 @@ func Test_unixHelperImage_Tag(t *testing.T) {
 		})
 	}
 }
+
+func Test_unixHelperImage_IsSupportingLocalImport(t *testing.T) {
+	u := newUnixHelperImage("")
+	assert.True(t, u.IsSupportingLocalImport())
+}

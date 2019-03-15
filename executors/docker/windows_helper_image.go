@@ -31,6 +31,10 @@ func (u *windowsHelperImage) Tag(revision string) (string, error) {
 	return fmt.Sprintf("%s-%s-%s", u.Architecture(), revision, version), nil
 }
 
+func (u *windowsHelperImage) IsSupportingLocalImport() bool {
+	return false
+}
+
 func (u *windowsHelperImage) helperImageVersion() (string, error) {
 	switch {
 	case strings.Contains(u.osType, windows1809):

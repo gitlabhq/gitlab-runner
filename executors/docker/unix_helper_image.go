@@ -29,6 +29,10 @@ func (u *unixHelperImage) Tag(revision string) (string, error) {
 	return fmt.Sprintf("%s-%s", u.Architecture(), revision), nil
 }
 
+func (u *unixHelperImage) IsSupportingLocalImport() bool {
+	return true
+}
+
 func newUnixHelperImage(dockerArch string) helperImage {
 	return &unixHelperImage{
 		dockerArch: dockerArch,

@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -73,6 +72,7 @@ type executor struct {
 type helperImage interface {
 	Architecture() string
 	Tag(revision string) (string, error)
+	IsSupportingLocalImport() bool
 }
 
 func init() {
@@ -305,6 +305,21 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	}
 
 	// Try to load prebuilt image from local filesystem
+	loadedImage := e.getLocalDockerImage(tag)
+	if loadedImage != nil {
+		return loadedImage, nil
+	}
+
+	// Fallback to getting image from DockerHub
+	e.Debugln("Loading image from registry:", imageName)
+	return e.getDockerImage(imageName)
+}
+
+func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
+	if !e.helperImage.IsSupportingLocalImport() {
+		return nil
+	}
+
 	architecture := e.helperImage.Architecture()
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
@@ -314,12 +329,10 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 			continue
 		}
 
-		return image, err
+		return image
 	}
 
-	// Fallback to getting image from DockerHub
-	e.Debugln("Loading image from registry:", imageName)
-	return e.getDockerImage(imageName)
+	return nil
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {
@@ -1166,7 +1179,7 @@ func (e *executor) connectDocker() (err error) {
 }
 
 func (e *executor) createDependencies() (err error) {
-	switch runtime.GOOS {
+	switch e.info.OSType {
 	case "windows":
 		e.helperImage = newWindowsHelperImage(e.info.OperatingSystem)
 	default:

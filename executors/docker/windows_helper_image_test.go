@@ -46,3 +46,8 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 		})
 	}
 }
+
+func Test_windowsHelperImage_IsSupportingLocalImport(t *testing.T) {
+	u := newWindowsHelperImage("")
+	assert.False(t, u.IsSupportingLocalImport())
+}
