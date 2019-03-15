@@ -291,7 +291,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		revision = common.REVISION
 	}
 
-	tag, err := e.helperImage.Tag(revision)
+	tag, err := e.getHelperImage().Tag(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
 		return nil
 	}
 
-	architecture := e.helperImage.Architecture()
+	architecture := e.getHelperImage().Architecture()
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
@@ -333,6 +333,20 @@ func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
 	}
 
 	return nil
+}
+
+func (e *executor) getHelperImage() helperImage {
+	if e.helperImage != nil {
+		return e.helperImage
+	}
+
+	if e.info.OSType == "windows" {
+		e.helperImage = newWindowsHelperImage(e.info.OperatingSystem)
+		return e.helperImage
+	}
+
+	e.helperImage = newLinuxHelperImage(e.info.Architecture)
+	return e.helperImage
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {
@@ -1179,13 +1193,6 @@ func (e *executor) connectDocker() (err error) {
 }
 
 func (e *executor) createDependencies() (err error) {
-	switch e.info.OSType {
-	case "windows":
-		e.helperImage = newWindowsHelperImage(e.info.OperatingSystem)
-	default:
-		e.helperImage = newLinuxHelperImage(e.info.Architecture)
-	}
-
 	err = e.bindDevices()
 	if err != nil {
 		return err
