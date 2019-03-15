@@ -3,6 +3,8 @@ package docker
 import (
 	"fmt"
 	"runtime"
+
+	"github.com/docker/docker/api/types"
 )
 
 type linuxHelperImage struct {
@@ -33,8 +35,8 @@ func (u *linuxHelperImage) IsSupportingLocalImport() bool {
 	return true
 }
 
-func newLinuxHelperImage(dockerArch string) helperImage {
+func newLinuxHelperImage(info types.Info) helperImage {
 	return &linuxHelperImage{
-		dockerArch: dockerArch,
+		dockerArch: info.Architecture,
 	}
 }

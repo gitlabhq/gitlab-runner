@@ -341,11 +341,11 @@ func (e *executor) getHelperImage() helperImage {
 	}
 
 	if e.info.OSType == "windows" {
-		e.helperImage = newWindowsHelperImage(e.info.OperatingSystem)
+		e.helperImage = newWindowsHelperImage(e.info)
 		return e.helperImage
 	}
 
-	e.helperImage = newLinuxHelperImage(e.info.Architecture)
+	e.helperImage = newLinuxHelperImage(e.info)
 	return e.helperImage
 }
 

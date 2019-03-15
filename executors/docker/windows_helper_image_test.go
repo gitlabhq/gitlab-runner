@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +33,7 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.osType, func(t *testing.T) {
-			w := newWindowsHelperImage(c.osType)
+			w := newWindowsHelperImage(types.Info{OSType: c.osType})
 
 			tag, err := w.Tag(revision)
 
@@ -48,6 +49,6 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 }
 
 func Test_windowsHelperImage_IsSupportingLocalImport(t *testing.T) {
-	u := newWindowsHelperImage("")
+	u := newWindowsHelperImage(types.Info{})
 	assert.False(t, u.IsSupportingLocalImport())
 }

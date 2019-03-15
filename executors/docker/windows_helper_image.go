@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/docker/docker/api/types"
 )
 
 const (
@@ -46,8 +48,8 @@ func (u *windowsHelperImage) helperImageVersion() (string, error) {
 	return "", errors.New("could not find windows version")
 }
 
-func newWindowsHelperImage(osType string) *windowsHelperImage {
+func newWindowsHelperImage(info types.Info) helperImage {
 	return &windowsHelperImage{
-		osType: osType,
+		osType: info.OSType,
 	}
 }

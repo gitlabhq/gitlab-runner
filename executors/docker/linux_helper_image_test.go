@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +37,7 @@ func Test_linuxHelperImage_Tag(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			u := newLinuxHelperImage(c.dockerArch)
+			u := newLinuxHelperImage(types.Info{Architecture: c.dockerArch})
 
 			tag, err := u.Tag(c.revision)
 
@@ -47,6 +48,6 @@ func Test_linuxHelperImage_Tag(t *testing.T) {
 }
 
 func Test_linuxHelperImage_IsSupportingLocalImport(t *testing.T) {
-	u := newLinuxHelperImage("")
+	u := newLinuxHelperImage(types.Info{})
 	assert.True(t, u.IsSupportingLocalImport())
 }
