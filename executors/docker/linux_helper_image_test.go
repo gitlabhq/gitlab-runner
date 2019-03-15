@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_unixHelperImage_Tag(t *testing.T) {
+func Test_linuxHelperImage_Tag(t *testing.T) {
 	cases := []struct {
 		name        string
 		dockerArch  string
@@ -36,7 +36,7 @@ func Test_unixHelperImage_Tag(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			u := newUnixHelperImage(c.dockerArch)
+			u := newLinuxHelperImage(c.dockerArch)
 
 			tag, err := u.Tag(c.revision)
 
@@ -46,7 +46,7 @@ func Test_unixHelperImage_Tag(t *testing.T) {
 	}
 }
 
-func Test_unixHelperImage_IsSupportingLocalImport(t *testing.T) {
-	u := newUnixHelperImage("")
+func Test_linuxHelperImage_IsSupportingLocalImport(t *testing.T) {
+	u := newLinuxHelperImage("")
 	assert.True(t, u.IsSupportingLocalImport())
 }

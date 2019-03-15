@@ -5,11 +5,11 @@ import (
 	"runtime"
 )
 
-type unixHelperImage struct {
+type linuxHelperImage struct {
 	dockerArch string
 }
 
-func (u *unixHelperImage) Architecture() string {
+func (u *linuxHelperImage) Architecture() string {
 	switch u.dockerArch {
 	case "armv6l", "armv7l", "aarch64":
 		return "arm"
@@ -25,16 +25,16 @@ func (u *unixHelperImage) Architecture() string {
 	}
 }
 
-func (u *unixHelperImage) Tag(revision string) (string, error) {
+func (u *linuxHelperImage) Tag(revision string) (string, error) {
 	return fmt.Sprintf("%s-%s", u.Architecture(), revision), nil
 }
 
-func (u *unixHelperImage) IsSupportingLocalImport() bool {
+func (u *linuxHelperImage) IsSupportingLocalImport() bool {
 	return true
 }
 
-func newUnixHelperImage(dockerArch string) helperImage {
-	return &unixHelperImage{
+func newLinuxHelperImage(dockerArch string) helperImage {
+	return &linuxHelperImage{
 		dockerArch: dockerArch,
 	}
 }

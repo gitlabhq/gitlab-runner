@@ -1183,7 +1183,7 @@ func (e *executor) createDependencies() (err error) {
 	case "windows":
 		e.helperImage = newWindowsHelperImage(e.info.OperatingSystem)
 	default:
-		e.helperImage = newUnixHelperImage(e.info.Architecture)
+		e.helperImage = newLinuxHelperImage(e.info.Architecture)
 	}
 
 	err = e.bindDevices()
