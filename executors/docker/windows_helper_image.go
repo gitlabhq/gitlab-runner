@@ -14,6 +14,8 @@ const (
 
 	nanoserver1809 = "nanoserver1809"
 	nanoserver1803 = "nanoserver1803"
+
+	windowsSupportedArchitecture = "x86_64"
 )
 
 type windowsHelperImage struct {
@@ -21,7 +23,7 @@ type windowsHelperImage struct {
 }
 
 func (*windowsHelperImage) Architecture() string {
-	return "x86_64"
+	return windowsSupportedArchitecture
 }
 
 func (u *windowsHelperImage) Tag(revision string) (string, error) {
