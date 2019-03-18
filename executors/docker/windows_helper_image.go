@@ -27,19 +27,19 @@ func (*windowsHelperImage) Architecture() string {
 }
 
 func (u *windowsHelperImage) Tag(revision string) (string, error) {
-	version, err := u.helperImageVersion()
+	osVersion, err := u.osVersion()
 	if err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s-%s-%s", u.Architecture(), revision, version), nil
+	return fmt.Sprintf("%s-%s-%s", u.Architecture(), revision, osVersion), nil
 }
 
 func (u *windowsHelperImage) IsSupportingLocalImport() bool {
 	return false
 }
 
-func (u *windowsHelperImage) helperImageVersion() (string, error) {
+func (u *windowsHelperImage) osVersion() (string, error) {
 	switch {
 	case strings.Contains(u.osType, windows1809):
 		return nanoserver1809, nil
