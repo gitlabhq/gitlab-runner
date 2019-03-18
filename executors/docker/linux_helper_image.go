@@ -19,6 +19,10 @@ func (u *linuxHelperImage) Architecture() string {
 		return "x86_64"
 	}
 
+	if u.dockerArch != "" {
+		return u.dockerArch
+	}
+
 	switch runtime.GOARCH {
 	case "amd64":
 		return "x86_64"
