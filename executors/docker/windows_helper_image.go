@@ -19,7 +19,7 @@ const (
 )
 
 type windowsHelperImage struct {
-	osType string
+	operatingSystem string
 }
 
 func (*windowsHelperImage) Architecture() string {
@@ -41,9 +41,9 @@ func (u *windowsHelperImage) IsSupportingLocalImport() bool {
 
 func (u *windowsHelperImage) osVersion() (string, error) {
 	switch {
-	case strings.Contains(u.osType, windows1809):
+	case strings.Contains(u.operatingSystem, windows1809):
 		return nanoserver1809, nil
-	case strings.Contains(u.osType, windows1803):
+	case strings.Contains(u.operatingSystem, windows1803):
 		return nanoserver1803, nil
 	}
 
@@ -52,6 +52,6 @@ func (u *windowsHelperImage) osVersion() (string, error) {
 
 func newWindowsHelperImage(info types.Info) helperImage {
 	return &windowsHelperImage{
-		osType: info.OSType,
+		operatingSystem: info.OperatingSystem,
 	}
 }

@@ -11,29 +11,29 @@ import (
 func Test_windowsHelperImage_Tag(t *testing.T) {
 	revision := "4011f186"
 	cases := []struct {
-		osType          string
+		operatingSystem string
 		expectedVersion string
 		expectedErr     string
 	}{
 		{
-			osType:          "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
+			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
 			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, nanoserver1809),
 			expectedErr:     "",
 		},
 		{
-			osType:          "Windows Server Datacenter Version 1803 (OS Build 17134.590)",
+			operatingSystem: "Windows Server Datacenter Version 1803 (OS Build 17134.590)",
 			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, nanoserver1803),
 			expectedErr:     "",
 		},
 		{
-			osType:      "some random string",
+			operatingSystem: "some random string",
 			expectedErr: "could not determine windows version",
 		},
 	}
 
 	for _, c := range cases {
-		t.Run(c.osType, func(t *testing.T) {
-			w := newWindowsHelperImage(types.Info{OSType: c.osType})
+		t.Run(c.operatingSystem, func(t *testing.T) {
+			w := newWindowsHelperImage(types.Info{OperatingSystem: c.operatingSystem})
 
 			tag, err := w.Tag(revision)
 
