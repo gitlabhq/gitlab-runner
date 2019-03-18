@@ -47,7 +47,7 @@ func (u *windowsHelperImage) osVersion() (string, error) {
 		return nanoserver1803, nil
 	}
 
-	return "", errors.New("could not find windows version")
+	return "", errors.New("could not determine windows version")
 }
 
 func newWindowsHelperImage(info types.Info) helperImage {
