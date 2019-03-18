@@ -18,6 +18,11 @@ const (
 	windowsSupportedArchitecture = "x86_64"
 )
 
+var supportedOSVersions = map[string]string{
+	windows1803: nanoserver1803,
+	windows1809: nanoserver1809,
+}
+
 type windowsHelperImage struct {
 	operatingSystem string
 }
@@ -36,11 +41,10 @@ func (u *windowsHelperImage) Tag(revision string) (string, error) {
 }
 
 func (u *windowsHelperImage) osVersion() (string, error) {
-	switch {
-	case strings.Contains(u.operatingSystem, windows1809):
-		return nanoserver1809, nil
-	case strings.Contains(u.operatingSystem, windows1803):
-		return nanoserver1803, nil
+	for operatingSystem, osVersion := range supportedOSVersions {
+		if strings.Contains(u.operatingSystem, operatingSystem) {
+			return osVersion, nil
+		}
 	}
 
 	return "", errors.New("could not determine windows version")
