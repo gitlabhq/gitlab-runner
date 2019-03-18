@@ -373,6 +373,14 @@ on other nodes. Further separation of build containers can be achieved using nod
 This will disallow other pods from scheduling on the same nodes as the
 build pods without extra configuration for the other pods.
 
+### Using kaniko
+Another approach for building Docker images inside a Kubernetes cluster is using [kaniko](https://github.com/GoogleContainerTools/kaniko).
+kaniko:
+
+- Allows you to build images without privileged access.
+- Works without the Docker daemon.
+For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
+
 [k8s-host-path-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 [k8s-pvc-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim
 [k8s-secret-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#secret
