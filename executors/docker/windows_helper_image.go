@@ -35,10 +35,6 @@ func (u *windowsHelperImage) Tag(revision string) (string, error) {
 	return fmt.Sprintf("%s-%s-%s", u.Architecture(), revision, osVersion), nil
 }
 
-func (u *windowsHelperImage) IsSupportingLocalImport() bool {
-	return false
-}
-
 func (u *windowsHelperImage) osVersion() (string, error) {
 	switch {
 	case strings.Contains(u.operatingSystem, windows1809):
@@ -48,6 +44,10 @@ func (u *windowsHelperImage) osVersion() (string, error) {
 	}
 
 	return "", errors.New("could not determine windows version")
+}
+
+func (u *windowsHelperImage) IsSupportingLocalImport() bool {
+	return false
 }
 
 func newWindowsHelperImage(info types.Info) helperImage {
