@@ -34,7 +34,7 @@ func TestServiceWaiterCommand_NoEnvironmentVariables(t *testing.T) {
 	})
 }
 
-func TestServiceWaiterCommand_Execute(t *testing.T) {
+func TestHealthCheckCommand_Execute(t *testing.T) {
 	cases := []struct {
 		name            string
 		expectedConnect bool
@@ -59,6 +59,7 @@ func TestServiceWaiterCommand_Execute(t *testing.T) {
 			require.NoError(t, err)
 
 			err = os.Setenv("SERVICE_TCP_PORT", strconv.Itoa(listener.Addr().(*net.TCPAddr).Port))
+			require.NoError(t, err)
 
 			// If we don't expect to connect we close the listener.
 			if !c.expectedConnect {
