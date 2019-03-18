@@ -23,6 +23,8 @@ var supportedOSVersions = map[string]string{
 	windows1809: nanoserver1809,
 }
 
+var ErrUnsupportedOSVersion = errors.New("could not determine windows version")
+
 type windowsHelperImage struct {
 	operatingSystem string
 }
@@ -47,7 +49,7 @@ func (u *windowsHelperImage) osVersion() (string, error) {
 		}
 	}
 
-	return "", errors.New("could not determine windows version")
+	return "", ErrUnsupportedOSVersion
 }
 
 func (u *windowsHelperImage) IsSupportingLocalImport() bool {

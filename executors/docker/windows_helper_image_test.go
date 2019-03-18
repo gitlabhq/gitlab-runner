@@ -13,21 +13,21 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 	cases := []struct {
 		operatingSystem string
 		expectedVersion string
-		expectedErr     string
+		expectedErr     error
 	}{
 		{
 			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
 			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, nanoserver1809),
-			expectedErr:     "",
+			expectedErr:     nil,
 		},
 		{
 			operatingSystem: "Windows Server Datacenter Version 1803 (OS Build 17134.590)",
 			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, nanoserver1803),
-			expectedErr:     "",
+			expectedErr:     nil,
 		},
 		{
 			operatingSystem: "some random string",
-			expectedErr: "could not determine windows version",
+			expectedErr:     ErrUnsupportedOSVersion,
 		},
 	}
 
@@ -37,13 +37,8 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 
 			tag, err := w.Tag(revision)
 
-			if c.expectedErr != "" {
-				assert.EqualError(t, err, c.expectedErr)
-				return
-			}
-
 			assert.Equal(t, c.expectedVersion, tag)
-			assert.NoError(t, err)
+			assert.Equal(t, c.expectedErr, err)
 		})
 	}
 }
