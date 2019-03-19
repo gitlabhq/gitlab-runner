@@ -67,14 +67,6 @@ type executor struct {
 	helperImage helperImage
 }
 
-// helperImage provides information about the helper image that can be used to
-// pull from Docker Hub.
-type helperImage interface {
-	Architecture() string
-	Tag(revision string) (string, error)
-	IsSupportingLocalImport() bool
-}
-
 func init() {
 	runnerFolder, err := osext.ExecutableFolder()
 	if err != nil {
@@ -340,12 +332,8 @@ func (e *executor) getHelperImage() helperImage {
 		return e.helperImage
 	}
 
-	if e.info.OSType == "windows" {
-		e.helperImage = newWindowsHelperImage(e.info)
-		return e.helperImage
-	}
+	e.helperImage = getHelperImage(e.info)
 
-	e.helperImage = newLinuxHelperImage(e.info)
 	return e.helperImage
 }
 
