@@ -64,7 +64,7 @@ type executor struct {
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
 
-	helperImage helperImage
+	helperImageInfo helperImageInfo
 }
 
 func init() {
@@ -283,7 +283,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		revision = common.REVISION
 	}
 
-	tag, err := e.getHelperImage().Tag(revision)
+	tag, err := e.getHelperImageInfo().Tag(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -308,11 +308,11 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 }
 
 func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
-	if !e.helperImage.IsSupportingLocalImport() {
+	if !e.helperImageInfo.IsSupportingLocalImport() {
 		return nil
 	}
 
-	architecture := e.getHelperImage().Architecture()
+	architecture := e.getHelperImageInfo().Architecture()
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
@@ -327,14 +327,14 @@ func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
 	return nil
 }
 
-func (e *executor) getHelperImage() helperImage {
-	if e.helperImage != nil {
-		return e.helperImage
+func (e *executor) getHelperImageInfo() helperImageInfo {
+	if e.helperImageInfo != nil {
+		return e.helperImageInfo
 	}
 
-	e.helperImage, _ = getHelperImage(e.info)
+	e.helperImageInfo, _ = getHelperImageInfo(e.info)
 
-	return e.helperImage
+	return e.helperImageInfo
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {

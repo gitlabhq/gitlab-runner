@@ -25,15 +25,15 @@ var supportedOSVersions = map[string]string{
 
 var ErrUnsupportedOSVersion = errors.New("could not determine windows version")
 
-type windowsHelperImage struct {
+type windowsHelperImageInfo struct {
 	operatingSystem string
 }
 
-func (*windowsHelperImage) Architecture() string {
+func (*windowsHelperImageInfo) Architecture() string {
 	return windowsSupportedArchitecture
 }
 
-func (u *windowsHelperImage) Tag(revision string) (string, error) {
+func (u *windowsHelperImageInfo) Tag(revision string) (string, error) {
 	osVersion, err := u.osVersion()
 	if err != nil {
 		return "", err
@@ -42,7 +42,7 @@ func (u *windowsHelperImage) Tag(revision string) (string, error) {
 	return fmt.Sprintf("%s-%s-%s", u.Architecture(), revision, osVersion), nil
 }
 
-func (u *windowsHelperImage) osVersion() (string, error) {
+func (u *windowsHelperImageInfo) osVersion() (string, error) {
 	for operatingSystem, osVersion := range supportedOSVersions {
 		if strings.Contains(u.operatingSystem, operatingSystem) {
 			return osVersion, nil
@@ -52,12 +52,12 @@ func (u *windowsHelperImage) osVersion() (string, error) {
 	return "", ErrUnsupportedOSVersion
 }
 
-func (u *windowsHelperImage) IsSupportingLocalImport() bool {
+func (u *windowsHelperImageInfo) IsSupportingLocalImport() bool {
 	return false
 }
 
-func newWindowsHelperImage(info types.Info) helperImage {
-	return &windowsHelperImage{
+func newWindowsHelperImageInfo(info types.Info) helperImageInfo {
+	return &windowsHelperImageInfo{
 		operatingSystem: info.OperatingSystem,
 	}
 }

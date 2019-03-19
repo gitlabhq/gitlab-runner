@@ -11,9 +11,9 @@ const (
 	OSTypeWindows = "windows"
 )
 
-// helperImage provides information about the helper image that can be used to
+// helperImageInfo provides information about the helper image that can be used to
 // pull from Docker Hub.
-type helperImage interface {
+type helperImageInfo interface {
 	Architecture() string
 	Tag(revision string) (string, error)
 	IsSupportingLocalImport() bool
@@ -35,14 +35,14 @@ func (e *unsupportedOSTypeError) OSType(osType string) *unsupportedOSTypeError {
 
 var errUnsupportedOSType = &unsupportedOSTypeError{}
 
-type helperImageFactory func(info types.Info) helperImage
+type helperImageInfoFactory func(info types.Info) helperImageInfo
 
-var supportedOsTypesFactories = map[string]helperImageFactory{
-	OSTypeWindows: newWindowsHelperImage,
-	OSTypeLinux:   newLinuxHelperImage,
+var supportedOsTypesFactories = map[string]helperImageInfoFactory{
+	OSTypeWindows: newWindowsHelperImageInfo,
+	OSTypeLinux:   newLinuxHelperImageInfo,
 }
 
-func getHelperImage(info types.Info) (helperImage, error) {
+func getHelperImageInfo(info types.Info) (helperImageInfo, error) {
 	osType := info.OSType
 	factory, ok := supportedOsTypesFactories[osType]
 	if !ok {

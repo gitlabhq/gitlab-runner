@@ -33,7 +33,7 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.operatingSystem, func(t *testing.T) {
-			w := newWindowsHelperImage(types.Info{OperatingSystem: c.operatingSystem})
+			w := newWindowsHelperImageInfo(types.Info{OperatingSystem: c.operatingSystem})
 
 			tag, err := w.Tag(revision)
 
@@ -44,6 +44,6 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 }
 
 func Test_windowsHelperImage_IsSupportingLocalImport(t *testing.T) {
-	u := newWindowsHelperImage(types.Info{})
+	u := newWindowsHelperImageInfo(types.Info{})
 	assert.False(t, u.IsSupportingLocalImport())
 }

@@ -7,11 +7,11 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-type linuxHelperImage struct {
+type linuxHelperImageInfo struct {
 	dockerArch string
 }
 
-func (u *linuxHelperImage) Architecture() string {
+func (u *linuxHelperImageInfo) Architecture() string {
 	switch u.dockerArch {
 	case "armv6l", "armv7l", "aarch64":
 		return "arm"
@@ -31,16 +31,16 @@ func (u *linuxHelperImage) Architecture() string {
 	}
 }
 
-func (u *linuxHelperImage) Tag(revision string) (string, error) {
+func (u *linuxHelperImageInfo) Tag(revision string) (string, error) {
 	return fmt.Sprintf("%s-%s", u.Architecture(), revision), nil
 }
 
-func (u *linuxHelperImage) IsSupportingLocalImport() bool {
+func (u *linuxHelperImageInfo) IsSupportingLocalImport() bool {
 	return true
 }
 
-func newLinuxHelperImage(info types.Info) helperImage {
-	return &linuxHelperImage{
+func newLinuxHelperImageInfo(info types.Info) helperImageInfo {
+	return &linuxHelperImageInfo{
 		dockerArch: info.Architecture,
 	}
 }
