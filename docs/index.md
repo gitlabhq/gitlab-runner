@@ -134,6 +134,9 @@ Contributions are welcome, see [`CONTRIBUTING.md`](https://gitlab.com/gitlab-org
 See the [development documentation](development/README.md) to hack on GitLab
 Runner.
 
+If you're a reviewer of GitLab Runner project, then please take a moment to read the
+[Reviewing GitLab Runner](development/reviewing-gitlab-runner.md) document.
+
 ## Changelog
 
 See the [CHANGELOG](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CHANGELOG.md) to view recent changes.
