@@ -133,7 +133,7 @@ following to the `[[runners]]` section:
 
 ```toml
 pre_clone_script = "git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY"
-environment = ["HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
+environment = ["https_proxy=docker0_interface_ip:3128", "http_proxy=docker0_interface_ip:3128", "HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
 ```
 
 Where `docker0_interface_ip` is the IP address of the `docker0` interface. You need to
@@ -141,18 +141,16 @@ be able to reach it from within the Docker containers, so it's important to set
 it right.
 
 NOTE: **Note:**
-Environment variables names are case-sensitive, 
-some programs expect lower case `http_proxy`, `https_proxy`, (e.g. `wget`, `apt-get`)
-and other upper case `HTTP_PROXY`, `HTTPS_PROXY`, (e.g. `docker`)
-and some respect both (e.g. `apk`)
-see: 
-https://unix.stackexchange.com/questions/212894/whats-the-right-format-for-the-http-proxy-environment-variable-caps-or-no-ca#212972
-Add both variants to `/etc/gitlab-runner/config.toml` if needed, 
-e.g. in case `docker` and `apt-get` are both used in a `script:` of a `.gitlab-ci.yml`:
-
-```toml
-environment = ["https_proxy=docker0_interface_ip:3128", "http_proxy=docker0_interface_ip:3128", "HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
-```
+In our examples, we are setting both lower case and upper case variables
+because certain programs expect `HTTP_PROXY` and others `http_proxy`.
+Unfortunately, there is no
+[standard](https://unix.stackexchange.com/questions/212894/whats-the-right-format-for-the-http-proxy-environment-variable-caps-or-no-ca#212972)
+on these kinds of environment variables.
+Some programs expect lower case (e.g. `wget`, `apt-get`)
+and other upper case (e.g. `docker`)
+and some respect both (e.g. `apk`),
+add both variants to `/etc/gitlab-runner/config.toml` if
+e.g. `docker` and `apt-get` are used in a `.gitlab-ci.yml`.
 
 ## Proxy settings when using dind service
 
