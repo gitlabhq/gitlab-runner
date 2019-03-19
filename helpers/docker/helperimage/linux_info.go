@@ -1,4 +1,4 @@
-package docker
+package helperimage
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-type linuxHelperImageInfo struct {
+type linuxInfo struct {
 	dockerArch string
 }
 
-func (u *linuxHelperImageInfo) Architecture() string {
+func (u *linuxInfo) Architecture() string {
 	switch u.dockerArch {
 	case "armv6l", "armv7l", "aarch64":
 		return "arm"
@@ -31,16 +31,16 @@ func (u *linuxHelperImageInfo) Architecture() string {
 	}
 }
 
-func (u *linuxHelperImageInfo) Tag(revision string) (string, error) {
+func (u *linuxInfo) Tag(revision string) (string, error) {
 	return fmt.Sprintf("%s-%s", u.Architecture(), revision), nil
 }
 
-func (u *linuxHelperImageInfo) IsSupportingLocalImport() bool {
+func (u *linuxInfo) IsSupportingLocalImport() bool {
 	return true
 }
 
-func newLinuxHelperImageInfo(info types.Info) helperImageInfo {
-	return &linuxHelperImageInfo{
+func newLinuxInfo(info types.Info) Info {
+	return &linuxInfo{
 		dockerArch: info.Architecture,
 	}
 }

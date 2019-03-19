@@ -28,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 )
 
 const (
@@ -281,12 +282,12 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		revision = common.REVISION
 	}
 
-	helperImgInfo, err := getHelperImageInfo(e.info)
+	helperImageInfo, err := helperimage.GetInfo(e.info)
 	if err != nil {
 		return nil, err
 	}
 
-	tag, err := helperImgInfo.Tag(revision)
+	tag, err := helperImageInfo.Tag(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +301,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	}
 
 	// Try to load prebuilt image from local filesystem
-	loadedImage := e.getLocalDockerImage(helperImgInfo, tag)
+	loadedImage := e.getLocalDockerImage(helperImageInfo, tag)
 	if loadedImage != nil {
 		return loadedImage, nil
 	}
@@ -310,12 +311,12 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	return e.getDockerImage(imageName)
 }
 
-func (e *executor) getLocalDockerImage(helperImgInfo helperImageInfo, tag string) *types.ImageInspect {
-	if !helperImgInfo.IsSupportingLocalImport() {
+func (e *executor) getLocalDockerImage(helperImageInfo helperimage.Info, tag string) *types.ImageInspect {
+	if !helperImageInfo.IsSupportingLocalImport() {
 		return nil
 	}
 
-	architecture := helperImgInfo.Architecture()
+	architecture := helperImageInfo.Architecture()
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
