@@ -332,7 +332,7 @@ func (e *executor) getHelperImage() helperImage {
 		return e.helperImage
 	}
 
-	e.helperImage = getHelperImage(e.info)
+	e.helperImage, _ = getHelperImage(e.info)
 
 	return e.helperImage
 }
