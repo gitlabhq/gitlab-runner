@@ -63,8 +63,6 @@ type executor struct {
 
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
-
-	helperImageInfo helperImageInfo
 }
 
 func init() {
@@ -283,7 +281,12 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		revision = common.REVISION
 	}
 
-	tag, err := e.getHelperImageInfo().Tag(revision)
+	helperImgInfo, err := getHelperImageInfo(e.info)
+	if err != nil {
+		return nil, err
+	}
+
+	tag, err := helperImgInfo.Tag(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +300,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	}
 
 	// Try to load prebuilt image from local filesystem
-	loadedImage := e.getLocalDockerImage(tag)
+	loadedImage := e.getLocalDockerImage(helperImgInfo, tag)
 	if loadedImage != nil {
 		return loadedImage, nil
 	}
@@ -307,12 +310,12 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	return e.getDockerImage(imageName)
 }
 
-func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
-	if !e.helperImageInfo.IsSupportingLocalImport() {
+func (e *executor) getLocalDockerImage(helperImgInfo helperImageInfo, tag string) *types.ImageInspect {
+	if !helperImgInfo.IsSupportingLocalImport() {
 		return nil
 	}
 
-	architecture := e.getHelperImageInfo().Architecture()
+	architecture := helperImgInfo.Architecture()
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
@@ -325,16 +328,6 @@ func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
 	}
 
 	return nil
-}
-
-func (e *executor) getHelperImageInfo() helperImageInfo {
-	if e.helperImageInfo != nil {
-		return e.helperImageInfo
-	}
-
-	e.helperImageInfo, _ = getHelperImageInfo(e.info)
-
-	return e.helperImageInfo
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {
