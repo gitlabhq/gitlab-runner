@@ -1,4 +1,4 @@
-package docker
+package helperimage
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_linuxHelperImage_Tag(t *testing.T) {
+func Test_linuxInfo_Tag(t *testing.T) {
 	cases := []struct {
 		name        string
 		dockerArch  string
@@ -36,7 +36,7 @@ func Test_linuxHelperImage_Tag(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			u := newLinuxHelperImage(types.Info{Architecture: c.dockerArch})
+			u := newLinuxInfo(types.Info{Architecture: c.dockerArch})
 
 			tag, err := u.Tag(c.revision)
 
@@ -46,7 +46,7 @@ func Test_linuxHelperImage_Tag(t *testing.T) {
 	}
 }
 
-func Test_linuxHelperImage_IsSupportingLocalImport(t *testing.T) {
-	u := newLinuxHelperImage(types.Info{})
+func Test_linuxInfo_IsSupportingLocalImport(t *testing.T) {
+	u := newLinuxInfo(types.Info{})
 	assert.True(t, u.IsSupportingLocalImport())
 }

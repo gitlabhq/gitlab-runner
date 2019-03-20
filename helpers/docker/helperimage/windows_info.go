@@ -1,4 +1,4 @@
-package docker
+package helperimage
 
 import (
 	"errors"
@@ -25,15 +25,15 @@ var supportedOSVersions = map[string]string{
 
 var ErrUnsupportedOSVersion = errors.New("could not determine windows version")
 
-type windowsHelperImage struct {
+type windowsInfo struct {
 	operatingSystem string
 }
 
-func (*windowsHelperImage) Architecture() string {
+func (*windowsInfo) Architecture() string {
 	return windowsSupportedArchitecture
 }
 
-func (u *windowsHelperImage) Tag(revision string) (string, error) {
+func (u *windowsInfo) Tag(revision string) (string, error) {
 	osVersion, err := u.osVersion()
 	if err != nil {
 		return "", err
@@ -42,7 +42,7 @@ func (u *windowsHelperImage) Tag(revision string) (string, error) {
 	return fmt.Sprintf("%s-%s-%s", u.Architecture(), revision, osVersion), nil
 }
 
-func (u *windowsHelperImage) osVersion() (string, error) {
+func (u *windowsInfo) osVersion() (string, error) {
 	for operatingSystem, osVersion := range supportedOSVersions {
 		if strings.Contains(u.operatingSystem, operatingSystem) {
 			return osVersion, nil
@@ -52,12 +52,12 @@ func (u *windowsHelperImage) osVersion() (string, error) {
 	return "", ErrUnsupportedOSVersion
 }
 
-func (u *windowsHelperImage) IsSupportingLocalImport() bool {
+func (u *windowsInfo) IsSupportingLocalImport() bool {
 	return false
 }
 
-func newWindowsHelperImage(info types.Info) helperImage {
-	return &windowsHelperImage{
+func newWindowsInfo(info types.Info) Info {
+	return &windowsInfo{
 		operatingSystem: info.OperatingSystem,
 	}
 }

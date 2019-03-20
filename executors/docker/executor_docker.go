@@ -28,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 )
 
 const (
@@ -63,16 +64,6 @@ type executor struct {
 
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
-
-	helperImage helperImage
-}
-
-// helperImage provides information about the helper image that can be used to
-// pull from Docker Hub.
-type helperImage interface {
-	Architecture() string
-	Tag(revision string) (string, error)
-	IsSupportingLocalImport() bool
 }
 
 func init() {
@@ -291,7 +282,12 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		revision = common.REVISION
 	}
 
-	tag, err := e.getHelperImage().Tag(revision)
+	helperImageInfo, err := helperimage.GetInfo(e.info)
+	if err != nil {
+		return nil, err
+	}
+
+	tag, err := helperImageInfo.Tag(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +301,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	}
 
 	// Try to load prebuilt image from local filesystem
-	loadedImage := e.getLocalDockerImage(tag)
+	loadedImage := e.getLocalDockerImage(helperImageInfo, tag)
 	if loadedImage != nil {
 		return loadedImage, nil
 	}
@@ -315,12 +311,12 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	return e.getDockerImage(imageName)
 }
 
-func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
-	if !e.helperImage.IsSupportingLocalImport() {
+func (e *executor) getLocalDockerImage(helperImageInfo helperimage.Info, tag string) *types.ImageInspect {
+	if !helperImageInfo.IsSupportingLocalImport() {
 		return nil
 	}
 
-	architecture := e.getHelperImage().Architecture()
+	architecture := helperImageInfo.Architecture()
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
@@ -333,20 +329,6 @@ func (e *executor) getLocalDockerImage(tag string) *types.ImageInspect {
 	}
 
 	return nil
-}
-
-func (e *executor) getHelperImage() helperImage {
-	if e.helperImage != nil {
-		return e.helperImage
-	}
-
-	if e.info.OSType == "windows" {
-		e.helperImage = newWindowsHelperImage(e.info)
-		return e.helperImage
-	}
-
-	e.helperImage = newLinuxHelperImage(e.info)
-	return e.helperImage
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {

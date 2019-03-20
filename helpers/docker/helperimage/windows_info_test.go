@@ -1,4 +1,4 @@
-package docker
+package helperimage
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_windowsHelperImage_Tag(t *testing.T) {
+func Test_windowsInfo_Tag(t *testing.T) {
 	revision := "4011f186"
 	cases := []struct {
 		operatingSystem string
@@ -33,7 +33,7 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.operatingSystem, func(t *testing.T) {
-			w := newWindowsHelperImage(types.Info{OperatingSystem: c.operatingSystem})
+			w := newWindowsInfo(types.Info{OperatingSystem: c.operatingSystem})
 
 			tag, err := w.Tag(revision)
 
@@ -43,7 +43,7 @@ func Test_windowsHelperImage_Tag(t *testing.T) {
 	}
 }
 
-func Test_windowsHelperImage_IsSupportingLocalImport(t *testing.T) {
-	u := newWindowsHelperImage(types.Info{})
+func Test_windowsInfo_IsSupportingLocalImport(t *testing.T) {
+	u := newWindowsInfo(types.Info{})
 	assert.False(t, u.IsSupportingLocalImport())
 }
