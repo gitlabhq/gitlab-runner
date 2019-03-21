@@ -1,7 +1,7 @@
 package common
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"gitlab.com/ayufan/golang-cli-helpers"
 )
@@ -13,7 +13,7 @@ type Commander interface {
 }
 
 func RegisterCommand(command cli.Command) {
-	log.Debugln("Registering", command.Name, "command...")
+	logrus.Debugln("Registering", command.Name, "command...")
 	commands = append(commands, command)
 }
 

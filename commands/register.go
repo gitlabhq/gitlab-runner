@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -69,7 +69,7 @@ func (s *RegisterCommand) ask(key, prompt string, allowEmptyOptional ...bool) st
 
 	if s.NonInteractive || prompt == "" {
 		if result == "" && !allowEmpty {
-			log.Panicln("The", key, "needs to be entered")
+			logrus.Panicln("The", key, "needs to be entered")
 		}
 		return result
 	}
@@ -94,9 +94,9 @@ func (s *RegisterCommand) askExecutor() {
 
 		message := "Invalid executor specified"
 		if s.NonInteractive {
-			log.Panicln(message)
+			logrus.Panicln(message)
 		} else {
-			log.Errorln(message)
+			logrus.Errorln(message)
 		}
 	}
 }
@@ -143,10 +143,10 @@ func (s *RegisterCommand) askRunner() {
 	s.URL = s.ask("url", "Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com/):")
 
 	if s.Token != "" {
-		log.Infoln("Token specified trying to verify runner...")
-		log.Warningln("If you want to register use the '-r' instead of '-t'.")
+		logrus.Infoln("Token specified trying to verify runner...")
+		logrus.Warningln("If you want to register use the '-r' instead of '-t'.")
 		if !s.network.VerifyRunner(s.RunnerCredentials) {
-			log.Panicln("Failed to verify this runner. Perhaps you are having network problems")
+			logrus.Panicln("Failed to verify this runner. Perhaps you are having network problems")
 		}
 	} else {
 		// we store registration token as token, since we pass that to RunnerCredentials
@@ -169,7 +169,7 @@ func (s *RegisterCommand) askRunner() {
 
 		result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
 		if result == nil {
-			log.Panicln("Failed to register this runner. Perhaps you are having network problems")
+			logrus.Panicln("Failed to register this runner. Perhaps you are having network problems")
 		}
 
 		s.Token = result.Token
@@ -275,7 +275,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	s.context = context
 	err := s.loadConfig()
 	if err != nil {
-		log.Panicln(err)
+		logrus.Panicln(err)
 	}
 	s.askRunner()
 
@@ -298,12 +298,12 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 		go func() {
 			signal := <-signals
 			s.network.UnregisterRunner(s.RunnerCredentials)
-			log.Fatalf("RECEIVED SIGNAL: %v", signal)
+			logrus.Fatalf("RECEIVED SIGNAL: %v", signal)
 		}()
 	}
 
 	if s.config.Concurrent < s.Limit {
-		log.Warningf("Specified limit (%d) larger then current concurrent limit (%d). Concurrent limit will not be enlarged.", s.Limit, s.config.Concurrent)
+		logrus.Warningf("Specified limit (%d) larger then current concurrent limit (%d). Concurrent limit will not be enlarged.", s.Limit, s.config.Concurrent)
 	}
 
 	s.askExecutor()
@@ -312,7 +312,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	s.prepareCache()
 	s.saveConfig()
 
-	log.Printf("Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!")
+	logrus.Printf("Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!")
 }
 
 func getHostname() string {
