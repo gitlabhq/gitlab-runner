@@ -25,6 +25,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 )
 
 func TestMain(m *testing.M) {
@@ -1354,6 +1355,9 @@ func setUpExecutorForFeatureFlag(variables common.JobVariables, helperImage stri
 			Context: context.Background(),
 		},
 		client: client,
+		info: types.Info{
+			OSType: helperimage.OSTypeLinux,
+		},
 	}
 }
 

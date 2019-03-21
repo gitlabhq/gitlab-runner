@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 )
 
 const (
@@ -233,27 +233,6 @@ func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []str
 	return image, nil
 }
 
-func (e *executor) getArchitecture() string {
-	architecture := e.info.Architecture
-	switch architecture {
-	case "armv6l", "armv7l", "aarch64":
-		architecture = "arm"
-	case "amd64":
-		architecture = "x86_64"
-	}
-
-	if architecture != "" {
-		return architecture
-	}
-
-	switch runtime.GOARCH {
-	case "amd64":
-		return "x86_64"
-	default:
-		return runtime.GOARCH
-	}
-}
-
 func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect, error) {
 	file, err := os.OpenFile(path, os.O_RDONLY, 0600)
 	if err != nil {
@@ -298,9 +277,9 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		return e.getDockerImage(imageNameFromConfig)
 	}
 
-	architecture := e.getArchitecture()
-	if architecture == "" {
-		return nil, errors.New("unsupported docker architecture")
+	helperImageInfo, err := helperimage.GetInfo(e.info)
+	if err != nil {
+		return nil, err
 	}
 
 	revision := "latest"
@@ -308,8 +287,12 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		revision = common.REVISION
 	}
 
+	tag, err := helperImageInfo.Tag(revision)
+	if err != nil {
+		return nil, err
+	}
+
 	// Try to find already loaded prebuilt image
-	tag := fmt.Sprintf("%s-%s", architecture, revision)
 	imageName := fmt.Sprintf("%s:%s", prebuiltImageName, tag)
 	e.Debugln("Looking for prebuilt image", imageName, "...")
 	image, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
@@ -318,6 +301,22 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	}
 
 	// Try to load prebuilt image from local filesystem
+	loadedImage := e.getLocalDockerImage(helperImageInfo, tag)
+	if loadedImage != nil {
+		return loadedImage, nil
+	}
+
+	// Fallback to getting image from DockerHub
+	e.Debugln("Loading image from registry:", imageName)
+	return e.getDockerImage(imageName)
+}
+
+func (e *executor) getLocalDockerImage(helperImageInfo helperimage.Info, tag string) *types.ImageInspect {
+	if !helperImageInfo.IsSupportingLocalImport() {
+		return nil
+	}
+
+	architecture := helperImageInfo.Architecture()
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
@@ -326,12 +325,10 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 			continue
 		}
 
-		return image, err
+		return image
 	}
 
-	// Fallback to getting image from DockerHub
-	e.Debugln("Loading image from registry:", imageName)
-	return e.getDockerImage(imageName)
+	return nil
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {
