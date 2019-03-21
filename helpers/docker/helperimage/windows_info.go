@@ -44,7 +44,7 @@ func (u *windowsInfo) Tag(revision string) (string, error) {
 
 func (u *windowsInfo) osVersion() (string, error) {
 	for operatingSystem, osVersion := range supportedOSVersions {
-		if strings.Contains(u.operatingSystem, operatingSystem) {
+		if strings.Contains(u.operatingSystem, fmt.Sprintf(" %s ", operatingSystem)) {
 			return osVersion, nil
 		}
 	}
