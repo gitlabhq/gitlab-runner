@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -41,32 +40,25 @@ func checkIfUpToDate(path string, resp *http.Response) (bool, time.Time) {
 	return fi != nil && !date.After(fi.ModTime()), date
 }
 
-func (c *CacheExtractorCommand) download() (bool, error) {
+func (c *CacheExtractorCommand) download() error {
 	os.MkdirAll(filepath.Dir(c.File), 0700)
 
-	resp, err := c.getClient().Get(c.URL)
+	resp, err := c.getCache()
 	if err != nil {
-		return true, err
+		return err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return false, os.ErrNotExist
-	} else if resp.StatusCode/100 != 2 {
-		// Retry on server errors
-		retry := resp.StatusCode/100 == 5
-		return retry, fmt.Errorf("Received: %s", resp.Status)
-	}
+	defer resp.Body.Close()
 
 	upToDate, date := checkIfUpToDate(c.File, resp)
 	if upToDate {
 		logrus.Infoln(filepath.Base(c.File), "is up to date")
-		return false, nil
+		return nil
 	}
 
 	file, err := ioutil.TempFile(filepath.Dir(c.File), "cache")
 	if err != nil {
-		return false, err
+		return err
 	}
 	defer os.Remove(file.Name())
 	defer file.Close()
@@ -74,20 +66,35 @@ func (c *CacheExtractorCommand) download() (bool, error) {
 	logrus.Infoln("Downloading", filepath.Base(c.File), "from", url_helpers.CleanURL(c.URL))
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		return true, err
+		return retryableErr{err: err}
 	}
 	os.Chtimes(file.Name(), time.Now(), date)
 
 	err = file.Close()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	err = os.Rename(file.Name(), c.File)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return false, nil
+
+	return nil
+}
+
+func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
+	resp, err := c.getClient().Get(c.URL)
+	if err != nil {
+		return nil, retryableErr{err: err}
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		resp.Body.Close()
+		return nil, os.ErrNotExist
+	}
+
+	return resp, retryOnServerError(resp)
 }
 
 func (c *CacheExtractorCommand) Execute(context *cli.Context) {

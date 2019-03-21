@@ -20,18 +20,18 @@ type ArtifactsDownloaderCommand struct {
 	network common.Network
 }
 
-func (c *ArtifactsDownloaderCommand) download(file string) (bool, error) {
+func (c *ArtifactsDownloaderCommand) download(file string) error {
 	switch c.network.DownloadArtifacts(c.JobCredentials, file) {
 	case common.DownloadSucceeded:
-		return false, nil
+		return nil
 	case common.DownloadNotFound:
-		return false, os.ErrNotExist
+		return os.ErrNotExist
 	case common.DownloadForbidden:
-		return false, os.ErrPermission
+		return os.ErrPermission
 	case common.DownloadFailed:
-		return true, os.ErrInvalid
+		return retryableErr{err: os.ErrInvalid}
 	default:
-		return false, os.ErrInvalid
+		return os.ErrInvalid
 	}
 }
 
@@ -54,7 +54,7 @@ func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 	defer os.Remove(file.Name())
 
 	// Download artifacts file
-	err = c.doRetry(func() (bool, error) {
+	err = c.doRetry(func() error {
 		return c.download(file.Name())
 	})
 	if err != nil {

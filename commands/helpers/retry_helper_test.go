@@ -2,34 +2,48 @@ package helpers
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestDoRetryError(t *testing.T) {
-	r := retryHelper{
-		Retry: 3,
-	}
-
-	retryCount := 0
-	err := r.doRetry(func() (bool, error) {
-		retryCount++
-		return true, errors.New("error")
-	})
-	assert.Error(t, err)
-	assert.Equal(t, r.Retry+1, retryCount)
-}
-
 func TestDoRetry(t *testing.T) {
-	r := retryHelper{
-		Retry: 3,
+	cases := []struct {
+		name          string
+		err           error
+		expectedCount int
+	}{
+		{
+			name:          "Error is of type retryableErr",
+			err:           retryableErr{err: errors.New("error")},
+			expectedCount: 4,
+		},
+		{
+			name:          "Error is not type of retryableErr",
+			err:           errors.New("error"),
+			expectedCount: 1,
+		},
+		{
+			name:          "Error is nil",
+			err:           nil,
+			expectedCount: 1,
+		},
 	}
 
-	retryCount := 0
-	err := r.doRetry(func() (bool, error) {
-		retryCount++
-		return false, nil
-	})
-	assert.NoError(t, err)
-	assert.Equal(t, 1, retryCount)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := retryHelper{
+				Retry: 3,
+			}
+
+			retryCount := 0
+			err := r.doRetry(func() error {
+				retryCount++
+				return c.err
+			})
+
+			assert.Equal(t, c.err, err)
+			assert.Equal(t, c.expectedCount, retryCount)
+		})
+	}
 }
