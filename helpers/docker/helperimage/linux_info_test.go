@@ -1,6 +1,8 @@
 package helperimage
 
 import (
+	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -18,7 +20,7 @@ func Test_linuxInfo_Tag(t *testing.T) {
 			name:        "When dockerArch not specified we fallback to runtime arch",
 			dockerArch:  "",
 			revision:    "2923a43",
-			expectedTag: "x86_64-2923a43",
+			expectedTag: fmt.Sprintf("%s-2923a43", getExpectedArch()),
 		},
 		{
 			name:        "Docker runs on armv6l",
@@ -44,6 +46,17 @@ func Test_linuxInfo_Tag(t *testing.T) {
 			assert.Equal(t, c.expectedTag, tag)
 		})
 	}
+}
+
+// We re write amd64 to x86_64 for the helper image, and we don't want this test
+// to be runtime dependant.
+func getExpectedArch() string {
+	if runtime.GOARCH == "amd64" {
+		return "x86_64"
+
+	}
+
+	return runtime.GOARCH
 }
 
 func Test_linuxInfo_IsSupportingLocalImport(t *testing.T) {
