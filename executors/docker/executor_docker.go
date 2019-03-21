@@ -277,14 +277,14 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		return e.getDockerImage(imageNameFromConfig)
 	}
 
-	revision := "latest"
-	if common.REVISION != "HEAD" {
-		revision = common.REVISION
-	}
-
 	helperImageInfo, err := helperimage.GetInfo(e.info)
 	if err != nil {
 		return nil, err
+	}
+
+	revision := "latest"
+	if common.REVISION != "HEAD" {
+		revision = common.REVISION
 	}
 
 	tag, err := helperImageInfo.Tag(revision)
