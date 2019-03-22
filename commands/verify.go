@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -23,14 +23,14 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 
 	err := c.loadConfig()
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 		return
 	}
 
 	// check if there's something to verify
 	toVerify, okRunners, err := c.selectRunners()
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 		return
 	}
 
@@ -47,7 +47,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 	}
 
 	if !c.DeleteNonExisting {
-		log.Fatalln("Failed to verify runners")
+		logrus.Fatalln("Failed to verify runners")
 		return
 	}
 
@@ -56,9 +56,9 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 	// save config file
 	err = c.saveConfig()
 	if err != nil {
-		log.Fatalln("Failed to update", c.ConfigFile, err)
+		logrus.Fatalln("Failed to update", c.ConfigFile, err)
 	}
-	log.Println("Updated", c.ConfigFile)
+	logrus.Println("Updated", c.ConfigFile)
 }
 
 func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunners []*common.RunnerConfig, err error) {

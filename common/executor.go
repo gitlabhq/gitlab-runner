@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type ExecutorData interface{}
@@ -85,7 +85,7 @@ func validateExecutorProvider(provider ExecutorProvider) error {
 }
 
 func RegisterExecutor(executor string, provider ExecutorProvider) {
-	log.Debugln("Registering", executor, "executor...")
+	logrus.Debugln("Registering", executor, "executor...")
 
 	if err := validateExecutorProvider(provider); err != nil {
 		panic("Executor cannot be registered: " + err.Error())

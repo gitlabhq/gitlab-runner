@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type StatusType string
@@ -73,7 +74,7 @@ func IsStatusOnlineOrTransient(vmStatus StatusType) bool {
 
 func VboxManageOutput(exe string, args ...string) (string, error) {
 	var stdout, stderr bytes.Buffer
-	log.Debugf("Executing VBoxManageOutput: %#v", args)
+	logrus.Debugf("Executing VBoxManageOutput: %#v", args)
 	cmd := exec.Command(exe, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -154,14 +155,14 @@ func getUsedVirtualBoxPorts() (usedPorts [][]string, err error) {
 func allocatePort(handler func(port string) error) (port string, err error) {
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
-		log.Debugln("VirtualBox ConfigureSSH:", err)
+		logrus.Debugln("VirtualBox ConfigureSSH:", err)
 		return
 	}
 	defer ln.Close()
 
 	usedPorts, err := getUsedVirtualBoxPorts()
 	if err != nil {
-		log.Debugln("VirtualBox ConfigureSSH:", err)
+		logrus.Debugln("VirtualBox ConfigureSSH:", err)
 		return
 	}
 

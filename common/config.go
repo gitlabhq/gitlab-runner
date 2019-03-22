@@ -16,7 +16,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/go-units"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -323,13 +323,13 @@ type Config struct {
 
 func getDeprecatedStringSetting(setting string, tomlField string, envVariable string, tomlReplacement string, envReplacement string) string {
 	if setting != "" {
-		log.Warningf("%s setting is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", tomlField, tomlReplacement)
+		logrus.Warningf("%s setting is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", tomlField, tomlReplacement)
 		return setting
 	}
 
 	value := os.Getenv(envVariable)
 	if value != "" {
-		log.Warningf("%s environment variables is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", envVariable, envReplacement)
+		logrus.Warningf("%s environment variables is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", envVariable, envReplacement)
 	}
 
 	return value
@@ -337,13 +337,13 @@ func getDeprecatedStringSetting(setting string, tomlField string, envVariable st
 
 func getDeprecatedBoolSetting(setting bool, tomlField string, envVariable string, tomlReplacement string, envReplacement string) bool {
 	if setting {
-		log.Warningf("%s setting is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", tomlField, tomlReplacement)
+		logrus.Warningf("%s setting is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", tomlField, tomlReplacement)
 		return setting
 	}
 
 	value, _ := strconv.ParseBool(os.Getenv(envVariable))
 	if value {
-		log.Warningf("%s environment variables is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", envVariable, envReplacement)
+		logrus.Warningf("%s environment variables is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", envVariable, envReplacement)
 	}
 
 	return value
@@ -360,7 +360,7 @@ func (c *CacheConfig) GetPath() string {
 
 	// TODO: Remove in 12.0
 	if c.S3CachePath != "" {
-		log.Warning("'--cache-s3-cache-path' command line option and `$S3_CACHE_PATH` environment variables are deprecated and will be removed in GitLab Runner 12.0. Please use '--cache-path' or '$CACHE_PATH' instead")
+		logrus.Warning("'--cache-s3-cache-path' command line option and `$S3_CACHE_PATH` environment variables are deprecated and will be removed in GitLab Runner 12.0. Please use '--cache-path' or '$CACHE_PATH' instead")
 	}
 
 	return c.S3CachePath
@@ -373,7 +373,7 @@ func (c *CacheConfig) GetShared() bool {
 
 	// TODO: Remove in 12.0
 	if c.CacheShared {
-		log.Warning("'--cache-cache-shared' command line is deprecated and will be removed in GitLab Runner 12.0. Please use '--cache-shared' instead")
+		logrus.Warning("'--cache-cache-shared' command line is deprecated and will be removed in GitLab Runner 12.0. Please use '--cache-shared' instead")
 	}
 
 	return c.CacheShared
@@ -475,7 +475,7 @@ func (c *DockerConfig) getMemoryBytes(size string, fieldName string) int64 {
 
 	bytes, err := units.RAMInBytes(size)
 	if err != nil {
-		log.Fatalf("Error parsing docker %s: %s", fieldName, err)
+		logrus.Fatalf("Error parsing docker %s: %s", fieldName, err)
 	}
 
 	return bytes
@@ -613,11 +613,11 @@ func (c *RunnerCredentials) UniqueID() string {
 	return c.URL + c.Token
 }
 
-func (c *RunnerCredentials) Log() *log.Entry {
+func (c *RunnerCredentials) Log() *logrus.Entry {
 	if c.ShortDescription() != "" {
-		return log.WithField("runner", c.ShortDescription())
+		return logrus.WithField("runner", c.ShortDescription())
 	}
-	return log.WithFields(log.Fields{})
+	return logrus.WithFields(logrus.Fields{})
 }
 
 func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
@@ -717,7 +717,7 @@ func (c *Config) SaveConfig(configFile string) error {
 	newBuffer := bufio.NewWriter(&newConfig)
 
 	if err := toml.NewEncoder(newBuffer).Encode(c); err != nil {
-		log.Fatalf("Error encoding TOML: %s", err)
+		logrus.Fatalf("Error encoding TOML: %s", err)
 		return err
 	}
 
@@ -751,7 +751,7 @@ func (c *Config) ListenOrServerMetricAddress() string {
 
 	// TODO: Remove in 12.0
 	if c.MetricsServerAddress != "" {
-		log.Warnln("'metrics_server' configuration entry is deprecated and will be removed in one of future releases; please use 'listen_address' instead")
+		logrus.Warnln("'metrics_server' configuration entry is deprecated and will be removed in one of future releases; please use 'listen_address' instead")
 	}
 
 	return c.MetricsServerAddress

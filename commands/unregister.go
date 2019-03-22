@@ -1,9 +1,9 @@
 package commands
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
@@ -17,10 +17,10 @@ type UnregisterCommand struct {
 }
 
 func (c *UnregisterCommand) unregisterAllRunners() (runners []*common.RunnerConfig) {
-	log.Warningln("Unregistering all runners")
+	logrus.Warningln("Unregistering all runners")
 	for _, r := range c.config.Runners {
 		if !c.network.UnregisterRunner(r.RunnerCredentials) {
-			log.Errorln("Failed to unregister runner", r.Name)
+			logrus.Errorln("Failed to unregister runner", r.Name)
 			//If unregister fails, leave the runner in the config
 			runners = append(runners, r)
 		}
@@ -32,14 +32,14 @@ func (c *UnregisterCommand) unregisterSingleRunner() (runners []*common.RunnerCo
 	if len(c.Name) > 0 { // Unregister when given a name
 		runnerConfig, err := c.RunnerByName(c.Name)
 		if err != nil {
-			log.Fatalln(err)
+			logrus.Fatalln(err)
 		}
 		c.RunnerCredentials = runnerConfig.RunnerCredentials
 	}
 
 	// Unregister given Token and URL of the runner
 	if !c.network.UnregisterRunner(c.RunnerCredentials) {
-		log.Fatalln("Failed to unregister runner", c.Name)
+		logrus.Fatalln("Failed to unregister runner", c.Name)
 	}
 
 	for _, otherRunner := range c.config.Runners {
@@ -56,7 +56,7 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 
 	err := c.loadConfig()
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 		return
 	}
 
@@ -77,9 +77,9 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 	// save config file
 	err = c.saveConfig()
 	if err != nil {
-		log.Fatalln("Failed to update", c.ConfigFile, err)
+		logrus.Fatalln("Failed to update", c.ConfigFile, err)
 	}
-	log.Println("Updated", c.ConfigFile)
+	logrus.Println("Updated", c.ConfigFile)
 }
 
 func init() {
