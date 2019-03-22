@@ -1,6 +1,6 @@
 v11.9.0 (2019-03-22)
 
-**Deprecations for upcoming 12.0 release**
+**Deprecations:**
 
 All deprecations, with a detailed description, are listed at
 https://about.gitlab.com/2019/03/22/gitlab-11-9-released/#release-deprecations
@@ -38,7 +38,7 @@ https://about.gitlab.com/2019/03/22/gitlab-11-9-released/#release-deprecations
    affect only the users that are configuring their custom Helper Image (the image
    will require an update to align with new requirements)
 
-release changes:
+**Release changes:**
 
 - fix(parallels): use the newer sntp command to time sync !1145
 - Update docker API verion !1187
