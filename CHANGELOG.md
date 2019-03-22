@@ -1,4 +1,45 @@
-v11.9.0-rc1 (2019-03-08)
+v11.9.0 (2019-03-22)
+
+**Deprecations:**
+
+All deprecations, with a detailed description, are listed at
+https://about.gitlab.com/2019/03/22/gitlab-11-9-released/#release-deprecations
+
+1. With version 11.9 we're deprecating the support for Docker Executor on CentOS 6
+
+2. With version 11.9 we've implemented a new method for cloning/fetching repositories.
+   Currently GitLab Runner still respects the old configuration sent from GitLab, but with
+   12.0 old methods will be removed and GitLab Runner will require at least GitLab 11.9
+   to work properly.
+
+3. With version 11.0 we've changed how the metrics server is configured for GitLab Runner.
+   `metrics_server` was replaced with `listen_address`. With version 12.0 the old configuration
+   option will be removed.
+
+4. With version 11.3 we've implemented support for different remote cache providers, which
+   required a change in how the cache is configured. With version 12.0 support for old
+   configuration structure will be removed.
+
+5. With version 11.4 we've fixed the way how `entrypoint:` and `command:` options of
+   Extended Docker configuration (https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#extended-docker-configuration-options)
+   are being handled by Kubernetes Executor. The previous implementation was wrong and
+   was making the configuration unusable in most cases. However some users could relay
+   on this wrong behavior. Because of that we've added a feature flag `FF_K8S_USE_ENTRYPOINT_OVER_COMMAND`
+   which, when set to `false`, could bring back the old behavior. With version 12.0 the
+   feature flag as well as the old behavior will be removed.
+
+6. Some Linux distributions for which GitLab Runner is providing DEB and RPM packages
+   have reached their End of Life. With version 12.0 we'll remove support for all
+   EoL distributions at the moment of 12.0 release.
+
+7. With version 11.9 we've prepared a go-based replacement for Runner Helper commands
+   executed within Docker executor inside of the Helper Image. With version 12.0
+   we will remove support for old commands basing on bash scripts. This change will
+   affect only the users that are configuring their custom Helper Image (the image
+   will require an update to align with new requirements)
+
+**Release changes:**
+
 - fix(parallels): use the newer sntp command to time sync !1145
 - Update docker API verion !1187
 - Update alpine images to alpine 3.9 !1197
@@ -27,6 +68,7 @@ v11.9.0-rc1 (2019-03-08)
 - Add note about pod annotations for more clarity !1220
 - Resolve memory allocation failure when cloning repos with LFS objects bigger than available RAM !1200
 - Release also on gitlab releases page !1232
+- Restore availability of pprof in the debug server !1242
 
 v11.8.0 (2019-02-22)
 - Kubernetes executor: add support for Node tolerations !941
