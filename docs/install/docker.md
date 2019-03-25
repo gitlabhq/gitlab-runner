@@ -166,17 +166,13 @@ want gitlab-runner to trust. The gitlab-runner container will
 import the `ca.crt` file on startup so if your container is already running you
 may need to restart it for the changes to take effect.
 
-## Alpine Linux
+## Docker Images
 
-You can also use alternative [Alpine Linux](https://www.alpinelinux.org/) based image with much smaller footprint:
-```
-gitlab/gitlab-runner    latest              3e8077e209f5        13 hours ago        304.3 MB
-gitlab/gitlab-runner    alpine              7c431ac8f30f        13 hours ago        25.98 MB
-```
+The original `gitlab/gitlab-runner:latest` is based on Ubuntu, see [gitlab-org/gitlab-runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles) source for possible build instructions for both Ubuntu and Alpine images.
+
+You can alternatively use [Alpine Linux](https://www.alpinelinux.org/) based image called `gitlab/gitlab-runner:alpine` with much smaller footprint (~400 MB Ubuntu vs ~100 MB Alpine):
 
 **Alpine Linux image is designed to use only Docker as the method of spawning runners.**
-
-The original `gitlab/gitlab-runner:latest` is based on Ubuntu 16.04 LTS.
 
 ## SELinux
 
