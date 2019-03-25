@@ -112,8 +112,6 @@ func ShellEscape(str string) string {
 			literal(char)
 		case char <= BACKTICK:
 			quoted(char)
-		case char <= LOWERCASE_Z:
-			literal(char)
 		case char <= TILDA:
 			quoted(char)
 		case char == DEL:

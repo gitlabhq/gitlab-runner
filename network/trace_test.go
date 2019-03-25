@@ -21,8 +21,6 @@ var (
 	jobConfig      = common.RunnerConfig{}
 	jobCredentials = &common.JobCredentials{ID: -1}
 	jobOutputLimit = common.RunnerConfig{OutputLimit: 1}
-
-	noTrace *string
 )
 
 func matchJobState(jobInfo common.UpdateJobInfo, id int, state common.JobState, failureReason common.JobFailureReason) bool {

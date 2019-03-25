@@ -30,7 +30,7 @@ func emptyCredentialsCacheFactory() *common.CacheConfig {
 
 type minioClientInitializationTest struct {
 	errorOnInitialization bool
-	configuractionFactory func() *common.CacheConfig
+	configurationFactory  func() *common.CacheConfig
 
 	expectedToUseIAM bool
 	expectedInsecure bool
@@ -94,18 +94,18 @@ func TestMinioClientInitialization(t *testing.T) {
 	tests := map[string]minioClientInitializationTest{
 		"error-on-initialization": {
 			errorOnInitialization: true,
-			configuractionFactory: defaultCacheFactory,
+			configurationFactory:  defaultCacheFactory,
 		},
 		"should-use-IAM": {
-			configuractionFactory: emptyCredentialsCacheFactory,
-			expectedToUseIAM:      true,
+			configurationFactory: emptyCredentialsCacheFactory,
+			expectedToUseIAM:     true,
 		},
 		"should-use-explicit-credentials": {
-			configuractionFactory: defaultCacheFactory,
+			configurationFactory: defaultCacheFactory,
 		},
 		"should-use-explicit-credentials-with-insecure": {
-			configuractionFactory: insecureCacheFactory,
-			expectedInsecure:      true,
+			configurationFactory: insecureCacheFactory,
+			expectedInsecure:     true,
 		},
 	}
 
@@ -117,7 +117,7 @@ func TestMinioClientInitialization(t *testing.T) {
 			cleanupMinioCredentialsMock := runOnFakeMinioWithCredentials(t, test)
 			defer cleanupMinioCredentialsMock()
 
-			cacheConfig := test.configuractionFactory()
+			cacheConfig := test.configurationFactory()
 			client, err := newMinioClient(cacheConfig.S3)
 
 			if test.errorOnInitialization {

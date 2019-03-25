@@ -37,7 +37,7 @@ type cacheOperationTest struct {
 	expectedURL  *url.URL
 }
 
-func onFakeMinioURLGenerator(t *testing.T, tc cacheOperationTest) func() {
+func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 	client := new(mockMinioClient)
 
 	var err error
@@ -63,7 +63,7 @@ func onFakeMinioURLGenerator(t *testing.T, tc cacheOperationTest) func() {
 
 func testCacheOperation(t *testing.T, operationName string, operation func(adapter cache.Adapter) *url.URL, tc cacheOperationTest) {
 	t.Run(operationName, func(t *testing.T) {
-		cleanupMinioURLGeneratorMock := onFakeMinioURLGenerator(t, tc)
+		cleanupMinioURLGeneratorMock := onFakeMinioURLGenerator(tc)
 		defer cleanupMinioURLGeneratorMock()
 
 		cacheConfig := defaultCacheFactory()

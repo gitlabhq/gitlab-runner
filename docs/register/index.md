@@ -40,7 +40,7 @@ To register a Runner under GNU/Linux:
 
     ```text
     Please enter the gitlab-ci description for this runner
-    [hostame] my-runner
+    [hostname] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
@@ -94,7 +94,7 @@ To register a Runner under macOS:
 
     ```text
     Please enter the gitlab-ci description for this runner
-    [hostame] my-runner
+    [hostname] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
@@ -149,7 +149,7 @@ To register a Runner under Windows:
 
     ```text
     Please enter the gitlab-ci description for this runner
-    [hostame] my-runner
+    [hostname] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
@@ -206,7 +206,7 @@ To register a Runner under FreeBSD:
 
     ```text
     Please enter the gitlab-ci description for this runner
-    [hostame] my-runner
+    [hostname] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
@@ -271,7 +271,7 @@ To register a Runner using a Docker container:
 
     ```text
     Please enter the gitlab-ci description for this runner
-    [hostame] my-runner
+    [hostname] my-runner
     ```
 
 1. Enter the [tags associated with the Runner][tags], you can change this later in GitLab's UI:
