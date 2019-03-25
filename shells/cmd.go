@@ -80,7 +80,7 @@ func (b *CmdWriter) Unindent() {
 }
 
 func (b *CmdWriter) checkErrorLevel() {
-	b.Line("IF %errorlevel% NEQ 0 exit /b %errorlevel%")
+	b.Line("IF !errorlevel! NEQ 0 exit /b !errorlevel!")
 	b.Line("")
 }
 
@@ -134,14 +134,14 @@ func (b *CmdWriter) IfFile(path string) {
 func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
 	b.Line(fmt.Sprintf("%s 2>NUL 1>NUL", cmdline))
-	b.Line("IF %errorlevel% EQU 0 (")
+	b.Line("IF !errorlevel! EQU 0 (")
 	b.Indent()
 }
 
 func (b *CmdWriter) IfCmdWithOutput(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
 	b.Line(fmt.Sprintf("%s", cmdline))
-	b.Line("IF %errorlevel% EQU 0 (")
+	b.Line("IF !errorlevel! EQU 0 (")
 	b.Indent()
 }
 

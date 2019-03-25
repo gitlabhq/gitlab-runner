@@ -779,6 +779,27 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 	})
 }
 
+func TestBuildWithUntrackedDirFromPreviousBuild(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+
+		err = os.MkdirAll(fmt.Sprintf("%s/.test", build.FullProjectDir()), 0644)
+		require.NoError(t, err)
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Removing .test/")
+	})
+}
+
 func TestInteractiveTerminal(t *testing.T) {
 	cases := []struct {
 		app                string
