@@ -77,7 +77,16 @@ func getLogrusOutput(t *testing.T, hook *test.Hook) string {
 	return buf.String()
 }
 
-func testRegisterCommandRun(t *testing.T, network common.Network, args ...string) {
+func testRegisterCommandRun(t *testing.T, network common.Network, args ...string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			// log panics forces exit
+			if e, ok := r.(*logrus.Entry); ok {
+				err = fmt.Errorf("command error: %s", e.Message)
+			}
+		}
+	}()
+
 	cmd := newRegisterCommand()
 	cmd.network = network
 
@@ -91,7 +100,9 @@ func testRegisterCommandRun(t *testing.T, network common.Network, args ...string
 	}
 
 	args = append([]string{"binary", "register"}, args...)
-	app.Run(args)
+	_ = app.Run(args)
+
+	return
 }
 
 func TestAccessLevelSetting(t *testing.T) {
@@ -115,25 +126,6 @@ func TestAccessLevelSetting(t *testing.T) {
 	for testName, testCase := range tests {
 		t.Run(testName, func(t *testing.T) {
 			hook := test.NewGlobal()
-
-			defer func() {
-				logrusOutput := getLogrusOutput(t, hook)
-
-				r := recover()
-				if r == nil {
-					assert.Contains(t, logrusOutput, "Runner registered successfully.")
-					assert.NotContains(t, logrusOutput, "Given access-level is not valid. Please refer to gitlab-runner register -h for the correct options.")
-					return
-				}
-
-				if _, ok := r.(*logrus.Entry); ok {
-					assert.NotContains(t, logrusOutput, "Runner registered successfully.")
-					assert.Contains(t, logrusOutput, "Given access-level is not valid. Please refer to gitlab-runner register -h for the correct options.")
-					return
-				}
-
-				assert.Fail(t, fmt.Sprintf("Unexpected panic: %v", r))
-			}()
 
 			network := new(common.MockNetwork)
 			defer network.AssertExpectations(t)
@@ -164,7 +156,19 @@ func TestAccessLevelSetting(t *testing.T) {
 				"--executor", "shell",
 				"--access-level", string(testCase.accessLevel),
 			}
-			testRegisterCommandRun(t, network, arguments...)
+
+			err = testRegisterCommandRun(t, network, arguments...)
+			logrusOutput := getLogrusOutput(t, hook)
+
+			if testCase.failureExpected {
+				assert.EqualError(t, err, "command error: Given access-level is not valid. Please refer to gitlab-runner register -h for the correct options.")
+				assert.NotContains(t, logrusOutput, "Runner registered successfully.")
+
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Contains(t, logrusOutput, "Runner registered successfully.")
 		})
 	}
 }
