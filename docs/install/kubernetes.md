@@ -1,10 +1,27 @@
 # Run GitLab Runner on a Kubernetes cluster
 
-To get started with the GitLab CI Runner on Kubernetes you need to define
-resources that you can then push to the cluster with `kubectl`.
+TIP: **Tip:**
+We also provide a [GitLab Runner Helm Chart](https://docs.gitlab.com/ce/install/kubernetes/gitlab_runner_chart.html).
 
-A recommended approach to this is to create a `ConfigMap` in Kubernetes such as
-the following:
+To install the GitLab CI Runner on Kubernetes there are several resources that need to be defined and then pushed to the cluster with `kubectl`.  This topic covers how to:
+
+1. Register the new runner using the API.
+1. Define the runner ConfigMap in a yaml file.
+1. Define the runner Deployment yaml file.
+1. Push the definitions to a Kubernetes cluster using `kubectl`.
+
+## Register the new runner using the API
+
+The runner must first be registered to your project, group or instance so that its **runner token** (not to be confused with the runner registration token) can be provided to the `ConfigMap` below. To do this:
+
+1. Register a new runner using the [GitLab Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) (example within) and provide the **registration token** from the CI/CD settings section of your project, group or instance as described in
+[Configuring GitLab Runners](https://docs.gitlab.com/ee/ci/runners/README.html).
+
+1. Copy the **runner token** that is returned by the runner API registration command and paste it as the value of the `token = "...."` field of your `ConfigMap`.
+
+## Define the Runner `ConfigMap`
+
+Create a file named `runner_config.yml` from the following example:
 
 ```yaml
 apiVersion: v1
@@ -18,7 +35,7 @@ data:
 
     [[runners]]
       name = "Kubernetes Runner"
-      url = "https://gitlab.com/ci"
+      url = "https://gitlab.com"
       token = "...."
       executor = "kubernetes"
       [runners.kubernetes]
@@ -26,18 +43,15 @@ data:
         image = "busybox"
 ```
 
-Where `image` (optional) is the default Docker image to run jobs on top of.
+Update the `url` and `token` with your values.  The parameter `image` is optional and is the default Docker image used to be used to run jobs.
 
 >**Note:**
-The `token` can be found in `/etc/gitlab-runner/config.toml` and should
-have been generated after registering the Runner. It's not to be confused
-with the registration token that can be found under your project's
-**Settings > CI/CD > Runners settings**.
+> Don't use the `gitlab-managed-apps` namespace for this runner. It should be reserved for applications installed through the GitLab UI.
 
 
+## Define the Runner `Deployment`
 
-Then create a `Deployment` or `ReplicationController` which uses the `ConfigMap`.
-This is an example of a `Deployment`:
+Create a file named `runner_deployment.yml` from the following example:
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -76,5 +90,15 @@ spec:
         name: cacerts
 ```
 
+## Push the definitions to Kubernetes
+
+Assuming that your kubectl context has already been set to the cluster in question, issue these commands:
+
+`kubectl apply -f runner_config.yml`
+
+`kubectl apply -f runner_deployment.yml`
+
+The new runner will now show up in the GitLab web UI at the appropriate level (instance, group or project).
+
 For more details see [Kubernetes executor](../executors/kubernetes.md)
-and the [[runners.kubernetes] section of advanced configuration](../configuration/advanced-configuration.md#the-runners-kubernetes-section).
+and the [[runners.kubernetes] section of advanced configuration](../configuration/advanced-configuration.md#the-runnerskubernetes-section).

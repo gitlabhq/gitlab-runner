@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	_ "net/http/pprof" // pprof package adds everything itself inside its init() function
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
@@ -121,15 +121,21 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 	}
 }
 
-func (mr *RunCommand) requestJob(runner *common.RunnerConfig, sessionInfo *common.SessionInfo) (*common.JobResponse, bool) {
+// requestJob will check if the runner can send another concurrent request to
+// GitLab, if not the return value is nil.
+func (mr *RunCommand) requestJob(runner *common.RunnerConfig, sessionInfo *common.SessionInfo) *common.JobResponse {
 	if !mr.buildsHelper.acquireRequest(runner) {
-		return nil, false
+		mr.log().WithField("runner", runner.ShortDescription()).
+			Debugln("Failed to request job: runner requestConcurrency meet")
+
+		return nil
 	}
 	defer mr.buildsHelper.releaseRequest(runner)
 
 	jobData, healthy := mr.network.RequestJob(*runner, sessionInfo)
 	mr.makeHealthy(runner.UniqueID(), healthy)
-	return jobData, true
+
+	return jobData
 }
 
 func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) (err error) {
@@ -138,20 +144,11 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		return
 	}
 
-	context, err := provider.Acquire(runner)
+	executorData, releaseFn, err := mr.acquireRunnerResources(provider, runner)
 	if err != nil {
-		logrus.Warningln("Failed to update executor", runner.Executor, "for", runner.ShortDescription(), err)
 		return
 	}
-	defer provider.Release(runner, context)
-
-	// Acquire build slot
-	if !mr.buildsHelper.acquireBuild(runner) {
-		mr.log().WithField("runner", runner.ShortDescription()).
-			Debugln("Failed to request job: runner limit meet")
-		return
-	}
-	defer mr.buildsHelper.releaseBuild(runner)
+	defer releaseFn()
 
 	var features common.FeaturesInfo
 	provider.GetFeatures(&features)
@@ -161,12 +158,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	}
 
 	// Receive a new build
-	jobData, result := mr.requestJob(runner, sessionInfo)
-	if !result {
-		mr.log().WithField("runner", runner.ShortDescription()).
-			Debugln("Failed to request job: runner requestConcurrency meet")
-		return
-	}
+	jobData := mr.requestJob(runner, sessionInfo)
 	if jobData == nil {
 		return
 	}
@@ -177,12 +169,22 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		Token: jobData.Token,
 	}
 	trace := mr.network.ProcessJob(*runner, jobCredentials)
-	defer trace.Fail(err, common.NoneFailure)
+	defer func() {
+		if err != nil {
+			fmt.Fprintln(trace, err.Error())
+			trace.Fail(err, common.RunnerSystemFailure)
+		} else {
+			trace.Fail(nil, common.NoneFailure)
+		}
+	}()
 
 	trace.SetFailuresCollector(mr.failuresCollector)
 
 	// Create a new build
-	build := common.NewBuild(*jobData, runner, mr.abortBuilds, context)
+	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData)
+	if err != nil {
+		return
+	}
 	build.Session = buildSession
 
 	// Add build to list of builds to assign numbers
@@ -201,6 +203,25 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	// Process a build
 	return build.Run(mr.config, trace)
+}
+
+func (mr *RunCommand) acquireRunnerResources(provider common.ExecutorProvider, runner *common.RunnerConfig) (common.ExecutorData, func(), error) {
+	executorData, err := provider.Acquire(runner)
+	if err != nil {
+		return nil, func() {}, fmt.Errorf("failed to update executor: %v", err)
+	}
+
+	if !mr.buildsHelper.acquireBuild(runner) {
+		provider.Release(runner, executorData)
+		return nil, nil, errors.New("failed to request job, runner limit met")
+	}
+
+	releaseFn := func() {
+		mr.buildsHelper.releaseBuild(runner)
+		provider.Release(runner, executorData)
+	}
+
+	return executorData, releaseFn, nil
 }
 
 func (mr *RunCommand) createSession(features common.FeaturesInfo) (*session.Session, *common.SessionInfo, error) {
@@ -227,7 +248,14 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 	for mr.stopSignal == nil {
 		select {
 		case runner := <-runners:
-			mr.processRunner(id, runner, runners)
+			err := mr.processRunner(id, runner, runners)
+			if err != nil {
+				mr.log().WithFields(logrus.Fields{
+					"runner":   runner.ShortDescription(),
+					"executor": runner.Executor,
+				}).WithError(err).
+					Error("Failed to process runner")
+			}
 
 			// force GC cycle after processing build
 			runtime.GC()
@@ -430,7 +458,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	// Go-specific metrics about the process (GC stats, goroutines, etc.).
 	registry.MustRegister(prometheus.NewGoCollector())
 	// Go-unrelated process metrics (memory usage, file descriptors, etc.).
-	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+	registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 
 	// Register all executor provider collectors
 	for _, provider := range common.GetExecutorProviders() {
@@ -444,6 +472,14 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 
 func (mr *RunCommand) serveDebugData(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/jobs/list", mr.buildsHelper.ListJobsHandler)
+}
+
+func (mr *RunCommand) servePprof(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
@@ -477,6 +513,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 
 	mr.serveMetrics(mux)
 	mr.serveDebugData(mux)
+	mr.servePprof(mux)
 
 	mr.log().
 		WithField("address", listenAddress).
@@ -602,7 +639,7 @@ func (mr *RunCommand) handleShutdown() error {
 			return fmt.Errorf("forced exit: %v", mr.stopSignal)
 
 		case <-time.After(common.ShutdownTimeout * time.Second):
-			return errors.New("shutdown timedout")
+			return errors.New("shutdown timed out")
 
 		case <-mr.runFinished:
 			// Everything finished we can exit now

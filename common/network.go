@@ -61,6 +61,8 @@ type FeaturesInfo struct {
 	UploadRawArtifacts      bool `json:"upload_raw_artifacts"`
 	Session                 bool `json:"session"`
 	Terminal                bool `json:"terminal"`
+	Refspecs                bool `json:"refspecs"`
+	Masking                 bool `json:"masking"`
 }
 
 type RegisterRunnerParameters struct {
@@ -134,6 +136,8 @@ type GitInfo struct {
 	Sha       string         `json:"sha"`
 	BeforeSha string         `json:"before_sha"`
 	RefType   GitInfoRefType `json:"ref_type"`
+	Refspecs  []string       `json:"refspecs"`
+	Depth     int            `json:"depth"`
 }
 
 type RunnerInfo struct {
@@ -356,6 +360,7 @@ type JobTrace interface {
 	Fail(err error, failureReason JobFailureReason)
 	SetCancelFunc(cancelFunc context.CancelFunc)
 	SetFailuresCollector(fc FailuresCollector)
+	SetMasked(values []string)
 	IsStdout() bool
 }
 

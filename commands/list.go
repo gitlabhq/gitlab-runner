@@ -1,8 +1,9 @@
 package commands
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -13,16 +14,16 @@ type ListCommand struct {
 func (c *ListCommand) Execute(context *cli.Context) {
 	err := c.loadConfig()
 	if err != nil {
-		log.Warningln(err)
+		logrus.Warningln(err)
 		return
 	}
 
-	log.WithFields(log.Fields{
+	logrus.WithFields(logrus.Fields{
 		"ConfigFile": c.ConfigFile,
 	}).Println("Listing configured runners")
 
 	for _, runner := range c.config.Runners {
-		log.WithFields(log.Fields{
+		logrus.WithFields(logrus.Fields{
 			"Executor": runner.RunnerSettings.Executor,
 			"Token":    runner.RunnerCredentials.Token,
 			"URL":      runner.RunnerCredentials.URL,

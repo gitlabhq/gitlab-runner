@@ -3,7 +3,7 @@ package common
 import (
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
@@ -59,7 +59,7 @@ type Shell interface {
 var shells map[string]Shell
 
 func RegisterShell(shell Shell) {
-	log.Debugln("Registering", shell.GetName(), "shell...")
+	logrus.Debugln("Registering", shell.GetName(), "shell...")
 
 	if shells == nil {
 		shells = make(map[string]Shell)

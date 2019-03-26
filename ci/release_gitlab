@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+if [[ -z "${DEPLOY_TOKEN}" ]]; then
+    echo -e "\033[0;31mMissing DEPLOY_TOKEN, cannot release\033[0m"
+
+    exit 1
+fi
+
+tag=${1:-$CI_COMMIT_TAG}
+
+if [[ -z "${tag}" ]]; then
+    echo -e "usage:\n\t$0 tag"
+
+    exit 2
+fi
+
+api=${CI_API_V4_URL:-https://gitlab.com/api/v4}
+runner_id=${CI_PROJECT_ID:-250833}
+
+changelog="https://gitlab.com/gitlab-org/gitlab-runner/blob/$tag/CHANGELOG.md"
+s3="https://gitlab-runner-downloads.s3.amazonaws.com/$tag"
+release=$(cat <<EOS
+{
+  "name": "$tag",
+  "tag_name": "$tag",
+  "description": "See [the changelog]($changelog) :rocket:",
+  "assets": {
+    "links": [
+      { "name": "linux amd64", "url": "$s3/binaries/gitlab-runner-linux-amd64" },
+      { "name": "linux arm", "url": "$s3/binaries/gitlab-runner-linux-arm" },
+      { "name": "macOS", "url": "$s3/binaries/gitlab-runner-darwin-amd64" },
+      { "name": "Windows 64 bits", "url": "$s3/binaries/gitlab-runner-windows-amd64.zip" },
+      { "name": "Windows 32 bits", "url": "$s3/binaries/gitlab-runner-windows-386.zip" },
+      { "name": "deb amd64", "url": "$s3/deb/gitlab-runner_amd64.deb" },
+      { "name": "deb i386", "url": "$s3/deb/gitlab-runner_i386.deb" },
+      { "name": "deb armel", "url": "$s3/deb/gitlab-runner_armel.deb" },
+      { "name": "deb armhf", "url": "$s3/deb/gitlab-runner_armhf.deb" },
+      { "name": "rpm amd64", "url": "$s3/rpm/gitlab-runner_amd64.rpm" },
+      { "name": "rpm i686", "url": "$s3/rpm/gitlab-runner_i686.rpm" },
+      { "name": "rpm arm", "url": "$s3/rpm/gitlab-runner_arm.rpm" },
+      { "name": "rpm armhf", "url": "$s3/rpm/gitlab-runner_armhf.rpm" },
+      { "name": "others", "url": "$s3/index.html" },
+      { "name": "docs", "url": "https://docs.gitlab.com/runner/" }
+    ]
+  }
+}
+EOS
+)
+
+curl -f --header 'Content-Type: application/json' --header "PRIVATE-TOKEN: $DEPLOY_TOKEN" \
+    --data "$release" --request POST "$api/projects/$runner_id/releases"
+

@@ -76,7 +76,7 @@ S3-compatible caching server:
 1. Read the Access and Secret Key of minio and use it to configure the Runner:
 
     ```
-    sudo cat /.minio/config.json
+    sudo cat /export/.minio.sys/config/config.json | grep Key
     ```
 
 You can now proceed and

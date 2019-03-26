@@ -1,16 +1,26 @@
 package common
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
+	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
 func init() {
@@ -64,6 +74,116 @@ func TestBuildRun(t *testing.T) {
 	}
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func TestBuildPredefinedVariables(t *testing.T) {
+	e := MockExecutor{}
+	defer e.AssertExpectations(t)
+
+	p := MockExecutorProvider{}
+	defer p.AssertExpectations(t)
+
+	// Create executor only once
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+
+	p.On("Create").Return(&e).Once()
+
+	// We run everything once
+	e.On("Prepare", mock.Anything).
+		Return(func(options ExecutorPrepareOptions) error {
+			options.Build.StartBuild("/root/dir", "/cache/dir", false)
+			return nil
+		}).Once()
+	e.On("Finish", nil).Return().Once()
+	e.On("Cleanup").Return().Once()
+
+	// Run script successfully
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+
+	RegisterExecutor(t.Name(), &p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		JobResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: t.Name(),
+			},
+		},
+	}
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+
+	projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
+	assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
+}
+
+func TestBuildRunNoModifyConfig(t *testing.T) {
+	e := MockExecutor{}
+	defer e.AssertExpectations(t)
+
+	p := MockExecutorProvider{}
+	defer p.AssertExpectations(t)
+
+	// Create executor only once
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+	p.On("Create").Return(&e).Once()
+
+	// Attempt to modify the Config object
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(func(options ExecutorPrepareOptions) error {
+			options.Config.Docker.DockerCredentials.Host = "10.0.0.2"
+			return nil
+		}).Once()
+
+	// We run everything else once
+	e.On("Finish", nil).Return().Once()
+	e.On("Cleanup").Return().Once()
+
+	// Run script successfully
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+
+	RegisterExecutor("build-run-nomodify-test", &p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	rc := &RunnerConfig{
+		RunnerSettings: RunnerSettings{
+			Executor: "build-run-nomodify-test",
+			Docker: &DockerConfig{
+				DockerCredentials: docker_helpers.DockerCredentials{
+					Host: "10.0.0.1",
+				},
+			},
+		},
+	}
+	build, err := NewBuild(successfulBuild, rc, nil, nil)
+	assert.NoError(t, err)
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+	assert.Equal(t, "10.0.0.1", rc.Docker.DockerCredentials.Host)
 }
 
 func TestRetryPrepare(t *testing.T) {
@@ -225,6 +345,7 @@ func TestJobFailure(t *testing.T) {
 	trace.On("Write", mock.Anything).Return(0, nil)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("SetMasked", mock.Anything).Once()
 	trace.On("Fail", thrownErr, ScriptFailure).Once()
 
 	err = build.Run(&Config{}, trace)
@@ -279,6 +400,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	trace.On("Write", mock.Anything).Return(0, nil)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("SetMasked", mock.Anything).Once()
 	trace.On("Fail", mock.Anything, JobExecutionTimeout).Run(func(arguments mock.Arguments) {
 		assert.Error(t, arguments.Get(0).(error))
 	}).Once()
@@ -613,7 +735,7 @@ func TestDebugTrace(t *testing.T) {
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
 
-	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{"CI_DEBUG_TRACE", "false", true, true, false})
+	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: "false", Public: true, Internal: true})
 	build = &Build{
 		JobResponse: successfulBuild,
 	}
@@ -622,11 +744,23 @@ func TestDebugTrace(t *testing.T) {
 	successfulBuild, err = GetSuccessfulBuild()
 	assert.NoError(t, err)
 
-	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{"CI_DEBUG_TRACE", "true", true, true, false})
+	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: "true", Public: true, Internal: true})
 	build = &Build{
 		JobResponse: successfulBuild,
 	}
 	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
+}
+
+func TestDefaultEnvVariables(t *testing.T) {
+	buildDir := "/tmp/test-build/dir"
+	build := Build{
+		BuildDir: buildDir,
+	}
+
+	vars := build.GetAllVariables().StringList()
+
+	assert.Contains(t, vars, "CI_PROJECT_DIR="+filepath.FromSlash(buildDir))
+	assert.Contains(t, vars, "CI_SERVER=yes")
 }
 
 func TestSharedEnvVariables(t *testing.T) {
@@ -765,5 +899,124 @@ func TestIsFeatureFlagOn(t *testing.T) {
 			hook.Reset()
 		})
 	}
+}
 
+func TestWaitForTerminal(t *testing.T) {
+	cases := []struct {
+		name                   string
+		cancelFn               func(ctxCancel context.CancelFunc, build *Build)
+		jobTimeout             int
+		waitForTerminalTimeout time.Duration
+		expectedErr            string
+	}{
+		{
+			name: "Cancel build",
+			cancelFn: func(ctxCancel context.CancelFunc, build *Build) {
+				ctxCancel()
+			},
+			jobTimeout:             3600,
+			waitForTerminalTimeout: time.Hour,
+			expectedErr:            "build cancelled, killing session",
+		},
+		{
+			name: "Terminal Timeout",
+			cancelFn: func(ctxCancel context.CancelFunc, build *Build) {
+				// noop
+			},
+			jobTimeout:             3600,
+			waitForTerminalTimeout: time.Second,
+			expectedErr:            "Terminal session timed out (maximum time allowed - 1s)",
+		},
+		{
+			name: "System Interrupt",
+			cancelFn: func(ctxCancel context.CancelFunc, build *Build) {
+				build.SystemInterrupt <- os.Interrupt
+			},
+			jobTimeout:             3600,
+			waitForTerminalTimeout: time.Hour,
+			expectedErr:            "terminal disconnected by system signal: interrupt",
+		},
+		{
+			name: "Terminal Disconnect",
+			cancelFn: func(ctxCancel context.CancelFunc, build *Build) {
+				build.Session.DisconnectCh <- errors.New("user disconnect")
+			},
+			jobTimeout:             3600,
+			waitForTerminalTimeout: time.Hour,
+			expectedErr:            "terminal disconnected: user disconnect",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			build := Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						Executor: "shell",
+					},
+				},
+				JobResponse: JobResponse{
+					RunnerInfo: RunnerInfo{
+						Timeout: c.jobTimeout,
+					},
+				},
+				SystemInterrupt: make(chan os.Signal),
+			}
+
+			trace := Trace{Writer: os.Stdout}
+			build.logger = NewBuildLogger(&trace, build.Log())
+			sess, err := session.NewSession(nil)
+			require.NoError(t, err)
+			build.Session = sess
+
+			srv := httptest.NewServer(build.Session.Mux())
+			defer srv.Close()
+
+			mockConn := terminal.MockConn{}
+			defer mockConn.AssertExpectations(t)
+			mockConn.On("Close").Maybe().Return(nil)
+			// On Start upgrade the web socket connection and wait for the
+			// timeoutCh to exit, to mock real work made on the websocket.
+			mockConn.On("Start", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				upgrader := &websocket.Upgrader{}
+				r := args[1].(*http.Request)
+				w := args[0].(http.ResponseWriter)
+
+				_, _ = upgrader.Upgrade(w, r, nil)
+				timeoutCh := args[2].(chan error)
+
+				<-timeoutCh
+			}).Once()
+
+			mockTerminal := terminal.MockInteractiveTerminal{}
+			defer mockTerminal.AssertExpectations(t)
+			mockTerminal.On("Connect").Return(&mockConn, nil)
+			sess.SetInteractiveTerminal(&mockTerminal)
+
+			u := url.URL{
+				Scheme: "ws",
+				Host:   srv.Listener.Addr().String(),
+				Path:   build.Session.Endpoint + "/exec",
+			}
+			headers := http.Header{
+				"Authorization": []string{build.Session.Token},
+			}
+
+			conn, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
+			require.NotNil(t, conn)
+			require.NoError(t, err)
+			defer conn.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), build.GetBuildTimeout())
+
+			errCh := make(chan error)
+			go func() {
+				errCh <- build.waitForTerminal(ctx, c.waitForTerminalTimeout)
+			}()
+
+			c.cancelFn(cancel, &build)
+
+			assert.EqualError(t, <-errCh, c.expectedErr)
+		})
+	}
 }

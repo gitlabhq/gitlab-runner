@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -50,6 +51,7 @@ const (
 type BuildStage string
 
 const (
+	BuildStagePrepareExecutor          BuildStage = "prepare_executor"
 	BuildStagePrepare                  BuildStage = "prepare_script"
 	BuildStageGetSources               BuildStage = "get_sources"
 	BuildStageRestoreCache             BuildStage = "restore_cache"
@@ -59,6 +61,10 @@ const (
 	BuildStageArchiveCache             BuildStage = "archive_cache"
 	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
+)
+
+const (
+	FFDockerHelperImageV2 string = "FF_DOCKER_HELPER_IMAGE_V2"
 )
 
 type Build struct {
@@ -148,6 +154,11 @@ func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
 	b.RootDir = rootDir
 	b.BuildDir = path.Join(rootDir, b.ProjectUniqueDir(sharedDir))
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
+
+	// invalidate variables cache:
+	// as some variables are based on dynamic
+	// state after build starts
+	b.allVariables = nil
 }
 
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
@@ -350,36 +361,60 @@ func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider Exe
 	return
 }
 
-func (b *Build) waitForTerminal(timeout time.Duration) {
+func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) error {
 	if b.Session == nil || !b.Session.Connected() {
-		return
+		return nil
 	}
+
+	timeout = b.getTerminalTimeout(ctx, timeout)
 
 	b.logger.Infoln(
 		fmt.Sprintf(
 			"Terminal is connected, will time out in %s...",
-			timeout,
+			// TODO: switch to timeout.Round(time.Second) after upgrading to Go 1.9+
+			roundDuration(timeout, time.Second),
 		),
 	)
 
 	select {
+	case <-ctx.Done():
+		err := b.Session.Kill()
+		if err != nil {
+			b.Log().WithError(err).Warn("Failed to kill session")
+		}
+		return errors.New("build cancelled, killing session")
 	case <-time.After(timeout):
 		err := fmt.Errorf(
 			"Terminal session timed out (maximum time allowed - %s)",
-			timeout,
+			// TODO: switch to timeout.Round(time.Second) after upgrading to Go 1.9+
+			roundDuration(timeout, time.Second),
 		)
 		b.logger.Infoln(err.Error())
-		b.Log().WithError(err).Debugln("Connection closed")
 		b.Session.TimeoutCh <- err
+		return err
 	case err := <-b.Session.DisconnectCh:
 		b.logger.Infoln("Terminal disconnected")
-		b.Log().WithError(err).Debugln("Terminal disconnected")
+		return fmt.Errorf("terminal disconnected: %v", err)
 	case signal := <-b.SystemInterrupt:
-		err := fmt.Errorf("aborted: %v", signal)
 		b.logger.Infoln("Terminal disconnected")
-		b.Log().WithError(err).Debugln("Terminal disconnected")
-		b.Session.Kill()
+		err := b.Session.Kill()
+		if err != nil {
+			b.Log().WithError(err).Warn("Failed to kill session")
+		}
+		return fmt.Errorf("terminal disconnected by system signal: %v", signal)
 	}
+}
+
+// getTerminalTimeout checks if the the job timeout comes before the
+// configured terminal timeout.
+func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) time.Duration {
+	expiryTime, _ := ctx.Deadline()
+
+	if expiryTime.Before(time.Now().Add(timeout)) {
+		timeout = expiryTime.Sub(time.Now())
+	}
+
+	return timeout
 }
 
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
@@ -444,6 +479,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	defer cancel()
 
 	trace.SetCancelFunc(cancel)
+	trace.SetMasked(b.GetAllVariables().Masked())
 
 	options := ExecutorPrepareOptions{
 		Config:  b.Runner,
@@ -460,14 +496,27 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	provider.GetFeatures(&b.ExecutorFeatures)
 
-	executor, err = b.retryCreateExecutor(options, provider, b.logger)
+	section := helpers.BuildSection{
+		Name:        string(BuildStagePrepareExecutor),
+		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		Run: func() error {
+			executor, err = b.retryCreateExecutor(options, provider, b.logger)
+			return err
+		},
+	}
+	err = section.Execute(&b.logger)
+
 	if err == nil {
 		err = b.run(ctx, executor)
-		b.waitForTerminal(globalConfig.SessionServer.GetSessionTimeout())
+		if err := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); err != nil {
+			b.Log().WithError(err).Debug("Stopped waiting for terminal")
+		}
 	}
+
 	if executor != nil {
 		executor.Finish(err)
 	}
+
 	return err
 }
 
@@ -477,7 +526,7 @@ func (b *Build) String() string {
 
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
-		{Key: "CI_PROJECT_DIR", Value: b.FullProjectDir(), Public: true, Internal: true, File: false},
+		{Key: "CI_PROJECT_DIR", Value: filepath.FromSlash(b.FullProjectDir()), Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER", Value: "yes", Public: true, Internal: true, File: false},
 	}
 }
@@ -499,28 +548,45 @@ func (b *Build) GetSharedEnvVariable() JobVariable {
 	return env
 }
 
-func (b *Build) GetCITLSVariables() JobVariables {
+func (b *Build) GetTLSVariables(caFile, certFile, keyFile string) JobVariables {
 	variables := JobVariables{}
+
 	if b.TLSCAChain != "" {
-		variables = append(variables, JobVariable{tls.VariableCAFile, b.TLSCAChain, true, true, true})
+		variables = append(variables, JobVariable{
+			Key:      caFile,
+			Value:    b.TLSCAChain,
+			Public:   true,
+			Internal: true,
+			File:     true,
+		})
 	}
+
 	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
-		variables = append(variables, JobVariable{tls.VariableCertFile, b.TLSAuthCert, true, true, true})
-		variables = append(variables, JobVariable{tls.VariableKeyFile, b.TLSAuthKey, true, true, true})
+		variables = append(variables, JobVariable{
+			Key:      certFile,
+			Value:    b.TLSAuthCert,
+			Public:   true,
+			Internal: true,
+			File:     true,
+		})
+
+		variables = append(variables, JobVariable{
+			Key:      keyFile,
+			Value:    b.TLSAuthKey,
+			Internal: true,
+			File:     true,
+		})
 	}
+
 	return variables
 }
 
+func (b *Build) GetCITLSVariables() JobVariables {
+	return b.GetTLSVariables(tls.VariableCAFile, tls.VariableCertFile, tls.VariableKeyFile)
+}
+
 func (b *Build) GetGitTLSVariables() JobVariables {
-	variables := JobVariables{}
-	if b.TLSCAChain != "" {
-		variables = append(variables, JobVariable{"GIT_SSL_CAINFO", b.TLSCAChain, true, true, true})
-	}
-	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
-		variables = append(variables, JobVariable{"GIT_SSL_CERT", b.TLSAuthCert, true, true, true})
-		variables = append(variables, JobVariable{"GIT_SSL_KEY", b.TLSAuthKey, true, true, true})
-	}
-	return variables
+	return b.GetTLSVariables("GIT_SSL_CAINFO", "GIT_SSL_CERT", "GIT_SSL_KEY")
 }
 
 func (b *Build) IsSharedEnv() bool {
@@ -566,6 +632,8 @@ func (b *Build) GetRemoteURL() string {
 	return fmt.Sprintf("%sgitlab-ci-token:%s@%s/%s.git", splits[0], ciJobToken, splits[1], ciProjectPath)
 }
 
+// GetGitDepth is deprecated and will be removed in 12.0, use build.GitInfo.Depth instead
+// TODO: Remove in 12.0
 func (b *Build) GetGitDepth() string {
 	return b.GetAllVariables().Get("GIT_DEPTH")
 }
@@ -677,14 +745,24 @@ func (b *Build) Duration() time.Duration {
 	return time.Since(b.createdAt)
 }
 
-func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt chan os.Signal, executorData ExecutorData) *Build {
+func (b *Build) RefspecsAvailable() bool {
+	return len(b.GitInfo.Refspecs) > 0
+}
+
+func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt chan os.Signal, executorData ExecutorData) (*Build, error) {
+	// Attempt to perform a deep copy of the RunnerConfig
+	runnerConfigCopy, err := runnerConfig.DeepCopy()
+	if err != nil {
+		return nil, fmt.Errorf("deep copy of runner config failed: %v", err)
+	}
+
 	return &Build{
 		JobResponse:     jobData,
-		Runner:          runnerConfig,
+		Runner:          runnerConfigCopy,
 		SystemInterrupt: systemInterrupt,
 		ExecutorData:    executorData,
 		createdAt:       time.Now(),
-	}
+	}, nil
 }
 
 func (b *Build) IsFeatureFlagOn(name string) bool {

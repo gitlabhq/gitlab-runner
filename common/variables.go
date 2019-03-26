@@ -13,6 +13,7 @@ type JobVariable struct {
 	Public   bool   `json:"public"`
 	Internal bool   `json:"-"`
 	File     bool   `json:"file"`
+	Masked   bool   `json:"masked"`
 }
 
 type JobVariables []JobVariable
@@ -62,6 +63,15 @@ func (b JobVariables) Expand() (variables JobVariables) {
 		variables = append(variables, variable)
 	}
 	return variables
+}
+
+func (b JobVariables) Masked() (masked []string) {
+	for _, variable := range b {
+		if variable.Masked {
+			masked = append(masked, variable.Value)
+		}
+	}
+	return
 }
 
 func ParseVariable(text string) (variable JobVariable, err error) {

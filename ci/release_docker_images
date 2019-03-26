@@ -28,6 +28,7 @@ build() {
         --no-cache \
         --build-arg DOCKER_MACHINE_VERSION="${DOCKER_MACHINE_VERSION}" \
         --build-arg DUMB_INIT_VERSION="${DUMB_INIT_VERSION}" \
+        --build-arg GIT_LFS_VERSION="${GIT_LFS_VERSION}" \
         -t "${1}" \
         "${2}"
 }
@@ -91,8 +92,9 @@ logout() {
     _docker logout "${1}"
 }
 
-echo "${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine" >> dockerfiles/checksums
+echo "${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine" > dockerfiles/checksums
 echo "${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init" >> dockerfiles/checksums
+echo "${GIT_LFS_CHECKSUM}  /usr/bin/git-lfs" >> dockerfiles/checksums
 cat dockerfiles/checksums
 
 cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/

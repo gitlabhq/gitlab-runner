@@ -19,11 +19,21 @@ import (
 	"github.com/tevino/abool"
 )
 
-const repoRemoteURL = "https://gitlab.com/gitlab-org/gitlab-test.git"
-const repoSHA = "6907208d755b60ebeacb2e9dfea74c92c3449a1f"
-const repoBeforeSHA = "c347ca2e140aa667b968e51ed0ffe055501fe4f4"
-const repoRefName = "master"
-const repoRefType = RefTypeBranch
+const (
+	repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git"
+
+	repoRefType = RefTypeBranch
+
+	repoSHA       = "91956efe32fb7bef54f378d90c9bd74c19025872"
+	repoBeforeSHA = "ca50079dac5293292f83a4d454922ba8db44e7a3"
+	repoRefName   = "master"
+
+	repoLFSSHA       = "2371dd05e426fca09b0d2ec5d9ed757559035e2f"
+	repoLFSBeforeSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"
+	repoLFSRefName   = "add-lfs-object"
+
+	FilesLFSFile1LFSsize = int64(2097152)
+)
 
 var (
 	gitLabComChain        string
@@ -34,12 +44,41 @@ func init() {
 	gitLabComChainFetched = abool.New()
 }
 
+func GetGitInfo(url string) GitInfo {
+	return GitInfo{
+		RepoURL:   url,
+		Sha:       repoSHA,
+		BeforeSha: repoBeforeSHA,
+		Ref:       repoRefName,
+		RefType:   repoRefType,
+		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
+	}
+}
+
+func GetLFSGitInfo(url string) GitInfo {
+	return GitInfo{
+		RepoURL:   url,
+		Sha:       repoLFSSHA,
+		BeforeSha: repoLFSBeforeSHA,
+		Ref:       repoLFSRefName,
+		RefType:   repoRefType,
+		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
+	}
+}
+
 func GetSuccessfulBuild() (JobResponse, error) {
 	return GetLocalBuildResponse("echo Hello World")
 }
 
 func GetRemoteSuccessfulBuild() (JobResponse, error) {
 	return GetRemoteBuildResponse("echo Hello World")
+}
+
+func GetRemoteSuccessfulLFSBuild() (JobResponse, error) {
+	response, err := GetRemoteBuildResponse("echo Hello World")
+	response.GitInfo = GetLFSGitInfo(repoRemoteURL)
+
+	return response, err
 }
 
 func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
@@ -54,17 +93,17 @@ func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
 	return jobResponse, err
 }
 
-func GetRemoteSuccessfulBuildWithDumpedVariables() (response JobResponse, err error) {
+func GetRemoteSuccessfulBuildWithDumpedVariables() (JobResponse, error) {
 	variableName := "test_dump"
 	variableValue := "test"
 
-	response, err = GetRemoteBuildResponse(
+	response, err := GetRemoteBuildResponse(
 		fmt.Sprintf("[[ \"${%s}\" != \"\" ]]", variableName),
 		fmt.Sprintf("[[ $(cat $%s) == \"%s\" ]]", variableName, variableValue),
 	)
 
 	if err != nil {
-		return
+		return JobResponse{}, err
 	}
 
 	dumpedVariable := JobVariable{
@@ -73,7 +112,7 @@ func GetRemoteSuccessfulBuildWithDumpedVariables() (response JobResponse, err er
 	}
 	response.Variables = append(response.Variables, dumpedVariable)
 
-	return
+	return response, nil
 }
 
 func GetFailedBuild() (JobResponse, error) {
@@ -101,28 +140,28 @@ fi
 `)
 }
 
-func GetRemoteBrokenTLSBuild() (job JobResponse, err error) {
+func GetRemoteBrokenTLSBuild() (JobResponse, error) {
 	invalidCert, err := buildSnakeOilCert()
 	if err != nil {
-		return
+		return JobResponse{}, err
 	}
 
 	return getRemoteCustomTLSBuild(invalidCert)
 }
 
-func GetRemoteGitLabComTLSBuild() (job JobResponse, err error) {
+func GetRemoteGitLabComTLSBuild() (JobResponse, error) {
 	cert, err := getGitLabComTLSChain()
 	if err != nil {
-		return
+		return JobResponse{}, err
 	}
 
 	return getRemoteCustomTLSBuild(cert)
 }
 
-func getRemoteCustomTLSBuild(chain string) (job JobResponse, err error) {
-	job, err = GetRemoteBuildResponse("echo Hello World")
+func getRemoteCustomTLSBuild(chain string) (JobResponse, error) {
+	job, err := GetRemoteBuildResponse("echo Hello World")
 	if err != nil {
-		return
+		return JobResponse{}, err
 	}
 
 	job.TLSCAChain = chain
@@ -130,18 +169,12 @@ func getRemoteCustomTLSBuild(chain string) (job JobResponse, err error) {
 		JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
 		JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
 
-	return
+	return job, nil
 }
 
-func GetRemoteBuildResponse(commands ...string) (response JobResponse, err error) {
-	response = JobResponse{
-		GitInfo: GitInfo{
-			RepoURL:   repoRemoteURL,
-			Sha:       repoSHA,
-			BeforeSha: repoBeforeSHA,
-			Ref:       repoRefName,
-			RefType:   repoRefType,
-		},
+func getBuildResponse(repoURL string, commands []string) JobResponse {
+	return JobResponse{
+		GitInfo: GetGitInfo(repoURL),
 		Steps: Steps{
 			Step{
 				Name:         StepNameScript,
@@ -151,35 +184,19 @@ func GetRemoteBuildResponse(commands ...string) (response JobResponse, err error
 			},
 		},
 	}
-
-	return
 }
 
-func GetLocalBuildResponse(commands ...string) (response JobResponse, err error) {
+func GetRemoteBuildResponse(commands ...string) (JobResponse, error) {
+	return getBuildResponse(repoRemoteURL, commands), nil
+}
+
+func GetLocalBuildResponse(commands ...string) (JobResponse, error) {
 	localRepoURL, err := getLocalRepoURL()
 	if err != nil {
-		return
+		return JobResponse{}, err
 	}
 
-	response = JobResponse{
-		GitInfo: GitInfo{
-			RepoURL:   localRepoURL,
-			Sha:       repoSHA,
-			BeforeSha: repoBeforeSHA,
-			Ref:       repoRefName,
-			RefType:   repoRefType,
-		},
-		Steps: Steps{
-			Step{
-				Name:         StepNameScript,
-				Script:       commands,
-				When:         StepWhenAlways,
-				AllowFailure: false,
-			},
-		},
-	}
-
-	return
+	return getBuildResponse(localRepoURL, commands), nil
 }
 
 func getLocalRepoURL() (string, error) {

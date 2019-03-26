@@ -153,6 +153,24 @@ func (s *executor) createVM() error {
 	return nil
 }
 
+func (s *executor) updateGuestTime() error {
+	s.Debugln("Updating VM date...")
+	timeServer := s.Config.Parallels.TimeServer
+	if timeServer == "" {
+		timeServer = "time.apple.com"
+	}
+
+	// Check either ntpdate command exists or not before trying to execute it
+	// Starting from Mojave ntpdate was removed
+	_, err := prl.Exec(s.vmName, "which", "ntpdate")
+	if err != nil {
+		// Fallback to sntp
+		return prl.TryExec(s.vmName, 20, "sudo", "sntp", "-sS", timeServer)
+	}
+
+	return prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", timeServer)
+}
+
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	err := s.AbstractExecutor.Prepare(options)
 	if err != nil {
@@ -264,9 +282,9 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	// TODO: integration tests do fail on this due
 	// Unable to open new session in this virtual machine.
 	// Make sure the latest version of Parallels Tools is installed in this virtual machine and it has finished booting
-	s.Debugln("Updating VM date...")
-	err = prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", "time.apple.com")
+	err = s.updateGuestTime()
 	if err != nil {
+		s.Println("Could not sync with timeserver!")
 		return err
 	}
 

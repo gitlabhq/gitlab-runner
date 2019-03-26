@@ -5,7 +5,7 @@
 package docker_helpers
 
 import container "github.com/docker/docker/api/types/container"
-import context "golang.org/x/net/context"
+import context "context"
 import io "io"
 import mock "github.com/stretchr/testify/mock"
 import network "github.com/docker/docker/api/types/network"
@@ -73,18 +73,18 @@ func (_m *MockClient) ContainerCreate(ctx context.Context, config *container.Con
 }
 
 // ContainerExecAttach provides a mock function with given fields: ctx, execID, config
-func (_m *MockClient) ContainerExecAttach(ctx context.Context, execID string, config types.ExecConfig) (types.HijackedResponse, error) {
+func (_m *MockClient) ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error) {
 	ret := _m.Called(ctx, execID, config)
 
 	var r0 types.HijackedResponse
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.ExecConfig) types.HijackedResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.ExecStartCheck) types.HijackedResponse); ok {
 		r0 = rf(ctx, execID, config)
 	} else {
 		r0 = ret.Get(0).(types.HijackedResponse)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, types.ExecConfig) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, types.ExecStartCheck) error); ok {
 		r1 = rf(ctx, execID, config)
 	} else {
 		r1 = ret.Error(1)
@@ -198,27 +198,6 @@ func (_m *MockClient) ContainerStart(ctx context.Context, containerID string, op
 	}
 
 	return r0
-}
-
-// ContainerWait provides a mock function with given fields: ctx, containerID
-func (_m *MockClient) ContainerWait(ctx context.Context, containerID string) (int64, error) {
-	ret := _m.Called(ctx, containerID)
-
-	var r0 int64
-	if rf, ok := ret.Get(0).(func(context.Context, string) int64); ok {
-		r0 = rf(ctx, containerID)
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, containerID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
 }
 
 // ImageImportBlocking provides a mock function with given fields: ctx, source, ref, options

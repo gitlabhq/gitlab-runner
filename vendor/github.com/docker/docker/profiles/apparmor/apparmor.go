@@ -1,6 +1,6 @@
 // +build linux
 
-package apparmor
+package apparmor // import "github.com/docker/docker/profiles/apparmor"
 
 import (
 	"bufio"
@@ -9,9 +9,9 @@ import (
 	"os"
 	"path"
 	"strings"
+	"text/template"
 
 	"github.com/docker/docker/pkg/aaparser"
-	"github.com/docker/docker/utils/templates"
 )
 
 var (
@@ -23,6 +23,8 @@ var (
 type profileData struct {
 	// Name is profile name.
 	Name string
+	// DaemonProfile is the profile name of our daemon.
+	DaemonProfile string
 	// Imports defines the apparmor functions to import, before defining the profile.
 	Imports []string
 	// InnerImports defines the apparmor functions to import in the profile.
@@ -33,7 +35,7 @@ type profileData struct {
 
 // generateDefault creates an apparmor profile from ProfileData.
 func (p *profileData) generateDefault(out io.Writer) error {
-	compiled, err := templates.NewParse("apparmor_profile", baseTemplate)
+	compiled, err := template.New("apparmor_profile").Parse(baseTemplate)
 	if err != nil {
 		return err
 	}
@@ -54,10 +56,7 @@ func (p *profileData) generateDefault(out io.Writer) error {
 	}
 	p.Version = ver
 
-	if err := compiled.Execute(out, p); err != nil {
-		return err
-	}
-	return nil
+	return compiled.Execute(out, p)
 }
 
 // macrosExists checks if the passed macro exists.
@@ -73,6 +72,25 @@ func InstallDefault(name string) error {
 		Name: name,
 	}
 
+	// Figure out the daemon profile.
+	currentProfile, err := ioutil.ReadFile("/proc/self/attr/current")
+	if err != nil {
+		// If we couldn't get the daemon profile, assume we are running
+		// unconfined which is generally the default.
+		currentProfile = nil
+	}
+	daemonProfile := string(currentProfile)
+	// Normally profiles are suffixed by " (enforcing)" or similar. AppArmor
+	// profiles cannot contain spaces so this doesn't restrict daemon profile
+	// names.
+	if parts := strings.SplitN(daemonProfile, " ", 2); len(parts) >= 1 {
+		daemonProfile = parts[0]
+	}
+	if daemonProfile == "" {
+		daemonProfile = "unconfined"
+	}
+	p.DaemonProfile = daemonProfile
+
 	// Install to a temporary directory.
 	f, err := ioutil.TempFile("", name)
 	if err != nil {
@@ -84,15 +102,10 @@ func InstallDefault(name string) error {
 	defer os.Remove(profilePath)
 
 	if err := p.generateDefault(f); err != nil {
-		f.Close()
 		return err
 	}
 
-	if err := aaparser.LoadProfile(profilePath); err != nil {
-		return err
-	}
-
-	return nil
+	return aaparser.LoadProfile(profilePath)
 }
 
 // IsLoaded checks if a profile with the given name has been loaded into the

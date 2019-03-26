@@ -12,10 +12,11 @@ import (
 const (
 	memoryStatContents = `cache 512
 rss 1024`
-	memoryUsageContents    = "2048\n"
-	memoryMaxUsageContents = "4096\n"
-	memoryFailcnt          = "100\n"
-	memoryLimitContents    = "8192\n"
+	memoryUsageContents        = "2048\n"
+	memoryMaxUsageContents     = "4096\n"
+	memoryFailcnt              = "100\n"
+	memoryLimitContents        = "8192\n"
+	memoryUseHierarchyContents = "1\n"
 )
 
 func TestMemorySetMemory(t *testing.T) {
@@ -86,6 +87,94 @@ func TestMemorySetMemoryswap(t *testing.T) {
 	}
 }
 
+func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+
+	const (
+		memoryBefore     = 314572800 // 300M
+		memoryswapBefore = 524288000 // 500M
+		memoryAfter      = 629145600 // 600M
+		memoryswapAfter  = 838860800 // 800M
+	)
+
+	helper.writeFileContents(map[string]string{
+		"memory.limit_in_bytes":       strconv.Itoa(memoryBefore),
+		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
+		// Set will call getMemoryData when memory and swap memory are
+		// both set, fake these fields so we don't get error.
+		"memory.usage_in_bytes":     "0",
+		"memory.max_usage_in_bytes": "0",
+		"memory.failcnt":            "0",
+	})
+
+	helper.CgroupData.config.Resources.Memory = memoryAfter
+	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
+	memory := &MemoryGroup{}
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+		t.Fatal(err)
+	}
+
+	value, err := getCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
+	if err != nil {
+		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
+	}
+	if value != memoryAfter {
+		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
+	}
+	value, err = getCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
+	if err != nil {
+		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
+	}
+	if value != memoryswapAfter {
+		t.Fatal("Got the wrong value, set memory.memsw.limit_in_bytes failed.")
+	}
+}
+
+func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+
+	const (
+		memoryBefore     = 629145600 // 600M
+		memoryswapBefore = 838860800 // 800M
+		memoryAfter      = 314572800 // 300M
+		memoryswapAfter  = 524288000 // 500M
+	)
+
+	helper.writeFileContents(map[string]string{
+		"memory.limit_in_bytes":       strconv.Itoa(memoryBefore),
+		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
+		// Set will call getMemoryData when memory and swap memory are
+		// both set, fake these fields so we don't get error.
+		"memory.usage_in_bytes":     "0",
+		"memory.max_usage_in_bytes": "0",
+		"memory.failcnt":            "0",
+	})
+
+	helper.CgroupData.config.Resources.Memory = memoryAfter
+	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
+	memory := &MemoryGroup{}
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+		t.Fatal(err)
+	}
+
+	value, err := getCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
+	if err != nil {
+		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
+	}
+	if value != memoryAfter {
+		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
+	}
+	value, err = getCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
+	if err != nil {
+		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
+	}
+	if value != memoryswapAfter {
+		t.Fatal("Got the wrong value, set memory.memsw.limit_in_bytes failed.")
+	}
+}
+
 func TestMemorySetKernelMemory(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
@@ -101,7 +190,7 @@ func TestMemorySetKernelMemory(t *testing.T) {
 
 	helper.CgroupData.config.Resources.KernelMemory = kernelMemoryAfter
 	memory := &MemoryGroup{}
-	if err := memory.SetKernelMemory(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -114,12 +203,40 @@ func TestMemorySetKernelMemory(t *testing.T) {
 	}
 }
 
+func TestMemorySetKernelMemoryTCP(t *testing.T) {
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+
+	const (
+		kernelMemoryTCPBefore = 314572800 // 300M
+		kernelMemoryTCPAfter  = 524288000 // 500M
+	)
+
+	helper.writeFileContents(map[string]string{
+		"memory.kmem.tcp.limit_in_bytes": strconv.Itoa(kernelMemoryTCPBefore),
+	})
+
+	helper.CgroupData.config.Resources.KernelMemoryTCP = kernelMemoryTCPAfter
+	memory := &MemoryGroup{}
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+		t.Fatal(err)
+	}
+
+	value, err := getCgroupParamUint(helper.CgroupPath, "memory.kmem.tcp.limit_in_bytes")
+	if err != nil {
+		t.Fatalf("Failed to parse memory.kmem.tcp.limit_in_bytes - %s", err)
+	}
+	if value != kernelMemoryTCPAfter {
+		t.Fatal("Got the wrong value, set memory.kmem.tcp.limit_in_bytes failed.")
+	}
+}
+
 func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
 
 	swappinessBefore := 60 //default is 60
-	swappinessAfter := int64(0)
+	swappinessAfter := uint64(0)
 
 	helper.writeFileContents(map[string]string{
 		"memory.swappiness": strconv.Itoa(swappinessBefore),
@@ -135,7 +252,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to parse memory.swappiness - %s", err)
 	}
-	if int64(value) != swappinessAfter {
+	if value != swappinessAfter {
 		t.Fatalf("Got the wrong value (%d), set memory.swappiness = %d failed.", value, swappinessAfter)
 	}
 }
@@ -157,6 +274,7 @@ func TestMemoryStats(t *testing.T) {
 		"memory.kmem.max_usage_in_bytes":  memoryMaxUsageContents,
 		"memory.kmem.failcnt":             memoryFailcnt,
 		"memory.kmem.limit_in_bytes":      memoryLimitContents,
+		"memory.use_hierarchy":            memoryUseHierarchyContents,
 	})
 
 	memory := &MemoryGroup{}
@@ -165,7 +283,7 @@ func TestMemoryStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedStats := cgroups.MemoryStats{Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}}
+	expectedStats := cgroups.MemoryStats{Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}, UseHierarchy: true}
 	expectMemoryStatEquals(t, expectedStats, actualStats.MemoryStats)
 }
 
@@ -314,11 +432,11 @@ func TestMemorySetOomControl(t *testing.T) {
 	defer helper.cleanup()
 
 	const (
-		oom_kill_disable = 1 // disable oom killer, default is 0
+		oomKillDisable = 1 // disable oom killer, default is 0
 	)
 
 	helper.writeFileContents(map[string]string{
-		"memory.oom_control": strconv.Itoa(oom_kill_disable),
+		"memory.oom_control": strconv.Itoa(oomKillDisable),
 	})
 
 	memory := &MemoryGroup{}
@@ -331,7 +449,7 @@ func TestMemorySetOomControl(t *testing.T) {
 		t.Fatalf("Failed to parse memory.oom_control - %s", err)
 	}
 
-	if value != oom_kill_disable {
+	if value != oomKillDisable {
 		t.Fatalf("Got the wrong value, set memory.oom_control failed.")
 	}
 }

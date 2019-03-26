@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -35,49 +34,67 @@ func (c *CacheExtractorCommand) getClient() *CacheClient {
 	return c.client
 }
 
-func (c *CacheExtractorCommand) download() (bool, error) {
+func checkIfUpToDate(path string, resp *http.Response) (bool, time.Time) {
+	fi, _ := os.Lstat(path)
+	date, _ := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
+	return fi != nil && !date.After(fi.ModTime()), date
+}
+
+func (c *CacheExtractorCommand) download() error {
 	os.MkdirAll(filepath.Dir(c.File), 0700)
+
+	resp, err := c.getCache()
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	upToDate, date := checkIfUpToDate(c.File, resp)
+	if upToDate {
+		logrus.Infoln(filepath.Base(c.File), "is up to date")
+		return nil
+	}
 
 	file, err := ioutil.TempFile(filepath.Dir(c.File), "cache")
 	if err != nil {
-		return false, err
+		return err
 	}
-	defer file.Close()
 	defer os.Remove(file.Name())
-
-	resp, err := c.getClient().Get(c.URL)
-	if err != nil {
-		return true, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return false, os.ErrNotExist
-	} else if resp.StatusCode/100 != 2 {
-		// Retry on server errors
-		retry := resp.StatusCode/100 == 5
-		return retry, fmt.Errorf("Received: %s", resp.Status)
-	}
-
-	fi, _ := os.Lstat(c.File)
-	date, _ := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
-	if fi != nil && !date.After(fi.ModTime()) {
-		logrus.Infoln(filepath.Base(c.File), "is up to date")
-		return false, nil
-	}
+	defer file.Close()
 
 	logrus.Infoln("Downloading", filepath.Base(c.File), "from", url_helpers.CleanURL(c.URL))
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		return true, err
+		return retryableErr{err: err}
 	}
 	os.Chtimes(file.Name(), time.Now(), date)
 
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
 	err = os.Rename(file.Name(), c.File)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return false, nil
+
+	return nil
+}
+
+func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
+	resp, err := c.getClient().Get(c.URL)
+	if err != nil {
+		return nil, retryableErr{err: err}
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		resp.Body.Close()
+		return nil, os.ErrNotExist
+	}
+
+	return resp, retryOnServerError(resp)
 }
 
 func (c *CacheExtractorCommand) Execute(context *cli.Context) {
@@ -93,7 +110,7 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 			logrus.Fatalln(err)
 		}
 	} else {
-		logrus.Infoln("No URL provided, cache will be not downloaded from shared cache server. Instead a local version of cache will be extracted.")
+		logrus.Infoln("No URL provided, cache will not be downloaded from shared cache server. Instead a local version of cache will be extracted.")
 	}
 
 	err := archives.ExtractZipFile(c.File)

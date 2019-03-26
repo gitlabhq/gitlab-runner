@@ -32,23 +32,28 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
-  branch = "master"
+  version = "1.3.0"
 
 [[constraint]]
   branch = "master"
   name = "github.com/ayufan/golang-kardianos-service"
 
-# temporary fork to handle Sirupsen -> sirupsen
 [[constraint]]
   name = "github.com/docker/distribution"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/docker-distribution"
+  version = "2.7"
 
-# temporary fork to handle Sirupsen -> sirupsen
+# We are using `github.com/docker/engine` as source since it has tagged
+# versions, unlike `github.com/moby/moby`, please read
+# https://github.com/moby/moby/issues/38063#issuecomment-431324613 for a
+# detailed explanation.
 [[constraint]]
   name = "github.com/docker/docker"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/moby"
+  source = "github.com/docker/engine"
+  version = "18.09"
+
+[[constraint]]
+  name = "github.com/docker/cli"
+  version = "18.09"
 
 [[constraint]]
   name = "github.com/docker/go-connections"
@@ -89,12 +94,11 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
-  # version = "0.8.0"
-  revision = "334af0119a8f8fb6af5bb950d535c482cac7f836"
+  version = "0.9.0"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
-  version = "1.2.2"
+  version = "1.3.0"
 
 [[constraint]]
   # branch = "master"
@@ -150,6 +154,10 @@ ignored = ["test", "appengine"]
   name = "gitlab.com/gitlab-org/gitlab-terminal"
   revision = "5af59b871b1bcc3f4b733f6db0ff3b6e8b247b92"
 
+[[constraint]]
+  name = "github.com/markelog/trie"
+  branch = "master"
+
 ##
 ## Refrain innovations ;)
 ##
@@ -157,10 +165,6 @@ ignored = ["test", "appengine"]
 [[override]]
   name = "github.com/Azure/go-autorest"
   revision = "d4e6b95c12a08b4de2d48b45d5b4d594e5d32fab"
-
-[[override]]
-  name = "github.com/Azure/go-ansiterm"
-  revision = "19f72df4d05d31cbe1c56bfc8045c96babff6c7e"
 
 [[override]]
   name = "github.com/Microsoft/go-winio"
@@ -177,10 +181,6 @@ ignored = ["test", "appengine"]
 [[override]]
   name = "github.com/docker/docker-credential-helpers"
   revision = "b7c53e02cd1a9a01500a58f22d83c6e964bc59db"
-
-[[override]]
-  name = "github.com/docker/engine-api"
-  revision = "4290f40c056686fcaa5c9caf02eac1dde9315adf"
 
 [[override]]
   name = "github.com/docker/spdystream"
@@ -238,11 +238,9 @@ ignored = ["test", "appengine"]
   name = "github.com/minio/go-homedir"
   revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
 
-# temporary fork to hanled Sirupsen -> sirupsen
 [[override]]
   name = "github.com/opencontainers/runc"
-  branch = "gitlab-runner"
-  source = "github.com/nolith/runc"
+  branch = "master"
 
 [[override]]
   name = "github.com/opencontainers/runtime-spec"
@@ -275,10 +273,6 @@ ignored = ["test", "appengine"]
 [[override]]
   name = "golang.org/x/oauth2"
   revision = "ef147856a6ddbb60760db74283d2424e98c87bff"
-
-[[override]]
-  name = "golang.org/x/sys"
-  revision = "042a8f53ce82bbe081222da955159491e32146a0"
 
 [[override]]
   name = "golang.org/x/text"

@@ -64,15 +64,18 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 	case common.ArtifactFormatZip, common.ArtifactFormatDefault:
 		pr, pw := io.Pipe()
 		go c.generateZipArchive(pw)
+
 		return name + ".zip", pr, nil
 
 	case common.ArtifactFormatGzip:
 		pr, pw := io.Pipe()
 		go c.generateGzipStream(pw)
+
 		return name + ".gz", pr, nil
 
 	case common.ArtifactFormatRaw:
 		file, err := c.openRawStream()
+
 		return name, file, err
 
 	default:
@@ -80,14 +83,15 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 	}
 }
 
-func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
+func (c *ArtifactsUploaderCommand) createAndUpload() error {
 	artifactsName, stream, err := c.createReadStream()
 	if err != nil {
-		return false, err
+		return err
 	}
 	if stream == nil {
 		logrus.Errorln("No files to upload")
-		return false, nil
+
+		return nil
 	}
 	defer stream.Close()
 
@@ -102,15 +106,15 @@ func (c *ArtifactsUploaderCommand) createAndUpload() (bool, error) {
 	// Upload the data
 	switch c.network.UploadRawArtifacts(c.JobCredentials, stream, options) {
 	case common.UploadSucceeded:
-		return false, nil
+		return nil
 	case common.UploadForbidden:
-		return false, os.ErrPermission
+		return os.ErrPermission
 	case common.UploadTooLarge:
-		return false, errors.New("Too large")
+		return errors.New("too large")
 	case common.UploadFailed:
-		return true, os.ErrInvalid
+		return retryableErr{err: os.ErrInvalid}
 	default:
-		return false, os.ErrInvalid
+		return os.ErrInvalid
 	}
 }
 

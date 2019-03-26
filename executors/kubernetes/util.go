@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
-	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -18,12 +16,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-)
-
-const (
-	DNS1123NameMaximumLength         = 63
-	DNS1123NotAllowedCharacters      = "[^-a-z0-9]"
-	DNS1123NotAllowedStartCharacters = "^[^a-z0-9]+"
 )
 
 type kubeConfigProvider func() (*restclient.Config, error)
@@ -209,7 +201,7 @@ func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *api.Po
 			return api.PodUnknown, ctx.Err()
 		}
 	}
-	return api.PodUnknown, errors.New("timedout waiting for pod to start")
+	return api.PodUnknown, errors.New("timed out waiting for pod to start")
 }
 
 // limits takes a string representing CPU & memory limits,
@@ -263,20 +255,4 @@ func buildVariables(bv common.JobVariables) []api.EnvVar {
 		}
 	}
 	return e
-}
-
-func makeDNS1123Compatible(name string) string {
-	name = strings.ToLower(name)
-
-	nameNotAllowedChars := regexp.MustCompile(DNS1123NotAllowedCharacters)
-	name = nameNotAllowedChars.ReplaceAllString(name, "")
-
-	nameNotAllowedStartChars := regexp.MustCompile(DNS1123NotAllowedStartCharacters)
-	name = nameNotAllowedStartChars.ReplaceAllString(name, "")
-
-	if len(name) > DNS1123NameMaximumLength {
-		name = name[0:DNS1123NameMaximumLength]
-	}
-
-	return name
 }

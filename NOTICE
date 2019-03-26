@@ -1,6 +1,8 @@
-Copyright (c) 2015-2017 GitLab B.V.
-
 With regard to the GitLab Software:
+
+The MIT License (MIT)
+
+Copyright (c) 2015-2019 GitLab B.V.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +22,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
+---
+
 For all third party components incorporated into the GitLab Software, those
 components are licensed under the original license provided by the owner of the
 applicable component.
+
+---
+
+All Documentation content that resides under the docs/ directory of this
+repository is licensed under Creative Commons: CC BY-SA 4.0.

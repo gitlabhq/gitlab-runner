@@ -701,10 +701,7 @@ func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Re
 }
 
 func getTracePatch(traceString string, offset int) *tracePatch {
-	trace := bytes.Buffer{}
-	trace.WriteString(traceString)
-	tracePatch, _ := newTracePatch(trace, offset)
-
+	tracePatch, _ := newTracePatch([]byte(traceString), offset)
 	return tracePatch
 }
 

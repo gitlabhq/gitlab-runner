@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -34,23 +33,23 @@ func (c *CacheArchiverCommand) getClient() *CacheClient {
 	return c.client
 }
 
-func (c *CacheArchiverCommand) upload() (bool, error) {
+func (c *CacheArchiverCommand) upload() error {
 	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.CleanURL(c.URL))
 
 	file, err := os.Open(c.File)
 	if err != nil {
-		return false, err
+		return err
 	}
 	defer file.Close()
 
 	fi, err := file.Stat()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	req, err := http.NewRequest("PUT", c.URL, file)
 	if err != nil {
-		return true, err
+		return retryableErr{err: err}
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
@@ -58,17 +57,11 @@ func (c *CacheArchiverCommand) upload() (bool, error) {
 
 	resp, err := c.getClient().Do(req)
 	if err != nil {
-		return true, err
+		return retryableErr{err: err}
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode/100 != 2 {
-		// Retry on server errors
-		retry := resp.StatusCode/100 == 5
-		return retry, fmt.Errorf("Received: %s", resp.Status)
-	}
-
-	return false, nil
+	return retryOnServerError(resp)
 }
 
 func (c *CacheArchiverCommand) Execute(*cli.Context) {
@@ -87,6 +80,7 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	// Check if list of files changed
 	if !c.isFileChanged(c.File) {
 		logrus.Infoln("Archive is up to date!")
+
 		return
 	}
 

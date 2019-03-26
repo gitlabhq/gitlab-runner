@@ -1,5 +1,5 @@
 ---
-last_updated: 2017-11-24
+last_updated: 2019-01-28
 ---
 
 > **[Article Type](https://docs.gitlab.com/ee/development/writing_documentation.html#types-of-technical-articles):** Admin guide ||
@@ -31,6 +31,11 @@ NOTE: **Note:**
 A familiarity with Amazon Web Services (AWS) is required as this is where most
 of the configuration will take place.
 
+TIP: **Tip:**
+We suggest a quick read through docker machine [`amazonec2` driver
+documentation](https://docs.docker.com/machine/drivers/aws/) to familiarize
+yourself with the parameters we will set later in this article.
+
 Your GitLab instance is going to need to talk to the Runners over the network,
 and that is something you need think about when configuring any AWS security
 groups or when setting up your DNS configuration.
@@ -46,7 +51,7 @@ Docker Machine will attempt to use a
 with rules for port `2376`, which is required for communication with the Docker
 daemon. Instead of relying on Docker, you can create a security group with the
 rules you need and provide that in the Runner options as we will
-[see below](#the-runners-machine-section). This way, you can customize it to your
+[see below](#the-runnersmachine-section). This way, you can customize it to your
 liking ahead of time based on your networking environment.
 
 ### AWS credentials
@@ -57,7 +62,7 @@ Create a new user with [policies](https://docs.aws.amazon.com/AWSEC2/latest/User
 for EC2 (AmazonEC2FullAccess) and S3 (AmazonS3FullAccess). To be more secure,
 you can disable console login for that user. Keep the tab open or copy paste the
 security credentials in an editor as we'll use them later during the
-[Runner configuration](#the-runners-machine-section).
+[Runner configuration](#the-runnersmachine-section).
 
 ## Prepare the bastion instance
 
@@ -86,7 +91,7 @@ Before configuring the GitLab Runner, you need to first register it, so that
 it connects with your GitLab instance:
 
 1. [Obtain a Runner token](https://docs.gitlab.com/ee/ci/runners/)
-1. [Register the Runner](../../register/index.md#gnu-linux)
+1. [Register the Runner](../../register/index.md#gnulinux)
 1. When asked the executor type, enter `docker+machine`
 
 You can now move on to the most important part, configuring the GitLab Runner.
@@ -168,7 +173,7 @@ Example:
     disable_cache = true
 ```
 
-[Read more](../advanced-configuration.md#the-runners-docker-section)
+[Read more](../advanced-configuration.md#the-runnersdocker-section)
 about all the options you can use under `[runners.docker]`.
 
 ### The `runners.cache` section
@@ -184,17 +189,19 @@ In the following example, we use Amazon S3:
 ```toml
   [runners.cache]
     Type = "s3"
-    ServerAddress = "s3.amazonaws.com"
-    AccessKey = "<your AWS Access Key ID>"
-    SecretKey = "<your AWS Secret Access Key>"
-    BucketName = "<the bucket where your cache should be kept>"
-    BucketLocation = "us-east-1"
     Shared = true
+    [runners.cache.s3]
+      ServerAddress = "s3.amazonaws.com"
+      AccessKey = "<your AWS Access Key ID>"
+      SecretKey = "<your AWS Secret Access Key>"
+      BucketName = "<the bucket where your cache should be kept>"
+      BucketLocation = "us-east-1"
 ```
 
 Here's some more info to further explore the cache mechanism:
 
-- [Reference for `runners.cache`](../advanced-configuration.md#the-runners-cache-section)
+- [Reference for `runners.cache`](../advanced-configuration.md#the-runnerscache-section)
+- [Reference for `runners.cache.s3`](../advanced-configuration.html#the-runnerscaches3-section)
 - [Deploying and using a cache server for GitLab Runner](../autoscale.md#distributed-runners-caching)
 - [How cache works](https://docs.gitlab.com/ee/ci/yaml/#cache)
 
@@ -231,9 +238,10 @@ Here's an example of the `runners.machine` section:
       "amazonec2-region=us-central-1",
       "amazonec2-vpc-id=vpc-xxxxx",
       "amazonec2-subnet-id=subnet-xxxxx",
+      "amazonec2-zone=x",
       "amazonec2-use-private-address=true",
       "amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true",
-      "amazonec2-security-group=docker-machine-scaler",
+      "amazonec2-security-group=xxxxx",
       "amazonec2-instance-type=m4.2xlarge",
     ]
 ```
@@ -252,9 +260,10 @@ under `MachineOptions`. Below you can see the most common ones.
 | `amazonec2-region=eu-central-1` | The region to use when launching the instance. You can omit this entirely and the default `us-east-1` will be used. |
 | `amazonec2-vpc-id=vpc-xxxxx` | Your [VPC ID](https://docs.docker.com/machine/drivers/aws/#vpc-id) to launch the instance in. |
 | `amazonec2-subnet-id=subnet-xxxx` | The AWS VPC subnet ID. |
+| `amazonec2-zone=x` | If not specified, the [availability zone is `a`](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values), it needs to be set to the same availability zone as the specified subnet, for example when the zone is `eu-west-1b` it has to be `amazonec2-zone=b` |
 | `amazonec2-use-private-address=true` | Use the private IP address of Docker Machines, but still create a public IP address. Useful to keep the traffic internal and avoid extra costs.|
 | `amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true` | AWS extra tag key-value pairs, useful to identify the instances on the AWS console. The "Name" tag is set to the machine name by default. We set the "runner-manager-name" to match the Runner name set in `[[runners]]`, so that we can filter all the EC2 instances created by a specific manager setup. Read more about [using tags in AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html). |
-| `amazonec2-security-group=docker-machine-scaler` | AWS VPC security group name, see [AWS security groups](#aws-security-groups). |
+| `amazonec2-security-group=xxxx` | AWS VPC security group name, see [AWS security groups](#aws-security-groups). |
 | `amazonec2-instance-type=m4.2xlarge` | The instance type that the child Runners will run on. |
 
 TIP: **Tip:**
@@ -274,7 +283,7 @@ VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
 but it’s something to consider if you've got a more complex configuration. Read
 more in [Docker docs about VPC connectivity](https://docs.docker.com/machine/drivers/aws/#vpc-connectivity).
 
-[Read more](../advanced-configuration.md#the-runners-machine-section)
+[Read more](../advanced-configuration.md#the-runnersmachine-section)
 about all the options you can use under `[runners.machine]`.
 
 ### Getting it all together
@@ -297,12 +306,13 @@ check_interval = 0
     disable_cache = true
   [runners.cache]
     Type = "s3"
-    ServerAddress = "s3.amazonaws.com"
-    AccessKey = "<your AWS Access Key ID>"
-    SecretKey = "<your AWS Secret Access Key>"
-    BucketName = "<the bucket where your cache should be kept>"
-    BucketLocation = "us-east-1"
     Shared = true
+    [runners.cache.s3]
+      ServerAddress = "s3.amazonaws.com"
+      AccessKey = "<your AWS Access Key ID>"
+      SecretKey = "<your AWS Secret Access Key>"
+      BucketName = "<the bucket where your cache should be kept>"
+      BucketLocation = "us-east-1"
   [runners.machine]
     IdleCount = 1
     IdleTime = 1800
@@ -339,9 +349,24 @@ pricing, you can significantly reduce the cost of running your applications,
 grow your application’s compute capacity and throughput for the same budget,
 and enable new types of cloud computing applications.
 
-In addition to the [`runners.machine`](#the-runners-machine-section) options
+In addition to the [`runners.machine`](#the-runnersmachine-section) options
 you picked above, in `/etc/gitlab-runner/config.toml` under the `MachineOptions`
 section, add the following:
+
+```toml
+    MachineOptions = [
+      "amazonec2-request-spot-instance=true",
+      "amazonec2-spot-price=",
+    ]
+```
+
+In this configuration with an empty `amazonec2-spot-price`, AWS sets your
+bidding price for a Spot instance to the default On-Demand price of that
+instance class. If you omit the `amazonec2-spot-price` completely, Docker
+Machine will set the bidding price to a [default value of $0.50 per
+hour](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values).
+
+You may further customize your Spot instance request:
 
 ```toml
     MachineOptions = [
@@ -369,7 +394,8 @@ costs of your infrastructure, you must be aware of the implications.
 
 Running CI jobs on Spot instances may increase the failure rates because of the
 Spot instances pricing model. If the price exceeds your bid, the existing Spot
-instances will be immediately terminated and all your jobs on that host will fail.
+instances will be terminated within two minutes and all your jobs on that host
+will fail.
 
 As a consequence, the auto-scale Runner would fail to create new machines while
 it will continue to request new instances. This eventually will make 60 requests

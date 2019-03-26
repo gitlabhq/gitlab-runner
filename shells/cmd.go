@@ -178,7 +178,7 @@ func (b *CmdWriter) RmDir(path string) {
 }
 
 func (b *CmdWriter) RmFile(path string) {
-	b.Line("rd /s /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
+	b.Line("del /f /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
 }
 
 func (b *CmdWriter) Print(format string, arguments ...interface{}) {

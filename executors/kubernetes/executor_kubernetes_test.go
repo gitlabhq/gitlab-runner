@@ -20,7 +20,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,6 +29,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
 var (
@@ -940,7 +941,7 @@ func TestSetupCredentials(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
-				assertDNS1123Compatibility(t, secret.GetGenerateName())
+				dns_test.AssertRFC1123Compatibility(t, secret.GetGenerateName())
 			},
 		},
 	}
@@ -1222,6 +1223,49 @@ func TestSetupBuildPod(t *testing.T) {
 				}
 			},
 		},
+		"support setting kubernetes pod taint tolerations": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						NodeTolerations: map[string]string{
+							"node-role.kubernetes.io/master": "NoSchedule",
+							"custom.toleration=value":        "NoSchedule",
+							"empty.value=":                   "PreferNoSchedule",
+							"onlyKey":                        "",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				expectedTolerations := []api.Toleration{
+					{
+						Key:      "node-role.kubernetes.io/master",
+						Operator: api.TolerationOpExists,
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+						Key:      "custom.toleration",
+						Operator: api.TolerationOpEqual,
+						Value:    "value",
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+
+						Key:      "empty.value",
+						Operator: api.TolerationOpEqual,
+						Value:    "",
+						Effect:   api.TaintEffectPreferNoSchedule,
+					},
+					{
+						Key:      "onlyKey",
+						Operator: api.TolerationOpExists,
+						Effect:   "",
+					},
+				}
+				assert.ElementsMatch(t, expectedTolerations, pod.Spec.Tolerations)
+			},
+		},
 		"supports extended docker configuration for image and services": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1408,7 +1452,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assertDNS1123Compatibility(t, pod.GetGenerateName())
+				dns_test.AssertRFC1123Compatibility(t, pod.GetGenerateName())
 			},
 		},
 		"supports pod security context": {
@@ -1807,9 +1851,20 @@ func TestInteractiveTerminal(t *testing.T) {
 	srv := httptest.NewServer(build.Session.Mux())
 	defer srv.Close()
 
-	u := url.URL{Scheme: "ws", Host: srv.Listener.Addr().String(), Path: build.Session.Endpoint + "/exec"}
-	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"Authorization": []string{build.Session.Token}})
-	defer conn.Close()
+	u := url.URL{
+		Scheme: "ws",
+		Host:   srv.Listener.Addr().String(),
+		Path:   build.Session.Endpoint + "/exec",
+	}
+	headers := http.Header{
+		"Authorization": []string{build.Session.Token},
+	}
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
+	defer func() {
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}()
 	require.NoError(t, err)
 	assert.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
 
@@ -1836,6 +1891,7 @@ func (f FakeBuildTrace) Fail(err error, failureReason common.JobFailureReason) {
 func (f FakeBuildTrace) Notify(func())                                         {}
 func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)           {}
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)      {}
+func (f FakeBuildTrace) SetMasked(masked []string)                             {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }

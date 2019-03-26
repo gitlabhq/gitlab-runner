@@ -2,6 +2,8 @@ package integration
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,10 +13,15 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
+
+func ptrInt(v int) *int {
+	return &v
+}
 
 func newStdBuffers() *stdBuffers {
 	return &stdBuffers{
@@ -62,6 +69,28 @@ func waitProcess(p *libcontainer.Process, t *testing.T) {
 	}
 }
 
+func newTestRoot() (string, error) {
+	dir, err := ioutil.TempDir("", "libcontainer")
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", err
+	}
+	return dir, nil
+}
+
+func newTestBundle() (string, error) {
+	dir, err := ioutil.TempDir("", "bundle")
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", err
+	}
+	return dir, nil
+}
+
 // newRootfs creates a new tmp directory and copies the busybox root filesystem
 func newRootfs() (string, error) {
 	dir, err := ioutil.TempDir("", "")
@@ -84,7 +113,7 @@ func remove(dir string) {
 // copyBusybox copies the rootfs for a busybox container created for the test image
 // into the new directory for the specific test
 func copyBusybox(dest string) error {
-	out, err := exec.Command("sh", "-c", fmt.Sprintf("cp -R /busybox/* %s/", dest)).CombinedOutput()
+	out, err := exec.Command("sh", "-c", fmt.Sprintf("cp -a /busybox/* %s/", dest)).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("copy error %q: %q", err, out)
 	}
@@ -92,7 +121,9 @@ func copyBusybox(dest string) error {
 }
 
 func newContainer(config *configs.Config) (libcontainer.Container, error) {
-	return newContainerWithName("testCT", config)
+	h := md5.New()
+	h.Write([]byte(time.Now().String()))
+	return newContainerWithName(hex.EncodeToString(h.Sum(nil)), config)
 }
 
 func newContainerWithName(name string, config *configs.Config) (libcontainer.Container, error) {
@@ -121,9 +152,10 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
+		Init:   true,
 	}
 
-	err = container.Start(process)
+	err = container.Run(process)
 	if err != nil {
 		return buffers, -1, err
 	}

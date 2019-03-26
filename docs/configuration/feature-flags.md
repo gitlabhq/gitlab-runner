@@ -29,5 +29,6 @@ change hidden behind the feature flag disabled a corresponding environment varia
 | Feature flag                         | Default value | Deprecated | To be removed with | Description |
 |--------------------------------------|---------------|------------|--------------------|-------------|
 | `FF_K8S_USE_ENTRYPOINT_OVER_COMMAND` | `true`        | ✓          | 12.0               | Enables [the fix][mr-1010] for entrypoint configuration when `kubernetes` executor is used. |
+| `FF_DOCKER_HELPER_IMAGE_V2`          | `false`       | ✓          | 12.0               | Enable the helper image to use the new commands when [helper_image](https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runnersdocker-section) is specified. This will start using the new API that will be used in 12.0 and stop showing the warning message in the build log. |
 
 [mr-1010]: https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1010

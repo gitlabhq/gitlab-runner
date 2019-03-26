@@ -13,6 +13,13 @@ run on your workstation. The added benefit is that you can test all the
 commands that we will explore later from your shell, rather than having to test
 them on a dedicated CI server.
 
+NOTE: **Note:**
+GitLab Runner uses Docker Engine API
+[v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
+Engine. Refer to the [API version
+matrix](https://docs.docker.com/develop/sdk/#api-version-matrix) for
+compatible versions of Docker.
+
 ## Workflow
 
 The Docker executor divides the build into multiple steps:
@@ -531,4 +538,4 @@ This executor is no longer maintained and will be removed in the near future.
 [service-file]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/dockerfiles/build/scripts/gitlab-runner-service
 [privileged]: https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities
 [entry]: https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime
-[secpull]: ../security/index.md##usage-of-private-docker-images-with-if-not-present-pull-policy
+[secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy

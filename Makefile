@@ -25,7 +25,7 @@ DEB_PLATFORMS ?= debian/wheezy debian/jessie debian/stretch debian/buster \
 DEB_ARCHS ?= amd64 i386 armel armhf
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
-    fedora/26 fedora/27 fedora/28
+    fedora/26 fedora/27 fedora/28 fedora/29
 RPM_ARCHS ?= x86_64 i686 arm armhf
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
@@ -65,9 +65,9 @@ MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mocke
 
 .PHONY: clean version mocks
 
-all: deps docker build
+all: deps helper-docker build
 
-include Makefile.docker.mk
+include Makefile.runner_helper.mk
 
 help:
 	# Commands:
@@ -75,8 +75,9 @@ help:
 	# make version - show information about current version
 	#
 	# Development commands:
+	# make build_simple - build executable for your arch and OS
 	# make install - install the version suitable for your OS as gitlab-runner
-	# make docker - build docker dependencies
+	# make helper-docker - build docker dependencies
 	#
 	# Testing commands:
 	# make test - run project tests
@@ -117,13 +118,12 @@ build_simple: $(GOPATH_SETUP)
 		-o "out/binaries/$(NAME)" \
 		$(PKG)
 
-build_current: docker build_simple
+build_current: helper-docker build_simple
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
-test: $(PKG_BUILD_DIR) docker
-	# Running tests...
+test: $(PKG_BUILD_DIR) helper-docker
 	go test $(OUR_PACKAGES) $(TESTFLAGS)
 
 parallel_test_prepare: $(GOPATH_SETUP)
@@ -366,13 +366,13 @@ prepare_release_checklist_issue_dry_run:
 	make prepare_release_checklist_issue opts="-dry-run"
 
 prepare_release_checklist_issue: opts ?= ""
-prepare_release_checklist_issue:
-	@go run ./scripts/prepare_release_checklist_issue.go \
+prepare_release_checklist_issue: $(GOPATH_SETUP)
+	@go run $(PKG)/scripts/prepare-release-checklist-issue \
 		-issue-template-file ".gitlab/issue_templates/Release Checklist.md" \
 		$(opts)
 
 development_setup:
-	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/gitlab-test.git tmp/gitlab-test
+	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git tmp/gitlab-test
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 

@@ -76,6 +76,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `helper_memory_request`: The amount of memory requested for build helper containers
 - `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set.
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
+- `node_tolerations`: A `table` of `key=value:Effect` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in kubernetes pod toleration configuration.
 - `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
 - `helper_image`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts. Read the [helper image][advanced-configuration-helper-image] section of _advanced configuration_ page for more details
 - `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
@@ -91,7 +92,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
     it disables the service account overwrite feature
-- `bearer-token`: Default bearer token used to launch build pods.
+- `bearer_token`: Default bearer token used to launch build pods.
 - `bearer_token_overwrite_allowed`: Boolean to allow projects to specify a bearer token that will be used to create the build pod.
 - `volumes`: configured through the config file, the list of volumes that will be mounted in the build container. [Read more about using volumes.](#using-volumes)
 
@@ -122,7 +123,7 @@ disabled.
 Additionally, Kubernetes service account can be overwritten on `.gitlab-ci.yml` file, by using the variable
 `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE`.
 
-This approach allow you to specify a service account that is attached to the namespace, usefull when dealing
+This approach allow you to specify a service account that is attached to the namespace, useful when dealing
 with complex RBAC configurations.
 ``` yaml
 variables:
@@ -145,12 +146,16 @@ variables:
 ### Overwriting pod annotations
 
 Additionally, Kubernetes pod annotations can be overwritten on the `.gitlab-ci.yml` file, by using `KUBERNETES_POD_ANNOTATIONS_*` for variables and `key=value` for the value. The pod annotations will be overwritten to the `key=value`. Also, multiple annotations can be applied. For example:
-``` yaml
- variables:
-   KUBERNETES_POD_ANNOTATIONS_1: "Key1=Val1"
-   KUBERNETES_POD_ANNOTATIONS_2: "Key2=Val2"
-   KUBERNETES_POD_ANNOTATIONS_3: "Key3=Val3"
+
+```yaml
+variables:
+  KUBERNETES_POD_ANNOTATIONS_1: "Key1=Val1"
+  KUBERNETES_POD_ANNOTATIONS_2: "Key2=Val2"
+  KUBERNETES_POD_ANNOTATIONS_3: "Key3=Val3"
 ```
+
+NOTE: **Note:**
+You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file. 
 
 ## Define keywords in the config toml
 
@@ -379,7 +384,18 @@ when running in privileged mode or by exposing `/var/run/docker.sock` is to use
 the `node_selector` option to set one or more labels that have to match a node
 before any containers are deployed to it. For example build containers may only run
 on nodes that are labeled with `role=ci` while running all other production services
-on other nodes.
+on other nodes. Further separation of build containers can be achieved using node
+[taints](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/).
+This will disallow other pods from scheduling on the same nodes as the
+build pods without extra configuration for the other pods.
+
+### Using kaniko
+Another approach for building Docker images inside a Kubernetes cluster is using [kaniko](https://github.com/GoogleContainerTools/kaniko).
+kaniko:
+
+- Allows you to build images without privileged access.
+- Works without the Docker daemon.
+For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
 
 [k8s-host-path-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 [k8s-pvc-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim

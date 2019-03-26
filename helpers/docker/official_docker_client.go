@@ -1,6 +1,7 @@
 package docker_helpers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,13 +11,15 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	container "github.com/docker/docker/api/types/container"
-	network "github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 )
+
+// The default API version used to create a new docker client.
+const DefaultAPIVersion = "1.25"
 
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.
@@ -86,12 +89,6 @@ func (c *officialDockerClient) ContainerStart(ctx context.Context, containerID s
 	return wrapError("ContainerCreate", err, started)
 }
 
-func (c *officialDockerClient) ContainerWait(ctx context.Context, containerID string) (int64, error) {
-	started := time.Now()
-	result, err := c.client.ContainerWait(ctx, containerID)
-	return result, wrapError("ContainerWait", err, started)
-}
-
 func (c *officialDockerClient) ContainerKill(ctx context.Context, containerID string, signal string) error {
 	started := time.Now()
 	err := c.client.ContainerKill(ctx, containerID, signal)
@@ -128,7 +125,7 @@ func (c *officialDockerClient) ContainerExecCreate(ctx context.Context, containe
 	return resp, wrapError("ContainerExecCreate", err, started)
 }
 
-func (c *officialDockerClient) ContainerExecAttach(ctx context.Context, execID string, config types.ExecConfig) (types.HijackedResponse, error) {
+func (c *officialDockerClient) ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error) {
 	started := time.Now()
 	resp, err := c.client.ContainerExecAttach(ctx, execID, config)
 	return resp, wrapError("ContainerExecAttach", err, started)
@@ -189,7 +186,8 @@ func (c *officialDockerClient) Close() error {
 	return nil
 }
 
-// New attempts to create a new Docker client of the specified version.
+// New attempts to create a new Docker client of the specified version. If the
+// specified version is empty, it will use the default version.
 //
 // If no host is given in the DockerCredentials, it will attempt to look up
 // details from the environment. If that fails, it will use the default
@@ -204,18 +202,22 @@ func New(c DockerCredentials, apiVersion string) (Client, error) {
 		c.Host = client.DefaultDockerHost
 	}
 
+	if apiVersion == "" {
+		apiVersion = DefaultAPIVersion
+	}
+
 	return newOfficialDockerClient(c, apiVersion)
 }
 
 func newHTTPTransport(c DockerCredentials) (*http.Transport, error) {
-	proto, addr, _, err := client.ParseHost(c.Host)
+	url, err := client.ParseHostURL(c.Host)
 	if err != nil {
 		return nil, err
 	}
 
 	tr := &http.Transport{}
 
-	if err := configureTransport(tr, proto, addr); err != nil {
+	if err := configureTransport(tr, url.Scheme, url.Host); err != nil {
 		return nil, err
 	}
 
