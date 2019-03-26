@@ -26,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
@@ -569,7 +570,7 @@ func TestHostMountedBuildsDirectory(t *testing.T) {
 		e := &executor{}
 
 		t.Log("Testing", i.path, "if volumes are configured to:", i.volumes, "...")
-		assert.Equal(t, i.result, IsHostMountedVolume(i.path, i.volumes...))
+		assert.Equal(t, i.result, volumes.IsHostMountedVolume(i.path, i.volumes...))
 
 		e.prepareBuildsDir(&c)
 		assert.Equal(t, i.result, e.SharedBuildsDir)

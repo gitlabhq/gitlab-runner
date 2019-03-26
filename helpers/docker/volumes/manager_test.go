@@ -1,4 +1,4 @@
-package docker
+package volumes
 
 import (
 	"testing"
@@ -57,13 +57,13 @@ func TestCacheImageCommand(t *testing.T) {
 				Return(nil).
 				Once()
 
-			vm := &DefaultVolumesManager{
-				DefaultVolumesManagerConfig: DefaultVolumesManagerConfig{
-					jobsRootDir:             "/builds",
-					fullProjectDir:          "/builds/namespace/project",
-					gitStrategy:             common.GitClone,
-					disableCache:            true,
-					outdatedHelperImageUsed: testCase.outdatedHelperImage,
+			vm := &DefaultManager{
+				DefaultManagerConfig: DefaultManagerConfig{
+					JobsRootDir:             "/builds",
+					FullProjectDir:          "/builds/namespace/project",
+					GitStrategy:             common.GitClone,
+					DisableCache:            true,
+					OutdatedHelperImageUsed: testCase.outdatedHelperImage,
 				},
 				helperImageResolver: hiResolver,
 				containerManager:    cManager,
