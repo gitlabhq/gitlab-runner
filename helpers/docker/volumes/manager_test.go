@@ -32,7 +32,7 @@ func TestCacheImageCommand(t *testing.T) {
 
 	for testName, testCase := range cases {
 		t.Run(testName, func(t *testing.T) {
-			hiResolver := new(MockHelperImageResolver)
+			hiResolver := new(mockHelperImageResolver)
 			defer hiResolver.AssertExpectations(t)
 			hiResolver.On("ResolveHelperImage").
 				Return(&types.ImageInspect{ID: "helperImageID"}, nil).
@@ -43,7 +43,7 @@ func TestCacheImageCommand(t *testing.T) {
 					testCase.expectedCmd[0] == c.Cmd[0]
 			})
 
-			cManager := new(MockContainerManager)
+			cManager := new(mockContainerManager)
 			defer cManager.AssertExpectations(t)
 			cManager.On("LabelContainer", mock.Anything, mock.Anything, mock.Anything).
 				Once()
@@ -57,8 +57,8 @@ func TestCacheImageCommand(t *testing.T) {
 				Return(nil).
 				Once()
 
-			vm := &DefaultManager{
-				DefaultManagerConfig: DefaultManagerConfig{
+			vm := &defaultManager{
+				config: DefaultManagerConfig{
 					JobsRootDir:             "/builds",
 					FullProjectDir:          "/builds/namespace/project",
 					GitStrategy:             common.GitClone,

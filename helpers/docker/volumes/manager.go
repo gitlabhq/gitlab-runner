@@ -14,7 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-type ContainerManager interface {
+type containerManager interface {
 	LabelContainer(container *container.Config, containerType string, otherLabels ...string)
 	CreateContainer(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error)
 	StartContainer(containerID string, options types.ContainerStartOptions) error
@@ -23,7 +23,7 @@ type ContainerManager interface {
 	RemoveContainer(id string) error
 }
 
-type HelperImageResolver interface {
+type helperImageResolver interface {
 	ResolveHelperImage() (*types.ImageInspect, error)
 }
 
@@ -47,29 +47,29 @@ type DefaultManagerConfig struct {
 	UseLegacyBuildsDirForDocker bool
 }
 
-type DefaultManager struct {
-	DefaultManagerConfig
+type defaultManager struct {
+	config DefaultManagerConfig
 
 	logger common.BuildLogger
 
-	containerManager    ContainerManager
-	helperImageResolver HelperImageResolver
+	containerManager    containerManager
+	helperImageResolver helperImageResolver
 
 	volumeBindings    []string
 	cacheContainerIDs []string
 	tmpContainerIDs   []string
 }
 
-func NewDefaultManager(logger common.BuildLogger, cManager ContainerManager, hiResolver HelperImageResolver, config DefaultManagerConfig) Manager {
-	return &DefaultManager{
-		DefaultManagerConfig: config,
-		logger:               logger,
-		containerManager:     cManager,
-		helperImageResolver:  hiResolver,
+func NewDefaultManager(logger common.BuildLogger, cManager containerManager, hiResolver helperImageResolver, config DefaultManagerConfig) Manager {
+	return &defaultManager{
+		config:              config,
+		logger:              logger,
+		containerManager:    cManager,
+		helperImageResolver: hiResolver,
 	}
 }
 
-func (m *DefaultManager) CreateUserVolumes(volumes []string) error {
+func (m *defaultManager) CreateUserVolumes(volumes []string) error {
 	for _, volume := range volumes {
 		err := m.addVolume(volume)
 		if err != nil {
@@ -80,7 +80,7 @@ func (m *DefaultManager) CreateUserVolumes(volumes []string) error {
 	return nil
 }
 
-func (m *DefaultManager) addVolume(volume string) error {
+func (m *defaultManager) addVolume(volume string) error {
 	hostVolume := strings.SplitN(volume, ":", 2)
 
 	var err error
@@ -99,49 +99,49 @@ func (m *DefaultManager) addVolume(volume string) error {
 	return err
 }
 
-func (m *DefaultManager) addHostVolume(hostPath string, containerPath string) error {
+func (m *defaultManager) addHostVolume(hostPath string, containerPath string) error {
 	containerPath = m.getAbsoluteContainerPath(containerPath)
 	m.appendVolumeBind(hostPath, containerPath)
 
 	return nil
 }
 
-func (m *DefaultManager) getAbsoluteContainerPath(dir string) string {
+func (m *defaultManager) getAbsoluteContainerPath(dir string) string {
 	if path.IsAbs(dir) {
 		return dir
 	}
 
-	return path.Join(m.FullProjectDir, dir)
+	return path.Join(m.config.FullProjectDir, dir)
 }
 
-func (m *DefaultManager) appendVolumeBind(hostPath string, containerPath string) {
+func (m *defaultManager) appendVolumeBind(hostPath string, containerPath string) {
 	m.logger.Debugln(fmt.Sprintf("Using host-based %q for %q...", hostPath, containerPath))
 
 	bindDefinition := fmt.Sprintf("%v:%v", filepath.ToSlash(hostPath), containerPath)
 	m.volumeBindings = append(m.volumeBindings, bindDefinition)
 }
 
-func (m *DefaultManager) addCacheVolume(containerPath string) error {
+func (m *defaultManager) addCacheVolume(containerPath string) error {
 	containerPath = m.getAbsoluteContainerPath(containerPath)
 
 	// disable cache for automatic container cache,
 	// but leave it for host volumes (they are shared on purpose)
-	if m.DisableCache {
+	if m.config.DisableCache {
 		m.logger.Debugln(fmt.Sprintf("Container cache for %q is disabled", containerPath))
 
 		return nil
 	}
 
 	hash := md5.Sum([]byte(containerPath))
-	if m.CacheDir != "" {
+	if m.config.CacheDir != "" {
 		return m.createHostBasedCacheVolume(containerPath, hash)
 	}
 
 	return m.createContainerBasedCacheVolume(containerPath, hash)
 }
 
-func (m *DefaultManager) createHostBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
-	hostPath := fmt.Sprintf("%s/%s/%x", m.CacheDir, m.ProjectUniqName, hash)
+func (m *defaultManager) createHostBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
+	hostPath := fmt.Sprintf("%s/%s/%x", m.config.CacheDir, m.config.ProjectUniqName, hash)
 	hostPath, err := filepath.Abs(hostPath)
 	if err != nil {
 		return err
@@ -152,8 +152,8 @@ func (m *DefaultManager) createHostBasedCacheVolume(containerPath string, hash [
 	return nil
 }
 
-func (m *DefaultManager) createContainerBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
-	containerName := fmt.Sprintf("%s-cache-%x", m.ProjectUniqName, hash)
+func (m *defaultManager) createContainerBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
+	containerName := fmt.Sprintf("%s-cache-%x", m.config.ProjectUniqName, hash)
 
 	containerID := m.findExistingCacheContainer(containerName, containerPath)
 
@@ -173,7 +173,7 @@ func (m *DefaultManager) createContainerBasedCacheVolume(containerPath string, h
 	return nil
 }
 
-func (m *DefaultManager) findExistingCacheContainer(containerName string, containerPath string) string {
+func (m *defaultManager) findExistingCacheContainer(containerName string, containerPath string) string {
 	inspected, err := m.containerManager.InspectContainer(containerName)
 	if err != nil {
 		return ""
@@ -192,7 +192,7 @@ func (m *DefaultManager) findExistingCacheContainer(containerName string, contai
 	return inspected.ID
 }
 
-func (m *DefaultManager) createCacheVolume(containerName string, containerPath string) (string, error) {
+func (m *defaultManager) createCacheVolume(containerName string, containerPath string) (string, error) {
 	cacheImage, err := m.helperImageResolver.ResolveHelperImage()
 	if err != nil {
 		return "", err
@@ -241,9 +241,9 @@ func (m *DefaultManager) createCacheVolume(containerName string, containerPath s
 	return resp.ID, nil
 }
 
-func (m *DefaultManager) getCacheCommand(containerPath string) []string {
+func (m *defaultManager) getCacheCommand(containerPath string) []string {
 	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
-	if m.OutdatedHelperImageUsed {
+	if m.config.OutdatedHelperImageUsed {
 		m.logger.Debugln("Falling back to old gitlab-runner-cache command")
 		return []string{"gitlab-runner-cache", containerPath}
 	}
@@ -251,14 +251,14 @@ func (m *DefaultManager) getCacheCommand(containerPath string) []string {
 	return []string{"gitlab-runner-helper", "cache-init", containerPath}
 }
 
-func (m *DefaultManager) CreateBuildVolume(volumes []string) error {
-	parentDir := m.JobsRootDir
+func (m *defaultManager) CreateBuildVolume(volumes []string) error {
+	parentDir := m.config.JobsRootDir
 
-	if m.UseLegacyBuildsDirForDocker {
+	if m.config.UseLegacyBuildsDirForDocker {
 		// Cache Git sources:
 		// take path of the projects directory,
 		// because we use `rm -rf` which could remove the mounted volume
-		parentDir = path.Dir(m.FullProjectDir)
+		parentDir = path.Dir(m.config.FullProjectDir)
 	}
 
 	if !path.IsAbs(parentDir) && parentDir != "/" {
@@ -272,7 +272,7 @@ func (m *DefaultManager) CreateBuildVolume(volumes []string) error {
 		return nil
 	}
 
-	if m.GitStrategy == common.GitFetch && !m.DisableCache {
+	if m.config.GitStrategy == common.GitFetch && !m.config.DisableCache {
 		// create persistent cache container
 		return m.addVolume(parentDir)
 	}
@@ -289,39 +289,14 @@ func (m *DefaultManager) CreateBuildVolume(volumes []string) error {
 	return nil
 }
 
-func (m *DefaultManager) VolumeBindings() []string {
+func (m *defaultManager) VolumeBindings() []string {
 	return m.volumeBindings
 }
 
-func (m *DefaultManager) CacheContainerIDs() []string {
+func (m *defaultManager) CacheContainerIDs() []string {
 	return m.cacheContainerIDs
 }
 
-func (m *DefaultManager) TmpContainerIDs() []string {
+func (m *defaultManager) TmpContainerIDs() []string {
 	return m.tmpContainerIDs
-}
-
-func IsHostMountedVolume(dir string, volumes ...string) bool {
-	for _, volume := range volumes {
-		hostVolume := strings.Split(volume, ":")
-
-		if len(hostVolume) < 2 {
-			continue
-		}
-
-		if isParentOf(path.Clean(hostVolume[1]), path.Clean(dir)) {
-			return true
-		}
-	}
-	return false
-}
-
-func isParentOf(parent string, dir string) bool {
-	for dir != "/" && dir != "." {
-		if dir == parent {
-			return true
-		}
-		dir = path.Dir(dir)
-	}
-	return false
 }
