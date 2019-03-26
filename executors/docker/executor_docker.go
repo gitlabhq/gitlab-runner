@@ -63,6 +63,8 @@ type executor struct {
 
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
+
+	volumesManager volumes.Manager
 }
 
 func init() {
@@ -1046,6 +1048,10 @@ func (a *volumesManagerAdapter) ResolveHelperImage() (*types.ImageInspect, error
 }
 
 func (e *executor) getVolumesManager() volumes.Manager {
+	if e.volumesManager != nil {
+		return e.volumesManager
+	}
+
 	adapter := &volumesManagerAdapter{e: e}
 	config := volumes.DefaultManagerConfig{
 		CacheDir:                    e.Config.Docker.CacheDir,
@@ -1058,7 +1064,9 @@ func (e *executor) getVolumesManager() volumes.Manager {
 		UseLegacyBuildsDirForDocker: e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker),
 	}
 
-	return volumes.NewDefaultManager(e.BuildLogger, adapter, adapter, config)
+	e.volumesManager = volumes.NewDefaultManager(e.BuildLogger, adapter, adapter, config)
+
+	return e.volumesManager
 }
 
 func (e *executor) checkOutdatedHelperImage() bool {
