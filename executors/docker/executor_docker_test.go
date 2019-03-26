@@ -569,7 +569,7 @@ func TestHostMountedBuildsDirectory(t *testing.T) {
 		e := &executor{}
 
 		t.Log("Testing", i.path, "if volumes are configured to:", i.volumes, "...")
-		assert.Equal(t, i.result, e.isHostMountedVolume(i.path, i.volumes...))
+		assert.Equal(t, i.result, IsHostMountedVolume(i.path, i.volumes...))
 
 		e.prepareBuildsDir(&c)
 		assert.Equal(t, i.result, e.SharedBuildsDir)
@@ -1223,84 +1223,43 @@ func TestCheckOSType(t *testing.T) {
 }
 
 // TODO: Remove in 12.0
-func TestCreateCacheVolumeFeatureFlag(t *testing.T) {
-	cacheDir := "/cache"
+func TestOutdatedHelperImage(t *testing.T) {
+	ffNotSet := common.JobVariables{}
+	ffSet := common.JobVariables{
+		{Key: featureflags.DockerHelperImageV2, Value: "true"},
+	}
 
-	cases := []struct {
-		name        string
-		variables   common.JobVariables
-		helperImage string
-		expectedCmd []string
+	testCases := map[string]struct {
+		helperImage    string
+		variables      common.JobVariables
+		expectedResult bool
 	}{
-		{
-			name:        "Helper image is not specified",
-			variables:   common.JobVariables{},
-			helperImage: "",
-			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		"helper image not set and FF set to false": {
+			variables:      ffNotSet,
+			helperImage:    "",
+			expectedResult: false,
 		},
-		{
-			name: "Helper image is not specified and FF still turned on",
-			variables: common.JobVariables{
-				common.JobVariable{Key: featureflags.DockerHelperImageV2, Value: "true"},
-			},
-			helperImage: "",
-			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		"helper image not set and FF set to true": {
+			variables:      ffSet,
+			helperImage:    "",
+			expectedResult: false,
 		},
-		{
-			name:        "Helper image is specified",
-			variables:   common.JobVariables{},
-			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
-			expectedCmd: []string{"gitlab-runner-cache", cacheDir},
+		"helper image set and FF set to false": {
+			variables:      ffNotSet,
+			helperImage:    "gitlab/gitlab-runner-helper:x86_64-latest",
+			expectedResult: true,
 		},
-		{
-			name: "Helper image is specified & FF variable is set to true",
-			variables: common.JobVariables{
-				common.JobVariable{Key: featureflags.DockerHelperImageV2, Value: "true"},
-			},
-			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
-			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		"helper image set and FF set to true": {
+			variables:      ffSet,
+			helperImage:    "gitlab/gitlab-runner-helper:x86_64-latest",
+			expectedResult: false,
 		},
 	}
 
-	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			helperImageID := fmt.Sprintf("%s-helperImage-%d", t.Name(), time.Now().Unix())
-			cacheContainerID := fmt.Sprintf("%s-cacheContainer-%d", t.Name(), time.Now().Unix())
-			containerName := fmt.Sprintf("%s-cacheContainerName-%d", t.Name(), time.Now().Unix())
-
-			mClient := docker_helpers.MockClient{}
-			defer mClient.AssertExpectations(t)
-			mClient.On("ImageInspectWithRaw", mock.Anything, mock.Anything).
-				Return(types.ImageInspect{ID: helperImageID}, nil, nil)
-			mClient.On("ContainerStart", mock.Anything, cacheContainerID, mock.Anything).Return(nil).Once()
-			mClient.On("ContainerInspect", mock.Anything, cacheContainerID).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
-						ExitCode: 0,
-					},
-				},
-			}, nil).Once()
-			if testCase.helperImage != "" {
-				mClient.On("ImagePullBlocking", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
-			}
-
-			executor := setUpExecutorForFeatureFlag(testCase.variables, testCase.helperImage, &mClient)
-
-			expectedConfig := &container.Config{
-				Image: helperImageID,
-				Cmd:   testCase.expectedCmd,
-				Volumes: map[string]struct{}{
-					cacheDir: {},
-				},
-				Labels: executor.getLabels("cache", "cache.dir="+cacheDir),
-			}
-
-			mClient.On("ContainerCreate", mock.Anything, expectedConfig, mock.Anything, mock.Anything, containerName).
-				Return(container.ContainerCreateCreatedBody{ID: cacheContainerID}, nil).
-				Once()
-
-			_, err := executor.createCacheVolume(containerName, cacheDir)
-			assert.NoError(t, err)
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			e := setUpExecutorForFeatureFlag(testCase.variables, testCase.helperImage, nil)
+			assert.Equal(t, testCase.expectedResult, e.checkOutdatedHelperImage())
 		})
 	}
 }
