@@ -7,25 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
-
-type containerManager interface {
-	LabelContainer(container *container.Config, containerType string, otherLabels ...string)
-	CreateContainer(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error)
-	StartContainer(containerID string, options types.ContainerStartOptions) error
-	InspectContainer(containerName string) (types.ContainerJSON, error)
-	WaitForContainer(id string) error
-	RemoveContainer(id string) error
-}
-
-type helperImageResolver interface {
-	ResolveHelperImage() (*types.ImageInspect, error)
-}
 
 type Manager interface {
 	CreateUserVolumes(volumes []string) error
@@ -50,22 +33,32 @@ type DefaultManagerConfig struct {
 type defaultManager struct {
 	config DefaultManagerConfig
 
-	logger common.BuildLogger
+	logger           common.BuildLogger
+	containerManager containerManager
 
-	containerManager    containerManager
-	helperImageResolver helperImageResolver
-
-	volumeBindings    []string
-	cacheContainerIDs []string
-	tmpContainerIDs   []string
+	volumeBindings    registry
+	cacheContainerIDs registry
+	tmpContainerIDs   registry
 }
 
-func NewDefaultManager(logger common.BuildLogger, cManager containerManager, hiResolver helperImageResolver, config DefaultManagerConfig) Manager {
+func NewDefaultManager(logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver, config DefaultManagerConfig) Manager {
+	tmpContainerIDs := new(defaultRegistry)
+
+	cManager := newDefaultContainerManager(
+		config.OutdatedHelperImageUsed,
+		logger,
+		cClient,
+		hiResolver,
+		tmpContainerIDs,
+	)
+
 	return &defaultManager{
-		config:              config,
-		logger:              logger,
-		containerManager:    cManager,
-		helperImageResolver: hiResolver,
+		config:            config,
+		logger:            logger,
+		containerManager:  cManager,
+		volumeBindings:    new(defaultRegistry),
+		cacheContainerIDs: new(defaultRegistry),
+		tmpContainerIDs:   tmpContainerIDs,
 	}
 }
 
@@ -118,7 +111,7 @@ func (m *defaultManager) appendVolumeBind(hostPath string, containerPath string)
 	m.logger.Debugln(fmt.Sprintf("Using host-based %q for %q...", hostPath, containerPath))
 
 	bindDefinition := fmt.Sprintf("%v:%v", filepath.ToSlash(hostPath), containerPath)
-	m.volumeBindings = append(m.volumeBindings, bindDefinition)
+	m.volumeBindings.Append(bindDefinition)
 }
 
 func (m *defaultManager) addCacheVolume(containerPath string) error {
@@ -155,100 +148,22 @@ func (m *defaultManager) createHostBasedCacheVolume(containerPath string, hash [
 func (m *defaultManager) createContainerBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
 	containerName := fmt.Sprintf("%s-cache-%x", m.config.ProjectUniqName, hash)
 
-	containerID := m.findExistingCacheContainer(containerName, containerPath)
+	containerID := m.containerManager.FindExistingCacheContainer(containerName, containerPath)
 
 	// create new cache container for that project
 	if containerID == "" {
 		var err error
 
-		containerID, err = m.createCacheVolume(containerName, containerPath)
+		containerID, err = m.containerManager.CreateCacheContainer(containerName, containerPath)
 		if err != nil {
 			return err
 		}
 	}
 
 	m.logger.Debugln(fmt.Sprintf("Using container %q as cache %q...", containerID, containerPath))
-	m.cacheContainerIDs = append(m.cacheContainerIDs, containerID)
+	m.cacheContainerIDs.Append(containerID)
 
 	return nil
-}
-
-func (m *defaultManager) findExistingCacheContainer(containerName string, containerPath string) string {
-	inspected, err := m.containerManager.InspectContainer(containerName)
-	if err != nil {
-		return ""
-	}
-
-	// check if we have valid cache,if not remove the broken container
-	_, ok := inspected.Config.Volumes[containerPath]
-	if !ok {
-		m.logger.Debugln(fmt.Sprintf("Removing broken cache container for %q path", containerPath))
-		err = m.containerManager.RemoveContainer(inspected.ID)
-		m.logger.Debugln(fmt.Sprintf("Cache container for %q path removed with %v", containerPath, err))
-
-		return ""
-	}
-
-	return inspected.ID
-}
-
-func (m *defaultManager) createCacheVolume(containerName string, containerPath string) (string, error) {
-	cacheImage, err := m.helperImageResolver.ResolveHelperImage()
-	if err != nil {
-		return "", err
-	}
-
-	config := &container.Config{
-		Image: cacheImage.ID,
-		Cmd:   m.getCacheCommand(containerPath),
-		Volumes: map[string]struct{}{
-			containerPath: {},
-		},
-	}
-	m.containerManager.LabelContainer(config, "cache", "cache.dir="+containerPath)
-
-	hostConfig := &container.HostConfig{
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-	}
-
-	resp, err := m.containerManager.CreateContainer(config, hostConfig, nil, containerName)
-	if err != nil {
-		if resp.ID != "" {
-			m.tmpContainerIDs = append(m.tmpContainerIDs, resp.ID)
-		}
-
-		return "", err
-	}
-
-	m.logger.Debugln(fmt.Sprintf("Starting cache container %q...", resp.ID))
-	err = m.containerManager.StartContainer(resp.ID, types.ContainerStartOptions{})
-	if err != nil {
-		m.tmpContainerIDs = append(m.tmpContainerIDs, resp.ID)
-
-		return "", err
-	}
-
-	m.logger.Debugln(fmt.Sprintf("Waiting for cache container %q...", resp.ID))
-	err = m.containerManager.WaitForContainer(resp.ID)
-	if err != nil {
-		m.tmpContainerIDs = append(m.tmpContainerIDs, resp.ID)
-
-		return "", err
-	}
-
-	return resp.ID, nil
-}
-
-func (m *defaultManager) getCacheCommand(containerPath string) []string {
-	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
-	if m.config.OutdatedHelperImageUsed {
-		m.logger.Debugln("Falling back to old gitlab-runner-cache command")
-		return []string{"gitlab-runner-cache", containerPath}
-	}
-
-	return []string{"gitlab-runner-helper", "cache-init", containerPath}
 }
 
 func (m *defaultManager) CreateBuildVolume(volumes []string) error {
@@ -278,25 +193,25 @@ func (m *defaultManager) CreateBuildVolume(volumes []string) error {
 	}
 
 	// create temporary cache container
-	id, err := m.createCacheVolume("", parentDir)
+	id, err := m.containerManager.CreateCacheContainer("", parentDir)
 	if err != nil {
 		return err
 	}
 
-	m.cacheContainerIDs = append(m.cacheContainerIDs, id)
-	m.tmpContainerIDs = append(m.tmpContainerIDs, id)
+	m.cacheContainerIDs.Append(id)
+	m.tmpContainerIDs.Append(id)
 
 	return nil
 }
 
 func (m *defaultManager) VolumeBindings() []string {
-	return m.volumeBindings
+	return m.volumeBindings.Elements()
 }
 
 func (m *defaultManager) CacheContainerIDs() []string {
-	return m.cacheContainerIDs
+	return m.cacheContainerIDs.Elements()
 }
 
 func (m *defaultManager) TmpContainerIDs() []string {
-	return m.tmpContainerIDs
+	return m.tmpContainerIDs.Elements()
 }
