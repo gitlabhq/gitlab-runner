@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/imdario/mergo"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
@@ -16,6 +18,47 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
+type configTemplate struct {
+	*common.Config
+
+	ConfigFile string `long:"config" env:"TEMPLATE_CONFIG_FILE" description:"Path to the configuration template file"`
+}
+
+func (c *configTemplate) Enabled() bool {
+	return c.ConfigFile != ""
+}
+
+func (c *configTemplate) MergeTo(config *common.RunnerConfig) error {
+	err := c.loadConfigTemplate()
+	if err != nil {
+		return errors.Wrap(err, "couldn't load configuration template file")
+	}
+
+	if len(c.Runners) != 1 {
+		return errors.New("configuration template must contain exactly one [[runners]] entry")
+	}
+
+	err = mergo.Merge(config, c.Runners[0])
+	if err != nil {
+		return errors.Wrap(err, "error while merging configuration with configuration template")
+	}
+
+	return nil
+}
+
+func (c *configTemplate) loadConfigTemplate() error {
+	config := common.NewConfig()
+
+	err := config.LoadConfig(c.ConfigFile)
+	if err != nil {
+		return err
+	}
+
+	c.Config = config
+
+	return nil
+}
+
 type RegisterCommand struct {
 	context    *cli.Context
 	network    common.Network
@@ -23,6 +66,9 @@ type RegisterCommand struct {
 	registered bool
 
 	configOptions
+
+	ConfigTemplate configTemplate `namespace:"template"`
+
 	TagList           string `long:"tag-list" env:"RUNNER_TAG_LIST" description:"Tag list"`
 	NonInteractive    bool   `short:"n" long:"non-interactive" env:"REGISTER_NON_INTERACTIVE" description:"Run registration unattended"`
 	LeaveRunner       bool   `long:"leave-runner" env:"REGISTER_LEAVE_RUNNER" description:"Don't remove runner if registration fails"`
@@ -336,6 +382,9 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 
 	s.askExecutor()
 	s.askExecutorOptions()
+
+	s.mergeTemplate()
+
 	s.addRunner(&s.RunnerConfig)
 	err = s.saveConfig()
 	if err != nil {
@@ -343,6 +392,19 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	}
 
 	logrus.Printf("Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!")
+}
+
+func (s *RegisterCommand) mergeTemplate() {
+	if !s.ConfigTemplate.Enabled() {
+		return
+	}
+
+	logrus.Infof("Merging configuration from template file %q", s.ConfigTemplate.ConfigFile)
+
+	err := s.ConfigTemplate.MergeTo(&s.RunnerConfig)
+	if err != nil {
+		logrus.WithError(err).Fatal("Could not handle configuration merging from template file")
+	}
 }
 
 func getHostname() string {
