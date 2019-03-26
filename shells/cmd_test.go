@@ -2,6 +2,7 @@ package shells
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,4 +68,23 @@ func TestCMD_IfCmdShellEscapes(t *testing.T) {
 	writer.IfCmd("foo", "x&(y)")
 
 	assert.Equal(t, "\"foo\" \"x^&(y)\" 2>NUL 1>NUL\r\nIF !errorlevel! EQU 0 (\r\n", writer.String())
+}
+
+func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
+	cases := map[bool]string{
+		true:  "\"foo\"\r\nIF %errorlevel% NEQ 0 exit /b %errorlevel%\r\n\r\n",
+		false: "\"foo\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n",
+	}
+
+	for disableDelayedErrorLevelExpansion, expectedCmd := range cases {
+		t.Run("disableDelayedErrorLevelExpansion_"+strconv.FormatBool(disableDelayedErrorLevelExpansion), func(t *testing.T) {
+			writer := &CmdWriter{
+				disableDelayedErrorLevelExpansion: disableDelayedErrorLevelExpansion,
+			}
+			writer.Command("foo")
+
+			assert.Equal(t, expectedCmd, writer.String())
+		})
+	}
+
 }

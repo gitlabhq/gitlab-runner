@@ -20,8 +20,9 @@ type CmdShell struct {
 
 type CmdWriter struct {
 	bytes.Buffer
-	TemporaryPath string
-	indent        int
+	TemporaryPath                     string
+	indent                            int
+	disableDelayedErrorLevelExpansion bool
 }
 
 func batchQuote(text string) string {
@@ -80,8 +81,17 @@ func (b *CmdWriter) Unindent() {
 }
 
 func (b *CmdWriter) checkErrorLevel() {
-	b.Line("IF !errorlevel! NEQ 0 exit /b !errorlevel!")
+	errCheck := "IF !errorlevel! NEQ 0 exit /b !errorlevel!"
+	b.Line(b.updateErrLevelCheck(errCheck))
 	b.Line("")
+}
+
+func (b *CmdWriter) updateErrLevelCheck(errCheck string) string {
+	if b.disableDelayedErrorLevelExpansion {
+		return strings.Replace(errCheck, "!", "%", -1)
+	}
+
+	return errCheck
 }
 
 func (b *CmdWriter) Command(command string, arguments ...string) {
@@ -134,14 +144,16 @@ func (b *CmdWriter) IfFile(path string) {
 func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
 	b.Line(fmt.Sprintf("%s 2>NUL 1>NUL", cmdline))
-	b.Line("IF !errorlevel! EQU 0 (")
+	errCheck := "IF !errorlevel! EQU 0 ("
+	b.Line(b.updateErrLevelCheck(errCheck))
 	b.Indent()
 }
 
 func (b *CmdWriter) IfCmdWithOutput(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
 	b.Line(fmt.Sprintf("%s", cmdline))
-	b.Line("IF !errorlevel! EQU 0 (")
+	errCheck := "IF !errorlevel! EQU 0 ("
+	b.Line(b.updateErrLevelCheck(errCheck))
 	b.Indent()
 }
 
@@ -243,7 +255,8 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 
 func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &CmdWriter{
-		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
+		TemporaryPath:                     info.Build.FullProjectDir() + ".tmp",
+		disableDelayedErrorLevelExpansion: info.Build.IsFeatureFlagOn("FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"),
 	}
 
 	if buildStage == common.BuildStagePrepare {
