@@ -1460,7 +1460,7 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						PodSecurityContext: common.KubernetesSecurityContext{
+						PodSecurityContext: common.KubernetesPodSecurityContext{
 							FSGroup:            200,
 							RunAsGroup:         200,
 							RunAsNonRoot:       true,
@@ -1476,6 +1476,18 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, int64(200), *pod.Spec.SecurityContext.RunAsUser)
 				assert.Equal(t, true, *pod.Spec.SecurityContext.RunAsNonRoot)
 				assert.Equal(t, []int64{200}, pod.Spec.SecurityContext.SupplementalGroups)
+			},
+		},
+		"uses default security context when unspecified": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Empty(t, pod.Spec.SecurityContext, "Security context should be empty")
 			},
 		},
 	}
