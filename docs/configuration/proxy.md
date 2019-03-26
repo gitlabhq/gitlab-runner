@@ -146,11 +146,6 @@ because certain programs expect `HTTP_PROXY` and others `http_proxy`.
 Unfortunately, there is no
 [standard](https://unix.stackexchange.com/questions/212894/whats-the-right-format-for-the-http-proxy-environment-variable-caps-or-no-ca#212972)
 on these kinds of environment variables.
-Some programs expect lower case (e.g. `wget`, `apt-get`)
-and other upper case (e.g. `docker`)
-and some respect both (e.g. `apk`),
-add both variants to `/etc/gitlab-runner/config.toml` if
-e.g. `docker` and `apt-get` are used in a `.gitlab-ci.yml`.
 
 ## Proxy settings when using dind service
 
