@@ -35,15 +35,15 @@ type defaultContainerManager struct {
 	containerClient     containerClient
 	helperImageResolver helperImageResolver
 
-	tmpContainerIDs registry
+	failedContainerIDs registry
 }
 
-func newDefaultContainerManager(logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver, tmpContainerIDs registry) containerManager {
+func newDefaultContainerManager(logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver, failedContainersIDs registry) containerManager {
 	return &defaultContainerManager{
 		logger:              logger,
 		containerClient:     cClient,
 		helperImageResolver: hiResolver,
-		tmpContainerIDs:     tmpContainerIDs,
+		failedContainerIDs:  failedContainersIDs,
 	}
 }
 
@@ -104,7 +104,7 @@ func (m *defaultContainerManager) createCacheContainer(containerName string, con
 	resp, err := m.containerClient.CreateContainer(config, hostConfig, nil, containerName)
 	if err != nil {
 		if resp.ID != "" {
-			m.tmpContainerIDs.Append(resp.ID)
+			m.failedContainerIDs.Append(resp.ID)
 		}
 
 		return "", err
@@ -117,7 +117,7 @@ func (m *defaultContainerManager) startCacheContainer(containerID string) error 
 	m.logger.Debugln(fmt.Sprintf("Starting cache container %q...", containerID))
 	err := m.containerClient.StartContainer(containerID, types.ContainerStartOptions{})
 	if err != nil {
-		m.tmpContainerIDs.Append(containerID)
+		m.failedContainerIDs.Append(containerID)
 
 		return err
 	}
@@ -125,7 +125,7 @@ func (m *defaultContainerManager) startCacheContainer(containerID string) error 
 	m.logger.Debugln(fmt.Sprintf("Waiting for cache container %q...", containerID))
 	err = m.containerClient.WaitForContainer(containerID)
 	if err != nil {
-		m.tmpContainerIDs.Append(containerID)
+		m.failedContainerIDs.Append(containerID)
 
 		return err
 	}

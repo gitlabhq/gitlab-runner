@@ -28,7 +28,7 @@ func getDefaultContainerManager() (*defaultContainerManager, *mockContainerClien
 		logger:              common.NewBuildLogger(nil, nil),
 		containerClient:     cClient,
 		helperImageResolver: hiResolver,
-		tmpContainerIDs:     tmpIDsRegistry,
+		failedContainerIDs:  tmpIDsRegistry,
 	}
 
 	return m, cClient, hiResolver, tmpIDsRegistry
