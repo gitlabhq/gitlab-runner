@@ -21,6 +21,7 @@ type containerClient interface {
 
 type helperImageResolver interface {
 	ResolveHelperImage() (*types.ImageInspect, error)
+	GetCacheCommand(containerPath string) []string
 }
 
 type containerManager interface {
@@ -29,8 +30,6 @@ type containerManager interface {
 }
 
 type defaultContainerManager struct {
-	outdatedHelperImage bool
-
 	logger common.BuildLogger
 
 	containerClient     containerClient
@@ -39,9 +38,8 @@ type defaultContainerManager struct {
 	tmpContainerIDs registry
 }
 
-func newDefaultContainerManager(outdatedHelperImage bool, logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver, tmpContainerIDs registry) containerManager {
+func newDefaultContainerManager(logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver, tmpContainerIDs registry) containerManager {
 	return &defaultContainerManager{
-		outdatedHelperImage: outdatedHelperImage,
 		logger:              logger,
 		containerClient:     cClient,
 		helperImageResolver: hiResolver,
@@ -90,7 +88,7 @@ func (m *defaultContainerManager) createCacheContainer(containerName string, con
 
 	config := &container.Config{
 		Image: cacheImage.ID,
-		Cmd:   m.getCacheCommand(containerPath),
+		Cmd:   m.helperImageResolver.GetCacheCommand(containerPath),
 		Volumes: map[string]struct{}{
 			containerPath: {},
 		},
@@ -133,14 +131,4 @@ func (m *defaultContainerManager) startCacheContainer(containerID string) error 
 	}
 
 	return nil
-}
-
-func (m *defaultContainerManager) getCacheCommand(containerPath string) []string {
-	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
-	if m.outdatedHelperImage {
-		m.logger.Debugln("Falling back to old gitlab-runner-cache command")
-		return []string{"gitlab-runner-cache", containerPath}
-	}
-
-	return []string{"gitlab-runner-helper", "cache-init", containerPath}
 }

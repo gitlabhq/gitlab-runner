@@ -10,6 +10,22 @@ type mockHelperImageResolver struct {
 	mock.Mock
 }
 
+// GetCacheCommand provides a mock function with given fields: containerPath
+func (_m *mockHelperImageResolver) GetCacheCommand(containerPath string) []string {
+	ret := _m.Called(containerPath)
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func(string) []string); ok {
+		r0 = rf(containerPath)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}
+
 // ResolveHelperImage provides a mock function with given fields:
 func (_m *mockHelperImageResolver) ResolveHelperImage() (*types.ImageInspect, error) {
 	ret := _m.Called()

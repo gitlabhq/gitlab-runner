@@ -25,13 +25,13 @@ func (_m *MockManager) CacheContainerIDs() []string {
 	return r0
 }
 
-// CreateBuildVolume provides a mock function with given fields: volumes
-func (_m *MockManager) CreateBuildVolume(volumes []string) error {
-	ret := _m.Called(volumes)
+// CreateBuildVolume provides a mock function with given fields: jobsRootDir, volumes
+func (_m *MockManager) CreateBuildVolume(jobsRootDir string, volumes []string) error {
+	ret := _m.Called(jobsRootDir, volumes)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]string) error); ok {
-		r0 = rf(volumes)
+	if rf, ok := ret.Get(0).(func(string, []string) error); ok {
+		r0 = rf(jobsRootDir, volumes)
 	} else {
 		r0 = ret.Error(0)
 	}

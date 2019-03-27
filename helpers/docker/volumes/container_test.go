@@ -6,7 +6,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -16,7 +15,7 @@ import (
 func TestNewDefaultContainerManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	m := newDefaultContainerManager(false, logger, nil, nil, nil)
+	m := newDefaultContainerManager(logger, nil, nil, nil)
 	assert.IsType(t, &defaultContainerManager{}, m)
 }
 
@@ -111,16 +110,17 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 	containerPath := "container-path"
 
 	testCases := map[string]struct {
-		hiResolverResult      *types.ImageInspect
-		hiResolverError       error
-		expectedContainerID   string
-		createResult          container.ContainerCreateCreatedBody
-		createError           error
-		containerID           string
-		startError            error
-		waitForContainerError error
-		expectedTmpID         string
-		expectedError         error
+		hiResolverResult       *types.ImageInspect
+		hiResolverError        error
+		hiResolverCacheCommand []string
+		expectedContainerID    string
+		createResult           container.ContainerCreateCreatedBody
+		createError            error
+		containerID            string
+		startError             error
+		waitForContainerError  error
+		expectedTmpID          string
+		expectedError          error
 	}{
 		"error on helper image resolving": {
 			hiResolverResult: nil,
@@ -128,12 +128,14 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			expectedError:    errors.New("test error"),
 		},
 		"error on container create": {
-			hiResolverResult: &types.ImageInspect{ID: "imageID"},
-			createError:      errors.New("test error"),
-			expectedError:    errors.New("test error"),
+			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
+			hiResolverCacheCommand: []string{"cache-command"},
+			createError:            errors.New("test error"),
+			expectedError:          errors.New("test error"),
 		},
 		"error on container create with returnedID": {
-			hiResolverResult: &types.ImageInspect{ID: "imageID"},
+			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
+			hiResolverCacheCommand: []string{"cache-command"},
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
@@ -142,7 +144,8 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			expectedError: errors.New("test error"),
 		},
 		"error on container start": {
-			hiResolverResult: &types.ImageInspect{ID: "imageID"},
+			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
+			hiResolverCacheCommand: []string{"cache-command"},
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
@@ -152,7 +155,8 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			expectedError: errors.New("test error"),
 		},
 		"error on wait for container": {
-			hiResolverResult: &types.ImageInspect{ID: "imageID"},
+			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
+			hiResolverCacheCommand: []string{"cache-command"},
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
@@ -162,7 +166,8 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			expectedError:         errors.New("test error"),
 		},
 		"success": {
-			hiResolverResult: &types.ImageInspect{ID: "imageID"},
+			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
+			hiResolverCacheCommand: []string{"cache-command"},
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
@@ -187,8 +192,16 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 				Once()
 
 			if testCase.hiResolverError == nil {
+				hiResolver.On("GetCacheCommand", mock.Anything).
+					Return(testCase.hiResolverCacheCommand).
+					Once()
+			}
+
+			if testCase.hiResolverError == nil {
 				configMatcher := mock.MatchedBy(func(config *container.Config) bool {
-					return config.Image == testCase.hiResolverResult.ID
+					return config.Image == testCase.hiResolverResult.ID &&
+						len(config.Cmd) == len(testCase.hiResolverCacheCommand) &&
+						config.Cmd[0] == testCase.hiResolverCacheCommand[0]
 				})
 
 				cClient.On("LabelContainer", configMatcher, "cache", "cache.dir=container-path").
@@ -220,68 +233,6 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			containerID, err := m.CreateCacheContainer(containerName, containerPath)
 			assert.Equal(t, err, testCase.expectedError)
 			assert.Equal(t, testCase.expectedContainerID, containerID)
-		})
-	}
-}
-
-// TODO: Remove in 12.0
-func TestCacheImageCommand(t *testing.T) {
-	oldCommand := []string{"gitlab-runner-cache", "/builds"}
-	newCommand := []string{"gitlab-runner-helper", "cache-init", "/builds"}
-
-	cases := map[string]struct {
-		outdatedHelperImage bool
-		expectedCmd         strslice.StrSlice
-	}{
-		"uses new helper image": {
-			outdatedHelperImage: false,
-			expectedCmd:         newCommand,
-		},
-		"uses outdated helper image": {
-			outdatedHelperImage: true,
-			expectedCmd:         oldCommand,
-		},
-	}
-
-	for testName, testCase := range cases {
-		t.Run(testName, func(t *testing.T) {
-			hiResolver := new(mockHelperImageResolver)
-			defer hiResolver.AssertExpectations(t)
-			hiResolver.On("ResolveHelperImage").
-				Return(&types.ImageInspect{ID: "helperImageID"}, nil).
-				Once()
-
-			containerConfigMatcher := mock.MatchedBy(func(c *container.Config) bool {
-				t.Log(testCase.expectedCmd)
-				t.Log(c.Cmd)
-
-				return true
-			})
-
-			cClient := new(mockContainerClient)
-			defer cClient.AssertExpectations(t)
-			cClient.On("LabelContainer", mock.Anything, mock.Anything, mock.Anything).
-				Once()
-			cClient.On("CreateContainer", containerConfigMatcher, mock.Anything, mock.Anything, "").
-				Return(container.ContainerCreateCreatedBody{ID: "createdContainerID"}, nil).
-				Once()
-			cClient.On("StartContainer", "createdContainerID", mock.Anything).
-				Return(nil).
-				Once()
-			cClient.On("WaitForContainer", "createdContainerID").
-				Return(nil).
-				Once()
-
-			m := &defaultContainerManager{
-				logger:              common.NewBuildLogger(nil, nil),
-				outdatedHelperImage: testCase.outdatedHelperImage,
-				containerClient:     cClient,
-				helperImageResolver: hiResolver,
-			}
-
-			id, err := m.CreateCacheContainer("", "/builds")
-			assert.NoError(t, err)
-			assert.NotEmpty(t, id)
 		})
 	}
 }

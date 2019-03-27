@@ -12,20 +12,18 @@ import (
 
 type Manager interface {
 	CreateUserVolumes(volumes []string) error
-	CreateBuildVolume(volumes []string) error
+	CreateBuildVolume(jobsRootDir string, volumes []string) error
 	VolumeBindings() []string
 	CacheContainerIDs() []string
 	TmpContainerIDs() []string
 }
 
 type DefaultManagerConfig struct {
-	CacheDir                string
-	JobsRootDir             string
-	FullProjectDir          string
-	ProjectUniqName         string
-	GitStrategy             common.GitStrategy
-	DisableCache            bool
-	OutdatedHelperImageUsed bool
+	CacheDir        string
+	FullProjectDir  string
+	ProjectUniqName string
+	GitStrategy     common.GitStrategy
+	DisableCache    bool
 
 	UseLegacyBuildsDirForDocker bool
 }
@@ -45,7 +43,6 @@ func NewDefaultManager(logger common.BuildLogger, cClient containerClient, hiRes
 	tmpContainerIDs := new(defaultRegistry)
 
 	cManager := newDefaultContainerManager(
-		config.OutdatedHelperImageUsed,
 		logger,
 		cClient,
 		hiResolver,
@@ -166,8 +163,8 @@ func (m *defaultManager) createContainerBasedCacheVolume(containerPath string, h
 	return nil
 }
 
-func (m *defaultManager) CreateBuildVolume(volumes []string) error {
-	parentDir := m.config.JobsRootDir
+func (m *defaultManager) CreateBuildVolume(jobsRootDir string, volumes []string) error {
+	parentDir := jobsRootDir
 
 	if m.config.UseLegacyBuildsDirForDocker {
 		// Cache Git sources:
