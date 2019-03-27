@@ -4,7 +4,7 @@ This is how you can run GitLab Runner inside a Docker container.
 
 ## General GitLab Runner Docker image usage
 
-GitLab Runner Docker images (both based on Ubuntu and [Alpine Linux](#alpine-linux))
+GitLab Runner Docker images (based on [Ubuntu or Alpine Linux](#docker-images))
 are designed as wrappers around the standard `gitlab-runner` command, like if
 GitLab Runner was installed directly on the host.
 
