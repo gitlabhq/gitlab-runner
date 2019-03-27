@@ -527,6 +527,8 @@ func (b *Build) String() string {
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
 		{Key: "CI_PROJECT_DIR", Value: filepath.FromSlash(b.FullProjectDir()), Public: true, Internal: true, File: false},
+		{Key: "CI_CONCURRENT_ID", Value: strconv.Itoa(b.RunnerID), Public: true, Internal: true, File: false},
+		{Key: "CI_CONCURRENT_PROJECT_ID", Value: strconv.Itoa(b.ProjectRunnerID), Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER", Value: "yes", Public: true, Internal: true, File: false},
 	}
 }
