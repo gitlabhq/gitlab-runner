@@ -133,12 +133,19 @@ following to the `[[runners]]` section:
 
 ```toml
 pre_clone_script = "git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY"
-environment = ["HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
+environment = ["https_proxy=docker0_interface_ip:3128", "http_proxy=docker0_interface_ip:3128", "HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
 ```
 
 Where `docker0_interface_ip` is the IP address of the `docker0` interface. You need to
 be able to reach it from within the Docker containers, so it's important to set
 it right.
+
+NOTE: **Note:**
+In our examples, we are setting both lower case and upper case variables
+because certain programs expect `HTTP_PROXY` and others `http_proxy`.
+Unfortunately, there is no
+[standard](https://unix.stackexchange.com/questions/212894/whats-the-right-format-for-the-http-proxy-environment-variable-caps-or-no-ca#212972)
+on these kinds of environment variables.
 
 ## Proxy settings when using dind service
 
