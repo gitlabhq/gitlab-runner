@@ -729,26 +729,53 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 }
 
 func TestDebugTrace(t *testing.T) {
-	build := &Build{}
-	assert.False(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be false if CI_DEBUG_TRACE is not set")
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-
-	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: "false", Public: true, Internal: true})
-	build = &Build{
-		JobResponse: successfulBuild,
+	testCases := map[string]struct {
+		debugTraceVariableValue   string
+		expectedValue             bool
+		debugTraceFeatureDisabled bool
+	}{
+		"variable not set": {
+			expectedValue: false,
+		},
+		"variable set to false": {
+			debugTraceVariableValue: "false",
+			expectedValue:           false,
+		},
+		"variable set to true": {
+			debugTraceVariableValue: "true",
+			expectedValue:           true,
+		},
+		"variable set to a non-bool value": {
+			debugTraceVariableValue: "xyz",
+			expectedValue:           false,
+		},
+		"variable set to true and feature disabled from configuration": {
+			debugTraceVariableValue:   "true",
+			expectedValue:             false,
+			debugTraceFeatureDisabled: true,
+		},
 	}
-	assert.False(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be false if CI_DEBUG_TRACE is set to false")
 
-	successfulBuild, err = GetSuccessfulBuild()
-	assert.NoError(t, err)
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			build := &Build{
+				JobResponse: JobResponse{
+					Variables: JobVariables{},
+				},
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						DebugTraceDisabled: testCase.debugTraceFeatureDisabled,
+					},
+				},
+			}
 
-	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: "true", Public: true, Internal: true})
-	build = &Build{
-		JobResponse: successfulBuild,
+			if testCase.debugTraceVariableValue != "" {
+				build.Variables = append(build.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true})
+			}
+
+			assert.Equal(t, testCase.expectedValue, build.IsDebugTraceEnabled())
+		})
 	}
-	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
 }
 
 func TestDefaultEnvVariables(t *testing.T) {

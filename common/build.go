@@ -687,6 +687,10 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 }
 
 func (b *Build) IsDebugTraceEnabled() bool {
+	if b.Runner.DebugTraceDisabled {
+		return false
+	}
+
 	trace, err := strconv.ParseBool(b.GetAllVariables().Get("CI_DEBUG_TRACE"))
 	if err != nil {
 		return false
