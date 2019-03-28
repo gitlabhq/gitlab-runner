@@ -820,6 +820,42 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 	})
 }
 
+func TestBranchAvailableLocally(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		f, err := ioutil.ReadFile(filepath.Join(build.FullProjectDir(), ".git/refs/heads/master"))
+		require.NoError(t, err)
+		assert.Equal(t, build.GitInfo.Sha, strings.TrimSuffix(string(f), "\n"))
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Fetching changes")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		f, err = ioutil.ReadFile(filepath.Join(build.FullProjectDir(), ".git/refs/heads/master"))
+		require.NoError(t, err)
+		assert.Equal(t, build.GitInfo.Sha, strings.TrimSuffix(string(f), "\n"))
+
+		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Fetching changes")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		f, err = ioutil.ReadFile(filepath.Join(build.FullProjectDir(), ".git/refs/heads/add-lfs-object"))
+		require.NoError(t, err)
+		assert.Equal(t, build.GitInfo.Sha, strings.TrimSuffix(string(f), "\n"))
+	})
+}
+
 func TestInteractiveTerminal(t *testing.T) {
 	cases := []struct {
 		app                string
