@@ -800,6 +800,26 @@ func TestBuildWithUntrackedDirFromPreviousBuild(t *testing.T) {
 	})
 }
 
+func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+
+		// Another build using the same repo but different branch.
+		build.GitInfo = common.GetLFSGitInfo(common.RepoRemoteURL)
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Checking out 2371dd05 as add-lfs-object...")
+	})
+}
+
 func TestInteractiveTerminal(t *testing.T) {
 	cases := []struct {
 		app                string
