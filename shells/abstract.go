@@ -350,13 +350,10 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	return nil
 }
 
-func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {
 	build := info.Build
-	hasRefspecs := build.RefspecsAvailable()
-	projectDir := build.FullProjectDir()
-	gitDir := path.Join(build.FullProjectDir(), ".git")
 
-	if !hasRefspecs {
+	if !info.Build.RefspecsAvailable() {
 		w.Warning("DEPRECATION: this GitLab server doesn't support refspecs, gitlab-runner 12.0 will no longer work with this version of GitLab")
 	}
 
@@ -372,28 +369,12 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 		w.Variable(common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1"})
 	}
 
-	switch info.Build.GetGitStrategy() {
-	case common.GitFetch:
-		if hasRefspecs {
-			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
-		} else {
-			b.writeFetchCmd(w, build, projectDir, gitDir)
-		}
-	case common.GitClone:
-		w.RmDir(projectDir)
-		if hasRefspecs {
-			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
-		} else {
-			b.writeCloneCmd(w, build, projectDir)
-		}
-	case common.GitNone:
-		w.Notice("Skipping Git repository setup")
-		w.MkDir(projectDir)
-	default:
-		return errors.New("unknown GIT_STRATEGY")
+	err := b.handleGetSourcesStrategy(w, build)
+	if err != nil {
+		return err
 	}
 
-	if info.Build.GetGitCheckout() {
+	if build.GetGitCheckout() {
 		b.writeCheckoutCmd(w, build)
 
 		// If LFS smudging was disabled by the user (by setting the GIT_LFS_SKIP_SMUDGE variable
@@ -416,6 +397,35 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 		}
 	} else {
 		w.Notice("Skipping Git checkout")
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Build) error {
+	hasRefspecs := build.RefspecsAvailable()
+	projectDir := build.FullProjectDir()
+	gitDir := path.Join(build.FullProjectDir(), ".git")
+
+	switch build.GetGitStrategy() {
+	case common.GitFetch:
+		if hasRefspecs {
+			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
+		} else {
+			b.writeFetchCmd(w, build, projectDir, gitDir)
+		}
+	case common.GitClone:
+		w.RmDir(projectDir)
+		if hasRefspecs {
+			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
+		} else {
+			b.writeCloneCmd(w, build, projectDir)
+		}
+	case common.GitNone:
+		w.Notice("Skipping Git repository setup")
+		w.MkDir(projectDir)
+	default:
+		return errors.New("unknown GIT_STRATEGY")
 	}
 
 	return nil
