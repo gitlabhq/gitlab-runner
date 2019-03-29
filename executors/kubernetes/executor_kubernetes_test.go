@@ -285,7 +285,7 @@ func fakeKubeDeleteResponse(status int) *http.Response {
 
 	body := objBody(codec, &metav1.Status{Code: int32(status)})
 	return &http.Response{StatusCode: status, Body: body, Header: map[string][]string{
-		"Content-Type": []string{"application/json"},
+		"Content-Type": {"application/json"},
 	}}
 }
 
