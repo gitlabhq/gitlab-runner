@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	RepoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git"
+	repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git"
 
 	repoRefType = RefTypeBranch
 
@@ -76,7 +76,7 @@ func GetRemoteSuccessfulBuild() (JobResponse, error) {
 
 func GetRemoteSuccessfulLFSBuild() (JobResponse, error) {
 	response, err := GetRemoteBuildResponse("echo Hello World")
-	response.GitInfo = GetLFSGitInfo(RepoRemoteURL)
+	response.GitInfo = GetLFSGitInfo(repoRemoteURL)
 
 	return response, err
 }
@@ -187,7 +187,7 @@ func getBuildResponse(repoURL string, commands []string) JobResponse {
 }
 
 func GetRemoteBuildResponse(commands ...string) (JobResponse, error) {
-	return getBuildResponse(RepoRemoteURL, commands), nil
+	return getBuildResponse(repoRemoteURL, commands), nil
 }
 
 func GetLocalBuildResponse(commands ...string) (JobResponse, error) {

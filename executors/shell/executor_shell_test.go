@@ -868,7 +868,7 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 		assert.Contains(t, out, "Created fresh repository")
 
 		// Another build using the same repo but different branch.
-		build.GitInfo = common.GetLFSGitInfo(common.RepoRemoteURL)
+		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
 		out, err = runBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Checking out 2371dd05 as add-lfs-object...")
