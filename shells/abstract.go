@@ -154,6 +154,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	w.Command("git", "init", projectDir, "--template", templateDir)
 	w.Cd(projectDir)
+	b.writeGitCleanup(w)
 
 	// fetching
 	if depth > 0 {
@@ -167,7 +168,6 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	w.Notice("Created fresh repository.")
 	w.Else()
 	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
-	b.writeGitCleanup(w)
 	w.EndIf()
 
 	fetchArgs := []string{"fetch", "origin", "--prune"}
