@@ -19,11 +19,6 @@ type containerClient interface {
 	RemoveContainer(id string) error
 }
 
-type helperImageResolver interface {
-	ResolveHelperImage() (*types.ImageInspect, error)
-	GetCacheCommand(containerPath string) []string
-}
-
 type ContainerManager interface {
 	FindExistingCacheContainer(containerName string, containerPath string) string
 	CreateCacheContainer(containerName string, containerPath string) (string, error)
@@ -33,17 +28,19 @@ type ContainerManager interface {
 type defaultContainerManager struct {
 	logger common.BuildLogger
 
-	containerClient     containerClient
-	helperImageResolver helperImageResolver
+	containerClient containerClient
 
-	failedContainerIDs registry
+	helperImage         *types.ImageInspect
+	outdatedHelperImage bool
+	failedContainerIDs  registry
 }
 
-func NewDefaultContainerManager(logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver) ContainerManager {
+func NewDefaultContainerManager(logger common.BuildLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) ContainerManager {
 	return &defaultContainerManager{
 		logger:              logger,
 		containerClient:     cClient,
-		helperImageResolver: hiResolver,
+		helperImage:         helperImage,
+		outdatedHelperImage: outdatedHelperImage,
 	}
 }
 
@@ -85,14 +82,9 @@ func (m *defaultContainerManager) CreateCacheContainer(containerName string, con
 }
 
 func (m *defaultContainerManager) createCacheContainer(containerName string, containerPath string) (string, error) {
-	cacheImage, err := m.helperImageResolver.ResolveHelperImage()
-	if err != nil {
-		return "", err
-	}
-
 	config := &container.Config{
-		Image: cacheImage.ID,
-		Cmd:   m.helperImageResolver.GetCacheCommand(containerPath),
+		Image: m.helperImage.ID,
+		Cmd:   m.getCacheCommand(containerPath),
 		Volumes: map[string]struct{}{
 			containerPath: {},
 		},
@@ -115,6 +107,17 @@ func (m *defaultContainerManager) createCacheContainer(containerName string, con
 	}
 
 	return resp.ID, nil
+}
+
+func (m *defaultContainerManager) getCacheCommand(containerPath string) []string {
+	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
+	if m.outdatedHelperImage {
+		m.logger.Debugln("Falling back to old gitlab-runner-cache command")
+		return []string{"gitlab-runner-cache", containerPath}
+	}
+
+	return []string{"gitlab-runner-helper", "cache-init", containerPath}
+
 }
 
 func (m *defaultContainerManager) startCacheContainer(containerID string) error {

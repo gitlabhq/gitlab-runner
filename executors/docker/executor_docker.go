@@ -1057,20 +1057,6 @@ func (a *volumesManagerAdapter) RemoveContainer(id string) error {
 	return a.e.removeContainer(a.e.Context, id)
 }
 
-func (a *volumesManagerAdapter) ResolveHelperImage() (*types.ImageInspect, error) {
-	return a.e.getPrebuiltImage()
-}
-
-func (a *volumesManagerAdapter) GetCacheCommand(containerPath string) []string {
-	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
-	if a.e.checkOutdatedHelperImage() {
-		a.e.Debugln("Falling back to old gitlab-runner-cache command")
-		return []string{"gitlab-runner-cache", containerPath}
-	}
-
-	return []string{"gitlab-runner-helper", "cache-init", containerPath}
-}
-
 func (e *executor) checkOutdatedHelperImage() bool {
 	return !e.Build.IsFeatureFlagOn(featureflags.DockerHelperImageV2) && e.Config.Docker.HelperImage != ""
 }
@@ -1090,10 +1076,16 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 		UseLegacyBuildsDirForDocker: e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker),
 	}
 
+	helperImage, err := e.getPrebuiltImage()
+	if err != nil {
+		return nil, err
+	}
+
 	cManager := volumes.NewDefaultContainerManager(
 		e.BuildLogger,
 		adapter,
-		adapter,
+		helperImage,
+		e.checkOutdatedHelperImage(),
 	)
 
 	e.volumesManager = volumes.NewDefaultManager(e.BuildLogger, cManager, config)

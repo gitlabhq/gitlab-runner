@@ -2,6 +2,7 @@ package volumes
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -15,23 +16,23 @@ import (
 func TestNewDefaultContainerManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	m := NewDefaultContainerManager(logger, nil, nil)
+	m := NewDefaultContainerManager(logger, nil, nil, true)
 	assert.IsType(t, &defaultContainerManager{}, m)
 }
 
-func getDefaultContainerManager() (*defaultContainerManager, *mockContainerClient, *mockHelperImageResolver, *mockRegistry) {
+func getDefaultContainerManager() (*defaultContainerManager, *mockContainerClient, *mockRegistry) {
 	cClient := new(mockContainerClient)
-	hiResolver := new(mockHelperImageResolver)
 	tmpIDsRegistry := new(mockRegistry)
 
 	m := &defaultContainerManager{
 		logger:              common.NewBuildLogger(nil, nil),
 		containerClient:     cClient,
-		helperImageResolver: hiResolver,
 		failedContainerIDs:  tmpIDsRegistry,
+		helperImage:         &types.ImageInspect{ID: "helper-image"},
+		outdatedHelperImage: false,
 	}
 
-	return m, cClient, hiResolver, tmpIDsRegistry
+	return m, cClient, tmpIDsRegistry
 }
 
 func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
@@ -81,11 +82,10 @@ func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			m, cClient, hiResolver, tmpIDsRegistry := getDefaultContainerManager()
+			m, cClient, tmpIDsRegistry := getDefaultContainerManager()
 
 			defer func() {
 				cClient.AssertExpectations(t)
-				hiResolver.AssertExpectations(t)
 				tmpIDsRegistry.AssertExpectations(t)
 			}()
 
@@ -110,32 +110,20 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 	containerPath := "container-path"
 
 	testCases := map[string]struct {
-		hiResolverResult       *types.ImageInspect
-		hiResolverError        error
-		hiResolverCacheCommand []string
-		expectedContainerID    string
-		createResult           container.ContainerCreateCreatedBody
-		createError            error
-		containerID            string
-		startError             error
-		waitForContainerError  error
-		expectedTmpID          string
-		expectedError          error
+		expectedContainerID   string
+		createResult          container.ContainerCreateCreatedBody
+		createError           error
+		containerID           string
+		startError            error
+		waitForContainerError error
+		expectedTmpID         string
+		expectedError         error
 	}{
-		"error on helper image resolving": {
-			hiResolverResult: nil,
-			hiResolverError:  errors.New("test error"),
-			expectedError:    errors.New("test error"),
-		},
 		"error on container create": {
-			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
-			hiResolverCacheCommand: []string{"cache-command"},
-			createError:            errors.New("test error"),
-			expectedError:          errors.New("test error"),
+			createError:   errors.New("test error"),
+			expectedError: errors.New("test error"),
 		},
 		"error on container create with returnedID": {
-			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
-			hiResolverCacheCommand: []string{"cache-command"},
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
@@ -144,8 +132,6 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			expectedError: errors.New("test error"),
 		},
 		"error on container start": {
-			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
-			hiResolverCacheCommand: []string{"cache-command"},
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
@@ -155,8 +141,6 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			expectedError: errors.New("test error"),
 		},
 		"error on wait for container": {
-			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
-			hiResolverCacheCommand: []string{"cache-command"},
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
@@ -166,8 +150,6 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			expectedError:         errors.New("test error"),
 		},
 		"success": {
-			hiResolverResult:       &types.ImageInspect{ID: "imageID"},
-			hiResolverCacheCommand: []string{"cache-command"},
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
@@ -177,31 +159,33 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 		},
 	}
 
+	// TODO: Remove in 12.0
+	outdatedHelperImageValues := map[bool][]string{
+		true:  {"gitlab-runner-cache", "container-path"},
+		false: {"gitlab-runner-helper", "cache-init", "container-path"},
+	}
+
 	for testName, testCase := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			m, cClient, hiResolver, tmpIDsRegistry := getDefaultContainerManager()
+		for outdatedHelperImage, expectedCommand := range outdatedHelperImageValues {
+			t.Run(fmt.Sprintf("%s-outdated-helper-image-is-%v", testName, outdatedHelperImage), func(t *testing.T) {
+				m, cClient, tmpIDsRegistry := getDefaultContainerManager()
+				m.outdatedHelperImage = outdatedHelperImage
 
-			defer func() {
-				cClient.AssertExpectations(t)
-				hiResolver.AssertExpectations(t)
-				tmpIDsRegistry.AssertExpectations(t)
-			}()
+				defer func() {
+					cClient.AssertExpectations(t)
+					tmpIDsRegistry.AssertExpectations(t)
+				}()
 
-			hiResolver.On("ResolveHelperImage").
-				Return(testCase.hiResolverResult, testCase.hiResolverError).
-				Once()
-
-			if testCase.hiResolverError == nil {
-				hiResolver.On("GetCacheCommand", mock.Anything).
-					Return(testCase.hiResolverCacheCommand).
-					Once()
-			}
-
-			if testCase.hiResolverError == nil {
 				configMatcher := mock.MatchedBy(func(config *container.Config) bool {
-					return config.Image == testCase.hiResolverResult.ID &&
-						len(config.Cmd) == len(testCase.hiResolverCacheCommand) &&
-						config.Cmd[0] == testCase.hiResolverCacheCommand[0]
+					if config.Image != "helper-image" {
+						return false
+					}
+
+					if len(config.Cmd) != len(expectedCommand) {
+						return false
+					}
+
+					return config.Cmd[0] == expectedCommand[0]
 				})
 
 				cClient.On("LabelContainer", configMatcher, "cache", "cache.dir=container-path").
@@ -211,28 +195,27 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 					Return(testCase.createResult, testCase.createError).
 					Once()
 
-			}
+				if testCase.createError == nil {
+					cClient.On("StartContainer", testCase.containerID, mock.Anything).
+						Return(testCase.startError).
+						Once()
 
-			if testCase.containerID != "" {
-				cClient.On("StartContainer", testCase.containerID, mock.Anything).
-					Return(testCase.startError).
-					Once()
+					if testCase.startError == nil {
+						cClient.On("WaitForContainer", testCase.containerID).
+							Return(testCase.waitForContainerError).
+							Once()
+					}
+				}
 
-				if testCase.startError == nil {
-					cClient.On("WaitForContainer", testCase.containerID).
-						Return(testCase.waitForContainerError).
+				if testCase.expectedTmpID != "" {
+					tmpIDsRegistry.On("Append", testCase.expectedTmpID).
 						Once()
 				}
-			}
 
-			if testCase.expectedTmpID != "" {
-				tmpIDsRegistry.On("Append", testCase.expectedTmpID).
-					Once()
-			}
-
-			containerID, err := m.CreateCacheContainer(containerName, containerPath)
-			assert.Equal(t, err, testCase.expectedError)
-			assert.Equal(t, testCase.expectedContainerID, containerID)
-		})
+				containerID, err := m.CreateCacheContainer(containerName, containerPath)
+				assert.Equal(t, err, testCase.expectedError)
+				assert.Equal(t, testCase.expectedContainerID, containerID)
+			})
+		}
 	}
 }
