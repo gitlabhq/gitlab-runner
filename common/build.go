@@ -774,3 +774,12 @@ func (b *Build) IsFeatureFlagOn(name string) bool {
 
 	return on
 }
+
+func (b *Build) IsLFSSmudgeDisabled() bool {
+	disabled, err := strconv.ParseBool(b.GetAllVariables().Get("GIT_LFS_SKIP_SMUDGE"))
+	if err != nil {
+		return false
+	}
+
+	return disabled
+}
