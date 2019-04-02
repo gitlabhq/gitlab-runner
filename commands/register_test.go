@@ -321,6 +321,7 @@ func TestDefaultExecutorConfiguration(t *testing.T) {
 						Port:         "22",
 						IdentityFile: "/home/user/.ssh/id_rsa",
 					},
+					CustomBuildDir: nil,
 				},
 			},
 		},
@@ -341,6 +342,7 @@ func TestDefaultExecutorConfiguration(t *testing.T) {
 					Parallels: &common.ParallelsConfig{
 						BaseName: "my-parallels-vm",
 					},
+					CustomBuildDir: nil,
 				},
 			},
 		},
@@ -362,6 +364,7 @@ func TestDefaultExecutorConfiguration(t *testing.T) {
 					VirtualBox: &common.VirtualBoxConfig{
 						BaseName: "my-virtualbox-vm",
 					},
+					CustomBuildDir: nil,
 				},
 			},
 		},

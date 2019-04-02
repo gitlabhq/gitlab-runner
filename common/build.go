@@ -160,24 +160,42 @@ func (b *Build) TmpProjectDir() string {
 	return helpers.ToSlash(b.BuildDir) + ".tmp"
 }
 
+func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customDirAllowed, sharedDir bool) (string, error) {
+	dir := b.GetAllVariables().Get(overrideKey)
+	if dir != "" {
+		if !customDirAllowed {
+			return "", MakeBuildError("setting %s is not allowed, enable `custom_build_dir` feature", overrideKey)
+		}
+
+		if !strings.HasPrefix(dir, rootDir) {
+			return "", MakeBuildError("the %s=%q has to be within %q",
+				overrideKey, dir, rootDir)
+		}
+	}
+
+	if dir == "" {
+		dir = path.Join(rootDir, b.ProjectUniqueDir(sharedDir))
+	}
+	return dir, nil
+}
+
 func (b *Build) StartBuild(rootDir, cacheDir string, customDirAllowed, sharedDir bool) error {
+	var err error
+
+	// We set RootDir and invalidate variables
+	// to be able to use CI_BUILDS_DIR
 	b.RootDir = rootDir
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
+	b.refreshAllVariables()
 
-	// Job Specific build dir
-	b.BuildDir = b.GetAllVariables().Get("GIT_CLONE_PATH")
-	if b.BuildDir != "" && !customDirAllowed {
-		return errors.New("setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature")
+	b.BuildDir, err = b.getCustomBuildDir(b.RootDir, "GIT_CLONE_PATH", customDirAllowed, sharedDir)
+	if err != nil {
+		return err
 	}
 
-	if b.BuildDir == "" {
-		b.BuildDir = path.Join(rootDir, b.ProjectUniqueDir(sharedDir))
-	}
-
-	// invalidate variables cache:
-	// as some variables are based on dynamic
-	// state after build starts
-	b.allVariables = nil
+	// We invalidate variables to be able to use
+	// CI_CACHE_DIR and CI_PROJECT_DIR
+	b.refreshAllVariables()
 	return nil
 }
 
@@ -546,6 +564,7 @@ func (b *Build) String() string {
 
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
+		{Key: "CI_BUILDS_DIR", Value: filepath.FromSlash(b.RootDir), Public: true, Internal: true, File: false},
 		{Key: "CI_PROJECT_DIR", Value: filepath.FromSlash(b.FullProjectDir()), Public: true, Internal: true, File: false},
 		{Key: "CI_CONCURRENT_ID", Value: strconv.Itoa(b.RunnerID), Public: true, Internal: true, File: false},
 		{Key: "CI_CONCURRENT_PROJECT_ID", Value: strconv.Itoa(b.ProjectRunnerID), Public: true, Internal: true, File: false},
@@ -614,6 +633,10 @@ func (b *Build) GetGitTLSVariables() JobVariables {
 
 func (b *Build) IsSharedEnv() bool {
 	return b.ExecutorFeatures.Shared
+}
+
+func (b *Build) refreshAllVariables() {
+	b.allVariables = nil
 }
 
 func (b *Build) GetAllVariables() JobVariables {

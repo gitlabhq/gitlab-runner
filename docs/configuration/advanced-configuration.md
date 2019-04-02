@@ -746,19 +746,23 @@ before upgrading the Runner, otherwise the jobs will start failing with a "No su
 ## The `[runners.custom_build_dir]` section
 
 NOTE: **Note:**
-[Introduced][gitlab-runner-876] in Gitlab Runner 11.1
+[Introduced][gitlab-runner-1267] in Gitlab Runner 11.10
 
-This section defines [custom build directories][custom-build-dir-docs] parameters.
+This section defines [custom build directories][https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories] parameters.
 
 Please notice, that the feature - if not configured explicitly - will be
 enabled by default for `kubernetes`, `docker`, `docker-ssh`, `docker+machine`
 and `docker-ssh+machine` executors. It will be disabled by default for all other
 executors.
 
-The feature will be also disabled when _shared_ environments (`shell`, `ssh`
-executors and all `docker*` executors when working directory is mounted
-as host volume shared between jobs) will be used together with `concurrent = 1`
-set in global section.
+This feature requires that `GIT_CLONE_PATH` is within a path defined
+within `runners.builds_dir`. For the ease of using `builds_dir` the
+`$CI_BUILDS_DIR` variable can be used.
+
+The feature is by default enabled only for `docker` and `kubernetes` executors
+as they provide a good way to separate resources. This feature can be
+explicitly enabled for any executor, but special care should be taken when using
+with executors that share `builds_dir` and have `concurrent > 1`.
 
 | Parameter | Type    | Description |
 |-----------|---------|-------------|
@@ -787,4 +791,3 @@ It depends on what you'd like to do.
 [variable]: https://docs.gitlab.com/ee/ci/variables/#variables
 [cronvendor]: https://github.com/gorhill/cronexpr#implementation
 [gitlab-runner-876]: https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/876
-[custom-build-dir-docs]: https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories

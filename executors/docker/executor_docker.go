@@ -509,7 +509,7 @@ func (e *executor) createBuildVolume() error {
 	// Cache Git sources:
 	// use a `BuildsDir`
 	if !path.IsAbs(e.Build.RootDir) || e.Build.RootDir == "/" {
-		return errors.New("build directory needs to be absolute and non-root path")
+		return common.MakeBuildError("build directory needs to be absolute and non-root path")
 	}
 
 	if e.isHostMountedVolume(e.Build.RootDir, e.Config.Docker.Volumes...) {

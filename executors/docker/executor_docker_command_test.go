@@ -45,6 +45,53 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDockerCommandUsingCustomClonePath(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	jobResponse, err := common.GetRemoteBuildResponse(
+		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo")
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		clonePath         string
+		expectedErrorType interface{}
+	}{
+		"uses custom clone path": {
+			clonePath:         "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+			expectedErrorType: nil,
+		},
+		"path has to be within CI_BUILDS_DIR": {
+			clonePath:         "/unknown/go/src/gitlab.com/gitlab-org/repo",
+			expectedErrorType: &common.BuildError{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &common.Build{
+				JobResponse: jobResponse,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker: &common.DockerConfig{
+							Image:      common.TestAlpineImage,
+							PullPolicy: common.PullPolicyIfNotPresent,
+						},
+						Environment: []string{
+							"GIT_CLONE_PATH=" + test.clonePath,
+						},
+					},
+				},
+			}
+
+			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			assert.IsType(t, test.expectedErrorType, err)
+		})
+	}
+}
+
 func TestDockerCommandNoRootImage(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
