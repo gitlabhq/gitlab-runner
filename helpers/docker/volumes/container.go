@@ -22,7 +22,7 @@ type containerClient interface {
 type ContainerManager interface {
 	FindExistingCacheContainer(containerName string, containerPath string) string
 	CreateCacheContainer(containerName string, containerPath string) (string, error)
-	SetFailedContainerIDsRegistry(registry registry)
+	FailedContainerIDs() []string
 }
 
 type defaultContainerManager struct {
@@ -42,10 +42,6 @@ func NewDefaultContainerManager(logger common.BuildLogger, cClient containerClie
 		helperImage:         helperImage,
 		outdatedHelperImage: outdatedHelperImage,
 	}
-}
-
-func (m *defaultContainerManager) SetFailedContainerIDsRegistry(registry registry) {
-	m.failedContainerIDs = registry
 }
 
 func (m *defaultContainerManager) FindExistingCacheContainer(containerName string, containerPath string) string {
@@ -138,4 +134,8 @@ func (m *defaultContainerManager) startCacheContainer(containerID string) error 
 	}
 
 	return nil
+}
+
+func (m *defaultContainerManager) FailedContainerIDs() []string {
+	return m.failedContainerIDs.Elements()
 }

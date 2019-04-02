@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -13,11 +12,7 @@ import (
 func TestNewDefaultManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	cManager := new(MockContainerManager)
-	defer cManager.AssertExpectations(t)
-	cManager.On("SetFailedContainerIDsRegistry", mock.Anything).Once()
-
-	m := NewDefaultManager(logger, cManager, DefaultManagerConfig{})
+	m := NewDefaultManager(logger, nil, DefaultManagerConfig{})
 	assert.IsType(t, &defaultManager{}, m)
 }
 
@@ -510,8 +505,13 @@ func TestDefaultManager_TmpContainerIDs(t *testing.T) {
 	expectedElements := []string{"element1", "element2"}
 	registry.On("Elements").Return(expectedElements).Once()
 
+	cManager := new(MockContainerManager)
+	defer cManager.AssertExpectations(t)
+	cManager.On("FailedContainerIDs").Return([]string{}).Once()
+
 	m := &defaultManager{
-		tmpContainerIDs: registry,
+		tmpContainerIDs:  registry,
+		containerManager: cManager,
 	}
 	assert.Equal(t, expectedElements, m.TmpContainerIDs())
 }

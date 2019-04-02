@@ -219,3 +219,16 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultContainerManager_FailedContainerIDs(t *testing.T) {
+	registry := new(mockRegistry)
+	defer registry.AssertExpectations(t)
+
+	expectedElements := []string{"element1", "element2"}
+	registry.On("Elements").Return(expectedElements).Once()
+
+	m := &defaultContainerManager{
+		failedContainerIDs: registry,
+	}
+	assert.Equal(t, expectedElements, m.FailedContainerIDs())
+}

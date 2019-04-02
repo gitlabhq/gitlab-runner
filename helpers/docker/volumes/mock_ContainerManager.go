@@ -30,6 +30,22 @@ func (_m *MockContainerManager) CreateCacheContainer(containerName string, conta
 	return r0, r1
 }
 
+// FailedContainerIDs provides a mock function with given fields:
+func (_m *MockContainerManager) FailedContainerIDs() []string {
+	ret := _m.Called()
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func() []string); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}
+
 // FindExistingCacheContainer provides a mock function with given fields: containerName, containerPath
 func (_m *MockContainerManager) FindExistingCacheContainer(containerName string, containerPath string) string {
 	ret := _m.Called(containerName, containerPath)
@@ -42,9 +58,4 @@ func (_m *MockContainerManager) FindExistingCacheContainer(containerName string,
 	}
 
 	return r0
-}
-
-// SetFailedContainerIDsRegistry provides a mock function with given fields: registry
-func (_m *MockContainerManager) SetFailedContainerIDsRegistry(registry registry) {
-	_m.Called(registry)
 }
