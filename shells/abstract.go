@@ -94,14 +94,6 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter) {
 	w.RmFile(".git/HEAD.lock")
 
 	w.RmFile(".git/hooks/post-checkout")
-
-	w.Command("git", "clean", "-ffdx")
-	w.IfCmd("git", "diff", "--no-ext-diff", "--quiet", "--exit-code")
-	// git 1.7 cannot reset before a checkout, if no diffs we can avoid git reset
-	w.Print("Clean repository")
-	w.Else()
-	w.Command("git", "reset", "--hard")
-	w.EndIf()
 }
 
 // TODO: Remove in 12.0
@@ -182,6 +174,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
 	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
+	w.Command("git", "clean", "-ffdx")
 }
 
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
