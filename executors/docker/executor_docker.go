@@ -486,6 +486,11 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
 
+	volumesManager, err := e.getVolumesManager()
+	if err != nil {
+		return nil, err
+	}
+
 	hostConfig := &container.HostConfig{
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
@@ -493,9 +498,9 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    e.Config.Docker.Privileged,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
-		Binds:         e.getVolumesManager().VolumeBindings(),
+		Binds:         volumesManager.VolumeBindings(),
 		ShmSize:       e.Config.Docker.ShmSize,
-		VolumesFrom:   e.getVolumesManager().CacheContainerIDs(),
+		VolumesFrom:   volumesManager.CacheContainerIDs(),
 		Tmpfs:         e.Config.Docker.ServicesTmpfs,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -672,9 +677,14 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		return nil, err
 	}
 
+	volumesManager, err := e.getVolumesManager()
+	if err != nil {
+		return nil, err
+	}
+
 	// By default we use caches container,
 	// but in later phases we hook to previous build container
-	volumesFrom := e.getVolumesManager().CacheContainerIDs()
+	volumesFrom := volumesManager.CacheContainerIDs()
 	if len(e.builds) > 0 {
 		volumesFrom = []string{
 			e.builds[len(e.builds)-1],
@@ -703,7 +713,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
 		Links:         append(e.Config.Docker.Links, e.links...),
-		Binds:         e.getVolumesManager().VolumeBindings(),
+		Binds:         volumesManager.VolumeBindings(),
 		ShmSize:       e.Config.Docker.ShmSize,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
 		VolumesFrom:   append(e.Config.Docker.VolumesFrom, volumesFrom...),
@@ -990,9 +1000,14 @@ func (e *executor) createDependencies() (err error) {
 		return err
 	}
 
+	volumesManager, err := e.getVolumesManager()
+	if err != nil {
+		return err
+	}
+
 	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
 	e.Debugln("Creating build volume...")
-	err = e.getVolumesManager().CreateBuildVolume(e.Build.RootDir, e.Config.Docker.Volumes)
+	err = volumesManager.CreateBuildVolume(e.Build.RootDir, e.Config.Docker.Volumes)
 	if err != nil {
 		return err
 	}
@@ -1006,7 +1021,7 @@ func (e *executor) createDependencies() (err error) {
 
 	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
-	err = e.getVolumesManager().CreateUserVolumes(e.Config.Docker.Volumes)
+	err = volumesManager.CreateUserVolumes(e.Config.Docker.Volumes)
 	if err != nil {
 		return err
 	}
@@ -1060,9 +1075,9 @@ func (e *executor) checkOutdatedHelperImage() bool {
 	return !e.Build.IsFeatureFlagOn(featureflags.DockerHelperImageV2) && e.Config.Docker.HelperImage != ""
 }
 
-func (e *executor) getVolumesManager() volumes.Manager {
+func (e *executor) getVolumesManager() (volumes.Manager, error) {
 	if e.volumesManager != nil {
-		return e.volumesManager
+		return e.volumesManager, nil
 	}
 
 	adapter := &volumesManagerAdapter{e: e}
@@ -1083,7 +1098,7 @@ func (e *executor) getVolumesManager() volumes.Manager {
 
 	e.volumesManager = volumes.NewDefaultManager(e.BuildLogger, cManager, config)
 
-	return e.volumesManager
+	return e.volumesManager, nil
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -1149,7 +1164,16 @@ func (e *executor) Cleanup() {
 		}()
 	}
 
-	for _, temporaryID := range e.getTemporaryIDs() {
+	temporaryIDs := e.temporary
+
+	volumesManager, err := e.getVolumesManager()
+	if err != nil {
+		logrus.WithError(err).Warning("Couldn't retrieve volumes manager to get tmp containers ids for cleanup")
+	} else {
+		temporaryIDs = append(temporaryIDs, volumesManager.TmpContainerIDs()...)
+	}
+
+	for _, temporaryID := range temporaryIDs {
 		remove(temporaryID)
 	}
 
@@ -1160,10 +1184,6 @@ func (e *executor) Cleanup() {
 	}
 
 	e.AbstractExecutor.Cleanup()
-}
-
-func (e *executor) getTemporaryIDs() []string {
-	return append(e.temporary, e.getVolumesManager().TmpContainerIDs()...)
 }
 
 type serviceHealthCheckError struct {

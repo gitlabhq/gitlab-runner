@@ -198,7 +198,11 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s-0", strings.Replace(serviceName, "/", "__", -1))
 	networkID := "network-id"
 
-	e := executor{client: &c}
+	e := executor{
+		client: &c,
+		info:   types.Info{OSType: helperimage.OSTypeLinux},
+	}
+
 	options := buildImagePullOptions(e, imageName)
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{}
@@ -232,6 +236,10 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 
 	c.On("NetworkDisconnect", e.Context, networkID, containerName, true).
 		Return(nil).
+		Once()
+
+	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner-helper:x86_64-latest").
+		Return(types.ImageInspect{ID: "helper-image-id"}, nil, nil).
 		Once()
 
 	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -953,6 +961,7 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 
 	e := &executor{}
 	e.client = c
+	e.info = types.Info{OSType: helperimage.OSTypeLinux}
 	e.Config.Docker = dockerConfig
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
@@ -962,6 +971,8 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 		Environment: []string{},
 	}
 
+	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner-helper:x86_64-latest").
+		Return(types.ImageInspect{ID: "helper-image-id"}, nil, nil).Once()
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
