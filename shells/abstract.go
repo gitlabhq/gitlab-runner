@@ -182,13 +182,6 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
 	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
-
-	// Use `git fetch $REMOTE $BRANCH:$BRANCH` to create the branch locally. We
-	// need to have it available locally so users can push branches to other
-	// remotes.
-	if build.GitInfo.RefType == common.RefTypeBranch {
-		w.Command("git", "fetch", "origin", fmt.Sprintf("%s:%s", build.GitInfo.Ref, build.GitInfo.Ref))
-	}
 }
 
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
