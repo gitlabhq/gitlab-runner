@@ -1075,7 +1075,13 @@ func (e *executor) getVolumesManager() volumes.Manager {
 		UseLegacyBuildsDirForDocker: e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker),
 	}
 
-	e.volumesManager = volumes.NewDefaultManager(e.BuildLogger, adapter, adapter, config)
+	cManager := volumes.NewDefaultContainerManager(
+		e.BuildLogger,
+		adapter,
+		adapter,
+	)
+
+	e.volumesManager = volumes.NewDefaultManager(e.BuildLogger, cManager, config)
 
 	return e.volumesManager
 }

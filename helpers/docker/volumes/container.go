@@ -24,9 +24,10 @@ type helperImageResolver interface {
 	GetCacheCommand(containerPath string) []string
 }
 
-type containerManager interface {
+type ContainerManager interface {
 	FindExistingCacheContainer(containerName string, containerPath string) string
 	CreateCacheContainer(containerName string, containerPath string) (string, error)
+	SetFailedContainerIDsRegistry(registry registry)
 }
 
 type defaultContainerManager struct {
@@ -38,13 +39,16 @@ type defaultContainerManager struct {
 	failedContainerIDs registry
 }
 
-func newDefaultContainerManager(logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver, failedContainersIDs registry) containerManager {
+func NewDefaultContainerManager(logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver) ContainerManager {
 	return &defaultContainerManager{
 		logger:              logger,
 		containerClient:     cClient,
 		helperImageResolver: hiResolver,
-		failedContainerIDs:  failedContainersIDs,
 	}
+}
+
+func (m *defaultContainerManager) SetFailedContainerIDsRegistry(registry registry) {
+	m.failedContainerIDs = registry
 }
 
 func (m *defaultContainerManager) FindExistingCacheContainer(containerName string, containerPath string) string {

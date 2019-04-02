@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -12,7 +13,11 @@ import (
 func TestNewDefaultManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	m := NewDefaultManager(logger, nil, nil, DefaultManagerConfig{})
+	cManager := new(MockContainerManager)
+	defer cManager.AssertExpectations(t)
+	cManager.On("SetFailedContainerIDsRegistry", mock.Anything).Once()
+
+	m := NewDefaultManager(logger, cManager, DefaultManagerConfig{})
 	assert.IsType(t, &defaultManager{}, m)
 }
 
@@ -37,8 +42,8 @@ func addRegistry(manager *defaultManager) (*mockRegistry, *mockRegistry, *mockRe
 	return bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry
 }
 
-func addContainerManager(manager *defaultManager) *mockContainerManager {
-	containerManager := new(mockContainerManager)
+func addContainerManager(manager *defaultManager) *MockContainerManager {
+	containerManager := new(MockContainerManager)
 
 	manager.containerManager = containerManager
 

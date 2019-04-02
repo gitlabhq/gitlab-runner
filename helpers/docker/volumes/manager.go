@@ -32,22 +32,17 @@ type defaultManager struct {
 	config DefaultManagerConfig
 
 	logger           common.BuildLogger
-	containerManager containerManager
+	containerManager ContainerManager
 
 	volumeBindings    registry
 	cacheContainerIDs registry
 	tmpContainerIDs   registry
 }
 
-func NewDefaultManager(logger common.BuildLogger, cClient containerClient, hiResolver helperImageResolver, config DefaultManagerConfig) Manager {
+func NewDefaultManager(logger common.BuildLogger, cManager ContainerManager, config DefaultManagerConfig) Manager {
 	tmpContainerIDs := new(defaultRegistry)
 
-	cManager := newDefaultContainerManager(
-		logger,
-		cClient,
-		hiResolver,
-		tmpContainerIDs,
-	)
+	cManager.SetFailedContainerIDsRegistry(tmpContainerIDs)
 
 	return &defaultManager{
 		config:            config,

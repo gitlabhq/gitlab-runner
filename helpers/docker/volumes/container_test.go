@@ -15,7 +15,7 @@ import (
 func TestNewDefaultContainerManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	m := newDefaultContainerManager(logger, nil, nil, nil)
+	m := NewDefaultContainerManager(logger, nil, nil)
 	assert.IsType(t, &defaultContainerManager{}, m)
 }
 
