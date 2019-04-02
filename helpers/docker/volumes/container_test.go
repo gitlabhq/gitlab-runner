@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -20,19 +21,18 @@ func TestNewDefaultContainerManager(t *testing.T) {
 	assert.IsType(t, &defaultContainerManager{}, m)
 }
 
-func getDefaultContainerManager() (*defaultContainerManager, *mockContainerClient, *mockRegistry) {
+func getDefaultContainerManager() (*defaultContainerManager, *mockContainerClient) {
 	cClient := new(mockContainerClient)
-	tmpIDsRegistry := new(mockRegistry)
 
 	m := &defaultContainerManager{
 		logger:              common.NewBuildLogger(nil, nil),
 		containerClient:     cClient,
-		failedContainerIDs:  tmpIDsRegistry,
+		failedContainerIDs:  make([]string, 0),
 		helperImage:         &types.ImageInspect{ID: "helper-image"},
 		outdatedHelperImage: false,
 	}
 
-	return m, cClient, tmpIDsRegistry
+	return m, cClient
 }
 
 func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
@@ -82,12 +82,9 @@ func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			m, cClient, tmpIDsRegistry := getDefaultContainerManager()
+			m, cClient := getDefaultContainerManager()
 
-			defer func() {
-				cClient.AssertExpectations(t)
-				tmpIDsRegistry.AssertExpectations(t)
-			}()
+			defer cClient.AssertExpectations(t)
 
 			cClient.On("InspectContainer", containerName).
 				Return(testCase.inspectResult, testCase.inspectError).
@@ -110,14 +107,14 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 	containerPath := "container-path"
 
 	testCases := map[string]struct {
-		expectedContainerID   string
-		createResult          container.ContainerCreateCreatedBody
-		createError           error
-		containerID           string
-		startError            error
-		waitForContainerError error
-		expectedTmpID         string
-		expectedError         error
+		expectedContainerID       string
+		createResult              container.ContainerCreateCreatedBody
+		createError               error
+		containerID               string
+		startError                error
+		waitForContainerError     error
+		expectedFailedContainerID string
+		expectedError             error
 	}{
 		"error on container create": {
 			createError:   errors.New("test error"),
@@ -127,27 +124,27 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
-			createError:   errors.New("test error"),
-			expectedTmpID: "containerID",
-			expectedError: errors.New("test error"),
+			createError:               errors.New("test error"),
+			expectedFailedContainerID: "containerID",
+			expectedError:             errors.New("test error"),
 		},
 		"error on container start": {
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
-			containerID:   "containerID",
-			startError:    errors.New("test error"),
-			expectedTmpID: "containerID",
-			expectedError: errors.New("test error"),
+			containerID:               "containerID",
+			startError:                errors.New("test error"),
+			expectedFailedContainerID: "containerID",
+			expectedError:             errors.New("test error"),
 		},
 		"error on wait for container": {
 			createResult: container.ContainerCreateCreatedBody{
 				ID: "containerID",
 			},
-			containerID:           "containerID",
-			waitForContainerError: errors.New("test error"),
-			expectedTmpID:         "containerID",
-			expectedError:         errors.New("test error"),
+			containerID:               "containerID",
+			waitForContainerError:     errors.New("test error"),
+			expectedFailedContainerID: "containerID",
+			expectedError:             errors.New("test error"),
 		},
 		"success": {
 			createResult: container.ContainerCreateCreatedBody{
@@ -168,13 +165,10 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 	for testName, testCase := range testCases {
 		for outdatedHelperImage, expectedCommand := range outdatedHelperImageValues {
 			t.Run(fmt.Sprintf("%s-outdated-helper-image-is-%v", testName, outdatedHelperImage), func(t *testing.T) {
-				m, cClient, tmpIDsRegistry := getDefaultContainerManager()
+				m, cClient := getDefaultContainerManager()
 				m.outdatedHelperImage = outdatedHelperImage
 
-				defer func() {
-					cClient.AssertExpectations(t)
-					tmpIDsRegistry.AssertExpectations(t)
-				}()
+				defer cClient.AssertExpectations(t)
 
 				configMatcher := mock.MatchedBy(func(config *container.Config) bool {
 					if config.Image != "helper-image" {
@@ -207,28 +201,31 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 					}
 				}
 
-				if testCase.expectedTmpID != "" {
-					tmpIDsRegistry.On("Append", testCase.expectedTmpID).
-						Once()
-				}
+				require.Empty(t, m.failedContainerIDs, "Initial list of failed containers should be empty")
 
 				containerID, err := m.CreateCacheContainer(containerName, containerPath)
 				assert.Equal(t, err, testCase.expectedError)
 				assert.Equal(t, testCase.expectedContainerID, containerID)
+
+				if testCase.expectedFailedContainerID != "" {
+					assert.Len(t, m.failedContainerIDs, 1)
+					assert.Contains(
+						t, m.failedContainerIDs, testCase.expectedFailedContainerID,
+						"List of failed container should be updated with %s", testCase.expectedContainerID,
+					)
+				} else {
+					assert.Empty(t, m.failedContainerIDs, "List of failed containers should not be updated")
+				}
 			})
 		}
 	}
 }
 
 func TestDefaultContainerManager_FailedContainerIDs(t *testing.T) {
-	registry := new(mockRegistry)
-	defer registry.AssertExpectations(t)
-
 	expectedElements := []string{"element1", "element2"}
-	registry.On("Elements").Return(expectedElements).Once()
-
 	m := &defaultContainerManager{
-		failedContainerIDs: registry,
+		failedContainerIDs: expectedElements,
 	}
+
 	assert.Equal(t, expectedElements, m.FailedContainerIDs())
 }

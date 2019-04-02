@@ -25,18 +25,6 @@ func newDefaultManager(config DefaultManagerConfig) *defaultManager {
 	return m
 }
 
-func addRegistry(manager *defaultManager) (*mockRegistry, *mockRegistry, *mockRegistry) {
-	bindingsRegistry := new(mockRegistry)
-	cacheIDsRegistry := new(mockRegistry)
-	tmpIdsRegistry := new(mockRegistry)
-
-	manager.volumeBindings = bindingsRegistry
-	manager.cacheContainerIDs = cacheIDsRegistry
-	manager.tmpContainerIDs = tmpIdsRegistry
-
-	return bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry
-}
-
 func addContainerManager(manager *defaultManager) *MockContainerManager {
 	containerManager := new(MockContainerManager)
 
@@ -81,20 +69,22 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 			}
 
 			m := newDefaultManager(config)
-			bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry := addRegistry(m)
-
-			defer func() {
-				bindingsRegistry.AssertExpectations(t)
-				cacheIDsRegistry.AssertExpectations(t)
-				tmpIdsRegistry.AssertExpectations(t)
-			}()
-
-			bindingsRegistry.On("Append", testCase.expectedBinding).Maybe()
 
 			err := m.CreateUserVolumes(testCase.volumes)
 			assert.NoError(t, err)
+			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
+}
+
+func assertVolumeBindings(t *testing.T, expectedBinding string, bindings []string) {
+	if expectedBinding == "" {
+		assert.Empty(t, bindings)
+
+		return
+	}
+	assert.Contains(t, bindings, expectedBinding)
+
 }
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
@@ -103,36 +93,36 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 		fullProjectDir string
 		disableCache   bool
 
-		expectedBindings          []string
+		expectedBinding           string
 		expectedCacheContainerIDs []string
 		expectedConfigVolume      string
 	}{
 		"no volumes specified": {
-			volumes:          []string{},
-			expectedBindings: nil,
+			volumes:         []string{},
+			expectedBinding: "",
 		},
 		"volume with absolute path, without fullProjectDir and with disableCache": {
-			volumes:          []string{"/volume"},
-			fullProjectDir:   "",
-			disableCache:     true,
-			expectedBindings: nil,
+			volumes:         []string{"/volume"},
+			fullProjectDir:  "",
+			disableCache:    true,
+			expectedBinding: "",
 		},
 		"volume with absolute path, with fullProjectDir and with disableCache": {
-			volumes:          []string{"/volume"},
-			fullProjectDir:   "/builds/project",
-			disableCache:     true,
-			expectedBindings: nil,
+			volumes:         []string{"/volume"},
+			fullProjectDir:  "/builds/project",
+			disableCache:    true,
+			expectedBinding: "",
 		},
 		"volume without absolute path, without fullProjectDir and with disableCache": {
-			volumes:          []string{"volume"},
-			disableCache:     true,
-			expectedBindings: nil,
+			volumes:         []string{"volume"},
+			disableCache:    true,
+			expectedBinding: "",
 		},
 		"volume without absolute path, with fullProjectDir and with disableCache": {
-			volumes:          []string{"volume"},
-			fullProjectDir:   "/builds/project",
-			disableCache:     true,
-			expectedBindings: nil,
+			volumes:         []string{"volume"},
+			fullProjectDir:  "/builds/project",
+			disableCache:    true,
+			expectedBinding: "",
 		},
 	}
 
@@ -144,16 +134,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 			}
 
 			m := newDefaultManager(config)
-			bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry := addRegistry(m)
-
-			defer func() {
-				bindingsRegistry.AssertExpectations(t)
-				cacheIDsRegistry.AssertExpectations(t)
-				tmpIdsRegistry.AssertExpectations(t)
-			}()
 
 			err := m.CreateUserVolumes(testCase.volumes)
 			assert.NoError(t, err)
+			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
 }
@@ -212,13 +196,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 			}
 
 			m := newDefaultManager(config)
-			bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry := addRegistry(m)
 
-			defer func() {
-				bindingsRegistry.AssertExpectations(t)
-				cacheIDsRegistry.AssertExpectations(t)
-				tmpIdsRegistry.AssertExpectations(t)
-			}()
+			err := m.CreateUserVolumes(testCase.volumes)
+			assert.NoError(t, err)
+			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
 }
@@ -301,15 +282,9 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			}
 
 			m := newDefaultManager(config)
-			bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry := addRegistry(m)
 			containerManager := addContainerManager(m)
 
-			defer func() {
-				bindingsRegistry.AssertExpectations(t)
-				cacheIDsRegistry.AssertExpectations(t)
-				tmpIdsRegistry.AssertExpectations(t)
-				containerManager.AssertExpectations(t)
-			}()
+			defer containerManager.AssertExpectations(t)
 
 			containerManager.On("FindExistingCacheContainer", testCase.expectedContainerName, testCase.expectedContainerPath).
 				Return(testCase.existingContainerID).
@@ -321,11 +296,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 					Once()
 			}
 
-			cacheIDsRegistry.On("Append", testCase.expectedCacheContainerID).
-				Once()
-
 			err := m.CreateUserVolumes(testCase.volumes)
 			assert.NoError(t, err)
+
+			assert.Contains(t, m.cacheContainerIDs, testCase.expectedCacheContainerID)
 		})
 	}
 }
@@ -337,15 +311,9 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 	}
 
 	m := newDefaultManager(config)
-	bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry := addRegistry(m)
 	containerManager := addContainerManager(m)
 
-	defer func() {
-		bindingsRegistry.AssertExpectations(t)
-		cacheIDsRegistry.AssertExpectations(t)
-		tmpIdsRegistry.AssertExpectations(t)
-		containerManager.AssertExpectations(t)
-	}()
+	defer containerManager.AssertExpectations(t)
 
 	containerManager.On("FindExistingCacheContainer", "project-uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("").
@@ -410,31 +378,13 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 			}
 
 			m := newDefaultManager(config)
-			bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry := addRegistry(m)
 			containerManager := addContainerManager(m)
 
-			defer func() {
-				bindingsRegistry.AssertExpectations(t)
-				cacheIDsRegistry.AssertExpectations(t)
-				tmpIdsRegistry.AssertExpectations(t)
-				containerManager.AssertExpectations(t)
-			}()
-
-			if testCase.expectedBinding != "" {
-				bindingsRegistry.On("Append", testCase.expectedBinding).
-					Once()
-			}
+			defer containerManager.AssertExpectations(t)
 
 			if testCase.expectedContainerPath != "" {
 				containerManager.On("CreateCacheContainer", testCase.expectedContainerName, testCase.expectedContainerPath).
 					Return(testCase.newContainerID, nil).
-					Once()
-			}
-
-			if testCase.expectedTmpAndCacheID != "" {
-				cacheIDsRegistry.On("Append", testCase.expectedTmpAndCacheID).
-					Once()
-				tmpIdsRegistry.On("Append", testCase.expectedTmpAndCacheID).
 					Once()
 			}
 
@@ -443,6 +393,15 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.EqualError(t, err, testCase.expectedError.Error())
+			}
+
+			if testCase.expectedBinding != "" {
+				assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
+			}
+
+			if testCase.expectedTmpAndCacheID != "" {
+				assert.Contains(t, m.cacheContainerIDs, testCase.expectedTmpAndCacheID)
+				assert.Contains(t, m.tmpContainerIDs, testCase.expectedTmpAndCacheID)
 			}
 		})
 	}
@@ -454,15 +413,9 @@ func TestDefaultManager_CreateBuildVolume_WithError(t *testing.T) {
 	}
 
 	m := newDefaultManager(config)
-	bindingsRegistry, cacheIDsRegistry, tmpIdsRegistry := addRegistry(m)
 	containerManager := addContainerManager(m)
 
-	defer func() {
-		bindingsRegistry.AssertExpectations(t)
-		cacheIDsRegistry.AssertExpectations(t)
-		tmpIdsRegistry.AssertExpectations(t)
-		containerManager.AssertExpectations(t)
-	}()
+	defer containerManager.AssertExpectations(t)
 
 	containerManager.On("CreateCacheContainer", "", "/builds/root").
 		Return("", errors.New("test error")).
@@ -473,45 +426,34 @@ func TestDefaultManager_CreateBuildVolume_WithError(t *testing.T) {
 }
 
 func TestDefaultManager_VolumeBindings(t *testing.T) {
-	registry := new(mockRegistry)
-	defer registry.AssertExpectations(t)
-
 	expectedElements := []string{"element1", "element2"}
-	registry.On("Elements").Return(expectedElements).Once()
-
 	m := &defaultManager{
-		volumeBindings: registry,
+		volumeBindings: expectedElements,
 	}
+
 	assert.Equal(t, expectedElements, m.VolumeBindings())
 }
 
 func TestDefaultManager_CacheContainerIDs(t *testing.T) {
-	registry := new(mockRegistry)
-	defer registry.AssertExpectations(t)
-
 	expectedElements := []string{"element1", "element2"}
-	registry.On("Elements").Return(expectedElements).Once()
-
 	m := &defaultManager{
-		cacheContainerIDs: registry,
+		cacheContainerIDs: expectedElements,
 	}
+
 	assert.Equal(t, expectedElements, m.CacheContainerIDs())
 }
 
 func TestDefaultManager_TmpContainerIDs(t *testing.T) {
-	registry := new(mockRegistry)
-	defer registry.AssertExpectations(t)
-
 	expectedElements := []string{"element1", "element2"}
-	registry.On("Elements").Return(expectedElements).Once()
 
 	cManager := new(MockContainerManager)
 	defer cManager.AssertExpectations(t)
 	cManager.On("FailedContainerIDs").Return([]string{}).Once()
 
 	m := &defaultManager{
-		tmpContainerIDs:  registry,
+		tmpContainerIDs:  expectedElements,
 		containerManager: cManager,
 	}
+
 	assert.Equal(t, expectedElements, m.TmpContainerIDs())
 }

@@ -32,7 +32,7 @@ type defaultContainerManager struct {
 
 	helperImage         *types.ImageInspect
 	outdatedHelperImage bool
-	failedContainerIDs  registry
+	failedContainerIDs  []string
 }
 
 func NewDefaultContainerManager(logger common.BuildLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) ContainerManager {
@@ -96,7 +96,7 @@ func (m *defaultContainerManager) createCacheContainer(containerName string, con
 	resp, err := m.containerClient.CreateContainer(config, hostConfig, nil, containerName)
 	if err != nil {
 		if resp.ID != "" {
-			m.failedContainerIDs.Append(resp.ID)
+			m.failedContainerIDs = append(m.failedContainerIDs, resp.ID)
 		}
 
 		return "", err
@@ -120,7 +120,7 @@ func (m *defaultContainerManager) startCacheContainer(containerID string) error 
 	m.logger.Debugln(fmt.Sprintf("Starting cache container %q...", containerID))
 	err := m.containerClient.StartContainer(containerID, types.ContainerStartOptions{})
 	if err != nil {
-		m.failedContainerIDs.Append(containerID)
+		m.failedContainerIDs = append(m.failedContainerIDs, containerID)
 
 		return err
 	}
@@ -128,7 +128,7 @@ func (m *defaultContainerManager) startCacheContainer(containerID string) error 
 	m.logger.Debugln(fmt.Sprintf("Waiting for cache container %q...", containerID))
 	err = m.containerClient.WaitForContainer(containerID)
 	if err != nil {
-		m.failedContainerIDs.Append(containerID)
+		m.failedContainerIDs = append(m.failedContainerIDs, containerID)
 
 		return err
 	}
@@ -137,5 +137,5 @@ func (m *defaultContainerManager) startCacheContainer(containerID string) error 
 }
 
 func (m *defaultContainerManager) FailedContainerIDs() []string {
-	return m.failedContainerIDs.Elements()
+	return m.failedContainerIDs
 }

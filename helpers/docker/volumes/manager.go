@@ -34,21 +34,19 @@ type defaultManager struct {
 	logger           common.BuildLogger
 	containerManager ContainerManager
 
-	volumeBindings    registry
-	cacheContainerIDs registry
-	tmpContainerIDs   registry
+	volumeBindings    []string
+	cacheContainerIDs []string
+	tmpContainerIDs   []string
 }
 
 func NewDefaultManager(logger common.BuildLogger, cManager ContainerManager, config DefaultManagerConfig) Manager {
-	tmpContainerIDs := new(defaultRegistry)
-
 	return &defaultManager{
 		config:            config,
 		logger:            logger,
 		containerManager:  cManager,
-		volumeBindings:    new(defaultRegistry),
-		cacheContainerIDs: new(defaultRegistry),
-		tmpContainerIDs:   tmpContainerIDs,
+		volumeBindings:    make([]string, 0),
+		cacheContainerIDs: make([]string, 0),
+		tmpContainerIDs:   make([]string, 0),
 	}
 }
 
@@ -101,7 +99,7 @@ func (m *defaultManager) appendVolumeBind(hostPath string, containerPath string)
 	m.logger.Debugln(fmt.Sprintf("Using host-based %q for %q...", hostPath, containerPath))
 
 	bindDefinition := fmt.Sprintf("%v:%v", filepath.ToSlash(hostPath), containerPath)
-	m.volumeBindings.Append(bindDefinition)
+	m.volumeBindings = append(m.volumeBindings, bindDefinition)
 }
 
 func (m *defaultManager) addCacheVolume(containerPath string) error {
@@ -151,7 +149,7 @@ func (m *defaultManager) createContainerBasedCacheVolume(containerPath string, h
 	}
 
 	m.logger.Debugln(fmt.Sprintf("Using container %q as cache %q...", containerID, containerPath))
-	m.cacheContainerIDs.Append(containerID)
+	m.cacheContainerIDs = append(m.cacheContainerIDs, containerID)
 
 	return nil
 }
@@ -188,20 +186,20 @@ func (m *defaultManager) CreateBuildVolume(jobsRootDir string, volumes []string)
 		return err
 	}
 
-	m.cacheContainerIDs.Append(id)
-	m.tmpContainerIDs.Append(id)
+	m.cacheContainerIDs = append(m.cacheContainerIDs, id)
+	m.tmpContainerIDs = append(m.tmpContainerIDs, id)
 
 	return nil
 }
 
 func (m *defaultManager) VolumeBindings() []string {
-	return m.volumeBindings.Elements()
+	return m.volumeBindings
 }
 
 func (m *defaultManager) CacheContainerIDs() []string {
-	return m.cacheContainerIDs.Elements()
+	return m.cacheContainerIDs
 }
 
 func (m *defaultManager) TmpContainerIDs() []string {
-	return append(m.tmpContainerIDs.Elements(), m.containerManager.FailedContainerIDs()...)
+	return append(m.tmpContainerIDs, m.containerManager.FailedContainerIDs()...)
 }
