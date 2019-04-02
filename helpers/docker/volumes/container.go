@@ -50,7 +50,7 @@ func (m *defaultContainerManager) FindExistingCacheContainer(containerName strin
 		return ""
 	}
 
-	// check if we have valid cache,if not remove the broken container
+	// check if we have valid cache, if not remove the broken container
 	_, ok := inspected.Config.Volumes[containerPath]
 	if !ok {
 		m.logger.Debugln(fmt.Sprintf("Removing broken cache container for %q path", containerPath))
