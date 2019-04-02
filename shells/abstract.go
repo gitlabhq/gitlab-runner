@@ -350,23 +350,64 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	return nil
 }
 
-func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {
 	build := info.Build
+
+	if !info.Build.RefspecsAvailable() {
+		w.Warning("DEPRECATION: this GitLab server doesn't support refspecs, gitlab-runner 12.0 will no longer work with this version of GitLab")
+	}
+
+	// If LFS smudging was disabled by the user (by setting the GIT_LFS_SKIP_SMUDGE variable
+	// when defining the job) we're skipping this step.
+	//
+	// In other case we're disabling smudging here to prevent us from memory
+	// allocation failures.
+	//
+	// Please read https://gitlab.com/gitlab-org/gitlab-runner/issues/3366 and
+	// https://github.com/git-lfs/git-lfs/issues/3524 for context.
+	if !build.IsLFSSmudgeDisabled() {
+		w.Variable(common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1"})
+	}
+
+	err := b.handleGetSourcesStrategy(w, build)
+	if err != nil {
+		return err
+	}
+
+	if build.GetGitCheckout() {
+		b.writeCheckoutCmd(w, build)
+
+		// If LFS smudging was disabled by the user (by setting the GIT_LFS_SKIP_SMUDGE variable
+		// when defining the job) we're skipping this step.
+		//
+		// In other case, because we've disabled LFS smudging above, we need now manually call
+		// `git lfs pull` to fetch and checkout all LFS objects that may be present in
+		// the repository.
+		//
+		// Repositories without LFS objects (and without any LFS metadata) will be not
+		// affected by this command.
+		//
+		// Please read https://gitlab.com/gitlab-org/gitlab-runner/issues/3366 and
+		// https://github.com/git-lfs/git-lfs/issues/3524 for context.
+		if !build.IsLFSSmudgeDisabled() {
+			w.IfCmd("git-lfs", "version")
+			w.Command("git", "lfs", "pull")
+			w.EmptyLine()
+			w.EndIf()
+		}
+	} else {
+		w.Notice("Skipping Git checkout")
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Build) error {
 	hasRefspecs := build.RefspecsAvailable()
 	projectDir := build.FullProjectDir()
 	gitDir := path.Join(build.FullProjectDir(), ".git")
 
-	if !hasRefspecs {
-		w.Warning("DEPRECATION: this GitLab server doesn't support refspecs, gitlab-runner 12.0 will no longer work with this version of GitLab")
-	}
-
-	// We're disabling smudging to prevent us from memory allocation failures.
-	//
-	// Please read https://gitlab.com/gitlab-org/gitlab-runner/issues/3366 and
-	// https://github.com/git-lfs/git-lfs/issues/3524 for context.
-	w.Variable(common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1"})
-
-	switch info.Build.GetGitStrategy() {
+	switch build.GetGitStrategy() {
 	case common.GitFetch:
 		if hasRefspecs {
 			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
@@ -385,22 +426,6 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 		w.MkDir(projectDir)
 	default:
 		return errors.New("unknown GIT_STRATEGY")
-	}
-
-	if info.Build.GetGitCheckout() {
-		b.writeCheckoutCmd(w, build)
-
-		// Because we've disabled LFS smudging above, we need now manually call `git lfs pull`
-		// to fetch and checkout all LFS objects that may be present in the repository.
-		//
-		// Repositories without LFS objects (and without any LFS metadata) will be not
-		// affected by this command.
-		w.IfCmd("git-lfs", "version")
-		w.Command("git", "lfs", "pull")
-		w.EmptyLine()
-		w.EndIf()
-	} else {
-		w.Notice("Skipping Git checkout")
 	}
 
 	return nil

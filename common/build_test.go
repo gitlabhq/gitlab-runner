@@ -1020,3 +1020,52 @@ func TestWaitForTerminal(t *testing.T) {
 		})
 	}
 }
+
+func TestBuild_IsLFSSmudgeDisabled(t *testing.T) {
+	testCases := map[string]struct {
+		isVariableUnset bool
+		variableValue   string
+		expectedResult  bool
+	}{
+		"variable not set": {
+			isVariableUnset: true,
+			expectedResult:  false,
+		},
+		"variable empty": {
+			variableValue:  "",
+			expectedResult: false,
+		},
+		"variable set to true": {
+			variableValue:  "true",
+			expectedResult: true,
+		},
+		"variable set to false": {
+			variableValue:  "false",
+			expectedResult: false,
+		},
+		"variable set to 1": {
+			variableValue:  "1",
+			expectedResult: true,
+		},
+		"variable set to 0": {
+			variableValue:  "0",
+			expectedResult: false,
+		},
+	}
+
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			b := &Build{
+				JobResponse: JobResponse{
+					Variables: JobVariables{},
+				},
+			}
+
+			if !testCase.isVariableUnset {
+				b.Variables = append(b.Variables, JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true})
+			}
+
+			assert.Equal(t, testCase.expectedResult, b.IsLFSSmudgeDisabled())
+		})
+	}
+}
