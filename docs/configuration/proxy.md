@@ -149,17 +149,19 @@ on these kinds of environment variables.
 
 ## Proxy settings when using dind service
 
-When using the [docker-in-docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor) (dind), 
-it can be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY` 
+When using the [docker-in-docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor) (dind),
+it can be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY`
 environment variable. This is because the proxy intercepts the TCP connection between:
+
 - `dockerd` from the dind container.
 - `docker` from the client container.
+
 The ports can be required because otherwise `docker push` will be blocked
 as it originates from the IP mapped to docker. However, in that case, it is meant to go through the proxy.
 
 When testing the communication between `dockerd` from dind and a `docker` client locally
-(as described here: https://hub.docker.com/_/docker/), 
-`dockerd` from dind is initially started as a client on the host system by root, 
+(as described here: https://hub.docker.com/_/docker/),
+`dockerd` from dind is initially started as a client on the host system by root,
 and the proxy variables are taken from `/root/.docker/config.json`.
 
 For example:
@@ -182,9 +184,9 @@ These are available as environment variables as is (in contrast to `.docker/conf
 in the dind containers running `dockerd` as a service and `docker` client executing `.gitlab-ci.yml`.
 In `.gitlab-ci.yml`, the environment variables will be picked up by any program honouring the proxy settings from default environment variables. For example,
 `wget`, `apt`, `apk`, `docker info` and `docker pull` (but not by `docker run` or `docker build` as per:
-https://github.com/moby/moby/issues/24697#issuecomment-366680499). 
+https://github.com/moby/moby/issues/24697#issuecomment-366680499).
 `docker run` or `docker build` executed inside the container of the docker executor
-will look for the proxy settings in `$HOME/.docker/config.json`, 
+will look for the proxy settings in `$HOME/.docker/config.json`,
 which is now inside the executor container (and initally empty).
 Therefore, `docker run` or `docker build` executions will have no proxy settings. In order to pass on the settings,
 a `$HOME/.docker/config.json` needs to be created in the executor container. For example:
@@ -196,7 +198,7 @@ before_script:
 ```
 
 Because it is confusing to add additional lines in a `.gitlab-ci.yml` file that are only needed in case of a proxy,
-it is better to move the creation of the `$HOME/.docker/config.json` into the 
+it is better to move the creation of the `$HOME/.docker/config.json` into the
 configuration of the `gitlab-runner` (`/etc/gitlab-runner/config.toml`) that is actually affected:
 
 ```toml
@@ -210,8 +212,8 @@ JSON file with a shell specified as a single string inside a TOML file.
 Because it is not YAML anymore, do not escape the `:`.
 
 Note that if the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes
-but not for prefixes or CIDR notation. 
-For more information, see 
-<https://github.com/moby/moby/issues/9145> 
-and 
+but not for prefixes or CIDR notation.
+For more information, see
+<https://github.com/moby/moby/issues/9145>
+and
 <https://unix.stackexchange.com/questions/23452/set-a-network-range-in-the-no-proxy-environment-variable>.
