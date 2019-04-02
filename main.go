@@ -52,6 +52,7 @@ func main() {
 		logrus.Fatalln("Command", command, "not found.")
 	}
 
+	cli_helpers.InitCli()
 	cli_helpers.LogRuntimePlatform(app)
 	cli_helpers.SetupCPUProfile(app)
 	cli_helpers.FixHOME(app)
