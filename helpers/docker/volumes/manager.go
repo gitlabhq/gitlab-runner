@@ -69,7 +69,6 @@ func (m *defaultManager) addVolume(volume string) error {
 	case 2:
 		err = m.addHostVolume(hostVolume[0], hostVolume[1])
 	case 1:
-		// disable cache disables
 		err = m.addCacheVolume(hostVolume[0])
 	}
 
