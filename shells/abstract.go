@@ -86,7 +86,7 @@ func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projec
 	w.Cd(projectDir)
 }
 
-func (b *AbstractShell) writeGitCleanup(w ShellWriter) {
+func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
 	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
 	w.RmFile(".git/index.lock")
@@ -94,6 +94,17 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter) {
 	w.RmFile(".git/HEAD.lock")
 
 	w.RmFile(".git/hooks/post-checkout")
+
+	// TODO: Remove in 12.0
+	if build.IsFeatureFlagOn(common.FFUseLegacyGitCleanStrategy) {
+		w.Command("git", "clean", "-ffdx")
+		w.IfCmd("git", "diff", "--no-ext-diff", "--quiet", "--exit-code")
+		// git 1.7 cannot reset before a checkout, if no diffs we can avoid git reset
+		w.Print("Clean repository")
+		w.Else()
+		w.Command("git", "reset", "--hard")
+		w.EndIf()
+	}
 }
 
 // TODO: Remove in 12.0
@@ -113,7 +124,7 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 		b.writeGitSSLConfig(w, build, nil)
 	}
 
-	b.writeGitCleanup(w)
+	b.writeGitCleanup(w, build)
 
 	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
 	if depth != "" {
@@ -146,7 +157,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	w.Command("git", "init", projectDir, "--template", templateDir)
 	w.Cd(projectDir)
-	b.writeGitCleanup(w)
+	b.writeGitCleanup(w, build)
 
 	// fetching
 	if depth > 0 {
@@ -174,7 +185,14 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
 	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
-	w.Command("git", "clean", "-ffdx")
+
+	if !build.IsFeatureFlagOn(common.FFUseLegacyGitCleanStrategy) {
+		cleanFlags := build.GetGitCleanFlags()
+		if len(cleanFlags) > 0 {
+			cleanArgs := append([]string{"clean"}, cleanFlags...)
+			w.Command("git", cleanArgs...)
+		}
+	}
 }
 
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
