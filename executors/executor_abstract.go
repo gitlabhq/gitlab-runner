@@ -65,13 +65,13 @@ func (e *AbstractExecutor) startBuild() error {
 	if cacheDir == "" {
 		cacheDir = e.DefaultCacheDir
 	}
-	customBuildDir := e.DefaultCustomBuildsDirEnabled
+	customBuildDirEnabled := e.DefaultCustomBuildsDirEnabled
 	if e.Config.CustomBuildDir != nil {
-		customBuildDir = e.Config.CustomBuildDir.Enable
+		customBuildDirEnabled = e.Config.CustomBuildDir.Enabled
 	}
 
 	return e.Build.StartBuild(rootDir, cacheDir,
-		customBuildDir, e.SharedBuildsDir)
+		customBuildDirEnabled, e.SharedBuildsDir)
 }
 
 func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {

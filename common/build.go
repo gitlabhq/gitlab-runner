@@ -160,26 +160,25 @@ func (b *Build) TmpProjectDir() string {
 	return helpers.ToSlash(b.BuildDir) + ".tmp"
 }
 
-func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customDirAllowed, sharedDir bool) (string, error) {
+func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEnabled, sharedDir bool) (string, error) {
 	dir := b.GetAllVariables().Get(overrideKey)
-	if dir != "" {
-		if !customDirAllowed {
-			return "", MakeBuildError("setting %s is not allowed, enable `custom_build_dir` feature", overrideKey)
-		}
-
-		if !strings.HasPrefix(dir, rootDir) {
-			return "", MakeBuildError("the %s=%q has to be within %q",
-				overrideKey, dir, rootDir)
-		}
-	}
-
 	if dir == "" {
-		dir = path.Join(rootDir, b.ProjectUniqueDir(sharedDir))
+		return path.Join(rootDir, b.ProjectUniqueDir(sharedDir)), nil
 	}
+
+	if !customBuildDirEnabled {
+		return "", MakeBuildError("setting %s is not allowed, enable `custom_build_dir` feature", overrideKey)
+	}
+
+	if !strings.HasPrefix(dir, rootDir) {
+		return "", MakeBuildError("the %s=%q has to be within %q",
+			overrideKey, dir, rootDir)
+	}
+
 	return dir, nil
 }
 
-func (b *Build) StartBuild(rootDir, cacheDir string, customDirAllowed, sharedDir bool) error {
+func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, sharedDir bool) error {
 	var err error
 
 	// We set RootDir and invalidate variables
@@ -188,7 +187,7 @@ func (b *Build) StartBuild(rootDir, cacheDir string, customDirAllowed, sharedDir
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
 	b.refreshAllVariables()
 
-	b.BuildDir, err = b.getCustomBuildDir(b.RootDir, "GIT_CLONE_PATH", customDirAllowed, sharedDir)
+	b.BuildDir, err = b.getCustomBuildDir(b.RootDir, "GIT_CLONE_PATH", customBuildDirEnabled, sharedDir)
 	if err != nil {
 		return err
 	}

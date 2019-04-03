@@ -107,10 +107,6 @@ func (s *RegisterCommand) askDocker() {
 	}
 	s.Docker.Image = s.ask("docker-image", "Please enter the default Docker image (e.g. ruby:2.1):")
 
-	s.CustomBuildDir = &common.CustomBuildDir{
-		Enable: true,
-	}
-
 	for _, volume := range s.Docker.Volumes {
 		parts := strings.Split(volume, ":")
 		if parts[len(parts)-1] == "/cache" {
@@ -199,9 +195,6 @@ func (s *RegisterCommand) askExecutorOptions() {
 	switch s.Executor {
 	case "kubernetes":
 		s.Kubernetes = kubernetes
-		s.CustomBuildDir = &common.CustomBuildDir{
-			Enable: true,
-		}
 	case "docker+machine":
 		s.Machine = machine
 		s.Docker = docker

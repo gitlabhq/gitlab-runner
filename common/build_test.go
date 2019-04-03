@@ -903,10 +903,10 @@ func TestIsFeatureFlagOn(t *testing.T) {
 
 func TestStartBuild(t *testing.T) {
 	type startBuildArgs struct {
-		rootDir        string
-		cacheDir       string
-		customBuildDir bool
-		sharedDir      bool
+		rootDir               string
+		cacheDir              string
+		customBuildDirEnabled bool
+		sharedDir             bool
 	}
 
 	tests := map[string]struct {
@@ -918,10 +918,10 @@ func TestStartBuild(t *testing.T) {
 	}{
 		"no job specific build dir with no shared dir": {
 			args: startBuildArgs{
-				rootDir:        "/build",
-				cacheDir:       "/cache",
-				customBuildDir: true,
-				sharedDir:      false,
+				rootDir:               "/build",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
 			},
 			jobVariables:     JobVariables{},
 			expectedBuildDir: "/build/test-namespace/test-repo",
@@ -930,10 +930,10 @@ func TestStartBuild(t *testing.T) {
 		},
 		"no job specified build dir with shared dir": {
 			args: startBuildArgs{
-				rootDir:        "/builds",
-				cacheDir:       "/cache",
-				customBuildDir: true,
-				sharedDir:      true,
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             true,
 			},
 			jobVariables:     JobVariables{},
 			expectedBuildDir: "/builds/1234/0/test-namespace/test-repo",
@@ -942,10 +942,10 @@ func TestStartBuild(t *testing.T) {
 		},
 		"valid GIT_CLONE_PATH was specified": {
 			args: startBuildArgs{
-				rootDir:        "/builds",
-				cacheDir:       "/cache",
-				customBuildDir: true,
-				sharedDir:      false,
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
 			},
 			jobVariables: JobVariables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
@@ -956,10 +956,10 @@ func TestStartBuild(t *testing.T) {
 		},
 		"valid GIT_CLONE_PATH using CI_BUILDS_DIR was specified": {
 			args: startBuildArgs{
-				rootDir:        "/builds",
-				cacheDir:       "/cache",
-				customBuildDir: true,
-				sharedDir:      false,
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
 			},
 			jobVariables: JobVariables{
 				{Key: "GIT_CLONE_PATH", Value: "$CI_BUILDS_DIR/go/src/gitlab.com/test-namespace/test-repo", Public: true},
@@ -970,10 +970,10 @@ func TestStartBuild(t *testing.T) {
 		},
 		"custom build disabled": {
 			args: startBuildArgs{
-				rootDir:        "/builds",
-				cacheDir:       "/cache",
-				customBuildDir: false,
-				sharedDir:      false,
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: false,
+				sharedDir:             false,
 			},
 			jobVariables: JobVariables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
@@ -984,10 +984,10 @@ func TestStartBuild(t *testing.T) {
 		},
 		"invalid GIT_CLONE_PATH was specified": {
 			args: startBuildArgs{
-				rootDir:        "/builds",
-				cacheDir:       "/cache",
-				customBuildDir: true,
-				sharedDir:      false,
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
 			},
 			jobVariables: JobVariables{
 				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
@@ -1012,7 +1012,7 @@ func TestStartBuild(t *testing.T) {
 				},
 			}
 
-			err := build.StartBuild(test.args.rootDir, test.args.cacheDir, test.args.customBuildDir, test.args.sharedDir)
+			err := build.StartBuild(test.args.rootDir, test.args.cacheDir, test.args.customBuildDirEnabled, test.args.sharedDir)
 			if test.expectedError {
 				assert.Error(t, err)
 				return

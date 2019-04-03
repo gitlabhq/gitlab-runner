@@ -323,7 +323,7 @@ type Config struct {
 }
 
 type CustomBuildDir struct {
-	Enable bool `toml:"enable,omitempty" json:"enable" long:"enable" env:"CUSTOM_BUILD_DIR_ENABLE" description:"Enable job specific build directories"`
+	Enabled bool `toml:"enabled,omitempty" json:"enabled" long:"enabled" env:"CUSTOM_BUILD_DIR_ENABLED" description:"Enable job specific build directories"`
 }
 
 func getDeprecatedStringSetting(setting string, tomlField string, envVariable string, tomlReplacement string, envReplacement string) string {
