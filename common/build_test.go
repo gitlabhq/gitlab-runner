@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -733,6 +734,7 @@ func TestDebugTrace(t *testing.T) {
 		debugTraceVariableValue   string
 		expectedValue             bool
 		debugTraceFeatureDisabled bool
+		expectedLogOutput         string
 	}{
 		"variable not set": {
 			expectedValue: false,
@@ -753,12 +755,16 @@ func TestDebugTrace(t *testing.T) {
 			debugTraceVariableValue:   "true",
 			expectedValue:             false,
 			debugTraceFeatureDisabled: true,
+			expectedLogOutput:         "CI_DEBUG_TRACE usage is disabled on this Runner",
 		},
 	}
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
+			logger, hooks := test.NewNullLogger()
+
 			build := &Build{
+				logger: NewBuildLogger(nil, logrus.NewEntry(logger)),
 				JobResponse: JobResponse{
 					Variables: JobVariables{},
 				},
@@ -773,7 +779,14 @@ func TestDebugTrace(t *testing.T) {
 				build.Variables = append(build.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true})
 			}
 
-			assert.Equal(t, testCase.expectedValue, build.IsDebugTraceEnabled())
+			isTraceEnabled := build.IsDebugTraceEnabled()
+			assert.Equal(t, testCase.expectedValue, isTraceEnabled)
+
+			if testCase.expectedLogOutput != "" {
+				output, err := hooks.LastEntry().String()
+				require.NoError(t, err)
+				assert.Contains(t, output, testCase.expectedLogOutput)
+			}
 		})
 	}
 }
