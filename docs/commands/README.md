@@ -1,4 +1,4 @@
-# GitLab Runner Commands
+# GitLab Runner commands
 
 GitLab Runner contains a set of commands with which you register, manage and
 run your builds.
@@ -167,8 +167,8 @@ The following commands allow you to register a new runner, or list and verify
 them if they are still registered.
 
 - [gitlab-runner register](#gitlab-runner-register)
-    - [Interactive registration](#interactive-registration)
-    - [Non-interactive registration](#non-interactive-registration)
+  - [Interactive registration](#interactive-registration)
+  - [Non-interactive registration](#non-interactive-registration)
 - [gitlab-runner list](#gitlab-runner-list)
 - [gitlab-runner verify](#gitlab-runner-verify)
 - [gitlab-runner unregister](#gitlab-runner-unregister)
@@ -181,13 +181,22 @@ The above commands support the following arguments:
 
 ### gitlab-runner register
 
-This command registers your GitLab Runner in GitLab. The registered runner is
+This command registers your GitLab Runner in GitLab using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner).
+
+The registered runner is
 added to the [configuration file](#configuration-file).
 You can use multiple configurations in a single GitLab Runner. Executing
 `gitlab-runner register` adds a new configuration entry, it doesn't remove the
 previous ones.
 
-There are two options to register a Runner, interactive and non-interactive.
+There are two options to register a Runner:
+
+- interactive.
+- non-interactive.
+
+NOTE: **Note:**
+Runners can be registered directly using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) but
+configuration will not be generated automatically.
 
 #### Interactive registration
 
@@ -223,7 +232,7 @@ Or by configuring the environment variable before the `register` command:
     <other-environment-variables>
     export REGISTER_NON_INTERACTIVE=true
     gitlab-runner register
-    
+
 > **Note:** Boolean parameters must be passed in the command line with `--key={true|false}`.
 
 ### gitlab-runner list
@@ -257,9 +266,18 @@ gitlab-runner verify --delete
 
 ### gitlab-runner unregister
 
-This command allows to unregister one of the registered runners. It expects
-either a full URL and the runner's token, or the runner's name. With the
-`--all-runners` option it will unregister all the attached runners.
+This command unregisters registered runners using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner).
+
+It expects either:
+
+- A full URL and the runner's token.
+- The runner's name.
+
+With the `--all-runners` option, it will unregister all the attached runners.
+
+NOTE: **Note:**
+Runners can be unregistered directly using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner) but
+configuration will not be modified for the user.
 
 To unregister a specific runner, first get the runner's details by executing
 `gitlab-runner list`:
