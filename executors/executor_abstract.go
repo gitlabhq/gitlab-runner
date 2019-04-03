@@ -8,11 +8,12 @@ import (
 )
 
 type ExecutorOptions struct {
-	DefaultBuildsDir string
-	DefaultCacheDir  string
-	SharedBuildsDir  bool
-	Shell            common.ShellScriptInfo
-	ShowHostname     bool
+	DefaultCustomBuildsDirEnabled bool
+	DefaultBuildsDir              string
+	DefaultCacheDir               string
+	SharedBuildsDir               bool
+	Shell                         common.ShellScriptInfo
+	ShowHostname                  bool
 }
 
 type AbstractExecutor struct {
@@ -64,8 +65,13 @@ func (e *AbstractExecutor) startBuild() error {
 	if cacheDir == "" {
 		cacheDir = e.DefaultCacheDir
 	}
-	e.Build.StartBuild(rootDir, cacheDir, e.SharedBuildsDir)
-	return nil
+	customBuildDirEnabled := e.DefaultCustomBuildsDirEnabled
+	if e.Config.CustomBuildDir != nil {
+		customBuildDirEnabled = e.Config.CustomBuildDir.Enabled
+	}
+
+	return e.Build.StartBuild(rootDir, cacheDir,
+		customBuildDirEnabled, e.SharedBuildsDir)
 }
 
 func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {

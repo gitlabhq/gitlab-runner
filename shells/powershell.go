@@ -251,7 +251,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (script *comm
 
 func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &PsWriter{
-		TemporaryPath: info.Build.FullProjectDir() + ".tmp",
+		TemporaryPath: info.Build.TmpProjectDir(),
 	}
 
 	if buildStage == common.BuildStagePrepare {

@@ -135,9 +135,10 @@ func init() {
 	}
 
 	options := executors.ExecutorOptions{
-		DefaultBuildsDir: "$PWD/builds",
-		DefaultCacheDir:  "$PWD/cache",
-		SharedBuildsDir:  true,
+		DefaultCustomBuildsDirEnabled: false,
+		DefaultBuildsDir:              "$PWD/builds",
+		DefaultCacheDir:               "$PWD/cache",
+		SharedBuildsDir:               true,
 		Shell: common.ShellScriptInfo{
 			Shell:         common.GetDefaultShell(),
 			Type:          common.LoginShell,

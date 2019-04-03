@@ -255,7 +255,7 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 
 func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &CmdWriter{
-		TemporaryPath:                     info.Build.FullProjectDir() + ".tmp",
+		TemporaryPath:                     info.Build.TmpProjectDir(),
 		disableDelayedErrorLevelExpansion: info.Build.IsFeatureFlagOn("FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"),
 	}
 

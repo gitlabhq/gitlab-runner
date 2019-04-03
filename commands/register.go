@@ -237,6 +237,9 @@ func (s *RegisterCommand) askExecutorOptions() {
 // old CLI options/env variables were used.
 func (s *RegisterCommand) prepareCache() {
 	cache := s.RunnerConfig.Cache
+	if cache == nil {
+		return
+	}
 
 	// Called to log deprecated usage, if old cli options/env variables are used
 	cache.Path = cache.GetPath()

@@ -66,6 +66,12 @@ func (b *BuildError) Error() string {
 	return b.Inner.Error()
 }
 
+func MakeBuildError(format string, args ...interface{}) error {
+	return &BuildError{
+		Inner: fmt.Errorf(format, args...),
+	}
+}
+
 var executors map[string]ExecutorProvider
 
 func validateExecutorProvider(provider ExecutorProvider) error {

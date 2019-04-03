@@ -93,7 +93,7 @@ func TestBuildPredefinedVariables(t *testing.T) {
 	// We run everything once
 	e.On("Prepare", mock.Anything).
 		Return(func(options ExecutorPrepareOptions) error {
-			options.Build.StartBuild("/root/dir", "/cache/dir", false)
+			options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
 			return nil
 		}).Once()
 	e.On("Finish", nil).Return().Once()
@@ -901,6 +901,131 @@ func TestIsFeatureFlagOn(t *testing.T) {
 	}
 }
 
+func TestStartBuild(t *testing.T) {
+	type startBuildArgs struct {
+		rootDir               string
+		cacheDir              string
+		customBuildDirEnabled bool
+		sharedDir             bool
+	}
+
+	tests := map[string]struct {
+		args             startBuildArgs
+		jobVariables     JobVariables
+		expectedBuildDir string
+		expectedCacheDir string
+		expectedError    bool
+	}{
+		"no job specific build dir with no shared dir": {
+			args: startBuildArgs{
+				rootDir:               "/build",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables:     JobVariables{},
+			expectedBuildDir: "/build/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		"no job specified build dir with shared dir": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             true,
+			},
+			jobVariables:     JobVariables{},
+			expectedBuildDir: "/builds/1234/0/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		"valid GIT_CLONE_PATH was specified": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/builds/go/src/gitlab.com/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		"valid GIT_CLONE_PATH using CI_BUILDS_DIR was specified": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "$CI_BUILDS_DIR/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/builds/go/src/gitlab.com/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		"custom build disabled": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: false,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/builds/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    true,
+		},
+		"invalid GIT_CLONE_PATH was specified": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedError: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := Build{
+				JobResponse: JobResponse{
+					GitInfo: GitInfo{
+						RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
+					},
+					Variables: test.jobVariables,
+				},
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "1234",
+					},
+				},
+			}
+
+			err := build.StartBuild(test.args.rootDir, test.args.cacheDir, test.args.customBuildDirEnabled, test.args.sharedDir)
+			if test.expectedError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, test.expectedBuildDir, build.BuildDir)
+			assert.Equal(t, test.args.rootDir, build.RootDir)
+			assert.Equal(t, test.expectedCacheDir, build.CacheDir)
+		})
+	}
+}
+
 func TestWaitForTerminal(t *testing.T) {
 	cases := []struct {
 		name                   string
@@ -1106,6 +1231,64 @@ func TestGitCleanFlags(t *testing.T) {
 
 			result := build.GetGitCleanFlags()
 			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestDefaultVariables(t *testing.T) {
+	tests := []struct {
+		name          string
+		jobVariables  JobVariables
+		rootDir       string
+		key           string
+		expectedValue string
+	}{
+		{
+			name:          "get default CI_SERVER value",
+			jobVariables:  JobVariables{},
+			rootDir:       "/builds",
+			key:           "CI_SERVER",
+			expectedValue: "yes",
+		},
+		{
+			name:          "get default CI_PROJECT_DIR value",
+			jobVariables:  JobVariables{},
+			rootDir:       "/builds",
+			key:           "CI_PROJECT_DIR",
+			expectedValue: "/builds/test-namespace/test-repo",
+		},
+		{
+			name: "get overwritten CI_PROJECT_DIR value",
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/gitlab-org/gitlab-runner", Public: true},
+			},
+			rootDir:       "/builds",
+			key:           "CI_PROJECT_DIR",
+			expectedValue: "/builds/go/src/gitlab.com/gitlab-org/gitlab-runner",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			build := Build{
+				JobResponse: JobResponse{
+					GitInfo: GitInfo{
+						RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
+					},
+					Variables: test.jobVariables,
+				},
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "1234",
+					},
+				},
+			}
+
+			err := build.StartBuild(test.rootDir, "/cache", true, false)
+			assert.NoError(t, err)
+
+			variable := build.GetAllVariables().Get(test.key)
+			assert.Equal(t, test.expectedValue, variable)
 		})
 	}
 }

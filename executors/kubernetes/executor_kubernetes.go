@@ -26,9 +26,10 @@ import (
 
 var (
 	executorOptions = executors.ExecutorOptions{
-		DefaultBuildsDir: "/builds",
-		DefaultCacheDir:  "/cache",
-		SharedBuildsDir:  false,
+		DefaultCustomBuildsDirEnabled: true,
+		DefaultBuildsDir:              "/builds",
+		DefaultCacheDir:               "/cache",
+		SharedBuildsDir:               false,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
 			Type:          common.NormalShell,
