@@ -1,3 +1,8 @@
+v11.9.1 (2019-04-03)
+- Make it again possible to disable Git LFS pull !1273
+- Use delayed variable expansion for error check in cmd !1260
+- Unexport common.RepoRemoteURL !1276
+
 v11.9.0 (2019-03-22)
 
 **Deprecations:**
