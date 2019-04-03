@@ -1069,3 +1069,43 @@ func TestBuild_IsLFSSmudgeDisabled(t *testing.T) {
 		})
 	}
 }
+
+func TestGitCleanFlags(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult []string
+	}{
+		"empty clean flags": {
+			value:          "",
+			expectedResult: []string{"-ffdx"},
+		},
+		"use custom flags": {
+			value:          "custom-flags",
+			expectedResult: []string{"custom-flags"},
+		},
+		"use custom flags with multiple arguments": {
+			value:          "-ffdx -e cache/",
+			expectedResult: []string{"-ffdx", "-e", "cache/"},
+		},
+		"disabled": {
+			value:          "none",
+			expectedResult: []string{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						{Key: "GIT_CLEAN_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			result := build.GetGitCleanFlags()
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}

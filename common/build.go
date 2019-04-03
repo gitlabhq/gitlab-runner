@@ -28,6 +28,11 @@ const (
 	GitNone
 )
 
+const (
+	gitCleanFlagsDefault = "-ffdx"
+	gitCleanFlagsNone    = "none"
+)
+
 type SubmoduleStrategy int
 
 const (
@@ -64,7 +69,8 @@ const (
 )
 
 const (
-	FFDockerHelperImageV2 string = "FF_DOCKER_HELPER_IMAGE_V2"
+	FFDockerHelperImageV2       string = "FF_DOCKER_HELPER_IMAGE_V2"
+	FFUseLegacyGitCleanStrategy string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
 )
 
 type Build struct {
@@ -536,6 +542,7 @@ func (b *Build) GetDefaultVariables() JobVariables {
 func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
 	return JobVariables{
 		{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "true", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
+		{Key: FFUseLegacyGitCleanStrategy, Value: "false", Public: true, Internal: true, File: false},         // TODO: Remove in 12.0
 	}
 }
 
@@ -696,6 +703,19 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 		// Will cause an error in AbstractShell) writeSubmoduleUpdateCmds
 		return SubmoduleInvalid
 	}
+}
+
+func (b *Build) GetGitCleanFlags() []string {
+	flags := b.GetAllVariables().Get("GIT_CLEAN_FLAGS")
+	if flags == "" {
+		flags = gitCleanFlagsDefault
+	}
+
+	if flags == gitCleanFlagsNone {
+		return []string{}
+	}
+
+	return strings.Fields(flags)
 }
 
 func (b *Build) IsDebugTraceEnabled() bool {

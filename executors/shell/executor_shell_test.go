@@ -217,9 +217,9 @@ func TestBuildWithShallowLock(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, []common.JobVariable{
+		build.Variables = append(build.Variables,
 			common.JobVariable{Key: "GIT_DEPTH", Value: "1"},
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"}}...)
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		err = runBuild(t, build)
 		assert.NoError(t, err)
@@ -973,6 +973,41 @@ func TestInteractiveTerminal(t *testing.T) {
 			assert.NotContains(t, out, "Terminal is connected, will time out in 2s...")
 		})
 	}
+}
+
+func TestBuildWithGitCleanFlags(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		jobResponse, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+
+		build, cleanup := newBuild(t, jobResponse, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+			common.JobVariable{Key: "GIT_CLEAN_FLAGS", Value: "-ffdx cleanup_file"})
+
+		// Run build and save file
+		err = runBuild(t, build)
+		require.NoError(t, err)
+
+		excludedFilePath := filepath.Join(build.BuildDir, "excluded_file")
+		cleanUpFilePath := filepath.Join(build.BuildDir, "cleanup_file")
+
+		err = ioutil.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
+		require.NoError(t, err)
+		err = ioutil.WriteFile(cleanUpFilePath, []byte{}, os.ModePerm)
+		require.NoError(t, err)
+
+		// Re-run build and ensure that file still exists
+		err = runBuild(t, build)
+		require.NoError(t, err)
+
+		_, err = os.Stat(excludedFilePath)
+		assert.NoError(t, err, "excluded_file does exist")
+		_, err = os.Stat(cleanUpFilePath)
+		assert.Error(t, err, "cleanup_file does not exist")
+	})
 }
 
 // TODO: Remove in 12.0
