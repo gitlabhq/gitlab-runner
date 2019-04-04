@@ -121,6 +121,7 @@ This defines one runner entry.
 | `pre_build_script`   | Commands to be executed on the Runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `post_build_script`  | Commands to be executed on the Runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `clone_url`          | Overwrite the URL for the GitLab instance. Used if the Runner can't connect to GitLab on the URL GitLab exposes itself. |
+| `debug_trace_disabled` | Disables the `CI_DEBUG_TRACE` feature. When set to true, then debug trace will remain disabled even if `CI_DEBUG_TRACE` will be set to `true` by the user. |
 
 Example:
 

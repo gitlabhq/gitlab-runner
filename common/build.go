@@ -757,6 +757,14 @@ func (b *Build) GetGitCleanFlags() []string {
 func (b *Build) IsDebugTraceEnabled() bool {
 	trace, err := strconv.ParseBool(b.GetAllVariables().Get("CI_DEBUG_TRACE"))
 	if err != nil {
+		trace = false
+	}
+
+	if b.Runner.DebugTraceDisabled {
+		if trace == true {
+			b.logger.Warningln("CI_DEBUG_TRACE usage is disabled on this Runner")
+		}
+
 		return false
 	}
 
