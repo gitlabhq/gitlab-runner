@@ -167,7 +167,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	}
 
 	// Add `git remote` or update existing
-	w.IfCmdWithOutput("git", "remote", "add", "origin", build.GetRemoteURL())
+	w.IfCmd("git", "remote", "add", "origin", build.GetRemoteURL())
 	w.Notice("Created fresh repository.")
 	w.Else()
 	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
