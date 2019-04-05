@@ -121,6 +121,7 @@ This defines one runner entry.
 | `pre_build_script`   | Commands to be executed on the Runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `post_build_script`  | Commands to be executed on the Runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `clone_url`          | Overwrite the URL for the GitLab instance. Used if the Runner can't connect to GitLab on the URL GitLab exposes itself. |
+| `debug_trace_disabled` | Disables the `CI_DEBUG_TRACE` feature. When set to true, then debug trace will remain disabled even if `CI_DEBUG_TRACE` will be set to `true` by the user. |
 
 Example:
 
@@ -742,6 +743,38 @@ With that configuration, GitLab Runner will instruct the executor to use the ima
 which is based on its compilation data. After updating the Runner to a new version, this will ensure that the
 Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
 before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
+
+## The `[runners.custom_build_dir]` section
+
+NOTE: **Note:**
+[Introduced][https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1267] in Gitlab Runner 11.10
+
+This section defines [custom build directories][https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories] parameters.
+
+Please notice, that the feature - if not configured explicitly - will be
+enabled by default for `kubernetes`, `docker`, `docker-ssh`, `docker+machine`
+and `docker-ssh+machine` executors. It will be disabled by default for all other
+executors.
+
+This feature requires that `GIT_CLONE_PATH` is within a path defined
+within `runners.builds_dir`. For the ease of using `builds_dir` the
+`$CI_BUILDS_DIR` variable can be used.
+
+The feature is by default enabled only for `docker` and `kubernetes` executors
+as they provide a good way to separate resources. This feature can be
+explicitly enabled for any executor, but special care should be taken when using
+with executors that share `builds_dir` and have `concurrent > 1`.
+
+| Parameter | Type    | Description |
+|-----------|---------|-------------|
+| `enabled` | boolean | Allow user to define a custom build directory for a job |
+
+Example:
+
+```bash
+[runners.custom_build_dir]
+  enabled = true
+```
 
 ## Note
 

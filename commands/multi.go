@@ -491,7 +491,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 	}
 
 	if listenAddress == "" {
-		mr.log().Info("Listen address not defined, metrics server disabled")
+		mr.log().Info("listen_address not defined, metrics & debug endpoints disabled")
 		return
 	}
 
@@ -522,7 +522,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 
 func (mr *RunCommand) setupSessionServer() {
 	if mr.config.SessionServer.ListenAddress == "" {
-		mr.log().Info("Listen address not defined, session server disabled")
+		mr.log().Info("[session_server].listen_address not defined, session endpoints disabled")
 		return
 	}
 

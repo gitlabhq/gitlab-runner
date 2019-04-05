@@ -28,6 +28,11 @@ const (
 	GitNone
 )
 
+const (
+	gitCleanFlagsDefault = "-ffdx"
+	gitCleanFlagsNone    = "none"
+)
+
 type SubmoduleStrategy int
 
 const (
@@ -64,7 +69,8 @@ const (
 )
 
 const (
-	FFDockerHelperImageV2 string = "FF_DOCKER_HELPER_IMAGE_V2"
+	FFDockerHelperImageV2       string = "FF_DOCKER_HELPER_IMAGE_V2"
+	FFUseLegacyGitCleanStrategy string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
 )
 
 type Build struct {
@@ -150,15 +156,46 @@ func (b *Build) FullProjectDir() string {
 	return helpers.ToSlash(b.BuildDir)
 }
 
-func (b *Build) StartBuild(rootDir, cacheDir string, sharedDir bool) {
-	b.RootDir = rootDir
-	b.BuildDir = path.Join(rootDir, b.ProjectUniqueDir(sharedDir))
-	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
+func (b *Build) TmpProjectDir() string {
+	return helpers.ToSlash(b.BuildDir) + ".tmp"
+}
 
-	// invalidate variables cache:
-	// as some variables are based on dynamic
-	// state after build starts
-	b.allVariables = nil
+func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEnabled, sharedDir bool) (string, error) {
+	dir := b.GetAllVariables().Get(overrideKey)
+	if dir == "" {
+		return path.Join(rootDir, b.ProjectUniqueDir(sharedDir)), nil
+	}
+
+	if !customBuildDirEnabled {
+		return "", MakeBuildError("setting %s is not allowed, enable `custom_build_dir` feature", overrideKey)
+	}
+
+	if !strings.HasPrefix(dir, rootDir) {
+		return "", MakeBuildError("the %s=%q has to be within %q",
+			overrideKey, dir, rootDir)
+	}
+
+	return dir, nil
+}
+
+func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, sharedDir bool) error {
+	var err error
+
+	// We set RootDir and invalidate variables
+	// to be able to use CI_BUILDS_DIR
+	b.RootDir = rootDir
+	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
+	b.refreshAllVariables()
+
+	b.BuildDir, err = b.getCustomBuildDir(b.RootDir, "GIT_CLONE_PATH", customBuildDirEnabled, sharedDir)
+	if err != nil {
+		return err
+	}
+
+	// We invalidate variables to be able to use
+	// CI_CACHE_DIR and CI_PROJECT_DIR
+	b.refreshAllVariables()
+	return nil
 }
 
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
@@ -526,7 +563,10 @@ func (b *Build) String() string {
 
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
+		{Key: "CI_BUILDS_DIR", Value: filepath.FromSlash(b.RootDir), Public: true, Internal: true, File: false},
 		{Key: "CI_PROJECT_DIR", Value: filepath.FromSlash(b.FullProjectDir()), Public: true, Internal: true, File: false},
+		{Key: "CI_CONCURRENT_ID", Value: strconv.Itoa(b.RunnerID), Public: true, Internal: true, File: false},
+		{Key: "CI_CONCURRENT_PROJECT_ID", Value: strconv.Itoa(b.ProjectRunnerID), Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER", Value: "yes", Public: true, Internal: true, File: false},
 	}
 }
@@ -534,6 +574,7 @@ func (b *Build) GetDefaultVariables() JobVariables {
 func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
 	return JobVariables{
 		{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "true", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
+		{Key: FFUseLegacyGitCleanStrategy, Value: "false", Public: true, Internal: true, File: false},         // TODO: Remove in 12.0
 	}
 }
 
@@ -591,6 +632,10 @@ func (b *Build) GetGitTLSVariables() JobVariables {
 
 func (b *Build) IsSharedEnv() bool {
 	return b.ExecutorFeatures.Shared
+}
+
+func (b *Build) refreshAllVariables() {
+	b.allVariables = nil
 }
 
 func (b *Build) GetAllVariables() JobVariables {
@@ -696,9 +741,30 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 	}
 }
 
+func (b *Build) GetGitCleanFlags() []string {
+	flags := b.GetAllVariables().Get("GIT_CLEAN_FLAGS")
+	if flags == "" {
+		flags = gitCleanFlagsDefault
+	}
+
+	if flags == gitCleanFlagsNone {
+		return []string{}
+	}
+
+	return strings.Fields(flags)
+}
+
 func (b *Build) IsDebugTraceEnabled() bool {
 	trace, err := strconv.ParseBool(b.GetAllVariables().Get("CI_DEBUG_TRACE"))
 	if err != nil {
+		trace = false
+	}
+
+	if b.Runner.DebugTraceDisabled {
+		if trace == true {
+			b.logger.Warningln("CI_DEBUG_TRACE usage is disabled on this Runner")
+		}
+
 		return false
 	}
 
@@ -783,4 +849,13 @@ func (b *Build) IsFeatureFlagOn(name string) bool {
 	}
 
 	return on
+}
+
+func (b *Build) IsLFSSmudgeDisabled() bool {
+	disabled, err := strconv.ParseBool(b.GetAllVariables().Get("GIT_LFS_SKIP_SMUDGE"))
+	if err != nil {
+		return false
+	}
+
+	return disabled
 }

@@ -126,6 +126,7 @@ systems. If a binary is not installed tests requiring this binary will be
 skipped.
 
 These are the binaries that you can install:
+
 1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html)
 1. [kubectl](https://kubernetes.io/docs/user-guide/prereqs/) with
   [Minikube](https://github.com/kubernetes/minikube)
@@ -167,6 +168,7 @@ This error happens due to missing executors/docker/bindata.go file that is gener
 Which is especially tricky on Windows.
 
 Try to execute: `make deps docker`, if it doesn't help you can do that in steps:
+
 1. Execute `go get -u github.com/jteeuwen/go-bindata/...`
 2. Download https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz and save to out/docker/prebuilt-x86_64.tar.xz
 3. Download https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz and save to out/docker/prebuilt-arm.tar.xz

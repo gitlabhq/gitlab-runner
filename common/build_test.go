@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -93,7 +94,7 @@ func TestBuildPredefinedVariables(t *testing.T) {
 	// We run everything once
 	e.On("Prepare", mock.Anything).
 		Return(func(options ExecutorPrepareOptions) error {
-			options.Build.StartBuild("/root/dir", "/cache/dir", false)
+			options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
 			return nil
 		}).Once()
 	e.On("Finish", nil).Return().Once()
@@ -729,26 +730,65 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 }
 
 func TestDebugTrace(t *testing.T) {
-	build := &Build{}
-	assert.False(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be false if CI_DEBUG_TRACE is not set")
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-
-	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: "false", Public: true, Internal: true})
-	build = &Build{
-		JobResponse: successfulBuild,
+	testCases := map[string]struct {
+		debugTraceVariableValue   string
+		expectedValue             bool
+		debugTraceFeatureDisabled bool
+		expectedLogOutput         string
+	}{
+		"variable not set": {
+			expectedValue: false,
+		},
+		"variable set to false": {
+			debugTraceVariableValue: "false",
+			expectedValue:           false,
+		},
+		"variable set to true": {
+			debugTraceVariableValue: "true",
+			expectedValue:           true,
+		},
+		"variable set to a non-bool value": {
+			debugTraceVariableValue: "xyz",
+			expectedValue:           false,
+		},
+		"variable set to true and feature disabled from configuration": {
+			debugTraceVariableValue:   "true",
+			expectedValue:             false,
+			debugTraceFeatureDisabled: true,
+			expectedLogOutput:         "CI_DEBUG_TRACE usage is disabled on this Runner",
+		},
 	}
-	assert.False(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be false if CI_DEBUG_TRACE is set to false")
 
-	successfulBuild, err = GetSuccessfulBuild()
-	assert.NoError(t, err)
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			logger, hooks := test.NewNullLogger()
 
-	successfulBuild.Variables = append(successfulBuild.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: "true", Public: true, Internal: true})
-	build = &Build{
-		JobResponse: successfulBuild,
+			build := &Build{
+				logger: NewBuildLogger(nil, logrus.NewEntry(logger)),
+				JobResponse: JobResponse{
+					Variables: JobVariables{},
+				},
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						DebugTraceDisabled: testCase.debugTraceFeatureDisabled,
+					},
+				},
+			}
+
+			if testCase.debugTraceVariableValue != "" {
+				build.Variables = append(build.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true})
+			}
+
+			isTraceEnabled := build.IsDebugTraceEnabled()
+			assert.Equal(t, testCase.expectedValue, isTraceEnabled)
+
+			if testCase.expectedLogOutput != "" {
+				output, err := hooks.LastEntry().String()
+				require.NoError(t, err)
+				assert.Contains(t, output, testCase.expectedLogOutput)
+			}
+		})
 	}
-	assert.True(t, build.IsDebugTraceEnabled(), "IsDebugTraceEnabled should be true if CI_DEBUG_TRACE is set to true")
 }
 
 func TestDefaultEnvVariables(t *testing.T) {
@@ -901,6 +941,131 @@ func TestIsFeatureFlagOn(t *testing.T) {
 	}
 }
 
+func TestStartBuild(t *testing.T) {
+	type startBuildArgs struct {
+		rootDir               string
+		cacheDir              string
+		customBuildDirEnabled bool
+		sharedDir             bool
+	}
+
+	tests := map[string]struct {
+		args             startBuildArgs
+		jobVariables     JobVariables
+		expectedBuildDir string
+		expectedCacheDir string
+		expectedError    bool
+	}{
+		"no job specific build dir with no shared dir": {
+			args: startBuildArgs{
+				rootDir:               "/build",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables:     JobVariables{},
+			expectedBuildDir: "/build/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		"no job specified build dir with shared dir": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             true,
+			},
+			jobVariables:     JobVariables{},
+			expectedBuildDir: "/builds/1234/0/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		"valid GIT_CLONE_PATH was specified": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/builds/go/src/gitlab.com/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		"valid GIT_CLONE_PATH using CI_BUILDS_DIR was specified": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "$CI_BUILDS_DIR/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/builds/go/src/gitlab.com/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    false,
+		},
+		"custom build disabled": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: false,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedBuildDir: "/builds/test-namespace/test-repo",
+			expectedCacheDir: "/cache/test-namespace/test-repo",
+			expectedError:    true,
+		},
+		"invalid GIT_CLONE_PATH was specified": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+			},
+			expectedError: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := Build{
+				JobResponse: JobResponse{
+					GitInfo: GitInfo{
+						RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
+					},
+					Variables: test.jobVariables,
+				},
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "1234",
+					},
+				},
+			}
+
+			err := build.StartBuild(test.args.rootDir, test.args.cacheDir, test.args.customBuildDirEnabled, test.args.sharedDir)
+			if test.expectedError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, test.expectedBuildDir, build.BuildDir)
+			assert.Equal(t, test.args.rootDir, build.RootDir)
+			assert.Equal(t, test.expectedCacheDir, build.CacheDir)
+		})
+	}
+}
+
 func TestWaitForTerminal(t *testing.T) {
 	cases := []struct {
 		name                   string
@@ -1017,6 +1182,153 @@ func TestWaitForTerminal(t *testing.T) {
 			c.cancelFn(cancel, &build)
 
 			assert.EqualError(t, <-errCh, c.expectedErr)
+		})
+	}
+}
+
+func TestBuild_IsLFSSmudgeDisabled(t *testing.T) {
+	testCases := map[string]struct {
+		isVariableUnset bool
+		variableValue   string
+		expectedResult  bool
+	}{
+		"variable not set": {
+			isVariableUnset: true,
+			expectedResult:  false,
+		},
+		"variable empty": {
+			variableValue:  "",
+			expectedResult: false,
+		},
+		"variable set to true": {
+			variableValue:  "true",
+			expectedResult: true,
+		},
+		"variable set to false": {
+			variableValue:  "false",
+			expectedResult: false,
+		},
+		"variable set to 1": {
+			variableValue:  "1",
+			expectedResult: true,
+		},
+		"variable set to 0": {
+			variableValue:  "0",
+			expectedResult: false,
+		},
+	}
+
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			b := &Build{
+				JobResponse: JobResponse{
+					Variables: JobVariables{},
+				},
+			}
+
+			if !testCase.isVariableUnset {
+				b.Variables = append(b.Variables, JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true})
+			}
+
+			assert.Equal(t, testCase.expectedResult, b.IsLFSSmudgeDisabled())
+		})
+	}
+}
+
+func TestGitCleanFlags(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult []string
+	}{
+		"empty clean flags": {
+			value:          "",
+			expectedResult: []string{"-ffdx"},
+		},
+		"use custom flags": {
+			value:          "custom-flags",
+			expectedResult: []string{"custom-flags"},
+		},
+		"use custom flags with multiple arguments": {
+			value:          "-ffdx -e cache/",
+			expectedResult: []string{"-ffdx", "-e", "cache/"},
+		},
+		"disabled": {
+			value:          "none",
+			expectedResult: []string{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						{Key: "GIT_CLEAN_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			result := build.GetGitCleanFlags()
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestDefaultVariables(t *testing.T) {
+	tests := []struct {
+		name          string
+		jobVariables  JobVariables
+		rootDir       string
+		key           string
+		expectedValue string
+	}{
+		{
+			name:          "get default CI_SERVER value",
+			jobVariables:  JobVariables{},
+			rootDir:       "/builds",
+			key:           "CI_SERVER",
+			expectedValue: "yes",
+		},
+		{
+			name:          "get default CI_PROJECT_DIR value",
+			jobVariables:  JobVariables{},
+			rootDir:       "/builds",
+			key:           "CI_PROJECT_DIR",
+			expectedValue: "/builds/test-namespace/test-repo",
+		},
+		{
+			name: "get overwritten CI_PROJECT_DIR value",
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/gitlab-org/gitlab-runner", Public: true},
+			},
+			rootDir:       "/builds",
+			key:           "CI_PROJECT_DIR",
+			expectedValue: "/builds/go/src/gitlab.com/gitlab-org/gitlab-runner",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			build := Build{
+				JobResponse: JobResponse{
+					GitInfo: GitInfo{
+						RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
+					},
+					Variables: test.jobVariables,
+				},
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "1234",
+					},
+				},
+			}
+
+			err := build.StartBuild(test.rootDir, "/cache", true, false)
+			assert.NoError(t, err)
+
+			variable := build.GetAllVariables().Get(test.key)
+			assert.Equal(t, test.expectedValue, variable)
 		})
 	}
 }

@@ -155,7 +155,7 @@ variables:
 ```
 
 NOTE: **Note:**
-You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file. 
+You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file.
 
 ## Define keywords in the config toml
 
@@ -390,11 +390,13 @@ This will disallow other pods from scheduling on the same nodes as the
 build pods without extra configuration for the other pods.
 
 ### Using kaniko
+
 Another approach for building Docker images inside a Kubernetes cluster is using [kaniko](https://github.com/GoogleContainerTools/kaniko).
 kaniko:
 
 - Allows you to build images without privileged access.
 - Works without the Docker daemon.
+
 For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
 
 [k8s-host-path-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath

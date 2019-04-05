@@ -4,7 +4,7 @@ This is how you can run GitLab Runner inside a Docker container.
 
 ## General GitLab Runner Docker image usage
 
-GitLab Runner Docker images (both based on Ubuntu and [Alpine Linux](#alpine-linux))
+GitLab Runner Docker images (based on [Ubuntu or Alpine Linux](#docker-images))
 are designed as wrappers around the standard `gitlab-runner` command, like if
 GitLab Runner was installed directly on the host.
 
@@ -166,17 +166,13 @@ want gitlab-runner to trust. The gitlab-runner container will
 import the `ca.crt` file on startup so if your container is already running you
 may need to restart it for the changes to take effect.
 
-## Alpine Linux
+## Docker Images
 
-You can also use alternative [Alpine Linux](https://www.alpinelinux.org/) based image with much smaller footprint:
-```
-gitlab/gitlab-runner    latest              3e8077e209f5        13 hours ago        304.3 MB
-gitlab/gitlab-runner    alpine              7c431ac8f30f        13 hours ago        25.98 MB
-```
+The original `gitlab/gitlab-runner:latest` is based on Ubuntu, see [gitlab-org/gitlab-runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles) source for possible build instructions for both Ubuntu and Alpine images.
+
+You can alternatively use [Alpine Linux](https://www.alpinelinux.org/) based image called `gitlab/gitlab-runner:alpine` with much smaller footprint (~400 MB Ubuntu vs ~100 MB Alpine):
 
 **Alpine Linux image is designed to use only Docker as the method of spawning runners.**
-
-The original `gitlab/gitlab-runner:latest` is based on Ubuntu 16.04 LTS.
 
 ## SELinux
 
@@ -185,11 +181,9 @@ Some distributions (CentOS, RedHat, Fedora) use SELinux by default to enhance th
 The special care must be taken when dealing with such configuration.
 
 1. If you want to use Docker executor to run builds in containers you need to access the `/var/run/docker.sock`.
-However, if you have a SELinux in enforcing mode, you will see the `Permission denied` when accessing the `/var/run/docker.sock`.
-Install the `selinux-dockersock` and to resolve the issue: https://github.com/dpw/selinux-dockersock.
-
+   However, if you have a SELinux in enforcing mode, you will see the `Permission denied` when accessing the `/var/run/docker.sock`.
+   Install the `selinux-dockersock` and to resolve the issue: https://github.com/dpw/selinux-dockersock.
 1. Make sure that persistent directory is created on host: `mkdir -p /srv/gitlab-runner/config`.
-
 1. Run docker with `:Z` on volumes:
 
 ```bash

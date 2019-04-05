@@ -217,9 +217,9 @@ func TestBuildWithShallowLock(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, []common.JobVariable{
+		build.Variables = append(build.Variables,
 			common.JobVariable{Key: "GIT_DEPTH", Value: "1"},
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"}}...)
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		err = runBuild(t, build)
 		assert.NoError(t, err)
@@ -283,6 +283,13 @@ func assertLFSFileDownloaded(t *testing.T, build *common.Build) {
 
 func assertLFSFileNotDownloaded(t *testing.T, build *common.Build) {
 	lfsFilePath := filepath.Join(build.FullProjectDir(), "files", "lfs", "file_1.lfs")
+	info, err := os.Stat(lfsFilePath)
+	require.NoError(t, err)
+	assert.True(t, info.Size() < common.FilesLFSFile1LFSsize, "invalid size of %q file - expected to be less then downloaded LFS object", lfsFilePath)
+}
+
+func assertLFSFileNotPresent(t *testing.T, build *common.Build) {
+	lfsFilePath := filepath.Join(build.FullProjectDir(), "files", "lfs", "file_1.lfs")
 	_, err := os.Stat(lfsFilePath)
 	require.IsType(t, &os.PathError{}, err)
 	assert.Equal(t, lfsFilePath, err.(*os.PathError).Path)
@@ -323,7 +330,7 @@ func TestBuildWithGitStrategyNoneWithLFS(t *testing.T) {
 		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
 		assert.Contains(t, out, "Skipping Git repository setup")
-		assertLFSFileNotDownloaded(t, build)
+		assertLFSFileNotPresent(t, build)
 	})
 }
 
@@ -365,7 +372,7 @@ func TestBuildWithGitStrategyFetchWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
-		assertLFSFileNotDownloaded(t, build)
+		assertLFSFileNotPresent(t, build)
 
 		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
 
@@ -374,6 +381,35 @@ func TestBuildWithGitStrategyFetchWithLFS(t *testing.T) {
 		assert.Contains(t, out, "Fetching changes")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 		assertLFSFileDownloaded(t, build)
+	})
+}
+
+func TestBuildWithGitStrategyFetchWithUserDisabledLFS(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		assertLFSFileNotPresent(t, build)
+
+		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Fetching changes")
+		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+		assertLFSFileNotDownloaded(t, build)
 	})
 }
 
@@ -417,7 +453,7 @@ func TestBuildWithGitStrategyFetchNoCheckoutWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Skipping Git checkout")
-		assertLFSFileNotDownloaded(t, build)
+		assertLFSFileNotPresent(t, build)
 
 		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
 
@@ -425,7 +461,7 @@ func TestBuildWithGitStrategyFetchNoCheckoutWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Fetching changes")
 		assert.Contains(t, out, "Skipping Git checkout")
-		assertLFSFileNotDownloaded(t, build)
+		assertLFSFileNotPresent(t, build)
 	})
 }
 
@@ -469,6 +505,25 @@ func TestBuildWithGitStrategyCloneWithLFS(t *testing.T) {
 	})
 }
 
+func TestBuildWithGitStrategyCloneWithUserDisabledLFS(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+		assertLFSFileNotDownloaded(t, build)
+	})
+}
+
 func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
@@ -508,7 +563,7 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithLFS(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Skipping Git checkout")
-		assertLFSFileNotDownloaded(t, build)
+		assertLFSFileNotPresent(t, build)
 	})
 }
 
@@ -779,6 +834,47 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 	})
 }
 
+func TestBuildWithUntrackedDirFromPreviousBuild(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+
+		err = os.MkdirAll(fmt.Sprintf("%s/.test", build.FullProjectDir()), 0644)
+		require.NoError(t, err)
+
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Removing .test/")
+	})
+}
+
+func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+
+		// Another build using the same repo but different branch.
+		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Checking out 2371dd05 as add-lfs-object...")
+	})
+}
+
 func TestInteractiveTerminal(t *testing.T) {
 	cases := []struct {
 		app                string
@@ -877,6 +973,41 @@ func TestInteractiveTerminal(t *testing.T) {
 			assert.NotContains(t, out, "Terminal is connected, will time out in 2s...")
 		})
 	}
+}
+
+func TestBuildWithGitCleanFlags(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		jobResponse, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+
+		build, cleanup := newBuild(t, jobResponse, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+			common.JobVariable{Key: "GIT_CLEAN_FLAGS", Value: "-ffdx cleanup_file"})
+
+		// Run build and save file
+		err = runBuild(t, build)
+		require.NoError(t, err)
+
+		excludedFilePath := filepath.Join(build.BuildDir, "excluded_file")
+		cleanUpFilePath := filepath.Join(build.BuildDir, "cleanup_file")
+
+		err = ioutil.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
+		require.NoError(t, err)
+		err = ioutil.WriteFile(cleanUpFilePath, []byte{}, os.ModePerm)
+		require.NoError(t, err)
+
+		// Re-run build and ensure that file still exists
+		err = runBuild(t, build)
+		require.NoError(t, err)
+
+		_, err = os.Stat(excludedFilePath)
+		assert.NoError(t, err, "excluded_file does exist")
+		_, err = os.Stat(cleanUpFilePath)
+		assert.Error(t, err, "cleanup_file does not exist")
+	})
 }
 
 // TODO: Remove in 12.0

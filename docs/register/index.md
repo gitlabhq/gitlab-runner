@@ -72,7 +72,7 @@ To register a Runner under macOS:
 1. Run the following command:
 
     ```sh
-    gitlab-runner register
+    sudo gitlab-runner register
     ```
 
 1. Enter your GitLab instance URL:

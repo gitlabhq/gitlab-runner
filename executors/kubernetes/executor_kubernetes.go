@@ -27,7 +27,10 @@ import (
 
 var (
 	executorOptions = executors.ExecutorOptions{
-		SharedBuildsDir: false,
+		DefaultCustomBuildsDirEnabled: true,
+		DefaultBuildsDir:              "/builds",
+		DefaultCacheDir:               "/cache",
+		SharedBuildsDir:               false,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
 			Type:          common.NormalShell,
@@ -254,12 +257,9 @@ func (s *executor) getCommandsAndArgsV2(imageDefinition common.Image, command ..
 }
 
 func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
-	path := strings.Split(s.Build.BuildDir, "/")
-	path = path[:len(path)-1]
-
 	mounts = append(mounts, api.VolumeMount{
 		Name:      "repo",
-		MountPath: strings.Join(path, "/"),
+		MountPath: s.Build.RootDir,
 	})
 
 	for _, mount := range s.Config.Kubernetes.Volumes.HostPaths {

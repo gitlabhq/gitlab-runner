@@ -22,6 +22,10 @@ To override the `~/builds` directory, specify the `builds_dir` option under
 the `[[runners]]` section in
 [`config.toml`](../configuration/advanced-configuration.md).
 
+You can also define [custom build
+directories](https://docs.gitlab.com/ce/ci/yaml/README.html#custom-build-directories) per job using the
+`GIT_CLONE_PATH`.
+
 ## Create a new base virtual machine
 
 1. Install [VirtualBox](https://www.virtualbox.org) and if running from Windows,
@@ -34,7 +38,7 @@ the `[[runners]]` section in
 1. If Windows VM, see [Checklist for Windows VMs](#checklist-for-windows-vms)
 1. Install the OpenSSH server
 1. Install all other dependencies required by your build
-1. If you want to upload job artifacts, install `gitlab-runner` inside the VM 
+1. If you want to upload job artifacts, install `gitlab-runner` inside the VM
 1. Log out and shutdown the virtual machine
 
 It's completely fine to use automation tools like Vagrant to provision the
@@ -66,6 +70,7 @@ When a new build is started:
 1. The Runner stops or shutdowns the virtual machine
 
 ## Checklist for Windows VMs
+
 * Install [Cygwin]
 * Install sshd and git from Cygwin (do not use *Git For Windows*, you will get lots of path issues!)
 * Install Git LFS

@@ -193,3 +193,76 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	err := shell.writeScript(mockWriter, common.BuildStageUploadOnFailureArtifacts, info)
 	require.NoError(t, err)
 }
+
+func TestGitCleanFlags(t *testing.T) {
+	tests := map[string]struct {
+		value               string
+		legacyCleanStrategy string
+
+		expectedGitClean      bool
+		expectedGitCleanFlags []interface{}
+	}{
+		"empty clean flags": {
+			value:                 "",
+			legacyCleanStrategy:   "false",
+			expectedGitClean:      true,
+			expectedGitCleanFlags: []interface{}{"-ffdx"},
+		},
+		"use custom flags": {
+			value:                 "custom-flags",
+			legacyCleanStrategy:   "false",
+			expectedGitClean:      true,
+			expectedGitCleanFlags: []interface{}{"custom-flags"},
+		},
+		"use custom flags with multiple arguments": {
+			value:                 "-ffdx -e cache/",
+			legacyCleanStrategy:   "false",
+			expectedGitClean:      true,
+			expectedGitCleanFlags: []interface{}{"-ffdx", "-e", "cache/"},
+		},
+		"uses legacy strategy": {
+			value:               "custom-flags",
+			legacyCleanStrategy: "true",
+			expectedGitClean:    false,
+		},
+		"disabled": {
+			value:               "none",
+			legacyCleanStrategy: "false",
+			expectedGitClean:    false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			const dummySha = "01234567abcdef"
+			const dummyRef = "master"
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{},
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef},
+					Variables: common.JobVariables{
+						{Key: "GIT_CLEAN_FLAGS", Value: test.value},
+						{Key: common.FFUseLegacyGitCleanStrategy, Value: test.legacyCleanStrategy},
+					},
+				},
+			}
+
+			mockWriter := new(MockShellWriter)
+			defer mockWriter.AssertExpectations(t)
+
+			mockWriter.On("Notice", "Checking out %s as %s...", dummySha[0:8], dummyRef).Once()
+			mockWriter.On("Command", "git", "checkout", "-f", "-q", dummySha).Once()
+
+			if test.expectedGitClean {
+				command := []interface{}{"git", "clean"}
+				command = append(command, test.expectedGitCleanFlags...)
+				mockWriter.On("Command", command...).Once()
+			}
+
+			shell.writeCheckoutCmd(mockWriter, build)
+		})
+	}
+}
