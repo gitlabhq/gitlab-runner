@@ -303,7 +303,6 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 		Token:         jobCredentials.Token,
 		State:         jobInfo.State,
 		FailureReason: jobInfo.FailureReason,
-		Trace:         jobInfo.Trace,
 	}
 
 	result, statusText, _, response := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", jobInfo.ID), http.StatusOK, &request, nil)
@@ -338,28 +337,29 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 	}
 }
 
-func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) common.UpdateState {
+func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, content []byte, startOffset int) (int, common.UpdateState) {
 	id := jobCredentials.ID
 
 	baseLog := config.Log().WithField("job", id)
-	if tracePatch.Offset() == tracePatch.TotalSize() {
-		baseLog.Warningln("Appending trace to coordinator...", "skipped due to empty patch")
-		return common.UpdateFailed
+	if len(content) == 0 {
+		baseLog.Debugln("Appending trace to coordinator...", "skipped due to empty patch")
+		return startOffset, common.UpdateSucceeded
 	}
 
-	contentRange := fmt.Sprintf("%d-%d", tracePatch.Offset(), tracePatch.TotalSize()-1)
+	endOffset := startOffset + len(content)
+	contentRange := fmt.Sprintf("%d-%d", startOffset, endOffset-1)
 
 	headers := make(http.Header)
 	headers.Set("Content-Range", contentRange)
 	headers.Set("JOB-TOKEN", jobCredentials.Token)
 
 	uri := fmt.Sprintf("jobs/%d/trace", id)
-	request := bytes.NewReader(tracePatch.Patch())
+	request := bytes.NewReader(content)
 
 	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
-		return common.UpdateFailed
+		return startOffset, common.UpdateFailed
 	}
 
 	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointPatchTrace, response.StatusCode)
@@ -379,23 +379,22 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *co
 	switch {
 	case tracePatchResponse.IsAborted():
 		log.Warningln("Appending trace to coordinator...", "aborted")
-		return common.UpdateAbort
+		return startOffset, common.UpdateAbort
 	case response.StatusCode == http.StatusAccepted:
 		log.Debugln("Appending trace to coordinator...", "ok")
-		return common.UpdateSucceeded
+		return endOffset, common.UpdateSucceeded
 	case response.StatusCode == http.StatusNotFound:
 		log.Warningln("Appending trace to coordinator...", "not-found")
-		return common.UpdateNotFound
+		return startOffset, common.UpdateNotFound
 	case response.StatusCode == http.StatusRequestedRangeNotSatisfiable:
 		log.Warningln("Appending trace to coordinator...", "range mismatch")
-		tracePatch.SetNewOffset(tracePatchResponse.NewOffset())
-		return common.UpdateRangeMismatch
+		return tracePatchResponse.NewOffset(), common.UpdateRangeMismatch
 	case response.StatusCode == clientError:
 		log.Errorln("Appending trace to coordinator...", "error")
-		return common.UpdateAbort
+		return startOffset, common.UpdateAbort
 	default:
 		log.Warningln("Appending trace to coordinator...", "failed")
-		return common.UpdateFailed
+		return startOffset, common.UpdateFailed
 	}
 }
 
