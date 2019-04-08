@@ -285,7 +285,7 @@ func fakeKubeDeleteResponse(status int) *http.Response {
 
 	body := objBody(codec, &metav1.Status{Code: int32(status)})
 	return &http.Response{StatusCode: status, Body: body, Header: map[string][]string{
-		"Content-Type": []string{"application/json"},
+		"Content-Type": {"application/json"},
 	}}
 }
 
@@ -306,7 +306,7 @@ func TestCleanup(t *testing.T) {
 			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
+				case m == http.MethodDelete && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
 					return fakeKubeDeleteResponse(http.StatusOK), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
@@ -326,7 +326,7 @@ func TestCleanup(t *testing.T) {
 			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
+				case m == http.MethodDelete && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
 					return fakeKubeDeleteResponse(http.StatusNotFound), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
@@ -340,7 +340,7 @@ func TestCleanup(t *testing.T) {
 			Credentials: &api.Secret{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == "DELETE" && p == "/api/"+version+"/namespaces/test-ns/secrets/test-resource":
+				case m == http.MethodDelete && p == "/api/"+version+"/namespaces/test-ns/secrets/test-resource":
 					return fakeKubeDeleteResponse(http.StatusNotFound), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
