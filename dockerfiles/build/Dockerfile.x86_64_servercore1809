@@ -1,6 +1,6 @@
 # escape=`
 
-FROM mcr.microsoft.com/windows/servercore:1803 as builder
+FROM mcr.microsoft.com/windows/servercore:1809_amd64 as builder
 
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
@@ -22,12 +22,9 @@ RUN powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:
 RUN Expand-Archive -Path git.zip -DestinationPath git
 RUN Expand-Archive -Path git-lfs.zip -DestinationPath git-lfs
 
-FROM mcr.microsoft.com/windows/nanoserver:1803
+FROM mcr.microsoft.com/windows/servercore:1809_amd64
 
 USER ContainerAdministrator
-
-# https://github.com/StefanScherer/dockerfiles-windows/tree/master/golang-issue-21867
-COPY --from=builder ["/windows/system32/netapi32.dll", "/windows/system32/netapi32.dll"]
 
 COPY --from=builder ["git", "C:\\Program Files\\git"]
 COPY --from=builder ["git-lfs", "C:\\Program Files\\git-lfs"]
