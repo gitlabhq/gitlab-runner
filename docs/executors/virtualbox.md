@@ -9,6 +9,10 @@ build environment for every build. This executor supports all systems that can
 be run on VirtualBox. The only requirement is that the virtual machine exposes
 its SSH server and provide a bash-compatible shell.
 
+NOTE: **Note:**
+GitLab Runner will use the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the virtual machine.
+Ensure Git LFS is up-to-date on any virtual machine where GitLab Runner will run using VirtualBox executor.
+
 ## Overview
 
 The project's source code is checked out to: `~/builds/<namespace>/<project-name>`.
