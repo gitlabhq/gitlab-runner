@@ -211,6 +211,12 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", append(foreachArgs, "git", "clean", "-ffxd")...)
 	w.Command("git", append(foreachArgs, "git", "reset", "--hard")...)
 	w.Command("git", updateArgs...)
+
+	if !build.IsLFSSmudgeDisabled() {
+		w.IfCmd("git-lfs", "version")
+		w.Command("git", append(foreachArgs, "git", "lfs", "pull")...)
+		w.EndIf()
+	}
 }
 
 func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, file string) {

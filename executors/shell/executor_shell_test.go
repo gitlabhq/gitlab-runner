@@ -567,6 +567,51 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithLFS(t *testing.T) {
 	})
 }
 
+func TestBuildWithSubmoduleLFSPullsLFSObject(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+		build.GitInfo = common.GetSubmoduleLFSGitInfo(build.GitInfo.RepoURL)
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+
+		f, err := os.Stat(filepath.Join(build.FullProjectDir(), "lfs", "1.lfs"))
+		require.NoError(t, err)
+		assert.Equal(t, common.FilesLFSFile1LFSsize, f.Size())
+	})
+}
+
+func TestBuildWithSubmoduleLFSDisabledSmudging(t *testing.T) {
+	skipIfGitDoesNotSupportLFS(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
+		build.GitInfo = common.GetSubmoduleLFSGitInfo(build.GitInfo.RepoURL)
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Created fresh repository")
+
+		f, err := os.Stat(filepath.Join(build.FullProjectDir(), "lfs", "1.lfs"))
+		require.NoError(t, err)
+		assert.True(t, f.Size() < common.FilesLFSFile1LFSsize)
+	})
+}
+
 func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 	for _, strategy := range []string{"none", ""} {
 		t.Run("strategy "+strategy, func(t *testing.T) {
