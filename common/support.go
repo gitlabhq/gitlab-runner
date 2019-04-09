@@ -32,6 +32,10 @@ const (
 	repoLFSBeforeSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"
 	repoLFSRefName   = "add-lfs-object"
 
+	repoSubmoduleLFSSHA       = "d0cb7ff49b5c4fcf159e860fd6b30ef40731c435"
+	repoSubmoduleLFSBeforeSHA = "dcbc4f0c93cb1731eeac4e3a70a55a991838e137"
+	repoSubmoduleLFSRefName   = "add-lfs-submodule"
+
 	FilesLFSFile1LFSsize = int64(2097152)
 )
 
@@ -61,6 +65,17 @@ func GetLFSGitInfo(url string) GitInfo {
 		Sha:       repoLFSSHA,
 		BeforeSha: repoLFSBeforeSHA,
 		Ref:       repoLFSRefName,
+		RefType:   repoRefType,
+		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
+	}
+}
+
+func GetSubmoduleLFSGitInfo(url string) GitInfo {
+	return GitInfo{
+		RepoURL:   url,
+		Sha:       repoSubmoduleLFSSHA,
+		BeforeSha: repoSubmoduleLFSBeforeSHA,
+		Ref:       repoSubmoduleLFSRefName,
 		RefType:   repoRefType,
 		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
 	}
