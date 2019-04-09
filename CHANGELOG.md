@@ -1,3 +1,6 @@
+v11.9.2 (2019-04-09)
+- Fix git lfs not getting submodule objects !1298
+
 v11.9.1 (2019-04-03)
 - Make it again possible to disable Git LFS pull !1273
 - Use delayed variable expansion for error check in cmd !1260
