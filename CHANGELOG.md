@@ -1,3 +1,47 @@
+v11.10.0-rc1 (2019-04-09)
+- Refactor slightly ./shells/shellstest !1237
+- Fix CI_PROJECT_DIR handling !1241
+- Log time took preparing executors !1196
+- Restore availability of pprof in the debug server !1242
+- Move variables defining .gopath to a shared place for all Windows jobs !1245
+- Docs: clarify runner api registration process !1244
+- add lfs support to ubuntu docker runner !1192
+- Add information about Kaniko for Kubernetes executor !1161
+- Enable the docs CI job !1251
+- Rename test to be more descriptive !1249
+- Create the reviewers guide base document !1233
+- Update codeclimate version !1252
+- Add retryable err type !1215
+- Get windows tag for helper image !1239
+- Remove unnecessary log alias for logrus inport !1256
+- Make gitlab-runner:alpine more specific, Add link to Dockerfiles sources,... !1259
+- Docs: Fix broken anchor in docker.md !1264
+- Replace the current k8s manual installation with the Helm chart !1250
+- Create cache for `/builds` dir !1265
+- Expose `CI_CONCURRENT_(PROJECT)_ID` !1268
+- DOC: note on case-sensitive proxy variables and the need for upper and lower case versions !1248
+- Add new links checker !1271
+- Update log messages for listen & session address !1275
+- Use delayed variable expansion for error check in cmd !1260
+- Unexport common.RepoRemoteURL !1276
+- Update index.md - added sudo when registering the service on macos (without... !1272
+- Add new lines around lists for renderer !1278
+- Fix color output on Windows !1208
+- Make it again possible to disable Git LFS pull !1273
+- Check out specific branch !1270
+- Revert "Merge branch '4097-branch-is-no-longer-checked-out-when-using-refspec' into 'master'" !1283
+- Add cross references to Runners API !1284
+- Improve support for `git clean` !1281
+- Make Kubernetes executor to clone into /builds !1282
+- Add option to specify clone path !1267
+- Allow to disable debug tracing !1286
+- Add Route Map for runner docs !1285
+- Do not print remote addition failure message !1287
+- Add true to the run-untagged subcommand !1288
+- Cleanup k8s cleanup test !1280
+- Change helper image to servercore !1290
+- Add note about git-lfs !1294
+
 v11.9.0 (2019-03-22)
 
 **Deprecations:**
