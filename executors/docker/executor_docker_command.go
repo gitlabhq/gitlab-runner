@@ -119,6 +119,9 @@ func initializeLinuxDockerExecutor() {
 			RunnerCommand: "/usr/bin/gitlab-runner-helper",
 		},
 		ShowHostname: true,
+		Metadata: map[string]string{
+			"OSType": osTypeLinux,
+		},
 	}
 
 	creator := func() common.Executor {
@@ -160,6 +163,9 @@ func initializeWindowsDockerExecutor() {
 			RunnerCommand: "gitlab-runner-helper",
 		},
 		ShowHostname: true,
+		Metadata: map[string]string{
+			"OSType": osTypeWindows,
+		},
 	}
 
 	creator := func() common.Executor {
