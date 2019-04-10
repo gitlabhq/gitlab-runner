@@ -4,10 +4,23 @@ last_updated: 2017-10-09
 
 # Install GitLab Runner on macOS
 
-In the future there will be a brew package, but for now you have to manually
-download the macOS binary.
+## Homebrew Installation
 
-## Installation
+1. Install the GitLab runner.
+
+    ```bash
+    brew install gitlab-runner
+    ```
+
+1. Install the runner as a service and start it.
+
+    ```bash
+    brew services start gitlab-runner
+    ```
+
+Voila! Runner is installed and running.
+
+## Manual Installation
 
 CAUTION: **Important:**
 With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
@@ -41,7 +54,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
 Voila! Runner is installed and will be run after a system reboot.
 
-## Update
+## Manual Update
 
 1. Stop the service:
 
