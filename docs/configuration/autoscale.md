@@ -263,10 +263,10 @@ from 12am to 9am and from 6pm to 11pm and whole weekend days. Machines
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
 
-One note about an edge case that may surprise you. The 59th second of the last
+NOTE: **Note:**
+The 59th second of the last
 minute in any period that you specify will *not* be considered part of the
-period. We think this will not be a real world problem, but something you
-should know about.
+period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/issues/2170).
 
 You can specify the `OffPeakTimezone` e.g. `"Australia/Sydney"`. If you don't,
 the system setting of the host machine of every runner will be used. This
