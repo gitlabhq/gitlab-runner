@@ -1,3 +1,6 @@
+v11.10.0-rc2 (2019-04-10)
+- Fix git lfs not getting submodule objects !1298
+
 v11.10.0-rc1 (2019-04-09)
 - Refactor slightly ./shells/shellstest !1237
 - Fix CI_PROJECT_DIR handling !1241
