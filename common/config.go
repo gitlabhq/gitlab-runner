@@ -20,7 +20,7 @@ import (
 	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
 )
@@ -32,8 +32,6 @@ const (
 	PullPolicyAlways       = "always"
 	PullPolicyNever        = "never"
 	PullPolicyIfNotPresent = "if-not-present"
-
-	defaultHelperImage = "gitlab/gitlab-runner-helper"
 )
 
 // Get returns one of the predefined values or returns an error if the value can't match the predefined
@@ -502,19 +500,6 @@ func (c *DockerConfig) GetMemoryReservation() int64 {
 
 func (c *DockerConfig) GetOomKillDisable() *bool {
 	return &c.OomKillDisable
-}
-
-func (c *KubernetesConfig) GetHelperImage() string {
-	if len(c.HelperImage) > 0 {
-		return c.HelperImage
-	}
-
-	rev := REVISION
-	if rev == "HEAD" {
-		rev = "latest"
-	}
-
-	return fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, rev)
 }
 
 func (c *KubernetesConfig) GetPollAttempts() int {

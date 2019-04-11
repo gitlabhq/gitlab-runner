@@ -8,19 +8,20 @@ import (
 	"net/url"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitlab-terminal"
+	"github.com/sirupsen/logrus"
+	terminal "gitlab.com/gitlab-org/gitlab-terminal"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	// Register all available authentication methods
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
 	restclient "k8s.io/client-go/rest"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -61,6 +62,8 @@ type executor struct {
 	serviceRequests         api.ResourceList
 	helperRequests          api.ResourceList
 	pullPolicy              common.KubernetesPullPolicy
+
+	helperImageInfo helperimage.Info
 }
 
 func (s *executor) setupResources() error {
@@ -463,7 +466,6 @@ func (s *executor) setupBuildPod() error {
 	}
 
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
-	helperImage := common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.GetHelperImage())
 
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -481,7 +483,7 @@ func (s *executor) setupBuildPod() error {
 			Containers: append([]api.Container{
 				// TODO use the build and helper template here
 				s.buildContainer("build", buildImage, s.options.Image, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("helper", helperImage, common.Image{}, s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer("helper", s.getHelperImage(), common.Image{}, s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
@@ -495,6 +497,14 @@ func (s *executor) setupBuildPod() error {
 	s.pod = pod
 
 	return nil
+}
+
+func (s *executor) getHelperImage() string {
+	if len(s.Config.Kubernetes.HelperImage) > 0 {
+		return common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.HelperImage)
+	}
+
+	return s.helperImageInfo.String()
 }
 
 func (s *executor) runInContainer(ctx context.Context, name string, command []string, script string) <-chan error {
@@ -670,10 +680,24 @@ func (s *executor) checkDefaults() error {
 }
 
 func createFn() common.Executor {
+	revision := "latest"
+	if common.REVISION != "HEAD" {
+		revision = common.REVISION
+	}
+
+	helperImageInfo, err := helperimage.Get(revision, helperimage.Config{
+		OSType:       helperimage.OSTypeLinux,
+		Architecture: "amd64",
+	})
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to set up helper image for kubernetes executor")
+	}
+
 	return &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
 		},
+		helperImageInfo: helperImageInfo,
 	}
 }
 
