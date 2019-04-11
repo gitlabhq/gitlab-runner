@@ -31,8 +31,6 @@ v11.10.0-rc1 (2019-04-09)
 - Add new lines around lists for renderer !1278
 - Fix color output on Windows !1208
 - Make it again possible to disable Git LFS pull !1273
-- Check out specific branch !1270
-- Revert "Merge branch '4097-branch-is-no-longer-checked-out-when-using-refspec' into 'master'" !1283
 - Add cross references to Runners API !1284
 - Improve support for `git clean` !1281
 - Make Kubernetes executor to clone into /builds !1282
