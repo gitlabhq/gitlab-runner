@@ -3,7 +3,6 @@ package helperimage
 import (
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/errors"
@@ -15,17 +14,25 @@ func TestGetInfo(t *testing.T) {
 		expectedHelperImageType interface{}
 		expectedError           interface{}
 	}{
-		{osType: OSTypeLinux, expectedHelperImageType: &linuxInfo{}, expectedError: nil},
-		{osType: OSTypeWindows, expectedHelperImageType: &windowsInfo{}, expectedError: nil},
-		{osType: "unsupported", expectedHelperImageType: nil, expectedError: errors.NewErrOSNotSupported("unsupported")},
+		{osType: OSTypeLinux, expectedError: nil},
+		{osType: OSTypeWindows, expectedError: ErrUnsupportedOSVersion},
+		{osType: "unsupported", expectedError: errors.NewErrOSNotSupported("unsupported")},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.osType, func(t *testing.T) {
-			i, err := GetInfo(types.Info{OSType: testCase.osType})
+			_, err := Get("HEAD", Config{OSType: testCase.osType})
 
-			assert.IsType(t, testCase.expectedHelperImageType, i)
 			assert.Equal(t, testCase.expectedError, err)
 		})
 	}
+}
+
+func TestContainerImage_String(t *testing.T) {
+	image := Info{
+		Name: "abc",
+		Tag:  "1234",
+	}
+
+	assert.Equal(t, "abc:1234", image.String())
 }

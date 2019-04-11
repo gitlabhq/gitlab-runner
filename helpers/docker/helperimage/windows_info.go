@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/docker/docker/api/types"
 )
 
 const (
@@ -25,39 +23,29 @@ var supportedOSVersions = map[string]string{
 
 var ErrUnsupportedOSVersion = errors.New("could not determine windows version")
 
-type windowsInfo struct {
-	operatingSystem string
-}
+type windowsInfo struct{}
 
-func (*windowsInfo) Architecture() string {
-	return windowsSupportedArchitecture
-}
-
-func (u *windowsInfo) Tag(revision string) (string, error) {
-	osVersion, err := u.osVersion()
+func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
+	osVersion, err := w.osVersion(cfg.OperatingSystem)
 	if err != nil {
-		return "", err
+		return Info{}, err
 	}
 
-	return fmt.Sprintf("%s-%s-%s", u.Architecture(), revision, osVersion), nil
+	return Info{
+		Architecture: windowsSupportedArchitecture,
+		Name:         name,
+		Tag:          fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, osVersion),
+		IsSupportingLocalImport: false,
+	}, nil
+
 }
 
-func (u *windowsInfo) osVersion() (string, error) {
-	for operatingSystem, osVersion := range supportedOSVersions {
-		if strings.Contains(u.operatingSystem, fmt.Sprintf(" %s ", operatingSystem)) {
-			return osVersion, nil
+func (w *windowsInfo) osVersion(operatingSystem string) (string, error) {
+	for osVersion, baseImage := range supportedOSVersions {
+		if strings.Contains(operatingSystem, fmt.Sprintf(" %s ", osVersion)) {
+			return baseImage, nil
 		}
 	}
 
 	return "", ErrUnsupportedOSVersion
-}
-
-func (u *windowsInfo) IsSupportingLocalImport() bool {
-	return false
-}
-
-func newWindowsInfo(info types.Info) Info {
-	return &windowsInfo{
-		operatingSystem: info.OperatingSystem,
-	}
 }

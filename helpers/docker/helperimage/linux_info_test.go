@@ -5,45 +5,59 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_linuxInfo_Tag(t *testing.T) {
+func Test_linuxInfo_create(t *testing.T) {
 	cases := []struct {
-		name        string
-		dockerArch  string
-		revision    string
-		expectedTag string
+		name         string
+		dockerArch   string
+		revision     string
+		expectedInfo Info
 	}{
 		{
-			name:        "When dockerArch not specified we fallback to runtime arch",
-			dockerArch:  "",
-			revision:    "2923a43",
-			expectedTag: fmt.Sprintf("%s-2923a43", getExpectedArch()),
+			name:       "When dockerArch not specified we fallback to runtime arch",
+			dockerArch: "",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture: getExpectedArch(),
+				Name:         name,
+				Tag:          fmt.Sprintf("%s-2923a43", getExpectedArch()),
+				IsSupportingLocalImport: true,
+			},
 		},
 		{
-			name:        "Docker runs on armv6l",
-			dockerArch:  "armv6l",
-			revision:    "2923a43",
-			expectedTag: "arm-2923a43",
+			name:       "Docker runs on armv6l",
+			dockerArch: "armv6l",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture: "arm",
+				Name:         name,
+				Tag:          "arm-2923a43",
+				IsSupportingLocalImport: true,
+			},
 		},
 		{
-			name:        "Docker runs on amd64",
-			dockerArch:  "amd64",
-			revision:    "2923a43",
-			expectedTag: "x86_64-2923a43",
+			name:       "Docker runs on amd64",
+			dockerArch: "amd64",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture: "x86_64",
+				Name:         name,
+				Tag:          "x86_64-2923a43",
+				IsSupportingLocalImport: true,
+			},
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			u := newLinuxInfo(types.Info{Architecture: c.dockerArch})
+			l := new(linuxInfo)
 
-			tag, err := u.Tag(c.revision)
+			image, err := l.Create(c.revision, Config{Architecture: c.dockerArch})
 
 			assert.NoError(t, err)
-			assert.Equal(t, c.expectedTag, tag)
+			assert.Equal(t, c.expectedInfo, image)
 		})
 	}
 }
@@ -57,9 +71,4 @@ func getExpectedArch() string {
 	}
 
 	return runtime.GOARCH
-}
-
-func Test_linuxInfo_IsSupportingLocalImport(t *testing.T) {
-	u := newLinuxInfo(types.Info{})
-	assert.True(t, u.IsSupportingLocalImport())
 }
