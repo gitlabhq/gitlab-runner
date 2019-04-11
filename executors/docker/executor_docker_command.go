@@ -58,7 +58,7 @@ func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON,
 		Name: prebuildImage.ID,
 	}
 
-	containerJSON, err := s.createContainer("predefined", buildImage, common.ContainerCommandBuild, []string{prebuildImage.ID})
+	containerJSON, err := s.createContainer("predefined", buildImage, s.helperImageInfo.Cmd, []string{prebuildImage.ID})
 	if err != nil {
 		return nil, err
 	}

@@ -22,6 +22,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				Name:         name,
 				Tag:          fmt.Sprintf("%s-2923a43", getExpectedArch()),
 				IsSupportingLocalImport: true,
+				Cmd: bashCmd,
 			},
 		},
 		"Docker runs on armv6l": {
@@ -32,6 +33,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				Name:         name,
 				Tag:          "arm-2923a43",
 				IsSupportingLocalImport: true,
+				Cmd: bashCmd,
 			},
 		},
 		"Docker runs on amd64": {
@@ -42,6 +44,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				Name:         name,
 				Tag:          "x86_64-2923a43",
 				IsSupportingLocalImport: true,
+				Cmd: bashCmd,
 			},
 		},
 		"Configured architecture is unknown": {
@@ -52,6 +55,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				Name:         name,
 				Tag:          "some-random-arch-2923a43",
 				IsSupportingLocalImport: true,
+				Cmd: bashCmd,
 			},
 		},
 	}

@@ -21,6 +21,7 @@ type Info struct {
 	Name                    string
 	Tag                     string
 	IsSupportingLocalImport bool
+	Cmd                     []string
 }
 
 func (i Info) String() string {
