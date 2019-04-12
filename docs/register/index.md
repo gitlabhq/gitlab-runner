@@ -327,7 +327,7 @@ If you're running the Runner in a Docker container, the `register` command would
 look like:
 
 ```sh
-docker run --rm -t -i -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
+docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
   --non-interactive \
   --executor "docker" \
   --docker-image alpine:3 \
