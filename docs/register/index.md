@@ -321,6 +321,7 @@ sudo gitlab-runner register \
   --tag-list "docker,aws" \
   --run-untagged="true" \
   --locked="false" \
+  --access-level="not_protected"
 ```
 
 If you're running the Runner in a Docker container, the `register` command would
@@ -336,7 +337,8 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --description "docker-runner" \
   --tag-list "docker,aws" \
   --run-untagged="true" \
-  --locked="false"
+  --locked="false" \
+  --access-level="not_protected"
 ```
 
 [tags]: https://docs.gitlab.com/ee/ci/runners/#using-tags

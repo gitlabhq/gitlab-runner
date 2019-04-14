@@ -27,6 +27,7 @@ type RegisterCommand struct {
 	RegistrationToken string `short:"r" long:"registration-token" env:"REGISTRATION_TOKEN" description:"Runner's registration token"`
 	RunUntagged       bool   `long:"run-untagged" env:"REGISTER_RUN_UNTAGGED" description:"Register to run untagged builds; defaults to 'true' when 'tag-list' is empty"`
 	Locked            bool   `long:"locked" env:"REGISTER_LOCKED" description:"Lock Runner for current project, defaults to 'true'"`
+	AccessLevel       string `long:"access-level" env:"REGISTER_ACCESS_LEVEL" description:"Set access_level of the runner to not_protected or ref_protected; defaults to not_protected"`
 	MaximumTimeout    int    `long:"maximum-timeout" env:"REGISTER_MAXIMUM_TIMEOUT" description:"What is the maximum timeout (in seconds) that will be set for job when using this Runner"`
 	Paused            bool   `long:"paused" env:"REGISTER_PAUSED" description:"Set Runner to be paused, defaults to 'false'"`
 
@@ -162,6 +163,7 @@ func (s *RegisterCommand) askRunner() {
 			Description:    s.Name,
 			Tags:           s.TagList,
 			Locked:         s.Locked,
+			AccessLevel:    s.AccessLevel,
 			RunUntagged:    s.RunUntagged,
 			MaximumTimeout: s.MaximumTimeout,
 			Active:         !s.Paused,
