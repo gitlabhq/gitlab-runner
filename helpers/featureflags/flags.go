@@ -20,6 +20,11 @@ type FeatureFlag struct {
 	Description     string
 }
 
+// REMEMBER to update the documentation after adding or removing a feature flag
+//
+// Please use `make update_feature_flags_docs` to make the update automatic and
+// properly formatted. It will replace the existing table with the new one, computed
+// basing on the values below
 var flags = []FeatureFlag{
 	{
 		Name:            FFK8sEntrypointOverCommand,
