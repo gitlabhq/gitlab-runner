@@ -1,6 +1,6 @@
 # The Docker executor
 
-GitLab Runner can use Docker to run builds on user provided images. This is
+GitLab Runner can use Docker to run jobs on user provided images. This is
 possible with the use of **Docker** executor.
 
 The **Docker** executor when used with GitLab CI, connects to [Docker Engine]
@@ -22,18 +22,19 @@ compatible versions of Docker.
 
 ## Workflow
 
-The Docker executor divides the build into multiple steps:
+The Docker executor divides the job into multiple steps:
 
-1. **Prepare**: Create and start the services.
-1. **Pre-build**: Clone, restore cache and download artifacts from previous
-   stages. This is run on a special Docker Image.
-1. **Build**: User build. This is run on the user-provided docker image.
-1. **Post-build**: Create cache, upload artifacts to GitLab. This is run on
+1. **Prepare**: Create and start the [services](https://docs.gitlab.com/ee/ci/yaml/#services).
+1. **Pre-job**: Clone, restore [cache](https://docs.gitlab.com/ee/ci/yaml/#cache)
+   and download [artifacts](https://docs.gitlab.com/ee/ci/yaml/#artifacts) from previous
+   stages. This is run on a special Docker image.
+1. **Job**: User build. This is run on the user-provided Docker image.
+1. **Post-job**: Create cache, upload artifacts to GitLab. This is run on
    a special Docker Image.
 
-The special Docker Image is based on [Alpine Linux] and contains all the tools
-required to run the prepare step the build: the Git binary and the Runner
-binary for supporting caching and artifacts. You can find the definition of
+The special Docker image is based on [Alpine Linux] and contains all the tools
+required to run the prepare, pre-job, and post-job steps, like the Git and the
+Runner binaries for supporting caching and artifacts. You can find the definition of
 this special image [in the official Runner repository][special-build].
 
 ## The `image` keyword
