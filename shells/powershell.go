@@ -263,7 +263,12 @@ func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.Sh
 	}
 
 	err = b.writeScript(w, buildStage, info)
-	script = w.Finish(info.Build.IsDebugTraceEnabled())
+
+	// No need to set up BOM or tracing since no script was generated.
+	if w.Buffer.Len() > 0 {
+		script = w.Finish(info.Build.IsDebugTraceEnabled())
+	}
+
 	return
 }
 
