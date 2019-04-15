@@ -1327,7 +1327,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Variables: []common.JobVariable{
-				{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "true"},
+				{Key: common.FFK8sEntrypointOverCommand, Value: "true"},
 			},
 			Options: &kubernetesOptions{
 				Image: common.Image{
@@ -1389,7 +1389,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Variables: []common.JobVariable{
-				{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "false"},
+				{Key: common.FFK8sEntrypointOverCommand, Value: "false"},
 			},
 			Options: &kubernetesOptions{
 				Image: common.Image{
