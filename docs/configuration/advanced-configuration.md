@@ -747,7 +747,7 @@ before upgrading the Runner, otherwise the jobs will start failing with a "No su
 ## The `[runners.custom_build_dir]` section
 
 NOTE: **Note:**
-[Introduced][https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1267] in Gitlab Runner 11.10
+[Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1267) in Gitlab Runner 11.10
 
 This section defines [custom build directories][https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories] parameters.
 
