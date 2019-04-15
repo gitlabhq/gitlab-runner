@@ -21,6 +21,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
@@ -219,7 +220,7 @@ func (s *executor) buildContainer(name, image string, imageDefinition common.Ima
 }
 
 func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
-	if s.Build.IsFeatureFlagOn(common.FFK8sEntrypointOverCommand) {
+	if s.Build.IsFeatureFlagOn(featureflags.FFK8sEntrypointOverCommand) {
 		return s.getCommandsAndArgsV2(imageDefinition, command...)
 	}
 
