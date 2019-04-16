@@ -64,6 +64,8 @@ func createZipEntry(archive *zip.Writer, fileName string) error {
 	}
 	fh.Name = fileName
 	fh.Extra = createZipExtra(fi)
+	// Set EFS flag to indicate that filenames and comments are UTF-8 encoded
+	fh.Flags = 0x800
 
 	switch fi.Mode() & os.ModeType {
 	case os.ModeDir:
