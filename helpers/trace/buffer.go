@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"sync"
 
 	"github.com/markelog/trie"
@@ -18,8 +20,10 @@ const defaultBytesLimit = 4 * 1024 * 1024 // 4MB
 type Buffer struct {
 	writer        io.WriteCloser
 	lock          sync.RWMutex
-	log           bytes.Buffer
-	logMaskedSize int
+	logFile       *os.File
+	logSize       int
+	logWriter     *bufio.Writer
+	advanceBuffer bytes.Buffer
 	bytesLimit    int
 	finish        chan struct{}
 
@@ -43,34 +47,50 @@ func (b *Buffer) SetLimit(size int) {
 	b.bytesLimit = size
 }
 
-func (b *Buffer) limitExceededMessage() string {
-	return fmt.Sprintf("\n%sJob's log exceeded limit of %v bytes.%s\n", helpers.ANSI_BOLD_RED, b.bytesLimit, helpers.ANSI_RESET)
+func (b *Buffer) Size() int {
+	return b.logSize
 }
 
-func (b *Buffer) Bytes() []byte {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (b *Buffer) Reader(offset, n int) (io.ReadSeeker, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
-	return b.log.Bytes()[0:b.logMaskedSize]
+	err := b.logWriter.Flush()
+	if err != nil {
+		return nil, err
+	}
+
+	return io.NewSectionReader(b.logFile, int64(offset), int64(n)), nil
 }
 
-func (b *Buffer) String() string {
-	return string(b.Bytes())
+func (b *Buffer) Bytes(offset, n int) ([]byte, error) {
+	reader, err := b.Reader(offset, n)
+	if err != nil {
+		return nil, err
+	}
+
+	return ioutil.ReadAll(reader)
 }
 
 func (b *Buffer) Write(data []byte) (n int, err error) {
 	return b.writer.Write(data)
 }
 
-func (b *Buffer) Close() error {
+func (b *Buffer) Finish() {
 	// wait for trace to finish
-	err := b.writer.Close()
+	b.writer.Close()
 	<-b.finish
-	return err
 }
 
-func (b *Buffer) advanceAllUnsafe() {
-	b.logMaskedSize = b.log.Len()
+func (b *Buffer) Close() {
+	_ = b.logFile.Close()
+	_ = os.Remove(b.logFile.Name())
+}
+
+func (b *Buffer) advanceAllUnsafe() error {
+	n, err := b.advanceBuffer.WriteTo(b.logWriter)
+	b.logSize += int(n)
+	return err
 }
 
 func (b *Buffer) advanceAll() {
@@ -84,70 +104,69 @@ func (b *Buffer) advanceAll() {
 func (b *Buffer) advanceLogUnsafe() error {
 	// advance all if no masking is enabled
 	if b.maskTree == nil {
-		b.advanceAllUnsafe()
-		return nil
+		return b.advanceAllUnsafe()
 	}
 
-	rest := string(b.log.Bytes()[b.logMaskedSize:])
-
+	rest := b.advanceBuffer.String()
 	results := b.maskTree.Search(rest)
 	if len(results) == 0 {
 		// we can advance as no match was found
-		b.advanceAllUnsafe()
-		return nil
+		return b.advanceAllUnsafe()
 	}
 
 	// full match was found
 	if len(results) == 1 && results[0].Key == rest {
-		b.log.Truncate(b.logMaskedSize)
-		b.log.WriteString(maskedText)
-		b.advanceAllUnsafe()
+		b.advanceBuffer.Reset()
+		b.advanceBuffer.WriteString(maskedText)
+		return b.advanceAllUnsafe()
 	}
 
 	// partial match, wait for more characters
 	return nil
 }
 
-func (b *Buffer) writeRune(r rune) (int, error) {
+func (b *Buffer) limitExceededMessage() string {
+	return fmt.Sprintf("\n%sJob's log exceeded limit of %v bytes.%s\n", helpers.ANSI_BOLD_RED, b.bytesLimit, helpers.ANSI_RESET)
+}
+
+func (b *Buffer) writeRune(r rune) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	n, err := b.log.WriteRune(r)
-	if err != nil {
-		return n, err
+	// over trace limit
+	if b.logSize > b.bytesLimit {
+		return io.EOF
 	}
 
-	err = b.advanceLogUnsafe()
-	if err != nil {
-		return n, err
+	if _, err := b.advanceBuffer.WriteRune(r); err != nil {
+		return err
 	}
 
-	if b.log.Len() < b.bytesLimit {
-		return n, nil
+	if err := b.advanceLogUnsafe(); err != nil {
+		return err
 	}
 
-	b.log.WriteString(b.limitExceededMessage())
-	return n, io.EOF
+	// under trace limit
+	if b.logSize <= b.bytesLimit {
+		return nil
+	}
+
+	b.advanceBuffer.Reset()
+	b.advanceBuffer.WriteString(b.limitExceededMessage())
+	return b.advanceAllUnsafe()
 }
 
 func (b *Buffer) process(pipe *io.PipeReader) {
 	defer pipe.Close()
 
-	stopped := false
 	reader := bufio.NewReader(pipe)
 
 	for {
 		r, s, err := reader.ReadRune()
 		if s <= 0 {
 			break
-		} else if stopped {
-			// ignore symbols if job log exceeded limit
-			continue
 		} else if err == nil {
-			_, err = b.writeRune(r)
-			if err == io.EOF {
-				stopped = true
-			}
+			b.writeRune(r)
 		} else {
 			// ignore invalid characters
 			continue
@@ -158,13 +177,20 @@ func (b *Buffer) process(pipe *io.PipeReader) {
 	close(b.finish)
 }
 
-func New() *Buffer {
+func New() (*Buffer, error) {
+	logFile, err := ioutil.TempFile("", "trace")
+	if err != nil {
+		return nil, err
+	}
+
 	reader, writer := io.Pipe()
 	buffer := &Buffer{
 		writer:     writer,
 		bytesLimit: defaultBytesLimit,
 		finish:     make(chan struct{}),
+		logFile:    logFile,
+		logWriter:  bufio.NewWriter(logFile),
 	}
 	go buffer.process(reader)
-	return buffer
+	return buffer, nil
 }

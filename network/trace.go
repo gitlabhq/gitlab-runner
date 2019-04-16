@@ -129,10 +129,11 @@ func (c *clientJobTrace) finalStatusUpdate() {
 }
 
 func (c *clientJobTrace) finish() {
-	c.buffer.Close()
+	c.buffer.Finish()
 	c.finished <- true
 	c.finalTraceUpdate()
 	c.finalStatusUpdate()
+	c.buffer.Close()
 }
 
 func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
@@ -147,23 +148,22 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 func (c *clientJobTrace) anyTraceToSend() bool {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return len(c.buffer.Bytes()) != c.sentTrace
+
+	return c.buffer.Size() != c.sentTrace
 }
 
 func (c *clientJobTrace) sendPatch() common.UpdateState {
 	c.lock.RLock()
-	trace := c.buffer.Bytes()
+	content, err := c.buffer.Bytes(c.sentTrace, c.maxTracePatchSize)
 	sentTrace := c.sentTrace
 	c.lock.RUnlock()
 
-	if len(trace) == sentTrace {
-		return common.UpdateSucceeded
+	if err != nil {
+		return common.UpdateFailed
 	}
 
-	// we send at most `maxTracePatchSize` in single patch
-	content := trace[sentTrace:]
-	if len(content) > c.maxTracePatchSize {
-		content = content[:c.maxTracePatchSize]
+	if len(content) == 0 {
+		return common.UpdateSucceeded
 	}
 
 	sentOffset, state := c.client.PatchTrace(
@@ -243,16 +243,21 @@ func (c *clientJobTrace) setupLogLimit() {
 	c.buffer.SetLimit(bytesLimit)
 }
 
-func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentials *common.JobCredentials) *clientJobTrace {
+func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentials *common.JobCredentials) (*clientJobTrace, error) {
+	buffer, err := trace.New()
+	if err != nil {
+		return nil, err
+	}
+
 	return &clientJobTrace{
 		client:              client,
 		config:              config,
-		buffer:              trace.New(),
+		buffer:              buffer,
 		jobCredentials:      jobCredentials,
 		id:                  jobCredentials.ID,
 		maxTracePatchSize:   common.DefaultTracePatchLimit,
 		updateInterval:      common.UpdateInterval,
 		forceSendInterval:   common.ForceTraceSentInterval,
 		finishRetryInterval: common.UpdateRetryInterval,
-	}
+	}, nil
 }

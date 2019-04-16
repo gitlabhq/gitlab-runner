@@ -530,10 +530,14 @@ func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifacts
 	}
 }
 
-func (n *GitLabClient) ProcessJob(config common.RunnerConfig, jobCredentials *common.JobCredentials) common.JobTrace {
-	trace := newJobTrace(n, config, jobCredentials)
+func (n *GitLabClient) ProcessJob(config common.RunnerConfig, jobCredentials *common.JobCredentials) (common.JobTrace, error) {
+	trace, err := newJobTrace(n, config, jobCredentials)
+	if err != nil {
+		return nil, err
+	}
+
 	trace.start()
-	return trace
+	return trace, nil
 }
 
 func NewGitLabClientWithRequestStatusesMap(rsMap *APIRequestStatusesMap) *GitLabClient {

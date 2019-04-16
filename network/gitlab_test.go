@@ -765,12 +765,12 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 	endOffset, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent[11:], 11)
 	assert.Equal(t, UpdateRangeMismatch, state)
-	assert.Equal(t, 10, endOffset) // TODO: (kamil) to verify behavior
+	assert.Equal(t, 10, endOffset)
 
 	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent[15:], 15)
 	assert.Equal(t, UpdateRangeMismatch, state)
-	assert.Equal(t, 10, endOffset) // TODO: (kamil) to verify behavior
+	assert.Equal(t, 10, endOffset)
 
 	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent[5:], 5)

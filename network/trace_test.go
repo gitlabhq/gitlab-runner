@@ -53,7 +53,9 @@ func TestIgnoreStatusChange(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, jobInfoMatcher).
 		Return(common.UpdateSucceeded).Once()
 
-	b := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
 	b.start()
 	b.Success()
 	b.Fail(errors.New("test"), "script_failure")
@@ -77,7 +79,9 @@ func TestJobAbort(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateAbort).Once()
 
-	b := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
 	b.updateInterval = 0
 	b.SetCancelFunc(cancel)
 
@@ -92,7 +96,9 @@ func TestJobOutputLimit(t *testing.T) {
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
 
-	b := newJobTrace(mockNetwork, jobOutputLimit, jobCredentials)
+	b, err := newJobTrace(mockNetwork, jobOutputLimit, jobCredentials)
+	require.NoError(t, err)
+
 	// prevent any UpdateJob before `b.Success()` call
 	b.updateInterval = 25 * time.Second
 
@@ -100,9 +106,10 @@ func TestJobOutputLimit(t *testing.T) {
 
 	receivedTrace := bytes.NewBuffer([]byte{})
 	mockNetwork.On("PatchTrace", jobOutputLimit, jobCredentials, mock.Anything, mock.Anything).
-		Return(1077, common.UpdateSucceeded).
+		Return(1078, common.UpdateSucceeded).
+		Once().
 		Run(func(args mock.Arguments) {
-			// the 1077 == len(data)
+			// the 1078 == len(data)
 			data := args.Get(2).([]byte)
 			receivedTrace.Write(data)
 		})
@@ -137,11 +144,13 @@ func TestJobMasking(t *testing.T) {
 	mockNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).
 		Return(common.UpdateSucceeded)
 
-	jobTrace := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	jobTrace, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
 	jobTrace.SetMasked(maskedValues)
 	jobTrace.start()
 
-	_, err := jobTrace.Write([]byte(traceMessage))
+	_, err = jobTrace.Write([]byte(traceMessage))
 	require.NoError(t, err)
 	jobTrace.Success()
 }
@@ -175,7 +184,9 @@ func TestJobFinishTraceUpdateRetry(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateSucceeded).Once()
 
-	b := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
 	b.finishRetryInterval = time.Microsecond
 
 	b.start()
@@ -204,7 +215,9 @@ func TestJobMaxTracePatchSize(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateSucceeded).Once()
 
-	b := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
 	b.finishRetryInterval = time.Microsecond
 	b.maxTracePatchSize = 5
 
@@ -227,7 +240,9 @@ func TestJobFinishStatusUpdateRetry(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateSucceeded).Once()
 
-	b := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
 	b.finishRetryInterval = time.Microsecond
 
 	b.start()
@@ -255,7 +270,9 @@ func TestJobIncrementalPatchSend(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
 		Return(common.UpdateSucceeded).Once()
 
-	b := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
 	b.updateInterval = time.Millisecond * 10
 	b.start()
 	fmt.Fprint(b, "test trace")
@@ -287,7 +304,9 @@ func TestJobIncrementalStatusRefresh(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
 		Return(common.UpdateSucceeded).Once()
 
-	b := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
 	b.updateInterval = time.Millisecond * 10
 	b.start()
 	wg.Wait()

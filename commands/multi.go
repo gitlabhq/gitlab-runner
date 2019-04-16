@@ -121,21 +121,54 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 	}
 }
 
+func (mr *RunCommand) requeueRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
+	select {
+	case runners <- runner:
+		mr.log().WithField("runner", runner.ShortDescription()).Debugln("Requeued the runner")
+
+	default:
+		mr.log().WithField("runner", runner.ShortDescription()).Debugln("Failed to requeue the runner: ")
+	}
+}
+
 // requestJob will check if the runner can send another concurrent request to
 // GitLab, if not the return value is nil.
-func (mr *RunCommand) requestJob(runner *common.RunnerConfig, sessionInfo *common.SessionInfo) *common.JobResponse {
+func (mr *RunCommand) requestJob(runner *common.RunnerConfig, sessionInfo *common.SessionInfo) (common.JobTrace, *common.JobResponse, error) {
 	if !mr.buildsHelper.acquireRequest(runner) {
 		mr.log().WithField("runner", runner.ShortDescription()).
 			Debugln("Failed to request job: runner requestConcurrency meet")
-
-		return nil
+		return nil, nil, nil
 	}
 	defer mr.buildsHelper.releaseRequest(runner)
 
 	jobData, healthy := mr.network.RequestJob(*runner, sessionInfo)
 	mr.makeHealthy(runner.UniqueID(), healthy)
 
-	return jobData
+	if jobData == nil {
+		return nil, nil, nil
+	}
+
+	// Make sure to always close output
+	jobCredentials := &common.JobCredentials{
+		ID:    jobData.ID,
+		Token: jobData.Token,
+	}
+
+	trace, err := mr.network.ProcessJob(*runner, jobCredentials)
+	if err != nil {
+		jobInfo := common.UpdateJobInfo{
+			ID:            jobCredentials.ID,
+			State:         common.Failed,
+			FailureReason: common.RunnerSystemFailure,
+		}
+
+		// send failure once
+		mr.network.UpdateJob(*runner, jobCredentials, jobInfo)
+		return nil, nil, err
+	}
+
+	trace.SetFailuresCollector(mr.failuresCollector)
+	return trace, jobData, nil
 }
 
 func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) (err error) {
@@ -150,25 +183,16 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	}
 	defer releaseFn()
 
-	var features common.FeaturesInfo
-	provider.GetFeatures(&features)
-	buildSession, sessionInfo, err := mr.createSession(features)
+	buildSession, sessionInfo, err := mr.createSession(provider)
 	if err != nil {
 		return
 	}
 
 	// Receive a new build
-	jobData := mr.requestJob(runner, sessionInfo)
-	if jobData == nil {
+	trace, jobData, err := mr.requestJob(runner, sessionInfo)
+	if err != nil || jobData == nil {
 		return
 	}
-
-	// Make sure to always close output
-	jobCredentials := &common.JobCredentials{
-		ID:    jobData.ID,
-		Token: jobData.Token,
-	}
-	trace := mr.network.ProcessJob(*runner, jobCredentials)
 	defer func() {
 		if err != nil {
 			fmt.Fprintln(trace, err.Error())
@@ -177,8 +201,6 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 			trace.Fail(nil, common.NoneFailure)
 		}
 	}()
-
-	trace.SetFailuresCollector(mr.failuresCollector)
 
 	// Create a new build
 	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData)
@@ -193,13 +215,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	// Process the same runner by different worker again
 	// to speed up taking the builds
-	select {
-	case runners <- runner:
-		mr.log().WithField("runner", runner.ShortDescription()).Debugln("Requeued the runner")
-
-	default:
-		mr.log().WithField("runner", runner.ShortDescription()).Debugln("Failed to requeue the runner: ")
-	}
+	mr.requeueRunner(runner, runners)
 
 	// Process a build
 	return build.Run(mr.config, trace)
@@ -224,7 +240,13 @@ func (mr *RunCommand) acquireRunnerResources(provider common.ExecutorProvider, r
 	return executorData, releaseFn, nil
 }
 
-func (mr *RunCommand) createSession(features common.FeaturesInfo) (*session.Session, *common.SessionInfo, error) {
+func (mr *RunCommand) createSession(provider common.ExecutorProvider) (*session.Session, *common.SessionInfo, error) {
+	var features common.FeaturesInfo
+
+	if err := provider.GetFeatures(&features); err != nil {
+		return nil, nil, err
+	}
+
 	if mr.sessionServer == nil || !features.Session {
 		return nil, nil, nil
 	}
