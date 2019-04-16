@@ -304,7 +304,6 @@ type UpdateJobRequest struct {
 	Token         string           `json:"token,omitempty"`
 	State         JobState         `json:"state,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
-	Trace         *string          `json:"trace,omitempty"`
 }
 
 type JobCredentials struct {
@@ -339,7 +338,6 @@ func (j *JobCredentials) GetToken() string {
 type UpdateJobInfo struct {
 	ID            int
 	State         JobState
-	Trace         *string
 	FailureReason JobFailureReason
 }
 
@@ -364,21 +362,13 @@ type JobTrace interface {
 	IsStdout() bool
 }
 
-type JobTracePatch interface {
-	Patch() []byte
-	Offset() int
-	TotalSize() int
-	SetNewOffset(newOffset int)
-	ValidateRange() bool
-}
-
 type Network interface {
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
-	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, tracePart JobTracePatch) UpdateState
+	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) (int, UpdateState)
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) JobTrace

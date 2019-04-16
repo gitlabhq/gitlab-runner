@@ -30,6 +30,7 @@ type clientJobTrace struct {
 	updateInterval      time.Duration
 	forceSendInterval   time.Duration
 	finishRetryInterval time.Duration
+	maxTracePatchSize   int
 
 	failuresCollector common.FailuresCollector
 }
@@ -92,95 +93,103 @@ func (c *clientJobTrace) start() {
 	go c.watch()
 }
 
+func (c *clientJobTrace) finalTraceUpdate() {
+	for c.anyTraceToSend() {
+		switch c.sendPatch() {
+		case common.UpdateSucceeded:
+			// we continue sending till we succeed
+			continue
+		case common.UpdateAbort:
+			return
+		case common.UpdateNotFound:
+			return
+		case common.UpdateRangeMismatch:
+			time.Sleep(c.finishRetryInterval)
+		case common.UpdateFailed:
+			time.Sleep(c.finishRetryInterval)
+		}
+	}
+}
+
+func (c *clientJobTrace) finalStatusUpdate() {
+	for {
+		switch c.sendUpdate(true) {
+		case common.UpdateSucceeded:
+			return
+		case common.UpdateAbort:
+			return
+		case common.UpdateNotFound:
+			return
+		case common.UpdateRangeMismatch:
+			return
+		case common.UpdateFailed:
+			time.Sleep(c.finishRetryInterval)
+		}
+	}
+}
+
 func (c *clientJobTrace) finish() {
 	c.buffer.Close()
 	c.finished <- true
-
-	// Do final upload of job trace
-	for {
-		if c.fullUpdate() != common.UpdateFailed {
-			return
-		}
-		time.Sleep(c.finishRetryInterval)
-	}
+	c.finalTraceUpdate()
+	c.finalStatusUpdate()
 }
 
 func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
+	state := c.sendPatch()
+	if state != common.UpdateSucceeded {
+		return state
+	}
+
+	return c.sendUpdate(false)
+}
+
+func (c *clientJobTrace) anyTraceToSend() bool {
 	c.lock.RLock()
-	state := c.state
+	defer c.lock.RUnlock()
+	return len(c.buffer.Bytes()) != c.sentTrace
+}
+
+func (c *clientJobTrace) sendPatch() common.UpdateState {
+	c.lock.RLock()
 	trace := c.buffer.Bytes()
+	sentTrace := c.sentTrace
 	c.lock.RUnlock()
 
-	if c.sentTrace != len(trace) {
-		result := c.sendPatch(trace)
-		if result != common.UpdateSucceeded {
-			return result
-		}
+	if len(trace) == sentTrace {
+		return common.UpdateSucceeded
 	}
 
-	if c.sentState != state || time.Since(c.sentTime) > c.forceSendInterval {
-		if state == common.Running { // we should only follow-up with Running!
-			result := c.sendUpdate(state)
-			if result != common.UpdateSucceeded {
-				return result
-			}
-		}
+	// we send at most `maxTracePatchSize` in single patch
+	content := trace[sentTrace:]
+	if len(content) > c.maxTracePatchSize {
+		content = content[:c.maxTracePatchSize]
 	}
 
-	return common.UpdateSucceeded
-}
+	sentOffset, state := c.client.PatchTrace(
+		c.config, c.jobCredentials, content, sentTrace)
 
-func (c *clientJobTrace) sendPatch(trace []byte) common.UpdateState {
-	tracePatch, err := newTracePatch(trace, c.sentTrace)
-	if err != nil {
-		c.config.Log().Errorln("Error while creating a tracePatch", err.Error())
-	}
-
-	update := c.client.PatchTrace(c.config, c.jobCredentials, tracePatch)
-	if update == common.UpdateNotFound {
-		return update
-	}
-
-	if update == common.UpdateRangeMismatch {
-		update = c.resendPatch(c.jobCredentials.ID, c.config, c.jobCredentials, tracePatch)
-	}
-
-	if update == common.UpdateSucceeded {
-		c.sentTrace = tracePatch.totalSize
+	if state == common.UpdateSucceeded || state == common.UpdateRangeMismatch {
+		c.lock.Lock()
 		c.sentTime = time.Now()
+		c.sentTrace = sentOffset
+		c.lock.Unlock()
 	}
 
-	return update
+	return state
 }
 
-func (c *clientJobTrace) resendPatch(id int, config common.RunnerConfig, jobCredentials *common.JobCredentials, tracePatch common.JobTracePatch) (update common.UpdateState) {
-	if !tracePatch.ValidateRange() {
-		config.Log().Warningln(id, "Full job update is needed")
-		fullTrace := string(c.buffer.Bytes())
+func (c *clientJobTrace) sendUpdate(force bool) common.UpdateState {
+	c.lock.RLock()
+	state := c.state
+	shouldUpdateState := c.state != c.sentState
+	shouldRefresh := time.Since(c.sentTime) > c.forceSendInterval
+	c.lock.RUnlock()
 
-		jobInfo := common.UpdateJobInfo{
-			ID:            c.id,
-			State:         c.state,
-			Trace:         &fullTrace,
-			FailureReason: c.failureReason,
-		}
-
-		return c.client.UpdateJob(c.config, jobCredentials, jobInfo)
+	if !force && !shouldUpdateState && !shouldRefresh {
+		return common.UpdateSucceeded
 	}
 
-	config.Log().Warningln(id, "Resending trace patch due to range mismatch")
-
-	update = c.client.PatchTrace(config, jobCredentials, tracePatch)
-	if update == common.UpdateRangeMismatch {
-		config.Log().Errorln(id, "Appending trace to coordinator...", "failed due to range mismatch")
-
-		return common.UpdateFailed
-	}
-
-	return
-}
-
-func (c *clientJobTrace) sendUpdate(state common.JobState) common.UpdateState {
 	jobInfo := common.UpdateJobInfo{
 		ID:            c.id,
 		State:         state,
@@ -188,43 +197,15 @@ func (c *clientJobTrace) sendUpdate(state common.JobState) common.UpdateState {
 	}
 
 	status := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
+
 	if status == common.UpdateSucceeded {
-		c.sentState = state
+		c.lock.Lock()
 		c.sentTime = time.Now()
+		c.sentState = state
+		c.lock.Unlock()
 	}
 
 	return status
-}
-
-func (c *clientJobTrace) fullUpdate() common.UpdateState {
-	c.lock.RLock()
-	state := c.state
-	trace := c.buffer.Bytes()
-	c.lock.RUnlock()
-
-	if c.sentTrace != len(trace) {
-		c.sendPatch(trace) // we don't care about sendPatch() result, in the worst case we will re-send the trace
-	}
-
-	jobInfo := common.UpdateJobInfo{
-		ID:            c.id,
-		State:         state,
-		FailureReason: c.failureReason,
-	}
-
-	if c.sentTrace != len(trace) {
-		traceString := string(trace)
-		jobInfo.Trace = &traceString
-	}
-
-	update := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
-	if update == common.UpdateSucceeded {
-		c.sentTrace = len(trace)
-		c.sentState = state
-		c.sentTime = time.Now()
-	}
-
-	return update
 }
 
 func (c *clientJobTrace) abort() bool {
@@ -254,12 +235,10 @@ func (c *clientJobTrace) watch() {
 }
 
 func (c *clientJobTrace) setupLogLimit() {
-	bytesLimit := c.config.OutputLimit
+	bytesLimit := c.config.OutputLimit * 1024 // convert to bytes
 	if bytesLimit == 0 {
 		bytesLimit = common.DefaultOutputLimit
 	}
-	// configuration values are expressed in KB
-	bytesLimit *= 1024
 
 	c.buffer.SetLimit(bytesLimit)
 }
@@ -271,6 +250,7 @@ func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentia
 		buffer:              trace.New(),
 		jobCredentials:      jobCredentials,
 		id:                  jobCredentials.ID,
+		maxTracePatchSize:   common.DefaultTracePatchLimit,
 		updateInterval:      common.UpdateInterval,
 		forceSendInterval:   common.ForceTraceSentInterval,
 		finishRetryInterval: common.UpdateRetryInterval,

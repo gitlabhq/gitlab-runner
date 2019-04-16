@@ -543,7 +543,6 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.NoError(t, err)
 
 	assert.Equal(t, "token", req["token"])
-	assert.Equal(t, "trace", req["trace"])
 
 	setStateForUpdateJobHandlerResponse(w, req)
 }
@@ -566,33 +565,32 @@ func TestUpdateJob(t *testing.T) {
 		Token: "token",
 	}
 
-	trace := "trace"
 	c := NewGitLabClient()
 
 	var state UpdateState
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running", Trace: &trace, FailureReason: ""})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running", FailureReason: ""})
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "forbidden", Trace: &trace, FailureReason: ""})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "forbidden", FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state, "Update should be aborted if the state is forbidden")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "other", Trace: &trace, FailureReason: ""})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "other", FailureReason: ""})
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state", Trace: &trace, FailureReason: ""})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state", FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown job")
 
-	state = c.UpdateJob(brokenConfig, jobCredentials, UpdateJobInfo{ID: 4, State: "state", Trace: &trace, FailureReason: ""})
+	state = c.UpdateJob(brokenConfig, jobCredentials, UpdateJobInfo{ID: 4, State: "state", FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state)
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: "script_failure"})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: "script_failure"})
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: "unknown_failure_reason"})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: "unknown_failure_reason"})
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", Trace: &trace, FailureReason: ""})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: ""})
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 }
 
@@ -658,9 +656,9 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 }
 
 var patchToken = "token"
-var patchTraceString = "trace trace trace"
+var patchTraceContent = []byte("trace trace trace")
 
-func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body string, offset, limit int)) (*httptest.Server, *GitLabClient, RunnerConfig) {
+func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int)) (*httptest.Server, *GitLabClient, RunnerConfig) {
 	patchHandler := func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v4/jobs/1/trace" {
 			w.WriteHeader(http.StatusNotFound)
@@ -686,7 +684,7 @@ func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Re
 		limit, err := strconv.Atoi(ranges[1])
 		assert.NoError(t, err)
 
-		handler(w, r, string(body), offset, limit)
+		handler(w, r, body, offset, limit)
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(patchHandler))
@@ -700,61 +698,59 @@ func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Re
 	return server, NewGitLabClient(), config
 }
 
-func getTracePatch(traceString string, offset int) *tracePatch {
-	tracePatch, _ := newTracePatch([]byte(traceString), offset)
-	return tracePatch
-}
-
 func TestUnknownPatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 		w.WriteHeader(http.StatusNotFound)
 	}
 
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent, 0)
 	assert.Equal(t, UpdateNotFound, state)
 }
 
 func TestForbiddenPatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 		w.WriteHeader(http.StatusForbidden)
 	}
 
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent, 0)
 	assert.Equal(t, UpdateAbort, state)
 }
 
 func TestPatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		assert.Equal(t, patchTraceString[offset:limit+1], body)
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+		assert.Equal(t, patchTraceContent[offset:limit+1], body)
 		w.WriteHeader(http.StatusAccepted)
 	}
 
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	endOffset, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent, 0)
 	assert.Equal(t, UpdateSucceeded, state)
+	assert.Equal(t, len(patchTraceContent), endOffset)
 
-	tracePatch = getTracePatch(patchTraceString, 3)
-	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent[3:], 3)
 	assert.Equal(t, UpdateSucceeded, state)
+	assert.Equal(t, len(patchTraceContent), endOffset)
 
-	tracePatch = getTracePatch(patchTraceString[:10], 3)
-	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent[3:10], 3)
 	assert.Equal(t, UpdateSucceeded, state)
+	assert.Equal(t, 10, endOffset)
 }
 
 func TestRangeMismatchPatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 		if offset > 10 {
 			w.Header().Set("Range", "0-10")
 			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
@@ -766,66 +762,24 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	tracePatch := getTracePatch(patchTraceString, 11)
-	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	endOffset, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent[11:], 11)
 	assert.Equal(t, UpdateRangeMismatch, state)
+	assert.Equal(t, 10, endOffset) // TODO: (kamil) to verify behavior
 
-	tracePatch = getTracePatch(patchTraceString, 15)
-	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent[15:], 15)
 	assert.Equal(t, UpdateRangeMismatch, state)
+	assert.Equal(t, 10, endOffset) // TODO: (kamil) to verify behavior
 
-	tracePatch = getTracePatch(patchTraceString, 5)
-	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent[5:], 5)
 	assert.Equal(t, UpdateSucceeded, state)
-}
-
-func TestResendPatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		if offset > 10 {
-			w.Header().Set("Range", "0-10")
-			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
-		}
-
-		w.WriteHeader(http.StatusAccepted)
-	}
-
-	server, client, config := getPatchServer(t, handler)
-	defer server.Close()
-
-	tracePatch := getTracePatch(patchTraceString, 11)
-	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
-	assert.Equal(t, UpdateRangeMismatch, state)
-
-	state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
-	assert.Equal(t, UpdateSucceeded, state)
-}
-
-// We've had a situation where the same job was triggered second time by GItLab. In GitLab the job trace
-// was 17041 bytes long while the repeated job trace was only 66 bytes long. We've had a `RangeMismatch`
-// response, so the offset was updated (to 17041) and `client.PatchTrace` was repeated, at it was planned.
-// Unfortunately the `tracePatch` struct was  not resistant to a situation when the offset is set to a
-// value bigger than trace's length. This test simulates such situation.
-func TestResendDoubledJobPatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
-		if offset > 10 {
-			w.Header().Set("Range", "0-100")
-			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
-		}
-
-		w.WriteHeader(http.StatusAccepted)
-	}
-
-	server, client, config := getPatchServer(t, handler)
-	defer server.Close()
-
-	tracePatch := getTracePatch(patchTraceString, 11)
-	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
-	assert.Equal(t, UpdateRangeMismatch, state)
-	assert.False(t, tracePatch.ValidateRange())
+	assert.Equal(t, len(patchTraceContent), endOffset)
 }
 
 func TestJobFailedStatePatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 		w.Header().Set("Job-Status", "failed")
 		w.WriteHeader(http.StatusAccepted)
 	}
@@ -833,49 +787,67 @@ func TestJobFailedStatePatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent, 0)
 	assert.Equal(t, UpdateAbort, state)
 }
 
 func TestPatchTraceCantConnect(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {}
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {}
 
 	server, client, config := getPatchServer(t, handler)
 	server.Close()
 
-	tracePatch := getTracePatch(patchTraceString, 0)
-	state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent, 0)
 	assert.Equal(t, UpdateFailed, state)
 }
 
 func TestPatchTraceUpdatedTrace(t *testing.T) {
 	sentTrace := 0
-	traceString := ""
+	traceContent := []byte{}
 
 	updates := []struct {
-		traceUpdate             string
+		traceUpdate             []byte
 		expectedContentRange    string
 		expectedContentLength   int64
 		expectedResult          UpdateState
 		shouldNotCallPatchTrace bool
 	}{
-		{traceUpdate: "test", expectedContentRange: "0-3", expectedContentLength: 4, expectedResult: UpdateSucceeded},
-		{traceUpdate: "", expectedResult: UpdateFailed, shouldNotCallPatchTrace: true},
-		{traceUpdate: " ", expectedContentRange: "4-4", expectedContentLength: 1, expectedResult: UpdateSucceeded},
-		{traceUpdate: "test", expectedContentRange: "5-8", expectedContentLength: 4, expectedResult: UpdateSucceeded},
+		{
+			traceUpdate:           []byte("test"),
+			expectedContentRange:  "0-3",
+			expectedContentLength: 4,
+			expectedResult:        UpdateSucceeded,
+		},
+		{
+			traceUpdate:             []byte{},
+			expectedContentLength:   4,
+			expectedResult:          UpdateSucceeded,
+			shouldNotCallPatchTrace: true,
+		},
+		{
+			traceUpdate:          []byte(" "),
+			expectedContentRange: "4-4", expectedContentLength: 1,
+			expectedResult: UpdateSucceeded,
+		},
+		{
+			traceUpdate:          []byte("test"),
+			expectedContentRange: "5-8", expectedContentLength: 4,
+			expectedResult: UpdateSucceeded,
+		},
 	}
 
 	for id, update := range updates {
 		t.Run(fmt.Sprintf("patch-%d", id+1), func(t *testing.T) {
-			handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 				if update.shouldNotCallPatchTrace {
 					t.Error("PatchTrace endpoint should not be called")
 					return
 				}
 
-				if limit+1 <= len(traceString) {
-					assert.Equal(t, traceString[offset:limit+1], body)
+				if limit+1 <= len(traceContent) {
+					assert.Equal(t, traceContent[offset:limit+1], body)
 				}
 
 				assert.Equal(t, update.traceUpdate, body)
@@ -887,34 +859,50 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			traceString += update.traceUpdate
-			tracePatch := getTracePatch(traceString, sentTrace)
-
-			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+			traceContent = append(traceContent, update.traceUpdate...)
+			endOffset, result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+				traceContent[sentTrace:], sentTrace)
 			assert.Equal(t, update.expectedResult, result)
 
-			sentTrace = tracePatch.totalSize
+			sentTrace = endOffset
 		})
 	}
 }
 
 func TestPatchTraceContentRangeAndLength(t *testing.T) {
-	tests := []struct {
+	tests := map[string]struct {
 		name                    string
-		trace                   string
+		trace                   []byte
 		expectedContentRange    string
 		expectedContentLength   int64
 		expectedResult          UpdateState
 		shouldNotCallPatchTrace bool
 	}{
-		{name: "0 bytes", trace: "", expectedResult: UpdateFailed, shouldNotCallPatchTrace: true},
-		{name: "1 byte", trace: "1", expectedContentRange: "0-0", expectedContentLength: 1, expectedResult: UpdateSucceeded, shouldNotCallPatchTrace: false},
-		{name: "2 bytes", trace: "12", expectedContentRange: "0-1", expectedContentLength: 2, expectedResult: UpdateSucceeded, shouldNotCallPatchTrace: false},
+		"0 bytes": {
+			trace:                   []byte{},
+			expectedResult:          UpdateSucceeded,
+			shouldNotCallPatchTrace: true,
+		},
+		"1 byte": {
+			name:                    "1 byte",
+			trace:                   []byte("1"),
+			expectedContentRange:    "0-0",
+			expectedContentLength:   1,
+			expectedResult:          UpdateSucceeded,
+			shouldNotCallPatchTrace: false,
+		},
+		"2 bytes": {
+			trace:                   []byte("12"),
+			expectedContentRange:    "0-1",
+			expectedContentLength:   2,
+			expectedResult:          UpdateSucceeded,
+			shouldNotCallPatchTrace: false,
+		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 				if test.shouldNotCallPatchTrace {
 					t.Error("PatchTrace endpoint should not be called")
 					return
@@ -928,15 +916,15 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			tracePatch := getTracePatch(test.trace, 0)
-			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+			_, result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+				test.trace, 0)
 			assert.Equal(t, test.expectedResult, result)
 		})
 	}
 }
 
 func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 		contentRange := r.Header.Get("Content-Range")
 		bytes := strings.Split(contentRange, "-")
 
@@ -947,7 +935,7 @@ func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
 		require.NoError(t, err, "Should not set error when parsing Content-Range endByte component")
 
 		assert.Equal(t, 0, startByte, "Content-Range should contain start byte as first field")
-		assert.Equal(t, len(patchTraceString)-1, endByte, "Content-Range should contain end byte as second field")
+		assert.Equal(t, len(patchTraceContent)-1, endByte, "Content-Range should contain end byte as second field")
 
 		w.WriteHeader(http.StatusAccepted)
 	}
@@ -955,8 +943,8 @@ func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	tracePatch := getTracePatch(patchTraceString, 0)
-	client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+	client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+		patchTraceContent, 0)
 }
 
 func TestAbortedPatchTrace(t *testing.T) {
@@ -964,7 +952,7 @@ func TestAbortedPatchTrace(t *testing.T) {
 
 	for _, status := range statuses {
 		t.Run(status, func(t *testing.T) {
-			handler := func(w http.ResponseWriter, r *http.Request, body string, offset, limit int) {
+			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 				w.Header().Set("Job-Status", status)
 				w.WriteHeader(http.StatusAccepted)
 			}
@@ -972,8 +960,8 @@ func TestAbortedPatchTrace(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			tracePatch := getTracePatch(patchTraceString, 0)
-			state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, tracePatch)
+			_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+				patchTraceContent, 0)
 			assert.Equal(t, UpdateAbort, state)
 		})
 	}
