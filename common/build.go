@@ -69,8 +69,10 @@ const (
 )
 
 const (
-	FFDockerHelperImageV2       string = "FF_DOCKER_HELPER_IMAGE_V2"
-	FFUseLegacyGitCleanStrategy string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
+	FFK8sEntrypointOverCommand             string = "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND"
+	FFDockerHelperImageV2                  string = "FF_DOCKER_HELPER_IMAGE_V2"
+	FFCmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
+	FFUseLegacyGitCleanStrategy            string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
 )
 
 type Build struct {
@@ -573,8 +575,10 @@ func (b *Build) GetDefaultVariables() JobVariables {
 
 func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
 	return JobVariables{
-		{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "true", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
-		{Key: FFUseLegacyGitCleanStrategy, Value: "false", Public: true, Internal: true, File: false},         // TODO: Remove in 12.0
+		{Key: FFK8sEntrypointOverCommand, Value: "true", Public: true, Internal: true, File: false},   // TODO: Remove in 12.0
+		{Key: FFDockerHelperImageV2, Value: "false", Public: true, Internal: true, File: false},       // TODO: Remove in 12.0
+		{Key: FFUseLegacyGitCleanStrategy, Value: "false", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
+		{Key: FFCmdDisableDelayedErrorLevelExpansion, Value: "false", Public: true, Internal: true, File: false},
 	}
 }
 
