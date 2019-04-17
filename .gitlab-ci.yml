@@ -205,6 +205,22 @@ dep status:
     variables:
     - $CI_DEP_STATUS_ENABLED
 
+check feature flags docs:
+  stage: prebuild
+  cache: {}
+  dependencies:
+  script:
+  - cp docs/configuration/feature-flags.md docs/configuration/feature-flags.md.orig
+  - make update_feature_flags_docs
+  - |
+    diff docs/configuration/feature-flags.md.orig docs/configuration/feature-flags.md || (
+      echo
+      echo "Feature Flags list in documentation is not up-to-date"
+      echo "Run 'make update_feature_flags_docs' to upate it"
+      echo
+      exit 1
+    )
+
 #
 # Test stage
 #
