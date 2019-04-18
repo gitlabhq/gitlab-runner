@@ -69,8 +69,9 @@ const (
 )
 
 const (
-	FFDockerHelperImageV2       string = "FF_DOCKER_HELPER_IMAGE_V2"
-	FFUseLegacyGitCleanStrategy string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
+	FFDockerHelperImageV2         string = "FF_DOCKER_HELPER_IMAGE_V2"
+	FFUseLegacyGitCleanStrategy   string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
+	FFUseLegacyBuildsDirForDocker string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 )
 
 type Build struct {
@@ -575,6 +576,7 @@ func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
 	return JobVariables{
 		{Key: "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND", Value: "true", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
 		{Key: FFUseLegacyGitCleanStrategy, Value: "false", Public: true, Internal: true, File: false},         // TODO: Remove in 12.0
+		{Key: FFUseLegacyBuildsDirForDocker, Value: "false", Public: true, Internal: true, File: false},       // TODO: Remove in 13.0
 	}
 }
 

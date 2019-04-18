@@ -506,9 +506,16 @@ func fakeContainer(id string, names ...string) *types.Container {
 }
 
 func (e *executor) createBuildVolume() error {
-	// Cache Git sources:
-	// use a `BuildsDir`
-	if !path.IsAbs(e.Build.RootDir) || e.Build.RootDir == "/" {
+	parentDir := e.Build.RootDir
+
+	if e.Build.IsFeatureFlagOn(common.FFUseLegacyBuildsDirForDocker) {
+		// Cache Git sources:
+		// take path of the projects directory,
+		// because we use `rm -rf` which could remove the mounted volume
+		parentDir = path.Dir(e.Build.FullProjectDir())
+	}
+
+	if !path.IsAbs(parentDir) && parentDir != "/" {
 		return common.MakeBuildError("build directory needs to be absolute and non-root path")
 	}
 
@@ -518,11 +525,11 @@ func (e *executor) createBuildVolume() error {
 
 	if e.Build.GetGitStrategy() == common.GitFetch && !e.Config.Docker.DisableCache {
 		// create persistent cache container
-		return e.addVolume(e.Build.RootDir)
+		return e.addVolume(parentDir)
 	}
 
 	// create temporary cache container
-	id, err := e.createCacheVolume("", e.Build.RootDir)
+	id, err := e.createCacheVolume("", parentDir)
 	if err != nil {
 		return err
 	}
