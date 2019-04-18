@@ -73,6 +73,7 @@ const (
 	FFDockerHelperImageV2                  string = "FF_DOCKER_HELPER_IMAGE_V2"
 	FFCmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
 	FFUseLegacyGitCleanStrategy            string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
+	FFUseLegacyBuildsDirForDocker          string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 )
 
 type Build struct {
@@ -579,6 +580,7 @@ func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
 		{Key: FFDockerHelperImageV2, Value: "false", Public: true, Internal: true, File: false},       // TODO: Remove in 12.0
 		{Key: FFUseLegacyGitCleanStrategy, Value: "false", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
 		{Key: FFCmdDisableDelayedErrorLevelExpansion, Value: "false", Public: true, Internal: true, File: false},
+		{Key: FFUseLegacyBuildsDirForDocker, Value: "false", Public: true, Internal: true, File: false}, // TODO: Remove in 13.0
 	}
 }
 

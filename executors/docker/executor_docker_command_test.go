@@ -1050,3 +1050,65 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
+
+func TestDockerCommandUsingBuildsVolume(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	const buildsPath = "/builds"
+	// the path is taken from `repoRemoteURL`
+	const buildsGroupPath = "/builds/gitlab-org/ci-cd/tests"
+
+	tests := map[string]struct {
+		validPath   string
+		invalidPath string
+		variable    string
+	}{
+		"uses default state of FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER": {
+			validPath:   buildsPath,
+			invalidPath: buildsGroupPath,
+			variable:    "",
+		},
+		"disables FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER": {
+			validPath:   buildsPath,
+			invalidPath: buildsGroupPath,
+			variable:    "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER=false",
+		},
+		"enables FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER": {
+			validPath:   buildsGroupPath,
+			invalidPath: buildsPath,
+			variable:    "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER=true",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			jobResponse, err := common.GetRemoteBuildResponse(
+				"mountpoint "+test.validPath,
+				"! mountpoint "+test.invalidPath,
+			)
+			require.NoError(t, err)
+
+			build := &common.Build{
+				JobResponse: jobResponse,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker: &common.DockerConfig{
+							Image:      common.TestAlpineImage,
+							PullPolicy: common.PullPolicyIfNotPresent,
+						},
+						Environment: []string{
+							"GIT_STRATEGY=none",
+							test.variable,
+						},
+					},
+				},
+			}
+
+			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			assert.NoError(t, err)
+		})
+	}
+}
