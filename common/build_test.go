@@ -941,6 +941,40 @@ func TestIsFeatureFlagOn(t *testing.T) {
 	}
 }
 
+func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
+	tests := map[string]struct {
+		variable      string
+		expectedValue bool
+	}{
+		"it has default value of FF": {
+			variable:      "",
+			expectedValue: true,
+		},
+		"it enables FF": {
+			variable:      "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND=true",
+			expectedValue: true,
+		},
+		"it disable FF": {
+			variable:      "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND=false",
+			expectedValue: false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := new(Build)
+			build.Runner = &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					Environment: []string{test.variable},
+				},
+			}
+
+			result := build.IsFeatureFlagOn("FF_K8S_USE_ENTRYPOINT_OVER_COMMAND")
+			assert.Equal(t, test.expectedValue, result)
+		})
+	}
+}
+
 func TestStartBuild(t *testing.T) {
 	type startBuildArgs struct {
 		rootDir               string

@@ -644,11 +644,11 @@ func (b *Build) GetAllVariables() JobVariables {
 	}
 
 	variables := make(JobVariables, 0)
+	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
 	if b.Runner != nil {
 		variables = append(variables, b.Runner.GetVariables()...)
 	}
 	variables = append(variables, b.GetDefaultVariables()...)
-	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
 	variables = append(variables, b.GetSharedEnvVariable())
