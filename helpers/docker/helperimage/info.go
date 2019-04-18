@@ -11,6 +11,9 @@ const (
 	OSTypeWindows = "windows"
 
 	name = "gitlab/gitlab-runner-helper"
+
+	headRevision        = "HEAD"
+	latestImageRevision = "latest"
 )
 
 type Info struct {
@@ -47,5 +50,13 @@ func Get(revision string, cfg Config) (Info, error) {
 		return Info{}, errors.NewErrOSNotSupported(cfg.OSType)
 	}
 
-	return factory.Create(revision, cfg)
+	return factory.Create(imageRevision(revision), cfg)
+}
+
+func imageRevision(revision string) string {
+	if revision != headRevision {
+		return revision
+	}
+
+	return latestImageRevision
 }

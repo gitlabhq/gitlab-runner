@@ -1461,7 +1461,7 @@ func TestSetupBuildPod(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			helperImageInfo, err := helperimage.Get("latest", helperimage.Config{
+			helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
 				OSType:       helperimage.OSTypeLinux,
 				Architecture: "amd64",
 			})
