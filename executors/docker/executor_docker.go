@@ -994,8 +994,8 @@ func (e *executor) validateOSType() error {
 	return nil
 }
 
-func (e *executor) createDependencies() (err error) {
-	err = e.bindDevices()
+func (e *executor) createDependencies() error {
+	err := e.bindDevices()
 	if err != nil {
 		return err
 	}
@@ -1021,12 +1021,15 @@ func (e *executor) createDependencies() (err error) {
 
 	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
-	err = volumesManager.CreateUserVolumes(e.Config.Docker.Volumes)
-	if err != nil {
-		return err
+
+	for _, volume := range e.Config.Docker.Volumes {
+		err = volumesManager.AddVolume(volume)
+		if err != nil {
+			return err
+		}
 	}
 
-	return
+	return nil
 }
 
 type volumesManagerAdapter struct {

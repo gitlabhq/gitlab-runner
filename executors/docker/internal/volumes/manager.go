@@ -11,7 +11,7 @@ import (
 )
 
 type Manager interface {
-	CreateUserVolumes(volumes []string) error
+	AddVolume(volume string) error
 	CreateBuildVolume(jobsRootDir string, volumes []string) error
 	VolumeBindings() []string
 	CacheContainerIDs() []string
@@ -50,18 +50,11 @@ func NewDefaultManager(logger common.BuildLogger, cManager ContainerManager, con
 	}
 }
 
-func (m *defaultManager) CreateUserVolumes(volumes []string) error {
-	for _, volume := range volumes {
-		err := m.addVolume(volume)
-		if err != nil {
-			return err
-		}
+func (m *defaultManager) AddVolume(volume string) error {
+	if len(volume) < 1 {
+		return nil
 	}
 
-	return nil
-}
-
-func (m *defaultManager) addVolume(volume string) error {
 	hostVolume := strings.SplitN(volume, ":", 2)
 
 	var err error
@@ -176,7 +169,7 @@ func (m *defaultManager) CreateBuildVolume(jobsRootDir string, volumes []string)
 
 	if m.config.GitStrategy == common.GitFetch && !m.config.DisableCache {
 		// create persistent cache container
-		return m.addVolume(parentDir)
+		return m.AddVolume(parentDir)
 	}
 
 	// create temporary cache container

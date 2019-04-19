@@ -9,6 +9,20 @@ type MockManager struct {
 	mock.Mock
 }
 
+// AddVolume provides a mock function with given fields: volume
+func (_m *MockManager) AddVolume(volume string) error {
+	ret := _m.Called(volume)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(volume)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // CacheContainerIDs provides a mock function with given fields:
 func (_m *MockManager) CacheContainerIDs() []string {
 	ret := _m.Called()
@@ -32,20 +46,6 @@ func (_m *MockManager) CreateBuildVolume(jobsRootDir string, volumes []string) e
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, []string) error); ok {
 		r0 = rf(jobsRootDir, volumes)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// CreateUserVolumes provides a mock function with given fields: volumes
-func (_m *MockManager) CreateUserVolumes(volumes []string) error {
-	ret := _m.Called(volumes)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func([]string) error); ok {
-		r0 = rf(volumes)
 	} else {
 		r0 = ret.Error(0)
 	}

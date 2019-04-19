@@ -35,28 +35,28 @@ func addContainerManager(manager *defaultManager) *MockContainerManager {
 
 func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 	testCases := map[string]struct {
-		volumes         []string
+		volume          string
 		fullProjectDir  string
 		expectedBinding string
 	}{
 		"no volumes specified": {
-			volumes: []string{},
+			volume: "",
 		},
 		"volume with absolute path": {
-			volumes:         []string{"/host:/volume"},
+			volume:          "/host:/volume",
 			expectedBinding: "/host:/volume",
 		},
 		"volume with absolute path and with fullProjectDir specified": {
-			volumes:         []string{"/host:/volume"},
+			volume:          "/host:/volume",
 			fullProjectDir:  "/builds",
 			expectedBinding: "/host:/volume",
 		},
 		"volume without absolute path and without fullProjectDir specified": {
-			volumes:         []string{"/host:volume"},
+			volume:          "/host:volume",
 			expectedBinding: "/host:volume",
 		},
 		"volume without absolute path and with fullProjectDir specified": {
-			volumes:         []string{"/host:volume"},
+			volume:          "/host:volume",
 			fullProjectDir:  "/builds/project",
 			expectedBinding: "/host:/builds/project/volume",
 		},
@@ -70,7 +70,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			err := m.CreateUserVolumes(testCase.volumes)
+			err := m.AddVolume(testCase.volume)
 			assert.NoError(t, err)
 			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
@@ -89,7 +89,7 @@ func assertVolumeBindings(t *testing.T, expectedBinding string, bindings []strin
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 	testCases := map[string]struct {
-		volumes        []string
+		volume         string
 		fullProjectDir string
 		disableCache   bool
 
@@ -98,28 +98,28 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 		expectedConfigVolume      string
 	}{
 		"no volumes specified": {
-			volumes:         []string{},
+			volume:          "",
 			expectedBinding: "",
 		},
 		"volume with absolute path, without fullProjectDir and with disableCache": {
-			volumes:         []string{"/volume"},
+			volume:          "/volume",
 			fullProjectDir:  "",
 			disableCache:    true,
 			expectedBinding: "",
 		},
 		"volume with absolute path, with fullProjectDir and with disableCache": {
-			volumes:         []string{"/volume"},
+			volume:          "/volume",
 			fullProjectDir:  "/builds/project",
 			disableCache:    true,
 			expectedBinding: "",
 		},
 		"volume without absolute path, without fullProjectDir and with disableCache": {
-			volumes:         []string{"volume"},
+			volume:          "volume",
 			disableCache:    true,
 			expectedBinding: "",
 		},
 		"volume without absolute path, with fullProjectDir and with disableCache": {
-			volumes:         []string{"volume"},
+			volume:          "volume",
 			fullProjectDir:  "/builds/project",
 			disableCache:    true,
 			expectedBinding: "",
@@ -135,7 +135,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			err := m.CreateUserVolumes(testCase.volumes)
+			err := m.AddVolume(testCase.volume)
 			assert.NoError(t, err)
 			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
@@ -144,7 +144,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 	testCases := map[string]struct {
-		volumes         []string
+		volume          string
 		fullProjectDir  string
 		disableCache    bool
 		cacheDir        string
@@ -155,14 +155,14 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 		expectedConfigVolume      string
 	}{
 		"volume with absolute path, without fullProjectDir, without disableCache and with cacheDir": {
-			volumes:         []string{"/volume"},
+			volume:          "/volume",
 			disableCache:    false,
 			cacheDir:        "/cache",
 			projectUniqName: "project-uniq",
 			expectedBinding: "/cache/project-uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
 		},
 		"volume with absolute path, with fullProjectDir, without disableCache and with cacheDir": {
-			volumes:         []string{"/volume"},
+			volume:          "/volume",
 			fullProjectDir:  "/builds/project",
 			disableCache:    false,
 			cacheDir:        "/cache",
@@ -170,14 +170,14 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 			expectedBinding: "/cache/project-uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
 		},
 		"volume without absolute path, without fullProjectDir, without disableCache and with cacheDir": {
-			volumes:         []string{"volume"},
+			volume:          "volume",
 			disableCache:    false,
 			cacheDir:        "/cache",
 			projectUniqName: "project-uniq",
 			expectedBinding: "/cache/project-uniq/210ab9e731c9c36c2c38db15c28a8d1c:volume",
 		},
 		"volume without absolute path, with fullProjectDir, without disableCache and with cacheDir": {
-			volumes:         []string{"volume"},
+			volume:          "volume",
 			fullProjectDir:  "/builds/project",
 			disableCache:    false,
 			cacheDir:        "/cache",
@@ -197,7 +197,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			err := m.CreateUserVolumes(testCase.volumes)
+			err := m.AddVolume(testCase.volume)
 			assert.NoError(t, err)
 			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
@@ -206,7 +206,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.T) {
 	testCases := map[string]struct {
-		volumes                  []string
+		volume                   string
 		fullProjectDir           string
 		projectUniqName          string
 		expectedContainerName    string
@@ -216,7 +216,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		expectedCacheContainerID string
 	}{
 		"volume with absolute path, without fullProjectDir and with existing container": {
-			volumes:                  []string{"/volume"},
+			volume:                   "/volume",
 			fullProjectDir:           "",
 			projectUniqName:          "project-uniq",
 			expectedContainerName:    "project-uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
@@ -225,7 +225,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			expectedCacheContainerID: "existingContainerID",
 		},
 		"volume with absolute path, without fullProjectDir and with new container": {
-			volumes:                  []string{"/volume"},
+			volume:                   "/volume",
 			fullProjectDir:           "",
 			projectUniqName:          "project-uniq",
 			expectedContainerName:    "project-uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
@@ -235,7 +235,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			expectedCacheContainerID: "newContainerID",
 		},
 		"volume without absolute path, without fullProjectDir and with existing container": {
-			volumes:                  []string{"volume"},
+			volume:                   "volume",
 			fullProjectDir:           "",
 			projectUniqName:          "project-uniq",
 			expectedContainerName:    "project-uniq-cache-210ab9e731c9c36c2c38db15c28a8d1c",
@@ -244,7 +244,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			expectedCacheContainerID: "existingContainerID",
 		},
 		"volume without absolute path, without fullProjectDir and with new container": {
-			volumes:                  []string{"volume"},
+			volume:                   "volume",
 			fullProjectDir:           "",
 			projectUniqName:          "project-uniq",
 			expectedContainerName:    "project-uniq-cache-210ab9e731c9c36c2c38db15c28a8d1c",
@@ -254,7 +254,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			expectedCacheContainerID: "newContainerID",
 		},
 		"volume without absolute path, with fullProjectDir and with existing container": {
-			volumes:                  []string{"volume"},
+			volume:                   "volume",
 			fullProjectDir:           "/builds/project",
 			projectUniqName:          "project-uniq",
 			expectedContainerName:    "project-uniq-cache-f69aef9fb01e88e6213362a04877452d",
@@ -263,7 +263,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			expectedCacheContainerID: "existingContainerID",
 		},
 		"volume without absolute path, with fullProjectDir and with new container": {
-			volumes:                  []string{"volume"},
+			volume:                   "volume",
 			fullProjectDir:           "/builds/project",
 			projectUniqName:          "project-uniq",
 			expectedContainerName:    "project-uniq-cache-f69aef9fb01e88e6213362a04877452d",
@@ -296,7 +296,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 					Once()
 			}
 
-			err := m.CreateUserVolumes(testCase.volumes)
+			err := m.AddVolume(testCase.volume)
 			assert.NoError(t, err)
 
 			assert.Contains(t, m.cacheContainerIDs, testCase.expectedCacheContainerID)
@@ -323,7 +323,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 		Return("", errors.New("test error")).
 		Once()
 
-	err := m.CreateUserVolumes([]string{"volume"})
+	err := m.AddVolume("volume")
 	assert.Error(t, err)
 }
 
