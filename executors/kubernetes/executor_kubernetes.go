@@ -220,7 +220,7 @@ func (s *executor) buildContainer(name, image string, imageDefinition common.Ima
 }
 
 func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
-	if s.Build.IsFeatureFlagOn(featureflags.FFK8sEntrypointOverCommand) {
+	if s.Build.IsFeatureFlagOn(featureflags.K8sEntrypointOverCommand) {
 		return s.getCommandsAndArgsV2(imageDefinition, command...)
 	}
 

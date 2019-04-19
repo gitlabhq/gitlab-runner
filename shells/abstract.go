@@ -97,7 +97,7 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
 	w.RmFile(".git/hooks/post-checkout")
 
 	// TODO: Remove in 12.0
-	if build.IsFeatureFlagOn(featureflags.FFUseLegacyGitCleanStrategy) {
+	if build.IsFeatureFlagOn(featureflags.UseLegacyGitCleanStrategy) {
 		w.Command("git", "clean", "-ffdx")
 		w.IfCmd("git", "diff", "--no-ext-diff", "--quiet", "--exit-code")
 		// git 1.7 cannot reset before a checkout, if no diffs we can avoid git reset
@@ -187,7 +187,7 @@ func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
 	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
 
-	if !build.IsFeatureFlagOn(featureflags.FFUseLegacyGitCleanStrategy) {
+	if !build.IsFeatureFlagOn(featureflags.UseLegacyGitCleanStrategy) {
 		cleanFlags := build.GetGitCleanFlags()
 		if len(cleanFlags) > 0 {
 			cleanArgs := append([]string{"clean"}, cleanFlags...)

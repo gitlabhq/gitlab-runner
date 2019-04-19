@@ -246,7 +246,7 @@ func TestGitCleanFlags(t *testing.T) {
 					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef},
 					Variables: common.JobVariables{
 						{Key: "GIT_CLEAN_FLAGS", Value: test.value},
-						{Key: featureflags.FFUseLegacyGitCleanStrategy, Value: test.legacyCleanStrategy},
+						{Key: featureflags.UseLegacyGitCleanStrategy, Value: test.legacyCleanStrategy},
 					},
 				},
 			}

@@ -1183,7 +1183,7 @@ func TestCreateCacheVolumeFeatureFlag(t *testing.T) {
 		{
 			name: "Helper image is not specified and FF still turned on",
 			variables: common.JobVariables{
-				common.JobVariable{Key: featureflags.FFDockerHelperImageV2, Value: "true"},
+				common.JobVariable{Key: featureflags.DockerHelperImageV2, Value: "true"},
 			},
 			helperImage: "",
 			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
@@ -1197,7 +1197,7 @@ func TestCreateCacheVolumeFeatureFlag(t *testing.T) {
 		{
 			name: "Helper image is specified & FF variable is set to true",
 			variables: common.JobVariables{
-				common.JobVariable{Key: featureflags.FFDockerHelperImageV2, Value: "true"},
+				common.JobVariable{Key: featureflags.DockerHelperImageV2, Value: "true"},
 			},
 			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
 			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
@@ -1264,7 +1264,7 @@ func TestRunServiceHealthCheckContainerFeatureFlag(t *testing.T) {
 		{
 			name: "Helper image is not specified and FF still turned on",
 			variables: common.JobVariables{
-				common.JobVariable{Key: featureflags.FFDockerHelperImageV2, Value: "true"},
+				common.JobVariable{Key: featureflags.DockerHelperImageV2, Value: "true"},
 			},
 			helperImage: "",
 			expectedCmd: []string{"gitlab-runner-helper", "health-check"},
@@ -1278,7 +1278,7 @@ func TestRunServiceHealthCheckContainerFeatureFlag(t *testing.T) {
 		{
 			name: "Helper image is specified & FF variable is set to true",
 			variables: common.JobVariables{
-				common.JobVariable{Key: featureflags.FFDockerHelperImageV2, Value: "true"},
+				common.JobVariable{Key: featureflags.DockerHelperImageV2, Value: "true"},
 			},
 			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
 			expectedCmd: []string{"gitlab-runner-helper", "health-check"},

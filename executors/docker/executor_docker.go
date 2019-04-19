@@ -271,7 +271,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		imageNameFromConfig = common.AppVersion.Variables().ExpandValue(imageNameFromConfig)
 
 		e.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
-		if !e.Build.IsFeatureFlagOn(featureflags.FFDockerHelperImageV2) {
+		if !e.Build.IsFeatureFlagOn(featureflags.DockerHelperImageV2) {
 			e.Warningln("DEPRECATION: With gitlab-runner 12.0 we will change some tools inside the helper image, please make sure your image is compliant with the new API. https://gitlab.com/gitlab-org/gitlab-runner/issues/4013")
 		}
 
@@ -390,7 +390,7 @@ func (e *executor) createCacheVolume(containerName, containerPath string) (strin
 	cmd := []string{"gitlab-runner-helper", "cache-init", containerPath}
 	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
 	if e.checkOutdatedHelperImage() {
-		e.Debugln(featureflags.FFDockerHelperImageV2, "is not set, falling back to old command")
+		e.Debugln(featureflags.DockerHelperImageV2, "is not set, falling back to old command")
 		cmd = []string{"gitlab-runner-cache", containerPath}
 	}
 
@@ -509,7 +509,7 @@ func fakeContainer(id string, names ...string) *types.Container {
 func (e *executor) createBuildVolume() error {
 	parentDir := e.Build.RootDir
 
-	if e.Build.IsFeatureFlagOn(featureflags.FFUseLegacyBuildsDirForDocker) {
+	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker) {
 		// Cache Git sources:
 		// take path of the projects directory,
 		// because we use `rm -rf` which could remove the mounted volume
@@ -1312,7 +1312,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	cmd := []string{"gitlab-runner-helper", "health-check"}
 	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
 	if e.checkOutdatedHelperImage() {
-		e.Debugln(featureflags.FFDockerHelperImageV2, "is not set, falling back to old command")
+		e.Debugln(featureflags.DockerHelperImageV2, "is not set, falling back to old command")
 		cmd = []string{"gitlab-runner-service"}
 	}
 
@@ -1418,5 +1418,5 @@ func (e *executor) readContainerLogs(containerID string) string {
 }
 
 func (e *executor) checkOutdatedHelperImage() bool {
-	return !e.Build.IsFeatureFlagOn(featureflags.FFDockerHelperImageV2) && e.Config.Docker.HelperImage != ""
+	return !e.Build.IsFeatureFlagOn(featureflags.DockerHelperImageV2) && e.Config.Docker.HelperImage != ""
 }
