@@ -1,7 +1,16 @@
-v11.10.0-rc2 (2019-04-10)
-- Fix git lfs not getting submodule objects !1298
+v11.10.0 (2019-04-22)
 
-v11.10.0-rc1 (2019-04-09)
+**Deprecations:**
+
+All deprecations, with a detailed description, are listed at
+https://about.gitlab.com/2019/04/22/gitlab-11-10-released/#release-deprecations
+
+1. With version 11.10 we're deprecating the feature flag
+[FF_USE_LEGACY_GIT_CLEAN_STRATEGY](https://docs.gitlab.com/runner/configuration/feature-flags.html#available-feature-flags).
+
+**Release changes:**
+
+- Fix git lfs not getting submodule objects !1298
 - Refactor slightly ./shells/shellstest !1237
 - Fix CI_PROJECT_DIR handling !1241
 - Log time took preparing executors !1196
