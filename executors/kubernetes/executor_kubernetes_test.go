@@ -1461,10 +1461,10 @@ func TestSetupBuildPod(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
 						PodSecurityContext: common.KubernetesPodSecurityContext{
-							FSGroup:            200,
-							RunAsGroup:         200,
-							RunAsNonRoot:       true,
-							RunAsUser:          200,
+							FSGroup:            func() *int64 { i := int64(200); return &i }(),
+							RunAsGroup:         func() *int64 { i := int64(200); return &i }(),
+							RunAsNonRoot:       func() *bool { i := bool(true); return &i }(),
+							RunAsUser:          func() *int64 { i := int64(200); return &i }(),
 							SupplementalGroups: []int64{200},
 						},
 					},

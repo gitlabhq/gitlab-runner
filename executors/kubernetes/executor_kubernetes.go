@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-
 	// Register all available authentication methods
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
@@ -436,23 +435,6 @@ func (s *executor) setupCredentials() error {
 	return nil
 }
 
-func (s *executor) getSecurityContext() *api.PodSecurityContext {
-	if s.Config.Kubernetes.PodSecurityContext.FSGroup == 0 &&
-		s.Config.Kubernetes.PodSecurityContext.RunAsGroup == 0 &&
-		s.Config.Kubernetes.PodSecurityContext.RunAsNonRoot == false &&
-		s.Config.Kubernetes.PodSecurityContext.RunAsUser == 0 &&
-		len(s.Config.Kubernetes.PodSecurityContext.SupplementalGroups) == 0 {
-		return nil
-	}
-	return &api.PodSecurityContext{
-		FSGroup:            &s.Config.Kubernetes.PodSecurityContext.FSGroup,
-		RunAsGroup:         &s.Config.Kubernetes.PodSecurityContext.RunAsGroup,
-		RunAsNonRoot:       &s.Config.Kubernetes.PodSecurityContext.RunAsNonRoot,
-		RunAsUser:          &s.Config.Kubernetes.PodSecurityContext.RunAsUser,
-		SupplementalGroups: s.Config.Kubernetes.PodSecurityContext.SupplementalGroups,
-	}
-}
-
 func (s *executor) setupBuildPod() error {
 	services := make([]api.Container, len(s.options.Services))
 	for i, service := range s.options.Services {
@@ -502,7 +484,7 @@ func (s *executor) setupBuildPod() error {
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
-			SecurityContext:               s.getSecurityContext(),
+			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
 		},
 	})
 
