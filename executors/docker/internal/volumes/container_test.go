@@ -17,14 +17,14 @@ import (
 func TestNewDefaultContainerManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	m := NewDefaultContainerManager(logger, nil, nil, true)
-	assert.IsType(t, &defaultContainerManager{}, m)
+	m := NewContainerManager(logger, nil, nil, true)
+	assert.IsType(t, &containerManager{}, m)
 }
 
-func getDefaultContainerManager() (*defaultContainerManager, *mockContainerClient) {
+func getDefaultContainerManager() (*containerManager, *mockContainerClient) {
 	cClient := new(mockContainerClient)
 
-	m := &defaultContainerManager{
+	m := &containerManager{
 		logger:              common.NewBuildLogger(nil, nil),
 		containerClient:     cClient,
 		failedContainerIDs:  make([]string, 0),
@@ -223,7 +223,7 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 
 func TestDefaultContainerManager_FailedContainerIDs(t *testing.T) {
 	expectedElements := []string{"element1", "element2"}
-	m := &defaultContainerManager{
+	m := &containerManager{
 		failedContainerIDs: expectedElements,
 	}
 

@@ -12,12 +12,12 @@ import (
 func TestNewDefaultManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	m := NewDefaultManager(logger, nil, DefaultManagerConfig{})
-	assert.IsType(t, &defaultManager{}, m)
+	m := NewManager(logger, nil, ManagerConfig{})
+	assert.IsType(t, &manager{}, m)
 }
 
-func newDefaultManager(config DefaultManagerConfig) *defaultManager {
-	m := &defaultManager{
+func newDefaultManager(config ManagerConfig) *manager {
+	m := &manager{
 		logger: common.NewBuildLogger(nil, nil),
 		config: config,
 	}
@@ -25,7 +25,7 @@ func newDefaultManager(config DefaultManagerConfig) *defaultManager {
 	return m
 }
 
-func addContainerManager(manager *defaultManager) *MockContainerManager {
+func addContainerManager(manager *manager) *MockContainerManager {
 	containerManager := new(MockContainerManager)
 
 	manager.containerManager = containerManager
@@ -64,7 +64,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			config := DefaultManagerConfig{
+			config := ManagerConfig{
 				FullProjectDir: testCase.fullProjectDir,
 			}
 
@@ -128,7 +128,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			config := DefaultManagerConfig{
+			config := ManagerConfig{
 				FullProjectDir: testCase.fullProjectDir,
 				DisableCache:   testCase.disableCache,
 			}
@@ -188,7 +188,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			config := DefaultManagerConfig{
+			config := ManagerConfig{
 				FullProjectDir:  testCase.fullProjectDir,
 				DisableCache:    testCase.disableCache,
 				CacheDir:        testCase.cacheDir,
@@ -276,7 +276,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			config := DefaultManagerConfig{
+			config := ManagerConfig{
 				FullProjectDir:  testCase.fullProjectDir,
 				ProjectUniqName: testCase.projectUniqName,
 			}
@@ -305,7 +305,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 }
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t *testing.T) {
-	config := DefaultManagerConfig{
+	config := ManagerConfig{
 		FullProjectDir:  "/builds/project",
 		ProjectUniqName: "project-uniq",
 	}
@@ -370,7 +370,7 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			config := DefaultManagerConfig{
+			config := ManagerConfig{
 				GitStrategy:     testCase.gitStrategy,
 				DisableCache:    testCase.disableCache,
 				CacheDir:        testCase.cacheDir,
@@ -408,7 +408,7 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 }
 
 func TestDefaultManager_CreateBuildVolume_WithError(t *testing.T) {
-	config := DefaultManagerConfig{
+	config := ManagerConfig{
 		GitStrategy: common.GitClone,
 	}
 
@@ -427,7 +427,7 @@ func TestDefaultManager_CreateBuildVolume_WithError(t *testing.T) {
 
 func TestDefaultManager_VolumeBindings(t *testing.T) {
 	expectedElements := []string{"element1", "element2"}
-	m := &defaultManager{
+	m := &manager{
 		volumeBindings: expectedElements,
 	}
 
@@ -436,7 +436,7 @@ func TestDefaultManager_VolumeBindings(t *testing.T) {
 
 func TestDefaultManager_CacheContainerIDs(t *testing.T) {
 	expectedElements := []string{"element1", "element2"}
-	m := &defaultManager{
+	m := &manager{
 		cacheContainerIDs: expectedElements,
 	}
 
@@ -450,7 +450,7 @@ func TestDefaultManager_TmpContainerIDs(t *testing.T) {
 	defer cManager.AssertExpectations(t)
 	cManager.On("FailedContainerIDs").Return([]string{}).Once()
 
-	m := &defaultManager{
+	m := &manager{
 		tmpContainerIDs:  expectedElements,
 		containerManager: cManager,
 	}

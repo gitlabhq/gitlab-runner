@@ -1070,7 +1070,7 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 	}
 
 	adapter := &volumesManagerAdapter{e: e}
-	config := volumes.DefaultManagerConfig{
+	config := volumes.ManagerConfig{
 		CacheDir:                    e.Config.Docker.CacheDir,
 		FullProjectDir:              e.Build.FullProjectDir(),
 		ProjectUniqName:             e.Build.ProjectUniqueName(),
@@ -1084,14 +1084,14 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 		return nil, err
 	}
 
-	cManager := volumes.NewDefaultContainerManager(
+	cManager := volumes.NewContainerManager(
 		e.BuildLogger,
 		adapter,
 		helperImage,
 		e.checkOutdatedHelperImage(),
 	)
 
-	e.volumesManager = volumes.NewDefaultManager(e.BuildLogger, cManager, config)
+	e.volumesManager = volumes.NewManager(e.BuildLogger, cManager, config)
 
 	return e.volumesManager, nil
 }

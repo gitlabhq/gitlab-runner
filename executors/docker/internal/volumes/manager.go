@@ -18,7 +18,7 @@ type Manager interface {
 	TmpContainerIDs() []string
 }
 
-type DefaultManagerConfig struct {
+type ManagerConfig struct {
 	CacheDir        string
 	FullProjectDir  string
 	ProjectUniqName string
@@ -28,8 +28,8 @@ type DefaultManagerConfig struct {
 	UseLegacyBuildsDirForDocker bool
 }
 
-type defaultManager struct {
-	config DefaultManagerConfig
+type manager struct {
+	config ManagerConfig
 
 	logger           common.BuildLogger
 	containerManager ContainerManager
@@ -39,8 +39,8 @@ type defaultManager struct {
 	tmpContainerIDs   []string
 }
 
-func NewDefaultManager(logger common.BuildLogger, cManager ContainerManager, config DefaultManagerConfig) Manager {
-	return &defaultManager{
+func NewManager(logger common.BuildLogger, cManager ContainerManager, config ManagerConfig) Manager {
+	return &manager{
 		config:            config,
 		logger:            logger,
 		containerManager:  cManager,
@@ -50,7 +50,7 @@ func NewDefaultManager(logger common.BuildLogger, cManager ContainerManager, con
 	}
 }
 
-func (m *defaultManager) AddVolume(volume string) error {
+func (m *manager) AddVolume(volume string) error {
 	if len(volume) < 1 {
 		return nil
 	}
@@ -72,14 +72,14 @@ func (m *defaultManager) AddVolume(volume string) error {
 	return err
 }
 
-func (m *defaultManager) addHostVolume(hostPath string, containerPath string) error {
+func (m *manager) addHostVolume(hostPath string, containerPath string) error {
 	containerPath = m.getAbsoluteContainerPath(containerPath)
 	m.appendVolumeBind(hostPath, containerPath)
 
 	return nil
 }
 
-func (m *defaultManager) getAbsoluteContainerPath(dir string) string {
+func (m *manager) getAbsoluteContainerPath(dir string) string {
 	if path.IsAbs(dir) {
 		return dir
 	}
@@ -87,14 +87,14 @@ func (m *defaultManager) getAbsoluteContainerPath(dir string) string {
 	return path.Join(m.config.FullProjectDir, dir)
 }
 
-func (m *defaultManager) appendVolumeBind(hostPath string, containerPath string) {
+func (m *manager) appendVolumeBind(hostPath string, containerPath string) {
 	m.logger.Debugln(fmt.Sprintf("Using host-based %q for %q...", hostPath, containerPath))
 
 	bindDefinition := fmt.Sprintf("%v:%v", filepath.ToSlash(hostPath), containerPath)
 	m.volumeBindings = append(m.volumeBindings, bindDefinition)
 }
 
-func (m *defaultManager) addCacheVolume(containerPath string) error {
+func (m *manager) addCacheVolume(containerPath string) error {
 	containerPath = m.getAbsoluteContainerPath(containerPath)
 
 	// disable cache for automatic container cache,
@@ -113,7 +113,7 @@ func (m *defaultManager) addCacheVolume(containerPath string) error {
 	return m.createContainerBasedCacheVolume(containerPath, hash)
 }
 
-func (m *defaultManager) createHostBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
+func (m *manager) createHostBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
 	hostPath := fmt.Sprintf("%s/%s/%x", m.config.CacheDir, m.config.ProjectUniqName, hash)
 	hostPath, err := filepath.Abs(hostPath)
 	if err != nil {
@@ -125,7 +125,7 @@ func (m *defaultManager) createHostBasedCacheVolume(containerPath string, hash [
 	return nil
 }
 
-func (m *defaultManager) createContainerBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
+func (m *manager) createContainerBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
 	containerName := fmt.Sprintf("%s-cache-%x", m.config.ProjectUniqName, hash)
 
 	containerID := m.containerManager.FindExistingCacheContainer(containerName, containerPath)
@@ -146,7 +146,7 @@ func (m *defaultManager) createContainerBasedCacheVolume(containerPath string, h
 	return nil
 }
 
-func (m *defaultManager) CreateBuildVolume(jobsRootDir string, volumes []string) error {
+func (m *manager) CreateBuildVolume(jobsRootDir string, volumes []string) error {
 	parentDir := jobsRootDir
 
 	if m.config.UseLegacyBuildsDirForDocker {
@@ -184,14 +184,14 @@ func (m *defaultManager) CreateBuildVolume(jobsRootDir string, volumes []string)
 	return nil
 }
 
-func (m *defaultManager) VolumeBindings() []string {
+func (m *manager) VolumeBindings() []string {
 	return m.volumeBindings
 }
 
-func (m *defaultManager) CacheContainerIDs() []string {
+func (m *manager) CacheContainerIDs() []string {
 	return m.cacheContainerIDs
 }
 
-func (m *defaultManager) TmpContainerIDs() []string {
+func (m *manager) TmpContainerIDs() []string {
 	return append(m.tmpContainerIDs, m.containerManager.FailedContainerIDs()...)
 }
