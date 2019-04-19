@@ -220,10 +220,10 @@ type KubernetesEmptyDir struct {
 }
 
 type KubernetesPodSecurityContext struct {
-	FSGroup            int64   `toml:"fs_group,omitempty" long:"fs-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_FS_GROUP" description:"A special supplemental group that applies to all containers in a pod"`
-	RunAsGroup         int64   `toml:"run_as_group,omitempty" long:"run-as-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_GROUP" description:"The GID to run the entrypoint of the container process"`
-	RunAsNonRoot       bool    `toml:"run_as_non_root,omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
-	RunAsUser          int64   `toml:"run_as_user,omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
+	FSGroup            *int64   `toml:"fs_group,omitempty" long:"fs-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_FS_GROUP" description:"A special supplemental group that applies to all containers in a pod"`
+	RunAsGroup         *int64   `toml:"run_as_group,omitempty" long:"run-as-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_GROUP" description:"The GID to run the entrypoint of the container process"`
+	RunAsNonRoot       *bool    `toml:"run_as_non_root,omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
+	RunAsUser          *int64   `toml:"run_as_user,omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
 }
 
@@ -566,6 +566,26 @@ func (c *KubernetesConfig) GetNodeTolerations() []api.Toleration {
 	}
 
 	return tolerations
+}
+
+func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
+	podSecurityContext := c.PodSecurityContext
+	
+	if podSecurityContext.FSGroup == nil &&
+		podSecurityContext.RunAsGroup == nil &&
+		podSecurityContext.RunAsNonRoot == nil &&
+		podSecurityContext.RunAsUser == nil &&
+		len(podSecurityContext.SupplementalGroups) == 0 {
+		return nil
+	}
+
+	return &api.PodSecurityContext{
+		FSGroup:            podSecurityContext.FSGroup,
+		RunAsGroup:         podSecurityContext.RunAsGroup,
+		RunAsNonRoot:       podSecurityContext.RunAsNonRoot,
+		RunAsUser:          podSecurityContext.RunAsUser,
+		SupplementalGroups: podSecurityContext.SupplementalGroups,
+	}
 }
 
 func (c *DockerMachine) GetIdleCount() int {

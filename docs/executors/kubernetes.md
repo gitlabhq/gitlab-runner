@@ -87,7 +87,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
   the pod annotations overwrite environment variable. When empty,
     it disables the pod annotations overwrite feature
-- `pod_security_context`: Configured through the config file, This sets a pod security context for the build pod. [Read more about security context](#using-security-context)  
+- `pod_security_context`: Configured through the config file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)  
 - `service_account`: default service account to be used for making kubernetes api calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
@@ -338,6 +338,38 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 Assigining  a security context to pods provides security to your Kubernetes cluster.  For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
+
+More about the helper image can be found [here](https://docs.gitlab.com/runner/configuration/advanced-configuration.html#helper-image).
+Example of building your own helper image:
+
+```Dockerfile
+ARG tag
+FROM gitlab/gitlab-runner-helper:${tag}
+RUN addgroup -g 59417 -S nonroot && \
+    adduser -u 59417 -S nonroot -G nonroot
+WORKDIR /home/nonroot
+USER 59417:59417
+```
+
+This example creates a user and group called `nonroot` and sets the image to run as that user.
+
+Example of setting pod security context in your config.toml:
+
+```toml
+concurrent = %(concurrent)s
+check_interval = 30
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+    [runners.kubernetes]
+      helper_image = "gitlab-registy.example.com/helper:latest"
+      [runners.kubernetes.pod_security_context]
+        run_as_non_root = true
+        run_as_user = 59417
+        run_as_group = 59417
+        fs_group = 59417
+```
 
 ## Using Docker in your builds
 
