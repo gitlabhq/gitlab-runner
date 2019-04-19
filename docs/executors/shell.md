@@ -5,6 +5,10 @@ locally to the machine that the Runner is installed. It supports all systems on
 which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, Windows PowerShell and Windows Batch.
 
+NOTE: **Note:**
+GitLab Runner will use the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the machine.
+Ensure Git LFS is up-to-date on any systems where GitLab Runner will run using shell executor.
+
 ## Overview
 
 The scripts can be run as unprivileged user if the `--user` is added to the

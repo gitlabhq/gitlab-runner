@@ -17,17 +17,17 @@ func Test_windowsInfo_Tag(t *testing.T) {
 	}{
 		{
 			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
-			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, nanoserver1809),
+			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, baseImage1809),
 			expectedErr:     nil,
 		},
 		{
 			operatingSystem: "Windows Server Datacenter Version 1809 (OS Build 1803.590)",
-			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, nanoserver1809),
+			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, baseImage1809),
 			expectedErr:     nil,
 		},
 		{
 			operatingSystem: "Windows Server Datacenter Version 1803 (OS Build 17134.590)",
-			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, nanoserver1803),
+			expectedVersion: fmt.Sprintf("%s-%s-%s", "x86_64", revision, baseImage1803),
 			expectedErr:     nil,
 		},
 		{

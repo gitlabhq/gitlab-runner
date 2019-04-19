@@ -941,6 +941,40 @@ func TestIsFeatureFlagOn(t *testing.T) {
 	}
 }
 
+func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
+	tests := map[string]struct {
+		variable      string
+		expectedValue bool
+	}{
+		"it has default value of FF": {
+			variable:      "",
+			expectedValue: true,
+		},
+		"it enables FF": {
+			variable:      "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND=true",
+			expectedValue: true,
+		},
+		"it disable FF": {
+			variable:      "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND=false",
+			expectedValue: false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := new(Build)
+			build.Runner = &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					Environment: []string{test.variable},
+				},
+			}
+
+			result := build.IsFeatureFlagOn("FF_K8S_USE_ENTRYPOINT_OVER_COMMAND")
+			assert.Equal(t, test.expectedValue, result)
+		})
+	}
+}
+
 func TestStartBuild(t *testing.T) {
 	type startBuildArgs struct {
 		rootDir               string
@@ -1276,29 +1310,25 @@ func TestGitCleanFlags(t *testing.T) {
 }
 
 func TestDefaultVariables(t *testing.T) {
-	tests := []struct {
-		name          string
+	tests := map[string]struct {
 		jobVariables  JobVariables
 		rootDir       string
 		key           string
 		expectedValue string
 	}{
-		{
-			name:          "get default CI_SERVER value",
+		"get default CI_SERVER value": {
 			jobVariables:  JobVariables{},
 			rootDir:       "/builds",
 			key:           "CI_SERVER",
 			expectedValue: "yes",
 		},
-		{
-			name:          "get default CI_PROJECT_DIR value",
+		"get default CI_PROJECT_DIR value": {
 			jobVariables:  JobVariables{},
 			rootDir:       "/builds",
 			key:           "CI_PROJECT_DIR",
 			expectedValue: "/builds/test-namespace/test-repo",
 		},
-		{
-			name: "get overwritten CI_PROJECT_DIR value",
+		"get overwritten CI_PROJECT_DIR value": {
 			jobVariables: JobVariables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/gitlab-org/gitlab-runner", Public: true},
 			},
@@ -1308,8 +1338,8 @@ func TestDefaultVariables(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
 			build := Build{
 				JobResponse: JobResponse{
 					GitInfo: GitInfo{

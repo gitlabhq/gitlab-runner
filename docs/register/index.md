@@ -72,7 +72,7 @@ To register a Runner under macOS:
 1. Run the following command:
 
     ```sh
-    sudo gitlab-runner register
+    gitlab-runner register
     ```
 
 1. Enter your GitLab instance URL:
@@ -319,7 +319,7 @@ sudo gitlab-runner register \
   --docker-image alpine:3 \
   --description "docker-runner" \
   --tag-list "docker,aws" \
-  --run-untagged \
+  --run-untagged="true" \
   --locked="false" \
 ```
 
@@ -335,7 +335,7 @@ docker run --rm -t -i -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/git
   --registration-token "PROJECT_REGISTRATION_TOKEN" \
   --description "docker-runner" \
   --tag-list "docker,aws" \
-  --run-untagged \
+  --run-untagged="true" \
   --locked="false"
 ```
 

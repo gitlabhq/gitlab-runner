@@ -7,6 +7,10 @@ is currently not supported.
 This is a simple executor that allows you to execute builds on a remote machine
 by executing commands over SSH.
 
+NOTE: **Note:**
+GitLab Runner will use the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the remote machine.
+Ensure Git LFS is up-to-date on any remote systems where GitLab Runner will run using SSH executor.
+
 ## Overview
 
 To use the SSH executor you need to specify `executor = "ssh"` under the

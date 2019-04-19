@@ -1,9 +1,9 @@
 package helperimage
 
 import (
-	"fmt"
-
 	"github.com/docker/docker/api/types"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/errors"
 )
 
 const (
@@ -19,20 +19,6 @@ type Info interface {
 	IsSupportingLocalImport() bool
 }
 
-type unsupportedOSTypeError struct {
-	detectedOSType string
-}
-
-func (e *unsupportedOSTypeError) Error() string {
-	return fmt.Sprintf("unsupported OSType %q", e.detectedOSType)
-}
-
-func newUnsupportedOSTypeError(osType string) *unsupportedOSTypeError {
-	return &unsupportedOSTypeError{
-		detectedOSType: osType,
-	}
-}
-
 type infoFactory func(info types.Info) Info
 
 var supportedOsTypesFactories = map[string]infoFactory{
@@ -43,7 +29,7 @@ var supportedOsTypesFactories = map[string]infoFactory{
 func GetInfo(info types.Info) (Info, error) {
 	factory, ok := supportedOsTypesFactories[info.OSType]
 	if !ok {
-		return nil, newUnsupportedOSTypeError(info.OSType)
+		return nil, errors.NewErrOSNotSupported(info.OSType)
 	}
 
 	return factory(info), nil

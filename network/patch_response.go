@@ -14,9 +14,12 @@ type TracePatchResponse struct {
 
 func (p *TracePatchResponse) NewOffset() int {
 	remoteRangeParts := strings.Split(p.RemoteRange, "-")
-	newOffset, _ := strconv.Atoi(remoteRangeParts[1])
+	if len(remoteRangeParts) == 2 {
+		newOffset, _ := strconv.Atoi(remoteRangeParts[1])
+		return newOffset
+	}
 
-	return newOffset
+	return 0
 }
 
 func NewTracePatchResponse(response *http.Response) *TracePatchResponse {

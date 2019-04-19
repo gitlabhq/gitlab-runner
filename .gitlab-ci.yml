@@ -52,7 +52,7 @@ image: $CI_IMAGE
 .windows1803: &windows1803
   variables: &windows1803_variables
     <<: *windows_base_variables
-    WINDOWS_VERSION: nanoserver1803
+    WINDOWS_VERSION: servercore1803
   tags:
   - windows-1803
   - shell
@@ -60,7 +60,7 @@ image: $CI_IMAGE
 .windows1809: &windows1809
   variables: &windows1809_variables
     <<: *windows_base_variables
-    WINDOWS_VERSION: nanoserver1809
+    WINDOWS_VERSION: servercore1809
   tags:
   - windows-1809
   - shell
@@ -511,12 +511,12 @@ development docker images:
   tags:
   - docker
 
-development nanoserver1803 helper docker image:
+development servercore1803 helper docker image:
   <<: *release_development
   <<: *windows1803
   extends: .build_windows_docker_images
 
-development nanoserver1809 helper docker image:
+development servercore1809 helper docker image:
   <<: *release_development
   <<: *windows1809
   extends: .build_windows_docker_images
@@ -542,7 +542,7 @@ bleeding edge docker images:
     name: bleeding_edge/docker_images
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-bleeding edge nanoserver1803 docker images:
+bleeding edge servercore1803 docker images:
   <<: *release_bleeding_edge
   <<: *windows1803
   extends: .build_windows_docker_images
@@ -553,7 +553,7 @@ bleeding edge nanoserver1803 docker images:
     name: bleeding_edge/docker_images/windows1803
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-bleeding edge nanoserver1809 docker images:
+bleeding edge servercore1809 docker images:
   <<: *release_bleeding_edge
   <<: *windows1809
   extends: .build_windows_docker_images
@@ -585,7 +585,7 @@ stable docker images:
     name: stable/docker_images
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-stable nanoserver1803 docker images:
+stable servercore1803 docker images:
   <<: *release_stable
   <<: *windows1803
   extends: .build_windows_docker_images
@@ -596,7 +596,7 @@ stable nanoserver1803 docker images:
     name: stable/docker_images/windows1803
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-stable nanoserver1809 docker images:
+stable servercore1809 docker images:
   <<: *release_stable
   <<: *windows1809
   extends: .build_windows_docker_images

@@ -12,15 +12,15 @@ const (
 	windows1809 = "1809"
 	windows1803 = "1803"
 
-	nanoserver1809 = "nanoserver1809"
-	nanoserver1803 = "nanoserver1803"
+	baseImage1809 = "servercore1809"
+	baseImage1803 = "servercore1803"
 
 	windowsSupportedArchitecture = "x86_64"
 )
 
 var supportedOSVersions = map[string]string{
-	windows1803: nanoserver1803,
-	windows1809: nanoserver1809,
+	windows1803: baseImage1803,
+	windows1809: baseImage1809,
 }
 
 var ErrUnsupportedOSVersion = errors.New("could not determine windows version")

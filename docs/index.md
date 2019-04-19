@@ -10,8 +10,6 @@ send the results back to GitLab. It is used in conjunction with [GitLab CI](http
 the open-source continuous integration service included with GitLab that
 coordinates the jobs.
 
-[![Build Status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/build.svg)](https://gitlab.com/gitlab-org/gitlab-runner)
-
 ## Requirements
 
 GitLab Runner is written in [Go](https://golang.org) and can be run as a single binary, no
