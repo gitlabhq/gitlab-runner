@@ -41,23 +41,21 @@ func TestIsOn(t *testing.T) {
 			expectedError:  `strconv.ParseBool: parsing "a": invalid syntax`,
 		},
 		"true value": {
-			expectedResult: true,
 			testValue:      "1",
+			expectedResult: true,
 		},
 		"false value": {
-			expectedResult: false,
 			testValue:      "f",
+			expectedResult: false,
 		},
 	}
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			result, err := IsOn(testCase.testValue)
-
 			assert.Equal(t, testCase.expectedResult, result)
 			if testCase.expectedError != "" {
 				assert.EqualError(t, err, testCase.expectedError)
-
 			} else {
 				assert.NoError(t, err)
 			}
