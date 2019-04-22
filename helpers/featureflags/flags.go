@@ -52,14 +52,14 @@ var flags = []FeatureFlag{
 		DefaultValue:    "false",
 		Deprecated:      true,
 		ToBeRemovedWith: "12.0",
-		Description:     "Enables the new strategy for `git clean` that moves the clean operation after checkout and enables support for `GIT_CLEAN_FLAGS`",
+		Description:     "Disables the new strategy for `git clean` that moves the clean operation after checkout and enables support for `GIT_CLEAN_FLAGS`",
 	},
 	{
 		Name:            UseLegacyBuildsDirForDocker,
 		DefaultValue:    "false",
 		Deprecated:      true,
 		ToBeRemovedWith: "13.0",
-		Description:     "Enables the new strategy for Docker executor to cache the content of `/builds` directory instead of `/builds/group-org`",
+		Description:     "Disables the new strategy for Docker executor to cache the content of `/builds` directory instead of `/builds/group-org`",
 	},
 }
 
