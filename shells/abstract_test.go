@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
@@ -245,7 +246,7 @@ func TestGitCleanFlags(t *testing.T) {
 					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef},
 					Variables: common.JobVariables{
 						{Key: "GIT_CLEAN_FLAGS", Value: test.value},
-						{Key: common.FFUseLegacyGitCleanStrategy, Value: test.legacyCleanStrategy},
+						{Key: featureflags.UseLegacyGitCleanStrategy, Value: test.legacyCleanStrategy},
 					},
 				},
 			}

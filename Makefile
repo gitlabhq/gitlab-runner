@@ -371,6 +371,9 @@ prepare_release_checklist_issue: $(GOPATH_SETUP)
 		-issue-template-file ".gitlab/issue_templates/Release Checklist.md" \
 		$(opts)
 
+update_feature_flags_docs: $(GOPATH_SETUP)
+	go run ./scripts/update-feature-flags-docs/main.go
+
 development_setup:
 	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git tmp/gitlab-test
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi

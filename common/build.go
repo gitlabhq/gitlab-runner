@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
@@ -66,14 +67,6 @@ const (
 	BuildStageArchiveCache             BuildStage = "archive_cache"
 	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
-)
-
-const (
-	FFK8sEntrypointOverCommand             string = "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND"
-	FFDockerHelperImageV2                  string = "FF_DOCKER_HELPER_IMAGE_V2"
-	FFCmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
-	FFUseLegacyGitCleanStrategy            string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
-	FFUseLegacyBuildsDirForDocker          string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 )
 
 type Build struct {
@@ -575,13 +568,18 @@ func (b *Build) GetDefaultVariables() JobVariables {
 }
 
 func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
-	return JobVariables{
-		{Key: FFK8sEntrypointOverCommand, Value: "true", Public: true, Internal: true, File: false},   // TODO: Remove in 12.0
-		{Key: FFDockerHelperImageV2, Value: "false", Public: true, Internal: true, File: false},       // TODO: Remove in 12.0
-		{Key: FFUseLegacyGitCleanStrategy, Value: "false", Public: true, Internal: true, File: false}, // TODO: Remove in 12.0
-		{Key: FFCmdDisableDelayedErrorLevelExpansion, Value: "false", Public: true, Internal: true, File: false},
-		{Key: FFUseLegacyBuildsDirForDocker, Value: "false", Public: true, Internal: true, File: false}, // TODO: Remove in 13.0
+	variables := make(JobVariables, 0)
+	for _, featureFlag := range featureflags.GetAll() {
+		variables = append(variables, JobVariable{
+			Key:      featureFlag.Name,
+			Value:    featureFlag.DefaultValue,
+			Public:   true,
+			Internal: true,
+			File:     false,
+		})
 	}
+
+	return variables
 }
 
 func (b *Build) GetSharedEnvVariable() JobVariable {
@@ -838,17 +836,13 @@ func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt c
 }
 
 func (b *Build) IsFeatureFlagOn(name string) bool {
-	ffValue := b.GetAllVariables().Get(name)
+	value := b.GetAllVariables().Get(name)
 
-	if ffValue == "" {
-		return false
-	}
-
-	on, err := strconv.ParseBool(ffValue)
+	on, err := featureflags.IsOn(value)
 	if err != nil {
 		logrus.WithError(err).
-			WithField("ffName", name).
-			WithField("ffValue", ffValue).
+			WithField("name", name).
+			WithField("value", value).
 			Error("Error while parsing the value of feature flag")
 
 		return false

@@ -30,6 +30,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
@@ -1327,7 +1328,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Variables: []common.JobVariable{
-				{Key: common.FFK8sEntrypointOverCommand, Value: "true"},
+				{Key: featureflags.K8sEntrypointOverCommand, Value: "true"},
 			},
 			Options: &kubernetesOptions{
 				Image: common.Image{
@@ -1389,7 +1390,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			Variables: []common.JobVariable{
-				{Key: common.FFK8sEntrypointOverCommand, Value: "false"},
+				{Key: featureflags.K8sEntrypointOverCommand, Value: "false"},
 			},
 			Options: &kubernetesOptions{
 				Image: common.Image{
