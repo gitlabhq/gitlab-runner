@@ -9,14 +9,12 @@ import (
 )
 
 func Test_linuxInfo_create(t *testing.T) {
-	cases := []struct {
-		name         string
+	tests := map[string]struct {
 		dockerArch   string
 		revision     string
 		expectedInfo Info
 	}{
-		{
-			name:       "When dockerArch not specified we fallback to runtime arch",
+		"When dockerArch not specified we fallback to runtime arch": {
 			dockerArch: "",
 			revision:   "2923a43",
 			expectedInfo: Info{
@@ -26,8 +24,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				IsSupportingLocalImport: true,
 			},
 		},
-		{
-			name:       "Docker runs on armv6l",
+		"Docker runs on armv6l": {
 			dockerArch: "armv6l",
 			revision:   "2923a43",
 			expectedInfo: Info{
@@ -37,8 +34,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				IsSupportingLocalImport: true,
 			},
 		},
-		{
-			name:       "Docker runs on amd64",
+		"Docker runs on amd64": {
 			dockerArch: "amd64",
 			revision:   "2923a43",
 			expectedInfo: Info{
@@ -50,14 +46,14 @@ func Test_linuxInfo_create(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
 			l := new(linuxInfo)
 
-			image, err := l.Create(c.revision, Config{Architecture: c.dockerArch})
+			image, err := l.Create(test.revision, Config{Architecture: test.dockerArch})
 
 			assert.NoError(t, err)
-			assert.Equal(t, c.expectedInfo, image)
+			assert.Equal(t, test.expectedInfo, image)
 		})
 	}
 }
