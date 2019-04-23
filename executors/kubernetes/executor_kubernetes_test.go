@@ -30,6 +30,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
@@ -1460,6 +1461,12 @@ func TestSetupBuildPod(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
+			helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+				OSType:       helperimage.OSTypeLinux,
+				Architecture: "amd64",
+			})
+			require.NoError(t, err)
+
 			vars := test.Variables
 			if vars == nil {
 				vars = []common.JobVariable{}
@@ -1488,13 +1495,14 @@ func TestSetupBuildPod(t *testing.T) {
 						Runner: &test.RunnerConfig,
 					},
 				},
+				helperImageInfo: helperImageInfo,
 			}
 
 			if test.PrepareFn != nil {
 				test.PrepareFn(t, test, &ex)
 			}
 
-			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			err = ex.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err, "error preparing overwrites")
 
 			err = ex.setupBuildPod()

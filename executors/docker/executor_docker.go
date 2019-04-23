@@ -278,49 +278,41 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		return e.getDockerImage(imageNameFromConfig)
 	}
 
-	helperImageInfo, err := helperimage.GetInfo(e.info)
+	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:          e.info.OSType,
+		Architecture:    e.info.Architecture,
+		OperatingSystem: e.info.OperatingSystem,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	revision := "latest"
-	if common.REVISION != "HEAD" {
-		revision = common.REVISION
-	}
-
-	tag, err := helperImageInfo.Tag(revision)
-	if err != nil {
-		return nil, err
-	}
-
-	// Try to find already loaded prebuilt image
-	imageName := fmt.Sprintf("%s:%s", prebuiltImageName, tag)
-	e.Debugln("Looking for prebuilt image", imageName, "...")
-	image, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
+	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", helperImageInfo))
+	image, _, err := e.client.ImageInspectWithRaw(e.Context, helperImageInfo.String())
 	if err == nil {
 		return &image, nil
 	}
 
 	// Try to load prebuilt image from local filesystem
-	loadedImage := e.getLocalDockerImage(helperImageInfo, tag)
+	loadedImage := e.getLocalDockerImage(helperImageInfo)
 	if loadedImage != nil {
 		return loadedImage, nil
 	}
 
 	// Fallback to getting image from DockerHub
-	e.Debugln("Loading image from registry:", imageName)
-	return e.getDockerImage(imageName)
+	e.Debugln(fmt.Sprintf("Loading image form registry: %s", helperImageInfo))
+	return e.getDockerImage(helperImageInfo.String())
 }
 
-func (e *executor) getLocalDockerImage(helperImageInfo helperimage.Info, tag string) *types.ImageInspect {
-	if !helperImageInfo.IsSupportingLocalImport() {
+func (e *executor) getLocalDockerImage(helperImageInfo helperimage.Info) *types.ImageInspect {
+	if !helperImageInfo.IsSupportingLocalImport {
 		return nil
 	}
 
-	architecture := helperImageInfo.Architecture()
+	architecture := helperImageInfo.Architecture
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
-		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
+		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, helperImageInfo.Tag)
 		if err != nil {
 			e.Debugln("Failed to load prebuilt image from:", dockerPrebuiltImageFilePath, "error:", err)
 			continue
