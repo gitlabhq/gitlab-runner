@@ -25,7 +25,7 @@ The currently supported shells are:
 | `cmd`         | Windows Batch script. All commands are executed in Batch context (default for Windows) |
 | `powershell`  | Windows PowerShell script. All commands are executed in PowerShell context |
 
-If you want to select a particular shell to use other than the default, you will need to [specify the shell](https://docs.gitlab.com/runner/executors/shell.html#selecting-your-shell) in your `config.toml` file.
+If you want to select a particular shell to use other than the default, you will need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
 ## Sh/Bash shells
 
