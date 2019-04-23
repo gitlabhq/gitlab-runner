@@ -73,7 +73,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			err := m.AddVolume(testCase.volume)
+			err := m.Create(testCase.volume)
 			assert.NoError(t, err)
 			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
@@ -138,7 +138,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			err := m.AddVolume(testCase.volume)
+			err := m.Create(testCase.volume)
 			assert.NoError(t, err)
 			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
@@ -200,7 +200,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			err := m.AddVolume(testCase.volume)
+			err := m.Create(testCase.volume)
 			assert.NoError(t, err)
 			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
@@ -299,7 +299,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 					Once()
 			}
 
-			err := m.AddVolume(testCase.volume)
+			err := m.Create(testCase.volume)
 			assert.NoError(t, err)
 
 			assert.Contains(t, m.cacheContainerIDs, testCase.expectedCacheContainerID)
@@ -326,7 +326,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 		Return("", errors.New("test error")).
 		Once()
 
-	err := m.AddVolume("volume")
+	err := m.Create("volume")
 	assert.Error(t, err)
 }
 
@@ -428,22 +428,22 @@ func TestDefaultManager_CreateBuildVolume_WithError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestDefaultManager_VolumeBindings(t *testing.T) {
+func TestDefaultManager_Binds(t *testing.T) {
 	expectedElements := []string{"element1", "element2"}
 	m := &manager{
 		volumeBindings: expectedElements,
 	}
 
-	assert.Equal(t, expectedElements, m.VolumeBindings())
+	assert.Equal(t, expectedElements, m.Binds())
 }
 
-func TestDefaultManager_CacheContainerIDs(t *testing.T) {
+func TestDefaultManager_ContainerIDs(t *testing.T) {
 	expectedElements := []string{"element1", "element2"}
 	m := &manager{
 		cacheContainerIDs: expectedElements,
 	}
 
-	assert.Equal(t, expectedElements, m.CacheContainerIDs())
+	assert.Equal(t, expectedElements, m.ContainerIDs())
 }
 
 func TestDefaultManager_Cleanup(t *testing.T) {

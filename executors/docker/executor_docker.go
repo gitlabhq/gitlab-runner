@@ -499,9 +499,9 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    e.Config.Docker.Privileged,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
-		Binds:         volumesManager.VolumeBindings(),
+		Binds:         volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
-		VolumesFrom:   volumesManager.CacheContainerIDs(),
+		VolumesFrom:   volumesManager.ContainerIDs(),
 		Tmpfs:         e.Config.Docker.ServicesTmpfs,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -685,7 +685,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 
 	// By default we use caches container,
 	// but in later phases we hook to previous build container
-	volumesFrom := volumesManager.CacheContainerIDs()
+	volumesFrom := volumesManager.ContainerIDs()
 	if len(e.builds) > 0 {
 		volumesFrom = []string{
 			e.builds[len(e.builds)-1],
@@ -714,7 +714,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
 		Links:         append(e.Config.Docker.Links, e.links...),
-		Binds:         volumesManager.VolumeBindings(),
+		Binds:         volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
 		VolumesFrom:   append(e.Config.Docker.VolumesFrom, volumesFrom...),
@@ -1033,7 +1033,7 @@ func (e *executor) createDependencies() error {
 	e.Debugln("Creating user-defined volumes...")
 
 	for _, volume := range e.Config.Docker.Volumes {
-		err = volumesManager.AddVolume(volume)
+		err = volumesManager.Create(volume)
 		if err != nil {
 			return err
 		}
