@@ -111,7 +111,7 @@ This defines one runner entry.
 | `tls-key-file`       | File containing the private key to authenticate with the peer when using HTTPS |
 | `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
 | `executor`           | Select how a project should be built, see next section |
-| `shell`              | The name of shell to generate the script (default value is platform dependent) |
+| `shell`              | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md#overview). |
 | `builds_dir`         | Directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
 | `cache_dir`          | Directory where build caches will be stored in context of selected executor (locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
 | `environment`        | Append or overwrite environment variables |
