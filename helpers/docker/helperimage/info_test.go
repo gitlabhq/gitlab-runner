@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetInfo(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		osType                  string
 		expectedHelperImageType interface{}
 		expectedError           interface{}
@@ -19,11 +19,11 @@ func TestGetInfo(t *testing.T) {
 		{osType: "unsupported", expectedError: errors.NewErrOSNotSupported("unsupported")},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.osType, func(t *testing.T) {
-			_, err := Get(headRevision, Config{OSType: testCase.osType})
+	for _, test := range tests {
+		t.Run(test.osType, func(t *testing.T) {
+			_, err := Get(headRevision, Config{OSType: test.osType})
 
-			assert.Equal(t, testCase.expectedError, err)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
@@ -38,7 +38,7 @@ func TestContainerImage_String(t *testing.T) {
 }
 
 func Test_imageRevision(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		revision    string
 		expectedTag string
 	}{
@@ -52,9 +52,9 @@ func Test_imageRevision(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.revision, func(t *testing.T) {
-			assert.Equal(t, testCase.expectedTag, imageRevision(testCase.revision))
+	for _, test := range tests {
+		t.Run(test.revision, func(t *testing.T) {
+			assert.Equal(t, test.expectedTag, imageRevision(test.revision))
 		})
 	}
 

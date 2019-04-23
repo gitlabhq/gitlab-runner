@@ -9,7 +9,7 @@ import (
 
 func Test_windowsInfo_create(t *testing.T) {
 	revision := "4011f186"
-	cases := []struct {
+	tests := []struct {
 		operatingSystem string
 		expectedInfo    Info
 		expectedErr     error
@@ -19,7 +19,7 @@ func Test_windowsInfo_create(t *testing.T) {
 			expectedInfo: Info{
 				Architecture: windowsSupportedArchitecture,
 				Name:         name,
-				Tag:          fmt.Sprintf("%s-%s-%s", "x86_64", revision, baseImage1809),
+				Tag:          fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1809),
 				IsSupportingLocalImport: false,
 			},
 			expectedErr: nil,
@@ -29,7 +29,7 @@ func Test_windowsInfo_create(t *testing.T) {
 			expectedInfo: Info{
 				Architecture: windowsSupportedArchitecture,
 				Name:         name,
-				Tag:          fmt.Sprintf("%s-%s-%s", "x86_64", revision, baseImage1809),
+				Tag:          fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1809),
 				IsSupportingLocalImport: false,
 			},
 			expectedErr: nil,
@@ -39,7 +39,7 @@ func Test_windowsInfo_create(t *testing.T) {
 			expectedInfo: Info{
 				Architecture: windowsSupportedArchitecture,
 				Name:         name,
-				Tag:          fmt.Sprintf("%s-%s-%s", "x86_64", revision, baseImage1803),
+				Tag:          fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1803),
 				IsSupportingLocalImport: false,
 			},
 			expectedErr: nil,
@@ -50,14 +50,14 @@ func Test_windowsInfo_create(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
-		t.Run(c.operatingSystem, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.operatingSystem, func(t *testing.T) {
 			w := new(windowsInfo)
 
-			image, err := w.Create(revision, Config{OperatingSystem: c.operatingSystem})
+			image, err := w.Create(revision, Config{OperatingSystem: test.operatingSystem})
 
-			assert.Equal(t, c.expectedInfo, image)
-			assert.Equal(t, c.expectedErr, err)
+			assert.Equal(t, test.expectedInfo, image)
+			assert.Equal(t, test.expectedErr, err)
 		})
 	}
 }
