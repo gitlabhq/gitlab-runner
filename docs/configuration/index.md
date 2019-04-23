@@ -13,7 +13,7 @@ well as information how to set up Prometheus metrics:
 - [Autoscaling using Docker machine](autoscale.md) Execute jobs on machines that are created on demand using Docker machine.
 - [Autoscaling GitLab Runner on AWS](runner_autoscale_aws/index.md)
 - [The init system of GitLab Runner](init.md) Learn how the Runner installs its init service files based on your operating system.
-- [Supported shells](../shells/README.md) Learn what shell script generators are supported that allow to execute builds on different systems.
+- [Supported shells](../shells/index.md) Learn what shell script generators are supported that allow to execute builds on different systems.
 - [Security considerations](../security/index.md) Be aware of potential security implications when running your jobs with GitLab Runner.
 - [Runner monitoring](../monitoring/README.md) Learn how to monitor the Runner's behavior.
 - [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup) A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
