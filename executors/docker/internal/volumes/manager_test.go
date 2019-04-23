@@ -396,7 +396,6 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
-				GitStrategy:  testCase.gitStrategy,
 				DisableCache: testCase.disableCache,
 				CacheDir:     testCase.cacheDir,
 				UniqName:     testCase.uniqName,
@@ -413,7 +412,7 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 					Once()
 			}
 
-			err := m.CreateBuildVolume(testCase.jobsRootDir, testCase.volumes)
+			err := m.CreateBuildVolume(testCase.jobsRootDir, testCase.gitStrategy, testCase.volumes)
 			if testCase.expectedError == nil {
 				assert.NoError(t, err)
 			} else {
@@ -433,11 +432,7 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 }
 
 func TestDefaultManager_CreateBuildVolume_WithError(t *testing.T) {
-	config := ManagerConfig{
-		GitStrategy: common.GitClone,
-	}
-
-	m := newDefaultManager(config)
+	m := newDefaultManager(ManagerConfig{})
 	containerManager := addContainerManager(m)
 
 	defer containerManager.AssertExpectations(t)
@@ -446,7 +441,7 @@ func TestDefaultManager_CreateBuildVolume_WithError(t *testing.T) {
 		Return("", errors.New("test error")).
 		Once()
 
-	err := m.CreateBuildVolume("/builds/root", []string{"/host/source:/destination"})
+	err := m.CreateBuildVolume("/builds/root", common.GitClone, []string{"/host/source:/destination"})
 	assert.Error(t, err)
 }
 

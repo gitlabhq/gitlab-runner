@@ -28,7 +28,7 @@ func NewErrVolumeAlreadyDefined(containerPath string) *ErrVolumeAlreadyDefined {
 
 type Manager interface {
 	Create(volume string) error
-	CreateBuildVolume(jobsRootDir string, volumes []string) error
+	CreateBuildVolume(jobsRootDir string, gitStrategy common.GitStrategy, volumes []string) error
 	Binds() []string
 	ContainerIDs() []string
 	Cleanup(ctx context.Context) chan bool
@@ -38,7 +38,6 @@ type ManagerConfig struct {
 	CacheDir          string
 	BaseContainerPath string
 	UniqName          string
-	GitStrategy       common.GitStrategy
 	DisableCache      bool
 }
 
@@ -184,7 +183,7 @@ func (m *manager) createContainerBasedCacheVolume(containerPath string, hash [md
 	return nil
 }
 
-func (m *manager) CreateBuildVolume(jobsRootDir string, volumes []string) error {
+func (m *manager) CreateBuildVolume(jobsRootDir string, gitStrategy common.GitStrategy, volumes []string) error {
 	if IsHostMountedVolume(jobsRootDir, volumes...) {
 		// If builds directory is within a volume mounted manually by user
 		// it will be added by CreateUserVolumes(), so nothing more to do
@@ -192,7 +191,7 @@ func (m *manager) CreateBuildVolume(jobsRootDir string, volumes []string) error 
 		return nil
 	}
 
-	if m.config.GitStrategy == common.GitFetch && !m.config.DisableCache {
+	if gitStrategy == common.GitFetch && !m.config.DisableCache {
 		// create persistent cache container
 		return m.Create(jobsRootDir)
 	}

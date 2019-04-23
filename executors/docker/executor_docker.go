@@ -1017,7 +1017,7 @@ func (e *executor) createDependencies() error {
 		jobsDir = path.Dir(e.Build.FullProjectDir())
 	}
 
-	err = volumesManager.CreateBuildVolume(jobsDir, e.Config.Docker.Volumes)
+	err = volumesManager.CreateBuildVolume(jobsDir, e.Build.GetGitStrategy(), e.Config.Docker.Volumes)
 	if err != nil {
 		return err
 	}
@@ -1087,7 +1087,6 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 		CacheDir:          e.Config.Docker.CacheDir,
 		BaseContainerPath: e.Build.FullProjectDir(),
 		UniqName:          e.Build.ProjectUniqueName(),
-		GitStrategy:       e.Build.GetGitStrategy(),
 		DisableCache:      e.Config.Docker.DisableCache,
 	}
 
