@@ -12,6 +12,20 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+type ErrVolumeAlreadyDefined struct {
+	containerPath string
+}
+
+func (e *ErrVolumeAlreadyDefined) Error() string {
+	return fmt.Sprintf("volume for container path %q is already defined", e.containerPath)
+}
+
+func NewErrVolumeAlreadyDefined(containerPath string) *ErrVolumeAlreadyDefined {
+	return &ErrVolumeAlreadyDefined{
+		containerPath: containerPath,
+	}
+}
+
 type Manager interface {
 	Create(volume string) error
 	CreateBuildVolume(jobsRootDir string, volumes []string) error
@@ -37,6 +51,8 @@ type manager struct {
 	volumeBindings    []string
 	cacheContainerIDs []string
 	tmpContainerIDs   []string
+
+	managedVolumes map[string]bool
 }
 
 func NewManager(logger common.BuildLogger, cManager ContainerManager, config ManagerConfig) Manager {
@@ -47,6 +63,7 @@ func NewManager(logger common.BuildLogger, cManager ContainerManager, config Man
 		volumeBindings:    make([]string, 0),
 		cacheContainerIDs: make([]string, 0),
 		tmpContainerIDs:   make([]string, 0),
+		managedVolumes:    make(map[string]bool, 0),
 	}
 }
 
@@ -74,6 +91,12 @@ func (m *manager) Create(volume string) error {
 
 func (m *manager) addHostVolume(hostPath string, containerPath string) error {
 	containerPath = m.getAbsoluteContainerPath(containerPath)
+
+	err := m.rememberVolume(containerPath)
+	if err != nil {
+		return err
+	}
+
 	m.appendVolumeBind(hostPath, containerPath)
 
 	return nil
@@ -87,6 +110,16 @@ func (m *manager) getAbsoluteContainerPath(dir string) string {
 	return path.Join(m.config.FullProjectDir, dir)
 }
 
+func (m *manager) rememberVolume(containerPath string) error {
+	if m.managedVolumes[containerPath] {
+		return NewErrVolumeAlreadyDefined(containerPath)
+	}
+
+	m.managedVolumes[containerPath] = true
+
+	return nil
+}
+
 func (m *manager) appendVolumeBind(hostPath string, containerPath string) {
 	m.logger.Debugln(fmt.Sprintf("Using host-based %q for %q...", hostPath, containerPath))
 
@@ -96,6 +129,11 @@ func (m *manager) appendVolumeBind(hostPath string, containerPath string) {
 
 func (m *manager) addCacheVolume(containerPath string) error {
 	containerPath = m.getAbsoluteContainerPath(containerPath)
+
+	err := m.rememberVolume(containerPath)
+	if err != nil {
+		return err
+	}
 
 	// disable cache for automatic container cache,
 	// but leave it for host volumes (they are shared on purpose)

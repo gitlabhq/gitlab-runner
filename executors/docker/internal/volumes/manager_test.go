@@ -8,9 +8,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
+
+func TestErrVolumeAlreadyDefined(t *testing.T) {
+	err := NewErrVolumeAlreadyDefined("test-path")
+	assert.EqualError(t, err, `volume for container path "test-path" is already defined`)
+}
 
 func TestNewDefaultManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
@@ -21,8 +27,9 @@ func TestNewDefaultManager(t *testing.T) {
 
 func newDefaultManager(config ManagerConfig) *manager {
 	m := &manager{
-		logger: common.NewBuildLogger(nil, nil),
-		config: config,
+		logger:         common.NewBuildLogger(nil, nil),
+		config:         config,
+		managedVolumes: make(map[string]bool, 0),
 	}
 
 	return m
@@ -40,28 +47,35 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 	testCases := map[string]struct {
 		volume          string
 		fullProjectDir  string
-		expectedBinding string
+		expectedBinding []string
+		expectedError   error
 	}{
 		"no volumes specified": {
-			volume: "",
+			volume:          "",
+			expectedBinding: []string{"/host:/duplicated"},
 		},
 		"volume with absolute path": {
 			volume:          "/host:/volume",
-			expectedBinding: "/host:/volume",
+			expectedBinding: []string{"/host:/duplicated", "/host:/volume"},
 		},
 		"volume with absolute path and with fullProjectDir specified": {
 			volume:          "/host:/volume",
 			fullProjectDir:  "/builds",
-			expectedBinding: "/host:/volume",
+			expectedBinding: []string{"/host:/duplicated", "/host:/volume"},
 		},
 		"volume without absolute path and without fullProjectDir specified": {
 			volume:          "/host:volume",
-			expectedBinding: "/host:volume",
+			expectedBinding: []string{"/host:/duplicated", "/host:volume"},
 		},
 		"volume without absolute path and with fullProjectDir specified": {
 			volume:          "/host:volume",
 			fullProjectDir:  "/builds/project",
-			expectedBinding: "/host:/builds/project/volume",
+			expectedBinding: []string{"/host:/duplicated", "/host:/builds/project/volume"},
+		},
+		"duplicated volume specification": {
+			volume:          "/host/new:/duplicated",
+			expectedBinding: []string{"/host:/duplicated"},
+			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
 		},
 	}
 
@@ -73,21 +87,14 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			err := m.Create(testCase.volume)
-			assert.NoError(t, err)
-			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
+			err := m.Create("/host:/duplicated")
+			require.NoError(t, err)
+
+			err = m.Create(testCase.volume)
+			assert.Equal(t, testCase.expectedError, err)
+			assert.Equal(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
-}
-
-func assertVolumeBindings(t *testing.T, expectedBinding string, bindings []string) {
-	if expectedBinding == "" {
-		assert.Empty(t, bindings)
-
-		return
-	}
-	assert.Contains(t, bindings, expectedBinding)
-
 }
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
@@ -96,36 +103,44 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 		fullProjectDir string
 		disableCache   bool
 
-		expectedBinding           string
+		expectedBinding           []string
 		expectedCacheContainerIDs []string
 		expectedConfigVolume      string
+		expectedError             error
 	}{
 		"no volumes specified": {
 			volume:          "",
-			expectedBinding: "",
+			expectedBinding: []string{"/host:/duplicated"},
 		},
 		"volume with absolute path, without fullProjectDir and with disableCache": {
 			volume:          "/volume",
 			fullProjectDir:  "",
 			disableCache:    true,
-			expectedBinding: "",
+			expectedBinding: []string{"/host:/duplicated"},
 		},
 		"volume with absolute path, with fullProjectDir and with disableCache": {
 			volume:          "/volume",
 			fullProjectDir:  "/builds/project",
 			disableCache:    true,
-			expectedBinding: "",
+			expectedBinding: []string{"/host:/duplicated"},
 		},
 		"volume without absolute path, without fullProjectDir and with disableCache": {
 			volume:          "volume",
 			disableCache:    true,
-			expectedBinding: "",
+			expectedBinding: []string{"/host:/duplicated"},
 		},
 		"volume without absolute path, with fullProjectDir and with disableCache": {
 			volume:          "volume",
 			fullProjectDir:  "/builds/project",
 			disableCache:    true,
-			expectedBinding: "",
+			expectedBinding: []string{"/host:/duplicated"},
+		},
+		"duplicated volume with absolute path, without fullProjectDir and with disableCache": {
+			volume:          "/duplicated",
+			fullProjectDir:  "",
+			disableCache:    true,
+			expectedBinding: []string{"/host:/duplicated"},
+			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
 		},
 	}
 
@@ -138,9 +153,12 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			err := m.Create(testCase.volume)
-			assert.NoError(t, err)
-			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
+			err := m.Create("/host:/duplicated")
+			require.NoError(t, err)
+
+			err = m.Create(testCase.volume)
+			assert.Equal(t, testCase.expectedError, err)
+			assert.Equal(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
 }
@@ -205,6 +223,14 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
+}
+
+func assertVolumeBindings(t *testing.T, expectedBinding string, bindings []string) {
+	if expectedBinding == "" {
+		return
+	}
+	assert.Contains(t, bindings, expectedBinding)
+
 }
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.T) {
