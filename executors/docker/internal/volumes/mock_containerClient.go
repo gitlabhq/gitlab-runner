@@ -3,6 +3,7 @@
 package volumes
 
 import container "github.com/docker/docker/api/types/container"
+import context "context"
 import mock "github.com/stretchr/testify/mock"
 import network "github.com/docker/docker/api/types/network"
 import types "github.com/docker/docker/api/types"
@@ -66,13 +67,13 @@ func (_m *mockContainerClient) LabelContainer(_a0 *container.Config, containerTy
 	_m.Called(_ca...)
 }
 
-// RemoveContainer provides a mock function with given fields: id
-func (_m *mockContainerClient) RemoveContainer(id string) error {
-	ret := _m.Called(id)
+// RemoveContainer provides a mock function with given fields: ctx, id
+func (_m *mockContainerClient) RemoveContainer(ctx context.Context, id string) error {
+	ret := _m.Called(ctx, id)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(id)
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Error(0)
 	}

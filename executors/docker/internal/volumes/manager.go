@@ -1,11 +1,13 @@
 package volumes
 
 import (
+	"context"
 	"crypto/md5"
 	"fmt"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -15,7 +17,7 @@ type Manager interface {
 	CreateBuildVolume(jobsRootDir string, volumes []string) error
 	VolumeBindings() []string
 	CacheContainerIDs() []string
-	TmpContainerIDs() []string
+	Cleanup(ctx context.Context) chan bool
 }
 
 type ManagerConfig struct {
@@ -181,6 +183,26 @@ func (m *manager) CacheContainerIDs() []string {
 	return m.cacheContainerIDs
 }
 
-func (m *manager) TmpContainerIDs() []string {
-	return append(m.tmpContainerIDs, m.containerManager.FailedContainerIDs()...)
+func (m *manager) Cleanup(ctx context.Context) chan bool {
+	done := make(chan bool, 1)
+
+	remove := func(wg *sync.WaitGroup, containerID string) {
+		wg.Add(1)
+		go func() {
+			_ = m.containerManager.RemoveCacheContainer(ctx, containerID)
+			wg.Done()
+		}()
+	}
+
+	go func() {
+		wg := new(sync.WaitGroup)
+		for _, id := range m.tmpContainerIDs {
+			remove(wg, id)
+		}
+
+		wg.Wait()
+		done <- true
+	}()
+
+	return done
 }

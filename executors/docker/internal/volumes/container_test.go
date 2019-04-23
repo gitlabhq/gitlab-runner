@@ -1,6 +1,7 @@
 package volumes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -91,7 +92,7 @@ func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
 				Once()
 
 			if testCase.expectedRemoveID != "" {
-				cClient.On("RemoveContainer", testCase.expectedRemoveID).
+				cClient.On("RemoveContainer", mock.Anything, testCase.expectedRemoveID).
 					Return(nil).
 					Once()
 			}
@@ -221,11 +222,18 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 	}
 }
 
-func TestDefaultContainerManager_FailedContainerIDs(t *testing.T) {
-	expectedElements := []string{"element1", "element2"}
+func TestDefaultContainerManager_RemoveCacheContainer(t *testing.T) {
+	cClient := new(mockContainerClient)
+	defer cClient.AssertExpectations(t)
+
+	cClient.On("RemoveContainer", mock.Anything, "container-id").
+		Return(nil).
+		Once()
+
 	m := &containerManager{
-		failedContainerIDs: expectedElements,
+		containerClient: cClient,
 	}
 
-	assert.Equal(t, expectedElements, m.FailedContainerIDs())
+	err := m.RemoveCacheContainer(context.Background(), "container-id")
+	assert.NoError(t, err)
 }

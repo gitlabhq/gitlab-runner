@@ -1066,8 +1066,11 @@ func (a *volumesManagerAdapter) WaitForContainer(id string) error {
 	return a.e.waitForContainer(a.e.Context, id)
 }
 
-func (a *volumesManagerAdapter) RemoveContainer(id string) error {
-	return a.e.removeContainer(a.e.Context, id)
+func (a *volumesManagerAdapter) RemoveContainer(ctx context.Context, id string) error {
+	if ctx == nil {
+		ctx = a.e.Context
+	}
+	return a.e.removeContainer(ctx, id)
 }
 
 func (e *executor) checkOutdatedHelperImage() bool {
@@ -1168,17 +1171,16 @@ func (e *executor) Cleanup() {
 		}()
 	}
 
-	temporaryIDs := e.temporary
+	for _, temporaryID := range e.temporary {
+		remove(temporaryID)
+	}
 
 	volumesManager, err := e.getVolumesManager()
 	if err != nil {
-		logrus.WithError(err).Warning("Couldn't retrieve volumes manager to get tmp containers ids for cleanup")
+		logrus.WithError(err).Warning("Couldn't retrieve volumes manager for cleanup")
 	} else {
-		temporaryIDs = append(temporaryIDs, volumesManager.TmpContainerIDs()...)
-	}
-
-	for _, temporaryID := range temporaryIDs {
-		remove(temporaryID)
+		vmCleanupDone := volumesManager.Cleanup(ctx)
+		<-vmCleanupDone
 	}
 
 	wg.Wait()

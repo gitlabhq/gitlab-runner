@@ -1,6 +1,7 @@
 package volumes
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/docker/docker/api/types"
@@ -16,13 +17,13 @@ type containerClient interface {
 	StartContainer(containerID string, options types.ContainerStartOptions) error
 	InspectContainer(containerName string) (types.ContainerJSON, error)
 	WaitForContainer(id string) error
-	RemoveContainer(id string) error
+	RemoveContainer(ctx context.Context, id string) error
 }
 
 type ContainerManager interface {
 	FindExistingCacheContainer(containerName string, containerPath string) string
 	CreateCacheContainer(containerName string, containerPath string) (string, error)
-	FailedContainerIDs() []string
+	RemoveCacheContainer(ctx context.Context, id string) error
 }
 
 type containerManager struct {
@@ -54,7 +55,7 @@ func (m *containerManager) FindExistingCacheContainer(containerName string, cont
 	_, ok := inspected.Config.Volumes[containerPath]
 	if !ok {
 		m.logger.Debugln(fmt.Sprintf("Removing broken cache container for %q path", containerPath))
-		err = m.containerClient.RemoveContainer(inspected.ID)
+		err = m.containerClient.RemoveContainer(nil, inspected.ID)
 		m.logger.Debugln(fmt.Sprintf("Cache container for %q path removed with %v", containerPath, err))
 
 		return ""
@@ -136,6 +137,6 @@ func (m *containerManager) startCacheContainer(containerID string) error {
 	return nil
 }
 
-func (m *containerManager) FailedContainerIDs() []string {
-	return m.failedContainerIDs
+func (m *containerManager) RemoveCacheContainer(ctx context.Context, id string) error {
+	return m.containerClient.RemoveContainer(ctx, id)
 }

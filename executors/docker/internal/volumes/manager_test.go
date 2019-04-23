@@ -1,10 +1,13 @@
 package volumes
 
 import (
+	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -443,17 +446,21 @@ func TestDefaultManager_CacheContainerIDs(t *testing.T) {
 	assert.Equal(t, expectedElements, m.CacheContainerIDs())
 }
 
-func TestDefaultManager_TmpContainerIDs(t *testing.T) {
-	expectedElements := []string{"element1", "element2"}
-
+func TestDefaultManager_Cleanup(t *testing.T) {
 	cManager := new(MockContainerManager)
 	defer cManager.AssertExpectations(t)
-	cManager.On("FailedContainerIDs").Return([]string{}).Once()
+
+	cManager.On("RemoveCacheContainer", mock.Anything, "container-1").
+		Return(nil).
+		Once()
 
 	m := &manager{
-		tmpContainerIDs:  expectedElements,
 		containerManager: cManager,
+		tmpContainerIDs:  []string{"container-1"},
 	}
 
-	assert.Equal(t, expectedElements, m.TmpContainerIDs())
+	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+
+	done := m.Cleanup(ctx)
+	<-done
 }
