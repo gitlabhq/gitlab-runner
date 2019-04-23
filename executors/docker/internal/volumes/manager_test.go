@@ -45,10 +45,10 @@ func addContainerManager(manager *manager) *MockContainerManager {
 
 func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 	testCases := map[string]struct {
-		volume          string
-		fullProjectDir  string
-		expectedBinding []string
-		expectedError   error
+		volume            string
+		baseContainerPath string
+		expectedBinding   []string
+		expectedError     error
 	}{
 		"no volumes specified": {
 			volume:          "",
@@ -58,19 +58,19 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 			volume:          "/host:/volume",
 			expectedBinding: []string{"/host:/duplicated", "/host:/volume"},
 		},
-		"volume with absolute path and with fullProjectDir specified": {
-			volume:          "/host:/volume",
-			fullProjectDir:  "/builds",
-			expectedBinding: []string{"/host:/duplicated", "/host:/volume"},
+		"volume with absolute path and with baseContainerPath specified": {
+			volume:            "/host:/volume",
+			baseContainerPath: "/builds",
+			expectedBinding:   []string{"/host:/duplicated", "/host:/volume"},
 		},
-		"volume without absolute path and without fullProjectDir specified": {
+		"volume without absolute path and without baseContainerPath specified": {
 			volume:          "/host:volume",
 			expectedBinding: []string{"/host:/duplicated", "/host:volume"},
 		},
-		"volume without absolute path and with fullProjectDir specified": {
-			volume:          "/host:volume",
-			fullProjectDir:  "/builds/project",
-			expectedBinding: []string{"/host:/duplicated", "/host:/builds/project/volume"},
+		"volume without absolute path and with baseContainerPath specified": {
+			volume:            "/host:volume",
+			baseContainerPath: "/builds/project",
+			expectedBinding:   []string{"/host:/duplicated", "/host:/builds/project/volume"},
 		},
 		"duplicated volume specification": {
 			volume:          "/host/new:/duplicated",
@@ -82,7 +82,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
-				FullProjectDir: testCase.fullProjectDir,
+				BaseContainerPath: testCase.baseContainerPath,
 			}
 
 			m := newDefaultManager(config)
@@ -99,9 +99,9 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 	testCases := map[string]struct {
-		volume         string
-		fullProjectDir string
-		disableCache   bool
+		volume            string
+		baseContainerPath string
+		disableCache      bool
 
 		expectedBinding           []string
 		expectedCacheContainerIDs []string
@@ -112,43 +112,43 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 			volume:          "",
 			expectedBinding: []string{"/host:/duplicated"},
 		},
-		"volume with absolute path, without fullProjectDir and with disableCache": {
-			volume:          "/volume",
-			fullProjectDir:  "",
-			disableCache:    true,
-			expectedBinding: []string{"/host:/duplicated"},
+		"volume with absolute path, without baseContainerPath and with disableCache": {
+			volume:            "/volume",
+			baseContainerPath: "",
+			disableCache:      true,
+			expectedBinding:   []string{"/host:/duplicated"},
 		},
-		"volume with absolute path, with fullProjectDir and with disableCache": {
-			volume:          "/volume",
-			fullProjectDir:  "/builds/project",
-			disableCache:    true,
-			expectedBinding: []string{"/host:/duplicated"},
+		"volume with absolute path, with baseContainerPath and with disableCache": {
+			volume:            "/volume",
+			baseContainerPath: "/builds/project",
+			disableCache:      true,
+			expectedBinding:   []string{"/host:/duplicated"},
 		},
-		"volume without absolute path, without fullProjectDir and with disableCache": {
+		"volume without absolute path, without baseContainerPath and with disableCache": {
 			volume:          "volume",
 			disableCache:    true,
 			expectedBinding: []string{"/host:/duplicated"},
 		},
-		"volume without absolute path, with fullProjectDir and with disableCache": {
-			volume:          "volume",
-			fullProjectDir:  "/builds/project",
-			disableCache:    true,
-			expectedBinding: []string{"/host:/duplicated"},
+		"volume without absolute path, with baseContainerPath and with disableCache": {
+			volume:            "volume",
+			baseContainerPath: "/builds/project",
+			disableCache:      true,
+			expectedBinding:   []string{"/host:/duplicated"},
 		},
-		"duplicated volume with absolute path, without fullProjectDir and with disableCache": {
-			volume:          "/duplicated",
-			fullProjectDir:  "",
-			disableCache:    true,
-			expectedBinding: []string{"/host:/duplicated"},
-			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
+		"duplicated volume with absolute path, without baseContainerPath and with disableCache": {
+			volume:            "/duplicated",
+			baseContainerPath: "",
+			disableCache:      true,
+			expectedBinding:   []string{"/host:/duplicated"},
+			expectedError:     NewErrVolumeAlreadyDefined("/duplicated"),
 		},
 	}
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
-				FullProjectDir: testCase.fullProjectDir,
-				DisableCache:   testCase.disableCache,
+				BaseContainerPath: testCase.baseContainerPath,
+				DisableCache:      testCase.disableCache,
 			}
 
 			m := newDefaultManager(config)
@@ -165,55 +165,55 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 	testCases := map[string]struct {
-		volume          string
-		fullProjectDir  string
-		disableCache    bool
-		cacheDir        string
-		projectUniqName string
+		volume            string
+		baseContainerPath string
+		disableCache      bool
+		cacheDir          string
+		uniqName          string
 
 		expectedBinding           string
 		expectedCacheContainerIDs []string
 		expectedConfigVolume      string
 	}{
-		"volume with absolute path, without fullProjectDir, without disableCache and with cacheDir": {
+		"volume with absolute path, without baseContainerPath, without disableCache and with cacheDir": {
 			volume:          "/volume",
 			disableCache:    false,
 			cacheDir:        "/cache",
-			projectUniqName: "project-uniq",
-			expectedBinding: "/cache/project-uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
+			uniqName:        "uniq",
+			expectedBinding: "/cache/uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
 		},
-		"volume with absolute path, with fullProjectDir, without disableCache and with cacheDir": {
-			volume:          "/volume",
-			fullProjectDir:  "/builds/project",
-			disableCache:    false,
-			cacheDir:        "/cache",
-			projectUniqName: "project-uniq",
-			expectedBinding: "/cache/project-uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
+		"volume with absolute path, with baseContainerPath, without disableCache and with cacheDir": {
+			volume:            "/volume",
+			baseContainerPath: "/builds/project",
+			disableCache:      false,
+			cacheDir:          "/cache",
+			uniqName:          "uniq",
+			expectedBinding:   "/cache/uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
 		},
-		"volume without absolute path, without fullProjectDir, without disableCache and with cacheDir": {
+		"volume without absolute path, without baseContainerPath, without disableCache and with cacheDir": {
 			volume:          "volume",
 			disableCache:    false,
 			cacheDir:        "/cache",
-			projectUniqName: "project-uniq",
-			expectedBinding: "/cache/project-uniq/210ab9e731c9c36c2c38db15c28a8d1c:volume",
+			uniqName:        "uniq",
+			expectedBinding: "/cache/uniq/210ab9e731c9c36c2c38db15c28a8d1c:volume",
 		},
-		"volume without absolute path, with fullProjectDir, without disableCache and with cacheDir": {
-			volume:          "volume",
-			fullProjectDir:  "/builds/project",
-			disableCache:    false,
-			cacheDir:        "/cache",
-			projectUniqName: "project-uniq",
-			expectedBinding: "/cache/project-uniq/f69aef9fb01e88e6213362a04877452d:/builds/project/volume",
+		"volume without absolute path, with baseContainerPath, without disableCache and with cacheDir": {
+			volume:            "volume",
+			baseContainerPath: "/builds/project",
+			disableCache:      false,
+			cacheDir:          "/cache",
+			uniqName:          "uniq",
+			expectedBinding:   "/cache/uniq/f69aef9fb01e88e6213362a04877452d:/builds/project/volume",
 		},
 	}
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
-				FullProjectDir:  testCase.fullProjectDir,
-				DisableCache:    testCase.disableCache,
-				CacheDir:        testCase.cacheDir,
-				ProjectUniqName: testCase.projectUniqName,
+				BaseContainerPath: testCase.baseContainerPath,
+				DisableCache:      testCase.disableCache,
+				CacheDir:          testCase.cacheDir,
+				UniqName:          testCase.uniqName,
 			}
 
 			m := newDefaultManager(config)
@@ -236,66 +236,66 @@ func assertVolumeBindings(t *testing.T, expectedBinding string, bindings []strin
 func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.T) {
 	testCases := map[string]struct {
 		volume                   string
-		fullProjectDir           string
-		projectUniqName          string
+		baseContainerPath        string
+		uniqName                 string
 		expectedContainerName    string
 		expectedContainerPath    string
 		existingContainerID      string
 		newContainerID           string
 		expectedCacheContainerID string
 	}{
-		"volume with absolute path, without fullProjectDir and with existing container": {
+		"volume with absolute path, without baseContainerPath and with existing container": {
 			volume:                   "/volume",
-			fullProjectDir:           "",
-			projectUniqName:          "project-uniq",
-			expectedContainerName:    "project-uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
+			baseContainerPath:        "",
+			uniqName:                 "uniq",
+			expectedContainerName:    "uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
 			expectedContainerPath:    "/volume",
 			existingContainerID:      "existingContainerID",
 			expectedCacheContainerID: "existingContainerID",
 		},
-		"volume with absolute path, without fullProjectDir and with new container": {
+		"volume with absolute path, without baseContainerPath and with new container": {
 			volume:                   "/volume",
-			fullProjectDir:           "",
-			projectUniqName:          "project-uniq",
-			expectedContainerName:    "project-uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
+			baseContainerPath:        "",
+			uniqName:                 "uniq",
+			expectedContainerName:    "uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
 			expectedContainerPath:    "/volume",
 			existingContainerID:      "",
 			newContainerID:           "newContainerID",
 			expectedCacheContainerID: "newContainerID",
 		},
-		"volume without absolute path, without fullProjectDir and with existing container": {
+		"volume without absolute path, without baseContainerPath and with existing container": {
 			volume:                   "volume",
-			fullProjectDir:           "",
-			projectUniqName:          "project-uniq",
-			expectedContainerName:    "project-uniq-cache-210ab9e731c9c36c2c38db15c28a8d1c",
+			baseContainerPath:        "",
+			uniqName:                 "uniq",
+			expectedContainerName:    "uniq-cache-210ab9e731c9c36c2c38db15c28a8d1c",
 			expectedContainerPath:    "volume",
 			existingContainerID:      "existingContainerID",
 			expectedCacheContainerID: "existingContainerID",
 		},
-		"volume without absolute path, without fullProjectDir and with new container": {
+		"volume without absolute path, without baseContainerPath and with new container": {
 			volume:                   "volume",
-			fullProjectDir:           "",
-			projectUniqName:          "project-uniq",
-			expectedContainerName:    "project-uniq-cache-210ab9e731c9c36c2c38db15c28a8d1c",
+			baseContainerPath:        "",
+			uniqName:                 "uniq",
+			expectedContainerName:    "uniq-cache-210ab9e731c9c36c2c38db15c28a8d1c",
 			expectedContainerPath:    "volume",
 			existingContainerID:      "",
 			newContainerID:           "newContainerID",
 			expectedCacheContainerID: "newContainerID",
 		},
-		"volume without absolute path, with fullProjectDir and with existing container": {
+		"volume without absolute path, with baseContainerPath and with existing container": {
 			volume:                   "volume",
-			fullProjectDir:           "/builds/project",
-			projectUniqName:          "project-uniq",
-			expectedContainerName:    "project-uniq-cache-f69aef9fb01e88e6213362a04877452d",
+			baseContainerPath:        "/builds/project",
+			uniqName:                 "uniq",
+			expectedContainerName:    "uniq-cache-f69aef9fb01e88e6213362a04877452d",
 			expectedContainerPath:    "/builds/project/volume",
 			existingContainerID:      "existingContainerID",
 			expectedCacheContainerID: "existingContainerID",
 		},
-		"volume without absolute path, with fullProjectDir and with new container": {
+		"volume without absolute path, with baseContainerPath and with new container": {
 			volume:                   "volume",
-			fullProjectDir:           "/builds/project",
-			projectUniqName:          "project-uniq",
-			expectedContainerName:    "project-uniq-cache-f69aef9fb01e88e6213362a04877452d",
+			baseContainerPath:        "/builds/project",
+			uniqName:                 "uniq",
+			expectedContainerName:    "uniq-cache-f69aef9fb01e88e6213362a04877452d",
 			expectedContainerPath:    "/builds/project/volume",
 			existingContainerID:      "",
 			newContainerID:           "newContainerID",
@@ -306,8 +306,8 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
-				FullProjectDir:  testCase.fullProjectDir,
-				ProjectUniqName: testCase.projectUniqName,
+				BaseContainerPath: testCase.baseContainerPath,
+				UniqName:          testCase.uniqName,
 			}
 
 			m := newDefaultManager(config)
@@ -335,8 +335,8 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t *testing.T) {
 	config := ManagerConfig{
-		FullProjectDir:  "/builds/project",
-		ProjectUniqName: "project-uniq",
+		BaseContainerPath: "/builds/project",
+		UniqName:          "uniq",
 	}
 
 	m := newDefaultManager(config)
@@ -344,11 +344,11 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 
 	defer containerManager.AssertExpectations(t)
 
-	containerManager.On("FindExistingCacheContainer", "project-uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+	containerManager.On("FindExistingCacheContainer", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("").
 		Once()
 
-	containerManager.On("CreateCacheContainer", "project-uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+	containerManager.On("CreateCacheContainer", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("", errors.New("test error")).
 		Once()
 
@@ -363,7 +363,7 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 		gitStrategy           common.GitStrategy
 		disableCache          bool
 		cacheDir              string
-		projectUniqName       string
+		uniqName              string
 		expectedContainerName string
 		expectedContainerPath string
 		newContainerID        string
@@ -380,8 +380,8 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 			gitStrategy:     common.GitFetch,
 			disableCache:    false,
 			cacheDir:        "/cache",
-			projectUniqName: "project-uniq",
-			expectedBinding: "/cache/project-uniq/28934d7b9a9154212a5dd671e4fa5704:/builds/root",
+			uniqName:        "uniq",
+			expectedBinding: "/cache/uniq/28934d7b9a9154212a5dd671e4fa5704:/builds/root",
 		},
 		"temporary cache container": {
 			jobsRootDir:           "/builds/root",
@@ -396,10 +396,10 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
-				GitStrategy:     testCase.gitStrategy,
-				DisableCache:    testCase.disableCache,
-				CacheDir:        testCase.cacheDir,
-				ProjectUniqName: testCase.projectUniqName,
+				GitStrategy:  testCase.gitStrategy,
+				DisableCache: testCase.disableCache,
+				CacheDir:     testCase.cacheDir,
+				UniqName:     testCase.uniqName,
 			}
 
 			m := newDefaultManager(config)

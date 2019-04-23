@@ -35,11 +35,11 @@ type Manager interface {
 }
 
 type ManagerConfig struct {
-	CacheDir        string
-	FullProjectDir  string
-	ProjectUniqName string
-	GitStrategy     common.GitStrategy
-	DisableCache    bool
+	CacheDir          string
+	BaseContainerPath string
+	UniqName          string
+	GitStrategy       common.GitStrategy
+	DisableCache      bool
 }
 
 type manager struct {
@@ -107,7 +107,7 @@ func (m *manager) getAbsoluteContainerPath(dir string) string {
 		return dir
 	}
 
-	return path.Join(m.config.FullProjectDir, dir)
+	return path.Join(m.config.BaseContainerPath, dir)
 }
 
 func (m *manager) rememberVolume(containerPath string) error {
@@ -152,7 +152,7 @@ func (m *manager) addCacheVolume(containerPath string) error {
 }
 
 func (m *manager) createHostBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
-	hostPath := fmt.Sprintf("%s/%s/%x", m.config.CacheDir, m.config.ProjectUniqName, hash)
+	hostPath := fmt.Sprintf("%s/%s/%x", m.config.CacheDir, m.config.UniqName, hash)
 	hostPath, err := filepath.Abs(hostPath)
 	if err != nil {
 		return err
@@ -164,7 +164,7 @@ func (m *manager) createHostBasedCacheVolume(containerPath string, hash [md5.Siz
 }
 
 func (m *manager) createContainerBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
-	containerName := fmt.Sprintf("%s-cache-%x", m.config.ProjectUniqName, hash)
+	containerName := fmt.Sprintf("%s-cache-%x", m.config.UniqName, hash)
 
 	containerID := m.containerManager.FindExistingCacheContainer(containerName, containerPath)
 

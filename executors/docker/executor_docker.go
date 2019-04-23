@@ -1084,11 +1084,11 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 
 	adapter := &volumesManagerAdapter{e: e}
 	config := volumes.ManagerConfig{
-		CacheDir:        e.Config.Docker.CacheDir,
-		FullProjectDir:  e.Build.FullProjectDir(),
-		ProjectUniqName: e.Build.ProjectUniqueName(),
-		GitStrategy:     e.Build.GetGitStrategy(),
-		DisableCache:    e.Config.Docker.DisableCache,
+		CacheDir:          e.Config.Docker.CacheDir,
+		BaseContainerPath: e.Build.FullProjectDir(),
+		UniqName:          e.Build.ProjectUniqueName(),
+		GitStrategy:       e.Build.GetGitStrategy(),
+		DisableCache:      e.Config.Docker.DisableCache,
 	}
 
 	helperImage, err := e.getPrebuiltImage()
