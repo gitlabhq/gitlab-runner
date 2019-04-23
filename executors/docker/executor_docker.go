@@ -1109,22 +1109,26 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
-	e.prepareBuildsDir(options.Config)
+	e.SetCurrentStage(DockerExecutorStagePrepare)
 
-	err := e.AbstractExecutor.Prepare(options)
+	if options.Config.Docker == nil {
+		return errors.New("missing docker configuration")
+	}
+
+	err := e.prepareBuildsDir(options)
+	if err != nil {
+		return err
+	}
+
+	err = e.AbstractExecutor.Prepare(options)
 	if err != nil {
 		return err
 	}
 
 	if e.BuildShell.PassFile {
-		return errors.New("Docker doesn't support shells that require script file")
+		return errors.New("docker doesn't support shells that require script file")
 	}
 
-	if options.Config.Docker == nil {
-		return errors.New("Missing docker configuration")
-	}
-
-	e.SetCurrentStage(DockerExecutorStagePrepare)
 	imageName, err := e.expandImageName(e.Build.Image.Name, []string{})
 	if err != nil {
 		return err
@@ -1144,15 +1148,17 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	return nil
 }
 
-func (e *executor) prepareBuildsDir(config *common.RunnerConfig) {
-	rootDir := config.BuildsDir
-	if rootDir == "" {
-		rootDir = e.DefaultBuildsDir
-	}
-
-	if volumes.IsHostMountedVolume(rootDir, config.Docker.Volumes...) {
+func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
+	// We need to set proper value for e.SharedBuildsDir because
+	// it's required to properly start the job, what is done inside of
+	// e.AbstractExecutor.Prepare()
+	// And a started job is required for Volumes Manager to work, so it's
+	// done before the manager is even created.
+	if volumes.IsHostMountedVolume(e.RootDir(), options.Config.Docker.Volumes...) {
 		e.SharedBuildsDir = true
 	}
+
+	return nil
 }
 
 func (e *executor) Cleanup() {

@@ -23,7 +23,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
@@ -551,37 +550,59 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	assert.Nil(t, image, "No existing image")
 }
 
-func TestHostMountedBuildsDirectory(t *testing.T) {
-	tests := []struct {
-		path    string
-		volumes []string
-		result  bool
+func TestPrepareBuildsDir(t *testing.T) {
+	tests := map[string]struct {
+		rootDir                 string
+		volumes                 []string
+		expectedSharedBuildsDir bool
+		expectedError           error
 	}{
-		{"/build", []string{"/build:/build"}, true},
-		{"/build", []string{"/build/:/build"}, true},
-		{"/build", []string{"/build"}, false},
-		{"/build", []string{"/folder:/folder"}, false},
-		{"/build", []string{"/folder"}, false},
-		{"/build/other/directory", []string{"/build/:/build"}, true},
-		{"/build/other/directory", []string{}, false},
+		"rootDir mounted as host based volume": {
+			rootDir:                 "/build",
+			volumes:                 []string{"/build:/build"},
+			expectedSharedBuildsDir: true,
+		},
+		"rootDir mounted as container based volume": {
+			rootDir:                 "/build",
+			volumes:                 []string{"/build"},
+			expectedSharedBuildsDir: false,
+		},
+		"rootDir not mounted as volume": {
+			rootDir:                 "/build",
+			volumes:                 []string{"/folder:/folder"},
+			expectedSharedBuildsDir: false,
+		},
+		"rootDir's parent mounted as volume": {
+			rootDir:                 "/build/other/directory",
+			volumes:                 []string{"/build/:/build"},
+			expectedSharedBuildsDir: true,
+		},
 	}
 
-	for _, i := range tests {
-		c := common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				BuildsDir: i.path,
-				Docker: &common.DockerConfig{
-					Volumes: i.volumes,
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			c := common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					BuildsDir: test.rootDir,
+					Docker: &common.DockerConfig{
+						Volumes: test.volumes,
+					},
 				},
-			},
-		}
-		e := &executor{}
+			}
 
-		t.Log("Testing", i.path, "if volumes are configured to:", i.volumes, "...")
-		assert.Equal(t, i.result, volumes.IsHostMountedVolume(i.path, i.volumes...))
+			options := common.ExecutorPrepareOptions{
+				Config: &c,
+			}
 
-		e.prepareBuildsDir(&c)
-		assert.Equal(t, i.result, e.SharedBuildsDir)
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: c,
+				},
+			}
+			err := e.prepareBuildsDir(options)
+			assert.Equal(t, test.expectedError, err)
+			assert.Equal(t, test.expectedSharedBuildsDir, e.SharedBuildsDir)
+		})
 	}
 }
 
