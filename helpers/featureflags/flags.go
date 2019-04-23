@@ -58,7 +58,7 @@ var flags = []FeatureFlag{
 		Name:            UseLegacyBuildsDirForDocker,
 		DefaultValue:    "false",
 		Deprecated:      true,
-		ToBeRemovedWith: "13.0",
+		ToBeRemovedWith: "12.3",
 		Description:     "Disables the new strategy for Docker executor to cache the content of `/builds` directory instead of `/builds/group-org`",
 	},
 }
