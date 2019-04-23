@@ -577,6 +577,14 @@ func TestPrepareBuildsDir(t *testing.T) {
 			volumes:                 []string{"/build/:/build"},
 			expectedSharedBuildsDir: true,
 		},
+		"rootDir is not an absolute path": {
+			rootDir:       "builds",
+			expectedError: buildDirectoryNotAbsoluteErr,
+		},
+		"rootDir is /": {
+			rootDir:       "/",
+			expectedError: buildDirectoryIsRootPathErr,
+		},
 	}
 
 	for testName, test := range tests {

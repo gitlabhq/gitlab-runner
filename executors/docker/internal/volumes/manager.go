@@ -147,10 +147,6 @@ func (m *manager) createContainerBasedCacheVolume(containerPath string, hash [md
 }
 
 func (m *manager) CreateBuildVolume(jobsRootDir string, volumes []string) error {
-	if !path.IsAbs(jobsRootDir) && jobsRootDir != "/" {
-		return common.MakeBuildError("build directory needs to be absolute and non-root path")
-	}
-
 	if IsHostMountedVolume(jobsRootDir, volumes...) {
 		// If builds directory is within a volume mounted manually by user
 		// it will be added by CreateUserVolumes(), so nothing more to do

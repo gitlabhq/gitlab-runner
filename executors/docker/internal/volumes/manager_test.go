@@ -345,10 +345,6 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 		expectedBinding       string
 		expectedTmpAndCacheID string
 	}{
-		"invalid project full dir": {
-			jobsRootDir:   "builds",
-			expectedError: errors.New("build directory needs to be absolute and non-root path"),
-		},
 		"build directory within host mounted volumes": {
 			jobsRootDir: "/builds/root",
 			volumes:     []string{"/host/builds:/builds"},

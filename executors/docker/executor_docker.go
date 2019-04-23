@@ -1148,6 +1148,12 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	return nil
 }
 
+var (
+	buildDirectoryNotAbsoluteErr = common.MakeBuildError("build directory needs to be an absolute path")
+
+	buildDirectoryIsRootPathErr = common.MakeBuildError("build directory needs to be a non-root path")
+)
+
 func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
 	// We need to set proper value for e.SharedBuildsDir because
 	// it's required to properly start the job, what is done inside of
@@ -1156,6 +1162,14 @@ func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error
 	// done before the manager is even created.
 	if volumes.IsHostMountedVolume(e.RootDir(), options.Config.Docker.Volumes...) {
 		e.SharedBuildsDir = true
+	}
+
+	if !filepath.IsAbs(e.RootDir()) {
+		return buildDirectoryNotAbsoluteErr
+	}
+
+	if e.RootDir() == "/" {
+		return buildDirectoryIsRootPathErr
 	}
 
 	return nil
