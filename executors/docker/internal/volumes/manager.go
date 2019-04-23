@@ -24,8 +24,6 @@ type ManagerConfig struct {
 	ProjectUniqName string
 	GitStrategy     common.GitStrategy
 	DisableCache    bool
-
-	UseLegacyBuildsDirForDocker bool
 }
 
 type manager struct {
@@ -147,20 +145,11 @@ func (m *manager) createContainerBasedCacheVolume(containerPath string, hash [md
 }
 
 func (m *manager) CreateBuildVolume(jobsRootDir string, volumes []string) error {
-	parentDir := jobsRootDir
-
-	if m.config.UseLegacyBuildsDirForDocker {
-		// Cache Git sources:
-		// take path of the projects directory,
-		// because we use `rm -rf` which could remove the mounted volume
-		parentDir = path.Dir(m.config.FullProjectDir)
-	}
-
-	if !path.IsAbs(parentDir) && parentDir != "/" {
+	if !path.IsAbs(jobsRootDir) && jobsRootDir != "/" {
 		return common.MakeBuildError("build directory needs to be absolute and non-root path")
 	}
 
-	if IsHostMountedVolume(parentDir, volumes...) {
+	if IsHostMountedVolume(jobsRootDir, volumes...) {
 		// If builds directory is within a volume mounted manually by user
 		// it will be added by CreateUserVolumes(), so nothing more to do
 		// here
@@ -169,11 +158,11 @@ func (m *manager) CreateBuildVolume(jobsRootDir string, volumes []string) error 
 
 	if m.config.GitStrategy == common.GitFetch && !m.config.DisableCache {
 		// create persistent cache container
-		return m.AddVolume(parentDir)
+		return m.AddVolume(jobsRootDir)
 	}
 
 	// create temporary cache container
-	id, err := m.containerManager.CreateCacheContainer("", parentDir)
+	id, err := m.containerManager.CreateCacheContainer("", jobsRootDir)
 	if err != nil {
 		return err
 	}

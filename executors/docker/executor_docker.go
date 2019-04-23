@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -1007,7 +1008,16 @@ func (e *executor) createDependencies() error {
 
 	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
 	e.Debugln("Creating build volume...")
-	err = volumesManager.CreateBuildVolume(e.Build.RootDir, e.Config.Docker.Volumes)
+
+	jobsDir := e.Build.RootDir
+	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker) {
+		// Cache Git sources:
+		// take path of the projects directory,
+		// because we use `rm -rf` which could remove the mounted volume
+		jobsDir = path.Dir(e.Build.FullProjectDir())
+	}
+
+	err = volumesManager.CreateBuildVolume(jobsDir, e.Config.Docker.Volumes)
 	if err != nil {
 		return err
 	}
@@ -1071,12 +1081,11 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 
 	adapter := &volumesManagerAdapter{e: e}
 	config := volumes.ManagerConfig{
-		CacheDir:                    e.Config.Docker.CacheDir,
-		FullProjectDir:              e.Build.FullProjectDir(),
-		ProjectUniqName:             e.Build.ProjectUniqueName(),
-		GitStrategy:                 e.Build.GetGitStrategy(),
-		DisableCache:                e.Config.Docker.DisableCache,
-		UseLegacyBuildsDirForDocker: e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker),
+		CacheDir:        e.Config.Docker.CacheDir,
+		FullProjectDir:  e.Build.FullProjectDir(),
+		ProjectUniqName: e.Build.ProjectUniqueName(),
+		GitStrategy:     e.Build.GetGitStrategy(),
+		DisableCache:    e.Config.Docker.DisableCache,
 	}
 
 	helperImage, err := e.getPrebuiltImage()
