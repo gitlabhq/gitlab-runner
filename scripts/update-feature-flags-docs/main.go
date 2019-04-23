@@ -19,11 +19,12 @@ const (
 )
 
 var ffTableTemplate = `{{ placeholder "start" }}
+
 | Feature flag | Default value | Deprecated | To be removed with | Description |
 |--------------|---------------|------------|--------------------|-------------|
 {{ range $_, $flag := . -}}
 | {{ $flag.Name | raw }} | {{ $flag.DefaultValue | raw }} | {{ $flag.Deprecated | tick }} | {{ $flag.ToBeRemovedWith }} | {{ $flag.Description }} |
-{{ end -}}
+{{ end }}
 {{ placeholder "end" }}
 `
 

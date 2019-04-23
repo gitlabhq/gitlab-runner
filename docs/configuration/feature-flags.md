@@ -34,6 +34,7 @@ The flags are defined in `./helpers/feature_flags/flags.go` file.
 -->
 
 <!-- feature_flags_list_start -->
+
 | Feature flag | Default value | Deprecated | To be removed with | Description |
 |--------------|---------------|------------|--------------------|-------------|
 | `FF_K8S_USE_ENTRYPOINT_OVER_COMMAND` | `true` | ✓ | 12.0 | Enables [the fix](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1010) for entrypoint configuration when `kubernetes` executor is used |
@@ -41,4 +42,5 @@ The flags are defined in `./helpers/feature_flags/flags.go` file.
 | `FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION` | `false` | ✗ |  | Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](https://docs.gitlab.com/runner/shells/#windows-batch) shell |
 | `FF_USE_LEGACY_GIT_CLEAN_STRATEGY` | `false` | ✓ | 12.0 | Disables the new strategy for `git clean` that moves the clean operation after checkout and enables support for `GIT_CLEAN_FLAGS` |
 | `FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER` | `false` | ✓ | 12.3 | Disables the new strategy for Docker executor to cache the content of `/builds` directory instead of `/builds/group-org` |
+
 <!-- feature_flags_list_end -->
