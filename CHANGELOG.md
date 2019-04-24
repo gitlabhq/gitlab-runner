@@ -1,3 +1,8 @@
+v11.10.1 (2019-04-24)
+
+- Allow to configure FF using config.toml !1321
+- Allow to use FF to configure `/builds` folder !1319
+
 v11.10.0 (2019-04-22)
 
 **Deprecations:**
