@@ -7,9 +7,15 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 )
 
 var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
+
+type parserProvider interface {
+	CreateParser() (parser.Parser, error)
+}
 
 type Manager interface {
 	Create(volume string) error
@@ -31,6 +37,7 @@ type manager struct {
 	logger debugLogger
 
 	cacheContainersManager CacheContainersManager
+	parserProvider         parserProvider
 
 	volumeBindings    []string
 	cacheContainerIDs []string
@@ -39,10 +46,11 @@ type manager struct {
 	managedVolumes pathList
 }
 
-func NewManager(logger debugLogger, ccManager CacheContainersManager, config ManagerConfig) Manager {
+func NewManager(logger debugLogger, pProvider parserProvider, ccManager CacheContainersManager, config ManagerConfig) Manager {
 	return &manager{
 		config:                 config,
 		logger:                 logger,
+		parserProvider:         pProvider,
 		cacheContainersManager: ccManager,
 		volumeBindings:         make([]string, 0),
 		cacheContainerIDs:      make([]string, 0),

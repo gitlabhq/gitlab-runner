@@ -26,7 +26,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
@@ -1070,14 +1069,20 @@ func (e *executor) createBuildVolume() error {
 
 	return nil
 }
+
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.SetCurrentStage(DockerExecutorStagePrepare)
+
+	err := e.connectDocker()
+	if err != nil {
+		return err
+	}
 
 	if options.Config.Docker == nil {
 		return errors.New("missing docker configuration")
 	}
 
-	err := e.prepareBuildsDir(options)
+	err = e.prepareBuildsDir(options)
 	if err != nil {
 		return err
 	}
@@ -1097,11 +1102,6 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	e.Println("Using Docker executor with image", imageName, "...")
-
-	err = e.connectDocker()
-	if err != nil {
-		return err
-	}
 
 	err = e.createDependencies()
 	if err != nil {

@@ -25,7 +25,7 @@ func TestErrVolumeAlreadyDefined(t *testing.T) {
 func TestNewDefaultManager(t *testing.T) {
 	logger := newDebugLoggerMock()
 
-	m := NewManager(logger, nil, ManagerConfig{})
+	m := NewManager(logger, nil, nil, ManagerConfig{})
 	assert.IsType(t, &manager{}, m)
 }
 

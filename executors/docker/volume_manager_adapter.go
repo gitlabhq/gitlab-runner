@@ -6,6 +6,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -14,6 +15,10 @@ type volumesManagerAdapter struct {
 	docker_helpers.Client
 
 	e *executor
+}
+
+func (a *volumesManagerAdapter) CreateParser() (parser.Parser, error) {
+	return parser.New(a.e.info)
 }
 
 func (a *volumesManagerAdapter) LabelContainer(container *container.Config, containerType string, otherLabels ...string) {
@@ -58,7 +63,7 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 		DisableCache:      e.Config.Docker.DisableCache,
 	}
 
-	volumesManager := volumes.NewManager(&e.BuildLogger, ccManager, config)
+	volumesManager := volumes.NewManager(&e.BuildLogger, adapter, ccManager, config)
 
 	return volumesManager, nil
 }
