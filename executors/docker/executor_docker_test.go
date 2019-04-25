@@ -250,8 +250,11 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(nil).
 		Once()
 
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
 	linksMap := make(map[string]*types.Container)
-	err := e.createFromServiceDefinition(0, common.Image{Name: description}, linksMap)
+	err = e.createFromServiceDefinition(0, common.Image{Name: description}, linksMap)
 	assert.NoError(t, err)
 }
 
@@ -815,7 +818,15 @@ func TestCreateVolumes(t *testing.T) {
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
 			volumesManagerMock := new(volumes.MockManager)
-			defer volumesManagerMock.AssertExpectations(t)
+
+			oldCreateVolumesManager := createVolumesManager
+			defer func() {
+				volumesManagerMock.AssertExpectations(t)
+				createVolumesManager = oldCreateVolumesManager
+			}()
+			createVolumesManager = func(_ *executor) (volumes.Manager, error) {
+				return volumesManagerMock, nil
+			}
 
 			if test.volumesManagerAssertions != nil {
 				test.volumesManagerAssertions(volumesManagerMock)
@@ -854,7 +865,6 @@ func TestCreateVolumes(t *testing.T) {
 				info: types.Info{
 					OSType: helperimage.OSTypeLinux,
 				},
-				volumesManager: volumesManagerMock,
 			}
 
 			e.Build.Variables = append(e.Build.Variables, common.JobVariable{
@@ -1204,7 +1214,10 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	e.Trace = &common.Trace{Writer: output}
 
 	err := e.connectDocker()
-	assert.NoError(t, err)
+	require.NoError(t, err)
+
+	err = e.createVolumesManager()
+	require.NoError(t, err)
 
 	container, err := e.createContainer("build", common.Image{Name: common.TestAlpineImage}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err)
@@ -1287,7 +1300,10 @@ func testDockerConfigurationWithJobContainer(t *testing.T, dockerConfig *common.
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
 
-	_, err := e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	_, err = e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -1298,7 +1314,10 @@ func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *com
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
 		Return(nil).Once()
 
-	_, err := e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}})
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	_, err = e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}})
 	assert.NoError(t, err, "Should create service container without errors")
 }
 

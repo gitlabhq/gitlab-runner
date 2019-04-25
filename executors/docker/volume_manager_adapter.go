@@ -32,11 +32,7 @@ func (e *executor) checkOutdatedHelperImage() bool {
 	return !e.Build.IsFeatureFlagOn(featureflags.DockerHelperImageV2) && e.Config.Docker.HelperImage != ""
 }
 
-func (e *executor) getVolumesManager() (volumes.Manager, error) {
-	if e.volumesManager != nil {
-		return e.volumesManager, nil
-	}
-
+var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 	adapter := &volumesManagerAdapter{
 		Client: e.client,
 		e:      e,
@@ -62,7 +58,18 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 		DisableCache:      e.Config.Docker.DisableCache,
 	}
 
-	e.volumesManager = volumes.NewManager(e.BuildLogger, ccManager, config)
+	volumesManager := volumes.NewManager(e.BuildLogger, ccManager, config)
 
-	return e.volumesManager, nil
+	return volumesManager, nil
+}
+
+func (e *executor) createVolumesManager() error {
+	vm, err := createVolumesManager(e)
+	if err != nil {
+		return err
+	}
+
+	e.volumesManager = vm
+
+	return nil
 }

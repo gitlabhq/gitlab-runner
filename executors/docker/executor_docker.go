@@ -486,11 +486,6 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
 
-	volumesManager, err := e.getVolumesManager()
-	if err != nil {
-		return nil, err
-	}
-
 	hostConfig := &container.HostConfig{
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
@@ -498,9 +493,9 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    e.Config.Docker.Privileged,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
-		Binds:         volumesManager.Binds(),
+		Binds:         e.volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
-		VolumesFrom:   volumesManager.ContainerIDs(),
+		VolumesFrom:   e.volumesManager.ContainerIDs(),
 		Tmpfs:         e.Config.Docker.ServicesTmpfs,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -677,14 +672,9 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		return nil, err
 	}
 
-	volumesManager, err := e.getVolumesManager()
-	if err != nil {
-		return nil, err
-	}
-
 	// By default we use caches container,
 	// but in later phases we hook to previous build container
-	volumesFrom := volumesManager.ContainerIDs()
+	volumesFrom := e.volumesManager.ContainerIDs()
 	if len(e.builds) > 0 {
 		volumesFrom = []string{
 			e.builds[len(e.builds)-1],
@@ -713,7 +703,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
 		Links:         append(e.Config.Docker.Links, e.links...),
-		Binds:         volumesManager.Binds(),
+		Binds:         e.volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
 		VolumesFrom:   append(e.Config.Docker.VolumesFrom, volumesFrom...),
@@ -1016,7 +1006,7 @@ func (e *executor) createDependencies() error {
 }
 
 func (e *executor) createVolumes() error {
-	volumesManager, err := e.getVolumesManager()
+	err := e.createVolumesManager()
 	if err != nil {
 		return err
 	}
@@ -1025,7 +1015,7 @@ func (e *executor) createVolumes() error {
 	e.Debugln("Creating user-defined volumes...")
 
 	for _, volume := range e.Config.Docker.Volumes {
-		err = volumesManager.Create(volume)
+		err = e.volumesManager.Create(volume)
 		if err == volumes.ErrCacheVolumesDisabled {
 			continue
 		}
@@ -1040,10 +1030,10 @@ func (e *executor) createVolumes() error {
 	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
 	e.Debugln("Creating build volume...")
 
-	return e.createBuildVolume(volumesManager)
+	return e.createBuildVolume()
 }
 
-func (e *executor) createBuildVolume(volumesManager volumes.Manager) error {
+func (e *executor) createBuildVolume() error {
 	jobsDir := e.Build.RootDir
 
 	// TODO: Remove in 12.3
@@ -1057,16 +1047,16 @@ func (e *executor) createBuildVolume(volumesManager volumes.Manager) error {
 	var err error
 
 	if e.Build.GetGitStrategy() == common.GitFetch {
-		err = volumesManager.Create(jobsDir)
+		err = e.volumesManager.Create(jobsDir)
 		if err == nil {
 			return nil
 		}
 
 		if err == volumes.ErrCacheVolumesDisabled {
-			err = volumesManager.CreateTemporary(jobsDir)
+			err = e.volumesManager.CreateTemporary(jobsDir)
 		}
 	} else {
-		err = volumesManager.CreateTemporary(jobsDir)
+		err = e.volumesManager.CreateTemporary(jobsDir)
 	}
 
 	if err != nil {
@@ -1164,11 +1154,8 @@ func (e *executor) Cleanup() {
 		remove(temporaryID)
 	}
 
-	volumesManager, err := e.getVolumesManager()
-	if err != nil {
-		logrus.WithError(err).Warning("Couldn't retrieve volumes manager for cleanup")
-	} else {
-		vmCleanupDone := volumesManager.Cleanup(ctx)
+	if e.volumesManager != nil {
+		vmCleanupDone := e.volumesManager.Cleanup(ctx)
 		<-vmCleanupDone
 	}
 
