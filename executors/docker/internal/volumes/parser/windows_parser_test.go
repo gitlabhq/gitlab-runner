@@ -14,7 +14,7 @@ func TestWindowsParser_ParseVolume(t *testing.T) {
 	}{
 		"empty": {
 			volumeSpec:    "",
-			expectedError: newInvalidVolumeSpecErr(""),
+			expectedError: NewInvalidVolumeSpecErr(""),
 		},
 		"destination only": {
 			volumeSpec:    `c:\destination`,
@@ -34,11 +34,11 @@ func TestWindowsParser_ParseVolume(t *testing.T) {
 		},
 		"too much colons": {
 			volumeSpec:    `c:\source:c:\destination:rw:something`,
-			expectedError: newInvalidVolumeSpecErr(`c:\source:c:\destination:rw:something`),
+			expectedError: NewInvalidVolumeSpecErr(`c:\source:c:\destination:rw:something`),
 		},
 		"invalid source": {
 			volumeSpec:    `/destination:c:\destination`,
-			expectedError: newInvalidVolumeSpecErr(`/destination:c:\destination`),
+			expectedError: NewInvalidVolumeSpecErr(`/destination:c:\destination`),
 		},
 		"named source": {
 			volumeSpec:    `volume_name:c:\destination`,

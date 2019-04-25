@@ -14,7 +14,7 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 	}{
 		"empty": {
 			volumeSpec:    "",
-			expectedError: newInvalidVolumeSpecErr(""),
+			expectedError: NewInvalidVolumeSpecErr(""),
 		},
 		"destination only": {
 			volumeSpec:    "/destination",
@@ -34,11 +34,11 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 		},
 		"too much colons": {
 			volumeSpec:    "/source:/destination:rw:something",
-			expectedError: newInvalidVolumeSpecErr("/source:/destination:rw:something"),
+			expectedError: NewInvalidVolumeSpecErr("/source:/destination:rw:something"),
 		},
 		"invalid source": {
 			volumeSpec:    ":/destination",
-			expectedError: newInvalidVolumeSpecErr(":/destination"),
+			expectedError: NewInvalidVolumeSpecErr(":/destination"),
 		},
 		"named source": {
 			volumeSpec:    "volume_name:/destination",

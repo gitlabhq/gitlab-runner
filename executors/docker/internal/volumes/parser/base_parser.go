@@ -19,7 +19,7 @@ func (p *baseParser) matchesToVolumeSpecParts(spec string, specExp *regexp.Regex
 	match := specExp.FindStringSubmatch(strings.ToLower(spec))
 
 	if len(match) == 0 {
-		return nil, newInvalidVolumeSpecErr(spec)
+		return nil, NewInvalidVolumeSpecErr(spec)
 	}
 
 	matchgroups := make(map[string]string)

@@ -12,7 +12,7 @@ func (e *InvalidVolumeSpecError) Error() string {
 	return fmt.Sprintf("invalid volume specification: %q", e.spec)
 }
 
-func newInvalidVolumeSpecErr(spec string) error {
+func NewInvalidVolumeSpecErr(spec string) error {
 	return &InvalidVolumeSpecError{
 		spec: spec,
 	}
