@@ -1073,6 +1073,8 @@ func (e *executor) createBuildVolume() error {
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.SetCurrentStage(DockerExecutorStagePrepare)
 
+	e.AbstractExecutor.PrepareConfiguration(options)
+
 	err := e.connectDocker()
 	if err != nil {
 		return err
@@ -1087,7 +1089,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	err = e.AbstractExecutor.Prepare(options)
+	err = e.AbstractExecutor.PrepareBuildAndShell()
 	if err != nil {
 		return err
 	}
