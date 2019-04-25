@@ -238,9 +238,12 @@ ignored = ["test", "appengine"]
   name = "github.com/juju/ratelimit"
   revision = "77ed1c8a01217656d2080ad51981f6e99adaa177"
 
+# go-homedir fork based on our vendored code due to upstream removal
+# from GitHub
 [[override]]
   name = "github.com/minio/go-homedir"
-  revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
+  source = "gitlab.com/steveazz/go-homedir"
+  revision = "01701865551470435b20b226b0eafb945185b700"
 
 [[override]]
   name = "github.com/opencontainers/runc"
