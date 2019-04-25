@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -91,11 +90,11 @@ func (m *manager) addHostVolume(hostPath string, containerPath string) error {
 }
 
 func (m *manager) getAbsoluteContainerPath(dir string) string {
-	if path.IsAbs(dir) {
+	if filepath.IsAbs(dir) {
 		return dir
 	}
 
-	return path.Join(m.config.BaseContainerPath, dir)
+	return filepath.Join(m.config.BaseContainerPath, dir)
 }
 
 func (m *manager) appendVolumeBind(hostPath string, containerPath string) {
