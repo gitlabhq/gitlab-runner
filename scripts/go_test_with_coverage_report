@@ -150,7 +150,7 @@ computeCoverageReport() {
     mkdir -p "${reportDirectory}"
 
     echo "mode: ${coverMode}" > ${sourceFile}
-    grep -h -v -e "^mode:" -e "executors/docker/bindata.go" .cover/*.${coverMode}.cover.txt >> ${sourceFile}
+    grep -h -v -E -e "^mode:" -e "\/mock_[^\.]+\.go" .cover/*.${coverMode}.cover.txt >> ${sourceFile}
 
     printMessage "Generating HTML coverage report"
     go tool cover -o ${htmlReportFile} -html=${sourceFile}
