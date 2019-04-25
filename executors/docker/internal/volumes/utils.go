@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+type debugLogger interface {
+	Debugln(args ...interface{})
+}
+
 func IsHostMountedVolume(dir string, volumes ...string) bool {
 	for _, volume := range volumes {
 		hostVolume := strings.Split(volume, ":")

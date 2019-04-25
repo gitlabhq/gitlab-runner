@@ -8,9 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
+
+func newDebugLoggerMock() *mockDebugLogger {
+	loggerMock := new(mockDebugLogger)
+	loggerMock.On("Debugln", mock.Anything)
+
+	return loggerMock
+}
 
 func TestErrVolumeAlreadyDefined(t *testing.T) {
 	err := NewErrVolumeAlreadyDefined("test-path")
@@ -18,7 +23,7 @@ func TestErrVolumeAlreadyDefined(t *testing.T) {
 }
 
 func TestNewDefaultManager(t *testing.T) {
-	logger := common.NewBuildLogger(nil, nil)
+	logger := newDebugLoggerMock()
 
 	m := NewManager(logger, nil, ManagerConfig{})
 	assert.IsType(t, &manager{}, m)
@@ -26,7 +31,7 @@ func TestNewDefaultManager(t *testing.T) {
 
 func newDefaultManager(config ManagerConfig) *manager {
 	m := &manager{
-		logger:         common.NewBuildLogger(nil, nil),
+		logger:         newDebugLoggerMock(),
 		config:         config,
 		managedVolumes: make(map[string]bool, 0),
 	}

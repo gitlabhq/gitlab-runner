@@ -8,7 +8,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
@@ -28,7 +27,7 @@ type CacheContainersManager interface {
 
 type cacheContainerManager struct {
 	ctx    context.Context
-	logger common.BuildLogger
+	logger debugLogger
 
 	containerClient containerClient
 
@@ -37,7 +36,7 @@ type cacheContainerManager struct {
 	failedContainerIDs  []string
 }
 
-func NewCacheContainerManager(ctx context.Context, logger common.BuildLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) CacheContainersManager {
+func NewCacheContainerManager(ctx context.Context, logger debugLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) CacheContainersManager {
 	return &cacheContainerManager{
 		ctx:                 ctx,
 		logger:              logger,

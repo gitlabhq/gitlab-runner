@@ -7,8 +7,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
@@ -30,7 +28,7 @@ type ManagerConfig struct {
 
 type manager struct {
 	config ManagerConfig
-	logger common.BuildLogger
+	logger debugLogger
 
 	cacheContainersManager CacheContainersManager
 
@@ -41,7 +39,7 @@ type manager struct {
 	managedVolumes pathList
 }
 
-func NewManager(logger common.BuildLogger, ccManager CacheContainersManager, config ManagerConfig) Manager {
+func NewManager(logger debugLogger, ccManager CacheContainersManager, config ManagerConfig) Manager {
 	return &manager{
 		config:                 config,
 		logger:                 logger,
@@ -66,10 +64,6 @@ func (m *manager) Create(volume string) error {
 		err = m.addHostVolume(hostVolume[0], hostVolume[1])
 	case 1:
 		err = m.addCacheVolume(hostVolume[0])
-	}
-
-	if err != nil {
-		m.logger.Errorln("Failed to create container volume for", volume, err)
 	}
 
 	return err

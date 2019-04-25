@@ -11,12 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 func TestNewCacheContainerManager(t *testing.T) {
-	logger := common.NewBuildLogger(nil, nil)
+	logger := newDebugLoggerMock()
 
 	m := NewCacheContainerManager(context.Background(), logger, nil, nil, true)
 	assert.IsType(t, &cacheContainerManager{}, m)
@@ -26,7 +24,7 @@ func getCacheContainerManager() (*cacheContainerManager, *mockContainerClient) {
 	cClient := new(mockContainerClient)
 
 	m := &cacheContainerManager{
-		logger:              common.NewBuildLogger(nil, nil),
+		logger:              newDebugLoggerMock(),
 		containerClient:     cClient,
 		failedContainerIDs:  make([]string, 0),
 		helperImage:         &types.ImageInspect{ID: "helper-image"},
