@@ -1001,23 +1001,7 @@ func (e *executor) createDependencies() error {
 		return err
 	}
 
-	volumesManager, err := e.getVolumesManager()
-	if err != nil {
-		return err
-	}
-
-	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
-	e.Debugln("Creating build volume...")
-
-	jobsDir := e.Build.RootDir
-	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker) {
-		// Cache Git sources:
-		// take path of the projects directory,
-		// because we use `rm -rf` which could remove the mounted volume
-		jobsDir = path.Dir(e.Build.FullProjectDir())
-	}
-
-	err = volumesManager.CreateBuildVolume(jobsDir, e.Build.GetGitStrategy(), e.Config.Docker.Volumes)
+	err = e.createVolumes()
 	if err != nil {
 		return err
 	}
@@ -1029,12 +1013,65 @@ func (e *executor) createDependencies() error {
 		return err
 	}
 
+	return nil
+}
+
+func (e *executor) createVolumes() error {
+	volumesManager, err := e.getVolumesManager()
+	if err != nil {
+		return err
+	}
+
 	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
 
 	for _, volume := range e.Config.Docker.Volumes {
 		err = volumesManager.Create(volume)
+		if err == volumes.ErrCacheVolumesDisabled {
+			continue
+		}
+
 		if err != nil {
+			if _, ok := err.(*volumes.ErrVolumeAlreadyDefined); !ok {
+				return err
+			}
+		}
+	}
+
+	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
+	e.Debugln("Creating build volume...")
+
+	return e.createBuildVolume(volumesManager)
+}
+
+func (e *executor) createBuildVolume(volumesManager volumes.Manager) error {
+	jobsDir := e.Build.RootDir
+
+	// TODO: Remove in 12.3
+	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker) {
+		// Cache Git sources:
+		// take path of the projects directory,
+		// because we use `rm -rf` which could remove the mounted volume
+		jobsDir = path.Dir(e.Build.FullProjectDir())
+	}
+
+	var err error
+
+	if e.Build.GetGitStrategy() == common.GitFetch {
+		err = volumesManager.Create(jobsDir)
+		if err == nil {
+			return nil
+		}
+
+		if err == volumes.ErrCacheVolumesDisabled {
+			err = volumesManager.CreateTemporary(jobsDir)
+		}
+	} else {
+		err = volumesManager.CreateTemporary(jobsDir)
+	}
+
+	if err != nil {
+		if _, ok := err.(*volumes.ErrVolumeAlreadyDefined); !ok {
 			return err
 		}
 	}
