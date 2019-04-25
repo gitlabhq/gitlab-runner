@@ -16,7 +16,6 @@ var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
 
 type Manager interface {
 	Create(volume string) error
-	CreateBuildVolume(jobsRootDir string, gitStrategy common.GitStrategy, volumes []string) error
 	CreateTemporary(containerPath string) error
 	Binds() []string
 	ContainerIDs() []string
@@ -167,31 +166,6 @@ func (m *manager) createContainerBasedCacheVolume(containerPath string) (string,
 	m.cacheContainerIDs = append(m.cacheContainerIDs, containerID)
 
 	return containerID, nil
-}
-
-func (m *manager) CreateBuildVolume(jobsRootDir string, gitStrategy common.GitStrategy, volumes []string) error {
-	if IsHostMountedVolume(jobsRootDir, volumes...) {
-		// If builds directory is within a volume mounted manually by user
-		// it will be added by CreateUserVolumes(), so nothing more to do
-		// here
-		return nil
-	}
-
-	if gitStrategy == common.GitFetch && !m.config.DisableCache {
-		// create persistent cache container
-		return m.Create(jobsRootDir)
-	}
-
-	// create temporary cache container
-	id, err := m.containerManager.CreateCacheContainer("", jobsRootDir)
-	if err != nil {
-		return err
-	}
-
-	m.cacheContainerIDs = append(m.cacheContainerIDs, id)
-	m.tmpContainerIDs = append(m.tmpContainerIDs, id)
-
-	return nil
 }
 
 func (m *manager) CreateTemporary(containerPath string) error {

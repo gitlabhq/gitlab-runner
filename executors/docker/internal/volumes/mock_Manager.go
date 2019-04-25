@@ -2,7 +2,6 @@
 
 package volumes
 
-import common "gitlab.com/gitlab-org/gitlab-runner/common"
 import context "context"
 import mock "github.com/stretchr/testify/mock"
 
@@ -66,20 +65,6 @@ func (_m *MockManager) Create(volume string) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string) error); ok {
 		r0 = rf(volume)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// CreateBuildVolume provides a mock function with given fields: jobsRootDir, gitStrategy, volumes
-func (_m *MockManager) CreateBuildVolume(jobsRootDir string, gitStrategy common.GitStrategy, volumes []string) error {
-	ret := _m.Called(jobsRootDir, gitStrategy, volumes)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, common.GitStrategy, []string) error); ok {
-		r0 = rf(jobsRootDir, gitStrategy, volumes)
 	} else {
 		r0 = ret.Error(0)
 	}
