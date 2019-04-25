@@ -7,7 +7,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -188,25 +187,5 @@ func (m *manager) ContainerIDs() []string {
 }
 
 func (m *manager) Cleanup(ctx context.Context) chan bool {
-	done := make(chan bool, 1)
-
-	remove := func(wg *sync.WaitGroup, containerID string) {
-		wg.Add(1)
-		go func() {
-			_ = m.cacheContainersManager.Remove(ctx, containerID)
-			wg.Done()
-		}()
-	}
-
-	go func() {
-		wg := new(sync.WaitGroup)
-		for _, id := range m.tmpContainerIDs {
-			remove(wg, id)
-		}
-
-		wg.Wait()
-		done <- true
-	}()
-
-	return done
+	return m.cacheContainersManager.Cleanup(ctx, m.tmpContainerIDs)
 }

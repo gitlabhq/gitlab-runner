@@ -3,6 +3,7 @@ package volumes
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -22,7 +23,7 @@ type containerClient interface {
 type CacheContainersManager interface {
 	FindOrCleanExisting(containerName string, containerPath string) string
 	Create(containerName string, containerPath string) (string, error)
-	Remove(ctx context.Context, id string) error
+	Cleanup(ctx context.Context, ids []string) chan bool
 }
 
 type cacheContainerManager struct {
@@ -138,6 +139,31 @@ func (m *cacheContainerManager) startCacheContainer(containerID string) error {
 	return nil
 }
 
-func (m *cacheContainerManager) Remove(ctx context.Context, id string) error {
-	return m.containerClient.RemoveContainer(ctx, id)
+func (m *cacheContainerManager) Cleanup(ctx context.Context, ids []string) chan bool {
+	done := make(chan bool, 1)
+
+	ids = append(m.failedContainerIDs, ids...)
+
+	go func() {
+		wg := new(sync.WaitGroup)
+		wg.Add(len(ids))
+		for _, id := range ids {
+			m.remove(ctx, wg, id)
+		}
+
+		wg.Wait()
+		done <- true
+	}()
+
+	return done
+}
+
+func (m *cacheContainerManager) remove(ctx context.Context, wg *sync.WaitGroup, id string) {
+	go func() {
+		err := m.containerClient.RemoveContainer(ctx, id)
+		if err != nil {
+			m.logger.Debugln(fmt.Sprintf("Error while removing the container: %v", err))
+		}
+		wg.Done()
+	}()
 }

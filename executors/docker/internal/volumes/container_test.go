@@ -222,18 +222,35 @@ func TestCacheContainerManager_CreateCacheContainer(t *testing.T) {
 	}
 }
 
-func TestCacheContainerManager_RemoveCacheContainer(t *testing.T) {
-	cClient := new(mockContainerClient)
-	defer cClient.AssertExpectations(t)
+func TestCacheContainerManager_Cleanup(t *testing.T) {
+	ctx := context.Background()
 
-	cClient.On("RemoveContainer", mock.Anything, "container-id").
+	containerClientMock := new(mockContainerClient)
+	defer containerClientMock.AssertExpectations(t)
+
+	loggerMock := new(mockDebugLogger)
+	defer loggerMock.AssertExpectations(t)
+
+	containerClientMock.On("RemoveContainer", ctx, "failed-container-1").
+		Return(nil).
+		Once()
+	containerClientMock.On("RemoveContainer", ctx, "container-1-with-remove-error").
+		Return(errors.New("test-error")).
+		Once()
+	containerClientMock.On("RemoveContainer", ctx, "container-1").
 		Return(nil).
 		Once()
 
+	loggerMock.On("Debugln", "Error while removing the container: test-error").
+		Once()
+
 	m := &cacheContainerManager{
-		containerClient: cClient,
+		containerClient:    containerClientMock,
+		logger:             loggerMock,
+		failedContainerIDs: []string{"failed-container-1", "container-1-with-remove-error"},
 	}
 
-	err := m.Remove(context.Background(), "container-id")
-	assert.NoError(t, err)
+	done := m.Cleanup(ctx, []string{"container-1"})
+
+	<-done
 }

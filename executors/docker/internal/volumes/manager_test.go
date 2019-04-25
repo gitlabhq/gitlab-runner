@@ -463,8 +463,13 @@ func TestDefaultManager_Cleanup(t *testing.T) {
 	ccManager := new(MockCacheContainersManager)
 	defer ccManager.AssertExpectations(t)
 
-	ccManager.On("Remove", mock.Anything, "container-1").
-		Return(nil).
+	doneCh := make(chan bool, 1)
+
+	ccManager.On("Cleanup", mock.Anything, []string{"container-1"}).
+		Run(func(_ mock.Arguments) {
+			close(doneCh)
+		}).
+		Return(doneCh).
 		Once()
 
 	m := &manager{
