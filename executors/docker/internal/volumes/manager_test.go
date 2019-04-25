@@ -34,10 +34,10 @@ func newDefaultManager(config ManagerConfig) *manager {
 	return m
 }
 
-func addContainerManager(manager *manager) *MockContainerManager {
-	containerManager := new(MockContainerManager)
+func addCacheContainerManager(manager *manager) *MockCacheContainersManager {
+	containerManager := new(MockCacheContainersManager)
 
-	manager.containerManager = containerManager
+	manager.cacheContainersManager = containerManager
 
 	return containerManager
 }
@@ -319,7 +319,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			}
 
 			m := newDefaultManager(config)
-			containerManager := addContainerManager(m)
+			containerManager := addCacheContainerManager(m)
 
 			defer containerManager.AssertExpectations(t)
 
@@ -327,12 +327,12 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			require.NoError(t, err)
 
 			if testCase.volume != "/duplicated" {
-				containerManager.On("FindExistingCacheContainer", testCase.expectedContainerName, testCase.expectedContainerPath).
+				containerManager.On("FindOrCleanExisting", testCase.expectedContainerName, testCase.expectedContainerPath).
 					Return(testCase.existingContainerID).
 					Once()
 
 				if testCase.newContainerID != "" {
-					containerManager.On("CreateCacheContainer", testCase.expectedContainerName, testCase.expectedContainerPath).
+					containerManager.On("Create", testCase.expectedContainerName, testCase.expectedContainerPath).
 						Return(testCase.newContainerID, nil).
 						Once()
 				}
@@ -355,15 +355,15 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 	}
 
 	m := newDefaultManager(config)
-	containerManager := addContainerManager(m)
+	containerManager := addCacheContainerManager(m)
 
 	defer containerManager.AssertExpectations(t)
 
-	containerManager.On("FindExistingCacheContainer", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+	containerManager.On("FindOrCleanExisting", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("").
 		Once()
 
-	containerManager.On("CreateCacheContainer", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+	containerManager.On("Create", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("", errors.New("test error")).
 		Once()
 
@@ -410,7 +410,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 			}
 
 			m := newDefaultManager(config)
-			containerManager := addContainerManager(m)
+			containerManager := addCacheContainerManager(m)
 
 			defer containerManager.AssertExpectations(t)
 
@@ -418,11 +418,11 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 			require.NoError(t, err)
 
 			if testCase.volume != "/duplicated" {
-				containerManager.On("FindExistingCacheContainer", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+				containerManager.On("FindOrCleanExisting", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 					Return("").
 					Once()
 
-				containerManager.On("CreateCacheContainer", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+				containerManager.On("Create", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 					Return(testCase.newContainerID, testCase.containerCreateError).
 					Once()
 			}
@@ -460,16 +460,16 @@ func TestDefaultManager_ContainerIDs(t *testing.T) {
 }
 
 func TestDefaultManager_Cleanup(t *testing.T) {
-	cManager := new(MockContainerManager)
-	defer cManager.AssertExpectations(t)
+	ccManager := new(MockCacheContainersManager)
+	defer ccManager.AssertExpectations(t)
 
-	cManager.On("RemoveCacheContainer", mock.Anything, "container-1").
+	ccManager.On("Remove", mock.Anything, "container-1").
 		Return(nil).
 		Once()
 
 	m := &manager{
-		containerManager: cManager,
-		tmpContainerIDs:  []string{"container-1"},
+		cacheContainersManager: ccManager,
+		tmpContainerIDs:        []string{"container-1"},
 	}
 
 	done := m.Cleanup(context.Background())

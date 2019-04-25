@@ -19,13 +19,13 @@ type containerClient interface {
 	RemoveContainer(ctx context.Context, id string) error
 }
 
-type ContainerManager interface {
-	FindExistingCacheContainer(containerName string, containerPath string) string
-	CreateCacheContainer(containerName string, containerPath string) (string, error)
-	RemoveCacheContainer(ctx context.Context, id string) error
+type CacheContainersManager interface {
+	FindOrCleanExisting(containerName string, containerPath string) string
+	Create(containerName string, containerPath string) (string, error)
+	Remove(ctx context.Context, id string) error
 }
 
-type containerManager struct {
+type cacheContainerManager struct {
 	ctx    context.Context
 	logger common.BuildLogger
 
@@ -36,8 +36,8 @@ type containerManager struct {
 	failedContainerIDs  []string
 }
 
-func NewContainerManager(ctx context.Context, logger common.BuildLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) ContainerManager {
-	return &containerManager{
+func NewCacheContainerManager(ctx context.Context, logger common.BuildLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) CacheContainersManager {
+	return &cacheContainerManager{
 		ctx:                 ctx,
 		logger:              logger,
 		containerClient:     cClient,
@@ -46,7 +46,7 @@ func NewContainerManager(ctx context.Context, logger common.BuildLogger, cClient
 	}
 }
 
-func (m *containerManager) FindExistingCacheContainer(containerName string, containerPath string) string {
+func (m *cacheContainerManager) FindOrCleanExisting(containerName string, containerPath string) string {
 	inspected, err := m.containerClient.ContainerInspect(m.ctx, containerName)
 	if err != nil {
 		return ""
@@ -65,7 +65,7 @@ func (m *containerManager) FindExistingCacheContainer(containerName string, cont
 	return inspected.ID
 }
 
-func (m *containerManager) CreateCacheContainer(containerName string, containerPath string) (string, error) {
+func (m *cacheContainerManager) Create(containerName string, containerPath string) (string, error) {
 	containerID, err := m.createCacheContainer(containerName, containerPath)
 	if err != nil {
 		return "", err
@@ -79,7 +79,7 @@ func (m *containerManager) CreateCacheContainer(containerName string, containerP
 	return containerID, nil
 }
 
-func (m *containerManager) createCacheContainer(containerName string, containerPath string) (string, error) {
+func (m *cacheContainerManager) createCacheContainer(containerName string, containerPath string) (string, error) {
 	config := &container.Config{
 		Image: m.helperImage.ID,
 		Cmd:   m.getCacheCommand(containerPath),
@@ -107,7 +107,7 @@ func (m *containerManager) createCacheContainer(containerName string, containerP
 	return resp.ID, nil
 }
 
-func (m *containerManager) getCacheCommand(containerPath string) []string {
+func (m *cacheContainerManager) getCacheCommand(containerPath string) []string {
 	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
 	if m.outdatedHelperImage {
 		m.logger.Debugln("Falling back to old gitlab-runner-cache command")
@@ -118,7 +118,7 @@ func (m *containerManager) getCacheCommand(containerPath string) []string {
 
 }
 
-func (m *containerManager) startCacheContainer(containerID string) error {
+func (m *cacheContainerManager) startCacheContainer(containerID string) error {
 	m.logger.Debugln(fmt.Sprintf("Starting cache container %q...", containerID))
 	err := m.containerClient.ContainerStart(m.ctx, containerID, types.ContainerStartOptions{})
 	if err != nil {
@@ -138,6 +138,6 @@ func (m *containerManager) startCacheContainer(containerID string) error {
 	return nil
 }
 
-func (m *containerManager) RemoveCacheContainer(ctx context.Context, id string) error {
+func (m *cacheContainerManager) Remove(ctx context.Context, id string) error {
 	return m.containerClient.RemoveContainer(ctx, id)
 }

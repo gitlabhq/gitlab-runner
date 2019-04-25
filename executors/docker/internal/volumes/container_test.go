@@ -15,17 +15,17 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func TestNewDefaultContainerManager(t *testing.T) {
+func TestNewCacheContainerManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	m := NewContainerManager(context.Background(), logger, nil, nil, true)
-	assert.IsType(t, &containerManager{}, m)
+	m := NewCacheContainerManager(context.Background(), logger, nil, nil, true)
+	assert.IsType(t, &cacheContainerManager{}, m)
 }
 
-func getDefaultContainerManager() (*containerManager, *mockContainerClient) {
+func getCacheContainerManager() (*cacheContainerManager, *mockContainerClient) {
 	cClient := new(mockContainerClient)
 
-	m := &containerManager{
+	m := &cacheContainerManager{
 		logger:              common.NewBuildLogger(nil, nil),
 		containerClient:     cClient,
 		failedContainerIDs:  make([]string, 0),
@@ -36,7 +36,7 @@ func getDefaultContainerManager() (*containerManager, *mockContainerClient) {
 	return m, cClient
 }
 
-func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
+func TestCacheContainerManager_FindExistingCacheContainer(t *testing.T) {
 	containerName := "container-name"
 	containerPath := "container-path"
 
@@ -83,7 +83,7 @@ func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			m, cClient := getDefaultContainerManager()
+			m, cClient := getCacheContainerManager()
 
 			defer cClient.AssertExpectations(t)
 
@@ -97,13 +97,13 @@ func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
 					Once()
 			}
 
-			containerID := m.FindExistingCacheContainer(containerName, containerPath)
+			containerID := m.FindOrCleanExisting(containerName, containerPath)
 			assert.Equal(t, testCase.expectedContainerID, containerID)
 		})
 	}
 }
 
-func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
+func TestCacheContainerManager_CreateCacheContainer(t *testing.T) {
 	containerName := "container-name"
 	containerPath := "container-path"
 
@@ -166,7 +166,7 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 	for testName, testCase := range testCases {
 		for outdatedHelperImage, expectedCommand := range outdatedHelperImageValues {
 			t.Run(fmt.Sprintf("%s-outdated-helper-image-is-%v", testName, outdatedHelperImage), func(t *testing.T) {
-				m, cClient := getDefaultContainerManager()
+				m, cClient := getCacheContainerManager()
 				m.outdatedHelperImage = outdatedHelperImage
 
 				defer cClient.AssertExpectations(t)
@@ -204,7 +204,7 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 
 				require.Empty(t, m.failedContainerIDs, "Initial list of failed containers should be empty")
 
-				containerID, err := m.CreateCacheContainer(containerName, containerPath)
+				containerID, err := m.Create(containerName, containerPath)
 				assert.Equal(t, err, testCase.expectedError)
 				assert.Equal(t, testCase.expectedContainerID, containerID)
 
@@ -222,7 +222,7 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 	}
 }
 
-func TestDefaultContainerManager_RemoveCacheContainer(t *testing.T) {
+func TestCacheContainerManager_RemoveCacheContainer(t *testing.T) {
 	cClient := new(mockContainerClient)
 	defer cClient.AssertExpectations(t)
 
@@ -230,10 +230,10 @@ func TestDefaultContainerManager_RemoveCacheContainer(t *testing.T) {
 		Return(nil).
 		Once()
 
-	m := &containerManager{
+	m := &cacheContainerManager{
 		containerClient: cClient,
 	}
 
-	err := m.RemoveCacheContainer(context.Background(), "container-id")
+	err := m.Remove(context.Background(), "container-id")
 	assert.NoError(t, err)
 }

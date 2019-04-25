@@ -31,9 +31,9 @@ type ManagerConfig struct {
 
 type manager struct {
 	config ManagerConfig
+	logger common.BuildLogger
 
-	logger           common.BuildLogger
-	containerManager ContainerManager
+	cacheContainersManager CacheContainersManager
 
 	volumeBindings    []string
 	cacheContainerIDs []string
@@ -42,15 +42,15 @@ type manager struct {
 	managedVolumes pathList
 }
 
-func NewManager(logger common.BuildLogger, cManager ContainerManager, config ManagerConfig) Manager {
+func NewManager(logger common.BuildLogger, ccManager CacheContainersManager, config ManagerConfig) Manager {
 	return &manager{
-		config:            config,
-		logger:            logger,
-		containerManager:  cManager,
-		volumeBindings:    make([]string, 0),
-		cacheContainerIDs: make([]string, 0),
-		tmpContainerIDs:   make([]string, 0),
-		managedVolumes:    pathList{},
+		config:                 config,
+		logger:                 logger,
+		cacheContainersManager: ccManager,
+		volumeBindings:         make([]string, 0),
+		cacheContainerIDs:      make([]string, 0),
+		tmpContainerIDs:        make([]string, 0),
+		managedVolumes:         pathList{},
 	}
 }
 
@@ -150,13 +150,13 @@ func (m *manager) createContainerBasedCacheVolume(containerPath string) (string,
 	}
 
 	containerName := fmt.Sprintf("%s-cache-%s", m.config.UniqName, hashContainerPath(containerPath))
-	containerID := m.containerManager.FindExistingCacheContainer(containerName, containerPath)
+	containerID := m.cacheContainersManager.FindOrCleanExisting(containerName, containerPath)
 
 	// create new cache container for that project
 	if containerID == "" {
 		var err error
 
-		containerID, err = m.containerManager.CreateCacheContainer(containerName, containerPath)
+		containerID, err = m.cacheContainersManager.Create(containerName, containerPath)
 		if err != nil {
 			return "", err
 		}
@@ -193,7 +193,7 @@ func (m *manager) Cleanup(ctx context.Context) chan bool {
 	remove := func(wg *sync.WaitGroup, containerID string) {
 		wg.Add(1)
 		go func() {
-			_ = m.containerManager.RemoveCacheContainer(ctx, containerID)
+			_ = m.cacheContainersManager.Remove(ctx, containerID)
 			wg.Done()
 		}()
 	}
