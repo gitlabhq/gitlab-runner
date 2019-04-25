@@ -52,6 +52,14 @@ https://about.gitlab.com/2019/04/22/gitlab-11-10-released/#release-deprecations
 - Change helper image to servercore !1290
 - Add note about git-lfs !1294
 
+v11.9.2 (2019-04-09)
+- Fix git lfs not getting submodule objects !1298
+
+v11.9.1 (2019-04-03)
+- Make it again possible to disable Git LFS pull !1273
+- Use delayed variable expansion for error check in cmd !1260
+- Unexport common.RepoRemoteURL !1276
+
 v11.9.0 (2019-03-22)
 
 **Deprecations:**
