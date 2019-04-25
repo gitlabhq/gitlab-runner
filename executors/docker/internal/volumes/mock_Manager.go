@@ -86,3 +86,17 @@ func (_m *MockManager) CreateBuildVolume(jobsRootDir string, gitStrategy common.
 
 	return r0
 }
+
+// CreateTemporary provides a mock function with given fields: containerPath
+func (_m *MockManager) CreateTemporary(containerPath string) error {
+	ret := _m.Called(containerPath)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(containerPath)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

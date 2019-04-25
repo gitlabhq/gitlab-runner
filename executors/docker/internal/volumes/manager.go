@@ -2,7 +2,7 @@ package volumes
 
 import (
 	"context"
-	"crypto/md5"
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -12,23 +12,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-type ErrVolumeAlreadyDefined struct {
-	containerPath string
-}
-
-func (e *ErrVolumeAlreadyDefined) Error() string {
-	return fmt.Sprintf("volume for container path %q is already defined", e.containerPath)
-}
-
-func NewErrVolumeAlreadyDefined(containerPath string) *ErrVolumeAlreadyDefined {
-	return &ErrVolumeAlreadyDefined{
-		containerPath: containerPath,
-	}
-}
+var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
 
 type Manager interface {
 	Create(volume string) error
 	CreateBuildVolume(jobsRootDir string, gitStrategy common.GitStrategy, volumes []string) error
+	CreateTemporary(containerPath string) error
 	Binds() []string
 	ContainerIDs() []string
 	Cleanup(ctx context.Context) chan bool
@@ -51,7 +40,7 @@ type manager struct {
 	cacheContainerIDs []string
 	tmpContainerIDs   []string
 
-	managedVolumes map[string]bool
+	managedVolumes pathList
 }
 
 func NewManager(logger common.BuildLogger, cManager ContainerManager, config ManagerConfig) Manager {
@@ -62,7 +51,7 @@ func NewManager(logger common.BuildLogger, cManager ContainerManager, config Man
 		volumeBindings:    make([]string, 0),
 		cacheContainerIDs: make([]string, 0),
 		tmpContainerIDs:   make([]string, 0),
-		managedVolumes:    make(map[string]bool, 0),
+		managedVolumes:    pathList{},
 	}
 }
 
@@ -91,7 +80,7 @@ func (m *manager) Create(volume string) error {
 func (m *manager) addHostVolume(hostPath string, containerPath string) error {
 	containerPath = m.getAbsoluteContainerPath(containerPath)
 
-	err := m.rememberVolume(containerPath)
+	err := m.managedVolumes.Add(containerPath)
 	if err != nil {
 		return err
 	}
@@ -109,16 +98,6 @@ func (m *manager) getAbsoluteContainerPath(dir string) string {
 	return path.Join(m.config.BaseContainerPath, dir)
 }
 
-func (m *manager) rememberVolume(containerPath string) error {
-	if m.managedVolumes[containerPath] {
-		return NewErrVolumeAlreadyDefined(containerPath)
-	}
-
-	m.managedVolumes[containerPath] = true
-
-	return nil
-}
-
 func (m *manager) appendVolumeBind(hostPath string, containerPath string) {
 	m.logger.Debugln(fmt.Sprintf("Using host-based %q for %q...", hostPath, containerPath))
 
@@ -127,32 +106,33 @@ func (m *manager) appendVolumeBind(hostPath string, containerPath string) {
 }
 
 func (m *manager) addCacheVolume(containerPath string) error {
+	// disable cache for automatic container cache,
+	// but leave it for host volumes (they are shared on purpose)
+	if m.config.DisableCache {
+		m.logger.Debugln("Cache containers feature is disabled")
+
+		return ErrCacheVolumesDisabled
+	}
+
+	if m.config.CacheDir != "" {
+		return m.createHostBasedCacheVolume(containerPath)
+	}
+
+	_, err := m.createContainerBasedCacheVolume(containerPath)
+
+	return err
+}
+
+func (m *manager) createHostBasedCacheVolume(containerPath string) error {
 	containerPath = m.getAbsoluteContainerPath(containerPath)
 
-	err := m.rememberVolume(containerPath)
+	err := m.managedVolumes.Add(containerPath)
 	if err != nil {
 		return err
 	}
 
-	// disable cache for automatic container cache,
-	// but leave it for host volumes (they are shared on purpose)
-	if m.config.DisableCache {
-		m.logger.Debugln(fmt.Sprintf("Container cache for %q is disabled", containerPath))
-
-		return nil
-	}
-
-	hash := md5.Sum([]byte(containerPath))
-	if m.config.CacheDir != "" {
-		return m.createHostBasedCacheVolume(containerPath, hash)
-	}
-
-	return m.createContainerBasedCacheVolume(containerPath, hash)
-}
-
-func (m *manager) createHostBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
-	hostPath := fmt.Sprintf("%s/%s/%x", m.config.CacheDir, m.config.UniqName, hash)
-	hostPath, err := filepath.Abs(hostPath)
+	hostPath := fmt.Sprintf("%s/%s/%s", m.config.CacheDir, m.config.UniqName, hashContainerPath(containerPath))
+	hostPath, err = filepath.Abs(hostPath)
 	if err != nil {
 		return err
 	}
@@ -162,9 +142,15 @@ func (m *manager) createHostBasedCacheVolume(containerPath string, hash [md5.Siz
 	return nil
 }
 
-func (m *manager) createContainerBasedCacheVolume(containerPath string, hash [md5.Size]byte) error {
-	containerName := fmt.Sprintf("%s-cache-%x", m.config.UniqName, hash)
+func (m *manager) createContainerBasedCacheVolume(containerPath string) (string, error) {
+	containerPath = m.getAbsoluteContainerPath(containerPath)
 
+	err := m.managedVolumes.Add(containerPath)
+	if err != nil {
+		return "", err
+	}
+
+	containerName := fmt.Sprintf("%s-cache-%s", m.config.UniqName, hashContainerPath(containerPath))
 	containerID := m.containerManager.FindExistingCacheContainer(containerName, containerPath)
 
 	// create new cache container for that project
@@ -173,14 +159,14 @@ func (m *manager) createContainerBasedCacheVolume(containerPath string, hash [md
 
 		containerID, err = m.containerManager.CreateCacheContainer(containerName, containerPath)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	m.logger.Debugln(fmt.Sprintf("Using container %q as cache %q...", containerID, containerPath))
 	m.cacheContainerIDs = append(m.cacheContainerIDs, containerID)
 
-	return nil
+	return containerID, nil
 }
 
 func (m *manager) CreateBuildVolume(jobsRootDir string, gitStrategy common.GitStrategy, volumes []string) error {
@@ -203,6 +189,17 @@ func (m *manager) CreateBuildVolume(jobsRootDir string, gitStrategy common.GitSt
 	}
 
 	m.cacheContainerIDs = append(m.cacheContainerIDs, id)
+	m.tmpContainerIDs = append(m.tmpContainerIDs, id)
+
+	return nil
+}
+
+func (m *manager) CreateTemporary(containerPath string) error {
+	id, err := m.createContainerBasedCacheVolume(containerPath)
+	if err != nil {
+		return err
+	}
+
 	m.tmpContainerIDs = append(m.tmpContainerIDs, id)
 
 	return nil

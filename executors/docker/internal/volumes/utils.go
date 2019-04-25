@@ -1,6 +1,8 @@
 package volumes
 
 import (
+	"crypto/md5"
+	"fmt"
 	"path"
 	"strings"
 )
@@ -28,4 +30,34 @@ func isParentOf(parent string, dir string) bool {
 		dir = path.Dir(dir)
 	}
 	return false
+}
+
+func hashContainerPath(containerPath string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(containerPath)))
+}
+
+type ErrVolumeAlreadyDefined struct {
+	containerPath string
+}
+
+func (e *ErrVolumeAlreadyDefined) Error() string {
+	return fmt.Sprintf("volume for container path %q is already defined", e.containerPath)
+}
+
+func NewErrVolumeAlreadyDefined(containerPath string) *ErrVolumeAlreadyDefined {
+	return &ErrVolumeAlreadyDefined{
+		containerPath: containerPath,
+	}
+}
+
+type pathList map[string]bool
+
+func (m pathList) Add(containerPath string) error {
+	if m[containerPath] {
+		return NewErrVolumeAlreadyDefined(containerPath)
+	}
+
+	m[containerPath] = true
+
+	return nil
 }

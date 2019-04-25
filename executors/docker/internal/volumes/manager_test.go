@@ -117,30 +117,34 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 			baseContainerPath: "",
 			disableCache:      true,
 			expectedBinding:   []string{"/host:/duplicated"},
+			expectedError:     ErrCacheVolumesDisabled,
 		},
 		"volume with absolute path, with baseContainerPath and with disableCache": {
 			volume:            "/volume",
 			baseContainerPath: "/builds/project",
 			disableCache:      true,
 			expectedBinding:   []string{"/host:/duplicated"},
+			expectedError:     ErrCacheVolumesDisabled,
 		},
 		"volume without absolute path, without baseContainerPath and with disableCache": {
 			volume:          "volume",
 			disableCache:    true,
 			expectedBinding: []string{"/host:/duplicated"},
+			expectedError:   ErrCacheVolumesDisabled,
 		},
 		"volume without absolute path, with baseContainerPath and with disableCache": {
 			volume:            "volume",
 			baseContainerPath: "/builds/project",
 			disableCache:      true,
 			expectedBinding:   []string{"/host:/duplicated"},
+			expectedError:     ErrCacheVolumesDisabled,
 		},
-		"duplicated volume with absolute path, without baseContainerPath and with disableCache": {
+		"duplicated volume definition": {
 			volume:            "/duplicated",
 			baseContainerPath: "",
 			disableCache:      true,
 			expectedBinding:   []string{"/host:/duplicated"},
-			expectedError:     NewErrVolumeAlreadyDefined("/duplicated"),
+			expectedError:     ErrCacheVolumesDisabled,
 		},
 	}
 
@@ -167,43 +171,46 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 	testCases := map[string]struct {
 		volume            string
 		baseContainerPath string
-		disableCache      bool
 		cacheDir          string
 		uniqName          string
 
-		expectedBinding           string
+		expectedBinding           []string
 		expectedCacheContainerIDs []string
 		expectedConfigVolume      string
+		expectedError             error
 	}{
-		"volume with absolute path, without baseContainerPath, without disableCache and with cacheDir": {
+		"volume with absolute path, without baseContainerPath and with cacheDir": {
 			volume:          "/volume",
-			disableCache:    false,
 			cacheDir:        "/cache",
 			uniqName:        "uniq",
-			expectedBinding: "/cache/uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
+			expectedBinding: []string{"/host:/duplicated", "/cache/uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume"},
 		},
-		"volume with absolute path, with baseContainerPath, without disableCache and with cacheDir": {
+		"volume with absolute path, with baseContainerPath and with cacheDir": {
 			volume:            "/volume",
 			baseContainerPath: "/builds/project",
-			disableCache:      false,
 			cacheDir:          "/cache",
 			uniqName:          "uniq",
-			expectedBinding:   "/cache/uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume",
+			expectedBinding:   []string{"/host:/duplicated", "/cache/uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume"},
 		},
-		"volume without absolute path, without baseContainerPath, without disableCache and with cacheDir": {
+		"volume without absolute path, without baseContainerPath and with cacheDir": {
 			volume:          "volume",
-			disableCache:    false,
 			cacheDir:        "/cache",
 			uniqName:        "uniq",
-			expectedBinding: "/cache/uniq/210ab9e731c9c36c2c38db15c28a8d1c:volume",
+			expectedBinding: []string{"/host:/duplicated", "/cache/uniq/210ab9e731c9c36c2c38db15c28a8d1c:volume"},
 		},
-		"volume without absolute path, with baseContainerPath, without disableCache and with cacheDir": {
+		"volume without absolute path, with baseContainerPath and with cacheDir": {
 			volume:            "volume",
 			baseContainerPath: "/builds/project",
-			disableCache:      false,
 			cacheDir:          "/cache",
 			uniqName:          "uniq",
-			expectedBinding:   "/cache/uniq/f69aef9fb01e88e6213362a04877452d:/builds/project/volume",
+			expectedBinding:   []string{"/host:/duplicated", "/cache/uniq/f69aef9fb01e88e6213362a04877452d:/builds/project/volume"},
+		},
+		"duplicated volume definition": {
+			volume:          "/duplicated",
+			cacheDir:        "/cache",
+			uniqName:        "uniq",
+			expectedBinding: []string{"/host:/duplicated"},
+			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
 		},
 	}
 
@@ -211,26 +218,21 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
 				BaseContainerPath: testCase.baseContainerPath,
-				DisableCache:      testCase.disableCache,
+				DisableCache:      false,
 				CacheDir:          testCase.cacheDir,
 				UniqName:          testCase.uniqName,
 			}
 
 			m := newDefaultManager(config)
 
-			err := m.Create(testCase.volume)
-			assert.NoError(t, err)
-			assertVolumeBindings(t, testCase.expectedBinding, m.volumeBindings)
+			err := m.Create("/host:/duplicated")
+			require.NoError(t, err)
+
+			err = m.Create(testCase.volume)
+			assert.Equal(t, testCase.expectedError, err)
+			assert.Equal(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
-}
-
-func assertVolumeBindings(t *testing.T, expectedBinding string, bindings []string) {
-	if expectedBinding == "" {
-		return
-	}
-	assert.Contains(t, bindings, expectedBinding)
-
 }
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.T) {
@@ -243,6 +245,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		existingContainerID      string
 		newContainerID           string
 		expectedCacheContainerID string
+		expectedError            error
 	}{
 		"volume with absolute path, without baseContainerPath and with existing container": {
 			volume:                   "/volume",
@@ -301,6 +304,11 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			newContainerID:           "newContainerID",
 			expectedCacheContainerID: "newContainerID",
 		},
+		"duplicated volume definition": {
+			volume:        "/duplicated",
+			uniqName:      "uniq",
+			expectedError: NewErrVolumeAlreadyDefined("/duplicated"),
+		},
 	}
 
 	for testName, testCase := range testCases {
@@ -308,6 +316,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 			config := ManagerConfig{
 				BaseContainerPath: testCase.baseContainerPath,
 				UniqName:          testCase.uniqName,
+				DisableCache:      false,
 			}
 
 			m := newDefaultManager(config)
@@ -315,20 +324,27 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 
 			defer containerManager.AssertExpectations(t)
 
-			containerManager.On("FindExistingCacheContainer", testCase.expectedContainerName, testCase.expectedContainerPath).
-				Return(testCase.existingContainerID).
-				Once()
+			err := m.Create("/host:/duplicated")
+			require.NoError(t, err)
 
-			if testCase.newContainerID != "" {
-				containerManager.On("CreateCacheContainer", testCase.expectedContainerName, testCase.expectedContainerPath).
-					Return(testCase.newContainerID, nil).
+			if testCase.volume != "/duplicated" {
+				containerManager.On("FindExistingCacheContainer", testCase.expectedContainerName, testCase.expectedContainerPath).
+					Return(testCase.existingContainerID).
 					Once()
+
+				if testCase.newContainerID != "" {
+					containerManager.On("CreateCacheContainer", testCase.expectedContainerName, testCase.expectedContainerPath).
+						Return(testCase.newContainerID, nil).
+						Once()
+				}
 			}
 
-			err := m.Create(testCase.volume)
-			assert.NoError(t, err)
+			err = m.Create(testCase.volume)
+			assert.Equal(t, testCase.expectedError, err)
 
-			assert.Contains(t, m.cacheContainerIDs, testCase.expectedCacheContainerID)
+			if testCase.expectedCacheContainerID != "" {
+				assert.Contains(t, m.cacheContainerIDs, testCase.expectedCacheContainerID)
+			}
 		})
 	}
 }
@@ -354,6 +370,76 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 
 	err := m.Create("volume")
 	assert.Error(t, err)
+}
+
+func TestDefaultManager_CreateTemporary(t *testing.T) {
+	testCases := map[string]struct {
+		volume                   string
+		newContainerID           string
+		containerCreateError     error
+		expectedContainerName    string
+		expectedContainerPath    string
+		expectedCacheContainerID string
+		expectedTmpContainerID   string
+		expectedError            error
+	}{
+		"volume created": {
+			volume:                   "volume",
+			newContainerID:           "newContainerID",
+			expectedContainerName:    "uniq-cache-f69aef9fb01e88e6213362a04877452d",
+			expectedContainerPath:    "/builds/project/volume",
+			expectedCacheContainerID: "newContainerID",
+			expectedTmpContainerID:   "newContainerID",
+		},
+		"cache container creation error": {
+			volume:               "volume",
+			newContainerID:       "",
+			containerCreateError: errors.New("test-error"),
+			expectedError:        errors.New("test-error"),
+		},
+		"duplicated volume definition": {
+			volume:        "/duplicated",
+			expectedError: NewErrVolumeAlreadyDefined("/duplicated"),
+		},
+	}
+
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			config := ManagerConfig{
+				BaseContainerPath: "/builds/project",
+				UniqName:          "uniq",
+			}
+
+			m := newDefaultManager(config)
+			containerManager := addContainerManager(m)
+
+			defer containerManager.AssertExpectations(t)
+
+			err := m.Create("/host:/duplicated")
+			require.NoError(t, err)
+
+			if testCase.volume != "/duplicated" {
+				containerManager.On("FindExistingCacheContainer", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+					Return("").
+					Once()
+
+				containerManager.On("CreateCacheContainer", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+					Return(testCase.newContainerID, testCase.containerCreateError).
+					Once()
+			}
+
+			err = m.CreateTemporary(testCase.volume)
+			assert.Equal(t, testCase.expectedError, err)
+
+			if testCase.expectedCacheContainerID != "" {
+				assert.Contains(t, m.cacheContainerIDs, testCase.expectedCacheContainerID)
+			}
+
+			if testCase.expectedTmpContainerID != "" {
+				assert.Contains(t, m.tmpContainerIDs, testCase.expectedTmpContainerID)
+			}
+		})
+	}
 }
 
 func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
@@ -429,6 +515,14 @@ func TestDefaultManager_CreateBuildVolume_WithoutError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func assertVolumeBindings(t *testing.T, expectedBinding string, bindings []string) {
+	if expectedBinding == "" {
+		return
+	}
+	assert.Contains(t, bindings, expectedBinding)
+
 }
 
 func TestDefaultManager_CreateBuildVolume_WithError(t *testing.T) {
