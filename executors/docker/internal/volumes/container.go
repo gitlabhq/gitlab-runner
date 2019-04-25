@@ -6,16 +6,15 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type containerClient interface {
+	docker_helpers.Client
+
 	LabelContainer(container *container.Config, containerType string, otherLabels ...string)
-	CreateContainer(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error)
-	StartContainer(containerID string, options types.ContainerStartOptions) error
-	InspectContainer(containerName string) (types.ContainerJSON, error)
 	WaitForContainer(id string) error
 	RemoveContainer(ctx context.Context, id string) error
 }
@@ -27,6 +26,7 @@ type ContainerManager interface {
 }
 
 type containerManager struct {
+	ctx    context.Context
 	logger common.BuildLogger
 
 	containerClient containerClient
@@ -36,8 +36,9 @@ type containerManager struct {
 	failedContainerIDs  []string
 }
 
-func NewContainerManager(logger common.BuildLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) ContainerManager {
+func NewContainerManager(ctx context.Context, logger common.BuildLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) ContainerManager {
 	return &containerManager{
+		ctx:                 ctx,
 		logger:              logger,
 		containerClient:     cClient,
 		helperImage:         helperImage,
@@ -46,7 +47,7 @@ func NewContainerManager(logger common.BuildLogger, cClient containerClient, hel
 }
 
 func (m *containerManager) FindExistingCacheContainer(containerName string, containerPath string) string {
-	inspected, err := m.containerClient.InspectContainer(containerName)
+	inspected, err := m.containerClient.ContainerInspect(m.ctx, containerName)
 	if err != nil {
 		return ""
 	}
@@ -55,7 +56,7 @@ func (m *containerManager) FindExistingCacheContainer(containerName string, cont
 	_, ok := inspected.Config.Volumes[containerPath]
 	if !ok {
 		m.logger.Debugln(fmt.Sprintf("Removing broken cache container for %q path", containerPath))
-		err = m.containerClient.RemoveContainer(nil, inspected.ID)
+		err = m.containerClient.RemoveContainer(m.ctx, inspected.ID)
 		m.logger.Debugln(fmt.Sprintf("Cache container for %q path removed with %v", containerPath, err))
 
 		return ""
@@ -94,7 +95,7 @@ func (m *containerManager) createCacheContainer(containerName string, containerP
 		},
 	}
 
-	resp, err := m.containerClient.CreateContainer(config, hostConfig, nil, containerName)
+	resp, err := m.containerClient.ContainerCreate(m.ctx, config, hostConfig, nil, containerName)
 	if err != nil {
 		if resp.ID != "" {
 			m.failedContainerIDs = append(m.failedContainerIDs, resp.ID)
@@ -119,7 +120,7 @@ func (m *containerManager) getCacheCommand(containerPath string) []string {
 
 func (m *containerManager) startCacheContainer(containerID string) error {
 	m.logger.Debugln(fmt.Sprintf("Starting cache container %q...", containerID))
-	err := m.containerClient.StartContainer(containerID, types.ContainerStartOptions{})
+	err := m.containerClient.ContainerStart(m.ctx, containerID, types.ContainerStartOptions{})
 	if err != nil {
 		m.failedContainerIDs = append(m.failedContainerIDs, containerID)
 

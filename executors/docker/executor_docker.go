@@ -18,7 +18,6 @@ import (
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/kardianos/osext"
 	"github.com/mattn/go-zglob"
@@ -1080,6 +1079,8 @@ func (e *executor) createBuildVolume(volumesManager volumes.Manager) error {
 }
 
 type volumesManagerAdapter struct {
+	docker_helpers.Client
+
 	e *executor
 }
 
@@ -1087,26 +1088,11 @@ func (a *volumesManagerAdapter) LabelContainer(container *container.Config, cont
 	container.Labels = a.e.getLabels(containerType, otherLabels...)
 }
 
-func (a *volumesManagerAdapter) CreateContainer(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error) {
-	return a.e.client.ContainerCreate(a.e.Context, config, hostConfig, networkingConfig, containerName)
-}
-
-func (a *volumesManagerAdapter) StartContainer(containerID string, options types.ContainerStartOptions) error {
-	return a.e.client.ContainerStart(a.e.Context, containerID, options)
-}
-
-func (a *volumesManagerAdapter) InspectContainer(containerName string) (types.ContainerJSON, error) {
-	return a.e.client.ContainerInspect(a.e.Context, containerName)
-}
-
 func (a *volumesManagerAdapter) WaitForContainer(id string) error {
 	return a.e.waitForContainer(a.e.Context, id)
 }
 
 func (a *volumesManagerAdapter) RemoveContainer(ctx context.Context, id string) error {
-	if ctx == nil {
-		ctx = a.e.Context
-	}
 	return a.e.removeContainer(ctx, id)
 }
 
@@ -1119,12 +1105,9 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 		return e.volumesManager, nil
 	}
 
-	adapter := &volumesManagerAdapter{e: e}
-	config := volumes.ManagerConfig{
-		CacheDir:          e.Config.Docker.CacheDir,
-		BaseContainerPath: e.Build.FullProjectDir(),
-		UniqName:          e.Build.ProjectUniqueName(),
-		DisableCache:      e.Config.Docker.DisableCache,
+	adapter := &volumesManagerAdapter{
+		Client: e.client,
+		e:      e,
 	}
 
 	helperImage, err := e.getPrebuiltImage()
@@ -1133,11 +1116,19 @@ func (e *executor) getVolumesManager() (volumes.Manager, error) {
 	}
 
 	cManager := volumes.NewContainerManager(
+		e.Context,
 		e.BuildLogger,
 		adapter,
 		helperImage,
 		e.checkOutdatedHelperImage(),
 	)
+
+	config := volumes.ManagerConfig{
+		CacheDir:          e.Config.Docker.CacheDir,
+		BaseContainerPath: e.Build.FullProjectDir(),
+		UniqName:          e.Build.ProjectUniqueName(),
+		DisableCache:      e.Config.Docker.DisableCache,
+	}
 
 	e.volumesManager = volumes.NewManager(e.BuildLogger, cManager, config)
 

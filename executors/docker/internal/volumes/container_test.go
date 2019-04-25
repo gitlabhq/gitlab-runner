@@ -18,7 +18,7 @@ import (
 func TestNewDefaultContainerManager(t *testing.T) {
 	logger := common.NewBuildLogger(nil, nil)
 
-	m := NewContainerManager(logger, nil, nil, true)
+	m := NewContainerManager(context.Background(), logger, nil, nil, true)
 	assert.IsType(t, &containerManager{}, m)
 }
 
@@ -87,7 +87,7 @@ func TestDefaultContainerManager_FindExistingCacheContainer(t *testing.T) {
 
 			defer cClient.AssertExpectations(t)
 
-			cClient.On("InspectContainer", containerName).
+			cClient.On("ContainerInspect", mock.Anything, containerName).
 				Return(testCase.inspectResult, testCase.inspectError).
 				Once()
 
@@ -186,12 +186,12 @@ func TestDefaultContainerManager_CreateCacheContainer(t *testing.T) {
 				cClient.On("LabelContainer", configMatcher, "cache", "cache.dir=container-path").
 					Once()
 
-				cClient.On("CreateContainer", configMatcher, mock.Anything, mock.Anything, containerName).
+				cClient.On("ContainerCreate", mock.Anything, configMatcher, mock.Anything, mock.Anything, containerName).
 					Return(testCase.createResult, testCase.createError).
 					Once()
 
 				if testCase.createError == nil {
-					cClient.On("StartContainer", testCase.containerID, mock.Anything).
+					cClient.On("ContainerStart", mock.Anything, testCase.containerID, mock.Anything).
 						Return(testCase.startError).
 						Once()
 

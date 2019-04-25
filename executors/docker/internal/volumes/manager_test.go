@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -473,8 +472,6 @@ func TestDefaultManager_Cleanup(t *testing.T) {
 		tmpContainerIDs:  []string{"container-1"},
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
-
-	done := m.Cleanup(ctx)
+	done := m.Cleanup(context.Background())
 	<-done
 }
