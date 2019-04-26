@@ -19,11 +19,11 @@ _This notice should stay as the first item in the CONTRIBUTING.md file._
 
 ## Contribute to GitLab runner
 
-The following contents has to be considered as an extension over [gitlab-ce contributing guidelines](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/CONTRIBUTING.md).
+The following contents has to be considered as an extension over [gitlab-ce contributing guidelines](https://docs.gitlab.com/ce/development/contributing/index.html).
 
 ## Workflow lables
 
-We have some additional labels plus those defined in [gitlab-ce workflow labels](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/CONTRIBUTING.md#workflow-labels) 
+We have some additional labels plus those defined in [gitlab-ce workflow labels](https://docs.gitlab.com/ce/development/contributing/issue_workflow.html)
 
 - Additional subjects: ~cache, ~executors, ~"git operations"
 - OS: ~"os::Linux" ~"os::MacOSX" ~"os:FreeBSD" ~"os::Windows" 
