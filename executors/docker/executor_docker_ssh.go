@@ -92,6 +92,9 @@ func init() {
 			RunnerCommand: "gitlab-runner",
 		},
 		ShowHostname: true,
+		Metadata: map[string]string{
+			"OSType": osTypeLinux,
+		},
 	}
 
 	creator := func() common.Executor {

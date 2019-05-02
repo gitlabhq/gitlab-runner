@@ -1156,7 +1156,7 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 	return nil
 }
 
-func (e *executor) connectDocker() (err error) {
+func (e *executor) connectDocker() error {
 	client, err := docker_helpers.New(e.Config.Docker.DockerCredentials, "")
 	if err != nil {
 		return err
@@ -1168,7 +1168,25 @@ func (e *executor) connectDocker() (err error) {
 		return err
 	}
 
-	return
+	return e.validateOSType()
+}
+
+// validateOSType checks if the ExecutorOptions metadata matches with the docker
+// info response.
+func (e *executor) validateOSType() error {
+	executorOSType, ok := e.ExecutorOptions.Metadata["OSType"]
+	if !ok {
+		return common.MakeBuildError("%s does not have any OSType specified", e.Config.Executor)
+	}
+
+	if executorOSType != e.info.OSType {
+		return common.MakeBuildError(
+			"executor requires OSType=%s, but Docker Engine supports only OSType=%s",
+			executorOSType, e.info.OSType,
+		)
+	}
+
+	return nil
 }
 
 func (e *executor) createDependencies() (err error) {

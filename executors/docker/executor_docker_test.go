@@ -24,7 +24,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -873,7 +873,15 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 		return
 	}
 
-	e := executor{}
+	e := executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executors.ExecutorOptions{
+				Metadata: map[string]string{
+					"OSType": "linux",
+				},
+			},
+		},
+	}
 	e.Context = context.Background()
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
@@ -1162,6 +1170,56 @@ func TestDockerSysctlsSetting(t *testing.T) {
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+func TestCheckOSType(t *testing.T) {
+	cases := map[string]struct {
+		executorMetadata map[string]string
+		dockerInfoOSType string
+		expectedErr      string
+	}{
+		"executor and docker info mismatch": {
+			executorMetadata: map[string]string{
+				"OSType": "windows",
+			},
+			dockerInfoOSType: "linux",
+			expectedErr:      "executor requires OSType=windows, but Docker Engine supports only OSType=linux",
+		},
+		"executor and docker info match": {
+			executorMetadata: map[string]string{
+				"OSType": "linux",
+			},
+			dockerInfoOSType: "linux",
+			expectedErr:      "",
+		},
+		"executor OSType not defined": {
+			executorMetadata: nil,
+			dockerInfoOSType: "linux",
+			expectedErr:      " does not have any OSType specified",
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			executor := executor{
+				info: types.Info{
+					OSType: c.dockerInfoOSType,
+				},
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executors.ExecutorOptions{
+						Metadata: c.executorMetadata,
+					},
+				},
+			}
+
+			err := executor.validateOSType()
+			if c.expectedErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			assert.EqualError(t, err, c.expectedErr)
+		})
+	}
 }
 
 // TODO: Remove in 12.0
