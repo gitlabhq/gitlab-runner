@@ -102,52 +102,41 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 }
 
 func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
+	expectedBinding := []string{"/host:/duplicated"}
+
 	testCases := map[string]struct {
 		volume            string
 		baseContainerPath string
-		disableCache      bool
 
-		expectedBinding           []string
 		expectedCacheContainerIDs []string
 		expectedConfigVolume      string
 		expectedError             error
 	}{
 		"no volumes specified": {
-			volume:          "",
-			expectedBinding: []string{"/host:/duplicated"},
+			volume: "",
 		},
 		"volume with absolute path, without baseContainerPath and with disableCache": {
 			volume:            "/volume",
 			baseContainerPath: "",
-			disableCache:      true,
-			expectedBinding:   []string{"/host:/duplicated"},
 			expectedError:     ErrCacheVolumesDisabled,
 		},
 		"volume with absolute path, with baseContainerPath and with disableCache": {
 			volume:            "/volume",
 			baseContainerPath: "/builds/project",
-			disableCache:      true,
-			expectedBinding:   []string{"/host:/duplicated"},
 			expectedError:     ErrCacheVolumesDisabled,
 		},
 		"volume without absolute path, without baseContainerPath and with disableCache": {
-			volume:          "volume",
-			disableCache:    true,
-			expectedBinding: []string{"/host:/duplicated"},
-			expectedError:   ErrCacheVolumesDisabled,
+			volume:        "volume",
+			expectedError: ErrCacheVolumesDisabled,
 		},
 		"volume without absolute path, with baseContainerPath and with disableCache": {
 			volume:            "volume",
 			baseContainerPath: "/builds/project",
-			disableCache:      true,
-			expectedBinding:   []string{"/host:/duplicated"},
 			expectedError:     ErrCacheVolumesDisabled,
 		},
 		"duplicated volume definition": {
 			volume:            "/duplicated",
 			baseContainerPath: "",
-			disableCache:      true,
-			expectedBinding:   []string{"/host:/duplicated"},
 			expectedError:     ErrCacheVolumesDisabled,
 		},
 	}
@@ -156,7 +145,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
 				BaseContainerPath: testCase.baseContainerPath,
-				DisableCache:      testCase.disableCache,
+				DisableCache:      true,
 			}
 
 			m := newDefaultManager(config)
@@ -166,7 +155,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 			err = m.Create(testCase.volume)
 			assert.Equal(t, testCase.expectedError, err)
-			assert.Equal(t, testCase.expectedBinding, m.volumeBindings)
+			assert.Equal(t, expectedBinding, m.volumeBindings)
 		})
 	}
 }
