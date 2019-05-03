@@ -11,10 +11,6 @@ import (
 
 var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
 
-type parserProvider interface {
-	CreateParser() (parser.Parser, error)
-}
-
 type Manager interface {
 	Create(volume string) error
 	CreateTemporary(containerPath string) error
@@ -33,9 +29,9 @@ type ManagerConfig struct {
 type manager struct {
 	config ManagerConfig
 	logger debugLogger
+	parser parser.Parser
 
 	cacheContainersManager CacheContainersManager
-	parserProvider         parserProvider
 
 	volumeBindings    []string
 	cacheContainerIDs []string
@@ -44,11 +40,11 @@ type manager struct {
 	managedVolumes pathList
 }
 
-func NewManager(logger debugLogger, pProvider parserProvider, ccManager CacheContainersManager, config ManagerConfig) Manager {
+func NewManager(logger debugLogger, volumeParser parser.Parser, ccManager CacheContainersManager, config ManagerConfig) Manager {
 	return &manager{
 		config:                 config,
 		logger:                 logger,
-		parserProvider:         pProvider,
+		parser:                 volumeParser,
 		cacheContainersManager: ccManager,
 		volumeBindings:         make([]string, 0),
 		cacheContainerIDs:      make([]string, 0),
@@ -62,12 +58,7 @@ func (m *manager) Create(volume string) error {
 		return nil
 	}
 
-	volumeParser, err := m.parserProvider.CreateParser()
-	if err != nil {
-		return err
-	}
-
-	parsedVolume, err := volumeParser.ParseVolume(volume)
+	parsedVolume, err := m.parser.ParseVolume(volume)
 	if err != nil {
 		return err
 	}

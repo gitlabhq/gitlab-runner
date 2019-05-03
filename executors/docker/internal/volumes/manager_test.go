@@ -49,17 +49,11 @@ func addCacheContainerManager(manager *manager) *MockCacheContainersManager {
 	return containerManager
 }
 
-func addParserProviderAndParser(manager *manager) (*mockParserProvider, *parser.MockParser) {
+func addParser(manager *manager) *parser.MockParser {
 	parserMock := new(parser.MockParser)
+	manager.parser = parserMock
 
-	pProviderMock := new(mockParserProvider)
-	pProviderMock.On("CreateParser").
-		Return(parserMock, nil).
-		Maybe()
-
-	manager.parserProvider = pProviderMock
-
-	return pProviderMock, parserMock
+	return parserMock
 }
 
 func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
@@ -112,11 +106,8 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			pProvider, volumeParser := addParserProviderAndParser(m)
-			defer func() {
-				pProvider.AssertExpectations(t)
-				volumeParser.AssertExpectations(t)
-			}()
+			volumeParser := addParser(m)
+			defer volumeParser.AssertExpectations(t)
 
 			volumeParser.On("ParseVolume", "/host:/duplicated").
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
@@ -193,11 +184,8 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			pProvider, volumeParser := addParserProviderAndParser(m)
-			defer func() {
-				pProvider.AssertExpectations(t)
-				volumeParser.AssertExpectations(t)
-			}()
+			volumeParser := addParser(m)
+			defer volumeParser.AssertExpectations(t)
 
 			volumeParser.On("ParseVolume", "/host:/duplicated").
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
@@ -276,12 +264,9 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 			}
 
 			m := newDefaultManager(config)
-			pProvider, volumeParser := addParserProviderAndParser(m)
 
-			defer func() {
-				pProvider.AssertExpectations(t)
-				volumeParser.AssertExpectations(t)
-			}()
+			volumeParser := addParser(m)
+			defer volumeParser.AssertExpectations(t)
 
 			volumeParser.On("ParseVolume", "/host:/duplicated").
 				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
@@ -387,11 +372,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 
 			m := newDefaultManager(config)
 			containerManager := addCacheContainerManager(m)
-			pProvider, volumeParser := addParserProviderAndParser(m)
+			volumeParser := addParser(m)
 
 			defer func() {
 				containerManager.AssertExpectations(t)
-				pProvider.AssertExpectations(t)
 				volumeParser.AssertExpectations(t)
 			}()
 
@@ -436,11 +420,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 
 	m := newDefaultManager(config)
 	containerManager := addCacheContainerManager(m)
-	pProvider, volumeParser := addParserProviderAndParser(m)
+	volumeParser := addParser(m)
 
 	defer func() {
 		containerManager.AssertExpectations(t)
-		pProvider.AssertExpectations(t)
 		volumeParser.AssertExpectations(t)
 	}()
 
@@ -461,48 +444,17 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 }
 
 func TestDefaultManager_CreateUserVolumes_ParserError(t *testing.T) {
-	testCases := map[string]struct {
-		providerError error
-		parserError   error
-	}{
-		"error when creating the parser": {
-			providerError: errors.New("provider-test-error"),
-		},
-		"error when using the parser": {
-			parserError: errors.New("parser-test-error"),
-		},
-	}
+	m := newDefaultManager(ManagerConfig{})
 
-	for testName, testCase := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			config := ManagerConfig{}
+	volumeParser := addParser(m)
+	defer volumeParser.AssertExpectations(t)
 
-			m := newDefaultManager(config)
+	volumeParser.On("ParseVolume", "volume").
+		Return(nil, errors.New("parser-test-error")).
+		Once()
 
-			volumeParser := new(parser.MockParser)
-
-			pProvider := new(mockParserProvider)
-			m.parserProvider = pProvider
-
-			defer func() {
-				volumeParser.AssertExpectations(t)
-				pProvider.AssertExpectations(t)
-			}()
-
-			pProvider.On("CreateParser").
-				Return(volumeParser, testCase.providerError).
-				Once()
-
-			if testCase.providerError == nil {
-				volumeParser.On("ParseVolume", "volume").
-					Return(nil, testCase.parserError).
-					Once()
-			}
-
-			err := m.Create("volume")
-			assert.Error(t, err)
-		})
-	}
+	err := m.Create("volume")
+	assert.Error(t, err)
 }
 
 func TestDefaultManager_CreateTemporary(t *testing.T) {
@@ -548,11 +500,10 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 
 			m := newDefaultManager(config)
 			containerManager := addCacheContainerManager(m)
-			pProvider, volumeParser := addParserProviderAndParser(m)
+			volumeParser := addParser(m)
 
 			defer func() {
 				containerManager.AssertExpectations(t)
-				pProvider.AssertExpectations(t)
 				volumeParser.AssertExpectations(t)
 			}()
 

@@ -17,10 +17,6 @@ type volumesManagerAdapter struct {
 	e *executor
 }
 
-func (a *volumesManagerAdapter) CreateParser() (parser.Parser, error) {
-	return parser.New(a.e.info)
-}
-
 func (a *volumesManagerAdapter) LabelContainer(container *container.Config, containerType string, otherLabels ...string) {
 	container.Labels = a.e.getLabels(containerType, otherLabels...)
 }
@@ -48,6 +44,11 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 		return nil, err
 	}
 
+	volumeParser, err := parser.New(e.info)
+	if err != nil {
+		return nil, err
+	}
+
 	ccManager := volumes.NewCacheContainerManager(
 		e.Context,
 		&e.BuildLogger,
@@ -63,7 +64,7 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 		DisableCache:      e.Config.Docker.DisableCache,
 	}
 
-	volumesManager := volumes.NewManager(&e.BuildLogger, adapter, ccManager, config)
+	volumesManager := volumes.NewManager(&e.BuildLogger, volumeParser, ccManager, config)
 
 	return volumesManager, nil
 }
