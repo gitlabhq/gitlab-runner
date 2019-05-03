@@ -1157,8 +1157,7 @@ func (e *executor) Cleanup() {
 	}
 
 	if e.volumesManager != nil {
-		vmCleanupDone := e.volumesManager.Cleanup(ctx)
-		<-vmCleanupDone
+		<-e.volumesManager.Cleanup(ctx)
 	}
 
 	wg.Wait()
