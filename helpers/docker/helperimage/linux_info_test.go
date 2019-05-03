@@ -44,6 +44,16 @@ func Test_linuxInfo_create(t *testing.T) {
 				IsSupportingLocalImport: true,
 			},
 		},
+		"Configured architecture is unknown": {
+			dockerArch: "some-random-arch",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture: "some-random-arch",
+				Name:         name,
+				Tag:          "some-random-arch-2923a43",
+				IsSupportingLocalImport: true,
+			},
+		},
 	}
 
 	for name, test := range tests {
