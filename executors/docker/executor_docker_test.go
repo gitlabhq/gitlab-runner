@@ -798,10 +798,8 @@ func TestCreateVolumes(t *testing.T) {
 				vm.On("Create", "/volume").
 					Return(volumes.NewErrVolumeAlreadyDefined("/volume")).
 					Once()
-				vm.On("CreateTemporary", defaultBuildsDir).
-					Return(nil).
-					Once()
 			},
+			expectedError: volumes.NewErrVolumeAlreadyDefined("/volume"),
 		},
 		"volumes defined, empty buildsDir, clone strategy, other error on user volume": {
 			volumes:     []string{"/volume"},
