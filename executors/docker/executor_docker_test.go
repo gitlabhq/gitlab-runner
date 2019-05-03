@@ -23,6 +23,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
@@ -197,7 +198,11 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s-0", strings.Replace(serviceName, "/", "__", -1))
 	networkID := "network-id"
 
-	e := executor{client: &c}
+	e := executor{
+		client: &c,
+		info:   types.Info{OSType: helperimage.OSTypeLinux},
+	}
+
 	options := buildImagePullOptions(e, imageName)
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{}
@@ -233,6 +238,10 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(nil).
 		Once()
 
+	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner-helper:x86_64-latest").
+		Return(types.ImageInspect{ID: "helper-image-id"}, nil, nil).
+		Once()
+
 	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{ID: containerName}, nil).
 		Once()
@@ -241,8 +250,11 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(nil).
 		Once()
 
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
 	linksMap := make(map[string]*types.Container)
-	err := e.createFromServiceDefinition(0, common.Image{Name: description}, linksMap)
+	err = e.createFromServiceDefinition(0, common.Image{Name: description}, linksMap)
 	assert.NoError(t, err)
 }
 
@@ -542,37 +554,337 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	assert.Nil(t, image, "No existing image")
 }
 
-func TestHostMountedBuildsDirectory(t *testing.T) {
-	tests := []struct {
-		path    string
-		volumes []string
-		result  bool
+func TestPrepareBuildsDir(t *testing.T) {
+	tests := map[string]struct {
+		rootDir                 string
+		volumes                 []string
+		expectedSharedBuildsDir bool
+		expectedError           error
 	}{
-		{"/build", []string{"/build:/build"}, true},
-		{"/build", []string{"/build/:/build"}, true},
-		{"/build", []string{"/build"}, false},
-		{"/build", []string{"/folder:/folder"}, false},
-		{"/build", []string{"/folder"}, false},
-		{"/build/other/directory", []string{"/build/:/build"}, true},
-		{"/build/other/directory", []string{}, false},
+		"rootDir mounted as host based volume": {
+			rootDir:                 "/build",
+			volumes:                 []string{"/build:/build"},
+			expectedSharedBuildsDir: true,
+		},
+		"rootDir mounted as container based volume": {
+			rootDir:                 "/build",
+			volumes:                 []string{"/build"},
+			expectedSharedBuildsDir: false,
+		},
+		"rootDir not mounted as volume": {
+			rootDir:                 "/build",
+			volumes:                 []string{"/folder:/folder"},
+			expectedSharedBuildsDir: false,
+		},
+		"rootDir's parent mounted as volume": {
+			rootDir:                 "/build/other/directory",
+			volumes:                 []string{"/build/:/build"},
+			expectedSharedBuildsDir: true,
+		},
+		"rootDir is not an absolute path": {
+			rootDir:       "builds",
+			expectedError: buildDirectoryNotAbsoluteErr,
+		},
+		"rootDir is /": {
+			rootDir:       "/",
+			expectedError: buildDirectoryIsRootPathErr,
+		},
 	}
 
-	for _, i := range tests {
-		c := common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				BuildsDir: i.path,
-				Docker: &common.DockerConfig{
-					Volumes: i.volumes,
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			c := common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					BuildsDir: test.rootDir,
+					Docker: &common.DockerConfig{
+						Volumes: test.volumes,
+					},
 				},
+			}
+
+			options := common.ExecutorPrepareOptions{
+				Config: &c,
+			}
+
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: c,
+				},
+			}
+			err := e.prepareBuildsDir(options)
+			assert.Equal(t, test.expectedError, err)
+			assert.Equal(t, test.expectedSharedBuildsDir, e.SharedBuildsDir)
+		})
+	}
+}
+
+func TestCreateVolumes(t *testing.T) {
+	defaultBuildsDir := "/default-builds-dir"
+
+	tests := map[string]struct {
+		volumes                  []string
+		buildsDir                string
+		gitStrategy              string
+		volumesManagerAssertions func(*volumes.MockManager)
+		adjustConfiguration      func(e *executor)
+		expectedError            error
+	}{
+		"no volumes defined, empty buildsDir, clone strategy, no errors": {
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("CreateTemporary", defaultBuildsDir).
+					Return(nil).
+					Once()
 			},
-		}
-		e := &executor{}
+		},
+		"no volumes defined, empty buildsDir, clone strategy, duplicated entry error": {
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("CreateTemporary", defaultBuildsDir).
+					Return(volumes.NewErrVolumeAlreadyDefined(defaultBuildsDir)).
+					Once()
+			},
+		},
+		"no volumes defined, empty buildsDir, clone strategy, other error": {
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("CreateTemporary", defaultBuildsDir).
+					Return(errors.New("test-error")).
+					Once()
+			},
+			expectedError: errors.New("test-error"),
+		},
+		"no volumes defined, defined buildsDir, clone strategy, no errors": {
+			buildsDir:   "/builds",
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("CreateTemporary", "/builds").
+					Return(nil).
+					Once()
+			},
+		},
+		"no volumes defined, defined buildsDir, clone strategy, duplicated entry error": {
+			buildsDir:   "/builds",
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("CreateTemporary", "/builds").
+					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
+					Once()
+			},
+		},
+		"no volumes defined, defined buildsDir, clone strategy, other error": {
+			buildsDir:   "/builds",
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("CreateTemporary", "/builds").
+					Return(errors.New("test-error")).
+					Once()
+			},
+			expectedError: errors.New("test-error"),
+		},
+		"no volumes defined, defined buildsDir, fetch strategy, no errors": {
+			buildsDir:   "/builds",
+			gitStrategy: "fetch",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/builds").
+					Return(nil).
+					Once()
+			},
+		},
+		"no volumes defined, defined buildsDir, fetch strategy, duplicated entry error": {
+			buildsDir:   "/builds",
+			gitStrategy: "fetch",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/builds").
+					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
+					Once()
+			},
+		},
+		"no volumes defined, defined buildsDir, fetch strategy, cache containers disabled error": {
+			buildsDir:   "/builds",
+			gitStrategy: "fetch",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/builds").
+					Return(volumes.ErrCacheVolumesDisabled).
+					Once()
 
-		t.Log("Testing", i.path, "if volumes are configured to:", i.volumes, "...")
-		assert.Equal(t, i.result, e.isHostMountedVolume(i.path, i.volumes...))
+				vm.On("CreateTemporary", "/builds").
+					Return(nil).
+					Once()
+			},
+		},
+		"no volumes defined, defined buildsDir, fetch strategy, cache containers disabled error and temporary returns duplicated error": {
+			buildsDir:   "/builds",
+			gitStrategy: "fetch",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/builds").
+					Return(volumes.ErrCacheVolumesDisabled).
+					Once()
 
-		e.prepareBuildsDir(&c)
-		assert.Equal(t, i.result, e.SharedBuildsDir)
+				vm.On("CreateTemporary", "/builds").
+					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
+					Once()
+			},
+		},
+		"no volumes defined, defined buildsDir, fetch strategy, cache containers disabled error and temporary returns other error": {
+			buildsDir:   "/builds",
+			gitStrategy: "fetch",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/builds").
+					Return(volumes.ErrCacheVolumesDisabled).
+					Once()
+
+				vm.On("CreateTemporary", "/builds").
+					Return(errors.New("test-error")).
+					Once()
+			},
+			expectedError: errors.New("test-error"),
+		},
+		"no volumes defined, defined buildsDir, fetch strategy, other error": {
+			buildsDir:   "/builds",
+			gitStrategy: "fetch",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/builds").
+					Return(errors.New("test-error")).
+					Once()
+			},
+			expectedError: errors.New("test-error"),
+		},
+		// TODO: Remove in 12.3
+		"no volumes defined, defined buildsDir, clone strategy, UseLegacyBuildsDirForDocker FF enabled": {
+			buildsDir:   "/builds",
+			gitStrategy: "fetch",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/builds/group").
+					Return(errors.New("test-error")).
+					Once()
+			},
+			adjustConfiguration: func(e *executor) {
+				e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+					Key:   featureflags.UseLegacyBuildsDirForDocker,
+					Value: "true",
+				})
+			},
+			expectedError: errors.New("test-error"),
+		},
+		"volumes defined, empty buildsDir, clone strategy, no errors on user volume": {
+			volumes:     []string{"/volume"},
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/volume").
+					Return(nil).
+					Once()
+				vm.On("CreateTemporary", defaultBuildsDir).
+					Return(nil).
+					Once()
+			},
+		},
+		"volumes defined, empty buildsDir, clone strategy, cache containers disabled error on user volume": {
+			volumes:     []string{"/volume"},
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/volume").
+					Return(volumes.ErrCacheVolumesDisabled).
+					Once()
+				vm.On("CreateTemporary", defaultBuildsDir).
+					Return(nil).
+					Once()
+			},
+		},
+		"volumes defined, empty buildsDir, clone strategy, duplicated error on user volume": {
+			volumes:     []string{"/volume"},
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/volume").
+					Return(volumes.NewErrVolumeAlreadyDefined("/volume")).
+					Once()
+			},
+			expectedError: volumes.NewErrVolumeAlreadyDefined("/volume"),
+		},
+		"volumes defined, empty buildsDir, clone strategy, other error on user volume": {
+			volumes:     []string{"/volume"},
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", "/volume").
+					Return(errors.New("test-error")).
+					Once()
+			},
+			expectedError: errors.New("test-error"),
+		},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			volumesManagerMock := new(volumes.MockManager)
+
+			oldCreateVolumesManager := createVolumesManager
+			defer func() {
+				volumesManagerMock.AssertExpectations(t)
+				createVolumesManager = oldCreateVolumesManager
+			}()
+			createVolumesManager = func(_ *executor) (volumes.Manager, error) {
+				return volumesManagerMock, nil
+			}
+
+			if test.volumesManagerAssertions != nil {
+				test.volumesManagerAssertions(volumesManagerMock)
+			}
+
+			c := common.RunnerConfig{
+				RunnerCredentials: common.RunnerCredentials{
+					Token: "abcdef1234567890",
+				},
+				RunnerSettings: common.RunnerSettings{
+					BuildsDir: test.buildsDir,
+					Docker: &common.DockerConfig{
+						Volumes: test.volumes,
+					},
+				},
+			}
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Build: &common.Build{
+						ProjectRunnerID: 0,
+						Runner:          &c,
+						JobResponse: common.JobResponse{
+							JobInfo: common.JobInfo{
+								ProjectID: 0,
+							},
+							GitInfo: common.GitInfo{
+								RepoURL: "https://gitlab.example.com/group/project.git",
+							},
+						},
+					},
+					Config: c,
+					ExecutorOptions: executors.ExecutorOptions{
+						DefaultBuildsDir: defaultBuildsDir,
+					},
+				},
+				info: types.Info{
+					OSType: helperimage.OSTypeLinux,
+				},
+			}
+
+			e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+				Key:   "GIT_STRATEGY",
+				Value: test.gitStrategy,
+			})
+
+			if test.adjustConfiguration != nil {
+				test.adjustConfiguration(e)
+			}
+
+			err := e.Build.StartBuild(
+				e.RootDir(),
+				e.CacheDir(),
+				e.CustomBuildEnabled(),
+				e.SharedBuildsDir,
+			)
+			require.NoError(t, err)
+
+			err = e.createVolumes()
+			assert.Equal(t, test.expectedError, err)
+		})
 	}
 }
 
@@ -900,7 +1212,10 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	e.Trace = &common.Trace{Writer: output}
 
 	err := e.connectDocker()
-	assert.NoError(t, err)
+	require.NoError(t, err)
+
+	err = e.createVolumesManager()
+	require.NoError(t, err)
 
 	container, err := e.createContainer("build", common.Image{Name: common.TestAlpineImage}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err)
@@ -952,6 +1267,7 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 
 	e := &executor{}
 	e.client = c
+	e.info = types.Info{OSType: helperimage.OSTypeLinux}
 	e.Config.Docker = dockerConfig
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
@@ -961,6 +1277,8 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 		Environment: []string{},
 	}
 
+	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner-helper:x86_64-latest").
+		Return(types.ImageInspect{ID: "helper-image-id"}, nil, nil).Once()
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
@@ -980,7 +1298,10 @@ func testDockerConfigurationWithJobContainer(t *testing.T, dockerConfig *common.
 	c.On("ContainerInspect", mock.Anything, "abc").
 		Return(types.ContainerJSON{}, nil).Once()
 
-	_, err := e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	_, err = e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -991,7 +1312,10 @@ func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *com
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
 		Return(nil).Once()
 
-	_, err := e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}})
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	_, err = e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}})
 	assert.NoError(t, err, "Should create service container without errors")
 }
 
@@ -1223,84 +1547,43 @@ func TestCheckOSType(t *testing.T) {
 }
 
 // TODO: Remove in 12.0
-func TestCreateCacheVolumeFeatureFlag(t *testing.T) {
-	cacheDir := "/cache"
+func TestOutdatedHelperImage(t *testing.T) {
+	ffNotSet := common.JobVariables{}
+	ffSet := common.JobVariables{
+		{Key: featureflags.DockerHelperImageV2, Value: "true"},
+	}
 
-	cases := []struct {
-		name        string
-		variables   common.JobVariables
-		helperImage string
-		expectedCmd []string
+	testCases := map[string]struct {
+		helperImage    string
+		variables      common.JobVariables
+		expectedResult bool
 	}{
-		{
-			name:        "Helper image is not specified",
-			variables:   common.JobVariables{},
-			helperImage: "",
-			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		"helper image not set and FF set to false": {
+			variables:      ffNotSet,
+			helperImage:    "",
+			expectedResult: false,
 		},
-		{
-			name: "Helper image is not specified and FF still turned on",
-			variables: common.JobVariables{
-				common.JobVariable{Key: featureflags.DockerHelperImageV2, Value: "true"},
-			},
-			helperImage: "",
-			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		"helper image not set and FF set to true": {
+			variables:      ffSet,
+			helperImage:    "",
+			expectedResult: false,
 		},
-		{
-			name:        "Helper image is specified",
-			variables:   common.JobVariables{},
-			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
-			expectedCmd: []string{"gitlab-runner-cache", cacheDir},
+		"helper image set and FF set to false": {
+			variables:      ffNotSet,
+			helperImage:    "gitlab/gitlab-runner-helper:x86_64-latest",
+			expectedResult: true,
 		},
-		{
-			name: "Helper image is specified & FF variable is set to true",
-			variables: common.JobVariables{
-				common.JobVariable{Key: featureflags.DockerHelperImageV2, Value: "true"},
-			},
-			helperImage: "gitlab/gitlab-runner-helper:x86_64-latest",
-			expectedCmd: []string{"gitlab-runner-helper", "cache-init", cacheDir},
+		"helper image set and FF set to true": {
+			variables:      ffSet,
+			helperImage:    "gitlab/gitlab-runner-helper:x86_64-latest",
+			expectedResult: false,
 		},
 	}
 
-	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			helperImageID := fmt.Sprintf("%s-helperImage-%d", t.Name(), time.Now().Unix())
-			cacheContainerID := fmt.Sprintf("%s-cacheContainer-%d", t.Name(), time.Now().Unix())
-			containerName := fmt.Sprintf("%s-cacheContainerName-%d", t.Name(), time.Now().Unix())
-
-			mClient := docker_helpers.MockClient{}
-			defer mClient.AssertExpectations(t)
-			mClient.On("ImageInspectWithRaw", mock.Anything, mock.Anything).
-				Return(types.ImageInspect{ID: helperImageID}, nil, nil)
-			mClient.On("ContainerStart", mock.Anything, cacheContainerID, mock.Anything).Return(nil).Once()
-			mClient.On("ContainerInspect", mock.Anything, cacheContainerID).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
-						ExitCode: 0,
-					},
-				},
-			}, nil).Once()
-			if testCase.helperImage != "" {
-				mClient.On("ImagePullBlocking", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
-			}
-
-			executor := setUpExecutorForFeatureFlag(testCase.variables, testCase.helperImage, &mClient)
-
-			expectedConfig := &container.Config{
-				Image: helperImageID,
-				Cmd:   testCase.expectedCmd,
-				Volumes: map[string]struct{}{
-					cacheDir: {},
-				},
-				Labels: executor.getLabels("cache", "cache.dir="+cacheDir),
-			}
-
-			mClient.On("ContainerCreate", mock.Anything, expectedConfig, mock.Anything, mock.Anything, containerName).
-				Return(container.ContainerCreateCreatedBody{ID: cacheContainerID}, nil).
-				Once()
-
-			_, err := executor.createCacheVolume(containerName, cacheDir)
-			assert.NoError(t, err)
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			e := setUpExecutorForFeatureFlag(testCase.variables, testCase.helperImage, nil)
+			assert.Equal(t, testCase.expectedResult, e.checkOutdatedHelperImage())
 		})
 	}
 }

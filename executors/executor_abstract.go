@@ -57,22 +57,36 @@ func (e *AbstractExecutor) startBuild() error {
 		e.Build.Hostname, _ = os.Hostname()
 	}
 
-	// Start actual build
-	rootDir := e.Config.BuildsDir
-	if rootDir == "" {
-		rootDir = e.DefaultBuildsDir
-	}
-	cacheDir := e.Config.CacheDir
-	if cacheDir == "" {
-		cacheDir = e.DefaultCacheDir
-	}
-	customBuildDirEnabled := e.DefaultCustomBuildsDirEnabled
-	if e.Config.CustomBuildDir != nil {
-		customBuildDirEnabled = e.Config.CustomBuildDir.Enabled
+	return e.Build.StartBuild(
+		e.RootDir(),
+		e.CacheDir(),
+		e.CustomBuildEnabled(),
+		e.SharedBuildsDir,
+	)
+}
+
+func (e *AbstractExecutor) RootDir() string {
+	if e.Config.BuildsDir != "" {
+		return e.Config.BuildsDir
 	}
 
-	return e.Build.StartBuild(rootDir, cacheDir,
-		customBuildDirEnabled, e.SharedBuildsDir)
+	return e.DefaultBuildsDir
+}
+
+func (e *AbstractExecutor) CacheDir() string {
+	if e.Config.CacheDir != "" {
+		return e.Config.CacheDir
+	}
+
+	return e.DefaultCacheDir
+}
+
+func (e *AbstractExecutor) CustomBuildEnabled() bool {
+	if e.Config.CustomBuildDir != nil {
+		return e.Config.CustomBuildDir.Enabled
+	}
+
+	return e.DefaultCustomBuildsDirEnabled
 }
 
 func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
