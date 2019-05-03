@@ -49,6 +49,7 @@ func NewCacheContainerManager(ctx context.Context, logger debugLogger, cClient c
 func (m *cacheContainerManager) FindOrCleanExisting(containerName string, containerPath string) string {
 	inspected, err := m.containerClient.ContainerInspect(m.ctx, containerName)
 	if err != nil {
+		m.logger.Debugln(fmt.Sprintf("Error while inspecting %q container: %v", containerName, err))
 		return ""
 	}
 
