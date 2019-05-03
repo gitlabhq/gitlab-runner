@@ -22,7 +22,7 @@ type Manager interface {
 type ManagerConfig struct {
 	CacheDir          string
 	BaseContainerPath string
-	UniqName          string
+	UniqueName        string
 	DisableCache      bool
 }
 
@@ -123,7 +123,7 @@ func (m *manager) createHostBasedCacheVolume(containerPath string) error {
 		return err
 	}
 
-	hostPath := fmt.Sprintf("%s/%s/%s", m.config.CacheDir, m.config.UniqName, hashContainerPath(containerPath))
+	hostPath := fmt.Sprintf("%s/%s/%s", m.config.CacheDir, m.config.UniqueName, hashContainerPath(containerPath))
 	hostPath, err = filepath.Abs(hostPath)
 	if err != nil {
 		return err
@@ -142,7 +142,7 @@ func (m *manager) createContainerBasedCacheVolume(containerPath string) (string,
 		return "", err
 	}
 
-	containerName := fmt.Sprintf("%s-cache-%s", m.config.UniqName, hashContainerPath(containerPath))
+	containerName := fmt.Sprintf("%s-cache-%s", m.config.UniqueName, hashContainerPath(containerPath))
 	containerID := m.cacheContainersManager.FindOrCleanExisting(containerName, containerPath)
 
 	// create new cache container for that project

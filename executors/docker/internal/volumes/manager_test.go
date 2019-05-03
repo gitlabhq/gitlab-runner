@@ -176,7 +176,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 		volume            string
 		baseContainerPath string
 		cacheDir          string
-		uniqName          string
+		uniqueName        string
 
 		expectedBinding           []string
 		expectedCacheContainerIDs []string
@@ -186,33 +186,33 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 		"volume with absolute path, without baseContainerPath and with cacheDir": {
 			volume:          "/volume",
 			cacheDir:        "/cache",
-			uniqName:        "uniq",
+			uniqueName:      "uniq",
 			expectedBinding: []string{"/host:/duplicated", "/cache/uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume"},
 		},
 		"volume with absolute path, with baseContainerPath and with cacheDir": {
 			volume:            "/volume",
 			baseContainerPath: "/builds/project",
 			cacheDir:          "/cache",
-			uniqName:          "uniq",
+			uniqueName:        "uniq",
 			expectedBinding:   []string{"/host:/duplicated", "/cache/uniq/14331bf18c8e434c4b3f48a8c5cc79aa:/volume"},
 		},
 		"volume without absolute path, without baseContainerPath and with cacheDir": {
 			volume:          "volume",
 			cacheDir:        "/cache",
-			uniqName:        "uniq",
+			uniqueName:      "uniq",
 			expectedBinding: []string{"/host:/duplicated", "/cache/uniq/210ab9e731c9c36c2c38db15c28a8d1c:volume"},
 		},
 		"volume without absolute path, with baseContainerPath and with cacheDir": {
 			volume:            "volume",
 			baseContainerPath: "/builds/project",
 			cacheDir:          "/cache",
-			uniqName:          "uniq",
+			uniqueName:        "uniq",
 			expectedBinding:   []string{"/host:/duplicated", "/cache/uniq/f69aef9fb01e88e6213362a04877452d:/builds/project/volume"},
 		},
 		"duplicated volume definition": {
 			volume:          "/duplicated",
 			cacheDir:        "/cache",
-			uniqName:        "uniq",
+			uniqueName:      "uniq",
 			expectedBinding: []string{"/host:/duplicated"},
 			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
 		},
@@ -224,7 +224,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 				BaseContainerPath: testCase.baseContainerPath,
 				DisableCache:      false,
 				CacheDir:          testCase.cacheDir,
-				UniqName:          testCase.uniqName,
+				UniqueName:        testCase.uniqueName,
 			}
 
 			m := newDefaultManager(config)
@@ -243,7 +243,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 	testCases := map[string]struct {
 		volume                   string
 		baseContainerPath        string
-		uniqName                 string
+		uniqueName               string
 		expectedContainerName    string
 		expectedContainerPath    string
 		existingContainerID      string
@@ -254,7 +254,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		"volume with absolute path, without baseContainerPath and with existing container": {
 			volume:                   "/volume",
 			baseContainerPath:        "",
-			uniqName:                 "uniq",
+			uniqueName:               "uniq",
 			expectedContainerName:    "uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
 			expectedContainerPath:    "/volume",
 			existingContainerID:      "existingContainerID",
@@ -263,7 +263,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		"volume with absolute path, without baseContainerPath and with new container": {
 			volume:                   "/volume",
 			baseContainerPath:        "",
-			uniqName:                 "uniq",
+			uniqueName:               "uniq",
 			expectedContainerName:    "uniq-cache-14331bf18c8e434c4b3f48a8c5cc79aa",
 			expectedContainerPath:    "/volume",
 			existingContainerID:      "",
@@ -273,7 +273,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		"volume without absolute path, without baseContainerPath and with existing container": {
 			volume:                   "volume",
 			baseContainerPath:        "",
-			uniqName:                 "uniq",
+			uniqueName:               "uniq",
 			expectedContainerName:    "uniq-cache-210ab9e731c9c36c2c38db15c28a8d1c",
 			expectedContainerPath:    "volume",
 			existingContainerID:      "existingContainerID",
@@ -282,7 +282,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		"volume without absolute path, without baseContainerPath and with new container": {
 			volume:                   "volume",
 			baseContainerPath:        "",
-			uniqName:                 "uniq",
+			uniqueName:               "uniq",
 			expectedContainerName:    "uniq-cache-210ab9e731c9c36c2c38db15c28a8d1c",
 			expectedContainerPath:    "volume",
 			existingContainerID:      "",
@@ -292,7 +292,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		"volume without absolute path, with baseContainerPath and with existing container": {
 			volume:                   "volume",
 			baseContainerPath:        "/builds/project",
-			uniqName:                 "uniq",
+			uniqueName:               "uniq",
 			expectedContainerName:    "uniq-cache-f69aef9fb01e88e6213362a04877452d",
 			expectedContainerPath:    "/builds/project/volume",
 			existingContainerID:      "existingContainerID",
@@ -301,7 +301,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		"volume without absolute path, with baseContainerPath and with new container": {
 			volume:                   "volume",
 			baseContainerPath:        "/builds/project",
-			uniqName:                 "uniq",
+			uniqueName:               "uniq",
 			expectedContainerName:    "uniq-cache-f69aef9fb01e88e6213362a04877452d",
 			expectedContainerPath:    "/builds/project/volume",
 			existingContainerID:      "",
@@ -310,7 +310,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		},
 		"duplicated volume definition": {
 			volume:        "/duplicated",
-			uniqName:      "uniq",
+			uniqueName:    "uniq",
 			expectedError: NewErrVolumeAlreadyDefined("/duplicated"),
 		},
 	}
@@ -319,7 +319,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
 				BaseContainerPath: testCase.baseContainerPath,
-				UniqName:          testCase.uniqName,
+				UniqueName:        testCase.uniqueName,
 				DisableCache:      false,
 			}
 
@@ -356,7 +356,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t *testing.T) {
 	config := ManagerConfig{
 		BaseContainerPath: "/builds/project",
-		UniqName:          "uniq",
+		UniqueName:        "unique",
 	}
 
 	m := newDefaultManager(config)
@@ -364,11 +364,11 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 
 	defer containerManager.AssertExpectations(t)
 
-	containerManager.On("FindOrCleanExisting", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+	containerManager.On("FindOrCleanExisting", "unique-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("").
 		Once()
 
-	containerManager.On("Create", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+	containerManager.On("Create", "unique-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("", errors.New("test error")).
 		Once()
 
@@ -411,7 +411,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
 				BaseContainerPath: "/builds/project",
-				UniqName:          "uniq",
+				UniqueName:        "unique",
 			}
 
 			m := newDefaultManager(config)
@@ -423,11 +423,11 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 			require.NoError(t, err)
 
 			if testCase.volume != "/duplicated" {
-				containerManager.On("FindOrCleanExisting", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+				containerManager.On("FindOrCleanExisting", "unique-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 					Return("").
 					Once()
 
-				containerManager.On("Create", "uniq-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
+				containerManager.On("Create", "unique-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 					Return(testCase.newContainerID, testCase.containerCreateError).
 					Once()
 			}
