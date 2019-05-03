@@ -82,7 +82,6 @@ func TestCacheContainerManager_FindExistingCacheContainer(t *testing.T) {
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			m, cClient := getCacheContainerManager()
-
 			defer cClient.AssertExpectations(t)
 
 			cClient.On("ContainerInspect", mock.Anything, containerName).
@@ -181,7 +180,7 @@ func TestCacheContainerManager_CreateCacheContainer(t *testing.T) {
 					return config.Cmd[0] == expectedCommand[0]
 				})
 
-				cClient.On("LabelContainer", configMatcher, "cache", "cache.dir=container-path").
+				cClient.On("LabelContainer", configMatcher, "cache", fmt.Sprintf("cache.dir=%s", containerPath)).
 					Once()
 
 				cClient.On("ContainerCreate", mock.Anything, configMatcher, mock.Anything, mock.Anything, containerName).
