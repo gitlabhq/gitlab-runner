@@ -27,7 +27,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -60,6 +60,8 @@ type executor struct {
 	links []string
 
 	devices []container.DeviceMapping
+
+	helperImageInfo helperimage.Info
 
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
@@ -278,41 +280,32 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		return e.getDockerImage(imageNameFromConfig)
 	}
 
-	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
-		OSType:          e.info.OSType,
-		Architecture:    e.info.Architecture,
-		OperatingSystem: e.info.OperatingSystem,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", helperImageInfo))
-	image, _, err := e.client.ImageInspectWithRaw(e.Context, helperImageInfo.String())
+	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
+	image, _, err := e.client.ImageInspectWithRaw(e.Context, e.helperImageInfo.String())
 	if err == nil {
 		return &image, nil
 	}
 
 	// Try to load prebuilt image from local filesystem
-	loadedImage := e.getLocalDockerImage(helperImageInfo)
+	loadedImage := e.getLocalHelperImage()
 	if loadedImage != nil {
 		return loadedImage, nil
 	}
 
 	// Fallback to getting image from DockerHub
-	e.Debugln(fmt.Sprintf("Loading image form registry: %s", helperImageInfo))
-	return e.getDockerImage(helperImageInfo.String())
+	e.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
+	return e.getDockerImage(e.helperImageInfo.String())
 }
 
-func (e *executor) getLocalDockerImage(helperImageInfo helperimage.Info) *types.ImageInspect {
-	if !helperImageInfo.IsSupportingLocalImport {
+func (e *executor) getLocalHelperImage() *types.ImageInspect {
+	if !e.helperImageInfo.IsSupportingLocalImport {
 		return nil
 	}
 
-	architecture := helperImageInfo.Architecture
+	architecture := e.helperImageInfo.Architecture
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
-		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, helperImageInfo.Tag)
+		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, e.helperImageInfo.Tag)
 		if err != nil {
 			e.Debugln("Failed to load prebuilt image from:", dockerPrebuiltImageFilePath, "error:", err)
 			continue
@@ -963,7 +956,18 @@ func (e *executor) connectDocker() error {
 		return err
 	}
 
-	return e.validateOSType()
+	err = e.validateOSType()
+	if err != nil {
+		return err
+	}
+
+	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:          e.info.OSType,
+		Architecture:    e.info.Architecture,
+		OperatingSystem: e.info.OperatingSystem,
+	})
+
+	return err
 }
 
 // validateOSType checks if the ExecutorOptions metadata matches with the docker

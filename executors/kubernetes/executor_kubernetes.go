@@ -152,7 +152,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	containerCommand := s.BuildShell.DockerCommand
 	if cmd.Predefined {
 		containerName = "helper"
-		containerCommand = common.ContainerCommandBuild
+		containerCommand = s.helperImageInfo.Cmd
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

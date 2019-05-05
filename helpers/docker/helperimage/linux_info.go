@@ -5,6 +5,8 @@ import (
 	"runtime"
 )
 
+var bashCmd = []string{"gitlab-runner-build"}
+
 type linuxInfo struct{}
 
 func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
@@ -15,6 +17,7 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 		Name:         name,
 		Tag:          fmt.Sprintf("%s-%s", arch, revision),
 		IsSupportingLocalImport: true,
+		Cmd: bashCmd,
 	}, nil
 
 }

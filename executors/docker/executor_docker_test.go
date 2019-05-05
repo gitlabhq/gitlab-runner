@@ -200,7 +200,10 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 
 	e := executor{
 		client: &c,
-		info:   types.Info{OSType: helperimage.OSTypeLinux},
+		info: types.Info{
+			OSType:       helperimage.OSTypeLinux,
+			Architecture: "amd64",
+		},
 	}
 
 	options := buildImagePullOptions(e, imageName)
@@ -213,6 +216,13 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.Build.JobInfo.ProjectID = 0
 	e.Build.Runner.Token = "abcdef1234567890"
 	e.Context = context.Background()
+	var err error
+	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:          e.info.OSType,
+		Architecture:    e.info.Architecture,
+		OperatingSystem: e.info.OperatingSystem,
+	})
+	require.NoError(t, err)
 
 	c.On("ImagePullBlocking", e.Context, imageName, options).
 		Return(nil).
@@ -250,7 +260,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(nil).
 		Once()
 
-	err := e.createVolumesManager()
+	err = e.createVolumesManager()
 	require.NoError(t, err)
 
 	linksMap := make(map[string]*types.Container)
@@ -1267,7 +1277,10 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 
 	e := &executor{}
 	e.client = c
-	e.info = types.Info{OSType: helperimage.OSTypeLinux}
+	e.info = types.Info{
+		OSType:       helperimage.OSTypeLinux,
+		Architecture: "amd64",
+	}
 	e.Config.Docker = dockerConfig
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
@@ -1276,6 +1289,13 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 	e.BuildShell = &common.ShellConfiguration{
 		Environment: []string{},
 	}
+	var err error
+	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:          e.info.OSType,
+		Architecture:    e.info.Architecture,
+		OperatingSystem: e.info.OperatingSystem,
+	})
+	require.NoError(t, err)
 
 	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner-helper:x86_64-latest").
 		Return(types.ImageInspect{ID: "helper-image-id"}, nil, nil).Once()
