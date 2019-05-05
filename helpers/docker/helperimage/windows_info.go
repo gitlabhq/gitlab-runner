@@ -23,6 +23,8 @@ var supportedOSVersions = map[string]string{
 
 var ErrUnsupportedOSVersion = errors.New("could not determine windows version")
 
+var powerShellCmd = []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"}
+
 type windowsInfo struct{}
 
 func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
@@ -36,6 +38,7 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 		Name:         name,
 		Tag:          fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, osVersion),
 		IsSupportingLocalImport: false,
+		Cmd: powerShellCmd,
 	}, nil
 
 }

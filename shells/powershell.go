@@ -13,6 +13,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
+const dockerWindowsExecutor = "docker-windows"
+
 type PowerShell struct {
 	AbstractShell
 }
@@ -241,10 +243,11 @@ func (b *PowerShell) GetName() string {
 
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
 	script = &common.ShellConfiguration{
-		Command:   "powershell",
-		Arguments: []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
-		PassFile:  true,
-		Extension: "ps1",
+		Command:       "powershell",
+		Arguments:     []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
+		PassFile:      info.Build.Runner.Executor != dockerWindowsExecutor,
+		Extension:     "ps1",
+		DockerCommand: []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"},
 	}
 	return
 }
@@ -263,7 +266,12 @@ func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.Sh
 	}
 
 	err = b.writeScript(w, buildStage, info)
-	script = w.Finish(info.Build.IsDebugTraceEnabled())
+
+	// No need to set up BOM or tracing since no script was generated.
+	if w.Buffer.Len() > 0 {
+		script = w.Finish(info.Build.IsDebugTraceEnabled())
+	}
+
 	return
 }
 
