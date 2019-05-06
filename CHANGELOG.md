@@ -1,3 +1,8 @@
+v11.11.0-rc2 (2019-04-06)
+
+- Add powershell support for Docker Executor !1243
+- Support windows docker volumes configuration !1269
+
 v11.11.0-rc1 (2019-04-05)
 
 - Fix git lfs not getting submodule objects !1298
