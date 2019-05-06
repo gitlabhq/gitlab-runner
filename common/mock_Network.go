@@ -26,12 +26,23 @@ func (_m *MockNetwork) DownloadArtifacts(config JobCredentials, artifactsFile st
 	return r0
 }
 
-// PatchTrace provides a mock function with given fields: config, jobCredentials, tracePart
-func (m *MockNetwork) PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) (int, UpdateState) {
-	ret := m.Called(config, jobCredentials, content, startOffset)
+// PatchTrace provides a mock function with given fields: config, jobCredentials, content, startOffset
+func (_m *MockNetwork) PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) (int, UpdateState) {
+	ret := _m.Called(config, jobCredentials, content, startOffset)
 
-	r0 := ret.Get(0).(int)
-	r1 := ret.Get(1).(UpdateState)
+	var r0 int
+	if rf, ok := ret.Get(0).(func(RunnerConfig, *JobCredentials, []byte, int) int); ok {
+		r0 = rf(config, jobCredentials, content, startOffset)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	var r1 UpdateState
+	if rf, ok := ret.Get(1).(func(RunnerConfig, *JobCredentials, []byte, int) UpdateState); ok {
+		r1 = rf(config, jobCredentials, content, startOffset)
+	} else {
+		r1 = ret.Get(1).(UpdateState)
+	}
 
 	return r0, r1
 }
