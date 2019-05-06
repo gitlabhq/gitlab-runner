@@ -24,6 +24,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
@@ -566,38 +567,54 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 
 func TestPrepareBuildsDir(t *testing.T) {
 	tests := map[string]struct {
+		osType                  string
 		rootDir                 string
 		volumes                 []string
 		expectedSharedBuildsDir bool
 		expectedError           error
 	}{
 		"rootDir mounted as host based volume": {
+			osType:                  parser.OSTypeLinux,
 			rootDir:                 "/build",
 			volumes:                 []string{"/build:/build"},
 			expectedSharedBuildsDir: true,
 		},
 		"rootDir mounted as container based volume": {
+			osType:                  parser.OSTypeLinux,
 			rootDir:                 "/build",
 			volumes:                 []string{"/build"},
 			expectedSharedBuildsDir: false,
 		},
 		"rootDir not mounted as volume": {
+			osType:                  parser.OSTypeLinux,
 			rootDir:                 "/build",
 			volumes:                 []string{"/folder:/folder"},
 			expectedSharedBuildsDir: false,
 		},
 		"rootDir's parent mounted as volume": {
+			osType:                  parser.OSTypeLinux,
 			rootDir:                 "/build/other/directory",
 			volumes:                 []string{"/build/:/build"},
 			expectedSharedBuildsDir: true,
 		},
 		"rootDir is not an absolute path": {
+			osType:        parser.OSTypeLinux,
 			rootDir:       "builds",
 			expectedError: buildDirectoryNotAbsoluteErr,
 		},
 		"rootDir is /": {
+			osType:        parser.OSTypeLinux,
 			rootDir:       "/",
 			expectedError: buildDirectoryIsRootPathErr,
+		},
+		"error on volume parsing": {
+			osType:        parser.OSTypeLinux,
+			rootDir:       "/build",
+			volumes:       []string{""},
+			expectedError: parser.NewInvalidVolumeSpecErr(""),
+		},
+		"error on volume parser creation": {
+			expectedError: errors.New(`couldn't create volumes parser: unsupported OSType ""`),
 		},
 	}
 
@@ -620,7 +637,11 @@ func TestPrepareBuildsDir(t *testing.T) {
 				AbstractExecutor: executors.AbstractExecutor{
 					Config: c,
 				},
+				info: types.Info{
+					OSType: test.osType,
+				},
 			}
+
 			err := e.prepareBuildsDir(options)
 			assert.Equal(t, test.expectedError, err)
 			assert.Equal(t, test.expectedSharedBuildsDir, e.SharedBuildsDir)

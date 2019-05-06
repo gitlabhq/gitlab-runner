@@ -94,13 +94,21 @@ func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
 }
 
 func (e *AbstractExecutor) Prepare(options common.ExecutorPrepareOptions) error {
+	e.PrepareConfiguration(options)
+
+	return e.PrepareBuildAndShell()
+}
+
+func (e *AbstractExecutor) PrepareConfiguration(options common.ExecutorPrepareOptions) {
 	e.currentStage = common.ExecutorStagePrepare
 	e.Context = options.Context
 	e.Config = *options.Config
 	e.Build = options.Build
 	e.Trace = options.Trace
 	e.BuildLogger = common.NewBuildLogger(options.Trace, options.Build.Log())
+}
 
+func (e *AbstractExecutor) PrepareBuildAndShell() error {
 	err := e.startBuild()
 	if err != nil {
 		return err

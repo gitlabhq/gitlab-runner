@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 )
 
 func newDebugLoggerMock() *mockDebugLogger {
@@ -25,7 +27,7 @@ func TestErrVolumeAlreadyDefined(t *testing.T) {
 func TestNewDefaultManager(t *testing.T) {
 	logger := newDebugLoggerMock()
 
-	m := NewManager(logger, nil, ManagerConfig{})
+	m := NewManager(logger, nil, nil, ManagerConfig{})
 	assert.IsType(t, &manager{}, m)
 }
 
@@ -47,9 +49,17 @@ func addCacheContainerManager(manager *manager) *MockCacheContainersManager {
 	return containerManager
 }
 
+func addParser(manager *manager) *parser.MockParser {
+	parserMock := new(parser.MockParser)
+	manager.parser = parserMock
+
+	return parserMock
+}
+
 func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 	testCases := map[string]struct {
 		volume            string
+		parsedVolume      *parser.Volume
 		baseContainerPath string
 		expectedBinding   []string
 		expectedError     error
@@ -60,24 +70,29 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 		},
 		"volume with absolute path": {
 			volume:          "/host:/volume",
+			parsedVolume:    &parser.Volume{Source: "/host", Destination: "/volume"},
 			expectedBinding: []string{"/host:/duplicated", "/host:/volume"},
 		},
 		"volume with absolute path and with baseContainerPath specified": {
 			volume:            "/host:/volume",
+			parsedVolume:      &parser.Volume{Source: "/host", Destination: "/volume"},
 			baseContainerPath: "/builds",
 			expectedBinding:   []string{"/host:/duplicated", "/host:/volume"},
 		},
 		"volume without absolute path and without baseContainerPath specified": {
 			volume:          "/host:volume",
+			parsedVolume:    &parser.Volume{Source: "/host", Destination: "volume"},
 			expectedBinding: []string{"/host:/duplicated", "/host:volume"},
 		},
 		"volume without absolute path and with baseContainerPath specified": {
 			volume:            "/host:volume",
+			parsedVolume:      &parser.Volume{Source: "/host", Destination: "volume"},
 			baseContainerPath: "/builds/project",
 			expectedBinding:   []string{"/host:/duplicated", "/host:/builds/project/volume"},
 		},
 		"duplicated volume specification": {
 			volume:          "/host/new:/duplicated",
+			parsedVolume:    &parser.Volume{Source: "/host/new", Destination: "/duplicated"},
 			expectedBinding: []string{"/host:/duplicated"},
 			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
 		},
@@ -91,8 +106,21 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 
 			m := newDefaultManager(config)
 
+			volumeParser := addParser(m)
+			defer volumeParser.AssertExpectations(t)
+
+			volumeParser.On("ParseVolume", "/host:/duplicated").
+				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
+				Once()
+
 			err := m.Create("/host:/duplicated")
 			require.NoError(t, err)
+
+			if len(testCase.volume) > 0 {
+				volumeParser.On("ParseVolume", testCase.volume).
+					Return(testCase.parsedVolume, nil).
+					Once()
+			}
 
 			err = m.Create(testCase.volume)
 			assert.Equal(t, testCase.expectedError, err)
@@ -106,6 +134,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 	testCases := map[string]struct {
 		volume            string
+		parsedVolume      *parser.Volume
 		baseContainerPath string
 
 		expectedCacheContainerIDs []string
@@ -117,25 +146,30 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 		},
 		"volume with absolute path, without baseContainerPath and with disableCache": {
 			volume:            "/volume",
+			parsedVolume:      &parser.Volume{Destination: "/volume"},
 			baseContainerPath: "",
 			expectedError:     ErrCacheVolumesDisabled,
 		},
 		"volume with absolute path, with baseContainerPath and with disableCache": {
 			volume:            "/volume",
+			parsedVolume:      &parser.Volume{Destination: "/volume"},
 			baseContainerPath: "/builds/project",
 			expectedError:     ErrCacheVolumesDisabled,
 		},
 		"volume without absolute path, without baseContainerPath and with disableCache": {
 			volume:        "volume",
+			parsedVolume:  &parser.Volume{Destination: "volume"},
 			expectedError: ErrCacheVolumesDisabled,
 		},
 		"volume without absolute path, with baseContainerPath and with disableCache": {
 			volume:            "volume",
+			parsedVolume:      &parser.Volume{Destination: "volume"},
 			baseContainerPath: "/builds/project",
 			expectedError:     ErrCacheVolumesDisabled,
 		},
 		"duplicated volume definition": {
 			volume:            "/duplicated",
+			parsedVolume:      &parser.Volume{Destination: "/duplicated"},
 			baseContainerPath: "",
 			expectedError:     ErrCacheVolumesDisabled,
 		},
@@ -150,8 +184,21 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 			m := newDefaultManager(config)
 
+			volumeParser := addParser(m)
+			defer volumeParser.AssertExpectations(t)
+
+			volumeParser.On("ParseVolume", "/host:/duplicated").
+				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
+				Once()
+
 			err := m.Create("/host:/duplicated")
 			require.NoError(t, err)
+
+			if len(testCase.volume) > 0 {
+				volumeParser.On("ParseVolume", testCase.volume).
+					Return(testCase.parsedVolume, nil).
+					Once()
+			}
 
 			err = m.Create(testCase.volume)
 			assert.Equal(t, testCase.expectedError, err)
@@ -218,8 +265,19 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 
 			m := newDefaultManager(config)
 
+			volumeParser := addParser(m)
+			defer volumeParser.AssertExpectations(t)
+
+			volumeParser.On("ParseVolume", "/host:/duplicated").
+				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
+				Once()
+
 			err := m.Create("/host:/duplicated")
 			require.NoError(t, err)
+
+			volumeParser.On("ParseVolume", testCase.volume).
+				Return(&parser.Volume{Destination: testCase.volume}, nil).
+				Once()
 
 			err = m.Create(testCase.volume)
 			assert.Equal(t, testCase.expectedError, err)
@@ -314,8 +372,16 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 
 			m := newDefaultManager(config)
 			containerManager := addCacheContainerManager(m)
+			volumeParser := addParser(m)
 
-			defer containerManager.AssertExpectations(t)
+			defer func() {
+				containerManager.AssertExpectations(t)
+				volumeParser.AssertExpectations(t)
+			}()
+
+			volumeParser.On("ParseVolume", "/host:/duplicated").
+				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
+				Once()
 
 			err := m.Create("/host:/duplicated")
 			require.NoError(t, err)
@@ -331,6 +397,10 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased(t *testing.
 						Once()
 				}
 			}
+
+			volumeParser.On("ParseVolume", testCase.volume).
+				Return(&parser.Volume{Destination: testCase.volume}, nil).
+				Once()
 
 			err = m.Create(testCase.volume)
 			assert.Equal(t, testCase.expectedError, err)
@@ -350,8 +420,12 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 
 	m := newDefaultManager(config)
 	containerManager := addCacheContainerManager(m)
+	volumeParser := addParser(m)
 
-	defer containerManager.AssertExpectations(t)
+	defer func() {
+		containerManager.AssertExpectations(t)
+		volumeParser.AssertExpectations(t)
+	}()
 
 	containerManager.On("FindOrCleanExisting", "unique-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("").
@@ -359,6 +433,24 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 
 	containerManager.On("Create", "unique-cache-f69aef9fb01e88e6213362a04877452d", "/builds/project/volume").
 		Return("", errors.New("test error")).
+		Once()
+
+	volumeParser.On("ParseVolume", "volume").
+		Return(&parser.Volume{Destination: "volume"}, nil).
+		Once()
+
+	err := m.Create("volume")
+	assert.Error(t, err)
+}
+
+func TestDefaultManager_CreateUserVolumes_ParserError(t *testing.T) {
+	m := newDefaultManager(ManagerConfig{})
+
+	volumeParser := addParser(m)
+	defer volumeParser.AssertExpectations(t)
+
+	volumeParser.On("ParseVolume", "volume").
+		Return(nil, errors.New("parser-test-error")).
 		Once()
 
 	err := m.Create("volume")
@@ -369,6 +461,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 	testCases := map[string]struct {
 		volume                   string
 		newContainerID           string
+		returnedParsedVolume     *parser.Volume
 		containerCreateError     error
 		expectedContainerName    string
 		expectedContainerPath    string
@@ -378,6 +471,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 	}{
 		"volume created": {
 			volume:                   "volume",
+			returnedParsedVolume:     &parser.Volume{Destination: "volume"},
 			newContainerID:           "newContainerID",
 			expectedContainerName:    "uniq-cache-f69aef9fb01e88e6213362a04877452d",
 			expectedContainerPath:    "/builds/project/volume",
@@ -386,6 +480,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 		},
 		"cache container creation error": {
 			volume:               "volume",
+			returnedParsedVolume: &parser.Volume{Destination: "volume"},
 			newContainerID:       "",
 			containerCreateError: errors.New("test-error"),
 			expectedError:        errors.New("test-error"),
@@ -405,8 +500,16 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 
 			m := newDefaultManager(config)
 			containerManager := addCacheContainerManager(m)
+			volumeParser := addParser(m)
 
-			defer containerManager.AssertExpectations(t)
+			defer func() {
+				containerManager.AssertExpectations(t)
+				volumeParser.AssertExpectations(t)
+			}()
+
+			volumeParser.On("ParseVolume", "/host:/duplicated").
+				Return(&parser.Volume{Source: "/host", Destination: "/duplicated"}, nil).
+				Once()
 
 			err := m.Create("/host:/duplicated")
 			require.NoError(t, err)

@@ -3,27 +3,31 @@ package volumes
 import (
 	"crypto/md5"
 	"fmt"
-	"path"
-	"strings"
+	"path/filepath"
+
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 )
 
 type debugLogger interface {
 	Debugln(args ...interface{})
 }
 
-func IsHostMountedVolume(dir string, volumes ...string) bool {
+func IsHostMountedVolume(volumeParser parser.Parser, dir string, volumes ...string) (bool, error) {
 	for _, volume := range volumes {
-		hostVolume := strings.Split(volume, ":")
+		parsedVolume, err := volumeParser.ParseVolume(volume)
+		if err != nil {
+			return false, err
+		}
 
-		if len(hostVolume) < 2 {
+		if parsedVolume.Len() < 2 {
 			continue
 		}
 
-		if isParentOf(path.Clean(hostVolume[1]), path.Clean(dir)) {
-			return true
+		if isParentOf(filepath.Clean(parsedVolume.Destination), filepath.Clean(dir)) {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func isParentOf(parent string, dir string) bool {
@@ -31,7 +35,7 @@ func isParentOf(parent string, dir string) bool {
 		if dir == parent {
 			return true
 		}
-		dir = path.Dir(dir)
+		dir = filepath.Dir(dir)
 	}
 	return false
 }

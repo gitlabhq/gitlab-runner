@@ -26,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
@@ -1073,6 +1074,7 @@ func (e *executor) createBuildVolume() error {
 
 	return nil
 }
+
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.SetCurrentStage(DockerExecutorStagePrepare)
 
@@ -1080,12 +1082,19 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("missing docker configuration")
 	}
 
-	err := e.prepareBuildsDir(options)
+	e.AbstractExecutor.PrepareConfiguration(options)
+
+	err := e.connectDocker()
 	if err != nil {
 		return err
 	}
 
-	err = e.AbstractExecutor.Prepare(options)
+	err = e.prepareBuildsDir(options)
+	if err != nil {
+		return err
+	}
+
+	err = e.AbstractExecutor.PrepareBuildAndShell()
 	if err != nil {
 		return err
 	}
@@ -1101,11 +1110,6 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	e.Println("Using Docker executor with image", imageName, "...")
 
-	err = e.connectDocker()
-	if err != nil {
-		return err
-	}
-
 	err = e.createDependencies()
 	if err != nil {
 		return err
@@ -1120,12 +1124,22 @@ var (
 )
 
 func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
+	volumeParser, err := parser.New(e.info)
+	if err != nil {
+		return fmt.Errorf("couldn't create volumes parser: %v", err)
+	}
+
+	isHostMounted, err := volumes.IsHostMountedVolume(volumeParser, e.RootDir(), options.Config.Docker.Volumes...)
+	if err != nil {
+		return err
+	}
+
 	// We need to set proper value for e.SharedBuildsDir because
 	// it's required to properly start the job, what is done inside of
 	// e.AbstractExecutor.Prepare()
 	// And a started job is required for Volumes Manager to work, so it's
 	// done before the manager is even created.
-	if volumes.IsHostMountedVolume(e.RootDir(), options.Config.Docker.Volumes...) {
+	if isHostMounted {
 		e.SharedBuildsDir = true
 	}
 
