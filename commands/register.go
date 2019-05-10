@@ -34,6 +34,13 @@ type RegisterCommand struct {
 	common.RunnerConfig
 }
 
+type AccessLevel string
+
+const (
+	NotProtected AccessLevel = "not_protected"
+	Protected    AccessLevel = "ref_protected"
+)
+
 func (s *RegisterCommand) askOnce(prompt string, result *string, allowEmpty bool) bool {
 	println(prompt)
 	if *result != "" {
@@ -240,6 +247,13 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	if err != nil {
 		logrus.Panicln(err)
 	}
+
+	validAccessLevels := []AccessLevel{NotProtected, Protected}
+	if !validateAccessLevel(validAccessLevels, s.AccessLevel) {
+		logrus.Panicln("Given access-level is not valid. " +
+			"Please refer to gitlab-runner register -h for the correct options.")
+	}
+
 	s.askRunner()
 
 	if !s.LeaveRunner {
@@ -300,6 +314,21 @@ func newRegisterCommand() *RegisterCommand {
 		Paused:  false,
 		network: network.NewGitLabClient(),
 	}
+}
+
+func validateAccessLevel(levels []AccessLevel, givenLevel string) bool {
+	// Validate that if an AccessLevel is provided, it is within a defined list
+	if givenLevel == "" {
+		return true
+	}
+
+	for _, level := range levels {
+		if AccessLevel(givenLevel) == level {
+			return true
+		}
+	}
+
+	return false
 }
 
 func init() {
