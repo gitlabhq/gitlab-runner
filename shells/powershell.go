@@ -123,14 +123,26 @@ func (b *PsWriter) IfFile(path string) {
 }
 
 func (b *PsWriter) IfCmd(cmd string, arguments ...string) {
-	b.Line(b.buildCommand(cmd, arguments...) + " 2>$null")
-	b.Line("if($?) {")
-	b.Indent()
+	b.ifInTryCatch(b.buildCommand(cmd, arguments...) + " 2>$null")
 }
 
 func (b *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
-	b.Line(b.buildCommand(cmd, arguments...))
-	b.Line("if($?) {")
+	b.ifInTryCatch(b.buildCommand(cmd, arguments...))
+}
+
+func (b *PsWriter) ifInTryCatch(cmd string) {
+	b.Line("Set-Variable -Name cmdErr -Value $false")
+	b.Line("Try {")
+	b.Indent()
+	b.Line(cmd)
+	b.Line("if(!$?) { throw $LASTEXITCODE }")
+	b.Unindent()
+	b.Line("} Catch {")
+	b.Indent()
+	b.Line("Set-Variable -Name cmdErr -Value $true")
+	b.Unindent()
+	b.Line("}")
+	b.Line("if(!$cmdErr) {")
 	b.Indent()
 }
 
