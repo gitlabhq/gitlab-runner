@@ -1,3 +1,7 @@
+v11.11.0-rc3 (2019-04-12)
+
+- Fix PowerShell cloning !1338
+
 v11.11.0-rc2 (2019-04-06)
 
 - Add powershell support for Docker Executor !1243
