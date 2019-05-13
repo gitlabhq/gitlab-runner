@@ -1000,6 +1000,11 @@ func (e *executor) createDependencies() error {
 		return common.MakeBuildError("failed to create volumes %v", err)
 	}
 
+	err = e.createBuildVolume()
+	if err != nil {
+		return err
+	}
+
 	e.SetCurrentStage(DockerExecutorStageCreatingServices)
 	e.Debugln("Creating services...")
 	err = e.createServices()
@@ -1034,13 +1039,13 @@ func (e *executor) createVolumes() error {
 		}
 	}
 
-	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
-	e.Debugln("Creating build volume...")
-
-	return e.createBuildVolume()
+	return nil
 }
 
 func (e *executor) createBuildVolume() error {
+	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
+	e.Debugln("Creating build volume...")
+
 	jobsDir := e.Build.RootDir
 
 	// TODO: Remove in 12.3
