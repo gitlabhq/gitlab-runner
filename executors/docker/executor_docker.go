@@ -989,7 +989,7 @@ func (e *executor) validateOSType() error {
 	return nil
 }
 
-func (e *executor) createDependencies() error {
+func (e *executor) createDependenciesV2() error {
 	err := e.bindDevices()
 	if err != nil {
 		return err
@@ -1115,7 +1115,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	e.Println("Using Docker executor with image", imageName, "...")
 
-	err = e.createDependencies()
+	err = e.createDependenciesV2()
 	if err != nil {
 		return err
 	}
