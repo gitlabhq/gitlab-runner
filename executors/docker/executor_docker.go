@@ -992,6 +992,30 @@ func (e *executor) validateOSType() error {
 	return nil
 }
 
+func (e *executor) createDependenciesV1() error {
+	err := e.bindDevices()
+	if err != nil {
+		return err
+	}
+
+	err = e.createBuildVolume()
+	if err != nil {
+		return err
+	}
+
+	err = e.createServices()
+	if err != nil {
+		return err
+	}
+
+	err = e.createVolumes()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (e *executor) createDependenciesV2() error {
 	err := e.bindDevices()
 	if err != nil {
