@@ -1000,8 +1000,8 @@ func (e *executor) createDependencies() error {
 		e.createServices,
 	}
 
-	if false {
-		// TODO: feature flag for control
+	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyVolumesMountingOrder) {
+		// TODO: Remove in 12.6
 		createDependenciesStrategy = []func() error{
 			e.bindDevices,
 			e.createBuildVolume,
