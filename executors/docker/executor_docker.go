@@ -995,6 +995,7 @@ func (e *executor) validateOSType() error {
 func (e *executor) createDependencies() error {
 	createDependenciesStrategy := []func() error{
 		e.bindDevices,
+		e.createVolumesManager,
 		e.createVolumes,
 		e.createBuildVolume,
 		e.createServices,
@@ -1004,6 +1005,7 @@ func (e *executor) createDependencies() error {
 		// TODO: Remove in 12.6
 		createDependenciesStrategy = []func() error{
 			e.bindDevices,
+			e.createVolumesManager,
 			e.createBuildVolume,
 			e.createServices,
 			e.createVolumes,
@@ -1021,16 +1023,11 @@ func (e *executor) createDependencies() error {
 }
 
 func (e *executor) createVolumes() error {
-	err := e.createVolumesManager()
-	if err != nil {
-		return err
-	}
-
 	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
 
 	for _, volume := range e.Config.Docker.Volumes {
-		err = e.volumesManager.Create(volume)
+		err := e.volumesManager.Create(volume)
 		if err == volumes.ErrCacheVolumesDisabled {
 			e.Warningln(fmt.Sprintf(
 				"Container based cache volumes creation is disabled. Will not create volume for %q",

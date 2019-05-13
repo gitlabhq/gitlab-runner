@@ -650,162 +650,29 @@ func TestPrepareBuildsDir(t *testing.T) {
 }
 
 func TestCreateVolumes(t *testing.T) {
-	defaultBuildsDir := "/default-builds-dir"
-
 	tests := map[string]struct {
 		volumes                  []string
 		buildsDir                string
 		gitStrategy              string
 		volumesManagerAssertions func(*volumes.MockManager)
-		adjustConfiguration      func(e *executor)
 		expectedError            error
 	}{
 		"no volumes defined, empty buildsDir, clone strategy, no errors": {
 			gitStrategy: "clone",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", defaultBuildsDir).
-					Return(nil).
-					Once()
-			},
-		},
-		"no volumes defined, empty buildsDir, clone strategy, duplicated entry error": {
-			gitStrategy: "clone",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", defaultBuildsDir).
-					Return(volumes.NewErrVolumeAlreadyDefined(defaultBuildsDir)).
-					Once()
-			},
-		},
-		"no volumes defined, empty buildsDir, clone strategy, other error": {
-			gitStrategy: "clone",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", defaultBuildsDir).
-					Return(errors.New("test-error")).
-					Once()
-			},
-			expectedError: errors.New("test-error"),
 		},
 		"no volumes defined, defined buildsDir, clone strategy, no errors": {
 			buildsDir:   "/builds",
 			gitStrategy: "clone",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", "/builds").
-					Return(nil).
-					Once()
-			},
-		},
-		"no volumes defined, defined buildsDir, clone strategy, duplicated entry error": {
-			buildsDir:   "/builds",
-			gitStrategy: "clone",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", "/builds").
-					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
-					Once()
-			},
-		},
-		"no volumes defined, defined buildsDir, clone strategy, other error": {
-			buildsDir:   "/builds",
-			gitStrategy: "clone",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", "/builds").
-					Return(errors.New("test-error")).
-					Once()
-			},
-			expectedError: errors.New("test-error"),
 		},
 		"no volumes defined, defined buildsDir, fetch strategy, no errors": {
 			buildsDir:   "/builds",
 			gitStrategy: "fetch",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
-					Return(nil).
-					Once()
-			},
-		},
-		"no volumes defined, defined buildsDir, fetch strategy, duplicated entry error": {
-			buildsDir:   "/builds",
-			gitStrategy: "fetch",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
-					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
-					Once()
-			},
-		},
-		"no volumes defined, defined buildsDir, fetch strategy, cache containers disabled error": {
-			buildsDir:   "/builds",
-			gitStrategy: "fetch",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
-					Return(volumes.ErrCacheVolumesDisabled).
-					Once()
-
-				vm.On("CreateTemporary", "/builds").
-					Return(nil).
-					Once()
-			},
-		},
-		"no volumes defined, defined buildsDir, fetch strategy, cache containers disabled error and temporary returns duplicated error": {
-			buildsDir:   "/builds",
-			gitStrategy: "fetch",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
-					Return(volumes.ErrCacheVolumesDisabled).
-					Once()
-
-				vm.On("CreateTemporary", "/builds").
-					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
-					Once()
-			},
-		},
-		"no volumes defined, defined buildsDir, fetch strategy, cache containers disabled error and temporary returns other error": {
-			buildsDir:   "/builds",
-			gitStrategy: "fetch",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
-					Return(volumes.ErrCacheVolumesDisabled).
-					Once()
-
-				vm.On("CreateTemporary", "/builds").
-					Return(errors.New("test-error")).
-					Once()
-			},
-			expectedError: errors.New("test-error"),
-		},
-		"no volumes defined, defined buildsDir, fetch strategy, other error": {
-			buildsDir:   "/builds",
-			gitStrategy: "fetch",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
-					Return(errors.New("test-error")).
-					Once()
-			},
-			expectedError: errors.New("test-error"),
-		},
-		// TODO: Remove in 12.3
-		"no volumes defined, defined buildsDir, clone strategy, UseLegacyBuildsDirForDocker FF enabled": {
-			buildsDir:   "/builds",
-			gitStrategy: "fetch",
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds/group").
-					Return(errors.New("test-error")).
-					Once()
-			},
-			adjustConfiguration: func(e *executor) {
-				e.Build.Variables = append(e.Build.Variables, common.JobVariable{
-					Key:   featureflags.UseLegacyBuildsDirForDocker,
-					Value: "true",
-				})
-			},
-			expectedError: errors.New("test-error"),
 		},
 		"volumes defined, empty buildsDir, clone strategy, no errors on user volume": {
 			volumes:     []string{"/volume"},
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("Create", "/volume").
-					Return(nil).
-					Once()
-				vm.On("CreateTemporary", defaultBuildsDir).
 					Return(nil).
 					Once()
 			},
@@ -816,9 +683,6 @@ func TestCreateVolumes(t *testing.T) {
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("Create", "/volume").
 					Return(volumes.ErrCacheVolumesDisabled).
-					Once()
-				vm.On("CreateTemporary", defaultBuildsDir).
-					Return(nil).
 					Once()
 			},
 		},
@@ -886,10 +750,8 @@ func TestCreateVolumes(t *testing.T) {
 							},
 						},
 					},
-					Config: c,
-					ExecutorOptions: executors.ExecutorOptions{
-						DefaultBuildsDir: defaultBuildsDir,
-					},
+					Config:          c,
+					ExecutorOptions: executors.ExecutorOptions{},
 				},
 				info: types.Info{
 					OSType: helperimage.OSTypeLinux,
@@ -901,16 +763,15 @@ func TestCreateVolumes(t *testing.T) {
 				Value: test.gitStrategy,
 			})
 
-			if test.adjustConfiguration != nil {
-				test.adjustConfiguration(e)
-			}
-
 			err := e.Build.StartBuild(
 				e.RootDir(),
 				e.CacheDir(),
 				e.CustomBuildEnabled(),
 				e.SharedBuildsDir,
 			)
+			require.NoError(t, err)
+
+			err = e.createVolumesManager()
 			require.NoError(t, err)
 
 			err = e.createVolumes()
