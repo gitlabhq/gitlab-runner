@@ -38,7 +38,7 @@ type AccessLevel string
 
 const (
 	NotProtected AccessLevel = "not_protected"
-	Protected    AccessLevel = "ref_protected"
+	RefProtected AccessLevel = "ref_protected"
 )
 
 func (s *RegisterCommand) askOnce(prompt string, result *string, allowEmpty bool) bool {
@@ -248,8 +248,8 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 		logrus.Panicln(err)
 	}
 
-	validAccessLevels := []AccessLevel{NotProtected, Protected}
-	if !validateAccessLevel(validAccessLevels, s.AccessLevel) {
+	validAccessLevels := []AccessLevel{NotProtected, RefProtected}
+	if !accessLevelValid(validAccessLevels, s.AccessLevel) {
 		logrus.Panicln("Given access-level is not valid. " +
 			"Please refer to gitlab-runner register -h for the correct options.")
 	}
@@ -316,8 +316,7 @@ func newRegisterCommand() *RegisterCommand {
 	}
 }
 
-func validateAccessLevel(levels []AccessLevel, givenLevel string) bool {
-	// Validate that if an AccessLevel is provided, it is within a defined list
+func accessLevelValid(levels []AccessLevel, givenLevel string) bool {
 	if givenLevel == "" {
 		return true
 	}
