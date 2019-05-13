@@ -597,6 +597,9 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 }
 
 func (e *executor) createServices() (err error) {
+	e.SetCurrentStage(DockerExecutorStageCreatingServices)
+	e.Debugln("Creating services...")
+
 	servicesDefinitions, err := e.getServicesDefinitions()
 	if err != nil {
 		return
@@ -1005,8 +1008,6 @@ func (e *executor) createDependenciesV2() error {
 		return err
 	}
 
-	e.SetCurrentStage(DockerExecutorStageCreatingServices)
-	e.Debugln("Creating services...")
 	err = e.createServices()
 	if err != nil {
 		return err
