@@ -992,49 +992,29 @@ func (e *executor) validateOSType() error {
 	return nil
 }
 
-func (e *executor) createDependenciesV1() error {
-	err := e.bindDevices()
-	if err != nil {
-		return err
+func (e *executor) createDependencies() error {
+	createDependenciesStrategy := []func() error{
+		e.bindDevices,
+		e.createVolumes,
+		e.createBuildVolume,
+		e.createServices,
 	}
 
-	err = e.createBuildVolume()
-	if err != nil {
-		return err
+	if false {
+		// TODO: feature flag for control
+		createDependenciesStrategy = []func() error{
+			e.bindDevices,
+			e.createBuildVolume,
+			e.createServices,
+			e.createVolumes,
+		}
 	}
 
-	err = e.createServices()
-	if err != nil {
-		return err
-	}
-
-	err = e.createVolumes()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (e *executor) createDependenciesV2() error {
-	err := e.bindDevices()
-	if err != nil {
-		return err
-	}
-
-	err = e.createVolumes()
-	if err != nil {
-		return common.MakeBuildError("failed to create volumes %v", err)
-	}
-
-	err = e.createBuildVolume()
-	if err != nil {
-		return err
-	}
-
-	err = e.createServices()
-	if err != nil {
-		return err
+	for _, setup := range createDependenciesStrategy {
+		err := setup()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -1140,7 +1120,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	e.Println("Using Docker executor with image", imageName, "...")
 
-	err = e.createDependenciesV2()
+	err = e.createDependencies()
 	if err != nil {
 		return err
 	}
