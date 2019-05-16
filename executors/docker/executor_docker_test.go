@@ -649,14 +649,86 @@ func TestPrepareBuildsDir(t *testing.T) {
 	}
 }
 
+type volumesTestCase struct {
+	volumes                  []string
+	buildsDir                string
+	gitStrategy              string
+	volumesManagerAssertions func(*volumes.MockManager)
+	expectedError            error
+}
+
+func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
+	volumesManagerMock := new(volumes.MockManager)
+
+	oldCreateVolumesManager := createVolumesManager
+	cleanup := func() {
+		volumesManagerMock.AssertExpectations(t)
+		createVolumesManager = oldCreateVolumesManager
+	}
+
+	createVolumesManager = func(_ *executor) (volumes.Manager, error) {
+		return volumesManagerMock, nil
+	}
+
+	if test.volumesManagerAssertions != nil {
+		test.volumesManagerAssertions(volumesManagerMock)
+	}
+
+	c := common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "abcdef1234567890",
+		},
+		RunnerSettings: common.RunnerSettings{
+			BuildsDir: test.buildsDir,
+			Docker: &common.DockerConfig{
+				Volumes: test.volumes,
+			},
+		},
+	}
+
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Build: &common.Build{
+				ProjectRunnerID: 0,
+				Runner:          &c,
+				JobResponse: common.JobResponse{
+					JobInfo: common.JobInfo{
+						ProjectID: 0,
+					},
+					GitInfo: common.GitInfo{
+						RepoURL: "https://gitlab.example.com/group/project.git",
+					},
+				},
+			},
+			Config:          c,
+			ExecutorOptions: executors.ExecutorOptions{},
+		},
+		info: types.Info{
+			OSType: helperimage.OSTypeLinux,
+		},
+	}
+
+	e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+		Key:   "GIT_STRATEGY",
+		Value: test.gitStrategy,
+	})
+
+	err := e.Build.StartBuild(
+		e.RootDir(),
+		e.CacheDir(),
+		e.CustomBuildEnabled(),
+		e.SharedBuildsDir,
+	)
+	require.NoError(t, err)
+
+	err = e.createVolumesManager()
+	require.NoError(t, err)
+
+	return e, cleanup
+}
+
 func TestCreateVolumes(t *testing.T) {
-	tests := map[string]struct {
-		volumes                  []string
-		buildsDir                string
-		gitStrategy              string
-		volumesManagerAssertions func(*volumes.MockManager)
-		expectedError            error
-	}{
+	tests := map[string]volumesTestCase{
 		"no volumes defined, empty buildsDir, clone strategy, no errors": {
 			gitStrategy: "clone",
 		},
@@ -710,71 +782,10 @@ func TestCreateVolumes(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			volumesManagerMock := new(volumes.MockManager)
+			e, cleanup := getExecutorForVolumesTests(t, test)
+			defer cleanup()
 
-			oldCreateVolumesManager := createVolumesManager
-			defer func() {
-				volumesManagerMock.AssertExpectations(t)
-				createVolumesManager = oldCreateVolumesManager
-			}()
-			createVolumesManager = func(_ *executor) (volumes.Manager, error) {
-				return volumesManagerMock, nil
-			}
-
-			if test.volumesManagerAssertions != nil {
-				test.volumesManagerAssertions(volumesManagerMock)
-			}
-
-			c := common.RunnerConfig{
-				RunnerCredentials: common.RunnerCredentials{
-					Token: "abcdef1234567890",
-				},
-				RunnerSettings: common.RunnerSettings{
-					BuildsDir: test.buildsDir,
-					Docker: &common.DockerConfig{
-						Volumes: test.volumes,
-					},
-				},
-			}
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					Build: &common.Build{
-						ProjectRunnerID: 0,
-						Runner:          &c,
-						JobResponse: common.JobResponse{
-							JobInfo: common.JobInfo{
-								ProjectID: 0,
-							},
-							GitInfo: common.GitInfo{
-								RepoURL: "https://gitlab.example.com/group/project.git",
-							},
-						},
-					},
-					Config:          c,
-					ExecutorOptions: executors.ExecutorOptions{},
-				},
-				info: types.Info{
-					OSType: helperimage.OSTypeLinux,
-				},
-			}
-
-			e.Build.Variables = append(e.Build.Variables, common.JobVariable{
-				Key:   "GIT_STRATEGY",
-				Value: test.gitStrategy,
-			})
-
-			err := e.Build.StartBuild(
-				e.RootDir(),
-				e.CacheDir(),
-				e.CustomBuildEnabled(),
-				e.SharedBuildsDir,
-			)
-			require.NoError(t, err)
-
-			err = e.createVolumesManager()
-			require.NoError(t, err)
-
-			err = e.createVolumes()
+			err := e.createVolumes()
 			assert.Equal(t, test.expectedError, err)
 		})
 	}
