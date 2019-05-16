@@ -316,7 +316,7 @@ sudo gitlab-runner register \
   --url "https://gitlab.com/" \
   --registration-token "PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
-  --docker-image alpine:3 \
+  --docker-image alpine:latest \
   --description "docker-runner" \
   --tag-list "docker,aws" \
   --run-untagged="true" \
@@ -330,7 +330,7 @@ look like:
 docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
   --non-interactive \
   --executor "docker" \
-  --docker-image alpine:3 \
+  --docker-image alpine:latest \
   --url "https://gitlab.com/" \
   --registration-token "PROJECT_REGISTRATION_TOKEN" \
   --description "docker-runner" \
