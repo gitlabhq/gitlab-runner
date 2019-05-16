@@ -481,7 +481,8 @@
   name = "github.com/minio/go-homedir"
   packages = ["."]
   pruneopts = "N"
-  revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
+  revision = "01701865551470435b20b226b0eafb945185b700"
+  source = "gitlab.com/steveazz/go-homedir"
 
 [[projects]]
   digest = "1:7aadf1a2b4d4faccb3afd541571dbd249c6e367e7b282ab2f71bd85f5c30f524"
