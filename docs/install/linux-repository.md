@@ -30,6 +30,7 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Mint         | qiana **_(Deprecated)_**   | April 2019            |
 | RHEL/CentOS  | 7                          | June 2024             |
 | RHEL/CentOS  | 6                          | November 2020         |
+| Fedora       | 30                         | approx. May 2020      |
 | Fedora       | 29                         | approx. November 2019 |
 | Fedora       | 28 **_(Deprecated)_**      | approx. May 2019      |
 | Fedora       | 27 **_(Deprecated)_**      | approx. November 2018 |
