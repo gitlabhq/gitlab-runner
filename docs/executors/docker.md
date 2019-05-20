@@ -20,6 +20,85 @@ Engine. Refer to the [API version
 matrix](https://docs.docker.com/develop/sdk/#api-version-matrix) for
 compatible versions of Docker.
 
+## Using Windows containers
+
+> [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in 11.11.
+
+To use Windows containers with the Docker executor, note the following
+information about limitations, supported Windows versions, and
+configuring a Windows Docker executor.
+
+### Limitations
+
+The following are some limitations of using Windows containers with
+Docker executor:
+
+- Services do not fully work (see
+  [#4186](https://gitlab.com/gitlab-org/gitlab-runner/issues/4186)).
+- Nanoserver cannot be used because it requires PowerShell 6 but GitLab
+  requires PowerShell 5 (see
+  [#3291](https://gitlab.com/gitlab-org/gitlab-runner/issues/3291)). See
+  also the list of [supported Windows
+  versions](#supported-windows-versions).
+- Docker-in-Docker is not supported, since it's [not
+  supported](https://github.com/docker-library/docker/issues/49) by
+  Docker itself.
+- Interactive web terminals are not supported.
+- Host device mounting not supported.
+- When mounting a volume directory it has to exist, or Docker will fail
+  to start the container, see
+  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/issues/3754) for
+  additional detail.
+
+### Supported Windows versions
+
+GitLab Runner only supports the following versions of Windows:
+
+- Windows Server 1809.
+- Windows Server 1803.
+
+You can only run containers based on the same OS version that the Docker
+daemon is running on. For example, the following [`Windows Server
+Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
+be used:
+
+- mcr.microsoft.com/windows/servercore:1809
+- mcr.microsoft.com/windows/servercore:1809-amd64
+- mcr.microsoft.com/windows/servercore:ltsc2019
+- mcr.microsoft.com/windows/servercore:1803
+
+### Configuring a Windows Docker executor
+
+When you register a new Runner in interactive mode,
+you can't choose `docker-windows` as an executor and must instead
+edit the `config.toml` that is created/updated.
+
+
+In addition, an incorrect Windows path for the
+[`volumes`](../configuration/advanced-configuration.md#the-runnersdocker-section)
+key is defined in `config.toml` file. User must manually edit this key
+until [#3915](https://gitlab.com/gitlab-org/gitlab-runner/issues/3915)
+is resolved.
+
+Below is an example of what the configuration for a simple Docker
+executor running Windows
+
+```
+[[runners]]
+  name = "windows-docker-2019"
+  url = "https://gitlab.com/"
+  token = "xxxxxxx"
+  executor = "docker-windows"
+  [runners.docker]
+    image = "mcr.microsoft.com/windows/servercore:1809_amd64"
+    volumes = ["c:\\cache"]
+```
+
+For other configuration options for the Docker executor, see the
+[advanced
+configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
+section.
+
 ## Workflow
 
 The Docker executor divides the job into multiple steps:
