@@ -1,5 +1,8 @@
-v11.11.0-rc1 (2019-04-05)
+v11.11.0 (2019-05-22)
 
+- Fix PowerShell cloning !1338
+- Add PowerShell support for Docker Executor !1243
+- Support windows docker volumes configuration !1269
 - Fix git lfs not getting submodule objects !1298
 - Add homebrew installation method for macOS runners !837
 - mention the 59th second timeperiod issue in the docs !490
