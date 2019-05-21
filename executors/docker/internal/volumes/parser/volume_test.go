@@ -56,11 +56,11 @@ func TestVolume_Len(t *testing.T) {
 		},
 		"destination and mode": {
 			volume:      &Volume{Destination: "destination", Mode: "mode"},
-			expectedLen: 2,
+			expectedLen: 1,
 		},
 		"all values": {
 			volume:      &Volume{Source: "source", Destination: "destination", Mode: "mode"},
-			expectedLen: 3,
+			expectedLen: 2,
 		},
 	}
 
