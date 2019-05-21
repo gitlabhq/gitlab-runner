@@ -45,9 +45,5 @@ func (v *Volume) Len() int {
 		len++
 	}
 
-	if v.Mode != "" {
-		len++
-	}
-
 	return len
 }
