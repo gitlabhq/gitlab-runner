@@ -96,6 +96,11 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 			expectedBinding: []string{"/host:/duplicated"},
 			expectedError:   NewErrVolumeAlreadyDefined("/duplicated"),
 		},
+		"volume with mode specified": {
+			volume:          "/host/new:/my/path:ro",
+			parsedVolume:    &parser.Volume{Source: "/host/new", Destination: "/my/path", Mode: "ro"},
+			expectedBinding: []string{"/host:/duplicated", "/host/new:/my/path:ro"},
+		},
 	}
 
 	for testName, testCase := range testCases {
