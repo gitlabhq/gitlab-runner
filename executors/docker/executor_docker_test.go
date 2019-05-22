@@ -666,7 +666,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 	volumesManagerMock := new(volumes.MockManager)
 
 	oldCreateVolumesManager := createVolumesManager
-	cleanup := func() {
+	closureFn := func() {
 		volumesManagerMock.AssertExpectations(t)
 		createVolumesManager = oldCreateVolumesManager
 	}
@@ -737,7 +737,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 		require.NoError(t, err)
 	}
 
-	return e, cleanup
+	return e, closureFn
 }
 
 func TestCreateVolumes(t *testing.T) {
@@ -805,8 +805,8 @@ func TestCreateVolumes(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			e, cleanup := getExecutorForVolumesTests(t, test)
-			defer cleanup()
+			e, closureFn := getExecutorForVolumesTests(t, test)
+			defer closureFn()
 
 			err := e.createVolumes()
 			assert.Equal(t, test.expectedError, err)
@@ -1001,8 +1001,8 @@ func TestCreateBuildVolume(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			e, cleanup := getExecutorForVolumesTests(t, test)
-			defer cleanup()
+			e, closureFn := getExecutorForVolumesTests(t, test)
+			defer closureFn()
 
 			err := e.createBuildVolume()
 			assert.Equal(t, test.expectedError, err)
