@@ -997,7 +997,7 @@ func (e *executor) createDependencies() error {
 
 	err = e.createVolumes()
 	if err != nil {
-		return err
+		return common.MakeBuildError("failed to create volumes %v", err)
 	}
 
 	e.SetCurrentStage(DockerExecutorStageCreatingServices)

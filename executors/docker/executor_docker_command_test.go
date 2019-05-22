@@ -18,7 +18,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 func TestDockerCommandSuccessRun(t *testing.T) {
@@ -394,7 +394,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 
 	err = build.Run(&common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
-	assert.EqualError(t, err, "canceled")
+	assert.Contains(t, err.Error(), "canceled")
 }
 
 func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {

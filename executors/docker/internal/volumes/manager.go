@@ -68,6 +68,8 @@ func (m *manager) Create(volume string) error {
 		err = m.addHostVolume(parsedVolume)
 	case 1:
 		err = m.addCacheVolume(parsedVolume)
+	default:
+		err = fmt.Errorf("unsupported volume definition %s", volume)
 	}
 
 	return err
