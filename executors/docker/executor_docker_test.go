@@ -663,12 +663,15 @@ type volumesTestCase struct {
 var volumesTestsDefaultBuildsDir = "/default-builds-dir"
 
 func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
+	clientMock := new(docker_helpers.MockClient)
 	volumesManagerMock := new(volumes.MockManager)
 
 	oldCreateVolumesManager := createVolumesManager
 	closureFn := func() {
-		volumesManagerMock.AssertExpectations(t)
 		createVolumesManager = oldCreateVolumesManager
+
+		volumesManagerMock.AssertExpectations(t)
+		clientMock.AssertExpectations(t)
 	}
 
 	createVolumesManager = func(_ *executor) (volumes.Manager, error) {
@@ -677,6 +680,10 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 
 	if test.volumesManagerAssertions != nil {
 		test.volumesManagerAssertions(volumesManagerMock)
+	}
+
+	if test.clientAssertions != nil {
+		test.clientAssertions(clientMock)
 	}
 
 	c := common.RunnerConfig{
@@ -710,6 +717,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 				DefaultBuildsDir: volumesTestsDefaultBuildsDir,
 			},
 		},
+		client: clientMock,
 		info: types.Info{
 			OSType: helperimage.OSTypeLinux,
 		},
@@ -1006,6 +1014,95 @@ func TestCreateBuildVolume(t *testing.T) {
 
 			err := e.createBuildVolume()
 			assert.Equal(t, test.expectedError, err)
+		})
+	}
+}
+
+func TestCreateDependencies(t *testing.T) {
+	testError := errors.New("test-error")
+
+	tests := map[string]struct {
+		legacyVolumesMountingOrder string
+		expectedServiceVolumes     []string
+	}{
+		"UseLegacyVolumesMountingOrder is false": {
+			legacyVolumesMountingOrder: "false",
+			expectedServiceVolumes:     []string{"/volume", "/builds"},
+		},
+		// TODO: Remove in 12.6
+		"UseLegacyVolumesMountingOrder is true": {
+			legacyVolumesMountingOrder: "true",
+			expectedServiceVolumes:     []string{"/builds"},
+		},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			testCase := volumesTestCase{
+				buildsDir: "/builds",
+				volumes:   []string{"/volume"},
+				adjustConfiguration: func(e *executor) {
+					e.Build.Services = append(e.Build.Services, common.Image{
+						Name: "alpine:latest",
+					})
+
+					e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+						Key:   featureflags.UseLegacyVolumesMountingOrder,
+						Value: test.legacyVolumesMountingOrder,
+					})
+				},
+				volumesManagerAssertions: func(vm *volumes.MockManager) {
+					binds := make([]string, 0)
+
+					vm.On("CreateTemporary", "/builds").
+						Return(nil).
+						Run(func(args mock.Arguments) {
+							binds = append(binds, args.Get(0).(string))
+						}).
+						Once()
+					vm.On("Create", "/volume").
+						Return(nil).
+						Run(func(args mock.Arguments) {
+							binds = append(binds, args.Get(0).(string))
+						}).
+						Maybe() // In the FF enabled case this assertion will be not met because of error during service starts
+					vm.On("Binds").
+						Return(func() []string {
+							return binds
+						}).
+						Once()
+					vm.On("ContainerIDs").
+						Return(nil).
+						Once()
+				},
+				clientAssertions: func(c *docker_helpers.MockClient) {
+					hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
+						return assert.Equal(t, test.expectedServiceVolumes, conf.Binds)
+					})
+
+					c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
+						Return(types.ImageInspect{}, nil, nil).
+						Once()
+					c.On("NetworkList", mock.Anything, mock.Anything).
+						Return(nil, nil).
+						Once()
+					c.On("ContainerRemove", mock.Anything, "runner-abcdef12-project-0-concurrent-0-alpine-0", mock.Anything).
+						Return(nil).
+						Once()
+					c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, "runner-abcdef12-project-0-concurrent-0-alpine-0").
+						Return(container.ContainerCreateCreatedBody{ID: "container-ID"}, nil).
+						Once()
+					c.On("ContainerStart", mock.Anything, "container-ID", mock.Anything).
+						Return(testError).
+						Once()
+				},
+			}
+
+			e, closureFn := getExecutorForVolumesTests(t, testCase)
+			defer closureFn()
+
+			err := e.createDependencies()
+			assert.Equal(t, testError, err)
 		})
 	}
 }
