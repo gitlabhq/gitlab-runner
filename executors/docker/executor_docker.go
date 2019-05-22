@@ -48,6 +48,8 @@ var DockerPrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
+var errVolumesManagerUndefined = errors.New("volumesManager is undefined")
+
 type executor struct {
 	executors.AbstractExecutor
 	client docker_helpers.Client
@@ -457,6 +459,10 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		return nil, errors.New("invalid service name")
 	}
 
+	if e.volumesManager == nil {
+		return nil, errVolumesManagerUndefined
+	}
+
 	e.Println("Starting service", service+":"+version, "...")
 	serviceImage, err := e.getDockerImage(image)
 	if err != nil {
@@ -633,6 +639,10 @@ func (e *executor) getValidContainers(containers []string) []string {
 }
 
 func (e *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
+	if e.volumesManager == nil {
+		return nil, errVolumesManagerUndefined
+	}
+
 	image, err := e.expandAndGetDockerImage(imageDefinition.Name, allowedInternalImages)
 	if err != nil {
 		return nil, err
@@ -1026,6 +1036,10 @@ func (e *executor) createVolumes() error {
 	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
 
+	if e.volumesManager == nil {
+		return errVolumesManagerUndefined
+	}
+
 	for _, volume := range e.Config.Docker.Volumes {
 		err := e.volumesManager.Create(volume)
 		if err == volumes.ErrCacheVolumesDisabled {
@@ -1047,6 +1061,10 @@ func (e *executor) createVolumes() error {
 func (e *executor) createBuildVolume() error {
 	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
 	e.Debugln("Creating build volume...")
+
+	if e.volumesManager == nil {
+		return errVolumesManagerUndefined
+	}
 
 	jobsDir := e.Build.RootDir
 

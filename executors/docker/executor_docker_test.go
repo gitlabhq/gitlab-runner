@@ -655,6 +655,8 @@ type volumesTestCase struct {
 	gitStrategy              string
 	adjustConfiguration      func(e *executor)
 	volumesManagerAssertions func(*volumes.MockManager)
+	clientAssertions         func(*docker_helpers.MockClient)
+	createVolumeManager      bool
 	expectedError            error
 }
 
@@ -730,24 +732,32 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 	)
 	require.NoError(t, err)
 
-	err = e.createVolumesManager()
-	require.NoError(t, err)
+	if test.createVolumeManager {
+		err = e.createVolumesManager()
+		require.NoError(t, err)
+	}
 
 	return e, cleanup
 }
 
 func TestCreateVolumes(t *testing.T) {
 	tests := map[string]volumesTestCase{
+		"volumes manager not created": {
+			expectedError: errVolumesManagerUndefined,
+		},
 		"no volumes defined, empty buildsDir, clone strategy, no errors": {
-			gitStrategy: "clone",
+			gitStrategy:         "clone",
+			createVolumeManager: true,
 		},
 		"no volumes defined, defined buildsDir, clone strategy, no errors": {
-			buildsDir:   "/builds",
-			gitStrategy: "clone",
+			buildsDir:           "/builds",
+			gitStrategy:         "clone",
+			createVolumeManager: true,
 		},
 		"no volumes defined, defined buildsDir, fetch strategy, no errors": {
-			buildsDir:   "/builds",
-			gitStrategy: "fetch",
+			buildsDir:           "/builds",
+			gitStrategy:         "fetch",
+			createVolumeManager: true,
 		},
 		"volumes defined, empty buildsDir, clone strategy, no errors on user volume": {
 			volumes:     []string{"/volume"},
@@ -757,6 +767,7 @@ func TestCreateVolumes(t *testing.T) {
 					Return(nil).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"volumes defined, empty buildsDir, clone strategy, cache containers disabled error on user volume": {
 			volumes:     []string{"/volume"},
@@ -766,6 +777,7 @@ func TestCreateVolumes(t *testing.T) {
 					Return(volumes.ErrCacheVolumesDisabled).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"volumes defined, empty buildsDir, clone strategy, duplicated error on user volume": {
 			volumes:     []string{"/volume"},
@@ -775,7 +787,8 @@ func TestCreateVolumes(t *testing.T) {
 					Return(volumes.NewErrVolumeAlreadyDefined("/volume")).
 					Once()
 			},
-			expectedError: volumes.NewErrVolumeAlreadyDefined("/volume"),
+			createVolumeManager: true,
+			expectedError:       volumes.NewErrVolumeAlreadyDefined("/volume"),
 		},
 		"volumes defined, empty buildsDir, clone strategy, other error on user volume": {
 			volumes:     []string{"/volume"},
@@ -785,7 +798,8 @@ func TestCreateVolumes(t *testing.T) {
 					Return(errors.New("test-error")).
 					Once()
 			},
-			expectedError: errors.New("test-error"),
+			createVolumeManager: true,
+			expectedError:       errors.New("test-error"),
 		},
 	}
 
@@ -802,6 +816,9 @@ func TestCreateVolumes(t *testing.T) {
 
 func TestCreateBuildVolume(t *testing.T) {
 	tests := map[string]volumesTestCase{
+		"volumes manager not created": {
+			expectedError: errVolumesManagerUndefined,
+		},
 		"git strategy clone, empty buildsDir, no error": {
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
@@ -809,6 +826,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(nil).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy clone, empty buildsDir, duplicated error": {
 			gitStrategy: "clone",
@@ -817,6 +835,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(volumes.NewErrVolumeAlreadyDefined(volumesTestsDefaultBuildsDir)).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy clone, empty buildsDir, other error": {
 			gitStrategy: "clone",
@@ -825,7 +844,8 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(errors.New("test-error")).
 					Once()
 			},
-			expectedError: errors.New("test-error"),
+			createVolumeManager: true,
+			expectedError:       errors.New("test-error"),
 		},
 		"git strategy clone, non-empty buildsDir, no error": {
 			gitStrategy: "clone",
@@ -835,6 +855,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(nil).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy clone, non-empty buildsDir, duplicated error": {
 			gitStrategy: "clone",
@@ -844,6 +865,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy clone, non-empty buildsDir, other error": {
 			gitStrategy: "clone",
@@ -853,7 +875,8 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(errors.New("test-error")).
 					Once()
 			},
-			expectedError: errors.New("test-error"),
+			createVolumeManager: true,
+			expectedError:       errors.New("test-error"),
 		},
 		"git strategy fetch, empty buildsDir, no error": {
 			gitStrategy: "fetch",
@@ -862,6 +885,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(nil).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy fetch, empty buildsDir, duplicated error": {
 			gitStrategy: "fetch",
@@ -870,6 +894,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(volumes.NewErrVolumeAlreadyDefined(volumesTestsDefaultBuildsDir)).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy fetch, empty buildsDir, other error": {
 			gitStrategy: "fetch",
@@ -878,7 +903,8 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(errors.New("test-error")).
 					Once()
 			},
-			expectedError: errors.New("test-error"),
+			createVolumeManager: true,
+			expectedError:       errors.New("test-error"),
 		},
 		"git strategy fetch, non-empty buildsDir, no error": {
 			gitStrategy: "fetch",
@@ -888,6 +914,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(nil).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy fetch, non-empty buildsDir, duplicated error": {
 			gitStrategy: "fetch",
@@ -897,6 +924,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy fetch, non-empty buildsDir, other error": {
 			gitStrategy: "fetch",
@@ -906,7 +934,8 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(errors.New("test-error")).
 					Once()
 			},
-			expectedError: errors.New("test-error"),
+			createVolumeManager: true,
+			expectedError:       errors.New("test-error"),
 		},
 		"git strategy fetch, non-empty buildsDir, cache volumes disabled": {
 			gitStrategy: "fetch",
@@ -919,6 +948,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(nil).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy fetch, non-empty buildsDir, cache volumes disabled, duplicated error": {
 			gitStrategy: "fetch",
@@ -931,6 +961,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy fetch, non-empty buildsDir, no error, legacy builds dir": {
 			// TODO: Remove in 12.3
@@ -947,6 +978,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(nil).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 		"git strategy clone, non-empty buildsDir, no error, legacy builds dir": {
 			// TODO: Remove in 12.3
@@ -963,6 +995,7 @@ func TestCreateBuildVolume(t *testing.T) {
 					Return(nil).
 					Once()
 			},
+			createVolumeManager: true,
 		},
 	}
 
