@@ -63,6 +63,7 @@ type FeaturesInfo struct {
 	Terminal                bool `json:"terminal"`
 	Refspecs                bool `json:"refspecs"`
 	Masking                 bool `json:"masking"`
+	Proxy                   bool `json:"proxy"`
 }
 
 type RegisterRunnerParameters struct {
@@ -185,6 +186,13 @@ type Image struct {
 	Alias      string   `json:"alias,omitempty"`
 	Command    []string `json:"command,omitempty"`
 	Entrypoint []string `json:"entrypoint,omitempty"`
+	Ports      []Port   `json:"ports,omitempty"`
+}
+
+type Port struct {
+	Number   int    `json:"number,omitempty"`
+	Protocol string `json:"protocol,omitempty"`
+	Name     string `json:"name,omitempty"`
 }
 
 type Services []Image
