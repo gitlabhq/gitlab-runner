@@ -308,9 +308,6 @@ type Config struct {
 	ListenAddress string        `toml:"listen_address,omitempty" json:"listen_address"`
 	SessionServer SessionServer `toml:"session_server,omitempty" json:"session_server"`
 
-	// TODO: Remove in 12.0
-	MetricsServerAddress string `toml:"metrics_server,omitempty" json:"metrics_server"` // DEPRECATED
-
 	Concurrent    int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
 	LogLevel      *string         `toml:"log_level" json:"log_level" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
@@ -734,17 +731,4 @@ func (c *Config) GetCheckInterval() time.Duration {
 		return time.Duration(c.CheckInterval) * time.Second
 	}
 	return CheckInterval
-}
-
-func (c *Config) ListenOrServerMetricAddress() string {
-	if c.ListenAddress != "" {
-		return c.ListenAddress
-	}
-
-	// TODO: Remove in 12.0
-	if c.MetricsServerAddress != "" {
-		logrus.Warnln("'metrics_server' configuration entry is deprecated and will be removed in one of future releases; please use 'listen_address' instead")
-	}
-
-	return c.MetricsServerAddress
 }
