@@ -5,10 +5,12 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
@@ -22,10 +24,12 @@ type Session struct {
 	Endpoint string
 	Token    string
 
-	mux *http.ServeMux
+	mux *mux.Router
 
 	interactiveTerminal terminal.InteractiveTerminal
 	terminalConn        terminal.Conn
+
+	proxyPool proxy.Pool
 
 	// Signal when client disconnects from terminal.
 	DisconnectCh chan error
@@ -85,12 +89,51 @@ func generateToken() (string, error) {
 	return token, nil
 }
 
+func (s *Session) withAuthorization(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := s.log.WithField("uri", r.RequestURI)
+		logger.Debug("Endpoint session request")
+
+		if s.Token != r.Header.Get("Authorization") {
+			logger.Error("Authorization header is not valid")
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Session) setMux() {
 	s.Lock()
 	defer s.Unlock()
 
-	s.mux = http.NewServeMux()
-	s.mux.HandleFunc(s.Endpoint+"/exec", s.execHandler)
+	s.mux = mux.NewRouter()
+	s.mux.Handle(s.Endpoint+"/proxy/{resource}/{port}/{requestedUri:.*}", s.withAuthorization(http.HandlerFunc(s.proxyHandler)))
+	s.mux.Handle(s.Endpoint+"/exec", s.withAuthorization(http.HandlerFunc(s.execHandler)))
+}
+
+func (s *Session) proxyHandler(w http.ResponseWriter, r *http.Request) {
+	logger := s.log.WithField("uri", r.RequestURI)
+	logger.Debug("Proxy session request")
+
+	params := mux.Vars(r)
+	serviceName := params["resource"]
+
+	serviceProxy := s.proxyPool[serviceName]
+	if serviceProxy == nil {
+		logger.Warn("Proxy not found")
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+	}
+
+	if serviceProxy.ConnectionHandler == nil {
+		logger.Warn("Proxy connection handler is not defined")
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+	}
+
+	serviceProxy.ConnectionHandler.ProxyRequest(w, r, params["requestedUri"], params["port"], serviceProxy.Settings)
 }
 
 func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
@@ -106,12 +149,6 @@ func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
 	if !websocket.IsWebSocketUpgrade(r) {
 		logger.Error("Request is not a web socket connection")
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		return
-	}
-
-	if s.Token != r.Header.Get("Authorization") {
-		logger.Error("Authorization header is not valid")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -179,7 +216,13 @@ func (s *Session) SetInteractiveTerminal(interactiveTerminal terminal.Interactiv
 	s.interactiveTerminal = interactiveTerminal
 }
 
-func (s *Session) Mux() *http.ServeMux {
+func (s *Session) SetProxyPool(pooler proxy.Pooler) {
+	s.Lock()
+	defer s.Unlock()
+	s.proxyPool = pooler.Pool()
+}
+
+func (s *Session) Mux() *mux.Router {
 	return s.mux
 }
 

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
 type ExecutorOptions struct {
@@ -26,6 +27,7 @@ type AbstractExecutor struct {
 	BuildShell   *common.ShellConfiguration
 	currentStage common.ExecutorStage
 	Context      context.Context
+	ProxyPool    proxy.Pool
 }
 
 func (e *AbstractExecutor) updateShell() error {
@@ -106,6 +108,7 @@ func (e *AbstractExecutor) PrepareConfiguration(options common.ExecutorPrepareOp
 	e.Build = options.Build
 	e.Trace = options.Trace
 	e.BuildLogger = common.NewBuildLogger(options.Trace, options.Build.Log())
+	e.ProxyPool = proxy.NewPool()
 }
 
 func (e *AbstractExecutor) PrepareBuildAndShell() error {
