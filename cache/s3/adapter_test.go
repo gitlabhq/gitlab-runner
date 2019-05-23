@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -109,44 +108,7 @@ func TestCacheOperation(t *testing.T) {
 	}
 }
 
-// TODO: Remove in 12.0
-func deprecatedCacheFactory() *common.CacheConfig {
-	return &common.CacheConfig{
-		Type:           "s3",
-		ServerAddress:  "server.com",
-		AccessKey:      "access",
-		SecretKey:      "key",
-		BucketName:     "test",
-		BucketLocation: "location",
-	}
-}
-
-// TODO: Remove in 12.0
-func TestS3DeprecatedConfigFormatDetection(t *testing.T) {
-	hook := test.NewGlobal()
-	s3Cache := deprecatedCacheFactory()
-
-	adapter, err := New(s3Cache, defaultTimeout, "key")
-	require.NoError(t, err)
-
-	url := adapter.GetDownloadURL()
-	assert.NotNil(t, url)
-
-	entries := hook.AllEntries()
-	message, err := entries[0].String()
-	require.NoError(t, err)
-	assert.Contains(t, message, "Runner uses S3 caching with deprecated configuration format")
-}
-
 func TestNoConfiguration(t *testing.T) {
-	oldDeprecatedConfigHandler := deprecatedConfigHandler
-	defer func() {
-		deprecatedConfigHandler = oldDeprecatedConfigHandler
-	}()
-	deprecatedConfigHandler = func(config *common.CacheConfig) *common.CacheConfig {
-		return config
-	}
-
 	s3Cache := defaultCacheFactory()
 	s3Cache.S3 = nil
 
