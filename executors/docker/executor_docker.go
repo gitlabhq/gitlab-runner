@@ -48,6 +48,8 @@ var DockerPrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
+var errVolumesManagerUndefined = errors.New("volumesManager is undefined")
+
 type executor struct {
 	executors.AbstractExecutor
 	client docker_helpers.Client
@@ -457,6 +459,10 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		return nil, errors.New("invalid service name")
 	}
 
+	if e.volumesManager == nil {
+		return nil, errVolumesManagerUndefined
+	}
+
 	e.Println("Starting service", service+":"+version, "...")
 	serviceImage, err := e.getDockerImage(image)
 	if err != nil {
@@ -597,6 +603,9 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 }
 
 func (e *executor) createServices() (err error) {
+	e.SetCurrentStage(DockerExecutorStageCreatingServices)
+	e.Debugln("Creating services...")
+
 	servicesDefinitions, err := e.getServicesDefinitions()
 	if err != nil {
 		return
@@ -630,6 +639,10 @@ func (e *executor) getValidContainers(containers []string) []string {
 }
 
 func (e *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
+	if e.volumesManager == nil {
+		return nil, errVolumesManagerUndefined
+	}
+
 	image, err := e.expandAndGetDockerImage(imageDefinition.Name, allowedInternalImages)
 	if err != nil {
 		return nil, err
@@ -990,37 +1003,45 @@ func (e *executor) validateOSType() error {
 }
 
 func (e *executor) createDependencies() error {
-	err := e.bindDevices()
-	if err != nil {
-		return err
+	createDependenciesStrategy := []func() error{
+		e.bindDevices,
+		e.createVolumesManager,
+		e.createVolumes,
+		e.createBuildVolume,
+		e.createServices,
 	}
 
-	err = e.createVolumes()
-	if err != nil {
-		return err
+	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyVolumesMountingOrder) {
+		// TODO: Remove in 12.6
+		createDependenciesStrategy = []func() error{
+			e.bindDevices,
+			e.createVolumesManager,
+			e.createBuildVolume,
+			e.createServices,
+			e.createVolumes,
+		}
 	}
 
-	e.SetCurrentStage(DockerExecutorStageCreatingServices)
-	e.Debugln("Creating services...")
-	err = e.createServices()
-	if err != nil {
-		return err
+	for _, setup := range createDependenciesStrategy {
+		err := setup()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (e *executor) createVolumes() error {
-	err := e.createVolumesManager()
-	if err != nil {
-		return err
-	}
-
 	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
 
+	if e.volumesManager == nil {
+		return errVolumesManagerUndefined
+	}
+
 	for _, volume := range e.Config.Docker.Volumes {
-		err = e.volumesManager.Create(volume)
+		err := e.volumesManager.Create(volume)
 		if err == volumes.ErrCacheVolumesDisabled {
 			e.Warningln(fmt.Sprintf(
 				"Container based cache volumes creation is disabled. Will not create volume for %q",
@@ -1034,13 +1055,17 @@ func (e *executor) createVolumes() error {
 		}
 	}
 
-	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
-	e.Debugln("Creating build volume...")
-
-	return e.createBuildVolume()
+	return nil
 }
 
 func (e *executor) createBuildVolume() error {
+	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
+	e.Debugln("Creating build volume...")
+
+	if e.volumesManager == nil {
+		return errVolumesManagerUndefined
+	}
+
 	jobsDir := e.Build.RootDir
 
 	// TODO: Remove in 12.3
