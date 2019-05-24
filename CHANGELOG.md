@@ -1,3 +1,9 @@
+v11.11.1 (2019-05-24)
+
+- Fix volume mounting when mode specified !1357
+- Add documentation for Windows Docker Executor !1345
+- Add feature flag to mounting volumes to services !1352
+
 v11.11.0 (2019-05-22)
 
 - Fix PowerShell cloning !1338
