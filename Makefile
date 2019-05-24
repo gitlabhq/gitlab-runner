@@ -25,7 +25,7 @@ DEB_PLATFORMS ?= debian/wheezy debian/jessie debian/stretch debian/buster \
 DEB_ARCHS ?= amd64 i386 armel armhf
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
-    fedora/26 fedora/27 fedora/28 fedora/29
+    fedora/26 fedora/27 fedora/28 fedora/29 fedora/30
 RPM_ARCHS ?= x86_64 i686 arm armhf
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
