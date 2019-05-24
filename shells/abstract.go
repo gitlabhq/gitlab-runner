@@ -65,28 +65,6 @@ func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, wh
 	return
 }
 
-// TODO: Remove in 12.0
-func (b *AbstractShell) writeCloneCmd(w ShellWriter, build *common.Build, projectDir string) {
-	templateDir := w.MkTmpDir("git-template")
-	args := []string{"clone", "--no-checkout", build.GetRemoteURL(), projectDir, "--template", templateDir}
-
-	templateFile := path.Join(templateDir, "config")
-	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
-	if build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
-	}
-
-	if depth := build.GetGitDepth(); depth != "" {
-		w.Notice("Cloning repository for %s with git depth set to %s...", build.GitInfo.Ref, depth)
-		args = append(args, "--depth", depth, "--branch", build.GitInfo.Ref)
-	} else {
-		w.Notice("Cloning repository...")
-	}
-
-	w.Command("git", args...)
-	w.Cd(projectDir)
-}
-
 func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
 	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
@@ -106,42 +84,6 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
 		w.Command("git", "reset", "--hard")
 		w.EndIf()
 	}
-}
-
-// TODO: Remove in 12.0
-func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
-	depth := build.GetGitDepth()
-
-	w.IfDirectory(gitDir)
-	if depth != "" {
-		w.Notice("Fetching changes for %s with git depth set to %s...", build.GitInfo.Ref, depth)
-	} else {
-		w.Notice("Fetching changes...")
-	}
-	w.Cd(projectDir)
-	w.Command("git", "config", "fetch.recurseSubmodules", "false")
-
-	if build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, build, nil)
-	}
-
-	b.writeGitCleanup(w, build)
-
-	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
-	if depth != "" {
-		var refspec string
-		if build.GitInfo.RefType == common.RefTypeTag {
-			refspec = "+refs/tags/" + build.GitInfo.Ref + ":refs/tags/" + build.GitInfo.Ref
-		} else {
-			refspec = "+refs/heads/" + build.GitInfo.Ref + ":refs/remotes/origin/" + build.GitInfo.Ref
-		}
-		w.Command("git", "fetch", "--depth", depth, "origin", "--prune", refspec)
-	} else {
-		w.Command("git", "fetch", "origin", "--prune", "+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*")
-	}
-	w.Else()
-	b.writeCloneCmd(w, build, projectDir)
-	w.EndIf()
 }
 
 func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
@@ -371,10 +313,6 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {
 	build := info.Build
 
-	if !info.Build.RefspecsAvailable() {
-		w.Warning("DEPRECATION: this GitLab server doesn't support refspecs, gitlab-runner 12.0 will no longer work with this version of GitLab")
-	}
-
 	// If LFS smudging was disabled by the user (by setting the GIT_LFS_SKIP_SMUDGE variable
 	// when defining the job) we're skipping this step.
 	//
@@ -421,24 +359,15 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 }
 
 func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Build) error {
-	hasRefspecs := build.RefspecsAvailable()
 	projectDir := build.FullProjectDir()
 	gitDir := path.Join(build.FullProjectDir(), ".git")
 
 	switch build.GetGitStrategy() {
 	case common.GitFetch:
-		if hasRefspecs {
-			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
-		} else {
-			b.writeFetchCmd(w, build, projectDir, gitDir)
-		}
+		b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
 	case common.GitClone:
 		w.RmDir(projectDir)
-		if hasRefspecs {
-			b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
-		} else {
-			b.writeCloneCmd(w, build, projectDir)
-		}
+		b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
 	case common.GitNone:
 		w.Notice("Skipping Git repository setup")
 		w.MkDir(projectDir)
