@@ -16,7 +16,7 @@ import (
 func TestNewCacheContainerManager(t *testing.T) {
 	logger := newDebugLoggerMock()
 
-	m := NewCacheContainerManager(context.Background(), logger, nil, nil, true)
+	m := NewCacheContainerManager(context.Background(), logger, nil, nil)
 	assert.IsType(t, &cacheContainerManager{}, m)
 }
 
@@ -24,11 +24,10 @@ func getCacheContainerManager() (*cacheContainerManager, *mockContainerClient) {
 	cClient := new(mockContainerClient)
 
 	m := &cacheContainerManager{
-		logger:              newDebugLoggerMock(),
-		containerClient:     cClient,
-		failedContainerIDs:  make([]string, 0),
-		helperImage:         &types.ImageInspect{ID: "helper-image"},
-		outdatedHelperImage: false,
+		logger:             newDebugLoggerMock(),
+		containerClient:    cClient,
+		failedContainerIDs: make([]string, 0),
+		helperImage:        &types.ImageInspect{ID: "helper-image"},
 	}
 
 	return m, cClient
@@ -103,6 +102,7 @@ func TestCacheContainerManager_FindExistingCacheContainer(t *testing.T) {
 func TestCacheContainerManager_CreateCacheContainer(t *testing.T) {
 	containerName := "container-name"
 	containerPath := "container-path"
+	expectedCacheCmd := []string{"gitlab-runner-helper", "cache-init", containerPath}
 
 	testCases := map[string]struct {
 		expectedContainerID       string
@@ -154,68 +154,59 @@ func TestCacheContainerManager_CreateCacheContainer(t *testing.T) {
 		},
 	}
 
-	// TODO: Remove in 12.0
-	outdatedHelperImageValues := map[bool][]string{
-		true:  {"gitlab-runner-cache", "container-path"},
-		false: {"gitlab-runner-helper", "cache-init", "container-path"},
-	}
-
 	for testName, testCase := range testCases {
-		for outdatedHelperImage, expectedCommand := range outdatedHelperImageValues {
-			t.Run(fmt.Sprintf("%s-outdated-helper-image-is-%v", testName, outdatedHelperImage), func(t *testing.T) {
-				m, cClient := getCacheContainerManager()
-				m.outdatedHelperImage = outdatedHelperImage
+		t.Run(testName, func(t *testing.T) {
+			m, cClient := getCacheContainerManager()
 
-				defer cClient.AssertExpectations(t)
+			defer cClient.AssertExpectations(t)
 
-				configMatcher := mock.MatchedBy(func(config *container.Config) bool {
-					if config.Image != "helper-image" {
-						return false
-					}
-
-					if len(config.Cmd) != len(expectedCommand) {
-						return false
-					}
-
-					return config.Cmd[0] == expectedCommand[0]
-				})
-
-				cClient.On("LabelContainer", configMatcher, "cache", fmt.Sprintf("cache.dir=%s", containerPath)).
-					Once()
-
-				cClient.On("ContainerCreate", mock.Anything, configMatcher, mock.Anything, mock.Anything, containerName).
-					Return(testCase.createResult, testCase.createError).
-					Once()
-
-				if testCase.createError == nil {
-					cClient.On("ContainerStart", mock.Anything, testCase.containerID, mock.Anything).
-						Return(testCase.startError).
-						Once()
-
-					if testCase.startError == nil {
-						cClient.On("WaitForContainer", testCase.containerID).
-							Return(testCase.waitForContainerError).
-							Once()
-					}
+			configMatcher := mock.MatchedBy(func(config *container.Config) bool {
+				if config.Image != "helper-image" {
+					return false
 				}
 
-				require.Empty(t, m.failedContainerIDs, "Initial list of failed containers should be empty")
-
-				containerID, err := m.Create(containerName, containerPath)
-				assert.Equal(t, err, testCase.expectedError)
-				assert.Equal(t, testCase.expectedContainerID, containerID)
-
-				if testCase.expectedFailedContainerID != "" {
-					assert.Len(t, m.failedContainerIDs, 1)
-					assert.Contains(
-						t, m.failedContainerIDs, testCase.expectedFailedContainerID,
-						"List of failed container should be updated with %s", testCase.expectedContainerID,
-					)
-				} else {
-					assert.Empty(t, m.failedContainerIDs, "List of failed containers should not be updated")
+				if len(config.Cmd) != len(expectedCacheCmd) {
+					return false
 				}
+
+				return config.Cmd[0] == expectedCacheCmd[0]
 			})
-		}
+
+			cClient.On("LabelContainer", configMatcher, "cache", fmt.Sprintf("cache.dir=%s", containerPath)).
+				Once()
+
+			cClient.On("ContainerCreate", mock.Anything, configMatcher, mock.Anything, mock.Anything, containerName).
+				Return(testCase.createResult, testCase.createError).
+				Once()
+
+			if testCase.createError == nil {
+				cClient.On("ContainerStart", mock.Anything, testCase.containerID, mock.Anything).
+					Return(testCase.startError).
+					Once()
+
+				if testCase.startError == nil {
+					cClient.On("WaitForContainer", testCase.containerID).
+						Return(testCase.waitForContainerError).
+						Once()
+				}
+			}
+
+			require.Empty(t, m.failedContainerIDs, "Initial list of failed containers should be empty")
+
+			containerID, err := m.Create(containerName, containerPath)
+			assert.Equal(t, err, testCase.expectedError)
+			assert.Equal(t, testCase.expectedContainerID, containerID)
+
+			if testCase.expectedFailedContainerID != "" {
+				assert.Len(t, m.failedContainerIDs, 1)
+				assert.Contains(
+					t, m.failedContainerIDs, testCase.expectedFailedContainerID,
+					"List of failed container should be updated with %s", testCase.expectedContainerID,
+				)
+			} else {
+				assert.Empty(t, m.failedContainerIDs, "List of failed containers should not be updated")
+			}
+		})
 	}
 }
 

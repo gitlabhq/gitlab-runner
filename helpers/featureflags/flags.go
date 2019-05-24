@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	DockerHelperImageV2                  string = "FF_DOCKER_HELPER_IMAGE_V2"
 	CmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
 	UseLegacyBuildsDirForDocker          string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 	UseLegacyVolumesMountingOrder        string = "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER"
@@ -25,13 +24,6 @@ type FeatureFlag struct {
 // properly formatted. It will replace the existing table with the new one, computed
 // basing on the values below
 var flags = []FeatureFlag{
-	{
-		Name:            DockerHelperImageV2,
-		DefaultValue:    "false",
-		Deprecated:      true,
-		ToBeRemovedWith: "12.0",
-		Description:     "Enable the helper image to use the new commands when [helper_image](https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runnersdocker-section) is specified. This will start using the new API that will be used in 12.0 and stop showing the warning message in the build log",
-	},
 	{
 		Name:            CmdDisableDelayedErrorLevelExpansion,
 		DefaultValue:    "false",

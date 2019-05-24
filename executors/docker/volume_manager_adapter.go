@@ -8,7 +8,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 type volumesManagerAdapter struct {
@@ -27,10 +26,6 @@ func (a *volumesManagerAdapter) WaitForContainer(id string) error {
 
 func (a *volumesManagerAdapter) RemoveContainer(ctx context.Context, id string) error {
 	return a.e.removeContainer(ctx, id)
-}
-
-func (e *executor) checkOutdatedHelperImage() bool {
-	return !e.Build.IsFeatureFlagOn(featureflags.DockerHelperImageV2) && e.Config.Docker.HelperImage != ""
 }
 
 var createVolumesManager = func(e *executor) (volumes.Manager, error) {
@@ -54,7 +49,6 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 		&e.BuildLogger,
 		adapter,
 		helperImage,
-		e.checkOutdatedHelperImage(),
 	)
 
 	config := volumes.ManagerConfig{
