@@ -2,10 +2,15 @@ package volumes
 
 import (
 	"crypto/md5"
+	"errors"
 	"fmt"
-	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+)
+
+var (
+	errDirectoryNotAbsolute = errors.New("build directory needs to be an absolute path")
+	errDirectoryIsRootPath  = errors.New("build directory needs to be a non-root path")
 )
 
 type debugLogger interface {
@@ -13,6 +18,14 @@ type debugLogger interface {
 }
 
 func IsHostMountedVolume(volumeParser parser.Parser, dir string, volumes ...string) (bool, error) {
+	if !volumeParser.Path().IsAbs(dir) {
+		return false, errDirectoryNotAbsolute
+	}
+
+	if volumeParser.Path().IsRoot(dir) {
+		return false, errDirectoryIsRootPath
+	}
+
 	for _, volume := range volumes {
 		parsedVolume, err := volumeParser.ParseVolume(volume)
 		if err != nil {
@@ -23,21 +36,11 @@ func IsHostMountedVolume(volumeParser parser.Parser, dir string, volumes ...stri
 			continue
 		}
 
-		if isParentOf(filepath.Clean(parsedVolume.Destination), filepath.Clean(dir)) {
+		if volumeParser.Path().Contains(parsedVolume.Destination, dir) {
 			return true, nil
 		}
 	}
 	return false, nil
-}
-
-func isParentOf(parent string, dir string) bool {
-	for dir != "/" && dir != "." {
-		if dir == parent {
-			return true
-		}
-		dir = filepath.Dir(dir)
-	}
-	return false
 }
 
 func hashContainerPath(containerPath string) string {

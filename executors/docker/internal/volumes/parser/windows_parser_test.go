@@ -1,3 +1,5 @@
+// +build windows
+
 package parser
 
 import (
@@ -52,7 +54,7 @@ func TestWindowsParser_ParseVolume(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			parser := newWindowsParser()
+			parser := NewWindowsParser()
 			parts, err := parser.ParseVolume(testCase.volumeSpec)
 
 			if testCase.expectedError == nil {

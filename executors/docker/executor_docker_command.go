@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 )
 
 type commandExecutor struct {
@@ -115,7 +116,7 @@ func init() {
 		},
 		ShowHostname: true,
 		Metadata: map[string]string{
-			"OSType": osTypeLinux,
+			metadataOSType: osTypeLinux,
 		},
 	}
 
@@ -125,6 +126,7 @@ func init() {
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: options,
 				},
+				volumeParser: parser.NewLinuxParser(),
 			},
 		}
 		e.SetCurrentStage(common.ExecutorStageCreated)

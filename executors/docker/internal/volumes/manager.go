@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 )
@@ -76,9 +75,14 @@ func (m *manager) Create(volume string) error {
 }
 
 func (m *manager) addHostVolume(volume *parser.Volume) error {
-	volume.Destination = m.getAbsoluteContainerPath(volume.Destination)
+	var err error
 
-	err := m.managedVolumes.Add(volume.Destination)
+	volume.Destination, err = m.getAbsoluteContainerPath(volume.Destination)
+	if err != nil {
+		return err
+	}
+
+	err = m.managedVolumes.Add(volume.Destination)
 	if err != nil {
 		return err
 	}
@@ -88,16 +92,21 @@ func (m *manager) addHostVolume(volume *parser.Volume) error {
 	return nil
 }
 
-func (m *manager) getAbsoluteContainerPath(dir string) string {
-	if filepath.IsAbs(dir) {
-		return dir
+func (m *manager) getAbsoluteContainerPath(dir string) (string, error) {
+	if m.parser.Path().IsRoot(dir) {
+		return "", errDirectoryIsRootPath
 	}
 
-	return filepath.Join(m.config.BaseContainerPath, dir)
+	if m.parser.Path().IsAbs(dir) {
+		return dir, nil
+	}
+
+	return m.parser.Path().Join(m.config.BaseContainerPath, dir), nil
 }
 
 func (m *manager) appendVolumeBind(volume *parser.Volume) {
 	m.logger.Debugln(fmt.Sprintf("Using host-based %q for %q...", volume.Source, volume.Destination))
+
 	m.volumeBindings = append(m.volumeBindings, volume.Definition())
 }
 
@@ -120,18 +129,19 @@ func (m *manager) addCacheVolume(volume *parser.Volume) error {
 }
 
 func (m *manager) createHostBasedCacheVolume(containerPath string) error {
-	containerPath = m.getAbsoluteContainerPath(containerPath)
+	var err error
 
-	err := m.managedVolumes.Add(containerPath)
+	containerPath, err = m.getAbsoluteContainerPath(containerPath)
 	if err != nil {
 		return err
 	}
 
-	hostPath := filepath.Join(m.config.CacheDir, m.config.UniqueName, hashContainerPath(containerPath))
-	hostPath, err = filepath.Abs(hostPath)
+	err = m.managedVolumes.Add(containerPath)
 	if err != nil {
 		return err
 	}
+
+	hostPath := m.parser.Path().Join(m.config.CacheDir, m.config.UniqueName, hashContainerPath(containerPath))
 
 	m.appendVolumeBind(&parser.Volume{
 		Source:      hostPath,
@@ -142,9 +152,12 @@ func (m *manager) createHostBasedCacheVolume(containerPath string) error {
 }
 
 func (m *manager) createContainerBasedCacheVolume(containerPath string) (string, error) {
-	containerPath = m.getAbsoluteContainerPath(containerPath)
+	containerPath, err := m.getAbsoluteContainerPath(containerPath)
+	if err != nil {
+		return "", err
+	}
 
-	err := m.managedVolumes.Add(containerPath)
+	err = m.managedVolumes.Add(containerPath)
 	if err != nil {
 		return "", err
 	}

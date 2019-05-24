@@ -68,7 +68,7 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			parser := newLinuxParser()
+			parser := NewLinuxParser()
 			parts, err := parser.ParseVolume(testCase.volumeSpec)
 
 			if testCase.expectedError == nil {
