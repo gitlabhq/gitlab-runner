@@ -66,7 +66,7 @@ func (m *machineDetails) writeDebugInformation() {
 func (m *machineDetails) logger() *logrus.Entry {
 	return logrus.WithFields(logrus.Fields{
 		"name":      m.Name,
-		"created":   time.Since(m.Created),
+		"lifetime":  time.Since(m.Created),
 		"used":      time.Since(m.Used),
 		"usedCount": m.UsedCount,
 		"reason":    m.Reason,
