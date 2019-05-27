@@ -32,6 +32,10 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			volumeSpec:    "/source:/destination:rw",
 			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "rw"},
 		},
+		"volume case sensitive": {
+			volumeSpec:    "/Source:/Destination:rw",
+			expectedParts: &Volume{Source: "/Source", Destination: "/Destination", Mode: "rw"},
+		},
 		"too much colons": {
 			volumeSpec:    "/source:/destination:rw:something",
 			expectedError: NewInvalidVolumeSpecErr("/source:/destination:rw:something"),
