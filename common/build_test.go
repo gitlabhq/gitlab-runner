@@ -948,14 +948,14 @@ func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
 	}{
 		"it has default value of FF": {
 			variable:      "",
-			expectedValue: true,
+			expectedValue: false,
 		},
 		"it enables FF": {
-			variable:      "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND=true",
+			variable:      "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER=true",
 			expectedValue: true,
 		},
 		"it disable FF": {
-			variable:      "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND=false",
+			variable:      "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER=false",
 			expectedValue: false,
 		},
 	}
@@ -969,7 +969,7 @@ func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
 				},
 			}
 
-			result := build.IsFeatureFlagOn("FF_K8S_USE_ENTRYPOINT_OVER_COMMAND")
+			result := build.IsFeatureFlagOn("FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER")
 			assert.Equal(t, test.expectedValue, result)
 		})
 	}

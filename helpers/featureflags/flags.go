@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	K8sEntrypointOverCommand             string = "FF_K8S_USE_ENTRYPOINT_OVER_COMMAND"
 	DockerHelperImageV2                  string = "FF_DOCKER_HELPER_IMAGE_V2"
 	CmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
 	UseLegacyGitCleanStrategy            string = "FF_USE_LEGACY_GIT_CLEAN_STRATEGY"
@@ -27,13 +26,6 @@ type FeatureFlag struct {
 // properly formatted. It will replace the existing table with the new one, computed
 // basing on the values below
 var flags = []FeatureFlag{
-	{
-		Name:            K8sEntrypointOverCommand,
-		DefaultValue:    "true",
-		Deprecated:      true,
-		ToBeRemovedWith: "12.0",
-		Description:     "Enables [the fix](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1010) for entrypoint configuration when `kubernetes` executor is used",
-	},
 	{
 		Name:            DockerHelperImageV2,
 		DefaultValue:    "false",
