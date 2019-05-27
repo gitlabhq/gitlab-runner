@@ -1291,7 +1291,9 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 		t,
 		out,
 		"Using docker image sha256:3cf24b1b62b6a4c55c5de43db4f50c0ff8b455238c836945d4b5c645411bfc77 for "+
-			"gitlab/gitlab-runner-helper:x86_64-5a147c92 ...")
+			"gitlab/gitlab-runner-helper:x86_64-5a147c92 with digest "+
+			"gitlab/gitlab-runner-helper@sha256:836120f351e800cd483402a5910b0a347f9e32e97ac3e94e67e2c005a289cc4c ...",
+	)
 }
 
 func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {

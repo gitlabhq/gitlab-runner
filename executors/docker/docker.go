@@ -166,7 +166,7 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 
 	defer func() {
 		if err == nil {
-			e.markImageAsUsed(imageName, image.ID)
+			e.markImageAsUsed(imageName, image)
 		}
 	}()
 
@@ -384,17 +384,19 @@ func (e *executor) wasImageUsed(imageName, imageID string) bool {
 	return e.usedImages[imageName] == imageID
 }
 
-func (e *executor) markImageAsUsed(imageName, imageID string) {
+func (e *executor) markImageAsUsed(imageName string, image *types.ImageInspect) {
 	e.usedImagesLock.Lock()
 	defer e.usedImagesLock.Unlock()
 
 	if e.usedImages == nil {
 		e.usedImages = make(map[string]string)
 	}
-	e.usedImages[imageName] = imageID
+	e.usedImages[imageName] = image.ID
 
-	if imageName != imageID {
-		e.Println("Using docker image", imageID, "for", imageName, "...")
+	if imageName != image.ID && len(image.RepoDigests) > 0 {
+		e.Println("Using docker image", image.ID, "for", imageName, "with digest", image.RepoDigests[0], "...")
+	} else if imageName != image.ID {
+		e.Println("Using docker image", image.ID, "for", imageName, "...")
 	}
 }
 
