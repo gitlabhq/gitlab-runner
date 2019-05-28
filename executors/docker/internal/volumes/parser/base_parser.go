@@ -2,7 +2,6 @@ package parser
 
 import (
 	"regexp"
-	"strings"
 )
 
 type baseParser struct{}
@@ -16,7 +15,7 @@ type baseParser struct{}
 // The original source is licensed under Apache License 2.0 and the copyright for it
 // goes to Docker, Inc.
 func (p *baseParser) matchesToVolumeSpecParts(spec string, specExp *regexp.Regexp) (map[string]string, error) {
-	match := specExp.FindStringSubmatch(strings.ToLower(spec))
+	match := specExp.FindStringSubmatch(spec)
 
 	if len(match) == 0 {
 		return nil, NewInvalidVolumeSpecErr(spec)
@@ -24,7 +23,7 @@ func (p *baseParser) matchesToVolumeSpecParts(spec string, specExp *regexp.Regex
 
 	matchgroups := make(map[string]string)
 	for i, name := range specExp.SubexpNames() {
-		matchgroups[name] = strings.ToLower(match[i])
+		matchgroups[name] = match[i]
 	}
 
 	parts := map[string]string{

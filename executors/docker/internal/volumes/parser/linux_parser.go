@@ -11,7 +11,7 @@ const (
 	linuxSource = `((?P<source>((` + linuxDir + `)|(` + linuxVolumeName + `))):)?`
 
 	linuxDestination = `(?P<destination>(?:` + linuxDir + `))`
-	linuxMode        = `(:(?P<mode>(?i)ro|rw))?`
+	linuxMode        = `(:(?P<mode>(?i)ro|rw|z))?`
 )
 
 type linuxParser struct {
