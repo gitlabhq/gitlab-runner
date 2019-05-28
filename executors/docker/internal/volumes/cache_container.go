@@ -8,7 +8,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type containerClient interface {
@@ -31,18 +31,16 @@ type cacheContainerManager struct {
 
 	containerClient containerClient
 
-	helperImage         *types.ImageInspect
-	outdatedHelperImage bool
-	failedContainerIDs  []string
+	helperImage        *types.ImageInspect
+	failedContainerIDs []string
 }
 
-func NewCacheContainerManager(ctx context.Context, logger debugLogger, cClient containerClient, helperImage *types.ImageInspect, outdatedHelperImage bool) CacheContainersManager {
+func NewCacheContainerManager(ctx context.Context, logger debugLogger, cClient containerClient, helperImage *types.ImageInspect) CacheContainersManager {
 	return &cacheContainerManager{
-		ctx:                 ctx,
-		logger:              logger,
-		containerClient:     cClient,
-		helperImage:         helperImage,
-		outdatedHelperImage: outdatedHelperImage,
+		ctx:             ctx,
+		logger:          logger,
+		containerClient: cClient,
+		helperImage:     helperImage,
 	}
 }
 
@@ -83,7 +81,7 @@ func (m *cacheContainerManager) Create(containerName string, containerPath strin
 func (m *cacheContainerManager) createCacheContainer(containerName string, containerPath string) (string, error) {
 	config := &container.Config{
 		Image: m.helperImage.ID,
-		Cmd:   m.getCacheCommand(containerPath),
+		Cmd:   []string{"gitlab-runner-helper", "cache-init", containerPath},
 		Volumes: map[string]struct{}{
 			containerPath: {},
 		},
@@ -106,17 +104,6 @@ func (m *cacheContainerManager) createCacheContainer(containerName string, conta
 	}
 
 	return resp.ID, nil
-}
-
-func (m *cacheContainerManager) getCacheCommand(containerPath string) []string {
-	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
-	if m.outdatedHelperImage {
-		m.logger.Debugln("Falling back to old gitlab-runner-cache command")
-		return []string{"gitlab-runner-cache", containerPath}
-	}
-
-	return []string{"gitlab-runner-helper", "cache-init", containerPath}
-
 }
 
 func (m *cacheContainerManager) startCacheContainer(containerID string) error {

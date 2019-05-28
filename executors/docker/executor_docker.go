@@ -276,9 +276,6 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		imageNameFromConfig = common.AppVersion.Variables().ExpandValue(imageNameFromConfig)
 
 		e.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
-		if !e.Build.IsFeatureFlagOn(featureflags.DockerHelperImageV2) {
-			e.Warningln("DEPRECATION: With gitlab-runner 12.0 we will change some tools inside the helper image, please make sure your image is compliant with the new API. https://gitlab.com/gitlab-org/gitlab-runner/issues/4013")
-		}
 
 		return e.getDockerImage(imageNameFromConfig)
 	}
@@ -1234,11 +1231,6 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	containerName := service.Names[0] + "-wait-for-service"
 
 	cmd := []string{"gitlab-runner-helper", "health-check"}
-	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
-	if e.checkOutdatedHelperImage() {
-		e.Debugln(featureflags.DockerHelperImageV2, "is not set, falling back to old command")
-		cmd = []string{"gitlab-runner-service"}
-	}
 
 	config := &container.Config{
 		Cmd:    cmd,
