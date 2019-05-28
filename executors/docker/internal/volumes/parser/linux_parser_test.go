@@ -32,6 +32,26 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			volumeSpec:    "/source:/destination:rw",
 			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "rw"},
 		},
+		"read only": {
+			volumeSpec:    "/source:/destination:ro",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "ro"},
+		},
+		"volume case sensitive": {
+			volumeSpec:    "/Source:/Destination:rw",
+			expectedParts: &Volume{Source: "/Source", Destination: "/Destination", Mode: "rw"},
+		},
+		"support SELinux label bind mount content is shared among multiple containers": {
+			volumeSpec:    "/source:/destination:z",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "z"},
+		},
+		"support SELinux label bind mount content is private and unshare": {
+			volumeSpec:    "/source:/destination:Z",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "Z"},
+		},
+		"unsupported mode": {
+			volumeSpec:    "/source:/destination:T",
+			expectedError: NewInvalidVolumeSpecErr("/source:/destination:T"),
+		},
 		"too much colons": {
 			volumeSpec:    "/source:/destination:rw:something",
 			expectedError: NewInvalidVolumeSpecErr("/source:/destination:rw:something"),
