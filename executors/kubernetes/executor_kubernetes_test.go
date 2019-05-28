@@ -32,7 +32,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
@@ -1670,8 +1669,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "port,name-.non-compat!ble", e.ProxyPool["service,name-.non-compat!ble"].Settings.Ports[0].Name)
 			},
 		},
-		// TODO: Remove the mention of Feature Flag in 12.0, make it the only proper test case.
-		"properly sets command (entrypoint) and args when FF_K8S_USE_ENTRYPOINT_OVER_COMMAND is on": {
+		"sets command (entrypoint) and args": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1679,9 +1677,6 @@ func TestSetupBuildPod(t *testing.T) {
 						HelperImage: "custom/helper-image",
 					},
 				},
-			},
-			Variables: []common.JobVariable{
-				{Key: featureflags.K8sEntrypointOverCommand, Value: "true"},
 			},
 			Options: &kubernetesOptions{
 				Image: common.Image{
@@ -1720,68 +1715,6 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "test-service-0", pod.Spec.Containers[2].Image)
 				assert.Empty(t, pod.Spec.Containers[2].Command, "Service container command should be empty")
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[2].Args)
-
-				assert.Equal(t, "svc-1", pod.Spec.Containers[3].Name)
-				assert.Equal(t, "test-service-1", pod.Spec.Containers[3].Image)
-				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[3].Command)
-				assert.Empty(t, pod.Spec.Containers[3].Args, "Service container args should be empty")
-
-				assert.Equal(t, "svc-2", pod.Spec.Containers[4].Name)
-				assert.Equal(t, "test-service-2", pod.Spec.Containers[4].Image)
-				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[4].Command)
-				assert.Equal(t, []string{"argument1", "argument2"}, pod.Spec.Containers[4].Args)
-			},
-		},
-		// TODO: Remove in 12.0
-		"sets command (entrypoint) and args in old way when FF_K8S_USE_ENTRYPOINT_OVER_COMMAND is off": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
-						HelperImage: "custom/helper-image",
-					},
-				},
-			},
-			Variables: []common.JobVariable{
-				{Key: featureflags.K8sEntrypointOverCommand, Value: "false"},
-			},
-			Options: &kubernetesOptions{
-				Image: common.Image{
-					Name: "test-image",
-				},
-				Services: common.Services{
-					{
-						Name:    "test-service-0",
-						Command: []string{"application", "--debug"},
-					},
-					{
-						Name:       "test-service-1",
-						Entrypoint: []string{"application", "--debug"},
-					},
-					{
-						Name:       "test-service-2",
-						Entrypoint: []string{"application", "--debug"},
-						Command:    []string{"argument1", "argument2"},
-					},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				require.Len(t, pod.Spec.Containers, 5)
-
-				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
-				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Empty(t, pod.Spec.Containers[0].Command, "Build container command should be empty")
-				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
-
-				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
-				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
-				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
-
-				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
-				assert.Equal(t, "test-service-0", pod.Spec.Containers[2].Image)
-				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[2].Command)
-				assert.Empty(t, pod.Spec.Containers[2].Args, "Service container command should be empty")
 
 				assert.Equal(t, "svc-1", pod.Spec.Containers[3].Name)
 				assert.Equal(t, "test-service-1", pod.Spec.Containers[3].Image)

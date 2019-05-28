@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	intstr "k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
 
@@ -18,7 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
@@ -284,30 +283,6 @@ func (s *executor) buildContainer(name, image string, imageDefinition common.Ima
 }
 
 func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
-	if s.Build.IsFeatureFlagOn(featureflags.K8sEntrypointOverCommand) {
-		return s.getCommandsAndArgsV2(imageDefinition, command...)
-	}
-
-	return s.getCommandsAndArgsV1(imageDefinition, command...)
-}
-
-// TODO: Remove in 12.0
-func (s *executor) getCommandsAndArgsV1(imageDefinition common.Image, command ...string) ([]string, []string) {
-	if len(command) == 0 && len(imageDefinition.Command) > 0 {
-		command = imageDefinition.Command
-	}
-
-	var args []string
-	if len(imageDefinition.Entrypoint) > 0 {
-		args = command
-		command = imageDefinition.Entrypoint
-	}
-
-	return command, args
-}
-
-// TODO: Make this the only proper way to setup command and args in 12.0
-func (s *executor) getCommandsAndArgsV2(imageDefinition common.Image, command ...string) ([]string, []string) {
 	if len(command) == 0 && len(imageDefinition.Entrypoint) > 0 {
 		command = imageDefinition.Entrypoint
 	}
