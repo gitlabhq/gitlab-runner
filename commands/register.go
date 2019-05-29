@@ -206,6 +206,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 		s.askDocker()
 		s.askSSHLogin()
 	case "docker":
+	case "docker-windows":
 		s.Docker = docker
 		s.askDocker()
 	case "docker-ssh":
