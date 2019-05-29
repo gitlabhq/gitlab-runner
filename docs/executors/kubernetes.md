@@ -328,13 +328,13 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 [Pod security context][k8s-pod-security-docs] configuration instructs executor to set a pod security policy on the build pod.
 
-| Option             | Type     | Required | Description |
-|--------------------|----------|----------|-------------|
-| fsGroup            | int      | no       | A special supplemental group that applies to all containers in a pod |
-| runAsGroup         | int      | no       | The GID to run the entrypoint of the container process |
-| runAsNonRoot       | boolean  | no       | Indicates that the container must run as a non-root user |
-| runAsUser          | int      | no       | The UID to run the entrypoint of the container process |
-| supplementalGroups | int list | no       | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
+| Option              | Type     | Required | Description |
+|---------------------|----------|----------|-------------|
+| fs_group            | int      | no       | A special supplemental group that applies to all containers in a pod |
+| run_as_group        | int      | no       | The GID to run the entrypoint of the container process |
+| run_as_non_root     | boolean  | no       | Indicates that the container must run as a non-root user |
+| run_as_user         | int      | no       | The UID to run the entrypoint of the container process |
+| supplemental_groups | int list | no       | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
 
 Assigining  a security context to pods provides security to your Kubernetes cluster.  For this to work you'll need to provide a helper
 image that conforms to the policy you set here.

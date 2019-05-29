@@ -172,7 +172,7 @@ type KubernetesConfig struct {
 	ServiceAccountOverwriteAllowed string                       `toml:"service_account_overwrite_allowed" json:"service_account_overwrite_allowed" long:"service_account_overwrite_allowed" env:"KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_SERVICE_ACCOUNT' value"`
 	PodAnnotations                 map[string]string            `toml:"pod_annotations,omitempty" json:"pod_annotations" long:"pod-annotations" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create pods with the given annotations. Can be overwritten in build with KUBERNETES_POD_ANNOTATION_* varialbes"`
 	PodAnnotationsOverwriteAllowed string                       `toml:"pod_annotations_overwrite_allowed" json:"pod_annotations_overwrite_allowed" long:"pod_annotations_overwrite_allowed" env:"KUBERNETES_POD_ANNOTATIONS_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_POD_ANNOTATIONS_*' values"`
-	PodSecurityContext             KubernetesPodSecurityContext `toml:"pod_security_context,omitempty" long:"pod-security-context" env:"POD_SECURITY_CONTEXT" description:"A security context attached to each build pod"`
+	PodSecurityContext             KubernetesPodSecurityContext `toml:"pod_security_context,omitempty" namespace:"pod-security-context" description:"A security context attached to each build pod"`
 	Volumes                        KubernetesVolumes            `toml:"volumes"`
 }
 
