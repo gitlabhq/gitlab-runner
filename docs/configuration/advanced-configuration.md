@@ -111,7 +111,7 @@ This defines one runner entry.
 | `tls-key-file`       | File containing the private key to authenticate with the peer when using HTTPS |
 | `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
 | `executor`           | Select how a project should be built, see next section |
-| `shell`              | The name of shell to generate the script (default value is platform dependent) |
+| `shell`              | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md#overview). |
 | `builds_dir`         | Directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
 | `cache_dir`          | Directory where build caches will be stored in context of selected executor (locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
 | `environment`        | Append or overwrite environment variables |
@@ -156,7 +156,8 @@ There are a couple of available executors currently.
 | Executor | Description |
 | -------- | ----------- |
 | `shell`       | run build locally, default |
-| `docker`      | run build using Docker container - this requires the presence of `[runners.docker]` and [Docker Engine][] installed on the system that the Runner runs |
+| `docker`      | run build using Docker container. This requires the presence of `[runners.docker]` and [Docker Engine][] installed on a system that the Runner will run the job on. |
+| `docker-windows` | run build using Windows Docker container. This requires the presence of `[runners.docker]` and [Docker Engine][] installed on a Windows system. |
 | `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine][] installed on the system that the Runner runs. **Note: This will run the docker container on the local machine, it just changes how the commands are run inside that container. If you want to run docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
 | `ssh`         | run build remotely with SSH - this requires the presence of `[runners.ssh]` |
 | `parallels`   | run build using Parallels VM, but connect to it with SSH - this requires the presence of `[runners.parallels]` and `[runners.ssh]` |
@@ -518,8 +519,8 @@ in the [runners autoscale documentation](autoscale.md#distributed-runners-cachin
 
 CAUTION: **Important:**
 With GitLab Runner 11.3.0, the configuration parameters related to S3 were moved to a dedicated `[runners.cache.s3]` section.
-The old format of the configuration with S3 configured directly in `[runners.cache]` section is still supported,
-but is deprecated with GitLab Runner 11.3.0. **This support will be removed in GitLab Runner 12.0.0**.
+The old format of the configuration with S3 configured directly in `[runners.cache]` was deprecated with GitLab Runner 11.3.0.
+**With GitLab Runner 12.0.0 the old configuration syntax was removed and is no longer supported**.
 
 NOTE: **Note:**
 The cache mechanism uses pre-signed URLs to upload and download cache. URLs are being signed by GitLab Runner on its **own instance**.
@@ -535,23 +536,23 @@ IAM instance profile, will use the profile attached with GitLab Runner's machine
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
 use the `CredentialsFile`, the file needs to be present on GitLab Runner's machine.
 
-Below is a table containing a summary of `config.toml`, cli options and ENV variables deprecations:
+Below is a table containing a summary of `config.toml`, cli options and ENV variables for `register`:
 
-| Setting             | TOML field                               | CLI option for `register`      | ENV for `register`                | deprecated TOML field               | deprecated CLI option   | deprecated ENV        |
-|---------------------|------------------------------------------|--------------------------------|-----------------------------------|-------------------------------------|-------------------------|-----------------------|
-| Type                | `[runners.cache] -> Type`                | `--cache-type`                 | `$CACHE_TYPE`                     |                                     |                         |                       |
-| Path                | `[runners.cache] -> Path`                | `--cache-path`                 | `$CACHE_PATH`                     |                                     | `--cache-s3-cache-path` | `$S3_CACHE_PATH`      |
-| Shared              | `[runners.cache] -> Shared`              | `--cache-shared`               | `$CACHE_SHARED`                   |                                     | `--cache-cache-shared`  |                       |
-| S3.ServerAddress    | `[runners.cache.s3] -> ServerAddress`    | `--cache-s3-server-address`    | `$CACHE_S3_SERVER_ADDRESS`        | `[runners.cache] -> ServerAddress`  |                         | `$S3_SERVER_ADDRESS`  |
-| S3.AccessKey        | `[runners.cache.s3] -> AccessKey`        | `--cache-s3-access-key`        | `$CACHE_S3_ACCESS_KEY`            | `[runners.cache] -> AccessKey`      |                         | `$S3_ACCESS_KEY`      |
-| S3.SecretKey        | `[runners.cache.s3] -> SecretKey`        | `--cache-s3-secret-key`        | `$CACHE_S3_SECRET_KEY`            | `[runners.cache] -> SecretKey`      |                         | `$S3_SECRET_KEY`      |
-| S3.BucketName       | `[runners.cache.s3] -> BucketName`       | `--cache-s3-bucket-name`       | `$CACHE_S3_BUCKET_NAME`           | `[runners.cache] -> BucketName`     |                         | `$S3_BUCKET_NAME`     |
-| S3.BucketLocation   | `[runners.cache.s3] -> BucketLocation`   | `--cache-s3-bucket-location`   | `$CACHE_S3_BUCKET_LOCATION`       | `[runners.cache] -> BucketLocation` |                         | `$S3_BUCKET_LOCATION` |
-| S3.Insecure         | `[runners.cache.s3] -> Insecure`         | `--cache-s3-insecure`          | `$CACHE_S3_INSECURE`              | `[runners.cache] -> Insecure`       |                         | `$S3_INSECURE`        |
-| GCS.AccessID        | `[runners.cache.gcs] -> AccessID`        | `--cache-gcs-access-id`        | `$CACHE_GCS_ACCESS_ID`            |                                     |                         |                       |
-| GCS.PrivateKey      | `[runners.cache.gcs] -> PrivateKey`      | `--cache-gcs-private-key`      | `$CACHE_GCS_PRIVATE_KEY`          |                                     |                         |                       |
-| GCS.CredentialsFile | `[runners.cache.gcs] -> CredentialsFile` | `--cache-gcs-credentials-file` | `$GOOGLE_APPLICATION_CREDENTIALS` |                                     |                         |                       |
-| GCS.BucketName      | `[runners.cache.gcs] -> BucketName`      | `--cache-gcs-bucket-name`      | `$CACHE_GCS_BUCKET_NAME`          |                                     |                         |                       |
+| Setting             | TOML field                               | CLI option for `register`      | ENV for `register`                | Before 12.0.0 TOML field            | Before 12.0.0 CLI option | Before 12.0.0 ENV         |
+|---------------------|------------------------------------------|--------------------------------|-----------------------------------|-------------------------------------|--------------------------|---------------------------|
+| Type                | `[runners.cache] -> Type`                | `--cache-type`                 | `$CACHE_TYPE`                     |                                     |                          |                           |
+| Path                | `[runners.cache] -> Path`                | `--cache-path`                 | `$CACHE_PATH`                     |                                     | `--cache-s3-cache-path`  | `$S3_CACHE_PATH`          |
+| Shared              | `[runners.cache] -> Shared`              | `--cache-shared`               | `$CACHE_SHARED`                   |                                     | `--cache-cache-shared`   |                           |
+| S3.ServerAddress    | `[runners.cache.s3] -> ServerAddress`    | `--cache-s3-server-address`    | `$CACHE_S3_SERVER_ADDRESS`        | `[runners.cache] -> ServerAddress`  |                          | `$S3_SERVER_ADDRESS`      |
+| S3.AccessKey        | `[runners.cache.s3] -> AccessKey`        | `--cache-s3-access-key`        | `$CACHE_S3_ACCESS_KEY`            | `[runners.cache] -> AccessKey`      |                          | `$S3_ACCESS_KEY`          |
+| S3.SecretKey        | `[runners.cache.s3] -> SecretKey`        | `--cache-s3-secret-key`        | `$CACHE_S3_SECRET_KEY`            | `[runners.cache] -> SecretKey`      |                          | `$S3_SECRET_KEY`          |
+| S3.BucketName       | `[runners.cache.s3] -> BucketName`       | `--cache-s3-bucket-name`       | `$CACHE_S3_BUCKET_NAME`           | `[runners.cache] -> BucketName`     |                          | `$S3_BUCKET_NAME`         |
+| S3.BucketLocation   | `[runners.cache.s3] -> BucketLocation`   | `--cache-s3-bucket-location`   | `$CACHE_S3_BUCKET_LOCATION`       | `[runners.cache] -> BucketLocation` |                          | `$S3_BUCKET_LOCATION`     |
+| S3.Insecure         | `[runners.cache.s3] -> Insecure`         | `--cache-s3-insecure`          | `$CACHE_S3_INSECURE`              | `[runners.cache] -> Insecure`       |                          | `$S3_INSECURE`            |
+| GCS.AccessID        | `[runners.cache.gcs] -> AccessID`        | `--cache-gcs-access-id`        | `$CACHE_GCS_ACCESS_ID`            |                                     |                          |                           |
+| GCS.PrivateKey      | `[runners.cache.gcs] -> PrivateKey`      | `--cache-gcs-private-key`      | `$CACHE_GCS_PRIVATE_KEY`          |                                     |                          |                           |
+| GCS.CredentialsFile | `[runners.cache.gcs] -> CredentialsFile` | `--cache-gcs-credentials-file` | `$GOOGLE_APPLICATION_CREDENTIALS` |                                     |                          |                           |
+| GCS.BucketName      | `[runners.cache.gcs] -> BucketName`      | `--cache-gcs-bucket-name`      | `$CACHE_GCS_BUCKET_NAME`          |                                     |                          |                           |
 
 ### The `[runners.cache.s3]` section
 

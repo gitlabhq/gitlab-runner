@@ -24,13 +24,16 @@ import (
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
+	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
 var (
@@ -291,14 +294,17 @@ func fakeKubeDeleteResponse(status int) *http.Response {
 
 func TestCleanup(t *testing.T) {
 	version, _ := testVersionAndCodec()
-
 	objectMeta := metav1.ObjectMeta{Name: "test-resource", Namespace: "test-ns"}
+	podsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/pods/" + objectMeta.Name
+	servicesEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/services/" + objectMeta.Name
+	secretsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/secrets/" + objectMeta.Name
 
 	tests := []struct {
 		Name        string
 		Pod         *api.Pod
 		Credentials *api.Secret
 		ClientFunc  func(*http.Request) (*http.Response, error)
+		Services    []api.Service
 		Error       bool
 	}{
 		{
@@ -306,7 +312,7 @@ func TestCleanup(t *testing.T) {
 			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == http.MethodDelete && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
+				case m == http.MethodDelete && p == podsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusOK), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
@@ -326,7 +332,7 @@ func TestCleanup(t *testing.T) {
 			Pod:  &api.Pod{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == http.MethodDelete && p == "/api/"+version+"/namespaces/test-ns/pods/test-resource":
+				case m == http.MethodDelete && p == podsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusNotFound), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
@@ -335,12 +341,68 @@ func TestCleanup(t *testing.T) {
 			Error: true,
 		},
 		{
-			Name:        "POD creation failed, Secretes provided",
+			Name:        "POD creation failed, Secrets provided",
 			Pod:         nil, // a failed POD create request will cause a nil Pod
 			Credentials: &api.Secret{ObjectMeta: objectMeta},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == http.MethodDelete && p == "/api/"+version+"/namespaces/test-ns/secrets/test-resource":
+				case m == http.MethodDelete && p == secretsEndpointURI:
+					return fakeKubeDeleteResponse(http.StatusNotFound), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+			Error: true,
+		},
+		{
+			Name:     "POD created, Services created",
+			Pod:      &api.Pod{ObjectMeta: objectMeta},
+			Services: []api.Service{{ObjectMeta: objectMeta}},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == http.MethodDelete && ((p == servicesEndpointURI) || (p == podsEndpointURI)):
+					return fakeKubeDeleteResponse(http.StatusOK), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+		},
+		{
+			Name:     "POD created, Services creation failed",
+			Pod:      &api.Pod{ObjectMeta: objectMeta},
+			Services: []api.Service{{ObjectMeta: objectMeta}},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == http.MethodDelete && p == servicesEndpointURI:
+					return fakeKubeDeleteResponse(http.StatusNotFound), nil
+				case m == http.MethodDelete && p == podsEndpointURI:
+					return fakeKubeDeleteResponse(http.StatusOK), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+			Error: true,
+		},
+		{
+			Name:     "POD creation failed, Services created",
+			Pod:      nil, // a failed POD create request will cause a nil Pod
+			Services: []api.Service{{ObjectMeta: objectMeta}},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == http.MethodDelete && p == servicesEndpointURI:
+					return fakeKubeDeleteResponse(http.StatusOK), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+		},
+		{
+			Name:     "POD creation failed, Services cleanup failed",
+			Pod:      nil, // a failed POD create request will cause a nil Pod
+			Services: []api.Service{{ObjectMeta: objectMeta}},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == http.MethodDelete && p == servicesEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusNotFound), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
@@ -356,6 +418,7 @@ func TestCleanup(t *testing.T) {
 				kubeClient:  testKubernetesClient(version, fake.CreateHTTPClient(test.ClientFunc)),
 				pod:         test.Pod,
 				credentials: test.Credentials,
+				services:    test.Services,
 			}
 			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
 			errored := false
@@ -1028,11 +1091,12 @@ func TestSetupCredentials(t *testing.T) {
 }
 
 type setupBuildPodTestDef struct {
-	RunnerConfig common.RunnerConfig
-	Variables    []common.JobVariable
-	Options      *kubernetesOptions
-	PrepareFn    func(*testing.T, setupBuildPodTestDef, *executor)
-	VerifyFn     func(*testing.T, setupBuildPodTestDef, *api.Pod)
+	RunnerConfig     common.RunnerConfig
+	Variables        []common.JobVariable
+	Options          *kubernetesOptions
+	PrepareFn        func(*testing.T, setupBuildPodTestDef, *executor)
+	VerifyFn         func(*testing.T, setupBuildPodTestDef, *api.Pod)
+	VerifyExecutorFn func(*testing.T, setupBuildPodTestDef, *executor)
 }
 
 type setupBuildPodFakeRoundTripper struct {
@@ -1054,7 +1118,10 @@ func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Res
 		return nil, err
 	}
 
-	rt.test.VerifyFn(rt.t, rt.test, p)
+	if rt.test.VerifyFn != nil {
+		rt.test.VerifyFn(rt.t, rt.test, p)
+	}
+
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
 		Body: FakeReadCloser{
@@ -1176,6 +1243,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"test":    "label",
 					"another": "label",
 					"var":     "sometestvar",
+					"pod":     pod.GenerateName,
 				}, pod.ObjectMeta.Labels)
 			},
 			Variables: []common.JobVariable{
@@ -1316,8 +1384,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[3].Args)
 			},
 		},
-		// TODO: Remove the mention of Feature Flag in 12.0, make it the only proper test case.
-		"properly sets command (entrypoint) and args when FF_K8S_USE_ENTRYPOINT_OVER_COMMAND is on": {
+		"creates services in kubernetes if ports are set": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1326,8 +1393,290 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Variables: []common.JobVariable{
-				{Key: common.FFK8sEntrypointOverCommand, Value: "true"},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+					Ports: []common.Port{
+						{
+							Number: 80,
+						},
+					},
+				},
+				Services: common.Services{
+					{
+						Name: "test-service",
+						Ports: []common.Port{
+							{
+								Number: 82,
+							},
+							{
+								Number: 84,
+							},
+						},
+					},
+					{
+						Name: "test-service2",
+						Ports: []common.Port{
+							{
+								Number: 85,
+							},
+						},
+					},
+					{
+						Name: "test-service3",
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				expectedServices := []api.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							GenerateName: "build",
+							Namespace:    "default",
+						},
+						Spec: api.ServiceSpec{
+							Ports: []api.ServicePort{
+								{
+									Port:       80,
+									TargetPort: intstr.FromInt(80),
+									Name:       "build-80",
+								},
+							},
+							Selector: map[string]string{"pod": e.pod.GenerateName},
+							Type:     api.ServiceTypeClusterIP,
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							GenerateName: "proxy-svc-0",
+							Namespace:    "default",
+						},
+						Spec: api.ServiceSpec{
+							Ports: []api.ServicePort{
+								{
+									Port:       82,
+									TargetPort: intstr.FromInt(82),
+									Name:       "proxy-svc-0-82",
+								},
+								{
+									Port:       84,
+									TargetPort: intstr.FromInt(84),
+									Name:       "proxy-svc-0-84",
+								},
+							},
+							Selector: map[string]string{"pod": e.pod.GenerateName},
+							Type:     api.ServiceTypeClusterIP,
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							GenerateName: "proxy-svc-1",
+							Namespace:    "default",
+						},
+						Spec: api.ServiceSpec{
+							Ports: []api.ServicePort{
+								{
+									Port:       85,
+									TargetPort: intstr.FromInt(85),
+									Name:       "proxy-svc-1-85",
+								},
+							},
+							Selector: map[string]string{"pod": e.pod.GenerateName},
+							Type:     api.ServiceTypeClusterIP,
+						},
+					},
+				}
+
+				assert.ElementsMatch(t, expectedServices, e.services)
+			},
+		},
+		"the default service name for the build container is build": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+					Ports: []common.Port{
+						{
+							Number: 80,
+						},
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.Equal(t, "build", e.services[0].GenerateName)
+			},
+		},
+		"the services have a selector pointing to the 'pod' label in the pod": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+					Ports: []common.Port{
+						{
+							Number: 80,
+						},
+					},
+				},
+				Services: common.Services{
+					{
+						Name: "test-service",
+						Ports: []common.Port{
+							{
+								Number: 82,
+							},
+						},
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				for _, service := range e.services {
+					assert.Equal(t, map[string]string{"pod": e.pod.GenerateName}, service.Spec.Selector)
+				}
+			},
+		},
+		"the service is named as the alias if set": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+				},
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "custom-name",
+						Ports: []common.Port{
+							{
+								Number: 82,
+							},
+						},
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.Equal(t, "custom-name", e.services[0].GenerateName)
+			},
+		},
+		"proxies are configured if services have been created": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+					Ports: []common.Port{
+						{
+							Number: 80,
+						},
+					},
+				},
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "custom_name",
+						Ports: []common.Port{
+							{
+								Number:   81,
+								Name:     "custom_port_name",
+								Protocol: "http",
+							},
+						},
+					},
+					{
+						Name: "test-service2",
+						Ports: []common.Port{
+							{
+								Number: 82,
+							},
+						},
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				require.Len(t, e.ProxyPool, 3)
+
+				assert.NotEmpty(t, "proxy-svc-1", e.ProxyPool)
+				assert.NotEmpty(t, "custom_name", e.ProxyPool)
+				assert.NotEmpty(t, "build", e.ProxyPool)
+
+				port := e.ProxyPool["proxy-svc-1"].Settings.Ports[0]
+				assert.Equal(t, 82, port.Number)
+
+				port = e.ProxyPool["custom_name"].Settings.Ports[0]
+				assert.Equal(t, 81, port.Number)
+				assert.Equal(t, "custom_port_name", port.Name)
+				assert.Equal(t, "http", port.Protocol)
+
+				port = e.ProxyPool["build"].Settings.Ports[0]
+				assert.Equal(t, 80, port.Number)
+			},
+		},
+		"makes service name compatible with RFC1123": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+				},
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "service,name-.non-compat!ble",
+						Ports: []common.Port{
+							{
+								Number:   81,
+								Name:     "port,name-.non-compat!ble",
+								Protocol: "http",
+							},
+						},
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.Equal(t, "servicename-non-compatble", e.services[0].GenerateName)
+				assert.NotEmpty(t, e.ProxyPool["service,name-.non-compat!ble"])
+				assert.Equal(t, "port,name-.non-compat!ble", e.ProxyPool["service,name-.non-compat!ble"].Settings.Ports[0].Name)
+			},
+		},
+		"sets command (entrypoint) and args": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
 			},
 			Options: &kubernetesOptions{
 				Image: common.Image{
@@ -1366,68 +1715,6 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "test-service-0", pod.Spec.Containers[2].Image)
 				assert.Empty(t, pod.Spec.Containers[2].Command, "Service container command should be empty")
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[2].Args)
-
-				assert.Equal(t, "svc-1", pod.Spec.Containers[3].Name)
-				assert.Equal(t, "test-service-1", pod.Spec.Containers[3].Image)
-				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[3].Command)
-				assert.Empty(t, pod.Spec.Containers[3].Args, "Service container args should be empty")
-
-				assert.Equal(t, "svc-2", pod.Spec.Containers[4].Name)
-				assert.Equal(t, "test-service-2", pod.Spec.Containers[4].Image)
-				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[4].Command)
-				assert.Equal(t, []string{"argument1", "argument2"}, pod.Spec.Containers[4].Args)
-			},
-		},
-		// TODO: Remove in 12.0
-		"sets command (entrypoint) and args in old way when FF_K8S_USE_ENTRYPOINT_OVER_COMMAND is off": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
-						HelperImage: "custom/helper-image",
-					},
-				},
-			},
-			Variables: []common.JobVariable{
-				{Key: common.FFK8sEntrypointOverCommand, Value: "false"},
-			},
-			Options: &kubernetesOptions{
-				Image: common.Image{
-					Name: "test-image",
-				},
-				Services: common.Services{
-					{
-						Name:    "test-service-0",
-						Command: []string{"application", "--debug"},
-					},
-					{
-						Name:       "test-service-1",
-						Entrypoint: []string{"application", "--debug"},
-					},
-					{
-						Name:       "test-service-2",
-						Entrypoint: []string{"application", "--debug"},
-						Command:    []string{"argument1", "argument2"},
-					},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				require.Len(t, pod.Spec.Containers, 5)
-
-				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
-				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Empty(t, pod.Spec.Containers[0].Command, "Build container command should be empty")
-				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
-
-				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
-				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
-				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
-
-				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
-				assert.Equal(t, "test-service-0", pod.Spec.Containers[2].Image)
-				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[2].Command)
-				assert.Empty(t, pod.Spec.Containers[2].Args, "Service container command should be empty")
 
 				assert.Equal(t, "svc-1", pod.Spec.Containers[3].Name)
 				assert.Equal(t, "test-service-1", pod.Spec.Containers[3].Image)
@@ -1494,6 +1781,12 @@ func TestSetupBuildPod(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
+			helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+				OSType:       helperimage.OSTypeLinux,
+				Architecture: "amd64",
+			})
+			require.NoError(t, err)
+
 			vars := test.Variables
 			if vars == nil {
 				vars = []common.JobVariable{}
@@ -1521,22 +1814,116 @@ func TestSetupBuildPod(t *testing.T) {
 						},
 						Runner: &test.RunnerConfig,
 					},
+					ProxyPool: proxy.NewPool(),
 				},
+				helperImageInfo: helperImageInfo,
 			}
 
 			if test.PrepareFn != nil {
 				test.PrepareFn(t, test, &ex)
 			}
 
-			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			err = ex.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err, "error preparing overwrites")
 
 			err = ex.setupBuildPod()
 			assert.NoError(t, err, "error setting up build pod")
 
 			assert.True(t, rt.executed, "RoundTrip for kubernetes client should be executed")
+
+			if test.VerifyExecutorFn != nil {
+				test.VerifyExecutorFn(t, test, &ex)
+			}
 		})
 	}
+}
+
+func TestSetupBuildPodServiceCreationError(t *testing.T) {
+	version, _ := testVersionAndCodec()
+	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:       helperimage.OSTypeLinux,
+		Architecture: "amd64",
+	})
+	require.NoError(t, err)
+
+	runnerConfig := common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Kubernetes: &common.KubernetesConfig{
+				Namespace:   "default",
+				HelperImage: "custom/helper-image",
+			},
+		},
+	}
+
+	fakeRoundTripper := func(req *http.Request) (*http.Response, error) {
+		body, err := ioutil.ReadAll(req.Body)
+		if !assert.NoError(t, err, "failed to read request body") {
+			return nil, err
+		}
+
+		p := new(api.Pod)
+		err = json.Unmarshal(body, p)
+		if !assert.NoError(t, err, "failed to read request body") {
+			return nil, err
+		}
+
+		if req.URL.Path == "/api/v1/namespaces/default/services" {
+			return nil, fmt.Errorf("foobar")
+		}
+
+		resp := &http.Response{
+			StatusCode: http.StatusOK,
+			Body: FakeReadCloser{
+				Reader: bytes.NewBuffer(body),
+			},
+		}
+		resp.Header = make(http.Header)
+		resp.Header.Add("Content-Type", "application/json")
+
+		return resp, nil
+	}
+
+	ex := executor{
+		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
+		options: &kubernetesOptions{
+			Image: common.Image{
+				Name:  "test-image",
+				Ports: []common.Port{{Number: 80}},
+			},
+			Services: common.Services{
+				{
+					Name:  "test-service",
+					Alias: "custom_name",
+					Ports: []common.Port{
+						{
+							Number:   81,
+							Name:     "custom_port_name",
+							Protocol: "http",
+						},
+					},
+				},
+			},
+		},
+		AbstractExecutor: executors.AbstractExecutor{
+			Config:     runnerConfig,
+			BuildShell: &common.ShellConfiguration{},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Variables: []common.JobVariable{},
+				},
+				Runner: &runnerConfig,
+			},
+			ProxyPool: proxy.NewPool(),
+		},
+		helperImageInfo: helperImageInfo,
+	}
+
+	err = ex.prepareOverwrites(make(common.JobVariables, 0))
+	assert.NoError(t, err)
+
+	err = ex.setupBuildPod()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "error creating the proxy service")
 }
 
 func TestKubernetesSuccessRun(t *testing.T) {

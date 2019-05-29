@@ -196,39 +196,29 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 
 func TestGitCleanFlags(t *testing.T) {
 	tests := map[string]struct {
-		value               string
-		legacyCleanStrategy string
+		value string
 
 		expectedGitClean      bool
 		expectedGitCleanFlags []interface{}
 	}{
 		"empty clean flags": {
 			value:                 "",
-			legacyCleanStrategy:   "false",
 			expectedGitClean:      true,
 			expectedGitCleanFlags: []interface{}{"-ffdx"},
 		},
 		"use custom flags": {
 			value:                 "custom-flags",
-			legacyCleanStrategy:   "false",
 			expectedGitClean:      true,
 			expectedGitCleanFlags: []interface{}{"custom-flags"},
 		},
 		"use custom flags with multiple arguments": {
 			value:                 "-ffdx -e cache/",
-			legacyCleanStrategy:   "false",
 			expectedGitClean:      true,
 			expectedGitCleanFlags: []interface{}{"-ffdx", "-e", "cache/"},
 		},
-		"uses legacy strategy": {
-			value:               "custom-flags",
-			legacyCleanStrategy: "true",
-			expectedGitClean:    false,
-		},
 		"disabled": {
-			value:               "none",
-			legacyCleanStrategy: "false",
-			expectedGitClean:    false,
+			value:            "none",
+			expectedGitClean: false,
 		},
 	}
 
@@ -245,7 +235,6 @@ func TestGitCleanFlags(t *testing.T) {
 					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef},
 					Variables: common.JobVariables{
 						{Key: "GIT_CLEAN_FLAGS", Value: test.value},
-						{Key: common.FFUseLegacyGitCleanStrategy, Value: test.legacyCleanStrategy},
 					},
 				},
 			}

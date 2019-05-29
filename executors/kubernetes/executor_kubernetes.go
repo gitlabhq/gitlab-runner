@@ -3,25 +3,27 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"strings"
+	"sync"
 
-	"gitlab.com/gitlab-org/gitlab-terminal"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	// Register all available authentication methods
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	restclient "k8s.io/client-go/rest"
+	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
-	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
+	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
+)
+
+const (
+	buildContainerName  = "build"
+	helperContainerName = "helper"
 )
 
 var (
@@ -51,6 +53,7 @@ type executor struct {
 	pod         *api.Pod
 	credentials *api.Secret
 	options     *kubernetesOptions
+	services    []api.Service
 
 	configurationOverwrites *overwrites
 	buildLimits             api.ResourceList
@@ -60,6 +63,18 @@ type executor struct {
 	serviceRequests         api.ResourceList
 	helperRequests          api.ResourceList
 	pullPolicy              common.KubernetesPullPolicy
+
+	helperImageInfo helperimage.Info
+}
+
+type serviceDeleteResponse struct {
+	serviceName string
+	err         error
+}
+
+type serviceCreateResponse struct {
+	service *api.Service
+	err     error
 }
 
 func (s *executor) setupResources() error {
@@ -144,11 +159,11 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		}
 	}
 
-	containerName := "build"
+	containerName := buildContainerName
 	containerCommand := s.BuildShell.DockerCommand
 	if cmd.Predefined {
-		containerName = "helper"
-		containerCommand = common.ContainerCommandBuild
+		containerName = helperContainerName
+		containerCommand = s.helperImageInfo.Cmd
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -187,12 +202,60 @@ func (s *executor) Cleanup() {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
 	}
+
+	ch := make(chan serviceDeleteResponse)
+	var wg sync.WaitGroup
+	wg.Add(len(s.services))
+
+	for _, service := range s.services {
+		go s.deleteKubernetesService(service.ObjectMeta.Name, ch, &wg)
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for res := range ch {
+		if res.err != nil {
+			s.Errorln(fmt.Sprintf("Error cleaning up the pod service %q: %v", res.serviceName, res.err))
+		}
+	}
+
 	closeKubeClient(s.kubeClient)
 	s.AbstractExecutor.Cleanup()
 }
 
+func (s *executor) deleteKubernetesService(serviceName string, ch chan<- serviceDeleteResponse, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	err := s.kubeClient.CoreV1().Services(s.configurationOverwrites.namespace).Delete(serviceName, &metav1.DeleteOptions{})
+	ch <- serviceDeleteResponse{serviceName: serviceName, err: err}
+}
+
 func (s *executor) buildContainer(name, image string, imageDefinition common.Image, requests, limits api.ResourceList, containerCommand ...string) api.Container {
 	privileged := false
+	containerPorts := make([]api.ContainerPort, len(imageDefinition.Ports))
+	proxyPorts := make([]proxy.Port, len(imageDefinition.Ports))
+
+	for i, port := range imageDefinition.Ports {
+		proxyPorts[i] = proxy.Port{Name: port.Name, Number: port.Number, Protocol: port.Protocol}
+		containerPorts[i] = api.ContainerPort{ContainerPort: int32(port.Number)}
+	}
+
+	if len(proxyPorts) > 0 {
+		serviceName := imageDefinition.Alias
+
+		if serviceName == "" {
+			serviceName = name
+			if name != buildContainerName {
+				serviceName = fmt.Sprintf("proxy-%s", name)
+			}
+		}
+
+		s.ProxyPool[serviceName] = s.newProxy(serviceName, proxyPorts)
+	}
+
 	if s.Config.Kubernetes != nil {
 		privileged = s.Config.Kubernetes.Privileged
 	}
@@ -210,6 +273,7 @@ func (s *executor) buildContainer(name, image string, imageDefinition common.Ima
 			Limits:   limits,
 			Requests: requests,
 		},
+		Ports:        containerPorts,
 		VolumeMounts: s.getVolumeMounts(),
 		SecurityContext: &api.SecurityContext{
 			Privileged: &privileged,
@@ -219,30 +283,6 @@ func (s *executor) buildContainer(name, image string, imageDefinition common.Ima
 }
 
 func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
-	if s.Build.IsFeatureFlagOn(common.FFK8sEntrypointOverCommand) {
-		return s.getCommandsAndArgsV2(imageDefinition, command...)
-	}
-
-	return s.getCommandsAndArgsV1(imageDefinition, command...)
-}
-
-// TODO: Remove in 12.0
-func (s *executor) getCommandsAndArgsV1(imageDefinition common.Image, command ...string) ([]string, []string) {
-	if len(command) == 0 && len(imageDefinition.Command) > 0 {
-		command = imageDefinition.Command
-	}
-
-	var args []string
-	if len(imageDefinition.Entrypoint) > 0 {
-		args = command
-		command = imageDefinition.Entrypoint
-	}
-
-	return command, args
-}
-
-// TODO: Make this the only proper way to setup command and args in 12.0
-func (s *executor) getCommandsAndArgsV2(imageDefinition common.Image, command ...string) ([]string, []string) {
 	if len(command) == 0 && len(imageDefinition.Entrypoint) > 0 {
 		command = imageDefinition.Entrypoint
 	}
@@ -442,7 +482,9 @@ func (s *executor) setupBuildPod() error {
 		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, service, s.serviceRequests, s.serviceLimits)
 	}
 
-	labels := make(map[string]string)
+	// We set a default label to the pod. This label will be used later
+	// by the services, to link each service to the pod
+	labels := map[string]string{"pod": s.projectUniqueName()}
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
 		labels[k] = s.Build.Variables.ExpandValue(v)
 	}
@@ -461,10 +503,26 @@ func (s *executor) setupBuildPod() error {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
 	}
 
-	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
-	helperImage := common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.GetHelperImage())
+	podConfig := s.preparePodConfig(labels, annotations, services, imagePullSecrets)
 
-	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&api.Pod{
+	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
+	if err != nil {
+		return err
+	}
+
+	s.pod = pod
+	s.services, err = s.makePodProxyServices()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *executor) preparePodConfig(labels, annotations map[string]string, services []api.Container, imagePullSecrets []api.LocalObjectReference) api.Pod {
+	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
+
+	return api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: s.projectUniqueName(),
 			Namespace:    s.configurationOverwrites.namespace,
@@ -479,22 +537,86 @@ func (s *executor) setupBuildPod() error {
 			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
 			Containers: append([]api.Container{
 				// TODO use the build and helper template here
-				s.buildContainer("build", buildImage, s.options.Image, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer("helper", helperImage, common.Image{}, s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer(buildContainerName, buildImage, s.options.Image, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer(helperContainerName, s.getHelperImage(), common.Image{}, s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
 		},
-	})
+	}
+}
 
-	if err != nil {
-		return err
+func (s *executor) getHelperImage() string {
+	if len(s.Config.Kubernetes.HelperImage) > 0 {
+		return common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.HelperImage)
 	}
 
-	s.pod = pod
+	return s.helperImageInfo.String()
+}
 
-	return nil
+func (s *executor) makePodProxyServices() ([]api.Service, error) {
+	ch := make(chan serviceCreateResponse)
+	var wg sync.WaitGroup
+	wg.Add(len(s.ProxyPool))
+
+	for serviceName, serviceProxy := range s.ProxyPool {
+		serviceName := dns.MakeRFC1123Compatible(serviceName)
+		servicePorts := make([]api.ServicePort, len(serviceProxy.Settings.Ports))
+		for i, port := range serviceProxy.Settings.Ports {
+			// When there is more than one port Kubernetes requires a port name
+			portName := fmt.Sprintf("%s-%d", serviceName, port.Number)
+			servicePorts[i] = api.ServicePort{Port: int32(port.Number), TargetPort: intstr.FromInt(port.Number), Name: portName}
+		}
+
+		serviceConfig := s.prepareServiceConfig(serviceName, servicePorts)
+		go s.createKubernetesService(&serviceConfig, serviceProxy.Settings, ch, &wg)
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	var services []api.Service
+	for res := range ch {
+		if res.err != nil {
+			err := fmt.Errorf("error creating the proxy service %q: %v", res.service.Name, res.err)
+			s.Errorln(err)
+
+			return []api.Service{}, err
+		}
+
+		services = append(services, *res.service)
+	}
+
+	return services, nil
+}
+
+func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) api.Service {
+	return api.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: name,
+			Namespace:    s.configurationOverwrites.namespace,
+		},
+		Spec: api.ServiceSpec{
+			Ports:    ports,
+			Selector: map[string]string{"pod": s.projectUniqueName()},
+			Type:     api.ServiceTypeClusterIP,
+		},
+	}
+}
+
+func (s *executor) createKubernetesService(service *api.Service, proxySettings *proxy.Settings, ch chan<- serviceCreateResponse, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	service, err := s.kubeClient.CoreV1().Services(s.pod.Namespace).Create(service)
+	if err == nil {
+		// Updating the internal service name reference and activating the proxy
+		proxySettings.ServiceName = service.Name
+	}
+
+	ch <- serviceCreateResponse{service: service, err: err}
 }
 
 func (s *executor) runInContainer(ctx context.Context, name string, command []string, script string) <-chan error {
@@ -541,91 +663,6 @@ func (s *executor) runInContainer(ctx context.Context, name string, command []st
 	return errc
 }
 
-func (s *executor) Connect() (terminalsession.Conn, error) {
-	settings, err := s.getTerminalSettings()
-	if err != nil {
-		return nil, err
-	}
-
-	return terminalConn{settings: settings}, nil
-}
-
-type terminalConn struct {
-	settings *terminal.TerminalSettings
-}
-
-func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, disconnectCh chan error) {
-	proxy := terminal.NewWebSocketProxy(1) // one stopper: terminal exit handler
-
-	terminalsession.ProxyTerminal(
-		timeoutCh,
-		disconnectCh,
-		proxy.StopCh,
-		func() {
-			terminal.ProxyWebSocket(w, r, t.settings, proxy)
-		},
-	)
-}
-
-func (t terminalConn) Close() error {
-	return nil
-}
-
-func (s *executor) getTerminalSettings() (*terminal.TerminalSettings, error) {
-	config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
-	if err != nil {
-		return nil, err
-	}
-
-	wsURL, err := s.getTerminalWebSocketURL(config)
-	if err != nil {
-		return nil, err
-	}
-
-	caCert := ""
-	if len(config.CAFile) > 0 {
-		buf, err := ioutil.ReadFile(config.CAFile)
-		if err != nil {
-			return nil, err
-		}
-		caCert = string(buf)
-	}
-
-	term := &terminal.TerminalSettings{
-		Subprotocols:   []string{"channel.k8s.io"},
-		Url:            wsURL.String(),
-		Header:         http.Header{"Authorization": []string{"Bearer " + config.BearerToken}},
-		CAPem:          caCert,
-		MaxSessionTime: 0,
-	}
-
-	return term, nil
-}
-
-func (s *executor) getTerminalWebSocketURL(config *restclient.Config) (*url.URL, error) {
-	wsURL := s.kubeClient.CoreV1().RESTClient().Post().
-		Namespace(s.pod.Namespace).
-		Resource("pods").
-		Name(s.pod.Name).
-		SubResource("exec").
-		VersionedParams(&api.PodExecOptions{
-			Stdin:     true,
-			Stdout:    true,
-			Stderr:    true,
-			TTY:       true,
-			Container: "build",
-			Command:   []string{"sh", "-c", "bash || sh"},
-		}, scheme.ParameterCodec).URL()
-
-	if wsURL.Scheme == "https" {
-		wsURL.Scheme = "wss"
-	} else if wsURL.Scheme == "http" {
-		wsURL.Scheme = "ws"
-	}
-
-	return wsURL, nil
-}
-
 func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 	values, err := createOverwrites(s.Config.Kubernetes, variables, s.BuildLogger)
 	if err != nil {
@@ -670,10 +707,19 @@ func (s *executor) checkDefaults() error {
 }
 
 func createFn() common.Executor {
+	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:       helperimage.OSTypeLinux,
+		Architecture: "amd64",
+	})
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to set up helper image for kubernetes executor")
+	}
+
 	return &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
 		},
+		helperImageInfo: helperImageInfo,
 	}
 }
 
@@ -685,6 +731,7 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Cache = true
 	features.Session = true
 	features.Terminal = true
+	features.Proxy = true
 }
 
 func init() {

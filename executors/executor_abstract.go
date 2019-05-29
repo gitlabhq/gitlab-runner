@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
 type ExecutorOptions struct {
@@ -14,6 +15,7 @@ type ExecutorOptions struct {
 	SharedBuildsDir               bool
 	Shell                         common.ShellScriptInfo
 	ShowHostname                  bool
+	Metadata                      map[string]string
 }
 
 type AbstractExecutor struct {
@@ -25,6 +27,7 @@ type AbstractExecutor struct {
 	BuildShell   *common.ShellConfiguration
 	currentStage common.ExecutorStage
 	Context      context.Context
+	ProxyPool    proxy.Pool
 }
 
 func (e *AbstractExecutor) updateShell() error {
@@ -56,22 +59,36 @@ func (e *AbstractExecutor) startBuild() error {
 		e.Build.Hostname, _ = os.Hostname()
 	}
 
-	// Start actual build
-	rootDir := e.Config.BuildsDir
-	if rootDir == "" {
-		rootDir = e.DefaultBuildsDir
-	}
-	cacheDir := e.Config.CacheDir
-	if cacheDir == "" {
-		cacheDir = e.DefaultCacheDir
-	}
-	customBuildDirEnabled := e.DefaultCustomBuildsDirEnabled
-	if e.Config.CustomBuildDir != nil {
-		customBuildDirEnabled = e.Config.CustomBuildDir.Enabled
+	return e.Build.StartBuild(
+		e.RootDir(),
+		e.CacheDir(),
+		e.CustomBuildEnabled(),
+		e.SharedBuildsDir,
+	)
+}
+
+func (e *AbstractExecutor) RootDir() string {
+	if e.Config.BuildsDir != "" {
+		return e.Config.BuildsDir
 	}
 
-	return e.Build.StartBuild(rootDir, cacheDir,
-		customBuildDirEnabled, e.SharedBuildsDir)
+	return e.DefaultBuildsDir
+}
+
+func (e *AbstractExecutor) CacheDir() string {
+	if e.Config.CacheDir != "" {
+		return e.Config.CacheDir
+	}
+
+	return e.DefaultCacheDir
+}
+
+func (e *AbstractExecutor) CustomBuildEnabled() bool {
+	if e.Config.CustomBuildDir != nil {
+		return e.Config.CustomBuildDir.Enabled
+	}
+
+	return e.DefaultCustomBuildsDirEnabled
 }
 
 func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
@@ -79,13 +96,22 @@ func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {
 }
 
 func (e *AbstractExecutor) Prepare(options common.ExecutorPrepareOptions) error {
+	e.PrepareConfiguration(options)
+
+	return e.PrepareBuildAndShell()
+}
+
+func (e *AbstractExecutor) PrepareConfiguration(options common.ExecutorPrepareOptions) {
 	e.currentStage = common.ExecutorStagePrepare
 	e.Context = options.Context
 	e.Config = *options.Config
 	e.Build = options.Build
 	e.Trace = options.Trace
 	e.BuildLogger = common.NewBuildLogger(options.Trace, options.Build.Log())
+	e.ProxyPool = proxy.NewPool()
+}
 
+func (e *AbstractExecutor) PrepareBuildAndShell() error {
 	err := e.startBuild()
 	if err != nil {
 		return err

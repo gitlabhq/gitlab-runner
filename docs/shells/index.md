@@ -18,12 +18,14 @@ from the commands defined in the [`script` directive in `.gitlab-ci.yml`][script
 
 The currently supported shells are:
 
-| Shell         | Description |
-| --------------| ----------- |
-| `bash`        | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
-| `sh`          | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `cmd`         | Windows Batch script. All commands are executed in Batch context (default for Windows) |
-| `powershell`  | Windows PowerShell script. All commands are executed in PowerShell context |
+| Shell         | Status             |  Description |
+| --------------| ------------------ |  ----------- |
+| `bash`        | Fully Supported    | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
+| `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
+| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context (default for Windows, but deprecated and will be removed in Jun 22, 2020 in favor of PowerShell) |
+| `powershell`  | Fully Supported    | Windows PowerShell script. All commands are executed in PowerShell context |
+
+If you want to select a particular shell to use other than the default, you will need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
 ## Sh/Bash shells
 
@@ -47,6 +49,11 @@ cat generated-bash-script | /bin/bash
 
 ## Windows Batch
 
+NOTE: **Note:** In GitLab 11.11, the Windows Batch executor for the
+GitLab Runner was deprecated in favor of the [PowerShell](#powershell)
+executor. Support for Windows Batch will be removed in GitLab 13.0 (Jun
+22, 2020).
+
 This is the default shell used on Windows. Windows Batch doesn't support
 executing the build in context of another user.
 
@@ -69,13 +76,13 @@ set nl=^
 echo Running on %COMPUTERNAME%...
 
 call :prescript
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 call :buildscript
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 call :postscript
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 goto :EOF
 :prescript
@@ -101,25 +108,25 @@ SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_
 echo Cloning repository...
 rd /s /q "C:\GitLab-Runner\builds\0\project-1" 2>NUL 1>NUL
 "git" "clone" "http://gitlab.example.com/group/project.git" "Z:\Gitlab\tests\test\builds\0\project-1"
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 cd /D "C:\GitLab-Runner\builds\0\project-1"
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 echo Checking out db45ad9a as master...
 "git" "checkout" "db45ad9af9d7af5e61b829442fd893d96e31250c"
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 IF EXIST "..\..\..\cache\project-1\pages\master\cache.tgz" (
   echo Restoring cache...
   "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
-  IF %errorlevel% NEQ 0 exit /b %errorlevel%
+  IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 ) ELSE (
   IF EXIST "..\..\..\cache\project-1\pages\master\cache.tgz" (
     echo Restoring cache...
     "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
-    IF %errorlevel% NEQ 0 exit /b %errorlevel%
+    IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
   )
 )
@@ -146,7 +153,7 @@ md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
 echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
 SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
 cd /D "C:\GitLab-Runner\builds\0\project-1"
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 echo $ echo true
 echo true
@@ -173,11 +180,11 @@ md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
 echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
 SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
 cd /D "C:\GitLab-Runner\builds\0\project-1"
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 echo Archiving cache...
 "gitlab-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz" "--path" "vendor"
-IF %errorlevel% NEQ 0 exit /b %errorlevel%
+IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 goto :EOF
 ```

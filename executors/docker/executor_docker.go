@@ -3,7 +3,6 @@ package docker
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"io"
@@ -26,9 +25,12 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/helperimage"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 const (
@@ -46,6 +48,8 @@ var DockerPrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
+var errVolumesManagerUndefined = errors.New("volumesManager is undefined")
+
 type executor struct {
 	executors.AbstractExecutor
 	client docker_helpers.Client
@@ -55,15 +59,17 @@ type executor struct {
 
 	builds   []string // IDs of successfully created build containers
 	services []*types.Container
-	caches   []string // IDs of cache containers
 
-	binds []string
 	links []string
 
 	devices []container.DeviceMapping
 
+	helperImageInfo helperimage.Info
+
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
+
+	volumesManager volumes.Manager
 }
 
 func init() {
@@ -270,56 +276,36 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		imageNameFromConfig = common.AppVersion.Variables().ExpandValue(imageNameFromConfig)
 
 		e.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
-		if !e.Build.IsFeatureFlagOn(common.FFDockerHelperImageV2) {
-			e.Warningln("DEPRECATION: With gitlab-runner 12.0 we will change some tools inside the helper image, please make sure your image is compliant with the new API. https://gitlab.com/gitlab-org/gitlab-runner/issues/4013")
-		}
 
 		return e.getDockerImage(imageNameFromConfig)
 	}
 
-	helperImageInfo, err := helperimage.GetInfo(e.info)
-	if err != nil {
-		return nil, err
-	}
-
-	revision := "latest"
-	if common.REVISION != "HEAD" {
-		revision = common.REVISION
-	}
-
-	tag, err := helperImageInfo.Tag(revision)
-	if err != nil {
-		return nil, err
-	}
-
-	// Try to find already loaded prebuilt image
-	imageName := fmt.Sprintf("%s:%s", prebuiltImageName, tag)
-	e.Debugln("Looking for prebuilt image", imageName, "...")
-	image, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
+	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
+	image, _, err := e.client.ImageInspectWithRaw(e.Context, e.helperImageInfo.String())
 	if err == nil {
 		return &image, nil
 	}
 
 	// Try to load prebuilt image from local filesystem
-	loadedImage := e.getLocalDockerImage(helperImageInfo, tag)
+	loadedImage := e.getLocalHelperImage()
 	if loadedImage != nil {
 		return loadedImage, nil
 	}
 
 	// Fallback to getting image from DockerHub
-	e.Debugln("Loading image from registry:", imageName)
-	return e.getDockerImage(imageName)
+	e.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
+	return e.getDockerImage(e.helperImageInfo.String())
 }
 
-func (e *executor) getLocalDockerImage(helperImageInfo helperimage.Info, tag string) *types.ImageInspect {
-	if !helperImageInfo.IsSupportingLocalImport() {
+func (e *executor) getLocalHelperImage() *types.ImageInspect {
+	if !e.helperImageInfo.IsSupportingLocalImport {
 		return nil
 	}
 
-	architecture := helperImageInfo.Architecture()
+	architecture := e.helperImageInfo.Architecture
 	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
-		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, tag)
+		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, e.helperImageInfo.Tag)
 		if err != nil {
 			e.Debugln("Failed to load prebuilt image from:", dockerPrebuiltImageFilePath, "error:", err)
 			continue
@@ -346,20 +332,6 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 	return image, nil
 }
 
-func (e *executor) getAbsoluteContainerPath(dir string) string {
-	if path.IsAbs(dir) {
-		return dir
-	}
-	return path.Join(e.Build.FullProjectDir(), dir)
-}
-
-func (e *executor) addHostVolume(hostPath, containerPath string) error {
-	containerPath = e.getAbsoluteContainerPath(containerPath)
-	e.Debugln("Using host-based", hostPath, "for", containerPath, "...")
-	e.binds = append(e.binds, fmt.Sprintf("%v:%v", hostPath, containerPath))
-	return nil
-}
-
 func (e *executor) getLabels(containerType string, otherLabels ...string) map[string]string {
 	labels := make(map[string]string)
 	labels[dockerLabelPrefix+".job.id"] = strconv.Itoa(e.Build.ID)
@@ -379,199 +351,8 @@ func (e *executor) getLabels(containerType string, otherLabels ...string) map[st
 	return labels
 }
 
-// createCacheVolume returns the id of the created container, or an error
-func (e *executor) createCacheVolume(containerName, containerPath string) (string, error) {
-	cacheImage, err := e.getPrebuiltImage()
-	if err != nil {
-		return "", err
-	}
-
-	cmd := []string{"gitlab-runner-helper", "cache-init", containerPath}
-	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
-	if e.checkOutdatedHelperImage() {
-		e.Debugln(common.FFDockerHelperImageV2, "is not set, falling back to old command")
-		cmd = []string{"gitlab-runner-cache", containerPath}
-	}
-
-	config := &container.Config{
-		Image: cacheImage.ID,
-		Cmd:   cmd,
-		Volumes: map[string]struct{}{
-			containerPath: {},
-		},
-		Labels: e.getLabels("cache", "cache.dir="+containerPath),
-	}
-
-	hostConfig := &container.HostConfig{
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-	}
-
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
-	if err != nil {
-		if resp.ID != "" {
-			e.temporary = append(e.temporary, resp.ID)
-		}
-		return "", err
-	}
-
-	e.Debugln("Starting cache container", resp.ID, "...")
-	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
-	if err != nil {
-		e.temporary = append(e.temporary, resp.ID)
-		return "", err
-	}
-
-	e.Debugln("Waiting for cache container", resp.ID, "...")
-	err = e.waitForContainer(e.Context, resp.ID)
-	if err != nil {
-		e.temporary = append(e.temporary, resp.ID)
-		return "", err
-	}
-
-	return resp.ID, nil
-}
-
-func (e *executor) addCacheVolume(containerPath string) error {
-	var err error
-	containerPath = e.getAbsoluteContainerPath(containerPath)
-
-	// disable cache for automatic container cache, but leave it for host volumes (they are shared on purpose)
-	if e.Config.Docker.DisableCache {
-		e.Debugln("Container cache for", containerPath, " is disabled.")
-		return nil
-	}
-
-	hash := md5.Sum([]byte(containerPath))
-
-	// use host-based cache
-	if cacheDir := e.Config.Docker.CacheDir; cacheDir != "" {
-		hostPath := fmt.Sprintf("%s/%s/%x", cacheDir, e.Build.ProjectUniqueName(), hash)
-		hostPath, err := filepath.Abs(hostPath)
-		if err != nil {
-			return err
-		}
-		e.Debugln("Using path", hostPath, "as cache for", containerPath, "...")
-		e.binds = append(e.binds, fmt.Sprintf("%v:%v", filepath.ToSlash(hostPath), containerPath))
-		return nil
-	}
-
-	// get existing cache container
-	var containerID string
-	containerName := fmt.Sprintf("%s-cache-%x", e.Build.ProjectUniqueName(), hash)
-	if inspected, err := e.client.ContainerInspect(e.Context, containerName); err == nil {
-		// check if we have valid cache, if not remove the broken container
-		if _, ok := inspected.Config.Volumes[containerPath]; !ok {
-			e.Debugln("Removing broken cache container for ", containerPath, "path")
-			e.removeContainer(e.Context, inspected.ID)
-		} else {
-			containerID = inspected.ID
-		}
-	}
-
-	// create new cache container for that project
-	if containerID == "" {
-		containerID, err = e.createCacheVolume(containerName, containerPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	e.Debugln("Using container", containerID, "as cache", containerPath, "...")
-	e.caches = append(e.caches, containerID)
-	return nil
-}
-
-func (e *executor) addVolume(volume string) error {
-	var err error
-	hostVolume := strings.SplitN(volume, ":", 2)
-	switch len(hostVolume) {
-	case 2:
-		err = e.addHostVolume(hostVolume[0], hostVolume[1])
-
-	case 1:
-		// disable cache disables
-		err = e.addCacheVolume(hostVolume[0])
-	}
-
-	if err != nil {
-		e.Errorln("Failed to create container volume for", volume, err)
-	}
-	return err
-}
-
 func fakeContainer(id string, names ...string) *types.Container {
 	return &types.Container{ID: id, Names: names}
-}
-
-func (e *executor) createBuildVolume() error {
-	parentDir := e.Build.RootDir
-
-	if e.Build.IsFeatureFlagOn(common.FFUseLegacyBuildsDirForDocker) {
-		// Cache Git sources:
-		// take path of the projects directory,
-		// because we use `rm -rf` which could remove the mounted volume
-		parentDir = path.Dir(e.Build.FullProjectDir())
-	}
-
-	if !path.IsAbs(parentDir) && parentDir != "/" {
-		return common.MakeBuildError("build directory needs to be absolute and non-root path")
-	}
-
-	if e.isHostMountedVolume(e.Build.RootDir, e.Config.Docker.Volumes...) {
-		return nil
-	}
-
-	if e.Build.GetGitStrategy() == common.GitFetch && !e.Config.Docker.DisableCache {
-		// create persistent cache container
-		return e.addVolume(parentDir)
-	}
-
-	// create temporary cache container
-	id, err := e.createCacheVolume("", parentDir)
-	if err != nil {
-		return err
-	}
-
-	e.caches = append(e.caches, id)
-	e.temporary = append(e.temporary, id)
-
-	return nil
-}
-
-func (e *executor) createUserVolumes() (err error) {
-	for _, volume := range e.Config.Docker.Volumes {
-		err = e.addVolume(volume)
-		if err != nil {
-			return
-		}
-	}
-	return nil
-}
-
-func (e *executor) isHostMountedVolume(dir string, volumes ...string) bool {
-	isParentOf := func(parent string, dir string) bool {
-		for dir != "/" && dir != "." {
-			if dir == parent {
-				return true
-			}
-			dir = path.Dir(dir)
-		}
-		return false
-	}
-
-	for _, volume := range volumes {
-		hostVolume := strings.Split(volume, ":")
-		if len(hostVolume) < 2 {
-			continue
-		}
-
-		if isParentOf(path.Clean(hostVolume[1]), path.Clean(dir)) {
-			return true
-		}
-	}
-	return false
 }
 
 func (e *executor) parseDeviceString(deviceString string) (device container.DeviceMapping, err error) {
@@ -675,6 +456,10 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		return nil, errors.New("invalid service name")
 	}
 
+	if e.volumesManager == nil {
+		return nil, errVolumesManagerUndefined
+	}
+
 	e.Println("Starting service", service+":"+version, "...")
 	serviceImage, err := e.getDockerImage(image)
 	if err != nil {
@@ -705,9 +490,9 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    e.Config.Docker.Privileged,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
-		Binds:         e.binds,
+		Binds:         e.volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
-		VolumesFrom:   e.caches,
+		VolumesFrom:   e.volumesManager.ContainerIDs(),
 		Tmpfs:         e.Config.Docker.ServicesTmpfs,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -815,6 +600,9 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 }
 
 func (e *executor) createServices() (err error) {
+	e.SetCurrentStage(DockerExecutorStageCreatingServices)
+	e.Debugln("Creating services...")
+
 	servicesDefinitions, err := e.getServicesDefinitions()
 	if err != nil {
 		return
@@ -848,6 +636,10 @@ func (e *executor) getValidContainers(containers []string) []string {
 }
 
 func (e *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
+	if e.volumesManager == nil {
+		return nil, errVolumesManagerUndefined
+	}
+
 	image, err := e.expandAndGetDockerImage(imageDefinition.Name, allowedInternalImages)
 	if err != nil {
 		return nil, err
@@ -886,7 +678,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 
 	// By default we use caches container,
 	// but in later phases we hook to previous build container
-	volumesFrom := e.caches
+	volumesFrom := e.volumesManager.ContainerIDs()
 	if len(e.builds) > 0 {
 		volumesFrom = []string{
 			e.builds[len(e.builds)-1],
@@ -915,7 +707,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
 		Links:         append(e.Config.Docker.Links, e.links...),
-		Binds:         e.binds,
+		Binds:         e.volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
 		VolumesFrom:   append(e.Config.Docker.VolumesFrom, volumesFrom...),
@@ -1163,7 +955,7 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 	return nil
 }
 
-func (e *executor) connectDocker() (err error) {
+func (e *executor) connectDocker() error {
 	client, err := docker_helpers.New(e.Config.Docker.DockerCredentials, "")
 	if err != nil {
 		return err
@@ -1175,70 +967,170 @@ func (e *executor) connectDocker() (err error) {
 		return err
 	}
 
-	return
+	err = e.validateOSType()
+	if err != nil {
+		return err
+	}
+
+	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:          e.info.OSType,
+		Architecture:    e.info.Architecture,
+		OperatingSystem: e.info.OperatingSystem,
+	})
+
+	return err
 }
 
-func (e *executor) createDependencies() (err error) {
-	err = e.bindDevices()
-	if err != nil {
-		return err
+// validateOSType checks if the ExecutorOptions metadata matches with the docker
+// info response.
+func (e *executor) validateOSType() error {
+	executorOSType, ok := e.ExecutorOptions.Metadata["OSType"]
+	if !ok {
+		return common.MakeBuildError("%s does not have any OSType specified", e.Config.Executor)
 	}
 
-	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
-	e.Debugln("Creating build volume...")
-	err = e.createBuildVolume()
-	if err != nil {
-		return err
+	if executorOSType != e.info.OSType {
+		return common.MakeBuildError(
+			"executor requires OSType=%s, but Docker Engine supports only OSType=%s",
+			executorOSType, e.info.OSType,
+		)
 	}
 
-	e.SetCurrentStage(DockerExecutorStageCreatingServices)
-	e.Debugln("Creating services...")
-	err = e.createServices()
-	if err != nil {
-		return err
+	return nil
+}
+
+func (e *executor) createDependencies() error {
+	createDependenciesStrategy := []func() error{
+		e.bindDevices,
+		e.createVolumesManager,
+		e.createVolumes,
+		e.createBuildVolume,
+		e.createServices,
 	}
 
+	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyVolumesMountingOrder) {
+		// TODO: Remove in 12.6
+		createDependenciesStrategy = []func() error{
+			e.bindDevices,
+			e.createVolumesManager,
+			e.createBuildVolume,
+			e.createServices,
+			e.createVolumes,
+		}
+	}
+
+	for _, setup := range createDependenciesStrategy {
+		err := setup()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *executor) createVolumes() error {
 	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
-	err = e.createUserVolumes()
-	if err != nil {
-		return err
+
+	if e.volumesManager == nil {
+		return errVolumesManagerUndefined
 	}
 
-	return
+	for _, volume := range e.Config.Docker.Volumes {
+		err := e.volumesManager.Create(volume)
+		if err == volumes.ErrCacheVolumesDisabled {
+			e.Warningln(fmt.Sprintf(
+				"Container based cache volumes creation is disabled. Will not create volume for %q",
+				volume,
+			))
+			continue
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *executor) createBuildVolume() error {
+	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
+	e.Debugln("Creating build volume...")
+
+	if e.volumesManager == nil {
+		return errVolumesManagerUndefined
+	}
+
+	jobsDir := e.Build.RootDir
+
+	// TODO: Remove in 12.3
+	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker) {
+		// Cache Git sources:
+		// take path of the projects directory,
+		// because we use `rm -rf` which could remove the mounted volume
+		jobsDir = path.Dir(e.Build.FullProjectDir())
+	}
+
+	var err error
+
+	if e.Build.GetGitStrategy() == common.GitFetch {
+		err = e.volumesManager.Create(jobsDir)
+		if err == nil {
+			return nil
+		}
+
+		if err == volumes.ErrCacheVolumesDisabled {
+			err = e.volumesManager.CreateTemporary(jobsDir)
+		}
+	} else {
+		err = e.volumesManager.CreateTemporary(jobsDir)
+	}
+
+	if err != nil {
+		if _, ok := err.(*volumes.ErrVolumeAlreadyDefined); !ok {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
-	err := e.prepareBuildsDir(options.Config)
+	e.SetCurrentStage(DockerExecutorStagePrepare)
+
+	if options.Config.Docker == nil {
+		return errors.New("missing docker configuration")
+	}
+
+	e.AbstractExecutor.PrepareConfiguration(options)
+
+	err := e.connectDocker()
 	if err != nil {
 		return err
 	}
 
-	err = e.AbstractExecutor.Prepare(options)
+	err = e.prepareBuildsDir(options)
+	if err != nil {
+		return err
+	}
+
+	err = e.AbstractExecutor.PrepareBuildAndShell()
 	if err != nil {
 		return err
 	}
 
 	if e.BuildShell.PassFile {
-		return errors.New("Docker doesn't support shells that require script file")
+		return errors.New("docker doesn't support shells that require script file")
 	}
 
-	if options.Config.Docker == nil {
-		return errors.New("Missing docker configuration")
-	}
-
-	e.SetCurrentStage(DockerExecutorStagePrepare)
 	imageName, err := e.expandImageName(e.Build.Image.Name, []string{})
 	if err != nil {
 		return err
 	}
 
 	e.Println("Using Docker executor with image", imageName, "...")
-
-	err = e.connectDocker()
-	if err != nil {
-		return err
-	}
 
 	err = e.createDependencies()
 	if err != nil {
@@ -1247,14 +1139,40 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	return nil
 }
 
-func (e *executor) prepareBuildsDir(config *common.RunnerConfig) error {
-	rootDir := config.BuildsDir
-	if rootDir == "" {
-		rootDir = e.DefaultBuildsDir
+var (
+	buildDirectoryNotAbsoluteErr = common.MakeBuildError("build directory needs to be an absolute path")
+
+	buildDirectoryIsRootPathErr = common.MakeBuildError("build directory needs to be a non-root path")
+)
+
+func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
+	volumeParser, err := parser.New(e.info)
+	if err != nil {
+		return fmt.Errorf("couldn't create volumes parser: %v", err)
 	}
-	if e.isHostMountedVolume(rootDir, config.Docker.Volumes...) {
+
+	isHostMounted, err := volumes.IsHostMountedVolume(volumeParser, e.RootDir(), options.Config.Docker.Volumes...)
+	if err != nil {
+		return err
+	}
+
+	// We need to set proper value for e.SharedBuildsDir because
+	// it's required to properly start the job, what is done inside of
+	// e.AbstractExecutor.Prepare()
+	// And a started job is required for Volumes Manager to work, so it's
+	// done before the manager is even created.
+	if isHostMounted {
 		e.SharedBuildsDir = true
 	}
+
+	if !filepath.IsAbs(e.RootDir()) {
+		return buildDirectoryNotAbsoluteErr
+	}
+
+	if e.RootDir() == "/" {
+		return buildDirectoryIsRootPathErr
+	}
+
 	return nil
 }
 
@@ -1276,6 +1194,10 @@ func (e *executor) Cleanup() {
 
 	for _, temporaryID := range e.temporary {
 		remove(temporaryID)
+	}
+
+	if e.volumesManager != nil {
+		<-e.volumesManager.Cleanup(ctx)
 	}
 
 	wg.Wait()
@@ -1309,11 +1231,6 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	containerName := service.Names[0] + "-wait-for-service"
 
 	cmd := []string{"gitlab-runner-helper", "health-check"}
-	// TODO: Remove in 12.0 to start using the command from `gitlab-runner-helper`
-	if e.checkOutdatedHelperImage() {
-		e.Debugln(common.FFDockerHelperImageV2, "is not set, falling back to old command")
-		cmd = []string{"gitlab-runner-service"}
-	}
 
 	config := &container.Config{
 		Cmd:    cmd,
@@ -1414,8 +1331,4 @@ func (e *executor) readContainerLogs(containerID string) string {
 	stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
 	containerLog := containerBuffer.String()
 	return strings.TrimSpace(containerLog)
-}
-
-func (e *executor) checkOutdatedHelperImage() bool {
-	return !e.Build.IsFeatureFlagOn(common.FFDockerHelperImageV2) && e.Config.Docker.HelperImage != ""
 }

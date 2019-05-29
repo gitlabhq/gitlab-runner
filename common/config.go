@@ -20,7 +20,7 @@ import (
 	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
 )
@@ -32,8 +32,6 @@ const (
 	PullPolicyAlways       = "always"
 	PullPolicyNever        = "never"
 	PullPolicyIfNotPresent = "if-not-present"
-
-	defaultHelperImage = "gitlab/gitlab-runner-helper"
 )
 
 // Get returns one of the predefined values or returns an error if the value can't match the predefined
@@ -262,16 +260,6 @@ type CacheConfig struct {
 
 	S3  *CacheS3Config  `toml:"s3,omitempty" json:"s3" namespace:"s3"`
 	GCS *CacheGCSConfig `toml:"gcs,omitempty" json:"gcs" namespace:"gcs"`
-
-	// TODO: Remove in 12.0
-	S3CachePath    string `toml:"-" long:"s3-cache-path" env:"S3_CACHE_PATH" description:"Name of the path to prepend to the cache URL. DEPRECATED"` // DEPRECATED
-	CacheShared    bool   `toml:"-" long:"cache-shared" description:"Enable cache sharing between runners. DEPRECATED"`                              // DEPRECATED
-	ServerAddress  string `toml:"ServerAddress,omitempty" description:"A host:port to the used S3-compatible server DEPRECATED"`                     // DEPRECATED
-	AccessKey      string `toml:"AccessKey,omitempty" description:"S3 Access Key DEPRECATED"`                                                        // DEPRECATED
-	SecretKey      string `toml:"SecretKey,omitempty" description:"S3 Secret Key DEPRECATED"`                                                        // DEPRECATED
-	BucketName     string `toml:"BucketName,omitempty" description:"Name of the bucket where cache will be stored DEPRECATED"`                       // DEPRECATED
-	BucketLocation string `toml:"BucketLocation,omitempty" description:"Name of S3 region DEPRECATED"`                                               // DEPRECATED
-	Insecure       bool   `toml:"Insecure,omitempty" description:"Use insecure mode (without https) DEPRECATED"`                                     // DEPRECATED
 }
 
 type RunnerSettings struct {
@@ -318,9 +306,6 @@ type SessionServer struct {
 type Config struct {
 	ListenAddress string        `toml:"listen_address,omitempty" json:"listen_address"`
 	SessionServer SessionServer `toml:"session_server,omitempty" json:"session_server"`
-
-	// TODO: Remove in 12.0
-	MetricsServerAddress string `toml:"metrics_server,omitempty" json:"metrics_server"` // DEPRECATED
 
 	Concurrent    int             `toml:"concurrent" json:"concurrent"`
 	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
@@ -370,95 +355,11 @@ func (c *CacheS3Config) ShouldUseIAMCredentials() bool {
 }
 
 func (c *CacheConfig) GetPath() string {
-	if c.Path != "" {
-		return c.Path
-	}
-
-	// TODO: Remove in 12.0
-	if c.S3CachePath != "" {
-		logrus.Warning("'--cache-s3-cache-path' command line option and `$S3_CACHE_PATH` environment variables are deprecated and will be removed in GitLab Runner 12.0. Please use '--cache-path' or '$CACHE_PATH' instead")
-	}
-
-	return c.S3CachePath
+	return c.Path
 }
 
 func (c *CacheConfig) GetShared() bool {
-	if c.Shared {
-		return c.Shared
-	}
-
-	// TODO: Remove in 12.0
-	if c.CacheShared {
-		logrus.Warning("'--cache-cache-shared' command line is deprecated and will be removed in GitLab Runner 12.0. Please use '--cache-shared' instead")
-	}
-
-	return c.CacheShared
-}
-
-// DEPRECATED
-// TODO: Remove in 12.0
-func (c *CacheConfig) GetServerAddress() string {
-	return getDeprecatedStringSetting(
-		c.ServerAddress,
-		"[runners.cache] ServerAddress",
-		"S3_SERVER_ADDRESS",
-		"[runners.cache.s3] ServerAddress",
-		"CACHE_S3_SERVER_ADDRESS")
-}
-
-// DEPRECATED
-// TODO: Remove in 12.0
-func (c *CacheConfig) GetAccessKey() string {
-	return getDeprecatedStringSetting(
-		c.AccessKey,
-		"[runners.cache] AccessKey",
-		"S3_ACCESS_KEY",
-		"[runners.cache.s3] AccessKey",
-		"CACHE_S3_ACCESS_KEY")
-}
-
-// DEPRECATED
-// TODO: Remove in 12.0
-func (c *CacheConfig) GetSecretKey() string {
-	return getDeprecatedStringSetting(
-		c.SecretKey,
-		"[runners.cache] SecretKey",
-		"S3_SECRET_KEY",
-		"[runners.cache.s3] SecretKey",
-		"CACHE_S3_SECRET_KEY")
-}
-
-// DEPRECATED
-// TODO: Remove in 12.0
-func (c *CacheConfig) GetBucketName() string {
-	return getDeprecatedStringSetting(
-		c.BucketName,
-		"[runners.cache] BucketName",
-		"S3_BUCKET_NAME",
-		"[runners.cache.s3] BucketName",
-		"CACHE_S3_BUCKET_NAME")
-}
-
-// DEPRECATED
-// TODO: Remove in 12.0
-func (c *CacheConfig) GetBucketLocation() string {
-	return getDeprecatedStringSetting(
-		c.BucketLocation,
-		"[runners.cache] BucketLocation",
-		"S3_BUCKET_LOCATION",
-		"[runners.cache.s3] BucketLocation",
-		"CACHE_S3_BUCKET_LOCATION")
-}
-
-// DEPRECATED
-// TODO: Remove in 12.0
-func (c *CacheConfig) GetInsecure() bool {
-	return getDeprecatedBoolSetting(
-		c.Insecure,
-		"[runners.cache] Insecure",
-		"S3_CACHE_INSECURE",
-		"[runners.cache.s3] Insecure",
-		"CACHE_S3_INSECURE")
+	return c.Shared
 }
 
 func (c *SessionServer) GetSessionTimeout() time.Duration {
@@ -511,19 +412,6 @@ func (c *DockerConfig) GetMemoryReservation() int64 {
 
 func (c *DockerConfig) GetOomKillDisable() *bool {
 	return &c.OomKillDisable
-}
-
-func (c *KubernetesConfig) GetHelperImage() string {
-	if len(c.HelperImage) > 0 {
-		return c.HelperImage
-	}
-
-	rev := REVISION
-	if rev == "HEAD" {
-		rev = "latest"
-	}
-
-	return fmt.Sprintf("%s:x86_64-%s", defaultHelperImage, rev)
 }
 
 func (c *KubernetesConfig) GetPollAttempts() int {
@@ -778,17 +666,4 @@ func (c *Config) GetCheckInterval() time.Duration {
 		return time.Duration(c.CheckInterval) * time.Second
 	}
 	return CheckInterval
-}
-
-func (c *Config) ListenOrServerMetricAddress() string {
-	if c.ListenAddress != "" {
-		return c.ListenAddress
-	}
-
-	// TODO: Remove in 12.0
-	if c.MetricsServerAddress != "" {
-		logrus.Warnln("'metrics_server' configuration entry is deprecated and will be removed in one of future releases; please use 'listen_address' instead")
-	}
-
-	return c.MetricsServerAddress
 }

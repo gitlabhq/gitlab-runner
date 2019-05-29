@@ -1,6 +1,6 @@
 # The Docker executor
 
-GitLab Runner can use Docker to run builds on user provided images. This is
+GitLab Runner can use Docker to run jobs on user provided images. This is
 possible with the use of **Docker** executor.
 
 The **Docker** executor when used with GitLab CI, connects to [Docker Engine]
@@ -20,20 +20,101 @@ Engine. Refer to the [API version
 matrix](https://docs.docker.com/develop/sdk/#api-version-matrix) for
 compatible versions of Docker.
 
+## Using Windows containers
+
+> [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in 11.11.
+
+To use Windows containers with the Docker executor, note the following
+information about limitations, supported Windows versions, and
+configuring a Windows Docker executor.
+
+### Limitations
+
+The following are some limitations of using Windows containers with
+Docker executor:
+
+- Services do not fully work (see
+  [#4186](https://gitlab.com/gitlab-org/gitlab-runner/issues/4186)).
+- Nanoserver cannot be used because it requires PowerShell 6 but GitLab
+  requires PowerShell 5 (see
+  [#3291](https://gitlab.com/gitlab-org/gitlab-runner/issues/3291)). See
+  also the list of [supported Windows
+  versions](#supported-windows-versions).
+- Docker-in-Docker is not supported, since it's [not
+  supported](https://github.com/docker-library/docker/issues/49) by
+  Docker itself.
+- Interactive web terminals are not supported.
+- Host device mounting not supported.
+- When mounting a volume directory it has to exist, or Docker will fail
+  to start the container, see
+  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/issues/3754) for
+  additional detail.
+- `docker-windows` executor can be run only using GitLab Runner running
+  on Windows.
+
+### Supported Windows versions
+
+GitLab Runner only supports the following versions of Windows:
+
+- Windows Server 1809.
+- Windows Server 1803.
+
+You can only run containers based on the same OS version that the Docker
+daemon is running on. For example, the following [`Windows Server
+Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
+be used:
+
+- mcr.microsoft.com/windows/servercore:1809
+- mcr.microsoft.com/windows/servercore:1809-amd64
+- mcr.microsoft.com/windows/servercore:ltsc2019
+- mcr.microsoft.com/windows/servercore:1803
+
+### Configuring a Windows Docker executor
+
+When you register a new Runner in interactive mode,
+you can't choose `docker-windows` as an executor and must instead
+edit the `config.toml` that is created/updated.
+
+In addition, an incorrect Windows path for the
+[`volumes`](../configuration/advanced-configuration.md#the-runnersdocker-section)
+key is defined in `config.toml` file. User must manually edit this key
+until [#3915](https://gitlab.com/gitlab-org/gitlab-runner/issues/3915)
+is resolved.
+
+Below is an example of what the configuration for a simple Docker
+executor running Windows
+
+```
+[[runners]]
+  name = "windows-docker-2019"
+  url = "https://gitlab.com/"
+  token = "xxxxxxx"
+  executor = "docker-windows"
+  [runners.docker]
+    image = "mcr.microsoft.com/windows/servercore:1809_amd64"
+    volumes = ["c:\\cache"]
+```
+
+For other configuration options for the Docker executor, see the
+[advanced
+configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
+section.
+
 ## Workflow
 
-The Docker executor divides the build into multiple steps:
+The Docker executor divides the job into multiple steps:
 
-1. **Prepare**: Create and start the services.
-1. **Pre-build**: Clone, restore cache and download artifacts from previous
-   stages. This is run on a special Docker Image.
-1. **Build**: User build. This is run on the user-provided docker image.
-1. **Post-build**: Create cache, upload artifacts to GitLab. This is run on
+1. **Prepare**: Create and start the [services](https://docs.gitlab.com/ee/ci/yaml/#services).
+1. **Pre-job**: Clone, restore [cache](https://docs.gitlab.com/ee/ci/yaml/#cache)
+   and download [artifacts](https://docs.gitlab.com/ee/ci/yaml/#artifacts) from previous
+   stages. This is run on a special Docker image.
+1. **Job**: User build. This is run on the user-provided Docker image.
+1. **Post-job**: Create cache, upload artifacts to GitLab. This is run on
    a special Docker Image.
 
-The special Docker Image is based on [Alpine Linux] and contains all the tools
-required to run the prepare step the build: the Git binary and the Runner
-binary for supporting caching and artifacts. You can find the definition of
+The special Docker image is based on [Alpine Linux] and contains all the tools
+required to run the prepare, pre-job, and post-job steps, like the Git and the
+Runner binaries for supporting caching and artifacts. You can find the definition of
 this special image [in the official Runner repository][special-build].
 
 ## The `image` keyword
@@ -176,9 +257,9 @@ and `tutum-wordpress`.
 The GitLab Runner creates two alias hostnames for the service that you can use
 alternatively. The aliases are taken from the image name following these rules:
 
-1. Everything after `:` is stripped
-2. For the first alias, the slash (`/`) is replaced with double underscores (`__`)
-2. For the second alias, the slash (`/`) is replaced with a single dash (`-`)
+1. Everything after `:` is stripped.
+1. For the first alias, the slash (`/`) is replaced with double underscores (`__`).
+1. For the second alias, the slash (`/`) is replaced with a single dash (`-`).
 
 Using a private service image will strip any port given and apply the rules as
 described above. A service `registry.gitlab-wp.com:4999/tutum/wordpress` will
@@ -222,7 +303,7 @@ This is an example `config.toml` to mount the data directory for the official My
 
 Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.
 
-See an issue: https://gitlab.com/gitlab-org/gitlab-runner/issues/1520
+See an issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1520>.
 
 ### PostgreSQL service example
 
@@ -240,14 +321,13 @@ After the service is started, GitLab Runner waits some time for the service to
 be responsive. Currently, the Docker executor tries to open a TCP connection to
 the first exposed service in the service container.
 
-You can see how it is implemented by checking [this script][service-file].
+You can see how it is implemented by checking this [Go command](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/commands/helpers/health_check.go).
 
 ## The builds and cache storage
 
 The Docker executor by default stores all builds in
 `/builds/<namespace>/<project-name>` and all caches in `/cache` (inside the
 container).
-
 You can overwrite the `/builds` and `/cache` directories by defining the
 `builds_dir` and `cache_dir` options under the `[[runners]]` section in
 `config.toml`. This will modify where the data are stored inside the container.
@@ -263,12 +343,12 @@ Read the next section of persistent storage for more information.
 The Docker executor can provide a persistent storage when running the containers.
 All directories defined under `volumes =` will be persistent between builds.
 
-The `volumes` directive supports 2 types of storage:
+The `volumes` directive supports two types of storage:
 
 1. `<path>` - **the dynamic storage**. The `<path>` is persistent between subsequent
     runs of the same concurrent job for that project. The data is attached to a
     custom cache container: `runner-<short-token>-project-<id>-concurrent-<job-id>-cache-<unique-id>`.
-2. `<host-path>:<path>[:<mode>]` - **the host-bound storage**. The `<path>` is
+1. `<host-path>:<path>[:<mode>]` - **the host-bound storage**. The `<path>` is
     bind to `<host-path>` on the host system. The optional `<mode>` can specify
     that this storage is read-only or read-write (default).
 
@@ -340,7 +420,7 @@ Consider the following example:
     ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
     ```
 
-2. Create a bash script (`entrypoint.sh`) that will be used as the `ENTRYPOINT`:
+1. Create a bash script (`entrypoint.sh`) that will be used as the `ENTRYPOINT`:
 
     ```bash
     #!/bin/sh
@@ -354,9 +434,9 @@ Consider the following example:
     docker push "$BUILD_IMAGE"
     ```
 
-3. Push the image to the Docker registry.
+1. Push the image to the Docker registry.
 
-4. Run Docker executor in `privileged` mode. In `config.toml` define:
+1. Run Docker executor in `privileged` mode. In `config.toml` define:
 
     ```toml
     [[runners]]
@@ -365,7 +445,7 @@ Consider the following example:
         privileged = true
     ```
 
-5. In your project use the following `.gitlab-ci.yml`:
+1. In your project use the following `.gitlab-ci.yml`:
 
     ```yaml
     variables:
@@ -535,7 +615,6 @@ This executor is no longer maintained and will be removed in the near future.
 [toml]: ../commands/README.md#configuration-file
 [alpine linux]: https://alpinelinux.org/
 [special-build]: https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles/build
-[service-file]: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/dockerfiles/build/scripts/gitlab-runner-service
 [privileged]: https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities
 [entry]: https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime
 [secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy

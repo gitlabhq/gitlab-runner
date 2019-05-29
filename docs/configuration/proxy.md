@@ -133,7 +133,7 @@ following to the `[[runners]]` section:
 
 ```toml
 pre_clone_script = "git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY"
-environment = ["https_proxy=docker0_interface_ip:3128", "http_proxy=docker0_interface_ip:3128", "HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
+environment = ["https_proxy=http://docker0_interface_ip:3128", "http_proxy=http://docker0_interface_ip:3128", "HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
 ```
 
 Where `docker0_interface_ip` is the IP address of the `docker0` interface. You need to

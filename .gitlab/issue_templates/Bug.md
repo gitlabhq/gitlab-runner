@@ -81,3 +81,11 @@ Running with gitlab-ci-multi-runner 1.4.2 (bcc1794)
 Using Docker executor with image golang:1.8 ...
 ```
 -->
+
+## Possible fixes
+
+<!--
+(If you can, link to the line of code that might be responsible for the problem)
+--->
+
+/label ~bug

@@ -5,45 +5,69 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_linuxInfo_Tag(t *testing.T) {
-	cases := []struct {
-		name        string
-		dockerArch  string
-		revision    string
-		expectedTag string
+func Test_linuxInfo_create(t *testing.T) {
+	tests := map[string]struct {
+		dockerArch   string
+		revision     string
+		expectedInfo Info
 	}{
-		{
-			name:        "When dockerArch not specified we fallback to runtime arch",
-			dockerArch:  "",
-			revision:    "2923a43",
-			expectedTag: fmt.Sprintf("%s-2923a43", getExpectedArch()),
+		"When dockerArch not specified we fallback to runtime arch": {
+			dockerArch: "",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture: getExpectedArch(),
+				Name:         name,
+				Tag:          fmt.Sprintf("%s-2923a43", getExpectedArch()),
+				IsSupportingLocalImport: true,
+				Cmd: bashCmd,
+			},
 		},
-		{
-			name:        "Docker runs on armv6l",
-			dockerArch:  "armv6l",
-			revision:    "2923a43",
-			expectedTag: "arm-2923a43",
+		"Docker runs on armv6l": {
+			dockerArch: "armv6l",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture: "arm",
+				Name:         name,
+				Tag:          "arm-2923a43",
+				IsSupportingLocalImport: true,
+				Cmd: bashCmd,
+			},
 		},
-		{
-			name:        "Docker runs on amd64",
-			dockerArch:  "amd64",
-			revision:    "2923a43",
-			expectedTag: "x86_64-2923a43",
+		"Docker runs on amd64": {
+			dockerArch: "amd64",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture: "x86_64",
+				Name:         name,
+				Tag:          "x86_64-2923a43",
+				IsSupportingLocalImport: true,
+				Cmd: bashCmd,
+			},
+		},
+		"Configured architecture is unknown": {
+			dockerArch: "some-random-arch",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture: "some-random-arch",
+				Name:         name,
+				Tag:          "some-random-arch-2923a43",
+				IsSupportingLocalImport: true,
+				Cmd: bashCmd,
+			},
 		},
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			u := newLinuxInfo(types.Info{Architecture: c.dockerArch})
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			l := new(linuxInfo)
 
-			tag, err := u.Tag(c.revision)
+			image, err := l.Create(test.revision, Config{Architecture: test.dockerArch})
 
 			assert.NoError(t, err)
-			assert.Equal(t, c.expectedTag, tag)
+			assert.Equal(t, test.expectedInfo, image)
 		})
 	}
 }
@@ -57,9 +81,4 @@ func getExpectedArch() string {
 	}
 
 	return runtime.GOARCH
-}
-
-func Test_linuxInfo_IsSupportingLocalImport(t *testing.T) {
-	u := newLinuxInfo(types.Info{})
-	assert.True(t, u.IsSupportingLocalImport())
 }

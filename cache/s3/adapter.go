@@ -41,9 +41,7 @@ func (a *s3Adapter) GetUploadURL() *url.URL {
 }
 
 func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
-	c := deprecatedConfigHandler(config)
-
-	s3 := c.S3
+	s3 := config.S3
 	if s3 == nil {
 		return nil, fmt.Errorf("missing S3 configuration")
 	}
@@ -61,26 +59,6 @@ func New(config *common.CacheConfig, timeout time.Duration, objectName string) (
 	}
 
 	return a, nil
-}
-
-// TODO: Remove in 12.0
-var deprecatedConfigHandler = func(config *common.CacheConfig) *common.CacheConfig {
-	if config.S3 != nil {
-		return config
-	}
-
-	logrus.Warningln("Runner uses S3 caching with deprecated configuration format. Support for deprecated format will be removed in GitLab Runner 12.0")
-
-	config.S3 = &common.CacheS3Config{
-		ServerAddress:  config.GetServerAddress(),
-		AccessKey:      config.GetAccessKey(),
-		SecretKey:      config.GetSecretKey(),
-		BucketName:     config.GetBucketName(),
-		BucketLocation: config.GetBucketLocation(),
-		Insecure:       config.GetInsecure(),
-	}
-
-	return config
 }
 
 func init() {

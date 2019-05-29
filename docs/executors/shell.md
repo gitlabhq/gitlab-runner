@@ -54,6 +54,19 @@ usermod -aG docker gitlab-runner
 usermod -aG vboxusers gitlab-runner
 ```
 
+## Selecting your shell
+
+GitLab Runner [supports certain shells](../shells/index.md). To select a shell, specify it in your `config.toml` file. For example:
+
+```toml
+...
+[[runners]]
+  name = "shell executor runner"
+  executor = "shell"
+  shell = "powershell"
+...
+```
+
 ## Security
 
 Generally it's unsafe to run tests with shell executors. The jobs are run with

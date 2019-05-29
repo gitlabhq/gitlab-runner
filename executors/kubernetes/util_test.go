@@ -377,8 +377,8 @@ func testKubernetesClient(version string, httpClient *http.Client) *kubernetes.C
 	}
 	kube := kubernetes.NewForConfigOrDie(&conf)
 	fakeClient := fake.RESTClient{Client: httpClient}
-	kube.Core().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	kube.Extensions().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
+	kube.CoreV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
+	kube.ExtensionsV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
 
 	return kube
 }

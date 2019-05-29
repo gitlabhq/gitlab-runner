@@ -12,6 +12,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 type CmdShell struct {
@@ -256,7 +257,7 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &CmdWriter{
 		TemporaryPath:                     info.Build.TmpProjectDir(),
-		disableDelayedErrorLevelExpansion: info.Build.IsFeatureFlagOn(common.FFCmdDisableDelayedErrorLevelExpansion),
+		disableDelayedErrorLevelExpansion: info.Build.IsFeatureFlagOn(featureflags.CmdDisableDelayedErrorLevelExpansion),
 	}
 
 	if buildStage == common.BuildStagePrepare {

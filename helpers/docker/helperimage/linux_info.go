@@ -3,24 +3,35 @@ package helperimage
 import (
 	"fmt"
 	"runtime"
-
-	"github.com/docker/docker/api/types"
 )
 
-type linuxInfo struct {
-	dockerArch string
+var bashCmd = []string{"gitlab-runner-build"}
+
+type linuxInfo struct{}
+
+func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
+	arch := l.architecture(cfg.Architecture)
+
+	return Info{
+		Architecture: arch,
+		Name:         name,
+		Tag:          fmt.Sprintf("%s-%s", arch, revision),
+		IsSupportingLocalImport: true,
+		Cmd: bashCmd,
+	}, nil
+
 }
 
-func (u *linuxInfo) Architecture() string {
-	switch u.dockerArch {
+func (l *linuxInfo) architecture(arch string) string {
+	switch arch {
 	case "armv6l", "armv7l", "aarch64":
 		return "arm"
 	case "amd64":
 		return "x86_64"
 	}
 
-	if u.dockerArch != "" {
-		return u.dockerArch
+	if arch != "" {
+		return arch
 	}
 
 	switch runtime.GOARCH {
@@ -28,19 +39,5 @@ func (u *linuxInfo) Architecture() string {
 		return "x86_64"
 	default:
 		return runtime.GOARCH
-	}
-}
-
-func (u *linuxInfo) Tag(revision string) (string, error) {
-	return fmt.Sprintf("%s-%s", u.Architecture(), revision), nil
-}
-
-func (u *linuxInfo) IsSupportingLocalImport() bool {
-	return true
-}
-
-func newLinuxInfo(info types.Info) Info {
-	return &linuxInfo{
-		dockerArch: info.Architecture,
 	}
 }

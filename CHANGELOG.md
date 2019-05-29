@@ -1,3 +1,37 @@
+v11.11.0 (2019-05-22)
+
+- Fix PowerShell cloning !1338
+- Add PowerShell support for Docker Executor !1243
+- Support windows docker volumes configuration !1269
+- Fix git lfs not getting submodule objects !1298
+- Add homebrew installation method for macOS runners !837
+- mention the 59th second timeperiod issue in the docs !490
+- Refactor macOS install instructions !1303
+- Edit note on edge case !1304
+- Extract unsupportedOSTypeError to errors pkg !1305
+- Optimise trace handling for big traces !1292
+- Cleanup feature flags mess !1312
+- Add more documentation for node tolerations !1318
+- Typo: varialbes -> variables !1316
+- Allow to configure FF using config.toml !1321
+- Update link to the introduction of custom build directories !1302
+- Allow to use FF to configure `/builds` folder !1319
+- Create a single source of truth for feature flags !1313
+- Clear up docs on how to select shell !1209
+- Update feature flag documentation !1326
+- Refactor Helper Image package to work with Kubernetes !1306
+- Fix broken internal links !1332
+- Refactor helperimage package tests !1327
+- Change deprecation of FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER to 12.3 !1330
+- Update cmd script example !1333
+- Better explain the workflow in Docker executors doc !1310
+- Exclude mock files from coverage reporting !1334
+- Fix link syntax in advanced-configuration.md !1311
+- Docs: Update contributing links from gitlab-ce !1308
+- Update docker executor Executor Options initialization !1296
+- Add test case for Linux helper image !1335
+- Extract volumes configuration to a separate struct !1261
+
 v11.10.0 (2019-04-22)
 
 **Deprecations:**
@@ -51,6 +85,14 @@ https://about.gitlab.com/2019/04/22/gitlab-11-10-released/#release-deprecations
 - Cleanup k8s cleanup test !1280
 - Change helper image to servercore !1290
 - Add note about git-lfs !1294
+
+v11.9.2 (2019-04-09)
+- Fix git lfs not getting submodule objects !1298
+
+v11.9.1 (2019-04-03)
+- Make it again possible to disable Git LFS pull !1273
+- Use delayed variable expansion for error check in cmd !1260
+- Unexport common.RepoRemoteURL !1276
 
 v11.9.0 (2019-03-22)
 

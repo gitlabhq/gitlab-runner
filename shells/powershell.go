@@ -13,6 +13,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
+const dockerWindowsExecutor = "docker-windows"
+
 type PowerShell struct {
 	AbstractShell
 }
@@ -121,14 +123,26 @@ func (b *PsWriter) IfFile(path string) {
 }
 
 func (b *PsWriter) IfCmd(cmd string, arguments ...string) {
-	b.Line(b.buildCommand(cmd, arguments...) + " 2>$null")
-	b.Line("if($?) {")
-	b.Indent()
+	b.ifInTryCatch(b.buildCommand(cmd, arguments...) + " 2>$null")
 }
 
 func (b *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
-	b.Line(b.buildCommand(cmd, arguments...))
-	b.Line("if($?) {")
+	b.ifInTryCatch(b.buildCommand(cmd, arguments...))
+}
+
+func (b *PsWriter) ifInTryCatch(cmd string) {
+	b.Line("Set-Variable -Name cmdErr -Value $false")
+	b.Line("Try {")
+	b.Indent()
+	b.Line(cmd)
+	b.Line("if(!$?) { throw $LASTEXITCODE }")
+	b.Unindent()
+	b.Line("} Catch {")
+	b.Indent()
+	b.Line("Set-Variable -Name cmdErr -Value $true")
+	b.Unindent()
+	b.Line("}")
+	b.Line("if(!$cmdErr) {")
 	b.Indent()
 }
 
@@ -241,10 +255,11 @@ func (b *PowerShell) GetName() string {
 
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
 	script = &common.ShellConfiguration{
-		Command:   "powershell",
-		Arguments: []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
-		PassFile:  true,
-		Extension: "ps1",
+		Command:       "powershell",
+		Arguments:     []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
+		PassFile:      info.Build.Runner.Executor != dockerWindowsExecutor,
+		Extension:     "ps1",
+		DockerCommand: []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"},
 	}
 	return
 }
@@ -263,7 +278,12 @@ func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.Sh
 	}
 
 	err = b.writeScript(w, buildStage, info)
-	script = w.Finish(info.Build.IsDebugTraceEnabled())
+
+	// No need to set up BOM or tracing since no script was generated.
+	if w.Buffer.Len() > 0 {
+		script = w.Finish(info.Build.IsDebugTraceEnabled())
+	}
+
 	return
 }
 

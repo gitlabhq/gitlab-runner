@@ -920,6 +920,40 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 	})
 }
 
+func TestBuildPowerShellCatchesExceptions(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "powershell") {
+		t.Skip()
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+	build, cleanup := newBuild(t, successfulBuild, "powershell")
+	defer cleanup()
+	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"})
+	build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+
+	out, err := runBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, "Created fresh repository")
+
+	out, err = runBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.NotContains(t, out, "Created fresh repository")
+	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+
+	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "Continue"})
+	out, err = runBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.NotContains(t, out, "Created fresh repository")
+	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+
+	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"})
+	out, err = runBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.NotContains(t, out, "Created fresh repository")
+	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+}
+
 func TestInteractiveTerminal(t *testing.T) {
 	cases := []struct {
 		app                string
