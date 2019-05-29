@@ -71,11 +71,7 @@ be used:
 
 ### Configuring a Windows Docker executor
 
-When you register a new Runner in interactive mode,
-you can't choose `docker-windows` as an executor and must instead
-edit the `config.toml` that is created/updated.
-
-In addition, an incorrect Windows path for the
+An incorrect Windows path for the
 [`volumes`](../configuration/advanced-configuration.md#the-runnersdocker-section)
 key is defined in `config.toml` file. User must manually edit this key
 until [#3915](https://gitlab.com/gitlab-org/gitlab-runner/issues/3915)
