@@ -147,6 +147,13 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
 	depth := build.GitInfo.Depth
 
+	// fetching
+	if depth > 0 {
+		w.Notice("Fetching changes with git depth set to %d...", depth)
+	} else {
+		w.Notice("Fetching changes...")
+	}
+
 	// initializing
 	templateDir := w.MkTmpDir("git-template")
 	templateFile := path.Join(templateDir, "config")
@@ -159,13 +166,6 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	w.Command("git", "init", projectDir, "--template", templateDir)
 	w.Cd(projectDir)
 	b.writeGitCleanup(w, build)
-
-	// fetching
-	if depth > 0 {
-		w.Notice("Fetching changes with git depth set to %d...", depth)
-	} else {
-		w.Notice("Fetching changes...")
-	}
 
 	// Add `git remote` or update existing
 	w.IfCmd("git", "remote", "add", "origin", build.GetRemoteURL())
