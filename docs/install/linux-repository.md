@@ -4,11 +4,6 @@ last_updated: 2017-10-12
 
 # Install GitLab Runner using the official GitLab repositories
 
-NOTE: **Note:**
-Any version that is marked as **_Deprecated_** is scheduled to be removed in
-GitLab 12.0. Please follow
-<https://gitlab.com/gitlab-org/gitlab-runner/issues/3473> for more details.
-
 We provide packages for the currently supported versions of Debian, Ubuntu, Mint, RHEL, Fedora, and CentOS.
 
 | Distribution | Version                    | End of Life date      |
