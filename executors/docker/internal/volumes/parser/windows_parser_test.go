@@ -24,9 +24,13 @@ func TestWindowsParser_ParseVolume(t *testing.T) {
 			volumeSpec:    `c:\source:c:\destination`,
 			expectedParts: &Volume{Source: `c:\source`, Destination: `c:\destination`},
 		},
-		"source and destination case sensitive": {
+		"source and destination case insensitive disk mount": {
+			volumeSpec:    `C:\source:C:\destination`,
+			expectedParts: &Volume{Source: `c:\source`, Destination: `c:\destination`},
+		},
+		"source and destination case insensitive": {
 			volumeSpec:    `c:\Source:c:\Destination`,
-			expectedParts: &Volume{Source: `c:\Source`, Destination: `c:\Destination`},
+			expectedParts: &Volume{Source: `c:\source`, Destination: `c:\destination`},
 		},
 		"destination and mode": {
 			volumeSpec:    `c:\destination:rw`,
