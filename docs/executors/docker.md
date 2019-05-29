@@ -257,9 +257,9 @@ and `tutum-wordpress`.
 The GitLab Runner creates two alias hostnames for the service that you can use
 alternatively. The aliases are taken from the image name following these rules:
 
-1. Everything after `:` is stripped
-2. For the first alias, the slash (`/`) is replaced with double underscores (`__`)
-2. For the second alias, the slash (`/`) is replaced with a single dash (`-`)
+1. Everything after `:` is stripped.
+1. For the first alias, the slash (`/`) is replaced with double underscores (`__`).
+1. For the second alias, the slash (`/`) is replaced with a single dash (`-`).
 
 Using a private service image will strip any port given and apply the rules as
 described above. A service `registry.gitlab-wp.com:4999/tutum/wordpress` will
@@ -303,7 +303,7 @@ This is an example `config.toml` to mount the data directory for the official My
 
 Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.
 
-See an issue: https://gitlab.com/gitlab-org/gitlab-runner/issues/1520
+See an issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1520>.
 
 ### PostgreSQL service example
 
@@ -343,12 +343,12 @@ Read the next section of persistent storage for more information.
 The Docker executor can provide a persistent storage when running the containers.
 All directories defined under `volumes =` will be persistent between builds.
 
-The `volumes` directive supports 2 types of storage:
+The `volumes` directive supports two types of storage:
 
 1. `<path>` - **the dynamic storage**. The `<path>` is persistent between subsequent
     runs of the same concurrent job for that project. The data is attached to a
     custom cache container: `runner-<short-token>-project-<id>-concurrent-<job-id>-cache-<unique-id>`.
-2. `<host-path>:<path>[:<mode>]` - **the host-bound storage**. The `<path>` is
+1. `<host-path>:<path>[:<mode>]` - **the host-bound storage**. The `<path>` is
     bind to `<host-path>` on the host system. The optional `<mode>` can specify
     that this storage is read-only or read-write (default).
 
@@ -420,7 +420,7 @@ Consider the following example:
     ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
     ```
 
-2. Create a bash script (`entrypoint.sh`) that will be used as the `ENTRYPOINT`:
+1. Create a bash script (`entrypoint.sh`) that will be used as the `ENTRYPOINT`:
 
     ```bash
     #!/bin/sh
@@ -434,9 +434,9 @@ Consider the following example:
     docker push "$BUILD_IMAGE"
     ```
 
-3. Push the image to the Docker registry.
+1. Push the image to the Docker registry.
 
-4. Run Docker executor in `privileged` mode. In `config.toml` define:
+1. Run Docker executor in `privileged` mode. In `config.toml` define:
 
     ```toml
     [[runners]]
@@ -445,7 +445,7 @@ Consider the following example:
         privileged = true
     ```
 
-5. In your project use the following `.gitlab-ci.yml`:
+1. In your project use the following `.gitlab-ci.yml`:
 
     ```yaml
     variables:
