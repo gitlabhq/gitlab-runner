@@ -71,6 +71,7 @@ type RegisterRunnerParameters struct {
 	Tags           string `json:"tag_list,omitempty"`
 	RunUntagged    bool   `json:"run_untagged"`
 	Locked         bool   `json:"locked"`
+	AccessLevel    string `json:"access_level,omitempty"`
 	MaximumTimeout int    `json:"maximum_timeout,omitempty"`
 	Active         bool   `json:"active"`
 }

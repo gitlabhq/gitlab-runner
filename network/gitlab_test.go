@@ -146,16 +146,16 @@ func TestRegisterRunner(t *testing.T) {
 		assert.Equal(t, validToken.Token, res.Token)
 	}
 
-	res = c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "invalid description", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
+	res = c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "invalid description", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(invalidToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
+	res = c.RegisterRunner(invalidToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(otherToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
+	res = c.RegisterRunner(otherToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(brokenCredentials, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
+	res = c.RegisterRunner(brokenCredentials, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
 	assert.Nil(t, res)
 }
 
