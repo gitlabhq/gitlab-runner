@@ -18,14 +18,14 @@ BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd'
 S3_UPLOAD_PATH ?= master
 
 # Keep in sync with docs/install/linux-repository.md
-DEB_PLATFORMS ?= debian/wheezy debian/jessie debian/stretch debian/buster \
-    ubuntu/trusty ubuntu/xenial ubuntu/artful ubuntu/bionic \
-    raspbian/wheezy raspbian/jessie raspbian/stretch raspbian/buster \
-    linuxmint/qiana linuxmint/rebecca linuxmint/rafaela linuxmint/rosa linuxmint/sarah linuxmint/serena linuxmint/sonya
+DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
+    ubuntu/xenial ubuntu/bionic \
+    raspbian/jessie raspbian/stretch raspbian/buster \
+    linuxmint/sarah linuxmint/serena linuxmint/sonya
 DEB_ARCHS ?= amd64 i386 armel armhf
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
-    fedora/26 fedora/27 fedora/28 fedora/29 fedora/30
+    fedora/29 fedora/30
 RPM_ARCHS ?= x86_64 i686 arm armhf
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
