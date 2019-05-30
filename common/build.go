@@ -686,12 +686,6 @@ func (b *Build) GetRemoteURL() string {
 	return fmt.Sprintf("%sgitlab-ci-token:%s@%s/%s.git", splits[0], ciJobToken, splits[1], ciProjectPath)
 }
 
-// GetGitDepth is deprecated and will be removed in 12.0, use build.GitInfo.Depth instead
-// TODO: Remove in 12.0
-func (b *Build) GetGitDepth() string {
-	return b.GetAllVariables().Get("GIT_DEPTH")
-}
-
 func (b *Build) GetGitStrategy() GitStrategy {
 	switch b.GetAllVariables().Get("GIT_STRATEGY") {
 	case "clone":
@@ -818,10 +812,6 @@ func (b *Build) GetCacheRequestTimeout() int {
 
 func (b *Build) Duration() time.Duration {
 	return time.Since(b.createdAt)
-}
-
-func (b *Build) RefspecsAvailable() bool {
-	return len(b.GitInfo.Refspecs) > 0
 }
 
 func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt chan os.Signal, executorData ExecutorData) (*Build, error) {
