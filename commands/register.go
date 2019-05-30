@@ -201,41 +201,58 @@ func (s *RegisterCommand) askExecutorOptions() {
 	s.Parallels = nil
 	s.VirtualBox = nil
 
-	switch s.Executor {
-	case "kubernetes":
-		s.Kubernetes = kubernetes
-	case "docker+machine":
-		s.Machine = machine
-		s.Docker = docker
-		s.askDocker()
-	case "docker-ssh+machine":
-		s.Machine = machine
-		s.Docker = docker
-		s.SSH = ssh
-		s.askDocker()
-		s.askSSHLogin()
-	case "docker":
-		s.Docker = docker
-		s.askDocker()
-	case "docker-ssh":
-		s.Docker = docker
-		s.SSH = ssh
-		s.askDocker()
-		s.askSSHLogin()
-	case "ssh":
-		s.SSH = ssh
-		s.askSSHServer()
-		s.askSSHLogin()
-	case "parallels":
-		s.SSH = ssh
-		s.Parallels = parallels
-		s.askParallels()
-		s.askSSHServer()
-	case "virtualbox":
-		s.SSH = ssh
-		s.VirtualBox = virtualbox
-		s.askVirtualBox()
-		s.askSSHLogin()
+	executorFns := map[string]func(){
+		"kubernetes": func() {
+			s.Kubernetes = kubernetes
+		},
+		"docker+machine": func() {
+			s.Machine = machine
+			s.Docker = docker
+			s.askDocker()
+		},
+		"docker-ssh+machine": func() {
+			s.Machine = machine
+			s.Docker = docker
+			s.SSH = ssh
+			s.askDocker()
+			s.askSSHLogin()
+		},
+		"docker": func() {
+			s.Docker = docker
+			s.askDocker()
+		},
+		"docker-windows": func() {
+			s.Docker = docker
+			s.askDocker()
+		},
+		"docker-ssh": func() {
+			s.Docker = docker
+			s.SSH = ssh
+			s.askDocker()
+			s.askSSHLogin()
+		},
+		"ssh": func() {
+			s.SSH = ssh
+			s.askSSHServer()
+			s.askSSHLogin()
+		},
+		"parallels": func() {
+			s.SSH = ssh
+			s.Parallels = parallels
+			s.askParallels()
+			s.askSSHServer()
+		},
+		"virtualbox": func() {
+			s.SSH = ssh
+			s.VirtualBox = virtualbox
+			s.askVirtualBox()
+			s.askSSHLogin()
+		},
+	}
+
+	executorFn, ok := executorFns[s.Executor]
+	if ok {
+		executorFn()
 	}
 }
 
