@@ -160,6 +160,44 @@ please ensure the vendored copies is updated with the appropriate `dep ensure` c
 
 Don't add dependency from upstream master branch when version tags are available.
 
+## Developing for Windows on a non-windows environment
+
+We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/Vagrantfile)
+to help you run a Windows Server 2019 or Windows 10 instance, since we
+are using [multiple machines](https://www.vagrantup.com/docs/multi-machine/) inside of Vagrant.
+
+The following are required:
+
+- [Vagrant](https://www.vagrant.com) installed.
+- [Virtualbox](https://www.virtualbox.com) installed.
+- Around 30GB of free hard disk space on your computer.
+
+Which virtual machine to use depends on your use case:
+
+- The Windows Server machine has docker pre-installed and should always
+  be used when you are developing on Runner for Windows.
+- The Windows 10 machine is there for you to have a windows environment
+  with a GUI which sometimes can help you debugging some Windows
+  features. Note that you cannot have Docker running inside of Windows
+  10 because nested virtualization is not supported.
+
+Running `vagrant up windows_10` will start the Windows 10 machine for
+you. To:
+
+- ssh inside of the Windows 10 machine, run `vagrant ssh windows_10`. 
+- Access the GUI for the Windows 10, you can connect via
+  RDP by running `vagrant rdp windows_10`, which will connect to the
+  machine using a locally installed RDP program.
+
+For both machines, the GitLab Runner source code is synced
+bi-directionally so that you can edit from your machine with your
+favorite editor. The source code can be found under the `$GOROOT`
+environment variable. We have a `RUNNER_SRC` environment variable which
+you can use to find out the full path so when using:
+
+- Windows batch scripts, you can run `cd %RUNNER_SRC`.
+- PowerShell, you can use `cd $Env:RUNNER_SRC`.
+
 ## Troubleshooting
 
 ### executor_docker.go missing Asset symbol
