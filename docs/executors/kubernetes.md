@@ -87,6 +87,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
   the pod annotations overwrite environment variable. When empty,
     it disables the pod annotations overwrite feature
+- `pod_security_context`: Configured through the config file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)  
 - `service_account`: default service account to be used for making kubernetes api calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
@@ -323,6 +324,53 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | medium     | String  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
 
+## Using Security Context
+
+[Pod security context][k8s-pod-security-docs] configuration instructs executor to set a pod security policy on the build pod.
+
+| Option              | Type     | Required | Description |
+|---------------------|----------|----------|-------------|
+| fs_group            | int      | no       | A special supplemental group that applies to all containers in a pod |
+| run_as_group        | int      | no       | The GID to run the entrypoint of the container process |
+| run_as_non_root     | boolean  | no       | Indicates that the container must run as a non-root user |
+| run_as_user         | int      | no       | The UID to run the entrypoint of the container process |
+| supplemental_groups | int list | no       | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
+
+Assigining  a security context to pods provides security to your Kubernetes cluster.  For this to work you'll need to provide a helper
+image that conforms to the policy you set here.
+
+More about the helper image can be found [here](https://docs.gitlab.com/runner/configuration/advanced-configuration.html#helper-image).
+Example of building your own helper image:
+
+```Dockerfile
+ARG tag
+FROM gitlab/gitlab-runner-helper:${tag}
+RUN addgroup -g 59417 -S nonroot && \
+    adduser -u 59417 -S nonroot -G nonroot
+WORKDIR /home/nonroot
+USER 59417:59417
+```
+
+This example creates a user and group called `nonroot` and sets the image to run as that user.
+
+Example of setting pod security context in your config.toml:
+
+```toml
+concurrent = %(concurrent)s
+check_interval = 30
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+    [runners.kubernetes]
+      helper_image = "gitlab-registy.example.com/helper:latest"
+      [runners.kubernetes.pod_security_context]
+        run_as_non_root = true
+        run_as_user = 59417
+        run_as_group = 59417
+        fs_group = 59417
+```
+
 ## Using Docker in your builds
 
 There are a couple of caveats when using docker in your builds while running on
@@ -393,4 +441,5 @@ For more information, see [Building images with kaniko and GitLab CI/CD](https:/
 [k8s-secret-volume-docs]: https://kubernetes.io/docs/concepts/storage/volumes/#secret
 [k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
 [k8s-empty-dir-volume-docs]:https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
+[k8s-pod-security-docs]:https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 [advanced-configuration-helper-image]: ../configuration/advanced-configuration.md#helper-image

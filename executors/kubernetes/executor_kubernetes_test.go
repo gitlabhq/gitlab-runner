@@ -1742,6 +1742,41 @@ func TestSetupBuildPod(t *testing.T) {
 				dns_test.AssertRFC1123Compatibility(t, pod.GetGenerateName())
 			},
 		},
+		"supports pod security context": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						PodSecurityContext: common.KubernetesPodSecurityContext{
+							FSGroup:            func() *int64 { i := int64(200); return &i }(),
+							RunAsGroup:         func() *int64 { i := int64(200); return &i }(),
+							RunAsNonRoot:       func() *bool { i := bool(true); return &i }(),
+							RunAsUser:          func() *int64 { i := int64(200); return &i }(),
+							SupplementalGroups: []int64{200},
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, int64(200), *pod.Spec.SecurityContext.FSGroup)
+				assert.Equal(t, int64(200), *pod.Spec.SecurityContext.RunAsGroup)
+				assert.Equal(t, int64(200), *pod.Spec.SecurityContext.RunAsUser)
+				assert.Equal(t, true, *pod.Spec.SecurityContext.RunAsNonRoot)
+				assert.Equal(t, []int64{200}, pod.Spec.SecurityContext.SupplementalGroups)
+			},
+		},
+		"uses default security context when unspecified": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Empty(t, pod.Spec.SecurityContext, "Security context should be empty")
+			},
+		},
 	}
 
 	for testName, test := range tests {
