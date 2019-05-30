@@ -71,11 +71,11 @@ be used:
 
 ### Configuring a Windows Docker executor
 
-An incorrect Windows path for the
-[`volumes`](../configuration/advanced-configuration.md#the-runnersdocker-section)
-key is defined in `config.toml` file. User must manually edit this key
-until [#3915](https://gitlab.com/gitlab-org/gitlab-runner/issues/3915)
-is resolved.
+NOTE: **Note:**
+There is a known issue when a new Runner is registered with `c:\\cache`
+as a source directory when passing the `--docker-volumes` or
+`DOCKER_VOLUMES` envrionment variable. For more details check
+[#4312](https://gitlab.com/gitlab-org/gitlab-runner/issues/4312)
 
 Below is an example of what the configuration for a simple Docker
 executor running Windows
