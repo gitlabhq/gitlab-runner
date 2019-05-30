@@ -2,7 +2,6 @@ package parser
 
 import (
 	"regexp"
-	"strings"
 )
 
 // The specification of regular expression used for parsing Windows volumes
@@ -73,9 +72,9 @@ func newWindowsParser() Parser {
 }
 
 func (p *windowsParser) ParseVolume(spec string) (*Volume, error) {
-	specExp := regexp.MustCompile(`^` + windowsSource + windowsDestination + windowsMode + `$`)
+	specExp := regexp.MustCompile(`(?i)^` + windowsSource + windowsDestination + windowsMode + `$`)
 
-	parts, err := p.matchesToVolumeSpecParts(strings.ToLower(spec), specExp)
+	parts, err := p.matchesToVolumeSpecParts(spec, specExp)
 	if err != nil {
 		return nil, err
 	}
