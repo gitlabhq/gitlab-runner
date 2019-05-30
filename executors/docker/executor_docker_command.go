@@ -154,8 +154,8 @@ func initializeLinuxDockerExecutor() {
 func initializeWindowsDockerExecutor() {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,
-		DefaultBuildsDir:              `C:\builds`,
-		DefaultCacheDir:               `C:\cache`,
+		DefaultBuildsDir:              `c:\builds`,
+		DefaultCacheDir:               `c:\cache`,
 		SharedBuildsDir:               false,
 		Shell: common.ShellScriptInfo{
 			Shell:         "powershell",

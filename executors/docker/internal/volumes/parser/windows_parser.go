@@ -72,7 +72,7 @@ func newWindowsParser() Parser {
 }
 
 func (p *windowsParser) ParseVolume(spec string) (*Volume, error) {
-	specExp := regexp.MustCompile(`^` + windowsSource + windowsDestination + windowsMode + `$`)
+	specExp := regexp.MustCompile(`(?i)^` + windowsSource + windowsDestination + windowsMode + `$`)
 
 	parts, err := p.matchesToVolumeSpecParts(spec, specExp)
 	if err != nil {
