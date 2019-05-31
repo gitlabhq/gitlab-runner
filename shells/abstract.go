@@ -147,7 +147,6 @@ func (b *AbstractShell) writeFetchCmd(w ShellWriter, build *common.Build, projec
 func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
 	depth := build.GitInfo.Depth
 
-	// fetching
 	if depth > 0 {
 		w.Notice("Fetching changes with git depth set to %d...", depth)
 	} else {
