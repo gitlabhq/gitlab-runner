@@ -13,7 +13,7 @@ case "${target}" in
         make packagecloud
         ;;
     *)
-        echo "Unkown packagecloud upload target: '${target}'"
+        echo "Unknown packagecloud upload target: '${target}'"
         exit 1
         ;;
 esac

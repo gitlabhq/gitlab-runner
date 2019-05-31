@@ -742,7 +742,7 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 		submoduleReadme := filepath.Join(submoduleDir, "README.md")
 
 		// modify submodule and commit
-		modifySubmoduleBeforeCommit := "commited change"
+		modifySubmoduleBeforeCommit := "committed change"
 		err = ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleBeforeCommit), os.ModeSticky)
 		require.NoError(t, err)
 		_, err = gitInDir(submoduleDir, "add", "README.md")

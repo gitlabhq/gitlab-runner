@@ -129,7 +129,7 @@ with complex RBAC configurations.
 variables:
   KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: ci-service-account
 ```
-usefull when overwritting the namespace and RBAC is setup in the cluster.
+useful when overwritting the namespace and RBAC is setup in the cluster.
 
 To ensure only designated service accounts will be used during CI runs, inform the configuration
  `service_account_overwrite_allowed` or set the environment variable `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED`

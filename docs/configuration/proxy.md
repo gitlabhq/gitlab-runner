@@ -187,7 +187,7 @@ In `.gitlab-ci.yml`, the environment variables will be picked up by any program 
 https://github.com/moby/moby/issues/24697#issuecomment-366680499).
 `docker run` or `docker build` executed inside the container of the docker executor
 will look for the proxy settings in `$HOME/.docker/config.json`,
-which is now inside the executor container (and initally empty).
+which is now inside the executor container (and initially empty).
 Therefore, `docker run` or `docker build` executions will have no proxy settings. In order to pass on the settings,
 a `$HOME/.docker/config.json` needs to be created in the executor container. For example:
 
