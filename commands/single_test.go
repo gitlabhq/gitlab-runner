@@ -77,7 +77,7 @@ func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job
 	_, cancel := context.WithCancel(context.Background())
 	jobTrace := common.Trace{Writer: ioutil.Discard, CancelFunc: cancel}
 	mockNetwork.On("RequestJob", mock.Anything, mock.Anything).Return(&jobData, true).Times(maxBuilds)
-	processJob := mockNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(&jobTrace).Times(maxBuilds)
+	processJob := mockNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(&jobTrace, nil).Times(maxBuilds)
 	if job != nil {
 		processJob.Run(job)
 	}

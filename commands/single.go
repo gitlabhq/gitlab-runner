@@ -96,7 +96,11 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		ID:    jobData.ID,
 		Token: jobData.Token,
 	}
-	trace := r.network.ProcessJob(r.RunnerConfig, jobCredentials)
+	trace, err := r.network.ProcessJob(r.RunnerConfig, jobCredentials)
+	if err != nil {
+		return err
+	}
+
 	defer trace.Fail(err, common.NoneFailure)
 
 	err = newBuild.Run(config, trace)

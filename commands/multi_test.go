@@ -46,7 +46,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	mNetwork := common.MockNetwork{}
 	defer mNetwork.AssertExpectations(t)
 	mNetwork.On("RequestJob", mock.Anything, mock.Anything).Return(&jobData, true)
-	mNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(&mJobTrace)
+	mNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(&mJobTrace, nil)
 
 	var runningBuilds uint32
 	e := common.MockExecutor{}
