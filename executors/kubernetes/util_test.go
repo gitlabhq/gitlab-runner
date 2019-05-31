@@ -74,7 +74,7 @@ func TestGetKubeClientConfig(t *testing.T) {
 			error:                true,
 		},
 		{
-			name: "Complete cert based auth take precendece over in cluster config",
+			name: "Complete cert based auth take precedence over in cluster config",
 			config: &common.KubernetesConfig{
 				CertFile: "crt",
 				KeyFile:  "key",

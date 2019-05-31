@@ -239,7 +239,7 @@ to the one that already exists.
 - [ ] `git checkout {{.Major}}-{{.Minor}}-stable && git pull` in your local working copy!
 - [ ] merge all RCx CHANGELOG entries into release entry
 
-    Put a proper header at the begining:
+    Put a proper header at the beginning:
 
     ```markdown
     v{{.Major}}.{{.Minor}}.0 (TODAY_DATE_HERE)
@@ -284,7 +284,7 @@ to the one that already exists.
     - [ ] `git checkout {{.HelmChartMajor}}-{{.HelmChartMinor}}-0-stable && git pull` in your local working copy!
     - [ ] merge all RCx CHANGELOG entries into release entry
 
-        Put a proper header at the begining:
+        Put a proper header at the beginning:
 
         ```markdown
         ## v{{.HelmChartMajor}}.{{.HelmChartMinor}}.0 (TODAY_DATE_HERE)
