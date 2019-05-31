@@ -332,7 +332,19 @@ If you modify the `/cache` storage path, you also need to make sure to mark this
 directory as persistent by defining it in `volumes = ["/my/cache/"]` under the
 `[runners.docker]` section in `config.toml`.
 
-Read the next section of persistent storage for more information.
+### Clearing Docker cache
+
+GitLab Runner provides the [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/packaging/root/usr/share/gitlab-runner/clear-docker-cache)
+script to remove containers that can unnecessarily consume disk space.
+
+Run `clear-docker-cache` regularly (using `cron` once per week, for example),
+ensuring a balance is struck between:
+
+- Maintaining some recent containers in the cache for performance.
+- Reclaiming disk space.
+
+NOTE: **Note:**
+`clear-docker-cache` does not clean build or cache volumes.
 
 ## The persistent storage
 
@@ -348,7 +360,7 @@ The `volumes` directive supports two types of storage:
     bind to `<host-path>` on the host system. The optional `<mode>` can specify
     that this storage is read-only or read-write (default).
 
-## The persistent storage for builds
+### The persistent storage for builds
 
 If you make the `/builds` to be **the host-bound storage**, your builds will be stored in:
 `/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`, where:
