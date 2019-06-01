@@ -205,6 +205,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 			OSType:       helperimage.OSTypeLinux,
 			Architecture: "amd64",
 		},
+		volumeParser: parser.NewLinuxParser(),
 	}
 
 	options := buildImagePullOptions(e, imageName)
@@ -567,54 +568,54 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 
 func TestPrepareBuildsDir(t *testing.T) {
 	tests := map[string]struct {
-		osType                  string
+		parser                  parser.Parser
 		rootDir                 string
 		volumes                 []string
 		expectedSharedBuildsDir bool
-		expectedError           error
+		expectedError           string
 	}{
 		"rootDir mounted as host based volume": {
-			osType:                  parser.OSTypeLinux,
+			parser:                  parser.NewLinuxParser(),
 			rootDir:                 "/build",
 			volumes:                 []string{"/build:/build"},
 			expectedSharedBuildsDir: true,
 		},
 		"rootDir mounted as container based volume": {
-			osType:                  parser.OSTypeLinux,
+			parser:                  parser.NewLinuxParser(),
 			rootDir:                 "/build",
 			volumes:                 []string{"/build"},
 			expectedSharedBuildsDir: false,
 		},
 		"rootDir not mounted as volume": {
-			osType:                  parser.OSTypeLinux,
+			parser:                  parser.NewLinuxParser(),
 			rootDir:                 "/build",
 			volumes:                 []string{"/folder:/folder"},
 			expectedSharedBuildsDir: false,
 		},
 		"rootDir's parent mounted as volume": {
-			osType:                  parser.OSTypeLinux,
+			parser:                  parser.NewLinuxParser(),
 			rootDir:                 "/build/other/directory",
 			volumes:                 []string{"/build/:/build"},
 			expectedSharedBuildsDir: true,
 		},
 		"rootDir is not an absolute path": {
-			osType:        parser.OSTypeLinux,
+			parser:        parser.NewLinuxParser(),
 			rootDir:       "builds",
-			expectedError: buildDirectoryNotAbsoluteErr,
+			expectedError: "build directory needs to be an absolute path",
 		},
 		"rootDir is /": {
-			osType:        parser.OSTypeLinux,
+			parser:        parser.NewLinuxParser(),
 			rootDir:       "/",
-			expectedError: buildDirectoryIsRootPathErr,
+			expectedError: "build directory needs to be a non-root path",
 		},
 		"error on volume parsing": {
-			osType:        parser.OSTypeLinux,
+			parser:        parser.NewLinuxParser(),
 			rootDir:       "/build",
 			volumes:       []string{""},
-			expectedError: parser.NewInvalidVolumeSpecErr(""),
+			expectedError: "invalid volume specification",
 		},
 		"error on volume parser creation": {
-			expectedError: errors.New(`couldn't create volumes parser: unsupported OSType ""`),
+			expectedError: `missing volume parser`,
 		},
 	}
 
@@ -637,13 +638,17 @@ func TestPrepareBuildsDir(t *testing.T) {
 				AbstractExecutor: executors.AbstractExecutor{
 					Config: c,
 				},
-				info: types.Info{
-					OSType: test.osType,
-				},
+				volumeParser: test.parser,
 			}
 
 			err := e.prepareBuildsDir(options)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.expectedError)
+				return
+			}
+
+			assert.NoError(t, err)
 			assert.Equal(t, test.expectedSharedBuildsDir, e.SharedBuildsDir)
 		})
 	}
@@ -1408,10 +1413,11 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executors.ExecutorOptions{
 				Metadata: map[string]string{
-					"OSType": "linux",
+					metadataOSType: osTypeLinux,
 				},
 			},
 		},
+		volumeParser: parser.NewLinuxParser(),
 	}
 	e.Context = context.Background()
 	e.Build = &common.Build{
@@ -1486,6 +1492,7 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 
 	e := &executor{}
 	e.client = c
+	e.volumeParser = parser.NewLinuxParser()
 	e.info = types.Info{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
@@ -1733,21 +1740,21 @@ func TestCheckOSType(t *testing.T) {
 	}{
 		"executor and docker info mismatch": {
 			executorMetadata: map[string]string{
-				"OSType": "windows",
+				metadataOSType: osTypeWindows,
 			},
-			dockerInfoOSType: "linux",
+			dockerInfoOSType: osTypeLinux,
 			expectedErr:      "executor requires OSType=windows, but Docker Engine supports only OSType=linux",
 		},
 		"executor and docker info match": {
 			executorMetadata: map[string]string{
-				"OSType": "linux",
+				metadataOSType: osTypeLinux,
 			},
-			dockerInfoOSType: "linux",
+			dockerInfoOSType: osTypeLinux,
 			expectedErr:      "",
 		},
 		"executor OSType not defined": {
 			executorMetadata: nil,
-			dockerInfoOSType: "linux",
+			dockerInfoOSType: osTypeLinux,
 			expectedErr:      " does not have any OSType specified",
 		},
 	}

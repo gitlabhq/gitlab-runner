@@ -2,6 +2,8 @@ package parser
 
 import (
 	"regexp"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/path"
 )
 
 const (
@@ -18,8 +20,12 @@ type linuxParser struct {
 	baseParser
 }
 
-func newLinuxParser() Parser {
-	return new(linuxParser)
+func NewLinuxParser() Parser {
+	return &linuxParser{
+		baseParser: baseParser{
+			path: path.NewUnixPath(),
+		},
+	}
 }
 
 func (p *linuxParser) ParseVolume(spec string) (*Volume, error) {

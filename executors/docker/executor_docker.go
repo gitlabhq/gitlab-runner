@@ -52,8 +52,9 @@ var errVolumesManagerUndefined = errors.New("volumesManager is undefined")
 
 type executor struct {
 	executors.AbstractExecutor
-	client docker_helpers.Client
-	info   types.Info
+	client       docker_helpers.Client
+	volumeParser parser.Parser
+	info         types.Info
 
 	temporary []string // IDs of containers that should be removed
 
@@ -984,8 +985,8 @@ func (e *executor) connectDocker() error {
 // validateOSType checks if the ExecutorOptions metadata matches with the docker
 // info response.
 func (e *executor) validateOSType() error {
-	executorOSType, ok := e.ExecutorOptions.Metadata["OSType"]
-	if !ok {
+	executorOSType := e.ExecutorOptions.Metadata[metadataOSType]
+	if executorOSType == "" {
 		return common.MakeBuildError("%s does not have any OSType specified", e.Config.Executor)
 	}
 
@@ -1139,21 +1140,14 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	return nil
 }
 
-var (
-	buildDirectoryNotAbsoluteErr = common.MakeBuildError("build directory needs to be an absolute path")
-
-	buildDirectoryIsRootPathErr = common.MakeBuildError("build directory needs to be a non-root path")
-)
-
 func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
-	volumeParser, err := parser.New(e.info)
-	if err != nil {
-		return fmt.Errorf("couldn't create volumes parser: %v", err)
+	if e.volumeParser == nil {
+		return common.MakeBuildError("missing volume parser")
 	}
 
-	isHostMounted, err := volumes.IsHostMountedVolume(volumeParser, e.RootDir(), options.Config.Docker.Volumes...)
+	isHostMounted, err := volumes.IsHostMountedVolume(e.volumeParser, e.RootDir(), options.Config.Docker.Volumes...)
 	if err != nil {
-		return err
+		return &common.BuildError{Inner: err}
 	}
 
 	// We need to set proper value for e.SharedBuildsDir because
@@ -1163,14 +1157,6 @@ func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error
 	// done before the manager is even created.
 	if isHostMounted {
 		e.SharedBuildsDir = true
-	}
-
-	if !filepath.IsAbs(e.RootDir()) {
-		return buildDirectoryNotAbsoluteErr
-	}
-
-	if e.RootDir() == "/" {
-		return buildDirectoryIsRootPathErr
 	}
 
 	return nil
