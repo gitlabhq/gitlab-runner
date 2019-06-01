@@ -3,6 +3,7 @@ package docker
 import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 )
 
 func init() {
@@ -18,7 +19,7 @@ func init() {
 		},
 		ShowHostname: true,
 		Metadata: map[string]string{
-			"OSType": osTypeWindows,
+			metadataOSType: osTypeWindows,
 		},
 	}
 
@@ -28,6 +29,7 @@ func init() {
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: options,
 				},
+				volumeParser: parser.NewWindowsParser(),
 			},
 		}
 		e.SetCurrentStage(common.ExecutorStageCreated)

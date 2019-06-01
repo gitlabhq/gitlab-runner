@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/path"
 )
 
 func newDebugLoggerMock() *mockDebugLogger {
@@ -51,8 +52,9 @@ func addCacheContainerManager(manager *manager) *MockCacheContainersManager {
 
 func addParser(manager *manager) *parser.MockParser {
 	parserMock := new(parser.MockParser)
-	manager.parser = parserMock
+	parserMock.On("Path").Return(path.NewUnixPath())
 
+	manager.parser = parserMock
 	return parserMock
 }
 
@@ -100,6 +102,12 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 			volume:          "/host/new:/my/path:ro",
 			parsedVolume:    &parser.Volume{Source: "/host/new", Destination: "/my/path", Mode: "ro"},
 			expectedBinding: []string{"/host:/duplicated", "/host/new:/my/path:ro"},
+		},
+		"root volume specified": {
+			volume:          "/host/new:/:ro",
+			parsedVolume:    &parser.Volume{Source: "/host/new", Destination: "/", Mode: "ro"},
+			expectedBinding: []string{"/host:/duplicated"},
+			expectedError:   errDirectoryIsRootPath,
 		},
 	}
 
@@ -451,8 +459,9 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_ContainerBased_WithError(t
 func TestDefaultManager_CreateUserVolumes_ParserError(t *testing.T) {
 	m := newDefaultManager(ManagerConfig{})
 
-	volumeParser := addParser(m)
+	volumeParser := new(parser.MockParser)
 	defer volumeParser.AssertExpectations(t)
+	m.parser = volumeParser
 
 	volumeParser.On("ParseVolume", "volume").
 		Return(nil, errors.New("parser-test-error")).

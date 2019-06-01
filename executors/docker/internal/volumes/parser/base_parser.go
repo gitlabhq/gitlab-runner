@@ -2,9 +2,13 @@ package parser
 
 import (
 	"regexp"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/path"
 )
 
-type baseParser struct{}
+type baseParser struct {
+	path path.Path
+}
 
 // The way how matchesToVolumeSpecParts parses the volume mount specification and assigns
 // parts was inspired by how Docker Engine's `windowsParser` is created. The original sources
@@ -40,4 +44,8 @@ func (p *baseParser) matchesToVolumeSpecParts(spec string, specExp *regexp.Regex
 	}
 
 	return parts, nil
+}
+
+func (p *baseParser) Path() path.Path {
+	return p.path
 }

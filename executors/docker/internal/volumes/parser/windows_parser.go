@@ -1,7 +1,11 @@
+// +build windows
+
 package parser
 
 import (
 	"regexp"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/path"
 )
 
 // The specification of regular expression used for parsing Windows volumes
@@ -67,8 +71,12 @@ type windowsParser struct {
 	baseParser
 }
 
-func newWindowsParser() Parser {
-	return new(windowsParser)
+func NewWindowsParser() Parser {
+	return &windowsParser{
+		baseParser: baseParser{
+			path: path.NewWindowsPath(),
+		},
+	}
 }
 
 func (p *windowsParser) ParseVolume(spec string) (*Volume, error) {
