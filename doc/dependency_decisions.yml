@@ -1,0 +1,85 @@
+---
+- - :license
+  - github.com/ayufan/golang-kardianos-service
+  - zlib
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:43:31.343341000 Z
+- - :license
+  - github.com/pmezard/go-difflib
+  - New BSD
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:56:01.347974000 Z
+- - :license
+  - github.com/pkg/errors
+  - BSD-2-Clause
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:56:16.618717000 Z
+- - :license
+  - github.com/markelog/trie
+  - MIT
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:56:29.079395000 Z
+- - :license
+  - github.com/howeyc/gopass
+  - ISC
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:56:49.679855000 Z
+- - :license
+  - github.com/Nvveen/Gotty
+  - BSD-2-Clause
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:57:00.398541000 Z
+- - :license
+  - github.com/gorilla/websocket
+  - BSD-2-Clause
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:57:11.021835000 Z
+- - :license
+  - github.com/gorhill/cronexpr
+  - Apache-2.0
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:57:23.329188000 Z
+- - :license
+  - github.com/golang/glog
+  - Apache-2.0
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:57:34.443986000 Z
+- - :license
+  - github.com/go-ini/ini
+  - Apache-2.0
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:57:59.782275000 Z
+- - :license
+  - github.com/davecgh/go-spew
+  - ISC
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:58:11.728785000 Z
+- - :license
+  - golang.org/x/crypto/ssh/terminal
+  - BSD-3-clause
+  - :who: 
+    :why: 
+    :versions: []
+    :when: 2019-05-03 07:58:23.789185000 Z

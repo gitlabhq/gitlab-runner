@@ -1,3 +1,6 @@
+include:
+  template: License-Management.gitlab-ci.yml
+
 stages:
 - prepare
 - prebuild
@@ -17,6 +20,7 @@ variables:
   GIT_VERSION: "2.21.0"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "2.7.1"
+  LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
 
 before_script:
   - unset GPG_KEY
