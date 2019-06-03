@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -39,6 +40,10 @@ type AccessLevel string
 const (
 	NotProtected AccessLevel = "not_protected"
 	RefProtected AccessLevel = "ref_protected"
+)
+
+const (
+	defaultDockerWindowCacheDir = "c:\\cache"
 )
 
 func (s *RegisterCommand) askOnce(prompt string, result *string, allowEmpty bool) bool {
@@ -110,10 +115,7 @@ func (s *RegisterCommand) askExecutor() {
 }
 
 func (s *RegisterCommand) askDocker() {
-	if s.Docker == nil {
-		s.Docker = &common.DockerConfig{}
-	}
-	s.Docker.Image = s.ask("docker-image", "Please enter the default Docker image (e.g. ruby:2.1):")
+	s.askBasicDocker("ruby:2.6")
 
 	for _, volume := range s.Docker.Volumes {
 		parts := strings.Split(volume, ":")
@@ -122,6 +124,27 @@ func (s *RegisterCommand) askDocker() {
 		}
 	}
 	s.Docker.Volumes = append(s.Docker.Volumes, "/cache")
+}
+
+func (s *RegisterCommand) askDockerWindows() {
+	s.askBasicDocker("mcr.microsoft.com/windows/servercore:1809")
+
+	for _, volume := range s.Docker.Volumes {
+		// This does not cover all the possibilities since we don't have access
+		// to volume parsing package since it's internal.
+		if strings.Contains(volume, defaultDockerWindowCacheDir) {
+			return
+		}
+	}
+	s.Docker.Volumes = append(s.Docker.Volumes, defaultDockerWindowCacheDir)
+}
+
+func (s *RegisterCommand) askBasicDocker(exampleHelperImage string) {
+	if s.Docker == nil {
+		s.Docker = &common.DockerConfig{}
+	}
+
+	s.Docker.Image = s.ask("docker-image", fmt.Sprintf("Please enter the default Docker image (e.g. %s):", exampleHelperImage))
 }
 
 func (s *RegisterCommand) askParallels() {
@@ -223,7 +246,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 		},
 		"docker-windows": func() {
 			s.Docker = docker
-			s.askDocker()
+			s.askDockerWindows()
 		},
 		"docker-ssh": func() {
 			s.Docker = docker
