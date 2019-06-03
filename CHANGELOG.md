@@ -1,3 +1,11 @@
+v11.11.2 (2019-01-03)
+
+- Fix support for SELinux volume mounts & case sensitivity !1381
+- Fix case sensitivity for windows volumes !1389
+- Update logging key for Docker Machine !1361
+- Limit `docker-windows` to Windows !1362
+- Make volumes to work on linux docker on windows !1363
+
 v11.11.1 (2019-05-24)
 
 - Fix volume mounting when mode specified !1357
