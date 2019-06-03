@@ -1,4 +1,4 @@
-v11.11.2 (2019-01-03)
+v11.11.2 (2019-06-03)
 
 - Fix support for SELinux volume mounts & case sensitivity !1381
 - Fix case sensitivity for windows volumes !1389
