@@ -172,7 +172,7 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "github.com/Microsoft/go-winio"
-  revision = "ce2922f643c8fd76b46cadc7f404a06282678b34"
+  version = "v0.4.12"
 
 [[override]]
   name = "github.com/blang/semver"
