@@ -319,7 +319,8 @@ you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
 [variable]. It can be set in both GitLab Variables section of
 a project and in the `config.toml` file.
 
-Docker credentials helper can be configured using `config.json` file in `.docker` folder in runner's home directory, if you are using self hosted runners:
+Docker credentials helper can be configured using `config.json` file in `.docker` folder
+in runner's home directory, if you are using self hosted runners:
 
 ```json
 {

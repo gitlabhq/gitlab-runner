@@ -114,28 +114,7 @@ func ReadAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error)
 		}
 		addAll(auths, authsFromCredentialsHelpers)
 	}
-
 	return auths, nil
-}
-
-func readAuthConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
-	helpersAuths := make(map[string]types.AuthConfig)
-
-	for registry, helper := range config.CredentialHelpers {
-
-		store := credentials.NewNativeStore(config, helper)
-
-		newAuths, err := store.Get(registry)
-
-		if err != nil {
-			return nil, err
-		}
-
-		helpersAuths[registry] = newAuths
-
-	}
-
-	return helpersAuths, nil
 }
 
 func readAuthConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
@@ -146,8 +125,20 @@ func readAuthConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[str
 	if err != nil {
 		return nil, err
 	}
-
 	return newAuths, nil
+}
+
+func readAuthConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
+	helpersAuths := make(map[string]types.AuthConfig)
+	for registry, helper := range config.CredentialHelpers {
+		store := credentials.NewNativeStore(config, helper)
+		newAuths, err := store.Get(registry)
+		if err != nil {
+			return nil, err
+		}
+		helpersAuths[registry] = newAuths
+	}
+	return helpersAuths, nil
 }
 
 func addAll(to, from map[string]types.AuthConfig) {
