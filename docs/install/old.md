@@ -5,8 +5,8 @@ last_updated: 2017-10-09
 # Old GitLab Runner URLs
 
 NOTE: **Note:**
-Take a look at the [compatibility chart](../index.md#compatibility-chart) for
-a list of compatible versions.
+Take a look at the [compatibility section](../index.md#compatibility-with-gitlab-versions) to check the Runner's compatibility
+with your version of GitLab.
 
 In GitLab Runner 10, the name of the executable was renamed from
 `gitlab-ci-multi-runner` to `gitlab-runner`. With that change, GitLab Runner
