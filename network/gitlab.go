@@ -277,7 +277,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig, sessionInfo *commo
 	switch result {
 	case http.StatusCreated:
 		config.Log().WithFields(logrus.Fields{
-			"job":      strconv.Itoa(response.ID),
+			"job":      response.ID,
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
 		addTLSData(&response, tlsData)
