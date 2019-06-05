@@ -12,7 +12,6 @@ import (
 const fileArchiverUntrackedFile = "untracked_test_file.txt"
 const fileArchiverUntrackedUnicodeFile = "неотслеживаемый_тестовый_файл.txt"
 const fileArchiverArchiveZipFile = "archive.zip"
-const fileArchiverOtherFile = "other_test_file.txt"
 const fileArchiverNotExistingFile = "not_existing_file.txt"
 const fileArchiverAbsoluteFile = "/absolute.txt"
 const fileArchiverRelativeFile = "../../../relative.txt"
@@ -60,7 +59,7 @@ func TestCacheArchiverAddingFile(t *testing.T) {
 	assert.Contains(t, f.sortedFiles(), fileArchiverUntrackedFile)
 }
 
-func TestFileArchiverToFailOnAbsoulteFile(t *testing.T) {
+func TestFileArchiverToFailOnAbsoluteFile(t *testing.T) {
 	f := fileArchiver{
 		Paths: []string{fileArchiverAbsoluteFile},
 	}

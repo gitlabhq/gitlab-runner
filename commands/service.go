@@ -16,7 +16,6 @@ import (
 
 const (
 	defaultServiceName = "gitlab-runner"
-	defaultDisplayName = "GitLab Runner"
 	defaultDescription = "GitLab Runner"
 )
 
@@ -55,7 +54,7 @@ func runServiceInstall(s service.Service, c *cli.Context) error {
 	return service.Control(s, "install")
 }
 
-func runServiceStatus(displayName string, s service.Service, c *cli.Context) error {
+func runServiceStatus(displayName string, s service.Service) error {
 	err := s.Status()
 	if err == nil {
 		fmt.Println(displayName+":", "Service is running!")
@@ -141,7 +140,7 @@ func RunServiceControl(c *cli.Context) {
 	case "install":
 		err = runServiceInstall(s, c)
 	case "status":
-		err = runServiceStatus(svcConfig.DisplayName, s, c)
+		err = runServiceStatus(svcConfig.DisplayName, s)
 	default:
 		err = service.Control(s, c.Command.Name)
 	}

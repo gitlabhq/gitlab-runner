@@ -36,14 +36,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
-var (
-	TRUE = true
-)
-
-const (
-	TestTimeout = 15 * time.Second
-)
-
 func TestLimits(t *testing.T) {
 	tests := []struct {
 		CPU, Memory string
