@@ -44,7 +44,7 @@ installed.
 - Easy installation as a service for GNU/Linux, macOS, and Windows.
 - Embedded Prometheus metrics HTTP server.
 
-## Compatibility chart
+## Compatibility with GitLab versions
 
 The GitLab Runner version should be in sync with the GitLab version. While older
 Runners may still work with newer GitLab versions, and vice versa, in some cases,

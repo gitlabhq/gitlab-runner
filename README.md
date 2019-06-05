@@ -11,7 +11,7 @@ The old name of this project was GitLab CI Multi Runner but please use "GitLab R
 ## Runner and GitLab CE/EE compatibility
 
 For a list of compatible versions between GitLab and GitLab Runner, consult
-the [compatibility chart](https://docs.gitlab.com/runner/#compatibility-chart).
+the [compatibility section](https://docs.gitlab.com/runner/#compatibility-with-gitlab-versions).
 
 ## Release process
 
