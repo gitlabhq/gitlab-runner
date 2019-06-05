@@ -319,19 +319,6 @@ you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
 [variable]. It can be set in both GitLab Variables section of
 a project and in the `config.toml` file.
 
-Docker credentials helper can be configured using `config.json` file in `.docker` folder
-in runner's home directory, if you are using self hosted runners:
-
-```json
-{
-    "credHelpers": {
-        "aws_account_id.dkr.ecr.region-1.amazonaws.com": "ecr-login",
-        "aws_account_id.dkr.ecr.region-2.amazonaws.com": "ecr-login",
-        "gcr.io": "gcr"
-    }
-}
-```
-
 For a detailed example, visit the [Using Docker images documentation][priv-example].
 
 The steps performed by the Runner can be summed up to:
