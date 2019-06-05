@@ -3,21 +3,30 @@ package commands
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
 func TestProcessRunner_BuildLimit(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+
 	cfg := common.RunnerConfig{
 		Limit:              2,
 		RequestConcurrency: 10,
@@ -95,8 +104,8 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 
 	// Start 2 builds.
 	wg := sync.WaitGroup{}
-	wg.Add(2)
-	for i := 0; i < 2; i++ {
+	wg.Add(3)
+	for i := 0; i < 3; i++ {
 		go func(i int) {
 			defer wg.Done()
 
@@ -110,11 +119,17 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	err := cmd.processRunner(3, &cfg, runners)
-	assert.EqualError(t, err, "failed to request job, runner limit met")
-
 	// Wait for all builds to finish.
 	wg.Wait()
+
+	limitMetCount := 0
+	for _, entry := range hook.AllEntries() {
+		if strings.Contains(entry.Message, "runner limit met") {
+			limitMetCount++
+		}
+	}
+
+	assert.Equal(t, 1, limitMetCount)
 }
 
 func runFileLockingCmd(t *testing.T, wg *sync.WaitGroup, started chan bool, stop chan bool, filePath string, shouldPanic bool) {
