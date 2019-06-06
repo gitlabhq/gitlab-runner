@@ -89,7 +89,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 			details.State = state
 			details.Used = time.Now()
 			creationTime := time.Since(started)
-			logrus.WithField("time", creationTime).
+			logrus.WithField("duration", creationTime).
 				WithField("name", details.Name).
 				WithField("now", time.Now()).
 				WithField("retries", details.RetryCount).
