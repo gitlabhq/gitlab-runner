@@ -4,14 +4,84 @@ last_updated: 2017-10-09
 
 # Install GitLab Runner manually on GNU/Linux
 
-If you don't want to use a [deb/rpm repository](linux-repository.md) to install
-GitLab Runner, or your GNU/Linux OS is not among the supported ones, you can
-install it manually.
+If you can't use the [deb/rpm repository](linux-repository.md) to
+install GitLab Runner, or your GNU/Linux OS is not among the supported
+ones, you can install it manually using one of the methods below, as a
+last resort.
+
+If you want to use the [Docker executor](../executors/docker.md),
+you must [install Docker](https://docs.docker.com/install/linux/docker-ce/centos/#install-docker-ce)
+before using the Runner.
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
 
-## Install
+## Using deb/rpm package
+
+It is possible to download and install via a `deb` or `rpm` package, if necessary.
+
+### Download
+
+To download the appropriate package for your system:
+
+1. Find the latest file name and options at
+   <https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html>.
+1. Choose a version and download a binary, as described in the
+   documentation for [downloading any other tagged
+   releases](bleeding-edge.md#download-any-other-tagged-release) for
+   bleeding edge GitLab Runner releases.
+
+For example, for Debian or Ubuntu:
+
+```sh
+curl -LJO https://gitlab-runner-downloads.s3.amazonaws.com/latest/deb/gitlab-runner_<arch>.deb
+```
+
+For example, for CentOS or Red Hat Enterprise Linux:
+
+```sh
+curl -LJO https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_<arch>.rpm
+```
+
+### Install
+
+1. Install the package for your system as follows.
+
+   For example, for Debian or Ubuntu:
+
+   ```sh
+   dpkg -i gitlab-runner_<arch>.deb
+   ```
+
+   For example, for CentOS or Red Hat Enterprise Linux:
+
+   ```sh
+   rpm -i gitlab-runner_<arch>.rpm
+   ```
+
+1. [Register the Runner](../register/index.md#gnulinux)
+
+### Update
+
+Download the latest package for your system then upgrade as follows:
+
+For example, for Debian or Ubuntu:
+
+```sh
+dpkg -i gitlab-runner_<arch>.deb
+```
+
+For example, for CentOS or Red Hat Enterprise Linux:
+
+```sh
+rpm -Uvh gitlab-runner_<arch>.rpm
+```
+
+## Using binary file
+
+It is possible to download and install via binary file, if necessary.
+
+### Install
 
 CAUTION: **Important:**
 With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
@@ -39,12 +109,6 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-1. Optionally, if you want to use Docker, install Docker with:
-
-   ```sh
-   curl -sSL https://get.docker.com/ | sh
-   ```
-
 1. Create a GitLab CI user:
 
    ```sh
@@ -67,7 +131,7 @@ the `install` command. This means that some of the job functions like cache and
 artifacts will need to execute `/usr/local/bin/gitlab-runner` command,
 therefore the user under which jobs are run, needs to have access to the executable.
 
-## Update
+### Update
 
 1. Stop the service (you need elevated command prompt as before):
 

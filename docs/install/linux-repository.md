@@ -114,8 +114,8 @@ sudo yum install gitlab-runner
 
 ## Manually download packages
 
-You can manually download the packages from the following URL:
-<https://packages.gitlab.com/runner/gitlab-runner>
+You can [manually download and install the
+packages](linux-manually.md#using-debrpm-package) if necessary.
 
 ## Upgrading to GitLab Runner 10
 
