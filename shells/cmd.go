@@ -274,6 +274,7 @@ func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.Shel
 }
 
 func (b *CmdShell) IsDefault() bool {
+	// TODO: Remove in 13.0 - Make PowerShell default shell for Windows.
 	return runtime.GOOS == "windows"
 }
 

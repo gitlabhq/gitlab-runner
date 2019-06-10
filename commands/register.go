@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -270,6 +271,11 @@ func (s *RegisterCommand) askExecutorOptions() {
 			s.VirtualBox = virtualbox
 			s.askVirtualBox()
 			s.askSSHLogin()
+		},
+		"shell": func() {
+			if runtime.GOOS == "windows" {
+				s.Shell = "powershell"
+			}
 		},
 	}
 
