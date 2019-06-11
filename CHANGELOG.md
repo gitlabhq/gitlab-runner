@@ -1,3 +1,76 @@
+v12.0.0-rc1 (2019-06-11)
+
+**Release notices:**
+
+With GitLab Runner 12.0 we're adding several breaking changes:
+
+- [Require refspec to clone/fetch git repository](https://gitlab.com/gitlab-org/gitlab-runner/issues/4069).
+- [Change command line API for helper images usage](https://gitlab.com/gitlab-org/gitlab-runner/issues/4013).
+- [Remove old cache configuration](https://gitlab.com/gitlab-org/gitlab-runner/issues/4070).
+- [Remove old metrics server configuration](https://gitlab.com/gitlab-org/gitlab-runner/issues/4072).
+- [Remove `FF_K8S_USE_ENTRYPOINT_OVER_COMMAND` feature flag and old behavior](https://gitlab.com/gitlab-org/gitlab-runner/issues/4073).
+- [Remove support for few Linux distributions that reached EOL](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1130).
+- [Remove old `git clean` flow](https://gitlab.com/gitlab-org/gitlab-runner/issues/4175).
+
+Please look into linked issues for details.
+
+**Release changes:**
+
+- Support windows docker volumes configuration !1269
+- Fix powershell cloning !1338
+- Docs: Update docker register non-interactive command !1309
+- Update mocks !1343
+- Change source for go-homedir !1339
+- improve MR and issues templates !1347
+- docs: reuse previous clone !1346
+- Prevent copy and paste error due to not existed alpine tag. !1351
+- Fix typo for usage of proxies within docker containers for runners !1342
+- Add documentation for Windows Docker Executor !1345
+- Fix volume mounting when mode specified !1357
+- Update docs for docker executor description !1358
+- Show error when volume length is not expected !1360
+- Add feature flag to mounting volumes to services !1352
+- Implement session endpoint to proxy build services requests !1170
+- add build info for fedora 30 !1353
+- Limit `docker-windows` to Windows !1362
+- Update logging key for Docker Machine !1361
+- Update docs to refer to Windows Batch deprecation !1371
+- Remove deprecated git clean strategy !1370
+- Remove support for deprecated metrics_server setting !1368
+- Add labels to templates !1375
+- Remove support for deprecated entrypoint configuration for K8S !1369
+- Fix support for SELinux volume mounts & case sensitivity !1381
+- Remove old docker helper image commands !1373
+- Remove support for deprecated S3 cache configuration !1367
+- Added --system flag information into gitlab-runner install command !1378
+- Minor markdown fixes !1382
+- Remove support for deprecated distributions !1130
+- Add configuration of access_level for runners on registration !1323
+- Remove doc notice for deprecated OSes !1384
+- Remove deprecated clone/fetch command !1372
+- Allow configuration of  Pod Security Context by Kubernetes Exeutor !1036
+- Fix case sensitivity for windows volumes !1389
+- Accept docker-windows as an option on register !1388
+- Add documentation for windows development !1183
+- Document clear-docker-cache script !1390
+- Store traces on disk !1315
+- Make git init to be quiet !1383
+- Fix several typos !1392
+- Make volumes to work on linux docker on windows !1363
+- Update CHANGELOG.md with 11.11.x patch releases !1393
+- Dependencies license management with GitLab CI/CD !1279
+- Fix default cache volume docker-windows register !1391
+- Fixed date typo for v11.11.2 CHANGELOG entry !1394
+- Update github.com/Microsoft/go-winio dependency !1348
+- Update compatibility heading as it's no longer a chart/table !1401
+- Docker Credentials helper support !1386
+- Numerous typos fixed !1258
+- Update some logrus fields used in Runner logs !1405
+- Update osx.md so the update instructions work as well as the install instructions !1402
+- Make PowerShell default for new registered Windows shell executors !1406
+- Restore gofmt rules from before codeclimate update !1408
+- Update logrus to v1.4.0 !1407
+
 v11.11.2 (2019-06-03)
 
 - Fix support for SELinux volume mounts & case sensitivity !1381
