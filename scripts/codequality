@@ -8,10 +8,25 @@ code_path=$(pwd)
 # it will break codequality json file
 [ "$CI" != "" ] || docker_tty="--tty"
 
+# Preparing gocyclo analyzer
 docker pull registry.gitlab.com/nolith/codeclimate-gocyclo > /dev/null
 docker tag registry.gitlab.com/nolith/codeclimate-gocyclo codeclimate/codeclimate-gocyclo > /dev/null
+
+# Preparing gofmt analyzer
+#
+# We're forcing the `b65` version because this is the oldest one that
+# doesn't require go1.12 compatible formatting. Since we're still stuck
+# on go1.8.7 it's better to set specific version of gofmt analyzer than
+# to manually update formatting for go1.12 (which is especially hard ant
+# frustrating when using an IDE) while still using the old version of Go
+# for development.
+docker pull codeclimate/codeclimate-gofmt:b65 > /dev/null
+docker tag codeclimate/codeclimate-gofmt:b65 codeclimate/codeclimate-gofmt:latest > /dev/null
+
+# Executing codeclimate check
 exec docker run --rm $docker_tty --env CODECLIMATE_CODE="$code_path" \
 	--volume "$code_path":/code \
 	--volume /var/run/docker.sock:/var/run/docker.sock \
 	--volume /tmp/cc:/tmp/cc \
 	codeclimate/codeclimate:0.83.0 "$@"
+
