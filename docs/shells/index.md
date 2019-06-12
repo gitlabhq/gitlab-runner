@@ -49,12 +49,18 @@ cat generated-bash-script | /bin/bash
 
 ## Windows Batch
 
-NOTE: **Note:** In GitLab 11.11, the Windows Batch executor for the
+NOTE: **Note:** 
+In GitLab 11.11, the Windows Batch executor for the
 GitLab Runner was deprecated in favor of the [PowerShell](#powershell)
 executor. Support for Windows Batch will be removed in GitLab 13.0 (Jun
 22, 2020).
 
-This is the default shell used on Windows. Windows Batch doesn't support
+TIP: **Tip:**
+You can execute batch scripts from PowerShell using `Start-Process
+"cmd.exe" "/c C:\Path\file.bat"` for old batch scripts not ported to
+PowerShell.
+
+Windows Batch is the default shell used on Windows. It doesn't support
 executing the build in context of another user.
 
 The generated Batch script is executed by saving its content to file and
