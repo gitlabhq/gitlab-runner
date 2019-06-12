@@ -255,3 +255,37 @@ func TestGitCleanFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestAbstractShell_writeSubmoduleUpdateCmdRecursive(t *testing.T) {
+	shell := AbstractShell{}
+	mockWriter := new(MockShellWriter)
+	defer mockWriter.AssertExpectations(t)
+
+	mockWriter.On("Notice", "Updating/initializing submodules recursively...").Once()
+	mockWriter.On("Command", "git", "submodule", "sync", "--recursive").Once()
+	mockWriter.On("Command", "git", "submodule", "update", "--init", "--recursive").Once()
+	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git clean -ffxd").Once()
+	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git reset --hard").Once()
+	mockWriter.On("IfCmd", "git-lfs", "version").Once()
+	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git lfs pull").Once()
+	mockWriter.On("EndIf").Once()
+
+	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, true)
+}
+
+func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
+	shell := AbstractShell{}
+	mockWriter := new(MockShellWriter)
+	defer mockWriter.AssertExpectations(t)
+
+	mockWriter.On("Notice", "Updating/initializing submodules...").Once()
+	mockWriter.On("Command", "git", "submodule", "sync").Once()
+	mockWriter.On("Command", "git", "submodule", "update", "--init").Once()
+	mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
+	mockWriter.On("Command", "git", "submodule", "foreach", "git reset --hard").Once()
+	mockWriter.On("IfCmd", "git-lfs", "version").Once()
+	mockWriter.On("Command", "git", "submodule", "foreach", "git lfs pull").Once()
+	mockWriter.On("EndIf").Once()
+
+	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, false)
+}
