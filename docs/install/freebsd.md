@@ -1,5 +1,5 @@
 ---
-last_updated: 2017-10-09
+last_updated: 2019-06-20
 ---
 
 # Install GitLab Runner on FreeBSD
@@ -77,7 +77,8 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
     user="gitlab-runner"
     user_home="/home/gitlab-runner"
-    command="/usr/local/bin/gitlab-runner run"
+    command="/usr/local/bin/gitlab-runner"
+    command_args="run"
     pidfile="/var/run/${name}.pid"
 
     start_cmd="gitlab_runner_start"
@@ -90,7 +91,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
         export HOME=${user_home}
         if checkyesno ${rcvar}; then
             cd ${user_home}
-            /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} > /var/log/gitlab_runner.log 2>&1
+            /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} ${command_args} > /var/log/gitlab_runner.log 2>&1
         fi
     }
 
@@ -103,7 +104,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
     gitlab_runner_status()
     {
-        if [ ! -f ${pidfile} ] || kill -0 `cat ${pidfile}`; then
+        if [ ! -f ${pidfile} ] || ! kill -0 `cat ${pidfile}`; then
             echo "Service ${name} is not running."
         else
             echo "${name} appears to be running."
