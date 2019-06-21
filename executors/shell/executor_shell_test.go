@@ -687,6 +687,43 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 	})
 }
 
+func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
+	skipOnGit17x(t)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+
+		out, err := runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.Contains(t, out, "Updating/initializing submodules recursively...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.NoError(t, err, "The submodule's submodule should have been initialized")
+
+		// Create a file not tracked that should be cleaned in submodule.
+		excludedFilePath := filepath.Join(build.BuildDir, "gitlab-grack", "excluded_file")
+		err = ioutil.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
+		require.NoError(t, err)
+
+		// Run second build, to run fetch.
+		out, err = runBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Created fresh repository")
+		assert.Contains(t, out, "Removing excluded_file")
+	})
+}
+
 func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
