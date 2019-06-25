@@ -112,8 +112,8 @@ This defines one runner entry.
 | `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
 | `executor`           | Select how a project should be built, see next section |
 | `shell`              | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md#overview). |
-| `builds_dir`         | Directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
-| `cache_dir`          | Directory where build caches will be stored in context of selected executor (locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
+| `builds_dir`         | Absolute path to a directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
+| `cache_dir`          | Absolute path to a directory where build caches will be stored in context of selected executor (locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
 | `environment`        | Append or overwrite environment variables |
 | `request_concurrency` | Limit number of concurrent requests for new jobs from GitLab (default 1) |
 | `output_limit`       | Set maximum build log size in kilobytes, by default set to 4096 (4MB) |
