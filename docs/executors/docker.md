@@ -13,6 +13,20 @@ run on your workstation. The added benefit is that you can test all the
 commands that we will explore later from your shell, rather than having to test
 them on a dedicated CI server.
 
+The following table lists what combinations of containers, executors,
+and OS are supported.
+
+| Container Type    | Executor         | OS Type | Supported |
+|:-----------------:|:----------------:|:-------:|:---------:|
+| Windows Container | `docker`         | Windows | ✗         |
+| Windows Container | `docker`         | Linux   | ✗         |
+| Windows Container | `docker-windows` | Windows | ✓         |
+| Windows Container | `docker-windows` | Linux   | ✗         |
+| Linux Containers  | `docker`         | Linux   | ✓         |
+| Linux Containers  | `docker`         | Windows | ✓         |
+| Linux Containers  | `docker-windows` | Linux   | ✗         |
+| Linux Containers  | `docker-windows` | Windows | ✗         |
+
 NOTE: **Note:**
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
@@ -51,6 +65,12 @@ Docker executor:
   additional detail.
 - `docker-windows` executor can be run only using GitLab Runner running
   on Windows.
+- [Linux containers on
+  Windows](https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
+  are not supported, since they are still experimental. Read [the
+  relevant
+  issue](https://gitlab.com/gitlab-org/gitlab-runner/issues/4373) for
+  more details.
 
 ### Supported Windows versions
 
