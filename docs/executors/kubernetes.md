@@ -76,7 +76,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `helper_memory_request`: The amount of memory requested for build helper containers
 - `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set.
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
-- `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in kubernetes pod toleration configuration. 
+- `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in kubernetes pod toleration configuration.
 - `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
 - `helper_image`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts. Read the [helper image][advanced-configuration-helper-image] section of _advanced configuration_ page for more details
 - `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
@@ -87,7 +87,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
   the pod annotations overwrite environment variable. When empty,
     it disables the pod annotations overwrite feature
-- `pod_security_context`: Configured through the config file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)  
+- `pod_security_context`: Configured through the config file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)
 - `service_account`: default service account to be used for making kubernetes api calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
@@ -194,7 +194,7 @@ concurrent = 4
       "node-role.kubernetes.io/master" = "NoSchedule"
       "custom.toleration=value" = "NoSchedule"
       "empty.value=" = "PreferNoSchedule"
-	  "onlyKey" = ""
+      "onlyKey" = ""
 ```
 
 ## Using volumes
