@@ -383,9 +383,9 @@ be sure to check on the current pricing based on the region you picked.
 
 To learn more about Amazon EC2 Spot instances, visit the following links:
 
-- https://aws.amazon.com/ec2/spot/
-- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html
-- https://aws.amazon.com/blogs/aws/focusing-on-spot-instances-lets-talk-about-best-practices/
+- <https://aws.amazon.com/ec2/spot/>
+- <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html>
+- <https://aws.amazon.com/blogs/aws/focusing-on-spot-instances-lets-talk-about-best-practices/>
 
 ### Caveats of Spot instances
 

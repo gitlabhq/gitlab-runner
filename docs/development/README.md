@@ -3,6 +3,7 @@
 ## 1. Install dependencies and Go runtime
 
 ### For Debian/Ubuntu
+
 ```bash
 apt-get install -y mercurial git-core wget make
 wget https://storage.googleapis.com/golang/go1.8.7.linux-amd64.tar.gz
@@ -10,23 +11,27 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 ### For OSX using binary package
+
 ```bash
 wget https://storage.googleapis.com/golang/go1.8.7.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 ### For OSX if you have brew.sh
+
 ```
 brew install go
 ```
 
 ### For OSX using installation package
+
 ```
 wget https://storage.googleapis.com/golang/go1.8.7.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
 ### For FreeBSD
+
 ```
 pkg install go-1.8.7 gmake git mercurial
 ```
@@ -38,15 +43,15 @@ The Docker Engine is required to create pre-built image that is embedded into ru
 Make sure that on machine that is running your Docker Engine you have a `binfmt_misc`.
 This is required to be able to build ARM images that are embedded into GitLab Runner binary.
 
-* For Debian/Ubuntu it's sufficient to execute:
+- For Debian/Ubuntu it's sufficient to execute:
 
     ```
     apt-get install binfmt-support qemu-user-static
     ```
 
-* For Docker for MacOS/Windows `binfmt_misc` is enabled by default.
+- For Docker for MacOS/Windows `binfmt_misc` is enabled by default.
 
-* For CoreOS (but also works on Debian and Ubuntu) you need to execute the following script on system start:
+- For CoreOS (but also works on Debian and Ubuntu) you need to execute the following script on system start:
 
     ```
     #!/bin/sh
@@ -184,7 +189,7 @@ Which virtual machine to use depends on your use case:
 Running `vagrant up windows_10` will start the Windows 10 machine for
 you. To:
 
-- ssh inside of the Windows 10 machine, run `vagrant ssh windows_10`. 
+- ssh inside of the Windows 10 machine, run `vagrant ssh windows_10`.
 - Access the GUI for the Windows 10, you can connect via
   RDP by running `vagrant rdp windows_10`, which will connect to the
   machine using a locally installed RDP program.
@@ -208,6 +213,6 @@ Which is especially tricky on Windows.
 Try to execute: `make deps docker`, if it doesn't help you can do that in steps:
 
 1. Execute `go get -u github.com/jteeuwen/go-bindata/...`
-2. Download https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz and save to out/docker/prebuilt-x86_64.tar.xz
-3. Download https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz and save to out/docker/prebuilt-arm.tar.xz
-4. Execute `make docker` or check the Makefile how this command looks like
+1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz and save to out/docker/prebuilt-x86_64.tar.xz>
+1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz and save to out/docker/prebuilt-arm.tar.xz>
+1. Execute `make docker` or check the Makefile how this command looks like

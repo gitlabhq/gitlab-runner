@@ -160,7 +160,7 @@ The ports can be required because otherwise `docker push` will be blocked
 as it originates from the IP mapped to docker. However, in that case, it is meant to go through the proxy.
 
 When testing the communication between `dockerd` from dind and a `docker` client locally
-(as described here: https://hub.docker.com/_/docker/),
+(as described here: <https://hub.docker.com/_/docker/>),
 `dockerd` from dind is initially started as a client on the host system by root,
 and the proxy variables are taken from `/root/.docker/config.json`.
 
@@ -184,7 +184,8 @@ These are available as environment variables as is (in contrast to `.docker/conf
 in the dind containers running `dockerd` as a service and `docker` client executing `.gitlab-ci.yml`.
 In `.gitlab-ci.yml`, the environment variables will be picked up by any program honouring the proxy settings from default environment variables. For example,
 `wget`, `apt`, `apk`, `docker info` and `docker pull` (but not by `docker run` or `docker build` as per:
-https://github.com/moby/moby/issues/24697#issuecomment-366680499).
+<https://github.com/moby/moby/issues/24697#issuecomment-366680499>).
+
 `docker run` or `docker build` executed inside the container of the docker executor
 will look for the proxy settings in `$HOME/.docker/config.json`,
 which is now inside the executor container (and initially empty).
