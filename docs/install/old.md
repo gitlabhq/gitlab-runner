@@ -28,4 +28,4 @@ curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-
 ## Downloading the binaries manually
 
 For manual installations, the old GitLab Runner binaries can be found under
-https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/index.html.
+<https://gitlab-ci-multi-runner-downloads.s3.amazonaws.com/latest/index.html>.

@@ -64,9 +64,9 @@ or this article about [control and configure with systemd](https://docs.docker.c
 
 ## I get 411 when uploading artifacts.
 
-This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of Nginx (http://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors).
+This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of Nginx (<http://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
 
-Upgrade your Nginx to newer version. For more information see this issue: https://gitlab.com/gitlab-org/gitlab-runner/issues/1031
+Upgrade your Nginx to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1031>
 
 ## I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`.
 
@@ -161,7 +161,7 @@ causes to why this happens:
 
     ---
 
-2. Make sure that your Runner service doesn't use `SessionCreate = true`.
+1. Make sure that your Runner service doesn't use `SessionCreate = true`.
    Previously, when running GitLab Runner as a service, we were creating
    `LaunchAgents` with `SessionCreate`. At that point (**Mavericks**), this was
    the only solution to make Code Signing work. That changed recently with

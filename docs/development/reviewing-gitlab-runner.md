@@ -37,7 +37,7 @@ To open the report:
 
 1. Find the Pipeline related to the change that we want to review. It may be the latest Pipeline for the
    Merge Requests or a Pipeline for the tag. For example, we can look at this one:
-   https://gitlab.com/gitlab-org/gitlab-runner/pipelines/48686952, which released the `v11.8.0` version of Runner.
+   <https://gitlab.com/gitlab-org/gitlab-runner/pipelines/48686952>, which released the `v11.8.0` version of Runner.
 
 1. In the pipeline, find the `stable S3` (for tagged releases), `bleeding edge S3` (for `master` and RC tagged releases),
    or `development S3` (for regular commits) job which should be present at the `release` stage. In our example

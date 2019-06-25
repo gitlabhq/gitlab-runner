@@ -182,7 +182,7 @@ The special care must be taken when dealing with such configuration.
 
 1. If you want to use Docker executor to run builds in containers you need to access the `/var/run/docker.sock`.
    However, if you have a SELinux in enforcing mode, you will see the `Permission denied` when accessing the `/var/run/docker.sock`.
-   Install the `selinux-dockersock` and to resolve the issue: https://github.com/dpw/selinux-dockersock.
+   Install the `selinux-dockersock` and to resolve the issue: <https://github.com/dpw/selinux-dockersock>.
 1. Make sure that persistent directory is created on host: `mkdir -p /srv/gitlab-runner/config`.
 1. Run docker with `:Z` on volumes:
 
@@ -194,4 +194,4 @@ docker run -d --name gitlab-runner --restart always \
 ```
 
 More information about the cause and resolution can be found here:
-http://www.projectatomic.io/blog/2015/06/using-volumes-with-docker-can-cause-problems-with-selinux/
+<http://www.projectatomic.io/blog/2015/06/using-volumes-with-docker-can-cause-problems-with-selinux/>
