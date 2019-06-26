@@ -1,3 +1,8 @@
+v12.0.1 (2019-06-26)
+
+- Fix artifact uploading for Windows Docker containers !1414
+- Wrap submodule command with a string !1411
+
 v12.0.0 (2019-06-21)
 
 **Release notices:**
