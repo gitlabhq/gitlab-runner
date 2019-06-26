@@ -1,3 +1,7 @@
+v11.11.3 (2019-06-26)
+
+- Fix Powershell scripts for Docker containers !1414
+
 v11.11.2 (2019-06-03)
 
 - Fix support for SELinux volume mounts & case sensitivity !1381
