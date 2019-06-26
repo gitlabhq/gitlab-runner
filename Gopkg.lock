@@ -459,15 +459,15 @@
   revision = "098fa99650c08b308663e2b2f057eddf4fb83fa2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:6f2e6a8a38f1e3b7d579404f0420bdf7a11389f4dc2de93134a142da2bbdca05"
+  digest = "1:5a93296ca590f834e900ac8a480e3b13800e7e030c24ec9b688b85b58629abb5"
   name = "github.com/mattn/go-zglob"
   packages = [
     ".",
     "fastwalk",
   ]
   pruneopts = "N"
-  revision = "4959821b481786922ac53e7ef25c61ae19fb7c36"
+  revision = "2ea3427bfa539cca900ca2768d8663ecc8a708c1"
+  version = "v0.0.1"
 
 [[projects]]
   digest = "1:c11b25d0b1937a2c7139e1f795dbcec1b77e7c9a0fb5aa3d065368a5a807c9c6"
