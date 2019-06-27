@@ -78,10 +78,10 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
 - `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in kubernetes pod toleration configuration.
 - `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
-- `helper_image`: [ADVANCED] Override the default helper image used to clone repos and upload artifacts. Read the [helper image][advanced-configuration-helper-image] section of _advanced configuration_ page for more details
+- `helper_image`: (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts.
 - `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
-- `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status. [Default: 3]
-- `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created (useful for queueing more builds that the cluster can handle at a time) [Default: 180]
+- `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3).
+- `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180).
 - `pod_labels`: A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion.
 - `pod_annotations`: A set of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build.
 - `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
@@ -278,7 +278,7 @@ that is defined in Kubernetes cluster and mount it inside of the container.
 | name       | string  | yes      | The name of the volume and at the same time the name of _configMap_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
-| items      | map[string]string | no | Key-to-path mapping for keys from the _configMap_ that should be used. |
+| items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _configMap_ volume, each key from selected _configMap_ will be changed into a file
 stored inside of the selected mount path. By default all keys are present, _configMap's_ key
@@ -301,7 +301,7 @@ a _secret_ that is defined in Kubernetes cluster and mount it inside of the cont
 | name       | string  | yes      | The name of the volume and at the same time the name of _secret_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
-| items      | map[string]string | no | Key-to-path mapping for keys from the _secret_ that should be used. |
+| items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _secret_ volume each key from selected _secret_ will be changed into a file
 stored inside of the selected mount path. By default all keys are present, _secret's_ key
@@ -442,4 +442,3 @@ For more information, see [Building images with kaniko and GitLab CI/CD](https:/
 [k8s-config-map-docs]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
 [k8s-empty-dir-volume-docs]:https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
 [k8s-pod-security-docs]:https://kubernetes.io/docs/concepts/policy/pod-security-policy/
-[advanced-configuration-helper-image]: ../configuration/advanced-configuration.md#helper-image
