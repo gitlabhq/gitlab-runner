@@ -135,25 +135,43 @@ func (e *executor) getHomeDirAuthConfiguration(indexName string) *types.AuthConf
 	return nil
 }
 
+type authConfigResolver func(indexName string) *types.AuthConfig
+
 func (e *executor) getAuthConfig(imageName string) *types.AuthConfig {
 	indexName, _ := docker_helpers.SplitDockerImageName(imageName)
 
-	authFuncs := map[string]func(string) *types.AuthConfig{
-		"DOCKER_AUTH_CONFIG": e.getUserAuthConfiguration,
-		"Docker home directory": e.getHomeDirAuthConfiguration,
-        "job payload": e.getBuildAuthConfiguration,
+	resolvers := []struct {
+		source  string
+		resolve authConfigResolver
+	}{
+		{
+			source:  "DOCKER_AUTH_CONFIG",
+			resolve: e.getUserAuthConfiguration,
+		},
+		{
+			source:  "~/.docker/config.json",
+			resolve: e.getHomeDirAuthConfiguration,
+		},
+		{
+			source:  "job payload",
+			resolve: e.getBuildAuthConfiguration,
+		},
 	}
-	authOrder := [3]string{"DOCKER_AUTH_CONFIG", "Docker home directory", "job payload"}
-    for _, configSource := range authOrder {
-        if authConfig := authFuncs[configSource](indexName); authConfig != nil {
-			e.Println("Authenticating with credentials from", configSource)
-            e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
-					  "in order to resolve", imageName, "...")
-            return authConfig
-        }
+
+	for _, resolver := range resolvers {
+		authConfig := resolver.resolve(indexName)
+
+		if authConfig != nil {
+			e.Println("Authenticating with credentials from", resolver.source)
+			e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
+				"in order to resolve", imageName, "...")
+
+			return authConfig
+		}
 	}
-	
+
 	e.Debugln(fmt.Sprintf("No credentials found for %v", indexName))
+
 	return nil
 }
 
