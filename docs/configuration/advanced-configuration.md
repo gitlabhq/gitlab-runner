@@ -284,9 +284,9 @@ This will create a new volume inside the container at `/path/to/volume/in/contai
 
 #### Example 2: mount a host directory as a data volume
 
-In addition to creating a volume using you can also mount a directory from your
-Docker daemon's host into a container. It's useful when you want to store
-builds outside the container.
+In addition to creating a volume using a data volume, you can also mount
+a directory from your Docker daemon's host into a container. It's useful
+when you want to store directories outside the container.
 
 ```bash
 [runners.docker]
@@ -301,6 +301,12 @@ builds outside the container.
 
 This will use `/path/to/bind/from/host` of the CI host inside the container at
 `/path/to/bind/in/container`.
+
+NOTE: **Note:**
+GitLab Runner 11.11 and newer [will mount the host
+directory](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1261)
+for the defined [services](https://docs.gitlab.com/ee/ci/services/) as
+well.
 
 ### Using a private container registry
 
