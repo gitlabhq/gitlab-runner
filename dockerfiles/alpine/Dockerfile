@@ -39,6 +39,7 @@ RUN chmod +x /usr/bin/gitlab-runner && \
 COPY entrypoint /
 RUN chmod +x /entrypoint
 
+STOPSIGNAL SIGQUIT
 VOLUME ["/etc/gitlab-runner", "/home/gitlab-runner"]
 ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]
 CMD ["run", "--user=gitlab-runner", "--working-directory=/home/gitlab-runner"]
