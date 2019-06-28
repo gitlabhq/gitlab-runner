@@ -54,39 +54,41 @@ func SplitDockerImageName(reposName string) (string, string) {
 
 var HomeDirectory = homedir.Get()
 
-func ReadDockerAuthConfigsFromHomeDir(userName string) (map[string]types.AuthConfig, error) {
+func ReadDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types.AuthConfig, error) {
 	homeDir := HomeDirectory
 
 	if userName != "" {
 		u, err := user.Lookup(userName)
 		if err != nil {
-			return nil, err
+			return "", nil, err
 		}
 		homeDir = u.HomeDir
 	}
 
 	if homeDir == "" {
-		return nil, fmt.Errorf("Failed to get home directory")
+		return "", nil, fmt.Errorf("Failed to get home directory")
 	}
 
-	p := path.Join(homeDir, ".docker", "config.json")
+	configFile := path.Join(homeDir, ".docker", "config.json")
 
-	r, err := os.Open(p)
+	r, err := os.Open(configFile)
 	defer r.Close()
 
 	if err != nil {
-		p := path.Join(homeDir, ".dockercfg")
-		r, err = os.Open(p)
+		configFile = path.Join(homeDir, ".dockercfg")
+		r, err = os.Open(configFile)
 		if err != nil && !os.IsNotExist(err) {
-			return nil, err
+			return "", nil, err
 		}
 	}
 
 	if r == nil {
-		return make(map[string]types.AuthConfig), nil
+		return "", make(map[string]types.AuthConfig), nil
 	}
 
-	return ReadAuthConfigsFromReader(r)
+	authConfigs, err := ReadAuthConfigsFromReader(r)
+
+	return configFile, authConfigs, err
 }
 
 func ReadAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
