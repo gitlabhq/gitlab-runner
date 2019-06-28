@@ -45,7 +45,7 @@ const (
 )
 
 const (
-	AuthConfigSourceNameUserVariable = "$DOCKER_AUTH_CONFIGS"
+	AuthConfigSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
 	AuthConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
 )
 
