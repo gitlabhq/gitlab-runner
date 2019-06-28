@@ -161,14 +161,14 @@ at the beginning of the example.
 So, to sum up:
 
 1. We start the Runner
-2. Runner creates 2 idle machines
-3. Runner picks one job
-4. Runner creates one more machine to fulfill the strong requirement of always
+1. Runner creates 2 idle machines
+1. Runner picks one job
+1. Runner creates one more machine to fulfill the strong requirement of always
    having the two idle machines
-5. Job finishes, we have 3 idle machines
-6. When one of the three idle machines goes over `IdleTime` from the time when
+1. Job finishes, we have 3 idle machines
+1. When one of the three idle machines goes over `IdleTime` from the time when
    last time it picked the job it will be removed
-7. The Runner will always have at least 2 idle machines waiting for fast
+1. The Runner will always have at least 2 idle machines waiting for fast
    picking of the jobs
 
 Below you can see a comparison chart of jobs statuses and machines statuses

@@ -33,8 +33,8 @@ you decide which executor to use.
 
 1. It's possible, but in most cases it is problematic if the build uses services
    installed on the build machine
-2. It requires to install all dependencies by hand
-3. For example using [Vagrant](https://www.vagrantup.com/docs/virtualbox/ "Vagrant documentation for VirtualBox")
+1. It requires to install all dependencies by hand
+1. For example using [Vagrant](https://www.vagrantup.com/docs/virtualbox/ "Vagrant documentation for VirtualBox")
 
 ### I am not sure
 
