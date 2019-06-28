@@ -44,6 +44,11 @@ const (
 	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 )
 
+const (
+	AuthConfigSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
+	AuthConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
+)
+
 var DockerPrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
@@ -89,22 +94,24 @@ func (e *executor) getServiceVariables() []string {
 	return e.Build.GetAllVariables().PublicOrInternal().StringList()
 }
 
-func (e *executor) getUserAuthConfiguration(indexName string) *types.AuthConfig {
+func (e *executor) getUserAuthConfiguration(indexName string) (string, *types.AuthConfig) {
 	if e.Build == nil {
-		return nil
+		return "", nil
 	}
 
 	buf := bytes.NewBufferString(e.Build.GetDockerAuthConfig())
 	authConfigs, _ := docker_helpers.ReadAuthConfigsFromReader(buf)
-	if authConfigs != nil {
-		return docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+
+	if authConfigs == nil {
+		return "", nil
 	}
-	return nil
+
+	return AuthConfigSourceNameUserVariable, docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
 }
 
-func (e *executor) getBuildAuthConfiguration(indexName string) *types.AuthConfig {
+func (e *executor) getBuildAuthConfiguration(indexName string) (string, *types.AuthConfig) {
 	if e.Build == nil {
-		return nil
+		return "", nil
 	}
 
 	authConfigs := make(map[string]types.AuthConfig)
@@ -121,38 +128,48 @@ func (e *executor) getBuildAuthConfiguration(indexName string) *types.AuthConfig
 		}
 	}
 
-	if authConfigs != nil {
-		return docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+	if authConfigs == nil {
+		return "", nil
 	}
-	return nil
+
+	return AuthConfigSourceNameJobPayload, docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
 }
 
-func (e *executor) getHomeDirAuthConfiguration(indexName string) *types.AuthConfig {
-	authConfigs, _ := docker_helpers.ReadDockerAuthConfigsFromHomeDir(e.Shell().User)
-	if authConfigs != nil {
-		return docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+func (e *executor) getHomeDirAuthConfiguration(indexName string) (string, *types.AuthConfig) {
+	sourceFile, authConfigs, _ := docker_helpers.ReadDockerAuthConfigsFromHomeDir(e.Shell().User)
+
+	if authConfigs == nil {
+		return "", nil
 	}
-	return nil
+	return sourceFile, docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+
 }
+
+type authConfigResolver func(indexName string) (string, *types.AuthConfig)
 
 func (e *executor) getAuthConfig(imageName string) *types.AuthConfig {
 	indexName, _ := docker_helpers.SplitDockerImageName(imageName)
 
-	authConfig := e.getUserAuthConfiguration(indexName)
-	if authConfig == nil {
-		authConfig = e.getHomeDirAuthConfiguration(indexName)
-	}
-	if authConfig == nil {
-		authConfig = e.getBuildAuthConfiguration(indexName)
+	resolvers := []authConfigResolver{
+		e.getUserAuthConfiguration,
+		e.getHomeDirAuthConfiguration,
+		e.getBuildAuthConfiguration,
 	}
 
-	if authConfig != nil {
-		e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
-			"in order to resolve", imageName, "...")
-		return authConfig
+	for _, resolver := range resolvers {
+		source, authConfig := resolver(indexName)
+
+		if authConfig != nil {
+			e.Println("Authenticating with credentials from", source)
+			e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
+				"in order to resolve", imageName, "...")
+
+			return authConfig
+		}
 	}
 
 	e.Debugln(fmt.Sprintf("No credentials found for %v", indexName))
+
 	return nil
 }
 
