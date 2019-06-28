@@ -32,7 +32,7 @@ is advised to set up a personal container registry and a cache server.
     Usually the private networking is also not accounted to your monthly
     bandwidth limit.
 
-5. Docker registry will be accessible under `MY_REGISTRY_IP:6000`
+1. Docker registry will be accessible under `MY_REGISTRY_IP:6000`
 
 You can now proceed and
 [configure `config.toml`](../configuration/autoscale.md#distributed-container-registry-mirroring)
