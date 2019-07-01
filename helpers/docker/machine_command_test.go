@@ -1,9 +1,11 @@
 package docker_helpers
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/docker/machine/commands/mcndirs"
@@ -73,4 +75,49 @@ func TestList(t *testing.T) {
 		assert.Empty(t, hostNames)
 		assert.Error(t, err)
 	})
+}
+
+func mockDockerMachineExecutable(t *testing.T) func() {
+	tempDir, err := ioutil.TempDir("", "docker-machine-executable")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	dmExecutable := filepath.Join(tempDir, "docker-machine")
+
+	err = ioutil.WriteFile(dmExecutable, []byte{}, 0777)
+	require.NoError(t, err)
+
+	currentDockerMachineExecutable := dockerMachineExecutable
+	dockerMachineExecutable = dmExecutable
+
+	return func() {
+		dockerMachineExecutable = currentDockerMachineExecutable
+	}
+}
+
+var dockerMachineCommandArgs = []string{"version", "--help"}
+
+func getDockerMachineCommandExpectedArgs() []string {
+	return []string{dockerMachineExecutable, "--bugsnag-api-token=no-report", "version", "--help"}
+}
+
+func TestNewDockerMachineCommand(t *testing.T) {
+	cmd := newDockerMachineCommand(dockerMachineCommandArgs...)
+	assert.Equal(t, getDockerMachineCommandExpectedArgs(), cmd.Args)
+	assert.NotEmpty(t, cmd.Env)
+}
+
+func TestNewDockerMachineCommandCtx(t *testing.T) {
+	defer mockDockerMachineExecutable(t)()
+
+	ctx, cancelFn := context.WithCancel(context.Background())
+
+	cmd := newDockerMachineCommandCtx(ctx, dockerMachineCommandArgs...)
+	assert.Equal(t, getDockerMachineCommandExpectedArgs(), cmd.Args)
+	assert.NotEmpty(t, cmd.Env)
+
+	cancelFn()
+	err := cmd.Start()
+
+	assert.Equal(t, context.Canceled, err)
 }
