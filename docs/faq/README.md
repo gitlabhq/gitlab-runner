@@ -11,8 +11,8 @@ requested by their `coordinator`.
 
 ## Where are logs stored when run as a service?
 
-+ If the GitLab Runner is run as service on Linux/OSX  the daemon logs to syslog.
-+ If the GitLab Runner is run as service on Windows it logs to System's Event Log.
+- If the GitLab Runner is run as service on Linux/OSX  the daemon logs to syslog.
+- If the GitLab Runner is run as service on Windows it logs to System's Event Log.
 
 ## Run in `--debug` mode
 
