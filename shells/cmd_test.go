@@ -112,6 +112,81 @@ func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
 	}
 }
 
+func TestSplitCertificateChain(t *testing.T) {
+	certChain := `--BEGIN 1--
+some certificate
+-----END CERTIFICATE-----
+
+
+
+--BEGIN 2--
+some certificate
+-----END CERTIFICATE-----
+--BEGIN 3--
+some certificate
+-----END CERTIFICATE-----`
+	certsExpected := []string{
+		"--BEGIN 1--\nsome certificate\n-----END CERTIFICATE-----\n",
+		"\n\n\n--BEGIN 2--\nsome certificate\n-----END CERTIFICATE-----\n",
+		"--BEGIN 3--\nsome certificate\n-----END CERTIFICATE-----",
+	}
+
+	certs, _ := SplitCertificateChain(certChain)
+	counter := 0
+	for _, certExpected := range certsExpected {
+		assert.Equal(t, certExpected, certs[counter])
+		counter++
+	}
+}
+
+func TestSplitCertificateChainWithEmptyLinesAtTheEnd(t *testing.T) {
+	certChain := `--BEGIN 1--
+some certificate
+-----END CERTIFICATE-----
+
+--BEGIN 2--
+some certificate
+-----END CERTIFICATE-----
+
+
+`
+	certsExpected := []string{
+		"--BEGIN 1--\nsome certificate\n-----END CERTIFICATE-----\n",
+		"\n--BEGIN 2--\nsome certificate\n-----END CERTIFICATE-----\n",
+		"\n\n",
+	}
+
+	certs, _ := SplitCertificateChain(certChain)
+	counter := 0
+	for _, certExpected := range certsExpected {
+		assert.Equal(t, certExpected, certs[counter])
+		counter++
+	}
+}
+
+func TestRemoveEmpty(t *testing.T) {
+	linesRemovedEmpty := RemoveEmpty([]string{
+		"non-empty",
+		"",
+		"another line",
+		" ",
+		"\n",
+		"last line",
+		"    ",
+	})
+	linesExpected := []string{
+		"non-empty",
+		"another line",
+		"last line",
+	}
+
+	counter := 0
+	for _, lineExpected := range linesExpected {
+		assert.Equal(t, lineExpected, linesRemovedEmpty[counter])
+		counter++
+	}
+}
+
 func Test_CmdWriter_isTmpFile(t *testing.T) {
 	tmpDir := "/foo/bar"
 	bw := CmdWriter{TemporaryPath: tmpDir}

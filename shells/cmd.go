@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -106,6 +107,28 @@ func batchEscape(text string) string {
 	return batchEscapeMode(text, batchQuoteModeEscape)
 }
 
+// splits certificates chain in a single string into separate strings
+func SplitCertificateChain(text string) (certs []string, err error) {
+	const END_CERTIFICATE = "-----END CERTIFICATE-----"
+	certs = strings.SplitAfter(text, END_CERTIFICATE+"\n")
+	if len(certs) <= 1 {
+		err = errors.New("missing " + END_CERTIFICATE)
+	}
+
+	return
+}
+
+// remove empty lines for array of string
+func RemoveEmpty(inputStrings []string) (result []string) {
+	for _, str := range inputStrings {
+		if strings.Trim(str, " \n") != "" {
+			result = append(result, str)
+		}
+	}
+
+	return
+}
+
 func (b *CmdShell) GetName() string {
 	return "cmd"
 }
@@ -190,7 +213,13 @@ func (b *CmdWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
 		b.Linef("md %q 2>NUL 1>NUL", batchEscape(helpers.ToBackslash(b.TemporaryPath)))
-		b.Linef("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile))
+		certs, _ := SplitCertificateChain(variable.Value)
+		certs = RemoveEmpty(certs)
+		// create empty file first
+		b.Linef("echo. 2> %q", batchEscape(variableFile))
+		for _, cert := range certs {
+			b.Linef("echo %s >> %q", batchEscapeVariable(cert), batchEscape(variableFile))
+		}
 		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscape(variableFile))
 	} else {
 		if b.isTmpFile(variable.Value) {
