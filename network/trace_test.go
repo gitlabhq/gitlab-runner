@@ -289,7 +289,15 @@ func TestJobIncrementalStatusRefresh(t *testing.T) {
 
 	b := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	b.updateInterval = time.Millisecond * 10
+
+	// Test for: https://gitlab.com/gitlab-org/gitlab-ce/issues/63972
+	// 1. lock, to prevent incrementalUpdate to read state
+	// 2. inject final state as early as possible
+	b.lock.Lock()
 	b.start()
+	b.state = common.Success
+	b.lock.Unlock()
+
 	wg.Wait()
-	b.Success()
+	b.finish()
 }
