@@ -388,6 +388,26 @@ test junit report:
     reports:
       junit: out/junit/report.xml
 
+.check windows test failures:
+  stage: coverage
+  script:
+  - ./scripts/check_windows_failures
+  artifacts:
+    paths:
+    - .test-failures.*.txt.updated
+    expire_in: 7d
+  when: always
+
+check windows 1803 test failures:
+  variables:
+    <<: *windows1803_variables
+  extends: .check windows test failures
+
+check windows 1809 test failures:
+  variables:
+    <<: *windows1809_variables
+  extends: .check windows test failures
+
 #
 # Build stage
 #

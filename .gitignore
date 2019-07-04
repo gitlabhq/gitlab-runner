@@ -24,6 +24,8 @@ testsdefinitions.txt
 /.vagrant/
 
 codeclimate.json
+ci/.test-failures.servercore1803.txt.updated
+ci/.test-failures.servercore1809.txt.updated
 
 # Ignore Visual Studio Code internals
 /.vscode

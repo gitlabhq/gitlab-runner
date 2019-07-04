@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+borderTop() {
+    echo
+    echo "========================================================================================================================="
+}
+
+borderBottom() {
+    echo "========================================================================================================================="
+    echo
+}
+
+WINDOWS_VERSION=${WINDOWS_VERSION:-servercore1809}
+
+testOutputDir="./.testoutput"
+windowsTestOutputPattern="${testOutputDir}/*.windows.${WINDOWS_VERSION}.output.txt"
+
+trackedFailuresFile="./ci/.test-failures.${WINDOWS_VERSION}.txt"
+if [[ ! -f "${trackedFailuresFile}" ]]; then
+    touch "${trackedFailuresFile}"
+fi
+
+trackedFailuresCount=$(wc -l < "${trackedFailuresFile}")
+
+existingFailures=()
+newFailures=()
+
+for file in ${windowsTestOutputPattern}; do
+    for failure in $(iconv -f utf-16 -t utf-8 "$file" | grep -Eo "\\--- FAIL: [^ ]+" | awk '{print $3}'); do
+        if grep "^${failure}$" "${trackedFailuresFile}" >/dev/null 2>&1; then
+            existingFailures+=("${failure}")
+        else
+            newFailures+=("${failure}")
+        fi
+    done
+done
+
+existingFailuresCount=${#existingFailures[@]}
+newFailuresCount=${#newFailures[@]}
+
+fixedFailuresCount=$((trackedFailuresCount - existingFailuresCount))
+
+borderTop
+echo "    Tracked failures: ${trackedFailuresCount}"
+echo "   Existing failures: ${existingFailuresCount}"
+echo "        New failures: ${newFailuresCount}"
+echo "  Fixed (?) failures: ${fixedFailuresCount}"
+borderBottom
+
+if [[ ${fixedFailuresCount} -gt -0 ]]; then
+    tmpFile="$(mktemp)"
+    updatedTrackedFailuresFile="${trackedFailuresFile}.updated"
+
+    touch "${updatedTrackedFailuresFile}"
+
+    cp "${trackedFailuresFile}" "${tmpFile}"
+
+    for failure in "${existingFailures[@]}"; do
+        echo "${failure}" >> "${updatedTrackedFailuresFile}"
+
+        grep -v "^${failure}$" "${tmpFile}" > "${tmpFile}.new"
+        mv "${tmpFile}.new" "${tmpFile}"
+    done
+
+    borderTop
+    echo "  Tests that were probably fixed:"
+    echo
+
+    while read -r file; do
+        echo "  - ${file}"
+    done < "${tmpFile}"
+
+    echo
+    echo "  Please consider updating the tracked failures file"
+    echo "  Updated version saved as artifact: ${updatedTrackedFailuresFile}"
+    borderBottom
+
+    rm "${tmpFile}"
+fi
+
+if [[ ${newFailuresCount} -gt 0 ]]; then
+    borderTop
+    echo "  Windows tests created new failures:"
+    echo
+
+    for failure in "${newFailures[@]}"; do
+        echo "  - ${failure}"
+    done
+
+    echo
+    echo "  This is unacceptable! Fix the failures!"
+    echo "  This job will not pass untill it's done!"
+    borderBottom
+
+    exit 1
+fi
+
+if [[ ${existingFailuresCount} -eq 0 ]]; then
+    borderTop
+    echo "  All tests are fixed! Good job!"
+    echo "  You can now update .gitlab-ci.yml file and remove this CI job."
+    borderBottom
+
+    exit 0
+fi
+
+if [[ ${fixedFailuresCount} -gt 0 ]]; then
+    borderTop
+    echo "  It looks like you've fixed some Windows failures (probably)."
+    echo "  KEEP GOING!"
+    borderBottom
+
+    exit 0
+fi
+
+borderTop
+echo "  It's not worse. But it could be better!"
+echo "  If you want to have some fun, chose one of the Windows"
+echo "  test failures and try to fix it!"
+echo "  And remember: Developers! Developers! Developers!"
+borderBottom
+
