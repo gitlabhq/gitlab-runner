@@ -16,6 +16,11 @@ To jump into the specific documentation for each executor, visit:
 - [Docker Machine (auto-scaling)](docker_machine.md)
 - [Kubernetes](kubernetes.md)
 
+The list of executors above is locked. We no longer are developing or
+accepting new ones. Please check
+[CONTRIBUTION.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CONTRIBUTING.md#contributing-a-new-executors)
+to check the details.
+
 ## Selecting the executor
 
 The executors support different platforms and methodologies for building a
