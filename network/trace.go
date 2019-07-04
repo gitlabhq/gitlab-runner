@@ -25,7 +25,6 @@ type clientJobTrace struct {
 
 	sentTrace int
 	sentTime  time.Time
-	sentState common.JobState
 
 	updateInterval      time.Duration
 	forceSendInterval   time.Duration
@@ -88,7 +87,6 @@ func (c *clientJobTrace) setFailure(reason common.JobFailureReason) {
 func (c *clientJobTrace) start() {
 	c.finished = make(chan bool)
 	c.state = common.Running
-	c.sentState = common.Running
 	c.setupLogLimit()
 	go c.watch()
 }
@@ -113,7 +111,7 @@ func (c *clientJobTrace) finalTraceUpdate() {
 
 func (c *clientJobTrace) finalStatusUpdate() {
 	for {
-		switch c.sendUpdate(true) {
+		switch c.sendUpdate() {
 		case common.UpdateSucceeded:
 			return
 		case common.UpdateAbort:
@@ -142,7 +140,7 @@ func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
 		return state
 	}
 
-	return c.sendUpdate(false)
+	return c.touchJob()
 }
 
 func (c *clientJobTrace) anyTraceToSend() bool {
@@ -179,16 +177,36 @@ func (c *clientJobTrace) sendPatch() common.UpdateState {
 	return state
 }
 
-func (c *clientJobTrace) sendUpdate(force bool) common.UpdateState {
+// Update Coordinator that the job is still running.
+func (c *clientJobTrace) touchJob() common.UpdateState {
 	c.lock.RLock()
-	state := c.state
-	shouldUpdateState := c.state != c.sentState
 	shouldRefresh := time.Since(c.sentTime) > c.forceSendInterval
 	c.lock.RUnlock()
 
-	if !force && !shouldUpdateState && !shouldRefresh {
+	if !shouldRefresh {
 		return common.UpdateSucceeded
 	}
+
+	jobInfo := common.UpdateJobInfo{
+		ID:    c.id,
+		State: common.Running,
+	}
+
+	status := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
+
+	if status == common.UpdateSucceeded {
+		c.lock.Lock()
+		c.sentTime = time.Now()
+		c.lock.Unlock()
+	}
+
+	return status
+}
+
+func (c *clientJobTrace) sendUpdate() common.UpdateState {
+	c.lock.RLock()
+	state := c.state
+	c.lock.RUnlock()
 
 	jobInfo := common.UpdateJobInfo{
 		ID:            c.id,
@@ -201,7 +219,6 @@ func (c *clientJobTrace) sendUpdate(force bool) common.UpdateState {
 	if status == common.UpdateSucceeded {
 		c.lock.Lock()
 		c.sentTime = time.Now()
-		c.sentState = state
 		c.lock.Unlock()
 	}
 
