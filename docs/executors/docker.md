@@ -80,7 +80,7 @@ Docker executor:
   - [`volumes`](../configuration/advanced-configuration.html#volumes-in-the-runnersdocker-section)
 
   This means values such as `f:\\cache_dir` are not supported, but `f:` is supported.
-  However, if the destination path is on the `c:` drive, paths are also supported 
+  However, if the destination path is on the `c:` drive, paths are also supported
   (for example `c:\\cache_dir`).
 
 ### Supported Windows versions
@@ -643,7 +643,7 @@ using its internal IP.
 This executor is no longer maintained and will be removed in the near future.
 
 [Docker Fundamentals]: https://docs.docker.com/engine/understanding-docker/
-[docker engine]: https://www.docker.com/products/docker-engine
+[docker engine]: https://www.docker.com/products/container-runtime
 [hub]: https://hub.docker.com/
 [linking-containers]: https://docs.docker.com/engine/userguide/networking/default_network/dockerlinks/
 [tutum/wordpress]: https://registry.hub.docker.com/u/tutum/wordpress/
