@@ -347,7 +347,7 @@ allows you to drop privileges of builds run with the **shell** executor.
 | Parameter             | Default               | Description |
 |-----------------------|-----------------------|-------------|
 | `--service`           | `gitlab-runner`       | Specify service name to use |
-| `--config`           | See the [configuration file](#configuration-file)       | Specify custom config file |
+| `--config`           | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
 | `--syslog`            | `true`                | Specify if the service should integrate with system logging service |
 | `--working-directory` | the current directory | Specify the root directory where all data will be stored when builds will be run with the **shell** executor |
 | `--user`              | `root`                | Specify the user which will be used to execute builds |
