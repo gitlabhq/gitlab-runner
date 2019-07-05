@@ -112,4 +112,4 @@ on Microsoft's support website.
 
 [x86]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-386.exe
 [amd64]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-amd64.exe
-[prompt]: https://docs.microsoft.com/en-us/powershell/scripting/setup/starting-windows-powershell#at-the-command-prompt
+[prompt]: https://docs.microsoft.com/en-us/powershell/scripting/setup/starting-windows-powershell?view=powershell-6#at-the-command-prompt
