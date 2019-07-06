@@ -125,8 +125,9 @@ Read the [FAQ](faq/README.md) for troubleshooting common issues.
 
 ## Release process
 
-The description of release process of the GitLab Runner project can be found in
-the [release documentation](release_process/README.md).
+The description of release process of the GitLab Runner project can be
+found in
+[PROCESS.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/PROCESS.md)
 
 ## Contributing
 
