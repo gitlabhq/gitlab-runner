@@ -1,3 +1,7 @@
+v12.0.2 (2019-07-07)
+
+- Fix concurrent updates !1447
+
 v12.0.1 (2019-06-26)
 
 - Fix artifact uploading for Windows Docker containers !1414
