@@ -1,3 +1,7 @@
+v11.11.4 (2019-07-07)
+
+- Fix concurrent updates !1447
+
 v11.11.3 (2019-06-26)
 
 - Fix Powershell scripts for Docker containers !1414
