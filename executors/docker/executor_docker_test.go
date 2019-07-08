@@ -666,6 +666,7 @@ type volumesTestCase struct {
 }
 
 var volumesTestsDefaultBuildsDir = "/default-builds-dir"
+var volumesTestsDefaultCacheDir = "/default-cache-dir"
 
 func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
 	clientMock := new(docker_helpers.MockClient)
@@ -720,6 +721,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 			Config: c,
 			ExecutorOptions: executors.ExecutorOptions{
 				DefaultBuildsDir: volumesTestsDefaultBuildsDir,
+				DefaultCacheDir:  volumesTestsDefaultCacheDir,
 			},
 		},
 		client: clientMock,

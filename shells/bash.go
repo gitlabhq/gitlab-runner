@@ -43,6 +43,7 @@ type BashShell struct {
 type BashWriter struct {
 	bytes.Buffer
 	TemporaryPath string
+	Shell         string
 	indent        int
 }
 
@@ -191,6 +192,10 @@ func (b *BashWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
 
+	if b.Shell != "" {
+		io.WriteString(w, "#!/usr/bin/env "+b.Shell+"\n\n")
+	}
+
 	if trace {
 		io.WriteString(w, "set -o xtrace\n")
 	}
@@ -242,6 +247,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
 	w := &BashWriter{
 		TemporaryPath: info.Build.TmpProjectDir(),
+		Shell:         b.Shell,
 	}
 
 	if buildStage == common.BuildStagePrepare {

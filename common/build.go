@@ -176,7 +176,13 @@ func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEna
 }
 
 func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, sharedDir bool) error {
-	var err error
+	if rootDir == "" {
+		return MakeBuildError("the builds_dir is not configured")
+	}
+
+	if cacheDir == "" {
+		return MakeBuildError("the cache_dir is not configured")
+	}
 
 	// We set RootDir and invalidate variables
 	// to be able to use CI_BUILDS_DIR
@@ -184,6 +190,7 @@ func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, shar
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
 	b.refreshAllVariables()
 
+	var err error
 	b.BuildDir, err = b.getCustomBuildDir(b.RootDir, "GIT_CLONE_PATH", customBuildDirEnabled, sharedDir)
 	if err != nil {
 		return err

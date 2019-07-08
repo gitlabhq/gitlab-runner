@@ -66,6 +66,7 @@ func init() {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultBuildsDir:              "builds",
+		DefaultCacheDir:               "cache",
 		SharedBuildsDir:               true,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
