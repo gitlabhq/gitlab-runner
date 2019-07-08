@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/sirupsen/logrus"
 
@@ -40,6 +41,10 @@ func (e *BuildLogger) sendLog(logger func(args ...interface{}), logPrefix string
 	}
 
 	logger(args...)
+}
+
+func (e *BuildLogger) WriterLevel(level logrus.Level) *io.PipeWriter {
+	return e.entry.WriterLevel(level)
 }
 
 func (e *BuildLogger) Debugln(args ...interface{}) {

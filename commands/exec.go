@@ -8,10 +8,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"gitlab.com/ayufan/golang-cli-helpers"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/gitlab_ci_yaml_parser"
-
 	// Force to load all executors, executes init() on them
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
