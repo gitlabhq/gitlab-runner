@@ -1,3 +1,35 @@
+v12.1.0-rc1 (2019-07-09)
+
+- Fix "WARNING: apt does not have a stable CLI interface. Use with caution in scripts" !1143
+- Fix artifact uploading for Windows Docker containers !1414
+- Upgrade base image for gitlab/gitlab-runner:ubuntu to ubuntu:18.04 !1413
+- Add tip to execute batch from PowerShell !1412
+- Replace wget commands with curl commands !1419
+- Wrap submodule command with a string !1411
+- Add missing test cases for s3 IAM checks !1421
+- Add Markdown linting and one rule !1422
+- Fix indentation for docs !1417
+- Add docs for not supporting LCOW !1415
+- Disallow bare URLs from project !1425
+- Update zglob !1426
+- Add note in docs for mounting volumes to services !1420
+- Clarify docs for `builds_dir` & `cache_dir` !1428
+- Update docs to fix markdown and square bracket use !1429
+- Enforce consistent prefix for numbered lists !1435
+- Remove fedora/30 from supported list !1436
+- Add STOPSIGNAL to gitlab-runner docker images !1427
+- Add trace entry for Docker authConfig resolving !1431
+- Enforce consistent prefix for bullet lists !1441
+- Fix concurrent updates !1447
+- docs: add --config for install command !1433
+- Document why we no longer accept new executors !1437
+- Document limitation for Windows Docker target drive !1432
+- Trivial update to virtualbox.md - 'shutdown' is not the verb, barely the noun. !1445
+- Update description of flag in docs !1451
+- Docs: Update redirected links in runner docs !1453
+- Add lint rule that headings must increment one level at a time !1452
+- Add custom executor !1385
+
 v12.0.0 (2019-06-21)
 
 **Release notices:**
