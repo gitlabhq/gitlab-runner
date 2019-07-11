@@ -111,6 +111,8 @@ func newBuild(t *testing.T, jobResponse common.JobResponse, shell string) (*comm
 				Executor:  "custom",
 				Shell:     shell,
 				Custom: &common.CustomConfig{
+					ConfigExec:          testExecutorFile,
+					ConfigArgs:          []string{shell, "config"},
 					PrepareExec:         testExecutorFile,
 					PrepareArgs:         []string{shell, "prepare"},
 					RunExec:             testExecutorFile,
@@ -482,4 +484,57 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotContains(t, out, "Created fresh repository")
 	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
+}
+
+func TestBuildOnCustomDirectory(t *testing.T) {
+	commands := map[string]string{
+		"bash":       "pwd",
+		"powershell": "pwd",
+	}
+
+	tests := map[string]bool{
+		"custom directory defined":     true,
+		"custom directory not defined": false,
+	}
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" {
+			t.Skip("This test doesn't support Windows CMD (which is deprecated)")
+		}
+
+		for testName, tt := range tests {
+			t.Run(testName, func(t *testing.T) {
+				cmd, ok := commands[shell]
+				require.Truef(t, ok, "Missing command for shell %q", shell)
+
+				dir := filepath.Join(os.TempDir(), "custom", "directory")
+				expectedDirectory := filepath.Join(dir, "0")
+
+				successfulBuild, err := common.GetSuccessfulBuild()
+				require.NoError(t, err)
+
+				successfulBuild.Steps[0].Script = common.StepScript{cmd}
+
+				build, cleanup := newBuild(t, successfulBuild, shell)
+				defer cleanup()
+
+				if tt {
+					build.Variables = append(build.Variables, common.JobVariable{
+						Key:    "IS_RUN_ON_CUSTOM_DIR",
+						Value:  dir,
+						Public: true,
+					})
+				}
+
+				out, err := runBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+
+				if tt {
+					assert.Contains(t, out, expectedDirectory)
+				} else {
+					assert.NotContains(t, out, expectedDirectory)
+				}
+			})
+		}
+	})
 }

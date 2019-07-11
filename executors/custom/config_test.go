@@ -40,6 +40,18 @@ func testGetDuration(t *testing.T, defaultValue time.Duration, assert func(*test
 	}
 }
 
+func TestConfig_GetConfigExecTimeout(t *testing.T) {
+	testGetDuration(t, defaultConfigExecTimeout, func(t *testing.T, tt getDurationTestCase) {
+		c := &config{
+			CustomConfig: &common.CustomConfig{
+				ConfigExecTimeout: tt.source,
+			},
+		}
+
+		assert.Equal(t, tt.expectedValue, c.GetConfigExecTimeout())
+	})
+}
+
 func TestConfig_GetPrepareExecTimeout(t *testing.T) {
 	testGetDuration(t, defaultPrepareExecTimeout, func(t *testing.T, tt getDurationTestCase) {
 		c := &config{
