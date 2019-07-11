@@ -10,6 +10,10 @@ type config struct {
 	*common.CustomConfig
 }
 
+func (c *config) GetConfigExecTimeout() time.Duration {
+	return getDuration(c.ConfigExecTimeout, defaultConfigExecTimeout)
+}
+
 func (c *config) GetPrepareExecTimeout() time.Duration {
 	return getDuration(c.PrepareExecTimeout, defaultPrepareExecTimeout)
 }

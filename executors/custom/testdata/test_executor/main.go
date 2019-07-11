@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 )
 
@@ -14,12 +16,14 @@ const (
 )
 
 const (
-	isBuildError   = "CUSTOM_ENV_IS_BUILD_ERROR"
-	isSystemError  = "CUSTOM_ENV_IS_SYSTEM_ERROR"
-	isUnknownError = "CUSTOM_ENV_IS_UNKNOWN_ERROR"
+	isBuildError     = "CUSTOM_ENV_IS_BUILD_ERROR"
+	isSystemError    = "CUSTOM_ENV_IS_SYSTEM_ERROR"
+	isUnknownError   = "CUSTOM_ENV_IS_UNKNOWN_ERROR"
+	isRunOnCustomDir = "CUSTOM_ENV_IS_RUN_ON_CUSTOM_DIR"
 )
 
 const (
+	stageConfig  = "config"
 	stagePrepare = "prepare"
 	stageRun     = "run"
 	stageCleanup = "cleanup"
@@ -73,6 +77,7 @@ func main() {
 	}
 
 	stages := map[string]stageFunc{
+		stageConfig:  config,
 		stagePrepare: prepare,
 		stageRun:     run,
 		stageCleanup: cleanup,
@@ -83,11 +88,34 @@ func main() {
 		setSystemFailure("Unknown stage %q", stage)
 	}
 
-	fmt.Printf("Custom Executor binary - %q stage\n", stage)
-	fmt.Printf("Mocking execution of: %v\n", args)
-	fmt.Println()
+	_, _ = fmt.Fprintf(os.Stderr, "Custom Executor binary - %q stage\n", stage)
+	_, _ = fmt.Fprintf(os.Stderr, "Mocking execution of: %v\n", args)
+	_, _ = fmt.Fprintln(os.Stderr)
 
 	stageFn(shell, args)
+}
+
+func config(shell string, args []string) {
+	customDir := os.Getenv(isRunOnCustomDir)
+	if customDir == "" {
+		return
+	}
+
+	concurrentID := os.Getenv("CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID")
+	projectSlug := os.Getenv("CUSTOM_ENV_CI_PROJECT_PATH_SLUG")
+
+	dir := filepath.Join(customDir, concurrentID, projectSlug)
+
+	type output struct {
+		BuildsDir string `json:"builds_dir"`
+	}
+
+	jsonOutput, err := json.Marshal(output{BuildsDir: dir})
+	if err != nil {
+		panic(fmt.Errorf("error while creating JSON output: %v", err))
+	}
+
+	fmt.Print(string(jsonOutput))
 }
 
 func prepare(shell string, args []string) {

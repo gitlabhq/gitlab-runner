@@ -30,6 +30,7 @@ type executorTestCase struct {
 
 	adjustExecutor func(t *testing.T, e *executor)
 
+	assertBuild          func(t *testing.T, b *common.Build)
 	assertCommandFactory func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions)
 	assertOutput         func(t *testing.T, output string)
 	expectedError        string
@@ -37,6 +38,9 @@ type executorTestCase struct {
 
 func getRunnerConfig(custom *common.CustomConfig) common.RunnerConfig {
 	rc := common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "RuNnErToKeN",
+		},
 		RunnerSettings: common.RunnerSettings{
 			BuildsDir: "/builds",
 			CacheDir:  "/cache",
@@ -164,7 +168,7 @@ func TestExecutor_Prepare(t *testing.T) {
 		"AbstractExecutor.Prepare failure": {
 			config:                  common.RunnerConfig{},
 			doNotMockCommandFactory: true,
-			expectedError:           "the builds_dir is not configured",
+			expectedError:           "custom executor not configured",
 		},
 		"custom executor not set": {
 			config:                  getRunnerConfig(nil),
@@ -183,6 +187,88 @@ func TestExecutor_Prepare(t *testing.T) {
 			doNotMockCommandFactory: true,
 			assertOutput: func(t *testing.T, output string) {
 				assert.Contains(t, output, "Using Custom executor...")
+			},
+		},
+		"custom executor set with ConfigExec with error": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+				ConfigArgs: []string{"test"},
+			}),
+			commandErr: errors.New("test-error"),
+			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
+				assert.Equal(t, tt.config.Custom.ConfigArgs, args)
+			},
+			assertOutput: func(t *testing.T, output string) {
+				assert.Contains(t, output, "Using Custom executor...")
+			},
+			expectedError: "test-error",
+		},
+		"custom executor set with ConfigExec with invalid JSON": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+			}),
+			commandStdoutContent: "abcd",
+			commandErr:           nil,
+			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
+			},
+			assertOutput: func(t *testing.T, output string) {
+				assert.Contains(t, output, "Using Custom executor...")
+			},
+			expectedError: "error while parsing JSON output: invalid character 'a' looking for beginning of value",
+		},
+		"custom executor set with ConfigExec with empty JSON": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+			}),
+			commandStdoutContent: "",
+			commandErr:           nil,
+			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
+			},
+			assertOutput: func(t *testing.T, output string) {
+				assert.Contains(t, output, "Using Custom executor...")
+			},
+			assertBuild: func(t *testing.T, b *common.Build) {
+				assert.Equal(t, "/builds/project-0", b.BuildDir)
+				assert.Equal(t, "/cache/project-0", b.CacheDir)
+			},
+		},
+		"custom executor set with ConfigExec with undefined builds_dir": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+			}),
+			commandStdoutContent: `{"builds_dir":""}`,
+			commandErr:           nil,
+			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
+			},
+			assertOutput: func(t *testing.T, output string) {
+				assert.Contains(t, output, "Using Custom executor...")
+			},
+			expectedError: "the builds_dir is not configured",
+		},
+		"custom executor set with ConfigExec": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+			}),
+			commandStdoutContent: `{"builds_dir":"/some/build/directory","cache_dir":"/some/cache/directory","builds_dir_is_shared":true}`,
+			commandErr:           nil,
+			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
+			},
+			assertOutput: func(t *testing.T, output string) {
+				assert.Contains(t, output, "Using Custom executor...")
+			},
+			assertBuild: func(t *testing.T, b *common.Build) {
+				assert.Equal(t, "/some/build/directory/RuNnErTo/0/project-0", b.BuildDir)
+				assert.Equal(t, "/some/cache/directory/project-0", b.CacheDir)
 			},
 		},
 		"custom executor set with PrepareExec": {
@@ -225,6 +311,10 @@ func TestExecutor_Prepare(t *testing.T) {
 			err := e.Prepare(options)
 
 			assertOutput(t, tt, out)
+
+			if tt.assertBuild != nil {
+				tt.assertBuild(t, e.Build)
+			}
 
 			if tt.expectedError == "" {
 				assert.NoError(t, err)

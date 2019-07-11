@@ -1,7 +1,9 @@
 package custom
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,6 +27,27 @@ type prepareCommandOpts struct {
 	out        commandOutputs
 }
 
+type ConfigExecOutput struct {
+	BuildsDir *string `json:"builds_dir"`
+	CacheDir  *string `json:"cache_dir"`
+
+	BuildsDirIsShared *bool `json:"builds_dir_is_shared"`
+}
+
+func (c *ConfigExecOutput) InjectInto(executor *executor) {
+	if c.BuildsDir != nil {
+		executor.Config.BuildsDir = *c.BuildsDir
+	}
+
+	if c.CacheDir != nil {
+		executor.Config.CacheDir = *c.CacheDir
+	}
+
+	if c.BuildsDirIsShared != nil {
+		executor.SharedBuildsDir = *c.BuildsDirIsShared
+	}
+}
+
 type executor struct {
 	executors.AbstractExecutor
 
@@ -33,12 +56,9 @@ type executor struct {
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
-	err := e.AbstractExecutor.Prepare(options)
-	if err != nil {
-		return err
-	}
+	e.AbstractExecutor.PrepareConfiguration(options)
 
-	err = e.prepareConfig()
+	err := e.prepareConfig()
 	if err != nil {
 		return err
 	}
@@ -46,6 +66,16 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.Println("Using Custom executor...")
 
 	e.tempDir, err = ioutil.TempDir("", "custom-executor")
+	if err != nil {
+		return err
+	}
+
+	err = e.dynamicConfig()
+	if err != nil {
+		return err
+	}
+
+	err = e.AbstractExecutor.PrepareBuildAndShell()
 	if err != nil {
 		return err
 	}
@@ -79,6 +109,48 @@ func (e *executor) prepareConfig() error {
 	if e.config.RunExec == "" {
 		return common.MakeBuildError("custom executor is missing RunExec")
 	}
+
+	return nil
+}
+
+func (e *executor) dynamicConfig() error {
+	if e.config.ConfigExec == "" {
+		return nil
+	}
+
+	ctx, cancelFunc := context.WithTimeout(e.Context, e.config.GetConfigExecTimeout())
+	defer cancelFunc()
+
+	buf := bytes.NewBuffer(nil)
+	outputs := commandOutputs{
+		stdout: buf,
+		stderr: e.Trace,
+	}
+
+	opts := prepareCommandOpts{
+		executable: e.config.ConfigExec,
+		args:       e.config.ConfigArgs,
+		out:        outputs,
+	}
+
+	err := e.prepareCommand(ctx, opts).Run()
+	if err != nil {
+		return err
+	}
+
+	jsonConfig := buf.Bytes()
+	if len(jsonConfig) < 1 {
+		return nil
+	}
+
+	config := new(ConfigExecOutput)
+
+	err = json.Unmarshal(jsonConfig, config)
+	if err != nil {
+		return fmt.Errorf("error while parsing JSON output: %v", err)
+	}
+
+	config.InjectInto(e)
 
 	return nil
 }
