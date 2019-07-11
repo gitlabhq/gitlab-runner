@@ -43,13 +43,13 @@ you decide which executor to use.
 
 ### I am not sure
 
-#### Shell Executor
+#### Shell executor
 
 **Shell** is the simplest executor to configure. All required dependencies for
 your builds need to be installed manually on the same machine that the Runner is
 installed on.
 
-#### Virtual Machine Executor (VirtualBox / Parallels)
+#### Virtual Machine executor (VirtualBox / Parallels)
 
 This type of executor allows you to use an already created virtual machine, which
 is cloned and used to run your build. We offer two full system virtualization
@@ -59,7 +59,7 @@ machines on Windows, Linux, OSX or FreeBSD, then GitLab Runner connects to the
 virtual machine and runs the build on it. Its usage can also be useful for reducing
 infrastructure costs.
 
-#### Docker Executor
+#### Docker executor
 
 A great option is to use **Docker** as it allows a clean build environment,
 with easy dependency management (all dependencies for building the project can
@@ -67,20 +67,20 @@ be put in the Docker image). The Docker executor allows you to easily create
 a build environment with dependent [services](https://docs.gitlab.com/ee/ci/services/README.html),
 like MySQL.
 
-#### Docker Machine
+#### Docker Machine executor
 
 The **Docker Machine** is a special version of the **Docker** executor
 with support for auto-scaling. It works like the normal **Docker** executor
 but with build hosts created on demand by _Docker Machine_.
 
-#### Kubernetes Executor
+#### Kubernetes executor
 
 The **Kubernetes** executor allows you to use an existing Kubernetes cluster
 for your builds. The executor will call the Kubernetes cluster API
 and create a new Pod (with a build container and services containers) for
 each GitLab CI job.
 
-#### SSH Executor
+#### SSH executor
 
 The **SSH** executor is added for completeness, but it's the least supported
 among all executors. It makes GitLab Runner connect to an external server
