@@ -16,6 +16,7 @@ build_simple: $(GOPATH_SETUP)
 
 build_current: helper-docker build_simple
 
+build_current_docker: export CI_COMMIT_REF_SLUG=$(shell echo $(BRANCH) | cut -c -63 | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-*([a-z0-9-]+[a-z0-9])-*$$/\1/g')
 build_current_docker: build_current_deb
 	make release_docker_images RUNNER_BINARY=$(RUNNER_BINARY)
 
