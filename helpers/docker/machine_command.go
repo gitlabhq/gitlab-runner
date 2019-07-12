@@ -287,8 +287,13 @@ func (m *machineCommand) Credentials(name string) (dc DockerCredentials, err err
 }
 
 func newDockerMachineCommandCtx(ctx context.Context, args ...string) *exec.Cmd {
+	token := os.Getenv("MACHINE_BUGSNAG_API_TOKEN")
+	if token == "" {
+		token = crashreportToken
+	}
+
 	commandArgs := []string{
-		fmt.Sprintf("%s=%s", crashreportTokenOption, crashreportToken),
+		fmt.Sprintf("%s=%s", crashreportTokenOption, token),
 	}
 	commandArgs = append(commandArgs, args...)
 
