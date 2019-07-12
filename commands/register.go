@@ -273,7 +273,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 			s.askSSHLogin()
 		},
 		"shell": func() {
-			if runtime.GOOS == "windows" {
+			if runtime.GOOS == "windows" && s.RunnerConfig.Shell == "" {
 				s.Shell = "powershell"
 			}
 		},

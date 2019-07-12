@@ -43,3 +43,35 @@ func TestRegisterDefaultWindowsDockerCacheVolume(t *testing.T) {
 		})
 	}
 }
+
+func TestDefaultWindowsShell(t *testing.T) {
+	tests := []struct {
+		shell         string
+		expectedShell string
+	}{
+		{
+			shell:         "cmd",
+			expectedShell: "cmd",
+		},
+		{
+			shell:         "powershell",
+			expectedShell: "powershell",
+		},
+		{
+			shell:         "",
+			expectedShell: "powershell",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.shell, func(t *testing.T) {
+			cmd := newRegisterCommand()
+			cmd.Shell = tt.shell
+			cmd.Executor = "shell"
+
+			cmd.askExecutorOptions()
+
+			assert.Equal(t, tt.expectedShell, cmd.Shell)
+		})
+	}
+}
