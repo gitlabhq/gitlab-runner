@@ -82,7 +82,7 @@ create_deb() {
         dpkg-sig \
             -g "--no-tty --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}'" \
 			-k "${GPG_KEYID}" \
-			--sign builder
+			--sign builder \
 			"out/deb/${PACKAGE_NAME}_${PACKAGE_ARCH}.deb"
 	fi
 }
