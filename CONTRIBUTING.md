@@ -21,7 +21,7 @@ _This notice should stay as the first item in the CONTRIBUTING.md file._
 
 The following contents has to be considered as an extension over [gitlab-ce contributing guidelines](https://docs.gitlab.com/ce/development/contributing/index.html).
 
-### How we prioritise MRs from the wider community
+### How we prioritize MRs from the wider community
 
 Currently we use a system of scoped labels to help us priortise which MRs our team will review. 
 
