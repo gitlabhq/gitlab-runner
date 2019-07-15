@@ -27,7 +27,7 @@ Currently we use a system of scoped labels to help us priortise which MRs our te
 
 | Label | Meaning | Use Cases |
 | ---- | ----- | ----- |
-| ~"Review::P1" | Highest priority to review | Indicates an MR that might solve an urgent pain point for users, contributes to the strategic direction of the runner development as laid out by the Product team, or fixes a critical issue. We maintain a hard cap on the number of contributions marked ~"Review::P1" at which is currently set at 3|
+| ~"Review::P1" | Highest priority to review | Indicates an MR that might solve an urgent pain point for users, contributes to the strategic direction of the runner development as laid out by the Product team, or fixes a critical issue. We maintain a hard cap on the number of contributions marked ~"Review::P1" at which is currently set at 3. |
 | ~"Review::P2" | Default priority to review | All incoming MRs should default to this. |
 | ~"Review::P3" | Lowest priority to review | WIP MRs, feature enhancements that only appear to serve a small number of users. |
 
