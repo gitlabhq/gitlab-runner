@@ -1,3 +1,7 @@
+v12.1.0-rc2 (2019-07-15)
+
+- Extend custom executor with configuration injects !1449
+
 v12.1.0-rc1 (2019-07-09)
 
 - Fix "WARNING: apt does not have a stable CLI interface. Use with caution in scripts" !1143
