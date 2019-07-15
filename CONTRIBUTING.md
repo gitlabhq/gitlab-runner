@@ -23,7 +23,7 @@ The following contents has to be considered as an extension over [gitlab-ce cont
 
 ### How we prioritize MRs from the wider community
 
-Currently we use a system of scoped labels to help us priortise which MRs our team will review. 
+Currently we use a system of [scoped labels](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels-premium) to help us prioritize which MRs our team will review. 
 
 | Label | Meaning | Use Cases |
 | ---- | ----- | ----- |
