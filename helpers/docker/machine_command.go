@@ -297,18 +297,14 @@ func newDockerMachineCommandCtx(ctx context.Context, args ...string) *exec.Cmd {
 	}
 	commandArgs = append(commandArgs, args...)
 
-	cmd := exec.Command(dockerMachineExecutable, commandArgs...)
-	if ctx != nil {
-		cmd = exec.CommandContext(ctx, dockerMachineExecutable, commandArgs...)
-	}
-
+	cmd := exec.CommandContext(ctx, dockerMachineExecutable, commandArgs...)
 	cmd.Env = os.Environ()
 
 	return cmd
 }
 
 func newDockerMachineCommand(args ...string) *exec.Cmd {
-	return newDockerMachineCommandCtx(nil, args...)
+	return newDockerMachineCommandCtx(context.Background(), args...)
 }
 
 func NewMachineCommand() Machine {
