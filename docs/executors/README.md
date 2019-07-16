@@ -15,6 +15,7 @@ To jump into the specific documentation for each executor, visit:
 - [Docker](docker.md)
 - [Docker Machine (auto-scaling)](docker_machine.md)
 - [Kubernetes](kubernetes.md)
+- [Custom](custom.md)
 
 The list of executors above is locked. We no longer are developing or
 accepting new ones. Please check
@@ -27,19 +28,21 @@ The executors support different platforms and methodologies for building a
 project. The table below shows the key facts for each executor which will help
 you decide which executor to use.
 
-| Executor                                          | SSH  | Shell   | VirtualBox | Parallels | Docker | Kubernetes |
-|:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|
-| Clean build environment for every build           | ✗    | ✗       | ✓          | ✓         | ✓      | ✓          |
-| Reuse previous clone if it exists                 | ✓    | ✓       | ✗          | ✗       | ✓      | ✗           |
-| Migrate runner machine                            | ✗    | ✗       | partial    | partial   | ✓      | ✓          |
-| Zero-configuration support for concurrent builds  | ✗    | ✗ (1)   | ✓          | ✓         | ✓      | ✓          |
-| Complicated build environments                    | ✗    | ✗ (2)   | ✓ (3)      | ✓ (3)     | ✓      | ✓          |
-| Debugging build problems                          | easy | easy    | hard       | hard      | medium | medium     |
+| Executor                                          | SSH  | Shell   | VirtualBox | Parallels | Docker | Kubernetes | Custom         |
+|:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|---------------:|
+| Clean build environment for every build           | ✗    | ✗       | ✓          | ✓         | ✓      | ✓          |conditional (4) |
+| Reuse previous clone if it exists                 | ✓    | ✓       |            | ✗         | ✓      | ✗          |conditional (4) |
+| Migrate runner machine                            | ✗    | ✗       | partial    | partial   | ✓      | ✓          |✓               |
+| Zero-configuration support for concurrent builds  | ✗    | ✗ (1)   | ✓          | ✓         | ✓      | ✓          |conditional (4) |
+| Complicated build environments                    | ✗    | ✗ (2)   | ✓ (3)      | ✓ (3)     | ✓      | ✓          |✓               |
+| Debugging build problems                          | easy | easy    | hard       | hard      | medium | medium     |medium          |
 
 1. It's possible, but in most cases it is problematic if the build uses services
    installed on the build machine
 1. It requires to install all dependencies by hand
 1. For example using [Vagrant](https://www.vagrantup.com/docs/virtualbox/ "Vagrant documentation for VirtualBox")
+1. Dependent on what kind of environment you are provisioning. It can be
+   completely isolated or shared between each build.
 
 ### I am not sure
 
@@ -87,22 +90,30 @@ among all executors. It makes GitLab Runner connect to an external server
 and runs the builds there. We have some success stories from organizations using
 this executor, but usually we recommend using one of the other types.
 
+#### Custom executor
+
+The **Custom** executor allows you to specify your own execution
+environments. When GitLab Runner does not provide an executor (for
+example, LXC containers), you are able to provide your own
+executables to GitLab Runner to provision and clean up any environment
+you want to use.
+
 ## Compatibility chart
 
 Supported features by different executors:
 
-| Executor                                     | SSH  | Shell   | VirtualBox | Parallels | Docker | Kubernetes |
-|:---------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|
-| Secure Variables                             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          |
-| GitLab Runner Exec command                   | ✗    | ✓       | ✗          | ✗         | ✓      | ✓          |
-| gitlab-ci.yml: image                         | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          |
-| gitlab-ci.yml: services                      | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          |
-| gitlab-ci.yml: cache                         | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          |
-| gitlab-ci.yml: artifacts                     | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          |
-| Absolute paths: caching, artifacts           | ✗    | ✗       | ✗          | ✗         | ✗      | ✓          |
-| Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          |
-| Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          |
-| Interactive Web terminal                     | ✗    | ✓ (bash)| ✗          | ✗         | ✓      | ✓          |
+| Executor                                     | SSH  | Shell   |VirtualBox  | Parallels | Docker | Kubernetes | Custom |
+|:---------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|:------:|
+| Secure Variables                             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
+| GitLab Runner Exec command                   | ✗    | ✓       | ✗          | ✗         | ✓      | ✓          | ✓      |
+| gitlab-ci.yml: image                         | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          | ✗      |
+| gitlab-ci.yml: services                      | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          | ✗      |
+| gitlab-ci.yml: cache                         | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
+| gitlab-ci.yml: artifacts                     | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
+| Absolute paths: caching, artifacts           | ✗    | ✗       | ✗          | ✗         | ✗      | ✓          | ✗      |
+| Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
+| Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          | n/a    |
+| Interactive Web terminal                     | ✗    | ✓ (bash)| ✗          | ✗         | ✓      | ✓          | ✗      |
 
 Supported systems by different shells:
 
