@@ -47,8 +47,8 @@ To install the Runner:
     >**Note:**
     _Debian users should use APT pinning_
     >
-    Since Debian Stretch, Debian maintainers added their native package
-    with the same name as is used by our package, and by default the official
+    A native package called gitlab-ci-multi-runner is available in Debian, by
+    default when installing gitlab-runner that package from the official
     repositories will have a higher priority.
     >
     If you want to use our package you should manually set the source of
