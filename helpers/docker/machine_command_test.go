@@ -1,9 +1,12 @@
 package docker_helpers
 
 import (
+	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/docker/machine/commands/mcndirs"
@@ -73,4 +76,81 @@ func TestList(t *testing.T) {
 		assert.Empty(t, hostNames)
 		assert.Error(t, err)
 	})
+}
+
+func mockDockerMachineExecutable(t *testing.T) func() {
+	tempDir, err := ioutil.TempDir("", "docker-machine-executable")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	dmExecutable := filepath.Join(tempDir, "docker-machine")
+
+	err = ioutil.WriteFile(dmExecutable, []byte{}, 0777)
+	require.NoError(t, err)
+
+	currentDockerMachineExecutable := dockerMachineExecutable
+	dockerMachineExecutable = dmExecutable
+
+	return func() {
+		dockerMachineExecutable = currentDockerMachineExecutable
+	}
+}
+
+var dockerMachineCommandArgs = []string{"version", "--help"}
+
+func getDockerMachineCommandExpectedArgs(token string) []string {
+	if token == "" {
+		token = "no-report"
+	}
+
+	return []string{dockerMachineExecutable, fmt.Sprintf("--bugsnag-api-token=%s", token), "version", "--help"}
+}
+
+var dockerMachineCommandTests = map[string]struct {
+	tokenEnvValue string
+	expectedArgs  func() []string
+}{
+	"MACHINE_BUGSNAG_API_TOKEN is defined by the user": {
+		tokenEnvValue: "some-other-token",
+		expectedArgs:  func() []string { return getDockerMachineCommandExpectedArgs("some-other-token") },
+	},
+	"MACHINE_BUGSNAG_API_TOKEN is not defined by the user": {
+		tokenEnvValue: "",
+		expectedArgs:  func() []string { return getDockerMachineCommandExpectedArgs("") },
+	},
+}
+
+func TestNewDockerMachineCommand(t *testing.T) {
+	for tn, tc := range dockerMachineCommandTests {
+		t.Run(tn, func(t *testing.T) {
+			err := os.Setenv("MACHINE_BUGSNAG_API_TOKEN", tc.tokenEnvValue)
+			require.NoError(t, err)
+
+			cmd := newDockerMachineCommand(dockerMachineCommandArgs...)
+			assert.Equal(t, tc.expectedArgs(), cmd.Args)
+			assert.NotEmpty(t, cmd.Env)
+		})
+	}
+}
+
+func TestNewDockerMachineCommandCtx(t *testing.T) {
+	for tn, tc := range dockerMachineCommandTests {
+		t.Run(tn, func(t *testing.T) {
+			defer mockDockerMachineExecutable(t)()
+
+			err := os.Setenv("MACHINE_BUGSNAG_API_TOKEN", tc.tokenEnvValue)
+			require.NoError(t, err)
+
+			ctx, cancelFn := context.WithCancel(context.Background())
+
+			cmd := newDockerMachineCommandCtx(ctx, dockerMachineCommandArgs...)
+			assert.Equal(t, tc.expectedArgs(), cmd.Args)
+			assert.NotEmpty(t, cmd.Env)
+
+			cancelFn()
+
+			err = cmd.Start()
+			assert.Equal(t, context.Canceled, err)
+		})
+	}
 }

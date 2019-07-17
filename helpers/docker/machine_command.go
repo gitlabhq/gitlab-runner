@@ -18,6 +18,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	defaultDockerMachineExecutable = "docker-machine"
+	crashreportTokenOption         = "--bugsnag-api-token"
+	crashreportToken               = "no-report"
+)
+
+var dockerMachineExecutable = defaultDockerMachineExecutable
+
 type logWriter struct {
 	log    func(args ...interface{})
 	reader *bufio.Reader
@@ -98,8 +106,7 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 	}
 	args = append(args, name)
 
-	cmd := exec.Command("docker-machine", args...)
-	cmd.Env = os.Environ()
+	cmd := newDockerMachineCommand(args...)
 
 	fields := logrus.Fields{
 		"operation": "create",
@@ -114,8 +121,7 @@ func (m *machineCommand) Create(driver, name string, opts ...string) error {
 }
 
 func (m *machineCommand) Provision(name string) error {
-	cmd := exec.Command("docker-machine", "provision", name)
-	cmd.Env = os.Environ()
+	cmd := newDockerMachineCommand("provision", name)
 
 	fields := logrus.Fields{
 		"operation": "provision",
@@ -131,8 +137,7 @@ func (m *machineCommand) Stop(name string, timeout time.Duration) error {
 	ctx, ctxCancelFn := context.WithTimeout(context.Background(), timeout)
 	defer ctxCancelFn()
 
-	cmd := exec.CommandContext(ctx, "docker-machine", "stop", name)
-	cmd.Env = os.Environ()
+	cmd := newDockerMachineCommandCtx(ctx, "stop", name)
 
 	fields := logrus.Fields{
 		"operation": "stop",
@@ -145,8 +150,7 @@ func (m *machineCommand) Stop(name string, timeout time.Duration) error {
 }
 
 func (m *machineCommand) Remove(name string) error {
-	cmd := exec.Command("docker-machine", "rm", "-y", name)
-	cmd.Env = os.Environ()
+	cmd := newDockerMachineCommand("rm", "-y", name)
 
 	fields := logrus.Fields{
 		"operation": "remove",
@@ -185,8 +189,8 @@ func (m *machineCommand) List() (hostNames []string, err error) {
 
 func (m *machineCommand) get(args ...string) (out string, err error) {
 	// Execute docker-machine to fetch IP
-	cmd := exec.Command("docker-machine", args...)
-	cmd.Env = os.Environ()
+	cmd := newDockerMachineCommand(args...)
+
 	data, err := cmd.Output()
 	if err != nil {
 		return
@@ -223,8 +227,7 @@ func (m *machineCommand) Exist(name string) bool {
 		return false
 	}
 
-	cmd := exec.Command("docker-machine", "inspect", name)
-	cmd.Env = os.Environ()
+	cmd := newDockerMachineCommand("inspect", name)
 
 	fields := logrus.Fields{
 		"operation": "exists",
@@ -260,8 +263,8 @@ func (m *machineCommand) CanConnect(name string, skipCache bool) bool {
 
 func (m *machineCommand) canConnect(name string) bool {
 	// Execute docker-machine config which actively ask the machine if it is up and online
-	cmd := exec.Command("docker-machine", "config", name)
-	cmd.Env = os.Environ()
+	cmd := newDockerMachineCommand("config", name)
+
 	err := cmd.Run()
 	if err == nil {
 		return true
@@ -281,6 +284,27 @@ func (m *machineCommand) Credentials(name string) (dc DockerCredentials, err err
 		dc.CertPath, err = m.CertPath(name)
 	}
 	return
+}
+
+func newDockerMachineCommandCtx(ctx context.Context, args ...string) *exec.Cmd {
+	token := os.Getenv("MACHINE_BUGSNAG_API_TOKEN")
+	if token == "" {
+		token = crashreportToken
+	}
+
+	commandArgs := []string{
+		fmt.Sprintf("%s=%s", crashreportTokenOption, token),
+	}
+	commandArgs = append(commandArgs, args...)
+
+	cmd := exec.CommandContext(ctx, dockerMachineExecutable, commandArgs...)
+	cmd.Env = os.Environ()
+
+	return cmd
+}
+
+func newDockerMachineCommand(args ...string) *exec.Cmd {
+	return newDockerMachineCommandCtx(context.Background(), args...)
 }
 
 func NewMachineCommand() Machine {
