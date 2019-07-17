@@ -63,7 +63,7 @@ runnerRegistrationToken: ""
 
 ## Set the certsSecretName in order to pass custom certificates for GitLab Runner to use
 ## Provide resource name for a Kubernetes Secret Object in the same namespace,
-## this is used to populate the /etc/gitlab-runner/certs directory
+## this is used to populate the /home/gitlab-runner/.gitlab-runner/certs directory
 ## ref: https://docs.gitlab.com/runner/configuration/tls-self-signed.html#supported-options-for-self-signed-certificates
 ##
 #certsSecretName:
@@ -198,7 +198,7 @@ runners:
 
 You can provide a [Kubernetes Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
 to the GitLab Runner Helm Chart, which will be used to populate the container's
-`/etc/gitlab-runner/certs` directory.
+`/home/gitlab-runner/.gitlab-runner/certs` directory.
 
 Each key name in the Secret will be used as a filename in the directory, with the
 file content being the value associated with the key:
@@ -231,7 +231,7 @@ Add the following to your `values.yaml`:
 ```yaml
 ## Set the certsSecretName in order to pass custom certificates for GitLab Runner to use
 ## Provide resource name for a Kubernetes Secret Object in the same namespace,
-## this is used to populate the /etc/gitlab-runner/certs directory
+## this is used to populate the /home/gitlab-runner/.gitlab-runner/certs/ directory
 ## ref: https://docs.gitlab.com/runner/configuration/tls-self-signed.html#supported-options-for-self-signed-certificates
 ##
 certsSecretName: <SECRET NAME>
