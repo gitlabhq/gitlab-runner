@@ -44,26 +44,8 @@ To install the Runner:
     curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
     ```
 
-    >**Note:**
-    _Debian users should use APT pinning_
-    >
-    A native package called gitlab-ci-multi-runner is available in
-    Debian Strech, by default when installing gitlab-runner that package
-    from the official repositories will have a higher priority.
-    >
-    If you want to use our package you should manually set the source of
-    the package. The best would be to add the pinning configuration file.
-    Thanks to this every next update of the Runner's package - whether it will
-    be done manually or automatically - will be done using the same source:
-    >
-    ```bash
-    cat <<EOF | sudo tee /etc/apt/preferences.d/pin-gitlab-runner.pref
-    Explanation: Prefer GitLab provided packages over the Debian native ones
-    Package: gitlab-runner
-    Pin: origin packages.gitlab.com
-    Pin-Priority: 1001
-    EOF
-    ```
+    NOTE: **Note:**
+    Debian users should use [APT pinning](#apt-pinning).
 
 1. Install the latest version of GitLab Runner, or skip to the next step to
    install a specific version:
@@ -95,6 +77,27 @@ ready to be used by your projects!
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
+
+### APT pinning
+
+A native package called `gitlab-ci-multi-runner` is available in
+Debian Stretch. By default, when installing `gitlab-runner`, that package
+from the official repositories will have a higher priority.
+
+If you want to use our package, you should manually set the source of
+the package. The best way is to add the pinning configuration file.
+
+If you do this, the next update of the Runner's package - whether it will
+be done manually or automatically - will be done using the same source:
+
+```bash
+cat <<EOF | sudo tee /etc/apt/preferences.d/pin-gitlab-runner.pref
+Explanation: Prefer GitLab provided packages over the Debian native ones
+Package: gitlab-runner
+Pin: origin packages.gitlab.com
+Pin-Priority: 1001
+EOF
+```
 
 ## Updating the Runner
 
