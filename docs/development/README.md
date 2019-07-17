@@ -10,25 +10,24 @@ wget https://storage.googleapis.com/golang/go1.8.7.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
-### For OSX using binary package
+### For macOS
 
-```bash
+Using binary package:
+
+```sh
 wget https://storage.googleapis.com/golang/go1.8.7.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
-### For OSX if you have brew.sh
+Using installation package:
 
-```
-brew install go
-```
-
-### For OSX using installation package
-
-```
+```sh
 wget https://storage.googleapis.com/golang/go1.8.7.darwin-amd64.pkg
 open go*-*.pkg
 ```
+
+NOTE: **Note:**
+Brew doesn't provide a [Go 1.8.x formula](https://formulae.brew.sh/formula/go).
 
 ### For FreeBSD
 
