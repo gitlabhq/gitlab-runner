@@ -26,9 +26,7 @@ const (
 
 func (s *ShellConfiguration) GetCommandWithArguments() []string {
 	parts := []string{s.Command}
-	for _, arg := range s.Arguments {
-		parts = append(parts, arg)
-	}
+	parts = append(parts, s.Arguments...)
 	return parts
 }
 

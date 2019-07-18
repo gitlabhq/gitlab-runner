@@ -332,7 +332,10 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	s.askExecutor()
 	s.askExecutorOptions()
 	s.addRunner(&s.RunnerConfig)
-	s.saveConfig()
+	err = s.saveConfig()
+	if err != nil {
+		logrus.Panicln(err)
+	}
 
 	logrus.Printf("Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!")
 }

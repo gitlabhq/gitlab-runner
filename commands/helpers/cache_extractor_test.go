@@ -26,7 +26,9 @@ func TestCacheExtractorValidArchive(t *testing.T) {
 	defer os.Remove(cacheExtractorTestArchivedFile)
 
 	archive := zip.NewWriter(file)
-	archive.Create(cacheExtractorTestArchivedFile)
+	_, err = archive.Create(cacheExtractorTestArchivedFile)
+	assert.NoError(t, err)
+
 	archive.Close()
 
 	_, err = os.Stat(cacheExtractorTestArchivedFile)
@@ -163,7 +165,9 @@ func TestCacheExtractorRemoteServer(t *testing.T) {
 	_, err := os.Stat(cacheExtractorTestArchivedFile)
 	assert.NoError(t, err)
 
-	os.Chtimes(cacheExtractorArchive, time.Now().Add(time.Hour), time.Now().Add(time.Hour))
+	err = os.Chtimes(cacheExtractorArchive, time.Now().Add(time.Hour), time.Now().Add(time.Hour))
+	assert.NoError(t, err)
+
 	assert.NotPanics(t, func() {
 		cmd.Execute(nil)
 	}, "archive is up to date")

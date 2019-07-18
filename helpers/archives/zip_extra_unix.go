@@ -31,7 +31,7 @@ func createZipUIDGidField(w io.Writer, fi os.FileInfo) (err error) {
 	if err == nil {
 		err = binary.Write(w, binary.LittleEndian, &ugField)
 	}
-	return nil
+	return err
 }
 
 func processZipUIDGidField(data []byte, file *zip.FileHeader) error {

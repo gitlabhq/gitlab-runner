@@ -10,9 +10,8 @@ import (
 
 func TestGetInfo(t *testing.T) {
 	tests := []struct {
-		osType                  string
-		expectedHelperImageType interface{}
-		expectedError           interface{}
+		osType        string
+		expectedError error
 	}{
 		{osType: OSTypeLinux, expectedError: nil},
 		{osType: OSTypeWindows, expectedError: ErrUnsupportedOSVersion},

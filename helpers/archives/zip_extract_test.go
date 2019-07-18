@@ -16,13 +16,15 @@ import (
 func createDefaultArchive(t *testing.T, archive *zip.Writer) {
 	testFile, err := archive.Create("temporary_file.txt")
 	require.NoError(t, err)
-	io.WriteString(testFile, "test file")
+	_, err = io.WriteString(testFile, "test file")
+	require.NoError(t, err)
 }
 
 func createArchiveWithGitPath(t *testing.T, archive *zip.Writer) {
 	testGitFile, err := archive.Create(".git/test_file")
 	require.NoError(t, err)
-	io.WriteString(testGitFile, "test git file")
+	_, err = io.WriteString(testGitFile, "test git file")
+	require.NoError(t, err)
 }
 
 func testOnArchive(t *testing.T, createArchive func(t *testing.T, archive *zip.Writer), testCase func(t *testing.T, fileName string)) {

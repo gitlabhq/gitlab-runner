@@ -17,6 +17,7 @@ func TestCertificate(t *testing.T) {
 
 	gen := X509Generator{}
 	cert, pem, err := gen.Generate("127.0.0.1")
+	require.NoError(t, err)
 
 	tlsConfig := tls.Config{
 		Certificates: []tls.Certificate{cert},

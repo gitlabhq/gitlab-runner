@@ -39,7 +39,9 @@ func TestCacheArchiverIsUpToDate(t *testing.T) {
 	// We need to wait one second, since the FS doesn't save milliseconds
 	time.Sleep(time.Second)
 
-	os.Chtimes(cacheArchiverTestArchivedFile, time.Now(), time.Now())
+	err := os.Chtimes(cacheArchiverTestArchivedFile, time.Now(), time.Now())
+	assert.NoError(t, err)
+
 	cmd.Execute(nil)
 	fi3, _ := os.Stat(cacheArchiverArchive)
 	assert.NotEqual(t, fi.ModTime(), fi3.ModTime(), "archive should get updated")
