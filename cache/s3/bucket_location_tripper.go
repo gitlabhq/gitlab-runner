@@ -19,7 +19,10 @@ type bucketLocationTripper struct {
 // the library.
 func (b *bucketLocationTripper) RoundTrip(req *http.Request) (res *http.Response, err error) {
 	var buffer bytes.Buffer
-	xml.NewEncoder(&buffer).Encode(b.bucketLocation)
+	err = xml.NewEncoder(&buffer).Encode(b.bucketLocation)
+	if err != nil {
+		return
+	}
 	res = &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       ioutil.NopCloser(&buffer),

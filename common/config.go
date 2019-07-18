@@ -671,7 +671,10 @@ func (c *Config) SaveConfig(configFile string) error {
 	}
 
 	// create directory to store configuration
-	os.MkdirAll(filepath.Dir(configFile), 0700)
+	err := os.MkdirAll(filepath.Dir(configFile), 0700)
+	if err != nil {
+		return err
+	}
 
 	// write config file
 	if err := ioutil.WriteFile(configFile, newConfig.Bytes(), 0600); err != nil {

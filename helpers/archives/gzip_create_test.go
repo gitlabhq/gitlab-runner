@@ -47,7 +47,8 @@ func TestGzipArchiveOfMultipleFiles(t *testing.T) {
 	defer file.Close()
 	defer os.Remove(file.Name())
 
-	file.Write(testZipFileContent)
+	_, err = file.Write(testZipFileContent)
+	require.NoError(t, err)
 	file.Close()
 
 	var buffer bytes.Buffer
@@ -105,6 +106,7 @@ func TestGzipArchivesExistingAndNonExistingFile(t *testing.T) {
 
 	var buffer bytes.Buffer
 	err = CreateGzipArchive(&buffer, []string{filePath, "non-existing-file"})
+	require.NoError(t, err)
 
 	// we have only one stream
 	testGzipStreams(t, &buffer, [][]byte{testGzipFileContent})

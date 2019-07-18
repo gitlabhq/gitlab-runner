@@ -70,7 +70,8 @@ func TestCreateAdapter(t *testing.T) {
 			adapterTypeName := "test"
 
 			if test.adapter != nil {
-				factories.Register(adapterTypeName, makeTestFactory(test))
+				err := factories.Register(adapterTypeName, makeTestFactory(test))
+				assert.NoError(t, err)
 			}
 
 			factories.Register("additional-adapter", func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {

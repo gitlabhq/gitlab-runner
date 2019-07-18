@@ -104,7 +104,10 @@ func CreateZipArchive(w io.Writer, fileNames []string) error {
 
 func CreateZipFile(fileName string, fileNames []string) error {
 	// create directories to store archive
-	os.MkdirAll(filepath.Dir(fileName), 0700)
+	err := os.MkdirAll(filepath.Dir(fileName), 0700)
+	if err != nil {
+		return err
+	}
 
 	tempFile, err := ioutil.TempFile(filepath.Dir(fileName), "archive_")
 	if err != nil {

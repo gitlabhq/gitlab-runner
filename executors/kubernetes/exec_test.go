@@ -45,9 +45,9 @@ func (f *fakeRemoteExecutor) Execute(method string, url *url.URL, config *restcl
 func TestExec(t *testing.T) {
 	version, codec := testVersionAndCodec()
 	tests := []struct {
-		name, version, podPath, execPath, container string
-		pod                                         *api.Pod
-		tty, execErr                                bool
+		name, version, podPath, execPath string
+		pod                              *api.Pod
+		tty, execErr                     bool
 	}{
 		{
 			name:     "pod exec",

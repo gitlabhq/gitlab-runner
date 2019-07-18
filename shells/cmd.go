@@ -152,7 +152,7 @@ func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
 
 func (b *CmdWriter) IfCmdWithOutput(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
-	b.Line(fmt.Sprintf("%s", cmdline))
+	b.Line(cmdline)
 	errCheck := "IF !errorlevel! EQU 0 ("
 	b.Line(b.updateErrLevelCheck(errCheck))
 	b.Indent()

@@ -61,7 +61,10 @@ func extractZipFileEntry(file *zip.File) (err error) {
 
 func extractZipFile(file *zip.File) (err error) {
 	// Create all parents to extract the file
-	os.MkdirAll(filepath.Dir(file.Name), 0777)
+	err = os.MkdirAll(filepath.Dir(file.Name), 0777)
+	if err != nil {
+		return err
+	}
 
 	switch file.Mode() & os.ModeType {
 	case os.ModeDir:
@@ -72,7 +75,7 @@ func extractZipFile(file *zip.File) (err error) {
 
 	case os.ModeNamedPipe, os.ModeSocket, os.ModeDevice:
 		// Ignore the files that of these types
-		logrus.Warningln("File ignored: %q", file.Name)
+		logrus.Warningf("File ignored: %q", file.Name)
 
 	default:
 		err = extractZipFileEntry(file)

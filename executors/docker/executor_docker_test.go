@@ -1123,7 +1123,8 @@ func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) executor 
 
 	if precreateConfigFile {
 		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
-		ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
+		err = ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
+		require.NoError(t, err)
 		docker_helpers.HomeDirectory = tempHomeDir
 	} else {
 		docker_helpers.HomeDirectory = ""

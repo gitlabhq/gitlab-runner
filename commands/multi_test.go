@@ -87,14 +87,15 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 
 	runners := make(chan *common.RunnerConfig)
 
-	// Start 5 builds.
+	// Start 2 builds.
 	wg := sync.WaitGroup{}
-	wg.Add(5)
-	for i := 0; i < 5; i++ {
+	wg.Add(2)
+	for i := 0; i < 2; i++ {
 		go func(i int) {
 			defer wg.Done()
 
-			cmd.processRunner(i, &cfg, runners)
+			err := cmd.processRunner(i, &cfg, runners)
+			assert.NoError(t, err)
 		}(i)
 	}
 
@@ -103,7 +104,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	err := cmd.processRunner(6, &cfg, runners)
+	err := cmd.processRunner(3, &cfg, runners)
 	assert.EqualError(t, err, "failed to request job, runner limit met")
 
 	// Wait for all builds to finish.
