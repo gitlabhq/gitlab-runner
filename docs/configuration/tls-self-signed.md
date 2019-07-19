@@ -22,9 +22,15 @@ GitLab Runner provides these options:
 
     > **Note:** You may need to concatenate the intermediate and server certificate
     > for the chain to be properly identified.
-1. GitLab Runner exposes `tls-ca-file` option during registration and in [`config.toml`](advanced-configuration.md)
-   under the `[[runners]]` section which allows you to specify a custom file with certificates. This file will be read every time when runner tries to
-   access the GitLab server.
+
+    > **Note:** Running GitLab Runner as a service on Windows does not recognize certificates in `./certs/hostname.crt`.
+    > Use Option 3 instead.
+1. GitLab Runner exposes `tls-ca-file` option during 
+   [registration](../commands/README.md#gitlab-runner-register)
+   (`gitlab-runner register --tls-ca-file=/path`) and in 
+   [`config.toml`](advanced-configuration.md) under the `[[runners]]` section.
+   This allows you to specify a custom file with certificates.
+   This file will be read every time when the runner tries to access the GitLab server.
 
 ## Git cloning
 
