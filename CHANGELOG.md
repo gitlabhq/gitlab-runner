@@ -1,5 +1,6 @@
-v12.1.0-rc1 (2019-07-09)
+v12.1.0 (2019-07-22)
 
+- Extend custom executor with configuration injects !1449
 - Fix "WARNING: apt does not have a stable CLI interface. Use with caution in scripts" !1143
 - Fix artifact uploading for Windows Docker containers !1414
 - Upgrade base image for gitlab/gitlab-runner:ubuntu to ubuntu:18.04 !1413
