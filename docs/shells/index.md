@@ -22,8 +22,8 @@ The currently supported shells are:
 | --------------| ------------------ |  ----------- |
 | `bash`        | Fully Supported    | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
 | `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context (default for Windows, but deprecated and will be removed in Jun 22, 2020 in favor of PowerShell) |
-| `powershell`  | Fully Supported    | Windows PowerShell script. All commands are executed in PowerShell context |
+| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. Due for removal on Jun 22, 2020 in favor of PowerShell. |
+| `powershell`  | Fully Supported    | Windows PowerShell script. All commands are executed in PowerShell context. Default when registering a new Runner in version 12.0 or newer. |
 
 If you want to select a particular shell to use other than the default, you will need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
@@ -49,7 +49,7 @@ cat generated-bash-script | /bin/bash
 
 ## Windows Batch
 
-NOTE: **Note:** 
+NOTE: **Note:**
 In GitLab 11.11, the Windows Batch executor for the
 GitLab Runner was deprecated in favor of the [PowerShell](#powershell)
 executor. Support for Windows Batch will be removed in GitLab 13.0 (Jun
@@ -60,8 +60,11 @@ You can execute batch scripts from PowerShell using `Start-Process
 "cmd.exe" "/c C:\Path\file.bat"` for old batch scripts not ported to
 PowerShell.
 
-Windows Batch is the default shell used on Windows. It doesn't support
-executing the build in context of another user.
+Windows Batch is the default shell used on Windows when
+[`shell`](../configuration/advanced-configuration.md#the-runners-section) is not
+specified.
+
+It doesn't support executing the build in context of another user.
 
 The generated Batch script is executed by saving its content to file and
 passing the file name to the following command:
@@ -196,6 +199,9 @@ goto :EOF
 ```
 
 ## PowerShell
+
+The default shell when a new Runner is registed using GitLab Runner
+12.0 or newer.
 
 PowerShell doesn't support executing the build in context of another user.
 
