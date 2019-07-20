@@ -85,7 +85,7 @@ details of the job, prepare and cleanup the environment and run the job
 script within it. Each stage is responsible for specific things and has
 different things to keep in mind.
 
-Each stage executed by the Customer executor is executed at the time
+Each stage executed by the Custom executor is executed at the time
 a builtin GitLab Runner executor would execute them.
 
 For each step that will be executed, specific environment variables are
@@ -97,7 +97,7 @@ environment variables available to them:
   variables](https://docs.gitlab.com/ee/ci/variables/), including
   [predefined
   variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
-- All environment variables provided by the Customer Runner host system.
+- All environment variables provided by the Custom Runner host system.
 
 Both CI/CD environment variables and predefined variables are prefixed
 with `CUSTOM_ENV_` to prevent conflicts with system environment
@@ -284,7 +284,7 @@ what the main goal of that script is.
 | Script Name | Script Contents |
 |:-----------:|:---------------:|
 | `prepare_script` | Simple debug info on which machine the Job is running on. |
-| `get_srouces`    | Prepares the Git config, and clone/fetch the repository. We suggest you keep this as is since you get all of the benefits of git strategies that GitLab provides. |
+| `get_sources`    | Prepares the Git config, and clone/fetch the repository. We suggest you keep this as is since you get all of the benefits of git strategies that GitLab provides. |
 | `restore_cache` | Extract the cache if any are defined. This expects the `gitlab-runner` binary is available in `$PATH`. |
 | `download_artifacts` | Download artifacts, if any are defined. This expects `gitlab-runner` binary is available in `$PATH`. |
 | `build_script` | This is a combination of [`before_script`](https://docs.gitlab.com/ee/ci/yaml/#before_script-and-after_script) and [script](https://docs.gitlab.com/ee/ci/yaml/#script). |
