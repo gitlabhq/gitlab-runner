@@ -19,8 +19,8 @@ It is designed to run on the GNU/Linux, macOS, and Windows operating systems.
 Other operating systems will probably work as long as you can compile a Go
 binary on them.
 
-If you want to use Docker make sure that you have at least version `v1.13.0`
-installed.
+If you want to [use Docker](executors/docker.md), install the latest version.
+GitLab Runner requires a minimum of Docker `v1.13.0`.
 
 ## Features
 

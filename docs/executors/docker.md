@@ -30,9 +30,9 @@ and OS are supported.
 NOTE: **Note:**
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
-Engine. Refer to the [API version
-matrix](https://docs.docker.com/develop/sdk/#api-version-matrix) for
-compatible versions of Docker.
+Engine. This means means the
+[minimum supported version](https://docs.docker.com/develop/sdk/#api-version-matrix)
+of Docker is `1.13.0`.
 
 ## Using Windows containers
 
@@ -74,7 +74,7 @@ Docker executor:
 - Because of a [limitation in
   Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
   if the destination path drive letter is not `c:`, paths are not supported for:
-  
+
   - [`builds_dir`](../configuration/advanced-configuration.html#the-runners-section)
   - [`cache_dir`](../configuration/advanced-configuration.html#the-runners-section)
   - [`volumes`](../configuration/advanced-configuration.html#volumes-in-the-runnersdocker-section)
