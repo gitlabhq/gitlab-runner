@@ -19,7 +19,7 @@ It is designed to run on the GNU/Linux, macOS, and Windows operating systems.
 Other operating systems will probably work as long as you can compile a Go
 binary on them.
 
-If you want to use Docker make sure that you have version `v1.5.0` at least
+If you want to use Docker make sure that you have at least version `v1.13.0`
 installed.
 
 ## Features
