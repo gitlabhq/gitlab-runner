@@ -119,10 +119,16 @@ Supported systems by different shells:
 
 | Shells  | Bash        | Windows Batch | PowerShell |
 |:-------:|:-----------:|:-------------:|:----------:|
-| Windows | ✓           | ✓ (default)   | ✓          |
-| Linux   | ✓ (default) | ✗             | ✗          |
-| OSX     | ✓ (default) | ✗             | ✗          |
-| FreeBSD | ✓ (default) | ✗             | ✗          |
+| Windows | ✓           | ✓ (2)         | ✓ (3)      |
+| Linux   | ✓ (1)       | ✗             | ✗          |
+| OSX     | ✓ (1)       | ✗             | ✗          |
+| FreeBSD | ✓ (1)       | ✗             | ✗          |
+
+1. Default shell.
+1. Default shell if no
+   [`shell`](../configuration/advanced-configuration.md#the-runners-section)
+   is specified.
+1. Default shell when a new GitLab Runner is registered.
 
 Supported systems for interactive web terminals by different shells:
 
