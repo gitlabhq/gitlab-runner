@@ -20,102 +20,102 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
 1. Create the `gitlab-runner` user and group:
 
-    ```sh
-    sudo pw group add -n gitlab-runner
-    sudo pw user add -n gitlab-runner -g gitlab-runner -s /usr/local/bin/bash
-    sudo mkdir /home/gitlab-runner
-    sudo chown gitlab-runner:gitlab-runner /home/gitlab-runner
-    ```
+   ```sh
+   sudo pw group add -n gitlab-runner
+   sudo pw user add -n gitlab-runner -g gitlab-runner -s /usr/local/bin/bash
+   sudo mkdir /home/gitlab-runner
+   sudo chown gitlab-runner:gitlab-runner /home/gitlab-runner
+   ```
 
 1. Download the binary for your system:
 
-    ```sh
-    # For amd64
-    sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-amd64
+   ```sh
+   # For amd64
+   sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-amd64
 
-    # For i386
-    sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-386
-    ```
+   # For i386
+   sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-386
+   ```
 
-    You can download a binary for every available version as described in
-    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+   You can download a binary for every available version as described in
+   [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
 1. Give it permissions to execute:
 
-    ```sh
-    sudo chmod +x /usr/local/bin/gitlab-runner
-    ```
+   ```sh
+   sudo chmod +x /usr/local/bin/gitlab-runner
+   ```
 
 1. Create an empty log file with correct permissions:
 
-    ```sh
-    sudo touch /var/log/gitlab_runner.log && sudo chown gitlab-runner:gitlab-runner /var/log/gitlab_runner.log
-    ```
+   ```sh
+   sudo touch /var/log/gitlab_runner.log && sudo chown gitlab-runner:gitlab-runner /var/log/gitlab_runner.log
+   ```
 
 1. Create the `rc.d` directory in case it doesn't exist:
 
-    ```sh
-    mkdir -p /usr/local/etc/rc.d
-    ```
+   ```sh
+   mkdir -p /usr/local/etc/rc.d
+   ```
 
 1. Create the `rc.d` script:
 
-    ```sh
-    sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
-    #!/bin/sh
-    # PROVIDE: gitlab_runner
-    # REQUIRE: DAEMON NETWORKING
-    # BEFORE:
-    # KEYWORD:
+   ```sh
+   sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
+   #!/bin/sh
+   # PROVIDE: gitlab_runner
+   # REQUIRE: DAEMON NETWORKING
+   # BEFORE:
+   # KEYWORD:
 
-    . /etc/rc.subr
+   . /etc/rc.subr
 
-    name="gitlab_runner"
-    rcvar="gitlab_runner_enable"
+   name="gitlab_runner"
+   rcvar="gitlab_runner_enable"
 
-    user="gitlab-runner"
-    user_home="/home/gitlab-runner"
-    command="/usr/local/bin/gitlab-runner"
-    command_args="run"
-    pidfile="/var/run/${name}.pid"
+   user="gitlab-runner"
+   user_home="/home/gitlab-runner"
+   command="/usr/local/bin/gitlab-runner"
+   command_args="run"
+   pidfile="/var/run/${name}.pid"
 
-    start_cmd="gitlab_runner_start"
+   start_cmd="gitlab_runner_start"
 
-    gitlab_runner_start()
-    {
-        export USER=${user}
-        export HOME=${user_home}
-        if checkyesno ${rcvar}; then
-            cd ${user_home}
-            /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} ${command_args} > /var/log/gitlab_runner.log 2>&1
-        fi
-    }
+   gitlab_runner_start()
+   {
+       export USER=${user}
+       export HOME=${user_home}
+       if checkyesno ${rcvar}; then
+           cd ${user_home}
+           /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} ${command_args} > /var/log/gitlab_runner.log 2>&1
+       fi
+   }
 
-    load_rc_config $name
-    run_rc_command $1
-    EOF
-    ```
+   load_rc_config $name
+   run_rc_command $1
+   EOF
+   ```
 
 1. Make it executable:
 
-    ```sh
-    sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
-    ```
+   ```sh
+   sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
+   ```
 
 1. [Register the Runner](../register/index.md)
 1. Enable the `gitlab-runner` service and start it:
 
-    ```sh
-    sudo sysrc -f /etc/rc.conf "gitlab_runner_enable=YES"
-    sudo service gitlab_runner start
-    ```
+   ```sh
+   sudo sysrc -f /etc/rc.conf "gitlab_runner_enable=YES"
+   sudo service gitlab_runner start
+   ```
 
-    If you don't want to enable the `gitlab-runner` service to start after a
-    reboot, use:
+   If you don't want to enable the `gitlab-runner` service to start after a
+   reboot, use:
 
-    ```sh
-    sudo service gitlab_runner onestart
-    ```
+   ```sh
+   sudo service gitlab_runner onestart
+   ```
 
 ## Upgrading to GitLab Runner 10
 
@@ -123,48 +123,48 @@ To upgrade GitLab Runner from a version prior to 10.0:
 
 1. Stop the Runner:
 
-    ```sh
-    sudo service gitlab_runner stop
-    ```
+   ```sh
+   sudo service gitlab_runner stop
+   ```
 
 1. Optionally, preserve the previous version of the Runner just in case:
 
-    ```sh
-    sudo mv /usr/local/bin/gitlab-ci-multi-runner{,.$(/usr/local/bin/gitlab-ci-multi-runner --version| grep Version | cut -d ':' -f 2 | sed 's/ //g')}
-    ```
+   ```sh
+   sudo mv /usr/local/bin/gitlab-ci-multi-runner{,.$(/usr/local/bin/gitlab-ci-multi-runner --version| grep Version | cut -d ':' -f 2 | sed 's/ //g')}
+   ```
 
 1. Download the new Runner and make it executable:
 
-    ```sh
-    # For amd64
-    sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-amd64
+   ```sh
+   # For amd64
+   sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-amd64
 
-    # For i386
-    sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-386
+   # For i386
+   sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-386
 
-    sudo chmod +x /usr/local/bin/gitlab-runner
-    ```
+   sudo chmod +x /usr/local/bin/gitlab-runner
+   ```
 
 1. Edit `/usr/local/etc/rc.d/gitlab_runner` and change:
 
-    ```
-    command="/usr/local/bin/gitlab-ci-multi-runner run"
-    ```
+   ```
+   command="/usr/local/bin/gitlab-ci-multi-runner run"
+   ```
 
-    to:
+   to:
 
-    ```
-    command="/usr/local/bin/gitlab-runner run"
-    ```
+   ```
+   command="/usr/local/bin/gitlab-runner run"
+   ```
 
 1. Start the Runner:
 
-    ```sh
-    sudo service gitlab_runner start
-    ```
+   ```sh
+   sudo service gitlab_runner start
+   ```
 
 1. After you confirm all is working correctly, you can remove the old binary:
 
-    ```sh
-    sudo rm /usr/local/bin/gitlab-ci-multi-runner.*
-    ```
+   ```sh
+   sudo rm /usr/local/bin/gitlab-ci-multi-runner.*
+   ```

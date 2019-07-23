@@ -10,27 +10,27 @@ is advised to set up a personal container registry and a cache server.
    on that machine
 1. Create a new container registry:
 
-    ```bash
-    docker run -d -p 6000:5000 \
-        -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io \
-        --restart always \
-        --name registry registry:2
-    ```
+   ```bash
+   docker run -d -p 6000:5000 \
+       -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io \
+       --restart always \
+       --name registry registry:2
+   ```
 
-    You can modify the port number (`6000`) to expose the registry on a
-    different port
+   You can modify the port number (`6000`) to expose the registry on a
+   different port
 
 1. Check the IP address of the server:
 
-    ```bash
-    hostname --ip-address
-    ```
+   ```bash
+   hostname --ip-address
+   ```
 
-    You should preferably choose the private networking IP address. The private
-    networking is usually the fastest solution for internal communication
-    between machines of a single provider (DigitalOcean, AWS, Azure, etc,)
-    Usually the private networking is also not accounted to your monthly
-    bandwidth limit.
+   You should preferably choose the private networking IP address. The private
+   networking is usually the fastest solution for internal communication
+   between machines of a single provider (DigitalOcean, AWS, Azure, etc,)
+   Usually the private networking is also not accounted to your monthly
+   bandwidth limit.
 
 1. Docker registry will be accessible under `MY_REGISTRY_IP:6000`
 
@@ -48,36 +48,37 @@ S3-compatible caching server:
    on that machine
 1. Start [minio](https://minio.io/), a simple S3-compatible server written in Go:
 
-    ```bash
-    docker run -it --restart always -p 9005:9000 \
-            -v /.minio:/root/.minio -v /export:/export \
-            --name minio \
-            minio/minio:latest server /export
-    ```
+   ```bash
+   docker run -it --restart always -p 9005:9000 \
+           -v /.minio:/root/.minio -v /export:/export \
+           --name minio \
+           minio/minio:latest server /export
+   ```
 
-    You can modify the port `9005` to expose the cache server on different port
+   You can modify the port `9005` to expose the cache server on different port
 
 1. Check the IP address of the server:
 
-    ```bash
-    hostname --ip-address
-    ```
+   ```bash
+   hostname --ip-address
+   ```
 
 1. Your cache server will be available at `MY_CACHE_IP:9005`
 1. Create a bucket that will be used by the Runner:
 
-    ```
-    sudo mkdir /export/runner
-    ```
+   ```
+   sudo mkdir /export/runner
+   ```
 
-    `runner` is the name of the bucket in that case. If you choose a different
-    bucket, then it will be different. All caches will be stored in the
-    `/export` directory.
+   `runner` is the name of the bucket in that case. If you choose a different
+   bucket, then it will be different. All caches will be stored in the
+   `/export` directory.
+
 1. Read the Access and Secret Key of minio and use it to configure the Runner:
 
-    ```
-    sudo cat /export/.minio.sys/config/config.json | grep Key
-    ```
+   ```
+   sudo cat /export/.minio.sys/config/config.json | grep Key
+   ```
 
 You can now proceed and
 [configure `config.toml`](../configuration/autoscale.md#distributed-runners-caching)

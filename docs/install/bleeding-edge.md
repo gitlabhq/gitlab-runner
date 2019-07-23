@@ -22,6 +22,7 @@ from `master` branch. Use at your own risk.
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-freebsd-arm>
 
 You can then run the Runner with:
+
 ```bash
 chmod +x gitlab-runner-linux-amd64
 ./gitlab-runner-linux-amd64 run

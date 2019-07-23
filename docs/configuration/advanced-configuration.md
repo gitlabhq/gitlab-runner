@@ -218,7 +218,7 @@ This defines the Docker Container parameters.
 | `allowed_services`          | Specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 | `sysctls`                   | specify the sysctl options |
-| `helper_image`              | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
+| `helper_image`              | (Advanced) [Override the default helper image](#helper-image) used to clone repos and upload artifacts. |
 
 Example:
 
@@ -311,14 +311,15 @@ well.
 ### Using a private container registry
 
 > **Notes:**
+>
 >- This feature requires GitLab Runner **1.8** or higher
 >- For GitLab Runner versions **>= 0.6, <1.8** there was a partial
-  support for using private registries, which required manual configuration
-  of credentials on runner's host. We recommend to upgrade your Runner to
-  at least version **1.8** if you want to use private registries.
+>  support for using private registries, which required manual configuration
+>  of credentials on runner's host. We recommend to upgrade your Runner to
+>  at least version **1.8** if you want to use private registries.
 >- Using private registries with the `if-not-present` pull policy may introduce
-  [security implications][secpull]. To fully understand how pull policies work,
-  read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
+>  [security implications][secpull]. To fully understand how pull policies work,
+>  read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
 If you want to use private registries as a source of images for your builds,
 you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
@@ -687,15 +688,15 @@ Example:
 
 ```bash
 [runners.kubernetes]
-	host = "https://45.67.34.123:4892"
-	cert_file = "/etc/ssl/kubernetes/api.crt"
-	key_file = "/etc/ssl/kubernetes/api.key"
-	ca_file = "/etc/ssl/kubernetes/ca.crt"
-	image = "golang:1.8"
-	privileged = true
-	image_pull_secrets = ["docker-registry-credentials"]
-	[runners.kubernetes.node_selector]
-		gitlab = "true"
+  host = "https://45.67.34.123:4892"
+  cert_file = "/etc/ssl/kubernetes/api.crt"
+  key_file = "/etc/ssl/kubernetes/api.key"
+  ca_file = "/etc/ssl/kubernetes/ca.crt"
+  image = "golang:1.8"
+  privileged = true
+  image_pull_secrets = ["docker-registry-credentials"]
+  [runners.kubernetes.node_selector]
+    gitlab = "true"
 ```
 
 ## Helper image

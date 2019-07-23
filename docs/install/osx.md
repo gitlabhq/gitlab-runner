@@ -16,29 +16,29 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 
 1. Download the binary for your system:
 
-    ```bash
-    sudo curl --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
-    ```
+   ```bash
+   sudo curl --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
+   ```
 
-    You can download a binary for every available version as described in
-    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+   You can download a binary for every available version as described in
+   [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
 1. Give it permissions to execute:
 
-    ```bash
-    sudo chmod +x /usr/local/bin/gitlab-runner
-    ```
+   ```bash
+   sudo chmod +x /usr/local/bin/gitlab-runner
+   ```
 
 **The rest of commands execute as the user who will run the Runner.**
 
 1. [Register the Runner](../register/index.md)
 1. Install the Runner as service and start it:
 
-    ```bash
-    cd ~
-    gitlab-runner install
-    gitlab-runner start
-    ```
+   ```bash
+   cd ~
+   gitlab-runner install
+   gitlab-runner start
+   ```
 
 Runner is installed and will be run after a system reboot.
 
@@ -53,15 +53,15 @@ To install GitLab Runner using Homebrew:
 
 1. Install the GitLab Runner.
 
-    ```bash
-    brew install gitlab-runner
-    ```
+   ```bash
+   brew install gitlab-runner
+   ```
 
 1. Install the Runner as a service and start it.
 
-    ```bash
-    brew services start gitlab-runner
-    ```
+   ```bash
+   brew services start gitlab-runner
+   ```
 
 Runner is installed and running.
 
@@ -94,30 +94,30 @@ executing the `install` command, by checking the
 
 1. Stop the service:
 
-    ```bash
-    gitlab-runner stop
-    ```
+   ```bash
+   gitlab-runner stop
+   ```
 
 1. Download the binary to replace the Runner's executable:
 
-    ```bash
-    sudo curl -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
-    ```
+   ```bash
+   sudo curl -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
+   ```
 
-    You can download a binary for every available version as described in
-    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
+   You can download a binary for every available version as described in
+   [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
 1. Give it permissions to execute:
 
-    ```bash
-    sudo chmod +x /usr/local/bin/gitlab-runner
-    ```
+   ```bash
+   sudo chmod +x /usr/local/bin/gitlab-runner
+   ```
 
 1. Start the service:
 
-    ```bash
-    gitlab-runner start
-    ```
+   ```bash
+   gitlab-runner start
+   ```
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.

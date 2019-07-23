@@ -35,30 +35,30 @@ world won't be able to.
 
 1. Find the IP that Docker is using:
 
-    ```sh
-    ip -4 -oneline addr show dev docker0
-    ```
+   ```sh
+   ip -4 -oneline addr show dev docker0
+   ```
 
-    This is usually `172.17.0.1`, let's call it `docker0_interface_ip`.
+   This is usually `172.17.0.1`, let's call it `docker0_interface_ip`.
 
 1. Open the config file for CNTLM (`/etc/cntlm.conf`). Enter your username,
    password, domain and proxy hosts, and configure the `Listen` IP address
    which you found from the previous step. It should look like this:
 
-    ```
-    Username     testuser
-    Domain       corp-uk
-    Password     password
-    Proxy        10.0.0.41:8080
-    Proxy        10.0.0.42:8080
-    Listen       172.17.0.1:3128 # Change to your docker0 interface IP
-    ```
+   ```
+   Username     testuser
+   Domain       corp-uk
+   Password     password
+   Proxy        10.0.0.41:8080
+   Proxy        10.0.0.42:8080
+   Listen       172.17.0.1:3128 # Change to your docker0 interface IP
+   ```
 
 1. Save the changes and restart its service:
 
-    ```sh
-    sudo systemctl restart cntlm
-    ```
+   ```sh
+   sudo systemctl restart cntlm
+   ```
 
 ## Configuring Docker for downloading images
 
@@ -85,42 +85,42 @@ This is basically the same as adding the proxy to the Docker service above:
 
 1. Create a systemd drop-in directory for the `gitlab-runner` service:
 
-    ```sh
-    mkdir /etc/systemd/system/gitlab-runner.service.d
-    ```
+   ```sh
+   mkdir /etc/systemd/system/gitlab-runner.service.d
+   ```
 
 1. Create a file called `/etc/systemd/system/gitlab-runner.service.d/http-proxy.conf`
    that adds the `HTTP_PROXY` environment variable(s):
 
-    ```ini
-    [Service]
-    Environment="HTTP_PROXY=http://docker0_interface_ip:3128/"
-    Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
-    ```
+   ```ini
+   [Service]
+   Environment="HTTP_PROXY=http://docker0_interface_ip:3128/"
+   Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
+   ```
 
 1. Save the file and flush changes:
 
-    ```sh
-    systemctl daemon-reload
-    ```
+   ```sh
+   systemctl daemon-reload
+   ```
 
 1. Restart GitLab Runner:
 
-    ```sh
-    sudo systemctl restart gitlab-runner
-    ```
+   ```sh
+   sudo systemctl restart gitlab-runner
+   ```
 
 1. Verify that the configuration has been loaded:
 
-    ```sh
-    systemctl show --property=Environment gitlab-runner
-    ```
+   ```sh
+   systemctl show --property=Environment gitlab-runner
+   ```
 
-      You should see:
+   You should see:
 
-      ```ini
-      Environment=HTTP_PROXY=http://docker0_interface_ip:3128/ HTTPS_PROXY=http://docker0_interface_ip:3128/
-      ```
+   ```ini
+   Environment=HTTP_PROXY=http://docker0_interface_ip:3128/ HTTPS_PROXY=http://docker0_interface_ip:3128/
+   ```
 
 ## Adding the proxy to the Docker containers
 
