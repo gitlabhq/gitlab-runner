@@ -44,27 +44,27 @@ This is required to be able to build ARM images that are embedded into GitLab Ru
 
 - For Debian/Ubuntu it's sufficient to execute:
 
-    ```
-    apt-get install binfmt-support qemu-user-static
-    ```
+  ```
+  apt-get install binfmt-support qemu-user-static
+  ```
 
 - For Docker for MacOS/Windows `binfmt_misc` is enabled by default.
 
 - For CoreOS (but also works on Debian and Ubuntu) you need to execute the following script on system start:
 
-    ```
-    #!/bin/sh
+  ```
+  #!/bin/sh
 
-    set -xe
+  set -xe
 
-    /sbin/modprobe binfmt_misc
+  /sbin/modprobe binfmt_misc
 
-    mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+  mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
 
-    # Support for ARM binaries through Qemu:
-    { echo ':arm:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-arm-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
-    { echo ':armeb:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-armeb-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
-    ```
+  # Support for ARM binaries through Qemu:
+  { echo ':arm:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-arm-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
+  { echo ':armeb:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-armeb-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
+  ```
 
 [Install Docker Engine](https://docs.docker.com/engine/installation/)
 
@@ -93,6 +93,7 @@ cd $GOPATH/src/gitlab.com/gitlab-org/gitlab-runner/
 ## 5. Install runner dependencies
 
 This will download and restore all dependencies required to build runner:
+
 ```
 make deps
 ```
@@ -133,7 +134,7 @@ These are the binaries that you can install:
 
 1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html)
 1. [kubectl](https://kubernetes.io/docs/user-guide/prereqs/) with
-  [Minikube](https://github.com/kubernetes/minikube)
+   [Minikube](https://github.com/kubernetes/minikube)
 1. [Parallels](http://www.parallels.com/products/desktop/download/)
 1. [PowerShell](https://msdn.microsoft.com/en-us/powershell)
 
@@ -212,6 +213,6 @@ Which is especially tricky on Windows.
 Try to execute: `make deps docker`, if it doesn't help you can do that in steps:
 
 1. Execute `go get -u github.com/jteeuwen/go-bindata/...`
-1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz and save to out/docker/prebuilt-x86_64.tar.xz>
-1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz and save to out/docker/prebuilt-arm.tar.xz>
+1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz> and save to `out/docker/prebuilt-x86_64.tar.xz`
+1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz> and save to `out/docker/prebuilt-arm.tar.xz`
 1. Execute `make docker` or check the Makefile how this command looks like

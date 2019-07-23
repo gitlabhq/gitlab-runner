@@ -150,16 +150,14 @@ causes to why this happens:
 
 1. Make sure that your user can perform UI interactions:
 
-    ```bash
-    DevToolsSecurity -enable
-    sudo security authorizationdb remove system.privilege.taskport is-developer
-    ```
+   ```bash
+   DevToolsSecurity -enable
+   sudo security authorizationdb remove system.privilege.taskport is-developer
+   ```
 
-    The first command enables access to developer tools for your user.
-    The second command allows the user who is member of the developer group to
-    do UI interactions, e.g., run the iOS simulator.
-
-    ---
+   The first command enables access to developer tools for your user.
+   The second command allows the user who is member of the developer group to
+   do UI interactions, e.g., run the iOS simulator.
 
 1. Make sure that your Runner service doesn't use `SessionCreate = true`.
    Previously, when running GitLab Runner as a service, we were creating
@@ -171,14 +169,14 @@ causes to why this happens:
    `SessionCreate`. However, in order to upgrade, you need to manually
    reinstall the `LaunchAgent` script:
 
-    ```
-    gitlab-runner uninstall
-    gitlab-runner install
-    gitlab-runner start
-    ```
+   ```
+   gitlab-runner uninstall
+   gitlab-runner install
+   gitlab-runner start
+   ```
 
-    Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
-    `SessionCreate` set to `false`.
+   Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
+   `SessionCreate` set to `false`.
 
 ## `The service did not start due to a logon failure` error when starting service on Windows
 
@@ -209,7 +207,7 @@ You can add `SeServiceLogonRight` in two ways:
      > **Notice:** According to [Microsoft's documentation][microsoft-manually-set-seservicelogonright]
      > this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
      > Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, Windows 8
-
+     >
      > **Notice:** The _Local Security Policy_ tool may be not available in some
      > Windows versions - for example in "Home Edition" variant of each version.
 
@@ -282,20 +280,20 @@ working by following the steps below:
 1. Set the `ZONEINFO` environment variable containing a full path to the `zoneinfo.zip` file. If you
    are starting the Runner using the `run` command, then you can do this with:
 
-    ```bash
-    ZONEINFO=/etc/gitlab-runner/zoneinfo.zip gitlab-runner run [other options ...]
-    ```
+   ```bash
+   ZONEINFO=/etc/gitlab-runner/zoneinfo.zip gitlab-runner run [other options ...]
+   ```
 
-    or if using Windows:
+   or if using Windows:
 
-    ```powershell
-    C:\gitlab-runner> set ZONEINFO=C:\gitlab-runner\zoneinfo.zip
-    C:\gitlab-runner> gitlab-runner run [other options ...]
-    ```
+   ```powershell
+   C:\gitlab-runner> set ZONEINFO=C:\gitlab-runner\zoneinfo.zip
+   C:\gitlab-runner> gitlab-runner run [other options ...]
+   ```
 
-    If you are starting the Runner as a system service then you will need to update/override
-    the service configuration in a way that is provided by your service manager software
-    (unix systems) or by adding the `ZONEINFO` variable to the list of environment variables
-    available for Runner's user through System Settings (Windows).
+   If you are starting the Runner as a system service then you will need to update/override
+   the service configuration in a way that is provided by your service manager software
+   (unix systems) or by adding the `ZONEINFO` variable to the list of environment variables
+   available for Runner's user through System Settings (Windows).
 
 [zoneinfo-file]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip

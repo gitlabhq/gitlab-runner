@@ -26,7 +26,7 @@ are then applicable:
 The Kubernetes executor divides the build into multiple steps:
 
 1. **Prepare**: Create the Pod against the Kubernetes Cluster.
-	This creates the containers required for the build and services to run.
+   This creates the containers required for the build and services to run.
 1. **Pre-build**: Clone, restore cache and download artifacts from previous
    stages. This is run on a special container as part of the Pod.
 1. **Build**: User build.
@@ -86,12 +86,12 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `pod_annotations`: A set of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build.
 - `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
   the pod annotations overwrite environment variable. When empty,
-    it disables the pod annotations overwrite feature
+  it disables the pod annotations overwrite feature
 - `pod_security_context`: Configured through the config file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)
 - `service_account`: default service account to be used for making kubernetes api calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
-    it disables the service account overwrite feature
+  it disables the service account overwrite feature
 - `bearer_token`: Default bearer token used to launch build pods.
 - `bearer_token_overwrite_allowed`: Boolean to allow projects to specify a bearer token that will be used to create the build pod.
 - `volumes`: configured through the config file, the list of volumes that will be mounted in the build container. [Read more about using volumes.](#using-volumes)
@@ -125,19 +125,22 @@ Additionally, Kubernetes service account can be overwritten on `.gitlab-ci.yml` 
 
 This approach allow you to specify a service account that is attached to the namespace, useful when dealing
 with complex RBAC configurations.
+
 ``` yaml
 variables:
   KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: ci-service-account
 ```
+
 useful when overwritting the namespace and RBAC is setup in the cluster.
 
 To ensure only designated service accounts will be used during CI runs, inform the configuration
- `service_account_overwrite_allowed` or set the environment variable `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED`
- with proper regular expression. When left empty the overwrite behaviour is disabled.
+`service_account_overwrite_allowed` or set the environment variable `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED`
+with proper regular expression. When left empty the overwrite behaviour is disabled.
 
 ### Setting Bearer Token to be Used When Making Kubernetes API calls
 
 In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods.  This will allow project owners to use project secret variables to specify a bearer token.  When specifying the bearer token, it is required that you set the `Host` config keyword.
+
 ``` yaml
 variables:
   KUBERNETES_BEARER_TOKEN: thebearertokenfromanothernamespace
@@ -381,6 +384,7 @@ documentation but it is worth it to revisit them here as you might run into
 some slightly different things when running this on your cluster.
 
 ### Exposing `/var/run/docker.sock`
+
 Exposing your host's `/var/run/docker.sock` into your build container, using the
 `runners.kubernetes.volumes.host_path` option, brings the same risks with it as
 always. That node's containers are accessible from the build container and
@@ -388,6 +392,7 @@ depending if you are running builds in the same cluster as your production
 containers it might not be wise to do that.
 
 ### Using `docker:dind`
+
 Running the `docker:dind` also known as the `docker-in-docker` image is also
 possible but sadly needs the containers to be run in privileged mode.
 If you're willing to take that risk other problems will arise that might not
@@ -401,6 +406,7 @@ to contact the docker daemon in the other container be sure to include
 `DOCKER_HOST=tcp://localhost:2375` in your environment variables of the build container.
 
 ### Not supplying git
+
 Do *not* try to use an image that doesn't supply git and add the `GIT_STRATEGY=none`
 environment variable for a job that you think doesn't need to do a fetch or clone.
 Because Pods are ephemeral and do not keep state of previously run jobs your
@@ -410,6 +416,7 @@ the docker service complaining that it cannot follow some symlinks into your
 build context because of the missing code.
 
 ### Resource separation
+
 In both the `docker:dind` and `/var/run/docker.sock` cases the docker daemon
 has access to the underlying kernel of the host machine. This means that any
 `limits` that had been set in the Pod will not work when building docker images.

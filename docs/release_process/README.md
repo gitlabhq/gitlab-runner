@@ -2,7 +2,6 @@
 comments: false
 ---
 
-
 # GitLab Runner release process
 
 We've moved all the timeline details inside of

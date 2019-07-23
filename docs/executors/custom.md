@@ -322,7 +322,6 @@ If any of the
 are defined, these will be added in order to the executable defined in
 `cleanup_exec`. For example we have the `config.toml` content below:
 
-
 ```toml
 ...
 [runners.custom]
@@ -409,4 +408,3 @@ your binary/script future proof.
 
 A set of example executors using the Custom executor can be found in
 the [examples page](custom_examples/index.md).
-

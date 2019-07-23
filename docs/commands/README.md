@@ -38,7 +38,7 @@ USAGE:
    gitlab-runner run [command options] [arguments...]
 
 OPTIONS:
-   -c, --config "/Users/ayufan/.gitlab-runner/config.toml"	Config file [$CONFIG_FILE]
+   -c, --config "/Users/ayufan/.gitlab-runner/config.toml" Config file [$CONFIG_FILE]
 ```
 
 ## Running in debug mode
@@ -141,22 +141,22 @@ AUTHOR(S):
    GitLab Inc. <support@gitlab.com>
 
 COMMANDS:
-   exec		execute a build locally
-   run		run multi runner service
-   register	register a new runner
-   install	install service
-   uninstall	uninstall service
-   start	start service
-   stop		stop service
-   restart	restart service
-   status	get status of a service
-   run-single	start single runner
-   unregister	unregister specific runner
-   verify	verify all registered runners
-   archive	find and archive files (internal)
-   artifacts	upload build artifacts (internal)
-   extract	extract files from an archive (internal)
-   help, h	Shows a list of commands or help for one command
+   exec         execute a build locally
+   run          run multi runner service
+   register     register a new runner
+   install      install service
+   uninstall    uninstall service
+   start        start service
+   stop         stop service
+   restart      restart service
+   status       get status of a service
+   run-single   start single runner
+   unregister   unregister specific runner
+   verify       verify all registered runners
+   archive      find and archive files (internal)
+   artifacts    upload build artifacts (internal)
+   extract      extract files from an archive (internal)
+   help, h      Shows a list of commands or help for one command
 ```
 
 Below we will explain what each command does in detail.
@@ -205,19 +205,25 @@ asked multiple questions during a Runner's registration.
 
 This question can be pre-filled by adding arguments when invoking the registration command:
 
-    gitlab-runner register --name my-runner --url http://gitlab.example.com --registration-token my-registration-token
+```
+gitlab-runner register --name my-runner --url http://gitlab.example.com --registration-token my-registration-token
+```
 
 Or by configuring the environment variable before the `register` command:
 
-    export CI_SERVER_URL=http://gitlab.example.com
-    export RUNNER_NAME=my-runner
-    export REGISTRATION_TOKEN=my-registration-token
-    export REGISTER_NON_INTERACTIVE=true
-    gitlab-runner register
+```
+export CI_SERVER_URL=http://gitlab.example.com
+export RUNNER_NAME=my-runner
+export REGISTRATION_TOKEN=my-registration-token
+export REGISTER_NON_INTERACTIVE=true
+gitlab-runner register
+```
 
 To check all possible arguments and environments execute:
 
-    gitlab-runner register --help
+```
+gitlab-runner register --help
+```
 
 #### Non-interactive registration
 
@@ -225,13 +231,17 @@ It's possible to use registration in non-interactive / unattended mode.
 
 You can specify the arguments when invoking the registration command:
 
-    gitlab-runner register --non-interactive <other-arguments>
+```
+gitlab-runner register --non-interactive <other-arguments>
+```
 
 Or by configuring the environment variable before the `register` command:
 
-    <other-environment-variables>
-    export REGISTER_NON_INTERACTIVE=true
-    gitlab-runner register
+```
+<other-environment-variables>
+export REGISTER_NON_INTERACTIVE=true
+gitlab-runner register
+```
 
 > **Note:** Boolean parameters must be passed in the command line with `--key={true|false}`.
 
@@ -488,7 +498,7 @@ for more details.
 | stages            | no                    | `exec` can only run one job, independently from others |
 | before_script     | yes                   | supports both global and job-level `before_script` |
 | after_script      | partially             | global `after_script` is not supported, only job-level `after_script`; only commands are taken in consideration, `when` is hardcoded to `always` |
-| variables         | yes                   | Supports default (partially), global and job-level variables; default variables are pre-set as can be seen in https://gitlab.com/gitlab-org/gitlab-runner/blob/master/helpers/gitlab_ci_yaml_parser/parser.go#L147 |
+| variables         | yes                   | Supports default (partially), global and job-level variables; default variables are pre-set as can be seen in <https://gitlab.com/gitlab-org/gitlab-runner/blob/master/helpers/gitlab_ci_yaml_parser/parser.go#L147> |
 | artifacts         | no                    |          |
 | cache             | partially             | Regarding the specific configuration it may or may not work as expected |
 | cache:policy      | no                    |          |
