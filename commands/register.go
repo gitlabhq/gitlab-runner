@@ -217,6 +217,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 	ssh := s.SSH
 	parallels := s.Parallels
 	virtualbox := s.VirtualBox
+	custom := s.Custom
 
 	s.Kubernetes = nil
 	s.Machine = nil
@@ -224,6 +225,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 	s.SSH = nil
 	s.Parallels = nil
 	s.VirtualBox = nil
+	s.Custom = nil
 
 	executorFns := map[string]func(){
 		"kubernetes": func() {
@@ -276,6 +278,9 @@ func (s *RegisterCommand) askExecutorOptions() {
 			if runtime.GOOS == "windows" && s.RunnerConfig.Shell == "" {
 				s.Shell = "powershell"
 			}
+		},
+		"custom": func() {
+			s.Custom = custom
 		},
 	}
 
