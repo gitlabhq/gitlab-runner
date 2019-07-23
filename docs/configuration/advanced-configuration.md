@@ -708,7 +708,7 @@ The helper image is based on Alpine Linux and it's provided for amd64 and arm ar
 a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner binary, that contains only a subset
 of available commands, as well as git, git-lfs, SSL certificates store and basic configuration of Alpine.
 
-When GitLab Runner is installed from the DEB/RPM packages, both images (`arm64` and `arm` based) are installed on the host.
+When GitLab Runner is installed from the DEB/RPM packages, both images (`amd64` and `arm` based) are installed on the host.
 When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's git
 revision) is not found on Docker Engine, it is automatically loaded. It works like that for both
 `docker` and `docker+machine` executors.
