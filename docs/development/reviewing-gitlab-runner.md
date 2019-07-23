@@ -45,28 +45,28 @@ To open the report:
 
 1. At the end of the job's log, we should see a line like:
 
-    ```
-    ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
-    ```
+   ```
+   ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
+   ```
 
-    Because when this job was triggered, and `v11.8.0` was also the `latest` release, we see  a link to the
-    `latest` version bucket. The problem with `latest` is that the content there changes when
-    new stable/patch versions are released.
+   Because when this job was triggered, and `v11.8.0` was also the `latest` release, we see  a link to the
+   `latest` version bucket. The problem with `latest` is that the content there changes when
+   new stable/patch versions are released.
 
-    Each pipeline also creates a deployment for a specific reference (a branch name
-    or a tag name). Several lines above we can see:
+   Each pipeline also creates a deployment for a specific reference (a branch name
+   or a tag name). Several lines above we can see:
 
-    ```
-    ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/v11.8.0/index.html
-    ```
+   ```
+   ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/v11.8.0/index.html
+   ```
 
-    This URL points to a bucket, that should not be changed in the future. For a `bleeding edge S3` started
-    from a `master` branch, the URL should look like <https://gitlab-runner-downloads.s3.amazonaws.com/master/index.html>
-    (which obviously also changes over time) and for the one started from a RC tag, it should look
-    like <https://gitlab-runner-downloads.s3.amazonaws.com/v11.8.0-rc1/index.html>. For the `development S3` job, started
-    from a regular commit (mostly tracked within a Merge Request), the URL should look like
-    <https://gitlab-runner-downloads.s3.amazonaws.com/mask-trace/index.html>. In this case the `mask-trace` is the
-    name of the branch, which was used as Merge Request source.
+   This URL points to a bucket, that should not be changed in the future. For a `bleeding edge S3` started
+   from a `master` branch, the URL should look like <https://gitlab-runner-downloads.s3.amazonaws.com/master/index.html>
+   (which obviously also changes over time) and for the one started from a RC tag, it should look
+   like <https://gitlab-runner-downloads.s3.amazonaws.com/v11.8.0-rc1/index.html>. For the `development S3` job, started
+   from a regular commit (mostly tracked within a Merge Request), the URL should look like
+   <https://gitlab-runner-downloads.s3.amazonaws.com/mask-trace/index.html>. In this case the `mask-trace` is the
+   name of the branch, which was used as Merge Request source.
 
 1. Open the S3 link gathered from the job's trace. Following our example, let's open the
    <https://gitlab-runner-downloads.s3.amazonaws.com/v11.8.0/index.html> one. We can see here several files that

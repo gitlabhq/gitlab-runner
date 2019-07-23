@@ -38,16 +38,16 @@ out of the scope of this documentation. For more details please read the
    After this, you can destroy the machine with `docker-machine rm [machine_name]`
    and start the Runner.
 
-    NOTE: **Note:**
-    Multiple concurrent requests to `docker-machine create` that are done
-    **at first usage** are not good. When the `docker+machine` executor is used,
-    the Runner may spin up few concurrent `docker-machine create` commands. If
-    Docker Machine was not used before in this environment, each started process
-    tries to prepare SSH keys and SSL certificates (for Docker API authentication
-    between Runner and Docker Engine on the autoscaled spawned machine), and these
-    concurrent processes are disturbing each other. This can end with a non-working
-    environment. That's why it's important to create a test machine manually the
-    very first time you set up the Runner with Docker Machine.
+   NOTE: **Note:**
+   Multiple concurrent requests to `docker-machine create` that are done
+   **at first usage** are not good. When the `docker+machine` executor is used,
+   the Runner may spin up few concurrent `docker-machine create` commands. If
+   Docker Machine was not used before in this environment, each started process
+   tries to prepare SSH keys and SSL certificates (for Docker API authentication
+   between Runner and Docker Engine on the autoscaled spawned machine), and these
+   concurrent processes are disturbing each other. This can end with a non-working
+   environment. That's why it's important to create a test machine manually the
+   very first time you set up the Runner with Docker Machine.
 
 1. Now, you can try and start a new pipeline in your project. In a few seconds,
    if you run `docker-machine ls` you should see a new machine being created.
@@ -56,34 +56,36 @@ out of the scope of this documentation. For more details please read the
 
 1. Check if your operating system is configured to automatically restart the
    Runner (for example, by checking its service file):
-    - **if yes**, ensure that service manager is [configured to use `SIGQUIT`](../configuration/init.md)
-      and use the service's tools to stop the process:
-        ```
-        # For systemd
-        sudo systemctl stop gitlab-runner
+   - **if yes**, ensure that service manager is [configured to use `SIGQUIT`](../configuration/init.md)
+     and use the service's tools to stop the process:
 
-        # For upstart
-        sudo service gitlab-runner stop
-        ```
-    - **if no**, you may stop the Runner's process manually:
+     ```
+     # For systemd
+     sudo systemctl stop gitlab-runner
 
-        ```bash
-        sudo killall -SIGQUIT gitlab-runner
-        ```
+     # For upstart
+     sudo service gitlab-runner stop
+     ```
 
-    NOTE: **Note:**
-    Sending the [`SIGQUIT` signal](../commands/README.md#signals) will make the
-    Runner to stop gracefully. It will stop accepting new jobs, and will exit
-    as soon as the current jobs are finished.
+   - **if no**, you may stop the Runner's process manually:
+
+     ```bash
+     sudo killall -SIGQUIT gitlab-runner
+     ```
+
+   NOTE: **Note:**
+   Sending the [`SIGQUIT` signal](../commands/README.md#signals) will make the
+   Runner to stop gracefully. It will stop accepting new jobs, and will exit
+   as soon as the current jobs are finished.
 
 1. Wait until the Runner exits. You can check its status with `gitlab-runner status`
-    or await a graceful shutdown for up to 30 minutes with:
+   or await a graceful shutdown for up to 30 minutes with:
 
-    ```bash
-    for i in `seq 1 180`; do # 1800 seconds = 30 minutes
-        gitlab-runner status || break
-        sleep 10
-    done
-    ```
+   ```bash
+   for i in `seq 1 180`; do # 1800 seconds = 30 minutes
+       gitlab-runner status || break
+       sleep 10
+   done
+   ```
 
 1. You can now safely install the new Runner without interrupting any jobs

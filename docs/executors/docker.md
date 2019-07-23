@@ -74,7 +74,7 @@ Docker executor:
 - Because of a [limitation in
   Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
   if the destination path drive letter is not `c:`, paths are not supported for:
-  
+
   - [`builds_dir`](../configuration/advanced-configuration.html#the-runners-section)
   - [`cache_dir`](../configuration/advanced-configuration.html#the-runners-section)
   - [`volumes`](../configuration/advanced-configuration.html#volumes-in-the-runnersdocker-section)
@@ -385,11 +385,11 @@ All directories defined under `volumes =` will be persistent between builds.
 The `volumes` directive supports two types of storage:
 
 1. `<path>` - **the dynamic storage**. The `<path>` is persistent between subsequent
-    runs of the same concurrent job for that project. The data is attached to a
-    custom cache container: `runner-<short-token>-project-<id>-concurrent-<job-id>-cache-<unique-id>`.
+   runs of the same concurrent job for that project. The data is attached to a
+   custom cache container: `runner-<short-token>-project-<id>-concurrent-<job-id>-cache-<unique-id>`.
 1. `<host-path>:<path>[:<mode>]` - **the host-bound storage**. The `<path>` is
-    bind to `<host-path>` on the host system. The optional `<mode>` can specify
-    that this storage is read-only or read-write (default).
+   bind to `<host-path>` on the host system. The optional `<mode>` can specify
+   that this storage is read-only or read-write (default).
 
 ### The persistent storage for builds
 
@@ -453,47 +453,47 @@ Consider the following example:
 
 1. Create a new Dockerfile:
 
-    ```bash
-    FROM docker:dind
-    ADD / /entrypoint.sh
-    ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
-    ```
+   ```bash
+   FROM docker:dind
+   ADD / /entrypoint.sh
+   ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
+   ```
 
 1. Create a bash script (`entrypoint.sh`) that will be used as the `ENTRYPOINT`:
 
-    ```bash
-    #!/bin/sh
+   ```bash
+   #!/bin/sh
 
-    dind docker daemon
-        --host=unix:///var/run/docker.sock \
-        --host=tcp://0.0.0.0:2375 \
-        --storage-driver=vf &
+   dind docker daemon
+       --host=unix:///var/run/docker.sock \
+       --host=tcp://0.0.0.0:2375 \
+       --storage-driver=vf &
 
-    docker build -t "$BUILD_IMAGE" .
-    docker push "$BUILD_IMAGE"
-    ```
+   docker build -t "$BUILD_IMAGE" .
+   docker push "$BUILD_IMAGE"
+   ```
 
 1. Push the image to the Docker registry.
 
 1. Run Docker executor in `privileged` mode. In `config.toml` define:
 
-    ```toml
-    [[runners]]
-      executor = "docker"
-      [runners.docker]
-        privileged = true
-    ```
+   ```toml
+   [[runners]]
+     executor = "docker"
+     [runners.docker]
+       privileged = true
+   ```
 
 1. In your project use the following `.gitlab-ci.yml`:
 
-    ```yaml
-    variables:
-      BUILD_IMAGE: my.image
-    build:
-      image: my/docker-build:image
-      script:
-      - Dummy Script
-    ```
+   ```yaml
+   variables:
+     BUILD_IMAGE: my.image
+   build:
+     image: my/docker-build:image
+     script:
+     - Dummy Script
+   ```
 
 This is just one of the examples. With this approach the possibilities are
 limitless.
