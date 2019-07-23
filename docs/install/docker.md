@@ -49,44 +49,44 @@ Docker container.
 
 1. Install Docker first:
 
-    ```bash
-    curl -sSL https://get.docker.com/ | sh
-    ```
+   ```bash
+   curl -sSL https://get.docker.com/ | sh
+   ```
 
 1. You need to mount a config volume into the `gitlab-runner` container to
    be used for configs and other resources:
 
-    ```bash
-    docker run -d --name gitlab-runner --restart always \
-      -v /srv/gitlab-runner/config:/etc/gitlab-runner \
-      -v /var/run/docker.sock:/var/run/docker.sock \
-      gitlab/gitlab-runner:latest
-    ```
+   ```bash
+   docker run -d --name gitlab-runner --restart always \
+     -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+     -v /var/run/docker.sock:/var/run/docker.sock \
+     gitlab/gitlab-runner:latest
+   ```
 
-    TIP: **Tip:**
-    On macOS, use `/Users/Shared` instead of `/srv`.
+   TIP: **Tip:**
+   On macOS, use `/Users/Shared` instead of `/srv`.
 
-    Or, you can use a config container to mount your custom data volume:
+   Or, you can use a config container to mount your custom data volume:
 
-    ```bash
-    docker run -d --name gitlab-runner-config \
-        -v /etc/gitlab-runner \
-        busybox:latest \
-        /bin/true
-    ```
+   ```bash
+   docker run -d --name gitlab-runner-config \
+       -v /etc/gitlab-runner \
+       busybox:latest \
+       /bin/true
+   ```
 
-    And then, run the Runner:
+   And then, run the Runner:
 
-    ```bash
-    docker run -d --name gitlab-runner --restart always \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        --volumes-from gitlab-runner-config \
-        gitlab/gitlab-runner:latest
-    ```
+   ```bash
+   docker run -d --name gitlab-runner --restart always \
+       -v /var/run/docker.sock:/var/run/docker.sock \
+       --volumes-from gitlab-runner-config \
+       gitlab/gitlab-runner:latest
+   ```
 
 1. Register the runner you just launched by following the instructions in the
-    [Docker section of Registering Runners](../register/index.md#docker).
-    The runner won't pick up any jobs until it's registered.
+   [Docker section of Registering Runners](../register/index.md#docker).
+   The runner won't pick up any jobs until it's registered.
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.

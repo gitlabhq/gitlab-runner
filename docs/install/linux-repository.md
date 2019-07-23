@@ -36,39 +36,39 @@ To install the Runner:
 
 1. Add GitLab's official repository:
 
-    ```bash
-    # For Debian/Ubuntu/Mint
-    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
+   ```bash
+   # For Debian/Ubuntu/Mint
+   curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
 
-    # For RHEL/CentOS/Fedora
-    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
-    ```
+   # For RHEL/CentOS/Fedora
+   curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
+   ```
 
-    NOTE: **Note:**
-    Debian users should use [APT pinning](#apt-pinning).
+   NOTE: **Note:**
+   Debian users should use [APT pinning](#apt-pinning).
 
 1. Install the latest version of GitLab Runner, or skip to the next step to
    install a specific version:
 
-    ```bash
-    # For Debian/Ubuntu/Mint
-    sudo apt-get install gitlab-runner
+   ```bash
+   # For Debian/Ubuntu/Mint
+   sudo apt-get install gitlab-runner
 
-    # For RHEL/CentOS/Fedora
-    sudo yum install gitlab-runner
-    ```
+   # For RHEL/CentOS/Fedora
+   sudo yum install gitlab-runner
+   ```
 
 1. To install a specific version of GitLab Runner:
 
-    ```bash
-    # for DEB based systems
-    apt-cache madison gitlab-runner
-    sudo apt-get install gitlab-runner=10.0.0
+   ```bash
+   # for DEB based systems
+   apt-cache madison gitlab-runner
+   sudo apt-get install gitlab-runner=10.0.0
 
-    # for RPM based systems
-    yum list gitlab-runner --showduplicates | sort -r
-    sudo yum install gitlab-runner-10.0.0-1
-    ```
+   # for RPM based systems
+   yum list gitlab-runner --showduplicates | sort -r
+   sudo yum install gitlab-runner-10.0.0-1
+   ```
 
 1. [Register the Runner](../register/index.md)
 
@@ -112,6 +112,7 @@ sudo apt-get install gitlab-runner
 sudo yum update
 sudo yum install gitlab-runner
 ```
+
 ## Manually download packages
 
 You can manually download the packages from the following URL:
@@ -123,25 +124,25 @@ To upgrade GitLab Runner from a version prior to 10.0:
 
 1. Remove the old repository:
 
-    ```
-    # For Debian/Ubuntu/Mint
-    sudo rm /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list
+   ```
+   # For Debian/Ubuntu/Mint
+   sudo rm /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list
 
-    # For RHEL/CentOS/Fedora
-    sudo rm /etc/yum.repos.d/runner_gitlab-ci-multi-runner.repo
-    ```
+   # For RHEL/CentOS/Fedora
+   sudo rm /etc/yum.repos.d/runner_gitlab-ci-multi-runner.repo
+   ```
 
 1. Follow the same steps when [installing the Runner](#installing-the-runner),
    **without registering it** and using the new repository.
 
 1. For RHEL/CentOS/Fedora, run:
 
-    ```
-    sudo /usr/share/gitlab-runner/post-install
-    ```
+   ```
+   sudo /usr/share/gitlab-runner/post-install
+   ```
 
-    CAUTION: **Important:** If you don't run the above command, you will be left
-    with no service file. Follow [issue #2786](https://gitlab.com/gitlab-org/gitlab-runner/issues/2786)
-    for more information.
+   CAUTION: **Important:** If you don't run the above command, you will be left
+   with no service file. Follow [issue #2786](https://gitlab.com/gitlab-org/gitlab-runner/issues/2786)
+   for more information.
 
 [docker executor]: ../executors/docker.md

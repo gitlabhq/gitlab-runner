@@ -35,9 +35,9 @@ in the chart repository.
 
 In order for GitLab Runner to function, your config file **must** specify the following:
 
- - `gitlabUrl` - the GitLab server full URL (e.g., `https://example.gitlab.com`) to register the Runner against.
- - `runnerRegistrationToken` - The registration token for adding new Runners to
-    GitLab. This must be [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
+- `gitlabUrl` - the GitLab server full URL (e.g., `https://example.gitlab.com`) to register the Runner against.
+- `runnerRegistrationToken` - The registration token for adding new Runners to
+  GitLab. This must be [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
 
 Unless you need to specify any additional configuration, you are
 ready to [install the Runner](#installing-gitlab-runner-using-the-helm-chart).
@@ -203,10 +203,10 @@ to the GitLab Runner Helm Chart, which will be used to populate the container's
 Each key name in the Secret will be used as a filename in the directory, with the
 file content being the value associated with the key:
 
- - The key/file name used should be in the format `<gitlab-hostname>.crt`, for example
-   `gitlab.your-domain.com.crt`.
- - Any intermediate certificates need to be concatenated to your server certificate in the same file.
- - The hostname used should be the one the certificate is registered for.
+- The key/file name used should be in the format `<gitlab-hostname>.crt`, for example
+  `gitlab.your-domain.com.crt`.
+- Any intermediate certificates need to be concatenated to your server certificate in the same file.
+- The hostname used should be the one the certificate is registered for.
 
 The GitLab Runner Helm Chart does not create a secret for you. In order to create
 the secret, you can prepare your certificate on you local machine, and then run

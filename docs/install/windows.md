@@ -30,25 +30,25 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 1. Install the Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
 
-    **Run service using Built-in System Account**
+   **Run service using Built-in System Account**
 
-    ```powershell
-    gitlab-runner install
-    gitlab-runner start
-    ```
+   ```powershell
+   gitlab-runner install
+   gitlab-runner start
+   ```
 
-    **Run service using user account**
+   **Run service using user account**
 
-    You have to enter a valid password for the current user account, because
-    it's required to start the service by Windows:
+   You have to enter a valid password for the current user account, because
+   it's required to start the service by Windows:
 
-    ```powershell
-    gitlab-runner install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
-    gitlab-runner start
-    ```
+   ```powershell
+   gitlab-runner install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
+   gitlab-runner start
+   ```
 
-    See the [troubleshooting section](#troubleshooting) if you encounter any
-    errors during the Runner installation.
+   See the [troubleshooting section](#troubleshooting) if you encounter any
+   errors during the Runner installation.
 
 1. (Optional) Update Runners `concurrent` value in `C:\GitLab-Runner\config.toml`
    to allow multiple concurrent jobs as detailed in [advanced configuration details](../configuration/advanced-configuration.md).
@@ -62,10 +62,10 @@ Logs are stored in Windows Event Log.
 
 1. Stop the service (you need [elevated command prompt][prompt] as before):
 
-    ```powershell
-    cd C:\GitLab-Runner
-    gitlab-runner stop
-    ```
+   ```powershell
+   cd C:\GitLab-Runner
+   gitlab-runner stop
+   ```
 
 1. Download the binary for [x86][] or [amd64][] and replace runner's executable.
    You can download a binary for every available version as described in
@@ -73,9 +73,9 @@ Logs are stored in Windows Event Log.
 
 1. Start the service:
 
-    ```powershell
-    gitlab-runner start
-    ```
+   ```powershell
+   gitlab-runner start
+   ```
 
 ## Uninstall
 
