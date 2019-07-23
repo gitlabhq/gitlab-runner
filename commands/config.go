@@ -41,20 +41,6 @@ func (c *configOptions) loadConfig() error {
 	return nil
 }
 
-func (c *configOptions) touchConfig() error {
-	// try to load existing config
-	err := c.loadConfig()
-	if err != nil {
-		return err
-	}
-
-	// save config for the first time
-	if !c.config.Loaded {
-		return c.saveConfig()
-	}
-	return nil
-}
-
 func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) {
 	if c.config == nil {
 		return nil, fmt.Errorf("config has not been loaded")
