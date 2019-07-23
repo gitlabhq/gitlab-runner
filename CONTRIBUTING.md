@@ -47,6 +47,23 @@ With GitLab 12.1, we introduced the [custom
 executor](https://gitlab.com/gitlab-org/gitlab-runner/issues/2885),
 which will provide a way to create an executor of choice.
 
+### Contributing new hardware architectures
+
+We're currently exploring how we can add builds for new and different hardware
+architectures. Adding and supporting new architectures brings added levels of 
+complexity and may require hardware that GitLab Inc. doesn't have access to.
+
+At the current time, new hardware architectures will only be considered if the 
+following criteria are met:
+
+1. GitLab Inc. must be able to build and test for the new architecture on our Shared Runners on GitLab.com
+1. If adding support for the new architecture in the helper image, Docker must also support the architecture upstream
+
+As we explore adding more architectures other requirements may come up.
+
+We are currently discussing the ability of providing builds for architectures that we
+don't have the ability to support and [we welcome contributions to that discussion](https://gitlab.com/gitlab-org/gitlab-runner/issues/4229).
+
 ## Workflow labels
 
 We have some additional labels plus those defined in [gitlab-ce workflow labels](https://docs.gitlab.com/ce/development/contributing/issue_workflow.html)
