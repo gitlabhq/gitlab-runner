@@ -28,7 +28,7 @@ is advised to set up a personal container registry and a cache server.
 
    You should preferably choose the private networking IP address. The private
    networking is usually the fastest solution for internal communication
-   between machines of a single provider (DigitalOcean, AWS, Azure, etc,)
+   between machines of a single provider (DigitalOcean, AWS, Azure, etc)
    Usually the private networking is also not accounted to your monthly
    bandwidth limit.
 
