@@ -38,7 +38,7 @@ USAGE:
    gitlab-runner run [command options] [arguments...]
 
 OPTIONS:
-   -c, --config "/Users/ayufan/.gitlab-runner/config.toml" Config file [$CONFIG_FILE]
+   -c, --config "/Users/ayufan/.gitlab-runner/config.toml"      Config file [$CONFIG_FILE]
 ```
 
 ## Running in debug mode
