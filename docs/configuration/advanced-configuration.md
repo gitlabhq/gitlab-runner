@@ -187,6 +187,7 @@ This defines the Docker Container parameters.
 | `hostname`                     | Specify custom hostname for Docker container |
 | `runtime`                      | Specify a runtime for Docker container |
 | `tls_cert_path`                | When set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
+| `tls_verify`                   | Enable or disable TLS verification of connections to Docker daemon. Disabled by default. |
 | `image`                        | Use this image to run builds |
 | `memory`                       | String value containing the memory limit |
 | `memory_swap`                  | String value containing the total memory limit |
