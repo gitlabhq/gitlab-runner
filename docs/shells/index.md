@@ -212,7 +212,7 @@ passing the file name to the following command:
 powershell -noprofile -noninteractive -executionpolicy Bypass -command generated-windows-powershell.ps1
 ```
 
-This is how an example powershell script looks like:
+This is how an example PowerShell script looks like:
 
 ```bash
 $ErrorActionPreference = "Stop"
