@@ -160,3 +160,49 @@ gitlab-runner uninstall
 gitlab-runner install
 gitlab-runner start
 ```
+
+## Starting GitLab Runner with launchd
+
+Assuming Homebrew was used to install `gitlab-runner` on macOS, if your build calls
+`codesign`, you may need to set `<key>SessionCreate</key><true/>` so that you have
+access to the user keychains. In the following example we run the builds as the user `gitlab` and want access to the signing certificates installed by that user for codesigning.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>SessionCreate</key><true/>
+    <key>KeepAlive</key>
+    <dict>
+      <key>SuccessfulExit</key>
+      <false/>
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>Disabled</key><false/>
+    <key>Label</key>
+    <string>com.gitlab.gitlab-runner</string>
+    <key>UserName</key>
+    <string>gitlab</string>
+    <key>GroupName</key>
+    <string>staff</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/usr/local/opt/gitlab-runner/bin/gitlab-runner</string>
+      <string>run</string>
+      <string>--working-directory</string>
+      <string>/Users/gitlab/gitlab-runner</string>
+      <string>--config</string>
+      <string>/Users/gitlab/gitlab-runner/config.toml</string>
+      <string>--service</string>
+      <string>gitlab-runner</string>
+      <string>--syslog</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+  </dict>
+</plist>
+```
