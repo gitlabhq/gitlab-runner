@@ -90,6 +90,34 @@ You can verify that the Runner created the service configuration file after
 executing the `install` command, by checking the
 `~/Library/LaunchAgents/gitlab-runner.plist` file.
 
+If Homebrew was used to install `git`, it may have added a `/usr/local/etc/gitconfig` file
+containing:
+
+```
+[credential]
+        helper = osxkeychain
+```
+
+This tells Git to cache user credentials in the keychain, which may not be what you want
+and can cause fetches to hang. You can remove the line from the system `gitconfig`
+with:
+
+```bash
+git config --system --unset credentials.helper
+```
+
+Alternatively, you can just disable `credentials.helper` for the GitLab user:
+
+```bash
+git config --global --add credentials.helper ''
+```
+
+You can check the status of the `credentials.helper` with:
+
+```bash
+git config credentials.helpers
+```
+
 ## Manual update
 
 1. Stop the service:
