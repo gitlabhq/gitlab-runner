@@ -30,134 +30,6 @@ func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptIn
 	w.Cd(info.Build.FullProjectDir())
 }
 
-func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo) {
-	for _, variable := range info.Build.GetAllVariables() {
-		w.Variable(variable)
-	}
-}
-
-func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
-	repoURL, err := url.Parse(build.Runner.URL)
-	if err != nil {
-		w.Warning("git SSL config: Can't parse repository URL. %s", err)
-		return
-	}
-
-	repoURL.Path = ""
-	host := repoURL.String()
-	variables := build.GetCITLSVariables()
-	args := append([]string{"config"}, where...)
-
-	for variable, config := range map[string]string{
-		tls.VariableCAFile:   "sslCAInfo",
-		tls.VariableCertFile: "sslCert",
-		tls.VariableKeyFile:  "sslKey",
-	} {
-		if variables.Get(variable) == "" {
-			continue
-		}
-
-		key := fmt.Sprintf("http.%s.%s", host, config)
-		w.Command("git", append(args, key, w.EnvVariableKey(variable))...)
-	}
-
-	return
-}
-
-func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
-	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
-	// The file can be left if previous build was terminated during git operation
-	w.RmFile(".git/index.lock")
-	w.RmFile(".git/shallow.lock")
-	w.RmFile(".git/HEAD.lock")
-
-	w.RmFile(".git/hooks/post-checkout")
-}
-
-func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
-	depth := build.GitInfo.Depth
-
-	if depth > 0 {
-		w.Notice("Fetching changes with git depth set to %d...", depth)
-	} else {
-		w.Notice("Fetching changes...")
-	}
-
-	// initializing
-	templateDir := w.MkTmpDir("git-template")
-	templateFile := path.Join(templateDir, "config")
-
-	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
-	if build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
-	}
-
-	w.Command("git", "init", projectDir, "--template", templateDir)
-	w.Cd(projectDir)
-	b.writeGitCleanup(w, build)
-
-	// Add `git remote` or update existing
-	w.IfCmd("git", "remote", "add", "origin", build.GetRemoteURL())
-	w.Notice("Created fresh repository.")
-	w.Else()
-	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
-	w.EndIf()
-
-	fetchArgs := []string{"fetch", "origin", "--prune"}
-	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
-	if depth > 0 {
-		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
-	}
-
-	w.Command("git", fetchArgs...)
-}
-
-func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
-	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
-	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
-
-	cleanFlags := build.GetGitCleanFlags()
-	if len(cleanFlags) > 0 {
-		cleanArgs := append([]string{"clean"}, cleanFlags...)
-		w.Command("git", cleanArgs...)
-	}
-}
-
-func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
-	if recursive {
-		w.Notice("Updating/initializing submodules recursively...")
-	} else {
-		w.Notice("Updating/initializing submodules...")
-	}
-
-	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
-	args := []string{"submodule", "sync"}
-	if recursive {
-		args = append(args, "--recursive")
-	}
-	w.Command("git", args...)
-
-	// Update / initialize submodules
-	updateArgs := []string{"submodule", "update", "--init"}
-	foreachArgs := []string{"submodule", "foreach"}
-	if recursive {
-		updateArgs = append(updateArgs, "--recursive")
-		foreachArgs = append(foreachArgs, "--recursive")
-	}
-
-	// Clean changed files in submodules
-	// "git submodule update --force" option not supported in Git 1.7.1 (shipped with CentOS 6)
-	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
-	w.Command("git", append(foreachArgs, "git reset --hard")...)
-	w.Command("git", updateArgs...)
-
-	if !build.IsLFSSmudgeDisabled() {
-		w.IfCmd("git-lfs", "version")
-		w.Command("git", append(foreachArgs, "git lfs pull")...)
-		w.EndIf()
-	}
-}
-
 func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, file string) {
 	if build.CacheDir == "" {
 		return
@@ -295,6 +167,58 @@ func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScrip
 	return nil
 }
 
+func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+	b.writeExports(w, info)
+
+	if !info.Build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
+	}
+
+	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
+		b.writeCommands(w, info.PreCloneScript)
+	}
+
+	if err := b.writeCloneFetchCmds(w, info); err != nil {
+		return err
+	}
+
+	return b.writeSubmoduleUpdateCmds(w, info)
+}
+
+func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo) {
+	for _, variable := range info.Build.GetAllVariables() {
+		w.Variable(variable)
+	}
+}
+
+func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
+	repoURL, err := url.Parse(build.Runner.URL)
+	if err != nil {
+		w.Warning("git SSL config: Can't parse repository URL. %s", err)
+		return
+	}
+
+	repoURL.Path = ""
+	host := repoURL.String()
+	variables := build.GetCITLSVariables()
+	args := append([]string{"config"}, where...)
+
+	for variable, config := range map[string]string{
+		tls.VariableCAFile:   "sslCAInfo",
+		tls.VariableCertFile: "sslCert",
+		tls.VariableKeyFile:  "sslKey",
+	} {
+		if variables.Get(variable) == "" {
+			continue
+		}
+
+		key := fmt.Sprintf("http.%s.%s", host, config)
+		w.Command("git", append(args, key, w.EnvVariableKey(variable))...)
+	}
+
+	return
+}
+
 func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {
 	build := info.Build
 
@@ -363,6 +287,65 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 	return nil
 }
 
+func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
+	depth := build.GitInfo.Depth
+
+	if depth > 0 {
+		w.Notice("Fetching changes with git depth set to %d...", depth)
+	} else {
+		w.Notice("Fetching changes...")
+	}
+
+	// initializing
+	templateDir := w.MkTmpDir("git-template")
+	templateFile := path.Join(templateDir, "config")
+
+	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
+	if build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
+	}
+
+	w.Command("git", "init", projectDir, "--template", templateDir)
+	w.Cd(projectDir)
+	b.writeGitCleanup(w, build)
+
+	// Add `git remote` or update existing
+	w.IfCmd("git", "remote", "add", "origin", build.GetRemoteURL())
+	w.Notice("Created fresh repository.")
+	w.Else()
+	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
+	w.EndIf()
+
+	fetchArgs := []string{"fetch", "origin", "--prune"}
+	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
+	if depth > 0 {
+		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
+	}
+
+	w.Command("git", fetchArgs...)
+}
+
+func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
+	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
+	// The file can be left if previous build was terminated during git operation
+	w.RmFile(".git/index.lock")
+	w.RmFile(".git/shallow.lock")
+	w.RmFile(".git/HEAD.lock")
+
+	w.RmFile(".git/hooks/post-checkout")
+}
+
+func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
+	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
+	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
+
+	cleanFlags := build.GetGitCleanFlags()
+	if len(cleanFlags) > 0 {
+		cleanArgs := append([]string{"clean"}, cleanFlags...)
+		w.Command("git", cleanArgs...)
+	}
+}
+
 func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	build := info.Build
 
@@ -383,22 +366,39 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 	return nil
 }
 
-func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeExports(w, info)
-
-	if !info.Build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
+func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
+	if recursive {
+		w.Notice("Updating/initializing submodules recursively...")
+	} else {
+		w.Notice("Updating/initializing submodules...")
 	}
 
-	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
-		b.writeCommands(w, info.PreCloneScript)
+	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
+	args := []string{"submodule", "sync"}
+	if recursive {
+		args = append(args, "--recursive")
+	}
+	w.Command("git", args...)
+
+	// Update / initialize submodules
+	updateArgs := []string{"submodule", "update", "--init"}
+	foreachArgs := []string{"submodule", "foreach"}
+	if recursive {
+		updateArgs = append(updateArgs, "--recursive")
+		foreachArgs = append(foreachArgs, "--recursive")
 	}
 
-	if err := b.writeCloneFetchCmds(w, info); err != nil {
-		return err
-	}
+	// Clean changed files in submodules
+	// "git submodule update --force" option not supported in Git 1.7.1 (shipped with CentOS 6)
+	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
+	w.Command("git", append(foreachArgs, "git reset --hard")...)
+	w.Command("git", updateArgs...)
 
-	return b.writeSubmoduleUpdateCmds(w, info)
+	if !build.IsLFSSmudgeDisabled() {
+		w.IfCmd("git-lfs", "version")
+		w.Command("git", append(foreachArgs, "git lfs pull")...)
+		w.EndIf()
+	}
 }
 
 func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
