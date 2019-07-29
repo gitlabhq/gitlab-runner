@@ -45,11 +45,14 @@ image: $CI_IMAGE
 .docker: &docker
   <<: *except_docs
   services:
-  - docker:dind
+  - docker:19.03-dind
   variables: &docker_variables
     CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
     DOCKER_DRIVER: overlay2
-    DOCKER_HOST: tcp://docker:2375
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_CERT_PATH: "/certs/client"
   tags:
   - docker
 
@@ -76,7 +79,7 @@ image: $CI_IMAGE
 .image_builder: &image_builder
   <<: *docker
   stage: prepare
-  image: docker:git
+  image: docker:19.03-git
   script:
   - source ./ci/build_ci_image
 
@@ -232,9 +235,9 @@ check feature flags docs:
 code_quality:
   <<: *except_docs
   stage: test
-  image: docker:git
+  image: docker:19.03-git
   services:
-    - docker:dind
+    - docker:19.03-dind
   variables:
     DOCKER_DRIVER: overlay2
     CODECLIMATE_FORMAT: json
