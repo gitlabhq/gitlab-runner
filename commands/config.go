@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
@@ -39,23 +41,9 @@ func (c *configOptions) loadConfig() error {
 	return nil
 }
 
-func (c *configOptions) touchConfig() error {
-	// try to load existing config
-	err := c.loadConfig()
-	if err != nil {
-		return err
-	}
-
-	// save config for the first time
-	if !c.config.Loaded {
-		return c.saveConfig()
-	}
-	return nil
-}
-
 func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) {
 	if c.config == nil {
-		return nil, fmt.Errorf("Config has not been loaded")
+		return nil, fmt.Errorf("config has not been loaded")
 	}
 
 	for _, runner := range c.config.Runners {
@@ -64,7 +52,7 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 		}
 	}
 
-	return nil, fmt.Errorf("Could not find a runner with the name '%s'", name)
+	return nil, fmt.Errorf("could not find a runner with the name '%s'", name)
 }
 
 type configOptionsWithListenAddress struct {
@@ -97,7 +85,10 @@ func (c *configOptionsWithListenAddress) listenAddress() (string, error) {
 func init() {
 	configFile := os.Getenv("CONFIG_FILE")
 	if configFile == "" {
-		os.Setenv("CONFIG_FILE", getDefaultConfigFile())
+		err := os.Setenv("CONFIG_FILE", getDefaultConfigFile())
+		if err != nil {
+			logrus.WithError(err).Fatal("Couldn't set CONFIG_FILE environment variable")
+		}
 	}
 
 	network.CertificateDirectory = getDefaultCertificateDirectory()
