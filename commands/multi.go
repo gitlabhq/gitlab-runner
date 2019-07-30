@@ -403,7 +403,7 @@ func (mr *RunCommand) Start(s service.Service) error {
 	}
 
 	// Start should not block. Do the actual work async.
-	go mr.Run()
+	go mr.RunWithLock()
 
 	return nil
 }
@@ -575,6 +575,19 @@ func (mr *RunCommand) setupSessionServer() {
 		Info("Session server listening")
 }
 
+func (mr *RunCommand) RunWithLock() {
+	log := mr.log().WithFields(logrus.Fields{
+		"file": mr.ConfigFile,
+		"pid":  os.Getpid(),
+	})
+	log.Info("Locking configuration file")
+
+	err := mr.inLock(mr.Run)
+	if err != nil {
+		log.WithError(err).Fatal("Could not handle configuration file locking")
+	}
+}
+
 func (mr *RunCommand) Run() {
 	mr.setupMetricsAndDebugServer()
 	mr.setupSessionServer()
@@ -609,7 +622,7 @@ func (mr *RunCommand) Run() {
 		mr.currentWorkers--
 	}
 	mr.log().Println("All workers stopped. Can exit now")
-	mr.runFinished <- true
+	close(mr.runFinished)
 }
 
 func (mr *RunCommand) interruptRun() {

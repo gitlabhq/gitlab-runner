@@ -275,6 +275,14 @@
   revision = "20b96f641a5ea98f2f8619ff4f3e061cff4833bd"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e27d558706a107ae82e91ac3010bb15d3978faab98ded7435d640e28007e611c"
+  name = "github.com/gofrs/flock"
+  packages = ["."]
+  pruneopts = "N"
+  revision = "5135e617513b1e6e205a3a89b042249dee6730c8"
+
+[[projects]]
   digest = "1:809e332c8b79399d55f1fd11f5e45b892bc0fb25c7c912898ad307a8d0506164"
   name = "github.com/gogo/protobuf"
   packages = [
@@ -1052,6 +1060,7 @@
     "github.com/docker/go-units",
     "github.com/docker/machine/commands/mcndirs",
     "github.com/getsentry/raven-go",
+    "github.com/gofrs/flock",
     "github.com/golang/mock/gomock",
     "github.com/gorhill/cronexpr",
     "github.com/gorilla/mux",
