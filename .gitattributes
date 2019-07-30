@@ -1,0 +1,2 @@
+*.sh		text eol=lf
+ci/version	text eol=lf
