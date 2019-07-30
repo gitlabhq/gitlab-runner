@@ -125,7 +125,7 @@ func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
 	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
-	assert.Contains(t, buf.String(), "net/http: request canceled (Client.Timeout")
+	assert.Contains(t, buf.String(), "Client.Timeout")
 }
 
 func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
