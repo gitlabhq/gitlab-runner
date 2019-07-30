@@ -162,6 +162,10 @@ ignored = ["test", "appengine"]
   name = "golang.org/x/sys"
   branch = "master"
 
+[[constraint]]
+  name = "github.com/gofrs/flock"
+  branch = "master"
+
 ##
 ## Refrain innovations ;)
 ##
