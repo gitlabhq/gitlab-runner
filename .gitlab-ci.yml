@@ -21,6 +21,7 @@ variables:
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "2.7.1"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
+  DOCS_GITLAB_REPO_SUFFIX: "runner"
 
 before_script:
   - unset GPG_KEY
