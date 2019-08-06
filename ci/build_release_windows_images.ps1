@@ -75,7 +75,7 @@ function Build-Image($tag)
         '--build-arg', "GIT_LFS_256_CHECKSUM=$Env:GIT_LFS_256_CHECKSUM"
     )
 
-    & 'docker' build -t "gitlab/gitlab-runner-helper:$tag" --force-rm $buildArgs -f $dockerFile $context
+    & 'docker' build -t "gitlab/gitlab-runner-helper:$tag" --force-rm --no-cache $buildArgs -f $dockerFile $context
     if ($LASTEXITCODE -ne 0) {
         throw ("Failed to build docker image" )
     }
