@@ -128,10 +128,6 @@ func (e *executor) getBuildAuthConfiguration(indexName string) (string, *types.A
 		}
 	}
 
-	if authConfigs == nil {
-		return "", nil
-	}
-
 	return AuthConfigSourceNameJobPayload, docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
 }
 
