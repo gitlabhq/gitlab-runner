@@ -166,6 +166,10 @@ ignored = ["test", "appengine"]
   name = "github.com/gofrs/flock"
   branch = "master"
 
+[[constraint]]
+  name = "github.com/imdario/mergo"
+  version = "v0.3.7"
+
 ##
 ## Refrain innovations ;)
 ##
@@ -229,10 +233,6 @@ ignored = ["test", "appengine"]
 [[override]]
   name = "github.com/gorilla/mux"
   revision = "599cba5e7b6137d46ddf58fb1765f5d928e69604"
-
-[[override]]
-  name = "github.com/imdario/mergo"
-  revision = "50d4dbd4eb0e84778abe37cefef140271d96fade"
 
 [[override]]
   name = "github.com/jonboulle/clockwork"
