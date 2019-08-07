@@ -274,7 +274,8 @@ different options to be applied.
 
 NOTE: **Note:**
 The child instances will use by default Ubuntu 16.04 unless you choose a
-different AMI ID by setting `amazonec2-ami`.
+different AMI ID by setting `amazonec2-ami`. Set only [supported
+base operating systems for Docker Machine](https://docs.docker.com/machine/drivers/os-base/).
 
 NOTE: **Note:**
 If you specify `amazonec2-private-address-only=true` as one of the machine
