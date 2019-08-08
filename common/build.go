@@ -389,10 +389,8 @@ func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider Exe
 		if err == nil {
 			break
 		}
-		if executor != nil {
-			executor.Cleanup()
-			executor = nil
-		}
+		executor.Cleanup()
+		executor = nil
 		if _, ok := err.(*BuildError); ok {
 			break
 		} else if options.Context.Err() != nil {
