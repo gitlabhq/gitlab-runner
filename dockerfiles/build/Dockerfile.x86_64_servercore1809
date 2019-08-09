@@ -30,6 +30,7 @@ COPY --from=builder ["git", "C:\\Program Files\\git"]
 COPY --from=builder ["git-lfs", "C:\\Program Files\\git-lfs"]
 RUN setx PATH "%PATH%;C:\Program Files\git\cmd;C:\Program Files\git-lfs;C:\Program Files\gitlab-runner-helper" /M
 
+RUN git config --system core.longpaths true
 RUN git lfs install --skip-repo
 
 COPY [".\\binaries\\gitlab-runner-helper.x86_64-windows.exe", "C:\\Program Files\\gitlab-runner-helper\\gitlab-runner-helper.exe"]
