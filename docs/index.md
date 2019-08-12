@@ -78,6 +78,7 @@ Learn how to [register a GitLab Runner](register/index.md).
 ## Using GitLab Runner
 
 - See the [commands documentation](commands/README.md).
+- See [best practice documentation](best_practice/index.md).
 
 ## Selecting the executor
 
