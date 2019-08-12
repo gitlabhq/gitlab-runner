@@ -18,5 +18,6 @@ well as information how to set up Prometheus metrics:
 - [Runner monitoring](../monitoring/README.md) Learn how to monitor the Runner's behavior.
 - [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup) A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
 - [Configure GitLab Runner to run behind a proxy](proxy.md) Learn how to set up a Linux proxy and configure GitLab Runner. Especially useful for the Docker executor.
+- [Best practice for using GitLab Runner](../best_practice/index.md).
 
 [TOML]: https://github.com/toml-lang/toml
