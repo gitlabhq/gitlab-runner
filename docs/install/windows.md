@@ -88,6 +88,74 @@ cd ..
 rmdir /s GitLab-Runner
 ```
 
+## Windows version support policy
+
+We follow the same lifecycle policy as Microsoft's [Servicing
+Channels](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19).
+
+This means that we support:
+
+- [Long-Term Servicing
+  Channel](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19#long-term-servicing-channel-ltsc),
+  versions for 5 years after their release date. Note that we don't
+  support versions that are on extended support.
+- [Semi-Annual
+  Channel](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19#semi-annual-channel)
+  versions for 18 months after their release date. We don't support
+  these versions after mainstream support ends.
+
+This is the case for both the [Windows binaries](#installation) that we
+distribute, and also for the [Docker
+executor](../executors/docker.md#supported-windows-versions).
+
+NOTE: **Note:**
+The Docker executor for Windows containers has strict version
+requirements, because containers have to match the version of the host
+OS. See the [list of supported Windows
+containers](../executors/docker.md#supported-windows-versions) for more
+information.
+
+After a Windows version no longer receives mainstream support from
+Microsoft, we officially [deprecate the
+version](https://about.gitlab.com/handbook/product/#deprecated) and
+remove it in the next major change. For example, in 12.x we started
+supporting [`Windows
+1803`](https://support.microsoft.com/en-us/lifecycle/search?alpha=1803)
+because it came out on `2018-04-30`. Mainstream support ended on
+`2019-11-12`, so we deprecated `Windows 1803` in 12.x and it will be
+[removed](https://gitlab.com/gitlab-org/gitlab-runner/issues/6553) in
+GitLab 13.0.
+
+As a single source of truth we use
+<https://support.microsoft.com/en-us/lifecycle/search> which specifies
+both the release and mainstream support dates.
+
+Below is a list of versions that are commonly used and their end of life
+date:
+
+| OS                                  | Mainstream support end of life date |
+|-------------------------------------|-------------------------------------|
+| Windows 10 1803                     | November 2019 *Deprecated*          |
+| Windows 10 1809/2019                | January 2024                        |
+| Windows Server Datacenter 1803      | November 2019 *Deprecated*          |
+| Windows Server Datacenter 1809/2019 | January 2024                        |
+| Windows Server Datacenter 1903      | December 2020                       |
+
+### Future releases
+
+Microsoft releases new Windows Server products in the [Semi-Annual
+Channel](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19#semi-annual-channel)
+twice a year, and every 2 - 3 years a new major version of Windows Sever
+is released in the [Long-Term Servicing Channel
+(LTSC)](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19#long-term-servicing-channel-ltsc).
+
+GitLab aims to test and release new GitLab Runner helper images that
+include the latest Windows Server version (Semi-Annual Channel) within 1
+month of the official Microsoft release date.  Refer to the [Windows
+Server current versions by servicing option
+list](https://docs.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
+for availability dates.
+
 ## Troubleshooting
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
