@@ -467,7 +467,7 @@ func (e *executor) splitServiceAndVersion(serviceDescription string) (service, v
 
 func (e *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image) (*types.Container, error) {
 	if len(service) == 0 {
-		return nil, errors.New("invalid service name")
+		return nil, errors.New("invalid service name: "+serviceDefinition.Name)
 	}
 
 	if e.volumesManager == nil {
