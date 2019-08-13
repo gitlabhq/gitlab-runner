@@ -31,7 +31,7 @@ you decide which executor to use.
 | Executor                                          | SSH  | Shell   | VirtualBox | Parallels | Docker | Kubernetes | Custom         |
 |:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|---------------:|
 | Clean build environment for every build           | ✗    | ✗       | ✓          | ✓         | ✓      | ✓          |conditional (4) |
-| Reuse previous clone if it exists                 | ✓    | ✓       |            | ✗         | ✓      | ✗          |conditional (4) |
+| Reuse previous clone if it exists                 | ✓    | ✓       | ✗          | ✗         | ✓      | ✗          |conditional (4) |
 | Migrate runner machine                            | ✗    | ✗       | partial    | partial   | ✓      | ✓          |✓               |
 | Zero-configuration support for concurrent builds  | ✗    | ✗ (1)   | ✓          | ✓         | ✓      | ✓          |conditional (4) |
 | Complicated build environments                    | ✗    | ✗ (2)   | ✓ (3)      | ✓ (3)     | ✓      | ✓          |✓               |
