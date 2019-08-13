@@ -375,12 +375,21 @@ The configuration template file supports:
   section.
 - No global options.
 
-When `--template-config` is used, then the configuration of `[[runners]]` entry is merged into the
-configuration of newly created `[[runners]]` entry in the regular `config.toml` file. The merging
-is done only for options that were _empty_ (so empty strings, nulls/non existing entries, zeroes).
-With this all configuration provided with command line options and/or environment variables during
-the `register` command call take the precedence, and the template fills the gaps and adds additional
-settings.
+When `--template-config` or `TEMPLATE_CONFIG_FILE` is used, the configuration of `[[runners]]` entry
+is merged into the configuration of newly created `[[runners]]` entry in the regular `config.toml`
+file.
+
+The merging is done only for options that were _empty_. That is:
+
+- Empty strings.
+- Nulls or/non existent entries.
+- Zeroes.
+
+With this:
+
+- All configuration provided with command line options and/or environment variables during the
+  `register` command call take precedence.
+- The template fills the gaps and adds additional settings.
 
 ### Example
 
@@ -435,11 +444,15 @@ check_interval = 0
     [runners.kubernetes.volumes]
 ```
 
-We can see the basic configuration created from the provided command line options. There are
-Runner credentials (URL and token), the executor specified and the default, empty section
-`runners.kubernetes` with only the one option provided during the registration filled. Normally
-one would need to set few more options to make the Kubernetes executor usable, but the above is enough
-for the purpose of our example.
+We can see the basic configuration created from the provided command line options:
+
+- Runner credentials (URL and token).
+- The executor specified.
+- The default, empty section `runners.kubernetes` with only the one option
+  provided during the registration filled out.
+
+Normally one would need to set few more options to make the Kubernetes executor
+usable, but the above is enough for the purpose of our example.
 
 Let's now assume that we need to configure an `emptyDir` volume for our Kubernetes executor. There is
 no way to add this while registering with neither environment variables nor command line options.
@@ -543,7 +556,7 @@ created by the registration. And because the whole file is saved with the same m
 we also have proper indentation.
 
 If the configuration template includes a settings, and the same setting is passed to the
-register command the one passed to the register command takes precedence over the one
+`register` command, the one passed to the `register` command takes precedence over the one
 specified inside of the config template.
 
 ```bash
@@ -591,7 +604,7 @@ check_interval = 0
     [runners.cache.gcs]
 ```
 
-The configuration set with the `register` command options got the priority and was
+The configuration set with the `register` command options took priority and was
 chosen to be placed in the final config.
 
 [tags]: https://docs.gitlab.com/ee/ci/runners/#using-tags
