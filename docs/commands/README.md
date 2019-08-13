@@ -245,6 +245,13 @@ gitlab-runner register
 
 > **Note:** Boolean parameters must be passed in the command line with `--key={true|false}`.
 
+#### `[[runners]]` configuration template file
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/4228) in GitLab Runner 12.2.
+
+Additional options can be easily configured during Runner registration using the
+[configuration template file](../register/index.md#runners-configuration-template-file) feature.
+
 ### gitlab-runner list
 
 This command lists all runners saved in the
