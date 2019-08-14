@@ -215,7 +215,7 @@ powershell -noprofile -noninteractive -executionpolicy Bypass -command generated
 This is how an example PowerShell script looks like:
 
 ```bash
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 echo "Running on $env:computername..."
 
