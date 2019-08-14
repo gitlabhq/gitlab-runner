@@ -8,7 +8,6 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 
 | Distribution | Version                    | End of Life date      |
 |--------------|----------------------------|-----------------------|
-| Debian       | buster                     |                       |
 | Debian       | stretch                    | approx. 2022          |
 | Debian       | jessie                     | June 2020             |
 | Ubuntu       | bionic                     | April 2023            |
