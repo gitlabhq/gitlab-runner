@@ -564,15 +564,45 @@ func TestDebugTrace(t *testing.T) {
 }
 
 func TestDefaultEnvVariables(t *testing.T) {
-	buildDir := "/tmp/test-build/dir"
-	build := Build{
-		BuildDir: buildDir,
+	tests := map[string]struct {
+		buildDir       string
+		expectedValue1 string
+		expectedValue2 string
+	}{
+		"UNIX-style BuildDir": {
+			buildDir:       "/tmp/test-build/dir",
+			expectedValue1: "CI_PROJECT_DIR=/tmp/test-build/dir",
+			expectedValue2: "CI_SERVER=yes",
+		},
+		// The next two tests expected value will depend on the platorm running the tests
+		"Windows-style BuildDir (CMD or PS)": {
+			buildDir:       "C:\\tmp\\test-build\\dir",
+			expectedValue1: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
+			expectedValue2: "CI_SERVER=yes",
+		},
+		"Windows-style BuildDir with forward slashes and drive letter": {
+			buildDir:       "C:/tmp/test-build/dir",
+			expectedValue1: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
+			expectedValue2: "CI_SERVER=yes",
+		},
+		"Windows-style BuildDir in MSYS bash executor and drive letter)": {
+			buildDir:       "/c/tmp/test-build/dir",
+			expectedValue1: "CI_PROJECT_DIR=/c/tmp/test-build/dir",
+			expectedValue2: "CI_SERVER=yes",
+		},
 	}
 
-	vars := build.GetAllVariables().StringList()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := new(Build)
+			build.BuildDir = test.buildDir
 
-	assert.Contains(t, vars, "CI_PROJECT_DIR="+filepath.FromSlash(buildDir))
-	assert.Contains(t, vars, "CI_SERVER=yes")
+			vars := build.GetAllVariables().StringList()
+
+			assert.Contains(t, vars, test.expectedValue1)
+			assert.Contains(t, vars, test.expectedValue2)
+		})
+	}
 }
 
 func TestSharedEnvVariables(t *testing.T) {
