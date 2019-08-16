@@ -9,6 +9,11 @@ This gives you the control to create your own executor by configuring
 GitLab Runner to use some executable to provision, run, and clean up
 your environment.
 
+The scripts you configure for the custom executor are called `Drivers`.
+For example, you could create a Podman driver, an [LXD
+driver](custom_examples/lxd.md) or a [Libvirt
+driver](custom_examples/libvirt.md).
+
 ## Limitations
 
 Below are some current limitations when using the Custom executor:
@@ -411,7 +416,7 @@ We strongly suggest using `SYSTEM_FAILURE_EXIT_CODE` to exit
 instead of a hard coded value since it can change in any release, making
 your binary/script future proof.
 
-## Examples
+## Driver examples
 
-A set of example executors using the Custom executor can be found in
-the [examples page](custom_examples/index.md).
+A set of example drivers using the Custom executor can be found in the
+[examples page](custom_examples/index.md).
