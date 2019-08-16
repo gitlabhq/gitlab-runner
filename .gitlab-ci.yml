@@ -500,7 +500,8 @@ package-rpm: *packages
   - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
   script:
   - .\ci\build_release_windows_images.ps1
-
+  dependencies:
+  - helper images
 
 .release: &release
   <<: *except_docs
