@@ -1,3 +1,58 @@
+v12.2.0-rc1 (2019-08-17)
+
+- Update docs executor titles !1454
+- Only default to Powershell on Windows if no other shell is specified !1457
+- Add more MDL rules !1462
+- Add PROCESS.md !1410
+- Fix wrong rc script for freebsd. !1418
+- Allow to build development version of DEB, RPM and Docker with make !824
+- Add custom executor documentation !1416
+- docs: clarify the requirements for pinning !823
+- Adds explanation of our review label system. !1461
+- Use FreeBSD's built-in stop and status scriplets from /etc/rc.subr !757
+- Fix typo on security docs !956
+- Update doc about Debian version !1464
+- Move note to subsection !1469
+- Correct spelling in help string !1471
+- Force an opt-out from Docker Machine bugsnag report !1443
+- Improved go install instructions for macOS !1472
+- Fix some linting issues !1424
+- Make it clear what is the default shell for Windows !1474
+- Add LXD example for custom executor !1439
+- Add libvirt custom executor example !1456
+- Update self-signed certificate docs for Windows service !1466
+- Docs/update min docker version !1480
+- Docs: Fix typo in custom executor !1479
+- Track Windows tests failures !1450
+- Add requirements for contributing new hardware architectures !1478
+- Fix markdown in runner docs (part 1) !1483
+- Fix markdown in runner docs (part 2) !1484
+- Update docs to specify default shell of OS !1485
+- Further clarify Docker requirements !1486
+- Fix typo and spacing in two runner docs !1487
+- docs: gitlab-runner helper image has no arm64 build yet !1489
+- Fix custom executor default config on register !1491
+- Update Windows test failures !1490
+- Expand markdown lint rules in runner !1492
+- Fix PowerShell capitalization !1497
+- Quarantine more windows tests !1499
+- Update tracked Windows tests failures list !1502
+- Quarantine windows tests !1501
+- Add docs for tls_verify config field !1493
+- Reorder methods in abstract.go to bring calees closer to the callers !1481
+- Update docs about bash on windows not working !1498
+- Cleanup commands/config.go !1494
+- Switch to DinD TLS for GitLab CI !1504
+- Add .gitattributes !1122
+- Prevent running multiple instances of the gitlab-runner process using the same configuration file !1496
+- Update test assertion !1510
+- Remove need for externally configured variable !1512
+- Change CI_COMMIT_REF to CI_COMMIT_SHA in docs !1513
+- Update reference to CI_COMMIT_REF to CI_COMMIT_SHA !1514
+- Configuration file template for registration command !1263
+- Update AWS autoscaling docs !1518
+- Add test for <at> and <colon> masking !1516
+
 v12.1.0 (2019-07-22)
 
 - Extend custom executor with configuration injects !1449
