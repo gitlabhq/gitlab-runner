@@ -309,13 +309,13 @@ Then use this information to unregister it, using one of the following commands.
 This operation cannot be undone, it will update the configuration file, so
 make sure to have a backup of `config.toml` before executing it.
 
-#### By URL and token:
+#### By URL and token
 
 ```bash
 gitlab-runner unregister --url http://gitlab.example.com/ --token t0k3n
 ```
 
-#### By name:
+#### By name
 
 > **Note:** If there is more than one runner with the given name, only the first one will be removed
 
@@ -323,7 +323,7 @@ gitlab-runner unregister --url http://gitlab.example.com/ --token t0k3n
 gitlab-runner unregister --name test-runner
 ```
 
-#### All Runners:
+#### All Runners
 
 ```bash
 gitlab-runner unregister --all-runners

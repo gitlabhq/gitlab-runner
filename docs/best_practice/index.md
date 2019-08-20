@@ -44,4 +44,3 @@ Directory_. GitLab Runner should have total control over it and does not
 provide stability in such cases. If you have dependencies that are
 required for your CI, we recommend to have them installed in some other
 place.
-
