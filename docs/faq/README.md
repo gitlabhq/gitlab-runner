@@ -52,7 +52,7 @@ You can see the `Permission Denied` error.
 The most likely cause is that your system uses SELinux (enabled by default on CentOS, Fedora and RHEL).
 Check your SELinux policy on your system for possible denials.
 
-## The Docker executor gets timeout when building Java project.
+## The Docker executor gets timeout when building Java project
 
 This most likely happens, because of the broken AUFS storage driver:
 [Java process hangs on inside container](https://github.com/docker/docker/issues/18502).
@@ -62,13 +62,13 @@ to either OverlayFS (faster) or DeviceMapper (slower).
 Check this article about [configuring and running Docker](https://docs.docker.com/engine/articles/configuring/)
 or this article about [control and configure with systemd](https://docs.docker.com/engine/articles/systemd/).
 
-## I get 411 when uploading artifacts.
+## I get 411 when uploading artifacts
 
 This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of Nginx (<http://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
 
 Upgrade your Nginx to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1031>
 
-## I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`.
+## I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
 
 You need to prepend `call` to your batch file line in .gitlab-ci.yml so that it looks like `call C:\path\to\test.bat`. Here
 is a more complete example:

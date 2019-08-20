@@ -294,10 +294,7 @@ docs lint:
     - mv docs/ /tmp/gitlab-docs/content/$DOCS_GITLAB_REPO_SUFFIX
     - cd /tmp/gitlab-docs
     # Lint Markdown
-    # https://github.com/markdownlint/markdownlint/blob/master/docs/RULES.md
-    - bundle exec mdl content/$DOCS_GITLAB_REPO_SUFFIX/**/*.md --rules \
-        MD001,MD002,MD003,MD005,MD006,MD009,MD010,MD011,MD012,MD018,MD019,MD022,\
-        MD023,MD025,MD027,MD028,MD029,MD030,MD031,MD032,MD034,MD037,MD038,MD039
+    - markdownlint --config $CI_PROJECT_DIR/.markdownlint.json content/$DOCS_GITLAB_REPO_SUFFIX/**/*.md
     # Build HTML from Markdown
     - bundle exec nanoc
     # Check the internal links
