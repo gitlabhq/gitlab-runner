@@ -1,4 +1,4 @@
-v12.2.0-rc1 (2019-08-17)
+v12.2.0 (2019-08-22)
 
 - Update docs executor titles !1454
 - Only default to Powershell on Windows if no other shell is specified !1457
