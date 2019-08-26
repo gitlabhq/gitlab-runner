@@ -98,7 +98,7 @@ gitlab-runner install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASS
 ```
 
 If you encounter a _The service did not start due to a logon failure_ error
-while starting the service, please [look in the FAQ](../faq/README.md#the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service-on-windows) to check how to resolve the problem.
+while starting the service, please [look in the FAQ](../faq/README.md#the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service) to check how to resolve the problem.
 
 If you don't have a Windows Password, Runner's service won't start but you can
 use the Built-in System Account.
