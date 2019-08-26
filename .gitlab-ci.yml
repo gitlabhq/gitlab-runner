@@ -9,7 +9,7 @@ stages:
 - build
 - package
 - release
-- cleanup
+- docs
 
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
@@ -129,51 +129,6 @@ clone test repo:
     paths:
     - tmp/gitlab-test
     expire_in: 7d
-
-# Review docs base
-.review-docs: &review-docs
-  image: ruby:2.4-alpine
-  before_script:
-    - unset GPG_KEY
-    - gem install gitlab --no-doc
-    # We need to download the script rather than clone the repo since the
-    # review-docs-cleanup job will not be able to run when the branch gets
-    # deleted (when merging the MR).
-    - apk add --update openssl
-    - wget https://gitlab.com/gitlab-org/gitlab-ce/raw/master/scripts/trigger-build-docs
-    - chmod 755 trigger-build-docs
-  cache: {}
-  dependencies: []
-  variables:
-    GIT_STRATEGY: none
-  when: manual
-  only:
-    - branches
-
-# Trigger a docs build in gitlab-docs
-# Useful to preview the docs changes live
-# https://docs.gitlab.com/ee/development/writing_documentation.html#previewing-the-changes-live
-review-docs-deploy:
-  <<: *review-docs
-  stage: prebuild
-  environment:
-    name: review-docs/$CI_COMMIT_REF_SLUG
-    # DOCS_REVIEW_APPS_DOMAIN and DOCS_GITLAB_REPO_SUFFIX are secret variables
-    # Discussion: https://gitlab.com/gitlab-org/gitlab-ce/merge_requests/14236/diffs#note_40140693
-    url: http://$CI_ENVIRONMENT_SLUG.$DOCS_REVIEW_APPS_DOMAIN/$DOCS_GITLAB_REPO_SUFFIX
-    on_stop: review-docs-cleanup
-  script:
-    - ./trigger-build-docs deploy
-
-# Cleanup remote environment of gitlab-docs
-review-docs-cleanup:
-  <<: *review-docs
-  stage: cleanup
-  environment:
-    name: review-docs/$CI_COMMIT_REF_SLUG
-    action: stop
-  script:
-    - ./trigger-build-docs cleanup
 
 tests definitions:
   <<: *except_docs
@@ -391,6 +346,7 @@ test junit report:
       junit: out/junit/report.xml
 
 .check windows test failures:
+  <<: *except_docs
   stage: coverage
   script:
   - ./scripts/check_windows_failures
@@ -672,3 +628,52 @@ static QA:
       jq -C . gl-code-quality-report.json
       exit 1
     fi
+
+#
+# Docs stage
+#
+
+# Review docs base
+.review-docs: &review-docs
+  image: ruby:2.6-alpine
+  before_script:
+    - unset GPG_KEY
+    - gem install gitlab --no-doc
+    # We need to download the script rather than clone the repo since the
+    # review-docs-cleanup job will not be able to run when the branch gets
+    # deleted (when merging the MR).
+    - apk add --update openssl
+    - wget https://gitlab.com/gitlab-org/gitlab-ce/raw/master/scripts/trigger-build-docs
+    - chmod 755 trigger-build-docs
+  cache: {}
+  dependencies: []
+  variables:
+    GIT_STRATEGY: none
+  when: manual
+  only:
+    - branches
+
+# Trigger a docs build in gitlab-docs
+# Useful to preview the docs changes live
+# https://docs.gitlab.com/ee/development/writing_documentation.html#previewing-the-changes-live
+review-docs-deploy:
+  <<: *review-docs
+  stage: docs
+  environment:
+    name: review-docs/$CI_COMMIT_REF_SLUG
+    # DOCS_REVIEW_APPS_DOMAIN and DOCS_GITLAB_REPO_SUFFIX are secret variables
+    # Discussion: https://gitlab.com/gitlab-org/gitlab-ce/merge_requests/14236/diffs#note_40140693
+    url: http://$CI_ENVIRONMENT_SLUG.$DOCS_REVIEW_APPS_DOMAIN/$DOCS_GITLAB_REPO_SUFFIX
+    on_stop: review-docs-cleanup
+  script:
+    - ./trigger-build-docs deploy
+
+# Cleanup remote environment of gitlab-docs
+review-docs-cleanup:
+  <<: *review-docs
+  stage: docs
+  environment:
+    name: review-docs/$CI_COMMIT_REF_SLUG
+    action: stop
+  script:
+    - ./trigger-build-docs cleanup
