@@ -14,7 +14,7 @@ type unixKiller struct {
 	process *os.Process
 }
 
-func NewKiller(logger common.BuildLogger, process *os.Process) Killer {
+func newKiller(logger common.BuildLogger, process *os.Process) killer {
 	return &unixKiller{
 		logger:  logger,
 		process: process,
@@ -22,6 +22,10 @@ func NewKiller(logger common.BuildLogger, process *os.Process) Killer {
 }
 
 func (pk *unixKiller) Terminate() {
+	if pk.process == nil {
+		return
+	}
+
 	err := pk.process.Signal(syscall.SIGTERM)
 	if err != nil {
 		pk.logger.Errorln("Failed to send SIGTERM signal:", err)
@@ -32,6 +36,10 @@ func (pk *unixKiller) Terminate() {
 }
 
 func (pk *unixKiller) ForceKill() {
+	if pk.process == nil {
+		return
+	}
+
 	err := pk.process.Kill()
 	if err != nil {
 		pk.logger.Errorln("Failed to force-kill:", err)
