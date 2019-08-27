@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 // ErrProcessNotStarted is returned when we try to manipulated/interact with a
@@ -41,13 +39,13 @@ func (k *KillProcessError) Is(err error) bool {
 }
 
 type osKillWait struct {
-	logger common.BuildLogger
+	logger Logger
 
 	gracefulKillTimeout time.Duration
 	forceKillTimeout    time.Duration
 }
 
-func NewOSKillWait(logger common.BuildLogger, gracefulKillTimeout time.Duration, forceKillTimeout time.Duration) KillWaiter {
+func NewOSKillWait(logger Logger, gracefulKillTimeout time.Duration, forceKillTimeout time.Duration) KillWaiter {
 	return &osKillWait{
 		logger:              logger,
 		gracefulKillTimeout: gracefulKillTimeout,

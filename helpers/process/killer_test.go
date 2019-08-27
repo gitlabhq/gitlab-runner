@@ -6,11 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 func mockKillerFactory(t *testing.T) (*mockKiller, func()) {
@@ -24,7 +21,7 @@ func mockKillerFactory(t *testing.T) (*mockKiller, func()) {
 		killerMock.AssertExpectations(t)
 	}
 
-	newProcessKiller = func(logger common.BuildLogger, process *os.Process) killer {
+	newProcessKiller = func(logger Logger, process *os.Process) killer {
 		return killerMock
 	}
 
@@ -64,15 +61,19 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 
 	for testName, testCase := range tests {
 		t.Run(testName, func(t *testing.T) {
+			waitCh := make(chan error, 1)
+
 			killerMock, cleanup := mockKillerFactory(t)
 			defer cleanup()
 
-			logger := common.NewBuildLogger(nil, logrus.NewEntry(logrus.New()))
-			kw := NewOSKillWait(logger, 10*time.Millisecond, 10*time.Millisecond)
-
-			waitCh := make(chan error, 1)
+			loggerMock := new(MockLogger)
+			defer loggerMock.AssertExpectations(t)
 
 			if testCase.process != nil {
+				loggerMock.
+					On("WithFields", mock.Anything).
+					Return(loggerMock)
+
 				terminateCall := killerMock.On("Terminate")
 				forceKillCall := killerMock.On("ForceKill").Maybe()
 
@@ -89,6 +90,7 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 				}
 			}
 
+			kw := NewOSKillWait(loggerMock, 100*time.Millisecond, 100*time.Millisecond)
 			err := kw.KillAndWait(testCase.process, waitCh)
 
 			if testCase.expectedError == nil {

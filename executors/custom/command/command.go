@@ -86,7 +86,9 @@ func (c *command) Run() error {
 		return err
 
 	case <-c.context.Done():
-		return newProcessKillWaiter(c.logger, c.gracefulKillTimeout, c.forceKillTimeout).
+		logger := &processLogger{buildLogger: c.logger}
+
+		return newProcessKillWaiter(logger, c.gracefulKillTimeout, c.forceKillTimeout).
 			KillAndWait(c.cmd.Process(), c.waitCh)
 	}
 }

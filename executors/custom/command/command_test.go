@@ -35,7 +35,7 @@ func newCommand(ctx context.Context, t *testing.T, executable string, options Cr
 		return commanderMock
 	}
 
-	newProcessKillWaiter = func(common.BuildLogger, time.Duration, time.Duration) process.KillWaiter {
+	newProcessKillWaiter = func(process.Logger, time.Duration, time.Duration) process.KillWaiter {
 		return processKillWaiterMock
 	}
 
