@@ -23,7 +23,7 @@ func (pk *windowsKiller) Terminate() {
 
 	err := pk.process.Kill()
 	if err != nil {
-		pk.logger.Warn("Failed to terminate:", err)
+		pk.logger.Warn("Failed to terminate process:", err)
 
 		// try to kill right-after
 		pk.ForceKill()

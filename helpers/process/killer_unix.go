@@ -26,7 +26,7 @@ func (pk *unixKiller) Terminate() {
 
 	err := pk.process.Signal(syscall.SIGTERM)
 	if err != nil {
-		pk.logger.Warn("Failed to send SIGTERM signal:", err)
+		pk.logger.Warn("Failed to terminate process:", err)
 
 		// try to kill right-after
 		pk.ForceKill()
