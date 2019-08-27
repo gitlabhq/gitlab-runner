@@ -165,6 +165,12 @@ These are defined with a colon (`:`) after the image name. For example, for
 Ruby you can see the supported tags at <https://hub.docker.com/_/ruby/>. If you
 don't specify a tag (like `image: ruby`), `latest` is implied.
 
+NOTE: **Note:**
+The image you choose to run your build in via `image` directive must have a
+working shell in its operating system `PATH`. Supported shells are `sh` or
+`bash` for Linux, `cmd` or PowerShell for Windows. GitLab Runner cannot
+execute a command using the underlying OS system calls (like `exec`).
+
 ## The `services` keyword
 
 The `services` keyword defines just another Docker image that is run during
