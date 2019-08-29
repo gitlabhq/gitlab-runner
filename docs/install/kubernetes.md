@@ -28,7 +28,7 @@ Create a `values.yaml` file for your GitLab Runner configuration. See
 for information on how your values file will override the defaults.
 
 The default configuration can always be found in the
-[`values.yaml`](https://gitlab.com/charts/gitlab-runner/blob/master/values.yaml)
+[`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml)
 in the chart repository.
 
 ### Required configuration
@@ -45,7 +45,7 @@ ready to [install the Runner](#installing-gitlab-runner-using-the-helm-chart).
 ### Additional configuration
 
 The rest of the configuration is
-[documented in the `values.yaml`](https://gitlab.com/charts/gitlab-runner/blob/master/values.yaml) in the chart repository.
+[documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository.
 
 Here is a snippet of the important settings:
 
