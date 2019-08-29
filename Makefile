@@ -262,15 +262,6 @@ check-tags-in-changelog:
 		echo "$$tag:   \t $$state"; \
 	done
 
-prepare_release_checklist_issue_dry_run:
-	make prepare_release_checklist_issue opts="-dry-run"
-
-prepare_release_checklist_issue: opts ?= ""
-prepare_release_checklist_issue: $(GOPATH_SETUP)
-	@go run $(PKG)/scripts/prepare-release-checklist-issue \
-		-issue-template-file ".gitlab/issue_templates/Release Checklist.md" \
-		$(opts)
-
 update_feature_flags_docs: $(GOPATH_SETUP)
 	go run ./scripts/update-feature-flags-docs/main.go
 
