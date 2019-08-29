@@ -1,6 +1,6 @@
 # SSH
 
->**Note:**
+NOTE: **Note:**
 The SSH executor supports only scripts generated in Bash and the caching feature
 is currently not supported.
 

@@ -1,6 +1,6 @@
 # VirtualBox
 
->**Note:**
+NOTE: **Note:**
 The Parallels executor works the same as the VirtualBox executor. The
 caching feature is currently not supported.
 
