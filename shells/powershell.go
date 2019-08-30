@@ -69,7 +69,7 @@ func (b *PsWriter) Unindent() {
 }
 
 func (b *PsWriter) checkErrorLevel() {
-	b.Line("if(!$?) { Exit $LASTEXITCODE }")
+	b.Line("if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
 	b.Line("")
 }
 
@@ -135,7 +135,7 @@ func (b *PsWriter) ifInTryCatch(cmd string) {
 	b.Line("Try {")
 	b.Indent()
 	b.Line(cmd)
-	b.Line("if(!$?) { throw $LASTEXITCODE }")
+	b.Line("if(!$?) { throw &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
 	b.Unindent()
 	b.Line("} Catch {")
 	b.Indent()
