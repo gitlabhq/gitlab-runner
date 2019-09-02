@@ -5,7 +5,7 @@
 ### For Debian/Ubuntu
 
 ```bash
-apt-get install -y mercurial git-core wget make
+sudo apt-get install -y mercurial git-core wget make build-essential
 wget https://storage.googleapis.com/golang/go1.8.7.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
@@ -39,13 +39,16 @@ pkg install go-1.8.7 gmake git mercurial
 
 The Docker Engine is required to create pre-built image that is embedded into runner and loaded when using docker executor.
 
+To install Docker, follow the Docker [installation
+instructions](https://docs.docker.com/install/) for your OS.
+
 Make sure that on machine that is running your Docker Engine you have a `binfmt_misc`.
 This is required to be able to build ARM images that are embedded into GitLab Runner binary.
 
 - For Debian/Ubuntu it's sufficient to execute:
 
   ```
-  apt-get install binfmt-support qemu-user-static
+  sudo apt-get install binfmt-support qemu-user-static
   ```
 
 - For Docker for MacOS/Windows `binfmt_misc` is enabled by default.
@@ -65,8 +68,6 @@ This is required to be able to build ARM images that are embedded into GitLab Ru
   { echo ':arm:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-arm-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
   { echo ':armeb:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-armeb-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
   ```
-
-[Install Docker Engine](https://docs.docker.com/engine/installation/)
 
 ## 3. Configure Go
 
