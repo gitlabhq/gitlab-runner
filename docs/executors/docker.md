@@ -310,8 +310,8 @@ service containers.
 For all possible configuration variables check the documentation of each image
 provided in their corresponding Docker hub page.
 
-> **Note**:
-> All variables will be passed to all services containers. It's not designed to
+NOTE: **Note**:
+All variables will be passed to all services containers. It's not designed to
 distinguish which variable should go where.
 Secure variables are only passed to the build container.
 
@@ -510,7 +510,7 @@ When using the `docker` or `docker+machine` executors, you can set the
 `pull_policy` parameter which defines how the Runner will work when pulling
 Docker images (for both `image` and `services` keywords).
 
-> **Note:**
+NOTE: **Note:**
 If you don't set any value for the `pull_policy` parameter, then
 Runner will use the `always` pull policy as the default value.
 
@@ -634,7 +634,7 @@ ERROR: Build failed: Error: image local_image:latest not found
 
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
-> **Note**:
+NOTE: **Note**:
 Starting with GitLab Runner 10.0, both docker-ssh and docker-ssh+machine executors
 are **deprecated** and will be removed in one of the upcoming releases.
 
