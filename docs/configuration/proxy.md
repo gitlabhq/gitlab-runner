@@ -125,7 +125,7 @@ This is basically the same as adding the proxy to the Docker service above:
 ## Adding the proxy to the Docker containers
 
 After you [registered your Runner](../register/index.md), you might want to
-propagate your proxy settings to the Docker containers (for git clone and other
+propagate your proxy settings to the Docker containers (for `git clone` and other
 stuff).
 
 To do that, you need to edit `/etc/gitlab-runner/config.toml` and add the

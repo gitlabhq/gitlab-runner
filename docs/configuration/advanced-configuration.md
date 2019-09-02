@@ -8,9 +8,9 @@ GitLab Runner configuration uses the [TOML][] format.
 
 The file to be edited can be found in:
 
-1. `/etc/gitlab-runner/config.toml` on \*nix systems when gitlab-runner is
+1. `/etc/gitlab-runner/config.toml` on \*nix systems when GitLab Runner is
    executed as root (**this is also path for service configuration**)
-1. `~/.gitlab-runner/config.toml` on \*nix systems when gitlab-runner is
+1. `~/.gitlab-runner/config.toml` on \*nix systems when GitLab Runner is
    executed as non-root
 1. `./config.toml` on other systems
 
@@ -215,8 +215,8 @@ This defines the Docker Container parameters.
 | `volume_driver`             | Specify the volume driver to use for the container |
 | `links`                     | Specify containers which should be linked with building container |
 | `services`                  | Specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
-| `allowed_images`            | Specify wildcard list of images that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `allowed_services`          | Specify wildcard list of services that can be specified in .gitlab-ci.yml. If not present all images are allowed (equivalent to `["*/*:*"]`) |
+| `allowed_images`            | Specify wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
+| `allowed_services`          | Specify wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 | `sysctls`                   | specify the sysctl options |
 | `helper_image`              | (Advanced) [Override the default helper image](#helper-image) used to clone repos and upload artifacts. |
@@ -338,7 +338,7 @@ The steps performed by the Runner can be summed up to:
    found, subsequent pulls will make use of it.
 
 Now that the Runner is set up to authenticate against your private registry,
-learn [how to configure .gitlab-ci.yml][yaml-priv-reg] in order to use that
+learn [how to configure `.gitlab-ci.yml`][yaml-priv-reg] in order to use that
 registry.
 
 #### Support for GitLab integrated registry
@@ -682,7 +682,7 @@ See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
 | `image`          | string  | Default docker image to use for builds when none is specified |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled |
-| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs |
+| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs |
 | `image_pull_secrets` | array | A list of secrets that are used to authenticate docker image pulling |
 
 Example:
@@ -707,10 +707,10 @@ to handle Git, artifacts and cache operations. This container is created from a 
 
 The helper image is based on Alpine Linux and it's provided for amd64 and arm architectures. It contains
 a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner binary, that contains only a subset
-of available commands, as well as git, git-lfs, SSL certificates store and basic configuration of Alpine.
+of available commands, as well as Git, Git LFS, SSL certificates store and basic configuration of Alpine.
 
 When GitLab Runner is installed from the DEB/RPM packages, both images (`amd64` and `arm` based) are installed on the host.
-When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's git
+When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's Git
 revision) is not found on Docker Engine, it is automatically loaded. It works like that for both
 `docker` and `docker+machine` executors.
 
@@ -756,7 +756,7 @@ As it was described above, one of the main reasons of providing such images is t
 API that is expected to be the same in both binaries.
 
 The Runner by default references to a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
-on the Runner's architecture and git revision. Starting with **GitLab Runner 11.3** it's possible to define the version
+on the Runner's architecture and Git revision. Starting with **GitLab Runner 11.3** it's possible to define the version
 of used image automatically, by using one of the
 [version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/11-3-stable/common/version.go#L48-50):
 
@@ -777,7 +777,7 @@ before upgrading the Runner, otherwise the jobs will start failing with a "No su
 ## The `[runners.custom_build_dir]` section
 
 NOTE: **Note:**
-[Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1267) in Gitlab Runner 11.10
+[Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1267) in GitLab Runner 11.10
 
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories) parameters.
 

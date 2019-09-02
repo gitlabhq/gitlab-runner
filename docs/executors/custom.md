@@ -72,10 +72,10 @@ are required fields.
 The user must set up the environment, including the following that must
 be present in the `PATH`:
 
-- [git](https://git-scm.com/download): Used to clone the repositories.
-- [git-lfs](https://git-lfs.github.com/): Pulls any LFS objects that
+- [Git](https://git-scm.com/download): Used to clone the repositories.
+- [Git LFS](https://git-lfs.github.com/): Pulls any LFS objects that
   might be in the repository.
-- [gitlab-runner](https://docs.gitlab.com/runner/install/): Used to
+- [GitLab Runner](https://docs.gitlab.com/runner/install/): Used to
   download/update artifacts and cache.
 
 ## Stages
@@ -284,7 +284,7 @@ what the main goal of that script is.
 | Script Name | Script Contents |
 |:-----------:|:---------------:|
 | `prepare_script` | Simple debug info on which machine the Job is running on. |
-| `get_sources`    | Prepares the Git config, and clone/fetch the repository. We suggest you keep this as is since you get all of the benefits of git strategies that GitLab provides. |
+| `get_sources`    | Prepares the Git config, and clone/fetch the repository. We suggest you keep this as is since you get all of the benefits of Git strategies that GitLab provides. |
 | `restore_cache` | Extract the cache if any are defined. This expects the `gitlab-runner` binary is available in `$PATH`. |
 | `download_artifacts` | Download artifacts, if any are defined. This expects `gitlab-runner` binary is available in `$PATH`. |
 | `build_script` | This is a combination of [`before_script`](https://docs.gitlab.com/ee/ci/yaml/#before_script-and-after_script) and [script](https://docs.gitlab.com/ee/ci/yaml/#script). |

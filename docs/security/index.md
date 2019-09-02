@@ -6,7 +6,7 @@ when running your jobs.
 ## Usage of Shell executor
 
 **Generally it's unsafe to run tests with `shell` executors.** The jobs are run
-with user's permissions (gitlab-runner's) and can steal code from other
+with user's permissions (GitLab Runner's) and can steal code from other
 projects that are run on this server. Use only it for running the trusted builds.
 
 ## Usage of Docker executor
