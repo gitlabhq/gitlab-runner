@@ -1,6 +1,6 @@
 # The Kubernetes executor
 
-GitLab Runner can use Kubernetes to run builds on a kubernetes cluster. This is
+GitLab Runner can use Kubernetes to run builds on a Kubernetes cluster. This is
 possible with the use of the **Kubernetes** executor.
 
 The **Kubernetes** executor, when used with GitLab CI, connects to the Kubernetes
@@ -75,8 +75,8 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `helper_cpu_request`: The CPU allocation requested for build helper containers
 - `helper_memory_request`: The amount of memory requested for build helper containers
 - `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set.
-- `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to kubernetes nodes matching all the `key=value` pairs
-- `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in kubernetes pod toleration configuration.
+- `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs
+- `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration.
 - `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
 - `helper_image`: (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts.
 - `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
@@ -88,7 +88,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
   the pod annotations overwrite environment variable. When empty,
   it disables the pod annotations overwrite feature
 - `pod_security_context`: Configured through the config file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)
-- `service_account`: default service account to be used for making kubernetes api calls.
+- `service_account`: default service account to be used for making Kubernetes api calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
   it disables the service account overwrite feature
@@ -162,7 +162,7 @@ You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to overrid
 
 ## Define keywords in the config toml
 
-Each of the keywords can be defined in the `config.toml` for the gitlab runner.
+Each of the keywords can be defined in the `config.toml` for the GitLab Runner.
 
 Here is an example `config.toml`:
 
@@ -377,9 +377,9 @@ check_interval = 30
 ## Using Docker in your builds
 
 There are a couple of caveats when using docker in your builds while running on
-a kubernetes cluster. Most of these issues are already discussed in the
+a Kubernetes cluster. Most of these issues are already discussed in the
 [**Using Docker Build**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html)
-section of the gitlab-ci
+section of the GitLab CI
 documentation but it is worth it to revisit them here as you might run into
 some slightly different things when running this on your cluster.
 
@@ -405,9 +405,9 @@ binary tries to use it by default. To overwrite this and make the client use tcp
 to contact the docker daemon in the other container be sure to include
 `DOCKER_HOST=tcp://localhost:2375` in your environment variables of the build container.
 
-### Not supplying git
+### Not supplying Git
 
-Do *not* try to use an image that doesn't supply git and add the `GIT_STRATEGY=none`
+Do *not* try to use an image that doesn't supply Git and add the `GIT_STRATEGY=none`
 environment variable for a job that you think doesn't need to do a fetch or clone.
 Because Pods are ephemeral and do not keep state of previously run jobs your
 checked out code will not exist in both the build and the docker service container.
@@ -421,7 +421,7 @@ In both the `docker:dind` and `/var/run/docker.sock` cases the docker daemon
 has access to the underlying kernel of the host machine. This means that any
 `limits` that had been set in the Pod will not work when building docker images.
 The docker daemon will report the full capacity of the node regardless of
-the limits imposed on the docker build containers spawned by kubernetes.
+the limits imposed on the docker build containers spawned by Kubernetes.
 
 One way to help minimize the exposure of the host's kernel to any build container
 when running in privileged mode or by exposing `/var/run/docker.sock` is to use

@@ -69,7 +69,7 @@ warning: You appear to have cloned an empty repository.
 Make sure, that the configuration of the HTTP Proxy in your GitLab server
 installation is done properly. Especially if you are using some HTTP Proxy with
 its own configuration, make sure that GitLab requests are proxied to the
-**GitLab Workhorse socket**, not to the **GitLab unicorn socket**.
+**GitLab Workhorse socket**, not to the **GitLab Unicorn socket**.
 
 Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
 **main entrypoint** of GitLab.
@@ -77,7 +77,7 @@ Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
 If you are using Omnibus GitLab, but don't want to use the bundled Nginx
 server, please read [using a non-bundled web-server][omnibus-ext-nginx].
 
-In gitlab-recipes repository there are [web-server configuration
+In the GitLab Recipes repository there are [web-server configuration
 examples][recipes] for Apache and Nginx.
 
 If you are using GitLab installed from source, please also read the above
@@ -179,19 +179,19 @@ adopt to solve the problem.
 
 You can avoid the problem by using Git to clean your directory structure, first run
 `git config --system core.longpaths true` from the command line and then set your
-project to use *git fetch* from the GitLab CI project settings page.
+project to use `git fetch` from the GitLab CI project settings page.
 
 #### b) Use NTFSSecurity tools for PowerShell
 
 The [NTFSSecurity](https://ntfssecurity.codeplex.com/) PowerShell module provides
-a *Remove-Item2* method which supports long paths. The Gitlab CI Multi Runner will
+a *Remove-Item2* method which supports long paths. The GitLab CI Multi Runner will
 detect it if it is available and automatically make use of it.
 
 [zoneinfo-file]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip
 
 ### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
 
-You need to prepend `call` to your batch file line in .gitlab-ci.yml so that it looks like `call C:\path\to\test.bat`. Here
+You need to prepend `call` to your batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
 is a more complete example:
 
 ```
@@ -210,7 +210,7 @@ running in a UNIX ANSI terminal emulator (because that's what the webUI's output
 
 **Long Answer:**
 
-The web interface for gitlab-ci emulates a UNIX ANSI terminal (at least partially). The `gitlab-runner` pipes any output from the build
+The web interface for GitLab CI emulates a UNIX ANSI terminal (at least partially). The `gitlab-runner` pipes any output from the build
 directly to the web interface. That means that any ANSI color codes that are present will be honored.
 
 Windows' CMD terminal (before Win10 ([source](http://www.nivot.org/blog/post/2016/02/04/Windows-10-TH2-(v1511)-Console-Host-Enhancements)))
