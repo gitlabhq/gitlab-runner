@@ -247,12 +247,12 @@ echo "Running on $env:computername..."
   $GITLAB_CI="true"
   $env:GITLAB_CI=$GITLAB_CI
   $GIT_SSL_CAINFO=""
-  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  New-Item -ItemType directory -Forace -Path "C:\GitLab-Runner\builds\0\project-1.tmp" | out-null
   $GIT_SSL_CAINFO | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $GIT_SSL_CAINFO="C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $env:GIT_SSL_CAINFO=$GIT_SSL_CAINFO
   $CI_SERVER_TLS_CA_FILE=""
-  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  New-Item -ItemType directory -Forace -Path "C:\GitLab-Runner\builds\0\project-1.tmp" | out-null
   $CI_SERVER_TLS_CA_FILE | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $CI_SERVER_TLS_CA_FILE="C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $env:CI_SERVER_TLS_CA_FILE=$CI_SERVER_TLS_CA_FILE
@@ -317,12 +317,12 @@ if(!$?) { Exit $LASTEXITCODE }
   $GITLAB_CI="true"
   $env:GITLAB_CI=$GITLAB_CI
   $GIT_SSL_CAINFO=""
-  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  New-Item -ItemType directory -Forace -Path "C:\GitLab-Runner\builds\0\project-1.tmp" | out-null
   $GIT_SSL_CAINFO | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $GIT_SSL_CAINFO="C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $env:GIT_SSL_CAINFO=$GIT_SSL_CAINFO
   $CI_SERVER_TLS_CA_FILE=""
-  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  New-Item -ItemType directory -Forace -Path "C:\GitLab-Runner\builds\0\project-1.tmp" | out-null
   $CI_SERVER_TLS_CA_FILE | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $CI_SERVER_TLS_CA_FILE="C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $env:CI_SERVER_TLS_CA_FILE=$CI_SERVER_TLS_CA_FILE
@@ -362,12 +362,12 @@ if(!$?) { Exit $LASTEXITCODE }
   $GITLAB_CI="true"
   $env:GITLAB_CI=$GITLAB_CI
   $GIT_SSL_CAINFO=""
-  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  New-Item -ItemType directory -Forace -Path "C:\GitLab-Runner\builds\0\project-1.tmp" | out-null
   $GIT_SSL_CAINFO | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $GIT_SSL_CAINFO="C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO"
   $env:GIT_SSL_CAINFO=$GIT_SSL_CAINFO
   $CI_SERVER_TLS_CA_FILE=""
-  md "C:\GitLab-Runner\builds\0\project-1.tmp" -Force | out-null
+  New-Item -ItemType directory -Forace -Path "C:\GitLab-Runner\builds\0\project-1.tmp" | out-null
   $CI_SERVER_TLS_CA_FILE | Out-File "C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $CI_SERVER_TLS_CA_FILE="C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE"
   $env:CI_SERVER_TLS_CA_FILE=$CI_SERVER_TLS_CA_FILE
