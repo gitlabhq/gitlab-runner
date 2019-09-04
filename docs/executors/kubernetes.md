@@ -124,6 +124,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
 | `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
 | `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
+| `extra_hosts` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases.](#adding-extra-host-aliases) |
 | `helper_image` | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
 | `image_pull_secrets` | A array of secrets that are used to authenticate Docker image pulling. |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
@@ -489,6 +490,25 @@ check_interval = 30
         alias = "svc1"
         entrypoint = ["entrypoint.sh"]
         command = ["executable","param1","param2"]
+```
+
+## Adding extra host aliases
+
+As described earlier, additional host entries can be added to the containers.
+This feature is available in Kubernetes 1.7+.
+
+Here is an example configuration:
+
+```toml
+concurrent = 4
+
+[[runners]]
+  # usual configuration
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [runners.kubernetes.extra_hosts]
+      "de.website.local" = "127.0.0.1"
+      "us.website.local" = "127.0.0.1"
 ```
 
 ## Using Affinity

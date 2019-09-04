@@ -296,6 +296,7 @@ type KubernetesConfig struct {
 	PodAnnotationsOverwriteAllowed                    string                       `toml:"pod_annotations_overwrite_allowed" json:"pod_annotations_overwrite_allowed" long:"pod_annotations_overwrite_allowed" env:"KUBERNETES_POD_ANNOTATIONS_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_POD_ANNOTATIONS_*' values"`
 	PodSecurityContext                                KubernetesPodSecurityContext `toml:"pod_security_context,omitempty" namespace:"pod-security-context" description:"A security context attached to each build pod"`
 	Volumes                                           KubernetesVolumes            `toml:"volumes"`
+	ExtraHosts                                        map[string]string            `toml:"extra_hosts"`
 	Services                                          []Service                    `toml:"services,omitempty" json:"services" description:"Add service that is started with container"`
 	CapAdd                                            []string                     `toml:"cap_add" json:"cap_add" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                                           []string                     `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
@@ -779,6 +780,19 @@ func (c *PreferredSchedulingTerm) GetPreferredSchedulingTerm() api.PreferredSche
 		Weight:     c.Weight,
 		Preference: c.Preference.GetNodeSelectorTerm(),
 	}
+}
+
+func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
+	var aliases []api.HostAlias
+
+	for hostname, ip := range c.ExtraHosts {
+		aliases = append(aliases, api.HostAlias{
+			IP:        ip,
+			Hostnames: []string{hostname},
+		})
+	}
+
+	return aliases
 }
 
 func (c *DockerMachine) GetIdleCount() int {

@@ -2924,6 +2924,33 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"test-service", "alias"}, pod.Spec.HostAliases[0].Hostnames)
 			},
 		},
+		"allows setting extra hosts using HostAlias": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						ExtraHosts: map[string]string{
+							"redis":  "127.0.0.1",
+							"google": "8.8.8.8",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.HostAliases, 2)
+				assert.Equal(t, []api.HostAlias{
+					api.HostAlias{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"redis"},
+					},
+					api.HostAlias{
+						IP:        "8.8.8.8",
+						Hostnames: []string{"google"},
+					},
+				}, pod.Spec.HostAliases)
+			},
+		},
+
 		"no host aliases when feature is not supported": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
