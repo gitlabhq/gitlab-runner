@@ -581,7 +581,9 @@ func (c *RunnerConfig) GetRequestConcurrency() int {
 }
 
 func (c *RunnerConfig) GetVariables() JobVariables {
-	var variables JobVariables
+	variables := JobVariables{
+		{Key: "CI_RUNNER_SHORT_TOKEN", Value: c.ShortDescription(), Public: true, Internal: true, File: false},
+	}
 
 	for _, environment := range c.Environment {
 		if variable, err := ParseVariable(environment); err == nil {
