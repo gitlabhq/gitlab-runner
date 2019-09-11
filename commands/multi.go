@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ayufan/golang-kardianos-service"
+	service "github.com/ayufan/golang-kardianos-service"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -23,7 +23,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/sentry"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/service"
+	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -177,11 +177,18 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		return
 	}
 
-	executorData, releaseFn, err := mr.acquireRunnerResources(provider, runner)
+	executorData, err := provider.Acquire(runner)
 	if err != nil {
+		return fmt.Errorf("failed to update executor: %v", err)
+	}
+	defer provider.Release(runner, executorData)
+
+	if !mr.buildsHelper.acquireBuild(runner) {
+		logrus.WithField("runner", runner.ShortDescription()).
+			Debug("Failed to request job, runner limit met")
 		return
 	}
-	defer releaseFn()
+	defer mr.buildsHelper.releaseBuild(runner)
 
 	buildSession, sessionInfo, err := mr.createSession(provider)
 	if err != nil {
@@ -219,25 +226,6 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	// Process a build
 	return build.Run(mr.config, trace)
-}
-
-func (mr *RunCommand) acquireRunnerResources(provider common.ExecutorProvider, runner *common.RunnerConfig) (common.ExecutorData, func(), error) {
-	executorData, err := provider.Acquire(runner)
-	if err != nil {
-		return nil, func() {}, fmt.Errorf("failed to update executor: %v", err)
-	}
-
-	if !mr.buildsHelper.acquireBuild(runner) {
-		provider.Release(runner, executorData)
-		return nil, nil, errors.New("failed to request job, runner limit met")
-	}
-
-	releaseFn := func() {
-		mr.buildsHelper.releaseBuild(runner)
-		provider.Release(runner, executorData)
-	}
-
-	return executorData, releaseFn, nil
 }
 
 func (mr *RunCommand) createSession(provider common.ExecutorProvider) (*session.Session, *common.SessionInfo, error) {
