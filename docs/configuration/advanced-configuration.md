@@ -69,6 +69,11 @@ be repeated after all requests for the other workers + their sleeps are called.
 
 ## The `[session_server]` section
 
+NOTE: **Note:**
+`session_server` is not yet supported by
+[`gitlab-runner` helm chart](https://docs.gitlab.com/charts/charts/gitlab/gitlab-runner/index.html),
+but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/issues/79).
+
 The section `[session_server]` is a system runner level configuration, so it should be specified at the root level,
 not per executor i.e. it should be outside `[[runners]]` section. The session server allows the user to interact
 with jobs that the Runner is responsible for. A good example of this is the
