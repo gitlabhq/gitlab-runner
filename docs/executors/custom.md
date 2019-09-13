@@ -199,7 +199,7 @@ are defined, these will be added in order to the executable defined in
 ...
 [runners.custom]
   ...
-  preapre_exec = "/path/to/bin"
+  prepare_exec = "/path/to/bin"
   prepare_args = [ "Arg1", "Arg2" ]
   ...
 ```
@@ -394,7 +394,7 @@ Below is a table of what stages are retried, and by how many times.
 
 | Stage Name           | Number of attempts                                          | Duration to wait between each retry |
 |----------------------|-------------------------------------------------------------|-------------------------------------|
-| `preapre_exec`       | 3                                                           | 3 seconds                           |
+| `prepare_exec`       | 3                                                           | 3 seconds                           |
 | `get_sources`        | Value of `GET_SOURCES_ATTEMPTS` variable. (Default 1)       | 0 seconds                           |
 | `restore_cache`      | Value of `RESTORE_CACHE_ATTEMPTS` variable. (Default 1)     | 0 seconds                           |
 | `download_artifacts` | Value of `ARTIFACT_DOWNLOAD_ATTEMPTS` variable. (Default 1) | 0 seconds                           |
