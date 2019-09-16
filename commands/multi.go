@@ -276,7 +276,7 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 					"runner":   runner.ShortDescription(),
 					"executor": runner.Executor,
 				}).WithError(err).
-					Error("Failed to process runner")
+					Warn("Failed to process runner")
 			}
 
 			// force GC cycle after processing build
