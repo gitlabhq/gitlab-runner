@@ -1,28 +1,30 @@
 # Feature flags
 
-Starting with GitLab Runner 11.4 we added base support for feature flags in GitLab Runner.
+> Introduced in GitLab 11.4.
 
-These flags may be used:
+Feature flags are toggles that allow you to enable or disable specific features. These flags are typically used:
 
-1. For beta features that we want to make available for volunteers but don't want to enable publicly yet.
+- For beta features that are made available for volunteers to test, but that are not ready to be enabled for all users.
 
-    A user who wants to use such feature and accepts the risk, can enable it explicitly while the wide
-    group of users will be unaffected by potential bugs and regressions.
+    Beta features are sometimes incomplete or need further testing. A user who wants to use a beta feature
+    can choose to accept the risk and explicitly enable the feature with a feature flag. Other users who
+    do not need the feature or who are not willing to accept the risk on their system have the
+    feature disabled by default and are not impacted by possible bugs and regressions.
 
-1. For breaking changes that need a deprecation and removal after few releases.
+- For breaking changes that result in functionality deprecation or feature removal in the near future.
 
-    While the product evolves some features may be removed or changed. Sometimes it may even be something
-    that is generally considered a bug, however users already managed to find workarounds for it
-    and a fix could affect their configurations.
+    As the product evolves, features are sometimes changed or removed entirely. Known bugs are often fixed,
+    but in some cases, users have already found a workaround for a bug that affected them; forcing users
+    to adopt the standardized bug fix might cause other problems with their customized configurations.
 
-    In that case the feature flag is used to switch from old behavior to the new one on demand. Such
-    fixes ensure that the old behavior is deprecated and marked for removal together with the feature
-    flag that protects the new behavior.
+    In such cases, the feature flag is used to switch from the old behavior to the new one on demand. This
+    allows users to adopt new versions of the product while giving them time to plan for a smooth, permanent
+    transition from the old behavior to the new behavior.
 
-The feature flags mechanism is based on environment variables. To enable the feature hidden behind
-the feature flag, set the corresponding environment variable to `true` or `1`. To disable the
-feature hidden behind the feature flag, set the corresponding environment variable to
-`false` or `0`. See [available feature flags](#available-feature-flags) for the current (auto-generated from source) list of available feature flags.
+Feature flags are toggled using environment variables. To:
+
+- Activate a feature flag, set the corresponding environment variable to `true` or `1`.
+- Deactivate a feature flag, set the corresponding environment variable to `false` or `0`.
 
 ## Available feature flags
 
