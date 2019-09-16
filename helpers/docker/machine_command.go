@@ -51,7 +51,7 @@ func (l *logWriter) watch() {
 			}
 		} else {
 			if !strings.Contains(err.Error(), "bad file descriptor") {
-				logrus.WithError(err).Errorln("Problem while reading command output")
+				logrus.WithError(err).Warn("Problem while reading command output")
 			}
 			return
 		}
