@@ -28,6 +28,7 @@ type prepareCommandOpts struct {
 }
 
 type ConfigExecOutput struct {
+	Hostname  *string `json:"hostname"`
 	BuildsDir *string `json:"builds_dir"`
 	CacheDir  *string `json:"cache_dir"`
 
@@ -35,6 +36,10 @@ type ConfigExecOutput struct {
 }
 
 func (c *ConfigExecOutput) InjectInto(executor *executor) {
+	if c.Hostname != nil {
+		executor.Build.Hostname = *c.Hostname
+	}
+
 	if c.BuildsDir != nil {
 		executor.Config.BuildsDir = *c.BuildsDir
 	}

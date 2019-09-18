@@ -258,8 +258,13 @@ func TestExecutor_Prepare(t *testing.T) {
 				RunExec:    "bash",
 				ConfigExec: "echo",
 			}),
-			commandStdoutContent: `{"builds_dir":"/some/build/directory","cache_dir":"/some/cache/directory","builds_dir_is_shared":true}`,
-			commandErr:           nil,
+			commandStdoutContent: `{
+				"hostname": "custom-hostname",
+				"builds_dir": "/some/build/directory",
+				"cache_dir": "/some/cache/directory",
+				"builds_dir_is_shared":true
+			}`,
+			commandErr: nil,
 			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
@@ -267,6 +272,7 @@ func TestExecutor_Prepare(t *testing.T) {
 				assert.Contains(t, output, "Using Custom executor...")
 			},
 			assertBuild: func(t *testing.T, b *common.Build) {
+				assert.Equal(t, "custom-hostname", b.Hostname)
 				assert.Equal(t, "/some/build/directory/RuNnErTo/0/project-0", b.BuildDir)
 				assert.Equal(t, "/some/cache/directory/project-0", b.CacheDir)
 			},
