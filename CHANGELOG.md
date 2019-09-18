@@ -1,3 +1,7 @@
+v12.3.0-rc1 (2019-09-18)
+
+- Change log levels for common errors !1578
+
 v12.3.0-rc1 (2019-09-11)
 
 - Update a redirected link !1520
