@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
 )
 
@@ -28,30 +29,7 @@ type prepareCommandOpts struct {
 }
 
 type ConfigExecOutput struct {
-	Driver *DriverInfo `json:"driver,omitempty"`
-
-	Hostname  *string `json:"hostname,omitempty"`
-	BuildsDir *string `json:"builds_dir,omitempty"`
-	CacheDir  *string `json:"cache_dir,omitempty"`
-
-	BuildsDirIsShared *bool `json:"builds_dir_is_shared,omitempty"`
-}
-
-type DriverInfo struct {
-	Name    *string `json:"name,omitempty"`
-	Version *string `json:"version,omitempty"`
-}
-
-func (d DriverInfo) String() string {
-	if d.Name == nil {
-		return ""
-	}
-
-	if d.Version == nil {
-		return fmt.Sprintf(" with driver %s", *d.Name)
-	}
-
-	return fmt.Sprintf(" with driver %s %s", *d.Name, *d.Version)
+	api.ConfigExecOutput
 }
 
 func (c *ConfigExecOutput) InjectInto(executor *executor) {
@@ -80,7 +58,7 @@ type executor struct {
 	config  *config
 	tempDir string
 
-	driverInfo *DriverInfo
+	driverInfo *api.DriverInfo
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -184,13 +162,20 @@ func (e *executor) dynamicConfig() error {
 }
 
 func (e *executor) logStartupMessage() {
-	if e.driverInfo == nil {
-		e.Println("Using Custom executor...")
+	const usageLine = "Using Custom executor"
 
+	info := e.driverInfo
+	if info == nil || info.Name == nil {
+		e.Println(fmt.Sprintf("%s...", usageLine))
 		return
 	}
 
-	e.Println(fmt.Sprintf("Using Custom executor%s...", e.driverInfo))
+	if info.Version == nil {
+		e.Println(fmt.Sprintf("%s with driver %s...", usageLine, *info.Name))
+		return
+	}
+
+	e.Println(fmt.Sprintf("%s with driver %s %s...", usageLine, *info.Name, *info.Version))
 }
 
 func (e *executor) defaultCommandOutputs() commandOutputs {
