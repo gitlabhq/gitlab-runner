@@ -130,7 +130,10 @@ cat << EOS
   "builds_dir": "/builds/${CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID}/${CUSTOM_ENV_CI_PROJECT_PATH_SLUG}"
   "cache_dir": "/cache/${CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID}/${CUSTOM_ENV_CI_PROJECT_PATH_SLUG}"
   "builds_dir_is_shared": true,
-  "hostname": "custom-hostname"
+  "hostname": "custom-hostname",
+  "driver": {
+    "name": "test driver",
+    "version": "v0.0.1"
   }
 }
 EOS
@@ -146,6 +149,8 @@ times.
 | `cache_dir` | string | ✗ | ✗ | The base directory where local cache will be stored. |
 | `builds_dir_is_shared` | bool | ✗ | n/a | Defines whether the environment is shared between concurrent job or not. |
 | `hostname` | string | ✗ | ✓ | The hostname to associate with job's "metadata" stored by Runner. If undefined, the hostname is not set. |
+| `driver.name` | string | ✗ | ✓ | The user-defined name for the driver. Printed with the `Using custom executor...` line. If undefined, no information about driver is printed. |
+| `driver.version` | string | ✗ | ✓ | The user-defined version for the drive. Printed with the `Using custom executor...` line. If undefined, only the name information is printed. |
 
 The `STDERR` of the executable will print to the job log.
 

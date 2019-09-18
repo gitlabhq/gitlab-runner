@@ -28,11 +28,30 @@ type prepareCommandOpts struct {
 }
 
 type ConfigExecOutput struct {
-	Hostname  *string `json:"hostname"`
-	BuildsDir *string `json:"builds_dir"`
-	CacheDir  *string `json:"cache_dir"`
+	Driver *DriverInfo `json:"driver,omitempty"`
 
-	BuildsDirIsShared *bool `json:"builds_dir_is_shared"`
+	Hostname  *string `json:"hostname,omitempty"`
+	BuildsDir *string `json:"builds_dir,omitempty"`
+	CacheDir  *string `json:"cache_dir,omitempty"`
+
+	BuildsDirIsShared *bool `json:"builds_dir_is_shared,omitempty"`
+}
+
+type DriverInfo struct {
+	Name    *string `json:"name,omitempty"`
+	Version *string `json:"version,omitempty"`
+}
+
+func (d DriverInfo) String() string {
+	if d.Name == nil {
+		return ""
+	}
+
+	if d.Version == nil {
+		return fmt.Sprintf(" with driver %s", *d.Name)
+	}
+
+	return fmt.Sprintf(" with driver %s %s", *d.Name, *d.Version)
 }
 
 func (c *ConfigExecOutput) InjectInto(executor *executor) {
@@ -51,6 +70,8 @@ func (c *ConfigExecOutput) InjectInto(executor *executor) {
 	if c.BuildsDirIsShared != nil {
 		executor.SharedBuildsDir = *c.BuildsDirIsShared
 	}
+
+	executor.driverInfo = c.Driver
 }
 
 type executor struct {
@@ -58,6 +79,8 @@ type executor struct {
 
 	config  *config
 	tempDir string
+
+	driverInfo *DriverInfo
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -68,8 +91,6 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	e.Println("Using Custom executor...")
-
 	e.tempDir, err = ioutil.TempDir("", "custom-executor")
 	if err != nil {
 		return err
@@ -79,6 +100,8 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if err != nil {
 		return err
 	}
+
+	e.logStartupMessage()
 
 	err = e.AbstractExecutor.PrepareBuildAndShell()
 	if err != nil {
@@ -158,6 +181,16 @@ func (e *executor) dynamicConfig() error {
 	config.InjectInto(e)
 
 	return nil
+}
+
+func (e *executor) logStartupMessage() {
+	if e.driverInfo == nil {
+		e.Println("Using Custom executor...")
+
+		return
+	}
+
+	e.Println(fmt.Sprintf("Using Custom executor%s...", e.driverInfo))
 }
 
 func (e *executor) defaultCommandOutputs() commandOutputs {
