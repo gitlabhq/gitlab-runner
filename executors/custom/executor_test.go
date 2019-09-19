@@ -201,7 +201,7 @@ func TestExecutor_Prepare(t *testing.T) {
 				assert.Equal(t, tt.config.Custom.ConfigArgs, args)
 			},
 			assertOutput: func(t *testing.T, output string) {
-				assert.Contains(t, output, "Using Custom executor...")
+				assert.NotContains(t, output, "Using Custom executor...")
 			},
 			expectedError: "test-error",
 		},
@@ -216,7 +216,7 @@ func TestExecutor_Prepare(t *testing.T) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
-				assert.Contains(t, output, "Using Custom executor...")
+				assert.NotContains(t, output, "Using Custom executor...")
 			},
 			expectedError: "error while parsing JSON output: invalid character 'a' looking for beginning of value",
 		},
@@ -253,20 +253,66 @@ func TestExecutor_Prepare(t *testing.T) {
 			},
 			expectedError: "the builds_dir is not configured",
 		},
-		"custom executor set with ConfigExec": {
+		"custom executor set with ConfigExec and driver info missing name": {
 			config: getRunnerConfig(&common.CustomConfig{
 				RunExec:    "bash",
 				ConfigExec: "echo",
 			}),
-			commandStdoutContent: `{"builds_dir":"/some/build/directory","cache_dir":"/some/cache/directory","builds_dir_is_shared":true}`,
-			commandErr:           nil,
+			commandStdoutContent: `{
+				"driver": {
+					"version": "v0.0.1"
+				}
+			}`,
+			commandErr: nil,
 			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
 				assert.Contains(t, output, "Using Custom executor...")
 			},
+		},
+		"custom executor set with ConfigExec and driver info missing version": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+			}),
+			commandStdoutContent: `{
+				"driver": {
+					"name": "test driver"
+				}
+			}`,
+			commandErr: nil,
+			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
+			},
+			assertOutput: func(t *testing.T, output string) {
+				assert.Contains(t, output, "Using Custom executor with driver test driver...")
+			},
+		},
+		"custom executor set with ConfigExec": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+			}),
+			commandStdoutContent: `{
+				"hostname": "custom-hostname",
+				"builds_dir": "/some/build/directory",
+				"cache_dir": "/some/cache/directory",
+				"builds_dir_is_shared":true,
+				"driver": {
+					"name": "test driver",
+					"version": "v0.0.1"
+				}
+			}`,
+			commandErr: nil,
+			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
+			},
+			assertOutput: func(t *testing.T, output string) {
+				assert.Contains(t, output, "Using Custom executor with driver test driver v0.0.1...")
+			},
 			assertBuild: func(t *testing.T, b *common.Build) {
+				assert.Equal(t, "custom-hostname", b.Hostname)
 				assert.Equal(t, "/some/build/directory/RuNnErTo/0/project-0", b.BuildDir)
 				assert.Equal(t, "/some/cache/directory/project-0", b.CacheDir)
 			},

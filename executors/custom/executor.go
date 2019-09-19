@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
 )
 
@@ -28,13 +29,14 @@ type prepareCommandOpts struct {
 }
 
 type ConfigExecOutput struct {
-	BuildsDir *string `json:"builds_dir"`
-	CacheDir  *string `json:"cache_dir"`
-
-	BuildsDirIsShared *bool `json:"builds_dir_is_shared"`
+	api.ConfigExecOutput
 }
 
 func (c *ConfigExecOutput) InjectInto(executor *executor) {
+	if c.Hostname != nil {
+		executor.Build.Hostname = *c.Hostname
+	}
+
 	if c.BuildsDir != nil {
 		executor.Config.BuildsDir = *c.BuildsDir
 	}
@@ -46,6 +48,8 @@ func (c *ConfigExecOutput) InjectInto(executor *executor) {
 	if c.BuildsDirIsShared != nil {
 		executor.SharedBuildsDir = *c.BuildsDirIsShared
 	}
+
+	executor.driverInfo = c.Driver
 }
 
 type executor struct {
@@ -53,6 +57,8 @@ type executor struct {
 
 	config  *config
 	tempDir string
+
+	driverInfo *api.DriverInfo
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -63,8 +69,6 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	e.Println("Using Custom executor...")
-
 	e.tempDir, err = ioutil.TempDir("", "custom-executor")
 	if err != nil {
 		return err
@@ -74,6 +78,8 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if err != nil {
 		return err
 	}
+
+	e.logStartupMessage()
 
 	err = e.AbstractExecutor.PrepareBuildAndShell()
 	if err != nil {
@@ -153,6 +159,23 @@ func (e *executor) dynamicConfig() error {
 	config.InjectInto(e)
 
 	return nil
+}
+
+func (e *executor) logStartupMessage() {
+	const usageLine = "Using Custom executor"
+
+	info := e.driverInfo
+	if info == nil || info.Name == nil {
+		e.Println(fmt.Sprintf("%s...", usageLine))
+		return
+	}
+
+	if info.Version == nil {
+		e.Println(fmt.Sprintf("%s with driver %s...", usageLine, *info.Name))
+		return
+	}
+
+	e.Println(fmt.Sprintf("%s with driver %s %s...", usageLine, *info.Name, *info.Version))
 }
 
 func (e *executor) defaultCommandOutputs() commandOutputs {
