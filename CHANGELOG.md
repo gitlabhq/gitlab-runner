@@ -1,9 +1,6 @@
-v12.3.0-rc1 (2019-09-18)
+v12.3.0 (2019-09-20)
 
 - Change log levels for common errors !1578
-
-v12.3.0-rc1 (2019-09-11)
-
 - Update a redirected link !1520
 - Removal of conditions which are always evaluated either to true or false !1517
 - Add initial docs for best practice !1509
