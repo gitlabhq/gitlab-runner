@@ -353,6 +353,7 @@ func (e *executor) getLabels(containerType string, otherLabels ...string) map[st
 	labels[dockerLabelPrefix+".job.before_sha"] = e.Build.GitInfo.BeforeSha
 	labels[dockerLabelPrefix+".job.ref"] = e.Build.GitInfo.Ref
 	labels[dockerLabelPrefix+".project.id"] = strconv.Itoa(e.Build.JobInfo.ProjectID)
+	labels[dockerLabelPrefix+".pipeline.id"] = e.Build.GetAllVariables().Get("CI_PIPELINE_ID")
 	labels[dockerLabelPrefix+".runner.id"] = e.Build.Runner.ShortDescription()
 	labels[dockerLabelPrefix+".runner.local_id"] = strconv.Itoa(e.Build.RunnerID)
 	labels[dockerLabelPrefix+".type"] = containerType
