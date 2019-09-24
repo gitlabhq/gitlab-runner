@@ -27,7 +27,7 @@ func (p *windowsPath) IsRoot(path string) bool {
 }
 
 func (p *windowsPath) Contains(basePath, targetPath string) bool {
-	// we use `filepath.Rel` as this perform OS-specific comparision
+	// we use `filepath.Rel` as this perform OS-specific comparison
 	// and this set of functions is compiled using OS-specific golang filepath
 	relativePath, err := filepath.Rel(basePath, targetPath)
 	if err != nil {
