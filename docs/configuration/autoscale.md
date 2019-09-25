@@ -30,9 +30,10 @@ inside of Docker containers.
 
 ## System requirements
 
-At this point you should have
-[installed all the requirements](../executors/docker_machine.md#preparing-the-environment).
-If not, make sure to do it before going over the configuration.
+Before configuring autoscale, you must:
+
+- [Prepare your own environment](../executors/docker_machine.md#preparing-the-environment).
+- Optionally use a [forked version](../executors/docker_machine.md#forked-version-of-docker-machine) of Docker machine supplied by GitLab, which has some additional fixes.
 
 ## Supported cloud providers
 
