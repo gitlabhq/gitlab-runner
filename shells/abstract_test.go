@@ -266,7 +266,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdRecursive(t *testing.T) {
 	mockWriter.On("Command", "git", "submodule", "update", "--init", "--recursive").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git clean -ffxd").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git reset --hard").Once()
-	mockWriter.On("IfCmd", "git-lfs", "version").Once()
+	mockWriter.On("IfCmd", "git", "lfs", "version").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git lfs pull").Once()
 	mockWriter.On("EndIf").Once()
 
@@ -283,7 +283,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	mockWriter.On("Command", "git", "submodule", "update", "--init").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "git reset --hard").Once()
-	mockWriter.On("IfCmd", "git-lfs", "version").Once()
+	mockWriter.On("IfCmd", "git", "lfs", "version").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "git lfs pull").Once()
 	mockWriter.On("EndIf").Once()
 

@@ -255,7 +255,7 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 		// Please read https://gitlab.com/gitlab-org/gitlab-runner/issues/3366 and
 		// https://github.com/git-lfs/git-lfs/issues/3524 for context.
 		if !build.IsLFSSmudgeDisabled() {
-			w.IfCmd("git-lfs", "version")
+			w.IfCmd("git", "lfs", "version")
 			w.Command("git", "lfs", "pull")
 			w.EmptyLine()
 			w.EndIf()
@@ -395,7 +395,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", updateArgs...)
 
 	if !build.IsLFSSmudgeDisabled() {
-		w.IfCmd("git-lfs", "version")
+		w.IfCmd("git", "lfs", "version")
 		w.Command("git", append(foreachArgs, "git lfs pull")...)
 		w.EndIf()
 	}
