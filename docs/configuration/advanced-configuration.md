@@ -199,7 +199,7 @@ This defines the Docker Container parameters.
 | `memory_reservation`           | String value containing the memory soft limit |
 | `oom_kill_disable`             | Do not kill processes in a container if an out-of-memory (OOM) error occurs |
 | `cpuset_cpus`                  | String value containing the cgroups CpusetCpus to use |
-| `cpus`                         | Number of CPUs (available in docker 1.13 or later) |
+| `cpus`                         | String value of number of CPUs (available in docker 1.13 or later) |
 | `dns`                          | A list of DNS servers for the container to use |
 | `dns_search`                   | A list of DNS search domains |
 | `privileged`                   | Make container run in Privileged mode (insecure) |
@@ -239,6 +239,7 @@ Example:
   memory_reservation = "64m"
   oom_kill_disable = false
   cpuset_cpus = "0,1"
+  cpus = "2"
   dns = ["8.8.8.8"]
   dns_search = [""]
   privileged = false
