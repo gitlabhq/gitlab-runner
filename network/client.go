@@ -23,6 +23,7 @@ import (
 
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
+	"github.com/zakjan/cert-chain-resolver/certUtil"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -186,6 +187,9 @@ func (n *client) getCAChain(tls *tls.ConnectionState) string {
 	seenCertificates := make(map[string]bool, 0)
 
 	for _, verifiedChain := range tls.VerifiedChains {
+		verifiedChain, _ = certUtil.FetchCertificateChain(verifiedChain[0])
+		verifiedChain, _ = certUtil.AddRootCA(verifiedChain)
+
 		for _, certificate := range verifiedChain {
 			signature := hex.EncodeToString(certificate.Signature)
 			if seenCertificates[signature] {

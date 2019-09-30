@@ -170,6 +170,10 @@ ignored = ["test", "appengine"]
   name = "github.com/imdario/mergo"
   version = "v0.3.7"
 
+[[constraint]]
+  name = "github.com/zakjan/cert-chain-resolver"
+  version = "1.0.2"
+
 ##
 ## Refrain innovations ;)
 ##

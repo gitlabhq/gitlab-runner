@@ -254,6 +254,14 @@
   revision = "bb3d318650d48840a39aa21a027c6630e198e626"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e87690b366bc22563796a55d0f07f819d7d017a6f889543be3d6fc0ad591bab0"
+  name = "github.com/fullsailor/pkcs7"
+  packages = ["."]
+  pruneopts = "N"
+  revision = "d7302db945fa6ea264fb79d8e13e931ea514a602"
+
+[[projects]]
   digest = "1:8df1d0de814f90082a4127781dd89e01f00586f36104c3e922cb3721a2ce153d"
   name = "github.com/getsentry/raven-go"
   packages = ["."]
@@ -658,6 +666,14 @@
   packages = ["."]
   pruneopts = "N"
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+
+[[projects]]
+  digest = "1:59e2776740eed3c71fdff7cf591c9401d69588607b0ab3fe2239005d8ca5ab33"
+  name = "github.com/zakjan/cert-chain-resolver"
+  packages = ["certUtil"]
+  pruneopts = "N"
+  revision = "6076e1ded27284d6df12668dba6bee76fc17f84e"
+  version = "1.0.2"
 
 [[projects]]
   branch = "master"
@@ -1086,6 +1102,7 @@
     "github.com/stretchr/testify/require",
     "github.com/tevino/abool",
     "github.com/urfave/cli",
+    "github.com/zakjan/cert-chain-resolver/certUtil",
     "gitlab.com/ayufan/golang-cli-helpers",
     "gitlab.com/gitlab-org/gitlab-terminal",
     "golang.org/x/crypto/ssh",
