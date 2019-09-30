@@ -12,7 +12,7 @@ stages:
 - docs
 
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.9.7-1
   GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
   DOCKER_MACHINE_VERSION: "0.14.0"
@@ -48,7 +48,7 @@ image: $CI_IMAGE
   services:
   - docker:19.03-dind
   variables: &docker_variables
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-2
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.9.7-1
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_VERIFY: 1
@@ -302,7 +302,7 @@ git 1.7.1:
   before_script:
     - unset GPG_KEY
     - yum install -y -q git && git version
-    - curl https://storage.googleapis.com/golang/go1.8.7.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+    - curl https://storage.googleapis.com/golang/go1.9.7.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
     - export PATH=${GOROOT}/bin:$PATH
     - source ci/touch_make_dependencies
   script:
