@@ -7,6 +7,7 @@ continuous integration service included with GitLab that coordinates the testing
 The old name of this project was GitLab CI Multi Runner but please use "GitLab Runner" (without CI) from now on.
 
 ![Build Status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/build.svg)
+[![Go Report Card](https://goreportcard.com/badge/gitlab.com/gitlab-org/gitlab-runner)](https://goreportcard.com/report/gitlab.com/gitlab-org/gitlab-runner)
 
 ## Runner and GitLab CE/EE compatibility
 
