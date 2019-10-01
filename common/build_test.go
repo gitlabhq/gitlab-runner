@@ -1362,3 +1362,37 @@ func TestDefaultVariables(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildFinishTimeout(t *testing.T) {
+	tests := map[string]bool{
+		"channel returns first": true,
+		"timeout returns first": false,
+	}
+
+	for name, chanFirst := range tests {
+		t.Run(name, func(t *testing.T) {
+			logger, hooks := test.NewNullLogger()
+			build := Build{
+				logger: NewBuildLogger(nil, logrus.NewEntry(logger)),
+			}
+			buildFinish := make(chan error, 1)
+			timeout := 10 * time.Millisecond
+
+			if chanFirst {
+				buildFinish <- errors.New("job finish error")
+			}
+
+			build.waitForBuildFinish(buildFinish, timeout)
+
+			entry := hooks.LastEntry()
+
+			if chanFirst {
+				assert.Nil(t, entry)
+				return
+			}
+
+			assert.NotNil(t, entry)
+		})
+	}
+
+}

@@ -371,8 +371,23 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 
 	// Wait till we receive that build did finish
 	runCancel()
-	<-buildFinish
+	b.waitForBuildFinish(buildFinish, WaitForBuildFinishTimeout)
+
 	return err
+}
+
+// waitForBuildFinish will wait for the build to finish or timeout, whichever
+// comes first. This is to prevent issues where something in the build can't be
+// killed or processed and results into the Job running until the GitLab Runner
+// process exists.
+func (b *Build) waitForBuildFinish(buildFinish <-chan error, timeout time.Duration) {
+	select {
+	case <-buildFinish:
+		return
+	case <-time.After(timeout):
+		b.logger.Warningln("Timed out waiting for the build to finish")
+		return
+	}
 }
 
 func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider ExecutorProvider, logger BuildLogger) (executor Executor, err error) {
