@@ -6,7 +6,7 @@ It runs tests and sends the results to GitLab.
 continuous integration service included with GitLab that coordinates the testing.
 The old name of this project was GitLab CI Multi Runner but please use "GitLab Runner" (without CI) from now on.
 
-![Build Status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/build.svg)
+[![Build Status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/build.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/master)
 [![Go Report Card](https://goreportcard.com/badge/gitlab.com/gitlab-org/gitlab-runner)](https://goreportcard.com/report/gitlab.com/gitlab-org/gitlab-runner)
 
 ## Runner and GitLab CE/EE compatibility
