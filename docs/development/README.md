@@ -6,7 +6,7 @@
 
 ```bash
 sudo apt-get install -y mercurial git-core wget make build-essential
-wget https://storage.googleapis.com/golang/go1.8.7.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.9.7.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
@@ -15,14 +15,14 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 Using binary package:
 
 ```sh
-wget https://storage.googleapis.com/golang/go1.8.7.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.9.7.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 Using installation package:
 
 ```sh
-wget https://storage.googleapis.com/golang/go1.8.7.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.9.7.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
@@ -32,7 +32,7 @@ Brew doesn't provide a [Go 1.8.x formula](https://formulae.brew.sh/formula/go).
 ### For FreeBSD
 
 ```
-pkg install go-1.8.7 gmake git mercurial
+pkg install go-1.9.7 gmake git mercurial
 ```
 
 ## 2. Install Docker Engine

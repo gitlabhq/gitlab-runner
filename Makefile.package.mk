@@ -2,7 +2,7 @@ package: package-deps package-prepare package-deb package-rpm
 
 package-deps:
 	# Installing packaging dependencies...
-	which fpm 1>/dev/null || gem install rake fpm --no-document
+	which fpm 1>/dev/null || gem install rake fpm:1.10.2 --no-document
 
 package-prepare:
 	chmod 755 packaging/root/usr/share/gitlab-runner/

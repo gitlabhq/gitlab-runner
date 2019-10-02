@@ -15,8 +15,8 @@ docker tag registry.gitlab.com/nolith/codeclimate-gocyclo codeclimate/codeclimat
 # Preparing gofmt analyzer
 #
 # We're forcing the `b65` version because this is the oldest one that
-# doesn't require go1.12 compatible formatting. Since we're still stuck
-# on go1.8.7 it's better to set specific version of gofmt analyzer than
+# doesn't require go1.12 compatible formatting. Since we're still not using
+# go1.12+ it's better to set specific version of gofmt analyzer than
 # to manually update formatting for go1.12 (which is especially hard ant
 # frustrating when using an IDE) while still using the old version of Go
 # for development.
