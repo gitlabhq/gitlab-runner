@@ -7,7 +7,7 @@ the init system.
 NOTE: **Note:**
 `service` will install / un-install, start / stop, and run a program as a
 service (daemon). Currently supports Windows XP+, Linux/(systemd | Upstart | SysV),
-and OSX/Launchd.
+and macOS/Launchd.
 
 Once GitLab Runner [is installed](../install/index.md), the service file will
 be automatically be created:

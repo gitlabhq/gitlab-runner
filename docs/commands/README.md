@@ -580,7 +580,7 @@ Below are some common pitfalls.
 Usually the [service related commands](#service-related-commands) require
 administrator privileges:
 
-- On Unix (Linux, OSX, FreeBSD) systems, prefix `gitlab-runner` with `sudo`
+- On Unix (Linux, macOS, FreeBSD) systems, prefix `gitlab-runner` with `sudo`
 - On Windows systems use the elevated command prompt.
   Run an `Administrator` command prompt.
   The simplest way is to write `Command Prompt` in the Windows search field,
