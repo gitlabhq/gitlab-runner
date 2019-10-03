@@ -301,7 +301,7 @@ ignored = ["test", "appengine"]
   revision = "2731d4fa720b67f9fe38e9051a2a9b38e4609260"
 
 [[override]]
-  name = "github.com/googleapis/gax-go"
+  name = "github.com/googleapis/gax-go/v2"
   version = "v2.0.0"
 
 [[override]]

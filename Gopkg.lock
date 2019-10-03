@@ -325,7 +325,7 @@
 
 [[projects]]
   digest = "1:d97c49d58f26b81742f7da0e9fe4e6cfd7403220b8983374d2d2d4ba44706df7"
-  name = "github.com/googleapis/gax-go"
+  name = "github.com/googleapis/gax-go/v2"
   packages = ["v2"]
   pruneopts = "N"
   revision = "bd5b16380fd03dc758d11cef74ba2e3bc8b0e8c2"
