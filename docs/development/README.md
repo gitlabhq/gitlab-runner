@@ -154,12 +154,8 @@ You can start hacking GitLab-Runner code. If you are interested you can use Inte
 
 ## Managing build dependencies
 
-GitLab Runner uses [dep](https://github.com/golang/dep) to manage
-its dependencies - they get checked into the repository under the `vendor/` directory,
-with a manifest stored in `Godep.toml` and in `Godep.lock` lockfile.
-
-If your contribution adds, removes or updates any dependencies to the runner,
-please ensure the vendored copies is updated with the appropriate `dep ensure` command.
+GitLab Runner uses [Go Modules](https://github.com/golang/go/wiki/Modules) to manage
+its dependencies - they get checked into the repository under the `vendor/` directory
 
 Don't add dependency from upstream master branch when version tags are available.
 
