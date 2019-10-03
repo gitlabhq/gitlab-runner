@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"errors"
+	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -16,7 +17,7 @@ type executor struct {
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	err := s.AbstractExecutor.Prepare(options)
 	if err != nil {
-		return err
+		return fmt.Errorf("AbstractExecutor.Prepare error: %w", err)
 	}
 
 	s.Println("Using SSH executor...")
@@ -25,7 +26,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	if s.Config.SSH == nil {
-		return errors.New("Missing SSH configuration")
+		return errors.New("missing SSH configuration")
 	}
 
 	s.Debugln("Starting SSH command...")
@@ -40,8 +41,9 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.Debugln("Connecting to SSH server...")
 	err = s.sshCommand.Connect()
 	if err != nil {
-		return err
+		return fmt.Errorf("ssh command Connect() error: %w", err)
 	}
+
 	return nil
 }
 
