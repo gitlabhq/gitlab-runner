@@ -2,9 +2,10 @@
 
 
 [[projects]]
-  digest = "1:136a977da90b185f870e921fc00164ce3c8ca5a83d57fd21c4aa3529e11959d6"
+  digest = "1:6bc982f0fd61bcf7a304070e858765565500abc52a1b66750fa6641b9f7f3958"
   name = "cloud.google.com/go"
   packages = [
+    ".",
     "compute/metadata",
     "iam",
     "internal",
@@ -14,8 +15,8 @@
     "storage",
   ]
   pruneopts = "N"
-  revision = "aad3f485ee528456e0768f20397b4d9dd941e755"
-  version = "v0.25.0"
+  revision = "d1ee711ee996fa74abaffbdb572963f368f215a9"
+  version = "v0.49.0"
 
 [[projects]]
   branch = "master"
@@ -300,7 +301,12 @@
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
+    "protoc-gen-go",
     "protoc-gen-go/descriptor",
+    "protoc-gen-go/generator",
+    "protoc-gen-go/generator/internal/remap",
+    "protoc-gen-go/grpc",
+    "protoc-gen-go/plugin",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -318,12 +324,12 @@
   revision = "fd52762d25a41827db7ef64c43756fd4b9f7e382"
 
 [[projects]]
-  digest = "1:25841c1ee6e87dee82a17f7f9641ad6fe56b72493a5abfb6e3bb05e86a30da2d"
+  digest = "1:d97c49d58f26b81742f7da0e9fe4e6cfd7403220b8983374d2d2d4ba44706df7"
   name = "github.com/googleapis/gax-go"
-  packages = ["."]
+  packages = ["v2"]
   pruneopts = "N"
-  revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
-  version = "v2.0.0"
+  revision = "bd5b16380fd03dc758d11cef74ba2e3bc8b0e8c2"
+  version = "v2.0.5"
 
 [[projects]]
   digest = "1:d2569d6842ceb5da171a1e051add4cb53ca75d7f49f2aa297159cec5dd261f08"
@@ -411,6 +417,18 @@
   pruneopts = "N"
   revision = "27518f6661eba504be5a7a9a9f6d9460d892ade3"
   version = "v1.1.7"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b1bdf5c9feaef7131fa6b0614070c71806d52242343635510b49792505c87440"
+  name = "github.com/jstemmer/go-junit-report"
+  packages = [
+    ".",
+    "formatter",
+    "parser",
+  ]
+  pruneopts = "N"
+  revision = "af01ea7f8024089b458d804d5cdf190f962a9a0c"
 
 [[projects]]
   digest = "1:d02a98e050f27c5882765d37a25456d5c04e28b70697d7b1318414c0179434f4"
@@ -663,7 +681,6 @@
   name = "go.opencensus.io"
   packages = [
     ".",
-    "exporter/stackdriver/propagation",
     "internal",
     "internal/tagencoding",
     "plugin/ochttp",
@@ -690,6 +707,28 @@
   ]
   pruneopts = "N"
   revision = "1f22c0103821b9390939b6776727195525381532"
+
+[[projects]]
+  branch = "master"
+  digest = "1:0f46fc6bd7d36ff05bd81892d56087510192f3cd689618d1abe551a0e2b50a66"
+  name = "golang.org/x/exp"
+  packages = [
+    "apidiff",
+    "cmd/apidiff",
+  ]
+  pruneopts = "N"
+  revision = "a1ab85dbe136a36c66fbea07de5e3d62a0ce60ad"
+
+[[projects]]
+  branch = "master"
+  digest = "1:eb5e237a08090ac5fbcb34b66dc8c9428d8374a4865863caa2a19744214a6bb4"
+  name = "golang.org/x/lint"
+  packages = [
+    ".",
+    "golint",
+  ]
+  pruneopts = "N"
+  revision = "fdd1cda4f05fd1fd86124f0ef9ce31a0b72c8448"
 
 [[projects]]
   digest = "1:12bf351167b765a0f2da3b384cb7dc2fdaedc3304e7ec5743914728a6c99242f"
@@ -775,21 +814,50 @@
   revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
-  digest = "1:f28bf2cf6a2c2070a2055f457c8c4ef737f1715a1fe53eeabb22db9e2d4c81a2"
+  branch = "master"
+  digest = "1:3017c332afa46a661be10a2fa813b25c3c6144037110f4815a3852efe6c5eafe"
+  name = "golang.org/x/tools"
+  packages = [
+    "cmd/goimports",
+    "go/analysis",
+    "go/analysis/passes/inspect",
+    "go/ast/astutil",
+    "go/ast/inspector",
+    "go/buildutil",
+    "go/gcexportdata",
+    "go/internal/gcimporter",
+    "go/internal/packagesdriver",
+    "go/packages",
+    "go/types/objectpath",
+    "go/types/typeutil",
+    "internal/fastwalk",
+    "internal/gopathwalk",
+    "internal/imports",
+    "internal/module",
+    "internal/semver",
+    "internal/span",
+  ]
+  pruneopts = "N"
+  revision = "b0650ceb63d94ec56d3a00dbdd5e37d944dbeabf"
+
+[[projects]]
+  digest = "1:560454a9541327059f8d42954afa5ac4ea7fc9dd99c4de643eb64c330907989b"
   name = "google.golang.org/api"
   packages = [
-    "gensupport",
     "googleapi",
-    "googleapi/internal/uritemplates",
     "googleapi/transport",
     "internal",
+    "internal/gensupport",
+    "internal/third_party/uritemplates",
     "iterator",
     "option",
     "storage/v1",
     "transport/http",
+    "transport/http/internal/propagation",
   ]
   pruneopts = "N"
-  revision = "0025a57598c017c1b9f7bc916c4fb8ae77315f9c"
+  revision = "8a410c21381766a810817fd6200fce8838ecb277"
+  version = "v0.14.0"
 
 [[projects]]
   digest = "1:107cebc6ab4e3cc3fd64253b8bdeccb820ee3591afb4578894dac5f6b91387ee"
@@ -870,6 +938,40 @@
   pruneopts = "N"
   revision = "f221b8435cfb71e54062f6c6e99e9ade30b124d5"
   version = "v2.2.4"
+
+[[projects]]
+  digest = "1:fb2bf966c8b45a4c78b5a62b8a22fd691671534dd220708c98763c6b6655b7e9"
+  name = "honnef.co/go/tools"
+  packages = [
+    "arg",
+    "cmd/staticcheck",
+    "config",
+    "deprecated",
+    "facts",
+    "functions",
+    "go/types/typeutil",
+    "internal/cache",
+    "internal/passes/buildssa",
+    "internal/renameio",
+    "internal/sharedcheck",
+    "lint",
+    "lint/lintdsl",
+    "lint/lintutil",
+    "lint/lintutil/format",
+    "loader",
+    "printf",
+    "simple",
+    "ssa",
+    "ssautil",
+    "staticcheck",
+    "staticcheck/vrp",
+    "stylecheck",
+    "unused",
+    "version",
+  ]
+  pruneopts = "N"
+  revision = "afd67930eec2a9ed3e9b19f684d17a062285f16a"
+  version = "2019.2.3"
 
 [[projects]]
   branch = "release-1.14"

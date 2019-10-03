@@ -1,31 +1,26 @@
-// Copyright 2017 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2017 Google LLC.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package main
 
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"google.golang.org/api/internal/version"
 )
 
 var updateGolden = flag.Bool("update_golden", false, "If true, causes TestAPIs to update golden files")
 
 func TestAPIs(t *testing.T) {
+	*copyrightYear = "YEAR"
+
 	names := []string{
 		"any",
 		"arrayofarray-1",
@@ -35,6 +30,8 @@ func TestAPIs(t *testing.T) {
 		"blogger-3",
 		"floats",
 		"getwithoutbody",
+		"http-body",
+		"json-body",
 		"mapofany",
 		"mapofarrayofobjects",
 		"mapofint64strings",
@@ -43,40 +40,46 @@ func TestAPIs(t *testing.T) {
 		"param-rename",
 		"quotednum",
 		"repeated",
+		"required-query",
 		"resource-named-service", // appengine/v1/appengine-api.json
 		"unfortunatedefaults",
 		"variants",
 		"wrapnewlines",
 	}
 	for _, name := range names {
-		t.Logf("TEST %s", name)
-		api, err := apiFromFile(filepath.Join("testdata", name+".json"))
-		if err != nil {
-			t.Errorf("Error loading API testdata/%s.json: %v", name, err)
-			continue
-		}
-		clean, err := api.GenerateCode()
-		if err != nil {
-			t.Errorf("Error generating code for %s: %v", name, err)
-			continue
-		}
-		goldenFile := filepath.Join("testdata", name+".want")
-		if *updateGolden {
-			if err := ioutil.WriteFile(goldenFile, clean, 0644); err != nil {
+		t.Run(name, func(t *testing.T) {
+			api, err := apiFromFile(filepath.Join("testdata", name+".json"))
+			if err != nil {
+				t.Fatalf("Error loading API testdata/%s.json: %v", name, err)
+			}
+			clean, err := api.GenerateCode()
+			if err != nil {
+				t.Fatalf("Error generating code for %s: %v", name, err)
+			}
+			goldenFile := filepath.Join("testdata", name+".want")
+			if *updateGolden {
+				if err := ioutil.WriteFile(goldenFile, clean, 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			want, err := ioutil.ReadFile(goldenFile)
+			if err != nil {
 				t.Fatal(err)
 			}
-		}
-		want, err := ioutil.ReadFile(goldenFile)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		if !bytes.Equal(want, clean) {
-			tf, _ := ioutil.TempFile("", "api-"+name+"-got-json.")
-			tf.Write(clean)
-			tf.Close()
-			t.Errorf("Output for API %s differs: diff -u %s %s", name, goldenFile, tf.Name())
-		}
+			wantStr := strings.Replace(string(want), "gl-go/1.12.5", fmt.Sprintf("gl-go/%s", version.Go()), -1)
+			wantStr = strings.Replace(wantStr, "gdcl/00000000", fmt.Sprintf("gdcl/%s", version.Repo), -1)
+			want = []byte(wantStr)
+			if !bytes.Equal(want, clean) {
+				tf, _ := ioutil.TempFile("", "api-"+name+"-got-json.")
+				if _, err := tf.Write(clean); err != nil {
+					t.Fatal(err)
+				}
+				if err := tf.Close(); err != nil {
+					t.Fatal(err)
+				}
+				t.Errorf("Output for API %s differs: diff -u %s %s", name, goldenFile, tf.Name())
+			}
+		})
 	}
 }
 

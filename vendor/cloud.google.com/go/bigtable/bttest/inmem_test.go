@@ -15,17 +15,22 @@
 package bttest
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"cloud.google.com/go/internal/testutil"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"golang.org/x/net/context"
 	btapb "google.golang.org/genproto/googleapis/bigtable/admin/v2"
 	btpb "google.golang.org/genproto/googleapis/bigtable/v2"
 	"google.golang.org/grpc"
@@ -129,6 +134,42 @@ func TestConcurrentMutationsReadModifyAndGC(t *testing.T) {
 	case <-done:
 	case <-time.After(1 * time.Second):
 		t.Error("Concurrent mutations and GCs haven't completed after 1s")
+	}
+}
+
+func TestCreateTableResponse(t *testing.T) {
+	// We need to ensure that invoking CreateTable returns
+	// the  ColumnFamilies as well as Granularity.
+	// See issue https://github.com/googleapis/google-cloud-go/issues/1512.
+	s := &server{
+		tables: make(map[string]*table),
+	}
+	ctx := context.Background()
+	got, err := s.CreateTable(ctx, &btapb.CreateTableRequest{
+		Parent:  "projects/issue-1512/instances/instance",
+		TableId: "table",
+		Table: &btapb.Table{
+			ColumnFamilies: map[string]*btapb.ColumnFamily{
+				"cf1": {GcRule: &btapb.GcRule{Rule: &btapb.GcRule_MaxNumVersions{MaxNumVersions: 123}}},
+				"cf2": {GcRule: &btapb.GcRule{Rule: &btapb.GcRule_MaxNumVersions{MaxNumVersions: 456}}},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Creating table: %v", err)
+	}
+
+	want := &btapb.Table{
+		Name: "projects/issue-1512/instances/instance/tables/table",
+		// If no Granularity was specified, we should get back "MILLIS".
+		Granularity: btapb.Table_MILLIS,
+		ColumnFamilies: map[string]*btapb.ColumnFamily{
+			"cf1": {GcRule: &btapb.GcRule{Rule: &btapb.GcRule_MaxNumVersions{MaxNumVersions: 123}}},
+			"cf2": {GcRule: &btapb.GcRule{Rule: &btapb.GcRule_MaxNumVersions{MaxNumVersions: 456}}},
+		},
+	}
+	if diff := testutil.Diff(got, want); diff != "" {
+		t.Fatalf("Response mismatch: got - want +\n%s", diff)
 	}
 }
 
@@ -420,6 +461,85 @@ func TestReadRows(t *testing.T) {
 	}
 }
 
+func TestReadRowsError(t *testing.T) {
+	ctx := context.Background()
+	s := &server{
+		tables: make(map[string]*table),
+	}
+	newTbl := btapb.Table{
+		ColumnFamilies: map[string]*btapb.ColumnFamily{
+			"cf0": {GcRule: &btapb.GcRule{Rule: &btapb.GcRule_MaxNumVersions{MaxNumVersions: 1}}},
+		},
+	}
+	tblInfo, err := s.CreateTable(ctx, &btapb.CreateTableRequest{Parent: "cluster", TableId: "t", Table: &newTbl})
+	if err != nil {
+		t.Fatalf("Creating table: %v", err)
+	}
+	mreq := &btpb.MutateRowRequest{
+		TableName: tblInfo.Name,
+		RowKey:    []byte("row"),
+		Mutations: []*btpb.Mutation{{
+			Mutation: &btpb.Mutation_SetCell_{SetCell: &btpb.Mutation_SetCell{
+				FamilyName:      "cf0",
+				ColumnQualifier: []byte("col"),
+				TimestampMicros: 1000,
+				Value:           []byte{},
+			}},
+		}},
+	}
+	if _, err := s.MutateRow(ctx, mreq); err != nil {
+		t.Fatalf("Populating table: %v", err)
+	}
+
+	mock := &MockReadRowsServer{}
+	req := &btpb.ReadRowsRequest{TableName: tblInfo.Name, Filter: &btpb.RowFilter{
+		Filter: &btpb.RowFilter_RowKeyRegexFilter{RowKeyRegexFilter: []byte("[")}}, // Invalid regex.
+	}
+	if err = s.ReadRows(req, mock); err == nil {
+		t.Fatal("ReadRows got no error, want error")
+	}
+}
+
+func TestReadRowsAfterDeletion(t *testing.T) {
+	ctx := context.Background()
+	s := &server{
+		tables: make(map[string]*table),
+	}
+	newTbl := btapb.Table{
+		ColumnFamilies: map[string]*btapb.ColumnFamily{
+			"cf0": {},
+		},
+	}
+	tblInfo, err := s.CreateTable(ctx, &btapb.CreateTableRequest{
+		Parent: "cluster", TableId: "t", Table: &newTbl,
+	})
+	if err != nil {
+		t.Fatalf("Creating table: %v", err)
+	}
+	populateTable(ctx, s)
+	dreq := &btpb.MutateRowRequest{
+		TableName: tblInfo.Name,
+		RowKey:    []byte("row"),
+		Mutations: []*btpb.Mutation{{
+			Mutation: &btpb.Mutation_DeleteFromRow_{
+				DeleteFromRow: &btpb.Mutation_DeleteFromRow{},
+			},
+		}},
+	}
+	if _, err := s.MutateRow(ctx, dreq); err != nil {
+		t.Fatalf("Deleting from table: %v", err)
+	}
+
+	mock := &MockReadRowsServer{}
+	req := &btpb.ReadRowsRequest{TableName: tblInfo.Name}
+	if err = s.ReadRows(req, mock); err != nil {
+		t.Fatalf("ReadRows error: %v", err)
+	}
+	if got, want := len(mock.responses), 0; got != want {
+		t.Errorf("response count: got %d, want %d", got, want)
+	}
+}
+
 func TestReadRowsOrder(t *testing.T) {
 	s := &server{
 		tables: make(map[string]*table),
@@ -516,8 +636,8 @@ func TestReadRowsOrder(t *testing.T) {
 
 	// Read with interleave filter
 	inter := &btpb.RowFilter_Interleave{}
-	fnr := &btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{FamilyNameRegexFilter: "1"}}
-	cqr := &btpb.RowFilter{Filter: &btpb.RowFilter_ColumnQualifierRegexFilter{ColumnQualifierRegexFilter: []byte("2")}}
+	fnr := &btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{FamilyNameRegexFilter: "cf1"}}
+	cqr := &btpb.RowFilter{Filter: &btpb.RowFilter_ColumnQualifierRegexFilter{ColumnQualifierRegexFilter: []byte("col2")}}
 	inter.Filters = append(inter.Filters, fnr, cqr)
 	req = &btpb.ReadRowsRequest{
 		TableName: tblInfo.Name,
@@ -573,6 +693,78 @@ func TestReadRowsOrder(t *testing.T) {
 	testOrder(mock)
 }
 
+func TestReadRowsWithlabelTransformer(t *testing.T) {
+	ctx := context.Background()
+	s := &server{
+		tables: make(map[string]*table),
+	}
+	newTbl := btapb.Table{
+		ColumnFamilies: map[string]*btapb.ColumnFamily{
+			"cf0": {GcRule: &btapb.GcRule{Rule: &btapb.GcRule_MaxNumVersions{MaxNumVersions: 1}}},
+		},
+	}
+	tblInfo, err := s.CreateTable(ctx, &btapb.CreateTableRequest{Parent: "cluster", TableId: "t", Table: &newTbl})
+	if err != nil {
+		t.Fatalf("Creating table: %v", err)
+	}
+	mreq := &btpb.MutateRowRequest{
+		TableName: tblInfo.Name,
+		RowKey:    []byte("row"),
+		Mutations: []*btpb.Mutation{{
+			Mutation: &btpb.Mutation_SetCell_{SetCell: &btpb.Mutation_SetCell{
+				FamilyName:      "cf0",
+				ColumnQualifier: []byte("col"),
+				TimestampMicros: 1000,
+				Value:           []byte{},
+			}},
+		}},
+	}
+	if _, err := s.MutateRow(ctx, mreq); err != nil {
+		t.Fatalf("Populating table: %v", err)
+	}
+
+	mock := &MockReadRowsServer{}
+	req := &btpb.ReadRowsRequest{
+		TableName: tblInfo.Name,
+		Filter: &btpb.RowFilter{
+			Filter: &btpb.RowFilter_ApplyLabelTransformer{
+				ApplyLabelTransformer: "label",
+			},
+		},
+	}
+	if err = s.ReadRows(req, mock); err != nil {
+		t.Fatalf("ReadRows error: %v", err)
+	}
+
+	if got, want := len(mock.responses), 1; got != want {
+		t.Fatalf("response count: got %d, want %d", got, want)
+	}
+	resp := mock.responses[0]
+	if got, want := len(resp.Chunks), 1; got != want {
+		t.Fatalf("chunks count: got %d, want %d", got, want)
+	}
+	chunk := resp.Chunks[0]
+	if got, want := len(chunk.Labels), 1; got != want {
+		t.Fatalf("labels count: got %d, want %d", got, want)
+	}
+	if got, want := chunk.Labels[0], "label"; got != want {
+		t.Fatalf("label: got %s, want %s", got, want)
+	}
+
+	mock = &MockReadRowsServer{}
+	req = &btpb.ReadRowsRequest{
+		TableName: tblInfo.Name,
+		Filter: &btpb.RowFilter{
+			Filter: &btpb.RowFilter_ApplyLabelTransformer{
+				ApplyLabelTransformer: "", // invalid label
+			},
+		},
+	}
+	if err = s.ReadRows(req, mock); err == nil {
+		t.Fatal("ReadRows want invalid label error, got none")
+	}
+}
+
 func TestCheckAndMutateRowWithoutPredicate(t *testing.T) {
 	s := &server{
 		tables: make(map[string]*table),
@@ -625,6 +817,258 @@ func TestCheckAndMutateRowWithoutPredicate(t *testing.T) {
 	} else if got, want := res.PredicateMatched, true; got != want {
 		t.Errorf("Invalid PredicateMatched value: got %t, want %t", got, want)
 	}
+}
+
+func TestCheckAndMutateRowWithPredicate(t *testing.T) {
+	ctx := context.Background()
+	srv := &server{tables: make(map[string]*table)}
+
+	tblReq := &btapb.CreateTableRequest{
+		Parent:  "issue-1435",
+		TableId: "table_id",
+		Table: &btapb.Table{
+			ColumnFamilies: map[string]*btapb.ColumnFamily{
+				"cf": {},
+				"df": {},
+				"ef": {},
+				"ff": {},
+				"zf": {},
+			},
+		},
+	}
+	tbl, err := srv.CreateTable(ctx, tblReq)
+	if err != nil {
+		t.Fatalf("Failed to create the table: %v", err)
+	}
+
+	entries := []struct {
+		row                         string
+		value                       []byte
+		familyName, columnQualifier string
+	}{
+		{"row1", []byte{0x11}, "cf", "cq"},
+		{"row2", []byte{0x1a}, "df", "dq"},
+		{"row3", []byte{'a'}, "ef", "eq"},
+		{"row4", []byte{'b'}, "ff", "fq"},
+	}
+
+	for _, entry := range entries {
+		req := &btpb.MutateRowRequest{
+			TableName: tbl.Name,
+			RowKey:    []byte(entry.row),
+			Mutations: []*btpb.Mutation{{
+				Mutation: &btpb.Mutation_SetCell_{SetCell: &btpb.Mutation_SetCell{
+					FamilyName:      entry.familyName,
+					ColumnQualifier: []byte(entry.columnQualifier),
+					TimestampMicros: 1000,
+					Value:           entry.value,
+				}},
+			}},
+		}
+		if _, err := srv.MutateRow(ctx, req); err != nil {
+			t.Fatalf("Failed to insert entry %v into server: %v", entry, err)
+		}
+	}
+
+	tests := []struct {
+		req       *btpb.CheckAndMutateRowRequest
+		wantMatch bool
+		name      string
+
+		// if wantState is nil, that means we don't care to check
+		// what the state of the world is.
+		wantState []*btpb.ReadRowsResponse_CellChunk
+	}{
+		{
+			req: &btpb.CheckAndMutateRowRequest{
+				TableName: tbl.Name,
+				PredicateFilter: &btpb.RowFilter{
+					Filter: &btpb.RowFilter_RowKeyRegexFilter{
+						RowKeyRegexFilter: []byte("not-one"),
+					},
+				},
+			},
+			name: "no match",
+		},
+		{
+			req: &btpb.CheckAndMutateRowRequest{
+				TableName: tbl.Name,
+				RowKey:    []byte("row1"),
+				PredicateFilter: &btpb.RowFilter{
+					Filter: &btpb.RowFilter_RowKeyRegexFilter{
+						RowKeyRegexFilter: []byte("ro.+"),
+					},
+				},
+			},
+			wantMatch: true,
+			name:      "rowkey regex",
+		},
+		{
+			req: &btpb.CheckAndMutateRowRequest{
+				TableName: tbl.Name,
+				RowKey:    []byte("row1"),
+				PredicateFilter: &btpb.RowFilter{
+					Filter: &btpb.RowFilter_PassAllFilter{
+						PassAllFilter: true,
+					},
+				},
+			},
+			wantMatch: true,
+			name:      "pass all",
+		},
+		{
+			req: &btpb.CheckAndMutateRowRequest{
+				TableName: tbl.Name,
+				RowKey:    []byte("row1"),
+				PredicateFilter: &btpb.RowFilter{
+					Filter: &btpb.RowFilter_BlockAllFilter{
+						BlockAllFilter: true,
+					},
+				},
+				FalseMutations: []*btpb.Mutation{
+					{
+						Mutation: &btpb.Mutation_SetCell_{
+							SetCell: &btpb.Mutation_SetCell{
+								FamilyName:      "zf",
+								Value:           []byte("foo"),
+								TimestampMicros: 2000,
+								ColumnQualifier: []byte("et"),
+							},
+						},
+					},
+				},
+			},
+			name:      "BlockAll for row1",
+			wantMatch: false,
+			wantState: []*btpb.ReadRowsResponse_CellChunk{
+				{
+					RowKey: []byte("row1"),
+					FamilyName: &wrappers.StringValue{
+						Value: "cf",
+					},
+					Qualifier: &wrappers.BytesValue{
+						Value: []byte("cq"),
+					},
+					TimestampMicros: 1000,
+					Value:           []byte{0x11},
+				},
+				{
+					RowKey: []byte("row1"),
+					FamilyName: &wrappers.StringValue{
+						Value: "zf",
+					},
+					Qualifier: &wrappers.BytesValue{
+						Value: []byte("et"),
+					},
+					TimestampMicros: 2000,
+					Value:           []byte("foo"),
+					RowStatus: &btpb.ReadRowsResponse_CellChunk_CommitRow{
+						CommitRow: true,
+					},
+				},
+				{
+					RowKey: []byte("row2"),
+					FamilyName: &wrappers.StringValue{
+						Value: "df",
+					},
+					Qualifier: &wrappers.BytesValue{
+						Value: []byte("dq"),
+					},
+					TimestampMicros: 1000,
+					Value:           []byte{0x1a},
+					RowStatus: &btpb.ReadRowsResponse_CellChunk_CommitRow{
+						CommitRow: true,
+					},
+				},
+				{
+					RowKey: []byte("row3"),
+					FamilyName: &wrappers.StringValue{
+						Value: "ef",
+					},
+					Qualifier: &wrappers.BytesValue{
+						Value: []byte("eq"),
+					},
+					TimestampMicros: 1000,
+					Value:           []byte("a"),
+					RowStatus: &btpb.ReadRowsResponse_CellChunk_CommitRow{
+						CommitRow: true,
+					},
+				},
+				{
+					RowKey: []byte("row4"),
+					FamilyName: &wrappers.StringValue{
+						Value: "ff",
+					},
+					Qualifier: &wrappers.BytesValue{
+						Value: []byte("fq"),
+					},
+					TimestampMicros: 1000,
+					Value:           []byte("b"),
+					RowStatus: &btpb.ReadRowsResponse_CellChunk_CommitRow{
+						CommitRow: true,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := srv.CheckAndMutateRow(ctx, tt.req)
+			if err != nil {
+				t.Fatalf("CheckAndMutateRow error: %v", err)
+			}
+			got, want := res.PredicateMatched, tt.wantMatch
+			if got != want {
+				t.Fatalf("Invalid PredicateMatched value: got %t, want %t\nRequest: %+v", got, want, tt.req)
+			}
+
+			if tt.wantState == nil {
+				return
+			}
+
+			rreq := &btpb.ReadRowsRequest{TableName: tbl.Name}
+			mock := &MockReadRowsServer{}
+			if err = srv.ReadRows(rreq, mock); err != nil {
+				t.Fatalf("ReadRows error: %v", err)
+			}
+
+			// Collect all the cellChunks
+			var gotCellChunks []*btpb.ReadRowsResponse_CellChunk
+			for _, res := range mock.responses {
+				gotCellChunks = append(gotCellChunks, res.Chunks...)
+			}
+			sort.Slice(gotCellChunks, func(i, j int) bool {
+				ci, cj := gotCellChunks[i], gotCellChunks[j]
+				return compareCellChunks(ci, cj)
+			})
+			wantCellChunks := tt.wantState[0:]
+			sort.Slice(wantCellChunks, func(i, j int) bool {
+				return compareCellChunks(wantCellChunks[i], wantCellChunks[j])
+			})
+
+			// bttest for some reason undeterministically returns:
+			//      RowStatus: &bigtable.ReadRowsResponse_CellChunk_CommitRow{CommitRow: true},
+			// so we'll ignore that field during comparison.
+			ignore := cmpopts.IgnoreFields(btpb.ReadRowsResponse_CellChunk{}, "RowStatus")
+			diff := cmp.Diff(gotCellChunks, wantCellChunks, ignore)
+			if diff != "" {
+				t.Fatalf("unexpected response: %s", diff)
+			}
+		})
+	}
+}
+
+// compareCellChunks is a comparator that is passed
+// into sort.Slice to stably sort cell chunks.
+func compareCellChunks(ci, cj *btpb.ReadRowsResponse_CellChunk) bool {
+	if bytes.Compare(ci.RowKey, cj.RowKey) > 0 {
+		return false
+	}
+	if bytes.Compare(ci.Value, cj.Value) > 0 {
+		return false
+	}
+	return ci.FamilyName.GetValue() < cj.FamilyName.GetValue()
 }
 
 func TestServer_ReadModifyWriteRow(t *testing.T) {
@@ -801,5 +1245,451 @@ func TestFilters(t *testing.T) {
 			t.Errorf("Response count: got %d, want %d", len(mock.responses), tc.out)
 			continue
 		}
+	}
+}
+
+func Test_Mutation_DeleteFromColumn(t *testing.T) {
+	ctx := context.Background()
+
+	s := &server{
+		tables: make(map[string]*table),
+	}
+
+	tblInfo, err := populateTable(ctx, s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		in   *btpb.MutateRowRequest
+		fail bool
+	}{
+		{
+			in: &btpb.MutateRowRequest{
+				TableName: tblInfo.Name,
+				RowKey:    []byte("row"),
+				Mutations: []*btpb.Mutation{{
+					Mutation: &btpb.Mutation_DeleteFromColumn_{DeleteFromColumn: &btpb.Mutation_DeleteFromColumn{
+						FamilyName:      "cf1",
+						ColumnQualifier: []byte("col1"),
+						TimeRange: &btpb.TimestampRange{
+							StartTimestampMicros: 2000,
+							EndTimestampMicros:   1000,
+						},
+					}},
+				}},
+			},
+			fail: true,
+		},
+		{
+			in: &btpb.MutateRowRequest{
+				TableName: tblInfo.Name,
+				RowKey:    []byte("row"),
+				Mutations: []*btpb.Mutation{{
+					Mutation: &btpb.Mutation_DeleteFromColumn_{DeleteFromColumn: &btpb.Mutation_DeleteFromColumn{
+						FamilyName:      "cf2",
+						ColumnQualifier: []byte("col2"),
+						TimeRange: &btpb.TimestampRange{
+							StartTimestampMicros: 1000,
+							EndTimestampMicros:   2000,
+						},
+					}},
+				}},
+			},
+			fail: false,
+		},
+		{
+			in: &btpb.MutateRowRequest{
+				TableName: tblInfo.Name,
+				RowKey:    []byte("row"),
+				Mutations: []*btpb.Mutation{{
+					Mutation: &btpb.Mutation_DeleteFromColumn_{DeleteFromColumn: &btpb.Mutation_DeleteFromColumn{
+						FamilyName:      "cf3",
+						ColumnQualifier: []byte("col3"),
+						TimeRange: &btpb.TimestampRange{
+							StartTimestampMicros: 1000,
+							EndTimestampMicros:   0,
+						},
+					}},
+				}},
+			},
+			fail: false,
+		},
+		{
+			in: &btpb.MutateRowRequest{
+				TableName: tblInfo.Name,
+				RowKey:    []byte("row"),
+				Mutations: []*btpb.Mutation{{
+					Mutation: &btpb.Mutation_DeleteFromColumn_{DeleteFromColumn: &btpb.Mutation_DeleteFromColumn{
+						FamilyName:      "cf4",
+						ColumnQualifier: []byte("col4"),
+						TimeRange: &btpb.TimestampRange{
+							StartTimestampMicros: 0,
+							EndTimestampMicros:   1000,
+						},
+					}},
+				}},
+			},
+			fail: true,
+		},
+	}
+	for _, test := range tests {
+		_, err = s.MutateRow(ctx, test.in)
+
+		if err != nil && !test.fail {
+			t.Errorf("expected passed got failure for : %v \n with err: %v", test.in, err)
+		}
+
+		if err == nil && test.fail {
+			t.Errorf("expected failure got passed for : %v", test)
+		}
+	}
+}
+
+func TestFilterRow(t *testing.T) {
+	row := &row{
+		key: "row",
+		families: map[string]*family{
+			"fam": {
+				name: "fam",
+				cells: map[string][]cell{
+					"col": {{ts: 100, value: []byte("val")}},
+				},
+			},
+		},
+	}
+	for _, test := range []struct {
+		filter *btpb.RowFilter
+		want   bool
+	}{
+		// The regexp-based filters perform whole-string, case-sensitive matches.
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_RowKeyRegexFilter{[]byte("row")}}, true},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_RowKeyRegexFilter{[]byte("ro")}}, false},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_RowKeyRegexFilter{[]byte("ROW")}}, false},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_RowKeyRegexFilter{[]byte("moo")}}, false},
+
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{"fam"}}, true},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{"f.*"}}, true},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{"[fam]+"}}, true},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{"fa"}}, false},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{"FAM"}}, false},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{"moo"}}, false},
+
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ColumnQualifierRegexFilter{[]byte("col")}}, true},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ColumnQualifierRegexFilter{[]byte("co")}}, false},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ColumnQualifierRegexFilter{[]byte("COL")}}, false},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ColumnQualifierRegexFilter{[]byte("moo")}}, false},
+
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ValueRegexFilter{[]byte("val")}}, true},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ValueRegexFilter{[]byte("va")}}, false},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ValueRegexFilter{[]byte("VAL")}}, false},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ValueRegexFilter{[]byte("moo")}}, false},
+	} {
+		got, _ := filterRow(test.filter, row.copy())
+		if got != test.want {
+			t.Errorf("%s: got %t, want %t", proto.CompactTextString(test.filter), got, test.want)
+		}
+	}
+}
+
+func TestFilterRowWithErrors(t *testing.T) {
+	row := &row{
+		key: "row",
+		families: map[string]*family{
+			"fam": {
+				name: "fam",
+				cells: map[string][]cell{
+					"col": {{ts: 100, value: []byte("val")}},
+				},
+			},
+		},
+	}
+	for _, test := range []struct {
+		badRegex *btpb.RowFilter
+	}{
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_RowKeyRegexFilter{[]byte("[")}}},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_FamilyNameRegexFilter{"["}}},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ColumnQualifierRegexFilter{[]byte("[")}}},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_ValueRegexFilter{[]byte("[")}}},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_Chain_{
+			Chain: &btpb.RowFilter_Chain{Filters: []*btpb.RowFilter{
+				{Filter: &btpb.RowFilter_ValueRegexFilter{[]byte("[")}}},
+			},
+		}}},
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_Condition_{
+			Condition: &btpb.RowFilter_Condition{
+				PredicateFilter: &btpb.RowFilter{Filter: &btpb.RowFilter_ValueRegexFilter{[]byte("[")}},
+			},
+		}}},
+
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_RowSampleFilter{0.0}}}, // 0.0 is invalid.
+		{&btpb.RowFilter{Filter: &btpb.RowFilter_RowSampleFilter{1.0}}}, // 1.0 is invalid.
+	} {
+		got, err := filterRow(test.badRegex, row.copy())
+		if got != false {
+			t.Errorf("%s: got true, want false", proto.CompactTextString(test.badRegex))
+		}
+		if err == nil {
+			t.Errorf("%s: got no error, want error", proto.CompactTextString(test.badRegex))
+		}
+	}
+}
+
+func TestFilterRowWithRowSampleFilter(t *testing.T) {
+	prev := randFloat
+	randFloat = func() float64 { return 0.5 }
+	defer func() { randFloat = prev }()
+	for _, test := range []struct {
+		p    float64
+		want bool
+	}{
+		{0.1, false}, // Less than random float. Return no rows.
+		{0.5, false}, // Equal to random float. Return no rows.
+		{0.9, true},  // Greater than random float. Return all rows.
+	} {
+		got, err := filterRow(&btpb.RowFilter{Filter: &btpb.RowFilter_RowSampleFilter{test.p}}, &row{})
+		if err != nil {
+			t.Fatalf("%f: %v", test.p, err)
+		}
+		if got != test.want {
+			t.Errorf("%v: got %t, want %t", test.p, got, test.want)
+		}
+	}
+}
+
+func TestFilterRowWithBinaryColumnQualifier(t *testing.T) {
+	rs := []byte{128, 128}
+	row := &row{
+		key: string(rs),
+		families: map[string]*family{
+			"fam": {
+				name: "fam",
+				cells: map[string][]cell{
+					string(rs): {{ts: 100, value: []byte("val")}},
+				},
+			},
+		},
+	}
+	for _, test := range []struct {
+		filter string
+		want   bool
+	}{
+		{`\x80\x80`, true},      // succeeds, exact match
+		{`\x80\x81`, false},     // fails
+		{`\x80`, false},         // fails, because the regexp must match the entire input
+		{`\x80*`, true},         // succeeds: 0 or more 128s
+		{`[\x7f\x80]{2}`, true}, // succeeds: exactly two of either 127 or 128
+		{`\C{2}`, true},         // succeeds: two bytes
+	} {
+		got, _ := filterRow(&btpb.RowFilter{Filter: &btpb.RowFilter_ColumnQualifierRegexFilter{[]byte(test.filter)}}, row.copy())
+		if got != test.want {
+			t.Errorf("%v: got %t, want %t", test.filter, got, test.want)
+		}
+	}
+}
+
+// Test that a single column qualifier with the interleave filter returns
+// the correct result and not return every single row.
+// See Issue https://github.com/googleapis/google-cloud-go/issues/1399
+func TestFilterRowWithSingleColumnQualifier(t *testing.T) {
+	ctx := context.Background()
+	srv := &server{tables: make(map[string]*table)}
+
+	tblReq := &btapb.CreateTableRequest{
+		Parent:  "issue-1399",
+		TableId: "table_id",
+		Table: &btapb.Table{
+			ColumnFamilies: map[string]*btapb.ColumnFamily{
+				"cf": {},
+			},
+		},
+	}
+	tbl, err := srv.CreateTable(ctx, tblReq)
+	if err != nil {
+		t.Fatalf("Failed to create the table: %v", err)
+	}
+
+	entries := []struct {
+		row   string
+		value []byte
+	}{
+		{"row1", []byte{0x11}},
+		{"row2", []byte{0x1a}},
+		{"row3", []byte{'a'}},
+		{"row4", []byte{'b'}},
+	}
+
+	for _, entry := range entries {
+		req := &btpb.MutateRowRequest{
+			TableName: tbl.Name,
+			RowKey:    []byte(entry.row),
+			Mutations: []*btpb.Mutation{{
+				Mutation: &btpb.Mutation_SetCell_{SetCell: &btpb.Mutation_SetCell{
+					FamilyName:      "cf",
+					ColumnQualifier: []byte("cq"),
+					TimestampMicros: 1000,
+					Value:           entry.value,
+				}},
+			}},
+		}
+		if _, err := srv.MutateRow(ctx, req); err != nil {
+			t.Fatalf("Failed to insert entry %v into server: %v", entry, err)
+		}
+	}
+
+	// After insertion now it is time for querying.
+	req := &btpb.ReadRowsRequest{
+		TableName: tbl.Name,
+		Filter: &btpb.RowFilter{Filter: &btpb.RowFilter_Chain_{
+			Chain: &btpb.RowFilter_Chain{Filters: []*btpb.RowFilter{{
+				Filter: &btpb.RowFilter_Interleave_{
+					Interleave: &btpb.RowFilter_Interleave{
+						Filters: []*btpb.RowFilter{{Filter: &btpb.RowFilter_Condition_{
+							Condition: &btpb.RowFilter_Condition{
+								PredicateFilter: &btpb.RowFilter{Filter: &btpb.RowFilter_Chain_{
+									Chain: &btpb.RowFilter_Chain{Filters: []*btpb.RowFilter{
+										{
+											Filter: &btpb.RowFilter_ValueRangeFilter{ValueRangeFilter: &btpb.ValueRange{
+												StartValue: &btpb.ValueRange_StartValueClosed{
+													StartValueClosed: []byte("a"),
+												},
+												EndValue: &btpb.ValueRange_EndValueClosed{EndValueClosed: []byte("a")},
+											}},
+										},
+									}},
+								}},
+								TrueFilter: &btpb.RowFilter{Filter: &btpb.RowFilter_PassAllFilter{PassAllFilter: true}},
+							},
+						}}},
+					},
+				},
+			}}},
+		}},
+	}
+
+	rrss := new(MockReadRowsServer)
+	if err := srv.ReadRows(req, rrss); err != nil {
+		t.Fatalf("Failed to read rows: %v", err)
+	}
+
+	if g, w := len(rrss.responses), 1; g != w {
+		t.Fatalf("Results/Streamed chunks mismatch:: got %d want %d", g, w)
+	}
+
+	got := rrss.responses[0]
+	// Only row3 should be matched.
+	want := &btpb.ReadRowsResponse{
+		Chunks: []*btpb.ReadRowsResponse_CellChunk{
+			{
+				RowKey:          []byte("row3"),
+				FamilyName:      &wrappers.StringValue{Value: "cf"},
+				Qualifier:       &wrappers.BytesValue{Value: []byte("cq")},
+				TimestampMicros: 1000,
+				Value:           []byte("a"),
+				RowStatus: &btpb.ReadRowsResponse_CellChunk_CommitRow{
+					CommitRow: true,
+				},
+			},
+		},
+	}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Fatalf("Response mismatch: got: + want -\n%s", diff)
+	}
+}
+
+func TestValueFilterRowWithAlternationInRegex(t *testing.T) {
+	// Test that regex alternation is applied properly.
+	// See Issue https://github.com/googleapis/google-cloud-go/issues/1499
+	ctx := context.Background()
+	srv := &server{tables: make(map[string]*table)}
+
+	tblReq := &btapb.CreateTableRequest{
+		Parent:  "issue-1499",
+		TableId: "table_id",
+		Table: &btapb.Table{
+			ColumnFamilies: map[string]*btapb.ColumnFamily{
+				"cf": {},
+			},
+		},
+	}
+	tbl, err := srv.CreateTable(ctx, tblReq)
+	if err != nil {
+		t.Fatalf("Failed to create the table: %v", err)
+	}
+
+	entries := []struct {
+		row   string
+		value []byte
+	}{
+		{"row1", []byte("")},
+		{"row2", []byte{'x'}},
+		{"row3", []byte{'a'}},
+		{"row4", []byte{'m'}},
+	}
+
+	for _, entry := range entries {
+		req := &btpb.MutateRowRequest{
+			TableName: tbl.Name,
+			RowKey:    []byte(entry.row),
+			Mutations: []*btpb.Mutation{{
+				Mutation: &btpb.Mutation_SetCell_{SetCell: &btpb.Mutation_SetCell{
+					FamilyName:      "cf",
+					ColumnQualifier: []byte("cq"),
+					TimestampMicros: 1000,
+					Value:           entry.value,
+				}},
+			}},
+		}
+		if _, err := srv.MutateRow(ctx, req); err != nil {
+			t.Fatalf("Failed to insert entry %v into server: %v", entry, err)
+		}
+	}
+
+	// After insertion now it is time for querying.
+	req := &btpb.ReadRowsRequest{
+		TableName: tbl.Name,
+		Rows:      &btpb.RowSet{},
+		Filter: &btpb.RowFilter{
+			Filter: &btpb.RowFilter_ValueRegexFilter{
+				ValueRegexFilter: []byte("|a"),
+			},
+		},
+	}
+
+	rrss := new(MockReadRowsServer)
+	if err := srv.ReadRows(req, rrss); err != nil {
+		t.Fatalf("Failed to read rows: %v", err)
+	}
+
+	var gotChunks []*btpb.ReadRowsResponse_CellChunk
+	for _, res := range rrss.responses {
+		gotChunks = append(gotChunks, res.Chunks...)
+	}
+
+	// Only row1 "" and row3 "a" should be matched.
+	wantChunks := []*btpb.ReadRowsResponse_CellChunk{
+		{
+			RowKey:          []byte("row1"),
+			FamilyName:      &wrappers.StringValue{Value: "cf"},
+			Qualifier:       &wrappers.BytesValue{Value: []byte("cq")},
+			TimestampMicros: 1000,
+			Value:           []byte(""),
+			RowStatus: &btpb.ReadRowsResponse_CellChunk_CommitRow{
+				CommitRow: true,
+			},
+		},
+		{
+			RowKey:          []byte("row3"),
+			FamilyName:      &wrappers.StringValue{Value: "cf"},
+			Qualifier:       &wrappers.BytesValue{Value: []byte("cq")},
+			TimestampMicros: 1000,
+			Value:           []byte("a"),
+			RowStatus: &btpb.ReadRowsResponse_CellChunk_CommitRow{
+				CommitRow: true,
+			},
+		},
+	}
+	if diff := cmp.Diff(gotChunks, wantChunks); diff != "" {
+		t.Fatalf("Response chunks mismatch: got: + want -\n%s", diff)
 	}
 }

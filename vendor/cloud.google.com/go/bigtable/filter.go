@@ -314,4 +314,39 @@ func (clf cellsPerRowLimitFilter) proto() *btpb.RowFilter {
 	return &btpb.RowFilter{Filter: &btpb.RowFilter_CellsPerRowLimitFilter{CellsPerRowLimitFilter: int32(clf)}}
 }
 
-// TODO(dsymonds): More filters: sampling
+// RowSampleFilter returns a filter that matches a row with a probability of p (must be in the interval (0, 1)).
+func RowSampleFilter(p float64) Filter {
+	return rowSampleFilter(p)
+}
+
+type rowSampleFilter float64
+
+func (rsf rowSampleFilter) String() string {
+	return fmt.Sprintf("filter(%f)", rsf)
+}
+
+func (rsf rowSampleFilter) proto() *btpb.RowFilter {
+	return &btpb.RowFilter{Filter: &btpb.RowFilter_RowSampleFilter{RowSampleFilter: float64(rsf)}}
+}
+
+// PassAllFilter returns a filter that matches everything.
+func PassAllFilter() Filter { return passAllFilter{} }
+
+type passAllFilter struct{}
+
+func (paf passAllFilter) String() string { return "passAllFilter()" }
+
+func (paf passAllFilter) proto() *btpb.RowFilter {
+	return &btpb.RowFilter{Filter: &btpb.RowFilter_PassAllFilter{PassAllFilter: true}}
+}
+
+// BlockAllFilter returns a filter that matches nothing.
+func BlockAllFilter() Filter { return blockAllFilter{} }
+
+type blockAllFilter struct{}
+
+func (baf blockAllFilter) String() string { return "blockAllFilter()" }
+
+func (baf blockAllFilter) proto() *btpb.RowFilter {
+	return &btpb.RowFilter{Filter: &btpb.RowFilter_BlockAllFilter{BlockAllFilter: true}}
+}

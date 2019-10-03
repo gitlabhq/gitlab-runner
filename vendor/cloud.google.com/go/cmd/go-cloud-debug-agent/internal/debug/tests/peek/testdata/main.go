@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright 2019 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ var (
 	Z_complex128          complex128  = 1.987654321 - 2.987654321i
 	Z_array               [5]int8     = [5]int8{-121, 121, 3, 2, 1}
 	Z_array_empty         [0]int8     = [0]int8{}
-	Z_array_of_empties    [2]struct{} = [2]struct{}{struct{}{}, struct{}{}}
+	Z_array_of_empties    [2]struct{} = [2]struct{}{{}, {}}
 	Z_channel             chan int16  = make(chan int16)
 	Z_channel_2           chan int16  = make(chan int16)
 	Z_channel_buffered    chan int16  = make(chan int16, 10)

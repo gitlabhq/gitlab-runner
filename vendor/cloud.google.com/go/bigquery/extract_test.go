@@ -17,10 +17,8 @@ package bigquery
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-
 	"cloud.google.com/go/internal/testutil"
-
+	"github.com/google/go-cmp/cmp"
 	bq "google.golang.org/api/bigquery/v2"
 )
 
@@ -92,6 +90,23 @@ func TestExtract(t *testing.T) {
 				j.Configuration.Extract.Compression = "GZIP"
 				j.Configuration.Extract.DestinationFormat = "NEWLINE_DELIMITED_JSON"
 				j.Configuration.Extract.FieldDelimiter = "\t"
+				return j
+			}(),
+		},
+		{
+			dst: func() *GCSReference {
+				g := NewGCSReference("uri")
+				g.DestinationFormat = Avro
+				return g
+			}(),
+			src: c.Dataset("dataset-id").Table("table-id"),
+			config: ExtractConfig{
+				UseAvroLogicalTypes: true,
+			},
+			want: func() *bq.Job {
+				j := defaultExtractJob()
+				j.Configuration.Extract.UseAvroLogicalTypes = true
+				j.Configuration.Extract.DestinationFormat = "AVRO"
 				return j
 			}(),
 		},

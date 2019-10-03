@@ -22,9 +22,11 @@ https://cloud.google.com/storage/docs.
 See https://godoc.org/cloud.google.com/go for authentication, timeouts,
 connection pooling and similar aspects of this package.
 
-All of the methods of this package use exponential backoff to retry calls
-that fail with certain errors, as described in
-https://cloud.google.com/storage/docs/exponential-backoff.
+All of the methods of this package use exponential backoff to retry calls that fail
+with certain errors, as described in
+https://cloud.google.com/storage/docs/exponential-backoff. Retrying continues
+indefinitely unless the controlling context is canceled or the client is closed. See
+context.WithTimeout and context.WithCancel.
 
 
 Creating a Client
@@ -115,6 +117,33 @@ Objects also have attributes, which you can fetch with Attrs:
     fmt.Printf("object %s has size %d and can be read using %s\n",
         objAttrs.Name, objAttrs.Size, objAttrs.MediaLink)
 
+Listing objects
+
+Listing objects in a bucket is done with the Bucket.Objects method:
+
+    query := &storage.Query{Prefix: ""}
+
+    var names []string
+    it := bkt.Objects(ctx, query)
+    for {
+        attrs, err := it.Next()
+        if err == iterator.Done {
+            break
+        }
+        if err != nil {
+            log.Fatal(err)
+        }
+        names = append(names, attrs.Name)
+    }
+
+If only a subset of object attributes is needed when listing, specifying this
+subset using Query.SetAttrSelection may speed up the listing process:
+
+    query := &storage.Query{Prefix: ""}
+    query.SetAttrSelection([]string{"Name"})
+
+    // ... as before
+
 ACLs
 
 Both objects and buckets have ACLs (Access Control Lists). An ACL is a list of
@@ -161,5 +190,14 @@ SignedURL for details.
         // TODO: Handle error.
     }
     fmt.Println(url)
+
+Errors
+
+Errors returned by this client are often of the type [`googleapi.Error`](https://godoc.org/google.golang.org/api/googleapi#Error).
+These errors can be introspected for more information by type asserting to the richer `googleapi.Error` type. For example:
+
+	if e, ok := err.(*googleapi.Error); ok {
+		  if e.Code == 409 { ... }
+	}
 */
 package storage // import "cloud.google.com/go/storage"

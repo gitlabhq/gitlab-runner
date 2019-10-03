@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright 2019 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -181,7 +181,7 @@ func (m *frameMachine) scanFDE(allBuf *buf, pc uint64) (int64, bool, error) {
 	}
 	// Create buffer for just this section.
 	b := allBuf.slice(length)
-	cieOffset := b.uint32() // TODO assumes 32 bits.
+	cieOffset := b.uint32() // TODO: assumes 32 bits.
 	// Expect 0: first CIE in this segment. TODO.
 	if cieOffset != 0 {
 		return 0, false, fmt.Errorf("FDE parse error: bad CIE offset: %.2x", cieOffset)

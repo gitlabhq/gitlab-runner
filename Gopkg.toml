@@ -147,7 +147,7 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "cloud.google.com/go"
-  version = "v0.25.0"
+  version = "v0.49.0"
 
 [[constraint]]
   name = "gitlab.com/gitlab-org/gitlab-terminal"
@@ -290,7 +290,7 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "google.golang.org/api"
-  revision = "0025a57598c017c1b9f7bc916c4fb8ae77315f9c"
+  version = "v0.14.0"
 
 [[override]]
   name = "google.golang.org/appengine"

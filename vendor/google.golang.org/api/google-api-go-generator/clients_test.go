@@ -1,20 +1,11 @@
-// Copyright 2017 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2017 Google LLC.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -27,17 +18,13 @@ import (
 	"testing"
 	"testing/iotest"
 
-	"golang.org/x/net/context"
-
 	// If you add a client, add a matching go:generate line below.
-	dfa "google.golang.org/api/dfareporting/v2.8"
 	mon "google.golang.org/api/monitoring/v3"
 	storage "google.golang.org/api/storage/v1"
 )
 
 //go:generate -command api go run gen.go docurls.go replacements.go -install -api
 
-//go:generate api dfareporting:v2.8
 //go:generate api monitoring:v3
 //go:generate api storage:v1
 
@@ -74,7 +61,7 @@ func TestMedia(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to create service: %v", err)
 	}
-	s.BasePath = server.URL
+	s.BasePath = fmt.Sprintf("%s%s", server.URL, "/storage/v1/")
 
 	const body = "fake media data"
 	f := strings.NewReader(body)
@@ -117,7 +104,7 @@ func TestMedia(t *testing.T) {
 	if w := "chunked"; len(g.TransferEncoding) != 1 || g.TransferEncoding[0] != w {
 		t.Errorf("TransferEncoding = %#v; want %q", g.TransferEncoding, w)
 	}
-	if w := strings.TrimPrefix(s.BasePath, "http://"); g.Host != w {
+	if w := server.Listener.Addr().String(); g.Host != w {
 		t.Errorf("Host = %q; want %q", g.Host, w)
 	}
 	if g.Form != nil {
@@ -129,7 +116,7 @@ func TestMedia(t *testing.T) {
 	if g.MultipartForm != nil {
 		t.Errorf("MultipartForm = %#v; want nil", g.MultipartForm)
 	}
-	if w := "/b/mybucket/o?alt=json&uploadType=multipart"; g.RequestURI != w {
+	if w := "/upload/storage/v1/b/mybucket/o?alt=json&prettyPrint=false&uploadType=multipart"; g.RequestURI != w {
 		t.Errorf("RequestURI = %q; want %q", g.RequestURI, w)
 	}
 	if w := "\r\n\r\n" + body + "\r\n"; !strings.Contains(string(handler.body), w) {
@@ -219,7 +206,7 @@ func TestNoMedia(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to create service: %v", err)
 	}
-	s.BasePath = server.URL
+	s.BasePath = fmt.Sprintf("%s%s", server.URL, "/storage/v1/")
 
 	o := &storage.Object{
 		Bucket:          "mybucket",
@@ -260,7 +247,7 @@ func TestNoMedia(t *testing.T) {
 	if len(g.TransferEncoding) != 0 {
 		t.Errorf("TransferEncoding = %#v; want []string{}", g.TransferEncoding)
 	}
-	if w := strings.TrimPrefix(s.BasePath, "http://"); g.Host != w {
+	if w := server.Listener.Addr().String(); g.Host != w {
 		t.Errorf("Host = %q; want %q", g.Host, w)
 	}
 	if g.Form != nil {
@@ -272,7 +259,7 @@ func TestNoMedia(t *testing.T) {
 	if g.MultipartForm != nil {
 		t.Errorf("MultipartForm = %#v; want nil", g.MultipartForm)
 	}
-	if w := "/b/mybucket/o?alt=json"; g.RequestURI != w {
+	if w := "/storage/v1/b/mybucket/o?alt=json&prettyPrint=false"; g.RequestURI != w {
 		t.Errorf("RequestURI = %q; want %q", g.RequestURI, w)
 	}
 	if w := `{"bucket":"mybucket","contentEncoding":"utf-8","contentLanguage":"en","contentType":"plain/text","name":"filename"}` + "\n"; string(handler.body) != w {
@@ -293,7 +280,7 @@ func TestMediaErrHandling(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to create service: %v", err)
 	}
-	s.BasePath = server.URL
+	s.BasePath = fmt.Sprintf("%s%s", server.URL, "/storage/v1/")
 
 	const body = "fake media data"
 	f := strings.NewReader(body)
@@ -380,34 +367,8 @@ func TestParams(t *testing.T) {
 		t.Fatalf("len(reqURIs) = %v, want %v", g, w)
 	}
 	want := []string{
-		"/b/mybucket/o?alt=json&ifGenerationMatch=42&name=filename&projection=full&uploadType=resumable",
+		"/upload/storage/v1/b/mybucket/o?alt=json&ifGenerationMatch=42&name=filename&prettyPrint=false&projection=full&uploadType=resumable",
 		"/uploadURL",
-	}
-	if !reflect.DeepEqual(handler.reqURIs, want) {
-		t.Errorf("reqURIs = %#v, want = %#v", handler.reqURIs, want)
-	}
-}
-
-func TestRepeatedParams(t *testing.T) {
-	handler := &myHandler{}
-	server := httptest.NewServer(handler)
-	defer server.Close()
-
-	client := &http.Client{}
-	s, err := dfa.New(client)
-	if err != nil {
-		t.Fatalf("unable to create service: %v", err)
-	}
-	s.BasePath = server.URL
-	s.UserAgent = "myagent/1.0"
-	cs := dfa.NewCreativesService(s)
-
-	_, err = cs.List(10).Active(true).MaxResults(1).Ids(2, 3).PageToken("abc").SizeIds(4, 5).Types("def", "ghi").IfNoneMatch("not-a-param").Do()
-	if err != nil {
-		t.Fatalf("dfa.List: %v", err)
-	}
-	want := []string{
-		"/userprofiles/10/creatives?active=true&alt=json&ids=2&ids=3&maxResults=1&pageToken=abc&sizeIds=4&sizeIds=5&types=def&types=ghi",
 	}
 	if !reflect.DeepEqual(handler.reqURIs, want) {
 		t.Errorf("reqURIs = %#v, want = %#v", handler.reqURIs, want)

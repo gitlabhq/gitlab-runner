@@ -20,7 +20,6 @@ import (
 	"reflect"
 
 	proto3 "github.com/golang/protobuf/ptypes/struct"
-
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc/codes"
 )
@@ -53,8 +52,8 @@ const (
 //
 // Many mutations can be applied in a single atomic commit. For purposes of
 // constraint checking (such as foreign key constraints), the operations can be
-// viewed as applying in the same order as the mutations are provided (so that, e.g.,
-// a row and its logical "child" can be inserted in the same commit).
+// viewed as applying in the same order as the mutations are provided (so that,
+// e.g., a row and its logical "child" can be inserted in the same commit).
 //
 // The Apply function applies series of mutations. For example,
 //
@@ -67,8 +66,8 @@ const (
 // for the new row is UserID (presuming that "user_id" has been declared as the
 // primary key of the "User" table).
 //
-// To apply a series of mutations as part of an atomic read-modify-write operation,
-// use ReadWriteTransaction.
+// To apply a series of mutations as part of an atomic read-modify-write
+// operation, use ReadWriteTransaction.
 //
 // Updating a row
 //
@@ -87,8 +86,8 @@ const (
 //	m := spanner.Delete("User", spanner.Key{UserId})
 //	_, err := client.Apply(ctx, []*spanner.Mutation{m})
 //
-// spanner.Delete accepts a KeySet, so you can also pass in a KeyRange, or use the
-// spanner.KeySets function to build any combination of Keys and KeyRanges.
+// spanner.Delete accepts a KeySet, so you can also pass in a KeyRange, or use
+// the spanner.KeySets function to build any combination of Keys and KeyRanges.
 //
 // Note that deleting a row in a table may also delete rows from other tables
 // if cascading deletes are specified in those tables' schemas. Delete does
@@ -192,7 +191,7 @@ func structToMutationParams(in interface{}) ([]string, []interface{}, error) {
 }
 
 // Insert returns a Mutation to insert a row into a table. If the row already
-// exists, the write or transaction fails.
+// exists, the write or transaction fails with codes.AlreadyExists.
 func Insert(table string, cols []string, vals []interface{}) *Mutation {
 	return &Mutation{
 		op:      opInsert,
@@ -204,14 +203,15 @@ func Insert(table string, cols []string, vals []interface{}) *Mutation {
 
 // InsertMap returns a Mutation to insert a row into a table, specified by
 // a map of column name to value. If the row already exists, the write or
-// transaction fails.
+// transaction fails with codes.AlreadyExists.
 func InsertMap(table string, in map[string]interface{}) *Mutation {
 	cols, vals := mapToMutationParams(in)
 	return Insert(table, cols, vals)
 }
 
 // InsertStruct returns a Mutation to insert a row into a table, specified by
-// a Go struct.  If the row already exists, the write or transaction fails.
+// a Go struct.  If the row already exists, the write or transaction fails with
+// codes.AlreadyExists.
 //
 // The in argument must be a struct or a pointer to a struct. Its exported
 // fields specify the column names and values. Use a field tag like "spanner:name"
@@ -282,8 +282,9 @@ func InsertOrUpdateMap(table string, in map[string]interface{}) *Mutation {
 // Any column values not explicitly written are preserved.
 //
 // The in argument must be a struct or a pointer to a struct. Its exported
-// fields specify the column names and values. Use a field tag like "spanner:name"
-// to provide an alternative column name, or use "spanner:-" to ignore the field.
+// fields specify the column names and values. Use a field tag like
+// "spanner:name" to provide an alternative column name, or use "spanner:-" to
+// ignore the field.
 //
 // For a similar example, See UpdateStruct.
 func InsertOrUpdateStruct(table string, in interface{}) (*Mutation, error) {

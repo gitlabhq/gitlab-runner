@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build go1.8
-
 package spanner
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/internal/testutil"
 	stestutil "cloud.google.com/go/spanner/internal/testutil"
-	"golang.org/x/net/context"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )
@@ -35,7 +33,10 @@ func TestOCStats(t *testing.T) {
 	ms := stestutil.NewMockCloudSpanner(t, trxTs)
 	ms.Serve()
 	ctx := context.Background()
-	c, err := NewClient(ctx, "projects/P/instances/I/databases/D",
+	c, err := NewClientWithConfig(ctx, "projects/P/instances/I/databases/D",
+		ClientConfig{SessionPoolConfig: SessionPoolConfig{
+			MinOpened: 0,
+		}},
 		option.WithEndpoint(ms.Addr()),
 		option.WithGRPCDialOption(grpc.WithInsecure()),
 		option.WithoutAuthentication())

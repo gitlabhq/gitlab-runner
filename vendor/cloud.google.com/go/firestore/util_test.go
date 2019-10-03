@@ -15,21 +15,18 @@
 package firestore
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/internal/testutil"
-
-	"golang.org/x/net/context"
-
-	pb "google.golang.org/genproto/googleapis/firestore/v1beta1"
-
 	"github.com/golang/protobuf/ptypes"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"google.golang.org/api/option"
+	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/genproto/googleapis/type/latlng"
 	"google.golang.org/grpc"
 )
@@ -82,8 +79,8 @@ func TestTestEqual(t *testing.T) {
 	}
 }
 
-func newMock(t *testing.T) (*Client, *mockServer) {
-	srv, err := newMockServer()
+func newMock(t *testing.T) (_ *Client, _ *mockServer, _ func()) {
+	srv, cleanup, err := newMockServer()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +92,11 @@ func newMock(t *testing.T) (*Client, *mockServer) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return client, srv
+	return client, srv, func() {
+		client.Close()
+		conn.Close()
+		cleanup()
+	}
 }
 
 func intval(i int) *pb.Value {

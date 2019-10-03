@@ -15,6 +15,7 @@
 package firestore
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sort"
 	"testing"
@@ -32,13 +34,10 @@ import (
 	"cloud.google.com/go/internal/uid"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-
-	"golang.org/x/net/context"
 	"google.golang.org/api/option"
 	"google.golang.org/genproto/googleapis/type/latlng"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func TestMain(m *testing.M) {
@@ -76,12 +75,28 @@ func initIntegrationTest() {
 	if ts == nil {
 		log.Fatal("The project key must be set. See CONTRIBUTING.md for details")
 	}
-	ti := &testInterceptor{dbPath: "projects/" + testProjectID + "/databases/(default)"}
-	c, err := NewClient(ctx, testProjectID,
-		option.WithTokenSource(ts),
-		option.WithGRPCDialOption(grpc.WithUnaryInterceptor(ti.interceptUnary)),
-		option.WithGRPCDialOption(grpc.WithStreamInterceptor(ti.interceptStream)),
-	)
+	wantDBPath := "projects/" + testProjectID + "/databases/(default)"
+
+	ti := &testutil.HeadersEnforcer{
+		Checkers: []*testutil.HeaderChecker{
+			testutil.XGoogClientHeaderChecker,
+
+			{
+				Key: "google-cloud-resource-prefix",
+				ValuesValidator: func(values ...string) error {
+					if len(values) == 0 {
+						return errors.New("expected non-blank header")
+					}
+					if values[0] != wantDBPath {
+						return fmt.Errorf("resource prefix mismatch; got %q want %q", values[0], wantDBPath)
+					}
+					return nil
+				},
+			},
+		},
+	}
+	copts := append(ti.CallOptions(), option.WithTokenSource(ts))
+	c, err := NewClient(ctx, testProjectID, copts...)
 	if err != nil {
 		log.Fatalf("NewClient: %v", err)
 	}
@@ -91,40 +106,6 @@ func initIntegrationTest() {
 	integrationTestMap["ref"] = refDoc
 	wantIntegrationTestMap["ref"] = refDoc
 	integrationTestStruct.Ref = refDoc
-}
-
-type testInterceptor struct {
-	dbPath string
-}
-
-func (ti *testInterceptor) interceptUnary(ctx context.Context, method string, req, res interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	ti.checkMetadata(ctx, method)
-	return invoker(ctx, method, req, res, cc, opts...)
-}
-
-func (ti *testInterceptor) interceptStream(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	ti.checkMetadata(ctx, method)
-	return streamer(ctx, desc, cc, method, opts...)
-}
-
-func (ti *testInterceptor) checkMetadata(ctx context.Context, method string) {
-	md, ok := metadata.FromOutgoingContext(ctx)
-	if !ok {
-		log.Fatalf("method %s: bad metadata", method)
-	}
-	for _, h := range []string{"google-cloud-resource-prefix", "x-goog-api-client"} {
-		v, ok := md[h]
-		if !ok {
-			log.Fatalf("method %s, header %s missing", method, h)
-		}
-		if len(v) != 1 {
-			log.Fatalf("method %s, header %s: bad value %v", method, h, v)
-		}
-	}
-	v := md["google-cloud-resource-prefix"][0]
-	if v != ti.dbPath {
-		log.Fatalf("method %s: bad resource prefix header:  %q", method, v)
-	}
 }
 
 func cleanupIntegrationTest() {
@@ -174,30 +155,44 @@ var (
 
 	// Use this when writing a doc.
 	integrationTestMap = map[string]interface{}{
-		"int":   1,
-		"str":   "two",
-		"bool":  true,
-		"float": 3.14,
-		"null":  nil,
-		"bytes": []byte("bytes"),
-		"*":     map[string]interface{}{"`": 4},
-		"time":  integrationTime,
-		"geo":   integrationGeo,
-		"ref":   nil, // populated by initIntegrationTest
+		"int":    1,
+		"int8":   int8(2),
+		"int16":  int16(3),
+		"int32":  int32(4),
+		"int64":  int64(5),
+		"uint8":  uint8(6),
+		"uint16": uint16(7),
+		"uint32": uint32(8),
+		"str":    "two",
+		"bool":   true,
+		"float":  3.14,
+		"null":   nil,
+		"bytes":  []byte("bytes"),
+		"*":      map[string]interface{}{"`": 4},
+		"time":   integrationTime,
+		"geo":    integrationGeo,
+		"ref":    nil, // populated by initIntegrationTest
 	}
 
 	// The returned data is slightly different.
 	wantIntegrationTestMap = map[string]interface{}{
-		"int":   int64(1),
-		"str":   "two",
-		"bool":  true,
-		"float": 3.14,
-		"null":  nil,
-		"bytes": []byte("bytes"),
-		"*":     map[string]interface{}{"`": int64(4)},
-		"time":  wantIntegrationTime,
-		"geo":   integrationGeo,
-		"ref":   nil, // populated by initIntegrationTest
+		"int":    int64(1),
+		"int8":   int64(2),
+		"int16":  int64(3),
+		"int32":  int64(4),
+		"int64":  int64(5),
+		"uint8":  int64(6),
+		"uint16": int64(7),
+		"uint32": int64(8),
+		"str":    "two",
+		"bool":   true,
+		"float":  3.14,
+		"null":   nil,
+		"bytes":  []byte("bytes"),
+		"*":      map[string]interface{}{"`": int64(4)},
+		"time":   wantIntegrationTime,
+		"geo":    integrationGeo,
+		"ref":    nil, // populated by initIntegrationTest
 	}
 
 	integrationTestStruct = integrationTestStructType{
@@ -257,7 +252,7 @@ func TestIntegration_Get(t *testing.T) {
 	ds, err := integrationColl(t).NewDoc().Get(ctx)
 	codeEq(t, "Get on a missing doc", codes.NotFound, err)
 	if ds == nil || ds.Exists() {
-		t.Fatal("got nil or existing doc snapshot, want !ds.Exists")
+		t.Error("got nil or existing doc snapshot, want !ds.Exists")
 	}
 	if ds.ReadTime.IsZero() {
 		t.Error("got zero read time")
@@ -320,25 +315,19 @@ func TestIntegration_Add(t *testing.T) {
 
 func TestIntegration_Set(t *testing.T) {
 	coll := integrationColl(t)
-	ctx := context.Background()
 	h := testHelper{t}
+	ctx := context.Background()
 
 	// Set Should be able to create a new doc.
 	doc := coll.NewDoc()
-	wr1, err := doc.Set(ctx, integrationTestMap)
-	if err != nil {
-		t.Fatal(err)
-	}
+	wr1 := h.mustSet(doc, integrationTestMap)
 	// Calling Set on the doc completely replaces the contents.
 	// The update time should increase.
 	newData := map[string]interface{}{
 		"str": "change",
 		"x":   "1",
 	}
-	wr2, err := doc.Set(ctx, newData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	wr2 := h.mustSet(doc, newData)
 	if !wr1.UpdateTime.Before(wr2.UpdateTime) {
 		t.Errorf("update time did not increase: old=%s, new=%s", wr1.UpdateTime, wr2.UpdateTime)
 	}
@@ -391,13 +380,25 @@ func TestIntegration_Set(t *testing.T) {
 		t.Errorf("update time did not increase: old=%s, new=%s", wr3.UpdateTime, wr4.UpdateTime)
 	}
 
-	// Writing an empty doc with MergeAll should create the doc.
-	doc2 := coll.NewDoc()
-	want = map[string]interface{}{}
-	_, err = doc2.Set(ctx, want, MergeAll)
+	// use firestore.Delete to delete a field.
+	// TODO(deklerk): We should be able to use mustSet, but then we get a test error. We should investigate this.
+	_, err = doc.Set(ctx, map[string]interface{}{"str": Delete}, MergeAll)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ds = h.mustGet(doc)
+	want = map[string]interface{}{
+		"x": "4",
+		"y": "5",
+	}
+	if got := ds.Data(); !testEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	// Writing an empty doc with MergeAll should create the doc.
+	doc2 := coll.NewDoc()
+	want = map[string]interface{}{}
+	h.mustSet(doc2, want, MergeAll)
 	ds = h.mustGet(doc2)
 	if got := ds.Data(); !testEqual(got, want) {
 		t.Errorf("got %v, want %v", got, want)
@@ -409,9 +410,9 @@ func TestIntegration_Delete(t *testing.T) {
 	doc := integrationColl(t).NewDoc()
 	h := testHelper{t}
 	h.mustCreate(doc, integrationTestMap)
-	wr := h.mustDelete(doc)
+	h.mustDelete(doc)
 	// Confirm that doc doesn't exist.
-	if _, err := doc.Get(ctx); grpc.Code(err) != codes.NotFound {
+	if _, err := doc.Get(ctx); status.Code(err) != codes.NotFound {
 		t.Fatalf("got error <%v>, want NotFound", err)
 	}
 
@@ -421,7 +422,7 @@ func TestIntegration_Delete(t *testing.T) {
 		er(doc.Delete(ctx)))
 	// TODO(jba): confirm that the server should return InvalidArgument instead of
 	// FailedPrecondition.
-	wr = h.mustCreate(doc, integrationTestMap)
+	wr := h.mustCreate(doc, integrationTestMap)
 	codeEq(t, "Delete with wrong LastUpdateTime", codes.FailedPrecondition,
 		er(doc.Delete(ctx, LastUpdateTime(wr.UpdateTime.Add(-time.Millisecond)))))
 	codeEq(t, "Delete with right LastUpdateTime", codes.OK,
@@ -539,27 +540,16 @@ func TestIntegration_ServerTimestamp(t *testing.T) {
 }
 
 func TestIntegration_MergeServerTimestamp(t *testing.T) {
-	ctx := context.Background()
 	doc := integrationColl(t).NewDoc()
 	h := testHelper{t}
 
 	// Create a doc with an ordinary field "a" and a ServerTimestamp field "b".
-	_, err := doc.Set(ctx, map[string]interface{}{
-		"a": 1,
-		"b": ServerTimestamp})
-	if err != nil {
-		t.Fatal(err)
-	}
+	h.mustSet(doc, map[string]interface{}{"a": 1, "b": ServerTimestamp})
 	docSnap := h.mustGet(doc)
 	data1 := docSnap.Data()
 	// Merge with a document with a different value of "a". However,
 	// specify only "b" in the list of merge fields.
-	_, err = doc.Set(ctx,
-		map[string]interface{}{"a": 2, "b": ServerTimestamp},
-		Merge([]string{"b"}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	h.mustSet(doc, map[string]interface{}{"a": 2, "b": ServerTimestamp}, Merge([]string{"b"}))
 	// The result should leave "a" unchanged, while "b" is updated.
 	docSnap = h.mustGet(doc)
 	data2 := docSnap.Data()
@@ -574,33 +564,24 @@ func TestIntegration_MergeServerTimestamp(t *testing.T) {
 }
 
 func TestIntegration_MergeNestedServerTimestamp(t *testing.T) {
-	ctx := context.Background()
 	doc := integrationColl(t).NewDoc()
 	h := testHelper{t}
 
 	// Create a doc with an ordinary field "a" a ServerTimestamp field "b",
 	// and a second ServerTimestamp field "c.d".
-	_, err := doc.Set(ctx, map[string]interface{}{
+	h.mustSet(doc, map[string]interface{}{
 		"a": 1,
 		"b": ServerTimestamp,
 		"c": map[string]interface{}{"d": ServerTimestamp},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	data1 := h.mustGet(doc).Data()
 	// Merge with a document with a different value of "a". However,
 	// specify only "c.d" in the list of merge fields.
-	_, err = doc.Set(ctx,
-		map[string]interface{}{
-			"a": 2,
-			"b": ServerTimestamp,
-			"c": map[string]interface{}{"d": ServerTimestamp},
-		},
-		Merge([]string{"c", "d"}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	h.mustSet(doc, map[string]interface{}{
+		"a": 2,
+		"b": ServerTimestamp,
+		"c": map[string]interface{}{"d": ServerTimestamp},
+	}, Merge([]string{"c", "d"}))
 	// The result should leave "a" and "b" unchanged, while "c.d" is updated.
 	data2 := h.mustGet(doc).Data()
 	if got, want := data2["a"], data1["a"]; got != want {
@@ -655,11 +636,9 @@ func TestIntegration_Query(t *testing.T) {
 	ctx := context.Background()
 	coll := integrationColl(t)
 	h := testHelper{t}
-	var docs []*DocumentRef
 	var wants []map[string]interface{}
 	for i := 0; i < 3; i++ {
 		doc := coll.NewDoc()
-		docs = append(docs, doc)
 		// To support running this test in parallel with the others, use a field name
 		// that we don't use anywhere else.
 		h.mustCreate(doc, map[string]interface{}{"q": i, "x": 1})
@@ -975,6 +954,309 @@ func TestIntegration_WatchDocument(t *testing.T) {
 	}
 }
 
+func TestIntegration_ArrayUnion_Create(t *testing.T) {
+	path := "somePath"
+	data := map[string]interface{}{
+		path: ArrayUnion("a", "b"),
+	}
+
+	doc := integrationColl(t).NewDoc()
+	h := testHelper{t}
+	h.mustCreate(doc, data)
+	ds := h.mustGet(doc)
+	var gotMap map[string][]string
+	if err := ds.DataTo(&gotMap); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := gotMap[path]; !ok {
+		t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+	}
+
+	want := []string{"a", "b"}
+	for i, v := range gotMap[path] {
+		if v != want[i] {
+			t.Fatalf("got\n%#v\nwant\n%#v", gotMap[path], want)
+		}
+	}
+}
+
+func TestIntegration_ArrayUnion_Update(t *testing.T) {
+	doc := integrationColl(t).NewDoc()
+	h := testHelper{t}
+	path := "somePath"
+
+	h.mustCreate(doc, map[string]interface{}{
+		path: []string{"a", "b"},
+	})
+	fpus := []Update{
+		{
+			Path:  path,
+			Value: ArrayUnion("this should be added"),
+		},
+	}
+	h.mustUpdate(doc, fpus)
+	ds := h.mustGet(doc)
+	var gotMap map[string][]string
+	if err := ds.DataTo(&gotMap); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := gotMap[path]; !ok {
+		t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+	}
+
+	want := []string{"a", "b", "this should be added"}
+	for i, v := range gotMap[path] {
+		if v != want[i] {
+			t.Fatalf("got\n%#v\nwant\n%#v", gotMap[path], want)
+		}
+	}
+}
+
+func TestIntegration_ArrayUnion_Set(t *testing.T) {
+	coll := integrationColl(t)
+	h := testHelper{t}
+	path := "somePath"
+
+	doc := coll.NewDoc()
+	newData := map[string]interface{}{
+		path: ArrayUnion("a", "b"),
+	}
+	h.mustSet(doc, newData)
+	ds := h.mustGet(doc)
+	var gotMap map[string][]string
+	if err := ds.DataTo(&gotMap); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := gotMap[path]; !ok {
+		t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+	}
+
+	want := []string{"a", "b"}
+	for i, v := range gotMap[path] {
+		if v != want[i] {
+			t.Fatalf("got\n%#v\nwant\n%#v", gotMap[path], want)
+		}
+	}
+}
+
+func TestIntegration_ArrayRemove_Create(t *testing.T) {
+	doc := integrationColl(t).NewDoc()
+	h := testHelper{t}
+	path := "somePath"
+
+	h.mustCreate(doc, map[string]interface{}{
+		path: ArrayRemove("a", "b"),
+	})
+
+	ds := h.mustGet(doc)
+	var gotMap map[string][]string
+	if err := ds.DataTo(&gotMap); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := gotMap[path]; !ok {
+		t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+	}
+
+	// A create with arrayRemove results in an empty array.
+	want := []string(nil)
+	if !testEqual(gotMap[path], want) {
+		t.Fatalf("got\n%#v\nwant\n%#v", gotMap[path], want)
+	}
+}
+
+func TestIntegration_ArrayRemove_Update(t *testing.T) {
+	doc := integrationColl(t).NewDoc()
+	h := testHelper{t}
+	path := "somePath"
+
+	h.mustCreate(doc, map[string]interface{}{
+		path: []string{"a", "this should be removed", "c"},
+	})
+	fpus := []Update{
+		{
+			Path:  path,
+			Value: ArrayRemove("this should be removed"),
+		},
+	}
+	h.mustUpdate(doc, fpus)
+	ds := h.mustGet(doc)
+	var gotMap map[string][]string
+	if err := ds.DataTo(&gotMap); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := gotMap[path]; !ok {
+		t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+	}
+
+	want := []string{"a", "c"}
+	for i, v := range gotMap[path] {
+		if v != want[i] {
+			t.Fatalf("got\n%#v\nwant\n%#v", gotMap[path], want)
+		}
+	}
+}
+
+func TestIntegration_ArrayRemove_Set(t *testing.T) {
+	coll := integrationColl(t)
+	h := testHelper{t}
+	path := "somePath"
+
+	doc := coll.NewDoc()
+	newData := map[string]interface{}{
+		path: ArrayRemove("a", "b"),
+	}
+	h.mustSet(doc, newData)
+	ds := h.mustGet(doc)
+	var gotMap map[string][]string
+	if err := ds.DataTo(&gotMap); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := gotMap[path]; !ok {
+		t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+	}
+
+	want := []string(nil)
+	if !testEqual(gotMap[path], want) {
+		t.Fatalf("got\n%#v\nwant\n%#v", gotMap[path], want)
+	}
+}
+
+func TestIntegration_Increment_Create(t *testing.T) {
+	doc := integrationColl(t).NewDoc()
+	h := testHelper{t}
+	path := "somePath"
+	want := 7
+
+	h.mustCreate(doc, map[string]interface{}{
+		path: Increment(want),
+	})
+
+	ds := h.mustGet(doc)
+	var gotMap map[string]int
+	if err := ds.DataTo(&gotMap); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := gotMap[path]; !ok {
+		t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+	}
+
+	if gotMap[path] != want {
+		t.Fatalf("want %d, got %d", want, gotMap[path])
+	}
+}
+
+// Also checks that all appropriate types are supported.
+func TestIntegration_Increment_Update(t *testing.T) {
+	type MyInt = int // Test a custom type.
+	for _, tc := range []struct {
+		// All three should be same type.
+		start interface{}
+		inc   interface{}
+		want  interface{}
+
+		wantErr bool
+	}{
+		{start: int(7), inc: int(4), want: int(11)},
+		{start: int8(7), inc: int8(4), want: int8(11)},
+		{start: int16(7), inc: int16(4), want: int16(11)},
+		{start: int32(7), inc: int32(4), want: int32(11)},
+		{start: int64(7), inc: int64(4), want: int64(11)},
+		{start: uint8(7), inc: uint8(4), want: uint8(11)},
+		{start: uint16(7), inc: uint16(4), want: uint16(11)},
+		{start: uint32(7), inc: uint32(4), want: uint32(11)},
+		{start: float32(7.7), inc: float32(4.1), want: float32(11.8)},
+		{start: float64(7.7), inc: float64(4.1), want: float64(11.8)},
+		{start: MyInt(7), inc: MyInt(4), want: MyInt(11)},
+		{start: 7, inc: "strings are not allowed", wantErr: true},
+		{start: 7, inc: uint(3), wantErr: true},
+		{start: 7, inc: uint64(3), wantErr: true},
+	} {
+		typeStr := reflect.TypeOf(tc.inc).String()
+		t.Run(typeStr, func(t *testing.T) {
+			doc := integrationColl(t).NewDoc()
+			h := testHelper{t}
+			path := "somePath"
+
+			h.mustCreate(doc, map[string]interface{}{
+				path: tc.start,
+			})
+			fpus := []Update{
+				{
+					Path:  path,
+					Value: Increment(tc.inc),
+				},
+			}
+			_, err := doc.Update(context.Background(), fpus)
+			if err != nil {
+				if tc.wantErr {
+					return
+				}
+				h.t.Fatalf("%s: updating: %v", loc(), err)
+			}
+			ds := h.mustGet(doc)
+			var gotMap map[string]interface{}
+			if err := ds.DataTo(&gotMap); err != nil {
+				t.Fatal(err)
+			}
+
+			switch tc.want.(type) {
+			case int, int8, int16, int32, int64:
+				if _, ok := gotMap[path]; !ok {
+					t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+				}
+				if got, want := reflect.ValueOf(gotMap[path]).Int(), reflect.ValueOf(tc.want).Int(); got != want {
+					t.Fatalf("want %v, got %v", want, got)
+				}
+			case uint8, uint16, uint32:
+				if _, ok := gotMap[path]; !ok {
+					t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+				}
+				if got, want := uint64(reflect.ValueOf(gotMap[path]).Int()), reflect.ValueOf(tc.want).Uint(); got != want {
+					t.Fatalf("want %v, got %v", want, got)
+				}
+			case float32, float64:
+				if _, ok := gotMap[path]; !ok {
+					t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+				}
+				const precision = 1e-6 // Floats are never precisely comparable.
+				if got, want := reflect.ValueOf(gotMap[path]).Float(), reflect.ValueOf(tc.want).Float(); math.Abs(got-want) > precision {
+					t.Fatalf("want %v, got %v", want, got)
+				}
+			default:
+				// Either some unsupported type was added without specifying
+				// wantErr, or a supported type needs to be added to this
+				// switch statement.
+				t.Fatalf("unsupported type %T", tc.want)
+			}
+		})
+	}
+}
+
+func TestIntegration_Increment_Set(t *testing.T) {
+	coll := integrationColl(t)
+	h := testHelper{t}
+	path := "somePath"
+	want := 9
+
+	doc := coll.NewDoc()
+	newData := map[string]interface{}{
+		path: Increment(want),
+	}
+	h.mustSet(doc, newData)
+	ds := h.mustGet(doc)
+	var gotMap map[string]int
+	if err := ds.DataTo(&gotMap); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := gotMap[path]; !ok {
+		t.Fatalf("expected a %v key in data, got %v", path, gotMap)
+	}
+
+	if gotMap[path] != want {
+		t.Fatalf("want %d, got %d", want, gotMap[path])
+	}
+}
+
 type imap map[string]interface{}
 
 func TestIntegration_WatchQuery(t *testing.T) {
@@ -987,21 +1269,21 @@ func TestIntegration_WatchQuery(t *testing.T) {
 	defer it.Stop()
 
 	next := func() ([]*DocumentSnapshot, []DocumentChange) {
-		diter, err := it.Next()
+		qsnap, err := it.Next()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if it.ReadTime.IsZero() {
+		if qsnap.ReadTime.IsZero() {
 			t.Fatal("zero time")
 		}
-		ds, err := diter.GetAll()
+		ds, err := qsnap.Documents.GetAll()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if it.Size != len(ds) {
-			t.Fatalf("Size=%d but we have %d docs", it.Size, len(ds))
+		if qsnap.Size != len(ds) {
+			t.Fatalf("Size=%d but we have %d docs", qsnap.Size, len(ds))
 		}
-		return ds, it.Changes
+		return ds, qsnap.Changes
 	}
 
 	copts := append([]cmp.Option{cmpopts.IgnoreFields(DocumentSnapshot{}, "ReadTime")}, cmpOpts...)
@@ -1077,8 +1359,78 @@ func TestIntegration_WatchQueryCancel(t *testing.T) {
 	codeEq(t, "after cancel", codes.Canceled, err)
 }
 
+func TestIntegration_MissingDocs(t *testing.T) {
+	ctx := context.Background()
+	h := testHelper{t}
+	client := integrationClient(t)
+	coll := client.Collection(collectionIDs.New())
+	dr1 := coll.NewDoc()
+	dr2 := coll.NewDoc()
+	dr3 := dr2.Collection("sub").NewDoc()
+	h.mustCreate(dr1, integrationTestMap)
+	defer h.mustDelete(dr1)
+	h.mustCreate(dr3, integrationTestMap)
+	defer h.mustDelete(dr3)
+
+	// dr1 is a document in coll. dr2 was never created, but there are documents in
+	// its sub-collections. It is "missing".
+	// The Collection.DocumentRefs method includes missing document refs.
+	want := []string{dr1.Path, dr2.Path}
+	drs, err := coll.DocumentRefs(ctx).GetAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, dr := range drs {
+		got = append(got, dr.Path)
+	}
+	sort.Strings(want)
+	sort.Strings(got)
+	if !testutil.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestIntegration_CollectionGroupQueries(t *testing.T) {
+	shouldBeFoundID := collectionIDs.New()
+	shouldNotBeFoundID := collectionIDs.New()
+
+	ctx := context.Background()
+	h := testHelper{t}
+	client := integrationClient(t)
+	cr1 := client.Collection(shouldBeFoundID)
+	dr1 := cr1.Doc("should-be-found-1")
+	h.mustCreate(dr1, map[string]string{"some-key": "should-be-found"})
+	defer h.mustDelete(dr1)
+
+	dr1.Collection(shouldBeFoundID)
+	dr2 := cr1.Doc("should-be-found-2")
+	h.mustCreate(dr2, map[string]string{"some-key": "should-be-found"})
+	defer h.mustDelete(dr2)
+
+	cr3 := client.Collection(shouldNotBeFoundID)
+	dr3 := cr3.Doc("should-not-be-found")
+	h.mustCreate(dr3, map[string]string{"some-key": "should-NOT-be-found"})
+	defer h.mustDelete(dr3)
+
+	cg := client.CollectionGroup(shouldBeFoundID)
+	snaps, err := cg.Documents(ctx).GetAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snaps) != 2 {
+		t.Fatalf("expected 2 snapshots but got %d", len(snaps))
+	}
+	if snaps[0].Ref.ID != "should-be-found-1" {
+		t.Fatalf("expected ID 'should-be-found-1', got %s", snaps[0].Ref.ID)
+	}
+	if snaps[1].Ref.ID != "should-be-found-2" {
+		t.Fatalf("expected ID 'should-be-found-2', got %s", snaps[1].Ref.ID)
+	}
+}
+
 func codeEq(t *testing.T, msg string, code codes.Code, err error) {
-	if grpc.Code(err) != code {
+	if status.Code(err) != code {
 		t.Fatalf("%s:\ngot <%v>\nwant code %s", msg, err, code)
 	}
 }
@@ -1143,4 +1495,36 @@ func (h testHelper) mustDelete(doc *DocumentRef) *WriteResult {
 		h.t.Fatalf("%s: updating: %v", loc(), err)
 	}
 	return wr
+}
+
+func (h testHelper) mustSet(doc *DocumentRef, data interface{}, opts ...SetOption) *WriteResult {
+	wr, err := doc.Set(context.Background(), data, opts...)
+	if err != nil {
+		h.t.Fatalf("%s: updating: %v", loc(), err)
+	}
+	return wr
+}
+
+func TestDetectProjectID(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Integration tests skipped in short mode")
+	}
+	ctx := context.Background()
+
+	creds := testutil.Credentials(ctx)
+	if creds == nil {
+		t.Skip("Integration tests skipped. See CONTRIBUTING.md for details")
+	}
+
+	// Use creds with project ID.
+	if _, err := NewClient(ctx, DetectProjectID, option.WithCredentials(creds)); err != nil {
+		t.Errorf("NewClient: %v", err)
+	}
+
+	ts := testutil.ErroringTokenSource{}
+	// Try to use creds without project ID.
+	_, err := NewClient(ctx, DetectProjectID, option.WithTokenSource(ts))
+	if err == nil || err.Error() != "firestore: see the docs on DetectProjectID" {
+		t.Errorf("expected an error while using TokenSource that does not have a project ID")
+	}
 }

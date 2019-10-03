@@ -1,25 +1,14 @@
-/*
-Copyright 2016 Google Inc. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2016 Google LLC.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package internal
 
 import (
-	"google.golang.org/grpc/naming"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc/naming"
 )
 
 func TestConnectionPool(t *testing.T) {
@@ -49,9 +38,9 @@ func TestConnectionPool(t *testing.T) {
 		}
 		metaSeen[u.Metadata] = true
 	}
+
 	// Test that Next blocks until Close and returns nil.
 	nextc := make(chan []*naming.Update)
-	closedc := make(chan bool)
 	go func() {
 		next, err := watcher.Next()
 		if err != nil {
@@ -59,24 +48,19 @@ func TestConnectionPool(t *testing.T) {
 		}
 		nextc <- next
 	}()
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		watcher.Close()
-		close(closedc)
-	}()
-
+	time.Sleep(50 * time.Millisecond) // wait for watcher.Next goroutine
 	select {
 	case <-nextc:
-		t.Fatalf("Next: second invocation didn't block, returned before Close()")
-	case <-closedc:
-		// OK, watcher was closed before Next() returned.
+		t.Fatal("next should not have been called yet")
+	default:
 	}
+	watcher.Close()
 	select {
 	case next := <-nextc:
 		if next != nil {
 			t.Errorf("Next: expected nil, got %v", next)
 		}
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(50 * time.Millisecond):
 		t.Error("Next: did not return after 100ms")
 	}
 }

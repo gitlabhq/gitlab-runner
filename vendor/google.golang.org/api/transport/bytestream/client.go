@@ -1,16 +1,6 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2016 Google LLC.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 // Package bytestream provides a client for any service that exposes a ByteStream API.
 //
@@ -21,11 +11,11 @@ package bytestream
 // https://github.com/googleapis/googleapis/blob/master/google/bytestream/bytestream.proto
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	pb "google.golang.org/genproto/googleapis/bytestream"
@@ -128,7 +118,7 @@ func (c *Client) NewReader(ctx context.Context, resourceName string) (*Reader, e
 	return c.NewReaderAt(ctx, resourceName, 0)
 }
 
-// NewReader creates a new Reader to read a resource from the given offset.
+// NewReaderAt creates a new Reader to read a resource from the given offset.
 func (c *Client) NewReaderAt(ctx context.Context, resourceName string, offset int64) (*Reader, error) {
 	// readClient is set up for Read(). ReadAt() will copy needed fields into its reentrantReader.
 	readClient, err := c.client.Read(ctx, &pb.ReadRequest{
@@ -153,7 +143,6 @@ type Writer struct {
 	writeClient  pb.ByteStream_WriteClient
 	resourceName string
 	offset       int64
-	backoffDelay time.Duration
 	err          error
 }
 

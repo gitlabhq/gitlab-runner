@@ -15,13 +15,13 @@
 package datastore
 
 import (
+	"context"
 	"fmt"
-
-	gax "github.com/googleapis/gax-go"
+	"time"
 
 	"cloud.google.com/go/internal"
 	"cloud.google.com/go/internal/version"
-	"golang.org/x/net/context"
+	gax "github.com/googleapis/gax-go/v2"
 	pb "google.golang.org/genproto/googleapis/datastore/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -99,7 +99,7 @@ func (dc *datastoreClient) AllocateIds(ctx context.Context, in *pb.AllocateIdsRe
 
 func (dc *datastoreClient) invoke(ctx context.Context, f func(ctx context.Context) error) error {
 	ctx = metadata.NewOutgoingContext(ctx, dc.md)
-	return internal.Retry(ctx, gax.Backoff{}, func() (stop bool, err error) {
+	return internal.Retry(ctx, gax.Backoff{Initial: 100 * time.Millisecond}, func() (stop bool, err error) {
 		err = f(ctx)
 		return !shouldRetry(err), err
 	})

@@ -1,4 +1,4 @@
-// Copyright 4 Google LLC
+// Copyright 2014 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,27 +47,9 @@ func saveEntity(key *Key, src interface{}) (*pb.Entity, error) {
 	return propertiesToProto(key, props)
 }
 
-// TODO(djd): Convert this and below to return ([]Property, error).
-func saveStructProperty(props *[]Property, name string, opts saveOpts, v reflect.Value) error {
-	p := Property{
-		Name:    name,
-		NoIndex: opts.noIndex,
-	}
-
-	if opts.omitEmpty && isEmptyValue(v) {
-		return nil
-	}
-
-	// First check if field type implements PLS. If so, use PLS to
-	// save.
-	ok, err := plsFieldSave(props, p, name, opts, v)
-	if err != nil {
-		return err
-	}
-	if ok {
-		return nil
-	}
-
+// reflectFieldSave extracts the underlying value of v by reflection,
+// and tries to extract a Property that'll be appended to props.
+func reflectFieldSave(props *[]Property, p Property, name string, opts saveOpts, v reflect.Value) error {
 	switch x := v.Interface().(type) {
 	case *Key, time.Time, GeoPoint:
 		p.Value = x
@@ -81,6 +63,13 @@ func saveStructProperty(props *[]Property, name string, opts saveOpts, v reflect
 			p.Value = v.String()
 		case reflect.Float32, reflect.Float64:
 			p.Value = v.Float()
+
+		case reflect.Interface:
+			// Extract the interface's underlying value and then retry the save.
+			// See issue https://github.com/googleapis/google-cloud-go/issues/1474.
+			v = v.Elem()
+			return reflectFieldSave(props, p, name, opts, v)
+
 		case reflect.Slice:
 			if v.Type().Elem().Kind() == reflect.Uint8 {
 				p.Value = v.Bytes()
@@ -95,6 +84,10 @@ func saveStructProperty(props *[]Property, name string, opts saveOpts, v reflect
 					*props = append(*props, p)
 					return nil
 				}
+				// When we recurse on the derefenced pointer, omitempty no longer applies:
+				// we already know the pointer is not empty, it doesn't matter if its referent
+				// is empty or not.
+				opts.omitEmpty = false
 				return saveStructProperty(props, name, opts, v.Elem())
 			}
 			if v.Type().Elem().Kind() != reflect.Struct {
@@ -137,11 +130,36 @@ func saveStructProperty(props *[]Property, name string, opts saveOpts, v reflect
 			}
 		}
 	}
+
 	if p.Value == nil {
 		return fmt.Errorf("datastore: unsupported struct field type: %v", v.Type())
 	}
 	*props = append(*props, p)
 	return nil
+}
+
+// TODO(djd): Convert this and below to return ([]Property, error).
+func saveStructProperty(props *[]Property, name string, opts saveOpts, v reflect.Value) error {
+	p := Property{
+		Name:    name,
+		NoIndex: opts.noIndex,
+	}
+
+	if opts.omitEmpty && isEmptyValue(v) {
+		return nil
+	}
+
+	// First check if field type implements PLS. If so, use PLS to
+	// save.
+	ok, err := plsFieldSave(props, p, name, opts, v)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+
+	return reflectFieldSave(props, p, name, opts, v)
 }
 
 // plsFieldSave first tries to converts v's value to a PLS, then v's addressed
@@ -306,7 +324,7 @@ func propertiesToProto(key *Key, props []Property) (*pb.Entity, error) {
 	}
 	indexedProps := 0
 	for _, p := range props {
-		// Do not send a Key value a a field to datastore.
+		// Do not send a Key value a field to datastore.
 		if p.Name == keyFieldName {
 			continue
 		}
