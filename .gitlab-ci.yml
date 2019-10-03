@@ -133,10 +133,6 @@ clone test repo:
 tests definitions:
   <<: *except_docs
   stage: prebuild
-  # Using Go 1.10, because the `go test -list` is unavailable in <1.9
-  # and it's much faster in 1.10. And since there is no real test execution
-  # in this step, the version difference doesn't matter
-  image: golang:1.10
   script:
   - apt-get update
   - apt-get install -y make
@@ -315,7 +311,6 @@ git 1.7.1:
 .coverage_job: &coverage_job
   <<: *except_docs
   stage: coverage
-  image: golang:1.10
   when: always
 
 test coverage report:
