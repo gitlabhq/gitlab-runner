@@ -1,3 +1,5 @@
-for file in $(find out .gopath -type f); do
-    touch $file
+for file in $(find out -type f); do
+    echo "touching ${file}"
+    touch ${file}
 done
+

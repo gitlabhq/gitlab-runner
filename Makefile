@@ -34,15 +34,6 @@ COMMON_PACKAGE_NAMESPACE=$(PKG)/common
 BUILD_DIR := $(CURDIR)
 TARGET_DIR := $(BUILD_DIR)/out
 
-ORIGINAL_GOPATH = $(shell echo $$GOPATH)
-LOCAL_GOPATH := $(CURDIR)/.gopath
-GOPATH_SETUP := $(LOCAL_GOPATH)/.ok
-GOPATH_BIN := $(LOCAL_GOPATH)/bin
-PKG_BUILD_DIR := $(LOCAL_GOPATH)/src/$(PKG)
-
-export GOPATH = $(LOCAL_GOPATH)
-export PATH := $(GOPATH_BIN):$(PATH)
-
 # Packages in vendor/ are included in ./...
 # https://github.com/golang/go/issues/11659
 export OUR_PACKAGES ?= $(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
@@ -51,13 +42,13 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PA
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
               -s -w
-GO_FILES ?= $(shell find . -name '*.go' | grep -v './.gopath/')
+GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED ?= 0
 
 
 # Development Tools
-GOX = $(GOPATH_BIN)/gox
-MOCKERY = $(GOPATH_BIN)/mockery
+GOX = gox
+MOCKERY = mockery
 DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
 
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
@@ -110,26 +101,26 @@ codequality:
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
-test: $(PKG_BUILD_DIR) helper-docker development_setup
+test: helper-docker development_setup
 	go test $(OUR_PACKAGES) $(TESTFLAGS)
 
-parallel_test_prepare: $(GOPATH_SETUP)
+parallel_test_prepare:
 	# Preparing test commands
 	@./scripts/go_test_with_coverage_report prepare
 
-parallel_test_execute: $(GOPATH_SETUP) pull_images_for_tests
+parallel_test_execute: pull_images_for_tests
 	# executing tests
 	@./scripts/go_test_with_coverage_report execute
 
-parallel_test_coverage_report: $(GOPATH_SETUP)
+parallel_test_coverage_report:
 	# Preparing coverage report
 	@./scripts/go_test_with_coverage_report coverage
 
-parallel_test_junit_report: $(GOPATH_SETUP)
+parallel_test_junit_report:
 	# Preparing jUnit test report
 	@./scripts/go_test_with_coverage_report junit
 
-pull_images_for_tests: $(GOPATH_SETUP)
+pull_images_for_tests:
 	# Pulling images required for some tests
 	@go run ./scripts/pull-images-for-tests/main.go
 
@@ -139,21 +130,20 @@ install:
 dockerfiles:
 	make -C dockerfiles all
 
-# We rely on user GOPATH 'cause mockery seems not to be able to find dependencies in vendor directory
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./helpers/docker -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./helpers/certificate -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./helpers/fslocker -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./executors/docker -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./executors/custom -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./cache -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./log -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./session -all -inpkg
-	GOPATH=$(ORIGINAL_GOPATH) mockery $(MOCKERY_FLAGS) -dir=./shells -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
+	mockery $(MOCKERY_FLAGS) -dir=./helpers/docker -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./helpers/certificate -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./helpers/fslocker -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./executors/docker -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./executors/custom -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./cache -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./log -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./session -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./shells -all -inpkg
 
 test-docker:
 	make test-docker-image IMAGE=centos:6 TYPE=rpm
@@ -262,7 +252,7 @@ check-tags-in-changelog:
 		echo "$$tag:   \t $$state"; \
 	done
 
-update_feature_flags_docs: $(GOPATH_SETUP)
+update_feature_flags_docs:
 	go run ./scripts/update-feature-flags-docs/main.go
 
 development_setup:
@@ -270,22 +260,12 @@ development_setup:
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 
-# local GOPATH
-$(GOPATH_SETUP): $(PKG_BUILD_DIR)
-	mkdir -p $(GOPATH_BIN)
-	touch $@
-
-$(PKG_BUILD_DIR):
-	mkdir -p $(@D)
-	ln -s ../../../.. $@
-
 # development tools
-$(GOX): $(GOPATH_SETUP)
+$(GOX):
 	go get github.com/mitchellh/gox
 
-$(MOCKERY): $(GOPATH_SETUP)
+$(MOCKERY):
 	go get github.com/vektra/mockery/.../
 
 clean:
-	-$(RM) -rf $(LOCAL_GOPATH)
 	-$(RM) -rf $(TARGET_DIR)
