@@ -15,7 +15,7 @@ requested by their `coordinator`.
 
 ### Where are logs stored when run as a service?
 
-- If the GitLab Runner is run as service on Linux/OSX the daemon logs to syslog.
+- If the GitLab Runner is run as service on Linux/macOS the daemon logs to syslog.
 - If the GitLab Runner is run as service on Windows it logs to System's Event Log.
 
 ### Run in `--debug` mode
@@ -305,7 +305,7 @@ causes to why this happens:
    Previously, when running GitLab Runner as a service, we were creating
    `LaunchAgents` with `SessionCreate`. At that point (**Mavericks**), this was
    the only solution to make Code Signing work. That changed recently with
-   **OSX El Capitan** which introduced a lot of new security features that
+   **OS X El Capitan** which introduced a lot of new security features that
    altered this behavior.
    Since GitLab Runner 1.1, when creating a `LaunchAgent`, we don't set
    `SessionCreate`. However, in order to upgrade, you need to manually
