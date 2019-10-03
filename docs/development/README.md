@@ -6,7 +6,7 @@
 
 ```bash
 sudo apt-get install -y mercurial git-core wget make build-essential
-wget https://storage.googleapis.com/golang/go1.10.8.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.13.4.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
@@ -15,21 +15,21 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 Using binary package:
 
 ```sh
-wget https://storage.googleapis.com/golang/go1.10.8.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.13.4.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 Using installation package:
 
 ```sh
-wget https://storage.googleapis.com/golang/go1.10.8.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.13.4.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
 ### For FreeBSD
 
 ```
-pkg install go-1.10.8 gmake git mercurial
+pkg install go-1.13.4 gmake git mercurial
 ```
 
 ## 2. Install Docker Engine
