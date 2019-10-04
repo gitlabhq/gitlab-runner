@@ -1,3 +1,16 @@
+// Copyright 2018 The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package procfs
 
 import (
@@ -14,7 +27,7 @@ var (
 		OutgoingBytes:   0,
 	}
 	expectedIPVSBackendStatuses = []IPVSBackendStatus{
-		IPVSBackendStatus{
+		{
 			LocalAddress:  net.ParseIP("192.168.0.22"),
 			LocalPort:     3306,
 			RemoteAddress: net.ParseIP("192.168.82.22"),
@@ -24,7 +37,7 @@ var (
 			ActiveConn:    248,
 			InactConn:     2,
 		},
-		IPVSBackendStatus{
+		{
 			LocalAddress:  net.ParseIP("192.168.0.22"),
 			LocalPort:     3306,
 			RemoteAddress: net.ParseIP("192.168.83.24"),
@@ -34,7 +47,7 @@ var (
 			ActiveConn:    248,
 			InactConn:     2,
 		},
-		IPVSBackendStatus{
+		{
 			LocalAddress:  net.ParseIP("192.168.0.22"),
 			LocalPort:     3306,
 			RemoteAddress: net.ParseIP("192.168.83.21"),
@@ -44,7 +57,7 @@ var (
 			ActiveConn:    248,
 			InactConn:     1,
 		},
-		IPVSBackendStatus{
+		{
 			LocalAddress:  net.ParseIP("192.168.0.57"),
 			LocalPort:     3306,
 			RemoteAddress: net.ParseIP("192.168.84.22"),
@@ -54,7 +67,7 @@ var (
 			ActiveConn:    0,
 			InactConn:     0,
 		},
-		IPVSBackendStatus{
+		{
 			LocalAddress:  net.ParseIP("192.168.0.57"),
 			LocalPort:     3306,
 			RemoteAddress: net.ParseIP("192.168.82.21"),
@@ -64,7 +77,7 @@ var (
 			ActiveConn:    1499,
 			InactConn:     0,
 		},
-		IPVSBackendStatus{
+		{
 			LocalAddress:  net.ParseIP("192.168.0.57"),
 			LocalPort:     3306,
 			RemoteAddress: net.ParseIP("192.168.50.21"),
@@ -74,7 +87,7 @@ var (
 			ActiveConn:    1498,
 			InactConn:     0,
 		},
-		IPVSBackendStatus{
+		{
 			LocalAddress:  net.ParseIP("192.168.0.55"),
 			LocalPort:     3306,
 			RemoteAddress: net.ParseIP("192.168.50.26"),
@@ -84,7 +97,7 @@ var (
 			ActiveConn:    0,
 			InactConn:     0,
 		},
-		IPVSBackendStatus{
+		{
 			LocalAddress:  net.ParseIP("192.168.0.55"),
 			LocalPort:     3306,
 			RemoteAddress: net.ParseIP("192.168.49.32"),
@@ -94,11 +107,63 @@ var (
 			ActiveConn:    0,
 			InactConn:     0,
 		},
+		{
+			LocalAddress:  net.ParseIP("2620::1"),
+			LocalPort:     80,
+			RemoteAddress: net.ParseIP("2620::2"),
+			RemotePort:    80,
+			Proto:         "TCP",
+			Weight:        1,
+			ActiveConn:    0,
+			InactConn:     0,
+		},
+		{
+			LocalAddress:  net.ParseIP("2620::1"),
+			LocalPort:     80,
+			RemoteAddress: net.ParseIP("2620::3"),
+			RemotePort:    80,
+			Proto:         "TCP",
+			Weight:        1,
+			ActiveConn:    0,
+			InactConn:     0,
+		},
+		{
+			LocalAddress:  net.ParseIP("2620::1"),
+			LocalPort:     80,
+			RemoteAddress: net.ParseIP("2620::4"),
+			RemotePort:    80,
+			Proto:         "TCP",
+			Weight:        1,
+			ActiveConn:    1,
+			InactConn:     1,
+		},
+		{
+			LocalMark:     "10001000",
+			RemoteAddress: net.ParseIP("192.168.50.26"),
+			RemotePort:    3306,
+			Proto:         "FWM",
+			Weight:        0,
+			ActiveConn:    0,
+			InactConn:     1,
+		},
+		{
+			LocalMark:     "10001000",
+			RemoteAddress: net.ParseIP("192.168.50.21"),
+			RemotePort:    3306,
+			Proto:         "FWM",
+			Weight:        0,
+			ActiveConn:    0,
+			InactConn:     2,
+		},
 	}
 )
 
 func TestIPVSStats(t *testing.T) {
-	stats, err := FS("fixtures").NewIPVSStats()
+	fs, err := NewFS(procTestFixtures)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stats, err := fs.IPVSStats()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,18 +207,17 @@ func TestParseIPPortIPv6(t *testing.T) {
 	ip := net.ParseIP("dead:beef::1")
 	port := uint16(8080)
 
-	gotIP, gotPort, err := parseIPPort("DEADBEEF000000000000000000000001:1F90")
+	gotIP, gotPort, err := parseIPPort("[DEAD:BEEF:0000:0000:0000:0000:0000:0001]:1F90")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !(gotIP.Equal(ip) && port == gotPort) {
 		t.Errorf("want %s:%d, have %s:%d", ip, port, gotIP, gotPort)
 	}
-
 }
 
 func TestIPVSBackendStatus(t *testing.T) {
-	backendStats, err := FS("fixtures").NewIPVSBackendStatus()
+	backendStats, err := getProcFixtures(t).IPVSBackendStatus()
 	if err != nil {
 		t.Fatal(err)
 	}
