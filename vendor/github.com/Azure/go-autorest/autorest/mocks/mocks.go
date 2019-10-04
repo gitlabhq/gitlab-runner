@@ -37,6 +37,14 @@ func NewBody(s string) *Body {
 	return (&Body{s: s}).reset()
 }
 
+// NewBodyWithBytes creates a new instance of Body.
+func NewBodyWithBytes(b []byte) *Body {
+	return &Body{
+		b:      b,
+		isOpen: true,
+	}
+}
+
 // NewBodyClose creates a new instance of Body.
 func NewBodyClose(s string) *Body {
 	return &Body{s: s}
@@ -78,6 +86,14 @@ func (body *Body) reset() *Body {
 	body.isOpen = true
 	body.b = []byte(body.s)
 	return body
+}
+
+// Length returns the number of bytes in the body.
+func (body *Body) Length() int64 {
+	if body == nil {
+		return 0
+	}
+	return int64(len(body.b))
 }
 
 type response struct {

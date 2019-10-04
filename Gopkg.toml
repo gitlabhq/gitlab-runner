@@ -179,7 +179,7 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "github.com/Azure/go-autorest"
-  revision = "d4e6b95c12a08b4de2d48b45d5b4d594e5d32fab"
+  version = "v13.0.0"
 
 [[override]]
   name = "github.com/Microsoft/go-winio"

@@ -1,4 +1,6 @@
-package utils
+// +build modhack
+
+package auth
 
 // Copyright 2017 Microsoft Corporation
 //
@@ -14,19 +16,9 @@ package utils
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-import (
-	"bytes"
-	"os/exec"
-)
+// This file, and the github.com/Azure/go-autorest/autorest import, won't actually become part of
+// the resultant binary.
 
-// GetCommit returns git HEAD (short)
-func GetCommit() string {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		return ""
-	}
-	return string(out.Bytes()[:7])
-}
+// Necessary for safely adding multi-module repo.
+// See: https://github.com/golang/go/wiki/Modules#is-it-possible-to-add-a-module-to-a-multi-module-repository
+import _ "github.com/Azure/go-autorest/autorest"
