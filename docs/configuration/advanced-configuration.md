@@ -628,7 +628,9 @@ get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-
 
 NOTE: **Note:**
 If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified, then the S3 client will use the
-IAM instance profile available to the `gitlab-runner` instance.
+IAM instance profile available to the `gitlab-runner` instance. In an
+[autoscale](autoscale.md) configuration, this is *NOT* the machine created on
+demand that jobs are executed on.
 
 ### The `[runners.cache.gcs]` section
 
