@@ -78,9 +78,9 @@ When a new build is started:
 - Install [Cygwin]
 - Install sshd and Git from Cygwin (do not use *Git For Windows*, you will get lots of path issues!)
 - Install Git LFS
-- Configure sshd and set it up as a service (see [Cygwin wiki](http://cygwin.wikia.com/wiki/Sshd))
+- Configure sshd and set it up as a service (see [Cygwin wiki](https://cygwin.fandom.com/wiki/Sshd))
 - Create a rule for the Windows Firewall to allow incoming TCP traffic on port 22
 - Add the GitLab server(s) to `~/.ssh/known_hosts`
-- To convert paths between cygwin and windows, use the `cygpath` utility which is documented [here](http://cygwin.wikia.com/wiki/Cygpath_utility)
+- To convert paths between cygwin and windows, use the `cygpath` utility which is documented [here](https://cygwin.fandom.com/wiki/Cygpath_utility)
 
 [cygwin]: https://cygwin.com/

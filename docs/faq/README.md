@@ -41,7 +41,7 @@ Check your SELinux policy on your system for possible denials.
 ### The Docker executor gets timeout when building Java project
 
 This most likely happens, because of the broken AUFS storage driver:
-[Java process hangs on inside container](https://github.com/docker/docker/issues/18502).
+[Java process hangs on inside container](https://github.com/moby/moby/issues/18502).
 The best solution is to change the [storage driver](https://docs.docker.com/engine/userguide/storagedriver/selectadriver/)
 to either OverlayFS (faster) or DeviceMapper (slower).
 
@@ -50,7 +50,7 @@ or this article about [control and configure with systemd](https://docs.docker.c
 
 ### I get 411 when uploading artifacts
 
-This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of Nginx (<http://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
+This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of Nginx (<https://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
 
 Upgrade your Nginx to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1031>
 
@@ -183,7 +183,7 @@ project to use `git fetch` from the GitLab CI project settings page.
 
 #### b) Use NTFSSecurity tools for PowerShell
 
-The [NTFSSecurity](https://ntfssecurity.codeplex.com/) PowerShell module provides
+The [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShell module provides
 a *Remove-Item2* method which supports long paths. The GitLab CI Multi Runner will
 detect it if it is available and automatically make use of it.
 
@@ -213,10 +213,10 @@ running in a UNIX ANSI terminal emulator (because that's what the webUI's output
 The web interface for GitLab CI emulates a UNIX ANSI terminal (at least partially). The `gitlab-runner` pipes any output from the build
 directly to the web interface. That means that any ANSI color codes that are present will be honored.
 
-Windows' CMD terminal (before Win10 ([source](http://www.nivot.org/blog/post/2016/02/04/Windows-10-TH2-(v1511)-Console-Host-Enhancements)))
-does not support ANSI color codes - it uses win32 ([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) calls instead which are **not** present in
+Older versions of Windows' CMD terminal (before Win10 version 1511) do not support
+ANSI color codes - they use win32 ([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) calls instead which are **not** present in
 the string to be displayed. When writing cross-platform programs, a developer will typically use ANSI color codes by default and convert
-them to win32 calls when running on a Windows system (example: [Colorama](https://pypi.python.org/pypi/colorama)).
+them to win32 calls when running on a Windows system (example: [Colorama](https://pypi.org/project/colorama/)).
 
 If your program is doing the above, then you need to disable that conversion for the CI builds so that the ANSI codes remain in the string.
 
@@ -248,7 +248,7 @@ You can add `SeServiceLogonRight` in two ways:
    - click on the _Add User or Group..._ button,
    - add the user ("by hand" or using _Advanced..._ button) and apply the settings.
 
-     > **Notice:** According to [Microsoft's documentation][microsoft-manually-set-seservicelogonright]
+     > **Notice:** According to [Microsoft's documentation](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))
      > this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
      > Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, Windows 8
      >
@@ -256,13 +256,13 @@ You can add `SeServiceLogonRight` in two ways:
      > Windows versions - for example in "Home Edition" variant of each version.
 
 1. From command line, using the `Ntrights.exe` tool:
-   - Download tools from [Microsoft's download site][microsoft-ntrights-download],
+   - Download tools from [Microsoft's download site](https://www.microsoft.com/en-us/download/details.aspx?id=17657),
    - execute `ntrights.exe ntrights +r SeServiceLogonRight -u USER_NAME_HERE` (remember,
      that you should provide a full path for `ntrights.exe` executable **or** add that
      path to system's `PATH` environment variable).
 
      > **Notice:** The tool was created in 2003 and was initially designed to use
-     > with Windows XP and Windows Server 2003. On [Microsoft sites][microsoft-ntrights-usage-on-win7]
+     > with Windows XP and Windows Server 2003. On [Microsoft sites][microsoft-ntrights-usage-on-win7](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/dd548356(v=ws.10))
      > you can find an example of usage `Ntrights.exe` that applies to Windows 7 and Windows Server 2008 R2.
      > This solution is not tested and because of the age of the software **it may not work
      > on newest Windows versions**.
@@ -270,10 +270,6 @@ You can add `SeServiceLogonRight` in two ways:
 After adding the `SeServiceLogonRight` for the user used in service configuration,
 the command `gitlab-runner start` should finish without failures
 and the service should be started properly.
-
-[microsoft-manually-set-seservicelogonright]: https://technet.microsoft.com/en-us/library/dn221981
-[microsoft-ntrights-download]: https://www.microsoft.com/en-us/download/details.aspx?id=17657
-[microsoft-ntrights-usage-on-win7]: https://technet.microsoft.com/en-us/library/dd548356(WS.10).aspx
 
 ## macOS troubleshooting
 
