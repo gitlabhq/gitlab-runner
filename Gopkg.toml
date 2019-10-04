@@ -127,15 +127,15 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "k8s.io/client-go"
-  branch = "release-7.0"
+  branch = "release-11.0"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  branch = "release-1.10"
+  branch = "release-1.14"
 
 [[constraint]]
   name = "k8s.io/api"
-  branch = "release-1.10"
+  branch = "release-1.14"
 
 [[constraint]]
   name = "github.com/mattn/go-zglob"
