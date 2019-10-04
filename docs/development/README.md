@@ -134,10 +134,10 @@ skipped.
 These are the binaries that you can install:
 
 1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html)
-1. [kubectl](https://kubernetes.io/docs/user-guide/prereqs/) with
+1. [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) with
    [Minikube](https://github.com/kubernetes/minikube)
-1. [Parallels](http://www.parallels.com/products/desktop/download/)
-1. [PowerShell](https://msdn.microsoft.com/en-us/powershell)
+1. [Parallels](https://www.parallels.com/products/desktop/download/)
+1. [PowerShell](https://docs.microsoft.com/en-us/powershell/)
 
 After installing the binaries run:
 

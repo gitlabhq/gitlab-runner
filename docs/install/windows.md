@@ -106,7 +106,7 @@ If you don't have a Windows Password, Runner's service won't start but you can
 use the Built-in System Account.
 
 If you have issues with the Built-in System Account, please read
-[How to Configure the Service to Start Up with the Built-in System Account](https://support.microsoft.com/en-us/kb/327545#6)
+[How to Configure the Service to Start Up with the Built-in System Account](https://support.microsoft.com/en-us/help/327545/how-to-troubleshoot-service-startup-permissions-in-windows-server-2003#6)
 on Microsoft's support website.
 
 [x86]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-386.exe

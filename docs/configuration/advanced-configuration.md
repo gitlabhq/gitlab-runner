@@ -77,7 +77,7 @@ but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/issu
 The section `[session_server]` is a system runner level configuration, so it should be specified at the root level,
 not per executor i.e. it should be outside `[[runners]]` section. The session server allows the user to interact
 with jobs that the Runner is responsible for. A good example of this is the
-[interactive web terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal).
+[interactive web terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/index.html).
 
 Both `listen_address` and `advertise_address` should be provided in the form
 of `host:port`, where `host` may be an IP address (e.g., `127.0.0.1:8093`)
@@ -219,7 +219,7 @@ This defines the Docker Container parameters.
 | `volumes_from`              | Specify a list of volumes to inherit from another container in the form `\<container name\>[:\<ro&#124;rw\>]` |
 | `volume_driver`             | Specify the volume driver to use for the container |
 | `links`                     | Specify containers which should be linked with building container |
-| `services`                  | Specify additional services that should be run with build. Please visit [Docker Registry](https://registry.hub.docker.com/) for list of available applications. Each service will be run in separate container and linked to the build. |
+| `services`                  | Specify additional services that should be run with build. Please visit [Docker Registry](https://hub.docker.com) for list of available applications. Each service will be run in separate container and linked to the build. |
 | `allowed_images`            | Specify wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `allowed_services`          | Specify wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |

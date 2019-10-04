@@ -46,7 +46,7 @@ S3-compatible caching server:
 1. Login to a dedicated machine where the cache server will be running
 1. Make sure that [Docker Engine](https://docs.docker.com/install/) is installed
    on that machine
-1. Start [minio](https://minio.io/), a simple S3-compatible server written in Go:
+1. Start [minio](https://min.io), a simple S3-compatible server written in Go:
 
    ```bash
    docker run -it --restart always -p 9005:9000 \

@@ -275,7 +275,7 @@ registry. Read more on [using a private Docker registry][runner-priv-reg].
 Let's say that you need a Wordpress instance to test some API integration with
 your application.
 
-You can then use for example the [tutum/wordpress][] as a service image in your
+You can then use for example the [tutum/wordpress](https://hub.docker.com/r/tutum/wordpress/) as a service image in your
 `.gitlab-ci.yml`:
 
 ```yaml
@@ -652,7 +652,6 @@ This executor is no longer maintained and will be removed in the near future.
 [docker engine]: https://www.docker.com/products/container-runtime
 [hub]: https://hub.docker.com/
 [linking-containers]: https://docs.docker.com/engine/userguide/networking/default_network/dockerlinks/
-[tutum/wordpress]: https://registry.hub.docker.com/u/tutum/wordpress/
 [postgres-hub]: https://registry.hub.docker.com/u/library/postgres/
 [mysql-hub]: https://registry.hub.docker.com/u/library/mysql/
 [runner-priv-reg]: ../configuration/advanced-configuration.md#using-a-private-container-registry
