@@ -122,9 +122,8 @@ ignored = ["test", "appengine"]
   revision = "d0887baf81f4598189d4e12a37c6da86f0bba4d0"
 
 [[constraint]]
-  # branch = "v2"
   name = "gopkg.in/yaml.v2"
-  revision = "e4d366fc3c7938e2958e662b4258c7a89e1f0e3e"
+  version = "2.2.4"
 
 [[constraint]]
   name = "k8s.io/client-go"
