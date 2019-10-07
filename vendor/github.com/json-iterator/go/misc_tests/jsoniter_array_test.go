@@ -3,9 +3,10 @@ package misc_tests
 import (
 	"bytes"
 	"encoding/json"
+	"testing"
+
 	"github.com/json-iterator/go"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_empty_array(t *testing.T) {
@@ -157,6 +158,27 @@ func Test_encode_byte_array(t *testing.T) {
 	should.Equal(`"AQID"`, string(bytes))
 }
 
+func Test_encode_empty_byte_array(t *testing.T) {
+	should := require.New(t)
+	bytes, err := json.Marshal([]byte{})
+	should.Nil(err)
+	should.Equal(`""`, string(bytes))
+	bytes, err = jsoniter.Marshal([]byte{})
+	should.Nil(err)
+	should.Equal(`""`, string(bytes))
+}
+
+func Test_encode_nil_byte_array(t *testing.T) {
+	should := require.New(t)
+	var nilSlice []byte
+	bytes, err := json.Marshal(nilSlice)
+	should.Nil(err)
+	should.Equal(`null`, string(bytes))
+	bytes, err = jsoniter.Marshal(nilSlice)
+	should.Nil(err)
+	should.Equal(`null`, string(bytes))
+}
+
 func Test_decode_byte_array_from_base64(t *testing.T) {
 	should := require.New(t)
 	data := []byte{}
@@ -164,6 +186,17 @@ func Test_decode_byte_array_from_base64(t *testing.T) {
 	should.Nil(err)
 	should.Equal([]byte{1, 2, 3}, data)
 	err = jsoniter.Unmarshal([]byte(`"AQID"`), &data)
+	should.Nil(err)
+	should.Equal([]byte{1, 2, 3}, data)
+}
+
+func Test_decode_byte_array_from_base64_with_newlines(t *testing.T) {
+	should := require.New(t)
+	data := []byte{}
+	err := json.Unmarshal([]byte(`"A\rQ\nID"`), &data)
+	should.Nil(err)
+	should.Equal([]byte{1, 2, 3}, data)
+	err = jsoniter.Unmarshal([]byte(`"A\rQ\nID"`), &data)
 	should.Nil(err)
 	should.Equal([]byte{1, 2, 3}, data)
 }
