@@ -173,10 +173,6 @@ ignored = ["test", "appengine"]
   name = "github.com/zakjan/cert-chain-resolver"
   version = "1.0.2"
 
-##
-## Refrain innovations ;)
-##
-
 [[override]]
   name = "github.com/Azure/go-autorest"
   version = "v13.0.0"
