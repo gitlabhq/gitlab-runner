@@ -317,3 +317,7 @@ ignored = ["test", "appengine"]
   # v1.14.0 introduced a compilation error with one of it dependencies,
   # so forcing v1.13.0 which works
   version = "=v1.13.0"
+
+[[override]]
+   name = "github.com/json-iterator/go"
+   version = "v1.1.7"
