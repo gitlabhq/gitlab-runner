@@ -127,15 +127,15 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "k8s.io/client-go"
-  branch = "release-7.0"
+  branch = "release-11.0"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  branch = "release-1.10"
+  branch = "release-1.14"
 
 [[constraint]]
   name = "k8s.io/api"
-  branch = "release-1.10"
+  branch = "release-1.14"
 
 [[constraint]]
   name = "github.com/mattn/go-zglob"
@@ -179,7 +179,7 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "github.com/Azure/go-autorest"
-  revision = "d4e6b95c12a08b4de2d48b45d5b4d594e5d32fab"
+  version = "v13.0.0"
 
 [[override]]
   name = "github.com/Microsoft/go-winio"
