@@ -1,3 +1,33 @@
+v12.4.0-rc1 (2019-10-08)
+
+- Fix err logging for runner limit !1403
+- Add the note about incompatibility of session_server with helm chart runner !1575
+- Fix prepare_exec typo in docs !1576
+- Docs edits to clarify feature flags motivations and usage in Runner !1568
+- Change log levels for common errors !1578
+- Extend custom executor config !1583
+- Fix JSON inside of docs !1587
+- Update link for Helm chart issue tracker !1588
+- Add pipeline ID to docker labels !1592
+- Fix typo in helpers/path/windows_path !1594
+- Fix broken check for Git LFS that breaks lfs pulling !1599
+- Update advanced-configuration.md !1597
+- Use certutil to create certificate chain for Git !1581
+- Add Go Report Card badge to the README file !1601
+- Add pipeline link !1608
+- Rename mentions of OSX to MacOS !1440
+- Enable pinentry mode to loopback for GPG signing !1614
+- Update various runner doc links !1585
+- Add note about IAM role usage for s3 cache configuration !1598
+- Bump used Go version to 1.10.8 !1617
+- Update gopkg.in/yaml.v2 !1619
+- Update prometheus libraries !1620
+- Bump github.com/json-iterator/go to 1.1.7 !1621
+- Update k8s client go to 11.0 !1615
+- Rename log to trace in runner docs !1616
+- Change Review priority label meaning !1600
+- Add timeout when waiting for the build to finish !1609
+
 v12.3.0 (2019-09-20)
 
 - Change log levels for common errors !1578
