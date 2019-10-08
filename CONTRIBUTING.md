@@ -23,13 +23,13 @@ The following contents has to be considered as an extension over [gitlab-ce cont
 
 ### How we prioritize MRs from the wider community
 
-Currently we use a system of [scoped labels](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels-premium) to help us prioritize which MRs our team will review. 
+Currently we use a system of [scoped labels](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels-premium) to help us prioritize which MRs our team will review.
 
 | Label | Meaning | Use Cases |
 | ---- | ----- | ----- |
-| ~"Review::P1" | Highest priority to review | Indicates an MR that might solve an urgent pain point for users, contributes to the strategic direction of the runner development as laid out by the Product team, or fixes a critical issue. We maintain a hard cap on the number of contributions marked ~"Review::P1" at which is currently set at 3. |
-| ~"Review::P2" | Default priority to review | All incoming MRs should default to this. |
-| ~"Review::P3" | Lowest priority to review | WIP MRs, feature enhancements that only appear to serve a small number of users. |
+| ~"Review::P1" | Highest priority to review. | Indicates a merge request that might solve an urgent pain point for users, contributes to the strategic direction of Runner development as laid out by the Product team, or fixes a critical issue. A hard cap on the number of contributions labelled ~"Review::P1" is set at 3. |
+| ~"Review::P2" | Important merge requests. | When a merge request is important, but has lower impact to customers when compared to merge requests labelled ~"Review::P1". |
+| ~"Review::P3" | Default priority to review. | All incoming merge requests should default to this. |
 
 ### Contributing new [executors](https://docs.gitlab.com/runner/#selecting-the-executor)
 
@@ -50,10 +50,10 @@ which will provide a way to create an executor of choice.
 ### Contributing new hardware architectures
 
 We're currently exploring how we can add builds for new and different hardware
-architectures. Adding and supporting new architectures brings added levels of 
+architectures. Adding and supporting new architectures brings added levels of
 complexity and may require hardware that GitLab Inc. doesn't have access to.
 
-At the current time, new hardware architectures will only be considered if the 
+At the current time, new hardware architectures will only be considered if the
 following criteria are met:
 
 1. GitLab Inc. must be able to build and test for the new architecture on our Shared Runners on GitLab.com
@@ -69,7 +69,7 @@ don't have the ability to support and [we welcome contributions to that discussi
 We have some additional labels plus those defined in [gitlab-ce workflow labels](https://docs.gitlab.com/ce/development/contributing/issue_workflow.html)
 
 - Additional subjects: ~cache, ~executors, ~"git operations"
-- OS: ~"os::Linux" ~"os::MacOSX" ~"os:FreeBSD" ~"os::Windows" 
-- executor: ~"executor::docker" ~"executor::kubernetes" ~"executor::docker\-machine" ~"executor::docker\-machine" ~"executor::shell" ~"executor::parallels" ~"executor::virtualbox" 
+- OS: ~"os::Linux" ~"os::MacOSX" ~"os:FreeBSD" ~"os::Windows"
+- executor: ~"executor::docker" ~"executor::kubernetes" ~"executor::docker\-machine" ~"executor::docker\-machine" ~"executor::shell" ~"executor::parallels" ~"executor::virtualbox"
 
 
