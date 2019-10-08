@@ -68,7 +68,7 @@ To open the report:
    <https://gitlab-runner-downloads.s3.amazonaws.com/mask-trace/index.html>. In this case the `mask-trace` is the
    name of the branch, which was used as Merge Request source.
 
-1. Open the S3 link gathered from the job's trace. Following our example, let's open the
+1. Open the S3 link gathered from the job's log. Following our example, let's open the
    <https://gitlab-runner-downloads.s3.amazonaws.com/v11.8.0/index.html> one. We can see here several files that
    are published as part of the release. We're interested in the content of the `coverage/` directory.
 
