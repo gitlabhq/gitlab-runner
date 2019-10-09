@@ -45,7 +45,7 @@ command stays as it is described in the [register documentation](../register/ind
 The only difference is that the `gitlab-runner` command is executed inside of a
 Docker container.
 
-## Docker image installation and configuration
+## Docker image installation
 
 1. Install Docker first:
 
@@ -91,9 +91,18 @@ Docker container.
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
 
-## Update
+## Update configuration
 
-Pull the latest version:
+If you change the configuration in `config.toml`, you might need to restart the runner to apply the change.
+Make sure to restart the whole container instead of using `gitlab-runner restart`:
+
+```bash
+docker restart gitlab-runner
+```
+
+## Upgrade version
+
+Pull the latest version (or a specific tag):
 
 ```bash
 docker pull gitlab/gitlab-runner:latest
