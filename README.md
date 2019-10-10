@@ -43,12 +43,12 @@ or merge request with the relevant information.
 ### Contributing to documentation
 
 If your contribution contains only documentation changes, you can speed up the CI process
-by following some branch naming conventions, as described in https://docs.gitlab.com/ce/development/documentation/index.html#branch-naming
+by following some branch naming conventions, as described in <https://docs.gitlab.com/ce/development/documentation/index.html#branch-naming>
 
 ## Documentation
 
 The documentation source files can be found under the [docs/](docs/) directory. You can
-read the documentation online at https://docs.gitlab.com/runner/.
+read the documentation online at <https://docs.gitlab.com/runner/>.
 
 ## Requirements
 
@@ -92,8 +92,8 @@ Visit the [Changelog](CHANGELOG.md) to view recent changes.
 
 ## The future
 
-* Please see the [GitLab Direction page](https://about.gitlab.com/direction/).
-* Feel free submit issues with feature proposals on the issue tracker.
+- Please see the [GitLab Direction page](https://about.gitlab.com/direction/).
+- Feel free submit issues with feature proposals on the issue tracker.
 
 ## Author
 
