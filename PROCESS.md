@@ -64,16 +64,16 @@ release, hence the name release candidate.
 
 These types of merge requests for the upcoming release need special consideration:
 
-* **Large features**: a large feature is one that is highlighted in the kick-off
+- **Large features**: a large feature is one that is highlighted in the kick-off
   and the release blogpost; typically this will have its own channel in Slack
   and a dedicated team with front-end, back-end, and UX.
-* **Small features**: any other feature request.
+- **Small features**: any other feature request.
 
 It is strongly recommended that **large features** be with a maintainer **by the
 1st**. This means that:
 
-* There is a merge request (even if it's WIP).
-* The person (or people, if it needs a frontend and backend maintainer) who will
+- There is a merge request (even if it's WIP).
+- The person (or people, if it needs a frontend and backend maintainer) who will
   ultimately be responsible for merging this have been pinged on the MR.
 
 It's OK if merge request isn't completely done, but this allows the maintainer
@@ -141,12 +141,12 @@ be a rare case: most features can be allowed to slip a release.
 Once the stable branch is frozen, the only MRs that can be cherry-picked into
 the stable branch are:
 
-* Fixes for [regressions](#regressions) where the affected version `xx.x` in `regression:xx.x` is the current release. See [Managing bugs](#managing-bugs) section.
-* Fixes for security issues.
-* Fixes or improvements to automated QA scenarios.
-* [Documentation improvements](https://docs.gitlab.com/ee/development/documentation/workflow.html) for feature changes made in the same release, though initial docs for these features should have already been merged by the freeze, as required.
-* New or updated translations (as long as they do not touch application code).
-* Changes that are behind a feature flag and have the ~"feature flag" label.
+- Fixes for [regressions](#regressions) where the affected version `xx.x` in `regression:xx.x` is the current release. See [Managing bugs](#managing-bugs) section.
+- Fixes for security issues.
+- Fixes or improvements to automated QA scenarios.
+- [Documentation improvements](https://docs.gitlab.com/ee/development/documentation/workflow.html) for feature changes made in the same release, though initial docs for these features should have already been merged by the freeze, as required.
+- New or updated translations (as long as they do not touch application code).
+- Changes that are behind a feature flag and have the ~"feature flag" label.
 
 During the feature freeze all merge requests that are meant to go into the
 upcoming release should have the correct milestone assigned _and_ the
@@ -206,15 +206,17 @@ Regressions should be considered high priority issues that should be solved as s
 ### Managing bugs
 
 **Prioritization:** We give higher priority to regressions on features that worked in the last recent monthly release and the current release candidates.
-The two scenarios below can [bypass the exception request in the release process](https://gitlab.com/gitlab-org/release/docs/blob/master/general/exception-request/process.md#after-the-7th), where the affected regression version matches the current monthly release version.
-* A regression which worked in the **Last monthly release**
-   * **Example:** In 11.0 we released a new `feature X` that is verified as working. Then in release 11.1 the feature no longer works, this is regression for 11.1. The issue should have the `regression:11.1` label.
-   * *Note:* When we say `the last recent monthly release`, this can refer to either the version currently running on GitLab.com, or the most recent version available in the package repositories.
-* A regression which worked in the **Current release candidates**
-   * **Example:** In 11.1-RC3 we shipped a new feature which has been verified as working. Then in 11.1-RC5 the feature no longer works, this is regression for 11.1. The issue should have the `regression:11.1` label.
-   * *Note:* Because GitLab.com runs release candidates of new releases, a regression can be reported in a release before its 'official' release date on the 22nd of the month.
+The two scenarios below can [bypass the exception request in the release process](https://gitlab.com/gitlab-org/release/docs/blob/master/general/exception-request/process.md#after-the-7th), where the affected regression version matches the current monthly release version:
+
+- A regression which worked in the **Last monthly release**
+  - **Example:** In 11.0 we released a new `feature X` that is verified as working. Then in release 11.1 the feature no longer works, this is regression for 11.1. The issue should have the `regression:11.1` label.
+  - *Note:* When we say `the last recent monthly release`, this can refer to either the version currently running on GitLab.com, or the most recent version available in the package repositories.
+- A regression which worked in the **Current release candidates**
+  - **Example:** In 11.1-RC3 we shipped a new feature which has been verified as working. Then in 11.1-RC5 the feature no longer works, this is regression for 11.1. The issue should have the `regression:11.1` label.
+  - *Note:* Because GitLab.com runs release candidates of new releases, a regression can be reported in a release before its 'official' release date on the 22nd of the month.
 
 When a bug is found:
+
 1. Create an issue describing the problem in the most detailed way possible.
 1. If possible, provide links to real examples and how to reproduce the problem.
 1. Label the issue properly, using the [team label](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#team-labels),
