@@ -5,6 +5,22 @@
 For an overview of the autoscale architecture, take a look at the
 [comprehensive documentation on autoscaling](../configuration/autoscale.md).
 
+## Forked version of Docker machine
+
+Because `docker-machine` is in [maintenance
+mode](https://github.com/docker/machine/issues/4537), GitLab is
+providing it's [own fork of
+`docker-machine`](https://gitlab.com/gitlab-org/ci-cd/docker-machine),
+which is based on the latest `master` branch of `docker-machine` with
+some additional patches for the following bugs:
+
+- [Make DigitalOcean driver RateLimit aware](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/2)
+- [Add backoff to google driver operations check](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/7)
+- [Add `--google-min-cpu-platform` option for machine creation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/9)
+
+The intent of this fork is to fix critical and bugs affecting running
+costs only. No new features will be added.
+
 ## Preparing the environment
 
 In order to use the autoscale feature, Docker and GitLab Runner must be
