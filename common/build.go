@@ -429,8 +429,7 @@ func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) erro
 	b.logger.Infoln(
 		fmt.Sprintf(
 			"Terminal is connected, will time out in %s...",
-			// TODO: switch to timeout.Round(time.Second) after upgrading to Go 1.9+
-			roundDuration(timeout, time.Second),
+			timeout.Round(time.Second),
 		),
 	)
 
@@ -444,8 +443,7 @@ func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) erro
 	case <-time.After(timeout):
 		err := fmt.Errorf(
 			"Terminal session timed out (maximum time allowed - %s)",
-			// TODO: switch to timeout.Round(time.Second) after upgrading to Go 1.9+
-			roundDuration(timeout, time.Second),
+			timeout.Round(time.Second),
 		)
 		b.logger.Infoln(err.Error())
 		b.Session.TimeoutCh <- err
