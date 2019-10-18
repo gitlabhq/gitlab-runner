@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -23,9 +21,9 @@ import (
 
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
-	"github.com/zakjan/cert-chain-resolver/certUtil"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls/ca_chain"
 )
 
 type requestCredentials interface {
@@ -173,44 +171,6 @@ func (n *client) createTransport() {
 	n.Timeout = common.DefaultNetworkClientTimeout
 }
 
-func (n *client) getCAChain(tls *tls.ConnectionState) string {
-	if len(n.caData) != 0 {
-		return string(n.caData)
-	}
-
-	if tls == nil {
-		return ""
-	}
-
-	// Don't reorder certificates by putting them directly into the map
-	var certificates []*x509.Certificate
-	seenCertificates := make(map[string]bool, 0)
-
-	for _, verifiedChain := range tls.VerifiedChains {
-		verifiedChain, _ = certUtil.FetchCertificateChain(verifiedChain[0])
-		verifiedChain, _ = certUtil.AddRootCA(verifiedChain)
-
-		for _, certificate := range verifiedChain {
-			signature := hex.EncodeToString(certificate.Signature)
-			if seenCertificates[signature] {
-				continue
-			}
-
-			seenCertificates[signature] = true
-			certificates = append(certificates, certificate)
-		}
-	}
-
-	out := bytes.NewBuffer(nil)
-	for _, certificate := range certificates {
-		if err := pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: certificate.Raw}); err != nil {
-			logrus.Warn("Failed to encode certificate from chain:", err)
-		}
-	}
-
-	return out.String()
-}
-
 func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -276,13 +236,13 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 	return
 }
 
-func (n *client) doJSON(uri, method string, statusCode int, request interface{}, response interface{}) (int, string, ResponseTLSData, *http.Response) {
+func (n *client) doJSON(uri, method string, statusCode int, request interface{}, response interface{}) (int, string, *http.Response) {
 	var body io.Reader
 
 	if request != nil {
 		requestBody, err := json.Marshal(request)
 		if err != nil {
-			return -1, fmt.Sprintf("failed to marshal project object: %v", err), ResponseTLSData{}, nil
+			return -1, fmt.Sprintf("failed to marshal project object: %v", err), nil
 		}
 		body = bytes.NewReader(requestBody)
 	}
@@ -294,7 +254,7 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 
 	res, err := n.do(uri, method, body, "application/json", headers)
 	if err != nil {
-		return -1, err.Error(), ResponseTLSData{}, nil
+		return -1, err.Error(), nil
 	}
 	defer res.Body.Close()
 	defer io.Copy(ioutil.Discard, res.Body)
@@ -303,26 +263,54 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 		if response != nil {
 			isApplicationJSON, err := isResponseApplicationJSON(res)
 			if !isApplicationJSON {
-				return -1, err.Error(), ResponseTLSData{}, nil
+				return -1, err.Error(), nil
 			}
 
 			d := json.NewDecoder(res.Body)
 			err = d.Decode(response)
 			if err != nil {
-				return -1, fmt.Sprintf("Error decoding json payload %v", err), ResponseTLSData{}, nil
+				return -1, fmt.Sprintf("Error decoding json payload %v", err), nil
 			}
 		}
 	}
 
 	n.setLastUpdate(res.Header)
 
+	return res.StatusCode, res.Status, res
+}
+
+func (n *client) getResponseTLSData(TLS *tls.ConnectionState) (ResponseTLSData, error) {
 	TLSData := ResponseTLSData{
-		CAChain:  n.getCAChain(res.TLS),
 		CertFile: n.certFile,
 		KeyFile:  n.keyFile,
 	}
 
-	return res.StatusCode, res.Status, TLSData, res
+	caChain, err := n.buildCAChain(TLS)
+	if err != nil {
+		return TLSData, fmt.Errorf("couldn't build CA Chain: %v", err)
+	}
+
+	TLSData.CAChain = caChain
+
+	return TLSData, nil
+}
+
+func (n *client) buildCAChain(tls *tls.ConnectionState) (string, error) {
+	if len(n.caData) != 0 {
+		return string(n.caData), nil
+	}
+
+	if tls == nil {
+		return "", nil
+	}
+
+	builder := ca_chain.NewBuilder()
+	err := builder.FetchCertificatesFromTLSConnectionState(tls)
+	if err != nil {
+		return "", fmt.Errorf("error while fetching certificates from TLS ConnectionState: %v", err)
+	}
+
+	return builder.String(), nil
 }
 
 func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
