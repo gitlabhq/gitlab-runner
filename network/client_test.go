@@ -117,7 +117,7 @@ func TestClientDo(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 
-	statusCode, statusText, _, _ := c.doJSON("test/auth", "GET", http.StatusOK, nil, nil)
+	statusCode, statusText, _ := c.doJSON("test/auth", "GET", http.StatusOK, nil, nil)
 	assert.Equal(t, http.StatusForbidden, statusCode, statusText)
 
 	req := struct {
@@ -130,16 +130,16 @@ func TestClientDo(t *testing.T) {
 		Key string `json:"key"`
 	}{}
 
-	statusCode, statusText, _, _ = c.doJSON("test/json", "GET", http.StatusOK, nil, &res)
+	statusCode, statusText, _ = c.doJSON("test/json", "GET", http.StatusOK, nil, &res)
 	assert.Equal(t, http.StatusBadRequest, statusCode, statusText)
 
-	statusCode, statusText, _, _ = c.doJSON("test/json", "GET", http.StatusOK, &req, nil)
+	statusCode, statusText, _ = c.doJSON("test/json", "GET", http.StatusOK, &req, nil)
 	assert.Equal(t, http.StatusNotAcceptable, statusCode, statusText)
 
-	statusCode, statusText, _, _ = c.doJSON("test/json", "GET", http.StatusOK, nil, nil)
+	statusCode, statusText, _ = c.doJSON("test/json", "GET", http.StatusOK, nil, nil)
 	assert.Equal(t, http.StatusBadRequest, statusCode, statusText)
 
-	statusCode, statusText, _, _ = c.doJSON("test/json", "GET", http.StatusOK, &req, &res)
+	statusCode, statusText, _ = c.doJSON("test/json", "GET", http.StatusOK, &req, &res)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 	assert.Equal(t, "value", res.Key, statusText)
 }
@@ -151,7 +151,7 @@ func TestClientInvalidSSL(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
-	statusCode, statusText, _, _ := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
+	statusCode, statusText, _ := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
 	assert.Equal(t, -1, statusCode, statusText)
 	assert.Contains(t, statusText, "certificate signed by unknown authority")
 }
@@ -172,8 +172,11 @@ func TestClientTLSCAFile(t *testing.T) {
 		URL:       s.URL,
 		TLSCAFile: file.Name(),
 	})
-	statusCode, statusText, tlsData, _ := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
+	statusCode, statusText, resp := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
+
+	tlsData, err := c.getResponseTLSData(resp.TLS)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, tlsData.CAChain)
 }
 
@@ -197,8 +200,11 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
-	statusCode, statusText, tlsData, _ := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
+	statusCode, statusText, resp := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
+
+	tlsData, err := c.getResponseTLSData(resp.TLS)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, tlsData.CAChain)
 }
 
@@ -221,7 +227,7 @@ func TestClientInvalidTLSAuth(t *testing.T) {
 		URL:       s.URL,
 		TLSCAFile: ca.Name(),
 	})
-	statusCode, statusText, _, _ := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
+	statusCode, statusText, _ := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
 	assert.Equal(t, -1, statusCode, statusText)
 	assert.Contains(t, statusText, "tls: bad certificate")
 }
@@ -260,8 +266,12 @@ func TestClientTLSAuth(t *testing.T) {
 		TLSCertFile: cert.Name(),
 		TLSKeyFile:  key.Name(),
 	})
-	statusCode, statusText, tlsData, _ := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
+
+	statusCode, statusText, resp := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
+
+	tlsData, err := c.getResponseTLSData(resp.TLS)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, tlsData.CAChain)
 	assert.Equal(t, cert.Name(), tlsData.CertFile)
 	assert.Equal(t, key.Name(), tlsData.KeyFile)
@@ -295,8 +305,11 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 	c, _ := newClient(&RunnerCredentials{
 		URL: s.URL,
 	})
-	statusCode, statusText, tlsData, _ := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
+	statusCode, statusText, resp := c.doJSON("test/ok", "GET", http.StatusOK, nil, nil)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
+
+	tlsData, err := c.getResponseTLSData(resp.TLS)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, tlsData.CAChain)
 	assert.NotEmpty(t, tlsData.CertFile)
 	assert.NotEmpty(t, tlsData.KeyFile)
@@ -350,16 +363,16 @@ func TestClientHandleCharsetInContentType(t *testing.T) {
 		Key string `json:"key"`
 	}{}
 
-	statusCode, statusText, _, _ := c.doJSON("with-charset", "GET", http.StatusOK, nil, &res)
+	statusCode, statusText, _ := c.doJSON("with-charset", "GET", http.StatusOK, nil, &res)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
-	statusCode, statusText, _, _ = c.doJSON("without-charset", "GET", http.StatusOK, nil, &res)
+	statusCode, statusText, _ = c.doJSON("without-charset", "GET", http.StatusOK, nil, &res)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
-	statusCode, statusText, _, _ = c.doJSON("without-json", "GET", http.StatusOK, nil, &res)
+	statusCode, statusText, _ = c.doJSON("without-json", "GET", http.StatusOK, nil, &res)
 	assert.Equal(t, -1, statusCode, statusText)
 
-	statusCode, statusText, _, _ = c.doJSON("invalid-header", "GET", http.StatusOK, nil, &res)
+	statusCode, statusText, _ = c.doJSON("invalid-header", "GET", http.StatusOK, nil, &res)
 	assert.Equal(t, -1, statusCode, statusText)
 }
 

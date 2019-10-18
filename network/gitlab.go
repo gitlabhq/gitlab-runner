@@ -159,13 +159,22 @@ func (n *GitLabClient) doRaw(credentials requestCredentials, method, uri string,
 	return c.do(uri, method, request, requestType, headers)
 }
 
-func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string, statusCode int, request interface{}, response interface{}) (int, string, ResponseTLSData, *http.Response) {
+func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string, statusCode int, request interface{}, response interface{}) (int, string, *http.Response) {
 	c, err := n.getClient(credentials)
 	if err != nil {
-		return clientError, err.Error(), ResponseTLSData{}, nil
+		return clientError, err.Error(), nil
 	}
 
 	return c.doJSON(uri, method, statusCode, request, response)
+}
+
+func (n *GitLabClient) getResponseTLSData(credentials requestCredentials, response *http.Response) (ResponseTLSData, error) {
+	c, err := n.getClient(credentials)
+	if err != nil {
+		return ResponseTLSData{}, fmt.Errorf("couldn't get client: %v", err)
+	}
+
+	return c.getResponseTLSData(response.TLS)
 }
 
 func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, parameters common.RegisterRunnerParameters) *common.RegisterRunnerResponse {
@@ -177,7 +186,7 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, parameter
 	}
 
 	var response common.RegisterRunnerResponse
-	result, statusText, _, _ := n.doJSON(&runner, "POST", "runners", http.StatusCreated, &request, &response)
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners", http.StatusCreated, &request, &response)
 
 	switch result {
 	case http.StatusCreated:
@@ -200,7 +209,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, _, _ := n.doJSON(&runner, "POST", "runners/verify", http.StatusOK, &request, nil)
+	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", http.StatusOK, &request, nil)
 
 	switch result {
 	case http.StatusOK:
@@ -224,7 +233,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, _, _ := n.doJSON(&runner, "DELETE", "runners", http.StatusNoContent, &request, nil)
+	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", http.StatusNoContent, &request, nil)
 
 	const baseLogText = "Unregistering runner from GitLab"
 	switch result {
@@ -270,7 +279,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig, sessionInfo *commo
 	}
 
 	var response common.JobResponse
-	result, statusText, tlsData, _ := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", http.StatusCreated, &request, &response)
+	result, statusText, httpResponse := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", http.StatusCreated, &request, &response)
 
 	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointRequestJob, result)
 
@@ -280,7 +289,14 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig, sessionInfo *commo
 			"job":      response.ID,
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
+
+		tlsData, err := n.getResponseTLSData(&config.RunnerCredentials, httpResponse)
+		if err != nil {
+			config.Log().
+				WithError(err).Errorln("Error on fetching TLS Data from API response...", "error")
+		}
 		addTLSData(&response, tlsData)
+
 		return &response, true
 	case http.StatusForbidden:
 		config.Log().Errorln("Checking for jobs...", "forbidden")
@@ -305,7 +321,7 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 		FailureReason: jobInfo.FailureReason,
 	}
 
-	result, statusText, _, response := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", jobInfo.ID), http.StatusOK, &request, nil)
+	result, statusText, response := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", jobInfo.ID), http.StatusOK, &request, nil)
 	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, result)
 
 	remoteJobStateResponse := NewRemoteJobStateResponse(response)
