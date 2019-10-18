@@ -1,3 +1,7 @@
+v12.4.0-rc1 (2019-10-18)
+
+- Fix certificates chain generation regression introduced with 12.4.0-rc1 !1639
+
 v12.4.0-rc1 (2019-10-08)
 
 - Fix err logging for runner limit !1403
