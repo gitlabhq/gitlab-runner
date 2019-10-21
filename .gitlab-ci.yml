@@ -15,7 +15,7 @@ variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.10.8-1
   GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
-  DOCKER_MACHINE_VERSION: "0.14.0"
+  DOCKER_MACHINE_VERSION: "0.16.2"
   DUMB_INIT_VERSION: "1.0.2"
   GIT_VERSION: "2.21.0"
   GIT_VERSION_BUILD: "1"
@@ -432,7 +432,7 @@ package-rpm: *packages
     <<: *docker_variables
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "true"
-    DOCKER_MACHINE_CHECKSUM: "a4c69bffb78d3cfe103b89dae61c3ea11cc2d1a91c4ff86e630c9ae88244db02"
+    DOCKER_MACHINE_CHECKSUM: "a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097"
     DUMB_INIT_CHECKSUM: "a8defac40aaca2ca0896c7c5adbc241af60c7c3df470c1a4c469a860bd805429"
     GIT_LFS_VERSION: "2.7.1"
     GIT_LFS_CHECKSUM: "c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920"
