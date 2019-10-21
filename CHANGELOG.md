@@ -1,4 +1,4 @@
-v12.4.0-rc1 (2019-10-08)
+v12.4.0 (2019-10-21)
 
 - Fix err logging for runner limit !1403
 - Add the note about incompatibility of session_server with helm chart runner !1575
