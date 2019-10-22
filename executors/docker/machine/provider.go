@@ -209,7 +209,7 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 
 	details, _ := m.details[machineName]
 	if details == nil {
-		return errors.New("Machine not found")
+		return errors.New("machine not found")
 	}
 
 	details.Reason = fmt.Sprint(reason...)
@@ -234,18 +234,18 @@ func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machi
 
 	if config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
 		// Limit number of builds
-		return errors.New("Too many builds")
+		return errors.New("too many builds")
 	}
 
 	if data.Total() >= config.Limit && config.Limit > 0 {
 		// Limit maximum number of machines
-		return errors.New("Too many machines")
+		return errors.New("too many machines")
 	}
 
 	if time.Since(details.Used) > time.Second*time.Duration(config.Machine.GetIdleTime()) {
 		if data.Idle >= config.Machine.GetIdleCount() {
 			// Remove machine that are way over the idle time
-			return errors.New("Too many idle machines")
+			return errors.New("too many idle machines")
 		}
 	}
 	return nil
@@ -299,7 +299,7 @@ func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []
 
 func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.ExecutorData, err error) {
 	if config.Machine == nil || config.Machine.MachineName == "" {
-		err = fmt.Errorf("Missing Machine options")
+		err = fmt.Errorf("missing Machine options")
 		return
 	}
 
@@ -335,7 +335,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 
 	// If we have a free machines we can process a build
 	if config.Machine.GetIdleCount() != 0 && machinesData.Idle == 0 {
-		err = errors.New("No free machines that can process builds")
+		err = errors.New("no free machines that can process builds")
 	}
 	return
 }
