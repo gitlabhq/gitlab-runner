@@ -73,7 +73,7 @@ RSKf+3OIln1a6DKx+zEzL20uwW5L/5l3FsLwwvOLybX4mAhiyxY=
 -----END CERTIFICATE-----`
 )
 
-func TestDefaultBuilder_FetchCertificatesFromVerifiedChain(t *testing.T) {
+func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 	testError := errors.New("test-error")
 
 	block, _ := pem.Decode([]byte(testCert))
@@ -141,7 +141,7 @@ func TestDefaultBuilder_FetchCertificatesFromVerifiedChain(t *testing.T) {
 			TLS := new(tls.ConnectionState)
 			TLS.VerifiedChains = tc.chains
 
-			err = builder.FetchCertificatesFromTLSConnectionState(TLS)
+			err = builder.BuildChainFromTLSConnectionState(TLS)
 
 			if tc.expectedError != "" {
 				assert.EqualError(t, err, tc.expectedError)
@@ -154,7 +154,7 @@ func TestDefaultBuilder_FetchCertificatesFromVerifiedChain(t *testing.T) {
 	}
 }
 
-func TestDefaultBuilder_AddCertificate(t *testing.T) {
+func TestDefaultBuilder_addCertificate(t *testing.T) {
 	block, _ := pem.Decode([]byte(testCert))
 	testCertificate, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)

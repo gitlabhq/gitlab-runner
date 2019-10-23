@@ -25,7 +25,7 @@ type pemEncoder func(out io.Writer, b *pem.Block) error
 type Builder interface {
 	fmt.Stringer
 
-	FetchCertificatesFromTLSConnectionState(TLS *tls.ConnectionState) error
+	BuildChainFromTLSConnectionState(TLS *tls.ConnectionState) error
 }
 
 func NewBuilder() Builder {
@@ -50,7 +50,7 @@ type defaultBuilder struct {
 	logger logrus.FieldLogger
 }
 
-func (b *defaultBuilder) FetchCertificatesFromTLSConnectionState(TLS *tls.ConnectionState) error {
+func (b *defaultBuilder) BuildChainFromTLSConnectionState(TLS *tls.ConnectionState) error {
 	for _, verifiedChain := range TLS.VerifiedChains {
 		err := b.fetchCertificatesFromVerifiedChain(verifiedChain)
 		if err != nil {
