@@ -103,10 +103,10 @@ func (m *testMachine) Create(driver, name string, opts ...string) error {
 	if strings.Contains(name, "second-fail") {
 		if !m.second {
 			m.second = true
-			return errors.New("Failed to create")
+			return errors.New("failed to create")
 		}
 	} else if strings.Contains(name, "create-fail") || strings.Contains(name, "provision-fail") {
-		return errors.New("Failed to create")
+		return errors.New("failed to create")
 	}
 	m.machines = append(m.machines, name)
 	m.Created <- true
@@ -119,7 +119,7 @@ func (m *testMachine) Provision(name string) error {
 	defer m.mutex.Unlock()
 
 	if strings.Contains(name, "provision-fail") || strings.Contains(name, "second-fail") {
-		return errors.New("Failed to provision")
+		return errors.New("failed to provision")
 	}
 	m.machines = append(m.machines, name)
 	return nil
@@ -178,7 +178,7 @@ func (m *testMachine) CanConnect(name string, skipCache bool) bool {
 
 func (m *testMachine) Credentials(name string) (dc docker_helpers.DockerCredentials, err error) {
 	if strings.Contains(name, "no-connect") {
-		err = errors.New("Failed to connect")
+		err = errors.New("failed to connect")
 	}
 	return
 }
@@ -500,7 +500,7 @@ func TestMachineIdleLimits(t *testing.T) {
 	p.Release(config, d4)
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateRemoving, d.State, "machine should not be removed, because no more than two idle")
-	assert.Equal(t, "Too many idle machines", d.Reason)
+	assert.Equal(t, "too many idle machines", d.Reason)
 }
 
 func TestMachineOffPeakIdleLimits(t *testing.T) {
