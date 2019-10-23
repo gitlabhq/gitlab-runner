@@ -85,11 +85,10 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := map[string]struct {
-		chains                    [][]*x509.Certificate
-		fetchCertificateChainMock certificateChainFetcher
-		addRootCAMock             rootCAAdder
-		expectedError             string
-		expectedChainLength       int
+		chains              [][]*x509.Certificate
+		setupResolverMock   func(t *testing.T) (resolver, func())
+		expectedError       string
+		expectedChainLength int
 	}{
 		"no chains": {
 			chains:              [][]*x509.Certificate{},
@@ -99,32 +98,38 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 			chains:              [][]*x509.Certificate{{}},
 			expectedChainLength: 0,
 		},
-		"error on chain fetching": {
+		"error on chain resolving": {
 			chains: [][]*x509.Certificate{{testCertificate}},
-			fetchCertificateChainMock: func(cert *x509.Certificate) ([]*x509.Certificate, error) {
-				return nil, testError
+			setupResolverMock: func(t *testing.T) (resolver, func()) {
+				mock := new(mockResolver)
+				cleanup := func() {
+					mock.AssertExpectations(t)
+				}
+
+				mock.
+					On("Resolve", testCertificate).
+					Return(nil, testError).
+					Once()
+
+				return mock, cleanup
 			},
-			expectedError:       "error while fetching certificates into the CA Chain: couldn't fetch certificates chain: test-error",
-			expectedChainLength: 0,
-		},
-		"error on root CA adding": {
-			chains: [][]*x509.Certificate{{testCertificate}},
-			fetchCertificateChainMock: func(cert *x509.Certificate) ([]*x509.Certificate, error) {
-				return []*x509.Certificate{cert}, nil
-			},
-			addRootCAMock: func(certs []*x509.Certificate) ([]*x509.Certificate, error) {
-				return nil, testError
-			},
-			expectedError:       "error while fetching certificates into the CA Chain: couldn't add root CA to the chain: test-error",
+			expectedError:       "error while fetching certificates into the CA Chain: couldn't resolve certificates chain from the leaf certificate: test-error",
 			expectedChainLength: 0,
 		},
 		"certificates chain prepared properly": {
 			chains: [][]*x509.Certificate{{testCertificate}},
-			fetchCertificateChainMock: func(cert *x509.Certificate) ([]*x509.Certificate, error) {
-				return []*x509.Certificate{cert}, nil
-			},
-			addRootCAMock: func(certs []*x509.Certificate) ([]*x509.Certificate, error) {
-				return append(certs, testCACertificate), nil
+			setupResolverMock: func(t *testing.T) (resolver, func()) {
+				mock := new(mockResolver)
+				cleanup := func() {
+					mock.AssertExpectations(t)
+				}
+
+				mock.
+					On("Resolve", testCertificate).
+					Return([]*x509.Certificate{testCertificate, testCACertificate}, nil).
+					Once()
+
+				return mock, cleanup
 			},
 			expectedChainLength: 2,
 		},
@@ -135,8 +140,13 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 			var err error
 
 			builder := NewBuilder().(*defaultBuilder)
-			builder.fetchCertificateChain = tc.fetchCertificateChainMock
-			builder.addRootCA = tc.addRootCAMock
+
+			if tc.setupResolverMock != nil {
+				resolver, cleanup := tc.setupResolverMock(t)
+				defer cleanup()
+
+				builder.resolver = resolver
+			}
 
 			TLS := new(tls.ConnectionState)
 			TLS.VerifiedChains = tc.chains

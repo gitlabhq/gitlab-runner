@@ -170,8 +170,8 @@ ignored = ["test", "appengine"]
   version = "v0.3.7"
 
 [[constraint]]
-  name = "github.com/zakjan/cert-chain-resolver"
-  version = "1.0.2"
+  name = "github.com/fullsailor/pkcs7"
+  revision = "d7302db945fa6ea264fb79d8e13e931ea514a602"
 
 [[override]]
   name = "github.com/Azure/go-autorest"
