@@ -77,6 +77,7 @@ help:
 	# make version - show information about current version
 	#
 	# Development commands:
+	# make development_setup  - setup needed environment for tests
 	# make build_simple - build executable for your arch and OS
 	# make install - install the version suitable for your OS as gitlab-runner
 	# make helper-docker - build docker dependencies
@@ -110,7 +111,7 @@ codequality:
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
-test: $(PKG_BUILD_DIR) helper-docker
+test: $(PKG_BUILD_DIR) helper-docker development_setup
 	go test $(OUR_PACKAGES) $(TESTFLAGS)
 
 parallel_test_prepare: $(GOPATH_SETUP)
