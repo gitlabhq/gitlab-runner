@@ -16,7 +16,7 @@ import (
 )
 
 type resolver interface {
-	Resolve(cert *x509.Certificate) ([]*x509.Certificate, error)
+	Resolve(certs []*x509.Certificate) ([]*x509.Certificate, error)
 }
 
 func newResolver(logger logrus.FieldLogger) resolver {
@@ -30,8 +30,8 @@ type chainResolver struct {
 	verifyOptions x509.VerifyOptions
 }
 
-func (d *chainResolver) Resolve(cert *x509.Certificate) ([]*x509.Certificate, error) {
-	certs, err := d.resolveChain(cert)
+func (d *chainResolver) Resolve(certs []*x509.Certificate) ([]*x509.Certificate, error) {
+	certs, err := d.resolveChain(certs)
 	if err != nil {
 		return nil, fmt.Errorf("error while resolving certificates chain: %v", err)
 	}
@@ -44,9 +44,10 @@ func (d *chainResolver) Resolve(cert *x509.Certificate) ([]*x509.Certificate, er
 	return certs, err
 }
 
-func (d *chainResolver) resolveChain(cert *x509.Certificate) ([]*x509.Certificate, error) {
-	certs := make([]*x509.Certificate, 0)
-	certs = append(certs, cert)
+func (d *chainResolver) resolveChain(certs []*x509.Certificate) ([]*x509.Certificate, error) {
+	if len(certs) < 1 {
+		return certs, nil
+	}
 
 	for {
 		certificate := certs[len(certs)-1]

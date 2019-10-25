@@ -68,7 +68,7 @@ func (b *defaultBuilder) fetchCertificatesFromVerifiedChain(verifiedChain []*x50
 		return nil
 	}
 
-	verifiedChain, err = b.resolver.Resolve(verifiedChain[0])
+	verifiedChain, err = b.resolver.Resolve(verifiedChain)
 	if err != nil {
 		return fmt.Errorf("couldn't resolve certificates chain from the leaf certificate: %v", err)
 	}

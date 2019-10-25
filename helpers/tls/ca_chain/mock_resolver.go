@@ -10,13 +10,13 @@ type mockResolver struct {
 	mock.Mock
 }
 
-// Resolve provides a mock function with given fields: cert
-func (_m *mockResolver) Resolve(cert *x509.Certificate) ([]*x509.Certificate, error) {
-	ret := _m.Called(cert)
+// Resolve provides a mock function with given fields: certs
+func (_m *mockResolver) Resolve(certs []*x509.Certificate) ([]*x509.Certificate, error) {
+	ret := _m.Called(certs)
 
 	var r0 []*x509.Certificate
-	if rf, ok := ret.Get(0).(func(*x509.Certificate) []*x509.Certificate); ok {
-		r0 = rf(cert)
+	if rf, ok := ret.Get(0).(func([]*x509.Certificate) []*x509.Certificate); ok {
+		r0 = rf(certs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*x509.Certificate)
@@ -24,8 +24,8 @@ func (_m *mockResolver) Resolve(cert *x509.Certificate) ([]*x509.Certificate, er
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*x509.Certificate) error); ok {
-		r1 = rf(cert)
+	if rf, ok := ret.Get(1).(func([]*x509.Certificate) error); ok {
+		r1 = rf(certs)
 	} else {
 		r1 = ret.Error(1)
 	}

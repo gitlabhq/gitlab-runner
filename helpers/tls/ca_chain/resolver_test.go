@@ -18,7 +18,7 @@ const (
 	invalidCertURI = "/invalid-cert"
 )
 
-func TestDefaultResolver_Resolve(t *testing.T) {
+func TestChainResolver_Resolve(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == testCACertURI {
 			_, err := rw.Write([]byte(testCACert))
@@ -129,7 +129,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 				}
 			}
 
-			certificates, err := r.Resolve(testCertificate)
+			certificates, err := r.Resolve([]*x509.Certificate{testCertificate})
 
 			if tc.expectedError != "" {
 				assert.EqualError(t, err, tc.expectedError)

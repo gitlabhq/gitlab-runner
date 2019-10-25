@@ -107,7 +107,7 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 				}
 
 				mock.
-					On("Resolve", testCertificate).
+					On("Resolve", []*x509.Certificate{testCertificate}).
 					Return(nil, testError).
 					Once()
 
@@ -125,7 +125,7 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 				}
 
 				mock.
-					On("Resolve", testCertificate).
+					On("Resolve", []*x509.Certificate{testCertificate}).
 					Return([]*x509.Certificate{testCertificate, testCACertificate}, nil).
 					Once()
 
