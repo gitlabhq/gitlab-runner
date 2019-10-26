@@ -15,6 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const resolveChainLoopLimit = 15
+
 type resolver interface {
 	Resolve(certs []*x509.Certificate) ([]*x509.Certificate, error)
 }
@@ -49,7 +51,7 @@ func (d *chainResolver) resolveChain(certs []*x509.Certificate) ([]*x509.Certifi
 		return certs, nil
 	}
 
-	for {
+	for i := 0; i < resolveChainLoopLimit; i++{
 		certificate := certs[len(certs)-1]
 		log := prepareCertificateLogger(d.logger, certificate)
 
