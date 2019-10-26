@@ -32,9 +32,12 @@ func NewBuilder(logger logrus.FieldLogger) Builder {
 	return &defaultBuilder{
 		certificates:     make([]*x509.Certificate, 0),
 		seenCertificates: make(map[string]bool, 0),
-		resolver:         newResolver(logger),
-		encodePEM:        pem.Encode,
-		logger:           logger,
+		resolver: newChainResolver(
+			newURLResolver(logger),
+			newVerifyResolver(logger),
+		),
+		encodePEM: pem.Encode,
+		logger:    logger,
 	}
 }
 
