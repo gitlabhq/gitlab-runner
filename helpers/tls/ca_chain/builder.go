@@ -25,8 +25,9 @@ type Builder interface {
 	BuildChainFromTLSConnectionState(TLS *tls.ConnectionState) error
 }
 
-func NewBuilder() Builder {
-	logger := logrus.StandardLogger()
+func NewBuilder(logger logrus.FieldLogger) Builder {
+	logger = logger.
+		WithField("context", "certificate-chain-build")
 
 	return &defaultBuilder{
 		certificates:     make([]*x509.Certificate, 0),
@@ -51,7 +52,7 @@ func (b *defaultBuilder) BuildChainFromTLSConnectionState(TLS *tls.ConnectionSta
 	for _, verifiedChain := range TLS.VerifiedChains {
 		b.logger.
 			WithField("chain-leaf", fmt.Sprintf("%v", verifiedChain)).
-			Debug("[certificates chain build] processing chain")
+			Debug("Processing chain")
 		err := b.fetchCertificatesFromVerifiedChain(verifiedChain)
 		if err != nil {
 			return fmt.Errorf("error while fetching certificates into the CA Chain: %v", err)

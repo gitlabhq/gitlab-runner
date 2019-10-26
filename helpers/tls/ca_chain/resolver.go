@@ -54,7 +54,7 @@ func (d *chainResolver) resolveChain(certs []*x509.Certificate) ([]*x509.Certifi
 		log := prepareCertificateLogger(d.logger, certificate)
 
 		if certificate.IssuingCertificateURL == nil {
-			log.Debug("[certificates chain build] Certificate doesn't provide parent URL: exiting the loop")
+			log.Debug("Certificate doesn't provide parent URL: exiting the loop")
 			break
 		}
 
@@ -66,7 +66,7 @@ func (d *chainResolver) resolveChain(certs []*x509.Certificate) ([]*x509.Certifi
 		certs = append(certs, newCert)
 
 		if isSelfSigned(newCert) {
-			log.Debug("[certificates chain build] Fetched issuer certificate is a ROOT certificate so exiting the loop")
+			log.Debug("Fetched issuer certificate is a ROOT certificate so exiting the loop")
 			break
 		}
 	}
@@ -85,8 +85,8 @@ func prepareCertificateLogger(logger logrus.FieldLogger, cert *x509.Certificate)
 }
 
 func (d *chainResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Certificate, error) {
-	log := prepareCertificateLogger(d.logger, cert)
-	log.Debug("[certificates chain build] Requesting issuer certificate")
+	log := prepareCertificateLogger(d.logger, cert).
+		WithField("method", "fetchIssuerCertificate")
 
 	parentURL := cert.IssuingCertificateURL[0]
 
@@ -97,7 +97,7 @@ func (d *chainResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Ce
 	if err != nil {
 		log.
 			WithError(err).
-			Warning("[certificates chain build] Requesting issuer certificate: HTTP request error")
+			Warning("HTTP request error")
 		return nil, err
 	}
 
@@ -105,7 +105,7 @@ func (d *chainResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Ce
 	if err != nil {
 		log.
 			WithError(err).
-			Warning("[certificates chain build] Requesting issuer certificate: response body read error")
+			Warning("Response body read error")
 		return nil, err
 	}
 
@@ -113,7 +113,7 @@ func (d *chainResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Ce
 	if err != nil {
 		log.
 			WithError(err).
-			Warning("[certificates chain build] Requesting issuer certificate: certificate decoding error")
+			Warning("Certificate decoding error")
 		return nil, err
 	}
 
@@ -124,7 +124,7 @@ func (d *chainResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Ce
 			"newCert-serial":        newCert.SerialNumber.String(),
 			"newCert-issuerCertURL": newCert.IssuingCertificateURL,
 		}).
-		Debug("[certificates chain build] Requesting issuer certificate: appending the certificate to the chain")
+		Debug("Appending the certificate to the chain")
 
 	return newCert, nil
 }
@@ -141,14 +141,14 @@ func (d *chainResolver) lookForRootIfMissing(certs []*x509.Certificate) ([]*x509
 	}
 
 	prepareCertificateLogger(d.logger, lastCert).
-		Debug("[certificates chain build] Verifying last certificate to find the final root certificate")
+		Debug("Verifying last certificate to find the final root certificate")
 
 	verifyChains, err := lastCert.Verify(d.verifyOptions)
 	if err != nil {
 		if _, e := err.(x509.UnknownAuthorityError); e {
 			prepareCertificateLogger(d.logger, lastCert).
 				WithError(err).
-				Warning("[certificates chain build] Last certificate signed by unknown authority; will not update the chain")
+				Warning("Last certificate signed by unknown authority; will not update the chain")
 
 			return certs, nil
 		}
@@ -162,7 +162,7 @@ func (d *chainResolver) lookForRootIfMissing(certs []*x509.Certificate) ([]*x509
 		}
 
 		prepareCertificateLogger(d.logger, cert).
-			Debug("[certificates chain build] Adding cert from verify chain to the final chain")
+			Debug("Adding cert from verify chain to the final chain")
 
 		certs = append(certs, cert)
 	}

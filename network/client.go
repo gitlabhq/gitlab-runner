@@ -304,7 +304,7 @@ func (n *client) buildCAChain(tls *tls.ConnectionState) (string, error) {
 		return "", nil
 	}
 
-	builder := ca_chain.NewBuilder()
+	builder := ca_chain.NewBuilder(logrus.StandardLogger())
 	err := builder.BuildChainFromTLSConnectionState(tls)
 	if err != nil {
 		return "", fmt.Errorf("error while fetching certificates from TLS ConnectionState: %v", err)

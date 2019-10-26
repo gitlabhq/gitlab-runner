@@ -80,8 +80,7 @@ func TestChainResolver_Resolve(t *testing.T) {
 			expectedError:       "error while resolving certificates chain: error while fetching issuer certificate: invalid certificate: empty PEM block",
 			expectedChainLength: 0,
 			expectedOutput: []string{
-				"Requesting issuer certificate",
-				"Requesting issuer certificate: certificate decoding error",
+				"Certificate decoding error",
 			},
 		},
 		"issuer certificate as parent": {
@@ -89,8 +88,7 @@ func TestChainResolver_Resolve(t *testing.T) {
 			expectedError:       "",
 			expectedChainLength: 2,
 			expectedOutput: []string{
-				"Requesting issuer certificate",
-				"Requesting issuer certificate: appending the certificate to the chain",
+				"Appending the certificate to the chain",
 				"Fetched issuer certificate is a ROOT certificate so exiting the loop",
 			},
 		},
@@ -100,8 +98,7 @@ func TestChainResolver_Resolve(t *testing.T) {
 			expectedError:       "",
 			expectedChainLength: 2,
 			expectedOutput: []string{
-				"Requesting issuer certificate",
-				"Requesting issuer certificate: appending the certificate to the chain",
+				"Appending the certificate to the chain",
 				"Fetched issuer certificate is a ROOT certificate so exiting the loop",
 			},
 		},

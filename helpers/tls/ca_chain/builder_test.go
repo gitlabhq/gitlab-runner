@@ -139,7 +139,7 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			var err error
 
-			builder := NewBuilder().(*defaultBuilder)
+			builder := NewBuilder(logrus.StandardLogger()).(*defaultBuilder)
 
 			if tc.setupResolverMock != nil {
 				resolver, cleanup := tc.setupResolverMock(t)
@@ -169,7 +169,7 @@ func TestDefaultBuilder_addCertificate(t *testing.T) {
 	testCertificate, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
 
-	b := NewBuilder().(*defaultBuilder)
+	b := NewBuilder(logrus.StandardLogger()).(*defaultBuilder)
 	b.addCertificate(testCertificate)
 	b.addCertificate(testCertificate)
 
@@ -222,9 +222,8 @@ func TestDefaultBuilder_String(t *testing.T) {
 			logger := logrus.New()
 			logger.Out = out
 
-			b := NewBuilder().(*defaultBuilder)
+			b := NewBuilder(logger).(*defaultBuilder)
 			b.encodePEM = tc.encodePEMMock
-			b.logger = logger
 
 			b.addCertificate(testCertificate)
 			assert.Equal(t, tc.expectedOutput, b.String())
