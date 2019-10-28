@@ -10,8 +10,8 @@ type MockBuilder struct {
 	mock.Mock
 }
 
-// FetchCertificatesFromTLSConnectionState provides a mock function with given fields: TLS
-func (_m *MockBuilder) FetchCertificatesFromTLSConnectionState(TLS *tls.ConnectionState) error {
+// BuildChainFromTLSConnectionState provides a mock function with given fields: TLS
+func (_m *MockBuilder) BuildChainFromTLSConnectionState(TLS *tls.ConnectionState) error {
 	ret := _m.Called(TLS)
 
 	var r0 error
