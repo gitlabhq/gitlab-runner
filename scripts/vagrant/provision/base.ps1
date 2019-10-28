@@ -1,5 +1,5 @@
 ﻿$goVersion = "1.10"
-$gitVersion = "2.22.0"
+$gitVersion = "2.23.0"
 $srcFolder = "C:\Go\src\gitlab.com\gitlab-org\gitlab-runner"
 
 function Main
