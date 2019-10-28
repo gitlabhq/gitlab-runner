@@ -1,3 +1,7 @@
+v12.4.1 (2019-10-28)
+
+- Fix TLS chain building !1643
+
 v12.4.0 (2019-10-21)
 
 - Fix err logging for runner limit !1403
