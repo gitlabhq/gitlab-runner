@@ -11,31 +11,33 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"github.com/zakjan/cert-chain-resolver/certUtil"
 )
 
 const (
 	pemTypeCertificate = "CERTIFICATE"
 )
 
-type certificateChainFetcher func(cert *x509.Certificate) ([]*x509.Certificate, error)
-type rootCAAdder func(certs []*x509.Certificate) ([]*x509.Certificate, error)
 type pemEncoder func(out io.Writer, b *pem.Block) error
 
 type Builder interface {
 	fmt.Stringer
 
-	FetchCertificatesFromTLSConnectionState(TLS *tls.ConnectionState) error
+	BuildChainFromTLSConnectionState(TLS *tls.ConnectionState) error
 }
 
-func NewBuilder() Builder {
+func NewBuilder(logger logrus.FieldLogger) Builder {
+	logger = logger.
+		WithField("context", "certificate-chain-build")
+
 	return &defaultBuilder{
-		certificates:          make([]*x509.Certificate, 0),
-		seenCertificates:      make(map[string]bool, 0),
-		fetchCertificateChain: certUtil.FetchCertificateChain,
-		addRootCA:             certUtil.AddRootCA,
-		encodePEM:             pem.Encode,
-		logger:                logrus.StandardLogger(),
+		certificates:     make([]*x509.Certificate, 0),
+		seenCertificates: make(map[string]bool, 0),
+		resolver: newChainResolver(
+			newURLResolver(logger),
+			newVerifyResolver(logger),
+		),
+		encodePEM: pem.Encode,
+		logger:    logger,
 	}
 }
 
@@ -43,15 +45,17 @@ type defaultBuilder struct {
 	certificates     []*x509.Certificate
 	seenCertificates map[string]bool
 
-	fetchCertificateChain certificateChainFetcher
-	addRootCA             rootCAAdder
-	encodePEM             pemEncoder
+	resolver  resolver
+	encodePEM pemEncoder
 
 	logger logrus.FieldLogger
 }
 
-func (b *defaultBuilder) FetchCertificatesFromTLSConnectionState(TLS *tls.ConnectionState) error {
+func (b *defaultBuilder) BuildChainFromTLSConnectionState(TLS *tls.ConnectionState) error {
 	for _, verifiedChain := range TLS.VerifiedChains {
+		b.logger.
+			WithField("chain-leaf", fmt.Sprintf("%v", verifiedChain)).
+			Debug("Processing chain")
 		err := b.fetchCertificatesFromVerifiedChain(verifiedChain)
 		if err != nil {
 			return fmt.Errorf("error while fetching certificates into the CA Chain: %v", err)
@@ -68,14 +72,9 @@ func (b *defaultBuilder) fetchCertificatesFromVerifiedChain(verifiedChain []*x50
 		return nil
 	}
 
-	verifiedChain, err = b.fetchCertificateChain(verifiedChain[0])
+	verifiedChain, err = b.resolver.Resolve(verifiedChain)
 	if err != nil {
-		return fmt.Errorf("couldn't fetch certificates chain: %v", err)
-	}
-
-	verifiedChain, err = b.addRootCA(verifiedChain)
-	if err != nil {
-		return fmt.Errorf("couldn't add root CA to the chain: %v", err)
+		return fmt.Errorf("couldn't resolve certificates chain from the leaf certificate: %v", err)
 	}
 
 	for _, certificate := range verifiedChain {
@@ -100,7 +99,9 @@ func (b *defaultBuilder) String() string {
 	for _, certificate := range b.certificates {
 		err := b.encodePEM(out, &pem.Block{Type: pemTypeCertificate, Bytes: certificate.Raw})
 		if err != nil {
-			b.logger.WithError(err).Warning("Failed to encode certificate from chain")
+			b.logger.
+				WithError(err).
+				Warning("Failed to encode certificate from chain")
 		}
 	}
 
