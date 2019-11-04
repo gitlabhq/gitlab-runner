@@ -43,7 +43,9 @@ func (c *configOptions) loadConfig() error {
 }
 
 func (c *configOptions) inLock(fn func()) error {
-	return fslocker.InLock(c.ConfigFile, fn)
+	lockFile := fmt.Sprintf("%s.lock", c.ConfigFile)
+
+	return fslocker.InLock(lockFile, fn)
 }
 
 func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) {
