@@ -8,11 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-)
 
-const (
-	buildFailure  = "BUILD_FAILURE_EXIT_CODE"
-	systemFailure = "SYSTEM_FAILURE_EXIT_CODE"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
 )
 
 const (
@@ -31,12 +28,12 @@ const (
 
 func setBuildFailure(msg string, args ...interface{}) {
 	fmt.Println("setting build failure")
-	setFailure(buildFailure, msg, args...)
+	setFailure(api.BuildFailureExitCodeVariable, msg, args...)
 }
 
 func setSystemFailure(msg string, args ...interface{}) {
 	fmt.Println("setting system failure")
-	setFailure(systemFailure, msg, args...)
+	setFailure(api.SystemFailureExitCodeVariable, msg, args...)
 }
 
 func setFailure(failureType string, msg string, args ...interface{}) {
