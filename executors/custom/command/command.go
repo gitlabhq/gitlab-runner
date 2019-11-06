@@ -14,15 +14,13 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/process"
 )
 
 const (
 	BuildFailureExitCode  = 1
 	SystemFailureExitCode = 2
-
-	BuildFailureExitCodeVariable  = "BUILD_FAILURE_EXIT_CODE"
-	SystemFailureExitCodeVariable = "SYSTEM_FAILURE_EXIT_CODE"
 )
 
 type CreateOptions struct {
@@ -56,9 +54,9 @@ type command struct {
 
 func New(ctx context.Context, executable string, args []string, options CreateOptions) Command {
 	defaultVariables := map[string]string{
-		"TMPDIR":                      options.Dir,
-		BuildFailureExitCodeVariable:  strconv.Itoa(BuildFailureExitCode),
-		SystemFailureExitCodeVariable: strconv.Itoa(SystemFailureExitCode),
+		"TMPDIR": options.Dir,
+		api.BuildFailureExitCodeVariable:  strconv.Itoa(BuildFailureExitCode),
+		api.SystemFailureExitCodeVariable: strconv.Itoa(SystemFailureExitCode),
 	}
 
 	env := os.Environ()
