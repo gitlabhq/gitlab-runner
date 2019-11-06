@@ -87,5 +87,5 @@ func (p *windowsParser) ParseVolume(spec string) (*Volume, error) {
 		return nil, err
 	}
 
-	return newVolume(parts["source"], parts["destination"], parts["mode"]), nil
+	return newVolume(parts["source"], parts["destination"], parts["mode"], ""), nil
 }

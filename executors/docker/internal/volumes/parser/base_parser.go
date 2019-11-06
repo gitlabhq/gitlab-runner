@@ -31,9 +31,10 @@ func (p *baseParser) matchesToVolumeSpecParts(spec string, specExp *regexp.Regex
 	}
 
 	parts := map[string]string{
-		"source":      "",
-		"destination": "",
-		"mode":        "",
+		"source":          "",
+		"destination":     "",
+		"mode":            "",
+		"bindPropagation": "",
 	}
 
 	for group := range parts {

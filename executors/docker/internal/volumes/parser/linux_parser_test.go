@@ -64,6 +64,34 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			volumeSpec:    "volume_name:/destination",
 			expectedParts: &Volume{Source: "volume_name", Destination: "/destination"},
 		},
+		"bind propagation": {
+			volumeSpec:    "/source:/destination:rslave",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", BindPropagation: "rslave"},
+		},
+		"mode with bind propagation": {
+			volumeSpec:    "/source:/destination:ro,rslave",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "ro", BindPropagation: "rslave"},
+		},
+		"unsupported bind propagation": {
+			volumeSpec:    "/source:/destination:unkown",
+			expectedError: NewInvalidVolumeSpecErr("/source:/destination:unkown"),
+		},
+		"unsupported bind propagation with mode": {
+			volumeSpec:    "/source:/destination:ro,unkown",
+			expectedError: NewInvalidVolumeSpecErr("/source:/destination:ro,unkown"),
+		},
+		"malformed bind propagation": {
+			volumeSpec:    "/source:/destination:,rslave",
+			expectedError: NewInvalidVolumeSpecErr("/source:/destination:,rslave"),
+		},
+		// This is not a valid syntax for Docker but GitLab Runner still parses
+		// for the sake of simplicity, check
+		// https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1632#note_240079623
+		// for the discussion and rationale.
+		"too much colons for bind propagation": {
+			volumeSpec:    "/source:/destination:rw:rslave",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "rw", BindPropagation: "rslave"},
+		},
 	}
 
 	for testName, testCase := range testCases {

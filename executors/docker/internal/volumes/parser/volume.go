@@ -5,21 +5,24 @@ import (
 )
 
 type Volume struct {
-	Source      string
-	Destination string
-	Mode        string
+	Source          string
+	Destination     string
+	Mode            string
+	BindPropagation string
 }
 
-func newVolume(source string, destination string, mode string) *Volume {
+func newVolume(source string, destination string, mode string, bindPropagation string) *Volume {
 	return &Volume{
-		Source:      source,
-		Destination: destination,
-		Mode:        mode,
+		Source:          source,
+		Destination:     destination,
+		Mode:            mode,
+		BindPropagation: bindPropagation,
 	}
 }
 
 func (v *Volume) Definition() string {
 	parts := make([]string, 0)
+	builder := strings.Builder{}
 
 	if v.Source != "" {
 		parts = append(parts, v.Source)
@@ -31,7 +34,19 @@ func (v *Volume) Definition() string {
 		parts = append(parts, v.Mode)
 	}
 
-	return strings.Join(parts, ":")
+	builder.WriteString(strings.Join(parts, ":"))
+
+	if v.BindPropagation != "" {
+		separator := ":"
+		if v.Mode != "" {
+			separator = ","
+		}
+
+		builder.WriteString(separator)
+		builder.WriteString(v.BindPropagation)
+	}
+
+	return builder.String()
 }
 
 func (v *Volume) Len() int {
