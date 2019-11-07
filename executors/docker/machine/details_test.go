@@ -1,9 +1,11 @@
 package machine
 
 import (
-	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 func TestMachineDetailsUsed(t *testing.T) {
@@ -32,4 +34,18 @@ func TestMachineDetailsMatcher(t *testing.T) {
 	d := machineDetails{Name: newMachineName(config)}
 	assert.True(t, d.match("test-machine-%s"))
 	assert.False(t, d.match("test-other-machine-%s"))
+}
+
+func TestIsPersistedOnDisk(t *testing.T) {
+	d := machineDetails{}
+	d.State = machineStateCreating
+	assert.False(t, d.isPersistedOnDisk())
+	d.State = machineStateIdle
+	assert.True(t, d.isPersistedOnDisk())
+	d.State = machineStateAcquired
+	assert.True(t, d.isPersistedOnDisk())
+	d.State = machineStateUsed
+	assert.True(t, d.isPersistedOnDisk())
+	d.State = machineStateRemoving
+	assert.True(t, d.isPersistedOnDisk())
 }

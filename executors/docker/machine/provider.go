@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type machineProvider struct {
@@ -287,12 +287,48 @@ func (m *machineProvider) createMachines(config *common.RunnerConfig, data *mach
 	}
 }
 
+// intermediateMachineList returns a list of machines that might not yet be
+// persisted on disk, these machines are the ones between being virtually
+// created, and `docker-machine create` getting executed we populate this data
+// set to overcome the race conditions related to not-full set of machines
+// returned by `docker-machine ls -q`
+func (m *machineProvider) intermediateMachineList(excludedMachines []string) []string {
+	var excludedSet map[string]struct{}
+	var intermediateMachines []string
+
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	for _, details := range m.details {
+		if details.isPersistedOnDisk() {
+			continue
+		}
+
+		// lazy init set, as most of times we don't create new machines
+		if excludedSet == nil {
+			excludedSet = make(map[string]struct{}, len(excludedMachines))
+			for _, excludedMachine := range excludedMachines {
+				excludedSet[excludedMachine] = struct{}{}
+			}
+		}
+
+		if _, ok := excludedSet[details.Name]; ok {
+			continue
+		}
+
+		intermediateMachines = append(intermediateMachines, details.Name)
+	}
+
+	return intermediateMachines
+}
+
 func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []string, err error) {
 	machines, err = m.machine.List()
 	if err != nil {
 		return nil, err
 	}
 
+	machines = append(machines, m.intermediateMachineList(machines)...)
 	machines = filterMachineList(machines, machineFilter(config))
 	return
 }

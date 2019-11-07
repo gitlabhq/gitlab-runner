@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
@@ -576,4 +577,27 @@ func TestMachineCreationIfFailedToConnect(t *testing.T) {
 	_, nd, err := p.Use(machineNoConnect, nil)
 	assert.Error(t, err, "it create a new machine")
 	assert.Nil(t, nd)
+}
+
+func TestIntermediateMachineList(t *testing.T) {
+	p, _ := testMachineProvider()
+	p.details = machinesDetails{
+		"machine1": &machineDetails{
+			Name:  "machine1",
+			State: machineStateIdle,
+		},
+		"machine2": &machineDetails{
+			Name:  "machine2",
+			State: machineStateCreating,
+		},
+		"machine3": &machineDetails{
+			Name:  "machine3",
+			State: machineStateCreating,
+		},
+	}
+
+	expectedIntermediateMachines := []string{"machine3"}
+
+	intermediateMachine := p.intermediateMachineList([]string{"machine1", "machine2"})
+	assert.Equal(t, expectedIntermediateMachines, intermediateMachine)
 }

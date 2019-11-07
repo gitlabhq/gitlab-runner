@@ -21,6 +21,14 @@ type machineDetails struct {
 	LastSeen   time.Time
 }
 
+func (m *machineDetails) isPersistedOnDisk() bool {
+	// Machines in creating phase might or might not be persisted on disk
+	// this is due to async nature of machine creation process
+	// where to `docker-machine create` is the one that is creating relevant files
+	// and it is being executed with undefined delay
+	return m.State != machineStateCreating
+}
+
 func (m *machineDetails) isUsed() bool {
 	return m.State != machineStateIdle
 }
