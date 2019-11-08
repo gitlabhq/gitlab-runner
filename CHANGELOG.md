@@ -1,3 +1,25 @@
+v12.5.0-rc1 (2019-11-09)
+
+- Update docs for Runner configuration inside of a Docker container !1613
+- Remove misleading comment !1622
+- Remove absolute paths from chart !1626
+- Fix lint on markdown files !1602
+- Document GitLab docker machine fork !1596
+- Update redirected link !1637
+- Fix certificates chain generation regression introduced with 12.4.0-rc1 !1639
+- Bump DOCKER_MACHINE_VERSION !1595
+- Fix golint issues in machine pkg !1641
+- Upgrade to alpine 3.10 !1636
+- Fix #4684 for K3s/containerd !1605
+- Update makefile to setup dev dependencies before running tests !1589
+- Fix external Helm documentation links !1644
+- Update Git version for Windows dev environment !1646
+- Change config lock to create a separate lock file !1647
+- Add few constants to executors/custom/api !1657
+- Fix bind propagation for Linux volumes !1632
+- Populate a list of machines with machines that might not yet be persisted on disk !914
+- Add service definition in config for Kubernetes executor !1476
+
 v12.4.1 (2019-10-28)
 
 - Fix TLS chain building !1643
