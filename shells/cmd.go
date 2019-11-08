@@ -266,6 +266,8 @@ func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.Shel
 		} else {
 			w.Line("echo Running on %COMPUTERNAME%...")
 		}
+
+		w.Warning("DEPRECATION: CMD shell is deprecated and will be removed in 13.0: https://gitlab.com/gitlab-org/gitlab-runner/issues/4163")
 	}
 
 	err = b.writeScript(w, buildStage, info)
