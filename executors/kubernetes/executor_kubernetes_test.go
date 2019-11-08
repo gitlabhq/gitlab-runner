@@ -20,7 +20,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -834,6 +833,71 @@ func TestPrepare(t *testing.T) {
 						Entrypoint: []string{"/init", "run"},
 					},
 					Services: common.Services{
+						{
+							Name:       "test-service",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
+				},
+				configurationOverwrites: &overwrites{namespace: "default"},
+				serviceLimits:           api.ResourceList{},
+				buildLimits:             api.ResourceList{},
+				helperLimits:            api.ResourceList{},
+				serviceRequests:         api.ResourceList{},
+				buildRequests:           api.ResourceList{},
+				helperRequests:          api.ResourceList{},
+			},
+		},
+		{
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+						Services: []common.Service{
+							{Name: "test-service-k8s"},
+							{Name: "test-service-k8s2"},
+							{Name: ""},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+						{
+							Name: "",
+						},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name: "test-service-k8s",
+						},
+						{
+							Name: "test-service-k8s2",
+						},
 						{
 							Name:       "test-service",
 							Entrypoint: []string{"/init", "run"},

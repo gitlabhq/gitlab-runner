@@ -95,6 +95,14 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `bearer_token`: Default bearer token used to launch build pods.
 - `bearer_token_overwrite_allowed`: Boolean to allow projects to specify a bearer token that will be used to create the build pod.
 - `volumes`: configured through the config file, the list of volumes that will be mounted in the build container. [Read more about using volumes.](#using-volumes)
+- `services`: configured through the config file, the list of [services](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#what-is-a-service) attached to the build container using the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar).
+- `services`:
+  [Since GitLab Runner
+  12.5](https://gitlab.com/gitlab-org/gitlab-runner/issues/4470), list of
+  [services](https://docs.gitlab.com/ee/ci/services/) attached to the build
+  container using the [sidecar
+  pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar).
+  Read more about [using services](#using-services).
 
 ### Configuring executor Service Account
 
@@ -372,6 +380,28 @@ check_interval = 30
         run_as_user = 59417
         run_as_group = 59417
         fs_group = 59417
+```
+
+## Using services
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/4470) in GitLab Runner 12.5.
+
+Define a list of [services](https://docs.gitlab.com/ee/ci/services/).
+Currently, only `name` can be defined.
+
+```toml
+concurrent = 1
+check_interval = 30
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+    [runners.kubernetes]
+      helper_image = "gitlab-registy.example.com/helper:latest"
+      [[runners.kubernetes.services]]
+        name = "postgres:12-alpine"
+      [[runners.kubernetes.services]]
+        name = "percona:latest"
 ```
 
 ## Using Docker in your builds

@@ -673,10 +673,22 @@ func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 	return nil
 }
 
-func (s *executor) prepareOptions(job *common.Build) {
+func (s *executor) prepareOptions(build *common.Build) {
 	s.options = &kubernetesOptions{}
-	s.options.Image = job.Image
-	for _, service := range job.Services {
+	s.options.Image = build.Image
+
+	s.getServices(build)
+}
+
+func (s *executor) getServices(build *common.Build) {
+	for _, service := range s.Config.Kubernetes.Services {
+		if service.Name == "" {
+			continue
+		}
+		s.options.Services = append(s.options.Services, common.Image{Name: service.Name})
+	}
+
+	for _, service := range build.Services {
 		if service.Name == "" {
 			continue
 		}
