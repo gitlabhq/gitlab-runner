@@ -194,6 +194,7 @@ type KubernetesConfig struct {
 	PodAnnotationsOverwriteAllowed string                       `toml:"pod_annotations_overwrite_allowed" json:"pod_annotations_overwrite_allowed" long:"pod_annotations_overwrite_allowed" env:"KUBERNETES_POD_ANNOTATIONS_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_POD_ANNOTATIONS_*' values"`
 	PodSecurityContext             KubernetesPodSecurityContext `toml:"pod_security_context,omitempty" namespace:"pod-security-context" description:"A security context attached to each build pod"`
 	Volumes                        KubernetesVolumes            `toml:"volumes"`
+	Services                       []Service                    `toml:"services,omitempty" json:"services" long:"services" description:"Add service that is started with container"`
 }
 
 type KubernetesVolumes struct {
@@ -243,6 +244,10 @@ type KubernetesPodSecurityContext struct {
 	RunAsNonRoot       *bool   `toml:"run_as_non_root,omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
 	RunAsUser          *int64  `toml:"run_as_user,omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
+}
+
+type Service struct {
+	Name string `toml:"name" long:"name" description:"The image path for the service"`
 }
 
 type RunnerCredentials struct {
