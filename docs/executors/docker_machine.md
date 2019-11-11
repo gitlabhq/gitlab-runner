@@ -17,6 +17,8 @@ some additional patches for the following bugs:
 - [Make DigitalOcean driver RateLimit aware](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/2)
 - [Add backoff to google driver operations check](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/7)
 - [Add `--google-min-cpu-platform` option for machine creation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/9)
+- [Use cached IP for Google driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/15)
+- [Use cached IP for AWS driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/14)
 
 The intent of this fork is to fix critical and bugs affecting running
 costs only. No new features will be added.
