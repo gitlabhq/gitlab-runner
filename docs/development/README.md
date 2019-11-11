@@ -26,9 +26,6 @@ wget https://storage.googleapis.com/golang/go1.10.8.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
-NOTE: **Note:**
-Brew doesn't provide a [Go 1.8.x formula](https://formulae.brew.sh/formula/go).
-
 ### For FreeBSD
 
 ```
