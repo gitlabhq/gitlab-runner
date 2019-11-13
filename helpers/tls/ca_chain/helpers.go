@@ -11,8 +11,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
 
 	"github.com/fullsailor/pkcs7"
@@ -90,23 +88,6 @@ func preparePrefixedCertificateLogger(logger logrus.FieldLogger, cert *x509.Cert
 			fmt.Sprintf("%sSerial", prefix):        cert.SerialNumber.String(),
 			fmt.Sprintf("%sIssuerCertURL", prefix): cert.IssuingCertificateURL,
 		})
-}
-
-func fetchRemoteCertificate(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
 }
 
 func verifyCertificate(cert *x509.Certificate) ([][]*x509.Certificate, error) {
