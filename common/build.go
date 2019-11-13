@@ -655,10 +655,6 @@ func (b *Build) GetCITLSVariables() JobVariables {
 	return b.GetTLSVariables(tls.VariableCAFile, tls.VariableCertFile, tls.VariableKeyFile)
 }
 
-func (b *Build) GetGitTLSVariables() JobVariables {
-	return b.GetTLSVariables("GIT_SSL_CAINFO", "GIT_SSL_CERT", "GIT_SSL_KEY")
-}
-
 func (b *Build) IsSharedEnv() bool {
 	return b.ExecutorFeatures.Shared
 }
