@@ -431,9 +431,20 @@ as a `service` usually in your `.gitlab-ci.yaml` it will be run as a separate
 container in your Pod. Basically containers in Pods only share volumes assigned
 to them and an IP address by which they can reach each other using `localhost`.
 `/var/run/docker.sock` is not shared by the `docker:dind` container and the `docker`
-binary tries to use it by default. To overwrite this and make the client use tcp
-to contact the docker daemon in the other container be sure to include
-`DOCKER_HOST=tcp://localhost:2375` in your environment variables of the build container.
+binary tries to use it by default.
+
+To overwrite this and make the client use TCP to contact the Docker daemon,
+in the other container, be sure to include the environment variables of
+the build container:
+
+- `DOCKER_HOST=tcp://localhost:2375` for no TLS connection.
+- `DOCKER_HOST=tcp://localhost:2376` for TLS connection.
+
+Make sure to configure those properly. As of Docker 19.03, TLS is enabled by
+default but it requires mapping
+certificates to your client. You can enable non-TLS connection for DIND or
+mount certificates as described in
+[**Use Docker In Docker Workflow wiht Docker executor**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor)
 
 ### Not supplying Git
 
