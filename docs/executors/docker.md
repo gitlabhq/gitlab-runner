@@ -199,6 +199,9 @@ The service container for MySQL will be accessible under the hostname `mysql`.
 So, in order to access your database service you have to connect to the host
 named `mysql` instead of a socket or `localhost`.
 
+If needed, you can [assign an alias](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services)
+to each service.
+
 ## Define image and services from `.gitlab-ci.yml`
 
 You can simply define an image that will be used for all jobs and a list of
@@ -246,8 +249,20 @@ Look for the `[runners.docker]` section:
 ```
 [runners.docker]
   image = "ruby:2.6"
-  services = ["mysql:latest", "postgres:latest"]
+
+[[runners.docker.services]]
+  name = "mysql:latest"
+  alias = "db"
+
+[[runners.docker.services]]
+  name = "redis:latest"
+  alias = "cache"
 ```
+
+NOTE: **Note:**
+The example above uses the [array of tables syntax](https://github.com/toml-lang/toml#user-content-array-of-tables).
+Defining services with the [array of strings syntax](https://github.com/toml-lang/toml#user-content-array)
+is deprecated and will be removed in a future version.
 
 The image and services defined this way will be added to all builds run by
 that Runner, so even if you don't define an `image` inside `.gitlab-ci.yml`,

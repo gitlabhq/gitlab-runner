@@ -79,7 +79,7 @@ type DockerConfig struct {
 	VolumesFrom                []string          `toml:"volumes_from,omitempty" json:"volumes_from" long:"volumes-from" env:"DOCKER_VOLUMES_FROM" description:"A list of volumes to inherit from another container"`
 	NetworkMode                string            `toml:"network_mode,omitempty" json:"network_mode" long:"network-mode" env:"DOCKER_NETWORK_MODE" description:"Add container to a custom network"`
 	Links                      []string          `toml:"links,omitempty" json:"links" long:"links" env:"DOCKER_LINKS" description:"Add link to another container"`
-	Services                   []string          `toml:"services,omitempty" json:"services" long:"services" env:"DOCKER_SERVICES" description:"Add service that is started with container"`
+	Services                   []*DockerService  `toml:"services,omitempty" json:"services" long:"services" env:"DOCKER_SERVICES" description:"Add service that is started with container"`
 	WaitForServicesTimeout     int               `toml:"wait_for_services_timeout,omitzero" json:"wait_for_services_timeout" long:"wait-for-services-timeout" env:"DOCKER_WAIT_FOR_SERVICES_TIMEOUT" description:"How long to wait for service startup"`
 	AllowedImages              []string          `toml:"allowed_images,omitempty" json:"allowed_images" long:"allowed-images" env:"DOCKER_ALLOWED_IMAGES" description:"Whitelist allowed images"`
 	AllowedServices            []string          `toml:"allowed_services,omitempty" json:"allowed_services" long:"allowed-services" env:"DOCKER_ALLOWED_SERVICES" description:"Whitelist allowed services"`
@@ -245,6 +245,63 @@ type KubernetesPodSecurityContext struct {
 	RunAsNonRoot       *bool   `toml:"run_as_non_root,omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
 	RunAsUser          *int64  `toml:"run_as_user,omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
+}
+
+type DockerService struct {
+	Service
+	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+}
+
+func (s *DockerService) ToImageDefinition() Image {
+	return Image{
+		Name:  s.Name,
+		Alias: s.Alias,
+	}
+}
+
+// TODO: Remove in 13.0
+// we should fallback to the default toml parsing
+func (s *DockerService) UnmarshalTOML(data interface{}) error {
+	switch v := data.(type) {
+	case string:
+		logrus.Warning("Setting runners.docker.services as array is deprecated and will be removed in the future. " +
+			"Please use the array of tables syntax instead. More info at " +
+			"[https://docs.gitlab.com/runner/executors/docker.html#define-image-and-services-in-configtoml].")
+		s.Name = v
+
+		return nil
+	case map[string]interface{}:
+		name, err := tryGetTomlValue(v, "name")
+		if err != nil {
+			return err
+		}
+
+		alias, err := tryGetTomlValue(v, "alias")
+		if err != nil {
+			return err
+		}
+
+		s.Name = name
+		s.Alias = alias
+
+		return nil
+	}
+
+	return fmt.Errorf("toml: type mismatch for config.DockerService: expected table but found %T", data)
+}
+
+func tryGetTomlValue(data map[string]interface{}, key string) (string, error) {
+	value, ok := data[key]
+	if !ok {
+		return "", nil
+	}
+
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	}
+
+	return "", fmt.Errorf("toml: cannot load TOML value of type %T into a Go string", value)
 }
 
 type Service struct {
