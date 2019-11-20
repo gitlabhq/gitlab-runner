@@ -1,4 +1,4 @@
-v12.5.0-rc1 (2019-11-09)
+v12.5.0 (2019-11-20)
 
 - Update docs for Runner configuration inside of a Docker container !1613
 - Remove misleading comment !1622
