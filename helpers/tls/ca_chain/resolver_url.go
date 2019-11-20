@@ -9,13 +9,49 @@ package ca_chain
 import (
 	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
 const defaultURLResolverLoopLimit = 15
+const defaultURLResolverFetchTimeout = 15 * time.Second
 
-type fetcher func(url string) ([]byte, error)
+type fetcher interface {
+	Fetch(url string) ([]byte, error)
+}
+
+type httpFetcher struct {
+	client *http.Client
+}
+
+func newHTTPFetcher(timeout time.Duration) *httpFetcher {
+	return &httpFetcher{
+		client: &http.Client{
+			Timeout: timeout,
+		},
+	}
+}
+
+func (f *httpFetcher) Fetch(url string) ([]byte, error) {
+	resp, err := f.client.Get(url)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 type decoder func(data []byte) (*x509.Certificate, error)
 
 type urlResolver struct {
@@ -29,7 +65,7 @@ type urlResolver struct {
 func newURLResolver(logger logrus.FieldLogger) resolver {
 	return &urlResolver{
 		logger:    logger,
-		fetcher:   fetchRemoteCertificate,
+		fetcher:   newHTTPFetcher(defaultURLResolverFetchTimeout),
 		decoder:   decodeCertificate,
 		loopLimit: defaultURLResolverLoopLimit,
 	}
@@ -81,7 +117,7 @@ func (r *urlResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Cert
 
 	issuerURL := cert.IssuingCertificateURL[0]
 
-	data, err := r.fetcher(issuerURL)
+	data, err := r.fetcher.Fetch(issuerURL)
 	if err != nil {
 		log.
 			WithError(err).
