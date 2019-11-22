@@ -198,7 +198,9 @@ This defines the Docker Container parameters.
 | `memory_swap`                  | String value containing the total memory limit |
 | `memory_reservation`           | String value containing the memory soft limit |
 | `oom_kill_disable`             | Do not kill processes in a container if an out-of-memory (OOM) error occurs |
+| `oom_score_adjust`             | OOM score adjustment, positive means kill earlier |
 | `cpuset_cpus`                  | String value containing the cgroups CpusetCpus to use |
+| `cpu_shares`                   | Number of CPU shares used to set relative cpu usage, default: 1024 |
 | `cpus`                         | String value of number of CPUs (available in docker 1.13 or later) |
 | `dns`                          | A list of DNS servers for the container to use |
 | `dns_search`                   | A list of DNS search domains |
