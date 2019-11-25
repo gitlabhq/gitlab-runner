@@ -3,7 +3,6 @@ package common
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -54,7 +53,7 @@ func (b JobVariables) Get(key string) string {
 }
 
 func (b JobVariables) ExpandValue(value string) string {
-	return os.Expand(value, b.Get)
+	return LegacyExpand(value, b.Get)
 }
 
 func (b JobVariables) Expand() (variables JobVariables) {
