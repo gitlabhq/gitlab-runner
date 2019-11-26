@@ -23,9 +23,9 @@ plugins:
     config:
       over: 9
     exclude_patterns:
-    - common/legacy_expand.go
     - vendor/
     - helpers/shell_escape.go
+    - helpers/shell/legacy_expand.go
     - executors/kubernetes/executor_kubernetes_test.go
     - executors/kubernetes/util_test.go
     - executors/kubernetes/exec_test.go

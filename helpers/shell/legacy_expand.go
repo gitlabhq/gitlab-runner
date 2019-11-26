@@ -15,7 +15,7 @@
 
 // General environment variables.
 
-package common
+package shell
 
 // Expand replaces ${var} or $var in the string based on the mapping function.
 func LegacyExpand(s string, mapping func(string) string) string {

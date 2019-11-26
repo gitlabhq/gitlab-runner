@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/shell"
 )
 
 type JobVariable struct {
@@ -53,7 +55,7 @@ func (b JobVariables) Get(key string) string {
 }
 
 func (b JobVariables) ExpandValue(value string) string {
-	return LegacyExpand(value, b.Get)
+	return shell.LegacyExpand(value, b.Get)
 }
 
 func (b JobVariables) Expand() (variables JobVariables) {
