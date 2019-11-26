@@ -280,10 +280,10 @@ git 1.7.1:
     - unset GPG_KEY
     - yum install -y -q git && git version
     - curl https://storage.googleapis.com/golang/go1.13.4.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
-    - export PATH=${GOROOT}/bin:$PATH
+    - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
     - source ci/touch_make_dependencies
   script:
-    - make test
+    - make simple-test
 
 #
 # Coverage stage

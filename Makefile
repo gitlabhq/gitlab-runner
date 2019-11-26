@@ -101,7 +101,9 @@ codequality:
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
-test: helper-docker development_setup
+test: helper-docker development_setup simple-test
+
+simple-test:
 	go test $(OUR_PACKAGES) $(TESTFLAGS)
 
 parallel_test_prepare:
