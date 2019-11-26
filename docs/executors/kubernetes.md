@@ -249,7 +249,7 @@ concurrent = 4
       [runners.kubernetes.volumes.secret.items]
         "secret_1" = "relative/path/to/secret_1_file"
     [[runners.kubernetes.volumes.empty_dir]]
-      name = "empty_dir"
+      name = "empty-dir"
       mount_path = "/path/to/empty_dir"
       medium = "Memory"
 ```
