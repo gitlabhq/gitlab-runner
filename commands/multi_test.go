@@ -149,9 +149,9 @@ func runFileLockingCmd(t *testing.T, wg *sync.WaitGroup, started chan bool, stop
 
 	go func() {
 		if shouldPanic {
-			assert.Panics(t, cmd.RunWithLock, "Expected the Runner to create a new lock")
+			assert.Panics(t, cmd.runWithLock, "Expected the Runner to create a new lock")
 		} else {
-			assert.NotPanics(t, cmd.RunWithLock, "Expected the Runner to reject creating a new lock")
+			assert.NotPanics(t, cmd.runWithLock, "Expected the Runner to reject creating a new lock")
 		}
 		wg.Done()
 	}()
@@ -194,7 +194,7 @@ func TestMulti_RunWithLock(t *testing.T) {
 	wg.Wait()
 
 	// Try to lock the file to check if it was properly unlocked while
-	// finishing cmd.RunWithLock() call
+	// finishing cmd.runWithLock() call
 	fl := flock.New(filePath)
 	locked, err := fl.TryLock()
 	defer fl.Unlock()
