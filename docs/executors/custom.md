@@ -232,7 +232,7 @@ order:
 1. `build_script`
 1. `after_script`
 1. `archive_cache`
-1. `upload_artifact_on_success` OR `upload_artifact_on_failure`
+1. `upload_artifacts_on_success` OR `upload_artifacts_on_failure`
 
 For each stage mentioned above, the `run_exec` executable will be
 executed with:
@@ -298,8 +298,8 @@ what the main goal of that script is.
 | `build_script` | This is a combination of [`before_script`](https://docs.gitlab.com/ee/ci/yaml/#before_script-and-after_script) and [script](https://docs.gitlab.com/ee/ci/yaml/#script). |
 | `after_script` | This is the [`after_script`](https://docs.gitlab.com/ee/ci/yaml/#before_script-and-after_script) defined from the job. This is always called even if any of the previous steps failed. |
 | `archive_cache` | Will create an archive of all the cache, if any are defined. |
-| `upload_artifact_on_success` | Upload any artifacts that are defined. Only executed when `build_script` was successful. |
-| `upload_artifact_on_failure` | Upload any artifacts that are defined. Only exected when `build_script` fails. |
+| `upload_artifacts_on_success` | Upload any artifacts that are defined. Only executed when `build_script` was successful. |
+| `upload_artifacts_on_failure` | Upload any artifacts that are defined. Only exected when `build_script` fails. |
 
 ### Cleanup
 
