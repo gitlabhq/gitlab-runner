@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -348,34 +347,6 @@ type Config struct {
 
 type CustomBuildDir struct {
 	Enabled bool `toml:"enabled,omitempty" json:"enabled" long:"enabled" env:"CUSTOM_BUILD_DIR_ENABLED" description:"Enable job specific build directories"`
-}
-
-func getDeprecatedStringSetting(setting string, tomlField string, envVariable string, tomlReplacement string, envReplacement string) string {
-	if setting != "" {
-		logrus.Warningf("%s setting is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", tomlField, tomlReplacement)
-		return setting
-	}
-
-	value := os.Getenv(envVariable)
-	if value != "" {
-		logrus.Warningf("%s environment variables is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", envVariable, envReplacement)
-	}
-
-	return value
-}
-
-func getDeprecatedBoolSetting(setting bool, tomlField string, envVariable string, tomlReplacement string, envReplacement string) bool {
-	if setting {
-		logrus.Warningf("%s setting is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", tomlField, tomlReplacement)
-		return setting
-	}
-
-	value, _ := strconv.ParseBool(os.Getenv(envVariable))
-	if value {
-		logrus.Warningf("%s environment variables is deprecated and will be removed in GitLab Runner 12.0. Please use %s instead", envVariable, envReplacement)
-	}
-
-	return value
 }
 
 func (c *CacheS3Config) ShouldUseIAMCredentials() bool {
