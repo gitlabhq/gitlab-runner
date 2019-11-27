@@ -54,7 +54,7 @@ type command struct {
 
 func New(ctx context.Context, executable string, args []string, options CreateOptions) Command {
 	defaultVariables := map[string]string{
-		"TMPDIR": options.Dir,
+		"TMPDIR":                          options.Dir,
 		api.BuildFailureExitCodeVariable:  strconv.Itoa(BuildFailureExitCode),
 		api.SystemFailureExitCodeVariable: strconv.Itoa(SystemFailureExitCode),
 	}

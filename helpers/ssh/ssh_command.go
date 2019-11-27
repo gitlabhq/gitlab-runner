@@ -83,8 +83,8 @@ func (s *Client) Connect() error {
 	}
 
 	config := &ssh.ClientConfig{
-		User: s.User,
-		Auth: methods,
+		User:            s.User,
+		Auth:            methods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 

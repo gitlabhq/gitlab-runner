@@ -95,7 +95,7 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 		defer executorProvider.AssertExpectations(t)
 
 		fakeExecutor := &machineCredentialsUsageFakeExecutor{
-			t: t,
+			t:                          t,
 			expectedmachineCredentials: machineCredentials,
 			expectedRunnerConfig:       runnerConfigSource(),
 		}

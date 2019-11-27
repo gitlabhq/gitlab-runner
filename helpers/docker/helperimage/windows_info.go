@@ -34,11 +34,11 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 	}
 
 	return Info{
-		Architecture: windowsSupportedArchitecture,
-		Name:         name,
-		Tag:          fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, osVersion),
+		Architecture:            windowsSupportedArchitecture,
+		Name:                    name,
+		Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, osVersion),
 		IsSupportingLocalImport: false,
-		Cmd: powerShellCmd,
+		Cmd:                     powerShellCmd,
 	}, nil
 
 }
