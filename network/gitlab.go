@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -167,6 +168,7 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 }
 
 func (n *GitLabClient) doRaw(
+	ctx context.Context,
 	credentials requestCredentials,
 	method, uri string,
 	request io.Reader,
@@ -178,10 +180,11 @@ func (n *GitLabClient) doRaw(
 		return nil, err
 	}
 
-	return c.do(uri, method, request, requestType, headers)
+	return c.do(ctx, uri, method, request, requestType, headers)
 }
 
 func (n *GitLabClient) doJSON(
+	ctx context.Context,
 	credentials requestCredentials,
 	method, uri string,
 	statusCode int,
@@ -193,7 +196,7 @@ func (n *GitLabClient) doJSON(
 		return clientError, err.Error(), nil
 	}
 
-	return c.doJSON(uri, method, statusCode, request, response)
+	return c.doJSON(ctx, uri, method, statusCode, request, response)
 }
 
 func (n *GitLabClient) getResponseTLSData(
@@ -221,6 +224,7 @@ func (n *GitLabClient) RegisterRunner(
 
 	var response common.RegisterRunnerResponse
 	result, statusText, resp := n.doJSON(
+		context.Background(),
 		&runner,
 		http.MethodPost,
 		"runners",
@@ -253,7 +257,15 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, resp := n.doJSON(&runner, http.MethodPost, "runners/verify", http.StatusOK, &request, nil)
+	result, statusText, resp := n.doJSON(
+		context.Background(),
+		&runner,
+		http.MethodPost,
+		"runners/verify",
+		http.StatusOK,
+		&request,
+		nil,
+	)
 	if resp != nil {
 		defer func() { _ = resp.Body.Close() }()
 	}
@@ -280,7 +292,15 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, resp := n.doJSON(&runner, http.MethodDelete, "runners", http.StatusNoContent, &request, nil)
+	result, statusText, resp := n.doJSON(
+		context.Background(),
+		&runner,
+		http.MethodDelete,
+		"runners",
+		http.StatusNoContent,
+		&request,
+		nil,
+	)
 	if resp != nil {
 		defer func() { _ = resp.Body.Close() }()
 	}
@@ -320,6 +340,7 @@ func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
 }
 
 func (n *GitLabClient) RequestJob(
+	ctx context.Context,
 	config common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
 ) (*common.JobResponse, bool) {
@@ -332,6 +353,7 @@ func (n *GitLabClient) RequestJob(
 
 	var response common.JobResponse
 	result, statusText, httpResponse := n.doJSON(
+		ctx,
 		&config.RunnerCredentials,
 		http.MethodPost,
 		"jobs/request",
@@ -388,6 +410,7 @@ func (n *GitLabClient) UpdateJob(
 	}
 
 	statusCode, statusText, response := n.doJSON(
+		context.Background(),
 		&config.RunnerCredentials,
 		http.MethodPut,
 		fmt.Sprintf("jobs/%d", jobInfo.ID),
@@ -475,7 +498,15 @@ func (n *GitLabClient) PatchTrace(
 	uri := fmt.Sprintf("jobs/%d/trace", id)
 	request := bytes.NewReader(content)
 
-	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
+	response, err := n.doRaw(
+		context.Background(),
+		&config.RunnerCredentials,
+		"PATCH",
+		uri,
+		request,
+		"text/plain",
+		headers,
+	)
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
 		return common.NewPatchTraceResult(startOffset, common.PatchFailed, 0)
@@ -616,6 +647,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 	headers := make(http.Header)
 	headers.Set("JOB-TOKEN", config.Token)
 	res, err := n.doRaw(
+		context.Background(),
 		&config,
 		http.MethodPost,
 		fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()),
@@ -689,7 +721,7 @@ func (n *GitLabClient) DownloadArtifacts(
 	headers.Set("JOB-TOKEN", config.Token)
 	uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
 
-	res, err := n.doRaw(&config, http.MethodGet, uri, nil, "", headers)
+	res, err := n.doRaw(context.Background(), &config, http.MethodGet, uri, nil, "", headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,

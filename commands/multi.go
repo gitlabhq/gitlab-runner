@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -68,8 +69,8 @@ type RunCommand struct {
 	// abortBuilds is used to abort running builds
 	abortBuilds chan os.Signal
 
-	// runSignal is used to abort current operation (scaling workers, waiting for config)
-	runSignal chan os.Signal
+	// runInterruptSignal is used to abort current operation (scaling workers, waiting for config)
+	runInterruptSignal chan os.Signal
 
 	// reloadSignal is used to trigger forceful config reload
 	reloadSignal chan os.Signal
@@ -98,7 +99,7 @@ func (mr *RunCommand) log() *logrus.Entry {
 // into Execute() for details.
 func (mr *RunCommand) Start(_ service.Service) error {
 	mr.abortBuilds = make(chan os.Signal)
-	mr.runSignal = make(chan os.Signal, 1)
+	mr.runInterruptSignal = make(chan os.Signal, 1)
 	mr.reloadSignal = make(chan os.Signal, 1)
 	mr.runFinished = make(chan bool, 1)
 	mr.stopSignals = make(chan os.Signal)
@@ -212,7 +213,7 @@ func (mr *RunCommand) run() {
 	workerIndex := 0
 
 	// Update number of workers and reload configuration.
-	// Exits when mr.runSignal receives a signal.
+	// Exits when mr.runInterruptSignal receives a signal.
 	for mr.stopSignal == nil {
 		signaled := mr.updateWorkers(&workerIndex, startWorker, stopWorker)
 		if signaled != nil {
@@ -543,7 +544,7 @@ func (mr *RunCommand) requestJob(
 	}
 	defer mr.buildsHelper.releaseRequest(runner)
 
-	jobData, healthy := mr.network.RequestJob(*runner, sessionInfo)
+	jobData, healthy := mr.doJobRequest(context.Background(), runner, sessionInfo)
 	mr.makeHealthy(runner.UniqueID(), healthy)
 
 	if jobData == nil {
@@ -571,6 +572,31 @@ func (mr *RunCommand) requestJob(
 
 	trace.SetFailuresCollector(mr.failuresCollector)
 	return trace, jobData, nil
+}
+
+// doJobRequest will execute the request for a new job, respecting an interruption
+// caused by interrupt signals or process execution finalization
+func (mr *RunCommand) doJobRequest(
+	ctx context.Context,
+	runner *common.RunnerConfig,
+	sessionInfo *common.SessionInfo,
+) (*common.JobResponse, bool) {
+	// Terminate opened requests to GitLab when interrupt signal
+	// is broadcast.
+	ctx, cancelFn := context.WithCancel(ctx)
+	defer cancelFn()
+
+	go func() {
+		select {
+		case <-mr.runInterruptSignal:
+			cancelFn()
+		case <-mr.runFinished:
+			cancelFn()
+		case <-ctx.Done():
+		}
+	}()
+
+	return mr.network.RequestJob(ctx, *runner, sessionInfo)
 }
 
 // requeueRunner feeds the runners channel in a non-blocking way. This replicates the
@@ -606,7 +632,7 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 		// or exit if termination signal was broadcasted.
 		select {
 		case stopWorker <- true:
-		case signaled := <-mr.runSignal:
+		case signaled := <-mr.runInterruptSignal:
 			return signaled
 		}
 		mr.currentWorkers--
@@ -617,7 +643,7 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 		// or exit if termination signal was broadcasted.
 		select {
 		case startWorker <- *workerIndex:
-		case signaled := <-mr.runSignal:
+		case signaled := <-mr.runInterruptSignal:
 			return signaled
 		}
 		mr.currentWorkers++
@@ -641,9 +667,10 @@ func (mr *RunCommand) updateConfig() os.Signal {
 			mr.log().Errorln("Failed to load config", err)
 		}
 
-	case signaled := <-mr.runSignal:
+	case signaled := <-mr.runInterruptSignal:
 		return signaled
 	}
+
 	return nil
 }
 
@@ -710,7 +737,7 @@ func (mr *RunCommand) interruptRun() {
 
 	// Pump interrupt signal
 	for {
-		mr.runSignal <- mr.stopSignal
+		mr.runInterruptSignal <- mr.stopSignal
 	}
 }
 
@@ -731,7 +758,8 @@ func (mr *RunCommand) handleGracefulShutdown() error {
 		// Wait for other signals to finish builds
 		select {
 		case mr.stopSignal = <-mr.stopSignals:
-		// We received a new signal
+			// We received a new signal
+			mr.log().WithField("stop-signal", mr.stopSignal).Warning("[handleGracefulShutdown] received stop signal")
 
 		case <-mr.runFinished:
 			// Everything finished we can exit now
@@ -739,7 +767,7 @@ func (mr *RunCommand) handleGracefulShutdown() error {
 		}
 	}
 
-	return fmt.Errorf("received: %v", mr.stopSignal)
+	return fmt.Errorf("received stop signal: %v", mr.stopSignal)
 }
 
 // handleForcefulShutdown is executed if handleGracefulShutdown exited with an error
@@ -771,7 +799,8 @@ func (mr *RunCommand) handleForcefulShutdown() error {
 	for {
 		select {
 		case mr.stopSignal = <-mr.stopSignals:
-			return fmt.Errorf("forced exit: %v", mr.stopSignal)
+			mr.log().WithField("stop-signal", mr.stopSignal).Warning("[handleForcefulShutdown] received stop signal")
+			return fmt.Errorf("forced exit with stop signal: %v", mr.stopSignal)
 
 		case <-time.After(common.ShutdownTimeout * time.Second):
 			return errors.New("shutdown timed out")
@@ -834,7 +863,9 @@ func (mr *RunCommand) runWait() {
 	mr.log().Debugln("Waiting for stop signal")
 
 	// Save the stop signal and exit to execute Stop()
-	mr.stopSignal = <-mr.stopSignals
+	stopSignal := <-mr.stopSignals
+	mr.stopSignal = stopSignal
+	mr.log().WithField("stop-signal", stopSignal).Warning("[runWait] received stop signal")
 }
 
 // Describe implements prometheus.Collector.
