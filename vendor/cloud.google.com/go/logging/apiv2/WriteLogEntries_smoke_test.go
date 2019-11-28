@@ -17,19 +17,16 @@
 package logging
 
 import (
-	loggingpb "google.golang.org/genproto/googleapis/logging/v2"
-)
-
-import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/internal/testutil"
-	"golang.org/x/net/context"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+	loggingpb "google.golang.org/genproto/googleapis/logging/v2"
 )
 
 var _ = fmt.Sprintf

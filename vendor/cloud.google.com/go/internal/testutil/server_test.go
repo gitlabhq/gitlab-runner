@@ -19,6 +19,7 @@ import (
 
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestNewServer(t *testing.T) {
@@ -26,13 +27,13 @@ func TestNewServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer srv.Close()
 	srv.Start()
 	conn, err := grpc.Dial(srv.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn.Close()
-	srv.Close()
+	defer conn.Close()
 }
 
 func TestPageBounds(t *testing.T) {
@@ -73,7 +74,7 @@ func TestPageBounds(t *testing.T) {
 	}
 
 	_, _, _, err := PageBounds(4, "xyz", 5)
-	if grpc.Code(err) != codes.InvalidArgument {
+	if status.Code(err) != codes.InvalidArgument {
 		t.Errorf("want invalid argument, got <%v>", err)
 	}
 }

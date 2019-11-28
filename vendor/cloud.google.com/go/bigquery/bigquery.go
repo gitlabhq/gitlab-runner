@@ -15,28 +15,26 @@
 package bigquery
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 
-	gax "github.com/googleapis/gax-go"
-
 	"cloud.google.com/go/internal"
 	"cloud.google.com/go/internal/version"
-
+	gax "github.com/googleapis/gax-go/v2"
+	bq "google.golang.org/api/bigquery/v2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
-	htransport "google.golang.org/api/transport/http"
-
-	"golang.org/x/net/context"
-	bq "google.golang.org/api/bigquery/v2"
 )
 
 const (
-	prodAddr  = "https://www.googleapis.com/bigquery/v2/"
-	Scope     = "https://www.googleapis.com/auth/bigquery"
-	userAgent = "gcloud-golang-bigquery/20160429"
+	// Scope is the Oauth2 scope for the service.
+	// For relevant BigQuery scopes, see:
+	// https://developers.google.com/identity/protocols/googlescopes#bigqueryv2
+	Scope           = "https://www.googleapis.com/auth/bigquery"
+	userAgentPrefix = "gcloud-golang-bigquery"
 )
 
 var xGoogHeader = fmt.Sprintf("gl-go/%s gccl/%s", version.Go(), version.Repo)
@@ -60,20 +58,14 @@ type Client struct {
 // Operations performed via the client are billed to the specified GCP project.
 func NewClient(ctx context.Context, projectID string, opts ...option.ClientOption) (*Client, error) {
 	o := []option.ClientOption{
-		option.WithEndpoint(prodAddr),
 		option.WithScopes(Scope),
-		option.WithUserAgent(userAgent),
+		option.WithUserAgent(fmt.Sprintf("%s/%s", userAgentPrefix, version.Repo)),
 	}
 	o = append(o, opts...)
-	httpClient, endpoint, err := htransport.NewClient(ctx, o...)
-	if err != nil {
-		return nil, fmt.Errorf("bigquery: dialing: %v", err)
-	}
-	bqs, err := bq.New(httpClient)
+	bqs, err := bq.NewService(ctx, o...)
 	if err != nil {
 		return nil, fmt.Errorf("bigquery: constructing client: %v", err)
 	}
-	bqs.BasePath = endpoint
 	c := &Client{
 		projectID: projectID,
 		bqs:       bqs,

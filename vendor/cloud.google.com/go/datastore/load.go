@@ -29,7 +29,6 @@ var (
 	typeOfTime      = reflect.TypeOf(time.Time{})
 	typeOfGeoPoint  = reflect.TypeOf(GeoPoint{})
 	typeOfKeyPtr    = reflect.TypeOf(&Key{})
-	typeOfEntityPtr = reflect.TypeOf(&Entity{})
 )
 
 // typeMismatchReason returns a string explaining why the property p could not
@@ -135,6 +134,19 @@ func (l *propertyLoader) loadOneElement(codec fields.List, structValue reflect.V
 		}
 		if ok {
 			return ""
+		}
+
+		if field.Type.Kind() == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct {
+			codec, err = structCache.Fields(field.Type.Elem())
+			if err != nil {
+				return err.Error()
+			}
+
+			// Init value if its nil
+			if v.IsNil() {
+				v.Set(reflect.New(field.Type.Elem()))
+			}
+			structValue = v.Elem()
 		}
 
 		if field.Type.Kind() == reflect.Struct {
@@ -280,6 +292,18 @@ func setVal(v reflect.Value, p Property) (s string) {
 			return overflowReason(x, v)
 		}
 		v.SetFloat(x)
+
+	case reflect.Interface:
+		if !v.CanSet() {
+			return fmt.Sprintf("%v is unsettable", v.Type())
+		}
+
+		rpValue := reflect.ValueOf(pValue)
+		if !rpValue.Type().AssignableTo(v.Type()) {
+			return fmt.Sprintf("%q is not assignable to %q", rpValue.Type(), v.Type())
+		}
+		v.Set(rpValue)
+
 	case reflect.Ptr:
 		// v must be a pointer to either a Key, an Entity, or one of the supported basic types.
 		if v.Type() != typeOfKeyPtr && v.Type().Elem().Kind() != reflect.Struct && !isValidPointerType(v.Type().Elem()) {
@@ -332,6 +356,18 @@ func setVal(v reflect.Value, p Property) (s string) {
 	case reflect.Struct:
 		switch v.Type() {
 		case typeOfTime:
+			// Some time values are converted into microsecond integer values
+			// (for example when used with projects). So, here we check first
+			// whether this value is an int64, and next whether it's time.
+			//
+			// See more at https://cloud.google.com/datastore/docs/concepts/queries#limitations_on_projections
+			micros, ok := pValue.(int64)
+			if ok {
+				s := micros / 1e6
+				ns := micros % 1e6
+				v.Set(reflect.ValueOf(time.Unix(s, ns)))
+				break
+			}
 			x, ok := pValue.(time.Time)
 			if !ok && pValue != nil {
 				return typeMismatchReason(p, v)
@@ -395,14 +431,19 @@ func loadEntityProto(dst interface{}, src *pb.Entity) error {
 
 func loadEntity(dst interface{}, ent *Entity) error {
 	if pls, ok := dst.(PropertyLoadSaver); ok {
-		err := pls.Load(ent.Properties)
-		if err != nil {
-			return err
-		}
+		// Load both key and properties. Try to load as much as possible, even
+		// if an error occurs during loading loading either the key or the
+		// properties.
+		var keyLoadErr error
 		if e, ok := dst.(KeyLoader); ok {
-			err = e.LoadKey(ent.Key)
+			keyLoadErr = e.LoadKey(ent.Key)
 		}
-		return err
+		loadErr := pls.Load(ent.Properties)
+		// Let any error returned by LoadKey prevail above any error from Load.
+		if keyLoadErr != nil {
+			return keyLoadErr
+		}
+		return loadErr
 	}
 	return loadEntityToStruct(dst, ent)
 }

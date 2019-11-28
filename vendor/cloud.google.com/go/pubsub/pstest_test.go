@@ -15,29 +15,47 @@
 package pubsub_test
 
 import (
+	"context"
 	"strconv"
 	"sync"
 	"testing"
 
-	"golang.org/x/net/context"
-
+	"cloud.google.com/go/internal/testutil"
 	"cloud.google.com/go/pubsub"
 	"cloud.google.com/go/pubsub/pstest"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )
 
+// withGRPCHeadersAssertionAlt is named differently than
+// withGRPCHeadersAssertion in integration_test.go, because integration_test.go
+// doesn't perform an external test i.e. its package name is "pubsub" while
+// this one's is "pubsub_test", and when using Go Modules, without this rename
+// go test won't find the function "withGRPCHeadersAssertion".
+func withGRPCHeadersAssertionAlt(t *testing.T, opts ...option.ClientOption) []option.ClientOption {
+	grpcHeadersEnforcer := &testutil.HeadersEnforcer{
+		OnFailure: t.Fatalf,
+		Checkers: []*testutil.HeaderChecker{
+			testutil.XGoogClientHeaderChecker,
+		},
+	}
+	return append(grpcHeadersEnforcer.CallOptions(), opts...)
+}
+
 func TestPSTest(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	srv := pstest.NewServer()
+	defer srv.Close()
 
 	conn, err := grpc.Dial(srv.Addr, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
+	defer conn.Close()
 
-	client, err := pubsub.NewClient(ctx, "some-project", option.WithGRPCConn(conn))
+	opts := withGRPCHeadersAssertionAlt(t, option.WithGRPCConn(conn))
+	client, err := pubsub.NewClient(ctx, "some-project", opts...)
 	if err != nil {
 		panic(err)
 	}

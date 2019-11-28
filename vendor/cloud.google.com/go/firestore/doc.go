@@ -169,6 +169,9 @@ build up a query using Select, Where and other methods of Query.
 
 	q := states.Where("pop", ">", 10).OrderBy("pop", firestore.Desc)
 
+Supported operators include '<', '<=', '>', '>=', '==', 'in', 'array-contains', and
+'array-contains-any'.
+
 Call the Query's Documents method to get an iterator, and use it like
 the other Google Cloud Client iterators.
 
@@ -212,5 +215,15 @@ read and write methods of the Transaction passed to it.
 	if err != nil {
 		// TODO: Handle error.
 	}
+
+Google Cloud Firestore Emulator
+
+This package supports the Cloud Firestore emulator, which is useful for testing and
+development. Environment variables are used to indicate that Firestore traffic should be
+directed to the emulator instead of the production Firestore service.
+
+To install and run the emulator and its environment variables, see the documentation
+at https://cloud.google.com/sdk/gcloud/reference/beta/emulators/firestore/. Once the
+emulator is running, set FIRESTORE_EMULATOR_HOST to the API endpoint.
 */
 package firestore

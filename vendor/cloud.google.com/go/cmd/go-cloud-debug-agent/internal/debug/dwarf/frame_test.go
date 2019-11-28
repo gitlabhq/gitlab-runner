@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright 2019 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"cloud.google.com/go/cmd/go-cloud-debug-agent/internal/debug/dwarf"
+	"cloud.google.com/go/cmd/go-cloud-debug-agent/internal/debug/elf"
 )
 
 var (
@@ -137,4 +138,21 @@ func TestPCToSPOffset(t *testing.T) {
 	if count[addrSize+3*argSize] == 0 {
 		t.Errorf("expected some values at offset %d; got %v", addrSize+3*argSize, count)
 	}
+}
+
+func getData(file string) (*dwarf.Data, error) {
+	switch runtime.GOOS {
+	case "linux":
+		f, err := elf.Open(file)
+		if err != nil {
+			return nil, err
+		}
+		dwarf, err := f.DWARF()
+		if err != nil {
+			return nil, err
+		}
+		f.Close()
+		return dwarf, nil
+	}
+	panic("unimplemented DWARF for GOOS=" + runtime.GOOS)
 }

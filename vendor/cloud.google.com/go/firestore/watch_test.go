@@ -15,22 +15,24 @@
 package firestore
 
 import (
+	"context"
 	"sort"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/internal/btree"
 	"github.com/golang/protobuf/proto"
-	gax "github.com/googleapis/gax-go"
-	"golang.org/x/net/context"
-	pb "google.golang.org/genproto/googleapis/firestore/v1beta1"
+	gax "github.com/googleapis/gax-go/v2"
+	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func TestWatchRecv(t *testing.T) {
 	ctx := context.Background()
-	c, srv := newMock(t)
+	c, srv, cleanup := newMock(t)
+	defer cleanup()
+
 	db := defaultBackoff
 	defaultBackoff = gax.Backoff{Initial: 1, Max: 1, Multiplier: 1}
 	defer func() { defaultBackoff = db }()
@@ -177,7 +179,9 @@ func TestWatchCancel(t *testing.T) {
 	// Canceling the context of a watch should result in a codes.Canceled error from the next
 	// call to the iterator's Next method.
 	ctx := context.Background()
-	c, srv := newMock(t)
+	c, srv, cleanup := newMock(t)
+	defer cleanup()
+
 	q := Query{c: c, collectionID: "x"}
 
 	// Cancel before open.

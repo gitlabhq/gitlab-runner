@@ -15,14 +15,14 @@
 package bigquery
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
 	"cloud.google.com/go/internal"
 	"cloud.google.com/go/internal/trace"
-	gax "github.com/googleapis/gax-go"
-	"golang.org/x/net/context"
+	gax "github.com/googleapis/gax-go/v2"
 	bq "google.golang.org/api/bigquery/v2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
@@ -30,11 +30,11 @@ import (
 
 // A Job represents an operation which has been submitted to BigQuery for processing.
 type Job struct {
-	c         *Client
-	projectID string
-	jobID     string
-	location  string
-
+	c          *Client
+	projectID  string
+	jobID      string
+	location   string
+	email      string
 	config     *bq.JobConfiguration
 	lastStatus *JobStatus
 }
@@ -73,13 +73,22 @@ func (j *Job) Location() string {
 	return j.location
 }
 
+// Email returns the email of the job's creator.
+func (j *Job) Email() string {
+	return j.email
+}
+
 // State is one of a sequence of states that a Job progresses through as it is processed.
 type State int
 
 const (
-	StateUnspecified State = iota // used only as a default in JobIterator
+	// StateUnspecified is the default JobIterator state.
+	StateUnspecified State = iota
+	// Pending is a state that describes that the job is pending.
 	Pending
+	// Running is a state that describes that the job is running.
 	Running
+	// Done is a state that describes that the job is done.
 	Done
 )
 
@@ -111,6 +120,15 @@ func (*QueryConfig) isJobConfig()   {}
 // Config returns the configuration information for j.
 func (j *Job) Config() (JobConfig, error) {
 	return bqToJobConfig(j.config, j.c)
+}
+
+// Children returns a job iterator for enumerating child jobs
+// of the current job.  Currently only scripts, a form of query job,
+// will create child jobs.
+func (j *Job) Children(ctx context.Context) *JobIterator {
+	it := j.c.Jobs(ctx)
+	it.ParentJobID = j.ID()
+	return it
 }
 
 func bqToJobConfig(q *bq.JobConfiguration, c *Client) (JobConfig, error) {
@@ -226,7 +244,7 @@ func (j *Job) Wait(ctx context.Context) (js *JobStatus, err error) {
 
 	if j.isQuery() {
 		// We can avoid polling for query jobs.
-		if _, err := j.waitForQuery(ctx, j.projectID); err != nil {
+		if _, _, err := j.waitForQuery(ctx, j.projectID); err != nil {
 			return nil, err
 		}
 		// Note: extra RPC even if you just want to wait for the query to finish.
@@ -262,7 +280,7 @@ func (j *Job) Read(ctx context.Context) (ri *RowIterator, err error) {
 	return j.read(ctx, j.waitForQuery, fetchPage)
 }
 
-func (j *Job) read(ctx context.Context, waitForQuery func(context.Context, string) (Schema, error), pf pageFetcher) (*RowIterator, error) {
+func (j *Job) read(ctx context.Context, waitForQuery func(context.Context, string) (Schema, uint64, error), pf pageFetcher) (*RowIterator, error) {
 	if !j.isQuery() {
 		return nil, errors.New("bigquery: cannot read from a non-query job")
 	}
@@ -272,7 +290,7 @@ func (j *Job) read(ctx context.Context, waitForQuery func(context.Context, strin
 	if destTable != nil && projectID != destTable.ProjectId {
 		return nil, fmt.Errorf("bigquery: job project ID is %q, but destination table's is %q", projectID, destTable.ProjectId)
 	}
-	schema, err := waitForQuery(ctx, projectID)
+	schema, totalRows, err := waitForQuery(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -282,11 +300,13 @@ func (j *Job) read(ctx context.Context, waitForQuery func(context.Context, strin
 	dt := bqToTable(destTable, j.c)
 	it := newRowIterator(ctx, dt, pf)
 	it.Schema = schema
+	it.TotalRows = totalRows
 	return it, nil
 }
 
-// waitForQuery waits for the query job to complete and returns its schema.
-func (j *Job) waitForQuery(ctx context.Context, projectID string) (Schema, error) {
+// waitForQuery waits for the query job to complete and returns its schema. It also
+// returns the total number of rows in the result set.
+func (j *Job) waitForQuery(ctx context.Context, projectID string) (Schema, uint64, error) {
 	// Use GetQueryResults only to wait for completion, not to read results.
 	call := j.c.bqs.Jobs.GetQueryResults(projectID, j.jobID).Location(j.location).Context(ctx).MaxResults(0)
 	setClientHeader(call.Header())
@@ -307,9 +327,9 @@ func (j *Job) waitForQuery(ctx context.Context, projectID string) (Schema, error
 		return true, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return bqToSchema(res.Schema), nil
+	return bqToSchema(res.Schema), res.TotalRows, nil
 }
 
 // JobStatistics contains statistics about a job.
@@ -320,6 +340,16 @@ type JobStatistics struct {
 	TotalBytesProcessed int64
 
 	Details Statistics
+
+	// NumChildJobs indicates the number of child jobs run as part of a script.
+	NumChildJobs int64
+
+	// ParentJobID indicates the origin job for jobs run as part of a script.
+	ParentJobID string
+
+	// ScriptStatistics includes information run as part of a child job within
+	// a script.
+	ScriptStatistics *ScriptStatistics
 }
 
 // Statistics is one of ExtractStatistics, LoadStatistics or QueryStatistics.
@@ -369,6 +399,14 @@ type QueryStatistics struct {
 	// Total bytes processed for the job.
 	TotalBytesProcessed int64
 
+	// For dry run queries, indicates how accurate the TotalBytesProcessed value is.
+	// When indicated, values include:
+	// UNKNOWN: accuracy of the estimate is unknown.
+	// PRECISE: estimate is precise.
+	// LOWER_BOUND: estimate is lower bound of what the query would cost.
+	// UPPER_BOUND: estiamte is upper bound of what the query would cost.
+	TotalBytesProcessedAccuracy string
+
 	// Describes execution plan for the query.
 	QueryPlan []*ExplainQueryStage
 
@@ -379,7 +417,7 @@ type QueryStatistics struct {
 	// Describes a timeline of job execution.
 	Timeline []*QueryTimelineSample
 
-	// ReferencedTables: [Output-only, Experimental] Referenced tables for
+	// ReferencedTables: [Output-only] Referenced tables for
 	// the job. Queries that reference more than 50 tables will not have a
 	// complete list.
 	ReferencedTables []*Table
@@ -401,6 +439,9 @@ type QueryStatistics struct {
 	// DDL Operation performed on the target table.  Used to report how the
 	// query impacted the DDL target table.
 	DDLOperationPerformed string
+
+	// The DDL target table, present only for CREATE/DROP FUNCTION/PROCEDURE queries.
+	DDLTargetRoutine *Routine
 }
 
 // ExplainQueryStage describes one stage of a query.
@@ -523,6 +564,66 @@ type QueryTimelineSample struct {
 	SlotMillis int64
 }
 
+// ScriptStatistics report information about script-based query jobs.
+type ScriptStatistics struct {
+	EvaluationKind string
+	StackFrames    []*ScriptStackFrame
+}
+
+func bqToScriptStatistics(bs *bq.ScriptStatistics) *ScriptStatistics {
+	if bs == nil {
+		return nil
+	}
+	ss := &ScriptStatistics{
+		EvaluationKind: bs.EvaluationKind,
+	}
+	for _, f := range bs.StackFrames {
+		ss.StackFrames = append(ss.StackFrames, bqToScriptStackFrame(f))
+	}
+	return ss
+}
+
+// ScriptStackFrame represents the location of the statement/expression being evaluated.
+//
+// Line and column numbers are defined as follows:
+//
+// - Line and column numbers start with one.  That is, line 1 column 1 denotes
+//   the start of the script.
+// - When inside a stored procedure, all line/column numbers are relative
+//   to the procedure body, not the script in which the procedure was defined.
+// - Start/end positions exclude leading/trailing comments and whitespace.
+//   The end position always ends with a ";", when present.
+// - Multi-byte Unicode characters are treated as just one column.
+// - If the original script (or procedure definition) contains TAB characters,
+//   a tab "snaps" the indentation forward to the nearest multiple of 8
+//   characters, plus 1. For example, a TAB on column 1, 2, 3, 4, 5, 6 , or 8
+//   will advance the next character to column 9.  A TAB on column 9, 10, 11,
+//   12, 13, 14, 15, or 16 will advance the next character to column 17.
+type ScriptStackFrame struct {
+	StartLine   int64
+	StartColumn int64
+	EndLine     int64
+	EndColumn   int64
+	// Name of the active procedure.  Empty if in a top-level script.
+	ProcedureID string
+	// Text of the current statement/expression.
+	Text string
+}
+
+func bqToScriptStackFrame(bsf *bq.ScriptStackFrame) *ScriptStackFrame {
+	if bsf == nil {
+		return nil
+	}
+	return &ScriptStackFrame{
+		StartLine:   bsf.StartLine,
+		StartColumn: bsf.StartColumn,
+		EndLine:     bsf.EndLine,
+		EndColumn:   bsf.EndColumn,
+		ProcedureID: bsf.ProcedureId,
+		Text:        bsf.Text,
+	}
+}
+
 func (*ExtractStatistics) implementsStatistics() {}
 func (*LoadStatistics) implementsStatistics()    {}
 func (*QueryStatistics) implementsStatistics()   {}
@@ -543,9 +644,12 @@ func (c *Client) Jobs(ctx context.Context) *JobIterator {
 
 // JobIterator iterates over jobs in a project.
 type JobIterator struct {
-	ProjectID string // Project ID of the jobs to list. Default is the client's project.
-	AllUsers  bool   // Whether to list jobs owned by all users in the project, or just the current caller.
-	State     State  // List only jobs in the given state. Defaults to all states.
+	ProjectID       string    // Project ID of the jobs to list. Default is the client's project.
+	AllUsers        bool      // Whether to list jobs owned by all users in the project, or just the current caller.
+	State           State     // List only jobs in the given state. Defaults to all states.
+	MinCreationTime time.Time // List only jobs created after this time.
+	MaxCreationTime time.Time // List only jobs created before this time.
+	ParentJobID     string    // List only jobs that are children of a given scripting job.
 
 	ctx      context.Context
 	c        *Client
@@ -554,8 +658,12 @@ type JobIterator struct {
 	items    []*Job
 }
 
+// PageInfo is a getter for the JobIterator's PageInfo.
 func (it *JobIterator) PageInfo() *iterator.PageInfo { return it.pageInfo }
 
+// Next returns the next Job. Its second return value is iterator.Done if
+// there are no more results. Once Next returns Done, all subsequent calls will
+// return Done.
 func (it *JobIterator) Next() (*Job, error) {
 	if err := it.nextFunc(); err != nil {
 		return nil, err
@@ -588,9 +696,18 @@ func (it *JobIterator) fetch(pageSize int, pageToken string) (string, error) {
 	if st != "" {
 		req.StateFilter(st)
 	}
+	if !it.MinCreationTime.IsZero() {
+		req.MinCreationTime(uint64(it.MinCreationTime.UnixNano() / 1e6))
+	}
+	if !it.MaxCreationTime.IsZero() {
+		req.MaxCreationTime(uint64(it.MaxCreationTime.UnixNano() / 1e6))
+	}
 	setClientHeader(req.Header())
 	if pageSize > 0 {
 		req.MaxResults(int64(pageSize))
+	}
+	if it.ParentJobID != "" {
+		req.ParentJobId(it.ParentJobID)
 	}
 	res, err := req.Do()
 	if err != nil {
@@ -607,7 +724,7 @@ func (it *JobIterator) fetch(pageSize int, pageToken string) (string, error) {
 }
 
 func convertListedJob(j *bq.JobListJobs, c *Client) (*Job, error) {
-	return bqToJob2(j.JobReference, j.Configuration, j.Status, j.Statistics, c)
+	return bqToJob2(j.JobReference, j.Configuration, j.Status, j.Statistics, j.UserEmail, c)
 }
 
 func (c *Client) getJobInternal(ctx context.Context, jobID, location string, fields ...googleapi.Field) (*bq.Job, error) {
@@ -631,15 +748,16 @@ func (c *Client) getJobInternal(ctx context.Context, jobID, location string, fie
 }
 
 func bqToJob(q *bq.Job, c *Client) (*Job, error) {
-	return bqToJob2(q.JobReference, q.Configuration, q.Status, q.Statistics, c)
+	return bqToJob2(q.JobReference, q.Configuration, q.Status, q.Statistics, q.UserEmail, c)
 }
 
-func bqToJob2(qr *bq.JobReference, qc *bq.JobConfiguration, qs *bq.JobStatus, qt *bq.JobStatistics, c *Client) (*Job, error) {
+func bqToJob2(qr *bq.JobReference, qc *bq.JobConfiguration, qs *bq.JobStatus, qt *bq.JobStatistics, email string, c *Client) (*Job, error) {
 	j := &Job{
 		projectID: qr.ProjectId,
 		jobID:     qr.JobId,
 		location:  qr.Location,
 		c:         c,
+		email:     email,
 	}
 	j.setConfig(qc)
 	if err := j.setStatus(qs); err != nil {
@@ -692,6 +810,9 @@ func (j *Job) setStatistics(s *bq.JobStatistics, c *Client) {
 		StartTime:           unixMillisToTime(s.StartTime),
 		EndTime:             unixMillisToTime(s.EndTime),
 		TotalBytesProcessed: s.TotalBytesProcessed,
+		NumChildJobs:        s.NumChildJobs,
+		ParentJobID:         s.ParentJobId,
+		ScriptStatistics:    bqToScriptStatistics(s.ScriptStatistics),
 	}
 	switch {
 	case s.Extract != nil:
@@ -719,9 +840,11 @@ func (j *Job) setStatistics(s *bq.JobStatistics, c *Client) {
 			CacheHit:                      s.Query.CacheHit,
 			DDLTargetTable:                bqToTable(s.Query.DdlTargetTable, c),
 			DDLOperationPerformed:         s.Query.DdlOperationPerformed,
+			DDLTargetRoutine:              bqToRoutine(s.Query.DdlTargetRoutine, c),
 			StatementType:                 s.Query.StatementType,
 			TotalBytesBilled:              s.Query.TotalBytesBilled,
 			TotalBytesProcessed:           s.Query.TotalBytesProcessed,
+			TotalBytesProcessedAccuracy:   s.Query.TotalBytesProcessedAccuracy,
 			NumDMLAffectedRows:            s.Query.NumDmlAffectedRows,
 			QueryPlan:                     queryPlanFromProto(s.Query.QueryPlan),
 			Schema:                        bqToSchema(s.Query.Schema),
