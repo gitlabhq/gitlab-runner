@@ -287,7 +287,7 @@ guidelines found in our [contributing guidelines](https://docs.gitlab.com/ee/dev
 ```
 Thanks for your interest in GitLab. We don't use the issue tracker for support
 requests and configuration questions. Please check our
-[getting help](https://about.gitlab.com/getting-help/) page to see all of the available
+[Support](https://about.gitlab.com/support/) page to see all of the available
 support options. Also, have a look at the [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/index.html)
 for more information.
 ```
