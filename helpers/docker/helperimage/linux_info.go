@@ -24,8 +24,10 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 
 func (l *linuxInfo) architecture(arch string) string {
 	switch arch {
-	case "armv6l", "armv7l", "aarch64":
+	case "armv6l", "armv7l":
 		return "arm"
+	case "aarch64":
+		return "arm64"
 	case "amd64":
 		return "x86_64"
 	}
