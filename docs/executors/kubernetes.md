@@ -5,11 +5,12 @@ possible with the use of the **Kubernetes** executor.
 
 The **Kubernetes** executor, when used with GitLab CI, connects to the Kubernetes
 API in the cluster creating a Pod for each GitLab CI Job. This Pod is made
-up of, at the very least, a build container and an additional container for each
-`service` defined by the GitLab CI yaml. The names for these containers
+up of, at the very least, a build container, a helper container, and an additional container for each
+`service` defined by the `.gitlab-ci.yml` file. The names for these containers
 are as follows:
 
 - The build container is `build`
+- The helper container is `helper`
 - The services containers are `svc-X` where `X` is `[0-9]+`
 
 Note that when services and containers are running in the same Kubernetes
