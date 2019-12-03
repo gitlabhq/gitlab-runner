@@ -47,7 +47,7 @@ The user account provided must have permission to create, list and attach to Pod
 the specified namespace in order to function.
 
 If you are running the GitLab CI Runner within the Kubernetes cluster you can omit
-all of the above fields to have the Runner auto-discovery the Kubernetes API. This
+all of the above fields to have the Runner auto-discover the Kubernetes API. This
 is the recommended approach.
 
 If you are running it externally to the Cluster then you will need to set each
@@ -58,9 +58,9 @@ on the cluster.
 
 The following keywords help to define the behaviour of the Runner within Kubernetes:
 
-- `namespace`: Namespace to run Kubernetes Pods in
+- `namespace`: Namespace in which to run Kubernetes Pods
 - `namespace_overwrite_allowed`: Regular expression to validate the contents of
-  the namespace overwrite environment variable (documented following). When empty,
+  the namespace overwrite environment variable (documented below). When empty,
   it disables the namespace overwrite feature
 - `privileged`: Run containers with the privileged flag
 - `cpu_limit`: The CPU allocation given to build containers
@@ -107,32 +107,32 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 
 ### Configuring executor Service Account
 
-You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--service-account` flag
+You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--service-account` flag.
 
 ### Overwriting Kubernetes Namespace
 
 Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, by using the variable
 `KUBERNETES_NAMESPACE_OVERWRITE`.
 
-This approach allow you to create a new isolated namespace dedicated for CI purposes, and deploy a custom
+This approach allows you to create a new isolated namespace dedicated for CI purposes, and deploy a custom
 set of Pods. The `Pods` spawned by the runner will take place on the overwritten namespace, for simple
-and straight forward access between container during the CI stages.
+and straight forward access between containers during the CI stages.
 
 ``` yaml
 variables:
   KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_COMMIT_REF_SLUG}
 ```
 
-Furthermore, to ensure only designated namespaces will be used during CI runs, inform the configuration
-`namespace_overwrite_allowed` with proper regular expression. When left empty the overwrite behaviour is
+Furthermore, to ensure only designated namespaces will be used during CI runs, set the configuration
+`namespace_overwrite_allowed` with an appropriate regular expression. When left empty the overwrite behaviour is
 disabled.
 
 ### Overwriting Kubernetes Default Service Account
 
-Additionally, Kubernetes service account can be overwritten on `.gitlab-ci.yml` file, by using the variable
+Additionally, the Kubernetes service account can be overwritten in the `.gitlab-ci.yml` file by using the variable
 `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE`.
 
-This approach allow you to specify a service account that is attached to the namespace, useful when dealing
+This approach allows you to specify a service account that is attached to the namespace, which is useful when dealing
 with complex RBAC configurations.
 
 ``` yaml
@@ -140,11 +140,9 @@ variables:
   KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: ci-service-account
 ```
 
-useful when overwritting the namespace and RBAC is setup in the cluster.
-
-To ensure only designated service accounts will be used during CI runs, inform the configuration
+To ensure only designated service accounts will be used during CI runs, set the configuration
 `service_account_overwrite_allowed` or set the environment variable `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED`
-with proper regular expression. When left empty the overwrite behaviour is disabled.
+with an appropriate regular expression. When left empty the overwrite behaviour is disabled.
 
 ### Setting Bearer Token to be Used When Making Kubernetes API calls
 
@@ -157,7 +155,7 @@ variables:
 
 ### Overwriting pod annotations
 
-Additionally, Kubernetes pod annotations can be overwritten on the `.gitlab-ci.yml` file, by using `KUBERNETES_POD_ANNOTATIONS_*` for variables and `key=value` for the value. The pod annotations will be overwritten to the `key=value`. Also, multiple annotations can be applied. For example:
+Additionally, Kubernetes pod annotations can be overwritten on the `.gitlab-ci.yml` file, by using `KUBERNETES_POD_ANNOTATIONS_*` for variables and `key=value` for the value. The pod annotations will be overwritten to the `key=value`. Multiple annotations can be applied. For example:
 
 ```yaml
 variables:
@@ -213,7 +211,7 @@ concurrent = 4
 
 As described earlier, volumes can be mounted in the build container.
 At this time _hostPath_, _PVC_, _configMap_, and _secret_ volume types
-are supported. User can configure any number of volumes for each of
+are supported. Users can configure any number of volumes for each of
 mentioned types.
 
 Here is an example configuration:
@@ -411,7 +409,7 @@ There are a couple of caveats when using docker in your builds while running on
 a Kubernetes cluster. Most of these issues are already discussed in the
 [**Using Docker Build**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html)
 section of the GitLab CI
-documentation but it is worth it to revisit them here as you might run into
+documentation but it is worthwhile to revisit them here as you might run into
 some slightly different things when running this on your cluster.
 
 ### Exposing `/var/run/docker.sock`
@@ -453,7 +451,7 @@ Do *not* try to use an image that doesn't supply Git and add the `GIT_STRATEGY=n
 environment variable for a job that you think doesn't need to do a fetch or clone.
 Because Pods are ephemeral and do not keep state of previously run jobs your
 checked out code will not exist in both the build and the docker service container.
-Error's you might run into are things like `could not find git binary` and
+Errors you might run into are things like `could not find git binary` and
 the docker service complaining that it cannot follow some symlinks into your
 build context because of the missing code.
 
