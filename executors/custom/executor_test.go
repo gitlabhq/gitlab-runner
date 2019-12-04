@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -506,6 +507,87 @@ func TestExecutor_Run(t *testing.T) {
 
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectedError)
+		})
+	}
+}
+
+func TestExecutor_Env(t *testing.T) {
+	runnerConfig := getRunnerConfig(&common.CustomConfig{
+		RunExec:     "bash",
+		PrepareExec: "echo",
+		CleanupExec: "bash",
+	})
+
+	assertCommandFactory := func(expectedImageName string) func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+			for _, env := range options.Env {
+				pair := strings.Split(env, "=")
+				if pair[0] == ciJobImageEnv {
+					assert.Equal(t, expectedImageName, pair[1])
+					break
+				}
+			}
+		}
+	}
+
+	adjustExecutorFactory := func(imageName string) func(t *testing.T, e *executor) {
+		return func(t *testing.T, e *executor) {
+			// the build is assumed to be non-nil across the executor codebase
+			e.Build.Image = common.Image{Name: imageName}
+		}
+	}
+
+	tests := map[string]executorTestCase{
+		"custom executor set " + ciJobImageEnv: {
+			config:               runnerConfig,
+			adjustExecutor:       adjustExecutorFactory("test_image"),
+			assertCommandFactory: assertCommandFactory("test_image"),
+		},
+		"custom executor set empty " + ciJobImageEnv: {
+			config:               runnerConfig,
+			adjustExecutor:       adjustExecutorFactory(""),
+			assertCommandFactory: assertCommandFactory(""),
+		},
+		"custom executor set expanded " + ciJobImageEnv: {
+			config: runnerConfig,
+			adjustExecutor: func(t *testing.T, e *executor) {
+				e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+					Key:   "to_expand",
+					Value: "expanded",
+				})
+				adjustExecutorFactory("image:$to_expand")(t, e)
+			},
+			assertCommandFactory: assertCommandFactory("image:expanded"),
+		},
+		"custom executor set no variable to expand " + ciJobImageEnv: {
+			config:               runnerConfig,
+			adjustExecutor:       adjustExecutorFactory("image:$nothing_to_expand"),
+			assertCommandFactory: assertCommandFactory("image:"),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			defer mockCommandFactory(t, tt)()
+
+			e, options, _ := prepareExecutor(t, tt)
+			e.Config = *options.Config
+			e.Build = options.Build
+			e.Trace = options.Trace
+			e.BuildLogger = common.NewBuildLogger(e.Trace, e.Build.Log())
+			if tt.adjustExecutor != nil {
+				tt.adjustExecutor(t, e)
+			}
+
+			err := e.Prepare(options)
+			assert.NoError(t, err)
+
+			err = e.Run(common.ExecutorCommand{
+				Context: context.Background(),
+			})
+			assert.NoError(t, err)
+
+			e.Cleanup()
 		})
 	}
 }

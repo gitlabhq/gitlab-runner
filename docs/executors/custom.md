@@ -13,9 +13,6 @@ your environment.
 
 Below are some current limitations when using the Custom executor:
 
-- No support for [`image`](https://docs.gitlab.com/ee/ci/yaml/#image).
-  See [#4357](https://gitlab.com/gitlab-org/gitlab-runner/issues/4357)
-  for more details.
 - No support for
   [`services`](https://docs.gitlab.com/ee/ci/yaml/#services). See
   [#4358](https://gitlab.com/gitlab-org/gitlab-runner/issues/4358) for
@@ -98,6 +95,8 @@ environment variables available to them:
   [predefined
   variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
 - All environment variables provided by the Custom Runner host system.
+- The value of the [`image` keyword](https://docs.gitlab.com/ee/ci/yaml/#image),
+exported as `CUSTOM_ENV_CI_JOB_IMAGE`.
 
 Both CI/CD environment variables and predefined variables are prefixed
 with `CUSTOM_ENV_` to prevent conflicts with system environment
