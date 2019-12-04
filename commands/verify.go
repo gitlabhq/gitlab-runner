@@ -75,7 +75,7 @@ func (c *VerifyCommand) selectRunners() (toVerify []*common.RunnerConfig, okRunn
 	}
 
 	if selectorPresent && len(toVerify) == 0 {
-		err = errors.New("No runner matches the filtering parameters")
+		err = errors.New("no runner matches the filtering parameters")
 	}
 	return
 }
