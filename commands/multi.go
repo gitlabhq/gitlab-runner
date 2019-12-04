@@ -681,6 +681,12 @@ func (mr *RunCommand) checkConfig() (err error) {
 func (mr *RunCommand) Stop(s service.Service) error {
 	go mr.interruptRun()
 
+	defer func() {
+		if mr.sessionServer != nil {
+			mr.sessionServer.Close()
+		}
+	}()
+
 	err := mr.handleGracefulShutdown()
 	if err == nil {
 		return nil
@@ -765,10 +771,6 @@ func (mr *RunCommand) handleForcefulShutdown() error {
 		Warning("Starting forceful shutdown")
 
 	go mr.abortAllBuilds()
-
-	if mr.sessionServer != nil {
-		mr.sessionServer.Close()
-	}
 
 	// Wait for graceful shutdown or abort after timeout
 	for {
