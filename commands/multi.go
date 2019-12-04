@@ -96,7 +96,7 @@ func (mr *RunCommand) log() *logrus.Entry {
 // interface. It's responsible for a non-blocking initialization of the process. When it exits,
 // the main control flow is passed to runWait() configured as service's RunWait method. Take a look
 // into Execute() for details.
-func (mr *RunCommand) Start(s service.Service) error {
+func (mr *RunCommand) Start(_ service.Service) error {
 	mr.abortBuilds = make(chan os.Signal)
 	mr.runSignal = make(chan os.Signal, 1)
 	mr.reloadSignal = make(chan os.Signal, 1)
@@ -466,8 +466,10 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	defer provider.Release(runner, executorData)
 
 	if !mr.buildsHelper.acquireBuild(runner) {
-		logrus.WithField("runner", runner.ShortDescription()).
-			Debug("Failed to request job, runner limit met")
+		logrus.WithFields(logrus.Fields{
+			"runner": runner.ShortDescription(),
+			"worker": id,
+		}).Debug("Failed to request job, runner limit met")
 		return
 	}
 	defer mr.buildsHelper.releaseBuild(runner)
@@ -678,7 +680,7 @@ func (mr *RunCommand) checkConfig() (err error) {
 // workers scaling goroutine).
 // Next it triggers graceful shutdown, which will be handled only if a proper signal is used.
 // At the end it triggers the forceful shutdown, which handles the forceful the process termination.
-func (mr *RunCommand) Stop(s service.Service) error {
+func (mr *RunCommand) Stop(_ service.Service) error {
 	go mr.interruptRun()
 
 	err := mr.handleGracefulShutdown()
@@ -797,7 +799,7 @@ func (mr *RunCommand) abortAllBuilds() {
 	}
 }
 
-func (mr *RunCommand) Execute(context *cli.Context) {
+func (mr *RunCommand) Execute(_ *cli.Context) {
 	svcConfig := &service.Config{
 		Name:        mr.ServiceName,
 		DisplayName: mr.ServiceName,
