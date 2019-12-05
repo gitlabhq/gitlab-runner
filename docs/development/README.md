@@ -6,7 +6,7 @@
 
 ```bash
 sudo apt-get install -y mercurial git-core wget make build-essential
-wget https://storage.googleapis.com/golang/go1.10.8.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.13.4.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
@@ -15,21 +15,21 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 Using binary package:
 
 ```sh
-wget https://storage.googleapis.com/golang/go1.10.8.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.13.4.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 Using installation package:
 
 ```sh
-wget https://storage.googleapis.com/golang/go1.10.8.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.13.4.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
 ### For FreeBSD
 
 ```
-pkg install go-1.10.8 gmake git mercurial
+pkg install go-1.13.4 gmake git mercurial
 ```
 
 ## 2. Install Docker Engine
@@ -66,29 +66,13 @@ This is required to be able to build ARM images that are embedded into GitLab Ru
   { echo ':armeb:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-armeb-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
   ```
 
-## 3. Configure Go
-
-Add to `.profile` or `.bash_profile`:
-
-```bash
-export GOPATH=$HOME/Go
-export PATH=$PATH:$GOPATH/bin:/usr/local/go/bin
-```
-
-Create new terminal session and create $GOPATH directory:
-
-```
-mkdir -p $GOPATH
-```
-
-## 4. Download runner sources
+## 3. Download runner sources
 
 ```
 go get gitlab.com/gitlab-org/gitlab-runner
-cd $GOPATH/src/gitlab.com/gitlab-org/gitlab-runner/
 ```
 
-## 5. Install runner dependencies
+## 4. Install runner dependencies
 
 This will download and restore all dependencies required to build runner:
 
@@ -98,7 +82,7 @@ make deps
 
 **For FreeBSD use `gmake deps`**
 
-## 6. Run runner
+## 5. Run runner
 
 Normally you would use `gitlab-runner`, in order to compile and run Go source use go toolchain:
 
@@ -114,13 +98,13 @@ make install
 gitlab-runner --debug run
 ```
 
-## 7. Compile and install runner binary as `gitlab-runner`
+## 6. Compile and install runner binary as `gitlab-runner`
 
 ```
 make install
 ```
 
-## 8. Run test suite locally
+## 7. Run test suite locally
 
 GitLab Runner test suite consists of "core" tests and tests for executors.
 Tests for executors require certain binaries to be installed on your local
@@ -148,18 +132,14 @@ To execute the tests run:
 make test
 ```
 
-## 9. Contribute
+## 8. Contribute
 
 You can start hacking GitLab-Runner code. If you are interested you can use Intellij IDEA Community Edition with [go-lang-idea-plugin](https://github.com/go-lang-plugin-org/go-lang-idea-plugin) to edit and debug code.
 
 ## Managing build dependencies
 
-GitLab Runner uses [dep](https://github.com/golang/dep) to manage
-its dependencies - they get checked into the repository under the `vendor/` directory,
-with a manifest stored in `Godep.toml` and in `Godep.lock` lockfile.
-
-If your contribution adds, removes or updates any dependencies to the runner,
-please ensure the vendored copies is updated with the appropriate `dep ensure` command.
+GitLab Runner uses [Go Modules](https://github.com/golang/go/wiki/Modules) to manage
+its dependencies - they get checked into the repository under the `vendor/` directory
 
 Don't add dependency from upstream master branch when version tags are available.
 

@@ -1,0 +1,6 @@
+image: golang:1.11
+
+test:
+  script:
+    - go get ./...
+    - go test -v ./...

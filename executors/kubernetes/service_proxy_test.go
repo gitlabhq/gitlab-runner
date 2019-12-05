@@ -339,7 +339,7 @@ func TestProxyRequestWebsockets(t *testing.T) {
 			},
 		},
 		configurationOverwrites: &overwrites{},
-		pod: &api.Pod{ObjectMeta: objectInfo},
+		pod:                     &api.Pod{ObjectMeta: objectInfo},
 	}
 
 	tests := map[string]struct {

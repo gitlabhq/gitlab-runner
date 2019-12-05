@@ -7,7 +7,7 @@ build: $(GOX)
 		-output="out/binaries/$(NAME)-{{.OS}}-{{.Arch}}" \
 		$(PKG)
 
-build_simple: $(GOPATH_SETUP)
+build_simple:
 	# Building $(NAME) in version $(VERSION) for current platform
 	go build \
 		-ldflags "$(GO_LDFLAGS)" \

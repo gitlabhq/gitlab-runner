@@ -181,8 +181,8 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, parameter
 	// TODO: pass executor
 	request := common.RegisterRunnerRequest{
 		RegisterRunnerParameters: parameters,
-		Token: runner.Token,
-		Info:  n.getRunnerVersion(common.RunnerConfig{}),
+		Token:                    runner.Token,
+		Info:                     n.getRunnerVersion(common.RunnerConfig{}),
 	}
 
 	var response common.RegisterRunnerResponse

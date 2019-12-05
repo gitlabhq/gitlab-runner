@@ -105,8 +105,8 @@ The error is caused by the `time` package in Go. Go uses the IANA Time Zone data
 the configuration of the specified timezone. On most Unix systems, this database is already present on
 one of well-known paths (`/usr/share/zoneinfo`, `/usr/share/lib/zoneinfo`, `/usr/lib/locale/TZ/`).
 Go's `time` package looks for the Time Zone database in all those three paths. If it doesn't find any
-of them, but the machine has a configured Go development environment (with a proper `$GOPATH`
-present for Runner's process), then it will fallback to the `$GOROOT/lib/time/zoneinfo.zip` file.
+of them, but the machine has a configured Go development environment, then it will fallback to
+the `$GOROOT/lib/time/zoneinfo.zip` file.
 
 If none of those paths are present (for example on a production Windows host) the above error is thrown.
 

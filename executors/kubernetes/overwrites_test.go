@@ -68,8 +68,8 @@ func TestOverwrites(t *testing.T) {
 			Expected: &overwrites{},
 		},
 		{
-			Name:   "All overwrites allowed",
-			Config: overwritesAllowedConfig,
+			Name:                                 "All overwrites allowed",
+			Config:                               overwritesAllowedConfig,
 			NamespaceOverwriteVariableValue:      "my_namespace",
 			ServiceAccountOverwriteVariableValue: "my_service_account",
 			BearerTokenOverwriteVariableValue:    "my_bearer_token",
@@ -128,7 +128,7 @@ func TestOverwrites(t *testing.T) {
 				NamespaceOverwriteAllowed: "not-a-match",
 			},
 			NamespaceOverwriteVariableValue: "my_namespace",
-			Error: true,
+			Error:                           true,
 		},
 		{
 			Name: "ServiceAccount failure",
@@ -136,7 +136,7 @@ func TestOverwrites(t *testing.T) {
 				ServiceAccountOverwriteAllowed: "not-a-match",
 			},
 			ServiceAccountOverwriteVariableValue: "my_service_account",
-			Error: true,
+			Error:                                true,
 		},
 		{
 			Name: "PodAnnotations failure",

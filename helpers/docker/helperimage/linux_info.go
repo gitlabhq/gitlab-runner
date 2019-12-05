@@ -13,11 +13,11 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 	arch := l.architecture(cfg.Architecture)
 
 	return Info{
-		Architecture: arch,
-		Name:         name,
-		Tag:          fmt.Sprintf("%s-%s", arch, revision),
+		Architecture:            arch,
+		Name:                    name,
+		Tag:                     fmt.Sprintf("%s-%s", arch, revision),
 		IsSupportingLocalImport: true,
-		Cmd: bashCmd,
+		Cmd:                     bashCmd,
 	}, nil
 
 }
