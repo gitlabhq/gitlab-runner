@@ -102,6 +102,9 @@ Example:
   session_timeout = 1800
 ```
 
+NOTE: **Note:**
+If you are running the Gitlab Runner inside a Docker container you will also need to expose 8093. `-p 8093:8093`
+
 ## The `[[runners]]` section
 
 This defines one runner entry.
