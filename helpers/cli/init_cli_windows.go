@@ -21,7 +21,7 @@ func setConsoleMode(handle windows.Handle, flags uint32) {
 	if err := windows.GetConsoleMode(handle, &mode); err == nil {
 		err := windows.SetConsoleMode(handle, mode|flags)
 		if err != nil {
-			logrus.WithError(err).Info("Failed to set console mode for cli")
+			logrus.WithError(err).Info("Did not set console mode for cli")
 		}
 	}
 }
