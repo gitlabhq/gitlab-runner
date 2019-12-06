@@ -51,11 +51,11 @@ func Test_linuxInfo_create(t *testing.T) {
 			dockerArch: "aarch64",
 			revision:   "2923a43",
 			expectedInfo: Info{
-				Architecture: "arm64",
-				Name:         name,
-				Tag:          "arm64-2923a43",
+				Architecture:            "arm64",
+				Name:                    name,
+				Tag:                     "arm64-2923a43",
 				IsSupportingLocalImport: true,
-				Cmd: bashCmd,
+				Cmd:                     bashCmd,
 			},
 		},
 		"Configured architecture is unknown": {
