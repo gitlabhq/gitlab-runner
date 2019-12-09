@@ -28,7 +28,7 @@ gitlab-runner --debug run
 
 ### I'm seeing `x509: certificate signed by unknown authority`
 
-Please [See the self-signed certificates](../configuration/tls-self-signed.md)
+Please see [the self-signed certificates](../configuration/tls-self-signed.md).
 
 ### I get `Permission Denied` when accessing the `/var/run/docker.sock`
 
@@ -262,7 +262,7 @@ You can add `SeServiceLogonRight` in two ways:
      path to system's `PATH` environment variable).
 
      > **Notice:** The tool was created in 2003 and was initially designed to use
-     > with Windows XP and Windows Server 2003. On [Microsoft sites][microsoft-ntrights-usage-on-win7](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/dd548356(v=ws.10))
+     > with Windows XP and Windows Server 2003. On [Microsoft sites](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/dd548356(v=ws.10))
      > you can find an example of usage `Ntrights.exe` that applies to Windows 7 and Windows Server 2008 R2.
      > This solution is not tested and because of the age of the software **it may not work
      > on newest Windows versions**.
