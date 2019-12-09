@@ -120,7 +120,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 	}
 
 	// Start should not block. Do the actual work async.
-	go mr.runWithLock()
+	go mr.run()
 
 	return nil
 }
@@ -186,23 +186,6 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 	}
 
 	return nil
-}
-
-// runWithLock is a wrapper around run() which sets a lock on the lock file.
-// This is made to prevent execution of multiple Runner processes from the same
-// configuration file on the same host (which introduces hard to debug and nasty
-// concurrency issues).
-func (mr *RunCommand) runWithLock() {
-	log := mr.log().WithFields(logrus.Fields{
-		"file": mr.ConfigFile,
-		"pid":  os.Getpid(),
-	})
-	log.Info("Locking configuration file")
-
-	err := mr.inLock(mr.run)
-	if err != nil {
-		log.WithError(err).Fatal("Could not handle configuration file locking")
-	}
 }
 
 // run is the main method of RunCommand. It's started asynchronously by services support

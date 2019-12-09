@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/fslocker"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
@@ -40,12 +39,6 @@ func (c *configOptions) loadConfig() error {
 	}
 	c.config = config
 	return nil
-}
-
-func (c *configOptions) inLock(fn func()) error {
-	lockFile := fmt.Sprintf("%s.lock", c.ConfigFile)
-
-	return fslocker.InLock(lockFile, fn)
 }
 
 func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) {
