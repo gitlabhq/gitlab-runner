@@ -90,8 +90,8 @@ if [[ ${newFailuresCount} -gt 0 ]]; then
     done
 
     echo
-    echo "  This is unacceptable! Fix the failures!"
-    echo "  This job will not pass untill it's done!"
+    echo "  Please fix the new failures detected."
+    echo "  This job will not pass untill it's done."
     borderBottom
 
     exit 1
