@@ -195,7 +195,7 @@ func (n *client) backoffRequired(res *http.Response) bool {
 func (n *client) doBackoffRequest(req *http.Request) (res *http.Response, err error) {
 	res, err = n.Do(req)
 	if err != nil {
-		err = fmt.Errorf("couldn't execute %v against %s: %v", req.Method, req.URL, err)
+		err = fmt.Errorf("couldn't execute %v against %s: %w", req.Method, req.URL, err)
 		return
 	}
 
@@ -217,7 +217,7 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 
 	req, err := http.NewRequest(method, url.String(), request)
 	if err != nil {
-		err = fmt.Errorf("failed to create NewRequest: %v", err)
+		err = fmt.Errorf("failed to create NewRequest: %w", err)
 		return
 	}
 
@@ -287,7 +287,7 @@ func (n *client) getResponseTLSData(TLS *tls.ConnectionState) (ResponseTLSData, 
 
 	caChain, err := n.buildCAChain(TLS)
 	if err != nil {
-		return TLSData, fmt.Errorf("couldn't build CA Chain: %v", err)
+		return TLSData, fmt.Errorf("couldn't build CA Chain: %w", err)
 	}
 
 	TLSData.CAChain = caChain
@@ -307,7 +307,7 @@ func (n *client) buildCAChain(tls *tls.ConnectionState) (string, error) {
 	builder := ca_chain.NewBuilder(logrus.StandardLogger())
 	err := builder.BuildChainFromTLSConnectionState(tls)
 	if err != nil {
-		return "", fmt.Errorf("error while fetching certificates from TLS ConnectionState: %v", err)
+		return "", fmt.Errorf("error while fetching certificates from TLS ConnectionState: %w", err)
 	}
 
 	return builder.String(), nil
@@ -318,7 +318,7 @@ func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
 
 	mimetype, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		return false, fmt.Errorf("Content-Type parsing error: %v", err)
+		return false, fmt.Errorf("Content-Type parsing error: %w", err)
 	}
 
 	if mimetype != "application/json" {

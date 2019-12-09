@@ -48,7 +48,7 @@ func New(config *common.CacheConfig, timeout time.Duration, objectName string) (
 
 	client, err := newMinioClient(s3)
 	if err != nil {
-		return nil, fmt.Errorf("error while creating S3 cache storage client: %v", err)
+		return nil, fmt.Errorf("error while creating S3 cache storage client: %w", err)
 	}
 
 	a := &s3Adapter{

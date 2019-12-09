@@ -109,7 +109,7 @@ func config(shell string, args []string) {
 
 	jsonOutput, err := json.Marshal(output{BuildsDir: dir})
 	if err != nil {
-		panic(fmt.Errorf("error while creating JSON output: %v", err))
+		panic(fmt.Errorf("error while creating JSON output: %w", err))
 	}
 
 	fmt.Print(string(jsonOutput))

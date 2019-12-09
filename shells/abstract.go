@@ -93,7 +93,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		}
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPull); err != nil {
-			return fmt.Errorf("%s for %s", err, cacheKey)
+			return fmt.Errorf("%w for %s", err, cacheKey)
 		} else if !ok {
 			w.Notice("Not downloading cache %s due to policy", cacheKey)
 			continue
@@ -477,7 +477,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		}
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPush); err != nil {
-			return fmt.Errorf("%s for %s", err, cacheKey)
+			return fmt.Errorf("%w for %s", err, cacheKey)
 		} else if !ok {
 			w.Notice("Not uploading cache %s due to policy", cacheKey)
 			continue

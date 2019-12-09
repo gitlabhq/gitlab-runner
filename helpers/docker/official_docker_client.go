@@ -65,10 +65,10 @@ func wrapError(method string, err error, started time.Time) error {
 	seconds := int(time.Since(started).Seconds())
 
 	if _, file, line, ok := runtime.Caller(2); ok {
-		return fmt.Errorf("%s (%s:%d:%ds)", err.Error(), filepath.Base(file), line, seconds)
+		return fmt.Errorf("%w (%s:%d:%ds)", err, filepath.Base(file), line, seconds)
 	}
 
-	return fmt.Errorf("%s (%s:%ds)", err.Error(), method, seconds)
+	return fmt.Errorf("%w (%s:%ds)", err, method, seconds)
 }
 
 func (c *officialDockerClient) ImageInspectWithRaw(ctx context.Context, imageID string) (types.ImageInspect, []byte, error) {

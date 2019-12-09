@@ -31,7 +31,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	// expand environment variables to have current directory
 	wd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Getwd: %v", err)
+		return fmt.Errorf("Getwd: %w", err)
 	}
 
 	mapping := func(key string) string {
@@ -104,7 +104,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	// Start a process
 	err := c.Start()
 	if err != nil {
-		return fmt.Errorf("Failed to start process: %s", err)
+		return fmt.Errorf("Failed to start process: %w", err)
 	}
 
 	// Wait for process to finish

@@ -171,7 +171,7 @@ func (n *GitLabClient) doJSON(credentials requestCredentials, method, uri string
 func (n *GitLabClient) getResponseTLSData(credentials requestCredentials, response *http.Response) (ResponseTLSData, error) {
 	c, err := n.getClient(credentials)
 	if err != nil {
-		return ResponseTLSData{}, fmt.Errorf("couldn't get client: %v", err)
+		return ResponseTLSData{}, fmt.Errorf("couldn't get client: %w", err)
 	}
 
 	return c.getResponseTLSData(response.TLS)

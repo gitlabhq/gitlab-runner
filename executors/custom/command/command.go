@@ -78,7 +78,7 @@ func New(ctx context.Context, executable string, args []string, options CreateOp
 func (c *command) Run() error {
 	err := c.cmd.Start()
 	if err != nil {
-		return fmt.Errorf("failed to start command: %v", err)
+		return fmt.Errorf("failed to start command: %w", err)
 	}
 
 	go c.waitForCommand()

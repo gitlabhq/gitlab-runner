@@ -52,7 +52,7 @@ func (r *verifyResolver) Resolve(certs []*x509.Certificate) ([]*x509.Certificate
 			return certs, nil
 		}
 
-		return nil, fmt.Errorf("error while verifying last certificate from the chain: %v", err)
+		return nil, fmt.Errorf("error while verifying last certificate from the chain: %w", err)
 	}
 
 	for _, cert := range verifyChains[0] {

@@ -101,7 +101,7 @@ func (l *Config) handleCliCtx(cliCtx *cli.Context) error {
 func (l *Config) SetLevel(levelString string) error {
 	level, err := logrus.ParseLevel(levelString)
 	if err != nil {
-		return fmt.Errorf("failed to parse log level: %v", err)
+		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
 	l.level = level

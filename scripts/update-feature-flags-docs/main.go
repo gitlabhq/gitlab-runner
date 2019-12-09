@@ -124,7 +124,7 @@ func (r *blockLineReplacer) Replace() (string, error) {
 		}
 
 		if err != nil {
-			return "", fmt.Errorf("error while reading issue description: %v", err)
+			return "", fmt.Errorf("error while reading issue description: %w", err)
 		}
 
 		r.handleLine(line)

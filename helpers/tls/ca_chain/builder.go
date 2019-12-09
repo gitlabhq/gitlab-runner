@@ -58,7 +58,7 @@ func (b *defaultBuilder) BuildChainFromTLSConnectionState(TLS *tls.ConnectionSta
 			Debug("Processing chain")
 		err := b.fetchCertificatesFromVerifiedChain(verifiedChain)
 		if err != nil {
-			return fmt.Errorf("error while fetching certificates into the CA Chain: %v", err)
+			return fmt.Errorf("error while fetching certificates into the CA Chain: %w", err)
 		}
 	}
 
@@ -74,7 +74,7 @@ func (b *defaultBuilder) fetchCertificatesFromVerifiedChain(verifiedChain []*x50
 
 	verifiedChain, err = b.resolver.Resolve(verifiedChain)
 	if err != nil {
-		return fmt.Errorf("couldn't resolve certificates chain from the leaf certificate: %v", err)
+		return fmt.Errorf("couldn't resolve certificates chain from the leaf certificate: %w", err)
 	}
 
 	for _, certificate := range verifiedChain {
