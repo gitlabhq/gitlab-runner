@@ -264,10 +264,10 @@ development_setup:
 
 # development tools
 $(GOX):
-	go install github.com/mitchellh/gox
+	go get github.com/mitchellh/gox
 
 $(MOCKERY):
-	go install github.com/vektra/mockery/cmd/mockery
+	go get github.com/vektra/mockery/cmd/mockery
 
 clean:
 	-$(RM) -rf $(TARGET_DIR)
