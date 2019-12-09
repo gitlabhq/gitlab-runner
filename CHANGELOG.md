@@ -1,3 +1,39 @@
+v12.6.0-rc1 (2019-12-09)
+
+- Update list of fixes for docker-machine fork !1655
+- Remove outdated note regarding non-existent 1.8.x brew Go formula in contributing docs !1661
+- Add manual rpm and deb installation details !1650
+- Remove GetGitTLSVariables method !1663
+- Link to example of how to run DinD !1515
+- Update feature flag deprecation !1672
+- Add timeout when sending request for certificate !1665
+- Support docker options for CPU shares and OOM adjust !1460
+- Backport os.Expand from Go v1.10.8 !1677
+- Switch to a specific version of govet analyzer !1690
+- Update cloud.google.com/go to v0.49.0 !1682
+- Add cmd to helper image !1645
+- Update blurb for when people use the issue tracker for support tickets !1691
+- Fixing typos !1685
+- Remove dead code !1686
+- Distribute arm64 binaries !1687
+- (Rebased) Update kubernetes.md adding the missing gitlab-helper container which is ever created. !1693
+- Various spelling, punctuation and readability fixes !1660
+- Add docs link to arm64 manual install !1694
+- Fixed empty_dir name to empty-dir !1681
+- Expose image to custom executor !1666
+- Reorder methods and add some more logging to RunCommand !1683
+- Refactor unused parameters for multi.go !1698
+- Migrate to go 1.13 and go modules !1625
+- Change log message for failing to set console mode !1662
+- Use time.Round from Go stdlib for web terminal !1631
+- Close session server on graceful shutdown !1699
+- Add deprecation warning for cmd shell in Job log !1659
+- Fix rpm signing !1703
+- Fix regex for finding virtualbox snapshot name and add tests !1656
+- Remove file locking !1710
+- Change tone of error on Windows test failure !1610
+- Fix CI image build !1707
+
 v12.5.0 (2019-11-20)
 
 - Update docs for Runner configuration inside of a Docker container !1613
