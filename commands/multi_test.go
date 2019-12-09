@@ -2,21 +2,17 @@ package commands
 
 import (
 	"io/ioutil"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/gofrs/flock"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
@@ -130,75 +126,4 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	}
 
 	assert.Equal(t, 1, limitMetCount)
-}
-
-func runFileLockingCmd(t *testing.T, wg *sync.WaitGroup, started chan bool, stop chan bool, filePath string, shouldPanic bool) {
-	cmd := &RunCommand{
-		configOptionsWithListenAddress: configOptionsWithListenAddress{
-			configOptions: configOptions{
-				ConfigFile: filePath,
-				config: &common.Config{
-					Concurrent: 5,
-				},
-			},
-		},
-		stopSignals:  make(chan os.Signal),
-		reloadSignal: make(chan os.Signal, 1),
-		runFinished:  make(chan bool, 1),
-	}
-
-	go func() {
-		if shouldPanic {
-			assert.Panics(t, cmd.runWithLock, "Expected the Runner to create a new lock")
-		} else {
-			assert.NotPanics(t, cmd.runWithLock, "Expected the Runner to reject creating a new lock")
-		}
-		wg.Done()
-	}()
-
-	close(started)
-
-	<-stop
-	cmd.stopSignal = os.Kill
-}
-
-func TestMulti_RunWithLock(t *testing.T) {
-	defer helpers.MakeFatalToPanic()()
-
-	file, err := ioutil.TempFile("", "config.toml")
-	require.NoError(t, err)
-
-	err = file.Close()
-	require.NoError(t, err)
-
-	filePath := file.Name()
-
-	wg := new(sync.WaitGroup)
-	stop := make(chan bool)
-
-	wg.Add(2)
-
-	started := make(chan bool)
-	go runFileLockingCmd(t, wg, started, stop, filePath, false)
-	<-started
-
-	time.Sleep(1 * time.Second)
-
-	started = make(chan bool)
-	go runFileLockingCmd(t, wg, started, stop, filePath, true)
-	<-started
-
-	time.Sleep(1 * time.Second)
-
-	close(stop)
-	wg.Wait()
-
-	// Try to lock the file to check if it was properly unlocked while
-	// finishing cmd.runWithLock() call
-	fl := flock.New(filePath)
-	locked, err := fl.TryLock()
-	defer fl.Unlock()
-
-	assert.True(t, locked, "File was not unlocked!")
-	assert.NoError(t, err)
 }

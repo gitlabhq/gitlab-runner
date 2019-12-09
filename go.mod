@@ -27,7 +27,6 @@ require (
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
 	github.com/go-ini/ini v1.28.2 // indirect
-	github.com/gofrs/flock v0.7.2-0.20190320160742-5135e617513b
 	github.com/golang/mock v1.3.1
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20180425001159-e25975f29734 // indirect
