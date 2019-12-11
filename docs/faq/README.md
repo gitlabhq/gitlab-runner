@@ -50,9 +50,9 @@ or this article about [control and configure with systemd](https://docs.docker.c
 
 ### I get 411 when uploading artifacts
 
-This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of Nginx (<https://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
+This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of NGINX (<https://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
 
-Upgrade your Nginx to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1031>
+Upgrade your NGINX to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1031>
 
 ### `warning: You appear to have cloned an empty repository.`
 
@@ -74,11 +74,11 @@ its own configuration, make sure that GitLab requests are proxied to the
 Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
 **main entrypoint** of GitLab.
 
-If you are using Omnibus GitLab, but don't want to use the bundled Nginx
+If you are using Omnibus GitLab, but don't want to use the bundled NGINX
 server, please read [using a non-bundled web-server][omnibus-ext-nginx].
 
 In the GitLab Recipes repository there are [web-server configuration
-examples][recipes] for Apache and Nginx.
+examples][recipes] for Apache and NGINX.
 
 If you are using GitLab installed from source, please also read the above
 documentation and examples, and make sure that all HTTP(S) traffic is going

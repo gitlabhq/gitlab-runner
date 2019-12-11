@@ -95,10 +95,10 @@ daemon is running on. For example, the following [`Windows Server
 Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
 be used:
 
-- mcr.microsoft.com/windows/servercore:1809
-- mcr.microsoft.com/windows/servercore:1809-amd64
-- mcr.microsoft.com/windows/servercore:ltsc2019
-- mcr.microsoft.com/windows/servercore:1803
+- `mcr.microsoft.com/windows/servercore:1809`
+- `mcr.microsoft.com/windows/servercore:1809-amd64`
+- `mcr.microsoft.com/windows/servercore:ltsc2019`
+- `mcr.microsoft.com/windows/servercore:1803`
 
 ### Configuring a Windows Docker executor
 
@@ -635,7 +635,7 @@ ERROR: Build failed: Error: image local_image:latest not found
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
 NOTE: **Note**:
-Starting with GitLab Runner 10.0, both docker-ssh and docker-ssh+machine executors
+Starting with GitLab Runner 10.0, both Docker-SSH and Docker-SSH+machine executors
 are **deprecated** and will be removed in one of the upcoming releases.
 
 We provided a support for a special type of Docker executor, namely Docker-SSH
@@ -643,7 +643,7 @@ We provided a support for a special type of Docker executor, namely Docker-SSH
 as the Docker executor, but instead of executing the script directly, it uses an
 SSH client to connect to the build container.
 
-Docker-ssh then connects to the SSH server that is running inside the container
+Docker-SSH then connects to the SSH server that is running inside the container
 using its internal IP.
 
 This executor is no longer maintained and will be removed in the near future.

@@ -24,7 +24,7 @@ This defines global settings of GitLab Runner.
 | `log_level`      | Log level (options: debug, info, warn, error, fatal, panic). Note that this setting has lower priority than level set by command line argument `--debug`, `-l` or `--log-level` |
 | `log_format`     | Log format (options: runner, text, json). Note that this setting has lower priority than format set by command line argument `--log-format` |
 | `check_interval` | defines the interval length, in seconds, between new jobs check. The default value is `3`; if set to `0` or lower, the default value will be used. |
-| `sentry_dsn`     | enable tracking of all system level errors to sentry |
+| `sentry_dsn`     | enable tracking of all system level errors to Sentry |
 | `listen_address` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
 
 Example:
@@ -71,7 +71,7 @@ be repeated after all requests for the other workers + their sleeps are called.
 
 NOTE: **Note:**
 `session_server` is not yet supported by
-[`gitlab-runner` helm chart](https://docs.gitlab.com/charts/charts/gitlab/gitlab-runner/index.html),
+[`gitlab-runner` Helm chart](https://docs.gitlab.com/charts/charts/gitlab/gitlab-runner/index.html),
 but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/issues/79).
 
 The section `[session_server]` is a system runner level configuration, so it should be specified at the root level,
@@ -625,7 +625,7 @@ Example:
 ```
 
 NOTE: **Note:**
-For Amazon's S3 service, the `ServerAddress` should always be `s3.amazonaws.com`. The Minio S3 client will
+For Amazon's S3 service, the `ServerAddress` should always be `s3.amazonaws.com`. The MinIO S3 client will
 get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
 
 NOTE: **Note:**

@@ -116,7 +116,7 @@ The prepare script:
 - Copies the disk to a new path.
 - Installs a new VM from the copied disk.
 - Waits for the VM to get an IP.
-- Waits for ssh to respond on the VM.
+- Waits for SSH to respond on the VM.
 
 ```sh
 #!/usr/bin/env bash
