@@ -167,7 +167,7 @@ Which virtual machine to use depends on your use case:
 Running `vagrant up windows_10` will start the Windows 10 machine for
 you. To:
 
-- ssh inside of the Windows 10 machine, run `vagrant ssh windows_10`.
+- SSH inside of the Windows 10 machine, run `vagrant ssh windows_10`.
 - Access the GUI for the Windows 10, you can connect via
   RDP by running `vagrant rdp windows_10`, which will connect to the
   machine using a locally installed RDP program.

@@ -15,7 +15,7 @@ which is based on the latest `master` branch of `docker-machine` with
 some additional patches for the following bugs:
 
 - [Make DigitalOcean driver RateLimit aware](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/2)
-- [Add backoff to google driver operations check](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/7)
+- [Add backoff to Google driver operations check](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/7)
 - [Add `--google-min-cpu-platform` option for machine creation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/9)
 - [Use cached IP for Google driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/15)
 - [Use cached IP for AWS driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/14)
