@@ -96,7 +96,6 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `bearer_token`: Default bearer token used to launch build pods.
 - `bearer_token_overwrite_allowed`: Boolean to allow projects to specify a bearer token that will be used to create the build pod.
 - `volumes`: configured through the config file, the list of volumes that will be mounted in the build container. [Read more about using volumes.](#using-volumes)
-- `services`: configured through the config file, the list of [services](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#what-is-a-service) attached to the build container using the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar).
 - `services`:
   [Since GitLab Runner
   12.5](https://gitlab.com/gitlab-org/gitlab-runner/issues/4470), list of
