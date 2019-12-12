@@ -91,7 +91,7 @@ if [[ ${newFailuresCount} -gt 0 ]]; then
 
     echo
     echo "  Please fix the new failures detected."
-    echo "  This job will not pass untill it's done."
+    echo "  This job will not pass until it's done."
     borderBottom
 
     exit 1
