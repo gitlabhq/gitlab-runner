@@ -257,7 +257,7 @@ Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitL
 run the following:
 
 ```bash
-helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
+helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
 ```
 
 Where:
