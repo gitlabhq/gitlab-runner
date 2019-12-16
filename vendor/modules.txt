@@ -113,8 +113,6 @@ github.com/fullsailor/pkcs7
 github.com/getsentry/raven-go
 # github.com/go-ini/ini v1.28.2
 github.com/go-ini/ini
-# github.com/gofrs/flock v0.7.2-0.20190320160742-5135e617513b
-github.com/gofrs/flock
 # github.com/gogo/protobuf v1.1.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
