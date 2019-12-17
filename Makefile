@@ -136,6 +136,7 @@ mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
 	mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
+	mockery $(MOCKERY_FLAGS) -dir=./network -name='requester' -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./helpers -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./executors/docker -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./executors/custom -all -inpkg
