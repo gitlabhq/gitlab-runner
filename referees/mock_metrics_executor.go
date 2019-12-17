@@ -9,3 +9,5 @@ func (m *mockMetricsExecutor) GetMetricsLabelName() string {
 func (m *mockMetricsExecutor) GetMetricsLabelValue() string {
 	return "value"
 }
+
+type mockExecutor struct{}
