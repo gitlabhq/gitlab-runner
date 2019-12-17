@@ -272,6 +272,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 	s.Parallels = nil
 	s.VirtualBox = nil
 	s.Custom = nil
+	s.Referees = nil
 
 	executorFns := map[string]func(){
 		"kubernetes": func() {
