@@ -473,7 +473,7 @@ found in the separate [runners autoscale documentation](autoscale.md).
 | `OffPeakPeriods`    | Time periods when the scheduler is in the OffPeak mode. An array of cron-style patterns (described below). |
 | `OffPeakTimezone`   | Timezone for the times given in OffPeakPeriods. A timezone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the timezone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
 | `OffPeakIdleCount`  | Like `IdleCount`, but for _Off Peak_ time periods. |
-| `OffPeakIdleTime`   | Like `IdleTime`, but for _Off Peak_ time mperiods. |
+| `OffPeakIdleTime`   | Like `IdleTime`, but for _Off Peak_ time periods. |
 | `MaxBuilds`         | Builds count after which machine will be removed. |
 | `MachineName`       | Name of the machine. It **must** contain `%s`, which will be replaced with a unique machine identifier. |
 | `MachineDriver`     | Docker Machine `driver` to use. More details can be found in the [Docker Machine configuration section](autoscale.md#supported-cloud-providers). |
