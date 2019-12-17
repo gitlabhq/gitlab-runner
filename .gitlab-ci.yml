@@ -285,6 +285,14 @@ git 1.7.1:
   script:
     - make simple-test
 
+check modules:
+  <<: *except_docs
+  stage: test
+  cache: {}
+  dependencies: []
+  script:
+  - make check_modules
+
 #
 # Coverage stage
 #
