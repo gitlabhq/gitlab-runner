@@ -15,28 +15,12 @@ import (
 
 type fetcherMockFactory func(t *testing.T) fetcher
 
-type mockFetcher struct {
-	t    *testing.T
-	data []byte
-	err  error
-
-	expectedURL string
-}
-
-func (f *mockFetcher) Fetch(url string) ([]byte, error) {
-	assert.Equal(f.t, f.expectedURL, url)
-
-	return f.data, f.err
-}
-
 func newFetcherMock(expectedURL string, data []byte, err error) fetcherMockFactory {
 	return func(t *testing.T) fetcher {
-		return &mockFetcher{
-			t,
-			data,
-			err,
-			expectedURL,
-		}
+		m := mockFetcher{}
+		m.On("Fetch", expectedURL).Return(data, err)
+
+		return &m
 	}
 }
 
