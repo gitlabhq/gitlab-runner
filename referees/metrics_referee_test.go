@@ -24,7 +24,7 @@ func TestNewMetricsRefereeNoConfig(t *testing.T) {
 	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{}
 	log := logrus.WithField("test", 1)
-	mr := CreateMetricsReferee(mockExecutor, config, log)
+	mr := newMetricsReferee(mockExecutor, config, log)
 	require.Nil(t, mr)
 }
 
@@ -39,7 +39,7 @@ func TestNewMetricsRefereeImproperExecutor(t *testing.T) {
 	}
 
 	log := logrus.WithField("test", 1)
-	mr := CreateMetricsReferee(mockExecutor, config, log)
+	mr := newMetricsReferee(mockExecutor, config, log)
 	require.Nil(t, mr)
 }
 
@@ -54,7 +54,7 @@ func TestNewMetricsRefereeBadPrometheusAddress(t *testing.T) {
 	}
 
 	log := logrus.WithField("test", 1)
-	mr := CreateMetricsReferee(mockExecutor, config, log)
+	mr := newMetricsReferee(mockExecutor, config, log)
 	require.Nil(t, mr)
 }
 
@@ -86,7 +86,7 @@ func newTestMetricsRefereeWithConfig(t *testing.T, mrConfig *MetricsRefereeConfi
 	}
 
 	log := logrus.WithField("test", 1)
-	mr := CreateMetricsReferee(mockExecutor, config, log)
+	mr := newMetricsReferee(mockExecutor, config, log)
 	require.NotNil(t, mr)
 
 	return mr
@@ -208,7 +208,7 @@ func TestMetricsRefereeExecute(t *testing.T) {
 	}
 
 	log := logrus.WithField("test", t.Name())
-	mr := CreateMetricsReferee(mockExecutor, config, log)
+	mr := newMetricsReferee(mockExecutor, config, log)
 	require.NotNil(t, mr)
 
 	ctx := context.Background()
