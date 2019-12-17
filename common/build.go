@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path"
@@ -17,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
+	"gitlab.com/gitlab-org/gitlab-runner/referees"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
@@ -98,6 +100,9 @@ type Build struct {
 	allVariables          JobVariables
 
 	createdAt time.Time
+
+	Referees         []referees.Referee
+	ArtifactUploader func(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -252,6 +257,10 @@ func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executo
 }
 
 func (b *Build) executeScript(ctx context.Context, executor Executor) error {
+	// track job start and create referees
+	startTime := time.Now()
+	b.createReferees(executor)
+
 	// Prepare stage
 	err := b.executeStage(ctx, BuildStagePrepare, executor)
 
@@ -281,7 +290,11 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
 	}
 
-	uploadError := b.executeUploadArtifacts(ctx, err, executor)
+	artifactUploadError := b.executeUploadArtifacts(ctx, err, executor)
+
+	// track job end and execute referees
+	endTime := time.Now()
+	b.executeUploadReferees(ctx, executor, startTime, endTime)
 
 	// Use job's error as most important
 	if err != nil {
@@ -289,7 +302,45 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	}
 
 	// Otherwise, use uploadError
-	return uploadError
+	return artifactUploadError
+}
+
+func (b *Build) createReferees(executor Executor) {
+	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
+}
+
+func (b *Build) executeUploadReferees(ctx context.Context, executor Executor, startTime time.Time, endTime time.Time) error {
+	if b.Referees == nil {
+		return nil
+	}
+
+	jobCredentials := JobCredentials{
+		ID:    b.JobResponse.ID,
+		Token: b.JobResponse.Token,
+		URL:   b.Runner.RunnerCredentials.URL,
+	}
+
+	// execute and upload the results of each referee
+	for _, referee := range b.Referees {
+		if referee == nil {
+			continue
+		}
+
+		reader, err := referee.Execute(ctx, startTime, endTime)
+		// keep moving even if a subset of the referees have failed
+		if err != nil {
+			continue
+		}
+
+		// referee ran successfully, upload its results to GitLab as an artifact
+		b.ArtifactUploader(jobCredentials, reader, ArtifactsOptions{
+			BaseName: referee.ArtifactBaseName(),
+			Type:     referee.ArtifactType(),
+			Format:   ArtifactFormat(referee.ArtifactFormat()),
+		})
+	}
+
+	return nil
 }
 
 func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {

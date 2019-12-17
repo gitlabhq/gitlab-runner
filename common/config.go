@@ -22,6 +22,7 @@ import (
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
+	"gitlab.com/gitlab-org/gitlab-runner/referees"
 )
 
 type DockerPullPolicy string
@@ -312,6 +313,7 @@ type RunnerSettings struct {
 	Machine        *DockerMachine    `toml:"machine,omitempty" json:"machine" group:"docker machine provider" namespace:"machine"`
 	Kubernetes     *KubernetesConfig `toml:"kubernetes,omitempty" json:"kubernetes" group:"kubernetes executor" namespace:"kubernetes"`
 	Custom         *CustomConfig     `toml:"custom,omitempty" json:"custom" group:"custom executor" namespace:"custom"`
+	Referees       *referees.Config  `toml:"referees,omitempty" json:"referees" group:"referees configuration" namespace:"referees"`
 }
 
 type RunnerConfig struct {
