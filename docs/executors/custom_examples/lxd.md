@@ -67,8 +67,6 @@ set -eo pipefail
 # trap any error, and mark it as a system failure.
 trap "exit $SYSTEM_FAILURE_EXIT_CODE" ERR
 
-CONTAINER_ID="runner-$CUSTOM_ENV_CI_RUNNER_ID-project-$CUSTOM_ENV_CI_PROJECT_ID-concurrent-$CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID"
-
 start_container () {
     if lxc info "$CONTAINER_ID" >/dev/null 2>/dev/null ; then
         echo 'Found old container, deleting'
