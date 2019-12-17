@@ -21,7 +21,7 @@ import (
 )
 
 func TestNewMetricsRefereeNoConfig(t *testing.T) {
-	mockExecutor := new(MockExecutor)
+	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{}
 	log := logrus.WithField("test", 1)
 	mr := CreateMetricsReferee(mockExecutor, config, log)
@@ -44,7 +44,7 @@ func TestNewMetricsRefereeImproperExecutor(t *testing.T) {
 }
 
 func TestNewMetricsRefereeBadPrometheusAddress(t *testing.T) {
-	mockExecutor := new(MockExecutor)
+	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{
 			PrometheusAddress: "*(^&*^*(34f34f34fg3rfg3rgfY&*^^%*&^*(^(*",
@@ -59,7 +59,7 @@ func TestNewMetricsRefereeBadPrometheusAddress(t *testing.T) {
 }
 
 func TestNewMetricsReferee(t *testing.T) {
-	mockExecutor := new(MockExecutor)
+	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{
 			PrometheusAddress: "http://localhost:9000",
@@ -79,7 +79,7 @@ func TestNewMetricsReferee(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteParseError(t *testing.T) {
-	mockExecutor := new(MockExecutor)
+	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{
 			PrometheusAddress: "http://localhost:9000",
@@ -98,7 +98,7 @@ func TestMetricsRefereeExecuteParseError(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
-	mockExecutor := new(MockExecutor)
+	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{
 			PrometheusAddress: "http://localhost:9000",
@@ -122,7 +122,7 @@ func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
-	mockExecutor := new(MockExecutor)
+	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{
 			PrometheusAddress: "http://localhost:9000",
@@ -145,7 +145,7 @@ func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
-	mockExecutor := new(MockExecutor)
+	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{
 			PrometheusAddress: "http://localhost:9000",
@@ -222,7 +222,7 @@ func TestMetricsRefereeExecute(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	mockExecutor := new(MockExecutor)
+	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{
 			PrometheusAddress: ts.URL,
