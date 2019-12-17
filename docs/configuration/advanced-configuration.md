@@ -103,7 +103,7 @@ Example:
 ```
 
 NOTE: **Note:**
-If you are running the Gitlab Runner inside a Docker container you will also need to expose 8093. `-p 8093:8093`
+If using the docker Gitlab Runner you will also need to expose the [port](../install/docker.md).
 
 ## The `[[runners]]` section
 
