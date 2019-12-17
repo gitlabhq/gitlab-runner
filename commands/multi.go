@@ -482,6 +482,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		return
 	}
 	build.Session = buildSession
+	build.ArtifactUploader = mr.network.UploadRawArtifacts
 
 	// Add build to list of builds to assign numbers
 	mr.buildsHelper.addBuild(build)

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"gitlab.com/gitlab-org/gitlab-runner/referees"
+
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -133,6 +135,18 @@ func (e *machineExecutor) SetCurrentStage(stage common.ExecutorStage) {
 	}
 
 	e.executor.SetCurrentStage(stage)
+}
+
+func (e *machineExecutor) GetMetricsLabelName() string {
+	return "instance"
+}
+
+func (e *machineExecutor) GetMetricsLabelValue() string {
+	refereed, ok := e.executor.(referees.MetricsExecutor)
+	if ok {
+		return refereed.GetMetricsLabelValue()
+	}
+	return ""
 }
 
 func init() {

@@ -31,6 +31,7 @@ ci/.test-failures.servercore1809.txt.updated
 # Ignore Visual Studio Code internals
 /.vscode
 /debug
+debug.test
 
 # Ignore the generated binary
 /gitlab-runner*

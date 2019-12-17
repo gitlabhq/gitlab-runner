@@ -51,6 +51,7 @@ require (
 	github.com/pkg/errors v0.8.0
 	github.com/prometheus/client_golang v1.1.0
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
+	github.com/prometheus/common v0.6.0
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sanity-io/litter v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.4.2

@@ -103,6 +103,14 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	return s.watchContainer(cmd.Context, runOn.ID, bytes.NewBufferString(cmd.Script))
 }
 
+func (s *commandExecutor) GetMetricsLabelName() string {
+	return ""
+}
+
+func (s *commandExecutor) GetMetricsLabelValue() string {
+	return s.executor.info.Name
+}
+
 func init() {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,

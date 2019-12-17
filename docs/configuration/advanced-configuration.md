@@ -127,6 +127,7 @@ This defines one runner entry.
 | `post_build_script`  | Commands to be executed on the Runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
 | `clone_url`          | Overwrite the URL for the GitLab instance. Used if the Runner can't connect to GitLab on the URL GitLab exposes itself. |
 | `debug_trace_disabled` | Disables the `CI_DEBUG_TRACE` feature. When set to true, then debug log (trace) will remain disabled even if `CI_DEBUG_TRACE` will be set to `true` by the user. |
+| `referees` | Extra job monitoring workers that pass their results as job artifacts to GitLab |
 
 Example:
 
@@ -815,6 +816,67 @@ Example:
 [runners.custom_build_dir]
   enabled = true
 ```
+
+## The `[runners.referees]` section
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1545) in GitLab Runner 12.7.
+> Requires [GitLab v12.6](https://about.gitlab.com/blog/2019/12/22/gitlab-12-6-released/) or later.
+
+Use Runner Referees to pass extra job monitoring data to GitLab. Runner referees are special workers within the Runner manager that query and collect additional data related to a job and upload their results to GitLab as job artifacts.
+
+### Using the Metrics Runner Referee
+
+If the machine/container that is running the job exposes [Prometheus](https://prometheus.io) metrics that are gathered by a Prometheus server, GitLab Runner can query the Prometheus server for the entirety of the job duration. After the metrics are received, they are uploaded as a job artifact which can be used for analysis later.
+
+Currently, only the [`docker-machine` executor](../executors/docker_machine.md) supports the referee.
+
+### Configuring the Metrics Runner Referee for a Runner
+
+Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml` file within a `[[runner]]` section and add the following fields:
+
+| Setting              | Description                                                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `prometheus_address` | The server that collects metrics from Runner instances. It must be accessible by the Runner manager when the job finishes.          |
+| `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).                               |
+| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics) queries that will be executed for each interval. |
+
+Here is a complete configuration example for `node_exporter` metrics:
+
+```toml
+[[runners]]
+  [runners.referees]
+    [runners.referees.metrics]
+      prometheus_address = "http://localhost:9090"
+      query_interval = "10s"
+      metric_queries = [
+        "arp_entries:rate(node_arp_entries{{selector}}[{interval}])",
+        "context_switches:rate(node_context_switches_total{{selector}}[{interval}])",
+        "cpu_seconds:rate(node_cpu_seconds_total{{selector}}[{interval}])",
+        "disk_read_bytes:rate(node_disk_read_bytes_total{{selector}}[{interval}])",
+        "disk_written_bytes:rate(node_disk_written_bytes_total{{selector}}[{interval}])",
+        "memory_bytes:rate(node_memory_MemTotal_bytes{{selector}}[{interval}])",
+        "memory_swap_bytes:rate(node_memory_SwapTotal_bytes{{selector}}[{interval}])",
+        "network_tcp_active_opens:rate(node_netstat_Tcp_ActiveOpens{{selector}}[{interval}])",
+        "network_tcp_passive_opens:rate(node_netstat_Tcp_PassiveOpens{{selector}}[{interval}])",
+        "network_receive_bytes:rate(node_network_receive_bytes_total{{selector}}[{interval}])",
+        "network_receive_drops:rate(node_network_receive_drop_total{{selector}}[{interval}])",
+        "network_receive_errors:rate(node_network_receive_errs_total{{selector}}[{interval}])",
+        "network_receive_packets:rate(node_network_receive_packets_total{{selector}}[{interval}])",
+        "network_transmit_bytes:rate(node_network_transmit_bytes_total{{selector}}[{interval}])",
+        "network_transmit_drops:rate(node_network_transmit_drop_total{{selector}}[{interval}])",
+        "network_transmit_errors:rate(node_network_transmit_errs_total{{selector}}[{interval}])",
+        "network_transmit_packets:rate(node_network_transmit_packets_total{{selector}}[{interval}])"
+      ]
+```
+
+Metrics queries are in `canonical_name:query_string` format. The query string supports two variables that are replaced during execution:
+
+| Setting      | Description                                                                                                                   |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `{selector}` | Replaced with a `label_name=label_value` pair that selects metrics generated by a specific Runner instance within Prometheus. |
+| `{interval}` | Replaced with the `query_interval` parameter from the [runners.referees.metrics] configuration for this referee.              |
+
+For example, a shared Runner environment using the docker-machine executor would have a `{selector}` similar to `node=shared-runner-123`.
 
 ## Note
 
