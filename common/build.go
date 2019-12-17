@@ -309,9 +309,9 @@ func (b *Build) createReferees(executor Executor) {
 	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
 }
 
-func (b *Build) executeUploadReferees(ctx context.Context, executor Executor, startTime time.Time, endTime time.Time) error {
+func (b *Build) executeUploadReferees(ctx context.Context, executor Executor, startTime time.Time, endTime time.Time) {
 	if b.Referees == nil {
-		return nil
+		return
 	}
 
 	jobCredentials := JobCredentials{
@@ -339,8 +339,6 @@ func (b *Build) executeUploadReferees(ctx context.Context, executor Executor, st
 			Format:   ArtifactFormat(referee.ArtifactFormat()),
 		})
 	}
-
-	return nil
 }
 
 func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {
