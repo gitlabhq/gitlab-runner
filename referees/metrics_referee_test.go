@@ -59,18 +59,7 @@ func TestNewMetricsRefereeBadPrometheusAddress(t *testing.T) {
 }
 
 func TestNewMetricsReferee(t *testing.T) {
-	mockExecutor := new(mockMetricsExecutor)
-	config := &Config{
-		Metrics: &MetricsRefereeConfig{
-			PrometheusAddress: "http://localhost:9000",
-			QueryInterval:     10,
-			Queries:           []string{"name1:metric1{{selector}}", "name2:metric2{{selector}}"},
-		},
-	}
-
-	log := logrus.WithField("test", 1)
-	mr := CreateMetricsReferee(mockExecutor, config, log)
-	require.NotNil(t, mr)
+	mr := newDefaultTestMetricsReferee(t)
 
 	// test job artifact parameters
 	assert.Equal(t, "metrics_referee.json", mr.ArtifactBaseName())
@@ -78,19 +67,39 @@ func TestNewMetricsReferee(t *testing.T) {
 	assert.Equal(t, "gzip", mr.ArtifactFormat())
 }
 
-func TestMetricsRefereeExecuteParseError(t *testing.T) {
+func newDefaultTestMetricsReferee(t *testing.T) *MetricsReferee {
+	config := &MetricsRefereeConfig{
+		PrometheusAddress: "http://localhost:9000",
+		QueryInterval:     10,
+		Queries:           []string{"name1:metric1{{selector}}", "name2:metric2{{selector}}"},
+	}
+
+	return newTestMetricsRefereeWithConfig(t, config)
+}
+
+func newTestMetricsRefereeWithConfig(t *testing.T, mrConfig *MetricsRefereeConfig) *MetricsReferee {
+	t.Helper()
+
 	mockExecutor := new(mockMetricsExecutor)
 	config := &Config{
-		Metrics: &MetricsRefereeConfig{
-			PrometheusAddress: "http://localhost:9000",
-			QueryInterval:     10,
-			Queries:           []string{"name1=metric1{{selector}}", "name2=metric2{{selector}}"},
-		},
+		Metrics: mrConfig,
 	}
 
 	log := logrus.WithField("test", 1)
 	mr := CreateMetricsReferee(mockExecutor, config, log)
 	require.NotNil(t, mr)
+
+	return mr
+}
+
+func TestMetricsRefereeExecuteParseError(t *testing.T) {
+	config := &MetricsRefereeConfig{
+		PrometheusAddress: "http://localhost:9000",
+		QueryInterval:     10,
+		Queries:           []string{"name1=metric1{{selector}}", "name2=metric2{{selector}}"},
+	}
+
+	mr := newTestMetricsRefereeWithConfig(t, config)
 
 	ctx := context.Background()
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
@@ -98,18 +107,7 @@ func TestMetricsRefereeExecuteParseError(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
-	mockExecutor := new(mockMetricsExecutor)
-	config := &Config{
-		Metrics: &MetricsRefereeConfig{
-			PrometheusAddress: "http://localhost:9000",
-			QueryInterval:     10,
-			Queries:           []string{"name1:metric1{{selector}}", "name2:metric2{{selector}}"},
-		},
-	}
-
-	log := logrus.WithField("test", 1)
-	mr := CreateMetricsReferee(mockExecutor, config, log)
-	require.NotNil(t, mr)
+	mr := newDefaultTestMetricsReferee(t)
 
 	ctx := context.Background()
 	prometheusAPI := new(MockPrometheusAPI)
@@ -122,18 +120,7 @@ func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
-	mockExecutor := new(mockMetricsExecutor)
-	config := &Config{
-		Metrics: &MetricsRefereeConfig{
-			PrometheusAddress: "http://localhost:9000",
-			QueryInterval:     10,
-			Queries:           []string{"name1:metric1{{selector}}", "name2:metric2{{selector}}"},
-		},
-	}
-
-	log := logrus.WithField("test", 1)
-	mr := CreateMetricsReferee(mockExecutor, config, log)
-	require.NotNil(t, mr)
+	mr := newDefaultTestMetricsReferee(t)
 
 	ctx := context.Background()
 	prometheusAPI := new(MockPrometheusAPI)
@@ -145,18 +132,7 @@ func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
 }
 
 func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
-	mockExecutor := new(mockMetricsExecutor)
-	config := &Config{
-		Metrics: &MetricsRefereeConfig{
-			PrometheusAddress: "http://localhost:9000",
-			QueryInterval:     10,
-			Queries:           []string{"name1:metric1{{selector}}", "name2:metric2{{selector}}"},
-		},
-	}
-
-	log := logrus.WithField("test", 1)
-	mr := CreateMetricsReferee(mockExecutor, config, log)
-	require.NotNil(t, mr)
+	mr := newDefaultTestMetricsReferee(t)
 
 	matrix := model.Matrix([]*model.SampleStream{})
 	ctx := context.Background()
