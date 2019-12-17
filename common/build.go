@@ -294,7 +294,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	// track job end and execute referees
 	endTime := time.Now()
-	b.executeUploadReferees(ctx, executor, startTime, endTime)
+	b.executeUploadReferees(ctx, startTime, endTime)
 
 	// Use job's error as most important
 	if err != nil {
@@ -309,7 +309,7 @@ func (b *Build) createReferees(executor Executor) {
 	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
 }
 
-func (b *Build) executeUploadReferees(ctx context.Context, executor Executor, startTime time.Time, endTime time.Time) {
+func (b *Build) executeUploadReferees(ctx context.Context, startTime time.Time, endTime time.Time) {
 	if b.Referees == nil {
 		return
 	}
