@@ -257,6 +257,10 @@ Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitL
 run the following:
 
 ```bash
+# For Helm 2
+helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
+
+# For Helm 3
 helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
 ```
 
