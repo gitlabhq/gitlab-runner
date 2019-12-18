@@ -246,10 +246,15 @@ More information on how GitLab Runner uses these certificates can be found in th
 
 ## Installing GitLab Runner using the Helm Chart
 
-Add the GitLab Helm repository and initialize Helm:
+Add the GitLab Helm repository:
 
 ```bash
 helm repo add gitlab https://charts.gitlab.io
+```
+
+If using Helm 2, you must also initialize Helm:
+
+```bash
 helm init
 ```
 
