@@ -91,8 +91,9 @@ func newTestMetricsRefereeWithConfig(t *testing.T, mrConfig *MetricsRefereeConfi
 	}
 
 	log := logrus.WithField("test", 1)
-	mr := newMetricsReferee(executor, config, log)
+	mr, ok := newMetricsReferee(executor, config, log).(*MetricsReferee)
 	require.NotNil(t, mr)
+	require.True(t, ok)
 
 	return mr
 }
