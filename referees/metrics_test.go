@@ -62,8 +62,7 @@ func TestNewMetricsReferee(t *testing.T) {
 	mockExecutor := new(MockMetricsExecutor)
 	defer mockExecutor.AssertExpectations(t)
 
-	mockExecutor.On("GetMetricsLabelName").Return("name").Once()
-	mockExecutor.On("GetMetricsLabelValue").Return("value").Once()
+	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	mr := newDefaultTestMetricsReferee(t, mockExecutor)
 	require.NotNil(t, mr)
@@ -102,8 +101,7 @@ func TestMetricsRefereeExecuteParseError(t *testing.T) {
 	mockExecutor := new(MockMetricsExecutor)
 	defer mockExecutor.AssertExpectations(t)
 
-	mockExecutor.On("GetMetricsLabelName").Return("name").Once()
-	mockExecutor.On("GetMetricsLabelValue").Return("value").Once()
+	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	config := &MetricsRefereeConfig{
 		PrometheusAddress: "http://localhost:9000",
@@ -122,8 +120,7 @@ func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
 	mockExecutor := new(MockMetricsExecutor)
 	defer mockExecutor.AssertExpectations(t)
 
-	mockExecutor.On("GetMetricsLabelName").Return("name").Once()
-	mockExecutor.On("GetMetricsLabelValue").Return("value").Once()
+	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	mr := newDefaultTestMetricsReferee(t, mockExecutor)
 	require.NotNil(t, mr)
@@ -142,8 +139,7 @@ func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
 	mockExecutor := new(MockMetricsExecutor)
 	defer mockExecutor.AssertExpectations(t)
 
-	mockExecutor.On("GetMetricsLabelName").Return("name").Once()
-	mockExecutor.On("GetMetricsLabelValue").Return("value").Once()
+	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	mr := newDefaultTestMetricsReferee(t, mockExecutor)
 	require.NotNil(t, mr)
@@ -161,8 +157,7 @@ func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
 	mockExecutor := new(MockMetricsExecutor)
 	defer mockExecutor.AssertExpectations(t)
 
-	mockExecutor.On("GetMetricsLabelName").Return("name").Once()
-	mockExecutor.On("GetMetricsLabelValue").Return("value").Once()
+	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	mr := newDefaultTestMetricsReferee(t, mockExecutor)
 	require.NotNil(t, mr)
@@ -234,8 +229,7 @@ func TestMetricsRefereeExecute(t *testing.T) {
 	mockExecutor := new(MockMetricsExecutor)
 	defer mockExecutor.AssertExpectations(t)
 
-	mockExecutor.On("GetMetricsLabelName").Return("name").Once()
-	mockExecutor.On("GetMetricsLabelValue").Return("value").Once()
+	mockExecutor.On("GetMetricsSelector").Return(`name="value"`).Once()
 
 	config := &Config{
 		Metrics: &MetricsRefereeConfig{

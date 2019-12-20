@@ -3,6 +3,7 @@ package docker
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/docker/docker/api/types"
@@ -103,12 +104,8 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	return s.watchContainer(cmd.Context, runOn.ID, bytes.NewBufferString(cmd.Script))
 }
 
-func (s *commandExecutor) GetMetricsLabelName() string {
-	return ""
-}
-
-func (s *commandExecutor) GetMetricsLabelValue() string {
-	return s.executor.info.Name
+func (s *commandExecutor) GetMetricsSelector() string {
+	return fmt.Sprintf("instance=%q", s.executor.info.Name)
 }
 
 func init() {

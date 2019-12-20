@@ -19,9 +19,8 @@ type MetricsReferee struct {
 	prometheusAPI prometheusV1.API
 	queries       []string
 	queryInterval time.Duration
-	labelName     string
-	labelValue    string
-	logger        *logrus.Entry
+	selector      string
+	logger        logrus.FieldLogger
 }
 
 type MetricsRefereeConfig struct {
@@ -31,8 +30,7 @@ type MetricsRefereeConfig struct {
 }
 
 type MetricsExecutor interface {
-	GetMetricsLabelName() string
-	GetMetricsLabelValue() string
+	GetMetricsSelector() string
 }
 
 func (mr *MetricsReferee) ArtifactBaseName() string {
@@ -88,10 +86,9 @@ func (mr *MetricsReferee) Execute(
 }
 
 func (mr *MetricsReferee) queryMetrics(ctx context.Context, query string, queryRange prometheusV1.Range) []model.SamplePair {
-	selector := fmt.Sprintf("%s=%q", mr.labelName, mr.labelValue)
 	interval := fmt.Sprintf("%.0fs", mr.queryInterval.Seconds())
 
-	query = strings.Replace(query, "{selector}", selector, -1)
+	query = strings.Replace(query, "{selector}", mr.selector, -1)
 	query = strings.Replace(query, "{interval}", interval, -1)
 
 	queryLogger := mr.logger.WithFields(logrus.Fields{
@@ -156,8 +153,7 @@ func newMetricsReferee(executor interface{}, config *Config, log logrus.FieldLog
 		prometheusAPI: prometheusAPI,
 		queryInterval: time.Duration(config.Metrics.QueryInterval) * time.Second,
 		queries:       config.Metrics.Queries,
-		labelName:     refereed.GetMetricsLabelName(),
-		labelValue:    refereed.GetMetricsLabelValue(),
+		selector:      refereed.GetMetricsSelector(),
 		logger:        logger,
 	}
 }
