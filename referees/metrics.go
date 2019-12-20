@@ -65,50 +65,21 @@ func (mr *MetricsReferee) Execute(
 		// break up query into name:query
 		components := strings.Split(metricQuery, ":")
 		if len(components) != 2 {
-			err := fmt.Errorf("%s not in name:query format in metric queries", metricQuery)
+			err := fmt.Errorf("%q not in name:query format in metric queries", metricQuery)
 			mr.logger.WithError(err).Error("Failed to parse metrics query")
+
 			return nil, err
 		}
 
 		name := components[0]
 		query := components[1]
-		selector := fmt.Sprintf("%s=\"%s\"", mr.labelName, mr.labelValue)
-		interval := fmt.Sprintf("%.0fs", mr.queryInterval.Seconds())
-		query = strings.Replace(query, "{selector}", selector, -1)
-		query = strings.Replace(query, "{interval}", interval, -1)
-		queryLogger := mr.logger.WithFields(logrus.Fields{
-			"query": query,
-			"start": startTime.UTC(),
-			"end":   endTime.UTC(),
-		})
 
-		queryLogger.Debug("Sending request to Prometheus API")
-		// execute query over range
-		result, _, err := mr.prometheusAPI.QueryRange(ctx, query, queryRange)
-		if err != nil {
-			queryLogger.WithError(err).Error("Failed to range query Prometheus")
-			continue
-		}
-
+		result := mr.queryMetrics(ctx, query, queryRange)
 		if result == nil {
-			queryLogger.Error("Received nil range query result")
 			continue
 		}
 
-		// ensure matrix result
-		matrix, ok := result.(model.Matrix)
-		if !ok {
-			queryLogger.WithField("type", reflect.TypeOf(result)).Info("Failed to type assert result into model.Matrix")
-			continue
-		}
-
-		// no results for range query
-		if matrix.Len() == 0 {
-			continue
-		}
-
-		// save first result set values at metric
-		metrics[name] = matrix[0].Values
+		metrics[name] = result
 	}
 
 	// convert metrics sample pairs to JSON
@@ -116,7 +87,49 @@ func (mr *MetricsReferee) Execute(
 	return bytes.NewReader(output), nil
 }
 
-func newMetricsReferee(executor interface{}, config *Config, log *logrus.Entry) *MetricsReferee {
+func (mr *MetricsReferee) queryMetrics(ctx context.Context, query string, queryRange prometheusV1.Range) []model.SamplePair {
+	selector := fmt.Sprintf("%s=%q", mr.labelName, mr.labelValue)
+	interval := fmt.Sprintf("%.0fs", mr.queryInterval.Seconds())
+
+	query = strings.Replace(query, "{selector}", selector, -1)
+	query = strings.Replace(query, "{interval}", interval, -1)
+
+	queryLogger := mr.logger.WithFields(logrus.Fields{
+		"query": query,
+		"start": queryRange.Start,
+		"end":   queryRange.End,
+	})
+
+	queryLogger.Debug("Sending request to Prometheus API")
+	// execute query over range
+	result, _, err := mr.prometheusAPI.QueryRange(ctx, query, queryRange)
+	if err != nil {
+		queryLogger.WithError(err).Error("Failed to range query Prometheus")
+		return nil
+	}
+
+	if result == nil {
+		queryLogger.Error("Received nil range query result")
+		return nil
+	}
+
+	// ensure matrix result
+	matrix, ok := result.(model.Matrix)
+	if !ok {
+		queryLogger.WithField("result-type", reflect.TypeOf(result)).Info("Failed to type assert result into model.Matrix")
+		return nil
+	}
+
+	// no results for range query
+	if matrix.Len() == 0 {
+		return nil
+	}
+
+	// save first result set values at metric
+	return matrix[0].Values
+}
+
+func newMetricsReferee(executor interface{}, config *Config, log logrus.FieldLogger) Referee {
 	logger := log.WithField("referee", "metrics")
 	if config.Metrics == nil {
 		return nil
