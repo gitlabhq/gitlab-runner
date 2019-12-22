@@ -200,7 +200,7 @@ goto :EOF
 
 ## PowerShell
 
-The default shell when a new Runner is registed using GitLab Runner
+The default shell when a new Runner is registered using GitLab Runner
 12.0 or newer.
 
 PowerShell doesn't support executing the build in context of another user.

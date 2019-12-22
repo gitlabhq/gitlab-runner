@@ -442,7 +442,7 @@ Make sure to configure those properly. As of Docker 19.03, TLS is enabled by
 default but it requires mapping
 certificates to your client. You can enable non-TLS connection for DIND or
 mount certificates as described in
-[**Use Docker In Docker Workflow wiht Docker executor**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor)
+[**Use Docker In Docker Workflow with Docker executor**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor)
 
 ### Not supplying Git
 
