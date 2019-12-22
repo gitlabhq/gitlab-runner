@@ -1,4 +1,4 @@
-v12.6.0-rc1 (2019-12-09)
+v12.6.0 (2019-12-22)
 
 - Update list of fixes for docker-machine fork !1655
 - Remove outdated note regarding non-existent 1.8.x brew Go formula in contributing docs !1661
