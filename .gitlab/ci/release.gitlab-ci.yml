@@ -1,8 +1,8 @@
-.release_docker_images: &release_docker_images
-  <<: *docker
+.release_docker_images:
+  extends:
+  - .docker
   stage: release
-  variables: &release_docker_images_variables
-    <<: *docker_variables
+  variables:
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "true"
     DOCKER_MACHINE_CHECKSUM: "a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097"
@@ -17,7 +17,8 @@
   - release
 
 .build_windows_docker_images:
-  <<: *except_docs
+  extends:
+  - .except_docs
   stage: release
   variables:
     PUSH_TO_DOCKER_HUB: "false"
@@ -30,8 +31,9 @@
   dependencies:
   - helper images
 
-.release: &release
-  <<: *except_docs
+.release:
+  extends:
+  - .except_docs
   stage: release
   before_script:
   - unset GPG_KEY
@@ -39,8 +41,9 @@
   tags:
   - release
 
-.release_s3: &release_s3
-  <<: *release
+.release_s3:
+  extends:
+  - .release
   script:
   - make release_s3
   - |
@@ -51,38 +54,40 @@
       echo -e "\033[0;31m****** gitlab publishing disabled ******\033[0m"
     fi
 
-.release_packagecloud: &release_packagecloud
-  <<: *release
+.release_packagecloud:
+  extends:
+  - .release
   script:
   - make release_packagecloud
 
-.release_development: &release_development
+.release_development:
   only:
   - branches@gitlab-org/gitlab-runner
   except:
   - master@gitlab-org/gitlab-runner
   - /(^docs[\/-].*|.*-docs$)/
 
-.release_bleeding_edge: &release_bleeding_edge
+.release_bleeding_edge:
   only:
   - master@gitlab-org/gitlab-runner
   - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+\Z/@gitlab-org/gitlab-runner
 
-.release_stable: &release_stable
+.release_stable:
   only:
   - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-runner
 
 development S3:
-  <<: *release_s3
-  <<: *release_development
+  extends:
+  - .release_s3
+  - .release_development
   environment:
     name: development/s3/${CI_COMMIT_REF_NAME}
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 development docker images:
-  <<: *release_docker_images
+  extends:
+  - .release_docker_images
   variables:
-    <<: *release_docker_images_variables
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
   only:
@@ -94,103 +99,112 @@ development docker images:
   - docker
 
 development servercore1803 helper docker image:
-  <<: *release_development
-  <<: *windows1803
-  extends: .build_windows_docker_images
+  extends:
+  - .build_windows_docker_images
+  - .windows1803
+  - .release_development
 
 development servercore1809 helper docker image:
-  <<: *release_development
-  <<: *windows1809
-  extends: .build_windows_docker_images
+  extends:
+  - .build_windows_docker_images
+  - .windows1809
+  - .release_development
 
 bleeding edge S3:
-  <<: *release_s3
-  <<: *release_bleeding_edge
+  extends:
+  - .release_s3
+  - .release_bleeding_edge
   environment:
     name: bleeding_edge/s3
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 bleeding edge packagecloud:
-  <<: *release_packagecloud
-  <<: *release_bleeding_edge
+  extends:
+  - .release_packagecloud
+  - .release_bleeding_edge
   environment:
     name: bleeding_edge/packagecloud
     url: https://packages.gitlab.com/runner/unstable
 
 bleeding edge docker images:
-  <<: *release_docker_images
-  <<: *release_bleeding_edge
+  extends:
+  - .release_docker_images
+  - .release_bleeding_edge
   environment:
     name: bleeding_edge/docker_images
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 bleeding edge servercore1803 docker images:
-  <<: *release_bleeding_edge
-  <<: *windows1803
-  extends: .build_windows_docker_images
+  extends:
+  - .build_windows_docker_images
+  - .windows1803
+  - .release_bleeding_edge
   variables:
-    <<: *windows1803_variables
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: bleeding_edge/docker_images/windows1803
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 bleeding edge servercore1809 docker images:
-  <<: *release_bleeding_edge
-  <<: *windows1809
-  extends: .build_windows_docker_images
+  extends:
+  - .build_windows_docker_images
+  - .windows1809
+  - .release_bleeding_edge
   variables:
-    <<: *windows1809_variables
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: bleeding_edge/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable S3:
-  <<: *release_s3
-  <<: *release_stable
+  extends:
+  - .release_s3
+  - .release_stable
   environment:
     name: stable/s3
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 stable packagecloud:
-  <<: *release_packagecloud
-  <<: *release_stable
+  extends:
+  - .release_packagecloud
+  - .release_stable
   environment:
     name: stable/packagecloud
     url: https://packages.gitlab.com/runner/gitlab-runner
 
 stable docker images:
-  <<: *release_docker_images
-  <<: *release_stable
+  extends:
+  - .release_docker_images
+  - .release_stable
   environment:
     name: stable/docker_images
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable servercore1803 docker images:
-  <<: *release_stable
-  <<: *windows1803
-  extends: .build_windows_docker_images
+  extends:
+  - .build_windows_docker_images
+  - .windows1803
+  - .release_stable
   variables:
-    <<: *windows1803_variables
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: stable/docker_images/windows1803
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable servercore1809 docker images:
-  <<: *release_stable
-  <<: *windows1809
-  extends: .build_windows_docker_images
+  extends:
+  - .build_windows_docker_images
+  - .windows1809
+  - .release_stable
   variables:
-    <<: *windows1809_variables
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: stable/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 static QA:
-  <<: *except_docs
+  extends:
+  - .except_docs
   stage: release
   image: alpine:3.7
   cache: {}

@@ -18,15 +18,16 @@ before_script:
 # Skip all jobs except the ones that begin and end with 'docs'.
 # Used for commits including ONLY documentation changes.
 # https://docs.gitlab.com/ce/development/writing_documentation.html#testing
-.except_docs: &except_docs
+.except_docs:
   except:
   - /(^docs[\/-].*|.*-docs$)/
 
-.docker: &docker
-  <<: *except_docs
+.docker:
+  extends:
+  - .except_docs
   services:
   - docker:19.03-dind
-  variables: &docker_variables
+  variables:
     CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.5-1
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2376
@@ -37,25 +38,33 @@ before_script:
   - docker
 
 .windows_base:
-  variables: &windows_base_variables
+  variables:
     PKG_NAMESPACE: gitlab.com\gitlab-org
     PKG_NAME: gitlab-runner
     GOPATH: "$CI_PROJECT_DIR\\.gopath"
     PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
     PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
 
-.windows1803: &windows1803
-  variables: &windows1803_variables
-    <<: *windows_base_variables
+.windows1803_variables:
+  variables:
     WINDOWS_VERSION: servercore1803
+
+.windows1803:
+  extends:
+  - .windows_base
+  - .windows1803_variables
   tags:
   - windows-1803
   - shell
 
-.windows1809: &windows1809
-  variables: &windows1809_variables
-    <<: *windows_base_variables
+.windows1809_variables:
+  variables:
     WINDOWS_VERSION: servercore1809
+
+.windows1809:
+  extends:
+  - .windows_base
+  - .windows1809_variables
   tags:
   - windows-1809
   - shell

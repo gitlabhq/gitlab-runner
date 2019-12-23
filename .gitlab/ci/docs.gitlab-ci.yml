@@ -1,4 +1,4 @@
-.review-docs: &review-docs
+.review-docs:
   image: ruby:2.6-alpine
   before_script:
   - unset GPG_KEY
@@ -21,7 +21,8 @@
 # Useful to preview the docs changes live
 # https://docs.gitlab.com/ee/development/writing_documentation.html#previewing-the-changes-live
 review-docs-deploy:
-  <<: *review-docs
+  extends:
+  - .review-docs
   stage: docs
   environment:
     name: review-docs/$CI_COMMIT_REF_SLUG
@@ -34,7 +35,8 @@ review-docs-deploy:
 
 # Cleanup remote environment of gitlab-docs
 review-docs-cleanup:
-  <<: *review-docs
+  extends:
+  - .review-docs
   stage: docs
   environment:
     name: review-docs/$CI_COMMIT_REF_SLUG

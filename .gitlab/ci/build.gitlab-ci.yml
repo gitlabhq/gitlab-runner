@@ -1,5 +1,6 @@
 .binaries: &binaries
-  <<: *except_docs
+  extends:
+  - .except_docs
   stage: build
   script:
   - source ci/touch_make_dependencies

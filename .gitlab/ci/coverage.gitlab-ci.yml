@@ -1,10 +1,12 @@
-.coverage_job: &coverage_job
-  <<: *except_docs
+.coverage_job:
+  extends:
+  - .except_docs
   stage: coverage
   when: always
 
 test coverage report:
-  <<: *coverage_job
+  extends:
+  - .coverage_job
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
   script:
   - source ci/touch_make_dependencies
@@ -16,7 +18,8 @@ test coverage report:
     expire_in: 7d
 
 test junit report:
-  <<: *coverage_job
+  extends:
+  - .coverage_job
   image: $CI_IMAGE
   script:
   - source ci/touch_make_dependencies
@@ -26,13 +29,15 @@ test junit report:
       junit: out/junit/report.xml
 
 race conditions detector:
-  <<: *coverage_job
+  extends:
+  - .coverage_job
   script:
   - source ci/touch_make_dependencies
   - make check_race_conditions
 
 .check windows test failures:
-  <<: *except_docs
+  extends:
+  - .except_docs
   stage: coverage
   script:
   - ./scripts/check_windows_failures
@@ -43,11 +48,11 @@ race conditions detector:
   when: always
 
 check windows 1803 test failures:
-  variables:
-    <<: *windows1803_variables
-  extends: .check windows test failures
+  extends:
+  - .check windows test failures
+  - .windows1803_variables
 
 check windows 1809 test failures:
-  variables:
-    <<: *windows1809_variables
-  extends: .check windows test failures
+  extends:
+  - .check windows test failures
+  - .windows1809_variables

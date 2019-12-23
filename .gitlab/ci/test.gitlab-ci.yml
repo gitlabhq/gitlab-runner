@@ -47,7 +47,8 @@ check modules:
   - make check_modules
 
 code_quality:
-  <<: *except_docs
+  extends:
+  - .except_docs
   stage: test
   image: docker:19.03-git
   services:
@@ -63,12 +64,12 @@ code_quality:
     paths: [gl-code-quality-report.json]
     expire_in: 7d
 
-unit test: &unit_tests
-  <<: *docker
+unit test:
+  extends:
+  - .docker
   stage: test
   parallel: 5
   variables:
-    <<: *docker_variables
     GIT_LFS_256_CHECKSUM: 7be85238cbbb957ab25de52b60279d40ba40d3faa72eeb2cb9fa77d6d92381e5
   before_script:
   # This' script content as well as the definition of GIT_LFS_256_CHECKSUM should be moved to
@@ -88,16 +89,17 @@ unit test: &unit_tests
     expire_in: 7d
 
 unit test with race:
-  <<: *unit_tests
+  extends:
+  - unit test
   allow_failure: true
   variables:
-    <<: *docker_variables
     GIT_LFS_256_CHECKSUM: 7be85238cbbb957ab25de52b60279d40ba40d3faa72eeb2cb9fa77d6d92381e5
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
 
 .windows test:
-  extends: .except_docs
+  extends:
+  - .except_docs
   stage: test
   parallel: 3
   variables:
@@ -121,15 +123,18 @@ unit test with race:
   - /.*/@gitlab-org/gitlab-runner
 
 windows 1803 tests:
-  <<: *windows1803
-  extends: .windows test
+  extends:
+  - .windows test
+  - .windows1803
 
 windows 1809 tests:
-  <<: *windows1809
-  extends: .windows test
+  extends:
+  - .windows test
+  - .windows1809
 
 git 1.7.1:
-  <<: *except_docs
+  extends:
+  - .except_docs
   image: centos:6
   stage: test
   variables:

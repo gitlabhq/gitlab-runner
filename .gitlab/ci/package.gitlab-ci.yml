@@ -1,5 +1,6 @@
 .packages: &packages
-  <<: *except_docs
+  extends:
+  - .except_docs
   stage: package
   before_script:
   - |

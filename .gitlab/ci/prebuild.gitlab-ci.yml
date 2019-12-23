@@ -1,5 +1,6 @@
 helper images:
-  <<: *docker
+  extends:
+  - .docker
   stage: prebuild
   script:
   - make helper-build helper-docker
@@ -12,7 +13,8 @@ helper images:
     expire_in: 7d
 
 clone test repo:
-  <<: *except_docs
+  extends:
+  - .except_docs
   stage: prebuild
   script:
   - mkdir tmp
@@ -25,7 +27,8 @@ clone test repo:
     expire_in: 7d
 
 tests definitions:
-  <<: *except_docs
+  extends:
+  - .except_docs
   stage: prebuild
   script:
   - apt-get update
