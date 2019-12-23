@@ -105,7 +105,7 @@ be used:
 NOTE: **Note:**
 There is a known issue when a new Runner is registered with `c:\\cache`
 as a source directory when passing the `--docker-volumes` or
-`DOCKER_VOLUMES` envrionment variable. For more details check
+`DOCKER_VOLUMES` environment variable. For more details check
 [#4312](https://gitlab.com/gitlab-org/gitlab-runner/issues/4312)
 
 Below is an example of what the configuration for a simple Docker
