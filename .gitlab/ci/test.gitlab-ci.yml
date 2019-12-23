@@ -64,7 +64,7 @@ unit test:
   extends:
   - .docker
   stage: test
-  parallel: 5
+  parallel: 8
   variables:
     GIT_LFS_256_CHECKSUM: 7be85238cbbb957ab25de52b60279d40ba40d3faa72eeb2cb9fa77d6d92381e5
   before_script:
