@@ -145,8 +145,12 @@ tests definitions:
   tags:
   - gitlab-org
 
+#
+# Test stage
+#
+
 check feature flags docs:
-  stage: prebuild
+  stage: test
   cache: {}
   dependencies:
   script:
@@ -160,10 +164,6 @@ check feature flags docs:
       echo
       exit 1
     )
-
-#
-# Test stage
-#
 
 code_quality:
   <<: *except_docs
