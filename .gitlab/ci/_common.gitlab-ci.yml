@@ -22,6 +22,17 @@ before_script:
   except:
   - /(^docs[\/-].*|.*-docs$)/
 
+.no_cache:
+  cache: {}
+
+.no_dependencies:
+  dependencies: []
+
+.no_cache_and_dependencies:
+  extends:
+  - .no_cache
+  - .no_dependencies
+
 .docker:
   extends:
   - .except_docs

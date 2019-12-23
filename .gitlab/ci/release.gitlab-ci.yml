@@ -205,9 +205,9 @@ stable servercore1809 docker images:
 static QA:
   extends:
   - .except_docs
+  - .no_cache
   stage: release
   image: alpine:3.7
-  cache: {}
   dependencies:
   - code_quality
   script: |

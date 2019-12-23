@@ -4,10 +4,8 @@ include:
 docs lint:
   image: "registry.gitlab.com/gitlab-org/gitlab-build-images:gitlab-docs-lint"
   stage: test
-  cache: {}
-  dependencies: []
-  before_script:
-  - unset GPG_KEY
+  extends:
+  - .no_cache_and_dependencies
   script:
   # Lint Markdown
   - markdownlint --config .markdownlint.json 'docs/**/*.md'
@@ -23,8 +21,8 @@ docs lint:
 
 check feature flags docs:
   stage: test
-  cache: {}
-  dependencies:
+  extends:
+  - .no_cache_and_dependencies
   script:
   - cp docs/configuration/feature-flags.md docs/configuration/feature-flags.md.orig
   - make update_feature_flags_docs
@@ -38,26 +36,24 @@ check feature flags docs:
     )
 
 check modules:
+  stage: test
   extends:
   - .except_docs
-  stage: test
-  cache: {}
-  dependencies: []
+  - .no_cache_and_dependencies
   script:
   - make check_modules
 
 code_quality:
+  stage: test
   extends:
   - .except_docs
-  stage: test
+  - .no_cache_and_dependencies
   image: docker:19.03-git
   services:
   - docker:19.03-dind
   variables:
     DOCKER_DRIVER: overlay2
     CODECLIMATE_FORMAT: json
-  cache: {}
-  dependencies: []
   script:
   - ./scripts/codequality analyze -f json --dev | tee gl-code-quality-report.json
   artifacts:

@@ -1,4 +1,7 @@
 .review-docs:
+  stage: docs
+  extends:
+  - .no_cache_and_dependencies
   image: ruby:2.6-alpine
   before_script:
   - unset GPG_KEY
@@ -9,8 +12,6 @@
   - apk add --update openssl
   - wget https://gitlab.com/gitlab-org/gitlab-ce/raw/master/scripts/trigger-build-docs
   - chmod 755 trigger-build-docs
-  cache: {}
-  dependencies: []
   variables:
     GIT_STRATEGY: none
   when: manual
@@ -23,7 +24,6 @@
 review-docs-deploy:
   extends:
   - .review-docs
-  stage: docs
   environment:
     name: review-docs/$CI_COMMIT_REF_SLUG
     # DOCS_REVIEW_APPS_DOMAIN and DOCS_GITLAB_REPO_SUFFIX are secret variables
@@ -37,7 +37,6 @@ review-docs-deploy:
 review-docs-cleanup:
   extends:
   - .review-docs
-  stage: docs
   environment:
     name: review-docs/$CI_COMMIT_REF_SLUG
     action: stop
