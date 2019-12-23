@@ -9,7 +9,9 @@
     DUMB_INIT_CHECKSUM: "a8defac40aaca2ca0896c7c5adbc241af60c7c3df470c1a4c469a860bd805429"
     GIT_LFS_VERSION: "2.7.1"
     GIT_LFS_CHECKSUM: "c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920"
-
+  needs:
+  - package-deb
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
   script:
   - source ci/touch_make_dependencies
   - make release_docker_images
@@ -24,12 +26,13 @@
     PUSH_TO_DOCKER_HUB: "false"
     GIT_256_CHECKSUM: "bd91db55bd95eaa80687df28877e2df8c8858a0266e9c67331cfddba2735f25c"
     GIT_LFS_256_CHECKSUM: "5c12db9728b53cba23e5f58f4a53d88cb2132e82fa1de0f8a79ce9d112e4d396"
+  needs:
+  - 'helper images'
+  - 'binaries windows/386 windows/amd64'
   before_script:
   - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
   script:
   - .\ci\build_release_windows_images.ps1
-  dependencies:
-  - helper images
 
 .release:
   extends:
@@ -208,7 +211,7 @@ static QA:
   - .no_cache
   stage: release
   image: alpine:3.7
-  dependencies:
+  needs:
   - code_quality
   script: |
     if [ "$(cat gl-code-quality-report.json)" != "[]" ] ; then
