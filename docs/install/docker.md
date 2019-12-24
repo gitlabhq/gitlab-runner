@@ -93,7 +93,6 @@ some of the most common problems with GitLab Runner.
 
 NOTE: **Note:** If you are using the [`session_server`](../configuration/advanced-configuration.md) you will also need to expose 8093 adding `-p 8093:8093` to your docker run command.
 
-
 ## Update configuration
 
 If you change the configuration in `config.toml`, you might need to restart the runner to apply the change.
