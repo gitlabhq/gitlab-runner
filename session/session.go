@@ -36,8 +36,8 @@ type Session struct {
 	// Signal when terminal session timeout.
 	TimeoutCh chan error
 
-	log *logrus.Entry
-	sync.Mutex
+	log  *logrus.Entry
+	lock sync.Mutex
 }
 
 func NewSession(logger *logrus.Entry) (*Session, error) {
@@ -105,8 +105,8 @@ func (s *Session) withAuthorization(next http.Handler) http.Handler {
 }
 
 func (s *Session) setMux() {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	s.mux = mux.NewRouter()
 	s.mux.Handle(s.Endpoint+"/proxy/{resource}/{port}/{requestedUri:.*}", s.withAuthorization(http.HandlerFunc(s.proxyHandler)))
@@ -171,15 +171,15 @@ func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Session) terminalAvailable() bool {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	return s.interactiveTerminal != nil
 }
 
 func (s *Session) newTerminalConn() (terminal.Conn, error) {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	if s.terminalConn != nil {
 		return nil, connectionInUseError{}
@@ -196,8 +196,8 @@ func (s *Session) newTerminalConn() (terminal.Conn, error) {
 }
 
 func (s *Session) closeTerminalConn(conn terminal.Conn) {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	err := conn.Close()
 	if err != nil {
@@ -211,14 +211,14 @@ func (s *Session) closeTerminalConn(conn terminal.Conn) {
 }
 
 func (s *Session) SetInteractiveTerminal(interactiveTerminal terminal.InteractiveTerminal) {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	s.interactiveTerminal = interactiveTerminal
 }
 
 func (s *Session) SetProxyPool(pooler proxy.Pooler) {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	s.proxyPool = pooler.Pool()
 }
 
@@ -227,15 +227,15 @@ func (s *Session) Mux() *mux.Router {
 }
 
 func (s *Session) Connected() bool {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	return s.terminalConn != nil
 }
 
 func (s *Session) Kill() error {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	if s.terminalConn == nil {
 		return nil
