@@ -31,8 +31,8 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
    ```powershell
    cd C:\GitLab-Runner
-   ./gitlab-runner.exe install
-   ./gitlab-runner.exe start
+   .\gitlab-runner.exe install
+   .\gitlab-runner.exe start
    ```
 
    **Run service using user account** (under directory created in step 1. from above, ex.: `C:\GitLab-Runner`)
@@ -42,8 +42,8 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
    ```powershell
    cd C:\GitLab-Runner
-   ./gitlab-runner.exe install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
-   ./gitlab-runner.exe start
+   .\gitlab-runner.exe install --user ENTER-YOUR-USERNAME --password ENTER-YOUR-PASSWORD
+   .\gitlab-runner.exe start
    ```
 
    See the [troubleshooting section](#troubleshooting) if you encounter any
@@ -63,7 +63,7 @@ Logs are stored in Windows Event Log.
 
    ```powershell
    cd C:\GitLab-Runner
-   ./gitlab-runner.exe stop
+   .\gitlab-runner.exe stop
    ```
 
 1. Download the binary for [x86][] or [amd64][] and replace runner's executable.
@@ -73,7 +73,7 @@ Logs are stored in Windows Event Log.
 1. Start the service:
 
    ```powershell
-   ./gitlab-runner.exe start
+   .\gitlab-runner.exe start
    ```
 
 ## Uninstall
@@ -82,8 +82,8 @@ From an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/sc
 
 ```powershell
 cd C:\GitLab-Runner
-./gitlab-runner.exe stop
-./gitlab-runner.exe uninstall
+.\gitlab-runner.exe stop
+.\gitlab-runner.exe uninstall
 cd ..
 rmdir /s GitLab-Runner
 ```
@@ -96,7 +96,7 @@ some of the most common problems with GitLab Runner.
 If you encounter an error like _The account name is invalid_ try to add `.\` before the username:
 
 ```powershell
-./gitlab-runner.exe install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASSWORD"
+.\gitlab-runner.exe install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASSWORD"
 ```
 
 If you encounter a _The service did not start due to a logon failure_ error
