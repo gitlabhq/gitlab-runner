@@ -1229,6 +1229,113 @@ func TestDockerTmpfsSetting(t *testing.T) {
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
 
+func TestDockerServicesDevicesSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		ServicesDevices: map[string][]string{
+			"alpine":  {"/dev/usb:ro"},
+			"alp*":    {"/dev/kvm", "/dev/dri"},
+			"nomatch": {"/dev/null"},
+		},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+		require.NotEmpty(t, hostConfig.Resources.Devices)
+		assert.Equal(t, len(hostConfig.Resources.Devices), 3)
+	}
+
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
+
+func TestDockerGetServicesDevices(t *testing.T) {
+	tests := map[string]struct {
+		image                  string
+		devices                map[string][]string
+		expectedDeviceMappings []container.DeviceMapping
+		expectedErrorSubstr    string
+	}{
+		"matching image": {
+			image: "alpine",
+			devices: map[string][]string{
+				"alpine": {"/dev/null"},
+			},
+			expectedDeviceMappings: []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/null",
+					PathInContainer:   "/dev/null",
+					CgroupPermissions: "rwm",
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"no devices": {
+			image: "alpine",
+			devices: map[string][]string{
+				"alpine": {},
+			},
+			expectedDeviceMappings: nil,
+			expectedErrorSubstr:    "",
+		},
+		"no matching image": {
+			image: "alpine",
+			devices: map[string][]string{
+				"ubuntu:*": {"/dev/null"},
+			},
+			expectedDeviceMappings: nil,
+			expectedErrorSubstr:    "",
+		},
+		"devices is nil": {
+			image:                  "alpine",
+			devices:                nil,
+			expectedDeviceMappings: nil,
+			expectedErrorSubstr:    "",
+		},
+		"multiple devices": {
+			image: "private.registry:5000/emulator/OSv7:26",
+			devices: map[string][]string{
+				"private.registry:5000/emulator/*": {"/dev/kvm", "/dev/dri"},
+			},
+			expectedDeviceMappings: []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/kvm",
+					PathInContainer:   "/dev/kvm",
+					CgroupPermissions: "rwm",
+				},
+				{
+					PathOnHost:        "/dev/dri",
+					PathInContainer:   "/dev/dri",
+					CgroupPermissions: "rwm",
+				},
+			},
+			expectedErrorSubstr: "",
+		},
+		"parseDeviceString error": {
+			image: "alpine",
+			devices: map[string][]string{
+				"alpine": {"/dev/null::::"},
+			},
+			expectedDeviceMappings: nil,
+			expectedErrorSubstr:    "too many colons",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{}
+			e.Config.Docker = &common.DockerConfig{
+				ServicesDevices: tt.devices,
+			}
+
+			mappings, err := e.getServicesDevices(tt.image)
+			if tt.expectedErrorSubstr != "" {
+				assert.Contains(t, fmt.Sprintf("%+v", err), tt.expectedErrorSubstr)
+				return
+			}
+
+			assert.Equal(t, tt.expectedDeviceMappings, mappings)
+		})
+	}
+}
+
 func TestDockerUserSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		User: "www",

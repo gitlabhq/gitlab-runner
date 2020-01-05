@@ -467,6 +467,57 @@ The following example shows a `config.toml` where the limit that each build can 
       "size" = "50G"
 ```
 
+## Using host devices
+
+Hardware devices on the Runner host can be exposed to containers with the `devices`
+and `services_devices` option in the runner configuration.
+
+- The `devices` option will expose devices to `build` and
+  [helper](../configuration/advanced-configuration.md#helper-image) containers.
+- The `services_devices` option will expose devices to services containers only. A service
+  container's device access can be limited to images with a matching image name or glob,
+  so that users do not have direct access to the host system's devices.
+
+See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#add-host-device-to-container---device)
+for details on device access.
+
+The example below shows a `config.toml` section with `/dev/bus/usb` exposed to build
+containers. This will allow pipelines to access any USB device attached to the host
+machine, such as Android smartphones controlled over the
+[Android Debug Bridge (adb)](https://developer.android.com/studio/command-line/adb).
+
+Since the build job container can execute anything with direct access to the
+host USB there is a likelihood that pipelines may conflict when simultaneously
+accessing the same hardware resources. It is preferable in some cases to prevent
+this failure point by using [resource_group](https://docs.gitlab.com/ee/ci/yaml/index.html#resource_group)
+to avoid conflicts of this nature.
+
+```toml
+[[runners]]
+  name = "hardware-runner"
+  url = "https://gitlab.com"
+  token = "__REDACTED__"
+  executor = "docker"
+  [runners.docker]
+    # All job containers may access the host device
+    devices = ["/dev/bus/usb"]
+```
+
+The following example exposes `/dev/kvm` and `/dev/dri` to images from a private
+Docker registry, commonly used for hardware accelerated virtualization and rendering.
+Some risks involved with providing users direct access to hardware resources are mitigated
+by restricting access to images in the `myregistry:5000/emulator/*` namespace.
+
+```toml
+[runners.docker]
+  [runners.docker.services_devices]
+    # Only images from an internal registry may access the host devices
+    "myregistry:5000/emulator/*" = ["/dev/kvm", "/dev/dri"]
+```
+
+NOTE:
+The image name `**/*` may be used to expose devices to any image.
+
 ## Configure directories for the container build and cache
 
 To define where data is stored in the container, configure `/builds` and `/cache`

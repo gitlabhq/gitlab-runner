@@ -320,7 +320,12 @@ func (e *executor) createService(
 
 	config := e.createServiceContainerConfig(service, version, serviceImage.ID, definition)
 
-	hostConfig, err := e.createHostConfigForService(e.isInPrivilegedServiceList(definition))
+	devices, err := e.getServicesDevices(image)
+	if err != nil {
+		return nil, err
+	}
+
+	hostConfig, err := e.createHostConfigForService(e.isInPrivilegedServiceList(definition), devices)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +362,7 @@ func platformForImage(image *types.ImageInspect, opts common.ImageExecutorOption
 	}
 }
 
-func (e *executor) createHostConfigForService(imageIsPrivileged bool) (*container.HostConfig, error) {
+func (e *executor) createHostConfigForService(imageIsPrivileged bool, devices []container.DeviceMapping) (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetServiceNanoCPUs()
 	if err != nil {
 		return nil, fmt.Errorf("service nano cpus: %w", err)
@@ -384,6 +389,7 @@ func (e *executor) createHostConfigForService(imageIsPrivileged bool) (*containe
 			CpusetCpus:        e.Config.Docker.ServiceCPUSetCPUs,
 			CPUShares:         e.Config.Docker.ServiceCPUShares,
 			NanoCPUs:          nanoCPUs,
+			Devices:           devices,
 		},
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
@@ -427,6 +433,31 @@ func (e *executor) createServiceContainerConfig(
 	config.User = definition.ExecutorOptions.Docker.User
 
 	return config
+}
+
+func (e *executor) getServicesDevices(image string) ([]container.DeviceMapping, error) {
+	var devices []container.DeviceMapping
+	for imageGlob, deviceStrings := range e.Config.Docker.ServicesDevices {
+		ok, err := doublestar.Match(imageGlob, image)
+		if err != nil {
+			return nil, fmt.Errorf("invalid service device image pattern: %s: %w", imageGlob, err)
+		}
+
+		if !ok {
+			continue
+		}
+
+		for _, deviceString := range deviceStrings {
+			device, err := e.parseDeviceString(deviceString)
+			if err != nil {
+				return nil, fmt.Errorf("invalid service device string: %s: %w", deviceString, err)
+			}
+
+			devices = append(devices, device)
+		}
+	}
+
+	return devices, nil
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
