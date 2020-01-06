@@ -10,8 +10,9 @@
     GIT_LFS_VERSION: "2.7.1"
     GIT_LFS_CHECKSUM: "c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920"
   needs:
-  - package-deb
+  - 'helper images'
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
+  - package-deb
   script:
   - source ci/touch_make_dependencies
   - make release_docker_images
