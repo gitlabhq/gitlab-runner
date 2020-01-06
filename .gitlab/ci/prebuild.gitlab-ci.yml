@@ -1,0 +1,43 @@
+helper images:
+  extends:
+  - .docker
+  stage: prebuild
+  script:
+  - make helper-build helper-docker
+  artifacts:
+    paths:
+    - out/helper-images/
+    - dockerfiles/build/binaries/*-windows.exe
+    - .gopath/bin
+    - .gopath/.ok
+    expire_in: 7d
+
+clone test repo:
+  extends:
+  - .except_docs
+  stage: prebuild
+  script:
+  - mkdir tmp
+  - succeed=0
+  - for i in {1..3}; do git clone https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git tmp/gitlab-test && succeed=1 && break; echo "retrying"; done
+  - '[[ "$succeed" -eq 1 ]]'
+  artifacts:
+    paths:
+    - tmp/gitlab-test
+    expire_in: 7d
+
+tests definitions:
+  extends:
+  - .except_docs
+  stage: prebuild
+  script:
+  - apt-get update
+  - apt-get install -y make
+  - source ci/touch_make_dependencies
+  - make parallel_test_prepare
+  artifacts:
+    paths:
+    - testsdefinitions.txt
+    expire_in: 7d
+  tags:
+  - gitlab-org

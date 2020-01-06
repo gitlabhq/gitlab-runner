@@ -1,0 +1,25 @@
+.image_builder:
+  extends:
+  - .docker
+  stage: prepare
+  image: docker:19.03-git
+  script:
+  - source ./ci/build_ci_image
+
+prepare ci image:
+  extends:
+  - .image_builder
+  variables:
+    BUILD_IMAGE: $CI_IMAGE
+    BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile
+  only:
+  - /\Adocker-ci-image\/.*/
+
+prepare alpine-no-root image:
+  extends:
+  - .image_builder
+  variables:
+    BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
+    BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-no-root/Dockerfile
+  only:
+  - /\Adocker-alpine-no-root-image\/.*/

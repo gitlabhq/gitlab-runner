@@ -1,0 +1,30 @@
+.packages: &packages
+  extends:
+  - .except_docs
+  stage: package
+  needs:
+  - 'helper images'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
+  before_script:
+  - |
+    # checking GPG signing support
+    if [ -n "$GPG_KEY" ]; then
+      echo "$GPG_KEY" | gpg --batch --no-tty --allow-secret-key-import --import -
+      unset GPG_KEY
+      export GPG_KEYID=$(gpg --with-colon --list-secret-keys | head -n1 | cut -d : -f 5)
+    else
+      echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
+    fi
+  script:
+  - source ci/touch_make_dependencies
+  - make ${CI_JOB_NAME}
+  artifacts:
+    paths:
+    - out/deb/
+    - out/rpm/
+    expire_in: 7d
+  tags:
+  - gitlab-org
+
+package-deb: *packages
+package-rpm: *packages

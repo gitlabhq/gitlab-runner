@@ -1,0 +1,81 @@
+variables:
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.5-1
+  GOROOT: /usr/local/go
+  # Following variables are used in some jobs to install specified software
+  DOCKER_MACHINE_VERSION: "0.16.2"
+  DUMB_INIT_VERSION: "1.0.2"
+  GIT_VERSION: "2.21.0"
+  GIT_VERSION_BUILD: "1"
+  GIT_LFS_VERSION: "2.7.1"
+  LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
+  DOCS_GITLAB_REPO_SUFFIX: "runner"
+
+image: $CI_IMAGE
+
+before_script:
+- unset GPG_KEY
+
+# Skip all jobs except the ones that begin and end with 'docs'.
+# Used for commits including ONLY documentation changes.
+# https://docs.gitlab.com/ce/development/writing_documentation.html#testing
+.except_docs:
+  except:
+  - /(^docs[\/-].*|.*-docs$)/
+
+.no_cache:
+  cache: {}
+
+.no_dependencies:
+  dependencies: []
+
+.no_cache_and_dependencies:
+  extends:
+  - .no_cache
+  - .no_dependencies
+
+.docker:
+  extends:
+  - .except_docs
+  services:
+  - docker:19.03-dind
+  variables:
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.5-1
+    DOCKER_DRIVER: overlay2
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_CERT_PATH: "/certs/client"
+  tags:
+  - docker
+
+.windows_base:
+  variables:
+    PKG_NAMESPACE: gitlab.com\gitlab-org
+    PKG_NAME: gitlab-runner
+    GOPATH: "$CI_PROJECT_DIR\\.gopath"
+    PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
+    PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
+
+.windows1803_variables:
+  variables:
+    WINDOWS_VERSION: servercore1803
+
+.windows1803:
+  extends:
+  - .windows_base
+  - .windows1803_variables
+  tags:
+  - windows-1803
+  - shell
+
+.windows1809_variables:
+  variables:
+    WINDOWS_VERSION: servercore1809
+
+.windows1809:
+  extends:
+  - .windows_base
+  - .windows1809_variables
+  tags:
+  - windows-1809
+  - shell
