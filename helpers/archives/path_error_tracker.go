@@ -8,7 +8,7 @@ import (
 // When extracting an archive, the same PathError.Op may be repeated for every
 // file in the archive; use pathErrorTracker to suppress repetitious log output
 type pathErrorTracker struct {
-	sync.Mutex
+	lock    sync.Mutex
 	seenOps map[string]bool
 }
 
@@ -24,8 +24,8 @@ func (p *pathErrorTracker) actionable(e error) bool {
 		return true
 	}
 
-	p.Lock()
-	defer p.Unlock()
+	p.lock.Lock()
+	defer p.lock.Unlock()
 
 	seen := p.seenOps[pathErr.Op]
 	p.seenOps[pathErr.Op] = true

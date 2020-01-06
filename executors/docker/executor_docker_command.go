@@ -15,12 +15,12 @@ import (
 type commandExecutor struct {
 	executor
 	buildContainer *types.ContainerJSON
-	sync.Mutex
+	lock           sync.Mutex
 }
 
 func (s *commandExecutor) getBuildContainer() *types.ContainerJSON {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	return s.buildContainer
 }
@@ -68,8 +68,8 @@ func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON,
 }
 
 func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	if s.buildContainer == nil {
 		var err error
