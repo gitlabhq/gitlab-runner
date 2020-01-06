@@ -1,5 +1,6 @@
 .coverage_job:
   extends:
+  - .merge_request_pipelines
   - .except_docs
   stage: coverage
   when: always
@@ -42,6 +43,7 @@ race conditions detector:
 
 .check windows test failures:
   extends:
+  - .merge_request_pipelines_on_gitlab_org_gitlab_runner
   - .except_docs
   stage: coverage
   script:

@@ -66,9 +66,8 @@
 
 .release_development:
   only:
-  - branches@gitlab-org/gitlab-runner
+  - merge_requests@gitlab-org/gitlab-runner
   except:
-  - master@gitlab-org/gitlab-runner
   - /(^docs[\/-].*|.*-docs$)/
 
 .release_bleeding_edge:
@@ -91,16 +90,10 @@ development S3:
 development docker images:
   extends:
   - .release_docker_images
+  - .release_development
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
-  only:
-  - branches
-  except:
-  - master
-  - /(^docs[\/-].*|.*-docs$)/
-  tags:
-  - docker
 
 development servercore1803 helper docker image:
   extends:
@@ -208,6 +201,7 @@ stable servercore1809 docker images:
 
 static QA:
   extends:
+  - .merge_request_pipelines
   - .except_docs
   - .no_cache
   stage: release
