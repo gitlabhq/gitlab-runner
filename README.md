@@ -22,23 +22,26 @@ The description of release process of GitLab Runner project can be found in the 
 
 Contributions are welcome, see [`CONTRIBUTING.md`](CONTRIBUTING.md) for more details.
 
-### Closing issues and merge requests
+### Closing issues
 
-GitLab is growing very fast and we have a limited resources to deal with reported issues
-and merge requests opened by the community volunteers. We appreciate all the contributions
-coming from our community. But to help all of us with issues and merge requests management
-we need to create some closing policy.
+GitLab is growing very fast and we have limited resources to deal with
+issues opened by community volunteers. We appreciate all the
+contributions coming from our community, but we need to create some
+closing policy to help all of us with issue management.
 
-If an issue or merge request has a ~"waiting for feedback" label and the response from the
-reporter has not been received for 14 days, we can close it using the following response
-template:
+The issue tracker is not used for support or configuration questions. We
+have dedicated [channels](https://about.gitlab.com/support/) for these
+kinds of questions. The issue tracker should only be used for feature
+requests, bug reports, and other tasks that need to be done for the
+Runner project.
 
-```
-We haven't received an update for more than 14 days so we will assume that the
-problem is fixed or is no longer valid. If you still experience the same problem
-try upgrading to the latest version. If the issue persists, reopen this issue
-or merge request with the relevant information.
-```
+It is up to a project maintainer to decide if an issue is actually a
+support/configuration question. Before closing the issue the maintainer
+should leave a reason why this a support/configuration question, to make
+it clear to the issue author. They should also leave a comment using
+[our template](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/PROCESS.md#support-requests-and-configuration-questions)
+before closing the issue. The issue author has every right to disagree and
+reopen the issue and discuss the issue further.
 
 ### Contributing to documentation
 
