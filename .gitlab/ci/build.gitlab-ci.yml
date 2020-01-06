@@ -1,5 +1,6 @@
 .binaries: &binaries
   extends:
+  - .gitlab_org_runners
   - .except_docs
   stage: build
   needs:
@@ -16,8 +17,6 @@
     paths:
     - out/binaries/
     expire_in: 7d
-  tags:
-  - gitlab-org
 
 binaries darwin/386 darwin/amd64: *binaries
 binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
