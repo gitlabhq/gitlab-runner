@@ -32,7 +32,7 @@ func CreateReferees(executor interface{}, config *Config, log *logrus.Entry) []R
 	}
 
 	var referees []Referee
-	metricsReferee := CreateMetricsReferee(executor, config, log)
+	metricsReferee := newMetricsReferee(executor, config, log)
 	if metricsReferee != nil {
 		referees = append(referees, metricsReferee)
 	}

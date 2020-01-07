@@ -116,7 +116,7 @@ func (mr *MetricsReferee) Execute(
 	return bytes.NewReader(output), nil
 }
 
-func CreateMetricsReferee(executor interface{}, config *Config, log *logrus.Entry) *MetricsReferee {
+func newMetricsReferee(executor interface{}, config *Config, log *logrus.Entry) *MetricsReferee {
 	logger := log.WithField("referee", "metrics")
 	if config.Metrics == nil {
 		return nil
