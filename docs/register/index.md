@@ -61,7 +61,7 @@ To register a Runner under GNU/Linux:
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
    ```text
-   Please enter the Docker image (eg. ruby:2.1):
+   Please enter the Docker image (eg. ruby:2.6):
    alpine:latest
    ```
 
@@ -115,7 +115,7 @@ To register a Runner under macOS:
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
    ```text
-   Please enter the Docker image (eg. ruby:2.1):
+   Please enter the Docker image (eg. ruby:2.6):
    alpine:latest
    ```
 
@@ -171,7 +171,7 @@ To register a Runner under Windows:
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
    ```text
-   Please enter the Docker image (eg. ruby:2.1):
+   Please enter the Docker image (eg. ruby:2.6):
    alpine:latest
    ```
 
@@ -228,7 +228,7 @@ To register a Runner under FreeBSD:
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
    ```text
-   Please enter the Docker image (eg. ruby:2.1):
+   Please enter the Docker image (eg. ruby:2.6):
    alpine:latest
    ```
 
@@ -293,7 +293,7 @@ To register a Runner using a Docker container:
    image to be used for projects that do not define one in `.gitlab-ci.yml`:
 
    ```text
-   Please enter the Docker image (eg. ruby:2.1):
+   Please enter the Docker image (eg. ruby:2.6):
    alpine:latest
    ```
 
