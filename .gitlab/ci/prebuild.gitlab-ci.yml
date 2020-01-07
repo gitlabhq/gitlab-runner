@@ -28,6 +28,7 @@ clone test repo:
 
 tests definitions:
   extends:
+  - .gitlab_org_runners
   - .except_docs
   stage: prebuild
   script:
@@ -39,5 +40,3 @@ tests definitions:
     paths:
     - testsdefinitions.txt
     expire_in: 7d
-  tags:
-  - gitlab-org

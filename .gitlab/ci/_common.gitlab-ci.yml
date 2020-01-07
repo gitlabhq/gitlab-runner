@@ -33,6 +33,10 @@ before_script:
   - .no_cache
   - .no_dependencies
 
+.gitlab_org_runners:
+  tags:
+  - gitlab-org
+
 .docker:
   extends:
   - .except_docs
