@@ -10,9 +10,9 @@ gitlab-runner register \
 --non-interactive \
 --url "https://gitlab.com" \
 --registration-token "$REGISTRATION_TOKEN" \
---description "gitlab-ce-ruby-2.1" \
+--description "gitlab-ce-ruby-2.6" \
 --executor "docker" \
---docker-image ruby:2.1 --docker-mysql latest \
+--docker-image ruby:2.6 --docker-mysql latest \
 --docker-postgres latest --docker-redis latest
 ```
 

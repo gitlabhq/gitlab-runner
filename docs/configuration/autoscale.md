@@ -379,7 +379,7 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
   executor = "docker+machine"        # This Runner is using the 'docker+machine' executor
   limit = 10                         # This Runner can execute up to 10 jobs (created machines)
   [runners.docker]
-    image = "ruby:2.1"               # The default image used for jobs is 'ruby:2.1'
+    image = "ruby:2.6"               # The default image used for jobs is 'ruby:2.6'
   [runners.machine]
     OffPeakPeriods = [               # Set the Off Peak time mode on for:
       "* * 0-9,18-23 * * mon-fri *", # - Monday to Friday for 12am to 9am and 6pm to 11pm

@@ -428,7 +428,7 @@ The GitLab URL and Runner token need to be specified too.
 For example:
 
 ```bash
-gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:2.1
+gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:2.6
 ```
 
 You can see all possible configuration options by using the `--help` flag:

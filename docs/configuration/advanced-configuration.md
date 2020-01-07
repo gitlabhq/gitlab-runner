@@ -133,7 +133,7 @@ Example:
 
 ```bash
 [[runners]]
-  name = "ruby-2.1-docker"
+  name = "ruby-2.6-docker"
   url = "https://CI/"
   token = "TOKEN"
   limit = 0
@@ -236,7 +236,7 @@ Example:
   host = ""
   hostname = ""
   tls_cert_path = "/Users/ayufan/.boot2docker/certs"
-  image = "ruby:2.1"
+  image = "ruby:2.6"
   memory = "128m"
   memory_swap = "256m"
   memory_reservation = "64m"
@@ -284,7 +284,7 @@ independent of the container's life cycle.
   host = ""
   hostname = ""
   tls_cert_path = "/Users/ayufan/.boot2docker/certs"
-  image = "ruby:2.1"
+  image = "ruby:2.6"
   privileged = false
   disable_cache = true
   volumes = ["/path/to/volume/in/container"]
@@ -303,7 +303,7 @@ when you want to store directories outside the container.
   host = ""
   hostname = ""
   tls_cert_path = "/Users/ayufan/.boot2docker/certs"
-  image = "ruby:2.1"
+  image = "ruby:2.6"
   privileged = false
   disable_cache = true
   volumes = ["/path/to/bind/from/host:/path/to/bind/in/container:rw"]
