@@ -218,7 +218,7 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 			return q, nil
 		}
 		if q, err = resource.ParseQuantity(s); err != nil {
-			return q, fmt.Errorf("error parsing resource limit: %s", err.Error())
+			return q, fmt.Errorf("error parsing resource limit: %w", err)
 		}
 		return q, nil
 	}

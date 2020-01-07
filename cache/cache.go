@@ -42,7 +42,7 @@ func generateObjectName(build *common.Build, config *common.CacheConfig, key str
 
 	relative, err := filepath.Rel(basePath, path)
 	if err != nil {
-		return "", fmt.Errorf("cache path correctness check failed with: %v", err)
+		return "", fmt.Errorf("cache path correctness check failed with: %w", err)
 	}
 
 	if strings.HasPrefix(relative, ".."+string(filepath.Separator)) {

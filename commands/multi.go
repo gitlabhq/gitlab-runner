@@ -444,7 +444,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	executorData, err := provider.Acquire(runner)
 	if err != nil {
-		return fmt.Errorf("failed to update executor: %v", err)
+		return fmt.Errorf("failed to update executor: %w", err)
 	}
 	defer provider.Release(runner, executorData)
 

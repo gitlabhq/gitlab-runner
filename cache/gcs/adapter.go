@@ -80,7 +80,7 @@ func New(config *common.CacheConfig, timeout time.Duration, objectName string) (
 
 	cr, err := credentialsResolverInitializer(gcs)
 	if err != nil {
-		return nil, fmt.Errorf("error while initializing GCS credentials resolver: %v", err)
+		return nil, fmt.Errorf("error while initializing GCS credentials resolver: %w", err)
 	}
 
 	a := &gcsAdapter{

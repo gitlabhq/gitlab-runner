@@ -260,7 +260,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 			return nil, err
 		}
 
-		return nil, fmt.Errorf("Cannot load prebuilt image: %s: %q", path, err.Error())
+		return nil, fmt.Errorf("Cannot load prebuilt image: %s: %w", path, err)
 	}
 	defer file.Close()
 
@@ -273,7 +273,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 	options := types.ImageImportOptions{Tag: tag}
 
 	if err := e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
-		return nil, fmt.Errorf("Failed to import image: %s", err)
+		return nil, fmt.Errorf("Failed to import image: %w", err)
 	}
 
 	image, _, err := e.client.ImageInspectWithRaw(e.Context, ref+":"+tag)
@@ -404,7 +404,7 @@ func (e *executor) bindDevices() (err error) {
 	for _, deviceString := range e.Config.Docker.Devices {
 		device, err := e.parseDeviceString(deviceString)
 		if err != nil {
-			err = fmt.Errorf("Failed to parse device string %q: %s", deviceString, err)
+			err = fmt.Errorf("Failed to parse device string %q: %w", deviceString, err)
 			return err
 		}
 
@@ -1227,7 +1227,7 @@ func (e *serviceHealthCheckError) Error() string {
 func (e *executor) runServiceHealthCheckContainer(service *types.Container, timeout time.Duration) error {
 	waitImage, err := e.getPrebuiltImage()
 	if err != nil {
-		return fmt.Errorf("getPrebuiltImage: %v", err)
+		return fmt.Errorf("getPrebuiltImage: %w", err)
 	}
 
 	containerName := service.Names[0] + "-wait-for-service"
@@ -1250,12 +1250,12 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	e.Debugln("Waiting for service container", containerName, "to be up and running...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
 	if err != nil {
-		return fmt.Errorf("ContainerCreate: %v", err)
+		return fmt.Errorf("ContainerCreate: %w", err)
 	}
 	defer e.removeContainer(e.Context, resp.ID)
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
-		return fmt.Errorf("ContainerStart: %v", err)
+		return fmt.Errorf("ContainerStart: %w", err)
 	}
 
 	waitResult := make(chan error, 1)

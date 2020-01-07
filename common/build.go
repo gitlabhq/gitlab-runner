@@ -501,7 +501,7 @@ func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) erro
 		return err
 	case err := <-b.Session.DisconnectCh:
 		b.logger.Infoln("Terminal disconnected")
-		return fmt.Errorf("terminal disconnected: %v", err)
+		return fmt.Errorf("terminal disconnected: %w", err)
 	case signal := <-b.SystemInterrupt:
 		b.logger.Infoln("Terminal disconnected")
 		err := b.Session.Kill()
@@ -883,7 +883,7 @@ func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt c
 	// Attempt to perform a deep copy of the RunnerConfig
 	runnerConfigCopy, err := runnerConfig.DeepCopy()
 	if err != nil {
-		return nil, fmt.Errorf("deep copy of runner config failed: %v", err)
+		return nil, fmt.Errorf("deep copy of runner config failed: %w", err)
 	}
 
 	return &Build{

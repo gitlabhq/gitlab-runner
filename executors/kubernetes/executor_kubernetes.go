@@ -82,28 +82,28 @@ func (s *executor) setupResources() error {
 
 	// Limit
 	if s.buildLimits, err = limits(s.Config.Kubernetes.CPULimit, s.Config.Kubernetes.MemoryLimit); err != nil {
-		return fmt.Errorf("invalid build limits specified: %s", err.Error())
+		return fmt.Errorf("invalid build limits specified: %w", err)
 	}
 
 	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit); err != nil {
-		return fmt.Errorf("invalid service limits specified: %s", err.Error())
+		return fmt.Errorf("invalid service limits specified: %w", err)
 	}
 
 	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit); err != nil {
-		return fmt.Errorf("invalid helper limits specified: %s", err.Error())
+		return fmt.Errorf("invalid helper limits specified: %w", err)
 	}
 
 	// Requests
 	if s.buildRequests, err = limits(s.Config.Kubernetes.CPURequest, s.Config.Kubernetes.MemoryRequest); err != nil {
-		return fmt.Errorf("invalid build requests specified: %s", err.Error())
+		return fmt.Errorf("invalid build requests specified: %w", err)
 	}
 
 	if s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest); err != nil {
-		return fmt.Errorf("invalid service requests specified: %s", err.Error())
+		return fmt.Errorf("invalid service requests specified: %w", err)
 	}
 
 	if s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest); err != nil {
-		return fmt.Errorf("invalid helper requests specified: %s", err.Error())
+		return fmt.Errorf("invalid helper requests specified: %w", err)
 	}
 	return nil
 }
@@ -136,7 +136,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes, s.configurationOverwrites); err != nil {
-		return fmt.Errorf("error connecting to Kubernetes: %s", err.Error())
+		return fmt.Errorf("error connecting to Kubernetes: %w", err)
 	}
 
 	s.Println("Using Kubernetes executor with image", s.options.Image.Name, "...")
@@ -581,7 +581,7 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 	var services []api.Service
 	for res := range ch {
 		if res.err != nil {
-			err := fmt.Errorf("error creating the proxy service %q: %v", res.service.Name, res.err)
+			err := fmt.Errorf("error creating the proxy service %q: %w", res.service.Name, res.err)
 			s.Errorln(err)
 
 			return []api.Service{}, err

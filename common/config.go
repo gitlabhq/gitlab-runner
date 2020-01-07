@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -504,7 +503,7 @@ func (c *DockerMachine) isOffPeak() bool {
 func (c *DockerMachine) CompileOffPeakPeriods() (err error) {
 	c.offPeakTimePeriods, err = timeperiod.TimePeriods(c.OffPeakPeriods, c.OffPeakTimezone)
 	if err != nil {
-		err = errors.New(fmt.Sprint("Invalid OffPeakPeriods value: ", err))
+		err = fmt.Errorf("invalid OffPeakPeriods value: %w", err)
 	}
 
 	return
@@ -581,12 +580,12 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 
 	bytes, err := json.Marshal(c)
 	if err != nil {
-		return nil, fmt.Errorf("serialization of runner config failed: %v", err)
+		return nil, fmt.Errorf("serialization of runner config failed: %w", err)
 	}
 
 	err = json.Unmarshal(bytes, &r)
 	if err != nil {
-		return nil, fmt.Errorf("deserialization of runner config failed: %v", err)
+		return nil, fmt.Errorf("deserialization of runner config failed: %w", err)
 	}
 
 	return &r, err

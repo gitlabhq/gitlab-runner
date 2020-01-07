@@ -84,7 +84,7 @@ func validateExecutorProvider(provider ExecutorProvider) error {
 	}
 
 	if err := provider.GetFeatures(&FeaturesInfo{}); err != nil {
-		return fmt.Errorf("cannot get features: %v", err)
+		return fmt.Errorf("cannot get features: %w", err)
 	}
 
 	return nil

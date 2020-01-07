@@ -97,7 +97,7 @@ func (r *urlResolver) Resolve(certs []*x509.Certificate) ([]*x509.Certificate, e
 
 		newCert, err := r.fetchIssuerCertificate(certificate)
 		if err != nil {
-			return nil, fmt.Errorf("error while fetching issuer certificate: %v", err)
+			return nil, fmt.Errorf("error while fetching issuer certificate: %w", err)
 		}
 
 		certs = append(certs, newCert)
@@ -124,7 +124,7 @@ func (r *urlResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Cert
 			WithField("issuerURL", issuerURL).
 			Warning("Remote certificate fetching error")
 
-		return nil, fmt.Errorf("remote fetch failure: %v", err)
+		return nil, fmt.Errorf("remote fetch failure: %w", err)
 	}
 
 	newCert, err := r.decoder(data)
@@ -133,7 +133,7 @@ func (r *urlResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Cert
 			WithError(err).
 			Warning("Certificate decoding error")
 
-		return nil, fmt.Errorf("decoding failure: %v", err)
+		return nil, fmt.Errorf("decoding failure: %w", err)
 	}
 
 	preparePrefixedCertificateLogger(log, newCert, "newCert").

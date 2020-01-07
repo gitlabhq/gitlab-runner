@@ -121,7 +121,7 @@ func (t terminalConn) Start(w http.ResponseWriter, r *http.Request, timeoutCh, d
 
 		stopCh := proxy.GetStopCh()
 		if err != nil {
-			stopCh <- fmt.Errorf("build container exited with %q", err)
+			stopCh <- fmt.Errorf("build container exited with %w", err)
 		} else {
 			stopCh <- errors.New("build container exited")
 		}

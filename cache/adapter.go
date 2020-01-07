@@ -60,12 +60,12 @@ func Factories() *FactoriesMap {
 func CreateAdapter(cacheConfig *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
 	create, err := Factories().Find(cacheConfig.Type)
 	if err != nil {
-		return nil, fmt.Errorf("cache factory not found: %v", err)
+		return nil, fmt.Errorf("cache factory not found: %w", err)
 	}
 
 	adapter, err := create(cacheConfig, timeout, objectName)
 	if err != nil {
-		return nil, fmt.Errorf("cache adapter could not be initialized: %v", err)
+		return nil, fmt.Errorf("cache adapter could not be initialized: %w", err)
 	}
 
 	return adapter, nil

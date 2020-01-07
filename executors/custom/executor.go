@@ -155,7 +155,7 @@ func (e *executor) dynamicConfig() error {
 
 	err = json.Unmarshal(jsonConfig, config)
 	if err != nil {
-		return fmt.Errorf("error while parsing JSON output: %v", err)
+		return fmt.Errorf("error while parsing JSON output: %w", err)
 	}
 
 	config.InjectInto(e)

@@ -43,13 +43,13 @@ func (cr *defaultCredentialsResolver) Resolve() error {
 func (cr *defaultCredentialsResolver) readCredentialsFromFile() error {
 	data, err := ioutil.ReadFile(cr.config.CredentialsFile)
 	if err != nil {
-		return fmt.Errorf("error while reading credentials file: %v", err)
+		return fmt.Errorf("error while reading credentials file: %w", err)
 	}
 
 	var credentialsFileContent credentialsFile
 	err = json.Unmarshal(data, &credentialsFileContent)
 	if err != nil {
-		return fmt.Errorf("error while parsing credentials file: %v", err)
+		return fmt.Errorf("error while parsing credentials file: %w", err)
 	}
 
 	if credentialsFileContent.Type != TypeServiceAccount {
