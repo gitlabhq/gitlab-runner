@@ -1,3 +1,36 @@
+v12.7.0-rc1 (2020-01-08)
+
+- Fixing kramdown link error !1711
+- Add caps and backtick testing to runner docs linting !1678
+- Fix macOS label !1712
+- Align markdownlint config to main repo version !1713
+- Bump go version to 1.13.5 !1701
+- Remove duplicate service description !1715
+- fix(scripts): fix until typo !1717
+- Use Prometheus to Query Runner Metrics Linked to Each Job !1545
+- Remove unnecessary dependencies from vendor directory !1721
+- Remove panic when metrics referee not configured properly !1724
+- Add check for go modules !1702
+- Update docs for Helm 3 !1727
+- Empty Referee configuration on registration !1726
+- Extract helperimage pkg outside of parent pkg !1720
+- Removed --name argument from helm install. !1718
+- macOS limitations and example update !1505
+- Update advanced-configuration.md - fix typo of mperiods !1722
+- Fix Typos !1731
+- Add a git version caveat !1732
+- Update docs for Windows to use backslashes not forwardslashes !1738
+- Do not embed mutex !1734
+- Refactor CI pipeline !1733
+- Add missing 'needs' entry for release docker images job template !1744
+- docs: Replace ruby:2.1/2.2 with ruby:2.6 or 2.7 !1748
+- Make 'tags: gitlab-org' a re-usable job tempalte !1745
+- Change to go1.13 error wrapping !1709
+- Refactor metrics referee tests !1714
+- Refactor metrics referee !1725
+- Copyedit doc for volumes_from in Docker executor config !1750
+- Allow service alias from config in Docker executor !1673
+
 v12.6.0 (2019-12-22)
 
 - Update list of fixes for docker-machine fork !1655
