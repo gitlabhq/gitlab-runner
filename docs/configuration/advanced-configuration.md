@@ -219,7 +219,7 @@ This defines the Docker Container parameters.
 | `volumes`                   | Specify additional volumes that should be mounted (same syntax as Docker's `-v` flag) |
 | `extra_hosts`               | Specify hosts that should be defined in container environment |
 | `shm_size`                  | Specify shared memory size for images (in bytes) |
-| `volumes_from`              | Specify a list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Optionally you can specify access level with `ro` (read-only) or `rw` (read-write, the default unless specified). |
+| `volumes_from`              | Specify a list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
 | `volume_driver`             | Specify the volume driver to use for the container |
 | `links`                     | Specify containers which should be linked with building container |
 | `services`                  | Specify additional services that should be run with build. Please visit [Docker Registry](https://hub.docker.com) for list of available applications. Each service will be run in separate container and linked to the build. |
