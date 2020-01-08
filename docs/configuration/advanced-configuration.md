@@ -855,7 +855,7 @@ Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml`
 | Setting              | Description                                                                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `prometheus_address` | The server that collects metrics from Runner instances. It must be accessible by the Runner manager when the job finishes.          |
-| `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).                               |
+| `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).   |
 | `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics) queries that will be executed for each interval. |
 
 Here is a complete configuration example for `node_exporter` metrics:
@@ -865,7 +865,7 @@ Here is a complete configuration example for `node_exporter` metrics:
   [runners.referees]
     [runners.referees.metrics]
       prometheus_address = "http://localhost:9090"
-      query_interval = "10s"
+      query_interval = 10
       metric_queries = [
         "arp_entries:rate(node_arp_entries{{selector}}[{interval}])",
         "context_switches:rate(node_context_switches_total{{selector}}[{interval}])",
