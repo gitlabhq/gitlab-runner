@@ -22,6 +22,20 @@ before_script:
   except:
   - /(^docs[\/-].*|.*-docs$)/
 
+.merge_request_pipelines:
+  only:
+    refs:
+    - merge_requests
+    - master@gitlab-org/gitlab-runner
+    - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
+
+.merge_request_pipelines_on_gitlab_org_gitlab_runner:
+  only:
+    refs:
+    - merge_requests@gitlab-org/gitlab-runner
+    - master@gitlab-org/gitlab-runner
+    - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
+
 .no_cache:
   cache: {}
 

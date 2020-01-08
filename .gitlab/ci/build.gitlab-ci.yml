@@ -1,14 +1,9 @@
 .binaries: &binaries
   extends:
   - .gitlab_org_runners
+  - .merge_request_pipelines
   - .except_docs
   stage: build
-  needs:
-  - 'test coverage report'
-  - 'test junit report'
-  - 'race conditions detector'
-  - 'check windows 1803 test failures'
-  - 'check windows 1809 test failures'
   script:
   - source ci/touch_make_dependencies
   - export platforms=$(echo $CI_JOB_NAME | sed 's|binaries ||')

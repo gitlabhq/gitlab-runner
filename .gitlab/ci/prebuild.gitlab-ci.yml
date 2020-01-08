@@ -1,5 +1,6 @@
 helper images:
   extends:
+  - .merge_request_pipelines
   - .docker
   stage: prebuild
   script:
@@ -14,6 +15,7 @@ helper images:
 
 clone test repo:
   extends:
+  - .merge_request_pipelines
   - .except_docs
   stage: prebuild
   script:
@@ -29,6 +31,7 @@ clone test repo:
 tests definitions:
   extends:
   - .gitlab_org_runners
+  - .merge_request_pipelines
   - .except_docs
   stage: prebuild
   script:
