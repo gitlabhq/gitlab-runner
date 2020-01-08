@@ -144,6 +144,7 @@ mocks: $(MOCKERY)
 	mockery $(MOCKERY_FLAGS) -dir=./cache -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./log -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./referees -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./session -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./shells -all -inpkg
 
