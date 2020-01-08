@@ -531,14 +531,17 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 }
 
 func (e *executor) getServicesDefinitions() (common.Services, error) {
+	internalServiceImages := []string{}
 	serviceDefinitions := common.Services{}
+
 	for _, service := range e.Config.Docker.Services {
-		serviceDefinitions = append(serviceDefinitions, common.Image{Name: service})
+		internalServiceImages = append(internalServiceImages, service.Name)
+		serviceDefinitions = append(serviceDefinitions, service.ToImageDefinition())
 	}
 
 	for _, service := range e.Build.Services {
 		serviceName := e.Build.GetAllVariables().ExpandValue(service.Name)
-		err := e.verifyAllowedImage(serviceName, "services", e.Config.Docker.AllowedServices, e.Config.Docker.Services)
+		err := e.verifyAllowedImage(serviceName, "services", e.Config.Docker.AllowedServices, internalServiceImages)
 		if err != nil {
 			return nil, err
 		}

@@ -222,12 +222,22 @@ This defines the Docker Container parameters.
 | `volumes_from`              | Specify a list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
 | `volume_driver`             | Specify the volume driver to use for the container |
 | `links`                     | Specify containers which should be linked with building container |
-| `services`                  | Specify additional services that should be run with build. Please visit [Docker Registry](https://hub.docker.com) for list of available applications. Each service will be run in separate container and linked to the build. |
 | `allowed_images`            | Specify wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `allowed_services`          | Specify wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
 | `sysctls`                   | specify the sysctl options |
 | `helper_image`              | (Advanced) [Override the default helper image](#helper-image) used to clone repos and upload artifacts. |
+
+### The `[[runners.docker.services]]` section
+
+Specify additional services that should be run with the build. Please visit the
+[Docker Registry](https://hub.docker.com) for the list of available applications.
+Each service will be run in a separate container and linked to the build.
+
+| Parameter | Description |
+| --------- | ----------- |
+| `name`  | The name of the image to be run as a service |
+| `alias` | Additional [alias name](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services) that can be used to access the service |
 
 Example:
 
@@ -258,9 +268,17 @@ Example:
   shm_size = 300000
   volumes_from = ["storage_container:ro"]
   links = ["mysql_container:mysql"]
-  services = ["mysql", "redis:2.8", "postgres:9"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
   allowed_services = ["postgres:9.4", "postgres:latest"]
+  [[runners.docker.services]]
+    name: "mysql"
+    alias: "db"
+  [[runners.docker.services]]
+    name: "redis:2.8"
+    alias: "cache"
+  [[runners.docker.services]]
+    name: "postgres:9"
+    alias: "postgres-db"
   [runners.docker.sysctls]
     "net.ipv4.ip_forward" = "1"
 ```

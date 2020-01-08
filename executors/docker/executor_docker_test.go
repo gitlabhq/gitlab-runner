@@ -1785,6 +1785,126 @@ func TestCheckOSType(t *testing.T) {
 	}
 }
 
+func TestGetServiceDefinitions(t *testing.T) {
+	e := executor{}
+	e.Build = &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
+	e.Config = common.RunnerConfig{}
+	e.Config.Docker = &common.DockerConfig{}
+
+	tests := map[string]struct {
+		services         []*common.DockerService
+		buildServices    []common.Image
+		allowedServices  []string
+		expectedServices common.Services
+		expectedErr      string
+	}{
+		"all services with proper name and alias": {
+			services: []*common.DockerService{
+				{
+					Service: common.Service{"name"},
+					Alias:   "alias",
+				},
+			},
+			expectedServices: common.Services{
+				{
+					Name:  "name",
+					Alias: "alias",
+				},
+			},
+		},
+		"build service not in internal images but empty allowed services": {
+			services: []*common.DockerService{
+				{
+					Service: common.Service{"name"},
+					Alias:   "alias",
+				},
+			},
+			buildServices: []common.Image{
+				{
+					Name: "name_not_in_internal",
+				},
+			},
+			expectedServices: common.Services{
+				{
+					Name:  "name",
+					Alias: "alias",
+				},
+				{
+					Name: "name_not_in_internal",
+				},
+			},
+		},
+		"build service not in internal images": {
+			services: []*common.DockerService{
+				{
+					Service: common.Service{"name"},
+					Alias:   "",
+				},
+			},
+			buildServices: []common.Image{
+				{
+					Name: "name_not_in_internal",
+				},
+			},
+			allowedServices: []string{"name"},
+			expectedErr:     "invalid image",
+		},
+		"build service not in allowed services but in internal images": {
+			services: []*common.DockerService{
+				{
+					Service: common.Service{Name: "name"},
+				},
+			},
+			buildServices: []common.Image{
+				{
+					Name: "name",
+				},
+			},
+			allowedServices: []string{"allowed_name"},
+			expectedServices: common.Services{
+				{
+					Name: "name",
+				},
+				{
+					Name: "name",
+				},
+			},
+		},
+		"empty service name": {
+			services: []*common.DockerService{
+				{
+					Service: common.Service{Name: ""},
+				},
+			},
+			buildServices: []common.Image{},
+			expectedServices: common.Services{
+				{
+					Name: "",
+				},
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e.Config.Docker.Services = tt.services
+			e.Config.Docker.AllowedServices = tt.allowedServices
+			e.Build.Services = tt.buildServices
+
+			svcs, err := e.getServicesDefinitions()
+			if tt.expectedErr != "" {
+				assert.EqualError(t, err, tt.expectedErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedServices, svcs)
+		})
+	}
+}
+
 func init() {
 	docker_helpers.HomeDirectory = ""
 }
