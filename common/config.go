@@ -264,7 +264,7 @@ func (s *DockerService) ToImageDefinition() Image {
 func (s *DockerService) UnmarshalTOML(data interface{}) error {
 	switch v := data.(type) {
 	case string:
-		logrus.Warning("Setting runners.docker.services as array is deprecated and will be removed in the future. " +
+		logrus.Warning("Setting runners.docker.services as array is deprecated and will be removed in 13.0. " +
 			"Please use the array of tables syntax instead. More info at " +
 			"[https://docs.gitlab.com/runner/executors/docker.html#define-image-and-services-in-configtoml].")
 		s.Name = v
