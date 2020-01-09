@@ -20,7 +20,8 @@ before_script:
 # https://docs.gitlab.com/ce/development/writing_documentation.html#testing
 .except_docs:
   except:
-  - /(^docs[\/-].*|.*-docs$)/
+    variables:
+    - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
 
 .merge_request_pipelines:
   only:

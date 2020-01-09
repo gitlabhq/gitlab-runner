@@ -68,7 +68,8 @@
   only:
   - merge_requests@gitlab-org/gitlab-runner
   except:
-  - /(^docs[\/-].*|.*-docs$)/
+    variables:
+    - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
 
 .release_bleeding_edge:
   only:
