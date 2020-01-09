@@ -146,6 +146,12 @@ mocks: $(MOCKERY)
 	mockery $(MOCKERY_FLAGS) -dir=./session -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./shells -all -inpkg
 
+check_mocks:
+	@git status -sb > /tmp/mocks-${CI_JOB_ID}-before
+	make mocks
+	@git status -sb > /tmp/mocks-${CI_JOB_ID}-after
+	@diff -U0 /tmp/mocks-${CI_JOB_ID}-before /tmp/mocks-${CI_JOB_ID}-after
+
 test-docker:
 	make test-docker-image IMAGE=centos:6 TYPE=rpm
 	make test-docker-image IMAGE=centos:7 TYPE=rpm
