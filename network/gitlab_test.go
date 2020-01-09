@@ -342,7 +342,7 @@ func getRequestJobResponse() (res map[string]interface{}) {
 	res["steps"] = steps
 
 	image := make(map[string]interface{})
-	image["name"] = "ruby:2.0"
+	image["name"] = "ruby:2.6"
 	image["entrypoint"] = []string{"/bin/sh"}
 	res["image"] = image
 
@@ -480,7 +480,7 @@ func TestRequestJob(t *testing.T) {
 	}
 	assert.True(t, ok)
 
-	assert.Equal(t, "ruby:2.0", res.Image.Name)
+	assert.Equal(t, "ruby:2.6", res.Image.Name)
 	assert.Equal(t, []string{"/bin/sh"}, res.Image.Entrypoint)
 	require.Len(t, res.Services, 2)
 	assert.Equal(t, "postgresql:9.5", res.Services[0].Name)

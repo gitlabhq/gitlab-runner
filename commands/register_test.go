@@ -24,7 +24,7 @@ import (
 func setupDockerRegisterCommand(dockerConfig *common.DockerConfig) *RegisterCommand {
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	ctx := cli.NewContext(cli.NewApp(), fs, nil)
-	fs.String("docker-image", "ruby:2.1", "")
+	fs.String("docker-image", "ruby:2.6", "")
 
 	s := &RegisterCommand{
 		context:        ctx,
