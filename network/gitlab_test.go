@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -706,7 +707,7 @@ func TestUnknownPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent, 0)
 	assert.Equal(t, UpdateNotFound, state)
 }
@@ -719,7 +720,7 @@ func TestForbiddenPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent, 0)
 	assert.Equal(t, UpdateAbort, state)
 }
@@ -733,17 +734,17 @@ func TestPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	endOffset, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	endOffset, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent, 0)
 	assert.Equal(t, UpdateSucceeded, state)
 	assert.Equal(t, len(patchTraceContent), endOffset)
 
-	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	endOffset, state, _ = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent[3:], 3)
 	assert.Equal(t, UpdateSucceeded, state)
 	assert.Equal(t, len(patchTraceContent), endOffset)
 
-	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	endOffset, state, _ = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent[3:10], 3)
 	assert.Equal(t, UpdateSucceeded, state)
 	assert.Equal(t, 10, endOffset)
@@ -762,17 +763,17 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	endOffset, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	endOffset, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent[11:], 11)
 	assert.Equal(t, UpdateRangeMismatch, state)
 	assert.Equal(t, 10, endOffset)
 
-	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	endOffset, state, _ = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent[15:], 15)
 	assert.Equal(t, UpdateRangeMismatch, state)
 	assert.Equal(t, 10, endOffset)
 
-	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	endOffset, state, _ = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent[5:], 5)
 	assert.Equal(t, UpdateSucceeded, state)
 	assert.Equal(t, len(patchTraceContent), endOffset)
@@ -787,7 +788,7 @@ func TestJobFailedStatePatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent, 0)
 	assert.Equal(t, UpdateAbort, state)
 }
@@ -798,7 +799,7 @@ func TestPatchTraceCantConnect(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	server.Close()
 
-	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+	_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 		patchTraceContent, 0)
 	assert.Equal(t, UpdateFailed, state)
 }
@@ -860,7 +861,7 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 			defer server.Close()
 
 			traceContent = append(traceContent, update.traceUpdate...)
-			endOffset, result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+			endOffset, result, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 				traceContent[sentTrace:], sentTrace)
 			assert.Equal(t, update.expectedResult, result)
 
@@ -916,7 +917,7 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			_, result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+			_, result, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 				test.trace, 0)
 			assert.Equal(t, test.expectedResult, result)
 		})
@@ -947,6 +948,64 @@ func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
 		patchTraceContent, 0)
 }
 
+func TestPatchTraceUpdateIntervalHeaderHandling(t *testing.T) {
+	tests := map[string]struct {
+		sendUpdateIntervalHeader  bool
+		updateIntervalHeaderValue string
+		expectedUpdateInterval    time.Duration
+	}{
+		"header set to negative integer": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "-10",
+			expectedUpdateInterval:    -10 * time.Second,
+		},
+		"header set to zero": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "0",
+			expectedUpdateInterval:    time.Duration(0),
+		},
+		"header set to positive integer": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "10",
+			expectedUpdateInterval:    10 * time.Second,
+		},
+		"header set to invalid format": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "some text",
+			expectedUpdateInterval:    time.Duration(0),
+		},
+		"empty header": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "",
+			expectedUpdateInterval:    time.Duration(0),
+		},
+		"header not set": {
+			sendUpdateIntervalHeader: false,
+			expectedUpdateInterval:   time.Duration(0),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+				if tt.sendUpdateIntervalHeader {
+					w.Header().Add(traceUpdateIntervalHeader, tt.updateIntervalHeaderValue)
+				}
+
+				w.WriteHeader(http.StatusAccepted)
+			}
+
+			server, client, config := getPatchServer(t, handler)
+			defer server.Close()
+
+			_, _, newUpdateInterval := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+				patchTraceContent, 0)
+
+			assert.Equal(t, tt.expectedUpdateInterval, newUpdateInterval)
+		})
+	}
+}
+
 func TestAbortedPatchTrace(t *testing.T) {
 	statuses := []string{"canceled", "failed"}
 
@@ -960,7 +1019,7 @@ func TestAbortedPatchTrace(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+			_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 				patchTraceContent, 0)
 			assert.Equal(t, UpdateAbort, state)
 		})

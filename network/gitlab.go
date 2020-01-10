@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -353,13 +354,13 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 	}
 }
 
-func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, content []byte, startOffset int) (int, common.UpdateState) {
+func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *common.JobCredentials, content []byte, startOffset int) (int, common.UpdateState, time.Duration) {
 	id := jobCredentials.ID
 
 	baseLog := config.Log().WithField("job", id)
 	if len(content) == 0 {
 		baseLog.Debugln("Appending trace to coordinator...", "skipped due to empty patch")
-		return startOffset, common.UpdateSucceeded
+		return startOffset, common.UpdateSucceeded, time.Duration(0)
 	}
 
 	endOffset := startOffset + len(content)
@@ -375,7 +376,7 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *co
 	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
-		return startOffset, common.UpdateFailed
+		return startOffset, common.UpdateFailed, time.Duration(0)
 	}
 
 	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointPatchTrace, response.StatusCode)
@@ -383,34 +384,35 @@ func (n *GitLabClient) PatchTrace(config common.RunnerConfig, jobCredentials *co
 	defer response.Body.Close()
 	defer io.Copy(ioutil.Discard, response.Body)
 
-	tracePatchResponse := NewTracePatchResponse(response)
+	tracePatchResponse := NewTracePatchResponse(response, baseLog)
 	log := baseLog.WithFields(logrus.Fields{
-		"sent-log":   contentRange,
-		"job-log":    tracePatchResponse.RemoteRange,
-		"job-status": tracePatchResponse.RemoteState,
-		"code":       response.StatusCode,
-		"status":     response.Status,
+		"sent-log":        contentRange,
+		"job-log":         tracePatchResponse.RemoteRange,
+		"job-status":      tracePatchResponse.RemoteState,
+		"code":            response.StatusCode,
+		"status":          response.Status,
+		"update-interval": tracePatchResponse.RemoteTraceUpdateInterval,
 	})
 
 	switch {
 	case tracePatchResponse.IsAborted():
 		log.Warningln("Appending trace to coordinator...", "aborted")
-		return startOffset, common.UpdateAbort
+		return startOffset, common.UpdateAbort, tracePatchResponse.RemoteTraceUpdateInterval
 	case response.StatusCode == http.StatusAccepted:
 		log.Debugln("Appending trace to coordinator...", "ok")
-		return endOffset, common.UpdateSucceeded
+		return endOffset, common.UpdateSucceeded, tracePatchResponse.RemoteTraceUpdateInterval
 	case response.StatusCode == http.StatusNotFound:
 		log.Warningln("Appending trace to coordinator...", "not-found")
-		return startOffset, common.UpdateNotFound
+		return startOffset, common.UpdateNotFound, tracePatchResponse.RemoteTraceUpdateInterval
 	case response.StatusCode == http.StatusRequestedRangeNotSatisfiable:
 		log.Warningln("Appending trace to coordinator...", "range mismatch")
-		return tracePatchResponse.NewOffset(), common.UpdateRangeMismatch
+		return tracePatchResponse.NewOffset(), common.UpdateRangeMismatch, tracePatchResponse.RemoteTraceUpdateInterval
 	case response.StatusCode == clientError:
 		log.Errorln("Appending trace to coordinator...", "error")
-		return startOffset, common.UpdateAbort
+		return startOffset, common.UpdateAbort, tracePatchResponse.RemoteTraceUpdateInterval
 	default:
 		log.Warningln("Appending trace to coordinator...", "failed")
-		return startOffset, common.UpdateFailed
+		return startOffset, common.UpdateFailed, tracePatchResponse.RemoteTraceUpdateInterval
 	}
 }
 

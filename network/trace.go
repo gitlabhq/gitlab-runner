@@ -9,6 +9,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
+const (
+	emptyRemoteTraceUpdateInterval = 0
+)
+
 type clientJobTrace struct {
 	client         common.Network
 	config         common.RunnerConfig
@@ -164,8 +168,10 @@ func (c *clientJobTrace) sendPatch() common.UpdateState {
 		return common.UpdateSucceeded
 	}
 
-	sentOffset, state := c.client.PatchTrace(
+	sentOffset, state, newUpdateInterval := c.client.PatchTrace(
 		c.config, c.jobCredentials, content, sentTrace)
+
+	c.setUpdateInterval(newUpdateInterval)
 
 	if state == common.UpdateSucceeded || state == common.UpdateRangeMismatch {
 		c.lock.Lock()
@@ -175,6 +181,17 @@ func (c *clientJobTrace) sendPatch() common.UpdateState {
 	}
 
 	return state
+}
+
+func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
+	if newUpdateInterval <= time.Duration(emptyRemoteTraceUpdateInterval) {
+		return
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.updateInterval = newUpdateInterval
 }
 
 // Update Coordinator that the job is still running.
@@ -237,7 +254,7 @@ func (c *clientJobTrace) abort() bool {
 func (c *clientJobTrace) watch() {
 	for {
 		select {
-		case <-time.After(c.updateInterval):
+		case <-time.After(c.getUpdateInterval()):
 			state := c.incrementalUpdate()
 			if state == common.UpdateAbort && c.abort() {
 				<-c.finished
@@ -251,10 +268,17 @@ func (c *clientJobTrace) watch() {
 	}
 }
 
+func (c *clientJobTrace) getUpdateInterval() time.Duration {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	return c.updateInterval
+}
+
 func (c *clientJobTrace) setupLogLimit() {
 	bytesLimit := c.config.OutputLimit * 1024 // convert to bytes
 	if bytesLimit == 0 {
-		bytesLimit = common.DefaultOutputLimit
+		bytesLimit = common.DefaultTraceOutputLimit
 	}
 
 	c.buffer.SetLimit(bytesLimit)
@@ -273,8 +297,8 @@ func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentia
 		jobCredentials:      jobCredentials,
 		id:                  jobCredentials.ID,
 		maxTracePatchSize:   common.DefaultTracePatchLimit,
-		updateInterval:      common.UpdateInterval,
-		forceSendInterval:   common.ForceTraceSentInterval,
-		finishRetryInterval: common.UpdateRetryInterval,
+		updateInterval:      common.DefaultTraceUpdateInterval,
+		forceSendInterval:   common.TraceForceSendInterval,
+		finishRetryInterval: common.TraceFinishRetryInterval,
 	}, nil
 }

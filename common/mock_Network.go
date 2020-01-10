@@ -6,6 +6,7 @@ package common
 
 import (
 	io "io"
+	time "time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -30,7 +31,7 @@ func (_m *MockNetwork) DownloadArtifacts(config JobCredentials, artifactsFile st
 }
 
 // PatchTrace provides a mock function with given fields: config, jobCredentials, content, startOffset
-func (_m *MockNetwork) PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) (int, UpdateState) {
+func (_m *MockNetwork) PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) (int, UpdateState, time.Duration) {
 	ret := _m.Called(config, jobCredentials, content, startOffset)
 
 	var r0 int
@@ -47,7 +48,14 @@ func (_m *MockNetwork) PatchTrace(config RunnerConfig, jobCredentials *JobCreden
 		r1 = ret.Get(1).(UpdateState)
 	}
 
-	return r0, r1
+	var r2 time.Duration
+	if rf, ok := ret.Get(2).(func(RunnerConfig, *JobCredentials, []byte, int) time.Duration); ok {
+		r2 = rf(config, jobCredentials, content, startOffset)
+	} else {
+		r2 = ret.Get(2).(time.Duration)
+	}
+
+	return r0, r1, r2
 }
 
 // ProcessJob provides a mock function with given fields: config, buildCredentials
