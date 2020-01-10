@@ -51,7 +51,9 @@ The GitLab Runner version should be in sync with the GitLab version. While older
 Runners may still work with newer GitLab versions, and vice versa, in some cases,
 features may be not available or work properly if there's a version difference.
 
-Backward incompatibility is allowed only for major version updates.
+Backward compatibility is guaranteed between minor version updates,
+but be aware that minor version updates of GitLab can introduce new features
+which will require the Runner to be on the same minor version.
 
 ## Install GitLab Runner
 
