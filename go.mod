@@ -34,7 +34,7 @@ require (
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.3.1-0.20170228224354-599cba5e7b61
 	github.com/gorilla/websocket v1.4.0
-	github.com/hashicorp/go-version v0.0.0-20170202080759-03c5bf6be031
+	github.com/hashicorp/go-version v1.0.0
 	github.com/imdario/mergo v0.3.7
 	github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
 	github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
@@ -43,6 +43,7 @@ require (
 	github.com/mattn/go-zglob v0.0.1
 	github.com/minio/go-homedir v0.0.0-20190425115525-017018655514 // indirect
 	github.com/minio/minio-go v3.0.3-0.20170912212908-4e0f567303d4+incompatible
+	github.com/mitchellh/gox v1.0.1
 	github.com/onsi/ginkgo v1.10.3 // indirect
 	github.com/onsi/gomega v1.7.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
@@ -60,6 +61,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.20.0
+	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
 	gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20180924111848-5af59b871b1b
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5

@@ -136,9 +136,7 @@ mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
 	mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
-	mockery $(MOCKERY_FLAGS) -dir=./helpers/docker -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./helpers/certificate -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./helpers/fslocker -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./helpers -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./executors/docker -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./executors/custom -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./cache -all -inpkg
@@ -147,6 +145,12 @@ mocks: $(MOCKERY)
 	mockery $(MOCKERY_FLAGS) -dir=./referees -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./session -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./shells -all -inpkg
+
+check_mocks:
+	@git status -sb > /tmp/mocks-${CI_JOB_ID}-before
+	make mocks
+	@git status -sb > /tmp/mocks-${CI_JOB_ID}-after
+	@diff -U0 /tmp/mocks-${CI_JOB_ID}-before /tmp/mocks-${CI_JOB_ID}-after
 
 test-docker:
 	make test-docker-image IMAGE=centos:6 TYPE=rpm

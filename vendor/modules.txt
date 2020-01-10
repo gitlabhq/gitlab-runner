@@ -154,7 +154,7 @@ github.com/gorilla/context
 github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
-# github.com/hashicorp/go-version v0.0.0-20170202080759-03c5bf6be031
+# github.com/hashicorp/go-version v1.0.0
 github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.1
 github.com/hashicorp/golang-lru/simplelru
@@ -192,6 +192,10 @@ github.com/minio/minio-go/pkg/policy
 github.com/minio/minio-go/pkg/s3signer
 github.com/minio/minio-go/pkg/s3utils
 github.com/minio/minio-go/pkg/set
+# github.com/mitchellh/gox v1.0.1
+github.com/mitchellh/gox
+# github.com/mitchellh/iochan v1.0.0
+github.com/mitchellh/iochan
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
@@ -238,6 +242,9 @@ github.com/stretchr/testify/require
 github.com/tevino/abool
 # github.com/urfave/cli v1.20.0
 github.com/urfave/cli
+# github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
+github.com/vektra/mockery/cmd/mockery
+github.com/vektra/mockery/mockery
 # gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
 gitlab.com/ayufan/golang-cli-helpers
 # gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20180924111848-5af59b871b1b
@@ -325,6 +332,7 @@ golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/go/types/typeutil
+golang.org/x/tools/imports
 golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports

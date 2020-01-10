@@ -56,6 +56,15 @@ check modules:
   script:
   - make check_modules
 
+check mocks:
+  stage: test
+  extends:
+  - .merge_request_pipelines
+  - .except_docs
+  - .no_cache_and_dependencies
+  script:
+  - make check_mocks
+
 code_quality:
   stage: test
   extends:
