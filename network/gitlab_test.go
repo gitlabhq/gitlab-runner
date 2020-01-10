@@ -707,9 +707,8 @@ func TestUnknownPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateNotFound, state)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateNotFound, result.State)
 }
 
 func TestForbiddenPatchTrace(t *testing.T) {
@@ -720,9 +719,8 @@ func TestForbiddenPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateAbort, state)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateAbort, result.State)
 }
 
 func TestPatchTrace(t *testing.T) {
@@ -734,20 +732,17 @@ func TestPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	endOffset, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateSucceeded, state)
-	assert.Equal(t, len(patchTraceContent), endOffset)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 
-	endOffset, state, _ = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[3:], 3)
-	assert.Equal(t, UpdateSucceeded, state)
-	assert.Equal(t, len(patchTraceContent), endOffset)
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:], 3)
+	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 
-	endOffset, state, _ = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[3:10], 3)
-	assert.Equal(t, UpdateSucceeded, state)
-	assert.Equal(t, 10, endOffset)
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:10], 3)
+	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, 10, result.SentOffset)
 }
 
 func TestRangeMismatchPatchTrace(t *testing.T) {
@@ -763,20 +758,17 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	endOffset, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[11:], 11)
-	assert.Equal(t, UpdateRangeMismatch, state)
-	assert.Equal(t, 10, endOffset)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[11:], 11)
+	assert.Equal(t, UpdateRangeMismatch, result.State)
+	assert.Equal(t, 10, result.SentOffset)
 
-	endOffset, state, _ = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[15:], 15)
-	assert.Equal(t, UpdateRangeMismatch, state)
-	assert.Equal(t, 10, endOffset)
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[15:], 15)
+	assert.Equal(t, UpdateRangeMismatch, result.State)
+	assert.Equal(t, 10, result.SentOffset)
 
-	endOffset, state, _ = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[5:], 5)
-	assert.Equal(t, UpdateSucceeded, state)
-	assert.Equal(t, len(patchTraceContent), endOffset)
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[5:], 5)
+	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 }
 
 func TestJobFailedStatePatchTrace(t *testing.T) {
@@ -788,9 +780,8 @@ func TestJobFailedStatePatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateAbort, state)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateAbort, result.State)
 }
 
 func TestPatchTraceCantConnect(t *testing.T) {
@@ -799,9 +790,8 @@ func TestPatchTraceCantConnect(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	server.Close()
 
-	_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateFailed, state)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateFailed, result.State)
 }
 
 func TestPatchTraceUpdatedTrace(t *testing.T) {
@@ -861,11 +851,11 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 			defer server.Close()
 
 			traceContent = append(traceContent, update.traceUpdate...)
-			endOffset, result, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 				traceContent[sentTrace:], sentTrace)
-			assert.Equal(t, update.expectedResult, result)
+			assert.Equal(t, update.expectedResult, result.State)
 
-			sentTrace = endOffset
+			sentTrace = result.SentOffset
 		})
 	}
 }
@@ -917,9 +907,8 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			_, result, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-				test.trace, 0)
-			assert.Equal(t, test.expectedResult, result)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, test.trace, 0)
+			assert.Equal(t, test.expectedResult, result.State)
 		})
 	}
 }
@@ -998,10 +987,8 @@ func TestPatchTraceUpdateIntervalHeaderHandling(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			_, _, newUpdateInterval := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-				patchTraceContent, 0)
-
-			assert.Equal(t, tt.expectedUpdateInterval, newUpdateInterval)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+			assert.Equal(t, tt.expectedUpdateInterval, result.NewUpdateInterval)
 		})
 	}
 }
@@ -1019,9 +1006,8 @@ func TestAbortedPatchTrace(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			_, state, _ := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-				patchTraceContent, 0)
-			assert.Equal(t, UpdateAbort, state)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+			assert.Equal(t, UpdateAbort, result.State)
 		})
 	}
 }

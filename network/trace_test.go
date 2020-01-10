@@ -104,7 +104,7 @@ func TestJobOutputLimit(t *testing.T) {
 
 	receivedTrace := bytes.NewBuffer([]byte{})
 	mockNetwork.On("PatchTrace", jobOutputLimit, jobCredentials, mock.Anything, mock.Anything).
-		Return(1078, common.UpdateSucceeded, time.Duration(0)).
+		Return(common.NewPatchTraceResult(1078, common.UpdateSucceeded, 0)).
 		Once().
 		Run(func(args mock.Arguments) {
 			// the 1078 == len(data)
@@ -137,7 +137,7 @@ func TestJobMasking(t *testing.T) {
 	defer mockNetwork.AssertExpectations(t)
 
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage), 0).
-		Return(len(traceMaskedMessage), common.UpdateSucceeded, time.Duration(0))
+		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.UpdateSucceeded, 0))
 
 	mockNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).
 		Return(common.UpdateSucceeded)
@@ -161,23 +161,23 @@ func TestJobFinishTraceUpdateRetry(t *testing.T) {
 
 	// accept just 3 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("My trace send"), 0).
-		Return(3, common.UpdateSucceeded, time.Duration(0)).Once()
+		Return(common.NewPatchTraceResult(3, common.UpdateSucceeded, 0)).Once()
 
 	// retry when trying to send next bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("trace send"), 3).
-		Return(0, common.UpdateFailed, time.Duration(0)).Once()
+		Return(common.NewPatchTraceResult(0, common.UpdateFailed, 0)).Once()
 
 	// accept 6 more bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("trace send"), 3).
-		Return(9, common.UpdateSucceeded, time.Duration(0)).Once()
+		Return(common.NewPatchTraceResult(9, common.UpdateSucceeded, 0)).Once()
 
 	// restart most of trace
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("send"), 9).
-		Return(6, common.UpdateRangeMismatch, time.Duration(0)).Once()
+		Return(common.NewPatchTraceResult(6, common.UpdateRangeMismatch, 0)).Once()
 
 	// accept rest of trace
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("ce send"), 6).
-		Return(13, common.UpdateSucceeded, time.Duration(0)).Once()
+		Return(common.NewPatchTraceResult(13, common.UpdateSucceeded, 0)).Once()
 
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateSucceeded).Once()
@@ -200,15 +200,15 @@ func TestJobMaxTracePatchSize(t *testing.T) {
 
 	// expect just 5 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("My tr"), 0).
-		Return(5, common.UpdateSucceeded, time.Duration(0)).Once()
+		Return(common.NewPatchTraceResult(5, common.UpdateSucceeded, 0)).Once()
 
 	// expect next 5 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("ace s"), 5).
-		Return(10, common.UpdateSucceeded, time.Duration(0)).Once()
+		Return(common.NewPatchTraceResult(10, common.UpdateSucceeded, 0)).Once()
 
 	// expect last 3 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("end"), 10).
-		Return(13, common.UpdateSucceeded, time.Duration(0)).Once()
+		Return(common.NewPatchTraceResult(13, common.UpdateSucceeded, 0)).Once()
 
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateSucceeded).Once()
@@ -259,7 +259,7 @@ func TestJobIncrementalPatchSend(t *testing.T) {
 	// ensure that PatchTrace gets executed first
 	wg.Add(1)
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("test trace"), 0).
-		Return(10, common.UpdateSucceeded, time.Duration(0)).Once().
+		Return(common.NewPatchTraceResult(10, common.UpdateSucceeded, 0)).Once().
 		Run(func(args mock.Arguments) {
 			wg.Done()
 		})
@@ -327,22 +327,22 @@ func TestTracePathIntervalChanges(t *testing.T) {
 
 	tests := map[string]struct {
 		initialUpdateInterval         time.Duration
-		patchTraceUpdateIntervalValue time.Duration
+		patchTraceUpdateIntervalValue int
 		finalUpdateInterval           time.Duration
 	}{
 		"negative updateInterval returned from PatchTrace": {
 			initialUpdateInterval:         traceUpdateIntervalDefault,
-			patchTraceUpdateIntervalValue: time.Duration(-10),
+			patchTraceUpdateIntervalValue: -10,
 			finalUpdateInterval:           traceUpdateIntervalDefault,
 		},
 		"zero updateInterval returned from PatchTrace": {
 			initialUpdateInterval:         traceUpdateIntervalDefault,
-			patchTraceUpdateIntervalValue: time.Duration(0),
+			patchTraceUpdateIntervalValue: 0,
 			finalUpdateInterval:           traceUpdateIntervalDefault,
 		},
 		"positive updateInterval returned from PatchTrace": {
 			initialUpdateInterval:         traceUpdateIntervalDefault,
-			patchTraceUpdateIntervalValue: 10 * time.Second,
+			patchTraceUpdateIntervalValue: 10,
 			finalUpdateInterval:           10 * time.Second,
 		},
 	}
@@ -356,7 +356,7 @@ func TestTracePathIntervalChanges(t *testing.T) {
 			waitForPatch.Add(1)
 
 			client.On("PatchTrace", jobConfig, jobCredentials, []byte(testTrace), 0).
-				Return(len(testTrace), common.UpdateSucceeded, tt.patchTraceUpdateIntervalValue).
+				Return(common.NewPatchTraceResult(len(testTrace), common.UpdateSucceeded, tt.patchTraceUpdateIntervalValue)).
 				Run(func(_ mock.Arguments) {
 					waitForPatch.Done()
 				}).

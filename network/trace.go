@@ -168,19 +168,18 @@ func (c *clientJobTrace) sendPatch() common.UpdateState {
 		return common.UpdateSucceeded
 	}
 
-	sentOffset, state, newUpdateInterval := c.client.PatchTrace(
-		c.config, c.jobCredentials, content, sentTrace)
+	result := c.client.PatchTrace(c.config, c.jobCredentials, content, sentTrace)
 
-	c.setUpdateInterval(newUpdateInterval)
+	c.setUpdateInterval(result.NewUpdateInterval)
 
-	if state == common.UpdateSucceeded || state == common.UpdateRangeMismatch {
+	if result.State == common.UpdateSucceeded || result.State == common.UpdateRangeMismatch {
 		c.lock.Lock()
 		c.sentTime = time.Now()
-		c.sentTrace = sentOffset
+		c.sentTrace = result.SentOffset
 		c.lock.Unlock()
 	}
 
-	return state
+	return result.State
 }
 
 func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
