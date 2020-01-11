@@ -100,7 +100,7 @@ executeTestCommand() {
         printMessage "\\n\\n--- Starting part ${index} of go tests of '${pkg}' package with coverprofile in '${coverMode}' mode:\\n"
 
         local profileFile=".cover/${pkgSlug}.${index}.${coverMode}.cover.txt"
-        options="-covermode=${coverMode} -coverprofile=${profileFile}"
+        options="-covermode=${coverMode} -coverprofile=${profileFile} -coverpkg=${MAIN_PACKAGE}/..."
     else
         echo "Starting go test"
     fi
