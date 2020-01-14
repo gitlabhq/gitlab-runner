@@ -16,8 +16,7 @@ func Test_CreateReferees(t *testing.T) {
 	mockMetricsExecutor := func(t *testing.T) (interface{}, func(t mock.TestingT) bool) {
 		m := new(MockMetricsExecutor)
 
-		m.On("GetMetricsLabelName").Return("name").Maybe()
-		m.On("GetMetricsLabelValue").Return("value").Maybe()
+		m.On("GetMetricsSelector").Return(`name="value"`).Maybe()
 
 		return m, m.AssertExpectations
 	}

@@ -4,14 +4,11 @@ import (
 	"errors"
 	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/referees"
-
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-
-	// Force to load docker executor
-	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker" // Force to load docker executor
+	"gitlab.com/gitlab-org/gitlab-runner/referees"
 )
 
 const (
@@ -137,16 +134,13 @@ func (e *machineExecutor) SetCurrentStage(stage common.ExecutorStage) {
 	e.executor.SetCurrentStage(stage)
 }
 
-func (e *machineExecutor) GetMetricsLabelName() string {
-	return "instance"
-}
-
-func (e *machineExecutor) GetMetricsLabelValue() string {
+func (e *machineExecutor) GetMetricsSelector() string {
 	refereed, ok := e.executor.(referees.MetricsExecutor)
-	if ok {
-		return refereed.GetMetricsLabelValue()
+	if !ok {
+		return ""
 	}
-	return ""
+
+	return refereed.GetMetricsSelector()
 }
 
 func init() {
