@@ -290,6 +290,9 @@ requests and configuration questions. Please check our
 [Support](https://about.gitlab.com/support/) page to see all of the available
 support options. Also, have a look at the [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/index.html)
 for more information.
+
+You can read more about this policy in our
+[README.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/README.md#closing-issues)
 ```
 
 ### Code format
