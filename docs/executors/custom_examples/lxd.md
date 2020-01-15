@@ -16,16 +16,16 @@ These scripts have the following prerequisites:
 
 ```toml
 [[runners]]
-  name = "lxd-executor"
+  name = "lxd-driver"
   url = "https://www.gitlab.com"
   token = "xxxxxxxxxxx"
   executor = "custom"
   builds_dir = "/builds"
   cache_dir = "/cache"
   [runners.custom]
-    prepare_exec = "/opt/lxd-executor/prepare.sh" # Path to a bash script to create lxd container and download dependencies.
-    run_exec = "/opt/lxd-executor/run.sh" # Path to a bash script to run script inside the container.
-    cleanup_exec = "/opt/lxd-executor/cleanup.sh" # Path to bash script to delete container.
+    prepare_exec = "/opt/lxd-driver/prepare.sh" # Path to a bash script to create lxd container and download dependencies.
+    run_exec = "/opt/lxd-driver/run.sh" # Path to a bash script to run script inside the container.
+    cleanup_exec = "/opt/lxd-driver/cleanup.sh" # Path to bash script to delete container.
 ```
 
 ## Base
@@ -35,12 +35,12 @@ will use this script to generate variables that are used throughout the
 scripts.
 
 It's important that this script is located in the same directory as the
-other scripts, in this case `/opt/lxd-executor/`.
+other scripts, in this case `/opt/lxd-driver/`.
 
 ```sh
 #!/usr/bin/env bash
 
-# /opt/lxd-executor/base.sh
+# /opt/lxd-driver/base.sh
 
 CONTAINER_ID="runner-$CUSTOM_ENV_CI_RUNNER_ID-project-$CUSTOM_ENV_CI_PROJECT_ID-concurrent-$CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID-$CUSTOM_ENV_CI_JOB_ID"
 ```
@@ -57,7 +57,7 @@ The prepare script will do the following:
 ```sh
 #!/usr/bin/env bash
 
-# /opt/lxd-executor/prepare.sh
+# /opt/lxd-driver/prepare.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base.
@@ -124,7 +124,7 @@ the content of the script to the container via `STDIN`.
 ```sh
 #!/usr/bin/env bash
 
-# /opt/lxd-executor/run.sh
+# /opt/lxd-driver/run.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base.
@@ -144,7 +144,7 @@ Destroy the container since the build has finished.
 ```sh
 #!/usr/bin/env bash
 
-# /opt/lxd-executor/cleanup.sh
+# /opt/lxd-driver/cleanup.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base.

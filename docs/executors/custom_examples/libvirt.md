@@ -1,22 +1,22 @@
 # Using libvirt with the Custom executor
 
-Using [libvirt](https://libvirt.org/), the Custom executor will create a
-new disk and VM for every job it executes, after which the disk and VM
-will be deleted.
+Using [libvirt](https://libvirt.org/), the Custom executor driver will
+create a new disk and VM for every job it executes, after which the disk
+and VM will be deleted.
 
 This example is inspired by a Community Contribution
 [!464](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/464)
 to add libvirt as a GitLab Runner executor.
 
 This document does not try to explain how to set up libvirt, since it's
-out of scope. However, this executor was tested using [GCP Nested
+out of scope. However, this driver was tested using [GCP Nested
 Virtualization](https://cloud.google.com/compute/docs/instances/enable-nested-virtualization-vm-instances),
 which also has [details on how to setup
 libvirt](https://cloud.google.com/compute/docs/instances/enable-nested-virtualization-vm-instances#starting_a_private_bridge_between_the_host_and_nested_vms)
 with bridge networking. This example will use the `default` network that
 comes with when installing libvirt so make sure it's running.
 
-This executor requires bridge networking since each VM needs to have
+This driver requires bridge networking since each VM needs to have
 it's own dedicated IP address so GitLab Runner can SSH inside of it to
 run commands. An SSH key can be generated [using the following
 commands](https://docs.gitlab.com/ee/ssh/#generating-a-new-ssh-key-pair).
@@ -69,7 +69,7 @@ check_interval = 0
   session_timeout = 1800
 
 [[runners]]
-  name = "libvirt-executor"
+  name = "libvirt-driver"
   url = "https://gitlab.com/"
   token = "xxxxx"
   executor = "custom"
@@ -80,9 +80,9 @@ check_interval = 0
     [runners.cache.s3]
     [runners.cache.gcs]
   [runners.custom]
-    prepare_exec = "/opt/libvirt-executor/prepare.sh" # Path to a bash script to create VM.
-    run_exec = "/opt/libvirt-executor/run.sh" # Path to a bash script to run script inside of VM over ssh.
-    cleanup_exec = "/opt/libvirt-executor/cleanup.sh" # Path to a bash script to delete VM and disks.
+    prepare_exec = "/opt/libvirt-driver/prepare.sh" # Path to a bash script to create VM.
+    run_exec = "/opt/libvirt-driver/run.sh" # Path to a bash script to run script inside of VM over ssh.
+    cleanup_exec = "/opt/libvirt-driver/cleanup.sh" # Path to a bash script to delete VM and disks.
 ```
 
 ## Base
@@ -92,12 +92,12 @@ will use the base script below to generate variables that are used
 throughout other scripts.
 
 It's important that this script is located in the same directory as the
-other scripts, in this case `/opt/libivirt-executor/`.
+other scripts, in this case `/opt/libivirt-driver/`.
 
 ```sh
 #!/usr/bin/env bash
 
-# /opt/libivrt-executor/base.sh
+# /opt/libivrt-driver/base.sh
 
 VM_IMAGES_PATH="/var/lib/libvirt/images"
 BASE_VM_IMAGE="$VM_IMAGES_PATH/gitlab-runner-base.qcow2"
@@ -121,7 +121,7 @@ The prepare script:
 ```sh
 #!/usr/bin/env bash
 
-# /opt/libivrt-executor/prepare.sh
+# /opt/libivrt-driver/prepare.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base script.
@@ -192,7 +192,7 @@ the content of the script to the VM via `STDIN` through SSH.
 ```sh
 #!/usr/bin/env bash
 
-# /opt/libivrt-executor/run.sh
+# /opt/libivrt-driver/run.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base script.
@@ -214,7 +214,7 @@ This script removes the VM and deletes the disk.
 ```sh
 #!/usr/bin/env bash
 
-# /opt/libivrt-executor/cleanup.sh
+# /opt/libivrt-driver/cleanup.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base script.
