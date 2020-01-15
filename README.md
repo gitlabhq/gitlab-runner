@@ -37,11 +37,11 @@ Runner project.
 
 It is up to a project maintainer to decide if an issue is actually a
 support/configuration question. Before closing the issue the maintainer
-should leave a reason why this a support/configuration question, to make
+should leave a reason why this is a support/configuration question, to make
 it clear to the issue author. They should also leave a comment using
 [our template](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/PROCESS.md#support-requests-and-configuration-questions)
 before closing the issue. The issue author has every right to disagree and
-reopen the issue and discuss the issue further.
+reopen the issue for further discussion.
 
 ### Contributing to documentation
 
