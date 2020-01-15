@@ -4,12 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"path"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -20,13 +25,17 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 const (
 	buildContainerName  = "build"
 	helperContainerName = "helper"
+
+	detectShellScriptName = "detect_shell_script"
 )
 
 var (
@@ -42,7 +51,28 @@ var (
 		},
 		ShowHostname: true,
 	}
+
+	detectShellScript = shells.BashTrapShellScript + shells.BashDetectShellScript
+
+	newLogProcessor = newKubernetesLogProcessor
 )
+
+type commandTerminatedError struct {
+	exitCode int
+}
+
+func (c *commandTerminatedError) Error() string {
+	return fmt.Sprintf("command terminated with exit code %d", c.exitCode)
+}
+
+type podPhaseError struct {
+	name  string
+	phase api.PodPhase
+}
+
+func (p *podPhaseError) Error() string {
+	return fmt.Sprintf("pod %q status is %q", p.name, p.phase)
+}
 
 type kubernetesOptions struct {
 	Image    common.Image
@@ -54,6 +84,7 @@ type executor struct {
 
 	kubeClient  *kubernetes.Clientset
 	pod         *api.Pod
+	configMap   *api.ConfigMap
 	credentials *api.Secret
 	options     *kubernetesOptions
 	services    []api.Service
@@ -70,6 +101,9 @@ type executor struct {
 	helperImageInfo helperimage.Info
 
 	featureChecker featureChecker
+
+	remoteProcessTerminated chan shells.TrapCommandExitStatus
+	logProcessor            logProcessor
 }
 
 type serviceDeleteResponse struct {
@@ -152,8 +186,16 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	s.Debugln("Starting Kubernetes command...")
+	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+		s.Debugln("Starting Kubernetes command...")
+		return s.runWithExecLegacy(cmd)
+	}
 
+	s.Debugln("Starting Kubernetes command with attach...")
+	return s.runWithAttach(cmd)
+}
+
+func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	if s.pod == nil {
 		err := s.setupCredentials()
 		if err != nil {
@@ -184,7 +226,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	))
 
 	select {
-	case err := <-s.runInContainer(ctx, containerName, containerCommand, cmd.Script):
+	case err := <-s.runInContainerWithExecLegacy(ctx, containerName, containerCommand, cmd.Script):
 		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		if err != nil && strings.Contains(err.Error(), "command terminated with exit code") {
 			return &common.BuildError{Inner: err}
@@ -196,20 +238,161 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	}
 }
 
-func (s *executor) Cleanup() {
-	if s.pod != nil {
-		err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Delete(s.pod.Name, &metav1.DeleteOptions{})
-		if err != nil {
-			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
-		}
-	}
-	if s.credentials != nil {
-		err := s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Delete(s.credentials.Name, &metav1.DeleteOptions{})
-		if err != nil {
-			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
-		}
+func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
+	err := s.ensurePodsConfigured(cmd.Context)
+	if err != nil {
+		return err
 	}
 
+	ctx, cancel := context.WithCancel(cmd.Context)
+	defer cancel()
+
+	containerName := buildContainerName
+	// Translates to roughly "sh /detect/shell/path.sh /stage/script/path.sh"
+	// which when the detect shell exits becomes something like "bash /stage/script/path.sh".
+	// This works unlike "gitlab-runner-build" since the detect shell passes arguments with "$@"
+	containerCommand := []string{"sh", s.scriptPath(detectShellScriptName), s.scriptPath(cmd.Stage)}
+	if cmd.Predefined {
+		containerName = helperContainerName
+		// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args
+		// to the shell it executes, so we technically pass the script to the stdin of the underlying shell
+		// translates roughly to "gitlab-runner-build <<< /stage/script/path.sh"
+		containerCommand = append(s.helperImageInfo.Cmd, "<<<", s.scriptPath(cmd.Stage))
+	}
+
+	s.Debugln(fmt.Sprintf(
+		"Starting in container %q the command %q with script: %s",
+		containerName,
+		containerCommand,
+		cmd.Script,
+	))
+
+	podStatusCh := s.watchPodStatus(ctx)
+
+	select {
+	case err := <-s.runInContainer(containerName, containerCommand):
+		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
+		if err != nil && errors.Is(err, new(commandTerminatedError)) {
+			return &common.BuildError{Inner: err}
+		}
+
+		return err
+	case err := <-podStatusCh:
+		return &common.BuildError{Inner: err}
+	case <-ctx.Done():
+		return fmt.Errorf("build aborted")
+	}
+}
+
+func (s *executor) ensurePodsConfigured(ctx context.Context) error {
+	if s.pod != nil {
+		return nil
+	}
+
+	err := s.setupCredentials()
+	if err != nil {
+		return fmt.Errorf("setting up credentials: %w", err)
+	}
+
+	err = s.setupScriptsConfigMap()
+	if err != nil {
+		return fmt.Errorf("setting up scripts configMap: %w", err)
+	}
+
+	err = s.setupBuildPod()
+	if err != nil {
+		return fmt.Errorf("setting up build pod: %w", err)
+	}
+
+	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.Trace, s.Config.Kubernetes)
+	if err != nil {
+		return fmt.Errorf("waiting for pod running: %w", err)
+	}
+
+	if status != api.PodRunning {
+		return fmt.Errorf("pod failed to enter running state: %s", status)
+	}
+
+	go s.processLogs(ctx)
+
+	return nil
+}
+
+func (s *executor) processLogs(ctx context.Context) {
+	processor := newLogProcessor(
+		s.kubeClient,
+		backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
+		&s.BuildLogger,
+		kubernetesLogProcessorPodConfig{
+			namespace:  s.pod.Namespace,
+			pod:        s.pod.Name,
+			containers: []string{helperContainerName, buildContainerName},
+		},
+	)
+
+	logs := processor.Listen(ctx)
+	for line := range logs {
+		var status shells.TrapCommandExitStatus
+		if status.TryUnmarshal(line) {
+			s.remoteProcessTerminated <- status
+			continue
+		}
+
+		_, err := s.Trace.Write([]byte(line + "\n"))
+		if err != nil {
+			s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
+		}
+	}
+}
+
+func (s *executor) setupScriptsConfigMap() error {
+	s.Debugln("Setting up scripts config map")
+
+	scripts := map[string]string{}
+	scripts[detectShellScriptName] = detectShellScript
+
+	// After issue https://gitlab.com/gitlab-org/gitlab-runner/issues/10342 is resolved and the legacy execution mode is removed
+	// we can remove the manual construction of trapShell and just use "bash+trap"
+	// in the exec options
+	bashShell, ok := common.GetShell(s.Shell().Shell).(*shells.BashShell)
+	if !ok {
+		return fmt.Errorf("kubernetes executor incorrect shell type")
+	}
+
+	trapShell := &shells.BashTrapShell{BashShell: bashShell}
+	for _, stage := range common.BuildStages {
+		script, err := trapShell.GenerateScript(stage, *s.Shell())
+		if err != nil {
+			return fmt.Errorf("generating trap shell script: %w", err)
+		}
+		scripts[string(stage)] = script
+	}
+
+	configMap := &api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-scripts", s.projectUniqueName()),
+			Namespace:    s.configurationOverwrites.namespace,
+		},
+		Data: scripts,
+	}
+
+	var err error
+	s.configMap, err = s.kubeClient.CoreV1().ConfigMaps(s.configurationOverwrites.namespace).Create(configMap)
+	if err != nil {
+		return fmt.Errorf("generating scripts config map: %w", err)
+	}
+
+	return nil
+}
+
+func (s *executor) Cleanup() {
+	s.cleanupResources()
+	s.cleanupServices()
+	closeKubeClient(s.kubeClient)
+	s.AbstractExecutor.Cleanup()
+}
+
+func (s *executor) cleanupServices() {
 	ch := make(chan serviceDeleteResponse)
 	var wg sync.WaitGroup
 	wg.Add(len(s.services))
@@ -228,9 +411,6 @@ func (s *executor) Cleanup() {
 			s.Errorln(fmt.Sprintf("Error cleaning up the pod service %q: %v", res.serviceName, res.err))
 		}
 	}
-
-	closeKubeClient(s.kubeClient)
-	s.AbstractExecutor.Cleanup()
 }
 
 func (s *executor) deleteKubernetesService(serviceName string, ch chan<- serviceDeleteResponse, wg *sync.WaitGroup) {
@@ -238,6 +418,27 @@ func (s *executor) deleteKubernetesService(serviceName string, ch chan<- service
 
 	err := s.kubeClient.CoreV1().Services(s.configurationOverwrites.namespace).Delete(serviceName, &metav1.DeleteOptions{})
 	ch <- serviceDeleteResponse{serviceName: serviceName, err: err}
+}
+
+func (s *executor) cleanupResources() {
+	if s.pod != nil {
+		err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Delete(s.pod.Name, &metav1.DeleteOptions{})
+		if err != nil {
+			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
+		}
+	}
+	if s.credentials != nil {
+		err := s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Delete(s.credentials.Name, &metav1.DeleteOptions{})
+		if err != nil {
+			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
+		}
+	}
+	if s.configMap != nil {
+		err := s.kubeClient.CoreV1().ConfigMaps(s.configurationOverwrites.namespace).Delete(s.configMap.Name, &metav1.DeleteOptions{})
+		if err != nil {
+			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
+		}
+	}
 }
 
 func (s *executor) buildContainer(name, image string, imageDefinition common.Image, requests, limits api.ResourceList, containerCommand ...string) api.Container {
@@ -302,11 +503,37 @@ func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...st
 	return command, args
 }
 
-func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
+func (s *executor) scriptsDir() string {
+	return path.Join(s.Build.TmpProjectDir(), "scripts")
+}
+
+func (s *executor) scriptPath(stage common.BuildStage) string {
+	return path.Join(s.scriptsDir(), string(stage))
+}
+
+func (s *executor) getVolumeMounts() []api.VolumeMount {
+	var mounts []api.VolumeMount
+
 	mounts = append(mounts, api.VolumeMount{
 		Name:      "repo",
 		MountPath: s.Build.RootDir,
 	})
+
+	// The configMap is nil when using legacy execution
+	if s.configMap != nil {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      "scripts",
+			MountPath: s.scriptsDir(),
+		})
+	}
+
+	mounts = append(mounts, s.getVolumeMountsForConfig()...)
+
+	return mounts
+}
+
+func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
+	var mounts []api.VolumeMount
 
 	for _, mount := range s.Config.Kubernetes.Volumes.HostPaths {
 		mounts = append(mounts, api.VolumeMount{
@@ -347,16 +574,43 @@ func (s *executor) getVolumeMounts() (mounts []api.VolumeMount) {
 		})
 	}
 
-	return
+	return mounts
 }
 
-func (s *executor) getVolumes() (volumes []api.Volume) {
+func (s *executor) getVolumes() []api.Volume {
+	volumes := s.getVolumesForConfig()
 	volumes = append(volumes, api.Volume{
 		Name: "repo",
 		VolumeSource: api.VolumeSource{
 			EmptyDir: &api.EmptyDirVolumeSource{},
 		},
 	})
+
+	// The configMap is nil when using legacy execution
+	if s.configMap == nil {
+		return volumes
+	}
+
+	mode := int32(0777)
+	optional := false
+	volumes = append(volumes, api.Volume{
+		Name: "scripts",
+		VolumeSource: api.VolumeSource{
+			ConfigMap: &api.ConfigMapVolumeSource{
+				LocalObjectReference: api.LocalObjectReference{
+					Name: s.configMap.Name,
+				},
+				DefaultMode: &mode,
+				Optional:    &optional,
+			},
+		},
+	})
+
+	return volumes
+}
+
+func (s *executor) getVolumesForConfig() []api.Volume {
+	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.HostPaths {
 		path := volume.HostPath
@@ -434,7 +688,7 @@ func (s *executor) getVolumes() (volumes []api.Volume) {
 		})
 	}
 
-	return
+	return volumes
 }
 
 type dockerConfigEntry struct {
@@ -715,27 +969,116 @@ func (s *executor) createKubernetesService(service *api.Service, proxySettings *
 	ch <- serviceCreateResponse{service: service, err: err}
 }
 
-func (s *executor) runInContainer(ctx context.Context, name string, command []string, script string) <-chan error {
-	errc := make(chan error, 1)
+func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
+	// Buffer of 1 in case the context is cancelled while the timer tick case is being executed
+	// and the consumer is no longer reading from the channel while we try to write to it
+	ch := make(chan error, 1)
+
 	go func() {
-		defer close(errc)
+		defer close(ch)
+
+		t := time.NewTicker(time.Duration(s.Config.Kubernetes.GetPollInterval()) * time.Second)
+		defer t.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				err := s.checkPodStatus()
+				if err != nil {
+					ch <- err
+					return
+				}
+			}
+		}
+	}()
+
+	return ch
+}
+
+func (s *executor) checkPodStatus() error {
+	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(s.pod.Name, metav1.GetOptions{})
+	var statusErr *kubeerrors.StatusError
+	if errors.As(err, &statusErr) && statusErr.ErrStatus.Code == http.StatusNotFound {
+		return err
+	}
+
+	if err != nil {
+		// General request failure
+		s.Warningln("Getting job pod status", err)
+		return nil
+	}
+
+	if pod.Status.Phase != api.PodRunning {
+		return &podPhaseError{
+			name:  s.pod.Name,
+			phase: pod.Status.Phase,
+		}
+	}
+
+	return nil
+}
+
+func (s *executor) runInContainer(name string, command []string) <-chan error {
+	errCh := make(chan error, 1)
+	go func() {
+		defer close(errCh)
+
+		config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		attach := AttachOptions{
+			PodName:       s.pod.Name,
+			Namespace:     s.pod.Namespace,
+			ContainerName: name,
+			Command:       command,
+
+			Config:   config,
+			Client:   s.kubeClient,
+			Executor: &DefaultRemoteExecutor{},
+		}
+
+		if err := attach.Run(); err != nil {
+			errCh <- err
+		}
+
+		exitStatus := <-s.remoteProcessTerminated
+		if *exitStatus.CommandExitCode == 0 {
+			errCh <- nil
+			return
+		}
+
+		errCh <- &commandTerminatedError{exitCode: *exitStatus.CommandExitCode}
+	}()
+
+	return errCh
+}
+
+func (s *executor) runInContainerWithExecLegacy(ctx context.Context, name string, command []string, script string) <-chan error {
+	errCh := make(chan error, 1)
+	go func() {
+		defer close(errCh)
 
 		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.Trace, s.Config.Kubernetes)
 
 		if err != nil {
-			errc <- err
+			errCh <- err
 			return
 		}
 
 		if status != api.PodRunning {
-			errc <- fmt.Errorf("pod failed to enter running state: %s", status)
+			errCh <- fmt.Errorf("pod failed to enter running state: %s", status)
 			return
 		}
 
 		config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
 
 		if err != nil {
-			errc <- err
+			errCh <- err
 			return
 		}
 
@@ -754,10 +1097,10 @@ func (s *executor) runInContainer(ctx context.Context, name string, command []st
 		}
 
 		retryable := retry.New(retry.WithBuildLog(&exec, &s.BuildLogger))
-		errc <- retryable.Run()
+		errCh <- retryable.Run()
 	}()
 
-	return errc
+	return errCh
 }
 
 func (s *executor) prepareOverwrites(variables common.JobVariables) error {
@@ -828,7 +1171,8 @@ func createFn() common.Executor {
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
 		},
-		helperImageInfo: helperImageInfo,
+		helperImageInfo:         helperImageInfo,
+		remoteProcessTerminated: make(chan shells.TrapCommandExitStatus),
 	}
 }
 

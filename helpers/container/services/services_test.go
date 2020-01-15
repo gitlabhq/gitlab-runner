@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	docker_helpers_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
 )
 

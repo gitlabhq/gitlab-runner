@@ -9,6 +9,7 @@ const (
 	UseLegacyBuildsDirForDocker          string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 	UseLegacyVolumesMountingOrder        string = "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER"
 	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
+	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
 )
 
 type FeatureFlag struct {
@@ -52,6 +53,13 @@ var flags = []FeatureFlag{
 		Deprecated:      true,
 		ToBeRemovedWith: "13.0",
 		Description:     "Disables the new ordering of volumes mounting when `docker*` executors are being used.",
+	},
+	{
+		Name:            UseLegacyKubernetesExecutionStrategy,
+		DefaultValue:    "true",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description:     "When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119)",
 	},
 }
 
