@@ -352,6 +352,7 @@ of the following conditions:
 
 - `config_exec_timeout`, `prepare_exec_timeout` or `cleanup_exec_timeout` are met.
 - The job [times out](https://docs.gitlab.com/ee/user/project/pipelines/settings.html#timeout).
+- The job is cancelled.
 
 When a timeout is reached, a `SIGTERM` is sent to the executable, and
 the countdown for
