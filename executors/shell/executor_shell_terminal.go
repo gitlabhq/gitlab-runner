@@ -38,7 +38,7 @@ func (t terminalConn) Close() error {
 func (s *executor) Connect() (terminalsession.Conn, error) {
 	cmd := exec.Command(s.BuildShell.Command, s.BuildShell.Arguments...)
 	if cmd == nil {
-		return nil, errors.New("Failed to generate shell command")
+		return nil, errors.New("failed to generate shell command")
 	}
 
 	shellFD, err := pty.Start(cmd)
