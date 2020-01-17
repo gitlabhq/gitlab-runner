@@ -171,7 +171,7 @@ are using [multiple machines](https://www.vagrantup.com/docs/multi-machine/) ins
 
 The following are required:
 
-- [Vagrant](https://www.vagrant.com) installed.
+- [Vagrant](https://www.vagrantup.com) installed.
 - [Virtualbox](https://www.virtualbox.com) installed.
 - Around 30GB of free hard disk space on your computer.
 
