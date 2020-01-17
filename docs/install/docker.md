@@ -197,12 +197,12 @@ source for possible build instructions for both Ubuntu and Alpine images.
 
 Some distributions (CentOS, RedHat, Fedora) use SELinux by default to enhance the security of the underlying system.
 
-The special care must be taken when dealing with such configuration.
+Special care must be taken when dealing with such configuration.
 
-1. If you want to use Docker executor to run builds in containers you need to access the `/var/run/docker.sock`.
-   However, if you have a SELinux in enforcing mode, you will see the `Permission denied` when accessing the `/var/run/docker.sock`.
-   Install the `selinux-dockersock` and to resolve the issue: <https://github.com/dpw/selinux-dockersock>.
-1. Make sure that persistent directory is created on host: `mkdir -p /srv/gitlab-runner/config`.
+1. If you want to use the [Docker executor](../executors/docker.md) to run builds in containers, you'll need access to `/var/run/docker.sock`.
+   However, if SELinux is in enforcing mode, you will see the `Permission denied` error when you're accessing `/var/run/docker.sock`.
+   Install [selinux-dockersock](https://github.com/dpw/selinux-dockersock) to resolve this issue.
+1. Make sure that a persistent directory is created on host: `mkdir -p /srv/gitlab-runner/config`.
 1. Run docker with `:Z` on volumes:
 
 ```bash
