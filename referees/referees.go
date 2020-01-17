@@ -31,7 +31,7 @@ var refereeFactories = []refereeFactory{
 
 func CreateReferees(executor interface{}, config *Config, log logrus.FieldLogger) []Referee {
 	if config == nil {
-		log.Debug("no referees configured")
+		log.Debug("No referees configured")
 		return nil
 	}
 
