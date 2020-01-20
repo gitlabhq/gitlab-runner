@@ -1,4 +1,4 @@
-v12.7.0-rc1 (2020-01-08)
+v12.7.0 (2020-01-20)
 
 - Fixing kramdown link error !1711
 - Add caps and backtick testing to runner docs linting !1678
