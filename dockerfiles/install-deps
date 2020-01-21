@@ -44,7 +44,7 @@ dumb-init --version
 
 wget -nv "https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-${GIT_LFS_ARCH}-v${GIT_LFS_VERSION}.tar.gz" -O /tmp/git-lfs.tar.gz
 mkdir /tmp/git-lfs
-tar -xzf /tmp/git-lfs.tar.gz -C /tmp/git-lfs/
+tar -xf /tmp/git-lfs.tar.gz -C /tmp/git-lfs/
 mv /tmp/git-lfs/git-lfs /usr/bin/git-lfs
 rm -rf /tmp/git-lfs*
 git-lfs install --skip-repo

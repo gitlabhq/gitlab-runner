@@ -8,9 +8,7 @@ RUN apk add --no-cache \
     bash \
     ca-certificates \
     git \
-    openssl \
-    tzdata \
-    wget
+    tzdata
 
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
@@ -18,7 +16,11 @@ ARG GIT_LFS_VERSION
 
 COPY gitlab-runner-linux-* /usr/bin/
 COPY checksums-* install-deps install-gitlab-runner /tmp/
-RUN /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}" "${GIT_LFS_VERSION}"
+
+# Install GNU wget for "-nv" flag support
+RUN apk add --no-cache --virtual .fetch-deps wget && \
+    /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}" "${GIT_LFS_VERSION}" && \
+    apk del .fetch-deps
 
 COPY entrypoint /
 RUN chmod +x /entrypoint
