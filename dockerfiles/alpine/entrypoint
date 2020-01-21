@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # gitlab-runner data directory
 DATA_DIR="/etc/gitlab-runner"
