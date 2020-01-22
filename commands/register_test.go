@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
-	"gitlab.com/ayufan/golang-cli-helpers"
+	clihelpers "gitlab.com/ayufan/golang-cli-helpers"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -337,4 +337,44 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 			tc.assertConfiguration(t, tc.config)
 		})
 	}
+}
+
+// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6404
+func TestDockerServiceFlags(t *testing.T) {
+	mNetwork := new(common.MockNetwork)
+	defer mNetwork.AssertExpectations(t)
+	mNetwork.On("RegisterRunner", mock.Anything, mock.Anything).
+		Return(&common.RegisterRunnerResponse{
+			Token: "test-runner-token",
+		}).
+		Once()
+
+	cmd := newRegisterCommand()
+	cmd.network = mNetwork
+
+	app := cli.NewApp()
+	app.Commands = []cli.Command{
+		{
+			Name:   "register",
+			Action: cmd.Execute,
+			Flags:  clihelpers.GetFlagsFromStruct(cmd),
+		},
+	}
+
+	args := []string{
+		"binary", "register",
+		"-n",
+		"--url", "http://gitlab.example.com/",
+		"--registration-token", "test-registration-token",
+		"--executor", "docker",
+		"--docker-image", "alpine:3.11",
+		"--docker-services", "alpine:3.11",
+		"--docker-services", "ruby:2.6",
+	}
+
+	err := app.Run(args)
+	require.NoError(t, err)
+
+	assert.Equal(t, "alpine:3.11", cmd.Docker.Services[0].Name)
+	assert.Equal(t, "ruby:2.6", cmd.Docker.Services[1].Name)
 }
