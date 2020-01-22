@@ -190,9 +190,7 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 var commandFactory = command.New
 
 func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) command.Command {
-	logger := &processLogger{
-		buildLogger: e.BuildLogger,
-	}
+	logger := common.NewProcessLoggerAdapter(e.BuildLogger)
 
 	cmdOpts := process.CommandOptions{
 		Dir:                 e.tempDir,
