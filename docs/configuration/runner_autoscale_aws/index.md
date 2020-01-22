@@ -364,7 +364,7 @@ section, add the following:
 In this configuration with an empty `amazonec2-spot-price`, AWS sets your
 bidding price for a Spot instance to the default On-Demand price of that
 instance class. If you omit the `amazonec2-spot-price` completely, Docker
-Machine will set the bidding price to a [default value of $0.50 per
+Machine will set the maximum price to a [default value of $0.50 per
 hour](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values).
 
 You may further customize your Spot instance request:
@@ -377,16 +377,16 @@ You may further customize your Spot instance request:
     ]
 ```
 
-With this configuration, Docker Machines are created on Spot instances with a
-maximum bid price of $0.03 per hour and the duration of the Spot instance is
-capped at 60 minutes. The `0.03` number mentioned above is just an example, so
+With this configuration, Docker Machines are created using Spot instances with a
+maximum Spot request price of $0.03 per hour and the duration of the Spot instance 
+is capped at 60 minutes. The `0.03` number mentioned above is just an example, so
 be sure to check on the current pricing based on the region you picked.
 
 To learn more about Amazon EC2 Spot instances, visit the following links:
 
 - <https://aws.amazon.com/ec2/spot/>
 - <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html>
-- <https://aws.amazon.com/blogs/aws/focusing-on-spot-instances-lets-talk-about-best-practices/>
+- <https://aws.amazon.com/ec2/spot/getting-started/>
 
 ### Caveats of Spot instances
 
@@ -394,9 +394,11 @@ While Spot instances is a great way to use unused resources and minimize the
 costs of your infrastructure, you must be aware of the implications.
 
 Running CI jobs on Spot instances may increase the failure rates because of the
-Spot instances pricing model. If the price exceeds your bid, the existing Spot
-instances will be terminated within two minutes and all your jobs on that host
-will fail.
+Spot instances pricing model. If the maximum Spot price you specify exceeds the 
+current Spot price you will not get the capacity requested. Spot pricing is 
+revised on an hourly basis. Any existing Spot instances that have a maximum price 
+below the revised Spot instance price will be terminated within two minutes and 
+all jobs on Spot hosts will fail.
 
 As a consequence, the auto-scale Runner would fail to create new machines while
 it will continue to request new instances. This eventually will make 60 requests
