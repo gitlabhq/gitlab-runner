@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -147,7 +148,13 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s-0", strings.Replace(serviceName, "/", "__", -1))
+	servicePart := fmt.Sprintf("-%s-0", strings.Replace(serviceName, "/", "__", -1))
+	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+" + servicePart)
+	require.NoError(t, err)
+
+	containerNameMatcher := mock.MatchedBy(func(containerName string) bool {
+		return containerNameRegex.MatchString(containerName)
+	})
 	networkID := "network-id"
 
 	e := executor{
@@ -169,7 +176,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.Build.JobInfo.ProjectID = 0
 	e.Build.Runner.Token = "abcdef1234567890"
 	e.Context = context.Background()
-	var err error
+
 	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:          e.info.OSType,
 		Architecture:    e.info.Architecture,
@@ -181,6 +188,8 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Environment: []string{},
 	}
 
+	realServiceContainerName := e.getProjectUniqRandomizedName() + servicePart
+
 	c.On("ImagePullBlocking", e.Context, imageName, options).
 		Return(nil).
 		Once()
@@ -189,19 +198,19 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Twice()
 
-	c.On("ContainerRemove", e.Context, containerName, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
+	c.On("ContainerRemove", e.Context, containerNameMatcher, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
 		Return(nil).
 		Once()
 
 	networkContainersMap := map[string]types.EndpointResource{
-		"1": {Name: containerName},
+		"1": {Name: realServiceContainerName},
 	}
 
 	c.On("NetworkList", e.Context, types.NetworkListOptions{}).
 		Return([]types.NetworkResource{{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
 		Once()
 
-	c.On("NetworkDisconnect", e.Context, networkID, containerName, true).
+	c.On("NetworkDisconnect", e.Context, networkID, containerNameMatcher, true).
 		Return(nil).
 		Once()
 
@@ -210,7 +219,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Once()
 
 	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{ID: containerName}, nil).
+		Return(container.ContainerCreateCreatedBody{ID: realServiceContainerName}, nil).
 		Once()
 
 	c.On("ContainerStart", e.Context, mock.Anything, mock.Anything).
@@ -981,6 +990,12 @@ func TestCreateBuildVolume(t *testing.T) {
 }
 
 func TestCreateDependencies(t *testing.T) {
+	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+-alpine-0")
+	require.NoError(t, err)
+
+	containerNameMatcher := mock.MatchedBy(func(containerName string) bool {
+		return containerNameRegex.MatchString(containerName)
+	})
 	testError := errors.New("test-error")
 
 	tests := map[string]struct {
@@ -1052,10 +1067,10 @@ func TestCreateDependencies(t *testing.T) {
 					c.On("NetworkList", mock.Anything, mock.Anything).
 						Return(nil, nil).
 						Once()
-					c.On("ContainerRemove", mock.Anything, "runner-abcdef12-project-0-concurrent-0-alpine-0", mock.Anything).
+					c.On("ContainerRemove", mock.Anything, containerNameMatcher, mock.Anything).
 						Return(nil).
 						Once()
-					c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, "runner-abcdef12-project-0-concurrent-0-alpine-0").
+					c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, containerNameMatcher).
 						Return(container.ContainerCreateCreatedBody{ID: "container-ID"}, nil).
 						Once()
 					c.On("ContainerStart", mock.Anything, "container-ID", mock.Anything).
