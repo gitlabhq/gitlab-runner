@@ -103,7 +103,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 	mr.runFinished = make(chan bool, 1)
 	mr.stopSignals = make(chan os.Signal)
 
-	mr.log().Info("Starting multi-runner from", mr.ConfigFile, "...")
+	mr.log().Info("Starting multi-runner from ", mr.ConfigFile, "...")
 
 	userModeWarning(false)
 
