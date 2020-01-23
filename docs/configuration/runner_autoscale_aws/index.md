@@ -394,10 +394,10 @@ While Spot instances is a great way to use unused resources and minimize the
 costs of your infrastructure, you must be aware of the implications.
 
 Running CI jobs on Spot instances may increase the failure rates because of the
-Spot instances pricing model. If the maximum Spot price you specify exceeds the 
-current Spot price you will not get the capacity requested. Spot pricing is 
-revised on an hourly basis. Any existing Spot instances that have a maximum price 
-below the revised Spot instance price will be terminated within two minutes and 
+Spot instances pricing model. If the maximum Spot price you specify exceeds the
+current Spot price you will not get the capacity requested. Spot pricing is
+revised on an hourly basis. Any existing Spot instances that have a maximum price
+below the revised Spot instance price will be terminated within two minutes and
 all jobs on Spot hosts will fail.
 
 As a consequence, the auto-scale Runner would fail to create new machines while
