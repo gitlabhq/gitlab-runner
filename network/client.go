@@ -58,6 +58,8 @@ type client struct {
 	lastUpdate      string
 	requestBackOffs map[string]*backoff.Backoff
 	lock            sync.Mutex
+
+	requester requester
 }
 
 type ResponseTLSData struct {
@@ -192,21 +194,13 @@ func (n *client) backoffRequired(res *http.Response) bool {
 	return res.StatusCode >= 400 && res.StatusCode < 600
 }
 
-func (n *client) doBackoffRequest(req *http.Request) (res *http.Response, err error) {
-	res, err = n.Do(req)
-	if err != nil {
-		err = fmt.Errorf("couldn't execute %v against %s: %w", req.Method, req.URL, err)
-		return
-	}
-
+func (n *client) checkBackoffRequest(req *http.Request, res *http.Response) {
 	backoffDelay := n.ensureBackoff(req.Method, req.RequestURI)
 	if n.backoffRequired(res) {
 		time.Sleep(backoffDelay.Duration())
 	} else {
 		backoffDelay.Reset()
 	}
-
-	return
 }
 
 func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
@@ -232,7 +226,12 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 
 	n.ensureTLSConfig()
 
-	res, err = n.doBackoffRequest(req)
+	res, err = n.requester.Do(req)
+	if err != nil {
+		return
+	}
+
+	n.checkBackoffRequest(req, res)
 	return
 }
 
@@ -364,6 +363,7 @@ func newClient(requestCredentials requestCredentials) (c *client, err error) {
 		keyFile:         requestCredentials.GetTLSKeyFile(),
 		requestBackOffs: make(map[string]*backoff.Backoff),
 	}
+	c.requester = newRateLimitRequester(&c.Client)
 
 	host := strings.Split(url.Host, ":")[0]
 	if CertificateDirectory != "" {

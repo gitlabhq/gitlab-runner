@@ -20,6 +20,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
@@ -435,4 +436,24 @@ func TestRequestsBackOff(t *testing.T) {
 			assert.Equal(t, expected, backoff.Attempt())
 		})
 	}
+}
+
+func TestRequesterCalled(t *testing.T) {
+	c, _ := newClient(&RunnerCredentials{
+		URL: "http://localhost:1000/",
+	})
+
+	rl := &mockRequester{}
+	defer rl.AssertExpectations(t)
+
+	resReturn := &http.Response{
+		StatusCode: http.StatusOK,
+	}
+	rl.On("Do", mock.MatchedBy(func(req *http.Request) bool {
+		return req.URL.String() == "http://mockURL" && req.Method == http.MethodGet
+	})).Return(resReturn, nil)
+	c.requester = rl
+
+	res, _ := c.do("http://mockURL", http.MethodGet, nil, "", nil)
+	assert.Equal(t, resReturn, res)
 }
