@@ -378,7 +378,7 @@ You may further customize your Spot instance request:
 ```
 
 With this configuration, Docker Machines are created using Spot instances with a
-maximum Spot request price of $0.03 per hour and the duration of the Spot instance 
+maximum Spot request price of $0.03 per hour and the duration of the Spot instance
 is capped at 60 minutes. The `0.03` number mentioned above is just an example, so
 be sure to check on the current pricing based on the region you picked.
 
