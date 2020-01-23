@@ -1,3 +1,7 @@
+v12.7.1 (2020-01-23)
+
+- Fix `--docker-services` flag in register command !1776
+
 v12.7.0 (2020-01-20)
 
 - Fixing kramdown link error !1711
