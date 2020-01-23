@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -16,22 +15,22 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
-func newCommand(ctx context.Context, t *testing.T, executable string, options CreateOptions) (*mockCommander, *process.MockKillWaiter, Command, func()) {
-	commanderMock := new(mockCommander)
+func newCommand(ctx context.Context, t *testing.T, executable string, options process.CommandOptions) (*process.MockCommander, *process.MockKillWaiter, Command, func()) {
+	commanderMock := new(process.MockCommander)
 	processKillWaiterMock := new(process.MockKillWaiter)
 
-	oldNewCmd := newCmd
+	oldNewCmd := newCommander
 	oldNewProcessKillWaiter := newProcessKillWaiter
 
 	cleanup := func() {
-		newCmd = oldNewCmd
+		newCommander = oldNewCmd
 		newProcessKillWaiter = oldNewProcessKillWaiter
 
 		commanderMock.AssertExpectations(t)
 		processKillWaiterMock.AssertExpectations(t)
 	}
 
-	newCmd = func(executable string, args []string, options CreateOptions) commander {
+	newCommander = func(string, []string, process.CommandOptions) process.Commander {
 		return commanderMock
 	}
 
@@ -91,8 +90,8 @@ func TestCommand_Run(t *testing.T) {
 			ctx, ctxCancel := context.WithCancel(context.Background())
 			defer ctxCancel()
 
-			options := CreateOptions{
-				Logger:              common.NewBuildLogger(nil, logrus.NewEntry(logrus.New())),
+			options := process.CommandOptions{
+				Logger:              new(process.MockLogger),
 				GracefulKillTimeout: 100 * time.Millisecond,
 				ForceKillTimeout:    100 * time.Millisecond,
 			}
@@ -119,11 +118,8 @@ func TestCommand_Run(t *testing.T) {
 
 			if tt.contextClosed {
 				ctxCancel()
-				commanderMock.On("Process").
-					Return(tt.process)
-
 				processKillWaiterMock.
-					On("KillAndWait", tt.process, mock.Anything).
+					On("KillAndWait", commanderMock, mock.Anything).
 					Return(testErr).
 					Once()
 			}

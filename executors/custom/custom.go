@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
 type commandOutputs struct {
@@ -189,12 +190,16 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 var commandFactory = command.New
 
 func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) command.Command {
-	cmdOpts := command.CreateOptions{
+	logger := &processLogger{
+		buildLogger: e.BuildLogger,
+	}
+
+	cmdOpts := process.CommandOptions{
 		Dir:                 e.tempDir,
 		Env:                 make([]string, 0),
 		Stdout:              opts.out.stdout,
 		Stderr:              opts.out.stderr,
-		Logger:              e.BuildLogger,
+		Logger:              logger,
 		GracefulKillTimeout: e.config.GetGracefulKillTimeout(),
 		ForceKillTimeout:    e.config.GetForceKillTimeout(),
 	}

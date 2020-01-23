@@ -29,7 +29,7 @@ func mockKillerFactory(t *testing.T) (*mockKiller, func()) {
 		killerMock.AssertExpectations(t)
 	}
 
-	newProcessKiller = func(logger Logger, process *os.Process) killer {
+	newProcessKiller = func(logger Logger, cmd Commander) killer {
 		return killerMock
 	}
 
@@ -77,6 +77,11 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 			loggerMock := new(MockLogger)
 			defer loggerMock.AssertExpectations(t)
 
+			commanderMock := new(MockCommander)
+			defer commanderMock.AssertExpectations(t)
+
+			commanderMock.On("Process").Return(testCase.process)
+
 			if testCase.process != nil {
 				loggerMock.
 					On("WithFields", mock.Anything).
@@ -99,7 +104,7 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 			}
 
 			kw := NewOSKillWait(loggerMock, 100*time.Millisecond, 100*time.Millisecond)
-			err := kw.KillAndWait(testCase.process, waitCh)
+			err := kw.KillAndWait(commanderMock, waitCh)
 
 			if testCase.expectedError == nil {
 				assert.NoError(t, err)
@@ -111,7 +116,7 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 	}
 }
 
-func newKillerWithLoggerAndCommand(t *testing.T, duration string, skipTerminate bool) (killer, *MockLogger, *exec.Cmd, func()) {
+func newKillerWithLoggerAndCommand(t *testing.T, duration string, skipTerminate bool) (killer, *MockLogger, Commander, func()) {
 	t.Helper()
 
 	loggerMock := new(MockLogger)
@@ -122,11 +127,11 @@ func newKillerWithLoggerAndCommand(t *testing.T, duration string, skipTerminate 
 		args = append(args, "skip-terminate-signals")
 	}
 
-	command := exec.Command(sleepBinary, args...)
+	command := NewOSCmd(sleepBinary, args, CommandOptions{})
 	err := command.Start()
 	require.NoError(t, err)
 
-	k := newKiller(loggerMock, command.Process)
+	k := newKiller(loggerMock, command)
 
 	cleanup := func() {
 		loggerMock.AssertExpectations(t)
@@ -180,7 +185,7 @@ func TestKiller(t *testing.T) {
 			waitCh := make(chan error)
 
 			if testCase.alreadyStopped {
-				_ = cmd.Process.Kill()
+				_ = cmd.Process().Kill()
 
 				loggerMock.On("Warn",
 					"Failed to terminate process:",

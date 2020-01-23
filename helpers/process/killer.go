@@ -3,7 +3,6 @@ package process
 import (
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -21,7 +20,7 @@ type killer interface {
 var newProcessKiller = newKiller
 
 type KillWaiter interface {
-	KillAndWait(process *os.Process, waitCh chan error) error
+	KillAndWait(command Commander, waitCh chan error) error
 }
 
 type KillProcessError struct {
@@ -56,7 +55,8 @@ func NewOSKillWait(logger Logger, gracefulKillTimeout time.Duration, forceKillTi
 // KillAndWait will take the specified process and terminate the process and
 // wait util the waitCh returns or the graceful kill timer runs out after which
 // a force kill on the process would be triggered.
-func (kw *osKillWait) KillAndWait(process *os.Process, waitCh chan error) error {
+func (kw *osKillWait) KillAndWait(command Commander, waitCh chan error) error {
+	process := command.Process()
 	if process == nil {
 		return ErrProcessNotStarted
 	}
@@ -65,7 +65,7 @@ func (kw *osKillWait) KillAndWait(process *os.Process, waitCh chan error) error 
 		"PID": process.Pid,
 	})
 
-	processKiller := newProcessKiller(log, process)
+	processKiller := newProcessKiller(log, command)
 	processKiller.Terminate()
 
 	select {
