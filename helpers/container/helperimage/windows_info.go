@@ -2,34 +2,20 @@ package helperimage
 
 import (
 	"fmt"
-	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 )
 
 const (
-	windows1809 = "1809"
-	windows1803 = "1803"
-
 	baseImage1809 = "servercore1809"
 	baseImage1803 = "servercore1803"
 
 	windowsSupportedArchitecture = "x86_64"
 )
 
-var supportedOSVersions = map[string]string{
-	windows1803: baseImage1803,
-	windows1809: baseImage1809,
-}
-
-type unsupportedWindowsVersionError struct {
-	version string
-}
-
-func newUnsupportedWindowsVersionError(version string) *unsupportedWindowsVersionError {
-	return &unsupportedWindowsVersionError{version: version}
-}
-
-func (e *unsupportedWindowsVersionError) Error() string {
-	return fmt.Sprintf("unsupported Windows version: %s", e.version)
+var helperImages = map[string]string{
+	windows.V1803: baseImage1803,
+	windows.V1809: baseImage1809,
 }
 
 var powerShellCmd = []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"}
@@ -37,27 +23,31 @@ var powerShellCmd = []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputForma
 type windowsInfo struct{}
 
 func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
-	osVersion, err := w.osVersion(cfg.OperatingSystem)
+	baseImage, err := w.baseImage(cfg.OperatingSystem)
 	if err != nil {
-		return Info{}, err
+		return Info{}, fmt.Errorf("detecting base image: %w", err)
 	}
 
 	return Info{
 		Architecture:            windowsSupportedArchitecture,
 		Name:                    name,
-		Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, osVersion),
+		Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage),
 		IsSupportingLocalImport: false,
 		Cmd:                     powerShellCmd,
 	}, nil
 
 }
 
-func (w *windowsInfo) osVersion(operatingSystem string) (string, error) {
-	for osVersion, baseImage := range supportedOSVersions {
-		if strings.Contains(operatingSystem, fmt.Sprintf(" %s ", osVersion)) {
-			return baseImage, nil
-		}
+func (w *windowsInfo) baseImage(operatingSystem string) (string, error) {
+	version, err := windows.Version(operatingSystem)
+	if err != nil {
+		return "", err
 	}
 
-	return "", newUnsupportedWindowsVersionError(operatingSystem)
+	baseImage, ok := helperImages[version]
+	if !ok {
+		return "", windows.NewUnsupportedWindowsVersionError(operatingSystem)
+	}
+
+	return baseImage, nil
 }
