@@ -8,4 +8,5 @@ package main
 import (
 	_ "github.com/mitchellh/gox"
 	_ "github.com/vektra/mockery/cmd/mockery"
+	_ "gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator/cmd/release-index-gen"
 )

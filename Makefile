@@ -49,6 +49,7 @@ export CGO_ENABLED ?= 0
 # Development Tools
 GOX = gox
 MOCKERY = mockery
+RELEASE_INDEX_GENERATOR = release-index-gen
 DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
 
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
@@ -241,9 +242,18 @@ prepare_zoneinfo:
 	# preparing the zoneinfo file
 	@cp $$GOROOT/lib/time/zoneinfo.zip out/
 
-prepare_index:
+prepare_index: CI_COMMIT_REF_NAME ?= $(BRANCH)
+prepare_index: CI_COMMIT_SHA ?= $(REVISION)
+prepare_index: $(RELEASE_INDEX_GENERATOR)
 	# Preparing index file
-	@./ci/prepare_index
+	@$(RELEASE_INDEX_GENERATOR) -working-directory out/ \
+						      -project-version $(VERSION) \
+						      -project-git-ref $(CI_COMMIT_REF_NAME) \
+						      -project-git-revision $(CI_COMMIT_SHA) \
+						      -project-name "GitLab Runner" \
+						      -project-repo-url "https://gitlab.com/gitlab-org/gitlab-runner" \
+						      -gpg-key-env GPG_KEY \
+						      -gpg-password-env GPG_PASSPHRASE
 
 release_docker_images: export RUNNER_BINARY := out/binaries/gitlab-runner-linux-amd64
 release_docker_images:
@@ -287,6 +297,9 @@ $(GOX):
 
 $(MOCKERY):
 	go get github.com/vektra/mockery/cmd/mockery
+
+$(RELEASE_INDEX_GENERATOR):
+	go get gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator/cmd/release-index-gen
 
 clean:
 	-$(RM) -rf $(TARGET_DIR)
