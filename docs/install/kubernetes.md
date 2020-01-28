@@ -216,14 +216,14 @@ the `kubectl create secret` command from the directory with the certificate:
 kubectl
   --namespace <NAMESPACE>
   create secret generic <SECRET_NAME>
-  --from-file=<CERTFICATE_FILENAME>
+  --from-file=<CERTIFICATE_FILENAME>
 ```
 
 Where:
 
 - `<NAMESPACE>` is the Kubernetes namespace where you want to install the GitLab Runner.
 - `<SECRET_NAME>` is the Kubernetes Secret resource name. For example: `gitlab-domain-cert`.
-- `<CERTFICATE_FILENAME>` is the filename for the certificate in your current directory that will be imported into the secret.
+- `<CERTIFICATE_FILENAME>` is the filename for the certificate in your current directory that will be imported into the secret.
 
 You then need to provide the secret's name to the GitLab Runner chart.
 Add the following to your `values.yaml`:
