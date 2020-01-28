@@ -44,6 +44,8 @@ func NewOSCmd(executable string, args []string, options CommandOptions) Commande
 }
 
 func (c *osCmd) Start() error {
+	setProcessGroup(c.internal)
+
 	return c.internal.Start()
 }
 
