@@ -31,7 +31,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	// expand environment variables to have current directory
 	wd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Getwd: %w", err)
+		return fmt.Errorf("getwd: %w", err)
 	}
 
 	mapping := func(key string) string {
@@ -72,7 +72,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	// Create execution command
 	c := exec.Command(s.BuildShell.Command, s.BuildShell.Arguments...)
 	if c == nil {
-		return errors.New("Failed to generate execution command")
+		return errors.New("failed to generate execution command")
 	}
 
 	helpers.SetProcessGroup(c)
@@ -104,7 +104,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	// Start a process
 	err := c.Start()
 	if err != nil {
-		return fmt.Errorf("Failed to start process: %w", err)
+		return fmt.Errorf("failed to start process: %w", err)
 	}
 
 	// Wait for process to finish
