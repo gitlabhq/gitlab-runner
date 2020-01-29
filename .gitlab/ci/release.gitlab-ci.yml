@@ -48,6 +48,8 @@
 .release_s3:
   extends:
   - .release
+  before_script:
+  - source ci/touch_make_dependencies
   script:
   - make release_s3
   - |
