@@ -147,6 +147,7 @@ windows 1803 tests:
   - .windows1803
 
 windows 1809 tests:
+  parallel: 8
   extends:
   - .windows test
   - .windows1809
