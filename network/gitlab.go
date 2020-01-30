@@ -492,6 +492,9 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 	case http.StatusRequestEntityTooLarge:
 		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "too large archive")
 		return common.UploadTooLarge
+	case http.StatusUnprocessableEntity:
+		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "unprocessable entity")
+		return common.UploadUnprocessableEntity
 	default:
 		log.WithField("status", res.Status).Warningln("Uploading artifacts to coordinator...", "failed")
 		return common.UploadFailed

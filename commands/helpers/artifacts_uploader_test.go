@@ -76,6 +76,31 @@ func TestArtifactsUploaderForbidden(t *testing.T) {
 	assert.Equal(t, 1, network.uploadCalled)
 }
 
+func TestArtifactsUploaderUnprocessableEntityNoRetry(t *testing.T) {
+	network := &testNetwork{
+		uploadState: common.UploadUnprocessableEntity,
+	}
+	cmd := ArtifactsUploaderCommand{
+		JobCredentials: UploaderCredentials,
+		network:        network,
+		fileArchiver: fileArchiver{
+			Paths: []string{artifactsTestArchivedFile},
+		},
+	}
+
+	writeTestFile(t, artifactsTestArchivedFile)
+	defer os.Remove(artifactsTestArchivedFile)
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+
+	assert.Panics(t, func() {
+		cmd.Execute(nil)
+	})
+
+	assert.Equal(t, 1, network.uploadCalled)
+}
+
 func TestArtifactsUploaderRetry(t *testing.T) {
 	network := &testNetwork{
 		uploadState: common.UploadFailed,
@@ -227,7 +252,7 @@ func TestArtifactsUploaderRawDoesNotSendMultipleFiles(t *testing.T) {
 	defer os.Remove(artifactsTestArchivedFile)
 
 	writeTestFile(t, artifactsTestArchivedFile2)
-	defer os.Remove(artifactsTestArchivedFile)
+	defer os.Remove(artifactsTestArchivedFile2)
 
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
