@@ -2,7 +2,7 @@
 
 set -eo pipefail
 
-refName=${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-CI_COMMIT_REF_NAME}
+refName=${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_REF_NAME}
 
 make s3-upload "S3_UPLOAD_PATH=${refName}"
 if [[ -n "${IS_LATEST}" ]]; then
