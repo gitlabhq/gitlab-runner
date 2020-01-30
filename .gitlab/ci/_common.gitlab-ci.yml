@@ -96,5 +96,6 @@ before_script:
   - .windows_base
   - .windows1809_variables
   tags:
+  - shared-windows
+  - windows
   - windows-1809
-  - shell
