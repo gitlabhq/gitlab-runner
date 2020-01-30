@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/url"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 type UpdateState int
@@ -41,6 +41,7 @@ const (
 	UploadTooLarge
 	UploadForbidden
 	UploadFailed
+	UploadUnprocessableEntity
 )
 
 const (

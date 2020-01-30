@@ -968,35 +968,46 @@ func TestAbortedPatchTrace(t *testing.T) {
 }
 
 func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Request, body string) {
-	switch body {
-	case "too-large":
-		w.WriteHeader(http.StatusRequestEntityTooLarge)
+	cases := map[string]struct {
+		formValueKey string
+		statusCode   int
+	}{
+		"too-large": {
+			statusCode: http.StatusRequestEntityTooLarge,
+		},
+		"content": {
+			statusCode: http.StatusCreated,
+		},
+		"zip": {
+			statusCode:   http.StatusCreated,
+			formValueKey: "artifact_format",
+		},
+		"gzip": {
+			statusCode:   http.StatusCreated,
+			formValueKey: "artifact_format",
+		},
+		"junit": {
+			statusCode:   http.StatusCreated,
+			formValueKey: "artifact_type",
+		},
+		"unprocessable-entity": {
+			statusCode: http.StatusUnprocessableEntity,
+		},
+	}
+
+	testCase, ok := cases[body]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
 
-	case "content":
-		w.WriteHeader(http.StatusCreated)
-		return
-
-	case "zip":
-		if r.FormValue("artifact_format") == "zip" {
-			w.WriteHeader(http.StatusCreated)
-			return
-		}
-
-	case "gzip":
-		if r.FormValue("artifact_format") == "gzip" {
-			w.WriteHeader(http.StatusCreated)
-			return
-		}
-
-	case "junit":
-		if r.FormValue("artifact_type") == "junit" {
-			w.WriteHeader(http.StatusCreated)
+	if len(testCase.formValueKey) > 0 {
+		if r.FormValue(testCase.formValueKey) != body {
 			return
 		}
 	}
 
-	w.WriteHeader(http.StatusBadRequest)
+	w.WriteHeader(testCase.statusCode)
 }
 
 func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
@@ -1100,6 +1111,10 @@ func TestArtifactsUpload(t *testing.T) {
 
 	state = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
+
+	ioutil.WriteFile(tempFile.Name(), []byte("unprocessable-entity"), 0600)
+	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	assert.Equal(t, UploadUnprocessableEntity, state, "Artifacts should be not uploaded, because of unprocessable entity response")
 }
 
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
