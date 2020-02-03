@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -92,10 +91,8 @@ func (c *command) Run() error {
 	}
 }
 
-var getExitStatus = func(err *exec.ExitError) int {
-	// TODO: simplify when we will update to Go 1.12. ExitStatus()
-	//       is available there directly from err.Sys().
-	return err.Sys().(syscall.WaitStatus).ExitStatus()
+var getExitCode = func(err *exec.ExitError) int {
+	return err.ExitCode()
 }
 
 func (c *command) waitForCommand() {
@@ -103,10 +100,11 @@ func (c *command) waitForCommand() {
 
 	eerr, ok := err.(*exec.ExitError)
 	if ok {
-		exitCode := getExitStatus(eerr)
-		if exitCode == BuildFailureExitCode {
+		exitCode := getExitCode(eerr)
+		switch {
+		case exitCode == BuildFailureExitCode:
 			err = &common.BuildError{Inner: eerr}
-		} else if exitCode != SystemFailureExitCode {
+		case exitCode != SystemFailureExitCode:
 			err = &ErrUnknownFailure{Inner: eerr, ExitCode: exitCode}
 		}
 	}
