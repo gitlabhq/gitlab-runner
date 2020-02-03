@@ -242,8 +242,8 @@ prepare_zoneinfo:
 	# preparing the zoneinfo file
 	@cp $$GOROOT/lib/time/zoneinfo.zip out/
 
-prepare_index: CI_COMMIT_REF_NAME ?= $(BRANCH)
-prepare_index: CI_COMMIT_SHA ?= $(REVISION)
+prepare_index: export CI_COMMIT_REF_NAME ?= $(BRANCH)
+prepare_index: export CI_COMMIT_SHA ?= $(REVISION)
 prepare_index: $(RELEASE_INDEX_GENERATOR)
 	# Preparing index file
 	@$(RELEASE_INDEX_GENERATOR) -working-directory out/ \
