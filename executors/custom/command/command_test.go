@@ -47,7 +47,7 @@ func TestCommand_Run(t *testing.T) {
 	tests := map[string]struct {
 		cmdStartErr       error
 		cmdWaitErr        error
-		getExitStatus     func(err *exec.ExitError) int
+		getExitCode       func(err *exec.ExitError) int
 		contextClosed     bool
 		process           *os.Process
 		expectedError     string
@@ -59,19 +59,19 @@ func TestCommand_Run(t *testing.T) {
 		},
 		"command ends with a build failure": {
 			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
-			getExitStatus:     func(err *exec.ExitError) int { return BuildFailureExitCode },
+			getExitCode:       func(err *exec.ExitError) int { return BuildFailureExitCode },
 			expectedError:     "exit status 0",
 			expectedErrorType: &common.BuildError{},
 		},
 		"command ends with a system failure": {
 			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
-			getExitStatus:     func(err *exec.ExitError) int { return SystemFailureExitCode },
+			getExitCode:       func(err *exec.ExitError) int { return SystemFailureExitCode },
 			expectedError:     "exit status 0",
 			expectedErrorType: &exec.ExitError{},
 		},
 		"command ends with a unknown failure": {
 			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
-			getExitStatus:     func(err *exec.ExitError) int { return 255 },
+			getExitCode:       func(err *exec.ExitError) int { return 255 },
 			expectedError:     "unknown Custom executor executable exit code 255; executable execution terminated with: exit status 0",
 			expectedErrorType: &ErrUnknownFailure{},
 		},
@@ -111,12 +111,12 @@ func TestCommand_Run(t *testing.T) {
 				}).
 				Maybe()
 
-			if tt.getExitStatus != nil {
-				oldGetExitStatus := getExitStatus
+			if tt.getExitCode != nil {
+				oldGetExitCode := getExitCode
 				defer func() {
-					getExitStatus = oldGetExitStatus
+					getExitCode = oldGetExitCode
 				}()
-				getExitStatus = tt.getExitStatus
+				getExitCode = tt.getExitCode
 			}
 
 			if tt.contextClosed {

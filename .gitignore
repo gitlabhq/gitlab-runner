@@ -11,6 +11,7 @@ dockerfiles/alpine/checksums
 dockerfiles/build/binaries/gitlab-runner-helper.*
 dockerfiles/ubuntu/gitlab-runner_amd64.deb
 dockerfiles/ubuntu/checksums
+.DS_Store
 .idea/
 .editorconfig
 tests/ubuntu/.vagrant
