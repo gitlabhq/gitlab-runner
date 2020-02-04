@@ -15,13 +15,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/kardianos/osext"
 	"github.com/mattn/go-zglob"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -437,35 +437,6 @@ func (e *executor) markImageAsUsed(imageName, imageID string) {
 	}
 }
 
-func (e *executor) splitServiceAndVersion(serviceDescription string) (service, version, imageName string, linkNames []string) {
-	ReferenceRegexpNoPort := regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
-	imageName = serviceDescription
-	version = "latest"
-
-	if match := reference.ReferenceRegexp.FindStringSubmatch(serviceDescription); match != nil {
-		matchService := ReferenceRegexpNoPort.FindStringSubmatch(match[1])
-		service = matchService[1] + matchService[3]
-
-		if len(match[2]) > 0 {
-			version = match[2]
-		} else {
-			imageName = match[1] + ":" + version
-		}
-	} else {
-		return
-	}
-
-	linkName := strings.Replace(service, "/", "__", -1)
-	linkNames = append(linkNames, linkName)
-
-	// Create alternative link name according to RFC 1123
-	// Where you can use only `a-zA-Z0-9-`
-	if alternativeName := strings.Replace(service, "/", "-", -1); linkName != alternativeName {
-		linkNames = append(linkNames, alternativeName)
-	}
-	return
-}
-
 func (e *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image) (*types.Container, error) {
 	if len(service) == 0 {
 		return nil, fmt.Errorf("invalid service name: %s", serviceDefinition.Name)
@@ -590,13 +561,13 @@ func (e *executor) buildServiceLinks(linksMap map[string]*types.Container) (link
 func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefinition common.Image, linksMap map[string]*types.Container) (err error) {
 	var container *types.Container
 
-	service, version, imageName, linkNames := e.splitServiceAndVersion(serviceDefinition.Name)
+	serviceMeta := services.SplitNameAndVersion(serviceDefinition.Name)
 
 	if serviceDefinition.Alias != "" {
-		linkNames = append(linkNames, serviceDefinition.Alias)
+		serviceMeta.Aliases = append(serviceMeta.Aliases, serviceDefinition.Alias)
 	}
 
-	for _, linkName := range linkNames {
+	for _, linkName := range serviceMeta.Aliases {
 		if linksMap[linkName] != nil {
 			e.Warningln("Service", serviceDefinition.Name, "is already created. Ignoring.")
 			continue
@@ -604,7 +575,7 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 
 		// Create service if not yet created
 		if container == nil {
-			container, err = e.createService(serviceIndex, service, version, imageName, serviceDefinition)
+			container, err = e.createService(serviceIndex, serviceMeta.Service, serviceMeta.Version, serviceMeta.ImageName, serviceDefinition)
 			if err != nil {
 				return
 			}

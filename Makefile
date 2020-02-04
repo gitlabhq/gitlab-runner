@@ -141,6 +141,7 @@ mocks: $(MOCKERY)
 	mockery $(MOCKERY_FLAGS) -dir=./helpers -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./executors/docker -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./executors/custom -all -inpkg
+	mockery $(MOCKERY_FLAGS) -dir=./executors/kubernetes -name=featureChecker -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./cache -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
 	mockery $(MOCKERY_FLAGS) -dir=./log -all -inpkg
