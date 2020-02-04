@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -78,6 +78,18 @@ func TestBuildRun(t *testing.T) {
 }
 
 func TestBuildPredefinedVariables(t *testing.T) {
+	for _, rootDir := range []string{"/root/dir1", "/root/dir2"} {
+		build := runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error {
+			return options.Build.StartBuild(rootDir, "/cache/dir", false, false)
+		})
+		executors = nil
+
+		projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
+		assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
+	}
+}
+
+func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepareOptions) error) *Build {
 	e := MockExecutor{}
 	defer e.AssertExpectations(t)
 
@@ -92,11 +104,7 @@ func TestBuildPredefinedVariables(t *testing.T) {
 	p.On("Create").Return(&e).Once()
 
 	// We run everything once
-	e.On("Prepare", mock.Anything).
-		Return(func(options ExecutorPrepareOptions) error {
-			options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
-			return nil
-		}).Once()
+	e.On("Prepare", mock.Anything).Return(prepareFn).Once()
 	e.On("Finish", nil).Return().Once()
 	e.On("Cleanup").Return().Once()
 
@@ -126,8 +134,60 @@ func TestBuildPredefinedVariables(t *testing.T) {
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
-	projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
-	assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
+	return build
+}
+
+func TestJobImageExposed(t *testing.T) {
+	tests := map[string]struct {
+		image           string
+		vars            []JobVariable
+		expectVarExists bool
+		expectImageName string
+	}{
+		"normal image exposed": {
+			image:           "alpine:3.11",
+			expectVarExists: true,
+			expectImageName: "alpine:3.11",
+		},
+		"image with variable expansion": {
+			image:           "${IMAGE}:3.11",
+			vars:            []JobVariable{{Key: "IMAGE", Value: "alpine", Public: true}},
+			expectVarExists: true,
+			expectImageName: "alpine:3.11",
+		},
+		"no image specified": {
+			image:           "",
+			expectVarExists: false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error {
+				options.Build.Image.Name = tt.image
+				options.Build.Variables = append(options.Build.Variables, tt.vars...)
+				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
+			})
+			executors = nil
+
+			actualVarExists := false
+			for _, v := range build.GetAllVariables() {
+				if v.Key == "CI_JOB_IMAGE" {
+					actualVarExists = true
+					break
+				}
+			}
+
+			if tt.expectVarExists {
+				assert.Equal(t, tt.expectVarExists, actualVarExists, "CI_JOB_IMAGE should be defined")
+
+				actualJobImage := build.GetAllVariables().Get("CI_JOB_IMAGE")
+				assert.Equal(t, tt.expectImageName, actualJobImage)
+			} else {
+				assert.Equal(t, tt.expectVarExists, actualVarExists, "CI_JOB_IMAGE should not be defined")
+			}
+		})
+	}
 }
 
 func TestBuildRunNoModifyConfig(t *testing.T) {

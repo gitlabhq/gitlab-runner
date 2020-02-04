@@ -724,6 +724,9 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, b.GetDefaultVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
+	if b.Image.Name != "" {
+		variables = append(variables, JobVariable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false})
+	}
 	variables = append(variables, b.GetSharedEnvVariable())
 	variables = append(variables, AppVersion.Variables()...)
 

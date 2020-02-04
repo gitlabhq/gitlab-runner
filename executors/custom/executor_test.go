@@ -512,6 +512,8 @@ func TestExecutor_Run(t *testing.T) {
 }
 
 func TestExecutor_Env(t *testing.T) {
+	ciJobImageEnv := "CUSTOM_ENV_CI_JOB_IMAGE"
+
 	runnerConfig := getRunnerConfig(&common.CustomConfig{
 		RunExec:     "bash",
 		PrepareExec: "echo",
