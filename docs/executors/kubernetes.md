@@ -17,11 +17,10 @@ Note that when services and containers are running in the same Kubernetes
 pod, they are all sharing the same localhost address. The following restrictions
 are then applicable:
 
-- The services are *not* accessible via their DNS name, you need to use localhost
-  instead.
+- Since GitLab Runner 12.8 and Kubernetes 1.7, the services are accessible via their DNS names. If you are using an older version you will have to use `localhost`.
 - You cannot use several services using the same port (e.g., you cannot have two
   `mysql` services at the same time).
-
+  
 ## Workflow
 
 The Kubernetes executor divides the build into multiple steps:

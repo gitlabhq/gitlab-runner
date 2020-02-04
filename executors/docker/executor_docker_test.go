@@ -20,13 +20,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
+	service_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -140,58 +140,6 @@ func TestVerifyAllowedImage(t *testing.T) {
 	}
 }
 
-type testServiceDescription struct {
-	description string
-	image       string
-	service     string
-	version     string
-	alias       string
-	alternative string
-}
-
-var testServices = []testServiceDescription{
-	{"service", "service:latest", "service", "latest", "service", ""},
-	{"service:version", "service:version", "service", "version", "service", ""},
-	{"namespace/service", "namespace/service:latest", "namespace/service", "latest", "namespace__service", "namespace-service"},
-	{"namespace/service:version", "namespace/service:version", "namespace/service", "version", "namespace__service", "namespace-service"},
-	{"domain.tld/service", "domain.tld/service:latest", "domain.tld/service", "latest", "domain.tld__service", "domain.tld-service"},
-	{"domain.tld/service:version", "domain.tld/service:version", "domain.tld/service", "version", "domain.tld__service", "domain.tld-service"},
-	{"domain.tld/namespace/service", "domain.tld/namespace/service:latest", "domain.tld/namespace/service", "latest", "domain.tld__namespace__service", "domain.tld-namespace-service"},
-	{"domain.tld/namespace/service:version", "domain.tld/namespace/service:version", "domain.tld/namespace/service", "version", "domain.tld__namespace__service", "domain.tld-namespace-service"},
-	{"domain.tld:8080/service", "domain.tld:8080/service:latest", "domain.tld/service", "latest", "domain.tld__service", "domain.tld-service"},
-	{"domain.tld:8080/service:version", "domain.tld:8080/service:version", "domain.tld/service", "version", "domain.tld__service", "domain.tld-service"},
-	{"domain.tld:8080/namespace/service", "domain.tld:8080/namespace/service:latest", "domain.tld/namespace/service", "latest", "domain.tld__namespace__service", "domain.tld-namespace-service"},
-	{"domain.tld:8080/namespace/service:version", "domain.tld:8080/namespace/service:version", "domain.tld/namespace/service", "version", "domain.tld__namespace__service", "domain.tld-namespace-service"},
-	{"subdomain.domain.tld:8080/service", "subdomain.domain.tld:8080/service:latest", "subdomain.domain.tld/service", "latest", "subdomain.domain.tld__service", "subdomain.domain.tld-service"},
-	{"subdomain.domain.tld:8080/service:version", "subdomain.domain.tld:8080/service:version", "subdomain.domain.tld/service", "version", "subdomain.domain.tld__service", "subdomain.domain.tld-service"},
-	{"subdomain.domain.tld:8080/namespace/service", "subdomain.domain.tld:8080/namespace/service:latest", "subdomain.domain.tld/namespace/service", "latest", "subdomain.domain.tld__namespace__service", "subdomain.domain.tld-namespace-service"},
-	{"subdomain.domain.tld:8080/namespace/service:version", "subdomain.domain.tld:8080/namespace/service:version", "subdomain.domain.tld/namespace/service", "version", "subdomain.domain.tld__namespace__service", "subdomain.domain.tld-namespace-service"},
-}
-
-func testSplitService(t *testing.T, test testServiceDescription) {
-	e := executor{}
-	service, version, imageName, linkNames := e.splitServiceAndVersion(test.description)
-
-	assert.Equal(t, test.service, service, "service for "+test.description)
-	assert.Equal(t, test.version, version, "version for "+test.description)
-	assert.Equal(t, test.image, imageName, "image for "+test.description)
-	assert.Equal(t, test.alias, linkNames[0], "alias for "+test.description)
-	if test.alternative != "" {
-		assert.Len(t, linkNames, 2, "linkNames len for "+test.description)
-		assert.Equal(t, test.alternative, linkNames[1], "alternative for "+test.description)
-	} else {
-		assert.Len(t, linkNames, 1, "linkNames len for "+test.description)
-	}
-}
-
-func TestSplitService(t *testing.T) {
-	for _, test := range testServices {
-		t.Run(test.description, func(t *testing.T) {
-			testSplitService(t, test)
-		})
-	}
-}
-
 func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string) {
 	var c docker_helpers.MockClient
 	defer c.AssertExpectations(t)
@@ -271,9 +219,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 }
 
 func TestServiceFromNamedImage(t *testing.T) {
-	for _, test := range testServices {
-		t.Run(test.description, func(t *testing.T) {
-			testServiceFromNamedImage(t, test.description, test.image, test.service)
+	for _, test := range service_test.TestServices {
+		t.Run(test.Description, func(t *testing.T) {
+			testServiceFromNamedImage(t, test.Description, test.Image, test.Service)
 		})
 	}
 }

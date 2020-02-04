@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -953,6 +954,7 @@ func TestPrepare(t *testing.T) {
 			// It currently contains some moving parts that are failing, meaning
 			// we'll need to mock _something_
 			e.kubeClient = nil
+			e.featureChecker = nil
 			assert.Equal(t, test.Expected, e)
 		})
 	}
@@ -1147,12 +1149,13 @@ func TestSetupCredentials(t *testing.T) {
 }
 
 type setupBuildPodTestDef struct {
-	RunnerConfig     common.RunnerConfig
-	Variables        []common.JobVariable
-	Options          *kubernetesOptions
-	PrepareFn        func(*testing.T, setupBuildPodTestDef, *executor)
-	VerifyFn         func(*testing.T, setupBuildPodTestDef, *api.Pod)
-	VerifyExecutorFn func(*testing.T, setupBuildPodTestDef, *executor)
+	RunnerConfig             common.RunnerConfig
+	Variables                []common.JobVariable
+	Options                  *kubernetesOptions
+	PrepareFn                func(*testing.T, setupBuildPodTestDef, *executor)
+	VerifyFn                 func(*testing.T, setupBuildPodTestDef, *api.Pod)
+	VerifyExecutorFn         func(*testing.T, setupBuildPodTestDef, *executor)
+	VerifySetupBuildPodErrFn func(*testing.T, error)
 }
 
 type setupBuildPodFakeRoundTripper struct {
@@ -1192,6 +1195,7 @@ func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Res
 
 func TestSetupBuildPod(t *testing.T) {
 	version, _ := testVersionAndCodec()
+	testErr := errors.New("fail")
 
 	tests := map[string]setupBuildPodTestDef{
 		"passes node selector setting": {
@@ -1833,6 +1837,178 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Empty(t, pod.Spec.SecurityContext, "Security context should be empty")
 			},
 		},
+		"supports services as host aliases": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "svc-alias",
+					},
+					{
+						Name: "docker:dind",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Len(t, pod.Spec.Containers, 4)
+				require.Len(t, pod.Spec.HostAliases, 1)
+
+				expectedHostnames := []string{
+					"test-service",
+					"svc-alias",
+					"docker",
+				}
+				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
+				assert.Equal(t, expectedHostnames, pod.Spec.HostAliases[0].Hostnames)
+			},
+		},
+		"supports services as kubernetes host aliases with simple docker image syntax": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name: "docker:dind",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Len(t, pod.Spec.Containers, 3)
+				require.Len(t, pod.Spec.HostAliases, 1)
+
+				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
+				assert.Equal(t, []string{"docker"}, pod.Spec.HostAliases[0].Hostnames)
+			},
+		},
+		"ignores non RFC1123 aliases": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "INVALID_ALIAS",
+					},
+					{
+						Name: "docker:dind",
+					},
+				},
+			},
+			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
+				var expected *invalidHostAliasDNSError
+				assert.True(t, errors.As(err, &expected))
+				assert.True(t, expected.Is(err))
+				errMsg := err.Error()
+				assert.Contains(t, errMsg, "is invalid DNS")
+				assert.Contains(t, errMsg, "INVALID_ALIAS")
+				assert.Contains(t, errMsg, "test-service")
+			},
+		},
+		"ignores services with ports": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "alias",
+					},
+					{
+						Name: "docker:dind",
+						Ports: []common.Port{{
+							Number:   0,
+							Protocol: "",
+							Name:     "",
+						}},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				// the second time this fn is called is to create the proxy service
+				if pod.Kind == "Service" {
+					return
+				}
+
+				require.Len(t, pod.Spec.Containers, 4)
+
+				require.Len(t, pod.Spec.HostAliases, 1)
+				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
+				assert.Equal(t, []string{"test-service", "alias"}, pod.Spec.HostAliases[0].Hostnames)
+			},
+		},
+		"no host aliases when feature is not supported": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "alias",
+					},
+				},
+			},
+			PrepareFn: func(t *testing.T, def setupBuildPodTestDef, e *executor) {
+				mockFc := &mockFeatureChecker{}
+				mockFc.On("IsHostAliasSupported").Return(false, nil)
+				e.featureChecker = mockFc
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Len(t, pod.Spec.Containers, 3)
+				assert.Nil(t, pod.Spec.HostAliases)
+			},
+		},
+		"check host aliases error": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "alias",
+					},
+				},
+			},
+			PrepareFn: func(t *testing.T, def setupBuildPodTestDef, e *executor) {
+				mockFc := &mockFeatureChecker{}
+				mockFc.On("IsHostAliasSupported").Return(false, testErr)
+				e.featureChecker = mockFc
+			},
+			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
+				assert.True(t, errors.Is(err, testErr))
+			},
+		},
 	}
 
 	for testName, test := range tests {
@@ -1858,6 +2034,8 @@ func TestSetupBuildPod(t *testing.T) {
 				test: test,
 			}
 
+			mockFc := &mockFeatureChecker{}
+			mockFc.On("IsHostAliasSupported").Return(true, nil)
 			ex := executor{
 				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
 				options:    options,
@@ -1873,6 +2051,7 @@ func TestSetupBuildPod(t *testing.T) {
 					ProxyPool: proxy.NewPool(),
 				},
 				helperImageInfo: helperImageInfo,
+				featureChecker:  mockFc,
 			}
 
 			if test.PrepareFn != nil {
@@ -1883,9 +2062,12 @@ func TestSetupBuildPod(t *testing.T) {
 			assert.NoError(t, err, "error preparing overwrites")
 
 			err = ex.setupBuildPod()
-			assert.NoError(t, err, "error setting up build pod")
-
-			assert.True(t, rt.executed, "RoundTrip for kubernetes client should be executed")
+			if test.VerifySetupBuildPodErrFn == nil {
+				assert.NoError(t, err, "error setting up build pod")
+				assert.True(t, rt.executed, "RoundTrip for kubernetes client should be executed")
+			} else {
+				test.VerifySetupBuildPodErrFn(t, err)
+			}
 
 			if test.VerifyExecutorFn != nil {
 				test.VerifyExecutorFn(t, test, &ex)
@@ -1939,6 +2121,8 @@ func TestSetupBuildPodServiceCreationError(t *testing.T) {
 		return resp, nil
 	}
 
+	mockFc := &mockFeatureChecker{}
+	mockFc.On("IsHostAliasSupported").Return(true, nil)
 	ex := executor{
 		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
 		options: &kubernetesOptions{
@@ -1972,6 +2156,7 @@ func TestSetupBuildPodServiceCreationError(t *testing.T) {
 			ProxyPool: proxy.NewPool(),
 		},
 		helperImageInfo: helperImageInfo,
+		featureChecker:  mockFc,
 	}
 
 	err = ex.prepareOverwrites(make(common.JobVariables, 0))
