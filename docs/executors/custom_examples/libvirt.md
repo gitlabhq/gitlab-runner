@@ -5,7 +5,7 @@ create a new disk and VM for every job it executes, after which the disk
 and VM will be deleted.
 
 This example is inspired by a Community Contribution
-[!464](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/464)
+[!464](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/464)
 to add libvirt as a GitLab Runner executor.
 
 This document does not try to explain how to set up libvirt, since it's
