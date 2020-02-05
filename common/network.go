@@ -41,7 +41,6 @@ const (
 	UploadTooLarge
 	UploadForbidden
 	UploadFailed
-	UploadUnprocessableEntity
 )
 
 const (
