@@ -1000,7 +1000,7 @@ func (e *executor) createDependencies() error {
 	}
 
 	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyVolumesMountingOrder) {
-		// TODO: Remove in 12.6
+		// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
 		createDependenciesStrategy = []func() error{
 			e.bindDevices,
 			e.createVolumesManager,
@@ -1056,7 +1056,7 @@ func (e *executor) createBuildVolume() error {
 
 	jobsDir := e.Build.RootDir
 
-	// TODO: Remove in 12.3
+	// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
 	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker) {
 		// Cache Git sources:
 		// take path of the projects directory,
