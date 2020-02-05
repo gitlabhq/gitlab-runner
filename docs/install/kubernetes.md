@@ -258,7 +258,7 @@ If using Helm 2, you must also initialize Helm:
 helm init
 ```
 
-Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yml` file,
+Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
 run the following:
 
 ```bash
