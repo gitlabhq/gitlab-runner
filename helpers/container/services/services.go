@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -14,31 +15,51 @@ type Service struct {
 	Aliases   []string
 }
 
-func SplitNameAndVersion(serviceDescription string) (out Service) {
-	ReferenceRegexpNoPort := regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
-	out.ImageName = serviceDescription
-	out.Version = "latest"
+var referenceRegexpNoPort = regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
 
-	if match := reference.ReferenceRegexp.FindStringSubmatch(serviceDescription); match != nil {
-		matchService := ReferenceRegexpNoPort.FindStringSubmatch(match[1])
-		out.Service = matchService[1] + matchService[3]
+const imageVersionLatest = "latest"
 
-		if len(match[2]) > 0 {
-			out.Version = match[2]
-		} else {
-			out.ImageName = match[1] + ":" + out.Version
-		}
-	} else {
-		return
+// SplitNameAndVersion parses Docker registry image urls and construct a struct with correct
+// image url, name, version and aliases
+func SplitNameAndVersion(serviceDescription string) Service {
+	service := Service{
+		ImageName: serviceDescription,
+		Version:   imageVersionLatest,
 	}
 
-	alias := strings.Replace(out.Service, "/", "__", -1)
-	out.Aliases = append(out.Aliases, alias)
+	// Try to find matches in e.g. subdomain.domain.tld:8080/namespace/service:version
+	matches := reference.ReferenceRegexp.FindStringSubmatch(serviceDescription)
+	if len(matches) == 0 {
+		return service
+	}
+
+	// -> subdomain.domain.tld:8080/namespace/service
+	imageWithoutVersion := matches[1]
+	// -> version
+	imageVersion := matches[2]
+
+	registryMatches := referenceRegexpNoPort.FindStringSubmatch(imageWithoutVersion)
+	// -> subdomain.domain.tld
+	registry := registryMatches[1]
+	// -> /namespace/service
+	imageName := registryMatches[3]
+	service.Service = registry + imageName
+
+	if len(imageVersion) > 0 {
+		service.Version = imageVersion
+	} else {
+		service.ImageName = fmt.Sprintf("%s:%s", imageWithoutVersion, service.Version)
+	}
+
+	alias := strings.Replace(service.Service, "/", "__", -1)
+	service.Aliases = append(service.Aliases, alias)
 
 	// Create alternative link name according to RFC 1123
 	// Where you can use only `a-zA-Z0-9-`
-	if alternativeName := strings.Replace(out.Service, "/", "-", -1); alias != alternativeName {
-		out.Aliases = append(out.Aliases, alternativeName)
+	alternativeName := strings.Replace(service.Service, "/", "-", -1)
+	if alias != alternativeName {
+		service.Aliases = append(service.Aliases, alternativeName)
 	}
-	return
+
+	return service
 }
