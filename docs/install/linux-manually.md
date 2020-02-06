@@ -43,12 +43,6 @@ For example, for CentOS or Red Hat Enterprise Linux:
 curl -LJO https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_<arch>.rpm
 ```
 
-Note: **Note**
-No arm64 deb/rpm packages are provided for GitLab Runner, but a [binary
-file](#using-binary-file) is available. See the [related
-issue](https://gitlab.com/gitlab-org/gitlab-runner/issues/4871) for more
-information.
-
 ### Install
 
 1. Install the package for your system as follows.

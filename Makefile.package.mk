@@ -12,6 +12,8 @@ package-deb: package-deps package-prepare
 	# Building Debian compatible packages...
 	$(MAKE) package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64 RUNNER_BINARY=out/binaries/$(NAME)-linux-amd64
 	$(MAKE) package-deb-fpm ARCH=386 PACKAGE_ARCH=i386 RUNNER_BINARY=out/binaries/$(NAME)-linux-386
+	$(MAKE) package-deb-fpm ARCH=arm PACKAGE_ARCH=aarch64 RUNNER_BINARY=out/binaries/$(NAME)-linux-arm64
+	$(MAKE) package-deb-fpm ARCH=arm PACKAGE_ARCH=arm64 RUNNER_BINARY=out/binaries/$(NAME)-linux-arm64
 	$(MAKE) package-deb-fpm ARCH=arm PACKAGE_ARCH=armel RUNNER_BINARY=out/binaries/$(NAME)-linux-arm
 	$(MAKE) package-deb-fpm ARCH=arm PACKAGE_ARCH=armhf RUNNER_BINARY=out/binaries/$(NAME)-linux-arm
 
@@ -19,6 +21,8 @@ package-rpm: package-deps package-prepare
 	# Building RedHat compatible packages...
 	$(MAKE) package-rpm-fpm ARCH=amd64 PACKAGE_ARCH=amd64 RUNNER_BINARY=out/binaries/$(NAME)-linux-amd64
 	$(MAKE) package-rpm-fpm ARCH=386 PACKAGE_ARCH=i686 RUNNER_BINARY=out/binaries/$(NAME)-linux-386
+	$(MAKE) package-rpm-fpm ARCH=arm PACKAGE_ARCH=aarch64 RUNNER_BINARY=out/binaries/$(NAME)-linux-arm64
+	$(MAKE) package-rpm-fpm ARCH=arm PACKAGE_ARCH=arm64 RUNNER_BINARY=out/binaries/$(NAME)-linux-arm64
 	$(MAKE) package-rpm-fpm ARCH=arm PACKAGE_ARCH=arm RUNNER_BINARY=out/binaries/$(NAME)-linux-arm
 	$(MAKE) package-rpm-fpm ARCH=arm PACKAGE_ARCH=armhf RUNNER_BINARY=out/binaries/$(NAME)-linux-arm
 

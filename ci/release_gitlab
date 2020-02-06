@@ -37,10 +37,14 @@ release=$(cat <<EOS
       { "name": "deb i386", "url": "$s3/deb/gitlab-runner_i386.deb" },
       { "name": "deb armel", "url": "$s3/deb/gitlab-runner_armel.deb" },
       { "name": "deb armhf", "url": "$s3/deb/gitlab-runner_armhf.deb" },
+      { "name": "deb aarch64", "url": "$s3/deb/gitlab-runner_aarch64.deb" },
+      { "name": "deb arm64", "url": "$s3/deb/gitlab-runner_arm64.deb" },
       { "name": "rpm amd64", "url": "$s3/rpm/gitlab-runner_amd64.rpm" },
       { "name": "rpm i686", "url": "$s3/rpm/gitlab-runner_i686.rpm" },
       { "name": "rpm arm", "url": "$s3/rpm/gitlab-runner_arm.rpm" },
       { "name": "rpm armhf", "url": "$s3/rpm/gitlab-runner_armhf.rpm" },
+      { "name": "rpm arm64", "url": "$s3/rpm/gitlab-runner_arm64.rpm" },
+      { "name": "rpm aarch64", "url": "$s3/rpm/gitlab-runner_aarch64.rpm" },
       { "name": "others", "url": "$s3/index.html" },
       { "name": "docs", "url": "https://docs.gitlab.com/runner/" }
     ]
