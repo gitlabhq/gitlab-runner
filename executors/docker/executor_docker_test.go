@@ -927,7 +927,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			createVolumeManager: true,
 		},
 		"git strategy fetch, non-empty buildsDir, no error, legacy builds dir": {
-			// TODO: Remove in 12.3
+			// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
 			gitStrategy: "fetch",
 			buildsDir:   "/builds",
 			adjustConfiguration: func(e *executor) {
@@ -944,7 +944,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			createVolumeManager: true,
 		},
 		"git strategy clone, non-empty buildsDir, no error, legacy builds dir": {
-			// TODO: Remove in 12.3
+			// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
 			gitStrategy: "clone",
 			buildsDir:   "/builds",
 			adjustConfiguration: func(e *executor) {
@@ -984,7 +984,7 @@ func TestCreateDependencies(t *testing.T) {
 			legacyVolumesMountingOrder: "false",
 			expectedServiceVolumes:     []string{"/volume", "/builds"},
 		},
-		// TODO: Remove in 12.6
+		// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6581
 		"UseLegacyVolumesMountingOrder is true": {
 			legacyVolumesMountingOrder: "true",
 			expectedServiceVolumes:     []string{"/builds"},
