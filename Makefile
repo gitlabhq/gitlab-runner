@@ -68,9 +68,9 @@ help:
 	# make version - show information about current version
 	#
 	# Development commands:
-	# make development_setup  - setup needed environment for tests
+	# make development_setup - setup needed environment for tests
 	# make build_simple - build executable for your arch and OS
-	# make install - install the version suitable for your OS as gitlab-runner
+	# make build_current - build executable for your arch and OS, including docker dependencies
 	# make helper-docker - build docker dependencies
 	#
 	# Testing commands:
@@ -126,9 +126,6 @@ parallel_test_junit_report:
 pull_images_for_tests:
 	# Pulling images required for some tests
 	@go run ./scripts/pull-images-for-tests/main.go
-
-install:
-	go install --ldflags="$(GO_LDFLAGS)" $(PKG)
 
 dockerfiles:
 	make -C dockerfiles all
