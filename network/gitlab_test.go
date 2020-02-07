@@ -1035,9 +1035,6 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 			statusCode:   http.StatusCreated,
 			formValueKey: "artifact_type",
 		},
-		"unprocessable-entity": {
-			statusCode: http.StatusUnprocessableEntity,
-		},
 	}
 
 	testCase, ok := cases[body]
@@ -1156,10 +1153,6 @@ func TestArtifactsUpload(t *testing.T) {
 
 	state = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
-
-	ioutil.WriteFile(tempFile.Name(), []byte("unprocessable-entity"), 0600)
-	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
-	assert.Equal(t, UploadUnprocessableEntity, state, "Artifacts should be not uploaded, because of unprocessable entity response")
 }
 
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {

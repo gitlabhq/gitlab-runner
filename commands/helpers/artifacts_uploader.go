@@ -111,8 +111,6 @@ func (c *ArtifactsUploaderCommand) createAndUpload() error {
 		return os.ErrPermission
 	case common.UploadTooLarge:
 		return errors.New("too large")
-	case common.UploadUnprocessableEntity:
-		return errors.New("unprocessable entity")
 	case common.UploadFailed:
 		return retryableErr{err: os.ErrInvalid}
 	default:
