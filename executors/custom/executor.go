@@ -190,36 +190,38 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 // Traverses the defined job services and appends them to CUSTOM_ENV_SERVICES as
 // json
 func createServicesEnv(e *executor, opts *[]string) {
-  type JSONService struct {
-    Name string `json:"name"`
-    Alias string `json:"alias"`
-    Entrypoint []string `json:"entrypoint"`
-    Command []string `json:"command"`
-  }
+	type JSONService struct {
+		Name       string   `json:"name"`
+		Alias      string   `json:"alias"`
+		Entrypoint []string `json:"entrypoint"`
+		Command    []string `json:"command"`
+	}
 
-  services := []JSONService{}
+	services := []JSONService{}
 
-  for _, service := range e.Build.Services {
-    services = append(services, JSONService{
-      Name: service.Name,
-      Alias: service.Alias,
-      Entrypoint: service.Entrypoint,
-      Command: service.Command,
-    })
-  }
+	for _, service := range e.Build.Services {
+		services = append(services, JSONService{
+			Name:       service.Name,
+			Alias:      service.Alias,
+			Entrypoint: service.Entrypoint,
+			Command:    service.Command,
+		})
+	}
 
-  // NOTE: Do we want to return an empty CUSTOM_ENV_SERVICES? We shouldn't
-  // pollute the env list in my opinion, if there is nothing to show.
-  if len(services) == 0 { return }
+	// NOTE: Do we want to return an empty CUSTOM_ENV_SERVICES? We shouldn't
+	// pollute the env list in my opinion, if there is nothing to show.
+	if len(services) == 0 {
+		return
+	}
 
-  // NOTE: Doing nothing with the error (yet?)
-  jsonData, _ := json.Marshal(services)
+	// NOTE: Doing nothing with the error (yet?)
+	jsonData, _ := json.Marshal(services)
 
-  *opts = append(*opts, fmt.Sprintf(
-                  "%s=%s",
-                  "CUSTOM_ENV_SERVICES",
-                  jsonData,
-                ))
+	*opts = append(*opts, fmt.Sprintf(
+		"%s=%s",
+		"CUSTOM_ENV_SERVICES",
+		jsonData,
+	))
 }
 
 var commandFactory = command.New
@@ -239,7 +241,7 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 		cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("CUSTOM_ENV_%s=%s", variable.Key, variable.Value))
 	}
 
-  createServicesEnv(e, &cmdOpts.Env)
+	createServicesEnv(e, &cmdOpts.Env)
 
 	// since the variable is unique to the custom executor
 	// at the moment, we add it separately from the other build variables
