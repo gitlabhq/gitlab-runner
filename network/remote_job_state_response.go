@@ -4,13 +4,20 @@ import (
 	"net/http"
 )
 
+const (
+	remoteStateHeader = "Job-Status"
+
+	statusCanceled = "canceled"
+	statusFailed   = "failed"
+)
+
 type RemoteJobStateResponse struct {
 	StatusCode  int
 	RemoteState string
 }
 
 func (r *RemoteJobStateResponse) IsAborted() bool {
-	if r.RemoteState == "canceled" || r.RemoteState == "failed" {
+	if r.RemoteState == statusCanceled || r.RemoteState == statusFailed {
 		return true
 	}
 
@@ -28,6 +35,6 @@ func NewRemoteJobStateResponse(response *http.Response) *RemoteJobStateResponse 
 
 	return &RemoteJobStateResponse{
 		StatusCode:  response.StatusCode,
-		RemoteState: response.Header.Get("Job-Status"),
+		RemoteState: response.Header.Get(remoteStateHeader),
 	}
 }

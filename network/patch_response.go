@@ -4,12 +4,21 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/sirupsen/logrus"
+)
+
+const (
+	rangeHeader               = "Range"
+	traceUpdateIntervalHeader = "X-GitLab-Trace-Update-Interval"
 )
 
 type TracePatchResponse struct {
 	*RemoteJobStateResponse
 
-	RemoteRange string
+	RemoteRange               string
+	RemoteTraceUpdateInterval time.Duration
 }
 
 func (p *TracePatchResponse) NewOffset() int {
@@ -22,9 +31,23 @@ func (p *TracePatchResponse) NewOffset() int {
 	return 0
 }
 
-func NewTracePatchResponse(response *http.Response) *TracePatchResponse {
+func NewTracePatchResponse(response *http.Response, logger logrus.FieldLogger) *TracePatchResponse {
+	if response == nil {
+		return new(TracePatchResponse)
+	}
+
+	updateIntervalRaw := response.Header.Get(traceUpdateIntervalHeader)
+	remoteTraceUpdateInterval, err := strconv.Atoi(updateIntervalRaw)
+	if err != nil {
+		remoteTraceUpdateInterval = emptyRemoteTraceUpdateInterval
+		logger.WithError(err).
+			WithField("header-value", updateIntervalRaw).
+			Warningf("Failed to parse %q header", traceUpdateIntervalHeader)
+	}
+
 	return &TracePatchResponse{
-		RemoteJobStateResponse: NewRemoteJobStateResponse(response),
-		RemoteRange:            response.Header.Get("Range"),
+		RemoteJobStateResponse:    NewRemoteJobStateResponse(response),
+		RemoteRange:               response.Header.Get(rangeHeader),
+		RemoteTraceUpdateInterval: time.Duration(remoteTraceUpdateInterval) * time.Second,
 	}
 }
