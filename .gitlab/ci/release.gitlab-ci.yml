@@ -12,7 +12,7 @@
   needs:
   - 'helper images'
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
-  - package-deb
+  - 'package-deb'
   script:
   - source ci/touch_make_dependencies
   - make release_docker_images
@@ -48,6 +48,15 @@
 .release_s3:
   extends:
   - .release
+  needs:
+  - 'helper images'
+  - 'test coverage report'
+  - 'binaries darwin/386 darwin/amd64'
+  - 'binaries freebsd/386 freebsd/amd64 freebsd/arm'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
+  - 'binaries windows/386 windows/amd64'
+  - 'package-deb'
+  - 'package-rpm'
   before_script:
   - source ci/touch_make_dependencies
   script:
@@ -61,6 +70,9 @@
     fi
 
 .release_packagecloud:
+  needs:
+  - 'package-deb'
+  - 'package-rpm'
   extends:
   - .release
   script:
