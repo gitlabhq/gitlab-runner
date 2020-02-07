@@ -58,6 +58,44 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 				assert.False(t, supported)
 			},
 		},
+		"host aliases cleanup version 1.6 not supported": {
+			version: k8sversion.Info{
+				Major: "1+535111",
+				Minor: "6.^&5151111",
+			},
+			clientErr: nil,
+			fn: func(t *testing.T, fc featureChecker) {
+				supported, err := fc.IsHostAliasSupported()
+				require.NoError(t, err)
+				assert.False(t, supported)
+			},
+		},
+		"host aliases cleanup version 1.14 supported": {
+			version: k8sversion.Info{
+				Major: "1*)(535111",
+				Minor: "14^^%&5151111",
+			},
+			clientErr: nil,
+			fn: func(t *testing.T, fc featureChecker) {
+				supported, err := fc.IsHostAliasSupported()
+				require.NoError(t, err)
+				assert.True(t, supported)
+			},
+		},
+		"host aliases cleanup invalid version with leading characters not supported": {
+			version: k8sversion.Info{
+				Major: "+1",
+				Minor: "-14",
+			},
+			clientErr: nil,
+			fn: func(t *testing.T, fc featureChecker) {
+				supported, err := fc.IsHostAliasSupported()
+				require.Error(t, err)
+				assert.False(t, supported)
+				assert.True(t, errors.Is(err, &badVersionError{}))
+				assert.Contains(t, err.Error(), "parsing Kubernetes version +1.-14")
+			},
+		},
 		"host aliases invalid version": {
 			version: k8sversion.Info{
 				Major: "aaa",
@@ -66,8 +104,9 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
-				require.NotNil(t, err)
+				require.Error(t, err)
 				assert.False(t, supported)
+				assert.True(t, errors.Is(err, &badVersionError{}))
 			},
 		},
 		"host aliases empty version": {
@@ -78,8 +117,9 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			clientErr: nil,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
-				require.NotNil(t, err)
+				require.Error(t, err)
 				assert.False(t, supported)
+				assert.True(t, errors.Is(err, &badVersionError{}))
 			},
 		},
 		"host aliases kube client error": {
@@ -90,7 +130,7 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 			clientErr: kubeClientErr,
 			fn: func(t *testing.T, fc featureChecker) {
 				supported, err := fc.IsHostAliasSupported()
-				require.NotNil(t, err)
+				require.Error(t, err)
 				assert.True(t, errors.Is(err, kubeClientErr))
 				assert.False(t, supported)
 			},

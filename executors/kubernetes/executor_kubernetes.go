@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -501,14 +502,19 @@ func (e *invalidHostAliasDNSError) Is(err error) bool {
 
 func (s *executor) prepareHostAlias() (*api.HostAlias, error) {
 	supportsHostAliases, err := s.featureChecker.IsHostAliasSupported()
-	if err != nil {
-		return nil, fmt.Errorf("checking for host alias support %w", err)
-	}
-
-	if !supportsHostAliases {
+	if errors.Is(err, &badVersionError{}) {
+		s.Warningln("Checking for host alias support. Host aliases will be disabled.", err)
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	} else if !supportsHostAliases {
 		return nil, nil
 	}
 
+	return s.createHostAlias()
+}
+
+func (s *executor) createHostAlias() (*api.HostAlias, error) {
 	servicesHostAlias := api.HostAlias{IP: "127.0.0.1"}
 
 	for _, service := range s.options.Services {

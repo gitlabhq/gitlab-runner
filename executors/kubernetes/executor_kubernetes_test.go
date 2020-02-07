@@ -1984,7 +1984,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Nil(t, pod.Spec.HostAliases)
 			},
 		},
-		"check host aliases error": {
+		"check host aliases non version error": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2007,6 +2007,31 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
 				assert.True(t, errors.Is(err, testErr))
+			},
+		},
+		"check host aliases version error": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "alias",
+					},
+				},
+			},
+			PrepareFn: func(t *testing.T, def setupBuildPodTestDef, e *executor) {
+				mockFc := &mockFeatureChecker{}
+				mockFc.On("IsHostAliasSupported").Return(false, &badVersionError{})
+				e.featureChecker = mockFc
+			},
+			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
+				assert.NoError(t, err)
 			},
 		},
 	}
