@@ -100,6 +100,8 @@ environment variables available to them:
   [predefined
   variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
 - All environment variables provided by the Custom Runner host system.
+- All services and their [available settings](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services).
+  Exposed in JSON format as `CUSTOM_ENV_CI_JOB_SERVICES`.
 - The value of the [`image` keyword](https://docs.gitlab.com/ee/ci/yaml/#image),
 exported as `CUSTOM_ENV_CI_JOB_IMAGE`.
 
@@ -185,12 +187,12 @@ The Prepare stage is executed by `prepare_exec`.
 
 At this point, GitLab Runner knows everything about the job (where and
 how it's going to run). The only thing left is for the environment to be
-set up so the job can run.  GitLab Runner will execute the executable
+set up so the job can run. GitLab Runner will execute the executable
 that is specified in `prepare_exec`.
 
 This is responsible for setting up the environment (for example,
-creating the virtual machine or container, or anything else). After this
-is done, we expect that the environment is ready to run the job.
+creating the virtual machine or container, services or anything else). After
+this is done, we expect that the environment is ready to run the job.
 
 This stage is executed only once, in a job execution.
 
