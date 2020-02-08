@@ -187,8 +187,8 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 	}
 }
 
-// Traverses the defined job services and appends them to CUSTOM_ENV_SERVICES as
-// json
+// Traverses the defined job services and appends them to
+// CUSTOM_ENV_CI_JOB_SERVICES as json
 func createServicesEnv(e *executor, opts *[]string) {
 	type JSONService struct {
 		Name       string   `json:"name"`
@@ -208,7 +208,7 @@ func createServicesEnv(e *executor, opts *[]string) {
 		})
 	}
 
-	// Don't create an empty CUSTOM_ENV_SERVICES variable
+	// Don't create an empty CUSTOM_ENV_CI_JOB_SERVICES variable
 	if len(services) == 0 {
 		return
 	}
@@ -216,13 +216,16 @@ func createServicesEnv(e *executor, opts *[]string) {
 	jsonData, err := json.Marshal(services)
 
 	if err != nil {
-		logrus.Errorln("Custom executor: unable to create CUSTOM_ENV_SERVICES json.", err)
+		logrus.Errorln(
+			"Custom executor: unable to create CUSTOM_ENV_CI_JOB_SERVICES json.",
+			err,
+		)
 		return
 	}
 
 	*opts = append(*opts, fmt.Sprintf(
 		"%s=%s",
-		"CUSTOM_ENV_SERVICES",
+		"CUSTOM_ENV_CI_JOB_SERVICES",
 		jsonData,
 	))
 }

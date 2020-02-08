@@ -528,7 +528,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
-				if pair[0] == "CUSTOM_ENV_SERVICES" {
+				if pair[0] == "CUSTOM_ENV_CI_JOB_SERVICES" {
 					assert.Equal(t, expectedServices, pair[1])
 					break
 				}
@@ -542,7 +542,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
-				if pair[0] == "CUSTOM_ENV_SERVICES" {
+				if pair[0] == "CUSTOM_ENV_CI_JOB_SERVICES" {
 					servicesEnvExists = true
 					break
 				}
@@ -608,7 +608,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 					"\"command\":null}]",
 			),
 		},
-		"does not create env CUSTOM_ENV_SERVICES": {
+		"does not create env CUSTOM_ENV_CI_JOB_SERVICES": {
 			config:               runnerConfig,
 			adjustExecutor:       adjustExecutorServices(common.Services{}),
 			assertCommandFactory: assertNoEnv(),
