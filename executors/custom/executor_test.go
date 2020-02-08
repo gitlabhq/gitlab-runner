@@ -511,6 +511,136 @@ func TestExecutor_Run(t *testing.T) {
 	}
 }
 
+func TestExecutor_ServicesEnv(t *testing.T) {
+  runnerConfig := getRunnerConfig(&common.CustomConfig{
+    RunExec:     "bash",
+    PrepareExec: "echo",
+    CleanupExec: "bash",
+  })
+
+  adjustExecutorServices := func(services common.Services) func(t *testing.T, e *executor) {
+    return func(t *testing.T, e *executor) {
+      e.Build.Services = services
+    }
+  }
+
+  assertEnvValue := func(expectedServices string) func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+    return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+      for _, env := range options.Env {
+        pair := strings.Split(env, "=")
+        if pair[0] == "CUSTOM_ENV_SERVICES" {
+          assert.Equal(t, expectedServices, pair[1])
+          break
+        }
+      }
+    }
+  }
+
+  assertNoEnv := func() func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+    return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+      servicesEnvExists := false
+
+      for _, env := range options.Env {
+        pair := strings.Split(env, "=")
+        if pair[0] == "CUSTOM_ENV_SERVICES" {
+          servicesEnvExists = true
+          break
+        }
+      }
+
+      assert.Equal(t, false, servicesEnvExists)
+    }
+  }
+
+  tests := map[string]executorTestCase{
+    "returns only name when service name is the only definition": {
+      config: runnerConfig,
+      adjustExecutor: adjustExecutorServices(common.Services{
+        {
+          Name: "ruby:latest",
+        },
+      }),
+      assertCommandFactory: assertEnvValue(
+        "[{\"name\":\"ruby:latest\"," +
+          "\"alias\":\"\"," +
+          "\"entrypoint\":null," +
+          "\"command\":null}]",
+      ),
+    },
+    "returns full service definition": {
+      config: runnerConfig,
+      adjustExecutor: adjustExecutorServices(common.Services{
+        {
+          Name: "ruby:latest",
+          Alias: "henk-ruby",
+          Entrypoint: []string{"path", "to", "entrypoint"},
+          Command: []string{"path", "to", "command"},
+        },
+      }),
+      assertCommandFactory: assertEnvValue(
+        "[{\"name\":\"ruby:latest\"," +
+          "\"alias\":\"henk-ruby\"," +
+          "\"entrypoint\":[\"path\",\"to\",\"entrypoint\"]," +
+          "\"command\":[\"path\",\"to\",\"command\"]}]",
+      ),
+    },
+    "returns both simple and full service definitions": {
+      config: runnerConfig,
+      adjustExecutor: adjustExecutorServices(common.Services{
+        {
+          Name: "python:latest",
+          Alias: "henk-python",
+          Entrypoint: []string{"entrypoint.sh"},
+          Command: []string{"command --test"},
+        },
+        {
+          Name: "python:alpine",
+        },
+      }),
+      assertCommandFactory: assertEnvValue(
+        "[{\"name\":\"python:latest\"," +
+          "\"alias\":\"henk-python\"," +
+          "\"entrypoint\":[\"entrypoint.sh\"]," +
+          "\"command\":[\"command --test\"]}," +
+        "{\"name\":\"python:alpine\"," +
+          "\"alias\":\"\"," +
+          "\"entrypoint\":null," +
+          "\"command\":null}]",
+      ),
+    },
+    "does not create env CUSTOM_ENV_SERVICES": {
+      config: runnerConfig,
+      adjustExecutor: adjustExecutorServices(common.Services{}),
+      assertCommandFactory: assertNoEnv(),
+    },
+  }
+
+  for tn, tt := range tests {
+    t.Run(tn, func(t *testing.T) {
+      defer mockCommandFactory(t, tt)()
+
+      e, options, _ := prepareExecutor(t, tt)
+      e.Config = *options.Config
+      e.Build = options.Build
+      e.Trace = options.Trace
+      e.BuildLogger = common.NewBuildLogger(e.Trace, e.Build.Log())
+      if tt.adjustExecutor != nil {
+        tt.adjustExecutor(t, e)
+      }
+
+      err := e.Prepare(options)
+      assert.NoError(t, err)
+
+      err = e.Run(common.ExecutorCommand{
+        Context: context.Background(),
+      })
+      assert.NoError(t, err)
+
+      e.Cleanup()
+    })
+  }
+}
+
 func TestExecutor_Env(t *testing.T) {
 	runnerConfig := getRunnerConfig(&common.CustomConfig{
 		RunExec:     "bash",
