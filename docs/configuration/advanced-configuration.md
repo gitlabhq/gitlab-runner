@@ -150,7 +150,7 @@ In cases where the GitLab instance is exposed to an URL which can't be used
 by the runner, a `clone_url` can be configured. For example; GitLab is exposed
 to `https://gitlab.example.com`, but the runner can't reach that because of
 a firewall setup. If the runner can reach the node on `192.168.1.23`,
-the `clone_url` should be set to `"http://192.168.1.23`.
+the `clone_url` should be set to `http://192.168.1.23`.
 
 Only if the `clone_url` is set, the runner will construct a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
@@ -736,7 +736,7 @@ to handle Git, artifacts and cache operations. This container is created from a 
 
 The helper image is based on Alpine Linux and it's provided for amd64 and arm architectures. It contains
 a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner binary, that contains only a subset
-of available commands, as well as Git, Git LFS, SSL certificates store and basic configuration of Alpine.
+of available commands, as well as Git, Git LFS, SSL certificates store, and basic configuration of Alpine.
 
 When GitLab Runner is installed from the DEB/RPM packages, both images (`amd64` and `arm` based) are installed on the host.
 When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's Git
@@ -744,8 +744,8 @@ revision) is not found on Docker Engine, it is automatically loaded. It works li
 `docker` and `docker+machine` executors.
 
 Things work a little different for the `kubernetes` executor or when GitLab Runner is installed manually. For manual
-installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor,the API of Kubernetes
-doesn't allow to load the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
+installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor, the API of Kubernetes
+doesn't allow loading the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
 the helper image from Docker Hub, from GitLab's official repository `gitlab/gitlab-runner-helper` by using the Runner's
 revision and architecture for defining which tag should be downloaded.
 
