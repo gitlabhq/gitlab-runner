@@ -208,14 +208,17 @@ func createServicesEnv(e *executor, opts *[]string) {
 		})
 	}
 
-	// NOTE: Do we want to return an empty CUSTOM_ENV_SERVICES? We shouldn't
-	// pollute the env list in my opinion, if there is nothing to show.
+	// Don't create an empty CUSTOM_ENV_SERVICES variable
 	if len(services) == 0 {
 		return
 	}
 
-	// NOTE: Doing nothing with the error (yet?)
-	jsonData, _ := json.Marshal(services)
+	jsonData, err := json.Marshal(services)
+
+	if err != nil {
+		logrus.Errorln("Custom executor: unable to create CUSTOM_ENV_SERVICES json.", err)
+		return
+	}
 
 	*opts = append(*opts, fmt.Sprintf(
 		"%s=%s",
