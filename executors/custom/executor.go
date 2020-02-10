@@ -190,6 +190,10 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 // Traverses the defined job services and appends them to
 // CUSTOM_ENV_CI_JOB_SERVICES as json
 func createServicesEnv(e *executor, opts *[]string) {
+  if len(e.Build.Services) == 0 {
+    return
+  }
+
 	type JSONService struct {
 		Name       string   `json:"name"`
 		Alias      string   `json:"alias"`
@@ -206,11 +210,6 @@ func createServicesEnv(e *executor, opts *[]string) {
 			Entrypoint: service.Entrypoint,
 			Command:    service.Command,
 		})
-	}
-
-	// Don't create an empty CUSTOM_ENV_CI_JOB_SERVICES variable
-	if len(services) == 0 {
-		return
 	}
 
 	jsonData, err := json.Marshal(services)
