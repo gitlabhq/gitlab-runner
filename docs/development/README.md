@@ -28,7 +28,7 @@ open go*-*.pkg
 
 ### For FreeBSD
 
-```
+```sh
 pkg install go-1.13.7 gmake git mercurial
 ```
 
@@ -52,7 +52,7 @@ This is required to be able to build ARM images that are embedded into GitLab Ru
 
 - For CoreOS (but also works on Debian and Ubuntu) you need to execute the following script on system start:
 
-  ```
+  ```sh
   #!/bin/sh
 
   set -xe
@@ -84,27 +84,24 @@ make deps
 
 ## 5. Run runner
 
-Normally you would use `gitlab-runner`, in order to compile and run Go source use go toolchain:
+Normally you would use `gitlab-runner`, in order to compile and run Go source use the go toolchain:
 
-```
-make install
-gitlab-runner run
+```sh
+make build_current
+./out/binaries/gitlab-runner run
 ```
 
 You can run runner in debug-mode:
 
-```
-make install
-gitlab-runner --debug run
-```
-
-## 6. Compile and install runner binary as `gitlab-runner`
-
-```
-make install
+```sh
+make build_current
+./out/binaries/gitlab-runner --debug run
 ```
 
-## 7. Run test suite locally
+`make build_current` is a superset of `make build_simple` which in addition
+takes care of building Docker dependencies.
+
+## 6. Run test suite locally
 
 GitLab Runner test suite consists of "core" tests and tests for executors.
 Tests for executors require certain binaries to be installed on your local
@@ -122,13 +119,13 @@ These are the binaries that you can install:
 
 After installing the binaries run:
 
-```
+```sh
 make development_setup
 ```
 
 To execute the tests run:
 
-```
+```sh
 make test
 ```
 
