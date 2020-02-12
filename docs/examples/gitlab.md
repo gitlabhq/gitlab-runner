@@ -13,7 +13,7 @@ gitlab-runner register \
 --description "gitlab-ce-ruby-2.6" \
 --executor "docker" \
 --docker-image ruby:2.6 --docker-mysql latest \
---docker-postgres latest --docker-redis latest
+--docker-services latest --docker-redis latest
 ```
 
 You now have a GitLab CE integration testing instance with bundle caching.
