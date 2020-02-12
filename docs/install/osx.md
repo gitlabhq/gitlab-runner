@@ -163,9 +163,10 @@ gitlab-runner start
 
 ## Using codesign with the GitLab Runner Service
 
-Assuming Homebrew was used to install `gitlab-runner` on macOS, if your build calls
-`codesign`, you may need to set `<key>SessionCreate</key><true/>` so that you have
-access to the user keychains. In the following example we run the builds as the user `gitlab` and want access to the signing certificates installed by that user for codesigning.
+If you installed `gitlab-runner` on macOS with homebrew and your build calls
+`codesign`, you may need to set `<key>SessionCreate</key><true/>` to have
+access to the user keychains. In the following example we run the builds as the `gitlab`
+user and want access to the signing certificates installed by that user for codesigning:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
