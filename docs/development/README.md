@@ -84,7 +84,7 @@ make deps
 
 ## 5. Run runner
 
-Normally you would use `gitlab-runner`, in order to compile and run Go source use the go toolchain:
+Normally you would use `gitlab-runner`. In order to compile and run the Go sources, use the Go toolchain:
 
 ```shell
 make build_current
@@ -100,6 +100,18 @@ make build_current
 
 `make build_current` is a superset of `make build_simple` which in addition
 takes care of building Docker dependencies.
+  
+### Building the Docker image
+
+If you want to build the Docker image, you need to run `make build_current_docker`.
+
+The `build_current_docker` Makefile target will:
+
+- build `gitlab-runner-helper` and create a helper Docker image from it;
+- compile Runner for `linux/amd64`;
+- build a DEB package for Runner (our official images are basing on Alpine and Ubuntu;
+we need DEB for the Ubuntu image build);
+- build the Alpine and Ubuntu versions of the `gitlab/gitlab-runner` image.
 
 ## 6. Run test suite locally
 
