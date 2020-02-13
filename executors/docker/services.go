@@ -20,6 +20,24 @@ import (
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 )
 
+type tooManyServicesRequestedError struct {
+	requested int
+	allowed   int
+}
+
+func (e *tooManyServicesRequestedError) Error() string {
+	return fmt.Sprintf("too many services requested: %d, only %d allowed", e.requested, e.allowed)
+}
+
+func (e *tooManyServicesRequestedError) Is(err error) bool {
+	var target *tooManyServicesRequestedError
+	if !errors.As(err, &target) {
+		return false
+	}
+
+	return e.allowed == target.allowed && e.requested == target.requested
+}
+
 func (e *executor) createServices() error {
 	e.SetCurrentStage(ExecutorStageCreatingServices)
 	e.BuildLogger.Debugln("Creating services...")
@@ -69,6 +87,11 @@ func (e *executor) getServicesDefinitions() (common.Services, error) {
 		}
 
 		serviceDefinitions = append(serviceDefinitions, service)
+	}
+
+	servicesLimit := e.Config.Docker.GetServicesLimit()
+	if servicesLimit >= 0 && len(serviceDefinitions) > servicesLimit {
+		return nil, &tooManyServicesRequestedError{requested: len(serviceDefinitions), allowed: servicesLimit}
 	}
 
 	return serviceDefinitions, nil

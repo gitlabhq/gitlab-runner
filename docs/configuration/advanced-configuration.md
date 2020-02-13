@@ -336,6 +336,13 @@ The following settings define the Docker container parameters.
 | `volume_driver`                | The volume driver to use for the container. |
 | `wait_for_services_timeout`    | How long to wait for Docker services. Set to `-1` to disable. Default is `30`. |
 | `container_labels`             | A set of labels to add to each container created by the runner. The label value can include environment variables for expansion. |
+| `services_limit`               | Set the maximum allowed services per job. `-1` (default) means there is no limit. |
+| `service_cpuset_cpus`          | String value containing the `cgroups CpusetCpus` to use for a service. |
+| `service_cpu_shares`           | Number of CPU shares used to set a service's relative cpu usage (default:  [`1024`](https://docs.docker.com/config/containers/resource_constraints/#cpu)). |
+| `service_cpus`                 | String value of the number of CPUs for a service. Available in Docker 1.13 or later. |
+| `service_memory`               | String value of the memory limit for a service. |
+| `service_memory_swap`          | String value of the total memory limit for a service. |
+| `service_memory_reservation`   | String value of the memory soft limit for a service. |
 
 ### The `[[runners.docker.services]]` section
 
@@ -367,6 +374,12 @@ Example:
   cpus = "2"
   dns = ["8.8.8.8"]
   dns_search = [""]
+  service_memory = "128m"
+  service_memory_swap = "256m"
+  service_memory_reservation = "64m"
+  service_cpuset_cpus = "0,1"
+  service_cpus = "2"
+  services_limit = 5
   privileged = false
   group_add = ["docker"]
   userns_mode = "host"
