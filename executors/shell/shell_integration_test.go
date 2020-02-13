@@ -819,6 +819,85 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 	}
 }
 
+func TestBuildWithGitSubmodulePaths(t *testing.T) {
+	skipOnGit17x(t)
+
+	tests := map[string]struct {
+		paths                   string
+		expectedBuildError      error
+		expectedSubmoduleExists bool
+	}{
+		"include submodule": {
+			paths:                   "gitlab-grack",
+			expectedBuildError:      nil,
+			expectedSubmoduleExists: true,
+		},
+		"exclude submodule": {
+			paths:                   ":(exclude)gitlab-grack",
+			expectedBuildError:      nil,
+			expectedSubmoduleExists: false,
+		},
+		"exclude submodule with single space": {
+			paths:                   ":(exclude) gitlab-grack",
+			expectedBuildError:      nil,
+			expectedSubmoduleExists: true,
+		},
+		"exclude submodule with multiple spaces": {
+			paths:                   ":(exclude)  gitlab-grack",
+			expectedBuildError:      nil,
+			expectedSubmoduleExists: true,
+		},
+		"exclude submodule with space between all statements": {
+			paths:                   ": (exclude) gitlab-grack",
+			expectedBuildError:      &exec.ExitError{},
+			expectedSubmoduleExists: false,
+		},
+		"exclude submodule invalid": {
+			paths:                   "::::(exclude) gitlab-grack",
+			expectedBuildError:      &exec.ExitError{},
+			expectedSubmoduleExists: false,
+		},
+		"empty": {
+			paths:                   "    ",
+			expectedBuildError:      nil,
+			expectedSubmoduleExists: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				successfulBuild, err := common.GetSuccessfulBuild()
+				assert.NoError(t, err)
+
+				build, cleanup := newBuild(t, successfulBuild, shell)
+				defer cleanup()
+
+				build.Variables = append(
+					build.Variables,
+					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+					common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: tt.paths},
+				)
+
+				out, err := buildtest.RunBuildReturningOutput(t, build)
+				err = errors.Unwrap(err)
+				require.IsType(t, err, tt.expectedBuildError)
+
+				assert.NotContains(t, out, "Skipping Git submodules setup")
+				assert.Contains(t, out, "Updating/initializing submodules...")
+
+				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+				if tt.expectedSubmoduleExists {
+					require.NoError(t, err, "Submodule should have been initialized")
+					return
+				}
+
+				require.True(t, errors.Is(err, os.ErrNotExist), "Submodule is initialized but shouldn't be")
+			})
+		})
+	}
+}
+
 func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()

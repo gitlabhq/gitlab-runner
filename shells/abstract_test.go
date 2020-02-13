@@ -3,6 +3,7 @@ package shells
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -835,6 +836,76 @@ func TestAbstractShell_extractCacheWithFallbackKey(t *testing.T) {
 
 	err := shell.cacheExtractor(mockWriter, info)
 	assert.NoError(t, err)
+}
+
+func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
+	tests := map[string]struct {
+		paths string
+	}{
+		"single path": {
+			paths: "submoduleA",
+		},
+		"multiple paths": {
+			paths: "submoduleA submoduleB submoduleC",
+		},
+		"exclude paths": {
+			paths: ":(exclude)submoduleA :(exclude)submoduleB",
+		},
+		"paths with dash": {
+			paths: "-submoduleA :(exclude)-submoduleB",
+		},
+		"invalid paths": {
+			paths: "submoduleA : (exclude)submoduleB submoduleC :::1(exclude) submoduleD",
+		},
+		"extra spaces": {
+			paths: "submoduleA :   (exclude)submoduleB    submoduleC :::1(exclude)   submoduleD",
+		},
+		"empty paths": {
+			paths: "",
+		},
+		"spaces": {
+			paths: "        ",
+		},
+	}
+
+	submoduleCommand := func(paths string, args ...string) []interface{} {
+		command := []interface{}{
+			"git",
+			"submodule",
+		}
+
+		for _, a := range args {
+			command = append(command, a)
+		}
+
+		paths = strings.TrimSpace(paths)
+		if paths != "" {
+			command = append(command, "--", paths)
+		}
+
+		return command
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+			mockWriter := new(MockShellWriter)
+			defer mockWriter.AssertExpectations(t)
+
+			mockWriter.On("Noticef", mock.Anything).Once()
+			mockWriter.On("Command", submoduleCommand(test.paths, "sync")...).Once()
+			mockWriter.On("Command", submoduleCommand(test.paths, "update", "--init")...).Once()
+			mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
+			mockWriter.On("Command", "git", "submodule", "foreach", "git reset --hard").Once()
+			mockWriter.On("IfCmd", "git", "lfs", "version").Once()
+			mockWriter.On("Command", "git", "submodule", "foreach", "git lfs pull").Once()
+			mockWriter.On("EndIf").Once()
+
+			build := &common.Build{}
+			build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: test.paths})
+			shell.writeSubmoduleUpdateCmd(mockWriter, build, false)
+		})
+	}
 }
 
 func TestWriteUserScript(t *testing.T) {
