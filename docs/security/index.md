@@ -45,9 +45,8 @@ Therefore, if you host a Runner that can be used by different users and
 different projects (with mixed private, and public access levels) you should
 never use `if-not-present` as the pull policy value, but use:
 
-- `never` - if you want to limit users to use the only image pre-downloaded by
-  you,
-- `always` - if you want to give users the possibility to download any image
+- `never` - If you want to limit users to use the only image pre-downloaded by you.
+- `always` - If you want to give users the possibility to download any image
   from any registry.
 
 The `if-not-present` pull policy should be used **only** for specific Runners
