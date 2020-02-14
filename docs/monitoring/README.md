@@ -82,7 +82,7 @@ Examples of addresses:
 Remember that for listening on ports below `1024` - at least on Linux/Unix
 systems - you need to have root/administrator rights.
 
-Also please notice, that the HTTP server is opened on selected `host:port`
+The HTTP server is opened on the selected `host:port`
 **without any authorization**. If you plan to bind the metrics server
 to a public interface then you should consider to use your firewall to
 limit access to this server or add an HTTP proxy which will add the
