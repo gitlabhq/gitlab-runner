@@ -46,7 +46,7 @@ dispatch alert notifications.
 
 While having metrics about the internal state of the Runner process is useful
 we've found that in some cases it would be good to check what is happening
-inside of the Running process in real-time. That's why we've introduced
+inside of the Running process in real time. That's why we've introduced
 the `pprof` HTTP endpoints.
 
 `pprof` endpoints will be available via an embedded HTTP server on `/debug/pprof/`
