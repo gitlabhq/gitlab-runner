@@ -11,16 +11,17 @@ import (
 func TestGetInfo(t *testing.T) {
 	tests := []struct {
 		osType        string
+		version       string
 		expectedError error
 	}{
 		{osType: OSTypeLinux, expectedError: nil},
-		{osType: OSTypeWindows, expectedError: ErrUnsupportedOSVersion},
+		{osType: OSTypeWindows, version: "1803", expectedError: NewErrUnsupportedOSVersion("1803")},
 		{osType: "unsupported", expectedError: errors.NewErrOSNotSupported("unsupported")},
 	}
 
 	for _, test := range tests {
 		t.Run(test.osType, func(t *testing.T) {
-			_, err := Get(headRevision, Config{OSType: test.osType})
+			_, err := Get(headRevision, Config{OSType: test.osType, OperatingSystem: test.version})
 
 			assert.Equal(t, test.expectedError, err)
 		})

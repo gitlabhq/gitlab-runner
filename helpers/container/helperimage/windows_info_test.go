@@ -49,7 +49,7 @@ func Test_windowsInfo_create(t *testing.T) {
 		},
 		{
 			operatingSystem: "some random string",
-			expectedErr:     ErrUnsupportedOSVersion,
+			expectedErr:     NewErrUnsupportedOSVersion("some random string"),
 		},
 	}
 
