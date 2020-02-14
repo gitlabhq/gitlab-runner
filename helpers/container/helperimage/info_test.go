@@ -9,13 +9,15 @@ import (
 )
 
 func TestGetInfo(t *testing.T) {
+	const windows1803 = "1803"
+
 	tests := []struct {
 		osType        string
 		version       string
 		expectedError error
 	}{
 		{osType: OSTypeLinux, expectedError: nil},
-		{osType: OSTypeWindows, version: "1803", expectedError: NewErrUnsupportedOSVersion("1803")},
+		{osType: OSTypeWindows, version: windows1803, expectedError: NewUnsupportedWindowsVersionError(windows1803)},
 		{osType: "unsupported", expectedError: errors.NewErrOSNotSupported("unsupported")},
 	}
 

@@ -47,5 +47,5 @@ func (w *windowsInfo) osVersion(operatingSystem string) (string, error) {
 		}
 	}
 
-	return "", NewErrUnsupportedOSVersion(operatingSystem)
+	return "", NewUnsupportedWindowsVersionError(operatingSystem)
 }
