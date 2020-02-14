@@ -16,7 +16,7 @@ such setup more secure it's advised to run jobs as a user (non-root) in Docker
 containers with disabled sudo or dropped `SETUID` and `SETGID` capabilities.
 
 On the other hand, there's a privileged mode which enables full access to the
-host system, permission to mount and unmount volumes and run nested containers.
+host system, permission to mount and unmount volumes, and run nested containers.
 It's not advised to run containers in privileged mode.
 
 More granular permissions can be configured in non-privileged mode via the
