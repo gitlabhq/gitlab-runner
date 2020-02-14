@@ -68,8 +68,8 @@ The metrics HTTP server can be configured in two ways:
 In both cases the option accepts a string with the format `[host]:<port>`,
 where:
 
-- `the host` can be an IP address or a hostname,
-- `the port` is a valid TCP port or symbolic service name (like `http`). We recommend using port `9252` which is already [allocated in Prometheus](https://github.com/prometheus/prometheus/wiki/Default-port-allocations).
+- `host` can be an IP address or a hostname,
+- `port` is a valid TCP port or symbolic service name (like `http`). We recommend using port `9252` which is already [allocated in Prometheus](https://github.com/prometheus/prometheus/wiki/Default-port-allocations).
 
 If the listen address does not contain a port, it will default to `9252`.
 
