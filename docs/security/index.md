@@ -30,7 +30,7 @@ you should use `always` as the `pull_policy` value. Especially you should
 use `always` pull policy if you are hosting a public, shared Runner with the
 Docker executor.
 
-Let's consider such example when pull policy is set to `if-not-present`:
+Let's consider an example where the pull policy is set to `if-not-present`:
 
 1. User A has a private image at `registry.example.com/image/name`.
 1. User A starts a build on a shared runner: The build receives the registry
