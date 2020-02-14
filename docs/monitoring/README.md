@@ -42,7 +42,7 @@ dispatch alert notifications.
 
 ## `pprof` HTTP endpoints
 
-> `pprof` integration were introduced in GitLab Runner 1.9.0.
+> `pprof` integration was introduced in GitLab Runner 1.9.0.
 
 While having metrics about the internal state of the Runner process is useful
 we've found that in some cases it would be good to check what is happening
