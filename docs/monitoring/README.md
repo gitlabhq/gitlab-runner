@@ -24,7 +24,7 @@ The metrics format is documented in Prometheus'
 specification.
 
 These metrics are meant as a way for operators to monitor and gain insight into
-GitLab Runners. For example, you may be interested, if the load average increase
+GitLab Runners. For example, you may be interested if the load average increase
 on your runner's host is related to an increase in processed jobs or not. Or
 you are running a cluster of machines to be used for the jobs and you want to
 track build trends to plan changes in your infrastructure.
