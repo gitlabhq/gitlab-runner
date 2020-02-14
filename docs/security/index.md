@@ -58,12 +58,12 @@ for more information.
 ## Systems with Docker installed
 
 >**Note:**
-This applies to installations below 0.5.0 or ones that were upgraded to the 
+This applies to installations below 0.5.0 or ones that were upgraded to the
 newer version.
 
-When installing the package on Linux systems with Docker installed, 
-`gitlab-runner` will create a user that will have permission to access `Docker`
-daemon. This makes the jobs run with `shell` executor able to access `docker` 
+When installing the package on Linux systems with Docker installed,
+`gitlab-runner` will create a user that will have permission to access the `Docker`
+daemon. This makes the jobs that run with the `shell` executor able to access `docker`
 with full permissions and potentially allows root access to the server.
 
 ## Usage of SSH executor
