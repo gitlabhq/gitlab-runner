@@ -166,7 +166,7 @@ git 1.7.1:
   before_script:
   - unset GPG_KEY
   - yum install -y -q git && git version
-  - curl https://storage.googleapis.com/golang/go1.13.7.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+  - curl https://storage.googleapis.com/golang/go1.13.8.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
   - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
   - source ci/touch_make_dependencies
   script:
