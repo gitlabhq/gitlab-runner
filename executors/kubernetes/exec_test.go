@@ -81,7 +81,7 @@ func TestExec(t *testing.T) {
 			case p == test.podPath && m == "GET":
 				body := objBody(codec, test.pod)
 				return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
-					"Content-Type": []string{"application/json"},
+					"Content-Type": {"application/json"},
 				}}, nil
 			default:
 				// Ensures no GET is performed when deleting by name
