@@ -79,13 +79,14 @@ func TestBuildRun(t *testing.T) {
 
 func TestBuildPredefinedVariables(t *testing.T) {
 	for _, rootDir := range []string{"/root/dir1", "/root/dir2"} {
-		build := runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error {
-			return options.Build.StartBuild(rootDir, "/cache/dir", false, false)
-		})
-		executors = nil
+		t.Run(rootDir, func(t *testing.T) {
+			build := runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error {
+				return options.Build.StartBuild(rootDir, "/cache/dir", false, false)
+			})
 
-		projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
-		assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
+			projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
+			assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
+		})
 	}
 }
 
@@ -168,7 +169,6 @@ func TestJobImageExposed(t *testing.T) {
 				options.Build.Variables = append(options.Build.Variables, tt.vars...)
 				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
 			})
-			executors = nil
 
 			actualVarExists := false
 			for _, v := range build.GetAllVariables() {
