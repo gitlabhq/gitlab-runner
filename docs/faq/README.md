@@ -59,8 +59,8 @@ Upgrade your NGINX to newer version. For more information see this issue: <https
 When running `git clone` using HTTP(s) (with GitLab Runner or manually for
 tests) and you see the following output:
 
-```bash
-git clone https://git.example.com/user/repo.git
+```shell
+$ git clone https://git.example.com/user/repo.git
 
 Cloning into 'repo'...
 warning: You appear to have cloned an empty repository.
@@ -113,7 +113,7 @@ If none of those paths are present (for example on a production Windows host) th
 In case your system has support for the IANA Time Zone database, but it's not available by default, you
 can try to install it. For Linux systems it can be done for example by:
 
-```bash
+```shell
 # on Debian/Ubuntu based systems
 sudo apt-get install tzdata
 
@@ -139,15 +139,15 @@ working by following the steps below:
 1. Set the `ZONEINFO` environment variable containing a full path to the `zoneinfo.zip` file. If you
    are starting the Runner using the `run` command, then you can do this with:
 
-   ```bash
-   ZONEINFO=/etc/gitlab-runner/zoneinfo.zip gitlab-runner run [other options ...]
+   ```shell
+   ZONEINFO=/etc/gitlab-runner/zoneinfo.zip gitlab-runner run <other options ...>
    ```
 
    or if using Windows:
 
    ```powershell
    C:\gitlab-runner> set ZONEINFO=C:\gitlab-runner\zoneinfo.zip
-   C:\gitlab-runner> gitlab-runner run [other options ...]
+   C:\gitlab-runner> gitlab-runner run <other options ...>
    ```
 
    If you are starting the Runner as a system service then you will need to update/override
@@ -288,7 +288,7 @@ causes to why this happens:
 
 1. Make sure that your user can perform UI interactions:
 
-   ```bash
+   ```shell
    DevToolsSecurity -enable
    sudo security authorizationdb remove system.privilege.taskport is-developer
    ```

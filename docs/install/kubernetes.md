@@ -212,7 +212,7 @@ The GitLab Runner Helm Chart does not create a secret for you. In order to creat
 the secret, you can prepare your certificate on you local machine, and then run
 the `kubectl create secret` command from the directory with the certificate:
 
-```bash
+```shell
 kubectl
   --namespace <NAMESPACE>
   create secret generic <SECRET_NAME>
@@ -248,20 +248,20 @@ More information on how GitLab Runner uses these certificates can be found in th
 
 Add the GitLab Helm repository:
 
-```bash
+```shell
 helm repo add gitlab https://charts.gitlab.io
 ```
 
 If using Helm 2, you must also initialize Helm:
 
-```bash
+```shell
 helm init
 ```
 
 Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
 run the following:
 
-```bash
+```shell
 # For Helm 2
 helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
 
@@ -279,7 +279,7 @@ Where:
 
 Once your GitLab Runner Chart is installed, configuration changes and chart updates should be done using `helm upgrade`:
 
-```bash
+```shell
 helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
 ```
 
@@ -295,7 +295,7 @@ Where:
 
 To uninstall the GitLab Runner Chart, run the following:
 
-```bash
+```shell
 helm delete --namespace <NAMESPACE> <RELEASE-NAME>
 ```
 

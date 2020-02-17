@@ -35,7 +35,7 @@ To install the Runner:
 
 1. Add GitLab's official repository:
 
-   ```bash
+   ```shell
    # For Debian/Ubuntu/Mint
    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
 
@@ -49,7 +49,7 @@ To install the Runner:
 1. Install the latest version of GitLab Runner, or skip to the next step to
    install a specific version:
 
-   ```bash
+   ```shell
    # For Debian/Ubuntu/Mint
    sudo apt-get install gitlab-runner
 
@@ -59,7 +59,7 @@ To install the Runner:
 
 1. To install a specific version of GitLab Runner:
 
-   ```bash
+   ```shell
    # for DEB based systems
    apt-cache madison gitlab-runner
    sudo apt-get install gitlab-runner=10.0.0
@@ -89,7 +89,7 @@ the package. The best way is to add the pinning configuration file.
 If you do this, the next update of the Runner's package - whether it will
 be done manually or automatically - will be done using the same source:
 
-```bash
+```shell
 cat <<EOF | sudo tee /etc/apt/preferences.d/pin-gitlab-runner.pref
 Explanation: Prefer GitLab provided packages over the Debian native ones
 Package: gitlab-runner
@@ -102,7 +102,7 @@ EOF
 
 Simply execute to install latest version:
 
-```bash
+```shell
 # For Debian/Ubuntu/Mint
 sudo apt-get update
 sudo apt-get install gitlab-runner

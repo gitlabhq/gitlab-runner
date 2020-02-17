@@ -29,7 +29,7 @@ This defines global settings of GitLab Runner.
 
 Example:
 
-```bash
+```toml
 concurrent = 4
 log_level = "warning"
 ```
@@ -95,7 +95,7 @@ section and terminal support will be disabled.
 
 Example:
 
-```bash
+```toml
 [session_server]
   listen_address = "0.0.0.0:8093" #  listen on all available interfaces on port 8093
   advertise_address = "runner-host-name.tld:8093"
@@ -131,7 +131,7 @@ This defines one runner entry.
 
 Example:
 
-```bash
+```toml
 [[runners]]
   name = "ruby-2.6-docker"
   url = "https://CI/"
@@ -150,7 +150,7 @@ In cases where the GitLab instance is exposed to an URL which can't be used
 by the runner, a `clone_url` can be configured. For example; GitLab is exposed
 to `https://gitlab.example.com`, but the runner can't reach that because of
 a firewall setup. If the runner can reach the node on `192.168.1.23`,
-the `clone_url` should be set to `"http://192.168.1.23`.
+the `clone_url` should be set to `http://192.168.1.23`.
 
 Only if the `clone_url` is set, the runner will construct a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
@@ -241,7 +241,7 @@ Each service will be run in a separate container and linked to the build.
 
 Example:
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -297,7 +297,7 @@ A data volume is a specially-designated directory within one or more containers
 that bypasses the Union File System. Data volumes are designed to persist data,
 independent of the container's life cycle.
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -316,7 +316,7 @@ In addition to creating a volume using a data volume, you can also mount
 a directory from your Docker daemon's host into a container. It's useful
 when you want to store directories outside the container.
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -408,7 +408,7 @@ if you add some credentials for the _integrated registry_ with the
 For certain setups you will restrict access of the build jobs to docker images
 which comes from your private docker registry. In that case set
 
-```bash
+```toml
 [runners.docker]
   ...
   allowed_images = ["my.registry.tld:5000/*:*"]
@@ -426,7 +426,7 @@ This defines the Parallels parameters.
 
 Example:
 
-```bash
+```toml
 [runners.parallels]
   base_name = "my-parallels-image"
   template_name = ""
@@ -448,7 +448,7 @@ your `PATH` environment variable on Windows hosts:
 
 Example:
 
-```bash
+```toml
 [runners.virtualbox]
   base_name = "my-virtualbox-image"
   base_snapshot = "my-image-snapshot"
@@ -500,7 +500,7 @@ found in the separate [runners autoscale documentation](autoscale.md).
 
 Example:
 
-```bash
+```toml
 [runners.machine]
   IdleCount = 5
   IdleTime = 600
@@ -716,7 +716,7 @@ See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
 
 Example:
 
-```bash
+```toml
 [runners.kubernetes]
   host = "https://45.67.34.123:4892"
   cert_file = "/etc/ssl/kubernetes/api.crt"
@@ -736,7 +736,7 @@ to handle Git, artifacts and cache operations. This container is created from a 
 
 The helper image is based on Alpine Linux and it's provided for amd64 and arm architectures. It contains
 a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner binary, that contains only a subset
-of available commands, as well as Git, Git LFS, SSL certificates store and basic configuration of Alpine.
+of available commands, as well as Git, Git LFS, SSL certificates store, and basic configuration of Alpine.
 
 When GitLab Runner is installed from the DEB/RPM packages, both images (`amd64` and `arm` based) are installed on the host.
 When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's Git
@@ -744,8 +744,8 @@ revision) is not found on Docker Engine, it is automatically loaded. It works li
 `docker` and `docker+machine` executors.
 
 Things work a little different for the `kubernetes` executor or when GitLab Runner is installed manually. For manual
-installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor,the API of Kubernetes
-doesn't allow to load the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
+installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor, the API of Kubernetes
+doesn't allow loading the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
 the helper image from Docker Hub, from GitLab's official repository `gitlab/gitlab-runner-helper` by using the Runner's
 revision and architecture for defining which tag should be downloaded.
 
@@ -830,7 +830,7 @@ with executors that share `builds_dir` and have `concurrent > 1`.
 
 Example:
 
-```bash
+```toml
 [runners.custom_build_dir]
   enabled = true
 ```

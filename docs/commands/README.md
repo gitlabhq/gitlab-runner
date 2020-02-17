@@ -5,13 +5,13 @@ run your builds.
 
 You can check a recent list of commands by executing:
 
-```bash
+```shell
 gitlab-runner --help
 ```
 
 Append `--help` after a command to see its specific help page:
 
-```bash
+```shell
 gitlab-runner <command> --help
 ```
 
@@ -24,13 +24,13 @@ You can see the name of the environment variable when invoking `--help` for a
 specific command. For example, you can see below the help message for the `run`
 command:
 
-```bash
+```shell
 gitlab-runner run --help
 ```
 
 The output would be similar to:
 
-```bash
+```plaintext
 NAME:
    gitlab-runner run - run multi runner service
 
@@ -48,7 +48,7 @@ behavior or error.
 
 To run a command in debug mode, prepend the command with `--debug`:
 
-```bash
+```shell
 gitlab-runner --debug <command>
 ```
 
@@ -61,8 +61,8 @@ the command.
 Be aware of the notice that is written when executing the commands that are
 used for running builds, registering services or managing registered runners:
 
-```bash
-gitlab-runner run
+```shell
+$ gitlab-runner run
 
 INFO[0000] Starting multi-runner from /Users/ayufan/.gitlab-runner/config.toml ...  builds=0
 WARN[0000] Running in user-mode.
@@ -73,8 +73,8 @@ WARN[0000] $ sudo gitlab-runner...
 You should use `user-mode` if you are really sure that this is a mode that you
 want to work with. Otherwise, prefix your command with `sudo`:
 
-```
-sudo gitlab-runner run
+```shell
+$ sudo gitlab-runner run
 
 INFO[0000] Starting multi-runner from /etc/gitlab-runner/config.toml ...  builds=0
 INFO[0000] Running in system-mode.
@@ -117,7 +117,7 @@ following commands support the following signals:
 For example, to force a reload of the Runner's configuration file, run
 (all `gitlab-runner` processes will receive this signal):
 
-```bash
+```shell
 sudo killall -SIGHUP gitlab-runner
 ```
 
@@ -127,7 +127,7 @@ If your operating system is configured to automatically restart the service if i
 
 This is what you see if you run `gitlab-runner` without any arguments:
 
-```bash
+```plaintext
 NAME:
    gitlab-runner - a GitLab Runner
 
@@ -205,13 +205,13 @@ asked multiple questions during a Runner's registration.
 
 This question can be pre-filled by adding arguments when invoking the registration command:
 
-```
+```shell
 gitlab-runner register --name my-runner --url http://gitlab.example.com --registration-token my-registration-token
 ```
 
 Or by configuring the environment variable before the `register` command:
 
-```
+```shell
 export CI_SERVER_URL=http://gitlab.example.com
 export RUNNER_NAME=my-runner
 export REGISTRATION_TOKEN=my-registration-token
@@ -221,7 +221,7 @@ gitlab-runner register
 
 To check all possible arguments and environments execute:
 
-```
+```shell
 gitlab-runner register --help
 ```
 
@@ -231,13 +231,13 @@ It's possible to use registration in non-interactive / unattended mode.
 
 You can specify the arguments when invoking the registration command:
 
-```
+```shell
 gitlab-runner register --non-interactive <other-arguments>
 ```
 
 Or by configuring the environment variable before the `register` command:
 
-```
+```shell
 <other-environment-variables>
 export REGISTER_NON_INTERACTIVE=true
 gitlab-runner register
@@ -263,7 +263,7 @@ This command checks if the registered runners can connect to GitLab, but it
 doesn't verify if the runners are being used by the GitLab Runner service. An
 example output is:
 
-```bash
+```plaintext
 Verifying runner... is alive                        runner=fee9938e
 Verifying runner... is alive                        runner=0db52b31
 Verifying runner... is alive                        runner=826f687f
@@ -277,7 +277,7 @@ command.
 This operation cannot be undone, it will update the configuration file, so
 make sure to have a backup of `config.toml` before executing it.
 
-```bash
+```shell
 gitlab-runner verify --delete
 ```
 
@@ -299,7 +299,7 @@ configuration will not be modified for the user.
 To unregister a specific runner, first get the runner's details by executing
 `gitlab-runner list`:
 
-```bash
+```plaintext
 test-runner     Executor=shell Token=t0k3n URL=http://gitlab.example.com
 ```
 
@@ -311,7 +311,7 @@ make sure to have a backup of `config.toml` before executing it.
 
 #### By URL and token
 
-```bash
+```shell
 gitlab-runner unregister --url http://gitlab.example.com/ --token t0k3n
 ```
 
@@ -319,13 +319,13 @@ gitlab-runner unregister --url http://gitlab.example.com/ --token t0k3n
 
 > **Note:** If there is more than one runner with the given name, only the first one will be removed
 
-```bash
+```shell
 gitlab-runner unregister --name test-runner
 ```
 
 #### All Runners
 
-```bash
+```shell
 gitlab-runner unregister --all-runners
 ```
 
@@ -427,13 +427,13 @@ The GitLab URL and Runner token need to be specified too.
 
 For example:
 
-```bash
+```shell
 gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:2.6
 ```
 
 You can see all possible configuration options by using the `--help` flag:
 
-```bash
+```shell
 gitlab-runner run-single --help
 ```
 
@@ -467,19 +467,19 @@ Make sure you have committed any changes you want to test beforehand.
 For example, the following command will execute the job named **tests** locally
 using a shell executor:
 
-```bash
+```shell
 gitlab-runner exec shell tests
 ```
 
 To see a list of available executors, run:
 
-```bash
+```shell
 gitlab-runner exec
 ```
 
 To see a list of all available options for the `shell` executor, run:
 
-```bash
+```shell
 gitlab-runner exec shell
 ```
 

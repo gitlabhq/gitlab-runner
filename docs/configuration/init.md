@@ -33,7 +33,7 @@ For Runners that use systemd create
 `/etc/systemd/system/gitlab-runner.service.d/kill.conf` with the following
 content:
 
-```bash
+```toml
 [Service]
 TimeoutStopSec=7200
 KillSignal=SIGQUIT
@@ -50,7 +50,7 @@ will just `SIGKILL` the process.
 For Runners that use upstart create `/etc/init/gitlab-runner.override` with the
 following content:
 
-```bash
+```shell
 kill signal SIGQUIT
 kill timeout 7200
 ```
