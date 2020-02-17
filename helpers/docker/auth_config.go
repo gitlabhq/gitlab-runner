@@ -66,7 +66,7 @@ func ReadDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types
 	}
 
 	if homeDir == "" {
-		return "", nil, fmt.Errorf("Failed to get home directory")
+		return "", nil, fmt.Errorf("failed to get home directory")
 	}
 
 	configFile := path.Join(homeDir, ".docker", "config.json")

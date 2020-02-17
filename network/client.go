@@ -317,11 +317,11 @@ func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
 
 	mimetype, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		return false, fmt.Errorf("Content-Type parsing error: %w", err)
+		return false, fmt.Errorf("parsing Content-Type: %w", err)
 	}
 
 	if mimetype != "application/json" {
-		return false, fmt.Errorf("Server should return application/json. Got: %v", contentType)
+		return false, fmt.Errorf("server should return application/json. Got: %v", contentType)
 	}
 
 	return true, nil

@@ -228,7 +228,7 @@ func GetCurrentSnapshot(vmName string) (string, error) {
 	}
 	snapshot := matchCurrentSnapshotName(output)
 	if snapshot == nil {
-		return "", errors.New("Failed to match current snapshot name")
+		return "", errors.New("failed to match current snapshot name")
 	}
 	return snapshot[1], nil
 }

@@ -724,8 +724,8 @@ func TestRunWrongAttempts(t *testing.T) {
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(nil).Once()
-	e.On("Run", mock.Anything).Return(errors.New("Number of attempts out of the range [1, 10] for stage: get_sources"))
-	e.On("Finish", errors.New("Number of attempts out of the range [1, 10] for stage: get_sources"))
+	e.On("Run", mock.Anything).Return(errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
+	e.On("Finish", errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
 
 	RegisterExecutorProvider("build-run-attempt-failure", &p)
 
@@ -742,7 +742,7 @@ func TestRunWrongAttempts(t *testing.T) {
 
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "Number of attempts out of the range [1, 10] for stage: get_sources")
+	assert.EqualError(t, err, "number of attempts out of the range [1, 10] for stage: get_sources")
 }
 
 func TestRunSuccessOnSecondAttempt(t *testing.T) {
@@ -1181,7 +1181,7 @@ func TestWaitForTerminal(t *testing.T) {
 			},
 			jobTimeout:             3600,
 			waitForTerminalTimeout: time.Second,
-			expectedErr:            "Terminal session timed out (maximum time allowed - 1s)",
+			expectedErr:            "terminal session timed out (maximum time allowed - 1s)",
 		},
 		{
 			name: "System Interrupt",

@@ -95,7 +95,7 @@ func (s *executor) determineBaseSnapshot(baseImage string) string {
 func (s *executor) createVM(vmName string) (err error) {
 	baseImage := s.Config.VirtualBox.BaseName
 	if baseImage == "" {
-		return errors.New("Missing Image setting from VirtualBox configuration")
+		return errors.New("missing Image setting from VirtualBox configuration")
 	}
 
 	_, err = vbox.Status(vmName)
@@ -159,15 +159,15 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	if s.Config.SSH == nil {
-		return errors.New("Missing SSH config")
+		return errors.New("missing SSH config")
 	}
 
 	if s.Config.VirtualBox == nil {
-		return errors.New("Missing VirtualBox configuration")
+		return errors.New("missing VirtualBox configuration")
 	}
 
 	if s.Config.VirtualBox.BaseName == "" {
-		return errors.New("Missing BaseName setting from VirtualBox configuration")
+		return errors.New("missing BaseName setting from VirtualBox configuration")
 	}
 
 	version, err := vbox.Version()

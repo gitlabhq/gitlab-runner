@@ -387,7 +387,7 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime time.Time, 
 
 func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {
 	if attempts < 1 || attempts > 10 {
-		return fmt.Errorf("Number of attempts out of the range [1, 10] for stage: %s", buildStage)
+		return fmt.Errorf("number of attempts out of the range [1, 10] for stage: %s", buildStage)
 	}
 	for attempt := 0; attempt < attempts; attempt++ {
 		if err = b.executeStage(ctx, buildStage, executor); err == nil {
@@ -535,7 +535,7 @@ func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) erro
 		return errors.New("build cancelled, killing session")
 	case <-time.After(timeout):
 		err := fmt.Errorf(
-			"Terminal session timed out (maximum time allowed - %s)",
+			"terminal session timed out (maximum time allowed - %s)",
 			timeout.Round(time.Second),
 		)
 		b.logger.Infoln(err.Error())

@@ -30,9 +30,9 @@ func TestBuildSection(t *testing.T) {
 		error       error
 	}{
 		{"Success", false, nil},
-		{"Failure", false, fmt.Errorf("Failing test")},
+		{"Failure", false, fmt.Errorf("failing test")},
 		{"SkipMetricsSuccess", true, nil},
-		{"SkipMetricsFailure", true, fmt.Errorf("Failing test")},
+		{"SkipMetricsFailure", true, fmt.Errorf("failing test")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			logger := new(testBuffer)

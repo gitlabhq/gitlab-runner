@@ -268,7 +268,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 			return nil, err
 		}
 
-		return nil, fmt.Errorf("Cannot load prebuilt image: %s: %w", path, err)
+		return nil, fmt.Errorf("cannot load prebuilt image: %s: %w", path, err)
 	}
 	defer file.Close()
 
@@ -281,7 +281,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 	options := types.ImageImportOptions{Tag: tag}
 
 	if err := e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
-		return nil, fmt.Errorf("Failed to import image: %w", err)
+		return nil, fmt.Errorf("failed to import image: %w", err)
 	}
 
 	image, _, err := e.client.ImageInspectWithRaw(e.Context, ref+":"+tag)
@@ -383,7 +383,7 @@ func (e *executor) parseDeviceString(deviceString string) (device container.Devi
 	parts := strings.Split(deviceString, ":")
 
 	if len(parts) > 3 {
-		err = fmt.Errorf("Too many colons")
+		err = fmt.Errorf("too many colons")
 		return
 	}
 
@@ -412,7 +412,7 @@ func (e *executor) bindDevices() (err error) {
 	for _, deviceString := range e.Config.Docker.Devices {
 		device, err := e.parseDeviceString(deviceString)
 		if err != nil {
-			err = fmt.Errorf("Failed to parse device string %q: %w", deviceString, err)
+			err = fmt.Errorf("failed to parse device string %q: %w", deviceString, err)
 			return err
 		}
 
@@ -911,7 +911,7 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	select {
 	case <-ctx.Done():
 		e.killContainer(id, waitCh)
-		err = errors.New("Aborted")
+		err = errors.New("aborted")
 
 	case err = <-attachCh:
 		e.killContainer(id, waitCh)
@@ -999,7 +999,7 @@ func (e *executor) expandImageName(imageName string, allowedInternalImages []str
 	}
 
 	if e.Config.Docker.Image == "" {
-		return "", errors.New("No Docker image specified to run the build in")
+		return "", errors.New("no Docker image specified to run the build in")
 	}
 
 	return e.Config.Docker.Image, nil
@@ -1316,12 +1316,12 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	e.Debugln("Waiting for service container", containerName, "to be up and running...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
 	if err != nil {
-		return fmt.Errorf("ContainerCreate: %w", err)
+		return fmt.Errorf("create service container: %w", err)
 	}
 	defer e.removeContainer(e.Context, resp.ID)
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
-		return fmt.Errorf("ContainerStart: %w", err)
+		return fmt.Errorf("start service container: %w", err)
 	}
 
 	waitResult := make(chan error, 1)
