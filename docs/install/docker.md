@@ -11,27 +11,27 @@ GitLab Runner was installed directly on the host.
 The general rule is that every GitLab Runner command that normally would be executed
 as:
 
-```bash
-gitlab-runner [Runner command and options...]
+```shell
+gitlab-runner <Runner command and options...>
 ```
 
 can be executed with:
 
-```bash
-docker run [chosen docker options...] gitlab/gitlab-runner [Runner command and options...]
+```shell
+docker run <chosen docker options...> gitlab/gitlab-runner <Runner command and options...>
 ```
 
 For example, getting the top-level help information for GitLab Runner command could be
 executed as:
 
-```bash
+```shell
 docker run --rm -t -i gitlab/gitlab-runner --help
 
 NAME:
    gitlab-runner - a GitLab Runner
 
 USAGE:
-   gitlab-runner [global options] command [command options] [arguments...]
+   gitlab-runner <global options> command <command options> <arguments...>
 
 VERSION:
    10.7.0 (7c273476)
@@ -49,14 +49,14 @@ Docker container.
 
 1. Install Docker first:
 
-   ```bash
+   ```shell
    curl -sSL https://get.docker.com/ | sh
    ```
 
 1. You need to mount a config volume into the `gitlab-runner` container to
    be used for configs and other resources:
 
-   ```bash
+   ```shell
    docker run -d --name gitlab-runner --restart always \
      -v /srv/gitlab-runner/config:/etc/gitlab-runner \
      -v /var/run/docker.sock:/var/run/docker.sock \
@@ -68,7 +68,7 @@ Docker container.
 
    Or, you can use a config container to mount your custom data volume:
 
-   ```bash
+   ```shell
    docker run -d --name gitlab-runner-config \
        -v /etc/gitlab-runner \
        busybox:latest \
@@ -77,7 +77,7 @@ Docker container.
 
    And then, run the Runner:
 
-   ```bash
+   ```shell
    docker run -d --name gitlab-runner --restart always \
        -v /var/run/docker.sock:/var/run/docker.sock \
        --volumes-from gitlab-runner-config \
@@ -96,7 +96,7 @@ some of the most common problems with GitLab Runner.
 If you change the configuration in `config.toml`, you might need to restart the runner to apply the change.
 Make sure to restart the whole container instead of using `gitlab-runner restart`:
 
-```bash
+```shell
 docker restart gitlab-runner
 ```
 
@@ -104,19 +104,19 @@ docker restart gitlab-runner
 
 Pull the latest version (or a specific tag):
 
-```bash
+```shell
 docker pull gitlab/gitlab-runner:latest
 ```
 
 Stop and remove the existing container:
 
-```bash
+```shell
 docker stop gitlab-runner && docker rm gitlab-runner
 ```
 
 Start the container as you did originally:
 
-```bash
+```shell
 docker run -d --name gitlab-runner --restart always \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /srv/gitlab-runner/config:/etc/gitlab-runner \
@@ -140,7 +140,7 @@ the main process of the container, the logs can be read using the `docker logs` 
 
 For example, if GitLab Runner was started with the following command:
 
-```bash
+```shell
 docker run -d --name gitlab-runner --restart always \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /srv/gitlab-runner/config:/etc/gitlab-runner \
@@ -149,7 +149,7 @@ docker run -d --name gitlab-runner --restart always \
 
 you may get the logs with:
 
-```bash
+```shell
 docker logs gitlab-runner
 ```
 
@@ -205,7 +205,7 @@ Special care must be taken when dealing with such configuration.
 1. Make sure that a persistent directory is created on host: `mkdir -p /srv/gitlab-runner/config`.
 1. Run docker with `:Z` on volumes:
 
-```bash
+```shell
 docker run -d --name gitlab-runner --restart always \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /srv/gitlab-runner/config:/etc/gitlab-runner:Z \

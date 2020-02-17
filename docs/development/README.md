@@ -4,7 +4,7 @@
 
 ### For Debian/Ubuntu
 
-```bash
+```shell
 sudo apt-get install -y mercurial git-core wget make build-essential
 wget https://storage.googleapis.com/golang/go1.13.7.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz

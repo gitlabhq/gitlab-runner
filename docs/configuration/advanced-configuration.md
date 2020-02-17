@@ -29,7 +29,7 @@ This defines global settings of GitLab Runner.
 
 Example:
 
-```bash
+```toml
 concurrent = 4
 log_level = "warning"
 ```
@@ -95,7 +95,7 @@ section and terminal support will be disabled.
 
 Example:
 
-```bash
+```toml
 [session_server]
   listen_address = "0.0.0.0:8093" #  listen on all available interfaces on port 8093
   advertise_address = "runner-host-name.tld:8093"
@@ -131,7 +131,7 @@ This defines one runner entry.
 
 Example:
 
-```bash
+```toml
 [[runners]]
   name = "ruby-2.6-docker"
   url = "https://CI/"
@@ -241,7 +241,7 @@ Each service will be run in a separate container and linked to the build.
 
 Example:
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -297,7 +297,7 @@ A data volume is a specially-designated directory within one or more containers
 that bypasses the Union File System. Data volumes are designed to persist data,
 independent of the container's life cycle.
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -316,7 +316,7 @@ In addition to creating a volume using a data volume, you can also mount
 a directory from your Docker daemon's host into a container. It's useful
 when you want to store directories outside the container.
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -408,7 +408,7 @@ if you add some credentials for the _integrated registry_ with the
 For certain setups you will restrict access of the build jobs to docker images
 which comes from your private docker registry. In that case set
 
-```bash
+```toml
 [runners.docker]
   ...
   allowed_images = ["my.registry.tld:5000/*:*"]
@@ -426,7 +426,7 @@ This defines the Parallels parameters.
 
 Example:
 
-```bash
+```toml
 [runners.parallels]
   base_name = "my-parallels-image"
   template_name = ""
@@ -448,7 +448,7 @@ your `PATH` environment variable on Windows hosts:
 
 Example:
 
-```bash
+```toml
 [runners.virtualbox]
   base_name = "my-virtualbox-image"
   base_snapshot = "my-image-snapshot"
@@ -500,7 +500,7 @@ found in the separate [runners autoscale documentation](autoscale.md).
 
 Example:
 
-```bash
+```toml
 [runners.machine]
   IdleCount = 5
   IdleTime = 600
@@ -716,7 +716,7 @@ See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
 
 Example:
 
-```bash
+```toml
 [runners.kubernetes]
   host = "https://45.67.34.123:4892"
   cert_file = "/etc/ssl/kubernetes/api.crt"
@@ -830,7 +830,7 @@ with executors that share `builds_dir` and have `concurrent > 1`.
 
 Example:
 
-```bash
+```toml
 [runners.custom_build_dir]
   enabled = true
 ```

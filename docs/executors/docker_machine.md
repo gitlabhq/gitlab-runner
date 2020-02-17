@@ -77,7 +77,7 @@ out of the scope of this documentation. For more details please read the
    - **if yes**, ensure that service manager is [configured to use `SIGQUIT`](../configuration/init.md)
      and use the service's tools to stop the process:
 
-     ```
+     ```shell
      # For systemd
      sudo systemctl stop gitlab-runner
 
@@ -87,7 +87,7 @@ out of the scope of this documentation. For more details please read the
 
    - **if no**, you may stop the Runner's process manually:
 
-     ```bash
+     ```shell
      sudo killall -SIGQUIT gitlab-runner
      ```
 
@@ -99,7 +99,7 @@ out of the scope of this documentation. For more details please read the
 1. Wait until the Runner exits. You can check its status with `gitlab-runner status`
    or await a graceful shutdown for up to 30 minutes with:
 
-   ```bash
+   ```shell
    for i in `seq 1 180`; do # 1800 seconds = 30 minutes
        gitlab-runner status || break
        sleep 10
