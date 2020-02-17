@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -177,14 +177,11 @@ func TestJobImageExposed(t *testing.T) {
 					break
 				}
 			}
+			assert.Equal(t, tt.expectVarExists, actualVarExists, "CI_JOB_IMAGE exported?")
 
 			if tt.expectVarExists {
-				assert.Equal(t, tt.expectVarExists, actualVarExists, "CI_JOB_IMAGE should be defined")
-
 				actualJobImage := build.GetAllVariables().Get("CI_JOB_IMAGE")
 				assert.Equal(t, tt.expectImageName, actualJobImage)
-			} else {
-				assert.Equal(t, tt.expectVarExists, actualVarExists, "CI_JOB_IMAGE should not be defined")
 			}
 		})
 	}

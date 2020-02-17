@@ -718,17 +718,17 @@ func (b *Build) GetAllVariables() JobVariables {
 
 	variables := make(JobVariables, 0)
 	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
+	if b.Image.Name != "" {
+		variables = append(variables, JobVariable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false})
+	}
+	if b.Runner != nil {
+		variables = append(variables, b.Runner.GetVariables()...)
+	}
 	variables = append(variables, b.GetDefaultVariables()...)
 	variables = append(variables, b.GetCITLSVariables()...)
 	variables = append(variables, b.Variables...)
 	variables = append(variables, b.GetSharedEnvVariable())
 	variables = append(variables, AppVersion.Variables()...)
-	if b.Runner != nil {
-		variables = append(variables, b.Runner.GetVariables()...)
-	}
-	if b.Image.Name != "" {
-		variables = append(variables, JobVariable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false})
-	}
 
 	b.allVariables = variables.Expand()
 	return b.allVariables
