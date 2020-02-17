@@ -20,6 +20,18 @@ var supportedOSVersions = map[string]string{
 	windows1809: baseImage1809,
 }
 
+type unsupportedWindowsVersionError struct {
+	version string
+}
+
+func newUnsupportedWindowsVersionError(version string) *unsupportedWindowsVersionError {
+	return &unsupportedWindowsVersionError{version: version}
+}
+
+func (e *unsupportedWindowsVersionError) Error() string {
+	return fmt.Sprintf("unsupported Windows version: %s", e.version)
+}
+
 var powerShellCmd = []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"}
 
 type windowsInfo struct{}
@@ -47,5 +59,5 @@ func (w *windowsInfo) osVersion(operatingSystem string) (string, error) {
 		}
 	}
 
-	return "", NewUnsupportedWindowsVersionError(operatingSystem)
+	return "", newUnsupportedWindowsVersionError(operatingSystem)
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_windowsInfo_create(t *testing.T) {
@@ -49,7 +50,7 @@ func Test_windowsInfo_create(t *testing.T) {
 		},
 		{
 			operatingSystem: "some random string",
-			expectedErr:     NewUnsupportedWindowsVersionError("some random string"),
+			expectedErr:     newUnsupportedWindowsVersionError("some random string"),
 		},
 	}
 
@@ -62,5 +63,13 @@ func Test_windowsInfo_create(t *testing.T) {
 			assert.Equal(t, test.expectedInfo, image)
 			assert.Equal(t, test.expectedErr, err)
 		})
+	}
+}
+
+func TestNewUnsupportedWindowsVersionError(t *testing.T) {
+	for _, expectedVersion := range []string{windows1803, windows1809, "random"} {
+		err := newUnsupportedWindowsVersionError(expectedVersion)
+		require.Error(t, err)
+		assert.Equal(t, expectedVersion, err.version)
 	}
 }
