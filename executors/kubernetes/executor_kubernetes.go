@@ -445,6 +445,8 @@ func (s *executor) projectUniqueName() string {
 }
 
 func (s *executor) setupCredentials() error {
+	s.Debugln("Setting up secrets")
+
 	authConfigs := make(map[string]dockerConfigEntry)
 
 	for _, credentials := range s.Build.Credentials {
@@ -552,6 +554,8 @@ func (s *executor) createHostAlias() (*api.HostAlias, error) {
 }
 
 func (s *executor) setupBuildPod() error {
+	s.Debugln("Setting up build pod")
+
 	services := make([]api.Container, len(s.options.Services))
 
 	for i, service := range s.options.Services {
@@ -587,6 +591,7 @@ func (s *executor) setupBuildPod() error {
 
 	podConfig := s.preparePodConfig(labels, annotations, services, imagePullSecrets, hostAlias)
 
+	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
 	if err != nil {
 		return err
@@ -644,6 +649,8 @@ func (s *executor) getHelperImage() string {
 }
 
 func (s *executor) makePodProxyServices() ([]api.Service, error) {
+	s.Debugln("Creating pod proxy services")
+
 	ch := make(chan serviceCreateResponse)
 	var wg sync.WaitGroup
 	wg.Add(len(s.ProxyPool))
