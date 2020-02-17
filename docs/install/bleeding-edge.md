@@ -23,7 +23,7 @@ from `master` branch. Use at your own risk.
 
 You can then run the Runner with:
 
-```bash
+```shell
 chmod +x gitlab-runner-linux-amd64
 ./gitlab-runner-linux-amd64 run
 ```
@@ -37,7 +37,7 @@ chmod +x gitlab-runner-linux-amd64
 
 You can then install it with:
 
-```bash
+```shell
 dpkg -i gitlab-runner_386.deb
 ```
 
@@ -50,7 +50,7 @@ dpkg -i gitlab-runner_386.deb
 
 You can then install it with:
 
-```bash
+```shell
 rpm -i gitlab-runner_386.rpm
 ```
 

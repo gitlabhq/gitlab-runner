@@ -111,7 +111,7 @@ as a source directory when passing the `--docker-volumes` or
 Below is an example of what the configuration for a simple Docker
 executor running Windows
 
-```
+```toml
 [[runners]]
   name = "windows-docker-2019"
   url = "https://gitlab.com/"
@@ -246,7 +246,7 @@ test:2.7:
 
 Look for the `[runners.docker]` section:
 
-```
+```toml
 [runners.docker]
   image = "ruby:2.6"
 
@@ -336,7 +336,7 @@ You can mount a path in RAM using tmpfs. This can speed up the time required to 
 If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
 This is an example `config.toml` to mount the data directory for the official Mysql container in RAM.
 
-```
+```toml
 [runners.docker]
   # For the main container
   [runners.docker.tmpfs]
@@ -443,7 +443,7 @@ First, configure your Runner (config.toml) to run in `privileged` mode:
 Then, make your build script (`.gitlab-ci.yml`) to use Docker-in-Docker
 container:
 
-```bash
+```yaml
 image: docker:git
 services:
 - docker:dind
@@ -474,7 +474,7 @@ Consider the following example:
 
 1. Create a new Dockerfile:
 
-   ```bash
+   ```dockerfile
    FROM docker:dind
    ADD / /entrypoint.sh
    ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
@@ -482,7 +482,7 @@ Consider the following example:
 
 1. Create a bash script (`entrypoint.sh`) that will be used as the `ENTRYPOINT`:
 
-   ```bash
+   ```shell
    #!/bin/sh
 
    dind docker daemon
@@ -541,7 +541,7 @@ the Runner runs on.
 If an image cannot be found locally, then the Runner will fail the build
 with an error similar to:
 
-```
+```plaintext
 Pulling docker image local_image:latest ...
 ERROR: Build failed: Error: image local_image:latest not found
 ```
@@ -602,7 +602,7 @@ When `always` is used, the Runner will try to pull the image even if a local
 copy is available. If the image is not found, then the build will
 fail with an error similar to:
 
-```
+```plaintext
 Pulling docker image registry.tld/my/image:latest ...
 ERROR: Build failed: Error: image registry.tld/my/image:latest not found
 ```
@@ -611,7 +611,7 @@ ERROR: Build failed: Error: image registry.tld/my/image:latest not found
 For versions prior to `v1.8`, when using the `always` pull policy, it could
 fall back to local copy of an image and print a warning:
 >
-> ```
+> ```plaintext
 > Pulling docker image registry.tld/my/image:latest ...
 > WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
 > WARNING: Locally found image will be used instead.
@@ -642,7 +642,7 @@ and try to pull it from the remote registry. If the image was build locally
 and doesn't exist in any public registry (and especially in the default
 Docker registry), the build will fail with:
 
-```
+```plaintext
 Pulling docker image local_image:latest ...
 ERROR: Build failed: Error: image local_image:latest not found
 ```

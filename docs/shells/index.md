@@ -33,7 +33,7 @@ This is the default shell used on all Unix based systems. The bash script used
 in `.gitlab-ci.yml` is executed by piping the shell script to one of the
 following commands:
 
-```bash
+```shell
 # This command is used if the build should be executed in context
 # of another user (the shell executor)
 cat generated-bash-script | su --shell /bin/bash --login user
@@ -69,13 +69,13 @@ It doesn't support executing the build in context of another user.
 The generated Batch script is executed by saving its content to file and
 passing the file name to the following command:
 
-```bash
+```batch
 cmd /Q /C generated-windows-batch.cmd
 ```
 
 This is how an example batch script looks like:
 
-```bash
+```batch
 @echo off
 setlocal enableextensions
 setlocal enableDelayedExpansion
@@ -208,13 +208,13 @@ PowerShell doesn't support executing the build in context of another user.
 The generated PowerShell script is executed by saving it content to a file and
 passing the file name to the following command:
 
-```bash
+```batch
 powershell -noprofile -noninteractive -executionpolicy Bypass -command generated-windows-powershell.ps1
 ```
 
 This is how an example PowerShell script looks like:
 
-```bash
+```powershell
 $ErrorActionPreference = "Continue"
 
 echo "Running on $env:computername..."

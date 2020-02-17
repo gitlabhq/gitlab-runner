@@ -100,15 +100,15 @@ automatically removed.
 Let's suppose, that we have configured GitLab Runner with the following
 autoscale parameters:
 
-```bash
+```toml
 [[runners]]
   limit = 10
-  (...)
+  # (...)
   executor = "docker+machine"
   [runners.machine]
     IdleCount = 2
     IdleTime = 1800
-    (...)
+    # (...)
 ```
 
 At the beginning, when no jobs are queued, GitLab Runner starts two machines
@@ -191,7 +191,7 @@ queue is empty.
 
 Let's assume the following example:
 
-```bash
+```toml
 concurrent=20
 
 [[runners]]
@@ -208,7 +208,7 @@ concurrent machines running jobs and 10 idle, summing up to 30.
 But what happens if the `limit` is less than the total amount of machines that
 could be created? The example below explains that case:
 
-```bash
+```toml
 concurrent=20
 
 [[runners]]
@@ -308,7 +308,7 @@ and will download or upload the archive respectively.
 To enable distributed caching, you have to define it in `config.toml` using the
 [`[runners.cache]` directive][runners-cache]:
 
-```bash
+```toml
 [[runners]]
   limit = 10
   executor = "docker+machine"
@@ -349,7 +349,7 @@ downloading step should be much faster on each host.
 To configure the Docker registry mirroring, you have to add `MachineOptions` to
 the configuration in `config.toml`:
 
-```bash
+```toml
 [[runners]]
   limit = 10
   executor = "docker+machine"
@@ -369,7 +369,7 @@ each host created by Docker Machine.
 
 The `config.toml` below uses the [`digitalocean` Docker Machine driver](https://docs.docker.com/machine/drivers/digital-ocean/):
 
-```bash
+```toml
 concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
 
 [[runners]]
