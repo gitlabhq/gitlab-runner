@@ -134,6 +134,29 @@ To open the report:
 1. At this moment, we can see the same file browser with coverage details as we seen with the S3 source.
    We can do the same. The only difference is that it will disappear in maximum of 7 days.
 
-### Summary
+## Reviewing the Merge Request title
+
+Because we generate [`CHANGELOG.md`](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/master/CHANGELOG.md) entries
+from the merge request titles, making sure that the title is valid and informative is a part
+of the reviewer and maintainer's responsibilities.
+
+Before merging a merge request, check the title and update it if you think it will not be clear in the
+`CHANGELOG.md` file. Keep in mind that the changelog will have only this one line, without the merge
+request description, discussion or diff that provide more context.
+
+As an example, look at <https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1812> and compare:
+
+- `yml to yaml` - which is the original title and was added to changelog with our script,
+- `Fix values.yaml file name in documentation` - which is what I've updated it to in the changelog.
+
+What will `yml to yaml` tell a Runner administrator if they review the changelog before updating
+to a newer version? Does it show the risks behind the update, the implemented behavior changes, a new
+behavior/features that were added? Keep these questions in mind when reviewing the merge request and its title.
+
+Contributors may not be aware of the above information, and that their titles
+may not match our requirements. Try to educate the contributor about this.
+In the end, it's your responsibility to verify and update the title **before the merge request is merged**.
+
+## Summary
 
 Dear reviewer, you've got your sword. Now go fight with the dragons!
