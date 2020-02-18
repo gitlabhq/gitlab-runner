@@ -107,11 +107,11 @@ logout() {
     _docker logout "${1}"
 }
 
-echo -n > dockerfiles/checksums
-echo "${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine" >> dockerfiles/checksums
-echo "${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init" >> dockerfiles/checksums
-echo "${GIT_LFS_CHECKSUM}  /usr/bin/git-lfs" >> dockerfiles/checksums
-cat dockerfiles/checksums
+tee dockerfiles/checksums <<EOF
+${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine
+${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init
+${GIT_LFS_CHECKSUM}  /usr/bin/git-lfs
+EOF
 
 cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/gitlab-runner_amd64.deb
 cp dockerfiles/checksums dockerfiles/ubuntu
