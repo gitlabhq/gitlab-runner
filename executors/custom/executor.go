@@ -244,7 +244,7 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 		cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("CUSTOM_ENV_%s=%s", variable.Key, variable.Value))
 	}
 
-  createServicesEnv(e, &cmdOpts.Env)
+	createServicesEnv(e, &cmdOpts.Env)
 
 	return commandFactory(ctx, opts.executable, opts.args, cmdOpts)
 }
