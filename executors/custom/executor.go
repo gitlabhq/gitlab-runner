@@ -17,8 +17,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
 )
 
-const ciJobImageEnv = "CUSTOM_ENV_CI_JOB_IMAGE"
-
 type commandOutputs struct {
 	stdout io.Writer
 	stderr io.Writer
@@ -246,13 +244,7 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 		cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("CUSTOM_ENV_%s=%s", variable.Key, variable.Value))
 	}
 
-	createServicesEnv(e, &cmdOpts.Env)
-
-	// since the variable is unique to the custom executor
-	// at the moment, we add it separately from the other build variables
-	// if we decide to export only the postfix in the build, this code can be removed
-	imageName := e.Build.GetAllVariables().ExpandValue(e.Build.Image.Name)
-	cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("%s=%s", ciJobImageEnv, imageName))
+  createServicesEnv(e, &cmdOpts.Env)
 
 	return commandFactory(ctx, opts.executable, opts.args, cmdOpts)
 }

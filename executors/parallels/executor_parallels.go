@@ -130,7 +130,7 @@ func (s *executor) createVM() error {
 		return err
 	}
 
-	s.Debugln("Bootstraping VM...")
+	s.Debugln("Bootstrapping VM...")
 	err = prl.Start(s.vmName)
 	if err != nil {
 		return err
