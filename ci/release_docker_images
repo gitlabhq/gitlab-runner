@@ -28,7 +28,7 @@ if [[ -z "${REVISION}" ]]; then
 fi
 
 _docker() {
-    docker ${@}
+    docker "${@}"
 }
 
 build() {
@@ -81,22 +81,21 @@ release_docker_helper_images() {
     helper_image_arm64="gitlab/gitlab-runner-helper:arm64-${REVISION}"
     helper_image_arm64_latest="gitlab/gitlab-runner-helper:arm64-latest"
 
-    import out/helper-images/prebuilt-x86_64.tar.xz ${helper_image_x86_64}
-    import out/helper-images/prebuilt-arm.tar.xz ${helper_image_arm}
-    import out/helper-images/prebuilt-arm64.tar.xz ${helper_image_arm64}
+    import out/helper-images/prebuilt-x86_64.tar.xz "${helper_image_x86_64}"
+    import out/helper-images/prebuilt-arm.tar.xz "${helper_image_arm}"
+    import out/helper-images/prebuilt-arm64.tar.xz "${helper_image_arm64}"
 
-    tag_latest ${helper_image_x86_64} ${helper_image_x86_64_latest}
-    tag_latest ${helper_image_arm} ${helper_image_arm_latest}
-    tag_latest ${helper_image_arm64} ${helper_image_arm64_latest}
+    tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
+    tag_latest "${helper_image_arm}" "${helper_image_arm_latest}"
+    tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
 
+    push "${helper_image_x86_64}"
+    push "${helper_image_arm}"
+    push "${helper_image_arm64}"
 
-    push ${helper_image_x86_64}
-    push ${helper_image_arm}
-    push ${helper_image_arm64}
-
-    push_latest ${helper_image_x86_64_latest}
-    push_latest ${helper_image_arm_latest}
-    push_latest ${helper_image_arm64_latest}
+    push_latest "${helper_image_x86_64_latest}"
+    push_latest "${helper_image_arm_latest}"
+    push_latest "${helper_image_arm64_latest}"
 }
 
 login() {
@@ -115,7 +114,7 @@ cat dockerfiles/checksums
 
 cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/gitlab-runner_amd64.deb
 cp dockerfiles/checksums dockerfiles/ubuntu
-cp ${RUNNER_BINARY} dockerfiles/alpine/gitlab-runner-linux-amd64
+cp "${RUNNER_BINARY}" dockerfiles/alpine/gitlab-runner-linux-amd64
 cp dockerfiles/checksums dockerfiles/alpine
 
 build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu
