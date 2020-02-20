@@ -19,7 +19,7 @@ var referenceRegexpNoPort = regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
 
 const imageVersionLatest = "latest"
 
-// SplitNameAndVersion parses Docker registry image urls and construct a struct with correct
+// SplitNameAndVersion parses Docker registry image urls and constructs a struct with correct
 // image url, name, version and aliases
 func SplitNameAndVersion(serviceDescription string) Service {
 	service := Service{
