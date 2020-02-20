@@ -1837,11 +1837,17 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Empty(t, pod.Spec.SecurityContext, "Security context should be empty")
 			},
 		},
-		"supports services as host aliases": {
+		"supports services with host aliases": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
+						Services: []common.Service{
+							{
+								Name:  "nginx",
+								Alias: "proxy",
+							},
+						},
 					},
 				},
 			},
@@ -1857,13 +1863,42 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 4)
+				assert.Len(t, pod.Spec.Containers, 5)
 				require.Len(t, pod.Spec.HostAliases, 1)
 
 				expectedHostnames := []string{
 					"test-service",
 					"svc-alias",
 					"docker",
+					"nginx",
+					"proxy",
+				}
+				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
+				assert.Equal(t, expectedHostnames, pod.Spec.HostAliases[0].Hostnames)
+			},
+		},
+		"supports services with host in runner config only": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						Services: []common.Service{
+							{
+								Name:  "nginx",
+								Alias: "proxy",
+							},
+						},
+					},
+				},
+			},
+			Options: &kubernetesOptions{},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Len(t, pod.Spec.Containers, 3)
+				require.Len(t, pod.Spec.HostAliases, 1)
+
+				expectedHostnames := []string{
+					"nginx",
+					"proxy",
 				}
 				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
 				assert.Equal(t, expectedHostnames, pod.Spec.HostAliases[0].Hostnames)
@@ -1874,6 +1909,11 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
+						Services: []common.Service{
+							{
+								Name: "nginx:latest",
+							},
+						},
 					},
 				},
 			},
@@ -1885,11 +1925,11 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 3)
+				assert.Len(t, pod.Spec.Containers, 4)
 				require.Len(t, pod.Spec.HostAliases, 1)
 
 				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
-				assert.Equal(t, []string{"docker"}, pod.Spec.HostAliases[0].Hostnames)
+				assert.Equal(t, []string{"docker", "nginx"}, pod.Spec.HostAliases[0].Hostnames)
 			},
 		},
 		"ignores non RFC1123 aliases": {
@@ -1897,6 +1937,12 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
+						Services: []common.Service{
+							{
+								Name:  "nginx",
+								Alias: "INVALID_PROXY_ALIAS",
+							},
+						},
 					},
 				},
 			},
@@ -1919,6 +1965,37 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Contains(t, errMsg, "is invalid DNS")
 				assert.Contains(t, errMsg, "INVALID_ALIAS")
 				assert.Contains(t, errMsg, "test-service")
+			},
+		},
+		"ignores non RFC1123 aliases from runner config": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						Services: []common.Service{
+							{
+								Name:  "nginx",
+								Alias: "INVALID_PROXY_ALIAS",
+							},
+						},
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name: "docker:dind",
+					},
+				},
+			},
+			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
+				var expected *invalidHostAliasDNSError
+				assert.True(t, errors.As(err, &expected))
+				assert.True(t, expected.Is(err))
+				errMsg := err.Error()
+				assert.Contains(t, errMsg, "is invalid DNS")
+				assert.Contains(t, errMsg, "INVALID_PROXY_ALIAS")
+				assert.Contains(t, errMsg, "nginx")
 			},
 		},
 		"ignores services with ports": {
@@ -1963,6 +2040,12 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
+						Services: []common.Service{
+							{
+								Name:  "nginx",
+								Alias: "proxy",
+							},
+						},
 					},
 				},
 			},
@@ -1980,7 +2063,7 @@ func TestSetupBuildPod(t *testing.T) {
 				e.featureChecker = mockFc
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 3)
+				assert.Len(t, pod.Spec.Containers, 4)
 				assert.Nil(t, pod.Spec.HostAliases)
 			},
 		},
@@ -2078,6 +2161,7 @@ func TestSetupBuildPod(t *testing.T) {
 				helperImageInfo: helperImageInfo,
 				featureChecker:  mockFc,
 			}
+			ex.getServices(ex.Build)
 
 			if test.PrepareFn != nil {
 				test.PrepareFn(t, test, &ex)

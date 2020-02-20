@@ -249,14 +249,6 @@ type KubernetesPodSecurityContext struct {
 
 type DockerService struct {
 	Service
-	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
-}
-
-func (s *DockerService) ToImageDefinition() Image {
-	return Image{
-		Name:  s.Name,
-		Alias: s.Alias,
-	}
 }
 
 // TODO: Remove in 13.0
@@ -305,7 +297,15 @@ func tryGetTomlValue(data map[string]interface{}, key string) (string, error) {
 }
 
 type Service struct {
-	Name string `toml:"name" long:"name" description:"The image path for the service"`
+	Name  string `toml:"name" long:"name" description:"The image path for the service"`
+	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+}
+
+func (s *Service) ToImageDefinition() Image {
+	return Image{
+		Name:  s.Name,
+		Alias: s.Alias,
+	}
 }
 
 type RunnerCredentials struct {

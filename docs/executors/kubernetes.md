@@ -6,7 +6,7 @@ possible with the use of the **Kubernetes** executor.
 The **Kubernetes** executor, when used with GitLab CI, connects to the Kubernetes
 API in the cluster creating a Pod for each GitLab CI Job. This Pod is made
 up of, at the very least, a build container, a helper container, and an additional container for each
-`service` defined by the `.gitlab-ci.yml` file. The names for these containers
+`service` defined by the `.gitlab-ci.yml` or `config.toml` files. The names for these containers
 are as follows:
 
 - The build container is `build`
@@ -384,7 +384,8 @@ check_interval = 30
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/4470) in GitLab Runner 12.5.
 
 Define a list of [services](https://docs.gitlab.com/ee/ci/services/).
-Currently, only `name` can be defined.
+
+Since [GitLab Runner 12.9](https://gitlab.com/gitlab-org/gitlab-runner/issues/4829) service aliases can be specified.
 
 ```toml
 concurrent = 1
@@ -397,8 +398,10 @@ check_interval = 30
       helper_image = "gitlab-registy.example.com/helper:latest"
       [[runners.kubernetes.services]]
         name = "postgres:12-alpine"
+        alias = "db1"
       [[runners.kubernetes.services]]
         name = "percona:latest"
+        alias = "db2"
 ```
 
 ## Using Docker in your builds

@@ -780,7 +780,7 @@ func (s *executor) getServices(build *common.Build) {
 		if service.Name == "" {
 			continue
 		}
-		s.options.Services = append(s.options.Services, common.Image{Name: service.Name})
+		s.options.Services = append(s.options.Services, service.ToImageDefinition())
 	}
 
 	for _, service := range build.Services {
