@@ -101,11 +101,9 @@ make build_current
 `make build_current` is a superset of `make build_simple` which in addition
 takes care of building Docker dependencies.
   
-### Building the Docker image
+### Building the Docker images
 
-If you want to build the Docker image, you need to run `make build_current_docker`.
-
-The `build_current_docker` Makefile target will:
+If you want to build the Docker images, run `make build_current_docker`, which will:
 
 - build `gitlab-runner-helper` and create a helper Docker image from it;
 - compile Runner for `linux/amd64`;
