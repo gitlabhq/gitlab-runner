@@ -1,6 +1,6 @@
 export RUNNER_BINARY ?= out/binaries/$(NAME)
 
-build: $(GOX)
+build_all: $(GOX)
 	# Building $(NAME) in version $(VERSION) for $(BUILD_PLATFORMS)
 	gox $(BUILD_PLATFORMS) \
 		-ldflags "$(GO_LDFLAGS)" \
