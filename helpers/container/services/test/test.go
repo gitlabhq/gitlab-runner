@@ -1,6 +1,6 @@
 package test
 
-type TestServiceDescription struct {
+type ServiceDescription struct {
 	Description string
 	Image       string
 	Service     string
@@ -9,7 +9,7 @@ type TestServiceDescription struct {
 	Alternative string
 }
 
-var TestServices = []TestServiceDescription{
+var Services = []ServiceDescription{
 	{"service", "service:latest", "service", "latest", "service", ""},
 	{"service:version", "service:version", "service", "version", "service", ""},
 	{"namespace/service", "namespace/service:latest", "namespace/service", "latest", "namespace__service", "namespace-service"},

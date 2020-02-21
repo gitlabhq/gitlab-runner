@@ -5,11 +5,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	docker_helpers_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
 )
 
 func TestSplitNameAndVersion(t *testing.T) {
-	for _, test := range docker_helpers_test.TestServices {
+	for _, test := range docker_helpers_test.Services {
 		t.Run(test.Description, func(t *testing.T) {
 			out := SplitNameAndVersion(test.Description)
 			service := out.Service
@@ -31,4 +32,12 @@ func TestSplitNameAndVersion(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSplitNameAndVersionEmpty(t *testing.T) {
+	expectedService := Service{
+		Version:   imageVersionLatest,
+		ImageName: "",
+	}
+	assert.Equal(t, expectedService, SplitNameAndVersion(""))
 }

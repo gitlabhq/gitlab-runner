@@ -22,15 +22,13 @@ const imageVersionLatest = "latest"
 // SplitNameAndVersion parses Docker registry image urls and constructs a struct with correct
 // image url, name, version and aliases
 func SplitNameAndVersion(serviceDescription string) Service {
-	service := Service{
-		ImageName: serviceDescription,
-		Version:   imageVersionLatest,
-	}
-
 	// Try to find matches in e.g. subdomain.domain.tld:8080/namespace/service:version
 	matches := reference.ReferenceRegexp.FindStringSubmatch(serviceDescription)
 	if len(matches) == 0 {
-		return service
+		return Service{
+			ImageName: serviceDescription,
+			Version:   imageVersionLatest,
+		}
 	}
 
 	// -> subdomain.domain.tld:8080/namespace/service
@@ -43,12 +41,16 @@ func SplitNameAndVersion(serviceDescription string) Service {
 	registry := registryMatches[1]
 	// -> /namespace/service
 	imageName := registryMatches[3]
+
+	service := Service{}
 	service.Service = registry + imageName
 
 	if len(imageVersion) > 0 {
+		service.ImageName = serviceDescription
 		service.Version = imageVersion
 	} else {
-		service.ImageName = fmt.Sprintf("%s:%s", imageWithoutVersion, service.Version)
+		service.ImageName = fmt.Sprintf("%s:%s", imageWithoutVersion, imageVersionLatest)
+		service.Version = imageVersionLatest
 	}
 
 	alias := strings.Replace(service.Service, "/", "__", -1)
