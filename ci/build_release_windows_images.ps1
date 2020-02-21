@@ -9,9 +9,9 @@ $InformationPreference = "Continue"
 #   used for building the Docker image. It is important for the version to match
 #   one of the Dockerfile suffix, for example, `nanoserver1809` for the Dockerfile
 #   `Dockerfile.x86_64_nanoserver1809`
-# - $Env:GIT_VERSON - Specify which version of Git needs to be installed on
+# - $Env:GIT_VERSION - Specify which version of Git needs to be installed on
 #   the Docker image. This is done through Docker build args.
-# - $Env:GIT_VERSON_BUILD - Specify which build is needed to download for the
+# - $Env:GIT_VERSION_BUILD - Specify which build is needed to download for the
 #   GIT_VERSION you specified.
 # - $Env:GIT_256_CHECKSUM - The checksum of the downloaded zip, usually found in
 #   the GitHub release page.
