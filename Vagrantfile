@@ -32,7 +32,7 @@ Vagrant.configure('2') do |config|
     cfg.vm.box = 'StefanScherer/windows_10'
     cfg.vm.communicator = 'winrm'
 
-    cfg.vm.synced_folder '.', 'C:\Go\src\gitlab.com\gitlab-org\gitlab-runner'
+    cfg.vm.synced_folder '.', 'C:\GitLab-Runner'
 
     cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/base.ps1'
     cfg.vm.provision 'shell', path: 'scripts/vagrant/provision/enable_developer_mode.ps1'
