@@ -16,8 +16,10 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+ARG DOCKER_VERSION
+
 # Install docker client
-RUN wget -q https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O /tmp/docker.tar.gz; \
+RUN wget -q https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz -O /tmp/docker.tar.gz; \
     tar -xzf /tmp/docker.tar.gz -C /tmp/; \
     cp /tmp/docker/docker* /usr/bin; \
     chmod +x /usr/bin/docker*; \
