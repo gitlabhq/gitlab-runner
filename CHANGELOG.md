@@ -1,4 +1,4 @@
-v12.8.0-rc1 (2020-02-13)
+v12.8.0 (2020-02-22)
 
 - Define most jobs as 'pipelines for merge requests' !1747
 - Build ci images only on related file changes !1746
@@ -55,6 +55,8 @@ v12.8.0-rc1 (2020-02-13)
 - Minor fixes in advanced-configuration.md !1828
 - Remove install Makefile target !1822
 - Docs osx install !1829
+- Set DinD image explicitly to 19.03.5 !1840
+- Make pipelines running also for X-Y-stable branches !1871
 
 v12.7.1 (2020-01-23)
 
