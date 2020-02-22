@@ -14,21 +14,21 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 
 Using binary package:
 
-```sh
+```shell
 wget https://storage.googleapis.com/golang/go1.13.8.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 Using installation package:
 
-```sh
+```shell
 wget https://storage.googleapis.com/golang/go1.13.8.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
 ### For FreeBSD
 
-```sh
+```shell
 pkg install go-1.13.8 gmake git mercurial
 ```
 
@@ -39,12 +39,12 @@ The Docker Engine is required to create pre-built image that is embedded into ru
 To install Docker, follow the Docker [installation
 instructions](https://docs.docker.com/install/) for your OS.
 
-Make sure that on machine that is running your Docker Engine you have a `binfmt_misc`.
-This is required to be able to build ARM images that are embedded into GitLab Runner binary.
+Make sure you have a `binfmt_misc` on the machine that is running your Docker Engine.
+This is required for building ARM images that are embedded into the GitLab Runner binary.
 
 - For Debian/Ubuntu it's sufficient to execute:
 
-  ```
+  ```shell
   sudo apt-get install binfmt-support qemu-user-static
   ```
 
@@ -52,7 +52,7 @@ This is required to be able to build ARM images that are embedded into GitLab Ru
 
 - For CoreOS (but also works on Debian and Ubuntu) you need to execute the following script on system start:
 
-  ```sh
+  ```shell
   #!/bin/sh
 
   set -xe
@@ -68,7 +68,7 @@ This is required to be able to build ARM images that are embedded into GitLab Ru
 
 ## 3. Download runner sources
 
-```
+```shell
 go get gitlab.com/gitlab-org/gitlab-runner
 ```
 
@@ -76,7 +76,7 @@ go get gitlab.com/gitlab-org/gitlab-runner
 
 This will download and restore all dependencies required to build runner:
 
-```
+```shell
 make deps
 ```
 
@@ -84,22 +84,32 @@ make deps
 
 ## 5. Run runner
 
-Normally you would use `gitlab-runner`, in order to compile and run Go source use the go toolchain:
+Normally you would use `gitlab-runner`. In order to compile and run the Go sources, use the Go toolchain:
 
-```sh
+```shell
 make build_current
 ./out/binaries/gitlab-runner run
 ```
 
 You can run runner in debug-mode:
 
-```sh
+```shell
 make build_current
 ./out/binaries/gitlab-runner --debug run
 ```
 
 `make build_current` is a superset of `make build_simple` which in addition
 takes care of building Docker dependencies.
+  
+### Building the Docker images
+
+If you want to build the Docker images, run `make build_current_docker`, which will:
+
+1. Build `gitlab-runner-helper` and create a helper Docker image from it.
+1. Compile Runner for `linux/amd64`.
+1. Build a DEB package for Runner. The official Runner images are based on Alpine and Ubuntu,
+   and the Ubuntu image build uses the DEB package.
+1. Build the Alpine and Ubuntu versions of the `gitlab/gitlab-runner` image.
 
 ## 6. Run test suite locally
 
@@ -119,13 +129,13 @@ These are the binaries that you can install:
 
 After installing the binaries run:
 
-```sh
+```shell
 make development_setup
 ```
 
 To execute the tests run:
 
-```sh
+```shell
 make test
 ```
 

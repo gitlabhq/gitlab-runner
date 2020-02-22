@@ -1,4 +1,4 @@
-# Best practice
+# Best practices
 
 Below are some guidelines you should follow when you use and administer
 GitLab Runner.
@@ -42,5 +42,5 @@ _Builds Directory_. For example, you can store tools inside of
 discourage this, you should never store anything inside of the _Builds
 Directory_. GitLab Runner should have total control over it and does not
 provide stability in such cases. If you have dependencies that are
-required for your CI, we recommend to have them installed in some other
+required for your CI, we recommend installing them in some other
 place.

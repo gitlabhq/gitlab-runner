@@ -102,8 +102,6 @@ environment variables available to them:
 - All environment variables provided by the Custom Runner host system.
 - All services and their [available settings](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services).
   Exposed in JSON format as `CUSTOM_ENV_CI_JOB_SERVICES`.
-- The value of the [`image` keyword](https://docs.gitlab.com/ee/ci/yaml/#image),
-exported as `CUSTOM_ENV_CI_JOB_IMAGE`.
 
 Both CI/CD environment variables and predefined variables are prefixed
 with `CUSTOM_ENV_` to prevent conflicts with system environment
