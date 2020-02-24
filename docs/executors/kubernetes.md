@@ -6,7 +6,7 @@ possible with the use of the **Kubernetes** executor.
 The **Kubernetes** executor, when used with GitLab CI, connects to the Kubernetes
 API in the cluster creating a Pod for each GitLab CI Job. This Pod is made
 up of, at the very least, a build container, a helper container, and an additional container for each
-`service` defined by the `.gitlab-ci.yml` or `config.toml` files. The names for these containers
+`service` defined in the `.gitlab-ci.yml` or `config.toml` files. The names for these containers
 are as follows:
 
 - The build container is `build`
