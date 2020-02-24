@@ -385,7 +385,7 @@ check_interval = 30
 
 Define a list of [services](https://docs.gitlab.com/ee/ci/services/).
 
-Since [GitLab Runner 12.9](https://gitlab.com/gitlab-org/gitlab-runner/issues/4829) service aliases can be specified.
+Service aliases are supported since [GitLab Runner 12.9](https://gitlab.com/gitlab-org/gitlab-runner/issues/4829).
 
 ```toml
 concurrent = 1
