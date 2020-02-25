@@ -17,11 +17,14 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -173,6 +176,10 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		OperatingSystem: e.info.OperatingSystem,
 	})
 	require.NoError(t, err)
+
+	e.BuildShell = &common.ShellConfiguration{
+		Environment: []string{},
+	}
 
 	c.On("ImagePullBlocking", e.Context, imageName, options).
 		Return(nil).
@@ -1005,6 +1012,10 @@ func TestCreateDependencies(t *testing.T) {
 						Key:   featureflags.UseLegacyVolumesMountingOrder,
 						Value: test.legacyVolumesMountingOrder,
 					})
+
+					e.BuildShell = &common.ShellConfiguration{
+						Environment: []string{},
+					}
 				},
 				volumesManagerAssertions: func(vm *volumes.MockManager) {
 					binds := make([]string, 0)
@@ -1502,7 +1513,7 @@ func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *com
 	err := e.createVolumesManager()
 	require.NoError(t, err)
 
-	_, err = e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}})
+	_, err = e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}}, nil)
 	assert.NoError(t, err, "Should create service container without errors")
 }
 
@@ -1683,6 +1694,214 @@ func TestDockerSysctlsSetting(t *testing.T) {
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
 
+type networksTestCase struct {
+	clientAssertions          func(*docker_helpers.MockClient)
+	networksManagerAssertions func(*networks.MockManager)
+	createNetworkManager      bool
+	networkPerBuild           string
+	expectedBuildError        error
+	expectedCleanError        error
+}
+
+func TestDockerCreateNetwork(t *testing.T) {
+	testErr := errors.New("test-err")
+
+	tests := map[string]networksTestCase{
+		"networks manager not created": {
+			networkPerBuild:    "false",
+			expectedBuildError: errNetworksManagerUndefined,
+			expectedCleanError: errNetworksManagerUndefined,
+		},
+		"network not created": {
+			createNetworkManager: true,
+			networkPerBuild:      "false",
+			networksManagerAssertions: func(nm *networks.MockManager) {
+				nm.On("Create", mock.Anything, mock.Anything).
+					Return(container.NetworkMode("test"), nil).
+					Once()
+				nm.On("Inspect", mock.Anything).
+					Return(types.NetworkResource{}, nil).
+					Once()
+				nm.On("Cleanup", mock.Anything).
+					Return(nil).
+					Once()
+			},
+		},
+		"network created": {
+			createNetworkManager: true,
+			networkPerBuild:      "true",
+			networksManagerAssertions: func(nm *networks.MockManager) {
+				nm.On("Create", mock.Anything, mock.Anything).
+					Return(container.NetworkMode("test"), nil).
+					Once()
+				nm.On("Inspect", mock.Anything).
+					Return(types.NetworkResource{}, nil).
+					Once()
+				nm.On("Cleanup", mock.Anything).
+					Return(nil).
+					Once()
+			},
+		},
+		"network creation failed": {
+			createNetworkManager: true,
+			networkPerBuild:      "true",
+			networksManagerAssertions: func(nm *networks.MockManager) {
+				nm.On("Create", mock.Anything, mock.Anything).
+					Return(container.NetworkMode("fail"), testErr).
+					Once()
+			},
+			expectedBuildError: testErr,
+		},
+		"network inspect failed": {
+			createNetworkManager: true,
+			networkPerBuild:      "true",
+			networksManagerAssertions: func(nm *networks.MockManager) {
+				nm.On("Create", mock.Anything, mock.Anything).
+					Return(container.NetworkMode("test"), nil).
+					Once()
+				nm.On("Inspect", mock.Anything).
+					Return(types.NetworkResource{}, testErr).
+					Once()
+			},
+			expectedCleanError: nil,
+		},
+		"removing container failed": {
+			createNetworkManager: true,
+			networkPerBuild:      "true",
+			clientAssertions: func(c *docker_helpers.MockClient) {
+				c.On("NetworkList", mock.Anything, mock.Anything).
+					Return([]types.NetworkResource{}, nil).
+					Once()
+				c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
+					Return(testErr).
+					Once()
+			},
+			networksManagerAssertions: func(nm *networks.MockManager) {
+				nm.On("Create", mock.Anything, mock.Anything).
+					Return(container.NetworkMode("test"), nil).
+					Once()
+				nm.On("Inspect", mock.Anything).
+					Return(
+						types.NetworkResource{
+							Containers: map[string]types.EndpointResource{
+								"abc": {},
+							},
+						},
+						nil,
+					).
+					Once()
+				nm.On("Cleanup", mock.Anything).
+					Return(nil).
+					Once()
+			},
+			expectedCleanError: nil,
+		},
+		"network cleanup failed": {
+			createNetworkManager: true,
+			networkPerBuild:      "true",
+			networksManagerAssertions: func(nm *networks.MockManager) {
+				nm.On("Create", mock.Anything, mock.Anything).
+					Return(container.NetworkMode("test"), nil).
+					Once()
+				nm.On("Inspect", mock.Anything).
+					Return(types.NetworkResource{}, nil).
+					Once()
+				nm.On("Cleanup", mock.Anything).
+					Return(testErr).
+					Once()
+			},
+			expectedCleanError: testErr,
+		},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			e, closureFn := getExecutorForNetworksTests(t, test)
+			defer closureFn()
+
+			err := e.createBuildNetwork()
+			assert.True(t, errors.Is(test.expectedBuildError, err))
+
+			err = e.cleanupNetwork(context.Background())
+			assert.True(t, errors.Is(test.expectedCleanError, err))
+		})
+	}
+}
+
+func getExecutorForNetworksTests(t *testing.T, test networksTestCase) (*executor, func()) {
+	t.Helper()
+
+	clientMock := new(docker_helpers.MockClient)
+	networksManagerMock := new(networks.MockManager)
+
+	oldCreateNetworksManager := createNetworksManager
+	closureFn := func() {
+		createNetworksManager = oldCreateNetworksManager
+
+		networksManagerMock.AssertExpectations(t)
+		clientMock.AssertExpectations(t)
+	}
+
+	createNetworksManager = func(_ *executor) (networks.Manager, error) {
+		return networksManagerMock, nil
+	}
+
+	if test.networksManagerAssertions != nil {
+		test.networksManagerAssertions(networksManagerMock)
+	}
+
+	if test.clientAssertions != nil {
+		test.clientAssertions(clientMock)
+	}
+
+	c := common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "abcdef1234567890",
+		},
+	}
+	c.Docker = &common.DockerConfig{
+		NetworkMode: "",
+	}
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Build: &common.Build{
+				ProjectRunnerID: 0,
+				Runner:          &c,
+				JobResponse: common.JobResponse{
+					JobInfo: common.JobInfo{
+						ProjectID: 0,
+					},
+					GitInfo: common.GitInfo{
+						RepoURL: "https://gitlab.example.com/group/project.git",
+					},
+				},
+			},
+			Config: c,
+			ExecutorOptions: executors.ExecutorOptions{
+				DefaultBuildsDir: volumesTestsDefaultBuildsDir,
+				DefaultCacheDir:  volumesTestsDefaultCacheDir,
+			},
+		},
+		client: clientMock,
+		info: types.Info{
+			OSType: helperimage.OSTypeLinux,
+		},
+	}
+
+	e.Context = context.Background()
+	e.Build.Variables = append(e.Build.Variables, common.JobVariable{
+		Key:   featureflags.NetworkPerBuild,
+		Value: test.networkPerBuild,
+	})
+
+	if test.createNetworkManager {
+		err := e.createNetworksManager()
+		require.NoError(t, err)
+	}
+
+	return e, closureFn
+}
+
 func TestCheckOSType(t *testing.T) {
 	cases := map[string]struct {
 		executorMetadata map[string]string
@@ -1849,6 +2068,106 @@ func TestGetServiceDefinitions(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedServices, svcs)
+		})
+	}
+}
+
+func TestAddServiceHealthCheck(t *testing.T) {
+	tests := map[string]struct {
+		networkMode            string
+		dockerClientAssertions func(*docker_helpers.MockClient)
+		expectedEnvironment    []string
+		expectedErr            error
+	}{
+		"network mode not defined": {
+			expectedEnvironment: []string{},
+		},
+		"get ports via environment": {
+			networkMode: "test",
+			dockerClientAssertions: func(c *docker_helpers.MockClient) {
+				c.On("ContainerInspect", mock.Anything, mock.Anything).
+					Return(types.ContainerJSON{
+						Config: &container.Config{
+							ExposedPorts: nat.PortSet{
+								"1000/tcp": {},
+							},
+						},
+					}, nil).
+					Once()
+			},
+			expectedEnvironment: []string{
+				"WAIT_FOR_SERVICE_TCP_ADDR=default",
+				"WAIT_FOR_SERVICE_TCP_PORT=1000",
+			},
+		},
+		"get port from many": {
+			networkMode: "test",
+			dockerClientAssertions: func(c *docker_helpers.MockClient) {
+				c.On("ContainerInspect", mock.Anything, mock.Anything).
+					Return(types.ContainerJSON{
+						Config: &container.Config{
+							ExposedPorts: nat.PortSet{
+								"1000/tcp": {},
+								"500/udp":  {},
+								"600/tcp":  {},
+								"1500/tcp": {},
+							},
+						},
+					}, nil).
+					Once()
+			},
+			expectedEnvironment: []string{
+				"WAIT_FOR_SERVICE_TCP_ADDR=default",
+				"WAIT_FOR_SERVICE_TCP_PORT=600",
+			},
+		},
+		"no ports defined": {
+			networkMode: "test",
+			dockerClientAssertions: func(c *docker_helpers.MockClient) {
+				c.On("ContainerInspect", mock.Anything, mock.Anything).
+					Return(types.ContainerJSON{
+						Config: &container.Config{
+							ExposedPorts: nat.PortSet{},
+						},
+					}, nil).
+					Once()
+			},
+			expectedErr: fmt.Errorf("service %q has no exposed ports", "default"),
+		},
+		"container inspect error": {
+			networkMode: "test",
+			dockerClientAssertions: func(c *docker_helpers.MockClient) {
+				c.On("ContainerInspect", mock.Anything, mock.Anything).
+					Return(types.ContainerJSON{}, fmt.Errorf("%v", "test error")).
+					Once()
+			},
+			expectedErr: fmt.Errorf("get container exposed ports: %v", "test error"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			client := new(docker_helpers.MockClient)
+
+			if test.dockerClientAssertions != nil {
+				test.dockerClientAssertions(client)
+			}
+			defer client.AssertExpectations(t)
+
+			executor := &executor{
+				networkMode: container.NetworkMode(test.networkMode),
+				client:      client,
+			}
+
+			service := &types.Container{
+				Names: []string{"default"},
+			}
+
+			environment, err := executor.addServiceHealthCheckEnvironment(service)
+
+			assert.Equal(t, test.expectedEnvironment, environment)
+
+			assert.Equal(t, test.expectedErr, err)
 		})
 	}
 }

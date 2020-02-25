@@ -286,6 +286,27 @@ func (_m *MockClient) Info(ctx context.Context) (types.Info, error) {
 	return r0, r1
 }
 
+// NetworkCreate provides a mock function with given fields: ctx, networkName, options
+func (_m *MockClient) NetworkCreate(ctx context.Context, networkName string, options types.NetworkCreate) (types.NetworkCreateResponse, error) {
+	ret := _m.Called(ctx, networkName, options)
+
+	var r0 types.NetworkCreateResponse
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.NetworkCreate) types.NetworkCreateResponse); ok {
+		r0 = rf(ctx, networkName, options)
+	} else {
+		r0 = ret.Get(0).(types.NetworkCreateResponse)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, types.NetworkCreate) error); ok {
+		r1 = rf(ctx, networkName, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NetworkDisconnect provides a mock function with given fields: ctx, networkID, containerID, force
 func (_m *MockClient) NetworkDisconnect(ctx context.Context, networkID string, containerID string, force bool) error {
 	ret := _m.Called(ctx, networkID, containerID, force)
@@ -298,6 +319,27 @@ func (_m *MockClient) NetworkDisconnect(ctx context.Context, networkID string, c
 	}
 
 	return r0
+}
+
+// NetworkInspect provides a mock function with given fields: ctx, networkID
+func (_m *MockClient) NetworkInspect(ctx context.Context, networkID string) (types.NetworkResource, error) {
+	ret := _m.Called(ctx, networkID)
+
+	var r0 types.NetworkResource
+	if rf, ok := ret.Get(0).(func(context.Context, string) types.NetworkResource); ok {
+		r0 = rf(ctx, networkID)
+	} else {
+		r0 = ret.Get(0).(types.NetworkResource)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, networkID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // NetworkList provides a mock function with given fields: ctx, options
@@ -321,4 +363,18 @@ func (_m *MockClient) NetworkList(ctx context.Context, options types.NetworkList
 	}
 
 	return r0, r1
+}
+
+// NetworkRemove provides a mock function with given fields: ctx, networkID
+func (_m *MockClient) NetworkRemove(ctx context.Context, networkID string) error {
+	ret := _m.Called(ctx, networkID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, networkID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }

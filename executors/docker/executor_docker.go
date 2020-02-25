@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/kardianos/osext"
 	"github.com/mattn/go-zglob"
@@ -25,6 +27,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -55,6 +58,8 @@ var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
 var errVolumesManagerUndefined = errors.New("volumesManager is undefined")
 
+var errNetworksManagerUndefined = errors.New("networksManager is undefined")
+
 type executor struct {
 	executors.AbstractExecutor
 	client       docker_helpers.Client
@@ -75,7 +80,10 @@ type executor struct {
 	usedImages     map[string]string
 	usedImagesLock sync.RWMutex
 
-	volumesManager volumes.Manager
+	volumesManager  volumes.Manager
+	networksManager networks.Manager
+
+	networkMode container.NetworkMode
 }
 
 func init() {
@@ -437,7 +445,7 @@ func (e *executor) markImageAsUsed(imageName, imageID string) {
 	}
 }
 
-func (e *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image) (*types.Container, error) {
+func (e *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image, linkNames []string) (*types.Container, error) {
 	if len(service) == 0 {
 		return nil, fmt.Errorf("invalid service name: %s", serviceDefinition.Name)
 	}
@@ -461,7 +469,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	config := &container.Config{
 		Image:  serviceImage.ID,
 		Labels: e.getLabels("service", "service="+service, "service.version="+version),
-		Env:    e.getServiceVariables(),
+		Env:    append(e.getServiceVariables(), e.BuildShell.Environment...),
 	}
 
 	if len(serviceDefinition.Command) > 0 {
@@ -475,7 +483,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    e.Config.Docker.Privileged,
-		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
+		NetworkMode:   e.networkMode,
 		Binds:         e.volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
 		VolumesFrom:   e.volumesManager.ContainerIDs(),
@@ -485,8 +493,10 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		},
 	}
 
+	networkConfig := e.networkConfig(linkNames)
+
 	e.Debugln("Creating service container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
+	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
 	if err != nil {
 		return nil, err
 	}
@@ -499,6 +509,18 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	}
 
 	return fakeContainer(resp.ID, containerName), nil
+}
+
+func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
+	if e.networkMode.UserDefined() == "" {
+		return &network.NetworkingConfig{}
+	}
+
+	return &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			e.networkMode.UserDefined(): {Aliases: aliases},
+		},
+	}
 }
 
 func (e *executor) getServicesDefinitions() (common.Services, error) {
@@ -575,10 +597,11 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 
 		// Create service if not yet created
 		if container == nil {
-			container, err = e.createService(serviceIndex, serviceMeta.Service, serviceMeta.Version, serviceMeta.ImageName, serviceDefinition)
+			container, err = e.createService(serviceIndex, serviceMeta.Service, serviceMeta.Version, serviceMeta.ImageName, serviceDefinition, serviceMeta.Aliases)
 			if err != nil {
 				return
 			}
+
 			e.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
 			e.services = append(e.services, container)
 			e.temporary = append(e.temporary, container.ID)
@@ -586,6 +609,47 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 		linksMap[linkName] = container
 	}
 	return
+}
+
+func (e *executor) createBuildNetwork() error {
+	if e.networksManager == nil {
+		return errNetworksManagerUndefined
+	}
+
+	networkMode, err := e.networksManager.Create(e.Context, e.Config.Docker.NetworkMode)
+	if err != nil {
+		return err
+	}
+
+	e.networkMode = networkMode
+
+	return nil
+}
+
+func (e *executor) cleanupNetwork(ctx context.Context) error {
+	if e.networksManager == nil {
+		return errNetworksManagerUndefined
+	}
+
+	if e.networkMode.UserDefined() == "" {
+		return nil
+	}
+
+	inspectResponse, err := e.networksManager.Inspect(ctx)
+	if err != nil {
+		e.Errorln("network inspect returned error ", err)
+		return nil
+	}
+
+	for id := range inspectResponse.Containers {
+		e.Debugln("Removing Container", id, "...")
+		err = e.removeContainer(ctx, id)
+		if err != nil {
+			e.Errorln("remove container returned error ", err)
+		}
+	}
+
+	return e.networksManager.Cleanup(ctx)
 }
 
 func (e *executor) createServices() (err error) {
@@ -608,7 +672,11 @@ func (e *executor) createServices() (err error) {
 
 	e.waitForServices()
 
-	e.links = e.buildServiceLinks(linksMap)
+	if e.networkMode.IsBridge() || e.networkMode.NetworkName() == "" {
+		e.Debugln("Building service links...")
+		e.links = e.buildServiceLinks(linksMap)
+	}
+
 	return
 }
 
@@ -695,7 +763,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		SecurityOpt:   e.Config.Docker.SecurityOpt,
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
-		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
+		NetworkMode:   e.networkMode,
 		Links:         append(e.Config.Docker.Links, e.links...),
 		Binds:         e.volumesManager.Binds(),
 		OomScoreAdj:   e.Config.Docker.OomScoreAdjust,
@@ -709,11 +777,14 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		Sysctls: e.Config.Docker.SysCtls,
 	}
 
+	aliases := []string{"build", containerName}
+	networkConfig := e.networkConfig(aliases)
+
 	// this will fail potentially some builds if there's name collision
 	e.removeContainer(e.Context, containerName)
 
 	e.Debugln("Creating container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
+	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
 	if err != nil {
 		if resp.ID != "" {
 			e.temporary = append(e.temporary, resp.ID)
@@ -992,6 +1063,8 @@ func (e *executor) validateOSType() error {
 
 func (e *executor) createDependencies() error {
 	createDependenciesStrategy := []func() error{
+		e.createNetworksManager,
+		e.createBuildNetwork,
 		e.bindDevices,
 		e.createVolumesManager,
 		e.createVolumes,
@@ -1002,6 +1075,8 @@ func (e *executor) createDependencies() error {
 	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyVolumesMountingOrder) {
 		// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
 		createDependenciesStrategy = []func() error{
+			e.createNetworksManager,
+			e.createBuildNetwork,
 			e.bindDevices,
 			e.createVolumesManager,
 			e.createBuildVolume,
@@ -1178,6 +1253,16 @@ func (e *executor) Cleanup() {
 
 	wg.Wait()
 
+	err := e.cleanupNetwork(ctx)
+	if err != nil {
+		networkLogger := e.WithFields(logrus.Fields{
+			"network": e.networkMode.NetworkName(),
+			"error":   err,
+		})
+
+		networkLogger.Errorln("Removing network for build")
+	}
+
 	if e.client != nil {
 		e.client.Close()
 	}
@@ -1206,21 +1291,28 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 
 	containerName := service.Names[0] + "-wait-for-service"
 
+	environment, err := e.addServiceHealthCheckEnvironment(service)
+	if err != nil {
+		return err
+	}
+
 	cmd := []string{"gitlab-runner-helper", "health-check"}
 
 	config := &container.Config{
 		Cmd:    cmd,
 		Image:  waitImage.ID,
 		Labels: e.getLabels("wait", "wait="+service.ID),
+		Env:    environment,
 	}
 	hostConfig := &container.HostConfig{
 		RestartPolicy: neverRestartPolicy,
 		Links:         []string{service.Names[0] + ":service"},
-		NetworkMode:   container.NetworkMode(e.Config.Docker.NetworkMode),
+		NetworkMode:   e.networkMode,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},
 	}
+
 	e.Debugln("Waiting for service container", containerName, "to be up and running...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
 	if err != nil {
@@ -1254,6 +1346,48 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 			Logs:  e.readContainerLogs(resp.ID),
 		}
 	}
+}
+
+// addServiceHealthCheckEnvironment will create the environment variables needed
+// for our healthcheck system if a network per build was created, until we
+// introduce the native HEALTHCHECK from docker in
+// https://gitlab.com/gitlab-org/gitlab-runner/issues/3984. This follows the
+// same principles as https://docs.docker.com/compose/link-env-deprecated/.
+func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([]string, error) {
+	environment := []string{}
+
+	if e.networkMode.UserDefined() != "" {
+		environment = append(environment, "WAIT_FOR_SERVICE_TCP_ADDR="+service.Names[0])
+		ports, err := e.getContainerExposedPorts(service)
+		if err != nil {
+			return nil, fmt.Errorf("get container exposed ports: %v", err)
+		}
+		if len(ports) == 0 {
+			return nil, fmt.Errorf("service %q has no exposed ports", service.Names[0])
+		}
+		environment = append(environment, fmt.Sprintf("WAIT_FOR_SERVICE_TCP_PORT=%d", ports[0]))
+	}
+
+	return environment, nil
+}
+
+func (e *executor) getContainerExposedPorts(container *types.Container) ([]int, error) {
+	var ports []int
+
+	inspect, err := e.client.ContainerInspect(e.Context, container.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	for port := range inspect.Config.ExposedPorts {
+		start, _, err := port.Range()
+		if err == nil && port.Proto() == "tcp" {
+			ports = append(ports, start)
+		}
+	}
+
+	sort.Ints(ports)
+	return ports, nil
 }
 
 func (e *executor) waitForServiceContainer(service *types.Container, timeout time.Duration) error {
