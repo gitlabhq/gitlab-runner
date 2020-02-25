@@ -6,6 +6,7 @@ stages:
 - build
 - package
 - release
+- postrelease
 - docs
 
 include:
@@ -17,4 +18,5 @@ include:
 - local: /.gitlab/ci/build.gitlab-ci.yml
 - local: /.gitlab/ci/package.gitlab-ci.yml
 - local: /.gitlab/ci/release.gitlab-ci.yml
+- local: /.gitlab/ci/postrelease.gitlab-ci.yml
 - local: /.gitlab/ci/docs.gitlab-ci.yml
