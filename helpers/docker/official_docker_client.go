@@ -131,6 +131,18 @@ func (c *officialDockerClient) ContainerExecAttach(ctx context.Context, execID s
 	return resp, wrapError("ContainerExecAttach", err, started)
 }
 
+func (c *officialDockerClient) NetworkCreate(ctx context.Context, networkName string, options types.NetworkCreate) (types.NetworkCreateResponse, error) {
+	started := time.Now()
+	response, err := c.client.NetworkCreate(ctx, networkName, options)
+	return response, wrapError("NetworkCreate", err, started)
+}
+
+func (c *officialDockerClient) NetworkRemove(ctx context.Context, networkID string) error {
+	started := time.Now()
+	err := c.client.NetworkRemove(ctx, networkID)
+	return wrapError("NetworkRemove", err, started)
+}
+
 func (c *officialDockerClient) NetworkDisconnect(ctx context.Context, networkID string, containerID string, force bool) error {
 	started := time.Now()
 	err := c.client.NetworkDisconnect(ctx, networkID, containerID, force)
@@ -141,6 +153,12 @@ func (c *officialDockerClient) NetworkList(ctx context.Context, options types.Ne
 	started := time.Now()
 	networks, err := c.client.NetworkList(ctx, options)
 	return networks, wrapError("NetworkList", err, started)
+}
+
+func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID string) (types.NetworkResource, error) {
+	started := time.Now()
+	resource, err := c.client.NetworkInspect(ctx, networkID, types.NetworkInspectOptions{})
+	return resource, wrapError("NetworkInspect", err, started)
 }
 
 func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {
