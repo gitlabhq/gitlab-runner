@@ -112,7 +112,7 @@ Supported features by different executors:
 | `gitlab-ci.yml`: artifacts                   | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          | n/a    |
-| Interactive Web terminal                     | ✗    | ✓ (bash)| ✗          | ✗         | ✓      | ✓          | ✗      |
+| Interactive Web terminal                     | ✗    | ✓ (UNIX)       | ✗          | ✗         | ✓      | ✓          | ✗      |
 
 Supported systems by different shells:
 
