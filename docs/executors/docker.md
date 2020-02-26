@@ -653,7 +653,10 @@ when used with private images, read the
 
 The `always` pull policy will ensure that the image is **always** pulled.
 When `always` is used, the Runner will try to pull the image even if a local
-copy is available. If the image is not found, then the build will
+copy is available. The [caching semantics of the underlying image provider make
+even this policy efficient](https://kubernetes.io/docs/concepts/configuration/overview/#container-images).
+The pull attempt is fast because all image layers are cached.
+If the image is not found, then the build will
 fail with an error similar to:
 
 ```plaintext
@@ -672,7 +675,7 @@ fall back to local copy of an image and print a warning:
 > ```
 >
 That is changed in version `v1.8`. To understand why we changed this and
-how incorrect usage of may be revealed please look into issue
+how incorrect usage of it may be revealed please look into issue
 [#1905](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
 
 **When to use this pull policy?**
@@ -692,7 +695,7 @@ configuration of the Runner.
 
 This pull policy will definitely not work if you need to use locally
 stored images. In this case, the Runner will skip the local copy of the image
-and try to pull it from the remote registry. If the image was build locally
+and try to pull it from the remote registry. If the image was built locally
 and doesn't exist in any public registry (and especially in the default
 Docker registry), the build will fail with:
 
