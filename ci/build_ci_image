@@ -11,7 +11,7 @@ registry_credentials_available() {
 login() {
     echo "Logging into registry"
     registry_credentials_available || return 0
-    docker login --username ${CI_REGISTRY_USER} --password ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
 }
 
 logout() {
