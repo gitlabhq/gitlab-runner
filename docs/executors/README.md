@@ -32,6 +32,7 @@ you decide which executor to use.
 |:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|---------------:|
 | Clean build environment for every build           | ✗    | ✗       | ✓          | ✓         | ✓      | ✓          |conditional (4) |
 | Reuse previous clone if it exists                 | ✓    | ✓       | ✗          | ✗         | ✓      | ✗          |conditional (4) |
+| Runner file system access protected (5)           | ✓    | ✗       | ✓          | ✓         | ✓      | ✓           |conditional    |
 | Migrate runner machine                            | ✗    | ✗       | partial    | partial   | ✓      | ✓          |✓               |
 | Zero-configuration support for concurrent builds  | ✗    | ✗ (1)   | ✓          | ✓         | ✓      | ✓          |conditional (4) |
 | Complicated build environments                    | ✗    | ✗ (2)   | ✓ (3)      | ✓ (3)     | ✓      | ✓          |✓               |
@@ -43,6 +44,11 @@ you decide which executor to use.
 1. For example using [Vagrant](https://www.vagrantup.com/docs/virtualbox/ "Vagrant documentation for VirtualBox")
 1. Dependent on what kind of environment you are provisioning. It can be
    completely isolated or shared between each build.
+1. When a Runner's file system access is not protected, jobs can access the entire
+   system including the Runner's token, and the cache and code of other jobs.
+   Executors marked ✓ don't allow Runner to access the file system by default.
+   However, security flaws or certain configurations could allow jobs
+   to break out of their container and access the file system hosting Runner.
 
 ### I am not sure
 
