@@ -111,8 +111,6 @@ github.com/docker/spdystream/spdy
 github.com/fullsailor/pkcs7
 # github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
 github.com/getsentry/raven-go
-# github.com/go-ini/ini v1.28.2
-github.com/go-ini/ini
 # github.com/gogo/protobuf v1.1.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
@@ -182,16 +180,17 @@ github.com/mattn/go-zglob
 github.com/mattn/go-zglob/fastwalk
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/minio/go-homedir v0.0.0-20190425115525-017018655514 => gitlab.com/steveazz/go-homedir v0.0.0-20190425115525-017018655514
-github.com/minio/go-homedir
-# github.com/minio/minio-go v3.0.3-0.20170912212908-4e0f567303d4+incompatible
-github.com/minio/minio-go
-github.com/minio/minio-go/pkg/credentials
-github.com/minio/minio-go/pkg/encrypt
-github.com/minio/minio-go/pkg/policy
-github.com/minio/minio-go/pkg/s3signer
-github.com/minio/minio-go/pkg/s3utils
-github.com/minio/minio-go/pkg/set
+# github.com/minio/minio-go/v6 v6.0.49
+github.com/minio/minio-go/v6
+github.com/minio/minio-go/v6/pkg/credentials
+github.com/minio/minio-go/v6/pkg/encrypt
+github.com/minio/minio-go/v6/pkg/s3signer
+github.com/minio/minio-go/v6/pkg/s3utils
+github.com/minio/minio-go/v6/pkg/set
+# github.com/minio/sha256-simd v0.1.1
+github.com/minio/sha256-simd
+# github.com/mitchellh/go-homedir v1.1.0
+github.com/mitchellh/go-homedir
 # github.com/mitchellh/gox v1.0.1
 github.com/mitchellh/gox
 # github.com/mitchellh/iochan v1.0.0
@@ -272,7 +271,10 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
+# golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
+golang.org/x/crypto/argon2
+golang.org/x/crypto/blake2b
+golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
@@ -287,6 +289,7 @@ golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
+golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136
 golang.org/x/exp/apidiff
@@ -294,7 +297,7 @@ golang.org/x/exp/cmd/apidiff
 # golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+# golang.org/x/net v0.0.0-20200222125558-5a598a2470a0
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -304,6 +307,7 @@ golang.org/x/net/idna
 golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
+golang.org/x/net/publicsuffix
 golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
@@ -311,7 +315,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9
+# golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -415,6 +419,8 @@ google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # gopkg.in/inf.v0 v0.9.0
 gopkg.in/inf.v0
+# gopkg.in/ini.v1 v1.52.0
+gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.2.8
 gopkg.in/yaml.v2
 # honnef.co/go/tools v0.0.1-2019.2.3

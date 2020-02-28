@@ -26,7 +26,6 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
-	github.com/go-ini/ini v1.28.2 // indirect
 	github.com/golang/mock v1.3.1
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20180425001159-e25975f29734 // indirect
@@ -42,8 +41,7 @@ require (
 	github.com/kr/pty v1.1.1
 	github.com/markelog/trie v0.0.0-20171230083431-098fa99650c0
 	github.com/mattn/go-zglob v0.0.1
-	github.com/minio/go-homedir v0.0.0-20190425115525-017018655514 // indirect
-	github.com/minio/minio-go v3.0.3-0.20170912212908-4e0f567303d4+incompatible
+	github.com/minio/minio-go/v6 v6.0.49
 	github.com/mitchellh/gox v1.0.1
 	github.com/onsi/ginkgo v1.10.3 // indirect
 	github.com/onsi/gomega v1.7.1 // indirect
@@ -67,12 +65,13 @@ require (
 	gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
 	gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator v0.0.0-20200128145756-4b03f39cb151
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20180924111848-5af59b871b1b
-	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
+	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
-	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
-	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9
+	golang.org/x/net v0.0.0-20200222125558-5a598a2470a0
+	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae
 	golang.org/x/tools v0.0.0-20200128002243-345141a36859 // indirect
 	gopkg.in/inf.v0 v0.9.0 // indirect
+	gopkg.in/ini.v1 v1.52.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/api v0.0.0-20191004102349-159aefb8556b
