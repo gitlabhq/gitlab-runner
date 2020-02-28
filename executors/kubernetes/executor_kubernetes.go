@@ -84,59 +84,59 @@ type serviceCreateResponse struct {
 func (s *executor) setupResources() error {
 	var err error
 
-	// Limit
-	if s.buildLimits, err = limits(s.Config.Kubernetes.CPULimit, s.Config.Kubernetes.MemoryLimit); err != nil {
+	if s.buildLimits, err = limits(s.configurationOverwrites.cpuLimit, s.configurationOverwrites.memoryLimit); err != nil {
 		return fmt.Errorf("invalid build limits specified: %w", err)
+	}
+
+	if s.buildRequests, err = limits(s.configurationOverwrites.cpuRequest, s.configurationOverwrites.memoryRequest); err != nil {
+		return fmt.Errorf("invalid build requests specified: %w", err)
 	}
 
 	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit); err != nil {
 		return fmt.Errorf("invalid service limits specified: %w", err)
 	}
 
-	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit); err != nil {
-		return fmt.Errorf("invalid helper limits specified: %w", err)
-	}
-
-	// Requests
-	if s.buildRequests, err = limits(s.Config.Kubernetes.CPURequest, s.Config.Kubernetes.MemoryRequest); err != nil {
-		return fmt.Errorf("invalid build requests specified: %w", err)
-	}
-
 	if s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest); err != nil {
 		return fmt.Errorf("invalid service requests specified: %w", err)
+	}
+
+	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit); err != nil {
+		return fmt.Errorf("invalid helper limits specified: %w", err)
 	}
 
 	if s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest); err != nil {
 		return fmt.Errorf("invalid helper requests specified: %w", err)
 	}
+
 	return nil
 }
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if err = s.AbstractExecutor.Prepare(options); err != nil {
-		return err
+		return fmt.Errorf("AbstractExecutor Prepare() failed with: %w", err)
 	}
 
 	if s.BuildShell.PassFile {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
+	if err = s.prepareOverwrites(options.Build.Variables); err != nil {
+		return fmt.Errorf("couldn't prepare overwrites: %w", err)
+	}
+
 	if err = s.setupResources(); err != nil {
-		return err
+		return fmt.Errorf("couldn't setup Kubernetes resources: %w", err)
+
 	}
 
 	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
-		return err
-	}
-
-	if err = s.prepareOverwrites(options.Build.Variables); err != nil {
-		return err
+		return fmt.Errorf("couldn't get pull policy: %w", err)
 	}
 
 	s.prepareOptions(options.Build)
 
 	if err = s.checkDefaults(); err != nil {
-		return err
+		return fmt.Errorf("check defaults error: %w", err)
 	}
 
 	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes, s.configurationOverwrites); err != nil {
