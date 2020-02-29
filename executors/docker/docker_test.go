@@ -995,17 +995,10 @@ func TestCreateDependencies(t *testing.T) {
 	testError := errors.New("test-error")
 
 	tests := map[string]struct {
-		legacyVolumesMountingOrder string
-		expectedServiceVolumes     []string
+		expectedServiceVolumes []string
 	}{
-		"UseLegacyVolumesMountingOrder is false": {
-			legacyVolumesMountingOrder: "false",
-			expectedServiceVolumes:     []string{"/volume", "/builds"},
-		},
-		// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6581
-		"UseLegacyVolumesMountingOrder is true": {
-			legacyVolumesMountingOrder: "true",
-			expectedServiceVolumes:     []string{"/builds"},
+		"Create dependencies": {
+			expectedServiceVolumes: []string{"/volume", "/builds"},
 		},
 	}
 
@@ -1017,11 +1010,6 @@ func TestCreateDependencies(t *testing.T) {
 				adjustConfiguration: func(e *executor) {
 					e.Build.Services = append(e.Build.Services, common.Image{
 						Name: "alpine:latest",
-					})
-
-					e.Build.Variables = append(e.Build.Variables, common.JobVariable{
-						Key:   featureflags.UseLegacyVolumesMountingOrder,
-						Value: test.legacyVolumesMountingOrder,
 					})
 
 					e.BuildShell = &common.ShellConfiguration{
@@ -1042,7 +1030,7 @@ func TestCreateDependencies(t *testing.T) {
 						Run(func(args mock.Arguments) {
 							binds = append(binds, args.Get(1).(string))
 						}).
-						Maybe() // In the FF enabled case this assertion will be not met because of error during service starts
+						Maybe()
 					vm.On("Binds").
 						Return(func() []string {
 							return binds

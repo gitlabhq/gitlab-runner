@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -1008,11 +1008,11 @@ func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
 			expectedValue: false,
 		},
 		"it enables FF": {
-			variable:      "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER=true",
+			variable:      "FF_NETWORK_PER_BUILD=true",
 			expectedValue: true,
 		},
 		"it disable FF": {
-			variable:      "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER=false",
+			variable:      "FF_NETWORK_PER_BUILD=false",
 			expectedValue: false,
 		},
 	}
@@ -1026,7 +1026,7 @@ func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
 				},
 			}
 
-			result := build.IsFeatureFlagOn("FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER")
+			result := build.IsFeatureFlagOn("FF_NETWORK_PER_BUILD")
 			assert.Equal(t, test.expectedValue, result)
 		})
 	}
