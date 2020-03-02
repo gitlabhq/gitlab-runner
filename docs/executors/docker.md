@@ -653,8 +653,8 @@ when used with private images, read the
 
 The `always` pull policy will ensure that the image is **always** pulled.
 When `always` is used, the Runner will try to pull the image even if a local
-copy is available. The [caching semantics of the underlying image provider make
-even this policy efficient](https://kubernetes.io/docs/concepts/configuration/overview/#container-images).
+copy is available. The [caching semantics](https://kubernetes.io/docs/concepts/configuration/overview/#container-images))
+of the underlying image provider make even this policy efficient.
 The pull attempt is fast because all image layers are cached.
 If the image is not found, then the build will
 fail with an error similar to:
