@@ -290,43 +290,10 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
-	version := r.URL.Query().Get("v")
-	if version == "" {
-		version = "1"
-	}
-
-	handlers := map[string]http.HandlerFunc{
-		"1": b.listJobsHandlerV1,
-		"2": b.listJobsHandlerV2,
-	}
-
-	handler, ok := handlers[version]
-	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Request version %q not supported", version)
-		return
-	}
-
-	w.Header().Add("X-List-Version", version)
+	w.Header().Add("X-List-Version", "2")
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	handler(w, r)
-}
-
-func (b *buildsHelper) listJobsHandlerV1(w http.ResponseWriter, r *http.Request) {
-	for _, job := range b.builds {
-		fmt.Fprintf(
-			w,
-			"id=%d url=%s state=%s stage=%s executor_stage=%s\n",
-			job.ID, job.RepoCleanURL(),
-			job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(),
-		)
-	}
-
-}
-
-func (b *buildsHelper) listJobsHandlerV2(w http.ResponseWriter, r *http.Request) {
 	for _, job := range b.builds {
 		url := CreateJobURL(job.RepoCleanURL(), job.ID)
 
