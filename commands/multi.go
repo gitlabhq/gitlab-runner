@@ -701,6 +701,10 @@ func (mr *RunCommand) checkConfig() (err error) {
 // Next it triggers graceful shutdown, which will be handled only if a proper signal is used.
 // At the end it triggers the forceful shutdown, which handles the forceful the process termination.
 func (mr *RunCommand) Stop(_ service.Service) error {
+	if mr.stopSignal == nil {
+		mr.stopSignal = os.Interrupt
+	}
+
 	go mr.interruptRun()
 
 	defer func() {
