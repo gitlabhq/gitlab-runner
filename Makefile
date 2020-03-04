@@ -56,7 +56,7 @@ MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mocke
 
 .PHONY: clean version mocks
 
-all: deps helper-docker build
+all: deps helper-docker build_all
 
 include Makefile.runner_helper.mk
 include Makefile.build.mk
