@@ -67,7 +67,7 @@ func Test_windowsInfo_create(t *testing.T) {
 }
 
 func TestNewUnsupportedWindowsVersionError(t *testing.T) {
-	for _, expectedVersion := range []string{windows1803, windows1809, "random"} {
+	for _, expectedVersion := range []string{"random1", "random2"} {
 		err := newUnsupportedWindowsVersionError(expectedVersion)
 		require.Error(t, err)
 		assert.Equal(t, expectedVersion, err.version)
