@@ -247,11 +247,12 @@ type KubernetesPodSecurityContext struct {
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
 }
 
+// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4922
 type DockerService struct {
 	Service
 }
 
-// TODO: Remove in 13.0
+// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4922
 // we should fallback to the default toml parsing
 func (s *DockerService) UnmarshalTOML(data interface{}) error {
 	switch v := data.(type) {

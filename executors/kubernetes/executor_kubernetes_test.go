@@ -1981,13 +1981,6 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
-						Name: "docker:dind",
-					},
-				},
-			},
 			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
 				var expected *invalidHostAliasDNSError
 				assert.True(t, errors.As(err, &expected))
