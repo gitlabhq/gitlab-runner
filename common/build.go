@@ -214,7 +214,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 
 	shell := executor.Shell()
 	if shell == nil {
-		return errors.New("No shell defined")
+		return errors.New("no shell defined")
 	}
 
 	script, err := GenerateShellScript(buildStage, *shell)
@@ -243,9 +243,33 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	section := helpers.BuildSection{
 		Name:        string(buildStage),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
-		Run:         func() error { return executor.Run(cmd) },
+		Run: func() error {
+			b.logger.Println(fmt.Sprintf("%s%s%s", helpers.ANSI_BOLD_CYAN, getStageDescription(buildStage), helpers.ANSI_RESET))
+			return executor.Run(cmd)
+		},
 	}
 	return section.Execute(&b.logger)
+}
+
+func getStageDescription(stage BuildStage) string {
+	descriptions := map[BuildStage]string{
+		BuildStagePrepare:                  "Preparing environment",
+		BuildStageGetSources:               "Getting source from Git repository",
+		BuildStageRestoreCache:             "Restoring cache",
+		BuildStageDownloadArtifacts:        "Downloading artifacts",
+		BuildStageUserScript:               "Running script from Job",
+		BuildStageAfterScript:              "Running after script",
+		BuildStageArchiveCache:             "Saving cache",
+		BuildStageUploadOnFailureArtifacts: "Uploading artifacts for failed job",
+		BuildStageUploadOnSuccessArtifacts: "Uploading artifacts for successful job",
+	}
+
+	description, ok := descriptions[stage]
+	if !ok {
+		return fmt.Sprintf("Executing %q stage of the job script", stage)
+	}
+
+	return description
 }
 
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
@@ -606,6 +630,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		Name:        string(BuildStagePrepareExecutor),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
+			b.logger.Println(fmt.Sprintf("%sPreparing the %q executor%s", helpers.ANSI_BOLD_CYAN, b.Runner.Executor, helpers.ANSI_RESET))
 			executor, err = b.retryCreateExecutor(options, provider, b.logger)
 			return err
 		},

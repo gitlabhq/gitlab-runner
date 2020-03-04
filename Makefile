@@ -14,7 +14,7 @@ endif
 
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
-BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd'
+BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd' -arch '!mips' -arch '!mips64' -arch '!mipsle' -arch '!mips64le' -arch '!s390x'
 S3_UPLOAD_PATH ?= master
 
 # Keep in sync with docs/install/linux-repository.md
@@ -22,11 +22,11 @@ DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
     ubuntu/xenial ubuntu/bionic \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya
-DEB_ARCHS ?= amd64 i386 armel armhf
+DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
     fedora/29 fedora/30
-RPM_ARCHS ?= x86_64 i686 arm armhf
+RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
 COMMON_PACKAGE_NAMESPACE=$(PKG)/common
@@ -128,7 +128,7 @@ pull_images_for_tests:
 	@go run ./scripts/pull-images-for-tests/main.go
 
 dockerfiles:
-	make -C dockerfiles all
+	$(MAKE) -C dockerfiles all
 
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
@@ -148,31 +148,31 @@ mocks: $(MOCKERY)
 
 check_mocks:
 	@git status -sb > /tmp/mocks-${CI_JOB_ID}-before
-	make mocks
+	$(MAKE) mocks
 	@git status -sb > /tmp/mocks-${CI_JOB_ID}-after
 	@diff -U0 /tmp/mocks-${CI_JOB_ID}-before /tmp/mocks-${CI_JOB_ID}-after
 
 test-docker:
-	make test-docker-image IMAGE=centos:6 TYPE=rpm
-	make test-docker-image IMAGE=centos:7 TYPE=rpm
-	make test-docker-image IMAGE=debian:wheezy TYPE=deb
-	make test-docker-image IMAGE=debian:jessie TYPE=deb
-	make test-docker-image IMAGE=ubuntu-upstart:precise TYPE=deb
-	make test-docker-image IMAGE=ubuntu-upstart:trusty TYPE=deb
-	make test-docker-image IMAGE=ubuntu-upstart:utopic TYPE=deb
+	$(MAKE) test-docker-image IMAGE=centos:6 TYPE=rpm
+	$(MAKE) test-docker-image IMAGE=centos:7 TYPE=rpm
+	$(MAKE) test-docker-image IMAGE=debian:wheezy TYPE=deb
+	$(MAKE) test-docker-image IMAGE=debian:jessie TYPE=deb
+	$(MAKE) test-docker-image IMAGE=ubuntu-upstart:precise TYPE=deb
+	$(MAKE) test-docker-image IMAGE=ubuntu-upstart:trusty TYPE=deb
+	$(MAKE) test-docker-image IMAGE=ubuntu-upstart:utopic TYPE=deb
 
 test-docker-image:
 	tests/test_installation.sh $(IMAGE) out/$(TYPE)/$(PACKAGE_NAME)_amd64.$(TYPE)
 	tests/test_installation.sh $(IMAGE) out/$(TYPE)/$(PACKAGE_NAME)_amd64.$(TYPE) Y
 
 build-and-deploy:
-	make build_all BUILD_PLATFORMS="-os=linux -arch=amd64"
-	make package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64
+	$(MAKE) build_all BUILD_PLATFORMS="-os=linux -arch=amd64"
+	$(MAKE) package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64
 	scp out/deb/$(PACKAGE_NAME)_amd64.deb $(SERVER):
 	ssh $(SERVER) dpkg -i $(PACKAGE_NAME)_amd64.deb
 
 build-and-deploy-binary:
-	make build_all BUILD_PLATFORMS="-os=linux -arch=amd64"
+	$(MAKE) build_all BUILD_PLATFORMS="-os=linux -arch=amd64"
 	scp out/binaries/$(PACKAGE_NAME)-linux-amd64 $(SERVER):/usr/bin/gitlab-runner
 
 packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm

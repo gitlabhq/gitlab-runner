@@ -132,7 +132,7 @@ set -eo pipefail
 trap "exit $SYSTEM_FAILURE_EXIT_CODE" ERR
 
 # Copy base disk to use for Job.
-cp "$BASE_VM_IMAGE" "$VM_IMAGE"
+qemu-img create -f qcow2 -b "$BASE_VM_IMAGE" "$VM_IMAGE"
 
 # Install the VM
 virt-install \

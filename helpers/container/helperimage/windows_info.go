@@ -1,7 +1,6 @@
 package helperimage
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -21,7 +20,17 @@ var supportedOSVersions = map[string]string{
 	windows1809: baseImage1809,
 }
 
-var ErrUnsupportedOSVersion = errors.New("could not determine windows version")
+type unsupportedWindowsVersionError struct {
+	version string
+}
+
+func newUnsupportedWindowsVersionError(version string) *unsupportedWindowsVersionError {
+	return &unsupportedWindowsVersionError{version: version}
+}
+
+func (e *unsupportedWindowsVersionError) Error() string {
+	return fmt.Sprintf("unsupported Windows version: %s", e.version)
+}
 
 var powerShellCmd = []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"}
 
@@ -50,5 +59,5 @@ func (w *windowsInfo) osVersion(operatingSystem string) (string, error) {
 		}
 	}
 
-	return "", ErrUnsupportedOSVersion
+	return "", newUnsupportedWindowsVersionError(operatingSystem)
 }

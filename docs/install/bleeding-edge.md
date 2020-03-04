@@ -34,6 +34,8 @@ chmod +x gitlab-runner-linux-amd64
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_amd64.deb>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_armel.deb>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_armhf.deb>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_arm64.deb>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_aarch64.deb>
 
 You can then install it with:
 
@@ -47,6 +49,8 @@ dpkg -i gitlab-runner_386.deb
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_amd64.rpm>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_arm.rpm>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_armhf.rpm>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_arm64.rpm>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_aarch64.rpm>
 
 You can then install it with:
 

@@ -488,7 +488,11 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "default"},
+				configurationOverwrites: &overwrites{
+					namespace:   "default",
+					cpuLimit:    "1.5",
+					memoryLimit: "4Gi",
+				},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -552,7 +556,14 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "default", serviceAccount: "not-default"},
+				configurationOverwrites: &overwrites{
+					namespace:      "default",
+					serviceAccount: "not-default",
+					cpuLimit:       "1.5",
+					memoryLimit:    "4Gi",
+					cpuRequest:     "1",
+					memoryRequest:  "1.5Gi",
+				},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -625,7 +636,13 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "namespacee"},
+				configurationOverwrites: &overwrites{
+					namespace:     "namespacee",
+					cpuLimit:      "1.5",
+					memoryLimit:   "4Gi",
+					cpuRequest:    "1",
+					memoryRequest: "1.5Gi",
+				},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),
@@ -699,7 +716,14 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "namespacee", serviceAccount: "a_service_account"},
+				configurationOverwrites: &overwrites{
+					namespace:      "namespacee",
+					serviceAccount: "a_service_account",
+					cpuLimit:       "1.5",
+					memoryLimit:    "4Gi",
+					cpuRequest:     "1",
+					memoryRequest:  "1.5Gi",
+				},
 				serviceLimits: api.ResourceList{
 					api.ResourceCPU:    resource.MustParse("100m"),
 					api.ResourceMemory: resource.MustParse("200Mi"),

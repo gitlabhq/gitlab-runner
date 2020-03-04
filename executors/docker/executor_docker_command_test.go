@@ -19,6 +19,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 func TestDockerCommandSuccessRun(t *testing.T) {
@@ -402,6 +403,22 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 		return
 	}
 
+	tests := map[string]struct {
+		variables common.JobVariables
+	}{
+		"bridge network": {
+			variables: common.JobVariables{},
+		},
+		"network per build": {
+			variables: common.JobVariables{
+				{
+					Key:   featureflags.NetworkPerBuild,
+					Value: "true",
+				},
+			},
+		},
+	}
+
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	successfulBuild.Services = common.Services{
 		{Name: common.TestAlpineImage, Alias: "service-1"},
@@ -421,15 +438,20 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 		},
 	}
 
-	var buffer bytes.Buffer
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var buffer bytes.Buffer
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
-	assert.NoError(t, err)
-	str := buffer.String()
+			build.Variables = tt.variables
+			err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+			assert.NoError(t, err)
+			str := buffer.String()
 
-	re, err := regexp.Compile("(?m)Conflict. The container name [^ ]+ is already in use by container")
-	require.NoError(t, err)
-	assert.NotRegexp(t, re, str, "Both service containers should be started and use different name")
+			re, err := regexp.Compile("(?m)Conflict. The container name [^ ]+ is already in use by container")
+			require.NoError(t, err)
+			assert.NotRegexp(t, re, str, "Both service containers should be started and use different name")
+		})
+	}
 }
 
 func TestDockerCommandOutput(t *testing.T) {

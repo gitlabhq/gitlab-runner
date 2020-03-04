@@ -63,13 +63,21 @@ The following keywords help to define the behaviour of the Runner within Kuberne
   it disables the namespace overwrite feature
 - `privileged`: Run containers with the privileged flag
 - `cpu_limit`: The CPU allocation given to build containers
+- `cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be writen to for build containers. When empty,
+    it disables the cpu limit overwrite feature
 - `memory_limit`: The amount of memory allocated to build containers
+- `memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be writen to for build containers. When empty,
+    it disables the memory limit overwrite feature
 - `service_cpu_limit`: The CPU allocation given to build service containers
 - `service_memory_limit`: The amount of memory allocated to build service containers
 - `helper_cpu_limit`: The CPU allocation given to build helper containers
 - `helper_memory_limit`: The amount of memory allocated to build helper containers
 - `cpu_request`: The CPU allocation requested for build containers
+- `cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be writen to for build containers. When empty,
+    it disables the cpu request overwrite feature
 - `memory_request`: The amount of memory requested from build containers
+- `memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be writen to for build containers. When empty,
+    it disables the memory request overwrite feature
 - `service_cpu_request`: The CPU allocation requested for build service containers
 - `service_memory_request`: The amount of memory requested for build service containers
 - `helper_cpu_request`: The CPU allocation requested for build helper containers
@@ -164,6 +172,23 @@ variables:
 
 NOTE: **Note:**
 You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file.
+
+### Overwriting Build Resources
+
+Additionally, Kubernetes CPU and memory allocations for requests and
+limits can be overwritten on the `.gitlab-ci.yml` file with the
+following variables:
+
+``` yaml
+ variables:
+   KUBERNETES_CPU_REQUEST: 3
+   KUBERNETES_CPU_LIMIT: 5
+   KUBERNETES_MEMORY_REQUEST: 2Gi
+   KUBERNETES_MEMORY_LIMIT: 4Gi
+```
+
+The values for these variables are restricted to what the max overwrite
+for that resource has been set to.
 
 ## Define keywords in the config toml
 

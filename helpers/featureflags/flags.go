@@ -8,6 +8,7 @@ const (
 	CmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
 	UseLegacyBuildsDirForDocker          string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 	UseLegacyVolumesMountingOrder        string = "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER"
+	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
 )
 
 type FeatureFlag struct {
@@ -30,6 +31,13 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "13.0",
 		Description:     "Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](https://docs.gitlab.com/runner/shells/#windows-batch) shell",
+	},
+	{
+		Name:            NetworkPerBuild,
+		DefaultValue:    "false",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description:     "Enables creation of a docker [network per build](https://docs.gitlab.com/runner/executors/docker.html#networking) with the docker executor",
 	},
 	{
 		Name:            UseLegacyBuildsDirForDocker,
