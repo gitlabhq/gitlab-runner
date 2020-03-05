@@ -47,8 +47,6 @@ configuring a Windows Docker executor.
 The following are some limitations of using Windows containers with
 Docker executor:
 
-- Services do not fully work (see
-  [#4186](https://gitlab.com/gitlab-org/gitlab-runner/issues/4186)).
 - Nanoserver cannot be used because it requires PowerShell 6 but GitLab
   requires PowerShell 5 (see
   [#3291](https://gitlab.com/gitlab-org/gitlab-runner/issues/3291)). See
@@ -126,6 +124,13 @@ For other configuration options for the Docker executor, see the
 [advanced
 configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
 section.
+
+### Services
+
+You can use [services](https://docs.gitlab.com/ee/ci/services/) by
+enabling [network per-build](#network-per-build) networking mode.
+[Available](https://gitlab.com/gitlab-org/gitlab-runner/issues/1042)
+since GitLab Runner 12.9.
 
 ## Workflow
 
