@@ -65,3 +65,30 @@ func TestNew_Version(t *testing.T) {
 		})
 	}
 }
+
+func TestRedirectsNotAllowed(t *testing.T) {
+	_, server := prepareDockerClientAndFakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+		require.Fail(t, "This server should not be hit")
+	})
+	defer server.Close()
+
+	handler := http.RedirectHandler(server.URL, http.StatusMovedPermanently)
+	redirectingServer := httptest.NewServer(handler)
+	defer redirectingServer.Close()
+
+	credentials := Credentials{
+		Host:      redirectingServer.URL,
+		TLSVerify: false,
+	}
+
+	client, err := New(credentials, "")
+	require.NoError(t, err)
+
+	_, err = client.Info(context.Background())
+	require.Error(t, err)
+	// The latest version of github.com/pkg/errors still doesn't provide the
+	// Unwrap method for withStack and withMessage types, so we can't leverage
+	// errors.Is and must resort to string search
+	assert.Contains(t, err.Error(), "error during connect")
+	assert.Contains(t, err.Error(), ErrRedirectNotAllowed.Error())
+}
