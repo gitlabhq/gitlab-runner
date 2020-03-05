@@ -1970,8 +1970,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 		"all services with proper name and alias": {
 			services: []*common.DockerService{
 				{
-					Service: common.Service{"name"},
-					Alias:   "alias",
+					Service: common.Service{Name: "name", Alias: "alias"},
 				},
 			},
 			expectedServices: common.Services{
@@ -1984,8 +1983,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 		"build service not in internal images but empty allowed services": {
 			services: []*common.DockerService{
 				{
-					Service: common.Service{"name"},
-					Alias:   "alias",
+					Service: common.Service{Name: "name", Alias: "alias"},
 				},
 			},
 			buildServices: []common.Image{
@@ -2006,8 +2004,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 		"build service not in internal images": {
 			services: []*common.DockerService{
 				{
-					Service: common.Service{"name"},
-					Alias:   "",
+					Service: common.Service{Name: "name"},
 				},
 			},
 			buildServices: []common.Image{

@@ -235,3 +235,33 @@ func TestConfigParse(t *testing.T) {
 		})
 	}
 }
+
+func TestService_ToImageDefinition(t *testing.T) {
+	tests := map[string]struct {
+		service       Service
+		expectedImage Image
+	}{
+		"empty service": {
+			service:       Service{},
+			expectedImage: Image{},
+		},
+		"only name": {
+			service:       Service{Name: "name"},
+			expectedImage: Image{Name: "name"},
+		},
+		"only alias": {
+			service:       Service{Alias: "alias"},
+			expectedImage: Image{Alias: "alias"},
+		},
+		"name and alias": {
+			service:       Service{Name: "name", Alias: "alias"},
+			expectedImage: Image{Name: "name", Alias: "alias"},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.Equal(t, tt.expectedImage, tt.service.ToImageDefinition())
+		})
+	}
+}

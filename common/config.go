@@ -251,19 +251,12 @@ type KubernetesPodSecurityContext struct {
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
 }
 
+// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4922
 type DockerService struct {
 	Service
-	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
 }
 
-func (s *DockerService) ToImageDefinition() Image {
-	return Image{
-		Name:  s.Name,
-		Alias: s.Alias,
-	}
-}
-
-// TODO: Remove in 13.0
+// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4922
 // we should fallback to the default toml parsing
 func (s *DockerService) UnmarshalTOML(data interface{}) error {
 	switch v := data.(type) {
@@ -309,7 +302,15 @@ func tryGetTomlValue(data map[string]interface{}, key string) (string, error) {
 }
 
 type Service struct {
-	Name string `toml:"name" long:"name" description:"The image path for the service"`
+	Name  string `toml:"name" long:"name" description:"The image path for the service"`
+	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+}
+
+func (s *Service) ToImageDefinition() Image {
+	return Image{
+		Name:  s.Name,
+		Alias: s.Alias,
+	}
 }
 
 type RunnerCredentials struct {
