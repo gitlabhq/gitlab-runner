@@ -18,13 +18,16 @@ package kubernetes
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	api "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
@@ -149,5 +152,63 @@ func execPod() *api.Pod {
 		Status: api.PodStatus{
 			Phase: api.PodRunning,
 		},
+	}
+}
+
+func TestExecShouldRetry(t *testing.T) {
+	tests := map[string]struct {
+		err                 error
+		tries               int
+		expectedShouldRetry bool
+	}{
+		"no error, shouldn't retry": {
+			err:                 nil,
+			expectedShouldRetry: false,
+		},
+		"different error, shouldn't retry": {
+			err:                 errors.New("err"),
+			expectedShouldRetry: false,
+		},
+		"empty status error, shouldn't retry": {
+			err:                 &kubeerrors.StatusError{},
+			expectedShouldRetry: false,
+		},
+		"status error different code, shouldn't retry": {
+			err: &kubeerrors.StatusError{
+				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusNotFound},
+			},
+			expectedShouldRetry: false,
+		},
+		"status error different message, shouldn't retry": {
+			err: &kubeerrors.StatusError{
+				ErrStatus: metav1.Status{Message: "random", Code: http.StatusInternalServerError},
+			},
+			expectedShouldRetry: false,
+		},
+		"status error matching message, should retry": {
+			err: &kubeerrors.StatusError{
+				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusInternalServerError},
+			},
+			expectedShouldRetry: true,
+		},
+		"status error matching code and message, over max tries limit": {
+			err: &kubeerrors.StatusError{
+				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusInternalServerError},
+			},
+			tries:               commandConnectFailureMaxTries + 1,
+			expectedShouldRetry: false,
+		},
+		"no error, over max tries limit": {
+			err:                 nil,
+			tries:               commandConnectFailureMaxTries + 1,
+			expectedShouldRetry: false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			retry := ExecOptions{}
+			assert.Equal(t, tt.expectedShouldRetry, retry.ShouldRetry(tt.tries, tt.err))
+		})
 	}
 }

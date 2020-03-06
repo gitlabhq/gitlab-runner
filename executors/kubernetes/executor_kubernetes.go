@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +18,9 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
@@ -752,7 +753,8 @@ func (s *executor) runInContainer(ctx context.Context, name string, command []st
 			Executor:      &DefaultRemoteExecutor{},
 		}
 
-		errc <- exec.Run()
+		retryable := retry.New(retry.WithBuildLog(&exec, &s.BuildLogger))
+		errc <- retryable.Run()
 	}()
 
 	return errc
