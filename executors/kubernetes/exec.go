@@ -19,18 +19,26 @@ This file was modified by James Munnelly (https://gitlab.com/u/munnerz)
 package kubernetes
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+)
+
+const (
+	commandConnectFailureMaxTries = 5
+	errorDialingBackendEOFMessage = "error dialing backend: EOF"
 )
 
 // RemoteExecutor defines the interface accepted by the Exec command - provided for test stubbing
@@ -112,6 +120,18 @@ func (p *ExecOptions) Run() error {
 	}, scheme.ParameterCodec)
 
 	return p.Executor.Execute("POST", req.URL(), p.Config, stdin, p.Out, p.Err, false)
+}
+
+func (p *ExecOptions) ShouldRetry(times int, err error) bool {
+	var statusError *kubeerrors.StatusError
+	if times < commandConnectFailureMaxTries &&
+		errors.As(err, &statusError) &&
+		statusError.ErrStatus.Code == http.StatusInternalServerError &&
+		statusError.ErrStatus.Message == errorDialingBackendEOFMessage {
+		return true
+	}
+
+	return false
 }
 
 func init() {
