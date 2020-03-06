@@ -1035,6 +1035,9 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 			statusCode:   http.StatusCreated,
 			formValueKey: "artifact_type",
 		},
+		"service-unavailable": {
+			statusCode: http.StatusServiceUnavailable,
+		},
 	}
 
 	testCase, ok := cases[body]
@@ -1153,6 +1156,10 @@ func TestArtifactsUpload(t *testing.T) {
 
 	state = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
+
+	ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600)
+	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
 }
 
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
