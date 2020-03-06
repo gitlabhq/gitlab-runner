@@ -50,6 +50,7 @@ export CGO_ENABLED ?= 0
 GOX = gox
 MOCKERY = mockery
 RELEASE_INDEX_GENERATOR = release-index-gen
+GITLAB_CHANGELOG = gitlab-changelog
 DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
 
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
@@ -263,6 +264,15 @@ release_docker_images:
 	# Releasing Docker images
 	@./ci/release_docker_images
 
+generate_changelog: export CHANGELOG_RELEASE ?= $(VERSION)
+generate_changelog: $(GITLAB_CHANGELOG)
+	# Generating new changelog entries
+	@$(GITLAB_CHANGELOG) -project-id 250833 \
+		-release $(CHANGELOG_RELEASE) \
+		-starting-point-matcher "v[0-9]*.[0-9]*.[0-9]*" \
+		-config-file .gitlab/changelog.yml \
+		-changelog-file CHANGELOG.md
+
 check-tags-in-changelog:
 	# Looking for tags in CHANGELOG
 	@git status | grep "On branch master" 2>&1 >/dev/null || echo "Check should be done on master branch only. Skipping."
@@ -303,6 +313,9 @@ $(MOCKERY):
 
 $(RELEASE_INDEX_GENERATOR):
 	go get gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator/cmd/release-index-gen
+
+$(GITLAB_CHANGELOG):
+	go get gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/cmd/gitlab-changelog
 
 clean:
 	-$(RM) -rf $(TARGET_DIR)
