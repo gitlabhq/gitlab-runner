@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -1452,4 +1452,50 @@ func TestBuildFinishTimeout(t *testing.T) {
 		})
 	}
 
+}
+
+func TestProjectUniqueName(t *testing.T) {
+	tests := map[string]struct {
+		build          Build
+		expectedOutput string
+	}{
+		"project non rfc1132 unique name": {
+			build: Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "vBzMytn_",
+					},
+				},
+				JobResponse: JobResponse{
+					JobInfo: JobInfo{
+						ProjectID: 1234567890,
+					},
+				},
+				ProjectRunnerID: 0,
+			},
+			expectedOutput: "runner-vbzmytn-project-1234567890-concurrent-0",
+		},
+		"project normal unique name": {
+			build: Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "xYzWabc-",
+					},
+				},
+				JobResponse: JobResponse{
+					JobInfo: JobInfo{
+						ProjectID: 1234567890,
+					},
+				},
+				ProjectRunnerID: 0,
+			},
+			expectedOutput: "runner-xyzwabc--project-1234567890-concurrent-0",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.expectedOutput, test.build.ProjectUniqueName())
+		})
+	}
 }
