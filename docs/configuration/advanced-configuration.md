@@ -146,7 +146,7 @@ Example:
 
 ### How `clone_url` works
 
-In cases where the GitLab instance is exposed to an URL which can't be used
+In cases where the GitLab instance is exposed to a URL which can't be used
 by the runner, a `clone_url` can be configured. For example; GitLab is exposed
 to `https://gitlab.example.com`, but the runner can't reach that because of
 a firewall setup. If the runner can reach the node on `192.168.1.23`,
