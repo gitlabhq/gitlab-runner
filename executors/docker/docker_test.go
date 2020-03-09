@@ -226,7 +226,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 }
 
 func TestServiceFromNamedImage(t *testing.T) {
-	for _, test := range service_test.TestServices {
+	for _, test := range service_test.Services {
 		t.Run(test.Description, func(t *testing.T) {
 			testServiceFromNamedImage(t, test.Description, test.Image, test.Service)
 		})
