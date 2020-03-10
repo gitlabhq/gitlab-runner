@@ -818,6 +818,8 @@ which is based on its compilation data. After updating the Runner to a new versi
 Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
 before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
 
+You can retrieve the helper image also by passing the runner version: `x86_64-${CI_RUNNER_VERSION}`.
+
 ## The `[runners.custom_build_dir]` section
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
