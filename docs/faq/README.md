@@ -165,6 +165,18 @@ unexpected and hard-to-debug behavior. In
 only a single instance of Runner can use a specific `config.toml` file at
 one time.
 
+### `Job failed (system failure): preparing environment:`
+
+This error is often due to your shell [loading your
+profile](../shells/index.md#shell-profile-loading), and one of the scripts is
+causing the failure.
+
+Example of dotfiles that are known to cause failure:
+
+- `.bash_logout`
+- `.condarc`
+- `.rvmrc`
+
 ## Windows troubleshooting
 
 The following relate to Runner troubleshooting on Windows.

@@ -46,6 +46,28 @@ cat generated-bash-script | /bin/bash --login
 cat generated-bash-script | /bin/bash
 ```
 
+### Shell profile loading
+
+For certain executors, the Runner will pass the `--login` flag as shown above,
+which also loads the shell profile. Anything that you have in your `.bashrc`,
+`.bash_logout`, [or any other
+dotfile](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_01_02),
+will be executed in your job.
+
+If a [job fails on the `Prepare
+environment`](../faq/README.md#job-failed-system-failure-preparing-environment) stage, it
+is likely that something in the shell profile is causing the failure. A common
+failure is when you have a `.bash_logout` that tries to clear the console.
+
+Executors that load shell profiles:
+
+- [`shell`](../executors/shell.md)
+- [`parallels`](../executors/parallels.md)  (The shell profile of the *target* virtual machine is loaded)
+- [`virtualbox`](../executors/virtualbox.md)  (The shell profile of the *target* virtual machine is loaded)
+- [`ssh`](../executors/ssh.md) (The shell profile of the *target* machine is loaded)
+- [`docker-ssh`](../executors/docker.md#docker-vs-docker-ssh-and-dockermachine-vs-docker-sshmachine) (The shell profile of the *target* machine is loaded)
+- [`docker-ssh+machine`](../executors/docker.md#docker-vs-docker-ssh-and-dockermachine-vs-docker-sshmachine) (The shell profile of the *target* machine is loaded)
+
 ## PowerShell
 
 The default shell when a new Runner is registered using GitLab Runner

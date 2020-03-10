@@ -77,6 +77,12 @@ func TestBuildRun(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func matchBuildStage(buildStage BuildStage) interface{} {
+	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
+		return cmd.Stage == buildStage
+	})
+}
+
 func TestBuildPredefinedVariables(t *testing.T) {
 	for _, rootDir := range []string{"/root/dir1", "/root/dir2"} {
 		t.Run(rootDir, func(t *testing.T) {
@@ -360,6 +366,43 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	assert.IsType(t, err, &BuildError{})
 }
 
+func TestPrepareEnvironmentFailure(t *testing.T) {
+	testErr := errors.New("test-err")
+
+	e := new(MockExecutor)
+	defer e.AssertExpectations(t)
+
+	p := new(MockExecutorProvider)
+	defer p.AssertExpectations(t)
+
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+	p.On("Create").Return(e).Once()
+
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	e.On("Cleanup").Once()
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(testErr).Once()
+	e.On("Finish", mock.Anything).Once()
+
+	RegisterExecutorProvider("build-run-prepare-environment-failure-on-build-error", p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		JobResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-prepare-environment-failure-on-build-error",
+			},
+		},
+	}
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.True(t, errors.Is(err, testErr))
+}
+
 func TestJobFailure(t *testing.T) {
 	e := new(MockExecutor)
 	defer e.AssertExpectations(t)
@@ -382,7 +425,8 @@ func TestJobFailure(t *testing.T) {
 	// Succeed a build script
 	thrownErr := &BuildError{Inner: errors.New("test error")}
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(thrownErr)
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	e.On("Run", mock.Anything).Return(thrownErr).Times(2)
 	e.On("Finish", thrownErr).Once()
 
 	RegisterExecutorProvider("build-run-job-failure", p)
@@ -465,12 +509,6 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 
 	err = build.Run(&Config{}, trace)
 	require.IsType(t, &BuildError{}, err)
-}
-
-func matchBuildStage(buildStage BuildStage) interface{} {
-	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
-		return cmd.Stage == buildStage
-	})
 }
 
 func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {

@@ -1,6 +1,7 @@
 package custom_test
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -177,7 +178,8 @@ func TestBuildBuildFailure(t *testing.T) {
 
 		err = buildtest.RunBuild(t, build)
 		assert.Error(t, err)
-		assert.IsType(t, &common.BuildError{}, err)
+		var buildErr *common.BuildError
+		assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
 	})
 }
 
@@ -197,7 +199,8 @@ func TestBuildSystemFailure(t *testing.T) {
 
 		err = buildtest.RunBuild(t, build)
 		assert.Error(t, err)
-		assert.IsType(t, &exec.ExitError{}, err)
+		var exitError *exec.ExitError
+		assert.True(t, errors.As(err, &exitError), "expected %T, got %T", exitError, err)
 		t.Log(err)
 	})
 }
@@ -218,7 +221,8 @@ func TestBuildUnknownFailure(t *testing.T) {
 
 		err = buildtest.RunBuild(t, build)
 		assert.Error(t, err)
-		assert.IsType(t, &command.ErrUnknownFailure{}, err)
+		var errUnknownFailure *command.ErrUnknownFailure
+		assert.True(t, errors.As(err, &errUnknownFailure), "expected %T, got %T", errUnknownFailure, err)
 	})
 }
 
