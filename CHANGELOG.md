@@ -1,3 +1,68 @@
+## v12.9.0-rc1 (2020-03-10)
+
+### New features
+
+- Handle 503 status when uploading artifacts and the object storage is unavailable !1887
+- Add trigering of GitLab Runner UBI images pipeline !1869
+- Add execution stage name in job trace !1847
+- Provide rpm/deb package for arm64 and aarch64 !1826
+- Expose CI_JOB_IMAGE env var on build environment !1813
+- Create network per build in docker executor !1569 (Steve Exley @steve.exley)
+- Overwrite kubernetes resource limits and requests for build container on job level !874 (Nicholas Colbert @45cali)
+
+### Bug fixes
+
+- Retry kubernetes commands when "error dialing backend: EOF" error is hit !1867
+
+### Maintenance
+
+- Remove executor_ prefix from filenames in the executors package !1902
+- Fix 'make all' target !1900
+- Replace changelog generator script !1888
+- Bump Minio to latest version !1881 (Tom Elliff @tomelliff)
+- Rename build makefile target to build_all !1873
+- Prevent building mips and s390x architectures by default !1872
+- Make pipelines running also for X-Y-stable branches !1871
+- Add double quotes around bash arguments in ci/release_docker_images !1865
+- Fix release docker warning !1864
+- Fix typo in PowerShell script comments !1862
+- Simplify sha256 checksum file creation !1859
+- Improve fpm detection !1858
+- Replace which command usage !1857
+- Convert indentation to spaces for package script !1856
+- Update synced path for Windows 10 machine !1854
+- Use chocolatey to install software in Vagrant boxes !1853
+- Remove redundant type declaration !1852
+- Bump to go 1.13.8 !1849
+- Add debug logs when setting up pod !1844
+- Improve message in Windows version detection !1841
+- Set DinD image explicitly to 19.03.5 !1840
+- Resolve data race in TestCommand_Run !1839 (Konrad Borowski @KonradBorowski)
+- Use $(MAKE) instead of make !1825
+- Refactor helpers/container/service pkg !1824
+
+### Documentation changes
+
+- Change document title to include EC2 !1912
+- Fix typo in advanced configuration docs !1910 (Geo @geo4orce)
+- Improve `Code format` instructions in the process documentation !1899
+- Add fedora 30 to supported OS !1896
+- Update docs for Windows services since we support services in network per build !1895
+- Fix typo in release process docs !1891 (Ranit @ranit.appcode)
+- Prevent full disk image copies in libvirt custom executor driver example !1878 (Tom Dohrmann @Freax13)
+- Interactive Web terminal does not work on Windows !1877 (Ben Bodenmiller @bbodenmiller)
+- List which executors are at risk of having Runner token & other project code stolen !1876 (Ben Bodenmiller @bbodenmiller)
+- Allow service alias from config in Kubernetes executor !1868
+- Update docs for image variable in custom executor !1866
+- Remove bash from codeblock tags !1846
+- Improve wording in docs/development/README.md !1837
+- Document merge request title requirements and reviewing guidelines !1836
+- Add documentation on building from sources !1835
+- Update security docs !1833 (masOOd @masood.kamyab)
+- Update the monitoring document !1831 (masOOd @masood.kamyab)
+- Change flag to docker-services !1830
+- Document Windows supported versions !1533
+
 ## v12.8.0 (2020-02-22)
 
 - Define most jobs as 'pipelines for merge requests' !1747
