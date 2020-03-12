@@ -11,7 +11,7 @@ import (
 // BashTrapShellScript is used to wrap a shell script in a trap that makes sure the script always exits with exit code of 0
 // this can be useful in container environments where exiting with an exit code different from 0 would kill the container.
 // At the same time it prints to stdout the actual exit code of the script as well as the filename of the script as json.
-const BashTrapShellScript = `tr() {
+const BashTrapShellScript = `runner_script_trap() {
 	command_exit_code=$?
 	out_json='{"command_exit_code": %s, "script": "%s"}\n'
 	printf "$out_json" "$command_exit_code" "$0"
@@ -19,7 +19,7 @@ const BashTrapShellScript = `tr() {
 	exit 0
 }
 
-trap tr EXIT
+trap runner_script_trap EXIT
 
 `
 
