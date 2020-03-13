@@ -269,16 +269,16 @@ Example:
   volumes_from = ["storage_container:ro"]
   links = ["mysql_container:mysql"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
-  allowed_services = ["postgres:9.4", "postgres:latest"]
+  allowed_services = ["postgres:9", "redis:*", "mysql:*"]
   [[runners.docker.services]]
-    name: "mysql"
-    alias: "db"
+    name = "mysql"
+    alias = "db"
   [[runners.docker.services]]
-    name: "redis:2.8"
-    alias: "cache"
+    name = "redis:2.8"
+    alias = "cache"
   [[runners.docker.services]]
-    name: "postgres:9"
-    alias: "postgres-db"
+    name = "postgres:9"
+    alias = "postgres-db"
   [runners.docker.sysctls]
     "net.ipv4.ip_forward" = "1"
 ```
