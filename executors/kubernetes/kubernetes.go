@@ -65,6 +65,11 @@ func (c *commandTerminatedError) Error() string {
 	return fmt.Sprintf("command terminated with exit code %d", c.exitCode)
 }
 
+func (c *commandTerminatedError) Is(err error) bool {
+	_, ok := err.(*commandTerminatedError)
+	return ok
+}
+
 type podPhaseError struct {
 	name  string
 	phase api.PodPhase

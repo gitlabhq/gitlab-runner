@@ -2964,3 +2964,30 @@ func (f FakeBuildTrace) SetMasked(masked []string)                             {
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }
+
+func TestCommandTerminatedError_Is(t *testing.T) {
+	tests := map[string]struct {
+		err error
+
+		expectedIsResult bool
+	}{
+		"nil": {
+			err:              nil,
+			expectedIsResult: false,
+		},
+		"EOF": {
+			err:              io.EOF,
+			expectedIsResult: false,
+		},
+		"commandTerminatedError": {
+			err:              &commandTerminatedError{},
+			expectedIsResult: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.Equal(t, tt.expectedIsResult, errors.Is(tt.err, new(commandTerminatedError)), "commandTerminatedError.Is incorrect result")
+		})
+	}
+}
