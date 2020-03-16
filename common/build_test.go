@@ -47,8 +47,8 @@ func TestBuildRun(t *testing.T) {
 
 	// We run everything once
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	e.On("Finish", nil).Return().Once()
-	e.On("Cleanup").Return().Once()
+	e.On("Finish", nil).Once()
+	e.On("Cleanup").Once()
 
 	// Run script successfully
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
@@ -106,8 +106,8 @@ func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepare
 
 	// We run everything once
 	e.On("Prepare", mock.Anything).Return(prepareFn).Once()
-	e.On("Finish", nil).Return().Once()
-	e.On("Cleanup").Return().Once()
+	e.On("Finish", nil).Once()
+	e.On("Cleanup").Once()
 
 	// Run script successfully
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
@@ -208,8 +208,8 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 		}).Once()
 
 	// We run everything else once
-	e.On("Finish", nil).Return().Once()
-	e.On("Cleanup").Return().Once()
+	e.On("Finish", nil).Once()
+	e.On("Cleanup").Once()
 
 	// Run script successfully
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
@@ -265,12 +265,12 @@ func TestRetryPrepare(t *testing.T) {
 		Return(errors.New("prepare failed")).Twice()
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Once()
-	e.On("Cleanup").Return().Times(3)
+	e.On("Cleanup").Times(3)
 
 	// Succeed a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(nil)
-	e.On("Finish", nil).Return().Once()
+	e.On("Finish", nil).Once()
 
 	RegisterExecutor("build-run-retry-prepare", &p)
 
@@ -307,7 +307,7 @@ func TestPrepareFailure(t *testing.T) {
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("prepare failed")).Times(3)
-	e.On("Cleanup").Return().Times(3)
+	e.On("Cleanup").Times(3)
 
 	RegisterExecutor("build-run-prepare-failure", &p)
 
@@ -342,7 +342,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(&BuildError{}).Times(1)
-	e.On("Cleanup").Return().Times(1)
+	e.On("Cleanup").Times(1)
 
 	RegisterExecutor("build-run-prepare-failure-on-build-error", &p)
 
@@ -377,13 +377,13 @@ func TestJobFailure(t *testing.T) {
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Times(1)
-	e.On("Cleanup").Return().Times(1)
+	e.On("Cleanup").Times(1)
 
 	// Succeed a build script
 	thrownErr := &BuildError{Inner: errors.New("test error")}
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(thrownErr)
-	e.On("Finish", thrownErr).Return().Once()
+	e.On("Finish", thrownErr).Once()
 
 	RegisterExecutor("build-run-job-failure", p)
 
@@ -427,7 +427,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Times(1)
-	e.On("Cleanup").Return().Times(1)
+	e.On("Cleanup").Times(1)
 
 	// Succeed a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
@@ -435,7 +435,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 		time.Sleep(2 * time.Second)
 	}).Return(nil)
 	e.On("Run", mock.Anything).Return(nil)
-	e.On("Finish", mock.Anything).Return().Once()
+	e.On("Finish", mock.Anything).Once()
 
 	RegisterExecutor("build-run-job-failure-on-execution-timeout", p)
 
@@ -489,7 +489,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup").Return().Once()
+	e.On("Cleanup").Once()
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
@@ -500,7 +500,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(errors.New("build fail")).Once()
 	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	e.On("Finish", errors.New("build fail")).Return().Once()
+	e.On("Finish", errors.New("build fail")).Once()
 
 	RegisterExecutor("build-run-run-failure", &p)
 
@@ -534,14 +534,14 @@ func TestGetSourcesRunFailure(t *testing.T) {
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup").Return()
+	e.On("Cleanup")
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail")).Times(3)
 	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	e.On("Finish", errors.New("build fail")).Return().Once()
+	e.On("Finish", errors.New("build fail")).Once()
 
 	RegisterExecutor("build-get-sources-run-failure", &p)
 
@@ -577,7 +577,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup").Return()
+	e.On("Cleanup")
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
@@ -586,7 +586,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(errors.New("build fail")).Times(3)
 	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	e.On("Finish", errors.New("build fail")).Return().Once()
+	e.On("Finish", errors.New("build fail")).Once()
 
 	RegisterExecutor("build-artifacts-run-failure", &p)
 
@@ -622,7 +622,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup").Return()
+	e.On("Cleanup")
 
 	// Successful build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Times(8)
@@ -634,7 +634,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(errors.New("upload fail")).Once()
-	e.On("Finish", errors.New("upload fail")).Return().Once()
+	e.On("Finish", errors.New("upload fail")).Once()
 
 	RegisterExecutor("build-upload-artifacts-run-failure", &p)
 
@@ -676,7 +676,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup").Return()
+	e.On("Cleanup")
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
@@ -684,7 +684,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(errors.New("build fail")).Times(3)
 	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	e.On("Finish", errors.New("build fail")).Return().Once()
+	e.On("Finish", errors.New("build fail")).Once()
 
 	RegisterExecutor("build-cache-run-failure", &p)
 
@@ -719,13 +719,13 @@ func TestRunWrongAttempts(t *testing.T) {
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup").Return()
+	e.On("Cleanup")
 
 	// Fail a build script
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(nil).Once()
 	e.On("Run", mock.Anything).Return(errors.New("Number of attempts out of the range [1, 10] for stage: get_sources"))
-	e.On("Finish", errors.New("Number of attempts out of the range [1, 10] for stage: get_sources")).Return()
+	e.On("Finish", errors.New("Number of attempts out of the range [1, 10] for stage: get_sources"))
 
 	RegisterExecutor("build-run-attempt-failure", &p)
 
@@ -758,8 +758,8 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 
 	// We run everything once
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	e.On("Finish", mock.Anything).Return().Twice()
-	e.On("Cleanup").Return().Twice()
+	e.On("Finish", mock.Anything).Twice()
+	e.On("Cleanup").Twice()
 
 	// Run script successfully
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})

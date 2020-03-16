@@ -63,9 +63,9 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	e := common.MockExecutor{}
 	defer e.AssertExpectations(t)
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup").Maybe().Return()
+	e.On("Cleanup").Maybe()
 	e.On("Shell").Return(&common.ShellScriptInfo{Shell: "script-shell"})
-	e.On("Finish", mock.Anything).Return(nil).Maybe()
+	e.On("Finish", mock.Anything).Maybe()
 	e.On("Run", mock.Anything).Run(func(args mock.Arguments) {
 		atomic.AddUint32(&runningBuilds, 1)
 
