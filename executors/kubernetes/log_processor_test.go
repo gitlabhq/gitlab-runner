@@ -248,13 +248,9 @@ func TestParseLogs(t *testing.T) {
 			p := kubernetesLogProcessor{}
 
 			timestamp, line, err := p.parseLogLine(tt.log.String())
-			if err != nil {
-				if tt.assertErrorFn != nil {
-					tt.assertErrorFn(t, err)
-					return
-				}
-
-				require.FailNow(t, "unexpected error: %v", err)
+			if tt.assertErrorFn != nil {
+				tt.assertErrorFn(t, err)
+				return
 			}
 
 			assert.NoError(t, err)

@@ -241,14 +241,14 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 }
 
 func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	tests := []struct {
+	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
 		Build        *common.Build
 
 		Expected []api.VolumeMount
 	}{
-		{
+		"no custom volumes": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -262,7 +262,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "repo"},
 			},
 		},
-		{
+		"custom volumes": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -291,7 +291,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
 			},
 		},
-		{
+		"custom volumes with read-only settings": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -324,32 +324,34 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 		},
 	}
 
-	for _, test := range tests {
-		e := &executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				ExecutorOptions: executorOptions,
-				Build:           test.Build,
-				Config:          test.RunnerConfig,
-			},
-		}
-		setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+					Build:           tt.Build,
+					Config:          tt.RunnerConfig,
+				},
+			}
+			setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
-		mounts := e.getVolumeMounts()
-		for _, expected := range test.Expected {
-			assert.Contains(t, mounts, expected, "Expected volumeMount definition for %s was not found", expected.Name)
-		}
+			mounts := e.getVolumeMounts()
+			for _, expected := range tt.Expected {
+				assert.Contains(t, mounts, expected, "Expected volumeMount definition for %s was not found", expected.Name)
+			}
+		})
 	}
 }
 
 func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	tests := []struct {
+	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
 		Build        *common.Build
 
 		Expected []api.Volume
 	}{
-		{
+		"no custom volumes": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -363,7 +365,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
-		{
+		"custom volumes": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -420,21 +422,23 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 		},
 	}
 
-	for _, test := range tests {
-		e := &executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				ExecutorOptions: executorOptions,
-				Build:           test.Build,
-				Config:          test.RunnerConfig,
-			},
-			configMap: fakeConfigMap(),
-		}
-		setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+					Build:           tt.Build,
+					Config:          tt.RunnerConfig,
+				},
+				configMap: fakeConfigMap(),
+			}
+			setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
-		volumes := e.getVolumes()
-		for _, expected := range test.Expected {
-			assert.Contains(t, volumes, expected, "Expected volume definition for %s was not found", expected.Name)
-		}
+			volumes := e.getVolumes()
+			for _, expected := range tt.Expected {
+				assert.Contains(t, volumes, expected, "Expected volume definition for %s was not found", expected.Name)
+			}
+		})
 	}
 }
 
