@@ -382,7 +382,7 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
     image = "ruby:2.6"               # The default image used for jobs is 'ruby:2.6'
   [runners.machine]
     OffPeakPeriods = [               # Set the Off Peak time mode on for:
-      "* * 0-9,18-23 * * mon-fri *", # - Monday to Friday for 12:00am through 9:59am and 6pm through 11:59pm
+      "* * 0-9,18-23 * * mon-fri *", # - Monday to Friday for 12:00am through 9:59am and 6:00pm through 11:59pm
       "* * * * * sat,sun *"          # - All of Saturday and Sunday
     ]
     OffPeakIdleCount = 1             # There must be 1 machine in Idle state - when Off Peak time mode is on
