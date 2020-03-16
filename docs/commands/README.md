@@ -331,9 +331,6 @@ gitlab-runner unregister --all-runners
 
 ## Service-related commands
 
-> **Note:** Starting with GitLab Runner 10.0, service-related commands are **deprecated**
-and will be removed in one of the upcoming releases.
-
 The following commands allow you to manage the runner as a system or user
 service. Use them to install, uninstall, start and stop the runner service.
 
