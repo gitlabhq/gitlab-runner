@@ -21,11 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -138,6 +141,10 @@ func TestExec(t *testing.T) {
 }
 
 func execPod() *api.Pod {
+	return execPodWithPhase(api.PodRunning)
+}
+
+func execPodWithPhase(phase api.PodPhase) *api.Pod {
 	return &api.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test", ResourceVersion: "10"},
 		Spec: api.PodSpec{
@@ -150,7 +157,7 @@ func execPod() *api.Pod {
 			},
 		},
 		Status: api.PodStatus{
-			Phase: api.PodRunning,
+			Phase: phase,
 		},
 	}
 }
@@ -211,4 +218,98 @@ func TestExecShouldRetry(t *testing.T) {
 			assert.Equal(t, tt.expectedShouldRetry, retry.ShouldRetry(tt.tries, tt.err))
 		})
 	}
+}
+
+func TestAttach(t *testing.T) {
+	version, codec := testVersionAndCodec()
+
+	fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+		switch p, m := req.URL.Path, req.Method; {
+		case p == "/api/v1/namespaces/test-resource/pods/test-resource" && m == http.MethodGet:
+			body := objBody(codec, execPod())
+			return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
+				"Content-Type": {"application/json"},
+			}}, nil
+
+		default:
+			return nil, fmt.Errorf("unexpected request")
+		}
+	})
+
+	client := testKubernetesClient(version, fakeClient)
+	clientConfig := &restclient.Config{}
+
+	mockExecutor := &MockRemoteExecutor{}
+	defer mockExecutor.AssertExpectations(t)
+
+	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
+		return url.Path == "/api/v1/namespaces/test/pods/foo/attach"
+	})
+	stdinMatcher := mock.MatchedBy(func(stdin io.Reader) bool {
+		b, _ := ioutil.ReadAll(stdin)
+		return string(b) == "sleep 1\n"
+	})
+	mockExecutor.On("Execute", http.MethodPost,
+		urlMatcher, clientConfig, stdinMatcher, nil, nil, false).Return(nil).Once()
+
+	opts := &AttachOptions{
+		Namespace:     "test-resource",
+		PodName:       "test-resource",
+		ContainerName: "test-resource",
+		Command:       []string{"sleep", "1"},
+		Executor:      mockExecutor,
+		Client:        client,
+		Config:        clientConfig,
+	}
+
+	assert.Nil(t, opts.Run())
+}
+
+func TestAttachErrorGettingPod(t *testing.T) {
+	err := errors.New("error")
+
+	version, _ := testVersionAndCodec()
+
+	fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
+		return nil, err
+	})
+
+	client := testKubernetesClient(version, fakeClient)
+	clientConfig := &restclient.Config{}
+
+	opts := &AttachOptions{
+		Namespace:     "test-resource",
+		PodName:       "test-resource",
+		ContainerName: "test-resource",
+		Client:        client,
+		Config:        clientConfig,
+	}
+
+	assert.True(t, errors.Is(opts.Run(), err))
+}
+
+func TestAttachPodNotRunning(t *testing.T) {
+	version, codec := testVersionAndCodec()
+
+	fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
+		body := objBody(codec, execPodWithPhase(api.PodUnknown))
+		return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
+			"Content-Type": {"application/json"},
+		}}, nil
+	})
+
+	client := testKubernetesClient(version, fakeClient)
+	clientConfig := &restclient.Config{}
+
+	opts := &AttachOptions{
+		Namespace:     "test-resource",
+		PodName:       "test-resource",
+		ContainerName: "test-resource",
+		Client:        client,
+		Config:        clientConfig,
+	}
+
+	err := opts.Run()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), api.PodUnknown)
 }

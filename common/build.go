@@ -72,6 +72,18 @@ const (
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
 )
 
+var BuildStages = []BuildStage{
+	BuildStagePrepare,
+	BuildStageGetSources,
+	BuildStageRestoreCache,
+	BuildStageDownloadArtifacts,
+	BuildStageUserScript,
+	BuildStageAfterScript,
+	BuildStageArchiveCache,
+	BuildStageUploadOnSuccessArtifacts,
+	BuildStageUploadOnFailureArtifacts,
+}
+
 type Build struct {
 	JobResponse `yaml:",inline"`
 
