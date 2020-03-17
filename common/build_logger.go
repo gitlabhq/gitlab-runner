@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/sirupsen/logrus"
-
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
