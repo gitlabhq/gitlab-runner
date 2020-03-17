@@ -49,7 +49,7 @@ To open the report:
    ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
    ```
 
-   Because when this job was triggered, and `v11.8.0` was also the `latest` release, we see  a link to the
+   Because when this job was triggered, and `v11.8.0` was also the `latest` release, we see a link to the
    `latest` version bucket. The problem with `latest` is that the content there changes when
    new stable/patch versions are released.
 

@@ -73,9 +73,9 @@ Docker executor:
   Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
   if the destination path drive letter is not `c:`, paths are not supported for:
 
-  - [`builds_dir`](../configuration/advanced-configuration.html#the-runners-section)
-  - [`cache_dir`](../configuration/advanced-configuration.html#the-runners-section)
-  - [`volumes`](../configuration/advanced-configuration.html#volumes-in-the-runnersdocker-section)
+  - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`cache_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`volumes`](../configuration/advanced-configuration.md#volumes-in-the-runnersdocker-section)
 
   This means values such as `f:\\cache_dir` are not supported, but `f:` is supported.
   However, if the destination path is on the `c:` drive, paths are also supported

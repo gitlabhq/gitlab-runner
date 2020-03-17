@@ -10,7 +10,7 @@ so we are going to use an Ubuntu 18.04 image to run the jobs.
 These scripts have the following prerequisites:
 
 - [LXD](https://linuxcontainers.org/lxd/introduction/)
-- [GitLab Runner](https://docs.gitlab.com/runner/install/linux-manually.html)
+- [GitLab Runner](../../install/linux-manually.md)
 
 ## Configuration
 

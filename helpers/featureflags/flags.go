@@ -31,14 +31,14 @@ var flags = []FeatureFlag{
 		DefaultValue:    "false",
 		Deprecated:      false,
 		ToBeRemovedWith: "13.0",
-		Description:     "Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](https://docs.gitlab.com/runner/shells/#windows-batch) shell",
+		Description:     "Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](../shells/index.md#windows-batch) shell",
 	},
 	{
 		Name:            NetworkPerBuild,
 		DefaultValue:    "false",
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description:     "Enables creation of a docker [network per build](https://docs.gitlab.com/runner/executors/docker.html#networking) with the docker executor",
+		Description:     "Enables creation of a docker [network per build](../executors/docker.md#networking) with the docker executor",
 	},
 	{
 		Name:            UseLegacyBuildsDirForDocker,

@@ -18,6 +18,8 @@ docs lint:
   - .merge_request_pipelines
   - .no_cache_and_dependencies
   script:
+  # Lint prose
+  - vale --minAlertLevel error docs
   # Lint Markdown
   - markdownlint --config .markdownlint.json 'docs/**/*.md'
   # Prepare docs for build
