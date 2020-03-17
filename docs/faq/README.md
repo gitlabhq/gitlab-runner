@@ -271,6 +271,10 @@ After adding the `SeServiceLogonRight` for the user used in service configuratio
 the command `gitlab-runner start` should finish without failures
 and the service should be started properly.
 
+### Job marked as success and terminated midway using Kubernetes executor
+
+Please see [Job execution](../executors/kubernetes.md#job-execution).
+
 ## macOS troubleshooting
 
 The following relate to Runner troubleshooting on macOS.

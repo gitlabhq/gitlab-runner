@@ -18,13 +18,17 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -32,63 +36,219 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
-func TestLimits(t *testing.T) {
-	tests := []struct {
-		CPU, Memory string
-		Expected    api.ResourceList
-	}{
-		{
-			CPU:    "100m",
-			Memory: "100Mi",
-			Expected: api.ResourceList{
-				api.ResourceCPU:    resource.MustParse("100m"),
-				api.ResourceMemory: resource.MustParse("100Mi"),
-			},
-		},
-		{
-			CPU: "100m",
-			Expected: api.ResourceList{
-				api.ResourceCPU: resource.MustParse("100m"),
-			},
-		},
-		{
-			Memory: "100Mi",
-			Expected: api.ResourceList{
-				api.ResourceMemory: resource.MustParse("100Mi"),
-			},
-		},
-		{
-			CPU:      "100j",
-			Expected: api.ResourceList{},
-		},
-		{
-			Memory:   "100j",
-			Expected: api.ResourceList{},
-		},
-		{
-			Expected: api.ResourceList{},
-		},
+type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
+
+func TestRunTestsWithFeatureFlag(t *testing.T) {
+	tests := map[string]featureFlagTest{
+		"testKubernetesSuccessRun":              testKubernetesSuccessRunFeatureFlag,
+		"testKubernetesTimeoutRun":              testKubernetesTimeoutRunFeatureFlag,
+		"testKubernetesBuildFail":               testKubernetesBuildFailFeatureFlag,
+		"testKubernetesBuildAbort":              testKubernetesBuildAbortFeatureFlag,
+		"testKubernetesBuildCancel":             testKubernetesBuildCancelFeatureFlag,
+		"testVolumeMounts":                      testVolumeMountsFeatureFlag,
+		"testVolumes":                           testVolumesFeatureFlag,
+		"testSetupBuildPodServiceCreationError": testSetupBuildPodServiceCreationErrorFeatureFlag,
+		"testKubernetesCustomClonePath":         testKubernetesCustomClonePathFeatureFlag,
+		"testKubernetesNoRootImage":             testKubernetesNoRootImageFeatureFlag,
+		"testKubernetesMissingImage":            testKubernetesMissingImageFeatureFlag,
+		"testKubernetesMissingTag":              testKubernetesMissingTagFeatureFlag,
+		"testOverwriteNamespaceNotMatch":        testOverwriteNamespaceNotMatchFeatureFlag,
+		"testOverwriteServiceAccountNotMatch":   testOverwriteServiceAccountNotMatchFeatureFlag,
+		"testInteractiveTerminal":               testInteractiveTerminalFeatureFlag,
 	}
 
-	for _, test := range tests {
-		res, _ := limits(test.CPU, test.Memory)
-		assert.Equal(t, test.Expected, res)
+	featureFlags := []string{
+		featureflags.UseLegacyKubernetesExecutionStrategy,
+	}
+
+	for tn, tt := range tests {
+		for _, ff := range featureFlags {
+			t.Run(fmt.Sprintf("%s %s true", tn, ff), func(t *testing.T) {
+				tt(t, ff, true)
+			})
+
+			t.Run(fmt.Sprintf("%s %s false", tn, ff), func(t *testing.T) {
+				tt(t, ff, false)
+			})
+		}
 	}
 }
 
-func TestVolumeMounts(t *testing.T) {
-	tests := []struct {
+func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+	successfulBuild.Image.Name = common.TestDockerGitImage
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
+			},
+		},
+	}
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
+func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	longRunningBuild, err := common.GetRemoteLongRunningBuild()
+	assert.NoError(t, err)
+	longRunningBuild.Image.Name = common.TestDockerGitImage
+	build := &common.Build{
+		JobResponse: longRunningBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
+			},
+		},
+	}
+	build.RunnerInfo.Timeout = 10 //seconds
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	var buildError *common.BuildError
+	assert.True(t, errors.As(err, &buildError))
+	assert.Equal(t, common.JobExecutionTimeout, buildError.FailureReason)
+}
+
+func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: failedBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
+			},
+		},
+	}
+	build.Image.Name = common.TestDockerGitImage
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err, "error")
+	assert.IsType(t, err, &common.BuildError{})
+	assert.Contains(t, err.Error(), "command terminated with exit code 1")
+}
+
+func testKubernetesBuildAbortFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: failedBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
+			},
+		},
+		SystemInterrupt: make(chan os.Signal, 1),
+	}
+	build.Image.Name = common.TestDockerGitImage
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	abortTimer := time.AfterFunc(time.Second, func() {
+		t.Log("Interrupt")
+		build.SystemInterrupt <- os.Interrupt
+	})
+	defer abortTimer.Stop()
+
+	timeoutTimer := time.AfterFunc(time.Minute, func() {
+		t.Log("Timedout")
+		t.FailNow()
+	})
+	defer timeoutTimer.Stop()
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.EqualError(t, err, "aborted: interrupt")
+}
+
+func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: failedBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
+			},
+		},
+		SystemInterrupt: make(chan os.Signal, 1),
+	}
+	build.Image.Name = common.TestDockerGitImage
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	trace := &common.Trace{Writer: os.Stdout}
+
+	abortTimer := time.AfterFunc(time.Second, func() {
+		t.Log("Interrupt")
+		trace.CancelFunc()
+	})
+	defer abortTimer.Stop()
+
+	timeoutTimer := time.AfterFunc(time.Minute, func() {
+		t.Log("Timedout")
+		t.FailNow()
+	})
+	defer timeoutTimer.Stop()
+
+	err = build.Run(&common.Config{}, trace)
+	assert.IsType(t, err, &common.BuildError{})
+	assert.EqualError(t, err, "canceled")
+}
+
+func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
 		Build        *common.Build
 
 		Expected []api.VolumeMount
 	}{
-		{
+		"no custom volumes": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -102,7 +262,7 @@ func TestVolumeMounts(t *testing.T) {
 				{Name: "repo"},
 			},
 		},
-		{
+		"custom volumes": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -131,7 +291,7 @@ func TestVolumeMounts(t *testing.T) {
 				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
 			},
 		},
-		{
+		"custom volumes with read-only settings": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -164,31 +324,34 @@ func TestVolumeMounts(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		e := &executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				ExecutorOptions: executorOptions,
-				Build:           test.Build,
-				Config:          test.RunnerConfig,
-			},
-		}
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+					Build:           tt.Build,
+					Config:          tt.RunnerConfig,
+				},
+			}
+			setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
-		mounts := e.getVolumeMounts()
-		for _, expected := range test.Expected {
-			assert.Contains(t, mounts, expected, "Expected volumeMount definition for %s was not found", expected.Name)
-		}
+			mounts := e.getVolumeMounts()
+			for _, expected := range tt.Expected {
+				assert.Contains(t, mounts, expected, "Expected volumeMount definition for %s was not found", expected.Name)
+			}
+		})
 	}
 }
 
-func TestVolumes(t *testing.T) {
-	tests := []struct {
+func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
 		Build        *common.Build
 
 		Expected []api.Volume
 	}{
-		{
+		"no custom volumes": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -202,7 +365,7 @@ func TestVolumes(t *testing.T) {
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
-		{
+		"custom volumes": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -259,29 +422,392 @@ func TestVolumes(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		e := &executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				ExecutorOptions: executorOptions,
-				Build:           test.Build,
-				Config:          test.RunnerConfig,
-			},
-		}
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+					Build:           tt.Build,
+					Config:          tt.RunnerConfig,
+				},
+				configMap: fakeConfigMap(),
+			}
+			setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
-		volumes := e.getVolumes()
-		for _, expected := range test.Expected {
-			assert.Contains(t, volumes, expected, "Expected volume definition for %s was not found", expected.Name)
-		}
+			volumes := e.getVolumes()
+			for _, expected := range tt.Expected {
+				assert.Contains(t, volumes, expected, "Expected volume definition for %s was not found", expected.Name)
+			}
+		})
 	}
 }
 
-func fakeKubeDeleteResponse(status int) *http.Response {
-	_, codec := testVersionAndCodec()
+func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	version, _ := testVersionAndCodec()
+	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:       helperimage.OSTypeLinux,
+		Architecture: "amd64",
+	})
+	require.NoError(t, err)
 
-	body := objBody(codec, &metav1.Status{Code: int32(status)})
-	return &http.Response{StatusCode: status, Body: body, Header: map[string][]string{
-		"Content-Type": {"application/json"},
-	}}
+	runnerConfig := common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Kubernetes: &common.KubernetesConfig{
+				Namespace:   "default",
+				HelperImage: "custom/helper-image",
+			},
+		},
+	}
+
+	fakeRoundTripper := func(req *http.Request) (*http.Response, error) {
+		body, err := ioutil.ReadAll(req.Body)
+		if !assert.NoError(t, err, "failed to read request body") {
+			return nil, err
+		}
+
+		p := new(api.Pod)
+		err = json.Unmarshal(body, p)
+		if !assert.NoError(t, err, "failed to read request body") {
+			return nil, err
+		}
+
+		if req.URL.Path == "/api/v1/namespaces/default/services" {
+			return nil, fmt.Errorf("foobar")
+		}
+
+		resp := &http.Response{
+			StatusCode: http.StatusOK,
+			Body: FakeReadCloser{
+				Reader: bytes.NewBuffer(body),
+			},
+		}
+		resp.Header = make(http.Header)
+		resp.Header.Add("Content-Type", "application/json")
+
+		return resp, nil
+	}
+
+	mockFc := &mockFeatureChecker{}
+	mockFc.On("IsHostAliasSupported").Return(true, nil)
+	ex := executor{
+		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
+		options: &kubernetesOptions{
+			Image: common.Image{
+				Name:  "test-image",
+				Ports: []common.Port{{Number: 80}},
+			},
+			Services: common.Services{
+				{
+					Name:  "test-service",
+					Alias: "custom_name",
+					Ports: []common.Port{
+						{
+							Number:   81,
+							Name:     "custom_port_name",
+							Protocol: "http",
+						},
+					},
+				},
+			},
+		},
+		AbstractExecutor: executors.AbstractExecutor{
+			Config:     runnerConfig,
+			BuildShell: &common.ShellConfiguration{},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Variables: []common.JobVariable{},
+				},
+				Runner: &runnerConfig,
+			},
+			ProxyPool: proxy.NewPool(),
+		},
+		helperImageInfo: helperImageInfo,
+		featureChecker:  mockFc,
+		configMap:       fakeConfigMap(),
+	}
+	setBuildFeatureFlag(ex.Build, featureFlagName, featureFlagValue)
+
+	err = ex.prepareOverwrites(make(common.JobVariables, 0))
+	assert.NoError(t, err)
+
+	err = ex.setupBuildPod()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "error creating the proxy service")
+}
+
+func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	jobResponse, err := common.GetRemoteBuildResponse(
+		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo")
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		clonePath         string
+		expectedErrorType interface{}
+	}{
+		"uses custom clone path": {
+			clonePath:         "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+			expectedErrorType: nil,
+		},
+		"path has to be within CI_BUILDS_DIR": {
+			clonePath:         "/unknown/go/src/gitlab.com/gitlab-org/repo",
+			expectedErrorType: &common.BuildError{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &common.Build{
+				JobResponse: jobResponse,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "kubernetes",
+						Kubernetes: &common.KubernetesConfig{
+							Image:      common.TestAlpineImage,
+							PullPolicy: common.PullPolicyIfNotPresent,
+						},
+						Environment: []string{
+							"GIT_CLONE_PATH=" + test.clonePath,
+						},
+					},
+				},
+			}
+			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			assert.IsType(t, test.expectedErrorType, err)
+		})
+	}
+}
+
+func testKubernetesNoRootImageFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
+
+	assert.NoError(t, err)
+	successfulBuild.Image.Name = common.TestAlpineNoRootImage
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					Image:      common.TestAlpineImage,
+					PullPolicy: common.PullPolicyIfNotPresent,
+				},
+			},
+		},
+	}
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
+func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: failedBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor:   "kubernetes",
+				Kubernetes: &common.KubernetesConfig{},
+			},
+		},
+	}
+	build.Image.Name = "some/non-existing/image"
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.IsType(t, err, &common.BuildError{})
+	assert.Contains(t, err.Error(), "image pull failed")
+}
+
+func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	failedBuild, err := common.GetRemoteFailedBuild()
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: failedBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor:   "kubernetes",
+				Kubernetes: &common.KubernetesConfig{},
+			},
+		},
+	}
+	build.Image.Name = "docker:missing-tag"
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.IsType(t, err, &common.BuildError{})
+	assert.Contains(t, err.Error(), "image pull failed")
+}
+
+func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			GitInfo: common.GitInfo{
+				Sha: "1234567890",
+			},
+			Image: common.Image{
+				Name: "test-image",
+			},
+			Variables: []common.JobVariable{
+				{Key: NamespaceOverwriteVariableName, Value: "namespace"},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					NamespaceOverwriteAllowed: "^not_a_match$",
+					PullPolicy:                common.PullPolicyIfNotPresent,
+				},
+			},
+		},
+		SystemInterrupt: make(chan os.Signal, 1),
+	}
+	build.Image.Name = common.TestDockerGitImage
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not match")
+}
+
+func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			GitInfo: common.GitInfo{
+				Sha: "1234567890",
+			},
+			Image: common.Image{
+				Name: "test-image",
+			},
+			Variables: []common.JobVariable{
+				{Key: ServiceAccountOverwriteVariableName, Value: "service-account"},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					ServiceAccountOverwriteAllowed: "^not_a_match$",
+					PullPolicy:                     common.PullPolicyIfNotPresent,
+				},
+			},
+		},
+		SystemInterrupt: make(chan os.Signal, 1),
+	}
+	build.Image.Name = common.TestDockerGitImage
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not match")
+}
+
+func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	client, err := getKubeClient(&common.KubernetesConfig{}, &overwrites{})
+	require.NoError(t, err)
+	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
+	require.NoError(t, err)
+
+	successfulBuild, err := common.GetRemoteBuildResponse("sleep 5")
+	require.NoError(t, err)
+	successfulBuild.Image.Name = "docker:git"
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					BearerToken: string(secrets.Items[0].Data["token"]),
+				},
+			},
+		},
+	}
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	sess, err := session.NewSession(nil)
+	build.Session = sess
+
+	outBuffer := bytes.NewBuffer(nil)
+	outCh := make(chan string)
+
+	go func() {
+		err = build.Run(
+			&common.Config{
+				SessionServer: common.SessionServer{
+					SessionTimeout: 2,
+				},
+			},
+			&common.Trace{Writer: outBuffer},
+		)
+		require.NoError(t, err)
+
+		outCh <- outBuffer.String()
+	}()
+
+	for build.Session.Mux() == nil {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	time.Sleep(5 * time.Second)
+
+	srv := httptest.NewServer(build.Session.Mux())
+	defer srv.Close()
+
+	u := url.URL{
+		Scheme: "ws",
+		Host:   srv.Listener.Addr().String(),
+		Path:   build.Session.Endpoint + "/exec",
+	}
+	headers := http.Header{
+		"Authorization": []string{build.Session.Token},
+	}
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
+	defer func() {
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}()
+	require.NoError(t, err)
+	assert.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
+
+	out := <-outCh
+	t.Log(out)
+
+	assert.Contains(t, out, "Terminal is connected, will time out in 2s...")
 }
 
 func TestCleanup(t *testing.T) {
@@ -290,10 +816,12 @@ func TestCleanup(t *testing.T) {
 	podsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/pods/" + objectMeta.Name
 	servicesEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/services/" + objectMeta.Name
 	secretsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/secrets/" + objectMeta.Name
+	configMapsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
 
 	tests := []struct {
 		Name        string
 		Pod         *api.Pod
+		ConfigMap   *api.ConfigMap
 		Credentials *api.Secret
 		ClientFunc  func(*http.Request) (*http.Response, error)
 		Services    []api.Service
@@ -402,6 +930,31 @@ func TestCleanup(t *testing.T) {
 			},
 			Error: true,
 		},
+		{
+			Name:      "ConfigMap cleanup",
+			ConfigMap: &api.ConfigMap{ObjectMeta: objectMeta},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == http.MethodDelete && p == configMapsEndpointURI:
+					return fakeKubeDeleteResponse(http.StatusOK), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+		},
+		{
+			Name:      "ConfigMap cleanup failed",
+			ConfigMap: &api.ConfigMap{ObjectMeta: objectMeta},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == http.MethodDelete && p == configMapsEndpointURI:
+					return fakeKubeDeleteResponse(http.StatusNotFound), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+			Error: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -411,6 +964,7 @@ func TestCleanup(t *testing.T) {
 				pod:         test.Pod,
 				credentials: test.Credentials,
 				services:    test.Services,
+				configMap:   test.ConfigMap,
 			}
 			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
 			errored := false
@@ -1861,17 +2415,11 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Empty(t, pod.Spec.SecurityContext, "Security context should be empty")
 			},
 		},
-		"supports services with host aliases": {
+		"supports services as host aliases": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						Services: []common.Service{
-							{
-								Name:  "nginx",
-								Alias: "proxy",
-							},
-						},
 					},
 				},
 			},
@@ -1887,42 +2435,13 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 5)
+				assert.Len(t, pod.Spec.Containers, 4)
 				require.Len(t, pod.Spec.HostAliases, 1)
 
 				expectedHostnames := []string{
 					"test-service",
 					"svc-alias",
 					"docker",
-					"nginx",
-					"proxy",
-				}
-				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
-				assert.Equal(t, expectedHostnames, pod.Spec.HostAliases[0].Hostnames)
-			},
-		},
-		"supports services with host in runner config only": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-						Services: []common.Service{
-							{
-								Name:  "nginx",
-								Alias: "proxy",
-							},
-						},
-					},
-				},
-			},
-			Options: &kubernetesOptions{},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 3)
-				require.Len(t, pod.Spec.HostAliases, 1)
-
-				expectedHostnames := []string{
-					"nginx",
-					"proxy",
 				}
 				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
 				assert.Equal(t, expectedHostnames, pod.Spec.HostAliases[0].Hostnames)
@@ -1933,11 +2452,6 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						Services: []common.Service{
-							{
-								Name: "nginx:latest",
-							},
-						},
 					},
 				},
 			},
@@ -1949,11 +2463,11 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 4)
+				assert.Len(t, pod.Spec.Containers, 3)
 				require.Len(t, pod.Spec.HostAliases, 1)
 
 				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
-				assert.Equal(t, []string{"docker", "nginx"}, pod.Spec.HostAliases[0].Hostnames)
+				assert.Equal(t, []string{"docker"}, pod.Spec.HostAliases[0].Hostnames)
 			},
 		},
 		"ignores non RFC1123 aliases": {
@@ -1961,12 +2475,6 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						Services: []common.Service{
-							{
-								Name:  "nginx",
-								Alias: "INVALID_PROXY_ALIAS",
-							},
-						},
 					},
 				},
 			},
@@ -1989,30 +2497,6 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Contains(t, errMsg, "is invalid DNS")
 				assert.Contains(t, errMsg, "INVALID_ALIAS")
 				assert.Contains(t, errMsg, "test-service")
-			},
-		},
-		"ignores non RFC1123 aliases from runner config": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-						Services: []common.Service{
-							{
-								Name:  "nginx",
-								Alias: "INVALID_PROXY_ALIAS",
-							},
-						},
-					},
-				},
-			},
-			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
-				var expected *invalidHostAliasDNSError
-				assert.True(t, errors.As(err, &expected))
-				assert.True(t, expected.Is(err))
-				errMsg := err.Error()
-				assert.Contains(t, errMsg, "is invalid DNS")
-				assert.Contains(t, errMsg, "INVALID_PROXY_ALIAS")
-				assert.Contains(t, errMsg, "nginx")
 			},
 		},
 		"ignores services with ports": {
@@ -2057,12 +2541,6 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						Services: []common.Service{
-							{
-								Name:  "nginx",
-								Alias: "proxy",
-							},
-						},
 					},
 				},
 			},
@@ -2080,7 +2558,7 @@ func TestSetupBuildPod(t *testing.T) {
 				e.featureChecker = mockFc
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 4)
+				assert.Len(t, pod.Spec.Containers, 3)
 				assert.Nil(t, pod.Spec.HostAliases)
 			},
 		},
@@ -2164,6 +2642,7 @@ func TestSetupBuildPod(t *testing.T) {
 			ex := executor{
 				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
 				options:    options,
+				configMap:  fakeConfigMap(),
 				AbstractExecutor: executors.AbstractExecutor{
 					Config:     test.RunnerConfig,
 					BuildShell: &common.ShellConfiguration{},
@@ -2178,7 +2657,6 @@ func TestSetupBuildPod(t *testing.T) {
 				helperImageInfo: helperImageInfo,
 				featureChecker:  mockFc,
 			}
-			ex.getServices(ex.Build)
 
 			if test.PrepareFn != nil {
 				test.PrepareFn(t, test, &ex)
@@ -2202,489 +2680,271 @@ func TestSetupBuildPod(t *testing.T) {
 	}
 }
 
-func TestSetupBuildPodServiceCreationError(t *testing.T) {
-	version, _ := testVersionAndCodec()
-	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
-		OSType:       helperimage.OSTypeLinux,
-		Architecture: "amd64",
-	})
-	require.NoError(t, err)
+func TestProcessLogs(t *testing.T) {
+	mockTrace := &common.MockJobTrace{}
+	defer mockTrace.AssertExpectations(t)
 
-	runnerConfig := common.RunnerConfig{
-		RunnerSettings: common.RunnerSettings{
-			Kubernetes: &common.KubernetesConfig{
-				Namespace:   "default",
-				HelperImage: "custom/helper-image",
-			},
-		},
+	mockTrace.On("Write", mock.MatchedBy(func(in []byte) bool {
+		return bytes.Equal(in, []byte("line\n"))
+	})).Return(0, nil).Once()
+
+	oldLogProcessor := newLogProcessor
+	defer func() {
+		newLogProcessor = oldLogProcessor
+	}()
+
+	mockLogProcessor := &mockLogProcessor{}
+	defer mockLogProcessor.AssertExpectations(t)
+
+	logsCh := make(chan string)
+	go func() {
+		logsCh <- "line"
+
+		exitCode := 1
+		script := "script"
+		status := shells.TrapCommandExitStatus{
+			CommandExitCode: &exitCode,
+			Script:          &script,
+		}
+
+		b, _ := json.Marshal(status)
+		logsCh <- string(b)
+		close(logsCh)
+	}()
+
+	var returnCh <-chan string = logsCh
+	mockLogProcessor.On("Listen", mock.Anything).Return(returnCh).Once()
+
+	newLogProcessor = func(client *kubernetes.Clientset, backoff backoff.Backoff, logger *common.BuildLogger, podCfg kubernetesLogProcessorPodConfig) logProcessor {
+		return mockLogProcessor
 	}
 
-	fakeRoundTripper := func(req *http.Request) (*http.Response, error) {
-		body, err := ioutil.ReadAll(req.Body)
-		if !assert.NoError(t, err, "failed to read request body") {
-			return nil, err
-		}
+	e := executor{}
+	e.remoteProcessTerminated = make(chan shells.TrapCommandExitStatus)
+	e.Trace = mockTrace
+	e.pod = &api.Pod{}
+	e.pod.Name = "pod_name"
+	e.pod.Namespace = "namespace"
 
-		p := new(api.Pod)
-		err = json.Unmarshal(body, p)
-		if !assert.NoError(t, err, "failed to read request body") {
-			return nil, err
-		}
+	go e.processLogs(context.Background())
 
-		if req.URL.Path == "/api/v1/namespaces/default/services" {
-			return nil, fmt.Errorf("foobar")
-		}
-
-		resp := &http.Response{
-			StatusCode: http.StatusOK,
-			Body: FakeReadCloser{
-				Reader: bytes.NewBuffer(body),
-			},
-		}
-		resp.Header = make(http.Header)
-		resp.Header.Add("Content-Type", "application/json")
-
-		return resp, nil
-	}
-
-	mockFc := &mockFeatureChecker{}
-	mockFc.On("IsHostAliasSupported").Return(true, nil)
-	ex := executor{
-		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
-		options: &kubernetesOptions{
-			Image: common.Image{
-				Name:  "test-image",
-				Ports: []common.Port{{Number: 80}},
-			},
-			Services: common.Services{
-				{
-					Name:  "test-service",
-					Alias: "custom_name",
-					Ports: []common.Port{
-						{
-							Number:   81,
-							Name:     "custom_port_name",
-							Protocol: "http",
-						},
-					},
-				},
-			},
-		},
-		AbstractExecutor: executors.AbstractExecutor{
-			Config:     runnerConfig,
-			BuildShell: &common.ShellConfiguration{},
-			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Variables: []common.JobVariable{},
-				},
-				Runner: &runnerConfig,
-			},
-			ProxyPool: proxy.NewPool(),
-		},
-		helperImageInfo: helperImageInfo,
-		featureChecker:  mockFc,
-	}
-
-	err = ex.prepareOverwrites(make(common.JobVariables, 0))
-	assert.NoError(t, err)
-
-	err = ex.setupBuildPod()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "error creating the proxy service")
+	exitStatus := <-e.remoteProcessTerminated
+	assert.Equal(t, 1, *exitStatus.CommandExitCode)
+	assert.Equal(t, "script", *exitStatus.Script)
 }
 
-func TestKubernetesSuccessRun(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
+func TestRunAttachCheckPodStatus(t *testing.T) {
+	version, codec := testVersionAndCodec()
+
+	respErr := errors.New("err")
+
+	type podResponse struct {
+		response *http.Response
+		err      error
 	}
-
-	successfulBuild, err := common.GetRemoteSuccessfulBuild()
-	assert.NoError(t, err)
-	successfulBuild.Image.Name = common.TestDockerGitImage
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
-}
-
-func TestKubernetesNoRootImage(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
-
-	assert.NoError(t, err)
-	successfulBuild.Image.Name = common.TestAlpineNoRootImage
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
-}
-
-func TestKubernetesCustomClonePath(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	jobResponse, err := common.GetRemoteBuildResponse(
-		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo")
-	require.NoError(t, err)
 
 	tests := map[string]struct {
-		clonePath         string
-		expectedErrorType interface{}
+		responses []podResponse
+		verifyErr func(t *testing.T, errCh <-chan error)
 	}{
-		"uses custom clone path": {
-			clonePath:         "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: nil,
+		"no error": {
+			responses: []podResponse{
+				{
+					response: &http.Response{StatusCode: http.StatusOK},
+					err:      nil,
+				},
+			},
+			verifyErr: func(t *testing.T, errCh <-chan error) {
+				assert.NoError(t, <-errCh)
+			},
 		},
-		"path has to be within CI_BUILDS_DIR": {
-			clonePath:         "/unknown/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: &common.BuildError{},
+		"pod phase failed": {
+			responses: []podResponse{
+				{
+					response: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, execPodWithPhase(api.PodFailed)),
+					},
+					err: nil,
+				},
+			},
+			verifyErr: func(t *testing.T, errCh <-chan error) {
+				err := <-errCh
+				require.Error(t, err)
+				var phaseErr *podPhaseError
+				assert.True(t, errors.As(err, &phaseErr))
+				assert.Equal(t, api.PodFailed, phaseErr.phase)
+			},
 		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			build := &common.Build{
-				JobResponse: jobResponse,
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Executor: "kubernetes",
-						Kubernetes: &common.KubernetesConfig{
-							Image:      common.TestAlpineImage,
-							PullPolicy: common.PullPolicyIfNotPresent,
-						},
-						Environment: []string{
-							"GIT_CLONE_PATH=" + test.clonePath,
+		"pod not found": {
+			responses: []podResponse{
+				{
+					response: nil,
+					err: &kubeerrors.StatusError{
+						ErrStatus: metav1.Status{
+							Code: http.StatusNotFound,
 						},
 					},
 				},
-			}
+			},
+			verifyErr: func(t *testing.T, errCh <-chan error) {
+				err := <-errCh
+				require.Error(t, err)
+				var statusErr *kubeerrors.StatusError
+				assert.True(t, errors.As(err, &statusErr))
+				assert.Equal(t, int32(http.StatusNotFound), statusErr.ErrStatus.Code)
+			},
+		},
+		"general error continues": {
+			responses: []podResponse{
+				{
+					response: nil,
+					err:      respErr,
+				},
+				{
+					response: nil,
+					err:      respErr,
+				},
+				{
+					response: nil,
+					err:      respErr,
+				},
+			},
+			verifyErr: func(t *testing.T, errCh <-chan error) {
+				select {
+				case err, more := <-errCh:
+					assert.False(t, more)
+					assert.NoError(t, err)
+				case <-time.After(10 * time.Second):
+					require.Fail(t, "Should not get any error")
+				}
+			},
+		},
+	}
 
-			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-			assert.IsType(t, test.expectedErrorType, err)
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			i := 0
+			fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/v1/namespaces/namespace/pods/pod" && m == http.MethodGet:
+					res := tt.responses[i]
+					i++
+					if i == len(tt.responses) {
+						cancel()
+					}
+
+					if res.response == nil {
+						return nil, res.err
+					}
+
+					res.response.Header = map[string][]string{
+						"Content-Type": {"application/json"},
+					}
+					if res.response.Body == nil {
+						res.response.Body = objBody(codec, execPod())
+					}
+
+					return res.response, nil
+				default:
+					return nil, fmt.Errorf("unexpected request")
+				}
+			})
+
+			client := testKubernetesClient(version, fakeClient)
+
+			e := executor{}
+			e.Config = common.RunnerConfig{}
+			e.Config.Kubernetes = &common.KubernetesConfig{
+				PollInterval: 1,
+				PollTimeout:  2,
+			}
+			e.kubeClient = client
+			e.remoteProcessTerminated = make(chan shells.TrapCommandExitStatus)
+			e.Trace = &common.Trace{Writer: os.Stdout}
+			e.pod = &api.Pod{}
+			e.pod.Name = "pod"
+			e.pod.Namespace = "namespace"
+
+			tt.verifyErr(t, e.watchPodStatus(ctx))
 		})
 	}
 }
-func TestKubernetesBuildFail(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
+func TestLimits(t *testing.T) {
+	tests := []struct {
+		CPU, Memory string
+		Expected    api.ResourceList
+	}{
+		{
+			CPU:    "100m",
+			Memory: "100Mi",
+			Expected: api.ResourceList{
+				api.ResourceCPU:    resource.MustParse("100m"),
+				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
 		},
+		{
+			CPU: "100m",
+			Expected: api.ResourceList{
+				api.ResourceCPU: resource.MustParse("100m"),
+			},
+		},
+		{
+			Memory: "100Mi",
+			Expected: api.ResourceList{
+				api.ResourceMemory: resource.MustParse("100Mi"),
+			},
+		},
+		{
+			CPU:      "100j",
+			Expected: api.ResourceList{},
+		},
+		{
+			Memory:   "100j",
+			Expected: api.ResourceList{},
+		},
+		{
+			Expected: api.ResourceList{},
+		},
 	}
-	build.Image.Name = common.TestDockerGitImage
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	require.Error(t, err, "error")
-	assert.IsType(t, err, &common.BuildError{})
-	assert.Contains(t, err.Error(), "command terminated with exit code")
+	for _, test := range tests {
+		res, _ := limits(test.CPU, test.Memory)
+		assert.Equal(t, test.Expected, res)
+	}
 }
 
-func TestKubernetesMissingImage(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
-			},
-		},
-	}
-	build.Image.Name = "some/non-existing/image"
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
-	assert.Contains(t, err.Error(), "image pull failed")
+func fakeConfigMap() *api.ConfigMap {
+	configMap := &api.ConfigMap{}
+	configMap.Name = "fake"
+	return configMap
 }
 
-func TestKubernetesMissingTag(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+func fakeKubeDeleteResponse(status int) *http.Response {
+	_, codec := testVersionAndCodec()
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
-			},
-		},
-	}
-	build.Image.Name = "docker:missing-tag"
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
-	assert.Contains(t, err.Error(), "image pull failed")
+	body := objBody(codec, &metav1.Status{Code: int32(status)})
+	return &http.Response{StatusCode: status, Body: body, Header: map[string][]string{
+		"Content-Type": {"application/json"},
+	}}
 }
 
-func TestKubernetesBuildAbort(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-	build.Image.Name = common.TestDockerGitImage
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		build.SystemInterrupt <- os.Interrupt
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "aborted: interrupt")
-}
-
-func TestKubernetesBuildCancel(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-	build.Image.Name = common.TestDockerGitImage
-
-	trace := &common.Trace{Writer: os.Stdout}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		trace.CancelFunc()
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, trace)
-	assert.IsType(t, err, &common.BuildError{})
-	assert.EqualError(t, err, "canceled")
-}
-
-func TestOverwriteNamespaceNotMatch(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	build := &common.Build{
-		JobResponse: common.JobResponse{
-			GitInfo: common.GitInfo{
-				Sha: "1234567890",
-			},
-			Image: common.Image{
-				Name: "test-image",
-			},
-			Variables: []common.JobVariable{
-				{Key: NamespaceOverwriteVariableName, Value: "namespace"},
-			},
-		},
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					NamespaceOverwriteAllowed: "^not_a_match$",
-					PullPolicy:                common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-	build.Image.Name = common.TestDockerGitImage
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not match")
-}
-
-func TestOverwriteServiceAccountNotMatch(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	build := &common.Build{
-		JobResponse: common.JobResponse{
-			GitInfo: common.GitInfo{
-				Sha: "1234567890",
-			},
-			Image: common.Image{
-				Name: "test-image",
-			},
-			Variables: []common.JobVariable{
-				{Key: ServiceAccountOverwriteVariableName, Value: "service-account"},
-			},
-		},
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					ServiceAccountOverwriteAllowed: "^not_a_match$",
-					PullPolicy:                     common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-	build.Image.Name = common.TestDockerGitImage
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not match")
-}
-
-func TestInteractiveTerminal(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	client, err := getKubeClient(&common.KubernetesConfig{}, &overwrites{})
-	require.NoError(t, err)
-	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
-	require.NoError(t, err)
-
-	successfulBuild, err := common.GetRemoteBuildResponse("sleep 5")
-	require.NoError(t, err)
-	successfulBuild.Image.Name = "docker:git"
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					BearerToken: string(secrets.Items[0].Data["token"]),
-				},
-			},
-		},
-	}
-
-	sess, err := session.NewSession(nil)
-	build.Session = sess
-
-	outBuffer := bytes.NewBuffer(nil)
-	outCh := make(chan string)
-
-	go func() {
-		err = build.Run(
-			&common.Config{
-				SessionServer: common.SessionServer{
-					SessionTimeout: 2,
-				},
-			},
-			&common.Trace{Writer: outBuffer},
-		)
-		require.NoError(t, err)
-
-		outCh <- outBuffer.String()
-	}()
-
-	for build.Session.Mux() == nil {
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	time.Sleep(5 * time.Second)
-
-	srv := httptest.NewServer(build.Session.Mux())
-	defer srv.Close()
-
-	u := url.URL{
-		Scheme: "ws",
-		Host:   srv.Listener.Addr().String(),
-		Path:   build.Session.Endpoint + "/exec",
-	}
-	headers := http.Header{
-		"Authorization": []string{build.Session.Token},
-	}
-	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
-	defer func() {
-		if conn != nil {
-			_ = conn.Close()
+func setBuildFeatureFlag(build *common.Build, flag string, value bool) {
+	for _, v := range build.Variables {
+		if v.Key == flag {
+			v.Value = fmt.Sprint(value)
+			return
 		}
-	}()
-	require.NoError(t, err)
-	assert.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
+	}
 
-	out := <-outCh
-	t.Log(out)
-
-	assert.Contains(t, out, "Terminal is connected, will time out in 2s...")
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   flag,
+		Value: fmt.Sprint(value),
+	})
 }
 
 type FakeReadCloser struct {
@@ -2707,4 +2967,31 @@ func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)      {
 func (f FakeBuildTrace) SetMasked(masked []string)                             {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
+}
+
+func TestCommandTerminatedError_Is(t *testing.T) {
+	tests := map[string]struct {
+		err error
+
+		expectedIsResult bool
+	}{
+		"nil": {
+			err:              nil,
+			expectedIsResult: false,
+		},
+		"EOF": {
+			err:              io.EOF,
+			expectedIsResult: false,
+		},
+		"commandTerminatedError": {
+			err:              &commandTerminatedError{},
+			expectedIsResult: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.Equal(t, tt.expectedIsResult, errors.Is(tt.err, new(commandTerminatedError)), "commandTerminatedError.Is incorrect result")
+		})
+	}
 }
