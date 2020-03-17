@@ -16,7 +16,7 @@ func getRunnerConfig() *common.RunnerConfig {
 		RunnerSettings: common.RunnerSettings{
 			Executor: "docker+machine",
 			Docker: &common.DockerConfig{
-				DockerCredentials: docker_helpers.DockerCredentials{},
+				DockerCredentials: docker.DockerCredentials{},
 				Image:             "alpine",
 			},
 		},
@@ -35,7 +35,7 @@ func getRunnerConfigWithoutDockerConfig() *common.RunnerConfig {
 type machineCredentialsUsageFakeExecutor struct {
 	t *testing.T
 
-	expectedmachineCredentials docker_helpers.DockerCredentials
+	expectedmachineCredentials docker.DockerCredentials
 	expectedRunnerConfig       *common.RunnerConfig
 }
 
@@ -67,7 +67,7 @@ func (e *machineCredentialsUsageFakeExecutor) GetCurrentStage() common.ExecutorS
 func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource func() *common.RunnerConfig) {
 	t.Run(name, func(t *testing.T) {
 		machineName := "expected-machine"
-		machineCredentials := docker_helpers.DockerCredentials{
+		machineCredentials := docker.DockerCredentials{
 			Host: "tcp://expected-host:1234",
 		}
 
@@ -83,7 +83,7 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 			},
 		}
 
-		machine := &docker_helpers.MockMachine{}
+		machine := &docker.MockMachine{}
 		defer machine.AssertExpectations(t)
 
 		machine.On("CanConnect", machineName, true).

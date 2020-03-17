@@ -8,11 +8,11 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type containerClient interface {
-	docker_helpers.Client
+	docker.Client
 
 	LabelContainer(container *container.Config, containerType string, otherLabels ...string)
 	WaitForContainer(id string) error

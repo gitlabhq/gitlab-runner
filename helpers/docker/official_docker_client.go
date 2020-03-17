@@ -1,4 +1,4 @@
-package docker_helpers
+package docker
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func IsErrNotFound(err error) bool {
 }
 
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
-// giving it the methods it needs to satisfy the docker_helpers.Client interface
+// giving it the methods it needs to satisfy the docker.Client interface
 type officialDockerClient struct {
 	client *client.Client
 

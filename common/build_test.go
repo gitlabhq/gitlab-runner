@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -230,7 +230,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 		RunnerSettings: RunnerSettings{
 			Executor: "build-run-nomodify-test",
 			Docker: &DockerConfig{
-				DockerCredentials: docker_helpers.DockerCredentials{
+				DockerCredentials: docker.DockerCredentials{
 					Host: "10.0.0.1",
 				},
 			},
