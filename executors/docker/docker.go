@@ -934,11 +934,11 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 	return err
 }
 
-func (e *executor) disconnectNetwork(ctx context.Context, id string) error {
+func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	netList, err := e.client.NetworkList(ctx, types.NetworkListOptions{})
 	if err != nil {
 		e.Debugln("Can't get network list. ListNetworks exited with", err)
-		return err
+		return
 	}
 
 	for _, network := range netList {
@@ -954,7 +954,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) error {
 			}
 		}
 	}
-	return err
+	return
 }
 
 func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalImages []string) error {
