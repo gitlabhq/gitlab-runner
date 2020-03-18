@@ -1,3 +1,9 @@
+## v12.9.0-rc3 (2020-03-18)
+
+### Maintenance
+
+- Upgrade docker client to version 19.03.5 for CI image !1874
+
 ## v12.9.0-rc2 (2020-03-18)
 
 ### New features
