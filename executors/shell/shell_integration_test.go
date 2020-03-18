@@ -152,6 +152,44 @@ func TestBuildSuccess(t *testing.T) {
 	})
 }
 
+func TestRawVariableOutput(t *testing.T) {
+	tests := map[string]struct {
+		command string
+	}{
+		"bash": {
+			command: "echo $TEST",
+		},
+		"powershell": {
+			command: "echo $env:TEST",
+		},
+	}
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		test, ok := tests[shell]
+		if !ok {
+			return
+		}
+
+		successfulBuild, err := common.GetLocalBuildResponse(test.command)
+		require.NoError(t, err)
+
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		value := "$VARIABLE$WITH$DOLLARS$$"
+		build.Variables = append(build.Variables, common.JobVariable{
+			Key:   "TEST",
+			Value: value,
+			Raw:   true,
+		})
+
+		var buf bytes.Buffer
+		err = runBuildWithTrace(t, build, &common.Trace{Writer: &buf})
+		assert.NoError(t, err)
+		assert.Contains(t, buf.String(), value)
+	})
+}
+
 func TestBuildAbort(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		longRunningBuild, err := common.GetLongRunningBuild()

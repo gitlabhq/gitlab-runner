@@ -28,6 +28,8 @@ TestBuildPowerShellCatchesExceptions
 TestBuildSuccess
 TestBuildSuccess/cmd
 TestBuildSuccess/powershell
+TestRawVariableOutput
+TestRawVariableOutput/powershell
 TestBuildSystemFailure
 TestBuildSystemFailure/cmd
 TestBuildSystemFailure/powershell

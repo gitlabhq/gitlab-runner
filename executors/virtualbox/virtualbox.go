@@ -321,6 +321,7 @@ func init() {
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
+		features.RawVariables = true
 	}
 
 	common.RegisterExecutorProvider("virtualbox", executors.DefaultExecutorProvider{

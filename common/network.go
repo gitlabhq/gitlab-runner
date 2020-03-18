@@ -66,6 +66,7 @@ type FeaturesInfo struct {
 	Refspecs                bool `json:"refspecs"`
 	Masking                 bool `json:"masking"`
 	Proxy                   bool `json:"proxy"`
+	RawVariables            bool `json:"raw_variables"`
 }
 
 type RegisterRunnerParameters struct {

@@ -140,6 +140,7 @@ func init() {
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
+		features.RawVariables = true
 		features.Image = true
 		features.Services = true
 		features.Session = true
