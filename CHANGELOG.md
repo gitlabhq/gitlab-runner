@@ -1,3 +1,17 @@
+## v12.9.0-rc2 (2020-03-18)
+
+### New features
+
+- Improve the wording of job output section titles !1929
+
+### Bug fixes
+
+- Kubernetes execute commands with attach instead of exec !1775
+
+### Maintenance
+
+- Fix docker machine executor test filename !1927
+
 ## v12.9.0-rc1 (2020-03-10)
 
 ### New features
