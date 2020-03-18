@@ -77,7 +77,7 @@ be present in the `PATH`:
 - [Git](https://git-scm.com/download): Used to clone the repositories.
 - [Git LFS](https://git-lfs.github.com/): Pulls any LFS objects that
   might be in the repository.
-- [GitLab Runner](https://docs.gitlab.com/runner/install/): Used to
+- [GitLab Runner](../install/index.md): Used to
   download/update artifacts and cache.
 
 ## Stages
@@ -183,7 +183,7 @@ The Prepare stage is executed by `prepare_exec`.
 
 At this point, GitLab Runner knows everything about the job (where and
 how it's going to run). The only thing left is for the environment to be
-set up so the job can run.  GitLab Runner will execute the executable
+set up so the job can run. GitLab Runner will execute the executable
 that is specified in `prepare_exec`.
 
 This is responsible for setting up the environment (for example,
