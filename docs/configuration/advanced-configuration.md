@@ -102,6 +102,10 @@ Example:
   session_timeout = 1800
 ```
 
+NOTE: **Note:**
+If using the GitLab Runner docker image, you will also need to expose port 8093 by
+adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
+
 ## The `[[runners]]` section
 
 This defines one runner entry.

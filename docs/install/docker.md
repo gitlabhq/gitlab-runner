@@ -91,6 +91,10 @@ Docker container.
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
 
+NOTE: **Note:**
+If you are using a [`session_server`](../configuration/advanced-configuration.md),
+you will also need to expose port 8093 by adding `-p 8093:8093` to your `docker run` command.
+
 ## Update configuration
 
 If you change the configuration in `config.toml`, you might need to restart the runner to apply the change.
