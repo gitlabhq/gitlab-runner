@@ -35,9 +35,10 @@ push () {
 build() {
     echo "Building image: ${BUILD_IMAGE}"
     docker build \
-           --cache-from ${BUILD_IMAGE} \
-           -t ${BUILD_IMAGE} \
-           -f ${BUILD_DOCKERFILE} \
+           --cache-from "${BUILD_IMAGE}" \
+           --build-arg DOCKER_VERSION="${DOCKER_VERSION}" \
+           -t "${BUILD_IMAGE}" \
+           -f "${BUILD_DOCKERFILE}" \
            .
 }
 
