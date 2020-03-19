@@ -1456,14 +1456,14 @@ func TestBuildFinishTimeout(t *testing.T) {
 
 func TestProjectUniqueName(t *testing.T) {
 	tests := map[string]struct {
-		build          Build
-		expectedOutput string
+		build        Build
+		expectedName string
 	}{
 		"project non rfc1132 unique name": {
 			build: Build{
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
-						Token: "vBzMytn_",
+						Token: "Ze_n8E6en622WxxSg4r8",
 					},
 				},
 				JobResponse: JobResponse{
@@ -1473,13 +1473,13 @@ func TestProjectUniqueName(t *testing.T) {
 				},
 				ProjectRunnerID: 0,
 			},
-			expectedOutput: "runner-vbzmytn-project-1234567890-concurrent-0",
+			expectedName: "runner-zen8e6e-project-1234567890-concurrent-0",
 		},
 		"project normal unique name": {
 			build: Build{
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
-						Token: "xYzWabc-",
+						Token: "xYzWabc-Ij3xlKjmoPO9",
 					},
 				},
 				JobResponse: JobResponse{
@@ -1489,13 +1489,13 @@ func TestProjectUniqueName(t *testing.T) {
 				},
 				ProjectRunnerID: 0,
 			},
-			expectedOutput: "runner-xyzwabc--project-1234567890-concurrent-0",
+			expectedName: "runner-xyzwabc--project-1234567890-concurrent-0",
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, test.expectedOutput, test.build.ProjectUniqueName())
+			assert.Equal(t, test.expectedName, test.build.ProjectUniqueName())
 		})
 	}
 }
