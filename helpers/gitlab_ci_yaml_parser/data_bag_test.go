@@ -2,10 +2,11 @@ package gitlab_ci_yaml_parser
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
-	"testing"
 )
 
 type dataOptions struct {

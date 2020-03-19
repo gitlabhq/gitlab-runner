@@ -1,13 +1,12 @@
 package helpers
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"os"
 )
 
 var downloaderCredentials = common.JobCredentials{
