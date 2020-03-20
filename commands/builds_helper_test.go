@@ -187,7 +187,6 @@ func getTestBuild() *common.Build {
 type listJobsHandlerTest struct {
 	build          *common.Build
 	expectedOutput []string
-	expectedStatus int
 }
 
 func TestBuildsHelper_ListJobsHandler(t *testing.T) {
@@ -195,15 +194,13 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 
 	tests := map[string]listJobsHandlerTest{
 		"no jobs": {
-			build:          nil,
-			expectedStatus: http.StatusOK,
+			build: nil,
 		},
 		"job exists": {
 			build: build,
 			expectedOutput: []string{
 				fmt.Sprintf("url=https://gitlab.example.com/my-namespace/my-project/-/jobs/%d", build.ID),
 			},
-			expectedStatus: http.StatusOK,
 		},
 	}
 
@@ -218,7 +215,7 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 			b.addBuild(test.build)
 			b.ListJobsHandler(writer, req)
 
-			assert.Equal(t, test.expectedStatus, writer.statusCode)
+			assert.Equal(t, http.StatusOK, writer.statusCode)
 			assert.Equal(t, writer.Header().Get("X-List-Version"), "2")
 			assert.Equal(t, writer.Header().Get("Content-Type"), "text/plain")
 
