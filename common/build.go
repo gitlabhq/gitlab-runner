@@ -111,8 +111,12 @@ func (b *Build) Log() *logrus.Entry {
 }
 
 func (b *Build) ProjectUniqueName() string {
-	projectUniqueName := fmt.Sprintf("runner-%s-project-%d-concurrent-%d",
-		b.Runner.ShortDescription(), b.JobInfo.ProjectID, b.ProjectRunnerID)
+	projectUniqueName := fmt.Sprintf(
+		"runner-%s-project-%d-concurrent-%d",
+		b.Runner.ShortDescription(),
+		b.JobInfo.ProjectID,
+		b.ProjectRunnerID,
+	)
 
 	return dns.MakeRFC1123Compatible(projectUniqueName)
 }
