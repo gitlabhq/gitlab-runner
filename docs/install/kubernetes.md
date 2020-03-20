@@ -238,9 +238,9 @@ kubectl
 
 Where:
 
-- the variables are substituted as above, and in addition
+- The variables are substituted, as above.
 - `<TARGET_FILENAME>` is the name of the certificate file as presented to the Runner
-  containers.  (For example: `gitlab-hostname.crt`.)
+  containers. (For example: `gitlab-hostname.crt`.)
 
 You then need to provide the secret's name to the GitLab Runner chart.
 Add the following to your `values.yaml`:
