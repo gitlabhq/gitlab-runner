@@ -44,7 +44,7 @@ func init() {
 		features.Terminal = false
 	}
 
-	common.RegisterExecutor("docker-windows", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("docker-windows", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

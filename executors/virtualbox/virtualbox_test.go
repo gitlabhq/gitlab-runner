@@ -22,8 +22,8 @@ var vboxSSHConfig = &ssh.Config{
 }
 
 func TestVirtualBoxExecutorRegistered(t *testing.T) {
-	executors := common.GetExecutors()
-	assert.Contains(t, executors, "virtualbox")
+	executorNames := common.GetExecutorNames()
+	assert.Contains(t, executorNames, "virtualbox")
 }
 
 func TestVirtualBoxCreateExecutor(t *testing.T) {

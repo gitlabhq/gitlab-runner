@@ -144,6 +144,6 @@ func (e *machineExecutor) GetMetricsSelector() string {
 }
 
 func init() {
-	common.RegisterExecutor("docker+machine", newMachineProvider("docker+machine", "docker"))
-	common.RegisterExecutor("docker-ssh+machine", newMachineProvider("docker-ssh+machine", "docker-ssh"))
+	common.RegisterExecutorProvider("docker+machine", newMachineProvider("docker+machine", "docker"))
+	common.RegisterExecutorProvider("docker-ssh+machine", newMachineProvider("docker-ssh+machine", "docker-ssh"))
 }

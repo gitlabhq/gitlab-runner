@@ -1251,7 +1251,7 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 		features := args[0].(*FeaturesInfo)
 		features.Shared = true
 	})
-	RegisterExecutor("my-test-executor", &executorProvider)
+	RegisterExecutorProvider("my-test-executor", &executorProvider)
 
 	shell := MockShell{}
 	defer shell.AssertExpectations(t)

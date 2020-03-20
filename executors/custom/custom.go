@@ -291,7 +291,7 @@ func init() {
 		features.Shared = true
 	}
 
-	common.RegisterExecutor("custom", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("custom", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

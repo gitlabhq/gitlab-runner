@@ -361,7 +361,7 @@ func init() {
 		features.Variables = true
 	}
 
-	common.RegisterExecutor("parallels", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("parallels", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

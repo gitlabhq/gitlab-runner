@@ -22,8 +22,8 @@ var prlSSHConfig = &ssh.Config{
 }
 
 func TestParallelsExecutorRegistered(t *testing.T) {
-	executors := common.GetExecutors()
-	assert.Contains(t, executors, "parallels")
+	executorNames := common.GetExecutorNames()
+	assert.Contains(t, executorNames, "parallels")
 }
 
 func TestParallelsCreateExecutor(t *testing.T) {

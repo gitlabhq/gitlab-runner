@@ -165,7 +165,7 @@ func init() {
 		}
 	}
 
-	common.RegisterExecutor("shell", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("shell", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
