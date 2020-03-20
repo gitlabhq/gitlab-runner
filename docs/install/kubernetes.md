@@ -210,7 +210,7 @@ file content being the value associated with the key:
 
 The GitLab Runner Helm Chart does not create a secret for you. In order to create
 the secret, you tell Kubernetes to store the certificate as a secret and present it
-to the Runner containers as a file.  To do this, run the following command:
+to the Runner containers as a file. To do this, run the following command:
 
 ```shell
 kubectl
@@ -222,7 +222,7 @@ kubectl
 Where:
 
 - `<NAMESPACE>` is the Kubernetes namespace where you want to install the GitLab Runner.
-- `<SECRET_NAME>` is the Kubernetes Secret resource name.  (For example: `gitlab-domain-cert`.)
+- `<SECRET_NAME>` is the Kubernetes Secret resource name. (For example: `gitlab-domain-cert`.)
 - `<CERTIFICATE_FILENAME>` is the filename for the certificate in your current directory that will be imported into the secret.
 
 If the source file `<CERTIFICATE_FILENAME>` is not in the current directory or
