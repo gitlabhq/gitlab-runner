@@ -1057,7 +1057,7 @@ func TestCreateDependencies(t *testing.T) {
 	defer closureFn()
 
 	err := e.createDependencies()
-	assert.Equal(t, testError, err)
+	assert.True(t, errors.Is(err, testError))
 }
 
 var testFileAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"aW52YWxpZF91c2VyOmludmFsaWRfcGFzc3dvcmQ="},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`

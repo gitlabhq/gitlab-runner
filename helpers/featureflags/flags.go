@@ -46,6 +46,13 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "13.0",
 		Description:     "Disables the new strategy for Docker executor to cache the content of `/builds` directory instead of `/builds/group-org`",
 	},
+	{
+		Name:            UseLegacyKubernetesExecutionStrategy,
+		DefaultValue:    "true",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description:     "When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119)",
+	},
 }
 
 func GetAll() []FeatureFlag {
