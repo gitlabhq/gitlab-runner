@@ -1,4 +1,4 @@
-## v12.9.0-rc1 (2020-03-10)
+## v12.9.0 (2020-03-20)
 
 ### New features
 
@@ -12,10 +12,13 @@
 
 ### Bug fixes
 
+- Kubernetes execute commands with attach instead of exec !1775
 - Retry kubernetes commands when "error dialing backend: EOF" error is hit !1867
 
 ### Maintenance
 
+- Upgrade docker client to version 19.03.5 for CI image !1874
+- Fix docker machine executor test filename !1927
 - Remove executor_ prefix from filenames in the executors package !1902
 - Fix 'make all' target !1900
 - Replace changelog generator script !1888
