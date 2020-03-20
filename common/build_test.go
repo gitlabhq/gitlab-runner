@@ -1475,6 +1475,22 @@ func TestProjectUniqueName(t *testing.T) {
 			},
 			expectedName: "runner-zen8e6e-project-1234567890-concurrent-0",
 		},
+		"project non rfc1132 unique name longer than 63 char": {
+			build: Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "Ze_n8E6en622WxxSg4r8",
+					},
+				},
+				JobResponse: JobResponse{
+					JobInfo: JobInfo{
+						ProjectID: 123456789012345,
+					},
+				},
+				ProjectRunnerID: 123456789012345,
+			},
+			expectedName: "runner-zen8e6e-project-123456789012345-concurrent-1234567890123",
+		},
 		"project normal unique name": {
 			build: Build{
 				Runner: &RunnerConfig{
