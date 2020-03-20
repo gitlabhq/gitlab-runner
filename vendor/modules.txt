@@ -128,6 +128,8 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
+# github.com/google/go-querystring v1.0.0
+github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.0.0
 github.com/google/gofuzz
 # github.com/googleapis/gax-go/v2 v2.0.5
@@ -166,6 +168,8 @@ github.com/json-iterator/go
 github.com/jstemmer/go-junit-report
 github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
+# github.com/juliangruber/go-intersect v1.0.1-0.20191008103957-64ef44ecb041
+github.com/juliangruber/go-intersect
 # github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
 github.com/kardianos/osext
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
@@ -244,8 +248,21 @@ github.com/urfave/cli
 # github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
 github.com/vektra/mockery/cmd/mockery
 github.com/vektra/mockery/mockery
+# github.com/xanzy/go-gitlab v0.26.0
+github.com/xanzy/go-gitlab
 # gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
 gitlab.com/ayufan/golang-cli-helpers
+# gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog v0.1.0
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/cmd/gitlab-changelog
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/commander
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/config
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/extractor
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/generator
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/git
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/gitlab
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/scope
+gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/writer
 # gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator v0.0.0-20200128145756-4b03f39cb151
 gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator
 gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator/cmd/release-index-gen

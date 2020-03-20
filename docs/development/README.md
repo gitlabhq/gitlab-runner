@@ -100,7 +100,7 @@ make build_current
 
 `make build_current` is a superset of `make build_simple` which in addition
 takes care of building Docker dependencies.
-  
+
 ### Building the Docker images
 
 If you want to build the Docker images, run `make build_current_docker`, which will:
@@ -190,7 +190,7 @@ you can use to find out the full path so when using:
 
 ## Troubleshooting
 
-### executor_docker.go missing Asset symbol
+### docker.go missing Asset symbol
 
 This error happens due to missing executors/docker/bindata.go file that is generated from docker prebuilts.
 Which is especially tricky on Windows.

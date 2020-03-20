@@ -102,6 +102,10 @@ Example:
   session_timeout = 1800
 ```
 
+NOTE: **Note:**
+If using the GitLab Runner docker image, you will also need to expose port 8093 by
+adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
+
 ## The `[[runners]]` section
 
 This defines one runner entry.
@@ -146,7 +150,7 @@ Example:
 
 ### How `clone_url` works
 
-In cases where the GitLab instance is exposed to an URL which can't be used
+In cases where the GitLab instance is exposed to a URL which can't be used
 by the runner, a `clone_url` can be configured. For example; GitLab is exposed
 to `https://gitlab.example.com`, but the runner can't reach that because of
 a firewall setup. If the runner can reach the node on `192.168.1.23`,
@@ -269,16 +273,16 @@ Example:
   volumes_from = ["storage_container:ro"]
   links = ["mysql_container:mysql"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
-  allowed_services = ["postgres:9.4", "postgres:latest"]
+  allowed_services = ["postgres:9", "redis:*", "mysql:*"]
   [[runners.docker.services]]
-    name: "mysql"
-    alias: "db"
+    name = "mysql"
+    alias = "db"
   [[runners.docker.services]]
-    name: "redis:2.8"
-    alias: "cache"
+    name = "redis:2.8"
+    alias = "cache"
   [[runners.docker.services]]
-    name: "postgres:9"
-    alias: "postgres-db"
+    name = "postgres:9"
+    alias = "postgres-db"
   [runners.docker.sysctls]
     "net.ipv4.ip_forward" = "1"
 ```

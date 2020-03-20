@@ -12,12 +12,14 @@ license_management:
     - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
 
 docs lint:
-  image: "registry.gitlab.com/gitlab-org/gitlab-build-images:gitlab-docs-lint"
+  image: "registry.gitlab.com/gitlab-org/gitlab-docs:lint"
   stage: test
   extends:
   - .merge_request_pipelines
   - .no_cache_and_dependencies
   script:
+  # Lint prose
+  - vale --minAlertLevel error docs
   # Lint Markdown
   - markdownlint --config .markdownlint.json 'docs/**/*.md'
   # Prepare docs for build
@@ -73,7 +75,7 @@ code_quality:
   - .no_cache_and_dependencies
   image: docker:19.03-git
   services:
-  - docker:${DOCKER_DIND_VERSION}-dind
+  - docker:${DOCKER_VERSION}-dind
   variables:
     DOCKER_DRIVER: overlay2
     CODECLIMATE_FORMAT: json

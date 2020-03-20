@@ -20,7 +20,7 @@ are then applicable:
 - Since GitLab Runner 12.8 and Kubernetes 1.7, the services are accessible via their DNS names. If you are using an older version you will have to use `localhost`.
 - You cannot use several services using the same port (e.g., you cannot have two
   `mysql` services at the same time).
-  
+
 ## Workflow
 
 The Kubernetes executor divides the build into multiple steps:
@@ -152,7 +152,7 @@ with an appropriate regular expression. When left empty the overwrite behaviour 
 
 ### Setting Bearer Token to be Used When Making Kubernetes API calls
 
-In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods.  This will allow project owners to use project secret variables to specify a bearer token.  When specifying the bearer token, it is required that you set the `Host` config keyword.
+In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods. This will allow project owners to use project secret variables to specify a bearer token. When specifying the bearer token, it is required that you set the `Host` config keyword.
 
 ``` yaml
 variables:
@@ -369,10 +369,10 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | run_as_user         | int      | no       | The UID to run the entrypoint of the container process |
 | supplemental_groups | int list | no       | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
 
-Assigining  a security context to pods provides security to your Kubernetes cluster.  For this to work you'll need to provide a helper
+Assigining a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
 
-More about the helper image can be found [here](https://docs.gitlab.com/runner/configuration/advanced-configuration.html#helper-image).
+More about the helper image can be found [here](../configuration/advanced-configuration.md#helper-image).
 Example of building your own helper image:
 
 ```Dockerfile
@@ -498,6 +498,16 @@ on other nodes. Further separation of build containers can be achieved using nod
 [taints](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/).
 This will disallow other pods from scheduling on the same nodes as the
 build pods without extra configuration for the other pods.
+
+## Job execution
+
+At the moment we are using `kube exec` to run the scripts, which relies on
+having a stable network connection between the Runner and the pod for the duration of the command.
+This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119).
+If you are experiencing this problem turn off the feature flag [FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY](../configuration/feature-flags.md#available-feature-flags)
+to use `kube attach` for script execution, which is more stable.
+
+We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/issues/10341) for updates.
 
 ### Using kaniko
 

@@ -1,5 +1,6 @@
 ﻿$goVersion = "1.13.8"
 $gitVersion = "2.23.0"
+$powerShellCoreVersion = "7.0.0"
 $srcFolder = "C:\GitLab-Runner"
 
 [environment]::SetEnvironmentVariable("RUNNER_SRC", $srcFolder, "Machine")
@@ -12,3 +13,6 @@ choco install golang -y --version $goVersion
 
 Write-Host "Installing Git"
 choco install git -y --version $gitVersion
+
+Write-Host "Install PowerShell Core"
+choco install powershell-core -y --version $powerShellCoreVersion

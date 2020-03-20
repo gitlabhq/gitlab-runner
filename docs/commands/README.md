@@ -331,9 +331,6 @@ gitlab-runner unregister --all-runners
 
 ## Service-related commands
 
-> **Note:** Starting with GitLab Runner 10.0, service-related commands are **deprecated**
-and will be removed in one of the upcoming releases.
-
 The following commands allow you to manage the runner as a system or user
 service. Use them to install, uninstall, start and stop the runner service.
 
@@ -437,11 +434,11 @@ You can see all possible configuration options by using the `--help` flag:
 gitlab-runner run-single --help
 ```
 
-You can use the `--max-builds` option to control how many builds the runner will execute before exiting.  The
+You can use the `--max-builds` option to control how many builds the runner will execute before exiting. The
 default of `0` means that the runner has no build limit and will run jobs forever.
 
 You can also use the `--wait-timeout` option to control how long the runner will wait for a job before
-exiting.  The default of `0` means that the runner has no timeout and will wait forever between jobs.
+exiting. The default of `0` means that the runner has no timeout and will wait forever between jobs.
 
 ### `gitlab-runner exec`
 

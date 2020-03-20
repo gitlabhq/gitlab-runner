@@ -2,10 +2,11 @@ package service_helpers
 
 import (
 	"errors"
-	service "github.com/ayufan/golang-kardianos-service"
 	"os"
 	"os/signal"
 	"syscall"
+
+	service "github.com/ayufan/golang-kardianos-service"
 )
 
 var (

@@ -1,11 +1,12 @@
 package helpers
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
-	"reflect"
-	"testing"
 )
 
 type TestObj struct {

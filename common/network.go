@@ -42,6 +42,7 @@ const (
 	UploadTooLarge
 	UploadForbidden
 	UploadFailed
+	UploadServiceUnavailable
 )
 
 const (

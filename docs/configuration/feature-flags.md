@@ -39,9 +39,10 @@ The flags are defined in `./helpers/feature_flags/flags.go` file.
 
 | Feature flag | Default value | Deprecated | To be removed with | Description |
 |--------------|---------------|------------|--------------------|-------------|
-| `FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION` | `false` | ✗ | 13.0 | Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](https://docs.gitlab.com/runner/shells/#windows-batch) shell |
-| `FF_NETWORK_PER_BUILD` | `false` | ✗ |  | Enables creation of a docker [network per build](https://docs.gitlab.com/runner/executors/docker.html#networking) with the docker executor |
+| `FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION` | `false` | ✗ | 13.0 | Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](../shells/index.md#windows-batch) shell |
+| `FF_NETWORK_PER_BUILD` | `false` | ✗ |  | Enables creation of a docker [network per build](../executors/docker.md#networking) with the docker executor |
 | `FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER` | `false` | ✓ | 13.0 | Disables the new strategy for Docker executor to cache the content of `/builds` directory instead of `/builds/group-org` |
 | `FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER` | `false` | ✓ | 13.0 | Disables the new ordering of volumes mounting when `docker*` executors are being used. |
+| `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` | `true` | ✗ |  | When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119) |
 
 <!-- feature_flags_list_end -->

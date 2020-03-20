@@ -19,18 +19,27 @@ This file was modified by James Munnelly (https://gitlab.com/u/munnerz)
 package kubernetes
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+)
+
+const (
+	commandConnectFailureMaxTries = 5
+	errorDialingBackendEOFMessage = "error dialing backend: EOF"
 )
 
 // RemoteExecutor defines the interface accepted by the Exec command - provided for test stubbing
@@ -55,6 +64,49 @@ func (*DefaultRemoteExecutor) Execute(method string, url *url.URL, config *restc
 	})
 }
 
+// AttachOptions declare the arguments accepted by the Attach command
+type AttachOptions struct {
+	Namespace     string
+	PodName       string
+	ContainerName string
+	Command       []string
+
+	Executor RemoteExecutor
+	Client   *kubernetes.Clientset
+	Config   *restclient.Config
+}
+
+// Run executes a validated remote execution against a pod.
+func (p *AttachOptions) Run() error {
+	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.PodName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("couldn't get pod details: %w", err)
+	}
+
+	if pod.Status.Phase != api.PodRunning {
+		return fmt.Errorf("pod %q (on namespace %q) is not running and cannot execute commands; current phase is %q",
+			p.PodName, p.Namespace, pod.Status.Phase)
+	}
+
+	// Ending with a newline is important to actually run the script
+	stdin := strings.NewReader(strings.Join(p.Command, " ") + "\n")
+
+	req := p.Client.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(pod.Name).
+		Namespace(pod.Namespace).
+		SubResource("attach").
+		VersionedParams(&api.PodAttachOptions{
+			Container: p.ContainerName,
+			Stdin:     true,
+			Stdout:    false,
+			Stderr:    false,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+
+	return p.Executor.Execute(http.MethodPost, req.URL(), p.Config, stdin, nil, nil, false)
+}
+
 // ExecOptions declare the arguments accepted by the Exec command
 type ExecOptions struct {
 	Namespace     string
@@ -76,11 +128,11 @@ type ExecOptions struct {
 func (p *ExecOptions) Run() error {
 	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.PodName, metav1.GetOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
 
 	if pod.Status.Phase != api.PodRunning {
-		return fmt.Errorf("Pod '%s' (on namespace '%s') is not running and cannot execute commands; current phase is '%s'",
+		return fmt.Errorf("pod %q (on namespace '%s') is not running and cannot execute commands; current phase is %q",
 			p.PodName, p.Namespace, pod.Status.Phase)
 	}
 
@@ -112,6 +164,18 @@ func (p *ExecOptions) Run() error {
 	}, scheme.ParameterCodec)
 
 	return p.Executor.Execute("POST", req.URL(), p.Config, stdin, p.Out, p.Err, false)
+}
+
+func (p *ExecOptions) ShouldRetry(times int, err error) bool {
+	var statusError *kubeerrors.StatusError
+	if times < commandConnectFailureMaxTries &&
+		errors.As(err, &statusError) &&
+		statusError.ErrStatus.Code == http.StatusInternalServerError &&
+		statusError.ErrStatus.Message == errorDialingBackendEOFMessage {
+		return true
+	}
+
+	return false
 }
 
 func init() {
