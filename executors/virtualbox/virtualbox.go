@@ -323,7 +323,7 @@ func init() {
 		features.Variables = true
 	}
 
-	common.RegisterExecutor("virtualbox", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("virtualbox", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

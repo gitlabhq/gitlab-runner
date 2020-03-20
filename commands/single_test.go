@@ -100,7 +100,7 @@ func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job
 	e.On("Shell").Return(&common.ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(nil)
 
-	common.RegisterExecutor(executorName, &p)
+	common.RegisterExecutorProvider(executorName, &p)
 
 	single := newRunSingleCommand(executorName, &mockNetwork)
 	single.MaxBuilds = maxBuilds

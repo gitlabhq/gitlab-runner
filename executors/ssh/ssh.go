@@ -91,7 +91,7 @@ func init() {
 		features.Shared = true
 	}
 
-	common.RegisterExecutor("ssh", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("ssh", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

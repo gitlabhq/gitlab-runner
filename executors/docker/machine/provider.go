@@ -455,7 +455,7 @@ func (m *machineProvider) Create() common.Executor {
 }
 
 func newMachineProvider(name, executor string) *machineProvider {
-	provider := common.GetExecutor(executor)
+	provider := common.GetExecutorProvider(executor)
 	if provider == nil {
 		logrus.Panicln("Missing", executor)
 	}

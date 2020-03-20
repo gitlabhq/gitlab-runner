@@ -72,7 +72,7 @@ func MakeBuildError(format string, args ...interface{}) error {
 	}
 }
 
-var executors map[string]ExecutorProvider
+var executorProviders map[string]ExecutorProvider
 
 func validateExecutorProvider(provider ExecutorProvider) error {
 	if provider.GetDefaultShell() == "" {
@@ -90,52 +90,53 @@ func validateExecutorProvider(provider ExecutorProvider) error {
 	return nil
 }
 
-func RegisterExecutor(executor string, provider ExecutorProvider) {
+// RegisterExecutorProvider maps an ExecutorProvider to an executor name, i.e. registers it.
+func RegisterExecutorProvider(executor string, provider ExecutorProvider) {
 	logrus.Debugln("Registering", executor, "executor...")
 
 	if err := validateExecutorProvider(provider); err != nil {
 		panic("Executor cannot be registered: " + err.Error())
 	}
 
-	if executors == nil {
-		executors = make(map[string]ExecutorProvider)
+	if executorProviders == nil {
+		executorProviders = make(map[string]ExecutorProvider)
 	}
-	if _, ok := executors[executor]; ok {
+	if _, ok := executorProviders[executor]; ok {
 		panic("Executor already exist: " + executor)
 	}
-	executors[executor] = provider
+	executorProviders[executor] = provider
 }
 
-func GetExecutor(executor string) ExecutorProvider {
-	if executors == nil {
+// GetExecutorProvider returns an ExecutorProvider by name from the registered ones.
+func GetExecutorProvider(executor string) ExecutorProvider {
+	if executorProviders == nil {
 		return nil
 	}
 
-	provider, _ := executors[executor]
+	provider, _ := executorProviders[executor]
 	return provider
 }
 
-func GetExecutors() []string {
-	names := []string{}
-	if executors != nil {
-		for name := range executors {
-			names = append(names, name)
-		}
+// GetExecutorNames returns a list of all registered executor names.
+func GetExecutorNames() []string {
+	var names []string
+	for name := range executorProviders {
+		names = append(names, name)
 	}
 	return names
 }
 
-func GetExecutorProviders() (providers []ExecutorProvider) {
-	if executors != nil {
-		for _, executorProvider := range executors {
-			providers = append(providers, executorProvider)
-		}
+// GetExecutorProviders returns a list of all registered executor providers.
+func GetExecutorProviders() []ExecutorProvider {
+	var providers []ExecutorProvider
+	for _, executorProvider := range executorProviders {
+		providers = append(providers, executorProvider)
 	}
-	return
+	return providers
 }
 
 func NewExecutor(executor string) Executor {
-	provider := GetExecutor(executor)
+	provider := GetExecutorProvider(executor)
 	if provider != nil {
 		return provider.Create()
 	}

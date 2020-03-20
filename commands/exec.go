@@ -11,6 +11,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/gitlab_ci_yaml_parser"
+
 	// Force to load all executors, executes init() on them
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
@@ -151,10 +152,10 @@ func init() {
 		Usage: "execute a build locally",
 	}
 
-	for _, executor := range common.GetExecutors() {
+	for _, executorName := range common.GetExecutorNames() {
 		subCmd := cli.Command{
-			Name:   executor,
-			Usage:  "use " + executor + " executor",
+			Name:   executorName,
+			Usage:  "use " + executorName + " executor",
 			Action: cmd.Execute,
 			Flags:  flags,
 		}

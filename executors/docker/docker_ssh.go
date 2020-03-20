@@ -118,7 +118,7 @@ func init() {
 		features.Services = true
 	}
 
-	common.RegisterExecutor("docker-ssh", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("docker-ssh", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

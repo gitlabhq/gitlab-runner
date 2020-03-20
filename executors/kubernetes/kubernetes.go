@@ -1196,7 +1196,7 @@ func featuresFn(features *common.FeaturesInfo) {
 }
 
 func init() {
-	common.RegisterExecutor("kubernetes", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("kubernetes", executors.DefaultExecutorProvider{
 		Creator:          createFn,
 		FeaturesUpdater:  featuresFn,
 		DefaultShellName: executorOptions.Shell.Shell,

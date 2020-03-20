@@ -146,7 +146,7 @@ func init() {
 		features.Terminal = true
 	}
 
-	common.RegisterExecutor("docker", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("docker", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

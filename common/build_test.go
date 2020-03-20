@@ -61,7 +61,7 @@ func TestBuildRun(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
 
-	RegisterExecutor("build-run-test", &p)
+	RegisterExecutorProvider("build-run-test", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -120,7 +120,7 @@ func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepare
 	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
 
-	RegisterExecutor(t.Name(), &p)
+	RegisterExecutorProvider(t.Name(), &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -222,7 +222,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
 	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
 
-	RegisterExecutor("build-run-nomodify-test", &p)
+	RegisterExecutorProvider("build-run-nomodify-test", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -272,7 +272,7 @@ func TestRetryPrepare(t *testing.T) {
 	e.On("Run", mock.Anything).Return(nil)
 	e.On("Finish", nil).Once()
 
-	RegisterExecutor("build-run-retry-prepare", &p)
+	RegisterExecutorProvider("build-run-retry-prepare", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -309,7 +309,7 @@ func TestPrepareFailure(t *testing.T) {
 		Return(errors.New("prepare failed")).Times(3)
 	e.On("Cleanup").Times(3)
 
-	RegisterExecutor("build-run-prepare-failure", &p)
+	RegisterExecutorProvider("build-run-prepare-failure", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -344,7 +344,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 		Return(&BuildError{}).Times(1)
 	e.On("Cleanup").Times(1)
 
-	RegisterExecutor("build-run-prepare-failure-on-build-error", &p)
+	RegisterExecutorProvider("build-run-prepare-failure-on-build-error", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -385,7 +385,7 @@ func TestJobFailure(t *testing.T) {
 	e.On("Run", mock.Anything).Return(thrownErr)
 	e.On("Finish", thrownErr).Once()
 
-	RegisterExecutor("build-run-job-failure", p)
+	RegisterExecutorProvider("build-run-job-failure", p)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
@@ -437,7 +437,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	e.On("Run", mock.Anything).Return(nil)
 	e.On("Finish", mock.Anything).Once()
 
-	RegisterExecutor("build-run-job-failure-on-execution-timeout", p)
+	RegisterExecutorProvider("build-run-job-failure-on-execution-timeout", p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -502,7 +502,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	e.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutor("build-run-run-failure", &p)
+	RegisterExecutorProvider("build-run-run-failure", &p)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
@@ -543,7 +543,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	e.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutor("build-get-sources-run-failure", &p)
+	RegisterExecutorProvider("build-get-sources-run-failure", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -588,7 +588,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	e.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutor("build-artifacts-run-failure", &p)
+	RegisterExecutorProvider("build-artifacts-run-failure", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -636,7 +636,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(errors.New("upload fail")).Once()
 	e.On("Finish", errors.New("upload fail")).Once()
 
-	RegisterExecutor("build-upload-artifacts-run-failure", &p)
+	RegisterExecutorProvider("build-upload-artifacts-run-failure", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	successfulBuild.Artifacts = make(Artifacts, 1)
@@ -686,7 +686,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	e.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutor("build-cache-run-failure", &p)
+	RegisterExecutorProvider("build-cache-run-failure", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -727,7 +727,7 @@ func TestRunWrongAttempts(t *testing.T) {
 	e.On("Run", mock.Anything).Return(errors.New("Number of attempts out of the range [1, 10] for stage: get_sources"))
 	e.On("Finish", errors.New("Number of attempts out of the range [1, 10] for stage: get_sources"))
 
-	RegisterExecutor("build-run-attempt-failure", &p)
+	RegisterExecutorProvider("build-run-attempt-failure", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)
@@ -768,7 +768,7 @@ func TestRunSuccessOnSecondAttempt(t *testing.T) {
 	e.On("Run", mock.Anything).Return(errors.New("build fail")).Once()
 	e.On("Run", mock.Anything).Return(nil)
 
-	RegisterExecutor("build-run-success-second-attempt", &p)
+	RegisterExecutorProvider("build-run-success-second-attempt", &p)
 
 	successfulBuild, err := GetSuccessfulBuild()
 	assert.NoError(t, err)

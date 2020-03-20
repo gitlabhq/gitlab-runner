@@ -631,7 +631,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		Context: ctx,
 	}
 
-	provider := GetExecutor(b.Runner.Executor)
+	provider := GetExecutorProvider(b.Runner.Executor)
 	if provider == nil {
 		return errors.New("executor not found")
 	}
