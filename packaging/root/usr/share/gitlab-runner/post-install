@@ -12,7 +12,8 @@ done
 
 # Disable
 # [skel](https://www.thegeekdiary.com/understanding-the-etc-skel-directory-in-linux/)
-# for distributions line Debian buster
+# for distributions like Debian buster
+# https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379
 GITLAB_RUNNER_DISABLE_SKEL=${GITLAB_RUNNER_DISABLE_SKEL:-false}
 
 # create user if doesn't exist: it will create gitlab-runner if not found
