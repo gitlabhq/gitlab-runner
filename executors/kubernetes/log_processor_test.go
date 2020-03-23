@@ -585,6 +585,7 @@ func TestScanHandlesCancelledContext(t *testing.T) {
 	cancel()
 	scanner, ch := processor.scan(ctx, logsToReadCloser(log{}))
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
