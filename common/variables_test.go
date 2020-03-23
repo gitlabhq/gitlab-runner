@@ -17,11 +17,11 @@ func TestVariablesJSON(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "FOO", x.Key)
 	assert.Equal(t, "bar", x.Value)
-	assert.Equal(t, true, x.Public)
-	assert.Equal(t, false, x.Internal) // cannot be set from the network
-	assert.Equal(t, true, x.File)
-	assert.Equal(t, true, x.Masked)
-	assert.Equal(t, true, x.Raw)
+	assert.True(t, x.Public)
+	assert.False(t, x.Internal) // cannot be set from the network
+	assert.True(t, x.File)
+	assert.True(t, x.Masked)
+	assert.True(t, x.Raw)
 }
 
 func TestVariableString(t *testing.T) {
@@ -164,20 +164,20 @@ func TestMultipleUsageOfAKey(t *testing.T) {
 }
 
 func TestRawVariableExpansion(t *testing.T) {
-	tests := []bool{true, false}
+	tests := map[bool]string{
+		true:  "value_of_${base}",
+		false: "value_of_base_value",
+	}
 
-	for _, raw := range tests {
+	for raw, expectedValue := range tests {
 		t.Run(fmt.Sprintf("raw-%v", raw), func(t *testing.T) {
 			variables := JobVariables{
 				{Key: "base", Value: "base_value"},
 				{Key: "related", Value: "value_of_${base}", Raw: raw},
 			}
+
 			expanded := variables.Expand()
-			if raw {
-				assert.Equal(t, "value_of_${base}", expanded.Get("related"))
-			} else {
-				assert.Equal(t, "value_of_base_value", expanded.Get("related"))
-			}
+			assert.Equal(t, expectedValue, expanded.Get("related"))
 		})
 	}
 }

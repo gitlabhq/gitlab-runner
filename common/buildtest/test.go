@@ -14,8 +14,8 @@ import (
 const TestTimeout = 60 * time.Second
 
 func RunBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {
-	var buf bytes.Buffer
-	err := RunBuildWithTrace(t, build, &common.Trace{Writer: &buf})
+	buf := new(bytes.Buffer)
+	err := RunBuildWithTrace(t, build, &common.Trace{Writer: buf})
 	output := buf.String()
 	t.Log(output)
 
@@ -23,10 +23,10 @@ func RunBuildReturningOutput(t *testing.T, build *common.Build) (string, error) 
 }
 
 func RunBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) error {
-	return RunBuildWithOptions(t, build, &common.Config{}, trace)
+	return RunBuildWithOptions(t, build, trace, &common.Config{})
 }
 
-func RunBuildWithOptions(t *testing.T, build *common.Build, config *common.Config, trace *common.Trace) error {
+func RunBuildWithOptions(t *testing.T, build *common.Build, trace *common.Trace, config *common.Config) error {
 	timeoutTimer := time.AfterFunc(TestTimeout, func() {
 		t.Log("Timed out")
 		t.FailNow()

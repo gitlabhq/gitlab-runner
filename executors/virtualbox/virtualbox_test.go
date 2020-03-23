@@ -54,7 +54,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err, "Make sure that you have done 'make -C tests/ubuntu virtualbox'")
+	assert.NoError(t, err, "Make sure that you have done 'make development_setup'")
 }
 
 func TestVirtualBoxSuccessRunRawVariable(t *testing.T) {
@@ -86,7 +86,7 @@ func TestVirtualBoxSuccessRunRawVariable(t *testing.T) {
 	})
 
 	out, err := buildtest.RunBuildReturningOutput(t, build)
-	require.NoError(t, err, "Make sure that you have done 'make -C tests/ubuntu virtualbox'")
+	require.NoError(t, err, "Make sure that you have done 'make development_setup'")
 	assert.Contains(t, out, value)
 }
 

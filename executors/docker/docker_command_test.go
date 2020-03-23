@@ -82,6 +82,28 @@ func getWindowsImage(t *testing.T) string {
 	return windowsImage
 }
 
+func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	build := getBuildForOS(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse("echo $TEST")
+	})
+
+	value := "$VARIABLE$WITH$DOLLARS$$"
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   "TEST",
+		Value: value,
+		Raw:   true,
+	})
+
+	var buf bytes.Buffer
+	err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), value)
+}
+
 func TestDockerCommandUsingCustomClonePath(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return

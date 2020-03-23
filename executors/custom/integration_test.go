@@ -139,6 +139,7 @@ func TestBuildSuccessRawVariable(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		test, ok := tests[shell]
 		if !ok {
+			t.Skip()
 			return
 		}
 
