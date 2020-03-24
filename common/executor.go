@@ -8,8 +8,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ExecutorData is an empty interface representing free-form data
+// executor will use. Meant to be casted, e.g. virtual machine details.
 type ExecutorData interface{}
 
+// ExecutorCommand stores the script executor will run on a given stage.
+// If Predefined it will try to use already allocated resources.
 type ExecutorCommand struct {
 	Script     string
 	Stage      BuildStage
@@ -17,15 +21,22 @@ type ExecutorCommand struct {
 	Context    context.Context
 }
 
+// ExecutorStage represents a stage of build execution in the executor scope.
 type ExecutorStage string
 
 const (
+	// ExecutorStageCreated means the executor is being initialized, i.e. created.
 	ExecutorStageCreated ExecutorStage = "created"
+	// ExecutorStagePrepare means the executor is preparing its environment, initializing dependencies.
 	ExecutorStagePrepare ExecutorStage = "prepare"
-	ExecutorStageFinish  ExecutorStage = "finish"
+	// ExecutorStageFinish means the executor has finished build execution.
+	ExecutorStageFinish ExecutorStage = "finish"
+	// ExecutorStageCleanup means the executor is cleaning up resources.
 	ExecutorStageCleanup ExecutorStage = "cleanup"
 )
 
+// ExecutorPrepareOptions stores any data necessary for the executor to prepare
+// the environment for running a build. This includes runner configuration, build data, etc.
 type ExecutorPrepareOptions struct {
 	Config  *RunnerConfig
 	Build   *Build
@@ -34,30 +45,51 @@ type ExecutorPrepareOptions struct {
 	Context context.Context
 }
 
+// Executor represents entities responsible for build execution.
+// It prepares the environment, runs the build and cleans up resources.
+// See more in https://docs.gitlab.com/runner/executors/
 type Executor interface {
+	// Shell returns data about the shell and scripts this executor is bound to.
 	Shell() *ShellScriptInfo
+	// Prepare prepares the environment for build execution. e.g. connects to SSH, creates containers.
 	Prepare(options ExecutorPrepareOptions) error
+	// Run executes a command on the prepared environment.
 	Run(cmd ExecutorCommand) error
+	// Finish marks the build execution as finished.
 	Finish(err error)
+	// Cleanup cleans any resources left by build execution.
 	Cleanup()
+	// GetCurrentStage returns current stage of build execution.
 	GetCurrentStage() ExecutorStage
+	// SetCurrentStage sets the current stage of build execution.
 	SetCurrentStage(stage ExecutorStage)
 }
 
+// ExecutorProvider is responsible for managing the lifetime of executors, acquiring resources,
+// retrieving executor metadata, etc.
 type ExecutorProvider interface {
+	// CanCreate returns whether the executor provider has the necessary data to create an executor.
 	CanCreate() bool
+	// Create creates a new executor. No resource allocation happens.
 	Create() Executor
+	// Acquire acquires the necessary resources for the executor to run, e.g. finds a virtual machine.
 	Acquire(config *RunnerConfig) (ExecutorData, error)
+	// Release releases any resources locked by Acquire.
 	Release(config *RunnerConfig, data ExecutorData)
+	// GetFeatures returns metadata about the features the executor supports, e.g. variables, services, shell.
 	GetFeatures(features *FeaturesInfo) error
+	// GetDefaultShell returns the name of the default shell for the executor.
 	GetDefaultShell() string
 }
 
+// BuildError represents an error during build execution, not related to
+// the job script, e.g. failed to create container, establish ssh connection.
 type BuildError struct {
 	Inner         error
 	FailureReason JobFailureReason
 }
 
+// Error implements the error interface.
 func (b *BuildError) Error() string {
 	if b.Inner == nil {
 		return "error"
@@ -66,6 +98,7 @@ func (b *BuildError) Error() string {
 	return b.Inner.Error()
 }
 
+// MakeBuildError returns an new instance of BuildError.
 func MakeBuildError(format string, args ...interface{}) error {
 	return &BuildError{
 		Inner: fmt.Errorf(format, args...),
