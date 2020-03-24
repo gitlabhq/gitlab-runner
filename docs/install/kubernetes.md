@@ -294,7 +294,7 @@ Where:
 - `<RELEASE-NAME>` is the name you gave the chart when installing it.
   In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
 
-If you want to update to a specific version of GitLab Runner Helm Chart instead of the latest one, add `--version <>RUNNER_HELM_CHART_VERSION`
+If you want to update to a specific version of GitLab Runner Helm Chart instead of the latest one, add `--version <RUNNER_HELM_CHART_VERSION>`
 to your `helm upgrade` command.
 
 ## Uninstalling GitLab Runner using the Helm Chart
