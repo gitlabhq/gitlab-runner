@@ -49,9 +49,12 @@ export CGO_ENABLED ?= 0
 # Development Tools
 GOX = gox
 MOCKERY = mockery
-RELEASE_INDEX_GENERATOR = release-index-gen
-GITLAB_CHANGELOG = gitlab-changelog
 DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
+
+RELEASE_INDEX_GEN_VERSION ?= latest
+RELEASE_INDEX_GENERATOR ?= .tmp/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
+GITLAB_CHANGELOG_VERSION ?= latest
+GITLAB_CHANGELOG = .tmp/gitlab-changelog-$(GITLAB_CHANGELOG_VERSION)
 
 MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
 
@@ -311,11 +314,21 @@ $(GOX):
 $(MOCKERY):
 	go get github.com/vektra/mockery/cmd/mockery
 
+$(RELEASE_INDEX_GENERATOR): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+$(RELEASE_INDEX_GENERATOR): DOWNLOAD_URL = "https://storage.googleapis.com/gitlab-runner-tools/release-index-generator/$(RELEASE_INDEX_GEN_VERSION)/release-index-gen-$(OS_TYPE)-amd64"
 $(RELEASE_INDEX_GENERATOR):
-	go get gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator/cmd/release-index-gen
+	# Installing $(DOWNLOAD_URL) as $(RELEASE_INDEX_GENERATOR)
+	@mkdir -p $(shell dirname $(RELEASE_INDEX_GENERATOR))
+	@curl -sL "$(DOWNLOAD_URL)" -o "$(RELEASE_INDEX_GENERATOR)"
+	@chmod +x "$(RELEASE_INDEX_GENERATOR)"
 
+$(GITLAB_CHANGELOG): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+$(GITLAB_CHANGELOG): DOWNLOAD_URL = "https://storage.googleapis.com/gitlab-runner-tools/gitlab-changelog/$(GITLAB_CHANGELOG_VERSION)/gitlab-changelog-$(OS_TYPE)-amd64"
 $(GITLAB_CHANGELOG):
-	go get gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog/cmd/gitlab-changelog
+	# Installing $(DOWNLOAD_URL) as $(GITLAB_CHANGELOG)
+	@mkdir -p $(shell dirname $(GITLAB_CHANGELOG))
+	@curl -sL "$(DOWNLOAD_URL)" -o "$(GITLAB_CHANGELOG)"
+	@chmod +x "$(GITLAB_CHANGELOG)"
 
 clean:
 	-$(RM) -rf $(TARGET_DIR)

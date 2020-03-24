@@ -63,8 +63,6 @@ require (
 	github.com/urfave/cli v1.20.0
 	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
 	gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
-	gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog v0.1.0
-	gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator v0.0.0-20200128145756-4b03f39cb151
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20180924111848-5af59b871b1b
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
