@@ -275,6 +275,9 @@ Where:
 - `<CONFIG_VALUES_FILE>` is the path to values file containing your custom configuration. See the
   [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
 
+If you want to install a specific version of GitLab Runner Helm Chart, add `--version <RUNNER_HELM_CHART_VERSION>`
+to your `helm install` command.
+
 ## Updating GitLab Runner using the Helm Chart
 
 Once your GitLab Runner Chart is installed, configuration changes and chart updates should be done using `helm upgrade`:
@@ -290,6 +293,9 @@ Where:
   [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
 - `<RELEASE-NAME>` is the name you gave the chart when installing it.
   In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
+
+If you want to update to a specific version of GitLab Runner Helm Chart instead of the latest one, add `--version <RUNNER_HELM_CHART_VERSION>`
+to your `helm upgrade` command.
 
 ## Uninstalling GitLab Runner using the Helm Chart
 
