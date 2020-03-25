@@ -13,5 +13,5 @@ type Machine interface {
 	Exist(name string) bool
 
 	CanConnect(name string, skipCache bool) bool
-	Credentials(name string) (DockerCredentials, error)
+	Credentials(name string) (Credentials, error)
 }

@@ -177,7 +177,7 @@ func (m *testMachine) CanConnect(name string, skipCache bool) bool {
 	return true
 }
 
-func (m *testMachine) Credentials(name string) (dc docker.DockerCredentials, err error) {
+func (m *testMachine) Credentials(name string) (dc docker.Credentials, err error) {
 	if strings.Contains(name, "no-connect") {
 		err = errors.New("failed to connect")
 	}

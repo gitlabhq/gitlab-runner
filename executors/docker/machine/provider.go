@@ -405,7 +405,7 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 	if config.Docker != nil {
 		*newConfig.Docker = *config.Docker
 	}
-	newConfig.Docker.DockerCredentials = dc
+	newConfig.Docker.Credentials = dc
 
 	// Mark machine as used
 	details.State = machineStateUsed

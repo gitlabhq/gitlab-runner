@@ -203,7 +203,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 	// Attempt to modify the Config object
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(func(options ExecutorPrepareOptions) error {
-			options.Config.Docker.DockerCredentials.Host = "10.0.0.2"
+			options.Config.Docker.Credentials.Host = "10.0.0.2"
 			return nil
 		}).Once()
 
@@ -230,7 +230,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 		RunnerSettings: RunnerSettings{
 			Executor: "build-run-nomodify-test",
 			Docker: &DockerConfig{
-				DockerCredentials: docker.DockerCredentials{
+				Credentials: docker.Credentials{
 					Host: "10.0.0.1",
 				},
 			},
@@ -241,7 +241,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
-	assert.Equal(t, "10.0.0.1", rc.Docker.DockerCredentials.Host)
+	assert.Equal(t, "10.0.0.1", rc.Docker.Credentials.Host)
 }
 
 func TestRetryPrepare(t *testing.T) {

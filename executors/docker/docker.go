@@ -1018,7 +1018,7 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 }
 
 func (e *executor) connectDocker() error {
-	client, err := docker.New(e.Config.Docker.DockerCredentials, "")
+	client, err := docker.New(e.Config.Docker.Credentials, "")
 	if err != nil {
 		return err
 	}
