@@ -473,7 +473,7 @@ This defines the SSH connection parameters.
 
 Example:
 
-```
+```toml
 [runners.ssh]
   host = "my-production-server"
   port = "22"
@@ -535,7 +535,7 @@ The `OffPeakPeriods` setting contains an array of string patterns of
 time periods represented in a cron-style format. The line contains
 following fields:
 
-```
+```plaintext
 [second] [minute] [hour] [day of month] [month] [day of week] [year]
 ```
 

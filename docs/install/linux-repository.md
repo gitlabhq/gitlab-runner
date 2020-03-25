@@ -150,7 +150,7 @@ To upgrade GitLab Runner from a version prior to 10.0:
 
 1. Remove the old repository:
 
-   ```
+   ```shell
    # For Debian/Ubuntu/Mint
    sudo rm /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list
 
@@ -163,7 +163,7 @@ To upgrade GitLab Runner from a version prior to 10.0:
 
 1. For RHEL/CentOS/Fedora, run:
 
-   ```
+   ```shell
    sudo /usr/share/gitlab-runner/post-install
    ```
 

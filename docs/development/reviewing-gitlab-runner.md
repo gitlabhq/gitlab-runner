@@ -45,7 +45,7 @@ To open the report:
 
 1. At the end of the job's log, we should see a line like:
 
-   ```
+   ```plaintext
    ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
    ```
 
@@ -56,7 +56,7 @@ To open the report:
    Each pipeline also creates a deployment for a specific reference (a branch name
    or a tag name). Several lines above we can see:
 
-   ```
+   ```plaintext
    ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/v11.8.0/index.html
    ```
 
