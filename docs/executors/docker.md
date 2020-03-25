@@ -242,7 +242,8 @@ Docker networks may conflict with other networks on the host, including other Do
 if the CIDR ranges are already in use. The default Docker address pool can be configured
 via `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
 
-The mode is activated via the `FF_NETWORK_PER_BUILD` [feature flag](../configuration/feature-flags.md).
+To enable this mode you need to enable the [`FF_NETWORK_PER_BUILD`
+feature flag](../configuration/feature-flags.md).
 
 When a job starts, a bridge network is created (similarly to `docker
 network create <network>`). Upon creation, the service container(s) and the
