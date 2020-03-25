@@ -73,7 +73,7 @@ code_quality:
   - .merge_request_pipelines
   - .except_docs
   - .no_cache_and_dependencies
-  image: docker:19.03-git
+  image: docker:${DOCKER_VERSION}-git
   services:
   - docker:${DOCKER_VERSION}-dind
   variables:
