@@ -93,7 +93,7 @@ executing the `install` command, by checking the
 If Homebrew was used to install `git`, it may have added a `/usr/local/etc/gitconfig` file
 containing:
 
-```
+```ini
 [credential]
         helper = osxkeychain
 ```
