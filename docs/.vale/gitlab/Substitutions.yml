@@ -9,5 +9,8 @@ level: error
 ignorecase: true
 swap:
   GitLabber: GitLab team member
+  params: parameters
+  param: parameter
+  postgres: PostgreSQL
   self hosted: self-managed
   self-hosted: self-managed
