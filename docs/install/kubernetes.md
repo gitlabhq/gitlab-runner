@@ -238,7 +238,6 @@ kubectl
 
 Where:
 
-- The variables are substituted, as above.
 - `<TARGET_FILENAME>` is the name of the certificate file as presented to the Runner
   containers. (For example: `gitlab-hostname.crt`.)
 
