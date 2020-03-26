@@ -240,7 +240,10 @@ Where:
 
 - `<TARGET_FILENAME>` is the name of the certificate file as presented to the Runner
   containers. (For example: `gitlab-hostname.crt`.)
-
+- `<CERTIFICATE_FILENAME>` is the filename for the certificate relative to your
+  current directory that will be imported into the secret. (For example:
+  `cert-directory/my-gitlab-certificate.crt`)
+ 
 You then need to provide the secret's name to the GitLab Runner chart.
 Add the following to your `values.yaml`:
 
