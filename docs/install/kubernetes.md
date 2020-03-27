@@ -209,8 +209,8 @@ file content being the value associated with the key:
 - The hostname used should be the one the certificate is registered for.
 
 The GitLab Runner Helm Chart does not create a secret for you. In order to create
-the secret, you can prepare your certificate on you local machine, and then run
-the `kubectl create secret` command from the directory with the certificate:
+the secret, you tell Kubernetes to store the certificate as a secret and present it
+to the Runner containers as a file. To do this, run the following command:
 
 ```shell
 kubectl
@@ -222,8 +222,27 @@ kubectl
 Where:
 
 - `<NAMESPACE>` is the Kubernetes namespace where you want to install the GitLab Runner.
-- `<SECRET_NAME>` is the Kubernetes Secret resource name. For example: `gitlab-domain-cert`.
+- `<SECRET_NAME>` is the Kubernetes Secret resource name. (For example: `gitlab-domain-cert`.)
 - `<CERTIFICATE_FILENAME>` is the filename for the certificate in your current directory that will be imported into the secret.
+
+If the source file `<CERTIFICATE_FILENAME>` is not in the current directory or
+does not follow the format `<gitlab-hostname.crt>` then it will be necessary to
+specify the filename to use on the target:
+
+```shell
+kubectl
+  --namespace <NAMESPACE>
+  create secret generic <SECRET_NAME>
+  --from-file=<TARGET_FILENAME>=<CERTIFICATE_FILENAME>
+```
+
+Where:
+
+- `<TARGET_FILENAME>` is the name of the certificate file as presented to the Runner
+  containers. (For example: `gitlab-hostname.crt`.)
+- `<CERTIFICATE_FILENAME>` is the filename for the certificate relative to your
+  current directory that will be imported into the secret. (For example:
+  `cert-directory/my-gitlab-certificate.crt`)
 
 You then need to provide the secret's name to the GitLab Runner chart.
 Add the following to your `values.yaml`:
@@ -239,7 +258,7 @@ certsSecretName: <SECRET NAME>
 
 Where:
 
-- `<SECRET_NAME>` is the Kubernetes Secret resource name, for example `gitlab-domain-cert`.
+- `<SECRET_NAME>` is the Kubernetes Secret resource name, as in the above example, `gitlab-domain-cert`.
 
 More information on how GitLab Runner uses these certificates can be found in the
 [Runner Documentation](../configuration/tls-self-signed.md#supported-options-for-self-signed-certificates).
