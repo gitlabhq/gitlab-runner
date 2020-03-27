@@ -703,10 +703,6 @@ type dockerConfigEntry struct {
 	Username, Password string
 }
 
-func (s *executor) projectUniqueName() string {
-	return dns.MakeRFC1123Compatible(s.Build.ProjectUniqueName())
-}
-
 func (s *executor) setupCredentials() error {
 	s.Debugln("Setting up secrets")
 
@@ -733,7 +729,7 @@ func (s *executor) setupCredentials() error {
 	}
 
 	secret := api.Secret{}
-	secret.GenerateName = s.projectUniqueName()
+	secret.GenerateName = s.Build.ProjectUniqueName()
 	secret.Namespace = s.configurationOverwrites.namespace
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
@@ -828,7 +824,7 @@ func (s *executor) setupBuildPod() error {
 
 	// We set a default label to the pod. This label will be used later
 	// by the services, to link each service to the pod
-	labels := map[string]string{"pod": s.projectUniqueName()}
+	labels := map[string]string{"pod": s.Build.ProjectUniqueName()}
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
 		labels[k] = s.Build.Variables.ExpandValue(v)
 	}
@@ -874,7 +870,7 @@ func (s *executor) preparePodConfig(labels, annotations map[string]string, servi
 
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: s.projectUniqueName(),
+			GenerateName: s.Build.ProjectUniqueName(),
 			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       labels,
 			Annotations:  annotations,
@@ -959,7 +955,7 @@ func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) ap
 		},
 		Spec: api.ServiceSpec{
 			Ports:    ports,
-			Selector: map[string]string{"pod": s.projectUniqueName()},
+			Selector: map[string]string{"pod": s.Build.ProjectUniqueName()},
 			Type:     api.ServiceTypeClusterIP,
 		},
 	}
