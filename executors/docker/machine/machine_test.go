@@ -83,7 +83,7 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 			},
 		}
 
-		machine := &docker.MockMachine{}
+		machine := new(docker.MockMachine)
 		defer machine.AssertExpectations(t)
 
 		machine.On("CanConnect", machineName, true).
