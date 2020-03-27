@@ -24,7 +24,7 @@ Feature flags are toggles that allow you to enable or disable specific features.
 Feature flags are toggled using environment variables. To:
 
 - Activate a feature flag, set the corresponding environment variable to `"true"` or `1`.
-- Deactivate a feature flag, set the corresponding environment variable docs/executors/docker.mdto `"false"` or `0`.
+- Deactivate a feature flag, set the corresponding environment variable to `"false"` or `0`.
 
 ## Available feature flags
 
