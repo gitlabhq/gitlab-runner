@@ -23,8 +23,8 @@ Feature flags are toggles that allow you to enable or disable specific features.
 
 Feature flags are toggled using environment variables. To:
 
-- Activate a feature flag, set the corresponding environment variable to `true` or `1`.
-- Deactivate a feature flag, set the corresponding environment variable to `false` or `0`.
+- Activate a feature flag, set the corresponding environment variable to `"true"` or `1`.
+- Deactivate a feature flag, set the corresponding environment variable to `"false"` or `0`.
 
 ## Available feature flags
 
@@ -46,3 +46,45 @@ The flags are defined in `./helpers/feature_flags/flags.go` file.
 | `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` | `true` | ✗ |  | When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119) |
 
 <!-- feature_flags_list_end -->
+
+## Enable feature flag in pipeline configuration
+
+You can use [CI variables](https://docs.gitlab.com/ee/ci/variables/) to
+enable feature flags:
+
+- For all jobs in the pipeline (globally):
+
+  ```yaml
+  variables:
+    FEATURE_FLAG_NAME: 1
+  ```
+
+- For a single job:
+
+  ```yml
+  job:
+    stage: test
+    variables:
+      FEATURE_FLAG_NAME: 1
+    script:
+    - echo "Hello"
+  ```
+
+## Enable feature flag for Runner
+
+To enable the feature for every job a Runner runs, specify the feature
+flag as an
+[`environment`](advanced-configuration.md#the-runners-section) variable
+in the [Runner configuration](advanced-configuration.md):
+
+```toml
+[[runners]]
+  name = "ruby-2.6-docker"
+  url = "https://CI/"
+  token = "TOKEN"
+  limit = 0
+  executor = "docker"
+  builds_dir = ""
+  shell = ""
+  environment = ["FEATURE_FLAG_NAME=1"]
+```
