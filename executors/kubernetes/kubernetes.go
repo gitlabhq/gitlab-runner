@@ -378,7 +378,7 @@ func (s *executor) setupScriptsConfigMap() error {
 
 	configMap := &api.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-scripts", s.projectUniqueName()),
+			GenerateName: fmt.Sprintf("%s-scripts", s.Build.ProjectUniqueName()),
 			Namespace:    s.configurationOverwrites.namespace,
 		},
 		Data: scripts,
