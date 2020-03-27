@@ -149,10 +149,12 @@ mocks: $(MOCKERY)
 	mockery -dir=./shells -all -inpkg
 
 check_mocks:
-	@git status -sb > /tmp/mocks-${CI_JOB_ID}-before
-	$(MAKE) mocks
-	@git status -sb > /tmp/mocks-${CI_JOB_ID}-after
-	@diff -U0 /tmp/mocks-${CI_JOB_ID}-before /tmp/mocks-${CI_JOB_ID}-after
+	# Checking if mocks are up-to-date
+	@$(MAKE) mocks
+	# Checking the differences
+	@git --no-pager diff --compact-summary --exit-code -- ./helpers/service/mocks \
+		$(shell git ls-files | grep 'mock_' | grep -v 'vendor/') && \
+		echo "Mocks up-to-date!"
 
 test-docker:
 	$(MAKE) test-docker-image IMAGE=centos:6 TYPE=rpm
