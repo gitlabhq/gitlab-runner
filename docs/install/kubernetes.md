@@ -244,6 +244,30 @@ Where:
 More information on how GitLab Runner uses these certificates can be found in the
 [Runner Documentation](../configuration/tls-self-signed.md#supported-options-for-self-signed-certificates).
 
+## Check available GitLab Runner Helm Chart versions
+
+Versions of Helm Chart and GitLab Runner application do not follow the same versioning.
+Use the command below to get version mappings between Helm Chart and GitLab Runner:
+
+```shell
+helm search -l gitlab/gitlab-runner
+```
+
+Example of the output is shown below:
+
+```plaintext
+NAME                    CHART VERSION   APP VERSION DESCRIPTION
+...
+gitlab/gitlab-runner    0.14.0          12.8.0      GitLab Runner
+gitlab/gitlab-runner    0.13.1          12.7.1      GitLab Runner
+gitlab/gitlab-runner    0.13.0          12.7.0      GitLab Runner
+gitlab/gitlab-runner    0.12.0          12.6.0      GitLab Runner
+gitlab/gitlab-runner    0.11.0          12.5.0      GitLab Runner
+gitlab/gitlab-runner    0.10.1          12.4.1      GitLab Runner
+gitlab/gitlab-runner    0.10.0          12.4.0      GitLab Runner
+...
+```
+
 ## Installing GitLab Runner using the Helm Chart
 
 Add the GitLab Helm repository:
