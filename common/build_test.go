@@ -565,30 +565,33 @@ func TestDebugTrace(t *testing.T) {
 
 func TestDefaultEnvVariables(t *testing.T) {
 	tests := map[string]struct {
-		buildDir       string
-		expectedValue1 string
-		expectedValue2 string
+		buildDir      string
+		expectedValue string
 	}{
 		"UNIX-style BuildDir": {
-			buildDir:       "/tmp/test-build/dir",
-			expectedValue1: "CI_PROJECT_DIR=/tmp/test-build/dir",
-			expectedValue2: "CI_SERVER=yes",
+			buildDir:      "/tmp/test-build/dir",
+			expectedValue: "CI_PROJECT_DIR=/tmp/test-build/dir",
 		},
-		// The next two tests expected value will depend on the platorm running the tests
+		// The next four tests' expected value will depend on the platform running the tests
+		"Windows UNC-style BuildDir (extended-length path support)": {
+			buildDir:      `\\?\C:\tmp\test-build\dir`,
+			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("//?/C:/tmp/test-build/dir"),
+		},
+		"Windows UNC-style BuildDir": {
+			buildDir:      `\\host\share\tmp\test-build\dir`,
+			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("//host/share/tmp/test-build/dir"),
+		},
 		"Windows-style BuildDir (CMD or PS)": {
-			buildDir:       "C:\\tmp\\test-build\\dir",
-			expectedValue1: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
-			expectedValue2: "CI_SERVER=yes",
+			buildDir:      `C:\tmp\test-build\dir`,
+			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
 		},
 		"Windows-style BuildDir with forward slashes and drive letter": {
-			buildDir:       "C:/tmp/test-build/dir",
-			expectedValue1: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
-			expectedValue2: "CI_SERVER=yes",
+			buildDir:      "C:/tmp/test-build/dir",
+			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
 		},
 		"Windows-style BuildDir in MSYS bash executor and drive letter)": {
-			buildDir:       "/c/tmp/test-build/dir",
-			expectedValue1: "CI_PROJECT_DIR=/c/tmp/test-build/dir",
-			expectedValue2: "CI_SERVER=yes",
+			buildDir:      "/c/tmp/test-build/dir",
+			expectedValue: "CI_PROJECT_DIR=/c/tmp/test-build/dir",
 		},
 	}
 
@@ -599,8 +602,8 @@ func TestDefaultEnvVariables(t *testing.T) {
 
 			vars := build.GetAllVariables().StringList()
 
-			assert.Contains(t, vars, test.expectedValue1)
-			assert.Contains(t, vars, test.expectedValue2)
+			assert.Contains(t, vars, test.expectedValue)
+			assert.Contains(t, vars, "CI_SERVER=yes")
 		})
 	}
 }

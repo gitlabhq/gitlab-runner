@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -781,11 +780,10 @@ func (b *Build) String() string {
 	return helpers.ToYAML(b)
 }
 
-func (b *Build) formatPathSlashes(s string) string {
-	// Look for a Windows drive letter before forcing a slash
-	// change. This keeps a valid path when run through MSYS bash
-	re := regexp.MustCompile(`^[[:alpha:]]:`)
-	if re.MatchString(s) {
+func (b *Build) platformAppropriatePath(s string) string {
+	// Check if we're dealing with a Windows path on a Windows platform
+	// filepath.VolumeName will return empty otherwise
+	if filepath.VolumeName(s) != "" {
 		return filepath.FromSlash(s)
 	}
 	return s
@@ -795,14 +793,14 @@ func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
 		{
 			Key:      "CI_BUILDS_DIR",
-			Value:    b.formatPathSlashes(b.RootDir),
+			Value:    b.platformAppropriatePath(b.RootDir),
 			Public:   true,
 			Internal: true,
 			File:     false,
 		},
 		{
 			Key:      "CI_PROJECT_DIR",
-			Value:    b.formatPathSlashes(b.FullProjectDir()),
+			Value:    b.platformAppropriatePath(b.FullProjectDir()),
 			Public:   true,
 			Internal: true,
 			File:     false,
