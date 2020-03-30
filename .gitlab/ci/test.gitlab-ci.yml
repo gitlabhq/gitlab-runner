@@ -69,7 +69,6 @@ code_quality:
   stage: test
   extends:
   - .merge_request_pipelines
-  - .except_docs
   - .no_cache_and_dependencies
   image: golangci/golangci-lint:v1.24.0
   variables:
