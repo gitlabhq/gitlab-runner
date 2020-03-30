@@ -242,7 +242,7 @@ func (e *executor) Cleanup() {
 
 	// nothing to do, as there's no cleanup_script
 	if e.config.CleanupExec == "" {
-                os.RemoveAll(e.TempDir)
+                os.RemoveAll(e.tempDir)
 		return
 	}
 
@@ -267,7 +267,7 @@ func (e *executor) Cleanup() {
 	if err != nil {
 		e.Warningln("Cleanup script failed:", err)
 	}
-        os.RemoveAll(e.TempDir)
+        os.RemoveAll(e.tempDir)
 }
 
 func init() {
