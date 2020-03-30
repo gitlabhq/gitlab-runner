@@ -166,10 +166,10 @@ func (b *PsWriter) MkDir(path string) {
 }
 
 func (b *PsWriter) MkTmpDir(name string) string {
-	path := helpers.ToBackslash(filepath.Join(b.TemporaryPath, name))
-	b.MkDir(path)
+	dirPath := helpers.ToBackslash(filepath.Join(b.TemporaryPath, name))
+	b.MkDir(dirPath)
 
-	return path
+	return dirPath
 }
 
 func (b *PsWriter) RmDir(path string) {
