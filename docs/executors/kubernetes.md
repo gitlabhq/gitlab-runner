@@ -82,7 +82,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `service_memory_request`: The amount of memory requested for build service containers
 - `helper_cpu_request`: The CPU allocation requested for build helper containers
 - `helper_memory_request`: The amount of memory requested for build helper containers
-- `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set.
+- `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set. See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs
 - `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration.
 - `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
