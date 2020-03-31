@@ -241,6 +241,7 @@ func (e *executor) Cleanup() {
 	}
 
 	defer os.RemoveAll(e.tempDir)
+
 	// nothing to do, as there's no cleanup_script
 	if e.config.CleanupExec == "" {
 		return
