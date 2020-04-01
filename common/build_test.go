@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -203,7 +203,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 	// Attempt to modify the Config object
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
 		Return(func(options ExecutorPrepareOptions) error {
-			options.Config.Docker.DockerCredentials.Host = "10.0.0.2"
+			options.Config.Docker.Credentials.Host = "10.0.0.2"
 			return nil
 		}).Once()
 
@@ -230,7 +230,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 		RunnerSettings: RunnerSettings{
 			Executor: "build-run-nomodify-test",
 			Docker: &DockerConfig{
-				DockerCredentials: docker_helpers.DockerCredentials{
+				Credentials: docker.Credentials{
 					Host: "10.0.0.1",
 				},
 			},
@@ -241,7 +241,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
-	assert.Equal(t, "10.0.0.1", rc.Docker.DockerCredentials.Host)
+	assert.Equal(t, "10.0.0.1", rc.Docker.Credentials.Host)
 }
 
 func TestRetryPrepare(t *testing.T) {

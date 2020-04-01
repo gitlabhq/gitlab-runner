@@ -68,7 +68,7 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 	if err != nil {
 		return err
 	}
-	options.Config.Docker.DockerCredentials = e.config.Docker.DockerCredentials
+	options.Config.Docker.Credentials = e.config.Docker.Credentials
 
 	// TODO: Currently the docker-machine doesn't support multiple builds
 	e.build.ProjectRunnerID = 0

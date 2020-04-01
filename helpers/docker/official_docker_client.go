@@ -1,4 +1,4 @@
-package docker_helpers
+package docker
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func IsErrNotFound(err error) bool {
 }
 
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
-// giving it the methods it needs to satisfy the docker_helpers.Client interface
+// giving it the methods it needs to satisfy the docker.Client interface
 type officialDockerClient struct {
 	client *client.Client
 
@@ -36,7 +36,7 @@ type officialDockerClient struct {
 	Transport *http.Transport
 }
 
-func newOfficialDockerClient(c DockerCredentials, apiVersion string) (*officialDockerClient, error) {
+func newOfficialDockerClient(c Credentials, apiVersion string) (*officialDockerClient, error) {
 	transport, err := newHTTPTransport(c)
 	if err != nil {
 		logrus.Errorln("Error creating TLS Docker client:", err)
@@ -207,10 +207,10 @@ func (c *officialDockerClient) Close() error {
 // New attempts to create a new Docker client of the specified version. If the
 // specified version is empty, it will use the default version.
 //
-// If no host is given in the DockerCredentials, it will attempt to look up
+// If no host is given in the Credentials, it will attempt to look up
 // details from the environment. If that fails, it will use the default
 // connection details for your platform.
-func New(c DockerCredentials, apiVersion string) (Client, error) {
+func New(c Credentials, apiVersion string) (Client, error) {
 	if c.Host == "" {
 		c = credentialsFromEnv()
 	}
@@ -227,7 +227,7 @@ func New(c DockerCredentials, apiVersion string) (Client, error) {
 	return newOfficialDockerClient(c, apiVersion)
 }
 
-func newHTTPTransport(c DockerCredentials) (*http.Transport, error) {
+func newHTTPTransport(c Credentials) (*http.Transport, error) {
 	url, err := client.ParseHostURL(c.Host)
 	if err != nil {
 		return nil, err

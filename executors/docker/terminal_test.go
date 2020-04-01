@@ -146,7 +146,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := &docker_helpers.MockClient{}
+			c := new(docker.MockClient)
 			defer c.AssertExpectations(t)
 
 			s := commandExecutor{
@@ -213,7 +213,7 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := &docker_helpers.MockClient{}
+			c := new(docker.MockClient)
 			defer c.AssertExpectations(t)
 
 			s := commandExecutor{
@@ -311,7 +311,7 @@ func (nopConn) SetWriteDeadline(t time.Time) error {
 }
 
 func TestTerminalConn_Start(t *testing.T) {
-	c := &docker_helpers.MockClient{}
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
 	s := commandExecutor{

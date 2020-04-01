@@ -16,8 +16,8 @@ func getRunnerConfig() *common.RunnerConfig {
 		RunnerSettings: common.RunnerSettings{
 			Executor: "docker+machine",
 			Docker: &common.DockerConfig{
-				DockerCredentials: docker_helpers.DockerCredentials{},
-				Image:             "alpine",
+				Credentials: docker.Credentials{},
+				Image:       "alpine",
 			},
 		},
 	}
@@ -35,7 +35,7 @@ func getRunnerConfigWithoutDockerConfig() *common.RunnerConfig {
 type machineCredentialsUsageFakeExecutor struct {
 	t *testing.T
 
-	expectedmachineCredentials docker_helpers.DockerCredentials
+	expectedmachineCredentials docker.Credentials
 	expectedRunnerConfig       *common.RunnerConfig
 }
 
@@ -45,7 +45,7 @@ func (e *machineCredentialsUsageFakeExecutor) assertRunnerConfiguration(runnerCo
 	if e.expectedRunnerConfig.Docker != nil {
 		assert.Equal(e.t, e.expectedRunnerConfig.Docker.Image, runnerConfig.Docker.Image)
 	}
-	assert.Equal(e.t, e.expectedmachineCredentials, runnerConfig.Docker.DockerCredentials, "DockerCredentials should be filled with machine's credentials")
+	assert.Equal(e.t, e.expectedmachineCredentials, runnerConfig.Docker.Credentials, "Credentials should be filled with machine's credentials")
 
 }
 
@@ -67,7 +67,7 @@ func (e *machineCredentialsUsageFakeExecutor) GetCurrentStage() common.ExecutorS
 func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource func() *common.RunnerConfig) {
 	t.Run(name, func(t *testing.T) {
 		machineName := "expected-machine"
-		machineCredentials := docker_helpers.DockerCredentials{
+		machineCredentials := docker.Credentials{
 			Host: "tcp://expected-host:1234",
 		}
 
@@ -83,7 +83,7 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 			},
 		}
 
-		machine := &docker_helpers.MockMachine{}
+		machine := new(docker.MockMachine)
 		defer machine.AssertExpectations(t)
 
 		machine.On("CanConnect", machineName, true).

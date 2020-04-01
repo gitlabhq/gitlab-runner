@@ -10,12 +10,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type machineProvider struct {
 	name        string
-	machine     docker_helpers.Machine
+	machine     docker.Machine
 	details     machinesDetails
 	lock        sync.RWMutex
 	acquireLock sync.Mutex
@@ -405,7 +405,7 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 	if config.Docker != nil {
 		*newConfig.Docker = *config.Docker
 	}
-	newConfig.Docker.DockerCredentials = dc
+	newConfig.Docker.Credentials = dc
 
 	// Mark machine as used
 	details.State = machineStateUsed
@@ -463,7 +463,7 @@ func newMachineProvider(name, executor string) *machineProvider {
 	return &machineProvider{
 		name:     name,
 		details:  make(machinesDetails),
-		machine:  docker_helpers.NewMachineCommand(),
+		machine:  docker.NewMachineCommand(),
 		provider: provider,
 		totalActions: prometheus.NewCounterVec(
 			prometheus.CounterOpts{

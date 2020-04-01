@@ -18,7 +18,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
@@ -257,7 +257,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 }
 
 func isDockerOlderThan17_07(t *testing.T) bool {
-	client, err := docker_helpers.New(docker_helpers.DockerCredentials{}, "")
+	client, err := docker.New(docker.Credentials{}, "")
 	require.NoError(t, err, "should be able to connect to docker")
 
 	types, err := client.Info(context.Background())
@@ -783,7 +783,7 @@ func runDockerInDocker(version string) (id string, err error) {
 	return
 }
 
-func getDockerCredentials(id string) (credentials docker_helpers.DockerCredentials, err error) {
+func getDockerCredentials(id string) (credentials docker.Credentials, err error) {
 	cmd := exec.Command("docker", "port", id, "2375")
 	cmd.Stderr = os.Stderr
 	data, err := cmd.Output()
@@ -802,8 +802,8 @@ func getDockerCredentials(id string) (credentials docker_helpers.DockerCredentia
 	return
 }
 
-func waitForDocker(credentials docker_helpers.DockerCredentials) error {
-	client, err := docker_helpers.New(credentials, "")
+func waitForDocker(credentials docker.Credentials) error {
+	client, err := docker.New(credentials, "")
 	if err != nil {
 		return err
 	}
@@ -854,10 +854,10 @@ func testDockerVersion(t *testing.T, version string) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:             common.TestAlpineImage,
-					PullPolicy:        common.PullPolicyIfNotPresent,
-					DockerCredentials: credentials,
-					CPUS:              "0.1",
+					Image:       common.TestAlpineImage,
+					PullPolicy:  common.PullPolicyIfNotPresent,
+					Credentials: credentials,
+					CPUS:        "0.1",
 				},
 			},
 		},

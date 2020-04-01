@@ -30,7 +30,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	service_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
@@ -144,14 +144,14 @@ func TestVerifyAllowedImage(t *testing.T) {
 }
 
 func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName string) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
 	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s-0", strings.Replace(serviceName, "/", "__", -1))
 	networkID := "network-id"
 
 	e := executor{
-		client: &c,
+		client: c,
 		info: types.Info{
 			OSType:       helperimage.OSTypeLinux,
 			Architecture: "amd64",
@@ -234,11 +234,11 @@ func TestServiceFromNamedImage(t *testing.T) {
 }
 
 func TestDockerForNamedImage(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	options := buildImagePullOptions(e, "test")
 
@@ -268,10 +268,10 @@ func TestDockerForNamedImage(t *testing.T) {
 }
 
 func TestDockerForExistingImage(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	options := buildImagePullOptions(e, "existing")
 
@@ -289,7 +289,7 @@ func TestDockerForExistingImage(t *testing.T) {
 }
 
 func TestHelperImageWithVariable(t *testing.T) {
-	c := new(docker_helpers.MockClient)
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
 	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner:HEAD").
@@ -333,11 +333,11 @@ func (e *executor) setPolicyMode(pullPolicy common.DockerPullPolicy) {
 }
 
 func TestDockerGetImageById(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
 	// Use default policy
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode("")
 
@@ -352,10 +352,10 @@ func TestDockerGetImageById(t *testing.T) {
 }
 
 func TestDockerUnknownPolicyMode(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode("unknown")
 
@@ -364,10 +364,10 @@ func TestDockerUnknownPolicyMode(t *testing.T) {
 }
 
 func TestDockerPolicyModeNever(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyNever)
 
@@ -388,10 +388,10 @@ func TestDockerPolicyModeNever(t *testing.T) {
 }
 
 func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
@@ -405,10 +405,10 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 }
 
 func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
@@ -440,10 +440,10 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 }
 
 func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
@@ -466,10 +466,10 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 }
 
 func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
@@ -488,10 +488,10 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 }
 
 func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
-	var c docker_helpers.MockClient
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: &c}
+	e := executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
@@ -615,7 +615,7 @@ type volumesTestCase struct {
 	gitStrategy              string
 	adjustConfiguration      func(e *executor)
 	volumesManagerAssertions func(*volumes.MockManager)
-	clientAssertions         func(*docker_helpers.MockClient)
+	clientAssertions         func(*docker.MockClient)
 	createVolumeManager      bool
 	expectedError            error
 }
@@ -624,7 +624,7 @@ var volumesTestsDefaultBuildsDir = "/default-builds-dir"
 var volumesTestsDefaultCacheDir = "/default-cache-dir"
 
 func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
-	clientMock := new(docker_helpers.MockClient)
+	clientMock := new(docker.MockClient)
 	volumesManagerMock := new(volumes.MockManager)
 
 	oldCreateVolumesManager := createVolumesManager
@@ -1041,7 +1041,7 @@ func TestCreateDependencies(t *testing.T) {
 						Return(nil).
 						Once()
 				},
-				clientAssertions: func(c *docker_helpers.MockClient) {
+				clientAssertions: func(c *docker.MockClient) {
 					hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
 						return assert.Equal(t, test.expectedServiceVolumes, conf.Binds)
 					})
@@ -1084,9 +1084,9 @@ func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) executor 
 		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
 		err = ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
 		require.NoError(t, err)
-		docker_helpers.HomeDirectory = tempHomeDir
+		docker.HomeDirectory = tempHomeDir
 	} else {
-		docker_helpers.HomeDirectory = ""
+		docker.HomeDirectory = ""
 	}
 
 	e := executor{}
@@ -1280,14 +1280,14 @@ func TestAuthConfigOverwritingOrder(t *testing.T) {
 	})
 }
 
-func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker_helpers.MockClient, imageName string)) {
+func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
 	t.Run("get:"+imageName, func(t *testing.T) {
-		var c docker_helpers.MockClient
+		c := new(docker.MockClient)
 		defer c.AssertExpectations(t)
 
-		e.client = &c
+		e.client = c
 
-		setClientExpectations(&c, imageName)
+		setClientExpectations(c, imageName)
 
 		image, err := e.getDockerImage(imageName)
 		assert.NoError(t, err, "Should not generate error")
@@ -1295,27 +1295,27 @@ func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExp
 	})
 }
 
-func testDeniesDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker_helpers.MockClient, imageName string)) {
+func testDeniesDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
 	t.Run("deny:"+imageName, func(t *testing.T) {
-		var c docker_helpers.MockClient
+		c := new(docker.MockClient)
 		defer c.AssertExpectations(t)
 
-		e.client = &c
+		e.client = c
 
-		setClientExpectations(&c, imageName)
+		setClientExpectations(c, imageName)
 
 		_, err := e.getDockerImage(imageName)
 		assert.Error(t, err, "Should generate error")
 	})
 }
 
-func addFindsLocalImageExpectations(c *docker_helpers.MockClient, imageName string) {
+func addFindsLocalImageExpectations(c *docker.MockClient, imageName string) {
 	c.On("ImageInspectWithRaw", mock.Anything, imageName).
 		Return(types.ImageInspect{ID: "this-image"}, nil, nil).
 		Once()
 }
 
-func addPullsRemoteImageExpectations(c *docker_helpers.MockClient, imageName string) {
+func addPullsRemoteImageExpectations(c *docker.MockClient, imageName string) {
 	c.On("ImageInspectWithRaw", mock.Anything, imageName).
 		Return(types.ImageInspect{ID: "not-this-image"}, nil, nil).
 		Once()
@@ -1329,7 +1329,7 @@ func addPullsRemoteImageExpectations(c *docker_helpers.MockClient, imageName str
 		Once()
 }
 
-func addDeniesPullExpectations(c *docker_helpers.MockClient, imageName string) {
+func addDeniesPullExpectations(c *docker.MockClient, imageName string) {
 	c.On("ImageInspectWithRaw", mock.Anything, imageName).
 		Return(types.ImageInspect{ID: "image"}, nil, nil).
 		Once()
@@ -1435,7 +1435,7 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 type containerConfigExpectations func(*testing.T, *container.Config, *container.HostConfig)
 
 type dockerConfigurationTestFakeDockerClient struct {
-	docker_helpers.MockClient
+	docker.MockClient
 
 	cce containerConfigExpectations
 	t   *testing.T
@@ -1695,7 +1695,7 @@ func TestDockerSysctlsSetting(t *testing.T) {
 }
 
 type networksTestCase struct {
-	clientAssertions          func(*docker_helpers.MockClient)
+	clientAssertions          func(*docker.MockClient)
 	networksManagerAssertions func(*networks.MockManager)
 	createNetworkManager      bool
 	networkPerBuild           string
@@ -1768,7 +1768,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 		"removing container failed": {
 			createNetworkManager: true,
 			networkPerBuild:      "true",
-			clientAssertions: func(c *docker_helpers.MockClient) {
+			clientAssertions: func(c *docker.MockClient) {
 				c.On("NetworkList", mock.Anything, mock.Anything).
 					Return([]types.NetworkResource{}, nil).
 					Once()
@@ -1831,7 +1831,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 func getExecutorForNetworksTests(t *testing.T, test networksTestCase) (*executor, func()) {
 	t.Helper()
 
-	clientMock := new(docker_helpers.MockClient)
+	clientMock := new(docker.MockClient)
 	networksManagerMock := new(networks.MockManager)
 
 	oldCreateNetworksManager := createNetworksManager
@@ -2072,7 +2072,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 func TestAddServiceHealthCheck(t *testing.T) {
 	tests := map[string]struct {
 		networkMode            string
-		dockerClientAssertions func(*docker_helpers.MockClient)
+		dockerClientAssertions func(*docker.MockClient)
 		expectedEnvironment    []string
 		expectedErr            error
 	}{
@@ -2081,7 +2081,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 		},
 		"get ports via environment": {
 			networkMode: "test",
-			dockerClientAssertions: func(c *docker_helpers.MockClient) {
+			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(types.ContainerJSON{
 						Config: &container.Config{
@@ -2099,7 +2099,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 		},
 		"get port from many": {
 			networkMode: "test",
-			dockerClientAssertions: func(c *docker_helpers.MockClient) {
+			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(types.ContainerJSON{
 						Config: &container.Config{
@@ -2120,7 +2120,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 		},
 		"no ports defined": {
 			networkMode: "test",
-			dockerClientAssertions: func(c *docker_helpers.MockClient) {
+			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(types.ContainerJSON{
 						Config: &container.Config{
@@ -2133,7 +2133,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 		},
 		"container inspect error": {
 			networkMode: "test",
-			dockerClientAssertions: func(c *docker_helpers.MockClient) {
+			dockerClientAssertions: func(c *docker.MockClient) {
 				c.On("ContainerInspect", mock.Anything, mock.Anything).
 					Return(types.ContainerJSON{}, fmt.Errorf("%v", "test error")).
 					Once()
@@ -2144,7 +2144,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			client := new(docker_helpers.MockClient)
+			client := new(docker.MockClient)
 
 			if test.dockerClientAssertions != nil {
 				test.dockerClientAssertions(client)
@@ -2170,5 +2170,5 @@ func TestAddServiceHealthCheck(t *testing.T) {
 }
 
 func init() {
-	docker_helpers.HomeDirectory = ""
+	docker.HomeDirectory = ""
 }
