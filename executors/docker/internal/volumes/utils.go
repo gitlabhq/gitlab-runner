@@ -43,8 +43,8 @@ func IsHostMountedVolume(volumeParser parser.Parser, dir string, volumes ...stri
 	return false, nil
 }
 
-func hashContainerPath(containerPath string) string {
-	return fmt.Sprintf("%x", md5.Sum([]byte(containerPath)))
+func hashPath(path string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(path)))
 }
 
 type ErrVolumeAlreadyDefined struct {
@@ -55,6 +55,11 @@ func (e *ErrVolumeAlreadyDefined) Error() string {
 	return fmt.Sprintf("volume for container path %q is already defined", e.containerPath)
 }
 
+func (e *ErrVolumeAlreadyDefined) Is(err error) bool {
+	_, ok := err.(*ErrVolumeAlreadyDefined)
+	return ok
+}
+
 func NewErrVolumeAlreadyDefined(containerPath string) *ErrVolumeAlreadyDefined {
 	return &ErrVolumeAlreadyDefined{
 		containerPath: containerPath,
@@ -63,12 +68,12 @@ func NewErrVolumeAlreadyDefined(containerPath string) *ErrVolumeAlreadyDefined {
 
 type pathList map[string]bool
 
-func (m pathList) Add(containerPath string) error {
-	if m[containerPath] {
-		return NewErrVolumeAlreadyDefined(containerPath)
+func (m pathList) Add(path string) error {
+	if m[path] {
+		return NewErrVolumeAlreadyDefined(path)
 	}
 
-	m[containerPath] = true
+	m[path] = true
 
 	return nil
 }
