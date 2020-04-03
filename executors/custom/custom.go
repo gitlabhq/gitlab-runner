@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -238,6 +239,8 @@ func (e *executor) Cleanup() {
 		// at this moment we don't care about the errors
 		return
 	}
+
+	defer os.RemoveAll(e.tempDir)
 
 	// nothing to do, as there's no cleanup_script
 	if e.config.CleanupExec == "" {
