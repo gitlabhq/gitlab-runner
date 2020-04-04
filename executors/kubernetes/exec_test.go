@@ -34,6 +34,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 )
 
 type fakeRemoteExecutor struct {
@@ -162,7 +164,15 @@ func execPodWithPhase(phase api.PodPhase) *api.Pod {
 	}
 }
 
-func TestExecShouldRetry(t *testing.T) {
+func TestExecOptions_ShouldRetry(t *testing.T) {
+	testCommandShouldRetry(t, &ExecOptions{})
+}
+
+func TestAttachOptions_ShouldRetry(t *testing.T) {
+	testCommandShouldRetry(t, &AttachOptions{})
+}
+
+func testCommandShouldRetry(t *testing.T, retryable retry.Retryable) {
 	tests := map[string]struct {
 		err                 error
 		tries               int
@@ -214,8 +224,7 @@ func TestExecShouldRetry(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			retry := ExecOptions{}
-			assert.Equal(t, tt.expectedShouldRetry, retry.ShouldRetry(tt.tries, tt.err))
+			assert.Equal(t, tt.expectedShouldRetry, retryable.ShouldRetry(tt.tries, tt.err))
 		})
 	}
 }

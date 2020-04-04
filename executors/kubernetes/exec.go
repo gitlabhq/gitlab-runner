@@ -107,6 +107,22 @@ func (p *AttachOptions) Run() error {
 	return p.Executor.Execute(http.MethodPost, req.URL(), p.Config, stdin, nil, nil, false)
 }
 
+func (p *AttachOptions) ShouldRetry(times int, err error) bool {
+	return shouldRetryKubernetesError(times, err)
+}
+
+func shouldRetryKubernetesError(times int, err error) bool {
+	var statusError *kubeerrors.StatusError
+	if times < commandConnectFailureMaxTries &&
+		errors.As(err, &statusError) &&
+		statusError.ErrStatus.Code == http.StatusInternalServerError &&
+		statusError.ErrStatus.Message == errorDialingBackendEOFMessage {
+		return true
+	}
+
+	return false
+}
+
 // ExecOptions declare the arguments accepted by the Exec command
 type ExecOptions struct {
 	Namespace     string
@@ -167,15 +183,7 @@ func (p *ExecOptions) Run() error {
 }
 
 func (p *ExecOptions) ShouldRetry(times int, err error) bool {
-	var statusError *kubeerrors.StatusError
-	if times < commandConnectFailureMaxTries &&
-		errors.As(err, &statusError) &&
-		statusError.ErrStatus.Code == http.StatusInternalServerError &&
-		statusError.ErrStatus.Message == errorDialingBackendEOFMessage {
-		return true
-	}
-
-	return false
+	return shouldRetryKubernetesError(times, err)
 }
 
 func init() {
