@@ -140,7 +140,6 @@ func TestBuildSuccessRawVariable(t *testing.T) {
 		test, ok := tests[shell]
 		if !ok {
 			t.Skip()
-			return
 		}
 
 		successfulBuild, err := common.GetRemoteBuildResponse(test.command)
