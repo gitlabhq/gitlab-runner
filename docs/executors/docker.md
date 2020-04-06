@@ -656,6 +656,8 @@ When `always` is used, the Runner will try to pull the image even if a local
 copy is available. This policy is fast and efficient because
 [all image layers are cached](https://kubernetes.io/docs/concepts/configuration/overview/#container-images).
 
+If the image is not found, then the build will fail with an error similar to:
+
 ```plaintext
 Pulling docker image registry.tld/my/image:latest ...
 ERROR: Build failed: Error: image registry.tld/my/image:latest not found
