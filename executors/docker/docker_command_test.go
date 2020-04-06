@@ -8,7 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,32 +20,66 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
+
+var getWindowsImageOnce sync.Once
+var windowsImage string
 
 func TestDockerCommandSuccessRun(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
 
-	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: successfulBuild,
+}
+
+func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {
+	executor := "docker"
+	image := common.TestAlpineImage
+
+	if runtime.GOOS == "windows" {
+		executor = "docker-windows"
+		image = getWindowsImage(t)
+	}
+
+	jobResp, err := getJobResp()
+	require.NoError(t, err)
+
+	return common.Build{
+		JobResponse: jobResp,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
+				Executor: executor,
 				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
+					Image:      image,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
 	}
+}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
+func getWindowsImage(t *testing.T) string {
+	getWindowsImageOnce.Do(func() {
+		client, err := docker.New(docker.Credentials{}, "")
+		require.NoError(t, err, "creating docker client")
+		defer client.Close()
+
+		info, err := client.Info(context.Background())
+		require.NoError(t, err, "docker info")
+
+		windowsVersion, err := windows.Version(info.OperatingSystem)
+		require.NoError(t, err)
+		windowsImage = fmt.Sprintf(common.TestWindowsImage, windowsVersion)
+	})
+
+	return windowsImage
 }
 
 func TestDockerCommandUsingCustomClonePath(t *testing.T) {
@@ -123,22 +159,9 @@ func TestDockerCommandBuildFail(t *testing.T) {
 		return
 	}
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
+	build := getBuildForOS(t, common.GetRemoteFailedBuild)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "exit code 1")
@@ -277,16 +300,8 @@ func TestDockerCommandMissingImage(t *testing.T) {
 		return
 	}
 
-	build := &common.Build{
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image: "some/non-existing/image",
-				},
-			},
-		},
-	}
+	build := getBuildForOS(t, common.GetSuccessfulBuild)
+	build.Runner.Docker.Image = "some/non-existing/image"
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -305,16 +320,8 @@ func TestDockerCommandMissingTag(t *testing.T) {
 		return
 	}
 
-	build := &common.Build{
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image: "docker:missing-tag",
-				},
-			},
-		},
-	}
+	build := getBuildForOS(t, common.GetSuccessfulBuild)
+	build.Runner.Docker.Image = "docker:missing-tag"
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -364,20 +371,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 		return
 	}
 
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
+	build := getBuildForOS(t, common.GetRemoteLongRunningBuild)
 
 	trace := &common.Trace{Writer: os.Stdout}
 
@@ -393,7 +387,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	err := build.Run(&common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "canceled")
 }
