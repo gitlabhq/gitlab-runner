@@ -662,19 +662,16 @@ Pulling docker image registry.tld/my/image:latest ...
 ERROR: Build failed: Error: image registry.tld/my/image:latest not found
 ```
 
-> **Note:**
-For versions prior to `v1.8`, when using the `always` pull policy, it could
-fall back to local copy of an image and print a warning:
->
-> ```plaintext
-> Pulling docker image registry.tld/my/image:latest ...
-> WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
-> WARNING: Locally found image will be used instead.
-> ```
->
-That is changed in version `v1.8`. To understand why we changed this and
-how incorrect usage of may be revealed please look into issue
-[#1905](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
+When using the `always` pull policy in GitLab Runner versions older than `v1.8`, it could
+fall back to the local copy of an image and print a warning:
+
+```plaintext
+Pulling docker image registry.tld/my/image:latest ...
+WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
+WARNING: Locally found image will be used instead.
+```
+
+This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
 
 **When to use this pull policy?**
 
