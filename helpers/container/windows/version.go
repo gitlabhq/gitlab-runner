@@ -6,11 +6,13 @@ import (
 )
 
 const (
+	// V1803 is the Windows version that is 1803 sac.
+	V1803 = "1803"
 	// V1809 is the Windows version that is 1809 and also known as Windows 2019
 	// ltsc.
 	V1809 = "1809"
-	// V1803 is the Windows version that is 1803 sac.
-	V1803 = "1803"
+	// V1903 is the Windows version that is 1903 sac.
+	V1903 = "1903"
 )
 
 // UnsupportedWindowsVersionError represents that the version specified is not
@@ -34,8 +36,9 @@ func (e *UnsupportedWindowsVersionError) Is(err error) bool {
 }
 
 var supportedWindowsVersions = []string{
-	V1809,
 	V1803,
+	V1809,
+	V1903,
 }
 
 // Version checks the specified operatingSystem to see if it's one of the
