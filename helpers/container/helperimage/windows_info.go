@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	baseImage1809 = "servercore1809"
 	baseImage1803 = "servercore1803"
+	baseImage1809 = "servercore1809"
+	baseImage1903 = "servercore1903"
 
 	windowsSupportedArchitecture = "x86_64"
 )
@@ -16,6 +17,7 @@ const (
 var helperImages = map[string]string{
 	windows.V1803: baseImage1803,
 	windows.V1809: baseImage1809,
+	windows.V1903: baseImage1903,
 }
 
 var powerShellCmd = []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"}
