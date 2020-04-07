@@ -27,7 +27,7 @@ func errorIfGitDirectory(path string) *os.PathError {
 	return &os.PathError{
 		Op:   ".git inside of archive",
 		Path: path,
-		Err:  errors.New("Trying to archive or extract .git path"),
+		Err:  errors.New("trying to archive or extract .git path"),
 	}
 }
 

@@ -111,7 +111,7 @@ func (s *Client) Connect() error {
 
 func (s *Client) Exec(cmd string) error {
 	if s.client == nil {
-		return errors.New("Not connected")
+		return errors.New("not connected")
 	}
 
 	session, err := s.client.NewSession()
@@ -136,7 +136,7 @@ func (s *Command) fullCommand() string {
 
 func (s *Client) Run(ctx context.Context, cmd Command) error {
 	if s.client == nil {
-		return errors.New("Not connected")
+		return errors.New("not connected")
 	}
 
 	session, err := s.client.NewSession()

@@ -153,7 +153,7 @@ func (s *executor) setupResources() error {
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if err = s.AbstractExecutor.Prepare(options); err != nil {
-		return fmt.Errorf("AbstractExecutor Prepare() failed with: %w", err)
+		return fmt.Errorf("prepare AbstractExecutor: %w", err)
 	}
 
 	if s.BuildShell.PassFile {

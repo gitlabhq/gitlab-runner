@@ -35,7 +35,7 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.Debugln("Starting Docker command...")
 
 	if len(s.BuildShell.DockerCommand) == 0 {
-		return errors.New("Script is not compatible with Docker")
+		return errors.New("script is not compatible with Docker")
 	}
 
 	_, err = s.getPrebuiltImage()
