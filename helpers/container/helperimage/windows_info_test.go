@@ -63,6 +63,17 @@ func Test_windowsInfo_create(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
+			expectedInfo: Info{
+				Architecture:            windowsSupportedArchitecture,
+				Name:                    name,
+				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1909),
+				IsSupportingLocalImport: false,
+				Cmd:                     powerShellCmd,
+			},
+			expectedErr: nil,
+		},
+		{
 			operatingSystem: "some random string",
 			expectedErr:     windows.NewUnsupportedWindowsVersionError("some random string"),
 		},
