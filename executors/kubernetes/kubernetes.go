@@ -1182,7 +1182,6 @@ func createFn() common.Executor {
 
 func featuresFn(features *common.FeaturesInfo) {
 	features.Variables = true
-	features.RawVariables = true
 	features.Image = true
 	features.Services = true
 	features.Artifacts = true

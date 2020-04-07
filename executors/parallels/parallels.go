@@ -359,7 +359,6 @@ func init() {
 
 	featuresUpdater := func(features *common.FeaturesInfo) {
 		features.Variables = true
-		features.RawVariables = true
 	}
 
 	common.RegisterExecutorProvider("parallels", executors.DefaultExecutorProvider{
