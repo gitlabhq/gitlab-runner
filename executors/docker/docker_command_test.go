@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -98,10 +99,9 @@ func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 		Raw:   true,
 	})
 
-	var buf bytes.Buffer
-	err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+	out, err := buildtest.RunBuildReturningOutput(t, &build)
 	assert.NoError(t, err)
-	assert.Contains(t, buf.String(), value)
+	assert.Contains(t, out, value)
 }
 
 func TestDockerCommandUsingCustomClonePath(t *testing.T) {
