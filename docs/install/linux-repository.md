@@ -1,5 +1,5 @@
 ---
-last_updated: 2017-10-12
+last_updated: 2020-03-14
 ---
 
 # Install GitLab Runner using the official GitLab repositories
@@ -8,6 +8,7 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 
 | Distribution | Version                    | End of Life date      |
 |--------------|----------------------------|-----------------------|
+| Debian       | buster                     |                       |
 | Debian       | stretch                    | approx. 2022          |
 | Debian       | jessie                     | June 2020             |
 | Ubuntu       | bionic                     | April 2023            |
@@ -17,7 +18,7 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Mint         | sarah                      | approx. 2021          |
 | RHEL/CentOS  | 7                          | June 2024             |
 | RHEL/CentOS  | 6                          | November 2020         |
-| Fedora       | 29                         | approx. November 2019 |
+| Fedora       | 29                         | approx. November 2019 *Deprecated* |
 | Fedora       | 30                         | approx. June 2020 |
 
 ## Prerequisites
@@ -49,6 +50,11 @@ To install the Runner:
 
 1. Install the latest version of GitLab Runner, or skip to the next step to
    install a specific version:
+
+   NOTE: **Note:**
+   Debian buster users should [disable skel](#disable-skel) to prevent
+   [No such file or directory Job
+   failures](https://gitlab.com/gitlab-org/gitlab-runner/issues/1379)
 
    ```shell
    # For Debian/Ubuntu/Mint
@@ -118,13 +124,33 @@ sudo yum install gitlab-runner
 You can [manually download and install the
 packages](linux-manually.md#using-debrpm-package) if necessary.
 
+## Disable `skel`
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/1379) in GitLab 12.10.
+
+Sometimes the default [skeleton (`skel`) directory](https://www.thegeekdiary.com/understanding-the-etc-skel-directory-in-linux/)
+causes [issues for GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/issues/4449),
+and it fails to run a job. When installing GitLab Runner, set the environment variable
+`GITLAB_RUNNER_DISABLE_SKEL` to `true` before you install the package. This will create
+the `$HOME` directory without the files inside of `skel`:
+
+For example:
+
+```shell
+# For Debian/Ubuntu/Mint
+export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E apt-get install gitlab-runner
+
+# For RHEL/CentOS/Fedora
+export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E yum install gitlab-runner
+```
+
 ## Upgrading to GitLab Runner 10
 
 To upgrade GitLab Runner from a version prior to 10.0:
 
 1. Remove the old repository:
 
-   ```
+   ```shell
    # For Debian/Ubuntu/Mint
    sudo rm /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list
 
@@ -137,7 +163,7 @@ To upgrade GitLab Runner from a version prior to 10.0:
 
 1. For RHEL/CentOS/Fedora, run:
 
-   ```
+   ```shell
    sudo /usr/share/gitlab-runner/post-install
    ```
 

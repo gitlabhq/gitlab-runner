@@ -1,11 +1,14 @@
 package helperimage
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 )
 
 func Test_windowsInfo_create(t *testing.T) {
@@ -15,6 +18,17 @@ func Test_windowsInfo_create(t *testing.T) {
 		expectedInfo    Info
 		expectedErr     error
 	}{
+		{
+			operatingSystem: "Windows Server Datacenter Version 1803 (OS Build 17134.590)",
+			expectedInfo: Info{
+				Architecture:            windowsSupportedArchitecture,
+				Name:                    name,
+				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1803),
+				IsSupportingLocalImport: false,
+				Cmd:                     powerShellCmd,
+			},
+			expectedErr: nil,
+		},
 		{
 			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
 			expectedInfo: Info{
@@ -38,11 +52,11 @@ func Test_windowsInfo_create(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			operatingSystem: "Windows Server Datacenter Version 1803 (OS Build 17134.590)",
+			operatingSystem: "Windows Server Datacenter Version 1903 (OS Build 18362.592)",
 			expectedInfo: Info{
 				Architecture:            windowsSupportedArchitecture,
 				Name:                    name,
-				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1803),
+				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1903),
 				IsSupportingLocalImport: false,
 				Cmd:                     powerShellCmd,
 			},
@@ -50,7 +64,7 @@ func Test_windowsInfo_create(t *testing.T) {
 		},
 		{
 			operatingSystem: "some random string",
-			expectedErr:     newUnsupportedWindowsVersionError("some random string"),
+			expectedErr:     windows.NewUnsupportedWindowsVersionError("some random string"),
 		},
 	}
 
@@ -61,15 +75,26 @@ func Test_windowsInfo_create(t *testing.T) {
 			image, err := w.Create(revision, Config{OperatingSystem: test.operatingSystem})
 
 			assert.Equal(t, test.expectedInfo, image)
-			assert.Equal(t, test.expectedErr, err)
+			assert.True(t, errors.Is(err, test.expectedErr), "expected err %T, but got %T", test.expectedErr, err)
 		})
 	}
 }
 
-func TestNewUnsupportedWindowsVersionError(t *testing.T) {
-	for _, expectedVersion := range []string{"random1", "random2"} {
-		err := newUnsupportedWindowsVersionError(expectedVersion)
-		require.Error(t, err)
-		assert.Equal(t, expectedVersion, err.version)
+func Test_windowsInfo_baseImage_NoSupportedVersion(t *testing.T) {
+	oldHelperImages := helperImages
+	defer func() {
+		helperImages = oldHelperImages
+	}()
+
+	helperImages = map[string]string{
+		windows.V1809: baseImage1809,
 	}
+
+	unsupportedVersion := "Windows Server Datacenter Version 1803 (OS Build 17134.590)"
+
+	w := new(windowsInfo)
+	_, err := w.baseImage(unsupportedVersion)
+	var unsupportedErr *windows.UnsupportedWindowsVersionError
+	require.True(t, errors.As(err, &unsupportedErr), "expected err %T, but got %T", unsupportedErr, err)
+	assert.Equal(t, unsupportedVersion, unsupportedErr.Version)
 }

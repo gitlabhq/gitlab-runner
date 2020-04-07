@@ -22,7 +22,7 @@ requested by their `coordinator`.
 
 Is it possible to run GitLab Runner in debug/verbose mode. From a terminal, run:
 
-```sh
+```shell
 gitlab-runner --debug run
 ```
 
@@ -97,7 +97,7 @@ are described. This feature should work on most Unix systems out of the box. How
 Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
 Runner's binaries), when used, the Runner will crash at start with an error similar to:
 
-```text
+```plaintext
 Failed to load config Invalid OffPeakPeriods value: open /usr/local/go/lib/time/zoneinfo.zip: no such file or directory
 ```
 
@@ -194,7 +194,7 @@ detect it if it is available and automatically make use of it.
 You need to prepend `call` to your batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
 is a more complete example:
 
-```
+```yaml
 before_script:
   - call C:\path\to\test.bat
 ```
@@ -227,7 +227,7 @@ See issue [#332](https://gitlab.com/gitlab-org/gitlab-runner/issues/332) for mor
 When installing and starting the GitLab Runner service on Windows you can
 meet with such error:
 
-```sh
+```shell
 gitlab-runner install --password WINDOWS_MACHINE_PASSWORD
 gitlab-runner start
 FATA[0000] Failed to start GitLab Runner: The service did not start due to a logon failure.
@@ -271,6 +271,10 @@ After adding the `SeServiceLogonRight` for the user used in service configuratio
 the command `gitlab-runner start` should finish without failures
 and the service should be started properly.
 
+### Job marked as success and terminated midway using Kubernetes executor
+
+Please see [Job execution](../executors/kubernetes.md#job-execution).
+
 ## macOS troubleshooting
 
 The following relate to Runner troubleshooting on macOS.
@@ -307,7 +311,7 @@ causes to why this happens:
    `SessionCreate`. However, in order to upgrade, you need to manually
    reinstall the `LaunchAgent` script:
 
-   ```sh
+   ```shell
    gitlab-runner uninstall
    gitlab-runner install
    gitlab-runner start

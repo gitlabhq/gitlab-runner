@@ -1,8 +1,9 @@
 package helpers
 
 import (
-	"github.com/docker/docker/pkg/homedir"
 	"os"
+
+	"github.com/docker/docker/pkg/homedir"
 )
 
 func GetCurrentWorkingDirectory() string {

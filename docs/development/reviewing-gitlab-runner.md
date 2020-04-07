@@ -45,18 +45,18 @@ To open the report:
 
 1. At the end of the job's log, we should see a line like:
 
-   ```
+   ```plaintext
    ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
    ```
 
-   Because when this job was triggered, and `v11.8.0` was also the `latest` release, we see  a link to the
+   Because when this job was triggered, and `v11.8.0` was also the `latest` release, we see a link to the
    `latest` version bucket. The problem with `latest` is that the content there changes when
    new stable/patch versions are released.
 
    Each pipeline also creates a deployment for a specific reference (a branch name
    or a tag name). Several lines above we can see:
 
-   ```
+   ```plaintext
    ==> Download index file: https://gitlab-runner-downloads.s3.amazonaws.com/v11.8.0/index.html
    ```
 

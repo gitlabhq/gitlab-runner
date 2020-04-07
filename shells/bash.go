@@ -14,7 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-const bashDetectShell = `if [ -x /usr/local/bin/bash ]; then
+const BashDetectShellScript = `if [ -x /usr/local/bin/bash ]; then
 	exec /usr/local/bin/bash $@
 elif [ -x /usr/bin/bash ]; then
 	exec /usr/bin/bash $@
@@ -192,20 +192,31 @@ func (b *BashWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
 
-	if b.Shell != "" {
-		io.WriteString(w, "#!/usr/bin/env "+b.Shell+"\n\n")
-	}
+	b.writeShebang(w)
+	b.writeTrace(w, trace)
+	b.writeScript(w)
 
-	if trace {
-		io.WriteString(w, "set -o xtrace\n")
-	}
-
-	io.WriteString(w, "set -eo pipefail\n")
-	io.WriteString(w, "set +o noclobber\n")
-	io.WriteString(w, ": | eval "+helpers.ShellEscape(b.String())+"\n")
-	io.WriteString(w, "exit 0\n")
 	w.Flush()
 	return buffer.String()
+}
+
+func (b *BashWriter) writeShebang(w io.Writer) {
+	if b.Shell != "" {
+		_, _ = io.WriteString(w, "#!/usr/bin/env "+b.Shell+"\n\n")
+	}
+}
+
+func (b *BashWriter) writeTrace(w io.Writer, trace bool) {
+	if trace {
+		_, _ = io.WriteString(w, "set -o xtrace\n")
+	}
+}
+
+func (b *BashWriter) writeScript(w io.Writer) {
+	_, _ = io.WriteString(w, "set -eo pipefail\n")
+	_, _ = io.WriteString(w, "set +o noclobber\n")
+	_, _ = io.WriteString(w, ": | eval "+helpers.ShellEscape(b.String())+"\n")
+	_, _ = io.WriteString(w, "exit 0\n")
 }
 
 func (b *BashShell) GetName() string {
@@ -216,10 +227,10 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 	var detectScript string
 	var shellCommand string
 	if info.Type == common.LoginShell {
-		detectScript = strings.Replace(bashDetectShell, "$@", "--login", -1)
+		detectScript = strings.Replace(BashDetectShellScript, "$@", "--login", -1)
 		shellCommand = b.Shell + " --login"
 	} else {
-		detectScript = strings.Replace(bashDetectShell, "$@", "", -1)
+		detectScript = strings.Replace(BashDetectShellScript, "$@", "", -1)
 		shellCommand = b.Shell
 	}
 
@@ -244,12 +255,23 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 	return
 }
 
-func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
+func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
 	w := &BashWriter{
 		TemporaryPath: info.Build.TmpProjectDir(),
 		Shell:         b.Shell,
 	}
 
+	return b.generateScript(w, buildStage, info)
+}
+
+func (b *BashShell) generateScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
+	b.ensurePrepareStageHostnameMessage(w, buildStage, info)
+	err := b.writeScript(w, buildStage, info)
+	script := w.Finish(info.Build.IsDebugTraceEnabled())
+	return script, err
+}
+
+func (b *BashShell) ensurePrepareStageHostnameMessage(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) {
 	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo " + strconv.Quote("Running on $(hostname) via "+info.Build.Hostname+"..."))
@@ -257,10 +279,6 @@ func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.She
 			w.Line("echo " + strconv.Quote("Running on $(hostname)..."))
 		}
 	}
-
-	err = b.writeScript(w, buildStage, info)
-	script = w.Finish(info.Build.IsDebugTraceEnabled())
-	return
 }
 
 func (b *BashShell) IsDefault() bool {

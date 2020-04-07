@@ -6,11 +6,11 @@ import (
 	"github.com/docker/docker/api/types/container"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type volumesManagerAdapter struct {
-	docker_helpers.Client
+	docker.Client
 
 	e *executor
 }

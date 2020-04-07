@@ -2,7 +2,7 @@
   extends:
   - .docker
   stage: prepare
-  image: docker:19.03-git
+  image: docker:${DOCKER_VERSION}-git
   script:
   - source ./ci/build_ci_image
   only:

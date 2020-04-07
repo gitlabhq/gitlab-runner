@@ -16,28 +16,29 @@ login() {
 
 logout() {
     echo "Logging out of registry"
-    docker logout ${CI_REGISTRY}
+    docker logout "${CI_REGISTRY}"
 }
 
 pull () {
     echo "Pulling base image"
     registry_credentials_available || return 0
-    docker pull ${BUILD_IMAGE} || echo "${BUILD_IMAGE} image is not available. Will not use cache."
+    docker pull "${BUILD_IMAGE}" || echo "${BUILD_IMAGE} image is not available. Will not use cache."
 }
 
 push () {
     echo "Pushing image"
     registry_credentials_available || return 0
-    docker push ${BUILD_IMAGE}
+    docker push "${BUILD_IMAGE}"
 }
 
 
 build() {
     echo "Building image: ${BUILD_IMAGE}"
     docker build \
-           --cache-from ${BUILD_IMAGE} \
-           -t ${BUILD_IMAGE} \
-           -f ${BUILD_DOCKERFILE} \
+           --cache-from "${BUILD_IMAGE}" \
+           --build-arg DOCKER_VERSION="${DOCKER_VERSION}" \
+           -t "${BUILD_IMAGE}" \
+           -f "${BUILD_DOCKERFILE}" \
            .
 }
 

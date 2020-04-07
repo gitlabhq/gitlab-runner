@@ -22,7 +22,6 @@
     "style": "---"
   },
   "no-emphasis-as-heading": false,
-  "fenced-code-language": false,
   "first-line-h1": false,
   "code-block-style": {
     "style": "fenced"
@@ -84,6 +83,7 @@
       "markdownlint",
       "Mattermost",
       "Microsoft",
+      "Minikube",
       "MinIO",
       "NGINX Ingress",
       "NGINX",
@@ -98,6 +98,7 @@
       "Prometheus",
       "Puma",
       "Python",
+      "Rake",
       "Redis",
       "Redmine",
       "reCAPTCHA",

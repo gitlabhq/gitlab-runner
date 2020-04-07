@@ -102,6 +102,10 @@ Example:
   session_timeout = 1800
 ```
 
+NOTE: **Note:**
+If using the GitLab Runner docker image, you will also need to expose port 8093 by
+adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
+
 ## The `[[runners]]` section
 
 This defines one runner entry.
@@ -146,7 +150,7 @@ Example:
 
 ### How `clone_url` works
 
-In cases where the GitLab instance is exposed to an URL which can't be used
+In cases where the GitLab instance is exposed to a URL which can't be used
 by the runner, a `clone_url` can be configured. For example; GitLab is exposed
 to `https://gitlab.example.com`, but the runner can't reach that because of
 a firewall setup. If the runner can reach the node on `192.168.1.23`,
@@ -269,16 +273,16 @@ Example:
   volumes_from = ["storage_container:ro"]
   links = ["mysql_container:mysql"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
-  allowed_services = ["postgres:9.4", "postgres:latest"]
+  allowed_services = ["postgres:9", "redis:*", "mysql:*"]
   [[runners.docker.services]]
-    name: "mysql"
-    alias: "db"
+    name = "mysql"
+    alias = "db"
   [[runners.docker.services]]
-    name: "redis:2.8"
-    alias: "cache"
+    name = "redis:2.8"
+    alias = "cache"
   [[runners.docker.services]]
-    name: "postgres:9"
-    alias: "postgres-db"
+    name = "postgres:9"
+    alias = "postgres-db"
   [runners.docker.sysctls]
     "net.ipv4.ip_forward" = "1"
 ```
@@ -469,7 +473,7 @@ This defines the SSH connection parameters.
 
 Example:
 
-```
+```toml
 [runners.ssh]
   host = "my-production-server"
   port = "22"
@@ -531,7 +535,7 @@ The `OffPeakPeriods` setting contains an array of string patterns of
 time periods represented in a cron-style format. The line contains
 following fields:
 
-```
+```plaintext
 [second] [minute] [hour] [day of month] [month] [day of week] [year]
 ```
 
@@ -541,8 +545,7 @@ can be found [here][cronvendor].
 
 ## The `[runners.custom]` section
 
-Define configuration for the [custom
-executor](../executors/custom.md).
+Define configuration for the [custom executor](../executors/custom.md).
 
 | Parameter               | Type         | Required | Description                                                                                                                                                                                                                                                                                         |
 |-------------------------|--------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -697,7 +700,7 @@ Examples:
 
 ## The `[runners.kubernetes]` section
 
-> Added in GitLab Runner v1.6.0
+> Introduced in GitLab Runner v1.6.0.
 
 This defines the Kubernetes parameters.
 See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
@@ -805,8 +808,7 @@ before upgrading the Runner, otherwise the jobs will start failing with a "No su
 
 ## The `[runners.custom_build_dir]` section
 
-NOTE: **Note:**
-[Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
 
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories) parameters.
 
@@ -837,8 +839,8 @@ Example:
 
 ## The `[runners.referees]` section
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
-> Requires [GitLab v12.6](https://about.gitlab.com/blog/2019/12/22/gitlab-12-6-released/) or later.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
+> - Requires [GitLab v12.6](https://about.gitlab.com/releases/2019/12/22/gitlab-12-6-released/) or later.
 
 Use Runner Referees to pass extra job monitoring data to GitLab. Runner referees are special workers within the Runner manager that query and collect additional data related to a job and upload their results to GitLab as job artifacts.
 
@@ -856,7 +858,7 @@ Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml`
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `prometheus_address` | The server that collects metrics from Runner instances. It must be accessible by the Runner manager when the job finishes.          |
 | `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).   |
-| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics) queries that will be executed for each interval. |
+| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that will be executed for each interval. |
 
 Here is a complete configuration example for `node_exporter` metrics:
 

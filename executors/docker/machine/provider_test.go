@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 var machineDefaultConfig = &common.RunnerConfig{
@@ -177,7 +177,7 @@ func (m *testMachine) CanConnect(name string, skipCache bool) bool {
 	return true
 }
 
-func (m *testMachine) Credentials(name string) (dc docker_helpers.DockerCredentials, err error) {
+func (m *testMachine) Credentials(name string) (dc docker.Credentials, err error) {
 	if strings.Contains(name, "no-connect") {
 		err = errors.New("failed to connect")
 	}

@@ -18,6 +18,7 @@ tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
 /.gopath/
+/.tmp/
 
 testsdefinitions.txt
 /.testoutput/

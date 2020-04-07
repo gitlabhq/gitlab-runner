@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
@@ -72,6 +73,18 @@ const (
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
 )
 
+var BuildStages = []BuildStage{
+	BuildStagePrepare,
+	BuildStageGetSources,
+	BuildStageRestoreCache,
+	BuildStageDownloadArtifacts,
+	BuildStageUserScript,
+	BuildStageAfterScript,
+	BuildStageArchiveCache,
+	BuildStageUploadOnSuccessArtifacts,
+	BuildStageUploadOnFailureArtifacts,
+}
+
 type Build struct {
 	JobResponse `yaml:",inline"`
 
@@ -110,8 +123,14 @@ func (b *Build) Log() *logrus.Entry {
 }
 
 func (b *Build) ProjectUniqueName() string {
-	return fmt.Sprintf("runner-%s-project-%d-concurrent-%d",
-		b.Runner.ShortDescription(), b.JobInfo.ProjectID, b.ProjectRunnerID)
+	projectUniqueName := fmt.Sprintf(
+		"runner-%s-project-%d-concurrent-%d",
+		b.Runner.ShortDescription(),
+		b.JobInfo.ProjectID,
+		b.ProjectRunnerID,
+	)
+
+	return dns.MakeRFC1123Compatible(projectUniqueName)
 }
 
 func (b *Build) ProjectSlug() (string, error) {
@@ -257,8 +276,8 @@ func getStageDescription(stage BuildStage) string {
 		BuildStageGetSources:               "Getting source from Git repository",
 		BuildStageRestoreCache:             "Restoring cache",
 		BuildStageDownloadArtifacts:        "Downloading artifacts",
-		BuildStageUserScript:               "Running script from Job",
-		BuildStageAfterScript:              "Running after script",
+		BuildStageUserScript:               "Running before_script and script",
+		BuildStageAfterScript:              "Running after_script",
 		BuildStageArchiveCache:             "Saving cache",
 		BuildStageUploadOnFailureArtifacts: "Uploading artifacts for failed job",
 		BuildStageUploadOnSuccessArtifacts: "Uploading artifacts for successful job",
@@ -619,7 +638,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		Context: ctx,
 	}
 
-	provider := GetExecutor(b.Runner.Executor)
+	provider := GetExecutorProvider(b.Runner.Executor)
 	if provider == nil {
 		return errors.New("executor not found")
 	}

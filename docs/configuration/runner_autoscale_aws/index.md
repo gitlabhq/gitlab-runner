@@ -7,7 +7,7 @@ last_updated: 2019-08-21
 > **Author:** [Achilleas Pipinellis](https://gitlab.com/axil) ||
 > **Publication date:** 2017-11-24
 
-# Autoscaling GitLab Runner on AWS
+# Autoscaling GitLab Runner on AWS EC2
 
 One of the biggest advantages of GitLab Runner is its ability to automatically
 spin up and down VMs to make sure your builds get processed immediately. It's a
@@ -201,7 +201,7 @@ In the following example, we use Amazon S3:
 Here's some more info to further explore the cache mechanism:
 
 - [Reference for `runners.cache`](../advanced-configuration.md#the-runnerscache-section)
-- [Reference for `runners.cache.s3`](../advanced-configuration.html#the-runnerscaches3-section)
+- [Reference for `runners.cache.s3`](../advanced-configuration.md#the-runnerscaches3-section)
 - [Deploying and using a cache server for GitLab Runner](../autoscale.md#distributed-runners-caching)
 - [How cache works](https://docs.gitlab.com/ee/ci/yaml/#cache)
 

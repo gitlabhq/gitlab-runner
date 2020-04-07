@@ -77,7 +77,7 @@ be present in the `PATH`:
 - [Git](https://git-scm.com/download): Used to clone the repositories.
 - [Git LFS](https://git-lfs.github.com/): Pulls any LFS objects that
   might be in the repository.
-- [GitLab Runner](https://docs.gitlab.com/runner/install/): Used to
+- [GitLab Runner](../install/index.md): Used to
   download/update artifacts and cache.
 
 ## Stages

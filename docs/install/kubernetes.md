@@ -209,8 +209,8 @@ file content being the value associated with the key:
 - The hostname used should be the one the certificate is registered for.
 
 The GitLab Runner Helm Chart does not create a secret for you. In order to create
-the secret, you can prepare your certificate on you local machine, and then run
-the `kubectl create secret` command from the directory with the certificate:
+the secret, you tell Kubernetes to store the certificate as a secret and present it
+to the Runner containers as a file. To do this, run the following command:
 
 ```shell
 kubectl
@@ -222,8 +222,27 @@ kubectl
 Where:
 
 - `<NAMESPACE>` is the Kubernetes namespace where you want to install the GitLab Runner.
-- `<SECRET_NAME>` is the Kubernetes Secret resource name. For example: `gitlab-domain-cert`.
+- `<SECRET_NAME>` is the Kubernetes Secret resource name. (For example: `gitlab-domain-cert`.)
 - `<CERTIFICATE_FILENAME>` is the filename for the certificate in your current directory that will be imported into the secret.
+
+If the source file `<CERTIFICATE_FILENAME>` is not in the current directory or
+does not follow the format `<gitlab-hostname.crt>` then it will be necessary to
+specify the filename to use on the target:
+
+```shell
+kubectl
+  --namespace <NAMESPACE>
+  create secret generic <SECRET_NAME>
+  --from-file=<TARGET_FILENAME>=<CERTIFICATE_FILENAME>
+```
+
+Where:
+
+- `<TARGET_FILENAME>` is the name of the certificate file as presented to the Runner
+  containers. (For example: `gitlab-hostname.crt`.)
+- `<CERTIFICATE_FILENAME>` is the filename for the certificate relative to your
+  current directory that will be imported into the secret. (For example:
+  `cert-directory/my-gitlab-certificate.crt`)
 
 You then need to provide the secret's name to the GitLab Runner chart.
 Add the following to your `values.yaml`:
@@ -239,10 +258,34 @@ certsSecretName: <SECRET NAME>
 
 Where:
 
-- `<SECRET_NAME>` is the Kubernetes Secret resource name, for example `gitlab-domain-cert`.
+- `<SECRET_NAME>` is the Kubernetes Secret resource name, as in the above example, `gitlab-domain-cert`.
 
 More information on how GitLab Runner uses these certificates can be found in the
 [Runner Documentation](../configuration/tls-self-signed.md#supported-options-for-self-signed-certificates).
+
+## Check available GitLab Runner Helm Chart versions
+
+Versions of Helm Chart and GitLab Runner application do not follow the same versioning.
+Use the command below to get version mappings between Helm Chart and GitLab Runner:
+
+```shell
+helm search -l gitlab/gitlab-runner
+```
+
+Example of the output is shown below:
+
+```plaintext
+NAME                    CHART VERSION   APP VERSION DESCRIPTION
+...
+gitlab/gitlab-runner    0.14.0          12.8.0      GitLab Runner
+gitlab/gitlab-runner    0.13.1          12.7.1      GitLab Runner
+gitlab/gitlab-runner    0.13.0          12.7.0      GitLab Runner
+gitlab/gitlab-runner    0.12.0          12.6.0      GitLab Runner
+gitlab/gitlab-runner    0.11.0          12.5.0      GitLab Runner
+gitlab/gitlab-runner    0.10.1          12.4.1      GitLab Runner
+gitlab/gitlab-runner    0.10.0          12.4.0      GitLab Runner
+...
+```
 
 ## Installing GitLab Runner using the Helm Chart
 
@@ -275,6 +318,9 @@ Where:
 - `<CONFIG_VALUES_FILE>` is the path to values file containing your custom configuration. See the
   [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
 
+If you want to install a specific version of GitLab Runner Helm Chart, add `--version <RUNNER_HELM_CHART_VERSION>`
+to your `helm install` command.
+
 ## Updating GitLab Runner using the Helm Chart
 
 Once your GitLab Runner Chart is installed, configuration changes and chart updates should be done using `helm upgrade`:
@@ -290,6 +336,9 @@ Where:
   [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
 - `<RELEASE-NAME>` is the name you gave the chart when installing it.
   In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
+
+If you want to update to a specific version of GitLab Runner Helm Chart instead of the latest one, add `--version <RUNNER_HELM_CHART_VERSION>`
+to your `helm upgrade` command.
 
 ## Uninstalling GitLab Runner using the Helm Chart
 

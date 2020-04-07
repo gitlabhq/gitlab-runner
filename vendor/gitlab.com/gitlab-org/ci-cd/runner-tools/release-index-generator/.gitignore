@@ -1,7 +1,0 @@
-.tests/
-build/
-
-testdata/index.html
-testdata/release.sha256
-testdata/release.sha256.asc
-

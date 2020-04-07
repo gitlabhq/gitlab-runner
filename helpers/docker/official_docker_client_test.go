@@ -1,4 +1,4 @@
-package docker_helpers
+package docker
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 func prepareDockerClientAndFakeServer(t *testing.T, handler http.HandlerFunc) (Client, *httptest.Server) {
 	server := httptest.NewServer(handler)
 
-	credentials := DockerCredentials{
+	credentials := Credentials{
 		Host:      server.URL,
 		TLSVerify: false,
 	}
@@ -56,7 +56,7 @@ func TestNew_Version(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.expectedVersion, func(t *testing.T) {
-			client, err := New(DockerCredentials{}, c.version)
+			client, err := New(Credentials{}, c.version)
 			require.NoError(t, err)
 
 			test, ok := client.(*officialDockerClient)

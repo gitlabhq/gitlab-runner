@@ -8,11 +8,10 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
-	"gitlab.com/gitlab-org/gitlab-terminal"
+	terminal "gitlab.com/gitlab-org/gitlab-terminal"
 )
 
 // buildContainerTerminalTimeout is the error used when the build container is
@@ -80,7 +79,7 @@ type terminalConn struct {
 	cancelFn func()
 
 	executor    *commandExecutor
-	client      docker_helpers.Client
+	client      docker.Client
 	containerID string
 	shell       []string
 }
