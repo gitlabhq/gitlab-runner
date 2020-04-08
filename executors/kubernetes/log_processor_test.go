@@ -26,6 +26,11 @@ import (
 const testDate1 = "2020-01-30T16:28:25.479904159Z"
 const testDate2 = "2021-01-30T16:28:25.479904159Z"
 
+// delayBackoff is used in all instances of logProcessor which call Listen.
+// this ensures that there will be a delay when reconnecting and calling mocked methods
+// to avoid flaky tests
+var delayBackoff = backoff.Backoff{Min: 500 * time.Millisecond, Max: time.Second}
+
 type log struct {
 	line      string
 	timestamp *time.Time
@@ -276,6 +281,7 @@ func TestListenReadLines(t *testing.T) {
 
 	receivedLogs := make([]string, 0)
 	processor := &kubernetesLogProcessor{
+		backoff:      delayBackoff,
 		logger:       &common.BuildLogger{},
 		logProviders: []logStreamProvider{mockStreamProvider},
 	}
@@ -308,6 +314,7 @@ func TestListenCancelContext(t *testing.T) {
 		Return(nil, io.EOF)
 
 	processor := &kubernetesLogProcessor{
+		backoff:      delayBackoff,
 		logger:       &common.BuildLogger{},
 		logProviders: []logStreamProvider{mockStreamProvider},
 	}
@@ -351,7 +358,7 @@ func TestAttachReconnect(t *testing.T) {
 				Return(tt.logStreamReturnReaderCloser, tt.logStreamReturnError).
 				Times(expectedReconnectCount)
 
-			minBackoff := 100 * time.Millisecond
+			minBackoff := 500 * time.Millisecond
 			processor := &kubernetesLogProcessor{
 				logProviders: []logStreamProvider{mockStreamProvider},
 				logger:       &common.BuildLogger{},
@@ -397,6 +404,7 @@ func TestAttachCorrectSinceTime(t *testing.T) {
 		Once()
 
 	processor := &kubernetesLogProcessor{
+		backoff:      delayBackoff,
 		logProviders: []logStreamProvider{mockStreamProvider},
 		logger:       &common.BuildLogger{},
 	}
@@ -430,6 +438,7 @@ func TestAttachCloseStream(t *testing.T) {
 		Once()
 
 	processor := &kubernetesLogProcessor{
+		backoff:      delayBackoff,
 		logProviders: []logStreamProvider{mockStreamProvider},
 		logger:       &common.BuildLogger{},
 	}
@@ -491,6 +500,7 @@ func TestAttachReconnectWhenStreamEOF(t *testing.T) {
 			tt.mockStreamProviderAssertions(mockStreamProvider)
 
 			processor := &kubernetesLogProcessor{
+				backoff:      delayBackoff,
 				logProviders: []logStreamProvider{mockStreamProvider},
 				logger:       &common.BuildLogger{},
 			}
@@ -533,6 +543,7 @@ func TestResumesFromCorrectSinceTimeAfterSuccessThenFailure(t *testing.T) {
 		Once()
 
 	processor := &kubernetesLogProcessor{
+		backoff:      delayBackoff,
 		logProviders: []logStreamProvider{mockStreamProvider},
 		logger:       &common.BuildLogger{},
 	}
@@ -585,6 +596,7 @@ func TestScanHandlesCancelledContext(t *testing.T) {
 	cancel()
 	scanner, ch := processor.scan(ctx, logsToReadCloser(log{}))
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
