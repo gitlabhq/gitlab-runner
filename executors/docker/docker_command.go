@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type commandExecutor struct {
@@ -72,36 +73,67 @@ func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) 
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if s.buildContainer == nil {
-		var err error
-
-		// Start build container which will run actual build
-		s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
-		if err != nil {
-			return nil, err
+	if s.buildContainer != nil {
+		_, inspectErr := s.client.ContainerInspect(s.Context, s.buildContainer.ID)
+		if inspectErr == nil {
+			return s.buildContainer, nil
 		}
+
+		if !docker.IsErrNotFound(inspectErr) {
+			s.Warningln("Failed to inspect build container", s.buildContainer.ID, inspectErr.Error())
+		}
+	}
+
+	var err error
+	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
+	if err != nil {
+		return nil, err
 	}
 
 	return s.buildContainer, nil
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
-	var runOn *types.ContainerJSON
-	var err error
-	if cmd.Predefined {
-		runOn, err = s.requestNewPredefinedContainer()
-	} else {
-		runOn, err = s.requestBuildContainer()
-	}
+	maxAttempts, err := s.Build.GetExecutorJobSectionAttempts()
 	if err != nil {
-		return err
+		return fmt.Errorf("getting job section attempts: %w", err)
 	}
 
-	s.Debugln("Executing on", runOn.Name, "the", cmd.Script)
+	var runErr error
+	for attempts := 1; attempts <= maxAttempts; attempts++ {
+		if attempts > 1 {
+			s.Infoln(fmt.Sprintf("Retrying %s", cmd.Stage))
+		}
 
-	s.SetCurrentStage(DockerExecutorStageRun)
+		ctr, err := s.getContainer(cmd)
+		if err != nil {
+			return err
+		}
 
-	return s.watchContainer(cmd.Context, runOn.ID, bytes.NewBufferString(cmd.Script))
+		s.Debugln("Executing on", ctr.Name, "the", cmd.Script)
+		s.SetCurrentStage(DockerExecutorStageRun)
+
+		runErr = s.watchContainer(cmd.Context, ctr.ID, bytes.NewBufferString(cmd.Script))
+		if !docker.IsErrNotFound(runErr) {
+			return runErr
+		}
+
+		s.Errorln(fmt.Sprintf("Container %q not found or removed. Will retry...", ctr.ID))
+	}
+
+	if runErr != nil && maxAttempts > 1 {
+		s.Errorln("Execution attempts exceeded")
+	}
+
+	return runErr
+}
+
+func (s *commandExecutor) getContainer(cmd common.ExecutorCommand) (*types.ContainerJSON, error) {
+	if cmd.Predefined {
+		return s.requestNewPredefinedContainer()
+	}
+
+	return s.requestBuildContainer()
 }
 
 func (s *commandExecutor) GetMetricsSelector() string {
