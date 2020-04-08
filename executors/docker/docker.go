@@ -84,6 +84,8 @@ type executor struct {
 	networksManager networks.Manager
 
 	networkMode container.NetworkMode
+
+	projectUniqRandomizedName string
 }
 
 func init() {
@@ -461,7 +463,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	}
 
 	serviceSlug := strings.Replace(service, "/", "__", -1)
-	containerName := fmt.Sprintf("%s-%s-%d", e.Build.ProjectUniqueName(), serviceSlug, serviceIndex)
+	containerName := fmt.Sprintf("%s-%s-%d", e.getProjectUniqRandomizedName(), serviceSlug, serviceIndex)
 
 	// this will fail potentially some builds if there's name collision
 	e.removeContainer(e.Context, containerName)
@@ -501,7 +503,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		return nil, err
 	}
 
-	e.Debugln("Starting service container", resp.ID, "...")
+	e.Debugln(fmt.Sprintf("Starting service container %s (%s)...", containerName, resp.ID))
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
 		e.temporary = append(e.temporary, resp.ID)
@@ -521,6 +523,15 @@ func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
 			e.networkMode.UserDefined(): {Aliases: aliases},
 		},
 	}
+}
+
+func (e *executor) getProjectUniqRandomizedName() string {
+	if e.projectUniqRandomizedName == "" {
+		uuid, _ := helpers.GenerateRandomUUID(8)
+		e.projectUniqRandomizedName = fmt.Sprintf("%s-%s", e.Build.ProjectUniqueName(), uuid)
+	}
+
+	return e.projectUniqRandomizedName
 }
 
 func (e *executor) getServicesDefinitions() (common.Services, error) {
@@ -709,7 +720,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 
 	// Always create unique, but sequential name
 	containerIndex := len(e.builds)
-	containerName := e.Build.ProjectUniqueName() + "-" +
+	containerName := e.getProjectUniqRandomizedName() + "-" +
 		containerType + "-" + strconv.Itoa(containerIndex)
 
 	config := &container.Config{
@@ -924,17 +935,28 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 }
 
 func (e *executor) removeContainer(ctx context.Context, id string) error {
+	e.Debugln("Removing container", id)
+
 	e.disconnectNetwork(ctx, id)
+
 	options := types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
+
 	err := e.client.ContainerRemove(ctx, id, options)
-	e.Debugln("Removed container", id, "with", err)
-	return err
+	if err != nil {
+		e.Debugln("Removing container", id, "finished with error", err)
+		return err
+	}
+
+	e.Debugln("Removed container", id)
+	return nil
 }
 
 func (e *executor) disconnectNetwork(ctx context.Context, id string) {
+	e.Debugln("Disconnecting container", id, "from networks")
+
 	netList, err := e.client.NetworkList(ctx, types.NetworkListOptions{})
 	if err != nil {
 		e.Debugln("Can't get network list. ListNetworks exited with", err)
@@ -1313,12 +1335,14 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 		},
 	}
 
-	e.Debugln("Waiting for service container", containerName, "to be up and running...")
+	e.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)
 	}
 	defer e.removeContainer(e.Context, resp.ID)
+
+	e.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
 		return fmt.Errorf("start service container: %w", err)
