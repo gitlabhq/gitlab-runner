@@ -11,7 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-const TestTimeout = 60 * time.Second
+const testTimeout = 120 * time.Second
 
 func RunBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {
 	buf := new(bytes.Buffer)
@@ -27,7 +27,7 @@ func RunBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) e
 }
 
 func RunBuildWithOptions(t *testing.T, build *common.Build, trace *common.Trace, config *common.Config) error {
-	timeoutTimer := time.AfterFunc(TestTimeout, func() {
+	timeoutTimer := time.AfterFunc(testTimeout, func() {
 		t.Log("Timed out")
 		t.FailNow()
 	})
