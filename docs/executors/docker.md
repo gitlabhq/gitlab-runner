@@ -30,7 +30,7 @@ and OS are supported.
 NOTE: **Note:**
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
-Engine. This means means the
+Engine. This means the
 [minimum supported version](https://docs.docker.com/develop/sdk/#api-version-matrix)
 of Docker is `1.13.0`.
 
