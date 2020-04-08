@@ -7,6 +7,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
 )
 
 type Client interface {
@@ -30,6 +31,8 @@ type Client interface {
 	NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error
 	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
 	NetworkInspect(ctx context.Context, networkID string) (types.NetworkResource, error)
+
+	VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error)
 
 	Info(ctx context.Context) (types.Info, error)
 

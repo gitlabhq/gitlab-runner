@@ -29,45 +29,13 @@ func (_m *MockManager) Binds() []string {
 	return r0
 }
 
-// Cleanup provides a mock function with given fields: ctx
-func (_m *MockManager) Cleanup(ctx context.Context) chan bool {
-	ret := _m.Called(ctx)
-
-	var r0 chan bool
-	if rf, ok := ret.Get(0).(func(context.Context) chan bool); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(chan bool)
-		}
-	}
-
-	return r0
-}
-
-// ContainerIDs provides a mock function with given fields:
-func (_m *MockManager) ContainerIDs() []string {
-	ret := _m.Called()
-
-	var r0 []string
-	if rf, ok := ret.Get(0).(func() []string); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-
-	return r0
-}
-
-// Create provides a mock function with given fields: volume
-func (_m *MockManager) Create(volume string) error {
-	ret := _m.Called(volume)
+// Create provides a mock function with given fields: ctx, volume
+func (_m *MockManager) Create(ctx context.Context, volume string) error {
+	ret := _m.Called(ctx, volume)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(volume)
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, volume)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -75,13 +43,13 @@ func (_m *MockManager) Create(volume string) error {
 	return r0
 }
 
-// CreateTemporary provides a mock function with given fields: containerPath
-func (_m *MockManager) CreateTemporary(containerPath string) error {
-	ret := _m.Called(containerPath)
+// CreateTemporary provides a mock function with given fields: ctx, destination
+func (_m *MockManager) CreateTemporary(ctx context.Context, destination string) error {
+	ret := _m.Called(ctx, destination)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(containerPath)
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, destination)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -488,7 +488,6 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		NetworkMode:   e.networkMode,
 		Binds:         e.volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
-		VolumesFrom:   e.volumesManager.ContainerIDs(),
 		Tmpfs:         e.Config.Docker.ServicesTmpfs,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -744,15 +743,6 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		return nil, err
 	}
 
-	// By default we use caches container,
-	// but in later phases we hook to previous build container
-	volumesFrom := e.volumesManager.ContainerIDs()
-	if len(e.builds) > 0 {
-		volumesFrom = []string{
-			e.builds[len(e.builds)-1],
-		}
-	}
-
 	hostConfig := &container.HostConfig{
 		Resources: container.Resources{
 			Memory:            e.Config.Docker.GetMemory(),
@@ -780,7 +770,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		OomScoreAdj:   e.Config.Docker.OomScoreAdjust,
 		ShmSize:       e.Config.Docker.ShmSize,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
-		VolumesFrom:   append(e.Config.Docker.VolumesFrom, volumesFrom...),
+		VolumesFrom:   append(e.Config.Docker.VolumesFrom),
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},
@@ -1126,7 +1116,7 @@ func (e *executor) createVolumes() error {
 	}
 
 	for _, volume := range e.Config.Docker.Volumes {
-		err := e.volumesManager.Create(volume)
+		err := e.volumesManager.Create(e.Context, volume)
 		if err == volumes.ErrCacheVolumesDisabled {
 			e.Warningln(fmt.Sprintf(
 				"Container based cache volumes creation is disabled. Will not create volume for %q",
@@ -1164,16 +1154,16 @@ func (e *executor) createBuildVolume() error {
 	var err error
 
 	if e.Build.GetGitStrategy() == common.GitFetch {
-		err = e.volumesManager.Create(jobsDir)
+		err = e.volumesManager.Create(e.Context, jobsDir)
 		if err == nil {
 			return nil
 		}
 
 		if err == volumes.ErrCacheVolumesDisabled {
-			err = e.volumesManager.CreateTemporary(jobsDir)
+			err = e.volumesManager.CreateTemporary(e.Context, jobsDir)
 		}
 	} else {
-		err = e.volumesManager.CreateTemporary(jobsDir)
+		err = e.volumesManager.CreateTemporary(e.Context, jobsDir)
 	}
 
 	if err != nil {
@@ -1267,10 +1257,6 @@ func (e *executor) Cleanup() {
 
 	for _, temporaryID := range e.temporary {
 		remove(temporaryID)
-	}
-
-	if e.volumesManager != nil {
-		<-e.volumesManager.Cleanup(ctx)
 	}
 
 	wg.Wait()

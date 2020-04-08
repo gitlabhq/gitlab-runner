@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
@@ -159,6 +160,12 @@ func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID str
 	started := time.Now()
 	resource, err := c.client.NetworkInspect(ctx, networkID, types.NetworkInspectOptions{})
 	return resource, wrapError("NetworkInspect", err, started)
+}
+
+func (c *officialDockerClient) VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error) {
+	started := time.Now()
+	v, err := c.client.VolumeCreate(ctx, options)
+	return v, wrapError("VolumeCreate", err, started)
 }
 
 func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {
