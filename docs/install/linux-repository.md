@@ -13,6 +13,8 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Debian       | jessie                     | June 2020             |
 | Ubuntu       | bionic                     | April 2023            |
 | Ubuntu       | xenial                     | April 2021            |
+| Ubuntu       | eoan                       | July 2020             |
+| Ubuntu       | focal                      | April 2025            |
 | Mint         | sonya                      | approx. 2021          |
 | Mint         | serena                     | approx. 2021          |
 | Mint         | sarah                      | approx. 2021          |
