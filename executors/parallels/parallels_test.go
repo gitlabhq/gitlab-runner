@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 )
@@ -53,7 +54,40 @@ func TestParallelsSuccessRun(t *testing.T) {
 	}
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err, "Make sure that you have done 'make -C tests/ubuntu parallels'")
+	assert.NoError(t, err, "Make sure that you have done 'make development_setup'")
+}
+
+func TestParallelsSuccessRunRawVariable(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
+		return
+	}
+
+	successfulBuild, err := common.GetRemoteBuildResponse("echo $TEST")
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "parallels",
+				Parallels: &common.ParallelsConfig{
+					BaseName:         prlImage,
+					DisableSnapshots: true,
+				},
+				SSH: prlSSHConfig,
+			},
+		},
+	}
+
+	value := "$VARIABLE$WITH$DOLLARS$$"
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   "TEST",
+		Value: value,
+		Raw:   true,
+	})
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err, "Make sure that you have done 'make development_setup'")
+	assert.Contains(t, out, value)
 }
 
 func TestParallelsBuildFail(t *testing.T) {

@@ -325,6 +325,7 @@ func getRequestJobResponse() (res map[string]interface{}) {
 	variables[0]["value"] = "master"
 	variables[0]["public"] = true
 	variables[0]["file"] = true
+	variables[0]["raw"] = true
 	res["variables"] = variables
 
 	steps := make([]map[string]interface{}, 2)
@@ -490,6 +491,13 @@ func TestRequestJob(t *testing.T) {
 	assert.Equal(t, "db-pg", res.Services[0].Alias)
 	assert.Equal(t, "mysql:5.6", res.Services[1].Name)
 	assert.Equal(t, "db-mysql", res.Services[1].Alias)
+
+	require.Len(t, res.Variables, 1)
+	assert.Equal(t, "CI_REF_NAME", res.Variables[0].Key)
+	assert.Equal(t, "master", res.Variables[0].Value)
+	assert.True(t, res.Variables[0].Public)
+	assert.True(t, res.Variables[0].File)
+	assert.True(t, res.Variables[0].Raw)
 
 	assert.Empty(t, c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should not be set")
 	res, ok = c.RequestJob(noJobsToken, nil)

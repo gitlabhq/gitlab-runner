@@ -1,7 +1,6 @@
 package custom_test
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,14 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
-)
-
-const (
-	TestTimeout = 60 * time.Second
 )
 
 var testExecutorFile string
@@ -64,36 +60,6 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 	os.Exit(code)
-}
-
-func runBuildWithOptions(t *testing.T, build *common.Build, config *common.Config, trace *common.Trace) error {
-	timeoutTimer := time.AfterFunc(TestTimeout, func() {
-		t.Log("Timed out")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	return build.Run(config, trace)
-}
-
-func runBuildWithTrace(t *testing.T, build *common.Build, trace *common.Trace) error {
-	return runBuildWithOptions(t, build, &common.Config{}, trace)
-}
-
-func runBuild(t *testing.T, build *common.Build) error {
-	err := runBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
-	assert.True(t, build.IsSharedEnv())
-
-	return err
-}
-
-func runBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {
-	buf := bytes.NewBuffer(nil)
-	err := runBuildWithTrace(t, build, &common.Trace{Writer: buf})
-	output := buf.String()
-	t.Log(output)
-
-	return output, err
 }
 
 func newBuild(t *testing.T, jobResponse common.JobResponse, shell string) (*common.Build, func()) {
@@ -153,8 +119,45 @@ func TestBuildSuccess(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		err = runBuild(t, build)
+		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
+	})
+}
+
+func TestBuildSuccessRawVariable(t *testing.T) {
+	tests := map[string]struct {
+		command string
+	}{
+		"bash": {
+			command: "echo $TEST",
+		},
+		"powershell": {
+			command: "echo $env:TEST",
+		},
+	}
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		test, ok := tests[shell]
+		if !ok {
+			t.Skip()
+		}
+
+		successfulBuild, err := common.GetRemoteBuildResponse(test.command)
+		require.NoError(t, err)
+
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		value := "$VARIABLE$WITH$DOLLARS$$"
+		build.Variables = append(build.Variables, common.JobVariable{
+			Key:   "TEST",
+			Value: value,
+			Raw:   true,
+		})
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, value)
 	})
 }
 
@@ -172,7 +175,7 @@ func TestBuildBuildFailure(t *testing.T) {
 			Public: true,
 		})
 
-		err = runBuild(t, build)
+		err = buildtest.RunBuild(t, build)
 		assert.Error(t, err)
 		assert.IsType(t, &common.BuildError{}, err)
 	})
@@ -192,7 +195,7 @@ func TestBuildSystemFailure(t *testing.T) {
 			Public: true,
 		})
 
-		err = runBuild(t, build)
+		err = buildtest.RunBuild(t, build)
 		assert.Error(t, err)
 		assert.IsType(t, &exec.ExitError{}, err)
 		t.Log(err)
@@ -213,7 +216,7 @@ func TestBuildUnknownFailure(t *testing.T) {
 			Public: true,
 		})
 
-		err = runBuild(t, build)
+		err = buildtest.RunBuild(t, build)
 		assert.Error(t, err)
 		assert.IsType(t, &command.ErrUnknownFailure{}, err)
 	})
@@ -233,7 +236,7 @@ func TestBuildAbort(t *testing.T) {
 		})
 		defer abortTimer.Stop()
 
-		err = runBuild(t, build)
+		err = buildtest.RunBuild(t, build)
 		assert.EqualError(t, err, "aborted: interrupt")
 	})
 }
@@ -254,7 +257,7 @@ func TestBuildCancel(t *testing.T) {
 		})
 		defer cancelTimer.Stop()
 
-		err = runBuildWithTrace(t, build, trace)
+		err = buildtest.RunBuildWithTrace(t, build, trace)
 		assert.EqualError(t, err, "canceled")
 		assert.IsType(t, err, &common.BuildError{})
 	})
@@ -271,11 +274,11 @@ func TestBuildWithGitStrategyCloneWithoutLFS(t *testing.T) {
 		build.Runner.PreCloneScript = "echo pre-clone-script"
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
 
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 
-		out, err = runBuildReturningOutput(t, build)
+		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
@@ -295,11 +298,11 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"})
 
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 
-		out, err = runBuildReturningOutput(t, build)
+		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Skipping Git checkout")
@@ -318,7 +321,7 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
 
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
@@ -338,7 +341,7 @@ func TestBuildWithoutDebugTrace(t *testing.T) {
 		defer cleanup()
 
 		// The default build shouldn't have debug tracing enabled
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.NotRegexp(t, `[^$] echo Hello World`, out)
 	})
@@ -354,7 +357,7 @@ func TestBuildWithDebugTrace(t *testing.T) {
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "true"})
 
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Regexp(t, `(>|[^$] )echo Hello World`, out)
 	})
@@ -378,7 +381,7 @@ func TestBuildMultilineCommand(t *testing.T) {
 		defer cleanup()
 
 		// The default build shouldn't have debug tracing enabled
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.NotContains(t, out, "echo")
 		assert.Contains(t, out, "Hello World")
@@ -400,7 +403,7 @@ func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
 
 		build.Runner.URL = "https://gitlab.com"
 
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Updating/initializing submodules")
@@ -419,12 +422,12 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 		build.Runner.PreCloneScript = "echo pre-clone-script"
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
-		out, err = runBuildReturningOutput(t, build)
+		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Fetching changes")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
@@ -441,13 +444,13 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 		defer cleanup()
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
-		out, err := runBuildReturningOutput(t, build)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Created fresh repository")
 
 		// Another build using the same repo but different branch.
 		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
-		out, err = runBuildReturningOutput(t, build)
+		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Checking out 2371dd05 as add-lfs-object...")
 	})
@@ -464,23 +467,23 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"})
 	build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
-	out, err := runBuildReturningOutput(t, build)
+	out, err := buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.Contains(t, out, "Created fresh repository")
 
-	out, err = runBuildReturningOutput(t, build)
+	out, err = buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.NotContains(t, out, "Created fresh repository")
 	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
 	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "Continue"})
-	out, err = runBuildReturningOutput(t, build)
+	out, err = buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.NotContains(t, out, "Created fresh repository")
 	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
 	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"})
-	out, err = runBuildReturningOutput(t, build)
+	out, err = buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.NotContains(t, out, "Created fresh repository")
 	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
@@ -526,7 +529,7 @@ func TestBuildOnCustomDirectory(t *testing.T) {
 					})
 				}
 
-				out, err := runBuildReturningOutput(t, build)
+				out, err := buildtest.RunBuildReturningOutput(t, build)
 				assert.NoError(t, err)
 
 				if tt {
