@@ -23,7 +23,7 @@ DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64
-RPM_PLATFORMS ?= el/6 el/7 \
+RPM_PLATFORMS ?= el/6 el/7 el/8 \
     ol/6 ol/7 \
     fedora/30
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64
