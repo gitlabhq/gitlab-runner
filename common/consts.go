@@ -15,6 +15,7 @@ const PreparationRetries = 3
 const DefaultGetSourcesAttempts = 1
 const DefaultArtifactDownloadAttempts = 1
 const DefaultRestoreCacheAttempts = 1
+const DefaultExecutorStageAttempts = 1
 const KubernetesPollInterval = 3
 const KubernetesPollTimeout = 180
 const AfterScriptTimeout = 5 * time.Minute

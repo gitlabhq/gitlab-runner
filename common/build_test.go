@@ -1515,3 +1515,49 @@ func TestProjectUniqueName(t *testing.T) {
 		})
 	}
 }
+
+func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
+	tests := []struct {
+		attempts         string
+		expectedAttempts int
+		expectedErr      error
+	}{
+		{
+			attempts:         "",
+			expectedAttempts: 1,
+		},
+		{
+			attempts:         "3",
+			expectedAttempts: 3,
+		},
+		{
+			attempts:         "0",
+			expectedAttempts: 0,
+			expectedErr:      &invalidAttemptError{},
+		},
+		{
+			attempts:         "99",
+			expectedAttempts: 0,
+			expectedErr:      &invalidAttemptError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.attempts, func(t *testing.T) {
+			build := Build{
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						JobVariable{
+							Key:   ExecutorJobSectionAttempts,
+							Value: tt.attempts,
+						},
+					},
+				},
+			}
+
+			attempts, err := build.GetExecutorJobSectionAttempts()
+			assert.True(t, errors.Is(err, tt.expectedErr))
+			assert.Equal(t, tt.expectedAttempts, attempts)
+		})
+	}
+}

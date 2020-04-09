@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,7 +26,7 @@ const DefaultAPIVersion = "1.25"
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.
 func IsErrNotFound(err error) bool {
-	return client.IsErrNotFound(err)
+	return client.IsErrNotFound(errors.Unwrap(err))
 }
 
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
@@ -76,6 +77,12 @@ func (c *officialDockerClient) ImageInspectWithRaw(ctx context.Context, imageID 
 	started := time.Now()
 	image, data, err := c.client.ImageInspectWithRaw(ctx, imageID)
 	return image, data, wrapError("ImageInspectWithRaw", err, started)
+}
+
+func (c *officialDockerClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+	started := time.Now()
+	containers, err := c.client.ContainerList(ctx, options)
+	return containers, wrapError("ContainerList", err, started)
 }
 
 func (c *officialDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error) {

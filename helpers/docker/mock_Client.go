@@ -156,6 +156,29 @@ func (_m *MockClient) ContainerKill(ctx context.Context, containerID string, sig
 	return r0
 }
 
+// ContainerList provides a mock function with given fields: ctx, options
+func (_m *MockClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+	ret := _m.Called(ctx, options)
+
+	var r0 []types.Container
+	if rf, ok := ret.Get(0).(func(context.Context, types.ContainerListOptions) []types.Container); ok {
+		r0 = rf(ctx, options)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]types.Container)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, types.ContainerListOptions) error); ok {
+		r1 = rf(ctx, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ContainerLogs provides a mock function with given fields: ctx, _a1, options
 func (_m *MockClient) ContainerLogs(ctx context.Context, _a1 string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
 	ret := _m.Called(ctx, _a1, options)
