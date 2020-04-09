@@ -1046,7 +1046,9 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 			Executor: &DefaultRemoteExecutor{},
 		}
 
-		if err := attach.Run(); err != nil {
+		retryable := retry.New(retry.WithBuildLog(&attach, &s.BuildLogger))
+		err = retryable.Run()
+		if err != nil {
 			errCh <- err
 		}
 
