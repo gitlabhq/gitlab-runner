@@ -48,11 +48,12 @@ is likely different, so consider what works best for your situation.
 
 Docker Machine will attempt to use a
 [default security group](https://docs.docker.com/machine/drivers/aws/#security-group)
-with rules for port `2376`, which is required for communication with the Docker
+with rules for port `2376` and SSH `22`, which is required for communication with the Docker
 daemon. Instead of relying on Docker, you can create a security group with the
 rules you need and provide that in the Runner options as we will
 [see below](#the-runnersmachine-section). This way, you can customize it to your
 liking ahead of time based on your networking environment.
+You have to make sure that ports `2376` and `22` are accessible by the [Runner Manager instance](#prepare-the-runner-manager-instance).
 
 ### AWS credentials
 
