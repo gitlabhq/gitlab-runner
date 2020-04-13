@@ -115,11 +115,21 @@ following commands support the following signals:
 | `run` | **SIGHUP** | Force to reload configuration file |
 
 For example, to force a reload of the Runner's configuration file, run
-(all `gitlab-runner` processes will receive this signal):
 
 ```shell
-sudo killall -SIGHUP gitlab-runner
+sudo kill -SIGHUP <main_runner_pid>
 ```
+
+For [graceful shutdowns](../best_practice/index.md#graceful-shutdown):
+
+```shell
+sudo kill -SIGQUIT <main_runner_pid>
+```
+
+CAUTION: **Warning**:
+Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
+or `docker` executors. This can cause improper handling of the signals due to subprocessess
+being killed as well. Use it only on the main process handling the jobs.
 
 If your operating system is configured to automatically restart the service if it fails (which is the default on some platforms) it may automatically restart the runner if it's shut down by the signals above.
 
