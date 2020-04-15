@@ -90,7 +90,6 @@ func TestCreateNetwork(t *testing.T) {
 						Name: "test-network",
 					}, nil).
 					Once()
-
 			},
 		},
 		"network create per-build network failure": {
@@ -102,7 +101,6 @@ func TestCreateNetwork(t *testing.T) {
 				mc.On("NetworkCreate", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("types.NetworkCreate")).
 					Return(types.NetworkCreateResponse{ID: "test-network"}, errors.New("test-network failed")).
 					Once()
-
 			},
 		},
 		"network create per-build inspect failure": {
@@ -132,7 +130,6 @@ func TestCreateNetwork(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-
 			m := newDefaultManager()
 			m.build.ID = 0
 			m.buildNetwork = testCase.buildNetwork
@@ -215,7 +212,6 @@ func TestInspectNetwork(t *testing.T) {
 			assert.True(t, errors.Is(err, testCase.expectedErr))
 		})
 	}
-
 }
 
 func TestCleanupNetwork(t *testing.T) {
@@ -255,7 +251,6 @@ func TestCleanupNetwork(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-
 			m := newDefaultManager()
 			m.build.ID = 0
 

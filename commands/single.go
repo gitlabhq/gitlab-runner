@@ -119,7 +119,6 @@ func (r *RunSingleCommand) checkFinishedConditions() {
 		logrus.Println("This runner has not received a job in", r.WaitTimeout, "seconds, so now exiting")
 		r.finished.Set()
 	}
-	return
 }
 
 func (r *RunSingleCommand) Execute(c *cli.Context) {

@@ -86,7 +86,7 @@ func TestExec(t *testing.T) {
 		// Create a fake kubeClient
 		fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
 			switch p, m := req.URL.Path, req.Method; {
-			case p == test.podPath && m == "GET":
+			case p == test.podPath && m == http.MethodGet:
 				body := objBody(codec, test.pod)
 				return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
 					"Content-Type": {"application/json"},
@@ -136,7 +136,7 @@ func TestExec(t *testing.T) {
 			t.Errorf("%s: Did not get expected path for exec request", test.name)
 			continue
 		}
-		if ex.method != "POST" {
+		if ex.method != http.MethodPost {
 			t.Errorf("%s: Did not get method for exec request: %s", test.name, ex.method)
 		}
 	}

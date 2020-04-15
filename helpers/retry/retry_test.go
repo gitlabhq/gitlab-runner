@@ -76,7 +76,7 @@ func TestRunBackoff(t *testing.T) {
 
 	start := time.Now()
 	err := retry.Run()
-	assert.True(t, time.Now().Sub(start) >= sleepTime)
+	assert.True(t, time.Since(start) >= sleepTime)
 	assert.Equal(t, runErr, err)
 }
 

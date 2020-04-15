@@ -368,7 +368,7 @@ func TestAttachReconnect(t *testing.T) {
 			started := time.Now()
 
 			<-processor.Listen(ctx)
-			assert.True(t, time.Now().Sub(started) > minBackoff*expectedReconnectCount)
+			assert.True(t, time.Since(started) > minBackoff*expectedReconnectCount)
 		})
 	}
 }

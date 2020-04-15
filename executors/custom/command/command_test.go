@@ -105,10 +105,8 @@ func TestCommand_Run(t *testing.T) {
 				Return(tt.cmdStartErr)
 			commanderMock.On("Wait").
 				Return(func() error {
-					select {
-					case <-time.After(500 * time.Millisecond):
-						return tt.cmdWaitErr
-					}
+					<-time.After(500 * time.Millisecond)
+					return tt.cmdWaitErr
 				}).
 				Maybe()
 

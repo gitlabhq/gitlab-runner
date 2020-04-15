@@ -26,6 +26,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls/ca_chain"
 )
 
+const jsonMimeType = "application/json"
+
 type requestCredentials interface {
 	GetURL() string
 	GetToken() string
@@ -248,10 +250,10 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 
 	headers := make(http.Header)
 	if response != nil {
-		headers.Set("Accept", "application/json")
+		headers.Set("Accept", jsonMimeType)
 	}
 
-	res, err := n.do(uri, method, body, "application/json", headers)
+	res, err := n.do(uri, method, body, jsonMimeType, headers)
 	if err != nil {
 		return -1, err.Error(), nil
 	}
@@ -315,12 +317,12 @@ func (n *client) buildCAChain(tls *tls.ConnectionState) (string, error) {
 func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
 	contentType := res.Header.Get("Content-Type")
 
-	mimetype, _, err := mime.ParseMediaType(contentType)
+	mimeType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
 		return false, fmt.Errorf("parsing Content-Type: %w", err)
 	}
 
-	if mimetype != "application/json" {
+	if mimeType != jsonMimeType {
 		return false, fmt.Errorf("server should return application/json. Got: %v", contentType)
 	}
 

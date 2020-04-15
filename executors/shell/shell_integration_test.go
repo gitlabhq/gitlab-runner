@@ -1071,6 +1071,7 @@ func TestInteractiveTerminal(t *testing.T) {
 			conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
 			assert.NoError(t, err)
 			assert.Equal(t, c.expectedStatusCode, resp.StatusCode)
+			defer resp.Body.Close()
 
 			defer func() {
 				if conn != nil {

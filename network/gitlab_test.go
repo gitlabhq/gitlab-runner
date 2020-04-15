@@ -21,6 +21,11 @@ import (
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+const (
+	validToken   = "valid"
+	invalidToken = "invalid"
+)
+
 var brokenCredentials = RunnerCredentials{
 	URL: "broken",
 }
@@ -73,7 +78,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -88,14 +93,14 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 	res := make(map[string]interface{})
 
 	switch req["token"].(string) {
-	case "valid":
+	case validToken:
 		if req["description"].(string) != "test" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		res["token"] = req["token"].(string)
-	case "invalid":
+	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 		return
 	default:
@@ -127,12 +132,12 @@ func TestRegisterRunner(t *testing.T) {
 
 	validToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "valid",
+		Token: validToken,
 	}
 
 	invalidToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "invalid",
+		Token: invalidToken,
 	}
 
 	otherToken := RunnerCredentials{
@@ -166,7 +171,7 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 		return
 	}
 
-	if r.Method != "DELETE" {
+	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -179,9 +184,9 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 	assert.NoError(t, err)
 
 	switch req["token"].(string) {
-	case "valid":
+	case validToken:
 		w.WriteHeader(http.StatusNoContent)
-	case "invalid":
+	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 	default:
 		w.WriteHeader(http.StatusBadRequest)
@@ -198,12 +203,12 @@ func TestUnregisterRunner(t *testing.T) {
 
 	validToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "valid",
+		Token: validToken,
 	}
 
 	invalidToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "invalid",
+		Token: invalidToken,
 	}
 
 	otherToken := RunnerCredentials{
@@ -232,7 +237,7 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -245,9 +250,9 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.
 	assert.NoError(t, err)
 
 	switch req["token"].(string) {
-	case "valid":
+	case validToken:
 		w.WriteHeader(http.StatusOK) // since the job id is broken, we should not find this job
-	case "invalid":
+	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 	default:
 		w.WriteHeader(http.StatusBadRequest)
@@ -264,12 +269,12 @@ func TestVerifyRunner(t *testing.T) {
 
 	validToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "valid",
+		Token: validToken,
 	}
 
 	invalidToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "invalid",
+		Token: invalidToken,
 	}
 
 	otherToken := RunnerCredentials{
@@ -404,7 +409,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -417,12 +422,12 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 	assert.NoError(t, err)
 
 	switch req["token"].(string) {
-	case "valid":
+	case validToken:
 	case "no-jobs":
 		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
 		w.WriteHeader(http.StatusNoContent)
 		return
-	case "invalid":
+	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 		return
 	default:
@@ -456,7 +461,7 @@ func TestRequestJob(t *testing.T) {
 	validToken := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
 			URL:   s.URL,
-			Token: "valid",
+			Token: validToken,
 		},
 	}
 
@@ -470,7 +475,7 @@ func TestRequestJob(t *testing.T) {
 	invalidToken := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
 			URL:   s.URL,
-			Token: "invalid",
+			Token: invalidToken,
 		},
 	}
 
@@ -539,7 +544,7 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 		return
 	}
 
-	if r.Method != "PUT" {
+	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -604,7 +609,7 @@ func TestUpdateJob(t *testing.T) {
 }
 
 func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
-	if r.Method != "PUT" {
+	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -1069,7 +1074,7 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -1176,7 +1181,7 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *tes
 		return
 	}
 
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}

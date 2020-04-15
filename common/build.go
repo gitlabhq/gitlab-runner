@@ -182,7 +182,7 @@ func (b *Build) ProjectUniqueDir(sharedDir bool) string {
 	// ex.<some-path>/01234567/0/group/repo/
 	if sharedDir {
 		dir = path.Join(
-			fmt.Sprintf("%s", b.Runner.ShortDescription()),
+			b.Runner.ShortDescription(),
 			fmt.Sprintf("%d", b.ProjectRunnerID),
 			dir,
 		)
@@ -577,7 +577,7 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 	expiryTime, _ := ctx.Deadline()
 
 	if expiryTime.Before(time.Now().Add(timeout)) {
-		timeout = expiryTime.Sub(time.Now())
+		timeout = time.Until(expiryTime)
 	}
 
 	return timeout
@@ -892,7 +892,7 @@ func (b *Build) IsDebugTraceEnabled() bool {
 	}
 
 	if b.Runner.DebugTraceDisabled {
-		if trace == true {
+		if trace {
 			b.logger.Warningln("CI_DEBUG_TRACE usage is disabled on this Runner")
 		}
 

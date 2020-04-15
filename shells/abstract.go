@@ -70,9 +70,8 @@ func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, 
 
 func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInfo) error {
 	for _, cacheOptions := range info.Build.Cache {
-
 		// Create list of files to extract
-		archiverArgs := []string{}
+		var archiverArgs []string
 		for _, path := range cacheOptions.Paths {
 			archiverArgs = append(archiverArgs, "--path", path)
 		}
@@ -216,8 +215,6 @@ func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, wh
 		key := fmt.Sprintf("http.%s.%s", host, config)
 		w.Command("git", append(args, key, w.EnvVariableKey(variable))...)
 	}
-
-	return
 }
 
 func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {

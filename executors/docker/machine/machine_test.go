@@ -35,7 +35,7 @@ func getRunnerConfigWithoutDockerConfig() *common.RunnerConfig {
 type machineCredentialsUsageFakeExecutor struct {
 	t *testing.T
 
-	expectedmachineCredentials docker.Credentials
+	expectedMachineCredentials docker.Credentials
 	expectedRunnerConfig       *common.RunnerConfig
 }
 
@@ -45,8 +45,7 @@ func (e *machineCredentialsUsageFakeExecutor) assertRunnerConfiguration(runnerCo
 	if e.expectedRunnerConfig.Docker != nil {
 		assert.Equal(e.t, e.expectedRunnerConfig.Docker.Image, runnerConfig.Docker.Image)
 	}
-	assert.Equal(e.t, e.expectedmachineCredentials, runnerConfig.Docker.Credentials, "Credentials should be filled with machine's credentials")
-
+	assert.Equal(e.t, e.expectedMachineCredentials, runnerConfig.Docker.Credentials, "Credentials should be filled with machine's credentials")
 }
 
 func (e *machineCredentialsUsageFakeExecutor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -96,7 +95,7 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 
 		fakeExecutor := &machineCredentialsUsageFakeExecutor{
 			t:                          t,
-			expectedmachineCredentials: machineCredentials,
+			expectedMachineCredentials: machineCredentials,
 			expectedRunnerConfig:       runnerConfigSource(),
 		}
 		executorProvider.On("Create").

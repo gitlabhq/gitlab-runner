@@ -223,7 +223,7 @@ func GetLocalBuildResponse(commands ...string) (JobResponse, error) {
 }
 
 func getLocalRepoURL() (string, error) {
-	_, filename, _, _ := runtime.Caller(0)
+	_, filename, _, _ := runtime.Caller(0) //nolint:dogsled
 
 	directory := path.Dir(filename)
 	if strings.Contains(directory, "_test/_obj_test") {
@@ -286,6 +286,7 @@ func getGitLabComTLSChain() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 
 	var buff bytes.Buffer
 	for _, certs := range resp.TLS.VerifiedChains {

@@ -118,10 +118,7 @@ func FindSSHPort(vmName string) (port string, err error) {
 
 func Exist(vmName string) bool {
 	_, err := VBoxManage("showvminfo", vmName)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func CreateOsVM(vmName string, templateName string, templateSnapshot string) error {

@@ -171,10 +171,7 @@ func (m *testMachine) List() (machines []string, err error) {
 }
 
 func (m *testMachine) CanConnect(name string, skipCache bool) bool {
-	if strings.Contains(name, "no-can-connect") {
-		return false
-	}
-	return true
+	return !strings.Contains(name, "no-can-connect")
 }
 
 func (m *testMachine) Credentials(name string) (dc docker.Credentials, err error) {

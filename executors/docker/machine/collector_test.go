@@ -11,8 +11,7 @@ import (
 )
 
 func TestIfMachineProviderExposesCollectInterface(t *testing.T) {
-	var provider common.ExecutorProvider
-	provider = &machineProvider{}
+	var provider common.ExecutorProvider = &machineProvider{}
 	collector, ok := provider.(prometheus.Collector)
 	assert.True(t, ok)
 	assert.NotNil(t, collector)

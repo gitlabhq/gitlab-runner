@@ -91,6 +91,7 @@ func TestProxyRequestError(t *testing.T) {
 
 			resp := rw.Result()
 			assert.Equal(t, test.expectedErrCode, resp.StatusCode)
+			defer resp.Body.Close()
 		})
 	}
 }
@@ -440,6 +441,7 @@ func TestProxyRequestWebsockets(t *testing.T) {
 
 			conn, resp, _ := websocket.DefaultDialer.Dial(u.String(), http.Header{})
 			defer func() {
+				resp.Body.Close()
 				if conn != nil {
 					_ = conn.Close()
 				}

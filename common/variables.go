@@ -60,7 +60,7 @@ func (b JobVariables) ExpandValue(value string) string {
 }
 
 func (b JobVariables) Expand() JobVariables {
-	var variables JobVariables
+	variables := make(JobVariables, 0, len(b))
 	for _, variable := range b {
 		if !variable.Raw {
 			variable.Value = b.ExpandValue(variable.Value)

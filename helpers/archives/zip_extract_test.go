@@ -59,7 +59,6 @@ func TestExtractZipFile(t *testing.T) {
 			assert.Equal(t, int64(9), stat.Size())
 		}
 	})
-
 }
 
 func TestExtractZipFileWithGitPath(t *testing.T) {
