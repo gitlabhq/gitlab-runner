@@ -269,7 +269,11 @@ Versions of Helm Chart and GitLab Runner application do not follow the same vers
 Use the command below to get version mappings between Helm Chart and GitLab Runner:
 
 ```shell
+# For Helm 2
 helm search -l gitlab/gitlab-runner
+
+# For Helm 3
+helm search repo -l gitlab/gitlab-runner
 ```
 
 Example of the output is shown below:
