@@ -267,7 +267,7 @@ func TestBuildCancel(t *testing.T) {
 
 		err = buildtest.RunBuildWithTrace(t, build, trace)
 		assert.EqualError(t, err, "canceled")
-		assert.IsType(t, err, &common.BuildError{})
+		assert.IsType(t, &common.BuildError{}, err)
 	})
 }
 
