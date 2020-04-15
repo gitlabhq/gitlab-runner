@@ -77,11 +77,9 @@ func GetShell(shell string) Shell {
 }
 
 func GetShells() []string {
-	names := []string{}
-	if shells != nil {
-		for name := range shells {
-			names = append(names, name)
-		}
+	names := make([]string, 0, len(shells))
+	for name := range shells {
+		names = append(names, name)
 	}
 	return names
 }

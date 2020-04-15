@@ -3,7 +3,6 @@ package parallels
 import (
 	"errors"
 	"fmt"
-	"os/exec"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -15,7 +14,6 @@ import (
 
 type executor struct {
 	executors.AbstractExecutor
-	cmd             *exec.Cmd
 	vmName          string
 	sshCommand      ssh.Client
 	provisioned     bool

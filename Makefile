@@ -77,7 +77,7 @@ help:
 	#
 	# Testing commands:
 	# make test - run project tests
-	# make codequality - run code quality analysis
+	# make lint - run code quality analysis
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -97,9 +97,11 @@ version:
 
 deps: $(DEVELOPMENT_TOOLS)
 
-codequality:
-	./scripts/codequality analyze --dev
-
+# Enable some additional linters that are too memory-hungry to run on the CI server
+lint: OUT_FORMAT ?= colored-line-number
+lint: LINT_FLAGS ?=
+lint:
+	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)

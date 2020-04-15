@@ -31,7 +31,7 @@ func NewBuilder(logger logrus.FieldLogger) Builder {
 
 	return &defaultBuilder{
 		certificates:     make([]*x509.Certificate, 0),
-		seenCertificates: make(map[string]bool, 0),
+		seenCertificates: make(map[string]bool),
 		resolver: newChainResolver(
 			newURLResolver(logger),
 			newVerifyResolver(logger),

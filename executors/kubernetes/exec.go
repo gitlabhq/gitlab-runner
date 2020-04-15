@@ -179,7 +179,7 @@ func (p *ExecOptions) Run() error {
 		Stderr:    p.Err != nil,
 	}, scheme.ParameterCodec)
 
-	return p.Executor.Execute("POST", req.URL(), p.Config, stdin, p.Out, p.Err, false)
+	return p.Executor.Execute(http.MethodPost, req.URL(), p.Config, stdin, p.Out, p.Err, false)
 }
 
 func (p *ExecOptions) ShouldRetry(times int, err error) bool {

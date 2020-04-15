@@ -493,7 +493,7 @@ func (c *KubernetesConfig) GetPollInterval() int {
 }
 
 func (c *KubernetesConfig) GetNodeTolerations() []api.Toleration {
-	var tolerations []api.Toleration
+	tolerations := make([]api.Toleration, 0, len(c.NodeTolerations))
 
 	for toleration, effect := range c.NodeTolerations {
 		newToleration := api.Toleration{

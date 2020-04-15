@@ -207,7 +207,7 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	details, _ := m.details[machineName]
+	details := m.details[machineName]
 	if details == nil {
 		return errors.New("machine not found")
 	}
@@ -294,7 +294,7 @@ func (m *machineProvider) createMachines(config *common.RunnerConfig, data *mach
 // returned by `docker-machine ls -q`
 func (m *machineProvider) intermediateMachineList(excludedMachines []string) []string {
 	var excludedSet map[string]struct{}
-	var intermediateMachines []string
+	intermediateMachines := make([]string, 0, len(m.details))
 
 	m.lock.Lock()
 	defer m.lock.Unlock()

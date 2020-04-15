@@ -1258,10 +1258,13 @@ func TestWaitForTerminal(t *testing.T) {
 				"Authorization": []string{build.Session.Token},
 			}
 
-			conn, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
+			conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
 			require.NotNil(t, conn)
 			require.NoError(t, err)
-			defer conn.Close()
+			defer func() {
+				resp.Body.Close()
+				conn.Close()
+			}()
 
 			ctx, cancel := context.WithTimeout(context.Background(), build.GetBuildTimeout())
 
@@ -1451,7 +1454,6 @@ func TestBuildFinishTimeout(t *testing.T) {
 			assert.NotNil(t, entry)
 		})
 	}
-
 }
 
 func TestProjectUniqueName(t *testing.T) {

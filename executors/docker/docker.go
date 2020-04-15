@@ -151,7 +151,6 @@ func (e *executor) getHomeDirAuthConfiguration(indexName string) (string, *types
 		return "", nil
 	}
 	return sourceFile, docker.ResolveDockerAuthConfig(indexName, authConfigs)
-
 }
 
 type authConfigResolver func(indexName string) (string, *types.AuthConfig)
@@ -430,10 +429,7 @@ func (e *executor) wasImageUsed(imageName, imageID string) bool {
 	e.usedImagesLock.RLock()
 	defer e.usedImagesLock.RUnlock()
 
-	if e.usedImages[imageName] == imageID {
-		return true
-	}
-	return false
+	return e.usedImages[imageName] == imageID
 }
 
 func (e *executor) markImageAsUsed(imageName, imageID string) {
@@ -691,18 +687,6 @@ func (e *executor) createServices() (err error) {
 	}
 
 	return
-}
-
-func (e *executor) getValidContainers(containers []string) []string {
-	var newContainers []string
-
-	for _, container := range containers {
-		if _, err := e.client.ContainerInspect(e.Context, container); err == nil {
-			newContainers = append(newContainers, container)
-		}
-	}
-
-	return newContainers
 }
 
 func (e *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
@@ -976,7 +960,6 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 			}
 		}
 	}
-	return
 }
 
 func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalImages []string) error {

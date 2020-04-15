@@ -39,7 +39,6 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 		IsSupportingLocalImport: false,
 		Cmd:                     powerShellCmd,
 	}, nil
-
 }
 
 func (w *windowsInfo) baseImage(operatingSystem string) (string, error) {

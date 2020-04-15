@@ -133,7 +133,6 @@ func TestHandleCliCtx(t *testing.T) {
 
 				assert.Contains(t, panicMessage, "Error while setting up logging configuration")
 				assert.Contains(t, panicMessage, testCase.expectedError)
-
 			} else {
 				assert.NotPanics(t, testFunc)
 			}

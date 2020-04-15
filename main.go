@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
+	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcs"

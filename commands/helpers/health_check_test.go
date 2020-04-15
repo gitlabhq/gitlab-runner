@@ -87,5 +87,4 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 			}
 		})
 	}
-
 }

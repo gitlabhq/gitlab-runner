@@ -1221,7 +1221,7 @@ func TestDockerCommandRunAttempts(t *testing.T) {
 		err := build.Run(&common.Config{}, &common.Trace{Writer: io.MultiWriter(trace, os.Stdout)})
 		// Only make sure that the build failed. Docker can return different
 		// kind of errors when a container is removed for example exit code 137,
-		// there is no garantee on what failure is returned.
+		// there is no guarantee on what failure is returned.
 		assert.Error(t, err)
 		close(runFinished)
 	}()

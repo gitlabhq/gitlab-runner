@@ -39,7 +39,7 @@ func newDefaultManager(config ManagerConfig) *manager {
 	m := &manager{
 		logger:         newDebugLoggerMock(),
 		config:         config,
-		managedVolumes: make(map[string]bool, 0),
+		managedVolumes: make(map[string]bool),
 	}
 
 	return m

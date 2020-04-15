@@ -16,7 +16,6 @@ func isPathAGitDirectory(path string) bool {
 		return true
 	}
 	return false
-
 }
 
 func errorIfGitDirectory(path string) *os.PathError {

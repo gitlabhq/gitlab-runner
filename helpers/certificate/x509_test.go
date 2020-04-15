@@ -47,15 +47,16 @@ func TestCertificate(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, "https://"+srv.Addr, nil)
 	require.NoError(t, err)
 
-	_, err = tlsClient.Do(req)
+	resp, err := tlsClient.Do(req)
 	assert.NoError(t, err)
+	defer resp.Body.Close()
 
 	// Client with no Root CA
 	client := &http.Client{}
 	req, err = http.NewRequest(http.MethodPost, "https://"+srv.Addr, nil)
 	require.NoError(t, err)
 
-	_, err = client.Do(req)
+	resp, err = client.Do(req)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "certificate signed by unknown authority")
 }

@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 
 	curDir, err := os.Getwd()
 	if err != nil {
-		panic(fmt.Sprintf("Error on getting the working directory"))
+		panic("Error on getting the working directory")
 	}
 
 	sourcesDir := filepath.Join(curDir, "testdata", "test_executor")
@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 
 	targetDir, err := ioutil.TempDir("", "test_executor")
 	if err != nil {
-		panic(fmt.Sprintf("Error on preparing tmp directory for test executor binary"))
+		panic("Error on preparing tmp directory for test executor binary")
 	}
 	testExecutorFile = filepath.Join(targetDir, "main")
 
@@ -55,7 +55,7 @@ func TestMain(m *testing.M) {
 
 	err = cmd.Run()
 	if err != nil {
-		panic(fmt.Sprintf("Error on executing go build to prepare test custom executor"))
+		panic("Error on executing go build to prepare test custom executor")
 	}
 
 	code := m.Run()
