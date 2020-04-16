@@ -636,7 +636,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.Secrets {
-		items := []api.KeyToPath{}
+		var items []api.KeyToPath
 		for key, path := range volume.Items {
 			items = append(items, api.KeyToPath{Key: key, Path: path})
 		}
@@ -665,7 +665,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.ConfigMaps {
-		items := []api.KeyToPath{}
+		var items []api.KeyToPath
 		for key, path := range volume.Items {
 			items = append(items, api.KeyToPath{Key: key, Path: path})
 		}
@@ -813,11 +813,17 @@ func (s *executor) createHostAlias() (*api.HostAlias, error) {
 func (s *executor) setupBuildPod() error {
 	s.Debugln("Setting up build pod")
 
-	services := make([]api.Container, len(s.options.Services))
+	podServices := make([]api.Container, len(s.options.Services))
 
 	for i, service := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
-		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, service, s.serviceRequests, s.serviceLimits)
+		podServices[i] = s.buildContainer(
+			fmt.Sprintf("svc-%d", i),
+			resolvedImage,
+			service,
+			s.serviceRequests,
+			s.serviceLimits,
+		)
 	}
 
 	// We set a default label to the pod. This label will be used later
@@ -846,7 +852,7 @@ func (s *executor) setupBuildPod() error {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(labels, annotations, services, imagePullSecrets, hostAlias)
+	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAlias)
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -930,7 +936,7 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 		close(ch)
 	}()
 
-	var services []api.Service
+	var proxyServices []api.Service
 	for res := range ch {
 		if res.err != nil {
 			err := fmt.Errorf("error creating the proxy service %q: %w", res.service.Name, res.err)
@@ -939,10 +945,10 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 			return []api.Service{}, err
 		}
 
-		services = append(services, *res.service)
+		proxyServices = append(proxyServices, *res.service)
 	}
 
-	return services, nil
+	return proxyServices, nil
 }
 
 func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) api.Service {

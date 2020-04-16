@@ -127,7 +127,6 @@ func (s *Client) Exec(cmd string) error {
 
 func (s *Command) fullCommand() string {
 	var arguments []string
-	// TODO: This method is compatible only with Bjourne compatible shells
 	for _, part := range s.Command {
 		arguments = append(arguments, helpers.ShellEscape(part))
 	}
