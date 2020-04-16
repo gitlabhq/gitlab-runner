@@ -1188,6 +1188,8 @@ func TestDockerCommandUsingBuildsVolume(t *testing.T) {
 }
 
 func TestDockerCommandRunAttempts(t *testing.T) {
+	t.Skip("Skipping until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is resolved.")
+
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
