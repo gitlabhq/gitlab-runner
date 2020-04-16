@@ -26,7 +26,7 @@ func (t *TimePeriod) InPeriod() bool {
 }
 
 func TimePeriods(periods []string, timezone string) (*TimePeriod, error) {
-	expressions := make([]*cronexpr.Expression, 0, len(periods))
+	var expressions []*cronexpr.Expression
 
 	for _, period := range periods {
 		expression, err := cronexpr.Parse(period)
