@@ -231,8 +231,8 @@ Autoscale can be configured with the support for _Off Peak_ time mode periods.
 
 Some organizations can select a regular time periods when no work is done.
 For example most of commercial companies are working from Monday to
-Friday in a fixed hours, eg. from 10am to 6pm. In the rest of the week -
-from Monday to Friday at 12am-9am and 6pm-12am and whole Saturday and Sunday -
+Friday in a fixed hours, eg. from 9am to 6pm. In the rest of the week -
+from Monday to Friday at 12am-9am and 6pm-12am and all of Saturday and Sunday -
 no one is working. These time periods we're naming here as _Off Peak_.
 
 Organizations where _Off Peak_ time periods occurs probably don't want
@@ -260,7 +260,7 @@ when the _Off Peak_ time mode should be set on. For example:
 ```
 
 will enable the _Off Peak_ periods described above, so on weekdays
-from 12:00am through 8:59am and 6:00pm through 11:59pm and all of Saturday and Sunday. Machines
+from 12:00am through 8:59am and 6:00pm through 11:59pm, plus all of Saturday and Sunday. Machines
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
 
