@@ -259,8 +259,8 @@ when the _Off Peak_ time mode should be set on. For example:
   ]
 ```
 
-will enable the _Off Peak_ periods described above, so the _working_ days
-from 12am to 9am and from 6pm to 12am and whole weekend days. Machines
+will enable the _Off Peak_ periods described above, so on weekdays
+from 12:00am through 8:59am and 6:00pm through 11:59pm and all of Saturday and Sunday. Machines
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
 
@@ -382,7 +382,7 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
     image = "ruby:2.6"               # The default image used for jobs is 'ruby:2.6'
   [runners.machine]
     OffPeakPeriods = [               # Set the Off Peak time mode on for:
-      "* * 0-9,18-23 * * mon-fri *", # - Monday to Friday for 12:00am through 9:59am and 6:00pm through 11:59pm
+      "* * 0-8,18-23 * * mon-fri *", # - Monday to Friday from 12:00am through 8:59am and 6:00pm through 11:59pm
       "* * * * * sat,sun *"          # - All of Saturday and Sunday
     ]
     OffPeakIdleCount = 1             # There must be 1 machine in Idle state - when Off Peak time mode is on
