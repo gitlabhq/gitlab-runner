@@ -319,3 +319,16 @@ causes to why this happens:
 
    Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
    `SessionCreate` set to `false`.
+
+### `fatal: unable to access 'https://path:3000/user/repo.git/': Failed to connect to path port 3000: Operation timed out` error in the job
+
+If one of the jobs fails with this error, you may have your firewall settings set too strict. Try 
+- Navigate to `System Preferences => Securty & Privacy => Firewall => Firewall Options` and ensure that `Block all incoming connections` is not selected
+    - The git clone operation is done inside of the Docker container
+    - `Block all incoming connections` prevents the clone command from the VM from accessing your local machine
+    - Verify your VM has access to the network by SSHing into it and pinging your local network
+        ```shell
+        $ docker-machine ssh default
+        $ ping 192.168.99.1
+        PING 192.168.99.1 (192.168.99.1): 56 data bytes
+        ```
