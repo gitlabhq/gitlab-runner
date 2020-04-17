@@ -1,22 +1,33 @@
 package virtualbox
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
-	// Add default virtualbox location to end of local PATH
-	for _, programFiles := range []string{os.Getenv("ProgramFiles"), os.Getenv("ProgramFiles(x86)"), os.Getenv("ProgramW6432")} {
-		if _, err := os.Stat(filepath.Join(programFiles, `Oracle\VirtualBox\VBoxManage.exe`)); err == nil {
-			virtualBoxPath := filepath.Join(programFiles, `Oracle\VirtualBox`)
-			path := os.Getenv("PATH")
-			path += ";" + virtualBoxPath
-			os.Setenv("PATH", path)
-			log.Debugln("Add autodetected VirtualBoxManage.exe to end of local PATH: ", virtualBoxPath)
-			break
-		}
+	addDirectoryToPATH(os.Getenv("ProgramFiles"))
+	addDirectoryToPATH(os.Getenv("ProgramFiles(X86)"))
+}
+
+func addDirectoryToPATH(programFilesPath string) {
+	if programFilesPath == "" {
+		return
 	}
+
+	virtualBoxPath := filepath.Join(programFilesPath, "Oracle", "VirtualBox")
+	newPath := fmt.Sprintf("%s;%s", os.Getenv("PATH"), virtualBoxPath)
+	err := os.Setenv("PATH", newPath)
+	if err != nil {
+		logrus.Warnf(
+			"Failed to add path to VBoxManage.exe (%q) to end of local PATH: %v",
+			virtualBoxPath,
+			err)
+		return
+	}
+
+	logrus.Debugf("Added path to VBoxManage.exe to end of local PATH: %q", virtualBoxPath)
 }
