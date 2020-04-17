@@ -29,6 +29,35 @@ const (
 	MemoryRequestOverwriteVariableValue = "KUBERNETES_MEMORY_REQUEST"
 )
 
+type overwriteTooHighError struct {
+	resource  string
+	max       string
+	overwrite string
+}
+
+func (o *overwriteTooHighError) Error() string {
+	return fmt.Sprintf("the resource %q requested %q is higher than limit allowed %q", o.resource, o.overwrite, o.max)
+}
+
+func (o *overwriteTooHighError) Is(err error) bool {
+	_, ok := err.(*overwriteTooHighError)
+	return ok
+}
+
+type malformedOverwriteError struct {
+	value   string
+	pattern string
+}
+
+func (m *malformedOverwriteError) Error() string {
+	return fmt.Sprintf("provided value %q does not match %q", m.value, m.pattern)
+}
+
+func (m *malformedOverwriteError) Is(err error) bool {
+	_, ok := err.(*malformedOverwriteError)
+	return ok
+}
+
 type overwrites struct {
 	namespace      string
 	serviceAccount string
@@ -134,7 +163,7 @@ func overwriteRegexCheck(regex, value string) error {
 		return err
 	}
 	if match := r.MatchString(value); !match {
-		return fmt.Errorf("provided value %q does not match regex %q", value, regex)
+		return &malformedOverwriteError{value: value, pattern: regex}
 	}
 	return nil
 }
@@ -146,7 +175,7 @@ func splitMapOverwrite(str string) (string, string, error) {
 		return split[0], split[1], nil
 	}
 
-	return "", "", fmt.Errorf("provided value %q is malformed, does not match k=v", str)
+	return "", "", &malformedOverwriteError{value: str, pattern: "k=v"}
 }
 
 func (o *overwrites) evaluateMapOverwrite(fieldName string, values map[string]string, regex string, variables common.JobVariables, variablesSelector string, logger common.BuildLogger) (map[string]string, error) {
@@ -199,11 +228,13 @@ func (o *overwrites) evaluateMaxResourceOverwrite(fieldName, value, maxResource,
 		return value, fmt.Errorf("error parsing resource limit: %q", err.Error())
 	}
 
-	ov := rOverwriteValue.Value()
-	mr := rMaxResource.Value()
-
-	if ov > mr {
-		return value, fmt.Errorf("the resource %q requested by the build %q does not match or is less than limit allowed %q", fieldName, overwriteValue, maxResource)
+	cmp := rOverwriteValue.Cmp(rMaxResource)
+	if cmp == 1 {
+		return "", &overwriteTooHighError{
+			resource:  fieldName,
+			max:       maxResource,
+			overwrite: overwriteValue,
+		}
 	}
 
 	logger.Println(fmt.Sprintf("%q overwritten with %q", fieldName, overwriteValue))
