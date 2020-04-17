@@ -78,6 +78,7 @@ help:
 	# Testing commands:
 	# make test - run project tests
 	# make lint - run code quality analysis
+	# make docs-lint - run documentation linting
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -97,11 +98,13 @@ version:
 
 deps: $(DEVELOPMENT_TOOLS)
 
-# Enable some additional linters that are too memory-hungry to run on the CI server
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
 lint:
 	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
+
+docs-lint:
+	@scripts/docs-lint
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
