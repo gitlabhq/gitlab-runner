@@ -10,7 +10,7 @@ so we are going to use an Ubuntu 18.04 image to run the jobs.
 These scripts have the following prerequisites:
 
 - [LXD](https://linuxcontainers.org/lxd/introduction/)
-- [GitLab Runner](https://docs.gitlab.com/runner/install/linux-manually.html)
+- [GitLab Runner](../../install/linux-manually.md)
 
 ## Configuration
 
@@ -66,8 +66,6 @@ set -eo pipefail
 
 # trap any error, and mark it as a system failure.
 trap "exit $SYSTEM_FAILURE_EXIT_CODE" ERR
-
-CONTAINER_ID="runner-$CUSTOM_ENV_CI_RUNNER_ID-project-$CUSTOM_ENV_CI_PROJECT_ID-concurrent-$CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID"
 
 start_container () {
     if lxc info "$CONTAINER_ID" >/dev/null 2>/dev/null ; then

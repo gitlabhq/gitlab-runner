@@ -7,6 +7,7 @@ import (
 
 	"archive/zip"
 	"encoding/binary"
+
 	"github.com/stretchr/testify/assert"
 )
 

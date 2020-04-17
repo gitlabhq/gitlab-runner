@@ -50,7 +50,7 @@ In some testing scenarios, your builds may need to access some privileged
 resources, like Docker Engine or VirtualBox. In that case you need to add the
 `gitlab-runner` user to the respective group:
 
-```bash
+```shell
 usermod -aG docker gitlab-runner
 usermod -aG vboxusers gitlab-runner
 ```

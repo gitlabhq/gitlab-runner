@@ -396,7 +396,7 @@ With this:
 We register a Kubernetes-executor-based Runner to some test project and see what the
 `config.toml` file looks like:
 
-```bash
+```shell
 $ sudo gitlab-runner register \
      --config /tmp/test-config.toml \
      --non-interactive \
@@ -475,7 +475,7 @@ end is risky.
 
 With GitLab Runner 12.2, this becomes much easier using the `--template-config` flag.
 
-```bash
+```shell
 $ cat > /tmp/test-config.template.toml << EOF
 [[runners]]
   [runners.kubernetes]
@@ -491,7 +491,7 @@ Having the file, we can now try to register the Runner again, but this time addi
 `--template-config /tmp/test-config.template.toml` option. Apart from this change, the
 rest of registration command will be exactly the same:
 
-```bash
+```shell
 $ sudo gitlab-runner register \
      --config /tmp/test-config.toml \
      --template-config /tmp/test-config.template.toml \
@@ -559,7 +559,7 @@ If the configuration template includes a settings, and the same setting is passe
 `register` command, the one passed to the `register` command takes precedence over the one
 specified inside of the config template.
 
-```bash
+```shell
 $ cat > /tmp/test-config.template.toml << EOF
 [[runners]]
   executor = "docker"

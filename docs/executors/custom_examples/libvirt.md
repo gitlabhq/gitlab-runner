@@ -5,7 +5,7 @@ create a new disk and VM for every job it executes, after which the disk
 and VM will be deleted.
 
 This example is inspired by a Community Contribution
-[!464](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/464)
+[!464](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/464)
 to add libvirt as a GitLab Runner executor.
 
 This document does not try to explain how to set up libvirt, since it's
@@ -132,7 +132,7 @@ set -eo pipefail
 trap "exit $SYSTEM_FAILURE_EXIT_CODE" ERR
 
 # Copy base disk to use for Job.
-cp "$BASE_VM_IMAGE" "$VM_IMAGE"
+qemu-img create -f qcow2 -b "$BASE_VM_IMAGE" "$VM_IMAGE"
 
 # Install the VM
 virt-install \

@@ -193,6 +193,7 @@ func TestBuildsHelper_ListJobsHandlerVersioning(t *testing.T) {
 			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
 			require.NotNil(t, resp)
+			defer resp.Body.Close()
 
 			assert.Equal(t, test.expectedCode, resp.StatusCode)
 

@@ -12,12 +12,18 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
+)
+
+const (
+	validToken   = "valid"
+	invalidToken = "invalid"
 )
 
 var brokenCredentials = RunnerCredentials{
@@ -72,7 +78,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -87,14 +93,14 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 	res := make(map[string]interface{})
 
 	switch req["token"].(string) {
-	case "valid":
+	case validToken:
 		if req["description"].(string) != "test" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		res["token"] = req["token"].(string)
-	case "invalid":
+	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 		return
 	default:
@@ -126,12 +132,12 @@ func TestRegisterRunner(t *testing.T) {
 
 	validToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "valid",
+		Token: validToken,
 	}
 
 	invalidToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "invalid",
+		Token: invalidToken,
 	}
 
 	otherToken := RunnerCredentials{
@@ -165,7 +171,7 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 		return
 	}
 
-	if r.Method != "DELETE" {
+	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -178,9 +184,9 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 	assert.NoError(t, err)
 
 	switch req["token"].(string) {
-	case "valid":
+	case validToken:
 		w.WriteHeader(http.StatusNoContent)
-	case "invalid":
+	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 	default:
 		w.WriteHeader(http.StatusBadRequest)
@@ -197,12 +203,12 @@ func TestUnregisterRunner(t *testing.T) {
 
 	validToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "valid",
+		Token: validToken,
 	}
 
 	invalidToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "invalid",
+		Token: invalidToken,
 	}
 
 	otherToken := RunnerCredentials{
@@ -231,7 +237,7 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -244,9 +250,9 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.
 	assert.NoError(t, err)
 
 	switch req["token"].(string) {
-	case "valid":
+	case validToken:
 		w.WriteHeader(http.StatusOK) // since the job id is broken, we should not find this job
-	case "invalid":
+	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 	default:
 		w.WriteHeader(http.StatusBadRequest)
@@ -263,12 +269,12 @@ func TestVerifyRunner(t *testing.T) {
 
 	validToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "valid",
+		Token: validToken,
 	}
 
 	invalidToken := RunnerCredentials{
 		URL:   s.URL,
-		Token: "invalid",
+		Token: invalidToken,
 	}
 
 	otherToken := RunnerCredentials{
@@ -324,6 +330,7 @@ func getRequestJobResponse() (res map[string]interface{}) {
 	variables[0]["value"] = "master"
 	variables[0]["public"] = true
 	variables[0]["file"] = true
+	variables[0]["raw"] = true
 	res["variables"] = variables
 
 	steps := make([]map[string]interface{}, 2)
@@ -402,7 +409,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -415,12 +422,12 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 	assert.NoError(t, err)
 
 	switch req["token"].(string) {
-	case "valid":
+	case validToken:
 	case "no-jobs":
 		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
 		w.WriteHeader(http.StatusNoContent)
 		return
-	case "invalid":
+	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 		return
 	default:
@@ -454,7 +461,7 @@ func TestRequestJob(t *testing.T) {
 	validToken := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
 			URL:   s.URL,
-			Token: "valid",
+			Token: validToken,
 		},
 	}
 
@@ -468,7 +475,7 @@ func TestRequestJob(t *testing.T) {
 	invalidToken := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
 			URL:   s.URL,
-			Token: "invalid",
+			Token: invalidToken,
 		},
 	}
 
@@ -489,6 +496,13 @@ func TestRequestJob(t *testing.T) {
 	assert.Equal(t, "db-pg", res.Services[0].Alias)
 	assert.Equal(t, "mysql:5.6", res.Services[1].Name)
 	assert.Equal(t, "db-mysql", res.Services[1].Alias)
+
+	require.Len(t, res.Variables, 1)
+	assert.Equal(t, "CI_REF_NAME", res.Variables[0].Key)
+	assert.Equal(t, "master", res.Variables[0].Value)
+	assert.True(t, res.Variables[0].Public)
+	assert.True(t, res.Variables[0].File)
+	assert.True(t, res.Variables[0].Raw)
 
 	assert.Empty(t, c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should not be set")
 	res, ok = c.RequestJob(noJobsToken, nil)
@@ -530,7 +544,7 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 		return
 	}
 
-	if r.Method != "PUT" {
+	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -595,7 +609,7 @@ func TestUpdateJob(t *testing.T) {
 }
 
 func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
-	if r.Method != "PUT" {
+	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -706,9 +720,8 @@ func TestUnknownPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateNotFound, state)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateNotFound, result.State)
 }
 
 func TestForbiddenPatchTrace(t *testing.T) {
@@ -719,9 +732,8 @@ func TestForbiddenPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateAbort, state)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateAbort, result.State)
 }
 
 func TestPatchTrace(t *testing.T) {
@@ -733,20 +745,17 @@ func TestPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	endOffset, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateSucceeded, state)
-	assert.Equal(t, len(patchTraceContent), endOffset)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 
-	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[3:], 3)
-	assert.Equal(t, UpdateSucceeded, state)
-	assert.Equal(t, len(patchTraceContent), endOffset)
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:], 3)
+	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 
-	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[3:10], 3)
-	assert.Equal(t, UpdateSucceeded, state)
-	assert.Equal(t, 10, endOffset)
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:10], 3)
+	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, 10, result.SentOffset)
 }
 
 func TestRangeMismatchPatchTrace(t *testing.T) {
@@ -762,20 +771,17 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	endOffset, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[11:], 11)
-	assert.Equal(t, UpdateRangeMismatch, state)
-	assert.Equal(t, 10, endOffset)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[11:], 11)
+	assert.Equal(t, UpdateRangeMismatch, result.State)
+	assert.Equal(t, 10, result.SentOffset)
 
-	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[15:], 15)
-	assert.Equal(t, UpdateRangeMismatch, state)
-	assert.Equal(t, 10, endOffset)
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[15:], 15)
+	assert.Equal(t, UpdateRangeMismatch, result.State)
+	assert.Equal(t, 10, result.SentOffset)
 
-	endOffset, state = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent[5:], 5)
-	assert.Equal(t, UpdateSucceeded, state)
-	assert.Equal(t, len(patchTraceContent), endOffset)
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[5:], 5)
+	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 }
 
 func TestJobFailedStatePatchTrace(t *testing.T) {
@@ -787,9 +793,8 @@ func TestJobFailedStatePatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateAbort, state)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateAbort, result.State)
 }
 
 func TestPatchTraceCantConnect(t *testing.T) {
@@ -798,9 +803,8 @@ func TestPatchTraceCantConnect(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	server.Close()
 
-	_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
-	assert.Equal(t, UpdateFailed, state)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	assert.Equal(t, UpdateFailed, result.State)
 }
 
 func TestPatchTraceUpdatedTrace(t *testing.T) {
@@ -860,11 +864,11 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 			defer server.Close()
 
 			traceContent = append(traceContent, update.traceUpdate...)
-			endOffset, result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
 				traceContent[sentTrace:], sentTrace)
-			assert.Equal(t, update.expectedResult, result)
+			assert.Equal(t, update.expectedResult, result.State)
 
-			sentTrace = endOffset
+			sentTrace = result.SentOffset
 		})
 	}
 }
@@ -916,9 +920,8 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			_, result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-				test.trace, 0)
-			assert.Equal(t, test.expectedResult, result)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, test.trace, 0)
+			assert.Equal(t, test.expectedResult, result.State)
 		})
 	}
 }
@@ -947,6 +950,62 @@ func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
 		patchTraceContent, 0)
 }
 
+func TestPatchTraceUpdateIntervalHeaderHandling(t *testing.T) {
+	tests := map[string]struct {
+		sendUpdateIntervalHeader  bool
+		updateIntervalHeaderValue string
+		expectedUpdateInterval    time.Duration
+	}{
+		"header set to negative integer": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "-10",
+			expectedUpdateInterval:    -10 * time.Second,
+		},
+		"header set to zero": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "0",
+			expectedUpdateInterval:    time.Duration(0),
+		},
+		"header set to positive integer": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "10",
+			expectedUpdateInterval:    10 * time.Second,
+		},
+		"header set to invalid format": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "some text",
+			expectedUpdateInterval:    time.Duration(0),
+		},
+		"empty header": {
+			sendUpdateIntervalHeader:  true,
+			updateIntervalHeaderValue: "",
+			expectedUpdateInterval:    time.Duration(0),
+		},
+		"header not set": {
+			sendUpdateIntervalHeader: false,
+			expectedUpdateInterval:   time.Duration(0),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+				if tt.sendUpdateIntervalHeader {
+					w.Header().Add(traceUpdateIntervalHeader, tt.updateIntervalHeaderValue)
+				}
+
+				w.WriteHeader(http.StatusAccepted)
+			}
+
+			server, client, config := getPatchServer(t, handler)
+			defer server.Close()
+
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+			assert.Equal(t, tt.expectedUpdateInterval, result.NewUpdateInterval)
+		})
+	}
+}
+
 func TestAbortedPatchTrace(t *testing.T) {
 	statuses := []string{"canceled", "failed"}
 
@@ -960,43 +1019,53 @@ func TestAbortedPatchTrace(t *testing.T) {
 			server, client, config := getPatchServer(t, handler)
 			defer server.Close()
 
-			_, state := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-				patchTraceContent, 0)
-			assert.Equal(t, UpdateAbort, state)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+			assert.Equal(t, UpdateAbort, result.State)
 		})
 	}
 }
 
 func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Request, body string) {
-	switch body {
-	case "too-large":
-		w.WriteHeader(http.StatusRequestEntityTooLarge)
+	cases := map[string]struct {
+		formValueKey string
+		statusCode   int
+	}{
+		"too-large": {
+			statusCode: http.StatusRequestEntityTooLarge,
+		},
+		"content": {
+			statusCode: http.StatusCreated,
+		},
+		"zip": {
+			statusCode:   http.StatusCreated,
+			formValueKey: "artifact_format",
+		},
+		"gzip": {
+			statusCode:   http.StatusCreated,
+			formValueKey: "artifact_format",
+		},
+		"junit": {
+			statusCode:   http.StatusCreated,
+			formValueKey: "artifact_type",
+		},
+		"service-unavailable": {
+			statusCode: http.StatusServiceUnavailable,
+		},
+	}
+
+	testCase, ok := cases[body]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
 
-	case "content":
-		w.WriteHeader(http.StatusCreated)
-		return
-
-	case "zip":
-		if r.FormValue("artifact_format") == "zip" {
-			w.WriteHeader(http.StatusCreated)
-			return
-		}
-
-	case "gzip":
-		if r.FormValue("artifact_format") == "gzip" {
-			w.WriteHeader(http.StatusCreated)
-			return
-		}
-
-	case "junit":
-		if r.FormValue("artifact_type") == "junit" {
-			w.WriteHeader(http.StatusCreated)
+	if len(testCase.formValueKey) > 0 {
+		if r.FormValue(testCase.formValueKey) != body {
 			return
 		}
 	}
 
-	w.WriteHeader(http.StatusBadRequest)
+	w.WriteHeader(testCase.statusCode)
 }
 
 func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
@@ -1005,7 +1074,7 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -1100,6 +1169,10 @@ func TestArtifactsUpload(t *testing.T) {
 
 	state = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
+
+	ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600)
+	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
 }
 
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
@@ -1108,7 +1181,7 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *tes
 		return
 	}
 
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
@@ -1191,7 +1264,7 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 		features := args[0].(*FeaturesInfo)
 		features.Shared = true
 	})
-	RegisterExecutor("my-test-executor", &executorProvider)
+	RegisterExecutorProvider("my-test-executor", &executorProvider)
 
 	shell := MockShell{}
 	defer shell.AssertExpectations(t)

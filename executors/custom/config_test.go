@@ -11,24 +11,20 @@ import (
 
 type getDurationTestCase struct {
 	source        *int
-	defaultValue  time.Duration
 	expectedValue time.Duration
 }
 
 func testGetDuration(t *testing.T, defaultValue time.Duration, assert func(*testing.T, getDurationTestCase)) {
 	tests := map[string]getDurationTestCase{
 		"source undefined": {
-			defaultValue:  defaultValue,
 			expectedValue: defaultValue,
 		},
 		"source value lower than zero": {
 			source:        func() *int { i := -10; return &i }(),
-			defaultValue:  defaultValue,
 			expectedValue: defaultValue,
 		},
 		"source value greater than zero": {
 			source:        func() *int { i := 10; return &i }(),
-			defaultValue:  defaultValue,
 			expectedValue: time.Duration(10) * time.Second,
 		},
 	}

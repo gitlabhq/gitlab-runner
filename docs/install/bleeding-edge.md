@@ -23,7 +23,7 @@ from `master` branch. Use at your own risk.
 
 You can then run the Runner with:
 
-```bash
+```shell
 chmod +x gitlab-runner-linux-amd64
 ./gitlab-runner-linux-amd64 run
 ```
@@ -34,10 +34,12 @@ chmod +x gitlab-runner-linux-amd64
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_amd64.deb>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_armel.deb>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_armhf.deb>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_arm64.deb>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/deb/gitlab-runner_aarch64.deb>
 
 You can then install it with:
 
-```bash
+```shell
 dpkg -i gitlab-runner_386.deb
 ```
 
@@ -47,10 +49,12 @@ dpkg -i gitlab-runner_386.deb
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_amd64.rpm>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_arm.rpm>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_armhf.rpm>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_arm64.rpm>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/rpm/gitlab-runner_aarch64.rpm>
 
 You can then install it with:
 
-```bash
+```shell
 rpm -i gitlab-runner_386.rpm
 ```
 

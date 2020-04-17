@@ -11,12 +11,14 @@ dockerfiles/alpine/checksums
 dockerfiles/build/binaries/gitlab-runner-helper.*
 dockerfiles/ubuntu/gitlab-runner_amd64.deb
 dockerfiles/ubuntu/checksums
+.DS_Store
 .idea/
 .editorconfig
 tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
 /.gopath/
+/.tmp/
 
 testsdefinitions.txt
 /.testoutput/
@@ -24,7 +26,6 @@ testsdefinitions.txt
 
 /.vagrant/
 
-codeclimate.json
 ci/.test-failures.servercore1803.txt.updated
 ci/.test-failures.servercore1809.txt.updated
 

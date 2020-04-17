@@ -14,11 +14,11 @@ providing it's [own fork of
 which is based on the latest `master` branch of `docker-machine` with
 some additional patches for the following bugs:
 
-- [Make DigitalOcean driver RateLimit aware](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/2)
-- [Add backoff to Google driver operations check](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/7)
-- [Add `--google-min-cpu-platform` option for machine creation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/9)
-- [Use cached IP for Google driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/15)
-- [Use cached IP for AWS driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/merge_requests/14)
+- [Make DigitalOcean driver RateLimit aware](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/2)
+- [Add backoff to Google driver operations check](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/7)
+- [Add `--google-min-cpu-platform` option for machine creation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/9)
+- [Use cached IP for Google driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/15)
+- [Use cached IP for AWS driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/14)
 
 The intent of this fork is to fix critical and bugs affecting running
 costs only. No new features will be added.
@@ -77,7 +77,7 @@ out of the scope of this documentation. For more details please read the
    - **if yes**, ensure that service manager is [configured to use `SIGQUIT`](../configuration/init.md)
      and use the service's tools to stop the process:
 
-     ```
+     ```shell
      # For systemd
      sudo systemctl stop gitlab-runner
 
@@ -87,7 +87,7 @@ out of the scope of this documentation. For more details please read the
 
    - **if no**, you may stop the Runner's process manually:
 
-     ```bash
+     ```shell
      sudo killall -SIGQUIT gitlab-runner
      ```
 
@@ -99,7 +99,7 @@ out of the scope of this documentation. For more details please read the
 1. Wait until the Runner exits. You can check its status with `gitlab-runner status`
    or await a graceful shutdown for up to 30 minutes with:
 
-   ```bash
+   ```shell
    for i in `seq 1 180`; do # 1800 seconds = 30 minutes
        gitlab-runner status || break
        sleep 10

@@ -35,7 +35,7 @@ world won't be able to.
 
 1. Find the IP that Docker is using:
 
-   ```sh
+   ```shell
    ip -4 -oneline addr show dev docker0
    ```
 
@@ -45,7 +45,7 @@ world won't be able to.
    password, domain and proxy hosts, and configure the `Listen` IP address
    which you found from the previous step. It should look like this:
 
-   ```
+   ```plaintext
    Username     testuser
    Domain       corp-uk
    Password     password
@@ -56,7 +56,7 @@ world won't be able to.
 
 1. Save the changes and restart its service:
 
-   ```sh
+   ```shell
    sudo systemctl restart cntlm
    ```
 
@@ -85,7 +85,7 @@ This is basically the same as adding the proxy to the Docker service above:
 
 1. Create a systemd drop-in directory for the `gitlab-runner` service:
 
-   ```sh
+   ```shell
    mkdir /etc/systemd/system/gitlab-runner.service.d
    ```
 
@@ -100,19 +100,19 @@ This is basically the same as adding the proxy to the Docker service above:
 
 1. Save the file and flush changes:
 
-   ```sh
+   ```shell
    systemctl daemon-reload
    ```
 
 1. Restart GitLab Runner:
 
-   ```sh
+   ```shell
    sudo systemctl restart gitlab-runner
    ```
 
 1. Verify that the configuration has been loaded:
 
-   ```sh
+   ```shell
    systemctl show --property=Environment gitlab-runner
    ```
 

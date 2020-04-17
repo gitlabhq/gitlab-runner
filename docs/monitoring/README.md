@@ -25,7 +25,7 @@ specification.
 
 These metrics are meant as a way for operators to monitor and gain insight into
 GitLab Runners. For example, you may be interested if the load average increase
-on your runner's host is related to an increase of processed jobs or not. Or
+on your runner's host is related to an increase in processed jobs or not. Or
 you are running a cluster of machines to be used for the jobs and you want to
 track build trends to plan changes in your infrastructure.
 
@@ -44,7 +44,7 @@ dispatch alert notifications.
 
 > `pprof` integration was introduced in GitLab Runner 1.9.0.
 
-While having metrics about internal state of Runner process is useful
+While having metrics about the internal state of the Runner process is useful
 we've found that in some cases it would be good to check what is happening
 inside of the Running process in real time. That's why we've introduced
 the `pprof` HTTP endpoints.
@@ -68,8 +68,8 @@ The metrics HTTP server can be configured in two ways:
 In both cases the option accepts a string with the format `[host]:<port>`,
 where:
 
-- `host` can be an IP address or a host name,
-- `port` is a valid TCP port or symbolic service name (like `http`). We recommend to use port `9252` which is already [allocated in Prometheus](https://github.com/prometheus/prometheus/wiki/Default-port-allocations).
+- `host` can be an IP address or a hostname,
+- `port` is a valid TCP port or symbolic service name (like `http`). We recommend using port `9252` which is already [allocated in Prometheus](https://github.com/prometheus/prometheus/wiki/Default-port-allocations).
 
 If the listen address does not contain a port, it will default to `9252`.
 
@@ -82,10 +82,10 @@ Examples of addresses:
 Remember that for listening on ports below `1024` - at least on Linux/Unix
 systems - you need to have root/administrator rights.
 
-Also please notice, that HTTP server is opened on selected `host:port`
+The HTTP server is opened on the selected `host:port`
 **without any authorization**. If you plan to bind the metrics server
 to a public interface then you should consider to use your firewall to
-limit access to this server or add a HTTP proxy which will add the
+limit access to this server or add an HTTP proxy which will add the
 authorization and access control layer.
 
 [go-pprof]: https://golang.org/pkg/net/http/pprof/

@@ -28,7 +28,7 @@ if [[ -z "${REVISION}" ]]; then
 fi
 
 _docker() {
-    docker ${@}
+    docker "${@}"
 }
 
 build() {
@@ -81,41 +81,40 @@ release_docker_helper_images() {
     helper_image_arm64="gitlab/gitlab-runner-helper:arm64-${REVISION}"
     helper_image_arm64_latest="gitlab/gitlab-runner-helper:arm64-latest"
 
-    import out/helper-images/prebuilt-x86_64.tar.xz ${helper_image_x86_64}
-    import out/helper-images/prebuilt-arm.tar.xz ${helper_image_arm}
-    import out/helper-images/prebuilt-arm64.tar.xz ${helper_image_arm64}
+    import out/helper-images/prebuilt-x86_64.tar.xz "${helper_image_x86_64}"
+    import out/helper-images/prebuilt-arm.tar.xz "${helper_image_arm}"
+    import out/helper-images/prebuilt-arm64.tar.xz "${helper_image_arm64}"
 
-    tag_latest ${helper_image_x86_64} ${helper_image_x86_64_latest}
-    tag_latest ${helper_image_arm} ${helper_image_arm_latest}
-    tag_latest ${helper_image_arm64} ${helper_image_arm64_latest}
+    tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
+    tag_latest "${helper_image_arm}" "${helper_image_arm_latest}"
+    tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
 
+    push "${helper_image_x86_64}"
+    push "${helper_image_arm}"
+    push "${helper_image_arm64}"
 
-    push ${helper_image_x86_64}
-    push ${helper_image_arm}
-    push ${helper_image_arm64}
-
-    push_latest ${helper_image_x86_64_latest}
-    push_latest ${helper_image_arm_latest}
-    push_latest ${helper_image_arm64_latest}
+    push_latest "${helper_image_x86_64_latest}"
+    push_latest "${helper_image_arm_latest}"
+    push_latest "${helper_image_arm64_latest}"
 }
 
 login() {
-    _docker login --username "${1}" --password "${2}" "${3}"
+    echo "${2}" | _docker login --username "${1}" --password-stdin "${3}"
 }
 
 logout() {
     _docker logout "${1}"
 }
 
-echo -n > dockerfiles/checksums
-echo "${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine" >> dockerfiles/checksums
-echo "${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init" >> dockerfiles/checksums
-echo "${GIT_LFS_CHECKSUM}  /usr/bin/git-lfs" >> dockerfiles/checksums
-cat dockerfiles/checksums
+tee dockerfiles/checksums <<EOF
+${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine
+${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init
+${GIT_LFS_CHECKSUM}  /usr/bin/git-lfs
+EOF
 
 cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/gitlab-runner_amd64.deb
 cp dockerfiles/checksums dockerfiles/ubuntu
-cp ${RUNNER_BINARY} dockerfiles/alpine/gitlab-runner-linux-amd64
+cp "${RUNNER_BINARY}" dockerfiles/alpine/gitlab-runner-linux-amd64
 cp dockerfiles/checksums dockerfiles/alpine
 
 build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu

@@ -22,7 +22,6 @@
     "style": "---"
   },
   "no-emphasis-as-heading": false,
-  "fenced-code-language": false,
   "first-line-h1": false,
   "code-block-style": {
     "style": "fenced"
@@ -43,6 +42,7 @@
       "CentOS",
       "Consul",
       "Debian",
+      "DevOps",
       "Elasticsearch",
       "Facebook",
       "Git LFS",
@@ -84,7 +84,9 @@
       "markdownlint",
       "Mattermost",
       "Microsoft",
+      "Minikube",
       "MinIO",
+      "ModSecurity",
       "NGINX Ingress",
       "NGINX",
       "OAuth",
@@ -98,9 +100,11 @@
       "Prometheus",
       "Puma",
       "Python",
+      "Rake",
       "Redis",
       "Redmine",
       "reCAPTCHA",
+      "Ruby",
       "runit",
       "Salesforce",
       "SAML",

@@ -73,12 +73,12 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "ro", BindPropagation: "rslave"},
 		},
 		"unsupported bind propagation": {
-			volumeSpec:    "/source:/destination:unkown",
-			expectedError: NewInvalidVolumeSpecErr("/source:/destination:unkown"),
+			volumeSpec:    "/source:/destination:unknown",
+			expectedError: NewInvalidVolumeSpecErr("/source:/destination:unknown"),
 		},
 		"unsupported bind propagation with mode": {
-			volumeSpec:    "/source:/destination:ro,unkown",
-			expectedError: NewInvalidVolumeSpecErr("/source:/destination:ro,unkown"),
+			volumeSpec:    "/source:/destination:ro,unknown",
+			expectedError: NewInvalidVolumeSpecErr("/source:/destination:ro,unknown"),
 		},
 		"malformed bind propagation": {
 			volumeSpec:    "/source:/destination:,rslave",

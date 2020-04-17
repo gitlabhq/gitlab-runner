@@ -22,7 +22,7 @@ requested by their `coordinator`.
 
 Is it possible to run GitLab Runner in debug/verbose mode. From a terminal, run:
 
-```sh
+```shell
 gitlab-runner --debug run
 ```
 
@@ -59,8 +59,8 @@ Upgrade your NGINX to newer version. For more information see this issue: <https
 When running `git clone` using HTTP(s) (with GitLab Runner or manually for
 tests) and you see the following output:
 
-```bash
-git clone https://git.example.com/user/repo.git
+```shell
+$ git clone https://git.example.com/user/repo.git
 
 Cloning into 'repo'...
 warning: You appear to have cloned an empty repository.
@@ -97,7 +97,7 @@ are described. This feature should work on most Unix systems out of the box. How
 Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
 Runner's binaries), when used, the Runner will crash at start with an error similar to:
 
-```text
+```plaintext
 Failed to load config Invalid OffPeakPeriods value: open /usr/local/go/lib/time/zoneinfo.zip: no such file or directory
 ```
 
@@ -113,7 +113,7 @@ If none of those paths are present (for example on a production Windows host) th
 In case your system has support for the IANA Time Zone database, but it's not available by default, you
 can try to install it. For Linux systems it can be done for example by:
 
-```bash
+```shell
 # on Debian/Ubuntu based systems
 sudo apt-get install tzdata
 
@@ -139,15 +139,15 @@ working by following the steps below:
 1. Set the `ZONEINFO` environment variable containing a full path to the `zoneinfo.zip` file. If you
    are starting the Runner using the `run` command, then you can do this with:
 
-   ```bash
-   ZONEINFO=/etc/gitlab-runner/zoneinfo.zip gitlab-runner run [other options ...]
+   ```shell
+   ZONEINFO=/etc/gitlab-runner/zoneinfo.zip gitlab-runner run <other options ...>
    ```
 
    or if using Windows:
 
    ```powershell
    C:\gitlab-runner> set ZONEINFO=C:\gitlab-runner\zoneinfo.zip
-   C:\gitlab-runner> gitlab-runner run [other options ...]
+   C:\gitlab-runner> gitlab-runner run <other options ...>
    ```
 
    If you are starting the Runner as a system service then you will need to update/override
@@ -194,7 +194,7 @@ detect it if it is available and automatically make use of it.
 You need to prepend `call` to your batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
 is a more complete example:
 
-```
+```yaml
 before_script:
   - call C:\path\to\test.bat
 ```
@@ -227,7 +227,7 @@ See issue [#332](https://gitlab.com/gitlab-org/gitlab-runner/issues/332) for mor
 When installing and starting the GitLab Runner service on Windows you can
 meet with such error:
 
-```sh
+```shell
 gitlab-runner install --password WINDOWS_MACHINE_PASSWORD
 gitlab-runner start
 FATA[0000] Failed to start GitLab Runner: The service did not start due to a logon failure.
@@ -271,6 +271,10 @@ After adding the `SeServiceLogonRight` for the user used in service configuratio
 the command `gitlab-runner start` should finish without failures
 and the service should be started properly.
 
+### Job marked as success and terminated midway using Kubernetes executor
+
+Please see [Job execution](../executors/kubernetes.md#job-execution).
+
 ## macOS troubleshooting
 
 The following relate to Runner troubleshooting on macOS.
@@ -288,7 +292,7 @@ causes to why this happens:
 
 1. Make sure that your user can perform UI interactions:
 
-   ```bash
+   ```shell
    DevToolsSecurity -enable
    sudo security authorizationdb remove system.privilege.taskport is-developer
    ```
@@ -307,7 +311,7 @@ causes to why this happens:
    `SessionCreate`. However, in order to upgrade, you need to manually
    reinstall the `LaunchAgent` script:
 
-   ```sh
+   ```shell
    gitlab-runner uninstall
    gitlab-runner install
    gitlab-runner start

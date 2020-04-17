@@ -1,3 +1,8 @@
+<!--
+We use Merge Request titles to generate the CHANGELOG.md entries. Please make the title
+clear and informative. Please style it so that it works as a CHANGELOG entry by itself.
+-->
+
 ## What does this MR do?
 
 <!--

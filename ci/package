@@ -6,7 +6,7 @@ check_macos_package() {
     local binary="${1}"
     local package="${2}"
 
-    if ! which "${binary}" >/dev/null 2>&1; then
+    if ! command -v "${binary}" >/dev/null 2>&1; then
         echo
         echo -e "\\033[31;1m"
         echo "Seems that you're using Mac OS. In case of troubles with packaging ensure"
@@ -31,41 +31,41 @@ create_package() {
         check_macos_package "rpmbuild" "rpm"
     fi
 
-	mkdir -p "out/${packageType}/"
+    mkdir -p "out/${packageType}/"
 
     fpm \
-		--package "out/${packageType}/${PACKAGE_NAME}_${PACKAGE_ARCH}.${packageType}" \
-		--force \
-		--input-type dir \
-		--output-type "${packageType}" \
-		\
-		--name "${PACKAGE_NAME}" \
-		--description "GitLab Runner" \
-		--version "${VERSION}" \
-		--url https://gitlab.com/gitlab-org/gitlab-runner \
-		--maintainer "GitLab Inc. <support@gitlab.com>" \
-		--license "MIT" \
-		--vendor "GitLab Inc." \
-		--architecture "${PACKAGE_ARCH}" \
-		\
-		--conflicts "${PACKAGE_NAME}-beta" \
-		--conflicts gitlab-ci-multi-runner \
-		--conflicts gitlab-ci-multi-runner-beta \
-		--provides gitlab-ci-multi-runner \
-		--replaces gitlab-ci-multi-runner \
-		\
-		--depends git \
-		--depends curl \
-		--depends tar \
-		\
-		${customOptions[@]} \
-		\
-		--after-install "packaging/scripts/postinst.${packageType}" \
-		--before-remove "packaging/scripts/prerm.${packageType}" \
-		\
-		packaging/root/=/ \
-		"${RUNNER_BINARY}=/usr/lib/gitlab-runner/gitlab-runner" \
-		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
+        --package "out/${packageType}/${PACKAGE_NAME}_${PACKAGE_ARCH}.${packageType}" \
+        --force \
+        --input-type dir \
+        --output-type "${packageType}" \
+        \
+        --name "${PACKAGE_NAME}" \
+        --description "GitLab Runner" \
+        --version "${VERSION}" \
+        --url https://gitlab.com/gitlab-org/gitlab-runner \
+        --maintainer "GitLab Inc. <support@gitlab.com>" \
+        --license "MIT" \
+        --vendor "GitLab Inc." \
+        --architecture "${PACKAGE_ARCH}" \
+        \
+        --conflicts "${PACKAGE_NAME}-beta" \
+        --conflicts gitlab-ci-multi-runner \
+        --conflicts gitlab-ci-multi-runner-beta \
+        --provides gitlab-ci-multi-runner \
+        --replaces gitlab-ci-multi-runner \
+        \
+        --depends git \
+        --depends curl \
+        --depends tar \
+        \
+        "${customOptions[@]}" \
+        \
+        --after-install "packaging/scripts/postinst.${packageType}" \
+        --before-remove "packaging/scripts/prerm.${packageType}" \
+        \
+        packaging/root/=/ \
+        "${RUNNER_BINARY}=/usr/lib/gitlab-runner/gitlab-runner" \
+        out/helper-images/=/usr/lib/gitlab-runner/helper-images/
 }
 
 create_deb() {
@@ -81,10 +81,10 @@ create_deb() {
     if [ -n "${GPG_KEYID}" ]; then
         dpkg-sig \
             -g "--no-tty --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}' --pinentry-mode=loopback" \
-			-k "${GPG_KEYID}" \
-			--sign builder \
-			"out/deb/${PACKAGE_NAME}_${PACKAGE_ARCH}.deb"
-	fi
+            -k "${GPG_KEYID}" \
+            --sign builder \
+            "out/deb/${PACKAGE_NAME}_${PACKAGE_ARCH}.deb"
+    fi
 }
 
 create_rpm() {
@@ -95,14 +95,13 @@ create_rpm() {
     create_package rpm "${options[@]}"
 
     if [ -n "${GPG_KEYID}" ] ; then
-		echo "yes" | setsid rpm \
-			--define "_gpg_name ${GPG_KEYID}" \
-			--define "_signature gpg" \
-			--define "__gpg_check_password_cmd /bin/true" \
-			--define "__gpg_sign_cmd $(which gpg) --batch --no-armor --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}' --pinentry-mode=loopback --no-secmem-warning -u '%{_gpg_name}' --sign --detach-sign --output %{__signature_filename} %{__plaintext_filename}" \
-			--addsign "out/rpm/${PACKAGE_NAME}_${PACKAGE_ARCH}.rpm"
-	fi
-
+        echo "yes" | setsid rpm \
+            --define "_gpg_name ${GPG_KEYID}" \
+            --define "_signature gpg" \
+            --define "__gpg_check_password_cmd /bin/true" \
+            --define "__gpg_sign_cmd $(command -v gpg) --batch --no-armor --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}' --pinentry-mode=loopback --no-secmem-warning -u '%{_gpg_name}' --sign --detach-sign --output %{__signature_filename} %{__plaintext_filename}" \
+            --addsign "out/rpm/${PACKAGE_NAME}_${PACKAGE_ARCH}.rpm"
+    fi
 }
 
 case "${1}" in

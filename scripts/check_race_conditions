@@ -3,7 +3,7 @@
 # This is the number of race conditions detected on master.
 # This number is not allowed to increase, and it has to be lowered when we
 # fix existing race conditions
-max=33
+max=19
 
 tmpFile=$(mktemp)
 

@@ -45,6 +45,7 @@ func TestExecSuccessful(t *testing.T) {
 	session.Mux().ServeHTTP(w, req)
 
 	resp := w.Result()
+	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -124,6 +125,7 @@ func TestExecFailedRequest(t *testing.T) {
 			session.Mux().ServeHTTP(w, req)
 
 			resp := w.Result()
+			defer resp.Body.Close()
 
 			assert.Equal(t, c.expectedStatusCode, resp.StatusCode)
 		})
@@ -158,6 +160,7 @@ func TestDoNotAllowMultipleConnections(t *testing.T) {
 	w := httptest.NewRecorder()
 	session.Mux().ServeHTTP(w, req)
 	resp := w.Result()
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusLocked, resp.StatusCode)
 }
 
@@ -300,6 +303,7 @@ func TestProxy(t *testing.T) {
 			session.Mux().ServeHTTP(w, req)
 
 			resp := w.Result()
+			defer resp.Body.Close()
 			assert.Equal(t, c.expectedStatusCode, resp.StatusCode)
 		})
 	}

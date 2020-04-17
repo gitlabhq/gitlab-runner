@@ -19,7 +19,7 @@ _This notice should stay as the first item in the CONTRIBUTING.md file._
 
 ## Contribute to GitLab Runner
 
-The following contents has to be considered as an extension over [gitlab-ce contributing guidelines](https://docs.gitlab.com/ce/development/contributing/index.html).
+The following content is an extension of the [GitLab contribution guidelines](https://docs.gitlab.com/ce/development/contributing/index.html).
 
 ### How we prioritize MRs from the wider community
 
@@ -64,12 +64,27 @@ As we explore adding more architectures other requirements may come up.
 We are currently discussing the ability of providing builds for architectures that we
 don't have the ability to support and [we welcome contributions to that discussion](https://gitlab.com/gitlab-org/gitlab-runner/issues/4229).
 
-## Workflow labels
+### Submitting Merge Requests
+
+#### Merge Request titles
+
+When submitting a Merge Request please remember that we use the Merge Request titles to generate entries
+for the [`CHANGELOG.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CHANGELOG.md) file.
+This one line will be the only thing a Runner administrator will see when reviewing
+the changelog prior to deciding if an upgrade should be made or not. The administrator may not check the
+MR description, list of changes, or diff which would give more context.
+
+Please make the title clear, concise and informative. A title of `Fixes bug` would not be
+acceptable, while `Fix timestamp in docker executor job output` would be acceptable.
+
+### Workflow labels
 
 We have some additional labels plus those defined in [gitlab-ce workflow labels](https://docs.gitlab.com/ce/development/contributing/issue_workflow.html)
 
 - Additional subjects: ~cache, ~executors, ~"git operations"
 - OS: ~"os::Linux" ~"os::macOS" ~"os:FreeBSD" ~"os::Windows"
 - executor: ~"executor::docker" ~"executor::kubernetes" ~"executor::docker\-machine" ~"executor::docker\-machine" ~"executor::shell" ~"executor::parallels" ~"executor::virtualbox"
-
-
+- For any [follow-up
+  issues](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#technical-debt-in-follow-up-issues)
+  created during code review the ~"follow-up" label should be added to
+  keep track of it.

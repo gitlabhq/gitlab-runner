@@ -10,7 +10,7 @@ is advised to set up a personal container registry and a cache server.
    on that machine
 1. Create a new container registry:
 
-   ```bash
+   ```shell
    docker run -d -p 6000:5000 \
        -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io \
        --restart always \
@@ -22,7 +22,7 @@ is advised to set up a personal container registry and a cache server.
 
 1. Check the IP address of the server:
 
-   ```bash
+   ```shell
    hostname --ip-address
    ```
 
@@ -48,7 +48,7 @@ S3-compatible caching server:
    on that machine
 1. Start [MinIO](https://min.io), a simple S3-compatible server written in Go:
 
-   ```bash
+   ```shell
    docker run -it --restart always -p 9005:9000 \
            -v /.minio:/root/.minio -v /export:/export \
            --name minio \
@@ -59,14 +59,14 @@ S3-compatible caching server:
 
 1. Check the IP address of the server:
 
-   ```bash
+   ```shell
    hostname --ip-address
    ```
 
 1. Your cache server will be available at `MY_CACHE_IP:9005`
 1. Create a bucket that will be used by the Runner:
 
-   ```
+   ```shell
    sudo mkdir /export/runner
    ```
 
@@ -76,7 +76,7 @@ S3-compatible caching server:
 
 1. Read the Access and Secret Key of MinIO and use it to configure the Runner:
 
-   ```
+   ```shell
    sudo cat /export/.minio.sys/config/config.json | grep Key
    ```
 

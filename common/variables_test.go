@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,16 +11,17 @@ import (
 
 func TestVariablesJSON(t *testing.T) {
 	var x JobVariable
-	data := []byte(`{"key": "FOO", "value": "bar", "public": true, "internal": true, "file": true, "masked": true}`)
+	data := []byte(`{"key": "FOO", "value": "bar", "public": true, "internal": true, "file": true, "masked": true, "raw": true}`)
 
 	err := json.Unmarshal(data, &x)
 	assert.NoError(t, err)
 	assert.Equal(t, "FOO", x.Key)
 	assert.Equal(t, "bar", x.Value)
-	assert.Equal(t, true, x.Public)
-	assert.Equal(t, false, x.Internal) // cannot be set from the network
-	assert.Equal(t, true, x.File)
-	assert.Equal(t, true, x.Masked)
+	assert.True(t, x.Public)
+	assert.False(t, x.Internal) // cannot be set from the network
+	assert.True(t, x.File)
+	assert.True(t, x.Masked)
+	assert.True(t, x.Raw)
 }
 
 func TestVariableString(t *testing.T) {
@@ -157,6 +159,25 @@ func TestMultipleUsageOfAKey(t *testing.T) {
 			for i := 0; i < 100; i++ {
 				require.Equal(t, testCase.expectedValue, testCase.variables.Get("key"))
 			}
+		})
+	}
+}
+
+func TestRawVariableExpansion(t *testing.T) {
+	tests := map[bool]string{
+		true:  "value_of_${base}",
+		false: "value_of_base_value",
+	}
+
+	for raw, expectedValue := range tests {
+		t.Run(fmt.Sprintf("raw-%v", raw), func(t *testing.T) {
+			variables := JobVariables{
+				{Key: "base", Value: "base_value"},
+				{Key: "related", Value: "value_of_${base}", Raw: raw},
+			}
+
+			expanded := variables.Expand()
+			assert.Equal(t, expectedValue, expanded.Get("related"))
 		})
 	}
 }

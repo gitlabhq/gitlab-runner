@@ -18,16 +18,24 @@ package kubernetes
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 )
 
 type fakeRemoteExecutor struct {
@@ -78,10 +86,10 @@ func TestExec(t *testing.T) {
 		// Create a fake kubeClient
 		fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
 			switch p, m := req.URL.Path, req.Method; {
-			case p == test.podPath && m == "GET":
+			case p == test.podPath && m == http.MethodGet:
 				body := objBody(codec, test.pod)
 				return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
-					"Content-Type": []string{"application/json"},
+					"Content-Type": {"application/json"},
 				}}, nil
 			default:
 				// Ensures no GET is performed when deleting by name
@@ -128,13 +136,17 @@ func TestExec(t *testing.T) {
 			t.Errorf("%s: Did not get expected path for exec request", test.name)
 			continue
 		}
-		if ex.method != "POST" {
+		if ex.method != http.MethodPost {
 			t.Errorf("%s: Did not get method for exec request: %s", test.name, ex.method)
 		}
 	}
 }
 
 func execPod() *api.Pod {
+	return execPodWithPhase(api.PodRunning)
+}
+
+func execPodWithPhase(phase api.PodPhase) *api.Pod {
 	return &api.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test", ResourceVersion: "10"},
 		Spec: api.PodSpec{
@@ -147,7 +159,166 @@ func execPod() *api.Pod {
 			},
 		},
 		Status: api.PodStatus{
-			Phase: api.PodRunning,
+			Phase: phase,
 		},
 	}
+}
+
+func TestExecOptions_ShouldRetry(t *testing.T) {
+	testCommandShouldRetry(t, &ExecOptions{})
+}
+
+func TestAttachOptions_ShouldRetry(t *testing.T) {
+	testCommandShouldRetry(t, &AttachOptions{})
+}
+
+func testCommandShouldRetry(t *testing.T, retryable retry.Retryable) {
+	tests := map[string]struct {
+		err                 error
+		tries               int
+		expectedShouldRetry bool
+	}{
+		"no error, shouldn't retry": {
+			err:                 nil,
+			expectedShouldRetry: false,
+		},
+		"different error, shouldn't retry": {
+			err:                 errors.New("err"),
+			expectedShouldRetry: false,
+		},
+		"empty status error, shouldn't retry": {
+			err:                 &kubeerrors.StatusError{},
+			expectedShouldRetry: false,
+		},
+		"status error different code, shouldn't retry": {
+			err: &kubeerrors.StatusError{
+				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusNotFound},
+			},
+			expectedShouldRetry: false,
+		},
+		"status error different message, shouldn't retry": {
+			err: &kubeerrors.StatusError{
+				ErrStatus: metav1.Status{Message: "random", Code: http.StatusInternalServerError},
+			},
+			expectedShouldRetry: false,
+		},
+		"status error matching message, should retry": {
+			err: &kubeerrors.StatusError{
+				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusInternalServerError},
+			},
+			expectedShouldRetry: true,
+		},
+		"status error matching code and message, over max tries limit": {
+			err: &kubeerrors.StatusError{
+				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusInternalServerError},
+			},
+			tries:               commandConnectFailureMaxTries + 1,
+			expectedShouldRetry: false,
+		},
+		"no error, over max tries limit": {
+			err:                 nil,
+			tries:               commandConnectFailureMaxTries + 1,
+			expectedShouldRetry: false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.Equal(t, tt.expectedShouldRetry, retryable.ShouldRetry(tt.tries, tt.err))
+		})
+	}
+}
+
+func TestAttach(t *testing.T) {
+	version, codec := testVersionAndCodec()
+
+	fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+		switch p, m := req.URL.Path, req.Method; {
+		case p == "/api/v1/namespaces/test-resource/pods/test-resource" && m == http.MethodGet:
+			body := objBody(codec, execPod())
+			return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
+				"Content-Type": {"application/json"},
+			}}, nil
+
+		default:
+			return nil, fmt.Errorf("unexpected request")
+		}
+	})
+
+	client := testKubernetesClient(version, fakeClient)
+	clientConfig := &restclient.Config{}
+
+	mockExecutor := &MockRemoteExecutor{}
+	defer mockExecutor.AssertExpectations(t)
+
+	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
+		return url.Path == "/api/v1/namespaces/test/pods/foo/attach"
+	})
+	stdinMatcher := mock.MatchedBy(func(stdin io.Reader) bool {
+		b, _ := ioutil.ReadAll(stdin)
+		return string(b) == "sleep 1\n"
+	})
+	mockExecutor.On("Execute", http.MethodPost,
+		urlMatcher, clientConfig, stdinMatcher, nil, nil, false).Return(nil).Once()
+
+	opts := &AttachOptions{
+		Namespace:     "test-resource",
+		PodName:       "test-resource",
+		ContainerName: "test-resource",
+		Command:       []string{"sleep", "1"},
+		Executor:      mockExecutor,
+		Client:        client,
+		Config:        clientConfig,
+	}
+
+	assert.Nil(t, opts.Run())
+}
+
+func TestAttachErrorGettingPod(t *testing.T) {
+	err := errors.New("error")
+
+	version, _ := testVersionAndCodec()
+
+	fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
+		return nil, err
+	})
+
+	client := testKubernetesClient(version, fakeClient)
+	clientConfig := &restclient.Config{}
+
+	opts := &AttachOptions{
+		Namespace:     "test-resource",
+		PodName:       "test-resource",
+		ContainerName: "test-resource",
+		Client:        client,
+		Config:        clientConfig,
+	}
+
+	assert.True(t, errors.Is(opts.Run(), err))
+}
+
+func TestAttachPodNotRunning(t *testing.T) {
+	version, codec := testVersionAndCodec()
+
+	fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
+		body := objBody(codec, execPodWithPhase(api.PodUnknown))
+		return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
+			"Content-Type": {"application/json"},
+		}}, nil
+	})
+
+	client := testKubernetesClient(version, fakeClient)
+	clientConfig := &restclient.Config{}
+
+	opts := &AttachOptions{
+		Namespace:     "test-resource",
+		PodName:       "test-resource",
+		ContainerName: "test-resource",
+		Client:        client,
+		Config:        clientConfig,
+	}
+
+	err := opts.Run()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), api.PodUnknown)
 }

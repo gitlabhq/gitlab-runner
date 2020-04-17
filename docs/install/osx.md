@@ -16,7 +16,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 
 1. Download the binary for your system:
 
-   ```bash
+   ```shell
    sudo curl --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
    ```
 
@@ -25,7 +25,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 
 1. Give it permissions to execute:
 
-   ```bash
+   ```shell
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
@@ -34,7 +34,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 1. [Register the Runner](../register/index.md)
 1. Install the Runner as service and start it:
 
-   ```bash
+   ```shell
    cd ~
    gitlab-runner install
    gitlab-runner start
@@ -53,13 +53,13 @@ To install GitLab Runner using Homebrew:
 
 1. Install the GitLab Runner.
 
-   ```bash
+   ```shell
    brew install gitlab-runner
    ```
 
 1. Install the Runner as a service and start it.
 
-   ```bash
+   ```shell
    brew services start gitlab-runner
    ```
 
@@ -93,7 +93,7 @@ executing the `install` command, by checking the
 If Homebrew was used to install `git`, it may have added a `/usr/local/etc/gitconfig` file
 containing:
 
-```
+```ini
 [credential]
         helper = osxkeychain
 ```
@@ -102,19 +102,19 @@ This tells Git to cache user credentials in the keychain, which may not be what 
 and can cause fetches to hang. You can remove the line from the system `gitconfig`
 with:
 
-```bash
+```shell
 git config --system --unset credentials.helper
 ```
 
 Alternatively, you can just disable `credentials.helper` for the GitLab user:
 
-```bash
+```shell
 git config --global --add credentials.helper ''
 ```
 
 You can check the status of the `credentials.helper` with:
 
-```bash
+```shell
 git config credentials.helpers
 ```
 
@@ -122,13 +122,13 @@ git config credentials.helpers
 
 1. Stop the service:
 
-   ```bash
+   ```shell
    gitlab-runner stop
    ```
 
 1. Download the binary to replace the Runner's executable:
 
-   ```bash
+   ```shell
    sudo curl -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
    ```
 
@@ -137,13 +137,13 @@ git config credentials.helpers
 
 1. Give it permissions to execute:
 
-   ```bash
+   ```shell
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
 1. Start the service:
 
-   ```bash
+   ```shell
    gitlab-runner start
    ```
 
@@ -155,17 +155,18 @@ some of the most common problems with GitLab Runner.
 In order to upgrade the `LaunchAgent` configuration, you need to uninstall and
 install the service:
 
-```bash
+```shell
 gitlab-runner uninstall
 gitlab-runner install
 gitlab-runner start
 ```
 
-## Starting GitLab Runner with launchd
+## Using codesign with the GitLab Runner Service
 
-Assuming Homebrew was used to install `gitlab-runner` on macOS, if your build calls
-`codesign`, you may need to set `<key>SessionCreate</key><true/>` so that you have
-access to the user keychains. In the following example we run the builds as the user `gitlab` and want access to the signing certificates installed by that user for codesigning.
+If you installed `gitlab-runner` on macOS with homebrew and your build calls
+`codesign`, you may need to set `<key>SessionCreate</key><true/>` to have
+access to the user keychains. In the following example we run the builds as the `gitlab`
+user and want access to the signing certificates installed by that user for codesigning:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>

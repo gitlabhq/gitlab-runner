@@ -50,7 +50,6 @@ func TestGetKubeClientConfig(t *testing.T) {
 	aConfig := func() (*restclient.Config, error) {
 		config := *completeConfig
 		return &config, nil
-
 	}
 
 	tests := []struct {
@@ -191,7 +190,7 @@ func TestWaitForPodRunning(t *testing.T) {
 			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
 					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
@@ -221,7 +220,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					}
 					retries++
 					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
-						"Content-Type": []string{"application/json"},
+						"Content-Type": {"application/json"},
 					}}, nil
 				default:
 					// Ensures no GET is performed when deleting by name
@@ -243,7 +242,7 @@ func TestWaitForPodRunning(t *testing.T) {
 			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
 					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
@@ -254,7 +253,7 @@ func TestWaitForPodRunning(t *testing.T) {
 						},
 					}
 					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
-						"Content-Type": []string{"application/json"},
+						"Content-Type": {"application/json"},
 					}}, nil
 				default:
 					// Ensures no GET is performed when deleting by name
@@ -295,7 +294,7 @@ func TestWaitForPodRunning(t *testing.T) {
 			},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
 					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
@@ -307,7 +306,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					}
 					retries++
 					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
-						"Content-Type": []string{"application/json"},
+						"Content-Type": {"application/json"},
 					}}, nil
 				default:
 					// Ensures no GET is performed when deleting by name
@@ -377,6 +376,7 @@ func testKubernetesClient(version string, httpClient *http.Client) *kubernetes.C
 	}
 	kube := kubernetes.NewForConfigOrDie(&conf)
 	fakeClient := fake.RESTClient{Client: httpClient}
+	kube.RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
 	kube.CoreV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
 	kube.ExtensionsV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
 

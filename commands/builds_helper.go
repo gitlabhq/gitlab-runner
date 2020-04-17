@@ -72,7 +72,7 @@ func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCoun
 		b.counters = make(map[string]*runnerCounter)
 	}
 
-	counter, _ := b.counters[runner.Token]
+	counter := b.counters[runner.Token]
 	if counter == nil {
 		counter = &runnerCounter{}
 		b.counters[runner.Token] = counter
@@ -187,8 +187,6 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 
 	b.builds = append(b.builds, build)
 	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription()).Inc()
-
-	return
 }
 
 func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
@@ -222,11 +220,7 @@ func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 	data := make(map[statePermutation]int)
 	for _, build := range b.builds {
 		state := newStatePermutationFromBuild(build)
-		if _, ok := data[state]; ok {
-			data[state]++
-		} else {
-			data[state] = 1
-		}
+		data[state]++
 	}
 	return data
 }
@@ -323,7 +317,6 @@ func (b *buildsHelper) listJobsHandlerV1(w http.ResponseWriter, r *http.Request)
 			job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(),
 		)
 	}
-
 }
 
 func (b *buildsHelper) listJobsHandlerV2(w http.ResponseWriter, r *http.Request) {
@@ -339,7 +332,7 @@ func (b *buildsHelper) listJobsHandlerV2(w http.ResponseWriter, r *http.Request)
 }
 
 func CreateJobURL(projectURL string, jobID int) string {
-	r := regexp.MustCompile("(\\.git$)?")
+	r := regexp.MustCompile(`(\.git$)?`)
 	URL := r.ReplaceAllString(projectURL, "")
 
 	return fmt.Sprintf("%s/-/jobs/%d", URL, jobID)

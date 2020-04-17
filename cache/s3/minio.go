@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio-go"
-	"github.com/minio/minio-go/pkg/credentials"
+	"github.com/minio/minio-go/v6"
+	"github.com/minio/minio-go/v6/pkg/credentials"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )

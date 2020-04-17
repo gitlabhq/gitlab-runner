@@ -146,7 +146,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := &docker_helpers.MockClient{}
+			c := new(docker.MockClient)
 			defer c.AssertExpectations(t)
 
 			s := commandExecutor{
@@ -190,7 +190,6 @@ func TestCommandExecutor_Connect(t *testing.T) {
 			assert.Nil(t, conn)
 		})
 	}
-
 }
 
 func TestTerminalConn_FailToStart(t *testing.T) {
@@ -213,7 +212,7 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := &docker_helpers.MockClient{}
+			c := new(docker.MockClient)
 			defer c.AssertExpectations(t)
 
 			s := commandExecutor{
@@ -264,6 +263,7 @@ func TestTerminalConn_FailToStart(t *testing.T) {
 
 			resp := w.Result()
 			assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+			defer resp.Body.Close()
 		})
 	}
 }
@@ -311,7 +311,7 @@ func (nopConn) SetWriteDeadline(t time.Time) error {
 }
 
 func TestTerminalConn_Start(t *testing.T) {
-	c := &docker_helpers.MockClient{}
+	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
 	s := commandExecutor{
@@ -377,6 +377,7 @@ func TestTerminalConn_Start(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, conn)
 	require.Equal(t, resp.StatusCode, http.StatusSwitchingProtocols)
+	defer resp.Body.Close()
 
 	defer conn.Close()
 

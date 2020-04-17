@@ -1,4 +1,4 @@
-# Best practice
+# Best practices
 
 Below are some guidelines you should follow when you use and administer
 GitLab Runner.
@@ -42,5 +42,33 @@ _Builds Directory_. For example, you can store tools inside of
 discourage this, you should never store anything inside of the _Builds
 Directory_. GitLab Runner should have total control over it and does not
 provide stability in such cases. If you have dependencies that are
-required for your CI, we recommend to have them installed in some other
+required for your CI, we recommend installing them in some other
 place.
+
+## Graceful shutdown
+
+When the runner is installed on a host and runs local executors it will start additional processes for some operations,
+like downloading or uploading artifacts, or handling cache.
+These processes are executed as `gitlab-runner` commands, which means that using `pkill -QUIT gitlab-runner` or `killall QUIT gitlab-runner` can kill them as well, and the operations they are responsible for will fail.
+
+Here are two ways to prevent this:
+
+- Register the runner as a local service (like `systemd`) with `SIGQUIT` as the kill
+  signal, and use `gitlab-runner stop` or `systemctl stop gitlab-runner.service`.
+  Here is an example from the configuration of the shared runners on GitLab.com:
+
+  ```ini
+  ; /etc/systemd/system/gitlab-runner.service.d/kill.conf
+  [Service]
+  KillSignal=SIGQUIT
+  TimeoutStopSec=__REDACTED__
+  ```
+
+- Manually kill the process with `kill -SIGQUIT <pid>`. You have to find the `pid`
+  of the main `gitlab-runner` process. You can find this by looking at logs, as
+  it's displayed on startup:
+
+  ```shell
+  $ gitlab-runner run
+  Runtime platform                                    arch=amd64 os=linux pid=87858 revision=8d21977e version=12.10.0~beta.82.g8d21977e
+  ```

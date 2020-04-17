@@ -10,24 +10,21 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func buildOverwriteVariables(namespace, serviceAccount, bearerToken string, podAnnotations map[string]string) common.JobVariables {
-	variables := make(common.JobVariables, 4)
+type variableOverwrites map[string]string
 
-	if namespace != "" {
-		variables = append(variables, common.JobVariable{Key: NamespaceOverwriteVariableName, Value: namespace})
-	}
+func buildOverwriteVariables(overwrites variableOverwrites, podAnnotations map[string]string) common.JobVariables {
+	variables := make(common.JobVariables, 8)
 
-	if serviceAccount != "" {
-		variables = append(variables, common.JobVariable{Key: ServiceAccountOverwriteVariableName, Value: serviceAccount})
-	}
-
-	if bearerToken != "" {
-		variables = append(variables, common.JobVariable{Key: BearerTokenOverwriteVariableValue, Value: bearerToken})
+	for variableKey, overwriteValue := range overwrites {
+		if overwriteValue != "" {
+			variables = append(variables, common.JobVariable{Key: variableKey, Value: overwriteValue})
+		}
 	}
 
 	for k, v := range podAnnotations {
 		variables = append(variables, common.JobVariable{Key: k, Value: v})
 	}
+
 	return variables
 }
 
@@ -50,6 +47,14 @@ func TestOverwrites(t *testing.T) {
 			"org.gitlab/gitlab-host":    "https://gitlab.example.com",
 			"iam.amazonaws.com/role":    "arn:aws:iam::123456789012:role/",
 		},
+		CPULimit:                         "5",
+		CPURequest:                       "3",
+		CPULimitOverwriteMaxAllowed:      "10",
+		CPURequestOverwriteMaxAllowed:    "8",
+		MemoryLimit:                      "5Gi",
+		MemoryRequest:                    "2Gi",
+		MemoryLimitOverwriteMaxAllowed:   "15Gi",
+		MemoryRequestOverwriteMaxAllowed: "10Gi",
 	}
 
 	tests := []struct {
@@ -59,6 +64,10 @@ func TestOverwrites(t *testing.T) {
 		ServiceAccountOverwriteVariableValue string
 		BearerTokenOverwriteVariableValue    string
 		PodAnnotationsOverwriteValues        map[string]string
+		CPULimitOverwriteVariableValue       string
+		CPURequestOverwriteVariableValue     string
+		MemoryLimitOverwriteVariableValue    string
+		MemoryRequestOverwriteVariableValue  string
 		Expected                             *overwrites
 		Error                                bool
 	}{
@@ -79,6 +88,10 @@ func TestOverwrites(t *testing.T) {
 				"KUBERNETES_POD_ANNOTATIONS_gilabversion": "org.gitlab/runner-version=v10.4.0-override",
 				"KUBERNETES_POD_ANNOTATIONS_kube2iam":     "iam.amazonaws.com/role=arn:aws:iam::kjcbs;dkjbck=jxzweopiu:role/",
 			},
+			CPULimitOverwriteVariableValue:      "10",
+			CPURequestOverwriteVariableValue:    "8",
+			MemoryLimitOverwriteVariableValue:   "15Gi",
+			MemoryRequestOverwriteVariableValue: "10Gi",
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
@@ -92,6 +105,10 @@ func TestOverwrites(t *testing.T) {
 					"org.gitlab/gitlab-host":    "https://gitlab.example.com",
 					"iam.amazonaws.com/role":    "arn:aws:iam::kjcbs;dkjbck=jxzweopiu:role/",
 				},
+				cpuLimit:      "10",
+				cpuRequest:    "8",
+				memoryLimit:   "15Gi",
+				memoryRequest: "10Gi",
 			},
 		},
 		{
@@ -104,6 +121,10 @@ func TestOverwrites(t *testing.T) {
 					"test1": "test1",
 					"test2": "test2",
 				},
+				CPULimit:      "1",
+				CPURequest:    "1",
+				MemoryLimit:   "2Gi",
+				MemoryRequest: "2Gi",
 			},
 			NamespaceOverwriteVariableValue:      "another_namespace",
 			ServiceAccountOverwriteVariableValue: "another_service_account",
@@ -112,6 +133,10 @@ func TestOverwrites(t *testing.T) {
 				"KUBERNETES_POD_ANNOTATIONS_1": "test3=test3",
 				"KUBERNETES_POD_ANNOTATIONS_2": "test4=test4",
 			},
+			CPULimitOverwriteVariableValue:      "10",
+			CPURequestOverwriteVariableValue:    "8",
+			MemoryLimitOverwriteVariableValue:   "15Gi",
+			MemoryRequestOverwriteVariableValue: "10Gi",
 			Expected: &overwrites{
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
@@ -120,6 +145,10 @@ func TestOverwrites(t *testing.T) {
 					"test1": "test1",
 					"test2": "test2",
 				},
+				cpuLimit:      "1",
+				cpuRequest:    "1",
+				memoryLimit:   "2Gi",
+				memoryRequest: "2Gi",
 			},
 		},
 		{
@@ -158,20 +187,72 @@ func TestOverwrites(t *testing.T) {
 			},
 			Error: true,
 		},
+		{
+			Name: "CPULimit too high",
+			Config: &common.KubernetesConfig{
+				CPULimitOverwriteMaxAllowed: "10",
+			},
+			CPULimitOverwriteVariableValue: "12",
+			Error:                          true,
+		},
+		{
+			Name: "CPURequest too high",
+			Config: &common.KubernetesConfig{
+				CPURequestOverwriteMaxAllowed: "10",
+			},
+			CPURequestOverwriteVariableValue: "12",
+			Error:                            true,
+		},
+		{
+			Name: "MemoryLimit too high",
+			Config: &common.KubernetesConfig{
+				MemoryLimitOverwriteMaxAllowed: "2Gi",
+			},
+			MemoryLimitOverwriteVariableValue: "10Gi",
+			Error:                             true,
+		},
+		{
+			Name: "MemoryRequest too high",
+			Config: &common.KubernetesConfig{
+				MemoryRequestOverwriteMaxAllowed: "2Gi",
+			},
+			MemoryRequestOverwriteVariableValue: "10Gi",
+			Error:                               true,
+		},
+		{
+			Name: "MemoryRequest too high different suffix",
+			Config: &common.KubernetesConfig{
+				MemoryRequestOverwriteMaxAllowed: "2Gi",
+			},
+			MemoryRequestOverwriteVariableValue: "5000Mi",
+			Error:                               true,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			assert := assert.New(t)
-			variables := buildOverwriteVariables(test.NamespaceOverwriteVariableValue, test.ServiceAccountOverwriteVariableValue, test.BearerTokenOverwriteVariableValue, test.PodAnnotationsOverwriteValues)
+			variables := buildOverwriteVariables(
+				variableOverwrites{
+					NamespaceOverwriteVariableName:      test.NamespaceOverwriteVariableValue,
+					ServiceAccountOverwriteVariableName: test.ServiceAccountOverwriteVariableValue,
+					BearerTokenOverwriteVariableValue:   test.BearerTokenOverwriteVariableValue,
+					CPULimitOverwriteVariableValue:      test.CPULimitOverwriteVariableValue,
+					CPURequestOverwriteVariableValue:    test.CPURequestOverwriteVariableValue,
+					MemoryLimitOverwriteVariableValue:   test.MemoryLimitOverwriteVariableValue,
+					MemoryRequestOverwriteVariableValue: test.MemoryRequestOverwriteVariableValue,
+				},
+				test.PodAnnotationsOverwriteValues,
+			)
+
 			values, err := createOverwrites(test.Config, variables, logger)
+
 			if test.Error {
-				assert.Error(err)
-				assert.Contains(err.Error(), "does not match")
-			} else {
-				assert.NoError(err)
-				assert.Equal(test.Expected, values)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "does not match")
+				return
 			}
+			assert.NoError(t, err)
+			assert.Equal(t, test.Expected, values)
 		})
 	}
 }

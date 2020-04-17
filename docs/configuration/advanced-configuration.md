@@ -29,7 +29,7 @@ This defines global settings of GitLab Runner.
 
 Example:
 
-```bash
+```toml
 concurrent = 4
 log_level = "warning"
 ```
@@ -95,12 +95,16 @@ section and terminal support will be disabled.
 
 Example:
 
-```bash
+```toml
 [session_server]
   listen_address = "0.0.0.0:8093" #  listen on all available interfaces on port 8093
   advertise_address = "runner-host-name.tld:8093"
   session_timeout = 1800
 ```
+
+NOTE: **Note:**
+If using the GitLab Runner docker image, you will also need to expose port 8093 by
+adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
 
 ## The `[[runners]]` section
 
@@ -131,7 +135,7 @@ This defines one runner entry.
 
 Example:
 
-```bash
+```toml
 [[runners]]
   name = "ruby-2.6-docker"
   url = "https://CI/"
@@ -146,11 +150,11 @@ Example:
 
 ### How `clone_url` works
 
-In cases where the GitLab instance is exposed to an URL which can't be used
+In cases where the GitLab instance is exposed to a URL which can't be used
 by the runner, a `clone_url` can be configured. For example; GitLab is exposed
 to `https://gitlab.example.com`, but the runner can't reach that because of
 a firewall setup. If the runner can reach the node on `192.168.1.23`,
-the `clone_url` should be set to `"http://192.168.1.23`.
+the `clone_url` should be set to `http://192.168.1.23`.
 
 Only if the `clone_url` is set, the runner will construct a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
@@ -241,7 +245,7 @@ Each service will be run in a separate container and linked to the build.
 
 Example:
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -269,16 +273,16 @@ Example:
   volumes_from = ["storage_container:ro"]
   links = ["mysql_container:mysql"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
-  allowed_services = ["postgres:9.4", "postgres:latest"]
+  allowed_services = ["postgres:9", "redis:*", "mysql:*"]
   [[runners.docker.services]]
-    name: "mysql"
-    alias: "db"
+    name = "mysql"
+    alias = "db"
   [[runners.docker.services]]
-    name: "redis:2.8"
-    alias: "cache"
+    name = "redis:2.8"
+    alias = "cache"
   [[runners.docker.services]]
-    name: "postgres:9"
-    alias: "postgres-db"
+    name = "postgres:9"
+    alias = "postgres-db"
   [runners.docker.sysctls]
     "net.ipv4.ip_forward" = "1"
 ```
@@ -297,7 +301,7 @@ A data volume is a specially-designated directory within one or more containers
 that bypasses the Union File System. Data volumes are designed to persist data,
 independent of the container's life cycle.
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -316,7 +320,7 @@ In addition to creating a volume using a data volume, you can also mount
 a directory from your Docker daemon's host into a container. It's useful
 when you want to store directories outside the container.
 
-```bash
+```toml
 [runners.docker]
   host = ""
   hostname = ""
@@ -332,7 +336,7 @@ This will use `/path/to/bind/from/host` of the CI host inside the container at
 
 NOTE: **Note:**
 GitLab Runner 11.11 and newer [will mount the host
-directory](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1261)
+directory](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1261)
 for the defined [services](https://docs.gitlab.com/ee/ci/services/) as
 well.
 
@@ -408,7 +412,7 @@ if you add some credentials for the _integrated registry_ with the
 For certain setups you will restrict access of the build jobs to docker images
 which comes from your private docker registry. In that case set
 
-```bash
+```toml
 [runners.docker]
   ...
   allowed_images = ["my.registry.tld:5000/*:*"]
@@ -426,7 +430,7 @@ This defines the Parallels parameters.
 
 Example:
 
-```bash
+```toml
 [runners.parallels]
   base_name = "my-parallels-image"
   template_name = ""
@@ -448,7 +452,7 @@ your `PATH` environment variable on Windows hosts:
 
 Example:
 
-```bash
+```toml
 [runners.virtualbox]
   base_name = "my-virtualbox-image"
   base_snapshot = "my-image-snapshot"
@@ -469,7 +473,7 @@ This defines the SSH connection parameters.
 
 Example:
 
-```
+```toml
 [runners.ssh]
   host = "my-production-server"
   port = "22"
@@ -500,7 +504,7 @@ found in the separate [runners autoscale documentation](autoscale.md).
 
 Example:
 
-```bash
+```toml
 [runners.machine]
   IdleCount = 5
   IdleTime = 600
@@ -531,7 +535,7 @@ The `OffPeakPeriods` setting contains an array of string patterns of
 time periods represented in a cron-style format. The line contains
 following fields:
 
-```
+```plaintext
 [second] [minute] [hour] [day of month] [month] [day of week] [year]
 ```
 
@@ -541,8 +545,7 @@ can be found [here][cronvendor].
 
 ## The `[runners.custom]` section
 
-Define configuration for the [custom
-executor](../executors/custom.md).
+Define configuration for the [custom executor](../executors/custom.md).
 
 | Parameter               | Type         | Required | Description                                                                                                                                                                                                                                                                                         |
 |-------------------------|--------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -697,7 +700,7 @@ Examples:
 
 ## The `[runners.kubernetes]` section
 
-> Added in GitLab Runner v1.6.0
+> Introduced in GitLab Runner v1.6.0.
 
 This defines the Kubernetes parameters.
 See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
@@ -716,7 +719,7 @@ See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
 
 Example:
 
-```bash
+```toml
 [runners.kubernetes]
   host = "https://45.67.34.123:4892"
   cert_file = "/etc/ssl/kubernetes/api.crt"
@@ -736,7 +739,7 @@ to handle Git, artifacts and cache operations. This container is created from a 
 
 The helper image is based on Alpine Linux and it's provided for amd64 and arm architectures. It contains
 a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner binary, that contains only a subset
-of available commands, as well as Git, Git LFS, SSL certificates store and basic configuration of Alpine.
+of available commands, as well as Git, Git LFS, SSL certificates store, and basic configuration of Alpine.
 
 When GitLab Runner is installed from the DEB/RPM packages, both images (`amd64` and `arm` based) are installed on the host.
 When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's Git
@@ -744,8 +747,8 @@ revision) is not found on Docker Engine, it is automatically loaded. It works li
 `docker` and `docker+machine` executors.
 
 Things work a little different for the `kubernetes` executor or when GitLab Runner is installed manually. For manual
-installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor,the API of Kubernetes
-doesn't allow to load the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
+installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor, the API of Kubernetes
+doesn't allow loading the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
 the helper image from Docker Hub, from GitLab's official repository `gitlab/gitlab-runner-helper` by using the Runner's
 revision and architecture for defining which tag should be downloaded.
 
@@ -805,8 +808,7 @@ before upgrading the Runner, otherwise the jobs will start failing with a "No su
 
 ## The `[runners.custom_build_dir]` section
 
-NOTE: **Note:**
-[Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1267) in GitLab Runner 11.10
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
 
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories) parameters.
 
@@ -830,15 +832,15 @@ with executors that share `builds_dir` and have `concurrent > 1`.
 
 Example:
 
-```bash
+```toml
 [runners.custom_build_dir]
   enabled = true
 ```
 
 ## The `[runners.referees]` section
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1545) in GitLab Runner 12.7.
-> Requires [GitLab v12.6](https://about.gitlab.com/blog/2019/12/22/gitlab-12-6-released/) or later.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
+> - Requires [GitLab v12.6](https://about.gitlab.com/releases/2019/12/22/gitlab-12-6-released/) or later.
 
 Use Runner Referees to pass extra job monitoring data to GitLab. Runner referees are special workers within the Runner manager that query and collect additional data related to a job and upload their results to GitLab as job artifacts.
 
@@ -856,7 +858,7 @@ Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml`
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `prometheus_address` | The server that collects metrics from Runner instances. It must be accessible by the Runner manager when the job finishes.          |
 | `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).   |
-| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics) queries that will be executed for each interval. |
+| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that will be executed for each interval. |
 
 Here is a complete configuration example for `node_exporter` metrics:
 

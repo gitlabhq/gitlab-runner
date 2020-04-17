@@ -30,7 +30,7 @@ and OS are supported.
 NOTE: **Note:**
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
-Engine. This means means the
+Engine. This means the
 [minimum supported version](https://docs.docker.com/develop/sdk/#api-version-matrix)
 of Docker is `1.13.0`.
 
@@ -47,8 +47,6 @@ configuring a Windows Docker executor.
 The following are some limitations of using Windows containers with
 Docker executor:
 
-- Services do not fully work (see
-  [#4186](https://gitlab.com/gitlab-org/gitlab-runner/issues/4186)).
 - Nanoserver cannot be used because it requires PowerShell 6 but GitLab
   requires PowerShell 5 (see
   [#3291](https://gitlab.com/gitlab-org/gitlab-runner/issues/3291)). See
@@ -75,9 +73,9 @@ Docker executor:
   Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
   if the destination path drive letter is not `c:`, paths are not supported for:
 
-  - [`builds_dir`](../configuration/advanced-configuration.html#the-runners-section)
-  - [`cache_dir`](../configuration/advanced-configuration.html#the-runners-section)
-  - [`volumes`](../configuration/advanced-configuration.html#volumes-in-the-runnersdocker-section)
+  - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`cache_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`volumes`](../configuration/advanced-configuration.md#volumes-in-the-runnersdocker-section)
 
   This means values such as `f:\\cache_dir` are not supported, but `f:` is supported.
   However, if the destination path is on the `c:` drive, paths are also supported
@@ -85,10 +83,15 @@ Docker executor:
 
 ### Supported Windows versions
 
-GitLab Runner only supports the following versions of Windows:
+GitLab Runner only supports the following versions of Windows which
+follows our [support lifecycle for
+Windows](../install/windows.md#windows-version-support-policy):
 
 - Windows Server 1809.
-- Windows Server 1803.
+- Windows Server 1803 *Deprecated*.
+
+For future Windows Server versions, we have a [future version support
+policy](../install/windows.md#windows-version-support-policy).
 
 You can only run containers based on the same OS version that the Docker
 daemon is running on. For example, the following [`Windows Server
@@ -111,7 +114,7 @@ as a source directory when passing the `--docker-volumes` or
 Below is an example of what the configuration for a simple Docker
 executor running Windows
 
-```
+```toml
 [[runners]]
   name = "windows-docker-2019"
   url = "https://gitlab.com/"
@@ -126,6 +129,13 @@ For other configuration options for the Docker executor, see the
 [advanced
 configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
 section.
+
+### Services
+
+You can use [services](https://docs.gitlab.com/ee/ci/services/) by
+enabling [network per-build](#network-per-build) networking mode.
+[Available](https://gitlab.com/gitlab-org/gitlab-runner/issues/1042)
+since GitLab Runner 12.9.
 
 ## Workflow
 
@@ -185,22 +195,67 @@ time the project is built.
 You can see some widely used services examples in the relevant documentation of
 [CI services examples](https://gitlab.com/gitlab-org/gitlab-ce/tree/master/doc/ci/services/README.md).
 
-### How is service linked to the build
-
-To better understand how the container linking works, read
-[Linking containers together](https://docs.docker.com/userguide/dockerlinks/).
-
-To summarize, if you add `mysql` as service to your application, this image
-will then be used to create a container that is linked to the build container.
-According to the [workflow](#workflow) this is the first step that is performed
-before running the actual builds.
-
-The service container for MySQL will be accessible under the hostname `mysql`.
-So, in order to access your database service you have to connect to the host
-named `mysql` instead of a socket or `localhost`.
-
 If needed, you can [assign an alias](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services)
 to each service.
+
+## Networking
+
+Networking is required to connect services to the build job and may also be used to run build jobs in user-defined
+networks. Either legacy `network_mode` or `per-build` networking may be used.
+
+### Legacy container links
+
+The default network mode uses [Legacy container links](https://docs.docker.com/network/links/) with
+the default Docker `bridge` mode to link the job container with the services.
+
+`network_mode` can be used to configure how the networking stack is set up for the containers
+using one of the following values:
+
+- One of the standard Docker [networking modes](https://docs.docker.com/engine/reference/run/#network-settings):
+  - `bridge`: use the bridge network (default)
+  - `host`: use the host's network stack inside the container
+  - `none`: no networking (not recommended)
+  - Any other `network_mode` value is taken as the name of an already existing
+    Docker network, which the build container should connect to.
+
+For name resolution to work, Docker will manipulate the `/etc/hosts` file in the build
+job container to include the service container hostname (and alias). However,
+the service container will **not** be able to resolve the build job container
+name. To achieve that, use the `per-build` network mode.
+
+NOTE: **Note:**
+Linked containers will share their environment variables.
+
+### Network per-build
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/1042) in GitLab Runner 12.9.
+
+This mode will create and use a new user-defined Docker bridge network per build.
+[User-defined bridge networks](https://docs.docker.com/network/bridge/) are covered in detail in the Docker documentation.
+
+NOTE: **Note:**
+Unlike [legacy container links](#legacy-container-links) used in other network modes,
+Docker environment variables will **Not** be shared across the containers.
+
+NOTE: **Note:**
+Docker networks may conflict with other networks on the host, including other Docker networks,
+if the CIDR ranges are already in use. The default Docker address pool can be configured
+via `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
+
+To enable this mode you need to enable the [`FF_NETWORK_PER_BUILD`
+feature flag](../configuration/feature-flags.md).
+
+When a job starts, a bridge network is created (similarly to `docker
+network create <network>`). Upon creation, the service container(s) and the
+build job container are connected to this network.
+
+Both the build job container and the service container(s) will be able to
+resolve each others' hostnames (and aliases). This functionality is
+[provided by Docker](https://docs.docker.com/network/bridge/#differences-between-user-defined-bridges-and-the-default-bridge).
+
+The build container is resolvable via the `build` alias as well as it's GitLab assigned hostname.
+
+The network is removed at the end of the build job.
 
 ## Define image and services from `.gitlab-ci.yml`
 
@@ -246,7 +301,7 @@ test:2.7:
 
 Look for the `[runners.docker]` section:
 
-```
+```toml
 [runners.docker]
   image = "ruby:2.6"
 
@@ -336,7 +391,7 @@ You can mount a path in RAM using tmpfs. This can speed up the time required to 
 If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
 This is an example `config.toml` to mount the data directory for the official Mysql container in RAM.
 
-```
+```toml
 [runners.docker]
   # For the main container
   [runners.docker.tmpfs]
@@ -443,7 +498,7 @@ First, configure your Runner (config.toml) to run in `privileged` mode:
 Then, make your build script (`.gitlab-ci.yml`) to use Docker-in-Docker
 container:
 
-```bash
+```yaml
 image: docker:git
 services:
 - docker:dind
@@ -474,7 +529,7 @@ Consider the following example:
 
 1. Create a new Dockerfile:
 
-   ```bash
+   ```dockerfile
    FROM docker:dind
    ADD / /entrypoint.sh
    ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
@@ -482,7 +537,7 @@ Consider the following example:
 
 1. Create a bash script (`entrypoint.sh`) that will be used as the `ENTRYPOINT`:
 
-   ```bash
+   ```shell
    #!/bin/sh
 
    dind docker daemon
@@ -541,7 +596,7 @@ the Runner runs on.
 If an image cannot be found locally, then the Runner will fail the build
 with an error similar to:
 
-```
+```plaintext
 Pulling docker image local_image:latest ...
 ERROR: Build failed: Error: image local_image:latest not found
 ```
@@ -602,24 +657,21 @@ When `always` is used, the Runner will try to pull the image even if a local
 copy is available. If the image is not found, then the build will
 fail with an error similar to:
 
-```
+```plaintext
 Pulling docker image registry.tld/my/image:latest ...
 ERROR: Build failed: Error: image registry.tld/my/image:latest not found
 ```
 
-> **Note:**
-For versions prior to `v1.8`, when using the `always` pull policy, it could
-fall back to local copy of an image and print a warning:
->
-> ```
-> Pulling docker image registry.tld/my/image:latest ...
-> WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
-> WARNING: Locally found image will be used instead.
-> ```
->
-That is changed in version `v1.8`. To understand why we changed this and
-how incorrect usage of may be revealed please look into issue
-[#1905](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
+When using the `always` pull policy in GitLab Runner versions older than `v1.8`, it could
+fall back to the local copy of an image and print a warning:
+
+```plaintext
+Pulling docker image registry.tld/my/image:latest ...
+WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
+WARNING: Locally found image will be used instead.
+```
+
+This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
 
 **When to use this pull policy?**
 
@@ -642,7 +694,7 @@ and try to pull it from the remote registry. If the image was build locally
 and doesn't exist in any public registry (and especially in the default
 Docker registry), the build will fail with:
 
-```
+```plaintext
 Pulling docker image local_image:latest ...
 ERROR: Build failed: Error: image local_image:latest not found
 ```

@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/url"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 type UpdateState int
@@ -41,6 +42,7 @@ const (
 	UploadTooLarge
 	UploadForbidden
 	UploadFailed
+	UploadServiceUnavailable
 )
 
 const (
@@ -64,6 +66,7 @@ type FeaturesInfo struct {
 	Refspecs                bool `json:"refspecs"`
 	Masking                 bool `json:"masking"`
 	Proxy                   bool `json:"proxy"`
+	RawVariables            bool `json:"raw_variables"`
 }
 
 type RegisterRunnerParameters struct {
@@ -252,7 +255,7 @@ func (c Cache) CheckPolicy(wanted CachePolicy) (bool, error) {
 		return wanted == c.Policy, nil
 	}
 
-	return false, fmt.Errorf("Unknown cache policy %s", c.Policy)
+	return false, fmt.Errorf("unknown cache policy %s", c.Policy)
 }
 
 type Caches []Cache
@@ -371,13 +374,27 @@ type JobTrace interface {
 	IsStdout() bool
 }
 
+type PatchTraceResult struct {
+	SentOffset        int
+	State             UpdateState
+	NewUpdateInterval time.Duration
+}
+
+func NewPatchTraceResult(sentOffset int, state UpdateState, newUpdateInterval int) PatchTraceResult {
+	return PatchTraceResult{
+		SentOffset:        sentOffset,
+		State:             state,
+		NewUpdateInterval: time.Duration(newUpdateInterval) * time.Second,
+	}
+}
+
 type Network interface {
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
-	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) (int, UpdateState)
+	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) PatchTraceResult
 	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) (JobTrace, error)
