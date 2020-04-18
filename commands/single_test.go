@@ -93,14 +93,14 @@ func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job
 
 	//Executor
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(maxBuilds)
-	e.On("Finish", nil).Return().Times(maxBuilds)
-	e.On("Cleanup").Return().Times(maxBuilds)
+	e.On("Finish", nil).Times(maxBuilds)
+	e.On("Cleanup").Times(maxBuilds)
 
 	// Run script successfully
 	e.On("Shell").Return(&common.ShellScriptInfo{Shell: "script-shell"})
 	e.On("Run", mock.Anything).Return(nil)
 
-	common.RegisterExecutor(executorName, &p)
+	common.RegisterExecutorProvider(executorName, &p)
 
 	single := newRunSingleCommand(executorName, &mockNetwork)
 	single.MaxBuilds = maxBuilds

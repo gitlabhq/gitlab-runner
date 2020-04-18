@@ -119,7 +119,6 @@ func (r *RunSingleCommand) checkFinishedConditions() {
 		logrus.Println("This runner has not received a job in", r.WaitTimeout, "seconds, so now exiting")
 		r.finished.Set()
 	}
-	return
 }
 
 func (r *RunSingleCommand) Execute(c *cli.Context) {
@@ -133,7 +132,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 		logrus.Fatalln("Missing Executor")
 	}
 
-	executorProvider := common.GetExecutor(r.Executor)
+	executorProvider := common.GetExecutorProvider(r.Executor)
 	if executorProvider == nil {
 		logrus.Fatalln("Unknown executor:", r.Executor)
 	}

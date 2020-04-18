@@ -15,6 +15,7 @@ const PreparationRetries = 3
 const DefaultGetSourcesAttempts = 1
 const DefaultArtifactDownloadAttempts = 1
 const DefaultRestoreCacheAttempts = 1
+const DefaultExecutorStageAttempts = 1
 const KubernetesPollInterval = 3
 const KubernetesPollTimeout = 180
 const AfterScriptTimeout = 5 * time.Minute
@@ -36,6 +37,7 @@ var PreparationRetryInterval = 3 * time.Second
 
 const (
 	TestAlpineImage       = "alpine:3.7"
+	TestWindowsImage      = "mcr.microsoft.com/windows/servercore:%s"
 	TestAlpineNoRootImage = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest"
 	TestDockerDindImage   = "docker:18-dind"
 	TestDockerGitImage    = "docker:18-git"

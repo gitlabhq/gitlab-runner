@@ -1,8 +1,9 @@
 variables:
-  DOCKER_DIND_VERSION: 19.03.5
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-1
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-2
   GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
+  RELEASE_INDEX_GEN_VERSION: "latest"
+  DOCKER_VERSION: 19.03.5
   DOCKER_MACHINE_VERSION: "0.16.2"
   DUMB_INIT_VERSION: "1.0.2"
   GIT_VERSION: "2.21.0"
@@ -59,9 +60,9 @@ before_script:
   extends:
   - .except_docs
   services:
-  - docker:${DOCKER_DIND_VERSION}-dind
+  - docker:${DOCKER_VERSION}-dind
   variables:
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-1
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-2
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_VERIFY: 1

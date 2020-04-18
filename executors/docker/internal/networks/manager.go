@@ -9,7 +9,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
@@ -23,7 +23,7 @@ type Manager interface {
 
 type manager struct {
 	logger debugLogger
-	client docker_helpers.Client
+	client docker.Client
 	build  *common.Build
 
 	networkMode  container.NetworkMode
@@ -31,7 +31,7 @@ type manager struct {
 	perBuild     bool
 }
 
-func NewManager(logger debugLogger, dockerClient docker_helpers.Client, build *common.Build) Manager {
+func NewManager(logger debugLogger, dockerClient docker.Client, build *common.Build) Manager {
 	return &manager{
 		logger: logger,
 		client: dockerClient,
@@ -77,7 +77,7 @@ func (m *manager) Create(ctx context.Context, networkMode string) (container.Net
 }
 
 func (m *manager) Inspect(ctx context.Context) (types.NetworkResource, error) {
-	if m.perBuild != true {
+	if !m.perBuild {
 		return types.NetworkResource{}, nil
 	}
 

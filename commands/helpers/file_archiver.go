@@ -171,7 +171,7 @@ func (c *fileArchiver) processUntracked() {
 func (c *fileArchiver) enumerate() error {
 	wd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Failed to get current working directory: %w", err)
+		return fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
 	c.wd = wd

@@ -6,7 +6,7 @@ possible with the use of the **Kubernetes** executor.
 The **Kubernetes** executor, when used with GitLab CI, connects to the Kubernetes
 API in the cluster creating a Pod for each GitLab CI Job. This Pod is made
 up of, at the very least, a build container, a helper container, and an additional container for each
-`service` defined by the `.gitlab-ci.yml` file. The names for these containers
+`service` defined in the `.gitlab-ci.yml` or `config.toml` files. The names for these containers
 are as follows:
 
 - The build container is `build`
@@ -20,7 +20,7 @@ are then applicable:
 - Since GitLab Runner 12.8 and Kubernetes 1.7, the services are accessible via their DNS names. If you are using an older version you will have to use `localhost`.
 - You cannot use several services using the same port (e.g., you cannot have two
   `mysql` services at the same time).
-  
+
 ## Workflow
 
 The Kubernetes executor divides the build into multiple steps:
@@ -82,7 +82,7 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `service_memory_request`: The amount of memory requested for build service containers
 - `helper_cpu_request`: The CPU allocation requested for build helper containers
 - `helper_memory_request`: The amount of memory requested for build helper containers
-- `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set.
+- `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster default will be used if not set. See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs
 - `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration.
 - `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
@@ -152,7 +152,7 @@ with an appropriate regular expression. When left empty the overwrite behaviour 
 
 ### Setting Bearer Token to be Used When Making Kubernetes API calls
 
-In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods.  This will allow project owners to use project secret variables to specify a bearer token.  When specifying the bearer token, it is required that you set the `Host` config keyword.
+In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods. This will allow project owners to use project secret variables to specify a bearer token. When specifying the bearer token, it is required that you set the `Host` config keyword.
 
 ``` yaml
 variables:
@@ -369,10 +369,10 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | run_as_user         | int      | no       | The UID to run the entrypoint of the container process |
 | supplemental_groups | int list | no       | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
 
-Assigining  a security context to pods provides security to your Kubernetes cluster.  For this to work you'll need to provide a helper
+Assigining a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
 
-More about the helper image can be found [here](https://docs.gitlab.com/runner/configuration/advanced-configuration.html#helper-image).
+More about the helper image can be found [here](../configuration/advanced-configuration.md#helper-image).
 Example of building your own helper image:
 
 ```Dockerfile
@@ -409,7 +409,8 @@ check_interval = 30
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/4470) in GitLab Runner 12.5.
 
 Define a list of [services](https://docs.gitlab.com/ee/ci/services/).
-Currently, only `name` can be defined.
+
+Service aliases are supported since [GitLab Runner 12.9](https://gitlab.com/gitlab-org/gitlab-runner/issues/4829).
 
 ```toml
 concurrent = 1
@@ -422,8 +423,10 @@ check_interval = 30
       helper_image = "gitlab-registy.example.com/helper:latest"
       [[runners.kubernetes.services]]
         name = "postgres:12-alpine"
+        alias = "db1"
       [[runners.kubernetes.services]]
         name = "percona:latest"
+        alias = "db2"
 ```
 
 ## Using Docker in your builds
@@ -495,6 +498,16 @@ on other nodes. Further separation of build containers can be achieved using nod
 [taints](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/).
 This will disallow other pods from scheduling on the same nodes as the
 build pods without extra configuration for the other pods.
+
+## Job execution
+
+At the moment we are using `kube exec` to run the scripts, which relies on
+having a stable network connection between the Runner and the pod for the duration of the command.
+This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119).
+If you are experiencing this problem turn off the feature flag [FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY](../configuration/feature-flags.md#available-feature-flags)
+to use `kube attach` for script execution, which is more stable.
+
+We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/issues/10341) for updates.
 
 ### Using kaniko
 

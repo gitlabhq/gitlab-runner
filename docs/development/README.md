@@ -100,7 +100,7 @@ make build_current
 
 `make build_current` is a superset of `make build_simple` which in addition
 takes care of building Docker dependencies.
-  
+
 ### Building the Docker images
 
 If you want to build the Docker images, run `make build_current_docker`, which will:
@@ -139,7 +139,12 @@ To execute the tests run:
 make test
 ```
 
-## 8. Contribute
+## 8. Install optional tools
+
+Install `golangci-lint`, used for the `make lint` target
+(see [installation instructions](https://github.com/golangci/golangci-lint#install)).
+
+## 9. Contribute
 
 You can start hacking GitLab-Runner code. If you are interested you can use Intellij IDEA Community Edition with [go-lang-idea-plugin](https://github.com/go-lang-plugin-org/go-lang-idea-plugin) to edit and debug code.
 
@@ -190,7 +195,7 @@ you can use to find out the full path so when using:
 
 ## Troubleshooting
 
-### executor_docker.go missing Asset symbol
+### docker.go missing Asset symbol
 
 This error happens due to missing executors/docker/bindata.go file that is generated from docker prebuilts.
 Which is especially tricky on Windows.

@@ -86,5 +86,4 @@ func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
 			assert.Equal(t, expectedCmd, writer.String())
 		})
 	}
-
 }

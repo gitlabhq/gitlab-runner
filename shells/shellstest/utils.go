@@ -22,7 +22,6 @@ func OnEachShell(t *testing.T, f func(t *testing.T, shell string)) {
 
 			f(t, shell)
 		})
-
 	}
 }
 

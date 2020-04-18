@@ -115,11 +115,21 @@ following commands support the following signals:
 | `run` | **SIGHUP** | Force to reload configuration file |
 
 For example, to force a reload of the Runner's configuration file, run
-(all `gitlab-runner` processes will receive this signal):
 
 ```shell
-sudo killall -SIGHUP gitlab-runner
+sudo kill -SIGHUP <main_runner_pid>
 ```
+
+For [graceful shutdowns](../best_practice/index.md#graceful-shutdown):
+
+```shell
+sudo kill -SIGQUIT <main_runner_pid>
+```
+
+CAUTION: **Warning**:
+Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
+or `docker` executors. This can cause improper handling of the signals due to subprocessess
+being killed as well. Use it only on the main process handling the jobs.
 
 If your operating system is configured to automatically restart the service if it fails (which is the default on some platforms) it may automatically restart the runner if it's shut down by the signals above.
 
@@ -331,9 +341,6 @@ gitlab-runner unregister --all-runners
 
 ## Service-related commands
 
-> **Note:** Starting with GitLab Runner 10.0, service-related commands are **deprecated**
-and will be removed in one of the upcoming releases.
-
 The following commands allow you to manage the runner as a system or user
 service. Use them to install, uninstall, start and stop the runner service.
 
@@ -437,11 +444,11 @@ You can see all possible configuration options by using the `--help` flag:
 gitlab-runner run-single --help
 ```
 
-You can use the `--max-builds` option to control how many builds the runner will execute before exiting.  The
+You can use the `--max-builds` option to control how many builds the runner will execute before exiting. The
 default of `0` means that the runner has no build limit and will run jobs forever.
 
 You can also use the `--wait-timeout` option to control how long the runner will wait for a job before
-exiting.  The default of `0` means that the runner has no timeout and will wait forever between jobs.
+exiting. The default of `0` means that the runner has no timeout and will wait forever between jobs.
 
 ### `gitlab-runner exec`
 

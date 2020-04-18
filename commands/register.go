@@ -148,10 +148,10 @@ func (s *RegisterCommand) ask(key, prompt string, allowEmptyOptional ...bool) st
 
 func (s *RegisterCommand) askExecutor() {
 	for {
-		names := common.GetExecutors()
+		names := common.GetExecutorNames()
 		executors := strings.Join(names, ", ")
 		s.Executor = s.ask("executor", "Please enter the executor: "+executors+":", true)
-		if common.GetExecutor(s.Executor) != nil {
+		if common.GetExecutorProvider(s.Executor) != nil {
 			return
 		}
 
@@ -325,7 +325,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 			s.askSSHLogin()
 		},
 		"shell": func() {
-			if runtime.GOOS == "windows" && s.RunnerConfig.Shell == "" {
+			if runtime.GOOS == osTypeWindows && s.RunnerConfig.Shell == "" {
 				s.Shell = "powershell"
 			}
 		},

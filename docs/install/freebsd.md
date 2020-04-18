@@ -20,7 +20,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
 1. Create the `gitlab-runner` user and group:
 
-   ```sh
+   ```shell
    sudo pw group add -n gitlab-runner
    sudo pw user add -n gitlab-runner -g gitlab-runner -s /usr/local/bin/bash
    sudo mkdir /home/gitlab-runner
@@ -29,7 +29,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
 1. Download the binary for your system:
 
-   ```sh
+   ```shell
    # For amd64
    sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-amd64
 
@@ -42,25 +42,25 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
 1. Give it permissions to execute:
 
-   ```sh
+   ```shell
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
 1. Create an empty log file with correct permissions:
 
-   ```sh
+   ```shell
    sudo touch /var/log/gitlab_runner.log && sudo chown gitlab-runner:gitlab-runner /var/log/gitlab_runner.log
    ```
 
 1. Create the `rc.d` directory in case it doesn't exist:
 
-   ```sh
+   ```shell
    mkdir -p /usr/local/etc/rc.d
    ```
 
 1. Create the `rc.d` script:
 
-   ```sh
+   ```shell
    sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
    #!/bin/sh
    # PROVIDE: gitlab_runner
@@ -98,14 +98,14 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
 1. Make it executable:
 
-   ```sh
+   ```shell
    sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
    ```
 
 1. [Register the Runner](../register/index.md)
 1. Enable the `gitlab-runner` service and start it:
 
-   ```sh
+   ```shell
    sudo sysrc -f /etc/rc.conf "gitlab_runner_enable=YES"
    sudo service gitlab_runner start
    ```
@@ -113,7 +113,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
    If you don't want to enable the `gitlab-runner` service to start after a
    reboot, use:
 
-   ```sh
+   ```shell
    sudo service gitlab_runner onestart
    ```
 
@@ -123,19 +123,19 @@ To upgrade GitLab Runner from a version prior to 10.0:
 
 1. Stop the Runner:
 
-   ```sh
+   ```shell
    sudo service gitlab_runner stop
    ```
 
 1. Optionally, preserve the previous version of the Runner just in case:
 
-   ```sh
+   ```shell
    sudo mv /usr/local/bin/gitlab-ci-multi-runner{,.$(/usr/local/bin/gitlab-ci-multi-runner --version| grep Version | cut -d ':' -f 2 | sed 's/ //g')}
    ```
 
 1. Download the new Runner and make it executable:
 
-   ```sh
+   ```shell
    # For amd64
    sudo fetch -o /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-freebsd-amd64
 
@@ -147,24 +147,24 @@ To upgrade GitLab Runner from a version prior to 10.0:
 
 1. Edit `/usr/local/etc/rc.d/gitlab_runner` and change:
 
-   ```
+   ```shell
    command="/usr/local/bin/gitlab-ci-multi-runner run"
    ```
 
    to:
 
-   ```
+   ```shell
    command="/usr/local/bin/gitlab-runner run"
    ```
 
 1. Start the Runner:
 
-   ```sh
+   ```shell
    sudo service gitlab_runner start
    ```
 
 1. After you confirm all is working correctly, you can remove the old binary:
 
-   ```sh
+   ```shell
    sudo rm /usr/local/bin/gitlab-ci-multi-runner.*
    ```

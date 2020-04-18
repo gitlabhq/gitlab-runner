@@ -1,41 +1,47 @@
-# The self-signed certificates or custom Certification Authorities
+# Self-signed certificates or custom Certification Authorities
 
-Since version 0.7.0 the GitLab Runner allows you to configure certificates that
-are used to verify TLS peer when connecting to the GitLab server.
+> Introduced in GitLab Runner 0.7.0
 
-**This allows to solve the `x509: certificate signed by unknown authority` problem when registering runner.**
+GitLab Runner allows you to configure certificates that are used to verify TLS peers
+when connecting to the GitLab server.
+
+**This solves the `x509: certificate signed by unknown authority` problem when registering a runner.**
 
 ## Supported options for self-signed certificates
 
-GitLab Runner provides these options:
+GitLab Runner supports the following options:
 
-1. **Default**: GitLab Runner reads system certificate store and verifies the GitLab server against the CA's stored in system.
+- **Default**: GitLab Runner reads the system certificate store and verifies the
+  GitLab server against the certificate authorities (CA) stored in the system.
 
-1. GitLab Runner reads the PEM (**DER format is not supported**) certificate from predefined file:
+- GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
+  predefined file:
 
-   - `/etc/gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as root.
-   - `~/.gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as non-root.
-   - `./certs/hostname.crt` on other systems.
+  - `/etc/gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as root.
+  - `~/.gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as non-root.
+  - `./certs/hostname.crt` on other systems. If running Runner as a Windows service,
+    this will not work. Use the last option instead.
 
-   If the address of your server is: `https://my.gitlab.server.com:8443/`.
-   Create the certificate file at: `/etc/gitlab-runner/certs/my.gitlab.server.com.crt`.
+  If your server address is: `https://my.gitlab.server.com:8443/`, create the
+  certificate file at: `/etc/gitlab-runner/certs/my.gitlab.server.com.crt`.
 
-   > **Note:** You may need to concatenate the intermediate and server certificate
-   > for the chain to be properly identified.
-   >
-   > **Note:** Running GitLab Runner as a service on Windows does not recognize certificates in `./certs/hostname.crt`.
-   > Use Option 3 instead.
+  NOTE: **Note:**
+  You may need to concatenate the intermediate and server certificate for the chain to
+  be properly identified.
 
-1. GitLab Runner exposes `tls-ca-file` option during
-   [registration](../commands/README.md#gitlab-runner-register)
-   (`gitlab-runner register --tls-ca-file=/path`) and in
-   [`config.toml`](advanced-configuration.md) under the `[[runners]]` section.
-   This allows you to specify a custom file with certificates.
-   This file will be read every time when the runner tries to access the GitLab server.
+- GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/README.md#gitlab-runner-register)
+  (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
+  under the `[[runners]]` section. This allows you to specify a custom certificate file.
+  This file will be read every time the runner tries to access the GitLab server.
+
+NOTE: **Note:**
+If your GitLab server certificate is signed by your CA, use your CA certificate
+(not your GitLab server signed certificate). You might need to add the intermediates to the chain as well.
 
 ## Git cloning
 
-The runner injects missing certificates to build CA chain to build containers.
-This allows the `git clone` and `artifacts` to work with servers that do not use publicly trusted certificates.
+The runner injects missing certificates to build the CA chain in build containers.
+This allows `git clone` and `artifacts` to work with servers that do not use publicly
+trusted certificates.
 
 This approach is secure, but makes the runner a single point of trust.

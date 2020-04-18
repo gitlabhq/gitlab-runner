@@ -12,12 +12,14 @@ license_management:
     - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
 
 docs lint:
-  image: "registry.gitlab.com/gitlab-org/gitlab-build-images:gitlab-docs-lint"
+  image: "registry.gitlab.com/gitlab-org/gitlab-docs:lint"
   stage: test
   extends:
   - .merge_request_pipelines
   - .no_cache_and_dependencies
   script:
+  # Lint prose
+  - vale --minAlertLevel error docs
   # Lint Markdown
   - markdownlint --config .markdownlint.json 'docs/**/*.md'
   # Prepare docs for build
@@ -71,16 +73,19 @@ code_quality:
   - .merge_request_pipelines
   - .except_docs
   - .no_cache_and_dependencies
-  image: docker:19.03-git
-  services:
-  - docker:${DOCKER_DIND_VERSION}-dind
+  image: golangci/golangci-lint:v1.24.0
   variables:
-    DOCKER_DRIVER: overlay2
-    CODECLIMATE_FORMAT: json
+    REPORT_FILE: gl-code-quality-report.json
+    LINT_FLAGS: "--issues-exit-code 0 --color never --deadline 15m"
+    OUT_FORMAT: code-climate
   script:
-  - ./scripts/codequality analyze -f json --dev | tee gl-code-quality-report.json
+  - make lint | tee ${REPORT_FILE}
+  timeout: 15 minutes
   artifacts:
-    paths: [gl-code-quality-report.json]
+    reports:
+      codequality: ${REPORT_FILE}
+    paths:
+    - ${REPORT_FILE}
     expire_in: 7d
 
 unit test:

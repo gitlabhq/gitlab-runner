@@ -1,11 +1,12 @@
 package helpers
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
-	"reflect"
-	"testing"
 )
 
 type TestObj struct {
@@ -14,7 +15,6 @@ type TestObj struct {
 }
 
 func TestSimpleYamlMarshalling(t *testing.T) {
-
 	ymlString := ToYAML(TestObj{
 		Text:   "example",
 		Number: 25,
@@ -27,7 +27,6 @@ func TestSimpleYamlMarshalling(t *testing.T) {
 }
 
 func TestSimpleTomlMarshalling(t *testing.T) {
-
 	tomlString := ToTOML(TestObj{
 		Text:   "example",
 		Number: 25,

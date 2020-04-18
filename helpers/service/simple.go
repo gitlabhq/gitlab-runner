@@ -2,15 +2,16 @@ package service_helpers
 
 import (
 	"errors"
-	service "github.com/ayufan/golang-kardianos-service"
 	"os"
 	"os/signal"
 	"syscall"
+
+	service "github.com/ayufan/golang-kardianos-service"
 )
 
 var (
 	// ErrNotSupported is returned when specific feature is not supported.
-	ErrNotSupported = errors.New("Not supported")
+	ErrNotSupported = errors.New("not supported")
 )
 
 type SimpleService struct {

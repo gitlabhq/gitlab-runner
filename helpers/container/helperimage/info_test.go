@@ -1,28 +1,33 @@
 package helperimage
 
 import (
+	stderrors "errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/errors"
 )
 
 func TestGetInfo(t *testing.T) {
+	const unsupportedVersion = "9.9"
+
 	tests := []struct {
 		osType        string
+		version       string
 		expectedError error
 	}{
 		{osType: OSTypeLinux, expectedError: nil},
-		{osType: OSTypeWindows, expectedError: ErrUnsupportedOSVersion},
+		{osType: OSTypeWindows, version: unsupportedVersion, expectedError: windows.NewUnsupportedWindowsVersionError(unsupportedVersion)},
 		{osType: "unsupported", expectedError: errors.NewErrOSNotSupported("unsupported")},
 	}
 
 	for _, test := range tests {
 		t.Run(test.osType, func(t *testing.T) {
-			_, err := Get(headRevision, Config{OSType: test.osType})
+			_, err := Get(headRevision, Config{OSType: test.osType, OperatingSystem: test.version})
 
-			assert.Equal(t, test.expectedError, err)
+			assert.True(t, stderrors.Is(err, test.expectedError), "expected err %T, but got %T", test.expectedError, err)
 		})
 	}
 }
@@ -56,5 +61,4 @@ func Test_imageRevision(t *testing.T) {
 			assert.Equal(t, test.expectedTag, imageRevision(test.revision))
 		})
 	}
-
 }

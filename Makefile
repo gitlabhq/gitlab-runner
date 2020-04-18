@@ -25,7 +25,7 @@ DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
-    fedora/29 fedora/30
+    fedora/30
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
@@ -49,14 +49,16 @@ export CGO_ENABLED ?= 0
 # Development Tools
 GOX = gox
 MOCKERY = mockery
-RELEASE_INDEX_GENERATOR = release-index-gen
 DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
 
-MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
+RELEASE_INDEX_GEN_VERSION ?= latest
+RELEASE_INDEX_GENERATOR ?= .tmp/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
+GITLAB_CHANGELOG_VERSION ?= latest
+GITLAB_CHANGELOG = .tmp/gitlab-changelog-$(GITLAB_CHANGELOG_VERSION)
 
 .PHONY: clean version mocks
 
-all: deps helper-docker build
+all: deps helper-docker build_all
 
 include Makefile.runner_helper.mk
 include Makefile.build.mk
@@ -75,7 +77,7 @@ help:
 	#
 	# Testing commands:
 	# make test - run project tests
-	# make codequality - run code quality analysis
+	# make lint - run code quality analysis
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -95,9 +97,11 @@ version:
 
 deps: $(DEVELOPMENT_TOOLS)
 
-codequality:
-	./scripts/codequality analyze --dev
-
+# Enable some additional linters that are too memory-hungry to run on the CI server
+lint: OUT_FORMAT ?= colored-line-number
+lint: LINT_FLAGS ?=
+lint:
+	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
@@ -133,24 +137,26 @@ dockerfiles:
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
-	mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
-	mockery $(MOCKERY_FLAGS) -dir=./network -name='requester' -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./helpers -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./executors/docker -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./executors/custom -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./executors/kubernetes -name=featureChecker -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./cache -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./log -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./referees -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./session -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./shells -all -inpkg
+	mockery -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
+	mockery -dir=./network -name='requester' -inpkg
+	mockery -dir=./helpers -all -inpkg
+	mockery -dir=./executors/docker -all -inpkg
+	mockery -dir=./executors/kubernetes -all -inpkg
+	mockery -dir=./executors/custom -all -inpkg
+	mockery -dir=./cache -all -inpkg
+	mockery -dir=./common -all -inpkg
+	mockery -dir=./log -all -inpkg
+	mockery -dir=./referees -all -inpkg
+	mockery -dir=./session -all -inpkg
+	mockery -dir=./shells -all -inpkg
 
 check_mocks:
-	@git status -sb > /tmp/mocks-${CI_JOB_ID}-before
-	$(MAKE) mocks
-	@git status -sb > /tmp/mocks-${CI_JOB_ID}-after
-	@diff -U0 /tmp/mocks-${CI_JOB_ID}-before /tmp/mocks-${CI_JOB_ID}-after
+	# Checking if mocks are up-to-date
+	@$(MAKE) mocks
+	# Checking the differences
+	@git --no-pager diff --compact-summary --exit-code -- ./helpers/service/mocks \
+		$(shell git ls-files | grep 'mock_' | grep -v 'vendor/') && \
+		echo "Mocks up-to-date!"
 
 test-docker:
 	$(MAKE) test-docker-image IMAGE=centos:6 TYPE=rpm
@@ -263,6 +269,15 @@ release_docker_images:
 	# Releasing Docker images
 	@./ci/release_docker_images
 
+generate_changelog: export CHANGELOG_RELEASE ?= $(VERSION)
+generate_changelog: $(GITLAB_CHANGELOG)
+	# Generating new changelog entries
+	@$(GITLAB_CHANGELOG) -project-id 250833 \
+		-release $(CHANGELOG_RELEASE) \
+		-starting-point-matcher "v[0-9]*.[0-9]*.[0-9]*" \
+		-config-file .gitlab/changelog.yml \
+		-changelog-file CHANGELOG.md
+
 check-tags-in-changelog:
 	# Looking for tags in CHANGELOG
 	@git status | grep "On branch master" 2>&1 >/dev/null || echo "Check should be done on master branch only. Skipping."
@@ -301,8 +316,21 @@ $(GOX):
 $(MOCKERY):
 	go get github.com/vektra/mockery/cmd/mockery
 
+$(RELEASE_INDEX_GENERATOR): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+$(RELEASE_INDEX_GENERATOR): DOWNLOAD_URL = "https://storage.googleapis.com/gitlab-runner-tools/release-index-generator/$(RELEASE_INDEX_GEN_VERSION)/release-index-gen-$(OS_TYPE)-amd64"
 $(RELEASE_INDEX_GENERATOR):
-	go get gitlab.com/gitlab-org/ci-cd/runner-tools/release-index-generator/cmd/release-index-gen
+	# Installing $(DOWNLOAD_URL) as $(RELEASE_INDEX_GENERATOR)
+	@mkdir -p $(shell dirname $(RELEASE_INDEX_GENERATOR))
+	@curl -sL "$(DOWNLOAD_URL)" -o "$(RELEASE_INDEX_GENERATOR)"
+	@chmod +x "$(RELEASE_INDEX_GENERATOR)"
+
+$(GITLAB_CHANGELOG): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+$(GITLAB_CHANGELOG): DOWNLOAD_URL = "https://storage.googleapis.com/gitlab-runner-tools/gitlab-changelog/$(GITLAB_CHANGELOG_VERSION)/gitlab-changelog-$(OS_TYPE)-amd64"
+$(GITLAB_CHANGELOG):
+	# Installing $(DOWNLOAD_URL) as $(GITLAB_CHANGELOG)
+	@mkdir -p $(shell dirname $(GITLAB_CHANGELOG))
+	@curl -sL "$(DOWNLOAD_URL)" -o "$(GITLAB_CHANGELOG)"
+	@chmod +x "$(GITLAB_CHANGELOG)"
 
 clean:
 	-$(RM) -rf $(TARGET_DIR)

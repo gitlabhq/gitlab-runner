@@ -21,6 +21,10 @@ type retryableErr struct {
 	err error
 }
 
+func (e retryableErr) Unwrap() error {
+	return e.err
+}
+
 func (e retryableErr) Error() string {
 	return e.err.Error()
 }

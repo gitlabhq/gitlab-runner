@@ -437,7 +437,7 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 // To speed-up jobs handling before starting the job this method "requeues" the runner to another
 // worker (by feeding the channel normally handled by feedRunners).
 func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) (err error) {
-	provider := common.GetExecutor(runner.Executor)
+	provider := common.GetExecutorProvider(runner.Executor)
 	if provider == nil {
 		return
 	}

@@ -7,7 +7,7 @@ last_updated: 2019-08-21
 > **Author:** [Achilleas Pipinellis](https://gitlab.com/axil) ||
 > **Publication date:** 2017-11-24
 
-# Autoscaling GitLab Runner on AWS
+# Autoscaling GitLab Runner on AWS EC2
 
 One of the biggest advantages of GitLab Runner is its ability to automatically
 spin up and down VMs to make sure your builds get processed immediately. It's a
@@ -48,11 +48,12 @@ is likely different, so consider what works best for your situation.
 
 Docker Machine will attempt to use a
 [default security group](https://docs.docker.com/machine/drivers/aws/#security-group)
-with rules for port `2376`, which is required for communication with the Docker
+with rules for port `2376` and SSH `22`, which is required for communication with the Docker
 daemon. Instead of relying on Docker, you can create a security group with the
 rules you need and provide that in the Runner options as we will
 [see below](#the-runnersmachine-section). This way, you can customize it to your
 liking ahead of time based on your networking environment.
+You have to make sure that ports `2376` and `22` are accessible by the [Runner Manager instance](#prepare-the-runner-manager-instance).
 
 ### AWS credentials
 
@@ -201,7 +202,7 @@ In the following example, we use Amazon S3:
 Here's some more info to further explore the cache mechanism:
 
 - [Reference for `runners.cache`](../advanced-configuration.md#the-runnerscache-section)
-- [Reference for `runners.cache.s3`](../advanced-configuration.html#the-runnerscaches3-section)
+- [Reference for `runners.cache.s3`](../advanced-configuration.md#the-runnerscaches3-section)
 - [Deploying and using a cache server for GitLab Runner](../autoscale.md#distributed-runners-caching)
 - [How cache works](https://docs.gitlab.com/ee/ci/yaml/#cache)
 

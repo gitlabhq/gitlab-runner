@@ -18,7 +18,7 @@ import (
 	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
@@ -50,7 +50,7 @@ func (p DockerPullPolicy) Get() (DockerPullPolicy, error) {
 }
 
 type DockerConfig struct {
-	docker_helpers.DockerCredentials
+	docker.Credentials
 	Hostname                   string            `toml:"hostname,omitempty" json:"hostname" long:"hostname" env:"DOCKER_HOSTNAME" description:"Custom container hostname"`
 	Image                      string            `toml:"image" json:"image" long:"image" env:"DOCKER_IMAGE" description:"Docker image to be used"`
 	Runtime                    string            `toml:"runtime,omitempty" json:"runtime" long:"runtime" env:"DOCKER_RUNTIME" description:"Docker runtime to be used"`
@@ -251,19 +251,12 @@ type KubernetesPodSecurityContext struct {
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
 }
 
+// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4922
 type DockerService struct {
 	Service
-	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
 }
 
-func (s *DockerService) ToImageDefinition() Image {
-	return Image{
-		Name:  s.Name,
-		Alias: s.Alias,
-	}
-}
-
-// TODO: Remove in 13.0
+// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4922
 // we should fallback to the default toml parsing
 func (s *DockerService) UnmarshalTOML(data interface{}) error {
 	switch v := data.(type) {
@@ -309,7 +302,15 @@ func tryGetTomlValue(data map[string]interface{}, key string) (string, error) {
 }
 
 type Service struct {
-	Name string `toml:"name" long:"name" description:"The image path for the service"`
+	Name  string `toml:"name" long:"name" description:"The image path for the service"`
+	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+}
+
+func (s *Service) ToImageDefinition() Image {
+	return Image{
+		Name:  s.Name,
+		Alias: s.Alias,
+	}
 }
 
 type RunnerCredentials struct {
@@ -492,7 +493,7 @@ func (c *KubernetesConfig) GetPollInterval() int {
 }
 
 func (c *KubernetesConfig) GetNodeTolerations() []api.Toleration {
-	var tolerations []api.Toleration
+	tolerations := make([]api.Toleration, 0, len(c.NodeTolerations))
 
 	for toleration, effect := range c.NodeTolerations {
 		newToleration := api.Toleration{
