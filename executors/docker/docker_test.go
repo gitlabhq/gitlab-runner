@@ -1009,28 +1009,25 @@ func TestCreateDependencies(t *testing.T) {
 		volumesManagerAssertions: func(vm *volumes.MockManager) {
 			binds := make([]string, 0)
 
-			vm.On("CreateTemporary", "/builds").
+			vm.On("CreateTemporary", mock.Anything, "/builds").
 				Return(nil).
 				Run(func(args mock.Arguments) {
-					binds = append(binds, args.Get(0).(string))
+					binds = append(binds, args.Get(1).(string))
 				}).
 				Once()
-			vm.On("Create", "/volume").
+			vm.On("Create", mock.Anything, "/volume").
 				Return(nil).
 				Run(func(args mock.Arguments) {
-					binds = append(binds, args.Get(0).(string))
+					binds = append(binds, args.Get(1).(string))
 				}).
-				Maybe()
+				Maybe() // In the FF enabled case this assertion will be not met because of error during service starts
 			vm.On("Binds").
 				Return(func() []string {
 					return binds
 				}).
 				Once()
-			vm.On("ContainerIDs").
-				Return(nil).
-				Once()
 		},
-		clientAssertions: func(c *docker_helpers.MockClient) {
+		clientAssertions: func(c *docker.MockClient) {
 			hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
 				return assert.Equal(t, []string{"/volume", "/builds"}, conf.Binds)
 			})
@@ -1041,10 +1038,10 @@ func TestCreateDependencies(t *testing.T) {
 			c.On("NetworkList", mock.Anything, mock.Anything).
 				Return(nil, nil).
 				Once()
-			c.On("ContainerRemove", mock.Anything, "runner-abcdef12-project-0-concurrent-0-alpine-0", mock.Anything).
+			c.On("ContainerRemove", mock.Anything, containerNameMatcher, mock.Anything).
 				Return(nil).
 				Once()
-			c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, "runner-abcdef12-project-0-concurrent-0-alpine-0").
+			c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, containerNameMatcher).
 				Return(container.ContainerCreateCreatedBody{ID: "container-ID"}, nil).
 				Once()
 			c.On("ContainerStart", mock.Anything, "container-ID", mock.Anything).
@@ -1056,8 +1053,8 @@ func TestCreateDependencies(t *testing.T) {
 	e, closureFn := getExecutorForVolumesTests(t, testCase)
 	defer closureFn()
 
-	err := e.createDependencies()
-	assert.True(t, errors.Is(err, testError))
+	err = e.createDependencies()
+	assert.Equal(t, testError, err)
 }
 
 var testFileAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"aW52YWxpZF91c2VyOmludmFsaWRfcGFzc3dvcmQ="},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
