@@ -1,3 +1,9 @@
+## v12.10.0-rc2 (2020-04-20)
+
+### Bug fixes
+
+- Revert "Merge branch '4450-fix-container-wait' into 'master'" !2026
+
 ## v12.10.0-rc1 (2020-04-10)
 
 ### New features
