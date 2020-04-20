@@ -141,8 +141,11 @@ make test
 
 ## 8. Install optional tools
 
-Install `golangci-lint`, used for the `make lint` target
-(see [installation instructions](https://github.com/golangci/golangci-lint#install)).
+- Install `golangci-lint`, used for the `make lint` target.
+- Install `markdown-lint` and `vale`, used for the `make docs-lint` target.
+
+Installation instructions will pop up when running a Makefile target
+if a tool is missing.
 
 ## 9. Contribute
 

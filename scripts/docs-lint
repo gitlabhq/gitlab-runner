@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+GIT_ROOT=$(cd "${BASH_SOURCE%/*}" && git rev-parse --show-toplevel)
+VALE_MIN_ALERT_LEVEL=${VALE_MIN_ALERT_LEVEL:-}
+
+echo "Lint prose"
+if command -v vale >/dev/null 2>&1; then
+    args=()
+    if [ -n "${VALE_MIN_ALERT_LEVEL}" ]; then
+        args+=("--minAlertLevel" "${VALE_MIN_ALERT_LEVEL}")
+    fi
+    vale --config "${GIT_ROOT}/.vale.ini" "${args[@]}" "${GIT_ROOT}/docs"
+else
+    echo "vale is missing, please install it from https://errata-ai.gitbook.io/vale/#installation"
+fi
+
+echo "Lint Markdown"
+if command -v markdownlint >/dev/null 2>&1; then
+    markdownlint --config "${GIT_ROOT}/.markdownlint.json" 'docs/**/*.md'
+else
+    echo "markdownlint is missing, please install it from https://github.com/igorshubovych/markdownlint-cli#installation"
+fi
