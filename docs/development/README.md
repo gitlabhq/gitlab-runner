@@ -149,7 +149,7 @@ Install `golangci-lint`, used for the `make lint` target
 You can start hacking GitLab-Runner code.
 If you need an IDE to edit and debug code, there are a few free suggestions you can use:
 
-- Intellij IDEA Community Edition with [go-lang-idea-plugin](https://github.com/go-lang-plugin-org/go-lang-idea-plugin).
+- [JetBrains GoLand IDE](https://www.jetbrains.com/go/).
 - Visual Studio Code using the
   [workspace recommended extensions](https://code.visualstudio.com/docs/editor/extension-gallery#_workspace-recommended-extensions),
   located in `.vscode/extensions.json`.
