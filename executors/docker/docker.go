@@ -52,9 +52,6 @@ const (
 	AuthConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
 )
 
-// containerStatusCreated is one of the Docker states a container can be in.
-const containerStatusCreated = "created"
-
 var DockerPrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
@@ -815,7 +812,7 @@ func (e *executor) waitForContainer(ctx context.Context, id string) error {
 
 	// Use active wait
 	for ctx.Err() == nil {
-		ctr, err := e.client.ContainerInspect(ctx, id)
+		container, err := e.client.ContainerInspect(ctx, id)
 		if err != nil {
 			if docker.IsErrNotFound(err) {
 				return err
@@ -833,14 +830,14 @@ func (e *executor) waitForContainer(ctx context.Context, id string) error {
 		// Reset retry timer
 		retries = 0
 
-		if containerCreated(ctr) {
+		if container.State.Running {
 			time.Sleep(time.Second)
 			continue
 		}
 
-		if ctr.State.ExitCode != 0 {
+		if container.State.ExitCode != 0 {
 			return &common.BuildError{
-				Inner: fmt.Errorf("exit code %d", ctr.State.ExitCode),
+				Inner: fmt.Errorf("exit code %d", container.State.ExitCode),
 			}
 		}
 
@@ -850,18 +847,7 @@ func (e *executor) waitForContainer(ctx context.Context, id string) error {
 	return ctx.Err()
 }
 
-func containerCreated(ctr types.ContainerJSON) bool {
-	return ctr.State.Running || ctr.State.Status == containerStatusCreated
-}
-
 func (e *executor) watchContainer(ctx context.Context, id string, input io.Reader) (err error) {
-	waitStarted := make(chan struct{})
-	waitCh := make(chan error, 1)
-	go func() {
-		close(waitStarted)
-		waitCh <- e.waitForContainer(e.Context, id)
-	}()
-
 	options := types.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  true,
@@ -876,7 +862,6 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	}
 	defer hijacked.Close()
 
-	<-waitStarted
 	e.Debugln("Starting container", id, "...")
 	err = e.client.ContainerStart(ctx, id, types.ContainerStartOptions{})
 	if err != nil {
@@ -901,6 +886,11 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 		if err != nil {
 			attachCh <- err
 		}
+	}()
+
+	waitCh := make(chan error, 1)
+	go func() {
+		waitCh <- e.waitForContainer(e.Context, id)
 	}()
 
 	select {
@@ -1319,22 +1309,18 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)
 	}
-
 	defer e.removeContainer(e.Context, resp.ID)
 
-	waitStarted := make(chan struct{})
-	waitResult := make(chan error, 1)
-	go func() {
-		close(waitStarted)
-		waitResult <- e.waitForContainer(e.Context, resp.ID)
-	}()
-
-	<-waitStarted
 	e.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
-		return fmt.Errorf("start service container %q: %w", resp.ID, err)
+		return fmt.Errorf("start service container: %w", err)
 	}
+
+	waitResult := make(chan error, 1)
+	go func() {
+		waitResult <- e.waitForContainer(e.Context, resp.ID)
+	}()
 
 	// these are warnings and they don't make the build fail
 	select {
