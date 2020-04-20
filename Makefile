@@ -78,7 +78,7 @@ help:
 	# Testing commands:
 	# make test - run project tests
 	# make lint - run code quality analysis
-	# make docs-lint - run documentation linting
+	# make lint-docs - run documentation linting
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -103,8 +103,8 @@ lint: LINT_FLAGS ?=
 lint:
 	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
-docs-lint:
-	@scripts/docs-lint
+lint-docs:
+	@scripts/lint-docs
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)

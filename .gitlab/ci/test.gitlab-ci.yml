@@ -19,7 +19,7 @@ docs lint:
   - .no_cache_and_dependencies
   script:
   # Lint prose and Markdown
-  - make docs-lint VALE_MIN_ALERT_LEVEL=error
+  - make lint-docs VALE_MIN_ALERT_LEVEL=error
   # Prepare docs for build
   - mv docs/ /tmp/gitlab-docs/content/$DOCS_GITLAB_REPO_SUFFIX
   - cd /tmp/gitlab-docs
