@@ -386,7 +386,7 @@ if(!$?) { Exit $LASTEXITCODE }
 
 ## Video Walkthrough of a Working Example
 
-The video [Managing the Complex Configuration Data Management Monster Using GitLab](https://www.youtube.com/watch?v=v4ZOJ96hAck) does a walkthrough of the Guided Exploration project (a working example) called [Complex Config Data Monorepo](https://gitlab.com/guided-explorations/config-data-top-scope/config-data-subscope/config-data-monorepo) which explains how multiple levels of group CI/CD variables can be combined with environment scoped project variables to accomodate the need for complex configuration data for application builds or deployments.
+The video [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc) does a walkthrough of the Guided Exploration project (a working example) called [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/gitlab-ci-yml-powershell-tips-tricks-and-hacks/powershell-pipelines-on-gitlab-ci) which, at the time of creation, was tested on Windows PowerShell and PowerShell Core 7 on Gitlab.com Shared Windows Shell Runners and PowerShell Core 7 in Linux Containers under the Docker-Machine Runner.
 
-The working example can be copied to your own group or instance as a starting point for learning or production work. The README.md of the Guided Exploration project gives more details on what other GitLab CI patterns are demonstrated and how to get a clone of the project working in another group.
+The working example can be copied to your own group or instance as a starting point for learning or production work. The README.md of the Guided Exploration project gives more details on what other GitLab CI patterns are demonstrated.
 
