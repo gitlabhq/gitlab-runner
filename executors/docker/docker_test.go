@@ -1020,7 +1020,7 @@ func TestCreateDependencies(t *testing.T) {
 				Run(func(args mock.Arguments) {
 					binds = append(binds, args.Get(1).(string))
 				}).
-				Maybe() // In the FF enabled case this assertion will be not met because of error during service starts
+				Once()
 			vm.On("Binds").
 				Return(func() []string {
 					return binds
