@@ -383,3 +383,10 @@ if(!$?) { Exit $LASTEXITCODE }
 ```
 
 [script]: http://doc.gitlab.com/ce/ci/yaml/README.html#script
+
+## Video Walkthrough of a Working Example
+
+The video [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc) does a walkthrough of the Guided Exploration project (a working example) called [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/gitlab-ci-yml-powershell-tips-tricks-and-hacks/powershell-pipelines-on-gitlab-ci) which, at the time of creation, was tested on Windows PowerShell and PowerShell Core 7 on Gitlab.com Shared Windows Shell Runners and PowerShell Core 7 in Linux Containers under the Docker-Machine Runner.
+
+The working example can be copied to your own group or instance as a starting point for learning or production work. The README.md of the Guided Exploration project gives more details on what other GitLab CI patterns are demonstrated.
+
