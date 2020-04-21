@@ -1,4 +1,4 @@
-## v12.10.0-rc1 (2020-04-10)
+## v12.10.0 (2020-04-21)
 
 ### New features
 
@@ -9,7 +9,6 @@
 ### Bug fixes
 
 - Add attempts to Docker executor for container not found !1995
-- Start watching container before starting !1990
 - Use Docker volumes instead of cache containers !1989
 - Use unique container names for Docker executor !1801
 
