@@ -51,9 +51,6 @@ issues:
     - path: helpers/shell_escape.go
       linters:
         - gocyclo
-    - path: helpers/shell/legacy_expand.go
-      linters:
-        - gocyclo
     - path: executors/kubernetes/kubernetes_test.go
       linters:
         - gocyclo
@@ -85,4 +82,3 @@ issues:
       linters:
         - deadcode
         - unused
-
