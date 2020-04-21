@@ -386,7 +386,12 @@ if(!$?) { Exit $LASTEXITCODE }
 
 ## Video Walkthrough of a Working Example
 
-The video [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc) does a walkthrough of the Guided Exploration project (a working example) called [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/gitlab-ci-yml-powershell-tips-tricks-and-hacks/powershell-pipelines-on-gitlab-ci) which, at the time of creation, was tested on Windows PowerShell and PowerShell Core 7 on Gitlab.com Shared Windows Shell Runners and PowerShell Core 7 in Linux Containers under the Docker-Machine Runner.
+The [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc)
+video is a walkthrough of the [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/gitlab-ci-yml-powershell-tips-tricks-and-hacks/powershell-pipelines-on-gitlab-ci)
+Guided Exploration project. It was tested on:
+
+- Windows PowerShell and PowerShell Core 7 on [GitLab's Windows shared runners](../../user/gitlab_com/index.md#windows-shared-runners-beta).
+- PowerShell Core 7 in Linux Containers under the [Docker-Machine Runner](https://docs.gitlab.com/runner/executors/docker_machine.html).
 
 The working example can be copied to your own group or instance as a starting point for learning or production work. The README.md of the Guided Exploration project gives more details on what other GitLab CI patterns are demonstrated.
 
