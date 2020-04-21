@@ -1067,19 +1067,6 @@ func (e *executor) createDependencies() error {
 		e.createServices,
 	}
 
-	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyVolumesMountingOrder) {
-		// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
-		createDependenciesStrategy = []func() error{
-			e.createNetworksManager,
-			e.createBuildNetwork,
-			e.bindDevices,
-			e.createVolumesManager,
-			e.createBuildVolume,
-			e.createServices,
-			e.createVolumes,
-		}
-	}
-
 	for _, setup := range createDependenciesStrategy {
 		err := setup()
 		if err != nil {

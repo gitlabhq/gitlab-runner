@@ -994,91 +994,67 @@ func TestCreateDependencies(t *testing.T) {
 	})
 	testError := errors.New("test-error")
 
-	tests := map[string]struct {
-		legacyVolumesMountingOrder string
-		expectedServiceVolumes     []string
-	}{
-		"UseLegacyVolumesMountingOrder is false": {
-			legacyVolumesMountingOrder: "false",
-			expectedServiceVolumes:     []string{"/volume", "/builds"},
-		},
-		// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6581
-		"UseLegacyVolumesMountingOrder is true": {
-			legacyVolumesMountingOrder: "true",
-			expectedServiceVolumes:     []string{"/builds"},
-		},
-	}
+	testCase := volumesTestCase{
+		buildsDir: "/builds",
+		volumes:   []string{"/volume"},
+		adjustConfiguration: func(e *executor) {
+			e.Build.Services = append(e.Build.Services, common.Image{
+				Name: "alpine:latest",
+			})
 
-	for testName, test := range tests {
-		t.Run(testName, func(t *testing.T) {
-			testCase := volumesTestCase{
-				buildsDir: "/builds",
-				volumes:   []string{"/volume"},
-				adjustConfiguration: func(e *executor) {
-					e.Build.Services = append(e.Build.Services, common.Image{
-						Name: "alpine:latest",
-					})
-
-					e.Build.Variables = append(e.Build.Variables, common.JobVariable{
-						Key:   featureflags.UseLegacyVolumesMountingOrder,
-						Value: test.legacyVolumesMountingOrder,
-					})
-
-					e.BuildShell = &common.ShellConfiguration{
-						Environment: []string{},
-					}
-				},
-				volumesManagerAssertions: func(vm *volumes.MockManager) {
-					binds := make([]string, 0)
-
-					vm.On("CreateTemporary", mock.Anything, "/builds").
-						Return(nil).
-						Run(func(args mock.Arguments) {
-							binds = append(binds, args.Get(1).(string))
-						}).
-						Once()
-					vm.On("Create", mock.Anything, "/volume").
-						Return(nil).
-						Run(func(args mock.Arguments) {
-							binds = append(binds, args.Get(1).(string))
-						}).
-						Maybe() // In the FF enabled case this assertion will be not met because of error during service starts
-					vm.On("Binds").
-						Return(func() []string {
-							return binds
-						}).
-						Once()
-				},
-				clientAssertions: func(c *docker.MockClient) {
-					hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
-						return assert.Equal(t, test.expectedServiceVolumes, conf.Binds)
-					})
-
-					c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
-						Return(types.ImageInspect{}, nil, nil).
-						Once()
-					c.On("NetworkList", mock.Anything, mock.Anything).
-						Return(nil, nil).
-						Once()
-					c.On("ContainerRemove", mock.Anything, containerNameMatcher, mock.Anything).
-						Return(nil).
-						Once()
-					c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, containerNameMatcher).
-						Return(container.ContainerCreateCreatedBody{ID: "container-ID"}, nil).
-						Once()
-					c.On("ContainerStart", mock.Anything, "container-ID", mock.Anything).
-						Return(testError).
-						Once()
-				},
+			e.BuildShell = &common.ShellConfiguration{
+				Environment: []string{},
 			}
+		},
+		volumesManagerAssertions: func(vm *volumes.MockManager) {
+			binds := make([]string, 0)
 
-			e, closureFn := getExecutorForVolumesTests(t, testCase)
-			defer closureFn()
+			vm.On("CreateTemporary", mock.Anything, "/builds").
+				Return(nil).
+				Run(func(args mock.Arguments) {
+					binds = append(binds, args.Get(1).(string))
+				}).
+				Once()
+			vm.On("Create", mock.Anything, "/volume").
+				Return(nil).
+				Run(func(args mock.Arguments) {
+					binds = append(binds, args.Get(1).(string))
+				}).
+				Maybe() // In the FF enabled case this assertion will be not met because of error during service starts
+			vm.On("Binds").
+				Return(func() []string {
+					return binds
+				}).
+				Once()
+		},
+		clientAssertions: func(c *docker.MockClient) {
+			hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
+				return assert.Equal(t, []string{"/volume", "/builds"}, conf.Binds)
+			})
 
-			err := e.createDependencies()
-			assert.Equal(t, testError, err)
-		})
+			c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
+				Return(types.ImageInspect{}, nil, nil).
+				Once()
+			c.On("NetworkList", mock.Anything, mock.Anything).
+				Return(nil, nil).
+				Once()
+			c.On("ContainerRemove", mock.Anything, containerNameMatcher, mock.Anything).
+				Return(nil).
+				Once()
+			c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, containerNameMatcher).
+				Return(container.ContainerCreateCreatedBody{ID: "container-ID"}, nil).
+				Once()
+			c.On("ContainerStart", mock.Anything, "container-ID", mock.Anything).
+				Return(testError).
+				Once()
+		},
 	}
+
+	e, closureFn := getExecutorForVolumesTests(t, testCase)
+	defer closureFn()
+
+	err = e.createDependencies()
+	assert.Equal(t, testError, err)
 }
 
 var testFileAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"aW52YWxpZF91c2VyOmludmFsaWRfcGFzc3dvcmQ="},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
