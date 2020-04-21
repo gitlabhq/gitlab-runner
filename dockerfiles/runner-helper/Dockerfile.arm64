@@ -5,6 +5,7 @@ ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 
 COPY ./apk-repositories /etc/apk/repositories
 
+# hadolint ignore=DL3018
 RUN apk add --no-cache bash ca-certificates git git-lfs miniperl \
 	&& ln -s miniperl /usr/bin/perl
 

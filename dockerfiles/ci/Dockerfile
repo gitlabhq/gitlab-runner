@@ -1,6 +1,7 @@
 FROM golang:1.13.8
 
 # Install required dependencies
+# hadolint ignore=DL3008,DL3015
 RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
                         ruby ruby-dev python-pip \
