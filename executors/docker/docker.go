@@ -1087,7 +1087,7 @@ func (e *executor) createVolumes() error {
 
 	for _, volume := range e.Config.Docker.Volumes {
 		err := e.volumesManager.Create(e.Context, volume)
-		if err == volumes.ErrCacheVolumesDisabled {
+		if errors.Is(err, volumes.ErrCacheVolumesDisabled) {
 			e.Warningln(fmt.Sprintf(
 				"Container based cache volumes creation is disabled. Will not create volume for %q",
 				volume,
@@ -1129,7 +1129,7 @@ func (e *executor) createBuildVolume() error {
 			return nil
 		}
 
-		if err == volumes.ErrCacheVolumesDisabled {
+		if errors.Is(err, volumes.ErrCacheVolumesDisabled) {
 			err = e.volumesManager.CreateTemporary(e.Context, jobsDir)
 		}
 	} else {
@@ -1137,7 +1137,8 @@ func (e *executor) createBuildVolume() error {
 	}
 
 	if err != nil {
-		if _, ok := err.(*volumes.ErrVolumeAlreadyDefined); !ok {
+		var volDefinedErr *volumes.ErrVolumeAlreadyDefined
+		if !errors.As(err, &volDefinedErr) {
 			return err
 		}
 	}
