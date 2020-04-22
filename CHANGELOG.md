@@ -1,3 +1,9 @@
+## v12.10.1 (2020-04-22)
+
+### Bug fixes
+
+- Fix err checks from volume manager !2034
+
 ## v12.10.0 (2020-04-21)
 
 ### New features
