@@ -754,6 +754,16 @@ func TestCreateVolumes(t *testing.T) {
 			},
 			createVolumeManager: true,
 		},
+		"volumes defined, empty buildsDir, clone strategy, cache containers disabled wrapped error on user volume": {
+			volumes:     []string{"/volume"},
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", mock.Anything, "/volume").
+					Return(fmt.Errorf("wrap: %w", volumes.ErrCacheVolumesDisabled)).
+					Once()
+			},
+			createVolumeManager: true,
+		},
 		"volumes defined, empty buildsDir, clone strategy, duplicated error on user volume": {
 			volumes:     []string{"/volume"},
 			gitStrategy: "clone",
@@ -901,6 +911,16 @@ func TestCreateBuildVolume(t *testing.T) {
 			},
 			createVolumeManager: true,
 		},
+		"git strategy fetch, non-empty buildsDir, wrapped duplicated error": {
+			gitStrategy: "fetch",
+			buildsDir:   "/builds",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", mock.Anything, "/builds").
+					Return(fmt.Errorf("wrap: %w", volumes.NewErrVolumeAlreadyDefined("/builds"))).
+					Once()
+			},
+			createVolumeManager: true,
+		},
 		"git strategy fetch, non-empty buildsDir, other error": {
 			gitStrategy: "fetch",
 			buildsDir:   "/builds",
@@ -918,6 +938,19 @@ func TestCreateBuildVolume(t *testing.T) {
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
 				vm.On("Create", mock.Anything, "/builds").
 					Return(volumes.ErrCacheVolumesDisabled).
+					Once()
+				vm.On("CreateTemporary", mock.Anything, "/builds").
+					Return(nil).
+					Once()
+			},
+			createVolumeManager: true,
+		},
+		"git strategy fetch, non-empty buildsDir, cache volumes disabled wrapped error": {
+			gitStrategy: "fetch",
+			buildsDir:   "/builds",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", mock.Anything, "/builds").
+					Return(fmt.Errorf("wrap: %w", volumes.ErrCacheVolumesDisabled)).
 					Once()
 				vm.On("CreateTemporary", mock.Anything, "/builds").
 					Return(nil).
