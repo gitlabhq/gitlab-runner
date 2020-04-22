@@ -1975,16 +1975,17 @@ func TestGetServiceDefinitions(t *testing.T) {
 	e.Config.Docker = &common.DockerConfig{}
 
 	tests := map[string]struct {
-		services         []*common.DockerService
+		services         []common.Service
 		buildServices    []common.Image
 		allowedServices  []string
 		expectedServices common.Services
 		expectedErr      string
 	}{
 		"all services with proper name and alias": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: "name", Alias: "alias"},
+					Name:  "name",
+					Alias: "alias",
 				},
 			},
 			expectedServices: common.Services{
@@ -1995,9 +1996,10 @@ func TestGetServiceDefinitions(t *testing.T) {
 			},
 		},
 		"build service not in internal images but empty allowed services": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: "name", Alias: "alias"},
+					Name:  "name",
+					Alias: "alias",
 				},
 			},
 			buildServices: []common.Image{
@@ -2016,9 +2018,9 @@ func TestGetServiceDefinitions(t *testing.T) {
 			},
 		},
 		"build service not in internal images": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: "name"},
+					Name: "name",
 				},
 			},
 			buildServices: []common.Image{
@@ -2030,9 +2032,9 @@ func TestGetServiceDefinitions(t *testing.T) {
 			expectedErr:     "invalid image",
 		},
 		"build service not in allowed services but in internal images": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: "name"},
+					Name: "name",
 				},
 			},
 			buildServices: []common.Image{
@@ -2051,9 +2053,9 @@ func TestGetServiceDefinitions(t *testing.T) {
 			},
 		},
 		"empty service name": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: ""},
+					Name: "",
 				},
 			},
 			buildServices: []common.Image{},
