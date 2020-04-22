@@ -393,5 +393,5 @@ Guided Exploration project. It was tested on:
 - Windows PowerShell and PowerShell Core 7 on [GitLab's Windows shared runners](../../user/gitlab_com/index.md#windows-shared-runners-beta).
 - PowerShell Core 7 in Linux Containers under the [Docker-Machine Runner](https://docs.gitlab.com/runner/executors/docker_machine.html).
 
-The working example can be copied to your own group or instance as a starting point for learning or production work. The README.md of the Guided Exploration project gives more details on what other GitLab CI patterns are demonstrated.
-
+The example can be copied to your own group or instance for testing. More details
+on what other GitLab CI patterns are demonstrated are available at the project page.
