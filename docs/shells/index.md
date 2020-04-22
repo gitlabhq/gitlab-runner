@@ -384,7 +384,7 @@ if(!$?) { Exit $LASTEXITCODE }
 
 [script]: http://doc.gitlab.com/ce/ci/yaml/README.html#script
 
-## Video Walkthrough of a Working Example
+## Video walkthrough of a working example
 
 The [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc)
 video is a walkthrough of the [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/gitlab-ci-yml-powershell-tips-tricks-and-hacks/powershell-pipelines-on-gitlab-ci)
