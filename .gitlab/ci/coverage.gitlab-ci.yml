@@ -54,13 +54,6 @@ race conditions detector:
     expire_in: 7d
   when: always
 
-check windows 1803 test failures:
-  extends:
-  - .check windows test failures
-  - .windows1803_variables
-  needs:
-  - windows 1803 tests
-
 check windows 1809 test failures:
   extends:
   - .check windows test failures

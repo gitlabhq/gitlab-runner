@@ -14,11 +14,6 @@ func TestVersion(t *testing.T) {
 		expectedErr     error
 	}{
 		{
-			operatingSystem: "Windows Server Datacenter Version 1803 (OS Build 17134.590)",
-			expectedVersion: V1803,
-			expectedErr:     nil,
-		},
-		{
 			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
 			expectedVersion: V1809,
 			expectedErr:     nil,
