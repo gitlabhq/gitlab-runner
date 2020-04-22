@@ -7,6 +7,7 @@ import (
 	"io"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -290,7 +291,7 @@ func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.Sh
 }
 
 func (b *PowerShell) IsDefault() bool {
-	return false
+	return runtime.GOOS == "windows"
 }
 
 func init() {

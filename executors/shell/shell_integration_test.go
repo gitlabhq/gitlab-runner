@@ -1010,12 +1010,6 @@ func TestInteractiveTerminal(t *testing.T) {
 			expectedStatusCode: http.StatusSwitchingProtocols,
 		},
 		{
-			app:                "cmd.exe",
-			shell:              "cmd",
-			command:            "timeout 2",
-			expectedStatusCode: http.StatusInternalServerError,
-		},
-		{
 			app:                "powershell.exe",
 			shell:              "powershell",
 			command:            "Start-Sleep -s 2",

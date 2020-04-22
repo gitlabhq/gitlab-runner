@@ -274,7 +274,7 @@ GitLab Runner will execute the executable with the following arguments:
 /path/to/run_exec.sh Arg1 Arg2 /path/to/tmp/script1 get_sources
 ```
 
-This executable should be responsible of executing the scripts that are
+This executable should be responsible for executing the scripts that are
 specified in the first argument. They contain all the scripts any GitLab
 Runner executor would run normally to clone, download artifacts, run
 user scripts and all the other steps described below. The scripts can be
@@ -282,7 +282,6 @@ of the following shells:
 
 - Bash
 - PowerShell
-- Batch (Deprecated)
 
 We generate the script using the shell configured by `shell` inside of
 [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section).

@@ -24,10 +24,10 @@ GitLab Runner requires a minimum of Docker `v1.13.0`.
 
 ## Features
 
-- Allows to run:
-  - Multiple jobs concurrently.
-  - Use multiple tokens with multiple server (even per-project).
-  - Limit number of concurrent jobs per-token.
+- Allows:
+  - Running multiple jobs concurrently.
+  - Using multiple tokens with multiple servers (even per-project).
+  - Limiting number of concurrent jobs per-token.
 - Jobs can be run:
   - Locally.
   - Using Docker containers.
@@ -35,7 +35,7 @@ GitLab Runner requires a minimum of Docker `v1.13.0`.
   - Using Docker containers with autoscaling on different clouds and virtualization hypervisors.
   - Connecting to remote SSH server.
 - Is written in Go and distributed as single binary without any other requirements.
-- Supports Bash, Windows Batch, and Windows PowerShell.
+- Supports Bash, and Windows PowerShell.
 - Works on GNU/Linux, macOS, and Windows (pretty much anywhere you can run Docker).
 - Allows customization of the job running environment.
 - Automatic configuration reload without restart.

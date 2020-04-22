@@ -157,12 +157,6 @@ func GetMultilineBashBuildPowerShell() (JobResponse, error) {
 	return GetRemoteBuildResponse("if (0 -eq 0) {\n\recho \"Hello World\"\n\r}")
 }
 
-func GetMultilineBashBuildCmd() (JobResponse, error) {
-	return GetRemoteBuildResponse(`IF 0==0 (
-  echo Hello World
-)`)
-}
-
 func GetRemoteBrokenTLSBuild() (JobResponse, error) {
 	invalidCert, err := buildSnakeOilCert()
 	if err != nil {

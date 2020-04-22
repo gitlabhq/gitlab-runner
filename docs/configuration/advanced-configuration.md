@@ -184,7 +184,6 @@ There are a couple of available shells that can be run on different platforms.
 | ----- | ----------- |
 | `bash`        | generate Bash (Bourne-shell) script. All commands executed in Bash context (default for all Unix systems) |
 | `sh`          | generate Sh (Bourne-shell) script. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `cmd`         | generate Windows Batch script. All commands are executed in Batch context (default for Windows) |
 | `powershell`  | generate Windows PowerShell script. All commands are executed in PowerShell context |
 
 ## The `[runners.docker]` section

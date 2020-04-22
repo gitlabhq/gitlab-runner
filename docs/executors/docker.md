@@ -176,7 +176,7 @@ don't specify a tag (like `image: ruby`), `latest` is implied.
 NOTE: **Note:**
 The image you choose to run your build in via `image` directive must have a
 working shell in its operating system `PATH`. Supported shells are `sh` or
-`bash` for Linux, `cmd` or PowerShell for Windows. GitLab Runner cannot
+`bash` for Linux, and PowerShell for Windows. GitLab Runner cannot
 execute a command using the underlying OS system calls (like `exec`).
 
 ## The `services` keyword
