@@ -55,7 +55,7 @@ var (
 		ShowHostname: true,
 	}
 
-	detectShellScript = shells.BashTrapShellScript + shells.BashDetectShellScript
+	detectShellScript = shells.BashDetectShellScript
 
 	newLogProcessor = newKubernetesLogProcessor
 )
@@ -260,13 +260,21 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 	// Translates to roughly "sh /detect/shell/path.sh /stage/script/path.sh"
 	// which when the detect shell exits becomes something like "bash /stage/script/path.sh".
 	// This works unlike "gitlab-runner-build" since the detect shell passes arguments with "$@"
-	containerCommand := []string{"sh", s.scriptPath(detectShellScriptName), s.scriptPath(cmd.Stage)}
+	containerCommand := []string{
+		"sh",
+		s.scriptPath(detectShellScriptName),
+		fmt.Sprintf("%s 2>&1 | tee -a %s", s.scriptPath(cmd.Stage), s.logFile()),
+	}
 	if cmd.Predefined {
 		containerName = helperContainerName
 		// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args
 		// to the shell it executes, so we technically pass the script to the stdin of the underlying shell
 		// translates roughly to "gitlab-runner-build <<< /stage/script/path.sh"
-		containerCommand = append(s.helperImageInfo.Cmd, "<<<", s.scriptPath(cmd.Stage))
+		containerCommand = append(
+			s.helperImageInfo.Cmd,
+			"<<<",
+			fmt.Sprintf("%s 2>&1 | tee -a %s", s.scriptPath(cmd.Stage), s.logFile()),
+		)
 	}
 
 	s.Debugln(fmt.Sprintf(
@@ -328,14 +336,20 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 }
 
 func (s *executor) processLogs(ctx context.Context) {
+	config, _ := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
+
 	processor := newLogProcessor(
 		s.kubeClient,
+		config,
 		backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
 		&s.BuildLogger,
 		kubernetesLogProcessorPodConfig{
-			namespace:  s.pod.Namespace,
-			pod:        s.pod.Name,
-			containers: []string{helperContainerName, buildContainerName},
+			namespace: s.pod.Namespace,
+			pod:       s.pod.Name,
+			containers: []kubernetesLogProcessorContainer{{
+				name:    helperContainerName,
+				logPath: s.logFile(),
+			}},
 		},
 	)
 
@@ -523,6 +537,14 @@ func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...st
 	return command, args
 }
 
+func (s *executor) logFile() string {
+	return path.Join(s.logsDir(), "output.log")
+}
+
+func (s *executor) logsDir() string {
+	return path.Join(s.Build.TmpProjectDir(), "logs")
+}
+
 func (s *executor) scriptsDir() string {
 	return path.Join(s.Build.TmpProjectDir(), "scripts")
 }
@@ -544,6 +566,11 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      "scripts",
 			MountPath: s.scriptsDir(),
+		})
+
+		mounts = append(mounts, api.VolumeMount{
+			Name:      "logs",
+			MountPath: s.logsDir(),
 		})
 	}
 
@@ -623,6 +650,13 @@ func (s *executor) getVolumes() []api.Volume {
 				DefaultMode: &mode,
 				Optional:    &optional,
 			},
+		},
+	})
+
+	volumes = append(volumes, api.Volume{
+		Name: "logs",
+		VolumeSource: api.VolumeSource{
+			EmptyDir: &api.EmptyDirVolumeSource{},
 		},
 	})
 

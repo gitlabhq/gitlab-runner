@@ -35,6 +35,7 @@ require (
 	github.com/gorilla/mux v1.3.1-0.20170228224354-599cba5e7b61
 	github.com/gorilla/websocket v1.4.0
 	github.com/hashicorp/go-version v1.2.0
+	github.com/hpcloud/tail v1.0.0
 	github.com/imdario/mergo v0.3.7
 	github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
 	github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
