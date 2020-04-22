@@ -60,3 +60,13 @@ check windows 1809 test failures:
   - .windows1809_variables
   needs:
   - windows 1809 tests
+
+check windows 1903 test failures:
+  extends:
+  - .check windows test failures
+  - .windows1903_variables
+  needs:
+  - windows 1903 tests
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner
