@@ -322,4 +322,9 @@ causes to why this happens:
 
 ### `fatal: unable to access 'https://path:3000/user/repo.git/': Failed to connect to path port 3000: Operation timed out` error in the job
 
-If one of the jobs fails with this error, make sure the Runner can connect to our GitLab instance by double-checking your firewalls, proxy, permissions, and routing configurations
+If one of the jobs fails with this error, make sure the Runner can connect to your GitLab instance. The connection could be blocked by things like:
+
+- firewalls
+- proxies
+- permissions
+- routing configurations
