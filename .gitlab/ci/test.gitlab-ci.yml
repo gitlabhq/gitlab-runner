@@ -144,11 +144,6 @@ unit test with race:
     expire_in: 7d
   allow_failure: true
 
-windows 1803 tests:
-  extends:
-  - .windows test
-  - .windows1803
-
 windows 1809 tests:
   parallel: 8
   extends:

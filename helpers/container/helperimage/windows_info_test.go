@@ -19,17 +19,6 @@ func Test_windowsInfo_create(t *testing.T) {
 		expectedErr     error
 	}{
 		{
-			operatingSystem: "Windows Server Datacenter Version 1803 (OS Build 17134.590)",
-			expectedInfo: Info{
-				Architecture:            windowsSupportedArchitecture,
-				Name:                    name,
-				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1803),
-				IsSupportingLocalImport: false,
-				Cmd:                     powerShellCmd,
-			},
-			expectedErr: nil,
-		},
-		{
 			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
 			expectedInfo: Info{
 				Architecture:            windowsSupportedArchitecture,

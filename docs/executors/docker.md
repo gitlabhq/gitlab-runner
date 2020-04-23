@@ -88,7 +88,6 @@ follows our [support lifecycle for
 Windows](../install/windows.md#windows-version-support-policy):
 
 - Windows Server 1809.
-- Windows Server 1803 *Deprecated*.
 
 For future Windows Server versions, we have a [future version support
 policy](../install/windows.md#windows-version-support-policy).
@@ -101,7 +100,6 @@ be used:
 - `mcr.microsoft.com/windows/servercore:1809`
 - `mcr.microsoft.com/windows/servercore:1809-amd64`
 - `mcr.microsoft.com/windows/servercore:ltsc2019`
-- `mcr.microsoft.com/windows/servercore:1803`
 
 ### Configuring a Windows Docker executor
 

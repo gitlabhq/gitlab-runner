@@ -79,18 +79,6 @@ before_script:
     PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
     PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
 
-.windows1803_variables:
-  variables:
-    WINDOWS_VERSION: servercore1803
-
-.windows1803:
-  extends:
-  - .windows_base
-  - .windows1803_variables
-  tags:
-  - windows-1803
-  - shell
-
 .windows1809_variables:
   variables:
     WINDOWS_VERSION: servercore1809

@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	baseImage1803 = "servercore1803"
 	baseImage1809 = "servercore1809"
 	baseImage1903 = "servercore1903"
 	baseImage1909 = "servercore1909"
@@ -16,7 +15,6 @@ const (
 )
 
 var helperImages = map[string]string{
-	windows.V1803: baseImage1803,
 	windows.V1809: baseImage1809,
 	windows.V1903: baseImage1903,
 	windows.V1909: baseImage1909,
