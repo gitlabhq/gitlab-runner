@@ -488,7 +488,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		}
 
 		// Create list of files to archive
-		archiverArgs := []string{}
+		var archiverArgs []string
 		for _, path := range cacheOptions.Paths {
 			archiverArgs = append(archiverArgs, "--path", path)
 		}
@@ -534,7 +534,7 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	}
 
 	// Create list of files to archive
-	archiverArgs := []string{}
+	var archiverArgs []string
 	for _, path := range artifact.Paths {
 		archiverArgs = append(archiverArgs, "--path", path)
 	}
