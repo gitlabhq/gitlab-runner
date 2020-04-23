@@ -194,6 +194,19 @@ runners:
   privileged: true
 ```
 
+### Best practices for building containers without privileged mode
+
+Building containers within containers with Docker-in-docker requires docker privileged
+mode. Google's [Kaniko](https://github.com/GoogleContainerTools/kaniko) is an alternative
+that works without privileged mode, and it has been tested on the GitLab Kubernetes Runner.
+
+The [Least Privilege Container Builds with Kaniko on GitLab](https://www.youtube.com/watch?v=d96ybcELpFs)
+video is a walkthrough of the [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build)
+working example project. It makes use of the documentation for
+[Building images with Kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
+
+The working example project can be copied to your own group or instance for testing. More details on what other GitLab CI patterns are demonstrated are available at the project page [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build).
+
 ### Providing a custom certificate for accessing GitLab
 
 You can provide a [Kubernetes Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
