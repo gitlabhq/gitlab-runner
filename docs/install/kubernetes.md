@@ -195,7 +195,7 @@ runners:
 ```
 
 ### Best practices for building containers without privileged mode
-There are several methods for building containers within containers that do not require docker privileged mode.  Google's Kaniko is one that has been tested on the GitLab Kubernetes Runner.
+There are several methods for building containers within containers that do not require docker privileged mode. Google's Kaniko is one that has been tested on the GitLab Kubernetes Runner.
 
 The [Least Privilege Container Builds with Kaniko on GitLab](https://www.youtube.com/watch?v=d96ybcELpFs) video is a walkthrough of the [Kaniko Docker Build[(https://gitlab.com/guided-explorations/containers/kaniko-docker-build)] working example project. It leverages the GitLab documentation [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
 
