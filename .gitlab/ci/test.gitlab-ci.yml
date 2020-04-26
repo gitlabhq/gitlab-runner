@@ -71,7 +71,7 @@ code_quality:
   - .merge_request_pipelines
   - .except_docs
   - .no_cache_and_dependencies
-  image: golangci/golangci-lint:v1.24.0
+  image: golangci/golangci-lint:v1.25.0
   variables:
     REPORT_FILE: gl-code-quality-report.json
     LINT_FLAGS: "--issues-exit-code 0 --color never --deadline 15m"
