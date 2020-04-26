@@ -41,6 +41,7 @@ linters:
     - structcheck
     - typecheck
     - unconvert
+    - unused
     - varcheck
     - whitespace
   fast: false
@@ -81,4 +82,3 @@ issues:
     - path: referees/prometheus_api.go
       linters:
         - deadcode
-        - unused
