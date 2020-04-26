@@ -57,7 +57,7 @@ func TestCacheArchiverForIfNoFileDefined(t *testing.T) {
 }
 
 func testCacheUploadHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "PUT" {
+	if r.Method != http.MethodPut {
 		http.Error(w, "405 Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}

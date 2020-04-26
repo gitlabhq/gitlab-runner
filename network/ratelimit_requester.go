@@ -101,6 +101,6 @@ func (r *rateLimitRequester) do(req *http.Request, logger *logrus.Entry) (*http.
 		return res, &r.fallbackDelay, nil
 	}
 
-	resetDuration := resetTime.Sub(time.Now())
+	resetDuration := time.Until(resetTime)
 	return res, &resetDuration, nil
 }

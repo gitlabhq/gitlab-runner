@@ -25,7 +25,7 @@ DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
-    fedora/29 fedora/30
+    fedora/30
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
@@ -56,8 +56,6 @@ RELEASE_INDEX_GENERATOR ?= .tmp/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
 GITLAB_CHANGELOG_VERSION ?= latest
 GITLAB_CHANGELOG = .tmp/gitlab-changelog-$(GITLAB_CHANGELOG_VERSION)
 
-MOCKERY_FLAGS = -note="This comment works around https://github.com/vektra/mockery/issues/155"
-
 .PHONY: clean version mocks
 
 all: deps helper-docker build_all
@@ -79,7 +77,8 @@ help:
 	#
 	# Testing commands:
 	# make test - run project tests
-	# make codequality - run code quality analysis
+	# make lint - run code quality analysis
+	# make lint-docs - run documentation linting
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -99,9 +98,13 @@ version:
 
 deps: $(DEVELOPMENT_TOOLS)
 
-codequality:
-	./scripts/codequality analyze --dev
+lint: OUT_FORMAT ?= colored-line-number
+lint: LINT_FLAGS ?=
+lint:
+	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
+lint-docs:
+	@scripts/lint-docs
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
@@ -137,24 +140,26 @@ dockerfiles:
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
-	mockery $(MOCKERY_FLAGS) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
-	mockery $(MOCKERY_FLAGS) -dir=./network -name='requester' -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./helpers -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./executors/docker -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./executors/kubernetes -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./executors/custom -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./cache -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./common -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./log -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./referees -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./session -all -inpkg
-	mockery $(MOCKERY_FLAGS) -dir=./shells -all -inpkg
+	mockery -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
+	mockery -dir=./network -name='requester' -inpkg
+	mockery -dir=./helpers -all -inpkg
+	mockery -dir=./executors/docker -all -inpkg
+	mockery -dir=./executors/kubernetes -all -inpkg
+	mockery -dir=./executors/custom -all -inpkg
+	mockery -dir=./cache -all -inpkg
+	mockery -dir=./common -all -inpkg
+	mockery -dir=./log -all -inpkg
+	mockery -dir=./referees -all -inpkg
+	mockery -dir=./session -all -inpkg
+	mockery -dir=./shells -all -inpkg
 
 check_mocks:
-	@git status -sb > /tmp/mocks-${CI_JOB_ID}-before
-	$(MAKE) mocks
-	@git status -sb > /tmp/mocks-${CI_JOB_ID}-after
-	@diff -U0 /tmp/mocks-${CI_JOB_ID}-before /tmp/mocks-${CI_JOB_ID}-after
+	# Checking if mocks are up-to-date
+	@$(MAKE) mocks
+	# Checking the differences
+	@git --no-pager diff --compact-summary --exit-code -- ./helpers/service/mocks \
+		$(shell git ls-files | grep 'mock_' | grep -v 'vendor/') && \
+		echo "Mocks up-to-date!"
 
 test-docker:
 	$(MAKE) test-docker-image IMAGE=centos:6 TYPE=rpm

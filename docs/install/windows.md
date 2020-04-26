@@ -1,12 +1,12 @@
 ---
-last_updated: 2017-10-09
+last_updated: 2020-03-27
 ---
 
 # Install GitLab Runner on Windows
 
 To install and run GitLab Runner on Windows you need:
 
-- Git installed.
+- Git, which can be installed from the [official site](https://git-scm.com/download/win)
 - A password for your user account, if you want to run it under your user
   account rather than the Built-in System Account.
 
@@ -122,7 +122,7 @@ remove it in the next major change. For example, in 12.x we started
 supporting [`Windows
 1803`](https://support.microsoft.com/en-us/lifecycle/search?alpha=1803)
 because it came out on `2018-04-30`. Mainstream support ended on
-`2019-11-12`, so we deprecated `Windows 1803` in 12.x and it will be
+`2019-11-12`, so we deprecated `Windows 1803` in 12.x and it was
 [removed](https://gitlab.com/gitlab-org/gitlab-runner/issues/6553) in
 GitLab 13.0.
 
@@ -135,9 +135,7 @@ date:
 
 | OS                                  | Mainstream support end of life date |
 |-------------------------------------|-------------------------------------|
-| Windows 10 1803                     | November 2019 *Deprecated*          |
 | Windows 10 1809/2019                | January 2024                        |
-| Windows Server Datacenter 1803      | November 2019 *Deprecated*          |
 | Windows Server Datacenter 1809/2019 | January 2024                        |
 | Windows Server Datacenter 1903      | December 2020                       |
 

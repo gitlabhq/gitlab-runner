@@ -545,8 +545,7 @@ can be found [here][cronvendor].
 
 ## The `[runners.custom]` section
 
-Define configuration for the [custom
-executor](../executors/custom.md).
+Define configuration for the [custom executor](../executors/custom.md).
 
 | Parameter               | Type         | Required | Description                                                                                                                                                                                                                                                                                         |
 |-------------------------|--------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -701,7 +700,7 @@ Examples:
 
 ## The `[runners.kubernetes]` section
 
-> Added in GitLab Runner v1.6.0
+> Introduced in GitLab Runner v1.6.0.
 
 This defines the Kubernetes parameters.
 See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
@@ -809,8 +808,7 @@ before upgrading the Runner, otherwise the jobs will start failing with a "No su
 
 ## The `[runners.custom_build_dir]` section
 
-NOTE: **Note:**
-[Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
 
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories) parameters.
 
@@ -841,8 +839,8 @@ Example:
 
 ## The `[runners.referees]` section
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
-> Requires [GitLab v12.6](https://about.gitlab.com/blog/2019/12/22/gitlab-12-6-released/) or later.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
+> - Requires [GitLab v12.6](https://about.gitlab.com/releases/2019/12/22/gitlab-12-6-released/) or later.
 
 Use Runner Referees to pass extra job monitoring data to GitLab. Runner referees are special workers within the Runner manager that query and collect additional data related to a job and upload their results to GitLab as job artifacts.
 
@@ -860,7 +858,7 @@ Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml`
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `prometheus_address` | The server that collects metrics from Runner instances. It must be accessible by the Runner manager when the job finishes.          |
 | `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).   |
-| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics) queries that will be executed for each interval. |
+| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that will be executed for each interval. |
 
 Here is a complete configuration example for `node_exporter` metrics:
 

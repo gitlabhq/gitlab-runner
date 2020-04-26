@@ -3,7 +3,6 @@ package parallels
 import (
 	"errors"
 	"fmt"
-	"os/exec"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -15,7 +14,6 @@ import (
 
 type executor struct {
 	executors.AbstractExecutor
-	cmd             *exec.Cmd
 	vmName          string
 	sshCommand      ssh.Client
 	provisioned     bool
@@ -102,7 +100,7 @@ func (s *executor) restoreFromSnapshot() error {
 func (s *executor) createVM() error {
 	baseImage := s.Config.Parallels.BaseName
 	if baseImage == "" {
-		return errors.New("Missing Image setting from Parallels config")
+		return errors.New("missing Image setting from Parallels config")
 	}
 
 	templateName := s.Config.Parallels.TemplateName
@@ -178,19 +176,19 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	if s.BuildShell.PassFile {
-		return errors.New("Parallels doesn't support shells that require script file")
+		return errors.New("parallels doesn't support shells that require script file")
 	}
 
 	if s.Config.SSH == nil {
-		return errors.New("Missing SSH configuration")
+		return errors.New("missing SSH configuration")
 	}
 
 	if s.Config.Parallels == nil {
-		return errors.New("Missing Parallels configuration")
+		return errors.New("missing Parallels configuration")
 	}
 
 	if s.Config.Parallels.BaseName == "" {
-		return errors.New("Missing BaseName setting from Parallels config")
+		return errors.New("missing BaseName setting from Parallels config")
 	}
 
 	version, err := prl.Version()

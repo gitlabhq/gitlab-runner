@@ -15,7 +15,6 @@ type TestObj struct {
 }
 
 func TestSimpleYamlMarshalling(t *testing.T) {
-
 	ymlString := ToYAML(TestObj{
 		Text:   "example",
 		Number: 25,
@@ -28,7 +27,6 @@ func TestSimpleYamlMarshalling(t *testing.T) {
 }
 
 func TestSimpleTomlMarshalling(t *testing.T) {
-
 	tomlString := ToTOML(TestObj{
 		Text:   "example",
 		Number: 25,

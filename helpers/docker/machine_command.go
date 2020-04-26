@@ -1,4 +1,4 @@
-package docker_helpers
+package docker
 
 import (
 	"bufio"
@@ -266,15 +266,12 @@ func (m *machineCommand) canConnect(name string) bool {
 	cmd := newDockerMachineCommand("config", name)
 
 	err := cmd.Run()
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
 
-func (m *machineCommand) Credentials(name string) (dc DockerCredentials, err error) {
+func (m *machineCommand) Credentials(name string) (dc Credentials, err error) {
 	if !m.CanConnect(name, true) {
-		err = errors.New("Can't connect")
+		err = errors.New("can't connect")
 		return
 	}
 

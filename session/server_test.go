@@ -117,6 +117,7 @@ func TestCertificate(t *testing.T) {
 
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	assert.True(t, requestSuccessful)

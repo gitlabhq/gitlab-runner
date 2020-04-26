@@ -108,7 +108,6 @@ type executor struct {
 	featureChecker featureChecker
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
-	logProcessor            logProcessor
 }
 
 type serviceDeleteResponse struct {
@@ -153,7 +152,7 @@ func (s *executor) setupResources() error {
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if err = s.AbstractExecutor.Prepare(options); err != nil {
-		return fmt.Errorf("AbstractExecutor Prepare() failed with: %w", err)
+		return fmt.Errorf("prepare AbstractExecutor: %w", err)
 	}
 
 	if s.BuildShell.PassFile {
@@ -166,7 +165,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	if err = s.setupResources(); err != nil {
 		return fmt.Errorf("couldn't setup Kubernetes resources: %w", err)
-
 	}
 
 	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
@@ -378,7 +376,7 @@ func (s *executor) setupScriptsConfigMap() error {
 
 	configMap := &api.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-scripts", s.projectUniqueName()),
+			GenerateName: fmt.Sprintf("%s-scripts", s.Build.ProjectUniqueName()),
 			Namespace:    s.configurationOverwrites.namespace,
 		},
 		Data: scripts,
@@ -541,9 +539,18 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 }
 
 func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
-	var mounts []api.VolumeMount
+	volumes := s.Config.Kubernetes.Volumes
+	mounts := make(
+		[]api.VolumeMount,
+		0,
+		len(volumes.HostPaths)+
+			len(volumes.Secrets)+
+			len(volumes.PVCs)+
+			len(volumes.ConfigMaps)+
+			len(volumes.EmptyDirs),
+	)
 
-	for _, mount := range s.Config.Kubernetes.Volumes.HostPaths {
+	for _, mount := range volumes.HostPaths {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
@@ -551,7 +558,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		})
 	}
 
-	for _, mount := range s.Config.Kubernetes.Volumes.Secrets {
+	for _, mount := range volumes.Secrets {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
@@ -559,7 +566,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		})
 	}
 
-	for _, mount := range s.Config.Kubernetes.Volumes.PVCs {
+	for _, mount := range volumes.PVCs {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
@@ -567,7 +574,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		})
 	}
 
-	for _, mount := range s.Config.Kubernetes.Volumes.ConfigMaps {
+	for _, mount := range volumes.ConfigMaps {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
@@ -575,7 +582,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		})
 	}
 
-	for _, mount := range s.Config.Kubernetes.Volumes.EmptyDirs {
+	for _, mount := range volumes.EmptyDirs {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
@@ -618,9 +625,18 @@ func (s *executor) getVolumes() []api.Volume {
 }
 
 func (s *executor) getVolumesForConfig() []api.Volume {
-	var volumes []api.Volume
+	cfgVolumes := s.Config.Kubernetes.Volumes
+	volumes := make(
+		[]api.Volume,
+		0,
+		len(cfgVolumes.HostPaths)+
+			len(cfgVolumes.Secrets)+
+			len(cfgVolumes.PVCs)+
+			len(cfgVolumes.ConfigMaps)+
+			len(cfgVolumes.EmptyDirs),
+	)
 
-	for _, volume := range s.Config.Kubernetes.Volumes.HostPaths {
+	for _, volume := range cfgVolumes.HostPaths {
 		path := volume.HostPath
 		// Make backward compatible with syntax introduced in version 9.3.0
 		if path == "" {
@@ -637,8 +653,8 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 		})
 	}
 
-	for _, volume := range s.Config.Kubernetes.Volumes.Secrets {
-		items := []api.KeyToPath{}
+	for _, volume := range cfgVolumes.Secrets {
+		var items []api.KeyToPath
 		for key, path := range volume.Items {
 			items = append(items, api.KeyToPath{Key: key, Path: path})
 		}
@@ -654,7 +670,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 		})
 	}
 
-	for _, volume := range s.Config.Kubernetes.Volumes.PVCs {
+	for _, volume := range cfgVolumes.PVCs {
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
@@ -666,8 +682,8 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 		})
 	}
 
-	for _, volume := range s.Config.Kubernetes.Volumes.ConfigMaps {
-		items := []api.KeyToPath{}
+	for _, volume := range cfgVolumes.ConfigMaps {
+		var items []api.KeyToPath
 		for key, path := range volume.Items {
 			items = append(items, api.KeyToPath{Key: key, Path: path})
 		}
@@ -685,7 +701,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 		})
 	}
 
-	for _, volume := range s.Config.Kubernetes.Volumes.EmptyDirs {
+	for _, volume := range cfgVolumes.EmptyDirs {
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
@@ -701,10 +717,6 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 
 type dockerConfigEntry struct {
 	Username, Password string
-}
-
-func (s *executor) projectUniqueName() string {
-	return dns.MakeRFC1123Compatible(s.Build.ProjectUniqueName())
 }
 
 func (s *executor) setupCredentials() error {
@@ -733,7 +745,7 @@ func (s *executor) setupCredentials() error {
 	}
 
 	secret := api.Secret{}
-	secret.GenerateName = s.projectUniqueName()
+	secret.GenerateName = s.Build.ProjectUniqueName()
 	secret.Namespace = s.configurationOverwrites.namespace
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
@@ -819,16 +831,16 @@ func (s *executor) createHostAlias() (*api.HostAlias, error) {
 func (s *executor) setupBuildPod() error {
 	s.Debugln("Setting up build pod")
 
-	services := make([]api.Container, len(s.options.Services))
+	podServices := make([]api.Container, len(s.options.Services))
 
 	for i, service := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
-		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, service, s.serviceRequests, s.serviceLimits)
+		podServices[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, service, s.serviceRequests, s.serviceLimits)
 	}
 
 	// We set a default label to the pod. This label will be used later
 	// by the services, to link each service to the pod
-	labels := map[string]string{"pod": s.projectUniqueName()}
+	labels := map[string]string{"pod": s.Build.ProjectUniqueName()}
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
 		labels[k] = s.Build.Variables.ExpandValue(v)
 	}
@@ -838,7 +850,7 @@ func (s *executor) setupBuildPod() error {
 		annotations[key] = s.Build.Variables.ExpandValue(val)
 	}
 
-	var imagePullSecrets []api.LocalObjectReference
+	imagePullSecrets := make([]api.LocalObjectReference, 0, len(s.Config.Kubernetes.ImagePullSecrets))
 	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})
 	}
@@ -852,7 +864,7 @@ func (s *executor) setupBuildPod() error {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(labels, annotations, services, imagePullSecrets, hostAlias)
+	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAlias)
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -874,7 +886,7 @@ func (s *executor) preparePodConfig(labels, annotations map[string]string, servi
 
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: s.projectUniqueName(),
+			GenerateName: s.Build.ProjectUniqueName(),
 			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       labels,
 			Annotations:  annotations,
@@ -936,7 +948,7 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 		close(ch)
 	}()
 
-	var services []api.Service
+	proxyServices := make([]api.Service, 0, len(s.ProxyPool))
 	for res := range ch {
 		if res.err != nil {
 			err := fmt.Errorf("error creating the proxy service %q: %w", res.service.Name, res.err)
@@ -945,10 +957,10 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 			return []api.Service{}, err
 		}
 
-		services = append(services, *res.service)
+		proxyServices = append(proxyServices, *res.service)
 	}
 
-	return services, nil
+	return proxyServices, nil
 }
 
 func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) api.Service {
@@ -959,7 +971,7 @@ func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) ap
 		},
 		Spec: api.ServiceSpec{
 			Ports:    ports,
-			Selector: map[string]string{"pod": s.projectUniqueName()},
+			Selector: map[string]string{"pod": s.Build.ProjectUniqueName()},
 			Type:     api.ServiceTypeClusterIP,
 		},
 	}
@@ -1050,7 +1062,9 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 			Executor: &DefaultRemoteExecutor{},
 		}
 
-		if err := attach.Run(); err != nil {
+		retryable := retry.New(retry.WithBuildLog(&attach, &s.BuildLogger))
+		err = retryable.Run()
+		if err != nil {
 			errCh <- err
 		}
 

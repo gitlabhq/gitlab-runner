@@ -28,5 +28,4 @@ func LogRuntimePlatform(app *cli.App) {
 		}
 		return nil
 	}
-
 }

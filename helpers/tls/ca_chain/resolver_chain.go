@@ -9,13 +9,9 @@ package ca_chain
 import (
 	"crypto/x509"
 	"fmt"
-
-	"github.com/sirupsen/logrus"
 )
 
 type chainResolver struct {
-	logger logrus.FieldLogger
-
 	urlResolver    resolver
 	verifyResolver resolver
 }

@@ -268,24 +268,24 @@ which is split into multiple templates.
 ### Improperly formatted issue
 
 ```
-Thanks for the issue report. Please reformat your issue to conform to the
-[contributing guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
+Thank you for the issue report. Please reformat your issue to conform to the
+[contribution guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
 ```
 
 ### Issue report for old version
 
 ```
-Thanks for the issue report but we only support issues for the latest stable version of GitLab.
-I'm closing this issue but if you still experience this problem in the latest stable version,
-please open a new issue (but also reference the old issue(s)).
+Thank you for the issue report. We only support issues for the latest stable version of GitLab.
+I'm closing this issue, however if you still experience this problem in the latest stable version,
+please open a new issue (and please reference the old issue(s)).
 Make sure to also include the necessary debugging information conforming to the issue tracker
-guidelines found in our [contributing guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
+guidelines found in our [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
 ```
 
 ### Support requests and configuration questions
 
 ```
-Thanks for your interest in GitLab. We don't use the issue tracker for support
+Thank you for your interest in GitLab. We don't use the issue tracker for support
 requests and configuration questions. Please check our
 [Support](https://about.gitlab.com/support/) page to see all of the available
 support options. Also, have a look at the [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/index.html)
@@ -306,20 +306,20 @@ very hard to read otherwise. For more information, read our
 ### Issue fixed in newer version
 
 ```
-Thanks for the issue report. This issue has already been fixed in newer versions of GitLab.
+Thank you for the issue report. This issue has already been fixed in newer versions of GitLab.
 Due to the size of this project and our limited resources we are only able to support the
-latest stable release as outlined in our [contributing guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html).
+latest stable release as outlined in our [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html).
 In order to get this bug fix and enjoy many new features please
 [upgrade](https://gitlab.com/gitlab-org/gitlab-ce/tree/master/doc/update).
-If you still experience issues at that time please open a new issue following our issue
-tracker guidelines found in the [contributing guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
+If you still experience issues at that time, please open a new issue following our issue
+tracker guidelines found in the [contribution guidelines](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#issue-tracker-guidelines).
 ```
 
 ### Improperly formatted merge request
 
 ```
 Thanks for your interest in improving the GitLab codebase!
-Please update your merge request according to the [contributing guidelines](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/doc/development/contributing/merge_request_workflow.md#merge-request-guidelines).
+Please update your merge request according to the [contribution guidelines](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/doc/development/contributing/merge_request_workflow.md#merge-request-guidelines).
 ```
 
 ### Accepting merge requests
@@ -337,7 +337,7 @@ might not make it into GitLab.
 
 ```
 We can only accept a merge request if all the tests are green. I've just
-restarted the build. When the tests are still not passing after this restart and
+restarted the build. If the tests are still not green after this restart and
 you're sure that is does not have anything to do with your code changes, please
 rebase with master to see if that solves the issue.
 ```

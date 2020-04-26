@@ -797,6 +797,7 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	}
 	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
 	defer func() {
+		resp.Body.Close()
 		if conn != nil {
 			_ = conn.Close()
 		}
@@ -1839,7 +1840,7 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				hasHelper := false
 				for _, c := range pod.Spec.Containers {
-					if c.Name == "helper" {
+					if c.Name == helperContainerName {
 						hasHelper = true
 					}
 				}

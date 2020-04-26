@@ -1,7 +1,8 @@
-package docker_helpers
+package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
@@ -24,11 +26,11 @@ const DefaultAPIVersion = "1.25"
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.
 func IsErrNotFound(err error) bool {
-	return client.IsErrNotFound(err)
+	return client.IsErrNotFound(errors.Unwrap(err))
 }
 
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
-// giving it the methods it needs to satisfy the docker_helpers.Client interface
+// giving it the methods it needs to satisfy the docker.Client interface
 type officialDockerClient struct {
 	client *client.Client
 
@@ -36,7 +38,7 @@ type officialDockerClient struct {
 	Transport *http.Transport
 }
 
-func newOfficialDockerClient(c DockerCredentials, apiVersion string) (*officialDockerClient, error) {
+func newOfficialDockerClient(c Credentials, apiVersion string) (*officialDockerClient, error) {
 	transport, err := newHTTPTransport(c)
 	if err != nil {
 		logrus.Errorln("Error creating TLS Docker client:", err)
@@ -75,6 +77,12 @@ func (c *officialDockerClient) ImageInspectWithRaw(ctx context.Context, imageID 
 	started := time.Now()
 	image, data, err := c.client.ImageInspectWithRaw(ctx, imageID)
 	return image, data, wrapError("ImageInspectWithRaw", err, started)
+}
+
+func (c *officialDockerClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+	started := time.Now()
+	containers, err := c.client.ContainerList(ctx, options)
+	return containers, wrapError("ContainerList", err, started)
 }
 
 func (c *officialDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error) {
@@ -161,6 +169,12 @@ func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID str
 	return resource, wrapError("NetworkInspect", err, started)
 }
 
+func (c *officialDockerClient) VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error) {
+	started := time.Now()
+	v, err := c.client.VolumeCreate(ctx, options)
+	return v, wrapError("VolumeCreate", err, started)
+}
+
 func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {
 	started := time.Now()
 	info, err := c.client.Info(ctx)
@@ -207,10 +221,10 @@ func (c *officialDockerClient) Close() error {
 // New attempts to create a new Docker client of the specified version. If the
 // specified version is empty, it will use the default version.
 //
-// If no host is given in the DockerCredentials, it will attempt to look up
+// If no host is given in the Credentials, it will attempt to look up
 // details from the environment. If that fails, it will use the default
 // connection details for your platform.
-func New(c DockerCredentials, apiVersion string) (Client, error) {
+func New(c Credentials, apiVersion string) (Client, error) {
 	if c.Host == "" {
 		c = credentialsFromEnv()
 	}
@@ -227,7 +241,7 @@ func New(c DockerCredentials, apiVersion string) (Client, error) {
 	return newOfficialDockerClient(c, apiVersion)
 }
 
-func newHTTPTransport(c DockerCredentials) (*http.Transport, error) {
+func newHTTPTransport(c Credentials) (*http.Transport, error) {
 	url, err := client.ParseHostURL(c.Host)
 	if err != nil {
 		return nil, err

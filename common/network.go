@@ -66,6 +66,7 @@ type FeaturesInfo struct {
 	Refspecs                bool `json:"refspecs"`
 	Masking                 bool `json:"masking"`
 	Proxy                   bool `json:"proxy"`
+	RawVariables            bool `json:"raw_variables"`
 }
 
 type RegisterRunnerParameters struct {
@@ -254,7 +255,7 @@ func (c Cache) CheckPolicy(wanted CachePolicy) (bool, error) {
 		return wanted == c.Policy, nil
 	}
 
-	return false, fmt.Errorf("Unknown cache policy %s", c.Policy)
+	return false, fmt.Errorf("unknown cache policy %s", c.Policy)
 }
 
 type Caches []Cache

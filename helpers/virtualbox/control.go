@@ -118,10 +118,7 @@ func FindSSHPort(vmName string) (port string, err error) {
 
 func Exist(vmName string) bool {
 	_, err := VBoxManage("showvminfo", vmName)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func CreateOsVM(vmName string, templateName string, templateSnapshot string) error {
@@ -228,7 +225,7 @@ func GetCurrentSnapshot(vmName string) (string, error) {
 	}
 	snapshot := matchCurrentSnapshotName(output)
 	if snapshot == nil {
-		return "", errors.New("Failed to match current snapshot name")
+		return "", errors.New("failed to match current snapshot name")
 	}
 	return snapshot[1], nil
 }

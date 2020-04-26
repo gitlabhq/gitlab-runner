@@ -30,7 +30,7 @@ and OS are supported.
 NOTE: **Note:**
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
-Engine. This means means the
+Engine. This means the
 [minimum supported version](https://docs.docker.com/develop/sdk/#api-version-matrix)
 of Docker is `1.13.0`.
 
@@ -88,7 +88,6 @@ follows our [support lifecycle for
 Windows](../install/windows.md#windows-version-support-policy):
 
 - Windows Server 1809.
-- Windows Server 1803 *Deprecated*.
 
 For future Windows Server versions, we have a [future version support
 policy](../install/windows.md#windows-version-support-policy).
@@ -101,7 +100,6 @@ be used:
 - `mcr.microsoft.com/windows/servercore:1809`
 - `mcr.microsoft.com/windows/servercore:1809-amd64`
 - `mcr.microsoft.com/windows/servercore:ltsc2019`
-- `mcr.microsoft.com/windows/servercore:1803`
 
 ### Configuring a Windows Docker executor
 
@@ -242,7 +240,8 @@ Docker networks may conflict with other networks on the host, including other Do
 if the CIDR ranges are already in use. The default Docker address pool can be configured
 via `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
 
-The mode is activated via the `FF_NETWORK_PER_BUILD` [feature flag](../configuration/feature-flags.md).
+To enable this mode you need to enable the [`FF_NETWORK_PER_BUILD`
+feature flag](../configuration/feature-flags.md).
 
 When a job starts, a bridge network is created (similarly to `docker
 network create <network>`). Upon creation, the service container(s) and the
@@ -664,19 +663,16 @@ Pulling docker image registry.tld/my/image:latest ...
 ERROR: Build failed: Error: image registry.tld/my/image:latest not found
 ```
 
-> **Note:**
-For versions prior to `v1.8`, when using the `always` pull policy, it could
-fall back to local copy of an image and print a warning:
->
-> ```plaintext
-> Pulling docker image registry.tld/my/image:latest ...
-> WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
-> WARNING: Locally found image will be used instead.
-> ```
->
-That is changed in version `v1.8`. To understand why we changed this and
-how incorrect usage of it may be revealed please look into issue
-[#1905](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
+When using the `always` pull policy in GitLab Runner versions older than `v1.8`, it could
+fall back to the local copy of an image and print a warning:
+
+```plaintext
+Pulling docker image registry.tld/my/image:latest ...
+WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
+WARNING: Locally found image will be used instead.
+```
+
+This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
 
 **When to use this pull policy?**
 

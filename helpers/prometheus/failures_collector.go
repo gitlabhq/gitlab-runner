@@ -35,11 +35,7 @@ func (fc *FailuresCollector) RecordFailure(reason common.JobFailureReason, runne
 	fc.lock.Lock()
 	defer fc.lock.Unlock()
 
-	if _, ok := fc.failures[failure]; ok {
-		fc.failures[failure]++
-	} else {
-		fc.failures[failure] = 1
-	}
+	fc.failures[failure]++
 }
 
 func (fc *FailuresCollector) Describe(ch chan<- *prometheus.Desc) {

@@ -231,8 +231,8 @@ Autoscale can be configured with the support for _Off Peak_ time mode periods.
 
 Some organizations can select a regular time periods when no work is done.
 For example most of commercial companies are working from Monday to
-Friday in a fixed hours, eg. from 10am to 6pm. In the rest of the week -
-from Monday to Friday at 12am-9am and 6pm-11pm and whole Saturday and Sunday -
+Friday in a fixed hours, eg. from 9am to 6pm. In the rest of the week -
+from Monday to Friday at 12am-9am and 6pm-12am and all of Saturday and Sunday -
 no one is working. These time periods we're naming here as _Off Peak_.
 
 Organizations where _Off Peak_ time periods occurs probably don't want
@@ -254,13 +254,13 @@ when the _Off Peak_ time mode should be set on. For example:
 ```toml
 [runners.machine]
   OffPeakPeriods = [
-    "* * 0-9,18-23 * * mon-fri *",
+    "* * 0-8,18-23 * * mon-fri *",
     "* * * * * sat,sun *"
   ]
 ```
 
-will enable the _Off Peak_ periods described above, so the _working_ days
-from 12am to 9am and from 6pm to 11pm and whole weekend days. Machines
+will enable the _Off Peak_ periods described above, so on weekdays
+from 12:00am through 8:59am and 6:00pm through 11:59pm, plus all of Saturday and Sunday. Machines
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
 
@@ -382,7 +382,7 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
     image = "ruby:2.6"               # The default image used for jobs is 'ruby:2.6'
   [runners.machine]
     OffPeakPeriods = [               # Set the Off Peak time mode on for:
-      "* * 0-9,18-23 * * mon-fri *", # - Monday to Friday for 12:00am through 9:59am and 6:00pm through 11:59pm
+      "* * 0-8,18-23 * * mon-fri *", # - Monday to Friday from 12:00am through 8:59am and 6:00pm through 11:59pm
       "* * * * * sat,sun *"          # - All of Saturday and Sunday
     ]
     OffPeakIdleCount = 1             # There must be 1 machine in Idle state - when Off Peak time mode is on

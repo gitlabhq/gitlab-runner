@@ -11,7 +11,7 @@ import (
 
 var (
 	// ErrNotSupported is returned when specific feature is not supported.
-	ErrNotSupported = errors.New("Not supported")
+	ErrNotSupported = errors.New("not supported")
 )
 
 type SimpleService struct {

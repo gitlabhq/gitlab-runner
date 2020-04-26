@@ -39,7 +39,7 @@ func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites
 
 	//apply overwrites
 	if len(overwrites.bearerToken) > 0 {
-		kubeConfig.BearerToken = string(overwrites.bearerToken)
+		kubeConfig.BearerToken = overwrites.bearerToken
 	}
 
 	kubeConfig.UserAgent = common.AppVersion.UserAgent()
@@ -166,7 +166,6 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 
 	fmt.Fprintf(out, "Waiting for pod %s/%s to be running, status is %s\n", pod.Namespace, pod.Name, pod.Status.Phase)
 	return podPhaseResponse{false, pod.Status.Phase, nil}
-
 }
 
 func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {

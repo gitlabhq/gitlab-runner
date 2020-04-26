@@ -4,46 +4,140 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
+
+var getWindowsImageOnce sync.Once
+var windowsImage string
+
+// safeBuffer is used for tests that are writing build logs to a buffer and
+// reading the build logs waiting for a log line.
+type safeBuffer struct {
+	buf *bytes.Buffer
+	mu  sync.RWMutex
+}
+
+func newSafeBuffer() *safeBuffer {
+	return &safeBuffer{
+		buf: &bytes.Buffer{},
+		mu:  sync.RWMutex{},
+	}
+}
+
+func (s *safeBuffer) Read(p []byte) (n int, err error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buf.Read(p)
+}
+
+func (s *safeBuffer) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buf.String()
+}
 
 func TestDockerCommandSuccessRun(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
 
-	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: successfulBuild,
+}
+
+func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {
+	executor := "docker"
+	image := common.TestAlpineImage
+
+	if runtime.GOOS == "windows" {
+		executor = "docker-windows"
+		image = getWindowsImage(t)
+	}
+
+	jobResp, err := getJobResp()
+	require.NoError(t, err)
+
+	return common.Build{
+		JobResponse: jobResp,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
+				Executor: executor,
 				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
+					Image:      image,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
 	}
+}
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+func getWindowsImage(t *testing.T) string {
+	getWindowsImageOnce.Do(func() {
+		client, err := docker.New(docker.Credentials{}, "")
+		require.NoError(t, err, "creating docker client")
+		defer client.Close()
+
+		info, err := client.Info(context.Background())
+		require.NoError(t, err, "docker info")
+
+		windowsVersion, err := windows.Version(info.OperatingSystem)
+		require.NoError(t, err)
+		windowsImage = fmt.Sprintf(common.TestWindowsImage, windowsVersion)
+	})
+
+	return windowsImage
+}
+
+func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	build := getBuildForOS(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse("echo $TEST")
+	})
+
+	value := "$VARIABLE$WITH$DOLLARS$$"
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   "TEST",
+		Value: value,
+		Raw:   true,
+	})
+
+	out, err := buildtest.RunBuildReturningOutput(t, &build)
 	assert.NoError(t, err)
+	assert.Contains(t, out, value)
 }
 
 func TestDockerCommandUsingCustomClonePath(t *testing.T) {
@@ -123,22 +217,9 @@ func TestDockerCommandBuildFail(t *testing.T) {
 		return
 	}
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
+	build := getBuildForOS(t, common.GetRemoteFailedBuild)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "exit code 1")
@@ -257,7 +338,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 }
 
 func isDockerOlderThan17_07(t *testing.T) bool {
-	client, err := docker_helpers.New(docker_helpers.DockerCredentials{}, "")
+	client, err := docker.New(docker.Credentials{}, "")
 	require.NoError(t, err, "should be able to connect to docker")
 
 	types, err := client.Info(context.Background())
@@ -277,16 +358,8 @@ func TestDockerCommandMissingImage(t *testing.T) {
 		return
 	}
 
-	build := &common.Build{
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image: "some/non-existing/image",
-				},
-			},
-		},
-	}
+	build := getBuildForOS(t, common.GetSuccessfulBuild)
+	build.Runner.Docker.Image = "some/non-existing/image"
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -305,16 +378,8 @@ func TestDockerCommandMissingTag(t *testing.T) {
 		return
 	}
 
-	build := &common.Build{
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image: "docker:missing-tag",
-				},
-			},
-		},
-	}
+	build := getBuildForOS(t, common.GetSuccessfulBuild)
+	build.Runner.Docker.Image = "docker:missing-tag"
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
@@ -364,20 +429,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 		return
 	}
 
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
+	build := getBuildForOS(t, common.GetRemoteLongRunningBuild)
 
 	trace := &common.Trace{Writer: os.Stdout}
 
@@ -393,7 +445,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	})
 	defer timeoutTimer.Stop()
 
-	err = build.Run(&common.Config{}, trace)
+	err := build.Run(&common.Config{}, trace)
 	assert.IsType(t, err, &common.BuildError{})
 	assert.Contains(t, err.Error(), "canceled")
 }
@@ -783,7 +835,7 @@ func runDockerInDocker(version string) (id string, err error) {
 	return
 }
 
-func getDockerCredentials(id string) (credentials docker_helpers.DockerCredentials, err error) {
+func getDockerCredentials(id string) (credentials docker.Credentials, err error) {
 	cmd := exec.Command("docker", "port", id, "2375")
 	cmd.Stderr = os.Stderr
 	data, err := cmd.Output()
@@ -802,8 +854,8 @@ func getDockerCredentials(id string) (credentials docker_helpers.DockerCredentia
 	return
 }
 
-func waitForDocker(credentials docker_helpers.DockerCredentials) error {
-	client, err := docker_helpers.New(credentials, "")
+func waitForDocker(credentials docker.Credentials) error {
+	client, err := docker.New(credentials, "")
 	if err != nil {
 		return err
 	}
@@ -854,10 +906,10 @@ func testDockerVersion(t *testing.T, version string) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					Image:             common.TestAlpineImage,
-					PullPolicy:        common.PullPolicyIfNotPresent,
-					DockerCredentials: credentials,
-					CPUS:              "0.1",
+					Image:       common.TestAlpineImage,
+					PullPolicy:  common.PullPolicyIfNotPresent,
+					Credentials: credentials,
+					CPUS:        "0.1",
 				},
 			},
 		},
@@ -1133,4 +1185,130 @@ func TestDockerCommandUsingBuildsVolume(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func TestDockerCommandRunAttempts(t *testing.T) {
+	t.Skip("Skipping until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is resolved.")
+
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	sleepCMD := "sleep 60"
+	executorStageAttempts := 2
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	build.Runner.RunnerCredentials.Token = "misscont"
+	build.JobResponse.Steps = common.Steps{
+		common.Step{
+			Name: common.StepNameScript,
+			Script: []string{
+				sleepCMD,
+			},
+			Timeout:      120,
+			When:         common.StepWhenAlways,
+			AllowFailure: false,
+		},
+	}
+	build.JobResponse.Variables = append(build.JobResponse.Variables, common.JobVariable{
+		Key:    common.ExecutorJobSectionAttempts,
+		Value:  strconv.Itoa(executorStageAttempts),
+		Public: true,
+	})
+
+	trace := newSafeBuffer()
+
+	runFinished := make(chan struct{})
+	go func() {
+		err := build.Run(&common.Config{}, &common.Trace{Writer: io.MultiWriter(trace, os.Stdout)})
+		// Only make sure that the build failed. Docker can return different
+		// kind of errors when a container is removed for example exit code 137,
+		// there is no guarantee on what failure is returned.
+		assert.Error(t, err)
+		close(runFinished)
+	}()
+
+	// Waiting until we reach the first sleep command in the build.
+	for {
+		if !strings.Contains(trace.String(), sleepCMD) {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		break
+	}
+
+	attempts := 0
+	for i := 0; i < executorStageAttempts; i++ {
+		assertFailedToInspectContainer(t, trace, &attempts)
+	}
+
+	assert.Equal(t, executorStageAttempts, attempts, "The %s stage should be retried at least once", common.BuildStageUserScript)
+	<-runFinished
+}
+
+func assertFailedToInspectContainer(t *testing.T, trace *safeBuffer, attempts *int) {
+	// If there is already an exit code, return early since a new container will
+	// never be scheduled.
+	if strings.Contains(trace.String(), "exit code") {
+		return
+	}
+
+	containerID := <-removeBuildContainer(t)
+	for {
+		if !strings.Contains(trace.String(), fmt.Sprintf("Container %q not found or removed", containerID)) {
+			time.Sleep(time.Second)
+
+			continue
+		}
+
+		*attempts++
+		break
+	}
+}
+
+func removeBuildContainer(t *testing.T) <-chan string {
+	removedContainer := make(chan string, 1)
+	defer close(removedContainer)
+
+	client, err := docker.New(docker.Credentials{}, "")
+	require.NoError(t, err, "creating docker client")
+	defer client.Close()
+
+	var list []types.Container
+	// Keep checking containers until we get the container that we want.
+	for len(list) == 0 {
+		time.Sleep(time.Second)
+		nameFilter := filters.Arg("name", "misscont")
+		containerList := types.ContainerListOptions{
+			Filters: filters.NewArgs(nameFilter),
+		}
+		list, err = client.ContainerList(context.Background(), containerList)
+		require.NoError(t, err)
+	}
+
+	for _, ctr := range list {
+		err := client.ContainerRemove(context.Background(), ctr.ID, types.ContainerRemoveOptions{Force: true})
+		require.NoError(t, err)
+	}
+
+	removedContainer <- list[0].ID
+
+	return removedContainer
+}
+
+func TestDockerCommandRunAttempts_InvalidAttempts(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	build.JobResponse.Variables = append(build.JobResponse.Variables, common.JobVariable{
+		Key:    common.ExecutorJobSectionAttempts,
+		Value:  strconv.Itoa(999),
+		Public: true,
+	})
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.Error(t, err)
 }

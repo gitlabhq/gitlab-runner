@@ -139,9 +139,23 @@ To execute the tests run:
 make test
 ```
 
-## 8. Contribute
+## 8. Install optional tools
 
-You can start hacking GitLab-Runner code. If you are interested you can use Intellij IDEA Community Edition with [go-lang-idea-plugin](https://github.com/go-lang-plugin-org/go-lang-idea-plugin) to edit and debug code.
+- Install `golangci-lint`, used for the `make lint` target.
+- Install `markdown-lint` and `vale`, used for the `make lint-docs` target.
+
+Installation instructions will pop up when running a Makefile target
+if a tool is missing.
+
+## 9. Contribute
+
+You can start hacking GitLab-Runner code.
+If you need an IDE to edit and debug code, there are a few free suggestions you can use:
+
+- [JetBrains GoLand IDE](https://www.jetbrains.com/go/).
+- Visual Studio Code using the
+  [workspace recommended extensions](https://code.visualstudio.com/docs/editor/extension-gallery#_workspace-recommended-extensions),
+  located in `.vscode/extensions.json`.
 
 ## Managing build dependencies
 

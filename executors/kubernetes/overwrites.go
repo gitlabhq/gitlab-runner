@@ -134,7 +134,7 @@ func overwriteRegexCheck(regex, value string) error {
 		return err
 	}
 	if match := r.MatchString(value); !match {
-		return fmt.Errorf("Provided value %q does not match regex %q", value, regex)
+		return fmt.Errorf("provided value %q does not match regex %q", value, regex)
 	}
 	return nil
 }
@@ -146,7 +146,7 @@ func splitMapOverwrite(str string) (string, string, error) {
 		return split[0], split[1], nil
 	}
 
-	return "", "", fmt.Errorf("Provided value %q is malformed, does not match k=v", str)
+	return "", "", fmt.Errorf("provided value %q is malformed, does not match k=v", str)
 }
 
 func (o *overwrites) evaluateMapOverwrite(fieldName string, values map[string]string, regex string, variables common.JobVariables, variablesSelector string, logger common.BuildLogger) (map[string]string, error) {

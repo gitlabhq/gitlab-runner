@@ -17,7 +17,7 @@ type executor struct {
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	err := s.AbstractExecutor.Prepare(options)
 	if err != nil {
-		return fmt.Errorf("AbstractExecutor.Prepare error: %w", err)
+		return fmt.Errorf("prearing AbstractExecutor: %w", err)
 	}
 
 	s.Println("Using SSH executor...")

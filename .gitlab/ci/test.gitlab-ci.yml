@@ -18,10 +18,8 @@ docs lint:
   - .merge_request_pipelines
   - .no_cache_and_dependencies
   script:
-  # Lint prose
-  - vale --minAlertLevel error docs
-  # Lint Markdown
-  - markdownlint --config .markdownlint.json 'docs/**/*.md'
+  # Lint prose and Markdown
+  - make lint-docs VALE_MIN_ALERT_LEVEL=error
   # Prepare docs for build
   - mv docs/ /tmp/gitlab-docs/content/$DOCS_GITLAB_REPO_SUFFIX
   - cd /tmp/gitlab-docs
@@ -73,16 +71,19 @@ code_quality:
   - .merge_request_pipelines
   - .except_docs
   - .no_cache_and_dependencies
-  image: docker:19.03-git
-  services:
-  - docker:${DOCKER_VERSION}-dind
+  image: golangci/golangci-lint:v1.24.0
   variables:
-    DOCKER_DRIVER: overlay2
-    CODECLIMATE_FORMAT: json
+    REPORT_FILE: gl-code-quality-report.json
+    LINT_FLAGS: "--issues-exit-code 0 --color never --deadline 15m"
+    OUT_FORMAT: code-climate
   script:
-  - ./scripts/codequality analyze -f json --dev | tee gl-code-quality-report.json
+  - make lint | tee ${REPORT_FILE}
+  timeout: 15 minutes
   artifacts:
-    paths: [gl-code-quality-report.json]
+    reports:
+      codequality: ${REPORT_FILE}
+    paths:
+    - ${REPORT_FILE}
     expire_in: 7d
 
 unit test:
@@ -142,11 +143,6 @@ unit test with race:
     when: always
     expire_in: 7d
   allow_failure: true
-
-windows 1803 tests:
-  extends:
-  - .windows test
-  - .windows1803
 
 windows 1809 tests:
   parallel: 8
