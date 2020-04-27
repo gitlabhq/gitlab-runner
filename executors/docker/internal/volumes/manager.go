@@ -16,6 +16,7 @@ var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
 type Manager interface {
 	Create(ctx context.Context, volume string) error
 	CreateTemporary(ctx context.Context, destination string) error
+	RemoveTemporary(ctx context.Context) error
 	Binds() []string
 }
 
@@ -32,8 +33,9 @@ type manager struct {
 	parser parser.Parser
 	client docker.Client
 
-	volumeBindings []string
-	managedVolumes pathList
+	volumeBindings   []string
+	temporaryVolumes []string
+	managedVolumes   pathList
 }
 
 func NewManager(logger debugLogger, volumeParser parser.Parser, c docker.Client, config ManagerConfig) Manager {
@@ -124,7 +126,9 @@ func (m *manager) addCacheVolume(ctx context.Context, volume *parser.Volume) err
 		return m.createHostBasedCacheVolume(volume.Destination)
 	}
 
-	return m.createCacheVolume(ctx, volume.Destination)
+	_, err := m.createCacheVolume(ctx, volume.Destination)
+
+	return err
 }
 
 func (m *manager) createHostBasedCacheVolume(destination string) error {
@@ -148,15 +152,15 @@ func (m *manager) createHostBasedCacheVolume(destination string) error {
 	return nil
 }
 
-func (m *manager) createCacheVolume(ctx context.Context, destination string) error {
+func (m *manager) createCacheVolume(ctx context.Context, destination string) (string, error) {
 	destination, err := m.absolutePath(destination)
 	if err != nil {
-		return fmt.Errorf("defining absolute path:%w", err)
+		return "", fmt.Errorf("defining absolute path:%w", err)
 	}
 
 	err = m.managedVolumes.Add(destination)
 	if err != nil {
-		return fmt.Errorf("updating managed volumes list: %w", err)
+		return "", fmt.Errorf("updating managed volumes list: %w", err)
 	}
 
 	volumeName := fmt.Sprintf("%s-cache-%s", m.config.UniqueName, hashPath(destination))
@@ -166,7 +170,7 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) err
 
 	v, err := m.client.VolumeCreate(ctx, vBody)
 	if err != nil {
-		return fmt.Errorf("creating docker volume: %w", err)
+		return "", fmt.Errorf("creating docker volume: %w", err)
 	}
 
 	m.appendVolumeBind(&parser.Volume{
@@ -175,13 +179,30 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) err
 	})
 	m.logger.Debugln(fmt.Sprintf("Using volume %q as cache %q...", v.Name, destination))
 
-	return nil
+	return volumeName, nil
 }
 
 func (m *manager) CreateTemporary(ctx context.Context, destination string) error {
-	err := m.createCacheVolume(ctx, destination)
+	volumeName, err := m.createCacheVolume(ctx, destination)
 	if err != nil {
 		return fmt.Errorf("creating cache volume: %w", err)
+	}
+
+	m.temporaryVolumes = append(m.temporaryVolumes, volumeName)
+
+	return nil
+}
+
+func (m *manager) RemoveTemporary(ctx context.Context) error {
+	for _, v := range m.temporaryVolumes {
+		err := m.client.VolumeRemove(ctx, v, true)
+		if docker.IsErrNotFound(err) {
+			m.logger.Debugln(fmt.Sprintf("volume not found: %q", v))
+			continue
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

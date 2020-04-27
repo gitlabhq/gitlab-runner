@@ -179,6 +179,12 @@ func (c *officialDockerClient) VolumeCreate(ctx context.Context, options volume.
 	return v, wrapError("VolumeCreate", err, started)
 }
 
+func (c *officialDockerClient) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
+	started := time.Now()
+	err := c.client.VolumeRemove(ctx, volumeID, force)
+	return wrapError("VolumeRemove", err, started)
+}
+
 func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {
 	started := time.Now()
 	info, err := c.client.Info(ctx)

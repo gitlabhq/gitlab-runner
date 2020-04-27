@@ -1232,7 +1232,16 @@ func (e *executor) Cleanup() {
 
 	wg.Wait()
 
-	err := e.cleanupNetwork(ctx)
+	err := e.cleanupVolume(ctx)
+	if err != nil {
+		volumeLogger := e.WithFields(logrus.Fields{
+			"error": err,
+		})
+
+		volumeLogger.Errorln("Failed to cleanup volumes")
+	}
+
+	err = e.cleanupNetwork(ctx)
 	if err != nil {
 		networkLogger := e.WithFields(logrus.Fields{
 			"network": e.networkMode.NetworkName(),
@@ -1247,6 +1256,20 @@ func (e *executor) Cleanup() {
 	}
 
 	e.AbstractExecutor.Cleanup()
+}
+
+func (e *executor) cleanupVolume(ctx context.Context) error {
+	if e.volumesManager == nil {
+		e.Debugln("Volumes manager is empty, skipping volumes cleanup")
+		return nil
+	}
+
+	err := e.volumesManager.RemoveTemporary(ctx)
+	if err != nil {
+		return fmt.Errorf("remove temporary volumes: %w", err)
+	}
+
+	return nil
 }
 
 type serviceHealthCheckError struct {
