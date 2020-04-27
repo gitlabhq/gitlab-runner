@@ -652,8 +652,11 @@ when used with private images, read the
 
 The `always` pull policy will ensure that the image is **always** pulled.
 When `always` is used, the Runner will try to pull the image even if a local
-copy is available. If the image is not found, then the build will
-fail with an error similar to:
+copy is available. The [caching semantics](https://kubernetes.io/docs/concepts/configuration/overview/#container-images))
+of the underlying image provider make this policy efficient.
+The pull attempt is fast because all image layers are cached.
+
+If the image is not found, then the build will fail with an error similar to:
 
 ```plaintext
 Pulling docker image registry.tld/my/image:latest ...
@@ -688,7 +691,7 @@ configuration of the Runner.
 
 This pull policy will definitely not work if you need to use locally
 stored images. In this case, the Runner will skip the local copy of the image
-and try to pull it from the remote registry. If the image was build locally
+and try to pull it from the remote registry. If the image was built locally
 and doesn't exist in any public registry (and especially in the default
 Docker registry), the build will fail with:
 
