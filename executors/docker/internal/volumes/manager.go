@@ -49,6 +49,10 @@ func NewManager(logger debugLogger, volumeParser parser.Parser, c docker.Client,
 	}
 }
 
+// Create will create a new Docker volume bind for the specified volume. The
+// volume can either be a host volume `/src:/dst`, meaning it will mount
+// something from the host to the container or `/dst` which will create a Docker
+// volume and mount it to the specified path.
 func (m *manager) Create(ctx context.Context, volume string) error {
 	if len(volume) < 1 {
 		return nil
@@ -182,6 +186,10 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) (st
 	return volumeName, nil
 }
 
+// CreateTemporary will create a volume, and mark it as temporary. When a volume
+// is marked as temporary it means that it should be cleaned up at some point.
+// It's up to the caller to clean up the temporary volumes by calling
+// `RemoveTemporary`.
 func (m *manager) CreateTemporary(ctx context.Context, destination string) error {
 	volumeName, err := m.createCacheVolume(ctx, destination)
 	if err != nil {
@@ -193,6 +201,9 @@ func (m *manager) CreateTemporary(ctx context.Context, destination string) error
 	return nil
 }
 
+// RemoveTemporary will remove all the volumes that are marked as temporary. If
+// the volume is not found the error is ignored, any other error is returned to
+// the caller.
 func (m *manager) RemoveTemporary(ctx context.Context) error {
 	for _, v := range m.temporaryVolumes {
 		err := m.client.VolumeRemove(ctx, v, true)
@@ -208,6 +219,7 @@ func (m *manager) RemoveTemporary(ctx context.Context) error {
 	return nil
 }
 
+// Binds returns all the bindings that the volume manager is aware of.
 func (m *manager) Binds() []string {
 	return m.volumeBindings
 }
