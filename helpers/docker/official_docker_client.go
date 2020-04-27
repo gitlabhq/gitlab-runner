@@ -26,7 +26,11 @@ const DefaultAPIVersion = "1.25"
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.
 func IsErrNotFound(err error) bool {
-	return client.IsErrNotFound(errors.Unwrap(err))
+	unwrapped := errors.Unwrap(err)
+	if unwrapped != nil {
+		err = unwrapped
+	}
+	return client.IsErrNotFound(err)
 }
 
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
