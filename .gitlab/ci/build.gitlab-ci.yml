@@ -1,6 +1,5 @@
 .binaries: &binaries
   extends:
-  - .gitlab_org_runners
   - .merge_request_pipelines
   - .except_docs
   stage: build

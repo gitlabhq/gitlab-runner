@@ -12,7 +12,10 @@ variables:
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
 
-image: $CI_IMAGE
+default:
+  image: $CI_IMAGE
+  tags:
+  - gitlab-org
 
 before_script:
 - unset GPG_KEY
@@ -52,10 +55,6 @@ before_script:
   - .no_cache
   - .no_dependencies
 
-.gitlab_org_runners:
-  tags:
-  - gitlab-org
-
 .docker:
   extends:
   - .except_docs
@@ -69,7 +68,7 @@ before_script:
     DOCKER_TLS_CERTDIR: "/certs"
     DOCKER_CERT_PATH: "/certs/client"
   tags:
-  - docker
+  - gitlab-org-docker
 
 .windows_base:
   variables:
