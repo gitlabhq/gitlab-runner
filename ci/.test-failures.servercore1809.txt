@@ -377,6 +377,7 @@ TestManagedList_Add
 TestManagedList_Add/add_child_path
 TestManagedList_Add/add_duplicated_path
 TestManagedList_Add/add_non-duplicated_path
+TestManagedList_Add/add_non-normalized_duplicated_path
 TestNewCacheContainerManager
 TestNewDefaultManager
 TestNewDockerMachineCommandCtx

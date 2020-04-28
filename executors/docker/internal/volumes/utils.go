@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 )
@@ -69,6 +70,7 @@ func NewErrVolumeAlreadyDefined(containerPath string) *ErrVolumeAlreadyDefined {
 type pathList map[string]bool
 
 func (m pathList) Add(path string) error {
+	path = filepath.Clean(path)
 	if m[path] {
 		return NewErrVolumeAlreadyDefined(path)
 	}

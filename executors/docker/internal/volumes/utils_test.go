@@ -76,6 +76,10 @@ func TestManagedList_Add(t *testing.T) {
 			path:          "/duplicate",
 			expectedError: NewErrVolumeAlreadyDefined("/duplicate"),
 		},
+		"add non-normalized duplicated path": {
+			path:          "/duplicate/",
+			expectedError: NewErrVolumeAlreadyDefined("/duplicate"),
+		},
 		"add child path": {
 			path: "/duplicate/child",
 		},
