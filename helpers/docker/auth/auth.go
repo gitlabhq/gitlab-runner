@@ -1,4 +1,4 @@
-package docker
+package auth
 
 import (
 	"bytes"
@@ -15,10 +15,94 @@ import (
 	"github.com/docker/cli/cli/config/credentials"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/homedir"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-// DefaultDockerRegistry is the name of the index
-const DefaultDockerRegistry = "docker.io"
+const (
+	// DefaultDockerRegistry is the name of the index
+	DefaultDockerRegistry            = "docker.io"
+	authConfigSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
+	authConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
+)
+
+type authConfigResolver func() (string, map[string]types.AuthConfig)
+
+// GetAuthConfigForImage returns the auth configuration for a particular image.
+// See GetAuthConfigs for source information.
+func GetAuthConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) (string, *types.AuthConfig) {
+	source, authConfigs := GetAuthConfigs(dockerAuthConfig, username, credentials)
+	if authConfigs == nil {
+		return source, nil
+	}
+	indexName, _ := SplitDockerImageName(imageName)
+	return source, resolveDockerAuthConfig(indexName, authConfigs)
+}
+
+// GetAuthConfigs returns the authentication configuration for docker registries.
+// Goes through several sources in this order:
+// 1. DOCKER_AUTH_CONFIG
+// 2. ~/.docker/config.json or .dockercfg
+// 3. Build credentials
+func GetAuthConfigs(dockerAuthConfig, username string, credentials []common.Credentials) (string, map[string]types.AuthConfig) {
+	resolvers := []authConfigResolver{
+		func() (string, map[string]types.AuthConfig) {
+			return getUserAuthConfiguration(dockerAuthConfig)
+		},
+		func() (string, map[string]types.AuthConfig) {
+			return getHomeDirAuthConfiguration(username)
+		},
+		func() (string, map[string]types.AuthConfig) {
+			return getBuildAuthConfiguration(credentials)
+		},
+	}
+
+	for _, resolver := range resolvers {
+		source, authConfigs := resolver()
+
+		if authConfigs != nil {
+			return source, authConfigs
+		}
+	}
+	return "", nil
+}
+
+func getUserAuthConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig) {
+	buf := bytes.NewBufferString(dockerAuthConfig)
+	authConfigs, _ := readAuthConfigsFromReader(buf)
+
+	if authConfigs == nil {
+		return "", nil
+	}
+
+	return authConfigSourceNameUserVariable, authConfigs
+}
+
+func getBuildAuthConfiguration(credentials []common.Credentials) (string, map[string]types.AuthConfig) {
+	authConfigs := make(map[string]types.AuthConfig)
+
+	for _, credentials := range credentials {
+		if credentials.Type != "registry" {
+			continue
+		}
+
+		authConfigs[credentials.URL] = types.AuthConfig{
+			Username:      credentials.Username,
+			Password:      credentials.Password,
+			ServerAddress: credentials.URL,
+		}
+	}
+
+	return authConfigSourceNameJobPayload, authConfigs
+}
+
+func getHomeDirAuthConfiguration(username string) (string, map[string]types.AuthConfig) {
+	sourceFile, authConfigs, _ := readDockerAuthConfigsFromHomeDir(username)
+
+	if authConfigs == nil {
+		return "", nil
+	}
+	return sourceFile, authConfigs
+}
 
 // EncodeAuthConfig constructs a token from an AuthConfig, suitable for
 // authorizing against the Docker API with.
@@ -55,10 +139,10 @@ func SplitDockerImageName(reposName string) (string, string) {
 var HomeDirectory = homedir.Get()
 var errNoHomeDir = errors.New("no home directory found")
 
-// ReadDockerAuthConfigsFromHomeDir reads known docker config from home
+// readDockerAuthConfigsFromHomeDir reads known docker config from home
 // directory. If no username is provided it will get the home directory for the
 // current user.
-func ReadDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types.AuthConfig, error) {
+func readDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types.AuthConfig, error) {
 	homeDir := HomeDirectory
 
 	if userName != "" {
@@ -89,12 +173,12 @@ func ReadDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types
 		return "", make(map[string]types.AuthConfig), nil
 	}
 
-	authConfigs, err := ReadAuthConfigsFromReader(r)
+	authConfigs, err := readAuthConfigsFromReader(r)
 
 	return configFile, authConfigs, err
 }
 
-func ReadAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
+func readAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
 	config := &configfile.ConfigFile{}
 
 	if err := config.LoadFromReader(r); err != nil {
@@ -156,8 +240,8 @@ func addAll(to, from map[string]types.AuthConfig) {
 	}
 }
 
-// ResolveDockerAuthConfig taken from: https://github.com/docker/docker/blob/master/registry/auth.go
-func ResolveDockerAuthConfig(indexName string, configs map[string]types.AuthConfig) *types.AuthConfig {
+// resolveDockerAuthConfig taken from: https://github.com/docker/docker/blob/master/registry/go
+func resolveDockerAuthConfig(indexName string, configs map[string]types.AuthConfig) *types.AuthConfig {
 	if configs == nil {
 		return nil
 	}

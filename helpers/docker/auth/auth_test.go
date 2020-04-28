@@ -1,4 +1,4 @@
-package docker
+package auth
 
 import (
 	"encoding/base64"

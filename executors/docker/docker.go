@@ -34,6 +34,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 )
 
 const (
@@ -47,11 +48,6 @@ const (
 	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 
 	logsCopyTimeout = 30 * time.Second
-)
-
-const (
-	AuthConfigSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
-	AuthConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
 )
 
 var DockerPrebuiltImagesPaths []string
@@ -107,80 +103,6 @@ func (e *executor) getServiceVariables() []string {
 	return e.Build.GetAllVariables().PublicOrInternal().StringList()
 }
 
-func (e *executor) getUserAuthConfiguration(indexName string) (string, *types.AuthConfig) {
-	if e.Build == nil {
-		return "", nil
-	}
-
-	buf := bytes.NewBufferString(e.Build.GetDockerAuthConfig())
-	authConfigs, _ := docker.ReadAuthConfigsFromReader(buf)
-
-	if authConfigs == nil {
-		return "", nil
-	}
-
-	return AuthConfigSourceNameUserVariable, docker.ResolveDockerAuthConfig(indexName, authConfigs)
-}
-
-func (e *executor) getBuildAuthConfiguration(indexName string) (string, *types.AuthConfig) {
-	if e.Build == nil {
-		return "", nil
-	}
-
-	authConfigs := make(map[string]types.AuthConfig)
-
-	for _, credentials := range e.Build.Credentials {
-		if credentials.Type != "registry" {
-			continue
-		}
-
-		authConfigs[credentials.URL] = types.AuthConfig{
-			Username:      credentials.Username,
-			Password:      credentials.Password,
-			ServerAddress: credentials.URL,
-		}
-	}
-
-	return AuthConfigSourceNameJobPayload, docker.ResolveDockerAuthConfig(indexName, authConfigs)
-}
-
-func (e *executor) getHomeDirAuthConfiguration(indexName string) (string, *types.AuthConfig) {
-	sourceFile, authConfigs, _ := docker.ReadDockerAuthConfigsFromHomeDir(e.Shell().User)
-
-	if authConfigs == nil {
-		return "", nil
-	}
-	return sourceFile, docker.ResolveDockerAuthConfig(indexName, authConfigs)
-}
-
-type authConfigResolver func(indexName string) (string, *types.AuthConfig)
-
-func (e *executor) getAuthConfig(imageName string) *types.AuthConfig {
-	indexName, _ := docker.SplitDockerImageName(imageName)
-
-	resolvers := []authConfigResolver{
-		e.getUserAuthConfiguration,
-		e.getHomeDirAuthConfiguration,
-		e.getBuildAuthConfiguration,
-	}
-
-	for _, resolver := range resolvers {
-		source, authConfig := resolver(indexName)
-
-		if authConfig != nil {
-			e.Println("Authenticating with credentials from", source)
-			e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
-				"in order to resolve", imageName, "...")
-
-			return authConfig
-		}
-	}
-
-	e.Debugln(fmt.Sprintf("No credentials found for %v", indexName))
-
-	return nil
-}
-
 func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*types.ImageInspect, error) {
 	e.SetCurrentStage(DockerExecutorStagePullingImage)
 	e.Println("Pulling docker image", imageName, "...")
@@ -193,7 +115,7 @@ func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 
 	options := types.ImagePullOptions{}
 	if ac != nil {
-		options.RegistryAuth, _ = docker.EncodeAuthConfig(ac)
+		options.RegistryAuth, _ = auth.EncodeAuthConfig(ac)
 	}
 
 	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
@@ -214,7 +136,10 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		return nil, err
 	}
 
-	authConfig := e.getAuthConfig(imageName)
+	source, authConfig := auth.GetAuthConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
+	e.Println("Authenticating with credentials from", source)
+	e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
+		"in order to resolve", imageName, "...")
 
 	e.Debugln("Looking for image", imageName, "...")
 	existingImage, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
