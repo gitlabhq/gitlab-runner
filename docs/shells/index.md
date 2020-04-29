@@ -51,6 +51,10 @@ cat generated-bash-script | /bin/bash
 The default shell when a new Runner is registered using GitLab Runner
 12.0 or newer.
 
+Powershell is the default shell used on Windows when
+[`shell`](../configuration/advanced-configuration.md#the-runners-section) is not
+specified.
+
 PowerShell doesn't support executing the build in context of another user.
 
 The generated PowerShell script is executed by saving its content to a file and
@@ -231,6 +235,13 @@ if(!$?) { Exit $LASTEXITCODE }
 ```
 
 [script]: http://doc.gitlab.com/ce/ci/yaml/README.html#script
+
+### Running windows batch
+
+TIP: **Tip:**
+You can execute batch scripts from PowerShell using `Start-Process
+"cmd.exe" "/c C:\Path\file.bat"` for old batch scripts not ported to
+PowerShell.
 
 ## Video walkthrough of a working example
 

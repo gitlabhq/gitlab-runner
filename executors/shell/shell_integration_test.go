@@ -1019,6 +1019,10 @@ func TestInteractiveTerminal(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.shell, func(t *testing.T) {
+			if c.shell == "powershell" {
+				// Interactive web terminals aren't supported on Windows at the moment
+				t.Skip()
+			}
 			if helpers.SkipIntegrationTests(t, c.app) {
 				t.Skip()
 			}
