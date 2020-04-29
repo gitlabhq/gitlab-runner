@@ -137,9 +137,11 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 	}
 
 	source, authConfig := auth.GetAuthConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
-	e.Println("Authenticating with credentials from", source)
-	e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
-		"in order to resolve", imageName, "...")
+	if authConfig != nil {
+		e.Println("Authenticating with credentials from", source)
+		e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
+			"in order to resolve", imageName, "...")
+	}
 
 	e.Debugln("Looking for image", imageName, "...")
 	existingImage, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
