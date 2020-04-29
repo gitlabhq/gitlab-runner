@@ -515,8 +515,15 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 		log = log.WithField("responseStatus", res.Status)
 	}
 
+	var messagePrefix string
+	if options.Type != "" {
+		messagePrefix = fmt.Sprintf("Uploading artifacts as \"%s\" to coordinator...", options.Type)
+	} else {
+		messagePrefix = "Uploading artifacts to coordinator..."
+	}
+
 	if err != nil {
-		log.WithError(err).Errorln("Uploading artifacts to coordinator...", "error")
+		log.WithError(err).Errorln(messagePrefix, "error")
 		return common.UploadFailed
 	}
 	defer res.Body.Close()
@@ -524,19 +531,19 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 
 	switch res.StatusCode {
 	case http.StatusCreated:
-		log.Println("Uploading artifacts to coordinator...", "ok")
+		log.Println(messagePrefix, "ok")
 		return common.UploadSucceeded
 	case http.StatusForbidden:
-		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "forbidden")
+		log.WithField("status", res.Status).Errorln(messagePrefix, "forbidden")
 		return common.UploadForbidden
 	case http.StatusRequestEntityTooLarge:
-		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "too large archive")
+		log.WithField("status", res.Status).Errorln(messagePrefix, "too large archive")
 		return common.UploadTooLarge
 	case http.StatusServiceUnavailable:
-		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "service unavailable")
+		log.WithField("status", res.Status).Errorln(messagePrefix, "service unavailable")
 		return common.UploadServiceUnavailable
 	default:
-		log.WithField("status", res.Status).Warningln("Uploading artifacts to coordinator...", "failed")
+		log.WithField("status", res.Status).Warningln(messagePrefix, "failed")
 		return common.UploadFailed
 	}
 }
