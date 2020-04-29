@@ -136,13 +136,6 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		return nil, err
 	}
 
-	source, authConfig := auth.GetAuthConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
-	if authConfig != nil {
-		e.Println("Authenticating with credentials from", source)
-		e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
-			"in order to resolve", imageName, "...")
-	}
-
 	e.Debugln("Looking for image", imageName, "...")
 	existingImage, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
 
@@ -173,6 +166,13 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 			e.Println("Using locally found image version due to if-not-present pull policy")
 			return &existingImage, err
 		}
+	}
+
+	source, authConfig := auth.GetAuthConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
+	if authConfig != nil {
+		e.Println("Authenticating with credentials from", source)
+		e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
+			"in order to resolve", imageName, "...")
 	}
 
 	return e.pullDockerImage(imageName, authConfig)
