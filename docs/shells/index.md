@@ -238,7 +238,6 @@ if(!$?) { Exit $LASTEXITCODE }
 
 ### Running windows batch
 
-TIP: **Tip:**
 You can execute batch scripts from PowerShell using `Start-Process
 "cmd.exe" "/c C:\Path\file.bat"` for old batch scripts not ported to
 PowerShell.
