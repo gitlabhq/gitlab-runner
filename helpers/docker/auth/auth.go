@@ -35,12 +35,17 @@ type authConfigResolver func() (string, map[string]types.AuthConfig)
 // GetConfigForImage returns the auth configuration for a particular image.
 // See GetAuthConfigs for source information.
 func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) (string, *types.AuthConfig) {
-	source, authConfigs := GetConfigs(dockerAuthConfig, username, credentials)
+	sources, authConfigs := GetConfigs(dockerAuthConfig, username, credentials)
 	if authConfigs == nil {
-		return source, nil
+		return "", nil
 	}
 	indexName, _ := SplitDockerImageName(imageName)
-	return source, resolveDockerAuthConfig(indexName, authConfigs)
+	for registry, config := range authConfigs {
+		if indexName == convertToHostname(registry) {
+			return sources[registry], &config
+		}
+	}
+	return "", nil
 }
 
 // GetConfigs returns the authentication configuration for docker registries.
@@ -48,7 +53,10 @@ func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials
 // 1. DOCKER_AUTH_CONFIG
 // 2. ~/.docker/config.json or .dockercfg
 // 3. Build credentials
-func GetConfigs(dockerAuthConfig, username string, credentials []common.Credentials) (string, map[string]types.AuthConfig) {
+func GetConfigs(dockerAuthConfig, username string, credentials []common.Credentials) (map[string]string, map[string]types.AuthConfig) {
+	sources := make(map[string]string)
+	res := make(map[string]types.AuthConfig)
+
 	resolvers := []authConfigResolver{
 		func() (string, map[string]types.AuthConfig) {
 			return getUserConfiguration(dockerAuthConfig)
@@ -61,14 +69,17 @@ func GetConfigs(dockerAuthConfig, username string, credentials []common.Credenti
 		},
 	}
 
-	for _, resolver := range resolvers {
-		source, authConfigs := resolver()
-
-		if authConfigs != nil {
-			return source, authConfigs
+	for _, r := range resolvers {
+		source, configs := r()
+		for registry, conf := range configs {
+			if _, ok := sources[registry]; !ok {
+				sources[registry] = source
+				res[registry] = conf
+			}
 		}
 	}
-	return "", nil
+
+	return sources, res
 }
 
 func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig) {
@@ -242,35 +253,17 @@ func addAll(to, from map[string]types.AuthConfig) {
 	}
 }
 
-// resolveDockerAuthConfig taken from: https://github.com/docker/docker/blob/master/registry/go
-func resolveDockerAuthConfig(indexName string, configs map[string]types.AuthConfig) *types.AuthConfig {
-	if configs == nil {
-		return nil
+func convertToHostname(url string) string {
+	stripped := url
+	if strings.HasPrefix(url, "http://") {
+		stripped = strings.Replace(url, "http://", "", 1)
+	} else if strings.HasPrefix(url, "https://") {
+		stripped = strings.Replace(url, "https://", "", 1)
 	}
 
-	convertToHostname := func(url string) string {
-		stripped := url
-		if strings.HasPrefix(url, "http://") {
-			stripped = strings.Replace(url, "http://", "", 1)
-		} else if strings.HasPrefix(url, "https://") {
-			stripped = strings.Replace(url, "https://", "", 1)
-		}
-
-		nameParts := strings.SplitN(stripped, "/", 2)
-		if nameParts[0] == "index."+DefaultDockerRegistry {
-			return DefaultDockerRegistry
-		}
-		return nameParts[0]
+	nameParts := strings.SplitN(stripped, "/", 2)
+	if nameParts[0] == "index."+DefaultDockerRegistry {
+		return DefaultDockerRegistry
 	}
-
-	// Maybe they have a legacy config file, we will iterate the keys converting
-	// them to the new format and testing
-	for registry, authConfig := range configs {
-		if indexName == convertToHostname(registry) {
-			return &authConfig
-		}
-	}
-
-	// When all else fails, return an empty auth config
-	return nil
+	return nameParts[0]
 }

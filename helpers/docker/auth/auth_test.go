@@ -5,190 +5,173 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
 	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func addGitLabRegistryCredentials(e *executor) {
-	e.Build.Credentials = []common.Credentials{
+const (
+	imageRegistryDomain1 = "registry.domain.tld:5005/image/name:version"
+	imageRegistryDomain2 = "registry2.domain.tld:5005/image/name:version"
+	imageGitlabDomain    = "registry.gitlab.tld:1234/image/name:version"
+)
+
+var (
+	testFileAuthConfigs       = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyXzI6dGVzdF9wYXNzd29yZF8y"}}}`
+	testVariableAuthConfigs   = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"}}}`
+	gitlabRegistryCredentials = []common.Credentials{
 		{
 			Type:     "registry",
 			URL:      "registry.gitlab.tld:1234",
-			Username: "gitlab-ci-token",
-			Password: e.Build.Token,
+			Username: "test_user_3",
+			Password: "test_password_3",
 		},
 	}
-}
+	registryDomainConfigVariable = &types.AuthConfig{
+		Username:      "test_user",
+		Password:      "test_password",
+		ServerAddress: "https://registry.domain.tld:5005/v1/",
+	}
+	registryDomain1Config = &types.AuthConfig{
+		Username:      "test_user_1",
+		Password:      "test_password_1",
+		ServerAddress: "https://registry.domain.tld:5005/v1/",
+	}
+	registryDomain2Config = &types.AuthConfig{
+		Username:      "test_user_2",
+		Password:      "test_password_2",
+		ServerAddress: "registry2.domain.tld:5005",
+	}
+	registryGitlabConfig = &types.AuthConfig{
+		Username:      "test_user_3",
+		Password:      "test_password_3",
+		ServerAddress: "registry.gitlab.tld:1234",
+	}
+	emptyCredentials = []common.Credentials{}
+)
 
-func addRemoteVariableCredentials(e *executor) {
-	e.Build.Variables = common.JobVariables{
-		common.JobVariable{
-			Key:   "DOCKER_AUTH_CONFIG",
-			Value: testVariableAuthConfigs,
+func TestGetConfigForImage(t *testing.T) {
+	tests := map[string]struct {
+		precreateConfigFile bool
+		dockerAuthVariable  string
+		credentials         []common.Credentials
+		image               string
+		expectedSource      string
+		expectedConf        *types.AuthConfig
+	}{
+		"registry1 from file only": {
+			true,
+			"",
+			emptyCredentials,
+			imageRegistryDomain1,
+			".dockercfg",
+			registryDomain1Config,
+		},
+		"registry2 from file only": {
+			true,
+			"",
+			emptyCredentials,
+			imageRegistryDomain2,
+			".dockercfg",
+			registryDomain2Config,
+		},
+		"missing credentials, file only": {
+			true,
+			"",
+			emptyCredentials,
+			imageGitlabDomain,
+			"",
+			nil,
+		},
+		"no file and gitlab credentials. image in gitlab credentials": {
+			false,
+			"",
+			gitlabRegistryCredentials,
+			imageGitlabDomain,
+			authConfigSourceNameJobPayload,
+			registryGitlabConfig,
+		},
+		"both file and gitlab credentials. image in gitlab credentials": {
+			true,
+			"",
+			gitlabRegistryCredentials,
+			imageGitlabDomain,
+			authConfigSourceNameJobPayload,
+			registryGitlabConfig,
+		},
+		"DOCKER_AUTH_CONFIG only": {
+			false,
+			testVariableAuthConfigs,
+			emptyCredentials,
+			imageRegistryDomain1,
+			authConfigSourceNameUserVariable,
+			registryDomain1Config,
+		},
+		"DOCKER_AUTH_CONFIG overrides home dir": {
+			true,
+			testVariableAuthConfigs,
+			emptyCredentials,
+			imageRegistryDomain1,
+			authConfigSourceNameUserVariable,
+			registryDomain1Config,
 		},
 	}
-}
 
-func addLocalVariableCredentials(e *executor) {
-	e.Build.Runner.Environment = []string{
-		"DOCKER_AUTH_CONFIG=" + testVariableAuthConfigs,
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupTestHomeDirectoryConfig(t, tt.precreateConfigFile)
+
+			source, config := GetConfigForImage(tt.image, tt.dockerAuthVariable, "", tt.credentials)
+
+			assert.Contains(t, source, tt.expectedSource)
+			assert.Equal(t, tt.expectedConf, config)
+		})
 	}
 }
 
-func assertEmptyCredentials(t *testing.T, ac *types.AuthConfig, messageElements ...string) {
-	if ac != nil {
-		assert.Empty(t, ac.ServerAddress, "ServerAddress for %v", messageElements)
-		assert.Empty(t, ac.Username, "Username for %v", messageElements)
-		assert.Empty(t, ac.Password, "Password for %v", messageElements)
+func TestGetConfigs(t *testing.T) {
+	setupTestHomeDirectoryConfig(t, true)
+	sources, configs := GetConfigs(testVariableAuthConfigs, "", gitlabRegistryCredentials)
+	assert.Len(t, sources, 3)
+	assert.Equal(t, authConfigSourceNameUserVariable, sources["https://registry.domain.tld:5005/v1/"])
+	assert.Equal(t, authConfigSourceNameJobPayload, sources["registry.gitlab.tld:1234"])
+	assert.Contains(t, sources["registry2.domain.tld:5005"], ".dockercfg")
+
+	assert.Equal(t, map[string]types.AuthConfig{
+		"https://registry.domain.tld:5005/v1/": {
+			Username:      "test_user_1",
+			Password:      "test_password_1",
+			ServerAddress: "https://registry.domain.tld:5005/v1/",
+		},
+		"registry.gitlab.tld:1234": {
+			Username:      "test_user_3",
+			Password:      "test_password_3",
+			ServerAddress: "registry.gitlab.tld:1234",
+		},
+		"registry2.domain.tld:5005": {
+			Username:      "test_user_2",
+			Password:      "test_password_2",
+			ServerAddress: "registry2.domain.tld:5005",
+		},
+	}, configs)
+}
+
+func setupTestHomeDirectoryConfig(t *testing.T, precreateConfigFile bool) {
+	if precreateConfigFile {
+		tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
+		require.NoError(t, err)
+		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
+		err = ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
+		require.NoError(t, err)
+		HomeDirectory = tempHomeDir
+	} else {
+		HomeDirectory = ""
 	}
-}
-
-func assertCredentials(t *testing.T, serverAddress, username, password string, ac *types.AuthConfig, messageElements ...string) {
-	assert.Equal(t, serverAddress, ac.ServerAddress, "ServerAddress for %v", messageElements)
-	assert.Equal(t, username, ac.Username, "Username for %v", messageElements)
-	assert.Equal(t, password, ac.Password, "Password for %v", messageElements)
-}
-
-func getTestAuthConfig(t *testing.T, e *executor, imageName string) *types.AuthConfig {
-	ac := e.getAuthConfig(imageName)
-
-	return ac
-}
-
-func testVariableAuthConfig(t *testing.T, e *executor) {
-	t.Run("withoutGitLabRegistry", func(t *testing.T) {
-		ac := getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
-		assertCredentials(t, "https://registry.domain.tld:5005/v1/", "test_user", "test_password", ac, "registry.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry2.domain.tld:5005/image/name:version")
-		assertCredentials(t, "registry2.domain.tld:5005", "test_user", "test_password", ac, "registry2.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
-		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
-	})
-
-	t.Run("withGitLabRegistry", func(t *testing.T) {
-		addGitLabRegistryCredentials(e)
-
-		ac := getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
-		assertCredentials(t, "https://registry.domain.tld:5005/v1/", "test_user", "test_password", ac, "registry.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry2.domain.tld:5005/image/name:version")
-		assertCredentials(t, "registry2.domain.tld:5005", "test_user", "test_password", ac, "registry2.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
-		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", "abcd123456", ac, "registry.gitlab.tld:1234")
-	})
-}
-
-func TestGetRemoteVariableAuthConfig(t *testing.T) {
-	e := getAuthConfigTestExecutor(t, true)
-	addRemoteVariableCredentials(e)
-
-	testVariableAuthConfig(t, e)
-}
-
-func TestGetLocalVariableAuthConfig(t *testing.T) {
-	e := getAuthConfigTestExecutor(t, true)
-	addLocalVariableCredentials(e)
-
-	testVariableAuthConfig(t, e)
-}
-
-func TestGetDefaultAuthConfig(t *testing.T) {
-	t.Run("withoutGitLabRegistry", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-
-		ac := getTestAuthConfig(t, e, "docker:dind")
-		assertEmptyCredentials(t, ac, "docker:dind")
-
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
-		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
-
-		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
-		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
-	})
-
-	t.Run("withGitLabRegistry", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(e)
-
-		ac := getTestAuthConfig(t, e, "docker:dind")
-		assertEmptyCredentials(t, ac, "docker:dind")
-
-		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
-		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
-		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", "abcd123456", ac, "registry.gitlab.tld:1234")
-	})
-}
-
-func TestAuthConfigOverwritingOrder(t *testing.T) {
-	testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV92YXJpYWJsZTpwYXNzd29yZA=="}}}`
-	testFileAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9maWxlOnBhc3N3b3Jk"}}}`
-
-	imageName := "registry.gitlab.tld:1234/image/name:latest"
-
-	t.Run("gitlabRegistryOnly", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", e.Build.Token, ac, imageName)
-	})
-
-	t.Run("withConfigFromRemoteVariable", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(e)
-		addRemoteVariableCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
-	})
-
-	t.Run("withConfigFromLocalVariable", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(e)
-		addLocalVariableCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
-	})
-
-	t.Run("withConfigFromFile", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_file", "password", ac, imageName)
-	})
-
-	t.Run("withConfigFromVariableAndFromFile", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(e)
-		addRemoteVariableCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
-	})
-
-	t.Run("withConfigFromLocalAndRemoteVariable", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(e)
-		addRemoteVariableCredentials(e)
-		testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9sb2NhbF92YXJpYWJsZTpwYXNzd29yZA=="}}}`
-		addLocalVariableCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
-	})
 }
 
 func TestSplitDockerImageName(t *testing.T) {
