@@ -115,7 +115,7 @@ func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 
 	options := types.ImagePullOptions{}
 	if ac != nil {
-		options.RegistryAuth, _ = auth.EncodeAuthConfig(ac)
+		options.RegistryAuth, _ = auth.EncodeConfig(ac)
 	}
 
 	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
@@ -168,7 +168,7 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		}
 	}
 
-	source, authConfig := auth.GetAuthConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
+	source, authConfig := auth.GetConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
 	if authConfig != nil {
 		e.Println("Authenticating with credentials from", source)
 		e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,

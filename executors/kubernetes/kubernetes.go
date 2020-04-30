@@ -717,7 +717,7 @@ type dockerConfigEntry struct {
 func (s *executor) setupCredentials() error {
 	s.Debugln("Setting up secrets")
 
-	source, authConfigs := auth.GetAuthConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
+	source, authConfigs := auth.GetConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
 	s.Println("Authenticating to docker registry using", source)
 
 	dockerCfgContent, err := json.Marshal(authConfigs)

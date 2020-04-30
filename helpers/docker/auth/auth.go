@@ -25,12 +25,17 @@ const (
 	authConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
 )
 
+var (
+	HomeDirectory = homedir.Get()
+	errNoHomeDir  = errors.New("no home directory found")
+)
+
 type authConfigResolver func() (string, map[string]types.AuthConfig)
 
-// GetAuthConfigForImage returns the auth configuration for a particular image.
+// GetConfigForImage returns the auth configuration for a particular image.
 // See GetAuthConfigs for source information.
-func GetAuthConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) (string, *types.AuthConfig) {
-	source, authConfigs := GetAuthConfigs(dockerAuthConfig, username, credentials)
+func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) (string, *types.AuthConfig) {
+	source, authConfigs := GetConfigs(dockerAuthConfig, username, credentials)
 	if authConfigs == nil {
 		return source, nil
 	}
@@ -38,21 +43,21 @@ func GetAuthConfigForImage(imageName, dockerAuthConfig, username string, credent
 	return source, resolveDockerAuthConfig(indexName, authConfigs)
 }
 
-// GetAuthConfigs returns the authentication configuration for docker registries.
+// GetConfigs returns the authentication configuration for docker registries.
 // Goes through several sources in this order:
 // 1. DOCKER_AUTH_CONFIG
 // 2. ~/.docker/config.json or .dockercfg
 // 3. Build credentials
-func GetAuthConfigs(dockerAuthConfig, username string, credentials []common.Credentials) (string, map[string]types.AuthConfig) {
+func GetConfigs(dockerAuthConfig, username string, credentials []common.Credentials) (string, map[string]types.AuthConfig) {
 	resolvers := []authConfigResolver{
 		func() (string, map[string]types.AuthConfig) {
-			return getUserAuthConfiguration(dockerAuthConfig)
+			return getUserConfiguration(dockerAuthConfig)
 		},
 		func() (string, map[string]types.AuthConfig) {
-			return getHomeDirAuthConfiguration(username)
+			return getHomeDirConfiguration(username)
 		},
 		func() (string, map[string]types.AuthConfig) {
-			return getBuildAuthConfiguration(credentials)
+			return getBuildConfiguration(credentials)
 		},
 	}
 
@@ -66,9 +71,9 @@ func GetAuthConfigs(dockerAuthConfig, username string, credentials []common.Cred
 	return "", nil
 }
 
-func getUserAuthConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig) {
+func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig) {
 	buf := bytes.NewBufferString(dockerAuthConfig)
-	authConfigs, _ := readAuthConfigsFromReader(buf)
+	authConfigs, _ := readConfigsFromReader(buf)
 
 	if authConfigs == nil {
 		return "", nil
@@ -77,7 +82,7 @@ func getUserAuthConfiguration(dockerAuthConfig string) (string, map[string]types
 	return authConfigSourceNameUserVariable, authConfigs
 }
 
-func getBuildAuthConfiguration(credentials []common.Credentials) (string, map[string]types.AuthConfig) {
+func getBuildConfiguration(credentials []common.Credentials) (string, map[string]types.AuthConfig) {
 	authConfigs := make(map[string]types.AuthConfig)
 
 	for _, credentials := range credentials {
@@ -95,8 +100,8 @@ func getBuildAuthConfiguration(credentials []common.Credentials) (string, map[st
 	return authConfigSourceNameJobPayload, authConfigs
 }
 
-func getHomeDirAuthConfiguration(username string) (string, map[string]types.AuthConfig) {
-	sourceFile, authConfigs, _ := readDockerAuthConfigsFromHomeDir(username)
+func getHomeDirConfiguration(username string) (string, map[string]types.AuthConfig) {
+	sourceFile, authConfigs, _ := readDockerConfigsFromHomeDir(username)
 
 	if authConfigs == nil {
 		return "", nil
@@ -104,9 +109,9 @@ func getHomeDirAuthConfiguration(username string) (string, map[string]types.Auth
 	return sourceFile, authConfigs
 }
 
-// EncodeAuthConfig constructs a token from an AuthConfig, suitable for
+// EncodeConfig constructs a token from an AuthConfig, suitable for
 // authorizing against the Docker API with.
-func EncodeAuthConfig(authConfig *types.AuthConfig) (string, error) {
+func EncodeConfig(authConfig *types.AuthConfig) (string, error) {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(authConfig); err != nil {
 		return "", err
@@ -136,13 +141,10 @@ func SplitDockerImageName(reposName string) (string, string) {
 	return indexName, remoteName
 }
 
-var HomeDirectory = homedir.Get()
-var errNoHomeDir = errors.New("no home directory found")
-
-// readDockerAuthConfigsFromHomeDir reads known docker config from home
+// readDockerConfigsFromHomeDir reads known docker config from home
 // directory. If no username is provided it will get the home directory for the
 // current user.
-func readDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types.AuthConfig, error) {
+func readDockerConfigsFromHomeDir(userName string) (string, map[string]types.AuthConfig, error) {
 	homeDir := HomeDirectory
 
 	if userName != "" {
@@ -173,12 +175,12 @@ func readDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types
 		return "", make(map[string]types.AuthConfig), nil
 	}
 
-	authConfigs, err := readAuthConfigsFromReader(r)
+	authConfigs, err := readConfigsFromReader(r)
 
 	return configFile, authConfigs, err
 }
 
-func readAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
+func readConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
 	config := &configfile.ConfigFile{}
 
 	if err := config.LoadFromReader(r); err != nil {
@@ -189,7 +191,7 @@ func readAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error)
 	addAll(auths, config.AuthConfigs)
 
 	if config.CredentialsStore != "" {
-		authsFromCredentialsStore, err := readAuthConfigsFromCredentialsStore(config)
+		authsFromCredentialsStore, err := readConfigsFromCredentialsStore(config)
 		if err != nil {
 			return nil, err
 		}
@@ -197,7 +199,7 @@ func readAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error)
 	}
 
 	if config.CredentialHelpers != nil {
-		authsFromCredentialsHelpers, err := readAuthConfigsFromCredentialsHelper(config)
+		authsFromCredentialsHelpers, err := readConfigsFromCredentialsHelper(config)
 		if err != nil {
 			return nil, err
 		}
@@ -207,7 +209,7 @@ func readAuthConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error)
 	return auths, nil
 }
 
-func readAuthConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
+func readConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
 	store := credentials.NewNativeStore(config, config.CredentialsStore)
 	newAuths, err := store.GetAll()
 	if err != nil {
@@ -217,7 +219,7 @@ func readAuthConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[str
 	return newAuths, nil
 }
 
-func readAuthConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
+func readConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
 	helpersAuths := make(map[string]types.AuthConfig)
 
 	for registry, helper := range config.CredentialHelpers {
