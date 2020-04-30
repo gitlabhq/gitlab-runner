@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
@@ -166,6 +167,16 @@ func init() {
 				volumeParser: parser.NewLinuxParser(),
 			},
 		}
+
+		e.newVolumePermissionSetter = func() (permission.Setter, error) {
+			helperImage, err := e.getPrebuiltImage()
+			if err != nil {
+				return nil, err
+			}
+
+			return permission.NewDockerLinuxSetter(e.client, e.Build.Log(), helperImage), nil
+		}
+
 		e.SetCurrentStage(common.ExecutorStageCreated)
 		return e
 	}

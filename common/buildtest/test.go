@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -38,7 +36,6 @@ func RunBuildWithOptions(t *testing.T, build *common.Build, trace *common.Trace,
 
 func RunBuild(t *testing.T, build *common.Build) error {
 	err := RunBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
-	assert.True(t, build.IsSharedEnv())
 
 	return err
 }

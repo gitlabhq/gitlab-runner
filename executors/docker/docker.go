@@ -29,6 +29,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -63,9 +64,10 @@ var errNetworksManagerUndefined = errors.New("networksManager is undefined")
 
 type executor struct {
 	executors.AbstractExecutor
-	client       docker.Client
-	volumeParser parser.Parser
-	info         types.Info
+	client                    docker.Client
+	volumeParser              parser.Parser
+	newVolumePermissionSetter func() (permission.Setter, error)
+	info                      types.Info
 
 	temporary []string // IDs of containers that should be removed
 
