@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -242,8 +244,7 @@ func TestDockerForNamedImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	options := buildImagePullOptions(e, "test")
 
 	c.On("ImagePullBlocking", e.Context, "test:latest", options).
@@ -271,12 +272,18 @@ func TestDockerForNamedImage(t *testing.T) {
 	assert.Nil(t, image)
 }
 
+func executorWithClient(c *docker.MockClient) *executor {
+	e := &executor{client: c}
+	e.Context = context.Background()
+	e.Build = &common.Build{}
+	return e
+}
+
 func TestDockerForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	options := buildImagePullOptions(e, "existing")
 
 	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
@@ -306,14 +313,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 		Return(types.ImageInspect{ID: "helper-image"}, nil, nil).
 		Once()
 
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Build: &common.Build{
-				JobResponse: common.JobResponse{},
-			},
-		},
-		client: c,
-	}
+	e := executorWithClient(c)
 
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{
@@ -341,8 +341,7 @@ func TestDockerGetImageById(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	// Use default policy
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	e.setPolicyMode("")
 
 	c.On("ImageInspectWithRaw", e.Context, "ID").
@@ -359,8 +358,7 @@ func TestDockerUnknownPolicyMode(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	e.setPolicyMode("unknown")
 
 	_, err := e.getDockerImage("not-existing")
@@ -371,8 +369,7 @@ func TestDockerPolicyModeNever(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	e.setPolicyMode(common.PullPolicyNever)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -395,8 +392,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -412,8 +408,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("ImageInspectWithRaw", e.Context, "not-existing").
@@ -447,8 +442,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -473,8 +467,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -495,8 +488,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := &executor{client: c}
-	e.Context = context.Background()
+	e := executorWithClient(c)
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "to-pull").
@@ -1077,9 +1069,9 @@ func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) *executor
 		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
 		err = ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
 		require.NoError(t, err)
-		docker.HomeDirectory = tempHomeDir
+		auth.HomeDirectory = tempHomeDir
 	} else {
-		docker.HomeDirectory = ""
+		auth.HomeDirectory = ""
 	}
 
 	e := new(executor)
@@ -1095,182 +1087,6 @@ func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) *executor
 	}
 
 	return e
-}
-
-func addGitLabRegistryCredentials(e *executor) {
-	e.Build.Credentials = []common.Credentials{
-		{
-			Type:     "registry",
-			URL:      "registry.gitlab.tld:1234",
-			Username: "gitlab-ci-token",
-			Password: e.Build.Token,
-		},
-	}
-}
-
-func addRemoteVariableCredentials(e *executor) {
-	e.Build.Variables = common.JobVariables{
-		common.JobVariable{
-			Key:   "DOCKER_AUTH_CONFIG",
-			Value: testVariableAuthConfigs,
-		},
-	}
-}
-
-func addLocalVariableCredentials(e *executor) {
-	e.Build.Runner.Environment = []string{
-		"DOCKER_AUTH_CONFIG=" + testVariableAuthConfigs,
-	}
-}
-
-func assertEmptyCredentials(t *testing.T, ac *types.AuthConfig, messageElements ...string) {
-	if ac != nil {
-		assert.Empty(t, ac.ServerAddress, "ServerAddress for %v", messageElements)
-		assert.Empty(t, ac.Username, "Username for %v", messageElements)
-		assert.Empty(t, ac.Password, "Password for %v", messageElements)
-	}
-}
-
-func assertCredentials(t *testing.T, serverAddress, username, password string, ac *types.AuthConfig, messageElements ...string) {
-	assert.Equal(t, serverAddress, ac.ServerAddress, "ServerAddress for %v", messageElements)
-	assert.Equal(t, username, ac.Username, "Username for %v", messageElements)
-	assert.Equal(t, password, ac.Password, "Password for %v", messageElements)
-}
-
-func getTestAuthConfig(t *testing.T, e *executor, imageName string) *types.AuthConfig {
-	ac := e.getAuthConfig(imageName)
-
-	return ac
-}
-
-func testVariableAuthConfig(t *testing.T, e *executor) {
-	t.Run("withoutGitLabRegistry", func(t *testing.T) {
-		ac := getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
-		assertCredentials(t, "https://registry.domain.tld:5005/v1/", "test_user", "test_password", ac, "registry.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry2.domain.tld:5005/image/name:version")
-		assertCredentials(t, "registry2.domain.tld:5005", "test_user", "test_password", ac, "registry2.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
-		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
-	})
-
-	t.Run("withGitLabRegistry", func(t *testing.T) {
-		addGitLabRegistryCredentials(e)
-
-		ac := getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
-		assertCredentials(t, "https://registry.domain.tld:5005/v1/", "test_user", "test_password", ac, "registry.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry2.domain.tld:5005/image/name:version")
-		assertCredentials(t, "registry2.domain.tld:5005", "test_user", "test_password", ac, "registry2.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
-		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", "abcd123456", ac, "registry.gitlab.tld:1234")
-	})
-}
-
-func TestGetRemoteVariableAuthConfig(t *testing.T) {
-	e := getAuthConfigTestExecutor(t, true)
-	addRemoteVariableCredentials(e)
-
-	testVariableAuthConfig(t, e)
-}
-
-func TestGetLocalVariableAuthConfig(t *testing.T) {
-	e := getAuthConfigTestExecutor(t, true)
-	addLocalVariableCredentials(e)
-
-	testVariableAuthConfig(t, e)
-}
-
-func TestGetDefaultAuthConfig(t *testing.T) {
-	t.Run("withoutGitLabRegistry", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-
-		ac := getTestAuthConfig(t, e, "docker:dind")
-		assertEmptyCredentials(t, ac, "docker:dind")
-
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
-		assertEmptyCredentials(t, ac, "registry.gitlab.tld:1234")
-
-		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
-		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
-	})
-
-	t.Run("withGitLabRegistry", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(e)
-
-		ac := getTestAuthConfig(t, e, "docker:dind")
-		assertEmptyCredentials(t, ac, "docker:dind")
-
-		ac = getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
-		assertEmptyCredentials(t, ac, "registry.domain.tld:5005/image/name:version")
-
-		ac = getTestAuthConfig(t, e, "registry.gitlab.tld:1234/image/name:version")
-		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", "abcd123456", ac, "registry.gitlab.tld:1234")
-	})
-}
-
-func TestAuthConfigOverwritingOrder(t *testing.T) {
-	testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV92YXJpYWJsZTpwYXNzd29yZA=="}}}`
-	testFileAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9maWxlOnBhc3N3b3Jk"}}}`
-
-	imageName := "registry.gitlab.tld:1234/image/name:latest"
-
-	t.Run("gitlabRegistryOnly", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", e.Build.Token, ac, imageName)
-	})
-
-	t.Run("withConfigFromRemoteVariable", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(e)
-		addRemoteVariableCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
-	})
-
-	t.Run("withConfigFromLocalVariable", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(e)
-		addLocalVariableCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
-	})
-
-	t.Run("withConfigFromFile", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_file", "password", ac, imageName)
-	})
-
-	t.Run("withConfigFromVariableAndFromFile", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(e)
-		addRemoteVariableCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
-	})
-
-	t.Run("withConfigFromLocalAndRemoteVariable", func(t *testing.T) {
-		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(e)
-		addRemoteVariableCredentials(e)
-		testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9sb2NhbF92YXJpYWJsZTpwYXNzd29yZA=="}}}`
-		addLocalVariableCredentials(e)
-
-		ac := getTestAuthConfig(t, e, imageName)
-		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
-	})
 }
 
 func testGetDockerImage(t *testing.T, e *executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
@@ -2162,5 +1978,5 @@ func TestAddServiceHealthCheck(t *testing.T) {
 }
 
 func init() {
-	docker.HomeDirectory = ""
+	auth.HomeDirectory = ""
 }
