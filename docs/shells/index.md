@@ -22,7 +22,6 @@ The currently supported shells are:
 | --------------| ------------------ |  ----------- |
 | `bash`        | Fully Supported    | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
 | `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. Due for removal on Jun 22, 2020 in favor of PowerShell. |
 | `powershell`  | Fully Supported    | Windows PowerShell script. All commands are executed in PowerShell context. Default when registering a new Runner in version 12.0 or newer. |
 
 If you want to select a particular shell to use other than the default, you will need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
@@ -47,165 +46,18 @@ cat generated-bash-script | /bin/bash --login
 cat generated-bash-script | /bin/bash
 ```
 
-## Windows Batch
-
-NOTE: **Note:**
-In GitLab 11.11, the Windows Batch executor for the
-GitLab Runner was deprecated in favor of the [PowerShell](#powershell)
-executor. Support for Windows Batch will be removed in GitLab 13.0 (Jun
-22, 2020).
-
-TIP: **Tip:**
-You can execute batch scripts from PowerShell using `Start-Process
-"cmd.exe" "/c C:\Path\file.bat"` for old batch scripts not ported to
-PowerShell.
-
-Windows Batch is the default shell used on Windows when
-[`shell`](../configuration/advanced-configuration.md#the-runners-section) is not
-specified.
-
-It doesn't support executing the build in context of another user.
-
-The generated Batch script is executed by saving its content to file and
-passing the file name to the following command:
-
-```batch
-cmd /Q /C generated-windows-batch.cmd
-```
-
-This is how an example batch script looks like:
-
-```batch
-@echo off
-setlocal enableextensions
-setlocal enableDelayedExpansion
-set nl=^
-
-
-echo Running on %COMPUTERNAME%...
-
-call :prescript
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-call :buildscript
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-call :postscript
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-goto :EOF
-:prescript
-SET CI=true
-SET CI_COMMIT_SHA=db45ad9af9d7af5e61b829442fd893d96e31250c
-SET CI_COMMIT_BEFORE_SHA=d63117656af6ff57d99e50cc270f854691f335ad
-SET CI_COMMIT_REF_NAME=master
-SET CI_JOB_ID=1
-SET CI_REPOSITORY_URL=http://gitlab.example.com/group/project.git
-SET CI_PROJECT_ID=1
-SET CI_PROJECT_DIR=Z:\Gitlab\tests\test\builds\0\project-1
-SET CI_SERVER=yes
-SET CI_SERVER_NAME=GitLab CI
-SET CI_SERVER_VERSION=
-SET CI_SERVER_REVISION=
-SET GITLAB_CI=true
-md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-SET GIT_SSL_CAINFO=C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-echo Cloning repository...
-rd /s /q "C:\GitLab-Runner\builds\0\project-1" 2>NUL 1>NUL
-"git" "clone" "http://gitlab.example.com/group/project.git" "Z:\Gitlab\tests\test\builds\0\project-1"
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-cd /D "C:\GitLab-Runner\builds\0\project-1"
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-echo Checking out db45ad9a as master...
-"git" "checkout" "db45ad9af9d7af5e61b829442fd893d96e31250c"
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-IF EXIST "..\..\..\cache\project-1\pages\master\cache.tgz" (
-  echo Restoring cache...
-  "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
-  IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-) ELSE (
-  IF EXIST "..\..\..\cache\project-1\pages\master\cache.tgz" (
-    echo Restoring cache...
-    "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
-    IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-  )
-)
-goto :EOF
-
-:buildscript
-SET CI=true
-SET CI_COMMIT_SHA=db45ad9af9d7af5e61b829442fd893d96e31250c
-SET CI_COMMIT_BEFORE_SHA=d63117656af6ff57d99e50cc270f854691f335ad
-SET CI_COMMIT_REF_NAME=master
-SET CI_JOB_ID=1
-SET CI_REPOSITORY_URL=Z:\Gitlab\tests\test
-SET CI_PROJECT_ID=1
-SET CI_PROJECT_DIR=Z:\Gitlab\tests\test\builds\0\project-1
-SET CI_SERVER=yes
-SET CI_SERVER_NAME=GitLab CI
-SET CI_SERVER_VERSION=
-SET CI_SERVER_REVISION=
-SET GITLAB_CI=true
-md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-SET GIT_SSL_CAINFO=C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-cd /D "C:\GitLab-Runner\builds\0\project-1"
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-echo $ echo true
-echo true
-goto :EOF
-
-:postscript
-SET CI=true
-SET CI_COMMIT_SHA=db45ad9af9d7af5e61b829442fd893d96e31250c
-SET CI_COMMIT_BEFORE_SHA=d63117656af6ff57d99e50cc270f854691f335ad
-SET CI_COMMIT_REF_NAME=master
-SET CI_JOB_ID=1
-SET CI_REPOSITORY_URL=Z:\Gitlab\tests\test
-SET CI_PROJECT_ID=1
-SET CI_PROJECT_DIR=Z:\Gitlab\tests\test\builds\0\project-1
-SET CI_SERVER=yes
-SET CI_SERVER_NAME=GitLab CI
-SET CI_SERVER_VERSION=
-SET CI_SERVER_REVISION=
-SET GITLAB_CI=true
-md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-SET GIT_SSL_CAINFO=C:\GitLab-Runner\builds\0\project-1.tmp\GIT_SSL_CAINFO
-md "C:\\GitLab-Runner\\builds\\0\\project-1.tmp" 2>NUL 1>NUL
-echo multiline!nl!tls!nl!chain > C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-SET CI_SERVER_TLS_CA_FILE=C:\GitLab-Runner\builds\0\project-1.tmp\CI_SERVER_TLS_CA_FILE
-cd /D "C:\GitLab-Runner\builds\0\project-1"
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-echo Archiving cache...
-"gitlab-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz" "--path" "vendor"
-IF !errorlevel! NEQ 0 exit /b !errorlevel!
-
-goto :EOF
-```
-
 ## PowerShell
 
 The default shell when a new Runner is registered using GitLab Runner
 12.0 or newer.
 
+Powershell is the default shell used on Windows when
+[`shell`](../configuration/advanced-configuration.md#the-runners-section) is not
+specified.
+
 PowerShell doesn't support executing the build in context of another user.
 
-The generated PowerShell script is executed by saving it content to a file and
+The generated PowerShell script is executed by saving its content to a file and
 passing the file name to the following command:
 
 ```batch
@@ -383,6 +235,13 @@ if(!$?) { Exit $LASTEXITCODE }
 ```
 
 [script]: http://doc.gitlab.com/ce/ci/yaml/README.html#script
+
+### Running windows batch
+
+TIP: **Tip:**
+You can execute batch scripts from PowerShell using `Start-Process
+"cmd.exe" "/c C:\Path\file.bat"` for old batch scripts not ported to
+PowerShell.
 
 ## Video walkthrough of a working example
 

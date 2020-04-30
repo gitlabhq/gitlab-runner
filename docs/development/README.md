@@ -197,10 +197,8 @@ For both machines, the GitLab Runner source code is synced
 bi-directionally so that you can edit from your machine with your
 favorite editor. The source code can be found under the `$GOROOT`
 environment variable. We have a `RUNNER_SRC` environment variable which
-you can use to find out the full path so when using:
-
-- Windows batch scripts, you can run `cd %RUNNER_SRC`.
-- PowerShell, you can use `cd $Env:RUNNER_SRC`.
+you can use to find out the full path so when using PowerShell,
+you can use `cd $Env:RUNNER_SRC`.
 
 ## Troubleshooting
 

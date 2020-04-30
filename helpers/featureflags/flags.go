@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	CmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
 	UseLegacyBuildsDirForDocker          string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
 	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
@@ -25,13 +24,6 @@ type FeatureFlag struct {
 // properly formatted. It will replace the existing table with the new one, computed
 // basing on the values below
 var flags = []FeatureFlag{
-	{
-		Name:            CmdDisableDelayedErrorLevelExpansion,
-		DefaultValue:    "false",
-		Deprecated:      false,
-		ToBeRemovedWith: "13.0",
-		Description:     "Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](../shells/index.md#windows-batch) shell",
-	},
 	{
 		Name:            NetworkPerBuild,
 		DefaultValue:    "false",
