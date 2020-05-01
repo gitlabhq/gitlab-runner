@@ -168,6 +168,10 @@ github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
 # github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
 github.com/kardianos/osext
+# github.com/klauspost/compress v1.10.5
+github.com/klauspost/compress/flate
+# github.com/klauspost/pgzip v1.2.3
+github.com/klauspost/pgzip
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/pty v1.1.1
