@@ -2,13 +2,13 @@ package archives
 
 import (
 	"bytes"
-	"compress/gzip"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	gzip "github.com/klauspost/pgzip"
 	"github.com/stretchr/testify/require"
 )
 
