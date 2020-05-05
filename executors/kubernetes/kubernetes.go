@@ -719,6 +719,10 @@ func (s *executor) setupCredentials() error {
 
 	_, authConfigs := auth.GetConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
 
+	if len(authConfigs) == 0 {
+		return nil
+	}
+
 	dockerCfgContent, err := json.Marshal(authConfigs)
 	if err != nil {
 		return err
