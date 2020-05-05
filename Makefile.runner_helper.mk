@@ -57,7 +57,11 @@ ${BASE_BINARY_PATH}.%: $(HELPER_GO_FILES) $(GOX)
 # Build the Runner Helper tar files for host platform.
 .PHONY: helper-dockerarchive-host
 helper-dockerarchive-host: ${BASE_TAR_PATH}-$(shell uname -m).tar.xz
-	docker import ${BASE_TAR_PATH}-$(shell uname -m).tar.xz gitlab/gitlab-runner-helper:$(shell uname -m)-$(REVISION)
+	@ # NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
+	@ # See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
+	docker import ${BASE_TAR_PATH}-$(shell uname -m).tar.xz \
+		--change "ENTRYPOINT [\"/usr/bin/dumb-init\", \"/entrypoint\"]" \
+		gitlab/gitlab-runner-helper:$(shell uname -m)-$(REVISION)
 
 # Build the Runner Helper tar files for all supported platforms.
 .PHONY: helper-dockerarchive

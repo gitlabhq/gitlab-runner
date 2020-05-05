@@ -36,3 +36,7 @@ COPY --from=builder ["C:\\Temp", "C:\\Program Files\\"]
 RUN [Environment]::SetEnvironmentVariable('Path', $env:Path + ';C:\Program Files\git\cmd;C:\Program Files\git-lfs;C:\Program Files\gitlab-runner-helper', [EnvironmentVariableTarget]::Machine); `
     Start-Process -FilePath "$env:ProgramFiles\git\cmd\git.exe" -ArgumentList "lfs","install","--skip-repo" -Wait; `
     Start-Process -FilePath "$env:ProgramFiles\git\cmd\git.exe" -ArgumentList "config","--system","core.longpaths","true" -Wait
+
+COPY [".\\helpers\\entrypoint.cmd", ".\\"]
+
+ENTRYPOINT ["entrypoint.cmd"]
