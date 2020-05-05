@@ -37,6 +37,7 @@ build() {
     docker build \
            --cache-from "${BUILD_IMAGE}" \
            --build-arg DOCKER_VERSION="${DOCKER_VERSION}" \
+           --build-arg BUILDX_VERSION="${BUILDX_VERSION}" \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
            .

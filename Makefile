@@ -267,7 +267,6 @@ prepare_index: $(RELEASE_INDEX_GENERATOR)
 						      -gpg-key-env GPG_KEY \
 						      -gpg-password-env GPG_PASSPHRASE
 
-release_docker_images: export RUNNER_BINARY := out/binaries/gitlab-runner-linux-amd64
 release_docker_images:
 	# Releasing Docker images
 	@./ci/release_docker_images

@@ -1,45 +1,185 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+set -eEo pipefail
 
-DOCKER_MACHINE_VERSION=${DOCKER_MACHINE_VERSION:-0.14.0}
-DOCKER_MACHINE_CHECKSUM=${DOCKER_MACHINE_CHECKSUM:-a4c69bffb78d3cfe103b89dae61c3ea11cc2d1a91c4ff86e630c9ae88244db02}
-DUMB_INIT_VERSION=${DUMB_INIT_VERSION:-1.0.2}
-DUMB_INIT_CHECKSUM=${DUMB_INIT_CHECKSUM:-a8defac40aaca2ca0896c7c5adbc241af60c7c3df470c1a4c469a860bd805429}
+declare -A checksums
+
+DOCKER_MACHINE_VERSION=${DOCKER_MACHINE_VERSION:-0.16.2}
+checksums['DOCKER_MACHINE_AMD64']=${DOCKER_MACHINE_AMD64_CHECKSUM:-a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097}
+checksums['DOCKER_MACHINE_ARM64']=${DOCKER_MACHINE_ARM64_CHECKSUM:-109f534bfb8b9b852c938cad978e60a86b13f5ecf92da5e24320dacd2a7216ac}
+DUMB_INIT_VERSION=${DUMB_INIT_VERSION:-1.2.2}
+checksums['DUMB_INIT_AMD64']=${DUMB_INIT_AMD64_CHECKSUM:-37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9}
+checksums['DUMB_INIT_ARM64']=${DUMB_INIT_ARM64_CHECKSUM:-45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3}
 GIT_LFS_VERSION=${GIT_LFS_VERSION:-2.7.1}
-GIT_LFS_CHECKSUM=${GIT_LFS_CHECKSUM:-c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920}
+checksums['GIT_LFS_AMD64']=${GIT_LFS_AMD64_CHECKSUM:-c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920}
+checksums['GIT_LFS_ARM64']=${GIT_LFS_ARM64_CHECKSUM:-7a80464be13acc23ac99fd33e4b4352894f0fe3a8794b270e964c9532941834d}
 
-RUNNER_BINARY=${RUNNER_BINARY:-out/binaries/gitlab-runner-linux-amd64}
+if [ -n "${TARGET_ARCHS}" ]; then
+    IFS=', ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
+else
+    TARGET_ARCHS=('amd64')
+fi
 
+CI_COMMIT_TAG=${CI_COMMIT_TAG:-}
+CI_REGISTRY=${CI_REGISTRY:-}
+CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE:-}
+CI_REGISTRY_USER=${CI_REGISTRY_USER:-}
+CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD:-}
+DOCKER_HOST=${DOCKER_HOST:-}
+DOCKER_CERT_PATH=${DOCKER_CERT_PATH:-}
+DOCKER_HUB_REPOSITORY=${DOCKER_HUB_REPOSITORY:-'gitlab/gitlab-runner'}
+DOCKER_HUB_USER=${DOCKER_HUB_USER:-}
+DOCKER_HUB_PASSWORD=${DOCKER_HUB_PASSWORD:-}
 IS_LATEST=${IS_LATEST:-}
+PUBLISH_IMAGES=${PUBLISH_IMAGES:-false}
+PUSH_TO_DOCKER_HUB=${PUSH_TO_DOCKER_HUB:-false}
 
-ref_tag=${CI_COMMIT_TAG}
+docker_builder_name='buildx-builder'
+docker_buildx_ctx_name='docker-buildx'
+
+ref_tag="${CI_COMMIT_TAG}"
 if [[ -z "${ref_tag}" ]]; then
     ref_tag=${CI_COMMIT_REF_SLUG:-master}
 fi
 
-if [[ "${ref_tag}" = "master" ]]; then
+if [[ "${ref_tag}" == "master" ]]; then
     ref_tag=bleeding
 fi
 
 REVISION=${REVISION:-}
 if [[ -z "${REVISION}" ]]; then
-  REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
+    REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
 fi
 
 _docker() {
     docker "${@}"
 }
 
-build() {
-    echo -e "\033[1mBuilding image: \033[32m${1}\033[0m"
-    _docker build \
-        --no-cache \
+_docker_experimental() {
+    DOCKER_CLI_EXPERIMENTAL=enabled docker "${@}"
+}
+
+_docker_buildx() {
+    # Run the command in a subshell so that we can safely unset DOCKER_HOST
+    (
+        unset DOCKER_HOST
+        _docker_experimental buildx "${@}"
+    )
+}
+
+join_by() {
+    local IFS="$1"
+    shift
+    echo "$*"
+}
+
+setup_docker_context() {
+    # In order for `docker buildx create` to work, we need to replace DOCKER_HOST with a Docker context.
+    # Otherwise, we get the following error:
+    # > could not create a builder instance with TLS data loaded from environment.
+    local docker="host=unix:///var/run/docker.sock"
+    if [ -n "${DOCKER_CERT_PATH}" ]; then
+        docker="host=${DOCKER_HOST},ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/cert.pem,key=${DOCKER_CERT_PATH}/key.pem"
+    fi
+    _docker context create "${docker_buildx_ctx_name}" \
+        --default-stack-orchestrator=swarm \
+        --description "Temporary buildx Docker context" \
+        --docker "${docker}"
+
+    _docker_buildx create --use --name "${docker_builder_name}" "${docker_buildx_ctx_name}"
+}
+
+cleanup_docker_context_trap() {
+    local error_code=$?
+
+    cleanup_docker_context
+
+    exit "${error_code}"
+}
+
+cleanup_docker_context() {
+    set +e
+    _docker_buildx rm "${docker_builder_name}" >/dev/null 2>&1
+    _docker context rm -f "${docker_buildx_ctx_name}" >/dev/null 2>&1
+    set -e
+}
+
+# buildx receives an array of tag names, and the image name as the last parameter
+buildx() {
+    local platforms=()
+    local os
+    os=$(_docker version -f '{{.Server.Os}}')
+    for arch in "${TARGET_ARCHS[@]}"; do
+        platforms+=("${os}/${arch}")
+    done
+    local imageName="$1"
+    shift
+
+    local args=("$@")
+    local buildxFlags=()
+
+    local experimental
+    experimental=$(_docker_experimental info -f '{{json .ExperimentalBuild}}')
+    if [ "${experimental}" = 'false' ]; then
+        echo "Docker experimental mode needs to be enabled for multi-platform build support. Aborting."
+        echo "See https://github.com/docker/cli/blob/master/experimental/README.md#use-docker-experimental for more information."
+        exit 1
+    fi
+
+    # Build -t tag name options from remaining arguments
+    local tagOpts=()
+    for tagName in "${args[@]}"; do
+        tagOpts+=("--tag" "${tagName}")
+    done
+
+    if [[ "${PUBLISH_IMAGES}" == "true" ]]; then
+        echo -e "\033[1mBuilding and pushing image: \033[32m${imageName}\033[0m"
+        buildxFlags+=("--push")
+    else
+        # If not pushing, just load the resulting image to local Docker
+        if [ ${#TARGET_ARCHS[@]} -eq 1 ]; then
+            echo -e "\033[1mBuilding and loading image: \033[32m${imageName}\033[0m"
+            # But that is only possible if we are targeting a single platform
+            buildxFlags+=("--load")
+        else
+            echo -e "\033[1mBuilding image: \033[32m${imageName}\033[0m"
+        fi
+    fi
+
+    trap cleanup_docker_context_trap ERR SIGINT SIGTERM
+    setup_docker_context
+
+    if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]]; then
+        login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
+    fi
+    if [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]] && [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
+        login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
+    fi
+
+    local formatted_platforms
+    formatted_platforms=$(join_by , "${platforms[@]}")
+    _docker_buildx build \
         --build-arg DOCKER_MACHINE_VERSION="${DOCKER_MACHINE_VERSION}" \
         --build-arg DUMB_INIT_VERSION="${DUMB_INIT_VERSION}" \
         --build-arg GIT_LFS_VERSION="${GIT_LFS_VERSION}" \
-        -t "${1}" \
-        "${2}"
+        --platform "${formatted_platforms}" \
+        --no-cache \
+        "${tagOpts[@]}" \
+        "${buildxFlags[@]}" \
+        "${imageName}"
+    trap - ERR SIGINT SIGTERM
+    cleanup_docker_context
+
+    if [[ -z "${PUBLISH_IMAGES}" ]] || [[ "${PUBLISH_IMAGES}" != "true" ]]; then
+        echo "Skipping images pushing"
+    fi
+
+    if [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]] && [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
+        logout
+    fi
+    if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]]; then
+        logout "${CI_REGISTRY}"
+    fi
 }
 
 import() {
@@ -106,54 +246,63 @@ logout() {
     _docker logout "${1}"
 }
 
-tee dockerfiles/checksums <<EOF
-${DOCKER_MACHINE_CHECKSUM}  /usr/bin/docker-machine
-${DUMB_INIT_CHECKSUM}  /usr/bin/dumb-init
-${GIT_LFS_CHECKSUM}  /usr/bin/git-lfs
-EOF
+add_tags() {
+    local -n tags=$1
+    local base_image="$2"
+    local user="$3"
+    local password="$4"
+    local repository="$5"
+    local default_image='ubuntu'
 
-cp out/deb/gitlab-runner_amd64.deb dockerfiles/ubuntu/gitlab-runner_amd64.deb
-cp dockerfiles/checksums dockerfiles/ubuntu
-cp "${RUNNER_BINARY}" dockerfiles/alpine/gitlab-runner-linux-amd64
-cp dockerfiles/checksums dockerfiles/alpine
-
-build "gitlab/gitlab-runner:ubuntu-${ref_tag}" dockerfiles/ubuntu
-build "gitlab/gitlab-runner:alpine-${ref_tag}" dockerfiles/alpine
-
-tag "gitlab/gitlab-runner:ubuntu-${ref_tag}" "gitlab/gitlab-runner:${ref_tag}"
-
-tag_latest "gitlab/gitlab-runner:ubuntu-${ref_tag}" gitlab/gitlab-runner:ubuntu
-tag_latest "gitlab/gitlab-runner:ubuntu-${ref_tag}" gitlab/gitlab-runner:latest
-tag_latest "gitlab/gitlab-runner:alpine-${ref_tag}" gitlab/gitlab-runner:alpine
-
-if [[ -z "${PUBLISH_IMAGES}" ]] || [[ "${PUBLISH_IMAGES}" != "true" ]]; then
-    echo "Skipping images pushing"
-    exit 0
-fi
-
-if [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
-    tag "gitlab/gitlab-runner:ubuntu-${ref_tag}" "${CI_REGISTRY_IMAGE}:ubuntu-${ref_tag}"
-    tag "gitlab/gitlab-runner:alpine-${ref_tag}" "${CI_REGISTRY_IMAGE}:alpine-${ref_tag}"
-    tag "gitlab/gitlab-runner:${ref_tag}" "${CI_REGISTRY_IMAGE}:${ref_tag}"
-
-    tag_latest gitlab/gitlab-runner:ubuntu "${CI_REGISTRY_IMAGE}:ubuntu"
-    tag_latest gitlab/gitlab-runner:latest "${CI_REGISTRY_IMAGE}:latest"
-    tag_latest gitlab/gitlab-runner:alpine "${CI_REGISTRY_IMAGE}:alpine"
-
-    if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]]; then
-        login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
-
-        push "${CI_REGISTRY_IMAGE}:ubuntu-${ref_tag}"
-        push "${CI_REGISTRY_IMAGE}:alpine-${ref_tag}"
-        push "${CI_REGISTRY_IMAGE}:${ref_tag}"
-
-        push_latest "${CI_REGISTRY_IMAGE}:ubuntu"
-        push_latest "${CI_REGISTRY_IMAGE}:latest"
-        push_latest "${CI_REGISTRY_IMAGE}:alpine"
-
-        logout "${CI_REGISTRY}"
+    if [[ -z "${user}" ]] || [[ -z "${password}" ]]; then
+        return
     fi
+
+    tags+=("${repository}:${base_image}-${ref_tag}")
+    if [[ "${base_image}" == "${default_image}" ]]; then
+        tags+=("${repository}:${ref_tag}")
+    fi
+    if [[ -n "${IS_LATEST}" ]]; then
+        tags+=("${repository}:${base_image}")
+        if [[ "${base_image}" == "${default_image}" ]]; then
+            tags+=("${repository}:latest")
+        fi
+    fi
+}
+
+[ "${#TARGET_ARCHS[@]}" -eq 0 ] && TARGET_ARCHS=("$(_docker version -f '{{.Server.Arch}}')")
+
+for arch in "${TARGET_ARCHS[@]}"; do
+    echo "${arch}:"
+    ARCH=$(echo "${arch}" | tr '[:lower:]' '[:upper:]')
+    tee "dockerfiles/checksums-${arch}" <<EOF
+${checksums["DOCKER_MACHINE_${ARCH}"]}  /usr/bin/docker-machine
+${checksums["DUMB_INIT_${ARCH}"]}  /usr/bin/dumb-init
+${checksums["GIT_LFS_${ARCH}"]}  /usr/bin/git-lfs
+EOF
+done
+
+cp dockerfiles/install-deps dockerfiles/ubuntu/
+cp dockerfiles/install-deps dockerfiles/alpine/
+for arch in "${TARGET_ARCHS[@]}"; do
+    cp "dockerfiles/checksums-${arch}" "out/deb/gitlab-runner_${arch}.deb" \
+        dockerfiles/ubuntu/
+    cp "dockerfiles/checksums-${arch}" "out/binaries/gitlab-runner-linux-${arch}" \
+        dockerfiles/alpine/
+done
+
+if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${PUSH_TO_DOCKER_HUB}" ]]; then
+   add_tags alpineTags "alpine" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_REPOSITORY}" "${ref_tag}"
+   add_tags ubuntuTags "ubuntu" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_REPOSITORY}" "${ref_tag}"
 fi
+if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
+   add_tags alpineTags "alpine" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
+   add_tags ubuntuTags "ubuntu" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
+fi
+
+# Build and publish multi-platform images using `docker buildx`
+buildx dockerfiles/ubuntu "${ubuntuTags[@]}"
+buildx dockerfiles/alpine "${alpineTags[@]}"
 
 if [[ -z "${PUSH_TO_DOCKER_HUB}" ]] || [[ "${PUSH_TO_DOCKER_HUB}" != "true" ]]; then
     echo "Skipping push to Docker Hub"
@@ -162,14 +311,6 @@ fi
 
 if [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
     login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
-
-    push "gitlab/gitlab-runner:ubuntu-${ref_tag}"
-    push "gitlab/gitlab-runner:alpine-${ref_tag}"
-    push "gitlab/gitlab-runner:${ref_tag}"
-
-    push_latest gitlab/gitlab-runner:ubuntu
-    push_latest gitlab/gitlab-runner:latest
-    push_latest gitlab/gitlab-runner:alpine
 
     release_docker_helper_images
 
