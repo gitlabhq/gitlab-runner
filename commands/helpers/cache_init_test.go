@@ -32,14 +32,12 @@ func TestCacheInit(t *testing.T) {
 
 	defer os.Remove(dir)
 
-	// Make sure that the mode is not the expect 0777.
+	// Make sure that the mode is not the expected 0777.
 	err = os.Chmod(dir, 0600)
 	require.NoError(t, err)
 
 	// Start a new cli with the arguments for the command.
-	args := os.Args[0:1]
-	args = append(args, "cache-init", dir)
-
+	args := []string{os.Args[0], "cache-init", dir}
 	err = newCacheInitTestApp().Run(args)
 	require.NoError(t, err)
 
@@ -53,8 +51,7 @@ func TestCacheInit_NoArguments(t *testing.T) {
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
 
-	args := os.Args[0:1]
-	args = append(args, "cache-init")
+	args := []string{os.Args[0], "cache-init"}
 
 	assert.Panics(t, func() {
 		newCacheInitTestApp().Run(args)
