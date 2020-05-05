@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"bytes"
-	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -145,68 +145,32 @@ func TestBuildsHelperFindSessionByURL(t *testing.T) {
 	assert.Nil(t, foundSession)
 }
 
-type fakeResponseWriter struct {
-	output     *bytes.Buffer
-	header     http.Header
-	statusCode int
-}
-
-func (w *fakeResponseWriter) Header() http.Header            { return w.header }
-func (w *fakeResponseWriter) Write(data []byte) (int, error) { return w.output.Write(data) }
-func (w *fakeResponseWriter) WriteHeader(statusCode int)     { w.statusCode = statusCode }
-
-func newFakeResponseWriter() *fakeResponseWriter {
-	return &fakeResponseWriter{
-		output: &bytes.Buffer{},
-		header: http.Header{},
-	}
-}
-
-var testBuildCurrentID int
-
-func getTestBuild() *common.Build {
-	testBuildCurrentID++
-
-	runner := common.RunnerConfig{}
-	runner.Token = "a1b2c3d4"
-	jobInfo := common.JobInfo{
-		ProjectID: 1,
-	}
-
-	build := &common.Build{}
-	build.ID = testBuildCurrentID
-	build.Runner = &runner
-	build.JobInfo = jobInfo
-	build.GitInfo = common.GitInfo{
-		RepoURL: "https://gitlab.example.com/my-namespace/my-project.git",
-	}
-
-	return build
-}
-
-type listJobsHandlerTest struct {
-	build          *common.Build
-	expectedOutput []string
-}
-
 func TestBuildsHelper_ListJobsHandler(t *testing.T) {
-	build := getTestBuild()
-
-	tests := map[string]listJobsHandlerTest{
+	tests := map[string]struct {
+		build          *common.Build
+		expectedOutput []string
+	}{
 		"no jobs": {
 			build: nil,
 		},
 		"job exists": {
-			build: build,
+			build: &common.Build{
+				Runner: &common.RunnerConfig{},
+				JobResponse: common.JobResponse{
+					ID:      1,
+					JobInfo: common.JobInfo{ProjectID: 1},
+					GitInfo: common.GitInfo{RepoURL: "https://gitlab.example.com/my-namespace/my-project.git"},
+				},
+			},
 			expectedOutput: []string{
-				fmt.Sprintf("url=https://gitlab.example.com/my-namespace/my-project/-/jobs/%d", build.ID),
+				"url=https://gitlab.example.com/my-namespace/my-project/-/jobs/1",
 			},
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			writer := newFakeResponseWriter()
+			writer := httptest.NewRecorder()
 
 			req, err := http.NewRequest(http.MethodGet, "/", nil)
 			require.NoError(t, err)
@@ -215,17 +179,23 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 			b.addBuild(test.build)
 			b.ListJobsHandler(writer, req)
 
-			assert.Equal(t, http.StatusOK, writer.statusCode)
-			assert.Equal(t, writer.Header().Get("X-List-Version"), "2")
-			assert.Equal(t, writer.Header().Get("Content-Type"), "text/plain")
+			resp := writer.Result()
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			assert.Equal(t, "2", resp.Header.Get("X-List-Version"))
+			assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
+
+			body, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
 
 			if len(test.expectedOutput) == 0 {
-				assert.Empty(t, writer.output.String())
+				assert.Empty(t, body)
 				return
 			}
 
 			for _, expectedOutput := range test.expectedOutput {
-				assert.Contains(t, writer.output.String(), expectedOutput)
+				assert.Contains(t, string(body), expectedOutput)
 			}
 		})
 	}
