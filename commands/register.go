@@ -397,7 +397,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 // TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6404
 //
 // transformDockerServices will take the value from `DockerServices`
-// and convert the value of each entry into a `common.DockerService` definition.
+// and convert the value of each entry into a `common.Service` definition.
 //
 // This is to keep backward compatibility when the user passes
 // `--docker-services alpine:3.11 --docker-services ruby:3.10` we parse this
@@ -406,9 +406,7 @@ func (s *RegisterCommand) transformDockerServices(services []string) {
 	for _, service := range services {
 		s.Docker.Services = append(
 			s.Docker.Services,
-			&common.DockerService{
-				Service: common.Service{Name: service},
-			},
+			common.Service{Name: service},
 		)
 	}
 }

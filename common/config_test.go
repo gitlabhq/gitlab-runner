@@ -108,22 +108,7 @@ func TestConfigParse(t *testing.T) {
 		validateConfig func(t *testing.T, config *Config)
 		expectedErr    string
 	}{
-		"parse DockerService as string array (deprecated syntax)": {
-			config: `
-				[[runners]]
-				[runners.docker]
-				services = ["svc1", "svc2"]
-			`,
-			validateConfig: func(t *testing.T, config *Config) {
-				require.Equal(t, 1, len(config.Runners))
-				require.Equal(t, 2, len(config.Runners[0].Docker.Services))
-				assert.Equal(t, "svc1", config.Runners[0].Docker.Services[0].Name)
-				assert.Equal(t, "", config.Runners[0].Docker.Services[0].Alias)
-				assert.Equal(t, "svc2", config.Runners[0].Docker.Services[1].Name)
-				assert.Equal(t, "", config.Runners[0].Docker.Services[1].Alias)
-			},
-		},
-		"parse DockerService as table with only name": {
+		"parse Service as table with only name": {
 			config: `
 				[[runners]]
 				[[runners.docker.services]]
@@ -140,7 +125,7 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, "", config.Runners[0].Docker.Services[1].Alias)
 			},
 		},
-		"parse DockerService as table with only alias": {
+		"parse Service as table with only alias": {
 			config: `
 				[[runners]]
 				[[runners.docker.services]]
@@ -157,7 +142,7 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, "svc2", config.Runners[0].Docker.Services[1].Alias)
 			},
 		},
-		"parse DockerService as table": {
+		"parse Service as table": {
 			config: `
 				[[runners]]
 				[[runners.docker.services]]
@@ -176,7 +161,7 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, "svc2_alias", config.Runners[0].Docker.Services[1].Alias)
 			},
 		},
-		"parse DockerService as table int value name": {
+		"parse Service as table int value name": {
 			config: `
 				[[runners]]
 				[[runners.docker.services]]
@@ -184,7 +169,7 @@ func TestConfigParse(t *testing.T) {
 			`,
 			expectedErr: "toml: cannot load TOML value of type int64 into a Go string",
 		},
-		"parse DockerService as table int value alias": {
+		"parse Service as table int value alias": {
 			config: `
 				[[runners]]
 				[[runners.docker.services]]
@@ -193,15 +178,7 @@ func TestConfigParse(t *testing.T) {
 			`,
 			expectedErr: "toml: cannot load TOML value of type int64 into a Go string",
 		},
-		"parse DockerService as int array": {
-			config: `
-				[[runners]]
-				[runners.docker]
-				services = [1, 2]
-			`,
-			expectedErr: "toml: type mismatch for config.DockerService: expected table but found int64",
-		},
-		"parse DockerService runners.docker and runners.docker.services": {
+		"parse Service runners.docker and runners.docker.services": {
 			config: `
 				[[runners]]
 				[runners.docker]

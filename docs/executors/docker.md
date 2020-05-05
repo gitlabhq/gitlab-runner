@@ -314,8 +314,6 @@ Look for the `[runners.docker]` section:
 
 NOTE: **Note:**
 The example above uses the [array of tables syntax](https://github.com/toml-lang/toml#user-content-array-of-tables).
-Defining services with the [array of strings syntax](https://github.com/toml-lang/toml#user-content-array)
-is deprecated and will be removed in a future version.
 
 The image and services defined this way will be added to all builds run by
 that Runner, so even if you don't define an `image` inside `.gitlab-ci.yml`,
