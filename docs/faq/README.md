@@ -133,7 +133,7 @@ working by following the steps below:
 
 1. Store this file in a well known directory. We're suggesting to use the same directory where
    the `config.toml` file is present. So for example, if you're hosting Runner on Windows machine
-   and your config file is stored at `C:\gitlab-runner\config.toml`, then save the `zoneinfo.zip`
+   and your configuration file is stored at `C:\gitlab-runner\config.toml`, then save the `zoneinfo.zip`
    at `C:\gitlab-runner\zoneinfo.zip`.
 
 1. Set the `ZONEINFO` environment variable containing a full path to the `zoneinfo.zip` file. If you
@@ -159,7 +159,7 @@ working by following the steps below:
 
 You can, but not sharing the same `config.toml` file.
 
-Running multiple instances of Runner using the same config file can cause
+Running multiple instances of Runner using the same configuration file can cause
 unexpected and hard-to-debug behavior. In
 [GitLab Runner 12.2](https://gitlab.com/gitlab-org/gitlab-runner/issues/4407),
 only a single instance of Runner can use a specific `config.toml` file at

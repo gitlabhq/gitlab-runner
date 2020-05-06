@@ -482,7 +482,7 @@ build container. One of these options is the [`privileged` mode][privileged].
 The configured `privileged` flag is passed to the build container and all
 services, thus allowing to easily use the docker-in-docker approach.
 
-First, configure your Runner (config.toml) to run in `privileged` mode:
+First, configure your Runner (`config.toml`) to run in `privileged` mode:
 
 ```toml
 [[runners]]
