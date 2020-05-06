@@ -754,7 +754,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		OomScoreAdj:   e.Config.Docker.OomScoreAdjust,
 		ShmSize:       e.Config.Docker.ShmSize,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
-		VolumesFrom:   append(e.Config.Docker.VolumesFrom),
+		VolumesFrom:   e.Config.Docker.VolumesFrom,
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},

@@ -57,7 +57,7 @@ func TestList(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	guardMachineOperationTest(t, "machines directory doesn't exists", func(t *testing.T) {
+	guardMachineOperationTest(t, "machines directory doesn't exist", func(t *testing.T) {
 		mc := NewMachineCommand()
 		hostNames, err := mc.List()
 		assert.Empty(t, hostNames)

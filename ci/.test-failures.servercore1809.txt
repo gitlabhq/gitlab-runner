@@ -373,10 +373,6 @@ TestMachineReleaseIfInvalidDataArePassed
 TestMachineTestRetry
 TestMachineUse
 TestMachineUseOnDemand
-TestManagedList_Add
-TestManagedList_Add/add_child_path
-TestManagedList_Add/add_duplicated_path
-TestManagedList_Add/add_non-duplicated_path
 TestNewCacheContainerManager
 TestNewDefaultManager
 TestNewDockerMachineCommandCtx
