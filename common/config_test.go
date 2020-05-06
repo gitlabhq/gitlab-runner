@@ -1,7 +1,10 @@
 package common
 
 import (
+	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
@@ -239,6 +242,175 @@ func TestService_ToImageDefinition(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			assert.Equal(t, tt.expectedImage, tt.service.ToImageDefinition())
+		})
+	}
+}
+
+func TestDockerMachine(t *testing.T) {
+	timeNow := func() time.Time {
+		return time.Date(2020, 05, 05, 20, 00, 00, 0, time.Local)
+	}
+	activeTimePeriod := []string{fmt.Sprintf("* * %d * * * *", timeNow().Hour())}
+	inactiveTimePeriod := []string{fmt.Sprintf("* * %d * * * *", timeNow().Add(2*time.Hour).Hour())}
+	invalidTimePeriod := []string{"invalid period"}
+
+	oldPeriodTimer := periodTimer
+	defer func() {
+		periodTimer = oldPeriodTimer
+	}()
+	periodTimer = timeNow
+
+	tests := map[string]struct {
+		config            *DockerMachine
+		expectedIdleCount int
+		expectedIdleTime  int
+		expectedErr       error
+	}{
+		"global config only": {
+			config:            &DockerMachine{IdleCount: 1, IdleTime: 1000},
+			expectedIdleCount: 1,
+			expectedIdleTime:  1000,
+		},
+		"offpeak active": {
+			config: &DockerMachine{
+				IdleCount:        1,
+				IdleTime:         1000,
+				OffPeakPeriods:   activeTimePeriod,
+				OffPeakIdleCount: 2,
+				OffPeakIdleTime:  2000,
+			},
+			expectedIdleCount: 2,
+			expectedIdleTime:  2000,
+		},
+		"offpeak inactive": {
+			config: &DockerMachine{
+				IdleCount:        1,
+				IdleTime:         1000,
+				OffPeakPeriods:   inactiveTimePeriod,
+				OffPeakIdleCount: 2,
+				OffPeakIdleTime:  2000,
+			},
+			expectedIdleCount: 1,
+			expectedIdleTime:  1000,
+		},
+		"offpeak invalid format": {
+			config: &DockerMachine{
+				IdleCount:        1,
+				IdleTime:         1000,
+				OffPeakPeriods:   invalidTimePeriod,
+				OffPeakIdleCount: 2,
+				OffPeakIdleTime:  2000,
+			},
+			expectedIdleCount: 0,
+			expectedIdleTime:  0,
+			expectedErr:       new(InvalidTimePeriodsError),
+		},
+		"autoscaling config active": {
+			config: &DockerMachine{
+				IdleCount: 1,
+				IdleTime:  1000,
+				AutoscalingConfigs: []*DockerMachineAutoscaling{
+					{
+						Periods:   activeTimePeriod,
+						IdleCount: 2,
+						IdleTime:  2000,
+					},
+				},
+			},
+			expectedIdleCount: 2,
+			expectedIdleTime:  2000,
+		},
+		"autoscaling config inactive": {
+			config: &DockerMachine{
+				IdleCount: 1,
+				IdleTime:  1000,
+				AutoscalingConfigs: []*DockerMachineAutoscaling{
+					{
+						Periods:   inactiveTimePeriod,
+						IdleCount: 2,
+						IdleTime:  2000,
+					},
+				},
+			},
+			expectedIdleCount: 1,
+			expectedIdleTime:  1000,
+		},
+		"last matching autoscaling config is selected": {
+			config: &DockerMachine{
+				IdleCount: 1,
+				IdleTime:  1000,
+				AutoscalingConfigs: []*DockerMachineAutoscaling{
+					{
+						Periods:   activeTimePeriod,
+						IdleCount: 2,
+						IdleTime:  2000,
+					},
+					{
+						Periods:   activeTimePeriod,
+						IdleCount: 3,
+						IdleTime:  3000,
+					},
+				},
+			},
+			expectedIdleCount: 3,
+			expectedIdleTime:  3000,
+		},
+		"autoscaling overrides offpeak config": {
+			config: &DockerMachine{
+				IdleCount:        1,
+				IdleTime:         1000,
+				OffPeakPeriods:   activeTimePeriod,
+				OffPeakIdleCount: 2,
+				OffPeakIdleTime:  2000,
+				AutoscalingConfigs: []*DockerMachineAutoscaling{
+					{
+						Periods:   activeTimePeriod,
+						IdleCount: 3,
+						IdleTime:  3000,
+					},
+					{
+						Periods:   activeTimePeriod,
+						IdleCount: 4,
+						IdleTime:  4000,
+					},
+					{
+						Periods:   inactiveTimePeriod,
+						IdleCount: 5,
+						IdleTime:  5000,
+					},
+				},
+			},
+			expectedIdleCount: 4,
+			expectedIdleTime:  4000,
+		},
+		"autoscaling invalid period config": {
+			config: &DockerMachine{
+				IdleCount: 1,
+				IdleTime:  1000,
+				AutoscalingConfigs: []*DockerMachineAutoscaling{
+					{
+						Periods:   []string{"invalid period"},
+						IdleCount: 3,
+						IdleTime:  3000,
+					},
+				},
+			},
+			expectedIdleCount: 0,
+			expectedIdleTime:  0,
+			expectedErr:       new(InvalidTimePeriodsError),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			err := tt.config.CompilePeriods()
+			if tt.expectedErr != nil {
+				assert.True(t, errors.Is(err, tt.expectedErr))
+				return
+			}
+			assert.NoError(t, err, "should not return err on good period compile")
+			assert.Equal(t, tt.expectedIdleCount, tt.config.GetIdleCount())
+			assert.Equal(t, tt.expectedIdleTime, tt.config.GetIdleTime())
 		})
 	}
 }

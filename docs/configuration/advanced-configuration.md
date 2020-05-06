@@ -492,14 +492,24 @@ found in the separate [runners autoscale documentation](autoscale.md).
 |---------------------|-------------|
 | `IdleCount`         | Number of machines, that need to be created and waiting in _Idle_ state. |
 | `IdleTime`          | Time (in seconds) for machine to be in _Idle_ state before it is removed. |
-| `OffPeakPeriods`    | Time periods when the scheduler is in the OffPeak mode. An array of cron-style patterns (described below). |
-| `OffPeakTimezone`   | Timezone for the times given in OffPeakPeriods. A timezone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the timezone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
-| `OffPeakIdleCount`  | Like `IdleCount`, but for _Off Peak_ time periods. |
-| `OffPeakIdleTime`   | Like `IdleTime`, but for _Off Peak_ time periods. |
+| `[[runners.machine.autoscaling]]` | Multiple sections each containing overrides for autoscaling configuration. The last section with the expression matching the current time is selected. |
+| `OffPeakPeriods`    | Deprecated: Time periods when the scheduler is in the OffPeak mode. An array of cron-style patterns (described [below](#periods-syntax)). |
+| `OffPeakTimezone`   | Deprecated: Timezone for the times given in OffPeakPeriods. A timezone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the timezone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
+| `OffPeakIdleCount`  | Deprecated: Like `IdleCount`, but for _Off Peak_ time periods. |
+| `OffPeakIdleTime`   | Deprecated: Like `IdleTime`, but for _Off Peak_ time periods. |
 | `MaxBuilds`         | Builds count after which machine will be removed. |
 | `MachineName`       | Name of the machine. It **must** contain `%s`, which will be replaced with a unique machine identifier. |
 | `MachineDriver`     | Docker Machine `driver` to use. More details can be found in the [Docker Machine configuration section](autoscale.md#supported-cloud-providers). |
 | `MachineOptions`    | Docker Machine options. More details can be found in the [Docker Machine configuration section](autoscale.md#supported-cloud-providers). |
+
+### The `[[runners.machine.autoscaling]]` sections
+
+| Parameter           | Description |
+|---------------------|-------------|
+| `Periods`           | Time periods during which this schedule is active. An array of cron-style patterns (described [below](#periods-syntax)).
+| `IdleCount`         | Number of machines that need to be created and waiting in _Idle_ state. |
+| `IdleTime`          | Time (in seconds) for a machine to be in _Idle_ state before it is removed. |
+| `Timezone`   | Timezone for the times given in `Periods`. A timezone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the timezone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
 
 Example:
 
@@ -507,13 +517,16 @@ Example:
 [runners.machine]
   IdleCount = 5
   IdleTime = 600
-  OffPeakPeriods = [
-    "* * 0-10,18-23 * * mon-fri *",
-    "* * * * * sat,sun *"
-  ]
-  OffPeakTimezone = "Europe/Berlin"
-  OffPeakIdleCount = 1
-  OffPeakIdleTime = 3600
+  [[runners.machine.autoscaling]]
+    Periods = ["* * 9-17 * * mon-fri *"]
+    IdleCount = 50
+    IdleTime = 3600
+    Timezone = "UTC"
+  [[runners.machine.autoscaling]]
+    Periods = ["* * * * * sat,sun *"]
+    IdleCount = 5
+    IdleTime = 60
+    Timezone = "UTC"
   MaxBuilds = 100
   MachineName = "auto-scale-%s"
   MachineDriver = "digitalocean"
@@ -528,9 +541,9 @@ Example:
   ]
 ```
 
-### OffPeakPeriods syntax
+### Periods syntax
 
-The `OffPeakPeriods` setting contains an array of string patterns of
+The `Periods` setting contains an array of string patterns of
 time periods represented in a cron-style format. The line contains
 following fields:
 

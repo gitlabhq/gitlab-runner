@@ -221,28 +221,74 @@ In this example we will have at most 20 concurrent jobs, and at most 25
 machines created. In the worst case scenario regarding idle machines, we will
 not be able to have 10 idle machines, but only 5, because the `limit` is 25.
 
-## Off Peak time mode configuration
+## Autoscaling periods configuration
 
-> Introduced in GitLab Runner v1.7
+> Introduced in [GitLab Runner 13.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/5069)
+
+Autoscaling can be configured to have different values depending on the time period.
+Organisations might have regular time periods with spikes of jobs being executed
+or some with little to no jobs.
+For example most commercial companies work from Monday to
+Friday in fixed hours, e.g. from 10am to 6pm. During the rest of the week -
+Workdays during the night and the weekends no pipelines are started.
+
+These periods can be configured with the help of `[[runners.machine.autoscaling]]` sections.
+Each of them supports setting `IdleCount` and `IdleTime` based on a set of `Periods`.
+
+**How does it work?**
+
+In the `[runners.machine]` settings users can add multiple `[[runners.machine.autoscaling]]` sections, each one with its own `IdleCount`, `IdleTime`, `Periods` and `Timezone` properties. A section should be defined for each configuration, proceeding in order from the most general scenario to the most specific scenario.
+
+They will all be parsed and the last one to match the current time will be active. If none is matched the values from the root of `[runners.machine]` will be used.
+
+For example:
+
+```toml
+[runners.machine]
+  IdleCount = 10
+  IdleTime = 1800
+  [[runners.machine.autoscaling]]
+    Periods = ["* * 9-17 * * mon-fri *"]
+    IdleCount = 50
+    IdleTime = 3600
+    Timezone = "UTC"
+  [[runners.machine.autoscaling]]
+    Periods = ["* * * * * sat,sun *"]
+    IdleCount = 5
+    IdleTime = 60
+    Timezone = "UTC"
+```
+
+In this configuration every week day between 9 and 17 UTC machines will be overprovisioned to handle the large traffic during operating hours. In the weekend `IdleCount` drops to 5 to account for the lesser traffic.
+During the rest of the time the values will be taken from the defaults in the root - `IdleCount = 10` and `IdleTime = 1800`.
+
+NOTE: **Note:**
+The 59th second of the last
+minute in any period that you specify will *not* be considered part of the
+period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/issues/2170).
+
+You can specify the `Timezone` of a period e.g. `"Australia/Sydney"`. If you don't,
+the system setting of the host machine of every runner will be used. This
+default can be stated as `Timezone = "Local"` explicitly.
+
+More information about the syntax of `[[runner.machine.autoscaling]]` sections can be found
+in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section][runners-machine].
+
+## [Deprecated] Off Peak time mode configuration
+
+> This setting is deprecated and will be removed in 14.0. Use autoscaling periods instead.
+> If both settings are used the Off Peak settings will be ignored.
 
 Autoscale can be configured with the support for _Off Peak_ time mode periods.
 
 **What is _Off Peak_ time mode period?**
 
 Some organizations can select a regular time periods when no work is done.
-For example most of commercial companies are working from Monday to
-Friday in a fixed hours, eg. from 9am to 6pm. In the rest of the week -
-from Monday to Friday at 12am-9am and 6pm-12am and all of Saturday and Sunday -
-no one is working. These time periods we're naming here as _Off Peak_.
+These time periods we're naming here as _Off Peak_.
 
 Organizations where _Off Peak_ time periods occurs probably don't want
 to pay for the _Idle_ machines when it's certain that no jobs will be
 executed in this time. Especially when `IdleCount` is set to a big number.
-
-In the `v1.7` version of the Runner we've added the support for _Off Peak_
-configuration. With parameters described in configuration file you can now
-change the `IdleCount` and `IdleTime` values for the _Off Peak_ time mode
-periods.
 
 **How it is working?**
 
@@ -264,24 +310,12 @@ from 12:00am through 8:59am and 6:00pm through 11:59pm, plus all of Saturday and
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
 
-NOTE: **Note:**
-The 59th second of the last
-minute in any period that you specify will *not* be considered part of the
-period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/issues/2170).
-
-You can specify the `OffPeakTimezone` e.g. `"Australia/Sydney"`. If you don't,
-the system setting of the host machine of every runner will be used. This
-default can be stated as `OffPeakTimezone = "Local"` explicitly if you wish.
-
 When the _Off Peak_ time mode is enabled machines scheduler use
 `OffPeakIdleCount` instead of `IdleCount` setting and `OffPeakIdleTime`
 instead of `IdleTime` setting. The autoscaling algorithm is not changed,
 only the parameters. When machines scheduler discovers that none from
 the `OffPeakPeriods` pattern is fulfilled then it switches back to
 `IdleCount` and `IdleTime` settings.
-
-More information about syntax of `OffPeakPeriods` patterns can be found
-in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section][runners-machine].
 
 ## Distributed runners caching
 
@@ -381,14 +415,18 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
   [runners.docker]
     image = "ruby:2.6"               # The default image used for jobs is 'ruby:2.6'
   [runners.machine]
-    OffPeakPeriods = [               # Set the Off Peak time mode on for:
-      "* * 0-8,18-23 * * mon-fri *", # - Monday to Friday from 12:00am through 8:59am and 6:00pm through 11:59pm
-      "* * * * * sat,sun *"          # - All of Saturday and Sunday
-    ]
-    OffPeakIdleCount = 1             # There must be 1 machine in Idle state - when Off Peak time mode is on
-    OffPeakIdleTime = 1200           # Each machine can be in Idle state up to 1200 seconds (after this it will be removed) - when Off Peak time mode is on
     IdleCount = 5                    # There must be 5 machines in Idle state - when Off Peak time mode is off
     IdleTime = 600                   # Each machine can be in Idle state up to 600 seconds (after this it will be removed) - when Off Peak time mode is off
+    [[runners.machine.autoscaling]]  # Define periods with different settings
+      Periods = ["* * 9-17 * * mon-fri *"] # Every workday between 9 and 17 UTC
+      IdleCount = 50
+      IdleTime = 3600
+      Timezone = "UTC"
+    [[runners.machine.autoscaling]]
+      Periods = ["* * * * * sat,sun *"] # During the weekends
+      IdleCount = 5
+      IdleTime = 60
+      Timezone = "UTC"
     MaxBuilds = 100                  # Each machine can handle up to 100 jobs in a row (after this it will be removed)
     MachineName = "auto-scale-%s"    # Each machine will have a unique name ('%s' is required)
     MachineDriver = "digitalocean"   # Docker Machine is using the 'digitalocean' driver
