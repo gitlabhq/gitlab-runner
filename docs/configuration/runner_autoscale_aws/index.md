@@ -216,7 +216,7 @@ We will focus on the AWS machine options, for the rest of the settings read
 about the:
 
 - [Autoscaling algorithm and the parameters it's based on](../autoscale.md#autoscaling-algorithm-and-parameters) - depends on the needs of your organization
-- [Off peak time configuration](../autoscale.md#off-peak-time-mode-configuration) - useful when there are regular time periods in your organization when no work is done, for example weekends
+- [Autoscaling periods](../autoscale.md#autoscaling-periods-configuration) - useful when there are regular time periods in your organization when no work is done, for example weekends
 
 Here's an example of the `runners.machine` section:
 
@@ -225,12 +225,16 @@ Here's an example of the `runners.machine` section:
     IdleCount = 1
     IdleTime = 1800
     MaxBuilds = 10
-    OffPeakPeriods = [
-      "* * 0-9,18-23 * * mon-fri *",
-      "* * * * * sat,sun *"
-    ]
-    OffPeakIdleCount = 0
-    OffPeakIdleTime = 1200
+     [[runners.machine.autoscaling]]
+      Periods = ["* * 9-17 * * mon-fri *"]
+      IdleCount = 50
+      IdleTime = 3600
+      Timezone = "UTC"
+    [[runners.machine.autoscaling]]
+      Periods = ["* * * * * sat,sun *"]
+      IdleCount = 5
+      IdleTime = 60
+      Timezone = "UTC"
     MachineDriver = "amazonec2"
     MachineName = "gitlab-docker-machine-%s"
     MachineOptions = [
@@ -319,12 +323,16 @@ check_interval = 0
     IdleCount = 1
     IdleTime = 1800
     MaxBuilds = 100
-    OffPeakPeriods = [
-      "* * 0-9,18-23 * * mon-fri *",
-      "* * * * * sat,sun *"
-    ]
-    OffPeakIdleCount = 0
-    OffPeakIdleTime = 1200
+    [[runners.machine.autoscaling]]
+      Periods = ["* * 9-17 * * mon-fri *"]
+      IdleCount = 50
+      IdleTime = 3600
+      Timezone = "UTC"
+    [[runners.machine.autoscaling]]
+      Periods = ["* * * * * sat,sun *"]
+      IdleCount = 5
+      IdleTime = 60
+      Timezone = "UTC"
     MachineDriver = "amazonec2"
     MachineName = "gitlab-docker-machine-%s"
     MachineOptions = [
