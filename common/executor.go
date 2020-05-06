@@ -152,7 +152,7 @@ func GetExecutorProvider(executor string) ExecutorProvider {
 
 // GetExecutorNames returns a list of all registered executor names.
 func GetExecutorNames() []string {
-	names := make([]string, 0, len(executorProviders))
+	var names []string
 	for name := range executorProviders {
 		names = append(names, name)
 	}
@@ -161,7 +161,7 @@ func GetExecutorNames() []string {
 
 // GetExecutorProviders returns a list of all registered executor providers.
 func GetExecutorProviders() []ExecutorProvider {
-	providers := make([]ExecutorProvider, 0, len(executorProviders))
+	var providers []ExecutorProvider
 	for _, executorProvider := range executorProviders {
 		providers = append(providers, executorProvider)
 	}

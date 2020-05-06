@@ -809,7 +809,7 @@ func TestPatchTraceCantConnect(t *testing.T) {
 
 func TestPatchTraceUpdatedTrace(t *testing.T) {
 	sentTrace := 0
-	traceContent := []byte{}
+	var traceContent []byte
 
 	updates := []struct {
 		traceUpdate             []byte

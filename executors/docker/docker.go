@@ -530,7 +530,7 @@ func (e *executor) getProjectUniqRandomizedName() string {
 }
 
 func (e *executor) getServicesDefinitions() (common.Services, error) {
-	internalServiceImages := []string{}
+	var internalServiceImages []string
 	serviceDefinitions := common.Services{}
 
 	for _, service := range e.Config.Docker.Services {
