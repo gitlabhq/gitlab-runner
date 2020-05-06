@@ -53,7 +53,7 @@ Docker container.
    curl -sSL https://get.docker.com/ | sh
    ```
 
-1. You need to mount a config volume into the `gitlab-runner` container to
+1. You need to mount a configuration volume into the `gitlab-runner` container to
    be used for configs and other resources:
 
    ```shell
@@ -66,7 +66,7 @@ Docker container.
    TIP: **Tip:**
    On macOS, use `/Users/Shared` instead of `/srv`.
 
-   Or, you can use a config container to mount your custom data volume:
+   Or, you can use a configuration container to mount your custom data volume:
 
    ```shell
    docker run -d --name gitlab-runner-config \

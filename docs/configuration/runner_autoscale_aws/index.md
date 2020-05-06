@@ -2,7 +2,7 @@
 last_updated: 2019-08-21
 ---
 
-> **[Article Type](https://docs.gitlab.com/ee/development/writing_documentation.html#types-of-technical-articles):** Admin guide ||
+> **[Article Type](https://docs.gitlab.com/ee/development/writing_documentation.html#types-of-technical-articles):** Administration guide ||
 > **Level:** intermediary ||
 > **Author:** [Achilleas Pipinellis](https://gitlab.com/axil) ||
 > **Publication date:** 2017-11-24
@@ -136,7 +136,7 @@ must be set to `docker+machine`. Most of those settings are taken care of when
 you register the Runner for the first time.
 
 `limit` sets the maximum number of machines (running and idle) that this Runner
-will spawn. For more info check the [relationship between `limit`, `concurrent`
+will spawn. For more information, check the [relationship between `limit`, `concurrent`
 and `IdleCount`](../autoscale.md#how-concurrent-limit-and-idlecount-generate-the-upper-limit-of-running-machines).
 
 Example:
@@ -199,7 +199,7 @@ In the following example, we use Amazon S3:
       BucketLocation = "us-east-1"
 ```
 
-Here's some more info to further explore the cache mechanism:
+Here's some more information to further explore the cache mechanism:
 
 - [Reference for `runners.cache`](../advanced-configuration.md#the-runnerscache-section)
 - [Reference for `runners.cache.s3`](../advanced-configuration.md#the-runnerscaches3-section)

@@ -41,7 +41,7 @@ world won't be able to.
 
    This is usually `172.17.0.1`, let's call it `docker0_interface_ip`.
 
-1. Open the config file for CNTLM (`/etc/cntlm.conf`). Enter your username,
+1. Open the configuration file for CNTLM (`/etc/cntlm.conf`). Enter your username,
    password, domain and proxy hosts, and configure the `Listen` IP address
    which you found from the previous step. It should look like this:
 
@@ -76,9 +76,9 @@ Environment="HTTP_PROXY=http://docker0_interface_ip:3128/"
 Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
 ```
 
-## Adding Proxy variables to the Runner config
+## Adding Proxy variables to the Runner configuration
 
-The proxy variables need to also be added the Runner's config, so that it can
+The proxy variables need to also be added the Runner's configuration, so that it can
 get builds assigned from GitLab behind the proxy.
 
 This is basically the same as adding the proxy to the Docker service above:
