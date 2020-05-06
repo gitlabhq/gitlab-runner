@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	UseLegacyBuildsDirForDocker          string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
 	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
 )
@@ -30,13 +29,6 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description:     "Enables creation of a docker [network per build](../executors/docker.md#networking) with the docker executor",
-	},
-	{
-		Name:            UseLegacyBuildsDirForDocker,
-		DefaultValue:    "false",
-		Deprecated:      true,
-		ToBeRemovedWith: "13.0",
-		Description:     "Disables the new strategy for Docker executor to cache the content of `/builds` directory instead of `/builds/group-org`",
 	},
 	{
 		Name:            UseLegacyKubernetesExecutionStrategy,

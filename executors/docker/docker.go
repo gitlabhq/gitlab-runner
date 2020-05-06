@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -33,7 +32,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 const (
@@ -1112,14 +1110,6 @@ func (e *executor) createBuildVolume() error {
 	}
 
 	jobsDir := e.Build.RootDir
-
-	// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
-	if e.Build.IsFeatureFlagOn(featureflags.UseLegacyBuildsDirForDocker) {
-		// Cache Git sources:
-		// take path of the projects directory,
-		// because we use `rm -rf` which could remove the mounted volume
-		jobsDir = path.Dir(e.Build.FullProjectDir())
-	}
 
 	var err error
 
