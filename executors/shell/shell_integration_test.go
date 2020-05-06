@@ -1197,9 +1197,7 @@ func TestInteractiveTerminal(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.shell, func(t *testing.T) {
-			if helpers.SkipIntegrationTests(t, c.app) {
-				t.Skip()
-			}
+			helpers.SkipIntegrationTests(t, c.app)
 
 			successfulBuild, err := common.GetLocalBuildResponse(c.command)
 			require.NoError(t, err)

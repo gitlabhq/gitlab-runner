@@ -31,9 +31,7 @@ import (
 
 func TestInteractiveTerminal(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteLongRunningBuild()
 	assert.NoError(t, err)

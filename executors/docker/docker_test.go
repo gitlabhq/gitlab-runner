@@ -1187,9 +1187,7 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 
 func TestDockerWatchOn_1_12_4(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{

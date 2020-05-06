@@ -32,9 +32,7 @@ func TestParallelsCreateExecutor(t *testing.T) {
 }
 
 func TestParallelsSuccessRun(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
@@ -57,9 +55,7 @@ func TestParallelsSuccessRun(t *testing.T) {
 }
 
 func TestParallelsSuccessRunRawVariable(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	successfulBuild, err := common.GetRemoteBuildResponse("echo $TEST")
 	assert.NoError(t, err)
@@ -90,9 +86,7 @@ func TestParallelsSuccessRunRawVariable(t *testing.T) {
 }
 
 func TestParallelsBuildFail(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
@@ -117,9 +111,7 @@ func TestParallelsBuildFail(t *testing.T) {
 }
 
 func TestParallelsMissingImage(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
@@ -140,9 +132,7 @@ func TestParallelsMissingImage(t *testing.T) {
 }
 
 func TestParallelsMissingSSHCredentials(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
@@ -162,9 +152,7 @@ func TestParallelsMissingSSHCredentials(t *testing.T) {
 }
 
 func TestParallelsBuildCancel(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	config := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
