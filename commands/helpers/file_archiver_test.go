@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,12 +10,52 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const fileArchiverUntrackedFile = "untracked_test_file.txt"
-const fileArchiverUntrackedUnicodeFile = "неотслеживаемый_тестовый_файл.txt"
-const fileArchiverArchiveZipFile = "archive.zip"
-const fileArchiverNotExistingFile = "not_existing_file.txt"
-const fileArchiverAbsoluteFile = "/absolute.txt"
-const fileArchiverRelativeFile = "../../../relative.txt"
+const (
+	fileArchiverUntrackedFile   = "untracked_test_file.txt"
+	fileArchiverArchiveZipFile  = "archive.zip"
+	fileArchiverNotExistingFile = "not_existing_file.txt"
+	fileArchiverAbsoluteFile    = "/absolute.txt"
+	fileArchiverRelativeFile    = "../../../relative.txt"
+)
+
+func TestGlobbedFilePaths(t *testing.T) {
+	const (
+		fileArchiverGlobbedFilePath = "foo/**/*.txt"
+		fileArchiverGlobPath        = "foo/bar/baz"
+	)
+
+	err := os.MkdirAll(fileArchiverGlobPath, 0700)
+	require.NoError(t, err, "Creating directory path: %s", fileArchiverGlobPath)
+	defer os.RemoveAll(strings.Split(fileArchiverGlobPath, "/")[0])
+
+	expectedMatchingFiles := []string{
+		"foo/bar/baz/glob1.txt",
+		"foo/bar/baz/glob2.txt",
+		"foo/bar/glob3.txt",
+	}
+	for _, f := range expectedMatchingFiles {
+		writeTestFile(t, f)
+	}
+
+	// Write a file that doesn't match glob
+	writeTestFile(t, "foo/bar/baz/main.go")
+
+	// Write a dir that is outside of glob pattern
+	const (
+		fileArchiverGlobNonMatchingPath = "bar/foo"
+	)
+	err = os.MkdirAll(fileArchiverGlobNonMatchingPath, 0700)
+	writeTestFile(t, "bar/foo/test.txt")
+	require.NoError(t, err, "Creating directory path: %s", fileArchiverGlobNonMatchingPath)
+	defer os.RemoveAll(strings.Split(fileArchiverGlobNonMatchingPath, "/")[0])
+
+	f := fileArchiver{
+		Paths: []string{fileArchiverGlobbedFilePath},
+	}
+	err = f.enumerate()
+	assert.NoError(t, err)
+	assert.Equal(t, expectedMatchingFiles, f.sortedFiles())
+}
 
 func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
 	writeTestFile(t, artifactsTestArchivedFile)
@@ -34,6 +75,8 @@ func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
 }
 
 func TestCacheArchiverAddingUntrackedUnicodeFiles(t *testing.T) {
+	const fileArchiverUntrackedUnicodeFile = "неотслеживаемый_тестовый_файл.txt"
+
 	writeTestFile(t, fileArchiverUntrackedUnicodeFile)
 	defer os.Remove(fileArchiverUntrackedUnicodeFile)
 

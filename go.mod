@@ -12,6 +12,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/ayufan/golang-kardianos-service v0.0.0-20160429143213-0c8eb6d8fff2
+	github.com/bmatcuk/doublestar v1.3.0
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/docker/cli v0.0.0-20181219132003-336b2a5cac7f
 	github.com/docker/distribution v2.7.0+incompatible
@@ -40,7 +41,6 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pty v1.1.1
 	github.com/markelog/trie v0.0.0-20171230083431-098fa99650c0
-	github.com/mattn/go-zglob v0.0.1
 	github.com/minio/minio-go/v6 v6.0.49
 	github.com/mitchellh/gox v1.0.1
 	github.com/onsi/ginkgo v1.10.3 // indirect

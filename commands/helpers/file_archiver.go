@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,7 +102,7 @@ func (c *fileArchiver) process(match string) bool {
 
 func (c *fileArchiver) processPaths() {
 	for _, path := range c.Paths {
-		matches, err := filepath.Glob(path)
+		matches, err := doublestar.Glob(path)
 		if err != nil {
 			logrus.Warningf("%s: %v", path, err)
 			continue
