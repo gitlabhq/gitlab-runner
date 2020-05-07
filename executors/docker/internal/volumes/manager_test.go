@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/path"
 )
 
@@ -463,6 +464,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 
 		expectedVolumeName string
 		expectedBindings   []string
+		expectedTemporary  []string
 		expectedError      error
 	}{
 		"volume created": {
@@ -531,8 +533,64 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, testCase.expectedError, err)
+			require.Len(t, m.temporaryVolumes, 1)
+			assert.Equal(t, m.temporaryVolumes[0], testCase.expectedVolumeName)
+			assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
 			assert.Equal(t, testCase.expectedBindings, m.Binds())
+		})
+	}
+}
+
+func TestDefaultManager_RemoveTemporary(t *testing.T) {
+	testErr := errors.New("test-err")
+	testCases := map[string]struct {
+		temporaryVolumes []string
+		clientAssertions func(*docker.MockClient)
+		expectedError    error
+	}{
+		"no volumes to remove": {
+			temporaryVolumes: []string{},
+			clientAssertions: func(c *docker.MockClient) {},
+			expectedError:    nil,
+		},
+		"all volumes removed": {
+			temporaryVolumes: []string{"volume1", "volume2", "volume3"},
+			clientAssertions: func(c *docker.MockClient) {
+				c.On("VolumeRemove", mock.Anything, "volume1", true).Return(nil).Once()
+				c.On("VolumeRemove", mock.Anything, "volume2", true).Return(nil).Once()
+				c.On("VolumeRemove", mock.Anything, "volume3", true).Return(nil).Once()
+			},
+			expectedError: nil,
+		},
+		"volume not found": {
+			temporaryVolumes: []string{"nonexistent-volume"},
+			clientAssertions: func(c *docker.MockClient) {
+				c.On("VolumeRemove", mock.Anything, "nonexistent-volume", true).Return(&test.NotFoundError{}).Once()
+			},
+			expectedError: nil,
+		},
+		"failed to remove volume": {
+			temporaryVolumes: []string{"volume-name-1"},
+			clientAssertions: func(c *docker.MockClient) {
+				c.On("VolumeRemove", mock.Anything, "volume-name-1", true).Return(testErr).Once()
+			},
+			expectedError: testErr,
+		},
+	}
+
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			mClient := new(docker.MockClient)
+			defer mClient.AssertExpectations(t)
+
+			testCase.clientAssertions(mClient)
+
+			m := newDefaultManager(ManagerConfig{})
+			m.client = mClient
+			m.temporaryVolumes = testCase.temporaryVolumes
+
+			err := m.RemoveTemporary(context.Background())
+			assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
 		})
 	}
 }

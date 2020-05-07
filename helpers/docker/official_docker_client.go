@@ -26,7 +26,11 @@ const DefaultAPIVersion = "1.25"
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.
 func IsErrNotFound(err error) bool {
-	return client.IsErrNotFound(errors.Unwrap(err))
+	unwrapped := errors.Unwrap(err)
+	if unwrapped != nil {
+		err = unwrapped
+	}
+	return client.IsErrNotFound(err)
 }
 
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
@@ -173,6 +177,12 @@ func (c *officialDockerClient) VolumeCreate(ctx context.Context, options volume.
 	started := time.Now()
 	v, err := c.client.VolumeCreate(ctx, options)
 	return v, wrapError("VolumeCreate", err, started)
+}
+
+func (c *officialDockerClient) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
+	started := time.Now()
+	err := c.client.VolumeRemove(ctx, volumeID, force)
+	return wrapError("VolumeRemove", err, started)
 }
 
 func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {

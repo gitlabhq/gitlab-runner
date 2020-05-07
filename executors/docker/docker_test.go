@@ -19,6 +19,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -629,11 +630,20 @@ var volumesTestsDefaultBuildsDir = "/default-builds-dir"
 var volumesTestsDefaultCacheDir = "/default-cache-dir"
 
 func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
+	e := &executor{}
+
 	clientMock := new(docker.MockClient)
+	clientMock.On("Close").Return(nil).Once()
+
 	volumesManagerMock := new(volumes.MockManager)
+	if !errors.Is(test.expectedError, errVolumesManagerUndefined) {
+		volumesManagerMock.On("RemoveTemporary", mock.Anything).Return(nil).Once()
+	}
 
 	oldCreateVolumesManager := createVolumesManager
 	closureFn := func() {
+		e.Cleanup()
+
 		createVolumesManager = oldCreateVolumesManager
 
 		volumesManagerMock.AssertExpectations(t)
@@ -664,30 +674,30 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 		},
 	}
 
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Build: &common.Build{
-				ProjectRunnerID: 0,
-				Runner:          &c,
-				JobResponse: common.JobResponse{
-					JobInfo: common.JobInfo{
-						ProjectID: 0,
-					},
-					GitInfo: common.GitInfo{
-						RepoURL: "https://gitlab.example.com/group/project.git",
-					},
+	logger, _ := logrustest.NewNullLogger()
+	e.AbstractExecutor = executors.AbstractExecutor{
+		BuildLogger: common.NewBuildLogger(&common.Trace{Writer: ioutil.Discard}, logger.WithField("test", t.Name())),
+		Build: &common.Build{
+			ProjectRunnerID: 0,
+			Runner:          &c,
+			JobResponse: common.JobResponse{
+				JobInfo: common.JobInfo{
+					ProjectID: 0,
+				},
+				GitInfo: common.GitInfo{
+					RepoURL: "https://gitlab.example.com/group/project.git",
 				},
 			},
-			Config: c,
-			ExecutorOptions: executors.ExecutorOptions{
-				DefaultBuildsDir: volumesTestsDefaultBuildsDir,
-				DefaultCacheDir:  volumesTestsDefaultCacheDir,
-			},
 		},
-		client: clientMock,
-		info: types.Info{
-			OSType: helperimage.OSTypeLinux,
+		Config: c,
+		ExecutorOptions: executors.ExecutorOptions{
+			DefaultBuildsDir: volumesTestsDefaultBuildsDir,
+			DefaultCacheDir:  volumesTestsDefaultCacheDir,
 		},
+	}
+	e.client = clientMock
+	e.info = types.Info{
+		OSType: helperimage.OSTypeLinux,
 	}
 
 	e.Build.Variables = append(e.Build.Variables, common.JobVariable{
@@ -1019,6 +1029,7 @@ func TestCreateBuildVolume(t *testing.T) {
 }
 
 func TestCreateDependencies(t *testing.T) {
+	const containerID = "container-ID"
 	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+-alpine-0")
 	require.NoError(t, err)
 
@@ -1092,14 +1103,17 @@ func TestCreateDependencies(t *testing.T) {
 						Once()
 					c.On("NetworkList", mock.Anything, mock.Anything).
 						Return(nil, nil).
-						Once()
+						Times(2)
 					c.On("ContainerRemove", mock.Anything, containerNameMatcher, mock.Anything).
 						Return(nil).
 						Once()
-					c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, containerNameMatcher).
-						Return(container.ContainerCreateCreatedBody{ID: "container-ID"}, nil).
+					c.On("ContainerRemove", mock.Anything, containerID, mock.Anything).
+						Return(nil).
 						Once()
-					c.On("ContainerStart", mock.Anything, "container-ID", mock.Anything).
+					c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, containerNameMatcher).
+						Return(container.ContainerCreateCreatedBody{ID: containerID}, nil).
+						Once()
+					c.On("ContainerStart", mock.Anything, containerID, mock.Anything).
 						Return(testError).
 						Once()
 				},

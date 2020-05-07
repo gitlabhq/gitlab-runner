@@ -422,3 +422,17 @@ func (_m *MockClient) VolumeCreate(ctx context.Context, options volume.VolumeCre
 
 	return r0, r1
 }
+
+// VolumeRemove provides a mock function with given fields: ctx, volumeID, force
+func (_m *MockClient) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
+	ret := _m.Called(ctx, volumeID, force)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
+		r0 = rf(ctx, volumeID, force)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
