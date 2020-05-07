@@ -53,6 +53,7 @@ func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials
 // 1. DOCKER_AUTH_CONFIG
 // 2. ~/.docker/config.json or .dockercfg
 // 3. Build credentials
+// Returns two maps - one mapping registry to source and one mapping registry to config.
 func GetConfigs(dockerAuthConfig, username string, credentials []common.Credentials) (map[string]string, map[string]types.AuthConfig) {
 	sources := make(map[string]string)
 	res := make(map[string]types.AuthConfig)
