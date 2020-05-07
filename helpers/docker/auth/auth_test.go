@@ -117,8 +117,8 @@ func TestGetConfigForImage(t *testing.T) {
 		},
 	}
 
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
 			setupTestHomeDirectoryConfig(t, tt.precreateConfigFile)
 
 			source, config := GetConfigForImage(tt.image, tt.dockerAuthVariable, "", tt.credentials)
