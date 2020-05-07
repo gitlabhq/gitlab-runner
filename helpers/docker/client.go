@@ -34,6 +34,7 @@ type Client interface {
 	NetworkInspect(ctx context.Context, networkID string) (types.NetworkResource, error)
 
 	VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error)
+	VolumeRemove(ctx context.Context, volumeID string, force bool) error
 
 	Info(ctx context.Context) (types.Info, error)
 
