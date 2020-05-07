@@ -1,3 +1,9 @@
+## v12.10.2 (2020-05-08)
+
+### Bug fixes
+
+- Fix removal of build volume when disable_cache set to true !2042
+
 ## v12.10.1 (2020-04-22)
 
 ### Bug fixes
