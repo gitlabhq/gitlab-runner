@@ -32,11 +32,6 @@ var (
 			Password: "test_password_3",
 		},
 	}
-	registryDomainConfigVariable = &types.AuthConfig{
-		Username:      "test_user",
-		Password:      "test_password",
-		ServerAddress: "https://registry.domain.tld:5005/v1/",
-	}
 	registryDomain1Config = &types.AuthConfig{
 		Username:      "test_user_1",
 		Password:      "test_password_1",
