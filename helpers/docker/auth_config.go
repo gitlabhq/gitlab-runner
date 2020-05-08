@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 	"os/user"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/docker/cli/cli/config/configfile"
@@ -73,11 +73,11 @@ func ReadDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types
 		return "", nil, errNoHomeDir
 	}
 
-	configFile := path.Join(homeDir, ".docker", "config.json")
+	configFile := filepath.Join(homeDir, ".docker", "config.json")
 
 	r, err := os.Open(configFile)
 	if err != nil {
-		configFile = path.Join(homeDir, ".dockercfg")
+		configFile = filepath.Join(homeDir, ".dockercfg")
 		r, err = os.Open(configFile)
 		if err != nil && !os.IsNotExist(err) {
 			return "", nil, err

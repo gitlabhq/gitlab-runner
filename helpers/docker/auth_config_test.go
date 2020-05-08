@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -136,7 +135,7 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 				configDir := HomeDirectory
 
 				if test.configLocation.subfolder != "" {
-					configDir = path.Join(dir, test.configLocation.subfolder)
+					configDir = filepath.Join(dir, test.configLocation.subfolder)
 					err := os.MkdirAll(configDir, 0777)
 					require.NoErrorf(t, err, "failed to create docker config subfolder: %s", err)
 				}
