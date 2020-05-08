@@ -1,11 +1,9 @@
 package commands
 
 import (
-	"bytes"
-	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -147,167 +145,58 @@ func TestBuildsHelperFindSessionByURL(t *testing.T) {
 	assert.Nil(t, foundSession)
 }
 
-type listJobsHandlerVersioningTest struct {
-	URL             string
-	expectedVersion string
-	expectedCode    int
-}
-
-func TestBuildsHelper_ListJobsHandlerVersioning(t *testing.T) {
-	baseURL := "/test/url"
-
-	tests := map[string]listJobsHandlerVersioningTest{
-		"no version specified": {
-			URL:             baseURL,
-			expectedVersion: "1",
-			expectedCode:    http.StatusOK,
-		},
-		"version 1 specified": {
-			URL:             baseURL + "?v=1",
-			expectedVersion: "1",
-			expectedCode:    http.StatusOK,
-		},
-		"version 2 specified": {
-			URL:             baseURL + "?v=2",
-			expectedVersion: "2",
-			expectedCode:    http.StatusOK,
-		},
-		"unsupported version specified": {
-			URL:          baseURL + "?v=3",
-			expectedCode: http.StatusNotFound,
-		},
-	}
-
-	b := newBuildsHelper()
-	mux := http.NewServeMux()
-	mux.HandleFunc(baseURL, b.ListJobsHandler)
-
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			req, err := http.NewRequest(http.MethodGet, server.URL+test.URL, nil)
-			require.NoError(t, err)
-
-			resp, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
-
-			assert.Equal(t, test.expectedCode, resp.StatusCode)
-
-			if test.expectedVersion != "" {
-				require.Contains(t, resp.Header, "X-List-Version")
-				assert.Equal(t, test.expectedVersion, resp.Header.Get("X-List-Version"))
-			}
-		})
-	}
-}
-
-type fakeResponseWriter struct {
-	output     *bytes.Buffer
-	header     http.Header
-	statusCode int
-}
-
-func (w *fakeResponseWriter) Header() http.Header            { return w.header }
-func (w *fakeResponseWriter) Write(data []byte) (int, error) { return w.output.Write(data) }
-func (w *fakeResponseWriter) WriteHeader(statusCode int)     { w.statusCode = statusCode }
-
-func newFakeResponseWriter() *fakeResponseWriter {
-	return &fakeResponseWriter{
-		output: &bytes.Buffer{},
-		header: http.Header{},
-	}
-}
-
-var testBuildCurrentID int
-
-func getTestBuild() *common.Build {
-	testBuildCurrentID++
-
-	runner := common.RunnerConfig{}
-	runner.Token = "a1b2c3d4"
-	jobInfo := common.JobInfo{
-		ProjectID: 1,
-	}
-
-	build := &common.Build{}
-	build.ID = testBuildCurrentID
-	build.Runner = &runner
-	build.JobInfo = jobInfo
-	build.GitInfo = common.GitInfo{
-		RepoURL: "https://gitlab.example.com/my-namespace/my-project.git",
-	}
-
-	return build
-}
-
-type listJobsHandlerTest struct {
-	build          *common.Build
-	version        string
-	expectedOutput []string
-	expectedRegexp []*regexp.Regexp
-	expectedStatus int
-}
-
 func TestBuildsHelper_ListJobsHandler(t *testing.T) {
-	build := getTestBuild()
-
-	tests := map[string]listJobsHandlerTest{
+	tests := map[string]struct {
+		build          *common.Build
+		expectedOutput []string
+	}{
 		"no jobs": {
-			build:          nil,
-			expectedStatus: http.StatusOK,
+			build: nil,
 		},
 		"job exists": {
-			build: build,
+			build: &common.Build{
+				Runner: &common.RunnerConfig{},
+				JobResponse: common.JobResponse{
+					ID:      1,
+					JobInfo: common.JobInfo{ProjectID: 1},
+					GitInfo: common.GitInfo{RepoURL: "https://gitlab.example.com/my-namespace/my-project.git"},
+				},
+			},
 			expectedOutput: []string{
-				fmt.Sprintf("id=%d url=https://gitlab.example.com/my-namespace/my-project.git", build.ID),
+				"url=https://gitlab.example.com/my-namespace/my-project/-/jobs/1",
 			},
-			expectedStatus: http.StatusOK,
-		},
-		"job exists v2": {
-			build:   build,
-			version: "2",
-			expectedOutput: []string{
-				fmt.Sprintf("url=https://gitlab.example.com/my-namespace/my-project/-/jobs/%d", build.ID),
-			},
-			expectedRegexp: []*regexp.Regexp{
-				regexp.MustCompile("duration=[0-9hms.]+"),
-			},
-			expectedStatus: http.StatusOK,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			writer := newFakeResponseWriter()
+			writer := httptest.NewRecorder()
 
-			URL := "/"
-			if test.version != "" {
-				URL = fmt.Sprintf("/?v=%s", test.version)
-			}
-
-			req, err := http.NewRequest(http.MethodGet, URL, nil)
+			req, err := http.NewRequest(http.MethodGet, "/", nil)
 			require.NoError(t, err)
 
 			b := newBuildsHelper()
 			b.addBuild(test.build)
 			b.ListJobsHandler(writer, req)
 
-			if len(test.expectedOutput) == 0 && len(test.expectedRegexp) == 0 {
-				assert.Empty(t, writer.output.String())
-			} else {
-				for _, expectedOutput := range test.expectedOutput {
-					assert.Contains(t, writer.output.String(), expectedOutput)
-				}
+			resp := writer.Result()
+			defer resp.Body.Close()
 
-				for _, expectedRegexp := range test.expectedRegexp {
-					assert.Regexp(t, expectedRegexp, writer.output.String())
-				}
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			assert.Equal(t, "2", resp.Header.Get("X-List-Version"))
+			assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
+
+			body, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			if len(test.expectedOutput) == 0 {
+				assert.Empty(t, body)
+				return
 			}
 
-			assert.Equal(t, test.expectedStatus, writer.statusCode)
+			for _, expectedOutput := range test.expectedOutput {
+				assert.Contains(t, string(body), expectedOutput)
+			}
 		})
 	}
 }

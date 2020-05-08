@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -59,8 +60,8 @@ var machineNoConnect = &common.RunnerConfig{
 	},
 }
 
-func createMachineConfig(idleCount int, idleTime int) *common.RunnerConfig {
-	return &common.RunnerConfig{
+func createMachineConfig(t *testing.T, idleCount int, idleTime int) *common.RunnerConfig {
+	conf := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Machine: &common.DockerMachine{
 				MachineName: "test-machine-%s",
@@ -69,21 +70,9 @@ func createMachineConfig(idleCount int, idleTime int) *common.RunnerConfig {
 			},
 		},
 	}
-}
-
-func createMachineOffPeakIdleConfig(offPeakPeriod string) *common.RunnerConfig {
-	return &common.RunnerConfig{
-		RunnerSettings: common.RunnerSettings{
-			Machine: &common.DockerMachine{
-				MachineName:      "test-machine-%s",
-				IdleCount:        2,
-				IdleTime:         0,
-				OffPeakIdleCount: 0,
-				OffPeakIdleTime:  0,
-				OffPeakPeriods:   []string{offPeakPeriod},
-			},
-		},
-	}
+	err := conf.RunnerSettings.Machine.CompilePeriods()
+	require.NoError(t, err)
+	return conf
 }
 
 type testMachine struct {
@@ -171,10 +160,7 @@ func (m *testMachine) List() (machines []string, err error) {
 }
 
 func (m *testMachine) CanConnect(name string, skipCache bool) bool {
-	if strings.Contains(name, "no-can-connect") {
-		return false
-	}
-	return true
+	return !strings.Contains(name, "no-can-connect")
 }
 
 func (m *testMachine) Credentials(name string) (dc docker.Credentials, err error) {
@@ -375,7 +361,7 @@ func TestMachineAcquireAndRelease(t *testing.T) {
 func TestMachineOnDemandMode(t *testing.T) {
 	p, _ := testMachineProvider()
 
-	config := createMachineConfig(0, 1)
+	config := createMachineConfig(t, 0, 1)
 	_, err := p.Acquire(config)
 	assert.NoError(t, err)
 }
@@ -383,7 +369,7 @@ func TestMachineOnDemandMode(t *testing.T) {
 func TestMachinePreCreateMode(t *testing.T) {
 	p, m := testMachineProvider()
 
-	config := createMachineConfig(1, 5)
+	config := createMachineConfig(t, 1, 5)
 	d, err := p.Acquire(config)
 	assert.Error(t, err, "it should fail with message that currently there's no free machines")
 	assert.Nil(t, d)
@@ -397,7 +383,7 @@ func TestMachinePreCreateMode(t *testing.T) {
 	p.Release(config, d)
 	assertIdleMachines(t, p, 1, "after releasing it should have one free node")
 
-	config = createMachineConfig(2, 5)
+	config = createMachineConfig(t, 2, 5)
 	d, err = p.Acquire(config)
 	assert.NoError(t, err)
 	p.Release(config, d)
@@ -405,7 +391,7 @@ func TestMachinePreCreateMode(t *testing.T) {
 	<-m.Created
 	assertIdleMachines(t, p, 2, "it should start creating a second machine")
 
-	config = createMachineConfig(1, 0)
+	config = createMachineConfig(t, 1, 0)
 	config.Limit = 1
 	d, err = p.Acquire(config)
 	assert.NoError(t, err)
@@ -427,7 +413,7 @@ func TestMachinePreCreateMode(t *testing.T) {
 func TestMachineLimitMax(t *testing.T) {
 	p, _ := testMachineProvider()
 
-	config := createMachineConfig(10, 5)
+	config := createMachineConfig(t, 10, 5)
 	config.Limit = 5
 
 	d, err := p.Acquire(config)
@@ -452,7 +438,7 @@ func TestMachineMaxBuildsForExistingMachines(t *testing.T) {
 	provisionRetryInterval = 0
 
 	p, _ := testMachineProvider("remove-fail")
-	config := createMachineConfig(1, 5)
+	config := createMachineConfig(t, 1, 5)
 	config.Machine.MaxBuilds = 1
 	d, err := p.Acquire(config)
 	assert.Error(t, err)
@@ -460,7 +446,7 @@ func TestMachineMaxBuildsForExistingMachines(t *testing.T) {
 }
 
 func TestMachineMaxBuilds(t *testing.T) {
-	config := createMachineConfig(1, 5)
+	config := createMachineConfig(t, 1, 5)
 	p, _ := testMachineProvider(newMachineName(config))
 	config.Machine.MaxBuilds = 2 // by default we set it to 1
 	d, err := p.Acquire(config)
@@ -481,7 +467,7 @@ func TestMachineMaxBuilds(t *testing.T) {
 func TestMachineIdleLimits(t *testing.T) {
 	p, _ := testMachineProvider()
 
-	config := createMachineConfig(2, 1)
+	config := createMachineConfig(t, 2, 1)
 	d, errCh := p.create(config, machineStateIdle)
 	assert.NoError(t, <-errCh, "machine creation should not fail")
 
@@ -490,50 +476,18 @@ func TestMachineIdleLimits(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateIdle, d.State, "machine should not be removed, because is still in idle time")
 
-	config = createMachineConfig(2, 0)
+	config = createMachineConfig(t, 2, 0)
 	d3, err := p.Acquire(config)
 	p.Release(config, d3)
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateIdle, d.State, "machine should not be removed, because no more than two idle")
 
-	config = createMachineConfig(0, 0)
+	config = createMachineConfig(t, 0, 0)
 	d4, err := p.Acquire(config)
 	p.Release(config, d4)
 	assert.NoError(t, err)
-	assert.Equal(t, machineStateRemoving, d.State, "machine should not be removed, because no more than two idle")
+	assert.Equal(t, machineStateRemoving, d.State, "machine should be removed, because there are no idle")
 	assert.Equal(t, "too many idle machines", d.Reason)
-}
-
-func TestMachineOffPeakIdleLimits(t *testing.T) {
-	daysOfWeek := map[time.Weekday]string{
-		time.Monday:    "mon",
-		time.Tuesday:   "tue",
-		time.Wednesday: "wed",
-		time.Thursday:  "thu",
-		time.Friday:    "fri",
-		time.Saturday:  "sat",
-		time.Sunday:    "sun",
-	}
-	now := time.Now()
-	offPeakEnabledPeriod := fmt.Sprintf("* * * * * %s *", daysOfWeek[now.Weekday()])
-	offPeakDisabledPeriod := fmt.Sprintf("* * * * * %s *", daysOfWeek[now.Add(time.Hour*48).Weekday()])
-
-	p, _ := testMachineProvider()
-
-	config := createMachineOffPeakIdleConfig(offPeakDisabledPeriod)
-	d, errCh := p.create(config, machineStateIdle)
-	assert.NoError(t, <-errCh, "machine creation should not fail")
-
-	d2, err := p.Acquire(config)
-	assert.NoError(t, err)
-	p.Release(config, d2)
-	assert.Equal(t, machineStateIdle, d.State, "machine should not be removed, because not in OffPeak time mode")
-
-	config = createMachineOffPeakIdleConfig(offPeakEnabledPeriod)
-	d3, err := p.Acquire(config)
-	p.Release(config, d3)
-	assert.NoError(t, err)
-	assert.Equal(t, machineStateRemoving, d.State, "machine should be removed, because in OffPeak time mode")
 }
 
 func TestMachineUseOnDemand(t *testing.T) {

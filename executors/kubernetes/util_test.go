@@ -50,7 +50,6 @@ func TestGetKubeClientConfig(t *testing.T) {
 	aConfig := func() (*restclient.Config, error) {
 		config := *completeConfig
 		return &config, nil
-
 	}
 
 	tests := []struct {
@@ -191,7 +190,7 @@ func TestWaitForPodRunning(t *testing.T) {
 			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
 					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
@@ -243,7 +242,7 @@ func TestWaitForPodRunning(t *testing.T) {
 			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
 					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",
@@ -295,7 +294,7 @@ func TestWaitForPodRunning(t *testing.T) {
 			},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == "GET":
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
 					pod := &api.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-pod",

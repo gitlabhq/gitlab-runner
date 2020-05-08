@@ -5,12 +5,11 @@ config.toml.lock
 out
 builds/
 commands/helpers/archive.zip
-dockerfiles/checksums
-dockerfiles/alpine/gitlab-runner-linux-amd64
-dockerfiles/alpine/checksums
+dockerfiles/**/checksums-*
+dockerfiles/*/install-deps
+dockerfiles/alpine/gitlab-runner-linux-*
 dockerfiles/build/binaries/gitlab-runner-helper.*
-dockerfiles/ubuntu/gitlab-runner_amd64.deb
-dockerfiles/ubuntu/checksums
+dockerfiles/ubuntu/gitlab-runner_*.deb
 .DS_Store
 .idea/
 .editorconfig
@@ -26,8 +25,6 @@ testsdefinitions.txt
 
 /.vagrant/
 
-codeclimate.json
-ci/.test-failures.servercore1803.txt.updated
 ci/.test-failures.servercore1809.txt.updated
 
 # Ignore Visual Studio Code internals

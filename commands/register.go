@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"strings"
 
 	"github.com/imdario/mergo"
@@ -78,9 +77,6 @@ type RegisterCommand struct {
 	AccessLevel       string `long:"access-level" env:"REGISTER_ACCESS_LEVEL" description:"Set access_level of the runner to not_protected or ref_protected; defaults to not_protected"`
 	MaximumTimeout    int    `long:"maximum-timeout" env:"REGISTER_MAXIMUM_TIMEOUT" description:"What is the maximum timeout (in seconds) that will be set for job when using this Runner"`
 	Paused            bool   `long:"paused" env:"REGISTER_PAUSED" description:"Set Runner to be paused, defaults to 'false'"`
-
-	// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6404
-	DockerServices []string `long:"docker-services" json:"docker-services" env:"DOCKER_SERVICES" description:"DEPRECATED will be remove in 13.0: Add service that is started with container from main register command"`
 
 	common.RunnerConfig
 }
@@ -324,11 +320,6 @@ func (s *RegisterCommand) askExecutorOptions() {
 			s.askVirtualBox()
 			s.askSSHLogin()
 		},
-		"shell": func() {
-			if runtime.GOOS == "windows" && s.RunnerConfig.Shell == "" {
-				s.Shell = "powershell"
-			}
-		},
 		"custom": func() {
 			s.Custom = custom
 		},
@@ -387,8 +378,6 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	s.askExecutor()
 	s.askExecutorOptions()
 
-	s.transformDockerServices(s.DockerServices)
-
 	s.mergeTemplate()
 
 	s.addRunner(&s.RunnerConfig)
@@ -398,25 +387,6 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	}
 
 	logrus.Printf("Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!")
-}
-
-// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6404
-//
-// transformDockerServices will take the value from `DockerServices`
-// and convert the value of each entry into a `common.DockerService` definition.
-//
-// This is to keep backward compatibility when the user passes
-// `--docker-services alpine:3.11 --docker-services ruby:3.10` we parse this
-// correctly and create the service definition.
-func (s *RegisterCommand) transformDockerServices(services []string) {
-	for _, service := range services {
-		s.Docker.Services = append(
-			s.Docker.Services,
-			&common.DockerService{
-				Service: common.Service{Name: service},
-			},
-		)
-	}
 }
 
 func (s *RegisterCommand) mergeTemplate() {

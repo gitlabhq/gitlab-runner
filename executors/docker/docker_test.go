@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -18,6 +19,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -43,12 +45,12 @@ func TestMain(m *testing.M) {
 
 // ImagePullOptions contains the RegistryAuth which is inferred from the docker
 // configuration for the user, so just mock it out here.
-func buildImagePullOptions(e executor, configName string) mock.AnythingOfTypeArgument {
+func buildImagePullOptions(e *executor, configName string) mock.AnythingOfTypeArgument {
 	return mock.AnythingOfType("ImagePullOptions")
 }
 
 func TestParseDeviceStringOne(t *testing.T) {
-	e := executor{}
+	e := new(executor)
 
 	device, err := e.parseDeviceString("/dev/kvm")
 
@@ -59,7 +61,7 @@ func TestParseDeviceStringOne(t *testing.T) {
 }
 
 func TestParseDeviceStringTwo(t *testing.T) {
-	e := executor{}
+	e := new(executor)
 
 	device, err := e.parseDeviceString("/dev/kvm:/devices/kvm")
 
@@ -70,7 +72,7 @@ func TestParseDeviceStringTwo(t *testing.T) {
 }
 
 func TestParseDeviceStringThree(t *testing.T) {
-	e := executor{}
+	e := new(executor)
 
 	device, err := e.parseDeviceString("/dev/kvm:/devices/kvm:r")
 
@@ -81,7 +83,7 @@ func TestParseDeviceStringThree(t *testing.T) {
 }
 
 func TestParseDeviceStringFour(t *testing.T) {
-	e := executor{}
+	e := new(executor)
 
 	_, err := e.parseDeviceString("/dev/kvm:/devices/kvm:r:oops")
 
@@ -130,7 +132,7 @@ var testAllowedImages = []testAllowedImageDescription{
 }
 
 func TestVerifyAllowedImage(t *testing.T) {
-	e := executor{}
+	e := new(executor)
 
 	for _, test := range testAllowedImages {
 		err := e.verifyAllowedImage(test.image, "", test.allowedImages, []string{})
@@ -147,10 +149,16 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	containerName := fmt.Sprintf("runner-abcdef12-project-0-concurrent-0-%s-0", strings.Replace(serviceName, "/", "__", -1))
+	servicePart := fmt.Sprintf("-%s-0", strings.Replace(serviceName, "/", "__", -1))
+	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+" + servicePart)
+	require.NoError(t, err)
+
+	containerNameMatcher := mock.MatchedBy(func(containerName string) bool {
+		return containerNameRegex.MatchString(containerName)
+	})
 	networkID := "network-id"
 
-	e := executor{
+	e := &executor{
 		client: c,
 		info: types.Info{
 			OSType:       helperimage.OSTypeLinux,
@@ -169,7 +177,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.Build.JobInfo.ProjectID = 0
 	e.Build.Runner.Token = "abcdef1234567890"
 	e.Context = context.Background()
-	var err error
+
 	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:          e.info.OSType,
 		Architecture:    e.info.Architecture,
@@ -181,6 +189,8 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Environment: []string{},
 	}
 
+	realServiceContainerName := e.getProjectUniqRandomizedName() + servicePart
+
 	c.On("ImagePullBlocking", e.Context, imageName, options).
 		Return(nil).
 		Once()
@@ -189,28 +199,24 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Twice()
 
-	c.On("ContainerRemove", e.Context, containerName, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
+	c.On("ContainerRemove", e.Context, containerNameMatcher, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
 		Return(nil).
 		Once()
 
 	networkContainersMap := map[string]types.EndpointResource{
-		"1": {Name: containerName},
+		"1": {Name: realServiceContainerName},
 	}
 
 	c.On("NetworkList", e.Context, types.NetworkListOptions{}).
 		Return([]types.NetworkResource{{ID: networkID, Name: "network-name", Containers: networkContainersMap}}, nil).
 		Once()
 
-	c.On("NetworkDisconnect", e.Context, networkID, containerName, true).
+	c.On("NetworkDisconnect", e.Context, networkID, containerNameMatcher, true).
 		Return(nil).
 		Once()
 
-	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner-helper:x86_64-latest").
-		Return(types.ImageInspect{ID: "helper-image-id"}, nil, nil).
-		Once()
-
 	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{ID: containerName}, nil).
+		Return(container.ContainerCreateCreatedBody{ID: realServiceContainerName}, nil).
 		Once()
 
 	c.On("ContainerStart", e.Context, mock.Anything, mock.Anything).
@@ -238,7 +244,7 @@ func TestDockerForNamedImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	options := buildImagePullOptions(e, "test")
 
@@ -271,7 +277,7 @@ func TestDockerForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	options := buildImagePullOptions(e, "existing")
 
@@ -302,7 +308,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 		Return(types.ImageInspect{ID: "helper-image"}, nil, nil).
 		Once()
 
-	e := executor{
+	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			Build: &common.Build{
 				JobResponse: common.JobResponse{},
@@ -337,7 +343,7 @@ func TestDockerGetImageById(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	// Use default policy
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode("")
 
@@ -355,7 +361,7 @@ func TestDockerUnknownPolicyMode(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode("unknown")
 
@@ -367,7 +373,7 @@ func TestDockerPolicyModeNever(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyNever)
 
@@ -391,7 +397,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
@@ -408,7 +414,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
@@ -443,7 +449,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
@@ -469,7 +475,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
@@ -491,7 +497,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executor{client: c}
+	e := &executor{client: c}
 	e.Context = context.Background()
 	e.setPolicyMode(common.PullPolicyAlways)
 
@@ -624,11 +630,20 @@ var volumesTestsDefaultBuildsDir = "/default-builds-dir"
 var volumesTestsDefaultCacheDir = "/default-cache-dir"
 
 func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
+	e := &executor{}
+
 	clientMock := new(docker.MockClient)
+	clientMock.On("Close").Return(nil).Once()
+
 	volumesManagerMock := new(volumes.MockManager)
+	if !errors.Is(test.expectedError, errVolumesManagerUndefined) {
+		volumesManagerMock.On("RemoveTemporary", mock.Anything).Return(nil).Once()
+	}
 
 	oldCreateVolumesManager := createVolumesManager
 	closureFn := func() {
+		e.Cleanup()
+
 		createVolumesManager = oldCreateVolumesManager
 
 		volumesManagerMock.AssertExpectations(t)
@@ -659,30 +674,30 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 		},
 	}
 
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Build: &common.Build{
-				ProjectRunnerID: 0,
-				Runner:          &c,
-				JobResponse: common.JobResponse{
-					JobInfo: common.JobInfo{
-						ProjectID: 0,
-					},
-					GitInfo: common.GitInfo{
-						RepoURL: "https://gitlab.example.com/group/project.git",
-					},
+	logger, _ := logrustest.NewNullLogger()
+	e.AbstractExecutor = executors.AbstractExecutor{
+		BuildLogger: common.NewBuildLogger(&common.Trace{Writer: ioutil.Discard}, logger.WithField("test", t.Name())),
+		Build: &common.Build{
+			ProjectRunnerID: 0,
+			Runner:          &c,
+			JobResponse: common.JobResponse{
+				JobInfo: common.JobInfo{
+					ProjectID: 0,
+				},
+				GitInfo: common.GitInfo{
+					RepoURL: "https://gitlab.example.com/group/project.git",
 				},
 			},
-			Config: c,
-			ExecutorOptions: executors.ExecutorOptions{
-				DefaultBuildsDir: volumesTestsDefaultBuildsDir,
-				DefaultCacheDir:  volumesTestsDefaultCacheDir,
-			},
 		},
-		client: clientMock,
-		info: types.Info{
-			OSType: helperimage.OSTypeLinux,
+		Config: c,
+		ExecutorOptions: executors.ExecutorOptions{
+			DefaultBuildsDir: volumesTestsDefaultBuildsDir,
+			DefaultCacheDir:  volumesTestsDefaultCacheDir,
 		},
+	}
+	e.client = clientMock
+	e.info = types.Info{
+		OSType: helperimage.OSTypeLinux,
 	}
 
 	e.Build.Variables = append(e.Build.Variables, common.JobVariable{
@@ -733,7 +748,7 @@ func TestCreateVolumes(t *testing.T) {
 			volumes:     []string{"/volume"},
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/volume").
+				vm.On("Create", mock.Anything, "/volume").
 					Return(nil).
 					Once()
 			},
@@ -743,8 +758,18 @@ func TestCreateVolumes(t *testing.T) {
 			volumes:     []string{"/volume"},
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/volume").
+				vm.On("Create", mock.Anything, "/volume").
 					Return(volumes.ErrCacheVolumesDisabled).
+					Once()
+			},
+			createVolumeManager: true,
+		},
+		"volumes defined, empty buildsDir, clone strategy, cache containers disabled wrapped error on user volume": {
+			volumes:     []string{"/volume"},
+			gitStrategy: "clone",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", mock.Anything, "/volume").
+					Return(fmt.Errorf("wrap: %w", volumes.ErrCacheVolumesDisabled)).
 					Once()
 			},
 			createVolumeManager: true,
@@ -753,7 +778,7 @@ func TestCreateVolumes(t *testing.T) {
 			volumes:     []string{"/volume"},
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/volume").
+				vm.On("Create", mock.Anything, "/volume").
 					Return(volumes.NewErrVolumeAlreadyDefined("/volume")).
 					Once()
 			},
@@ -764,7 +789,7 @@ func TestCreateVolumes(t *testing.T) {
 			volumes:     []string{"/volume"},
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/volume").
+				vm.On("Create", mock.Anything, "/volume").
 					Return(errors.New("test-error")).
 					Once()
 			},
@@ -792,7 +817,7 @@ func TestCreateBuildVolume(t *testing.T) {
 		"git strategy clone, empty buildsDir, no error": {
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", volumesTestsDefaultBuildsDir).
+				vm.On("CreateTemporary", mock.Anything, volumesTestsDefaultBuildsDir).
 					Return(nil).
 					Once()
 			},
@@ -801,7 +826,7 @@ func TestCreateBuildVolume(t *testing.T) {
 		"git strategy clone, empty buildsDir, duplicated error": {
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", volumesTestsDefaultBuildsDir).
+				vm.On("CreateTemporary", mock.Anything, volumesTestsDefaultBuildsDir).
 					Return(volumes.NewErrVolumeAlreadyDefined(volumesTestsDefaultBuildsDir)).
 					Once()
 			},
@@ -810,7 +835,7 @@ func TestCreateBuildVolume(t *testing.T) {
 		"git strategy clone, empty buildsDir, other error": {
 			gitStrategy: "clone",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", volumesTestsDefaultBuildsDir).
+				vm.On("CreateTemporary", mock.Anything, volumesTestsDefaultBuildsDir).
 					Return(errors.New("test-error")).
 					Once()
 			},
@@ -821,7 +846,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "clone",
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", "/builds").
+				vm.On("CreateTemporary", mock.Anything, "/builds").
 					Return(nil).
 					Once()
 			},
@@ -831,7 +856,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "clone",
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", "/builds").
+				vm.On("CreateTemporary", mock.Anything, "/builds").
 					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
 					Once()
 			},
@@ -841,7 +866,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "clone",
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", "/builds").
+				vm.On("CreateTemporary", mock.Anything, "/builds").
 					Return(errors.New("test-error")).
 					Once()
 			},
@@ -851,7 +876,7 @@ func TestCreateBuildVolume(t *testing.T) {
 		"git strategy fetch, empty buildsDir, no error": {
 			gitStrategy: "fetch",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", volumesTestsDefaultBuildsDir).
+				vm.On("Create", mock.Anything, volumesTestsDefaultBuildsDir).
 					Return(nil).
 					Once()
 			},
@@ -860,7 +885,7 @@ func TestCreateBuildVolume(t *testing.T) {
 		"git strategy fetch, empty buildsDir, duplicated error": {
 			gitStrategy: "fetch",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", volumesTestsDefaultBuildsDir).
+				vm.On("Create", mock.Anything, volumesTestsDefaultBuildsDir).
 					Return(volumes.NewErrVolumeAlreadyDefined(volumesTestsDefaultBuildsDir)).
 					Once()
 			},
@@ -869,7 +894,7 @@ func TestCreateBuildVolume(t *testing.T) {
 		"git strategy fetch, empty buildsDir, other error": {
 			gitStrategy: "fetch",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", volumesTestsDefaultBuildsDir).
+				vm.On("Create", mock.Anything, volumesTestsDefaultBuildsDir).
 					Return(errors.New("test-error")).
 					Once()
 			},
@@ -880,7 +905,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "fetch",
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
+				vm.On("Create", mock.Anything, "/builds").
 					Return(nil).
 					Once()
 			},
@@ -890,8 +915,18 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "fetch",
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
+				vm.On("Create", mock.Anything, "/builds").
 					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
+					Once()
+			},
+			createVolumeManager: true,
+		},
+		"git strategy fetch, non-empty buildsDir, wrapped duplicated error": {
+			gitStrategy: "fetch",
+			buildsDir:   "/builds",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", mock.Anything, "/builds").
+					Return(fmt.Errorf("wrap: %w", volumes.NewErrVolumeAlreadyDefined("/builds"))).
 					Once()
 			},
 			createVolumeManager: true,
@@ -900,7 +935,7 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "fetch",
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
+				vm.On("Create", mock.Anything, "/builds").
 					Return(errors.New("test-error")).
 					Once()
 			},
@@ -911,10 +946,23 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "fetch",
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
+				vm.On("Create", mock.Anything, "/builds").
 					Return(volumes.ErrCacheVolumesDisabled).
 					Once()
-				vm.On("CreateTemporary", "/builds").
+				vm.On("CreateTemporary", mock.Anything, "/builds").
+					Return(nil).
+					Once()
+			},
+			createVolumeManager: true,
+		},
+		"git strategy fetch, non-empty buildsDir, cache volumes disabled wrapped error": {
+			gitStrategy: "fetch",
+			buildsDir:   "/builds",
+			volumesManagerAssertions: func(vm *volumes.MockManager) {
+				vm.On("Create", mock.Anything, "/builds").
+					Return(fmt.Errorf("wrap: %w", volumes.ErrCacheVolumesDisabled)).
+					Once()
+				vm.On("CreateTemporary", mock.Anything, "/builds").
 					Return(nil).
 					Once()
 			},
@@ -924,10 +972,10 @@ func TestCreateBuildVolume(t *testing.T) {
 			gitStrategy: "fetch",
 			buildsDir:   "/builds",
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds").
+				vm.On("Create", mock.Anything, "/builds").
 					Return(volumes.ErrCacheVolumesDisabled).
 					Once()
-				vm.On("CreateTemporary", "/builds").
+				vm.On("CreateTemporary", mock.Anything, "/builds").
 					Return(volumes.NewErrVolumeAlreadyDefined("/builds")).
 					Once()
 			},
@@ -944,7 +992,7 @@ func TestCreateBuildVolume(t *testing.T) {
 				})
 			},
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", "/builds/group").
+				vm.On("Create", mock.Anything, "/builds/group").
 					Return(nil).
 					Once()
 			},
@@ -961,7 +1009,7 @@ func TestCreateBuildVolume(t *testing.T) {
 				})
 			},
 			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", "/builds/group").
+				vm.On("CreateTemporary", mock.Anything, "/builds/group").
 					Return(nil).
 					Once()
 			},
@@ -981,102 +1029,85 @@ func TestCreateBuildVolume(t *testing.T) {
 }
 
 func TestCreateDependencies(t *testing.T) {
+	const containerID = "container-ID"
+	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+-alpine-0")
+	require.NoError(t, err)
+
+	containerNameMatcher := mock.MatchedBy(func(containerName string) bool {
+		return containerNameRegex.MatchString(containerName)
+	})
 	testError := errors.New("test-error")
 
-	tests := map[string]struct {
-		legacyVolumesMountingOrder string
-		expectedServiceVolumes     []string
-	}{
-		"UseLegacyVolumesMountingOrder is false": {
-			legacyVolumesMountingOrder: "false",
-			expectedServiceVolumes:     []string{"/volume", "/builds"},
-		},
-		// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6581
-		"UseLegacyVolumesMountingOrder is true": {
-			legacyVolumesMountingOrder: "true",
-			expectedServiceVolumes:     []string{"/builds"},
-		},
-	}
+	testCase := volumesTestCase{
+		buildsDir: "/builds",
+		volumes:   []string{"/volume"},
+		adjustConfiguration: func(e *executor) {
+			e.Build.Services = append(e.Build.Services, common.Image{
+				Name: "alpine:latest",
+			})
 
-	for testName, test := range tests {
-		t.Run(testName, func(t *testing.T) {
-			testCase := volumesTestCase{
-				buildsDir: "/builds",
-				volumes:   []string{"/volume"},
-				adjustConfiguration: func(e *executor) {
-					e.Build.Services = append(e.Build.Services, common.Image{
-						Name: "alpine:latest",
-					})
-
-					e.Build.Variables = append(e.Build.Variables, common.JobVariable{
-						Key:   featureflags.UseLegacyVolumesMountingOrder,
-						Value: test.legacyVolumesMountingOrder,
-					})
-
-					e.BuildShell = &common.ShellConfiguration{
-						Environment: []string{},
-					}
-				},
-				volumesManagerAssertions: func(vm *volumes.MockManager) {
-					binds := make([]string, 0)
-
-					vm.On("CreateTemporary", "/builds").
-						Return(nil).
-						Run(func(args mock.Arguments) {
-							binds = append(binds, args.Get(0).(string))
-						}).
-						Once()
-					vm.On("Create", "/volume").
-						Return(nil).
-						Run(func(args mock.Arguments) {
-							binds = append(binds, args.Get(0).(string))
-						}).
-						Maybe() // In the FF enabled case this assertion will be not met because of error during service starts
-					vm.On("Binds").
-						Return(func() []string {
-							return binds
-						}).
-						Once()
-					vm.On("ContainerIDs").
-						Return(nil).
-						Once()
-				},
-				clientAssertions: func(c *docker.MockClient) {
-					hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
-						return assert.Equal(t, test.expectedServiceVolumes, conf.Binds)
-					})
-
-					c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
-						Return(types.ImageInspect{}, nil, nil).
-						Once()
-					c.On("NetworkList", mock.Anything, mock.Anything).
-						Return(nil, nil).
-						Once()
-					c.On("ContainerRemove", mock.Anything, "runner-abcdef12-project-0-concurrent-0-alpine-0", mock.Anything).
-						Return(nil).
-						Once()
-					c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, "runner-abcdef12-project-0-concurrent-0-alpine-0").
-						Return(container.ContainerCreateCreatedBody{ID: "container-ID"}, nil).
-						Once()
-					c.On("ContainerStart", mock.Anything, "container-ID", mock.Anything).
-						Return(testError).
-						Once()
-				},
+			e.BuildShell = &common.ShellConfiguration{
+				Environment: []string{},
 			}
+		},
+		volumesManagerAssertions: func(vm *volumes.MockManager) {
+			binds := make([]string, 0)
 
-			e, closureFn := getExecutorForVolumesTests(t, testCase)
-			defer closureFn()
+			vm.On("CreateTemporary", mock.Anything, "/builds").
+				Return(nil).
+				Run(func(args mock.Arguments) {
+					binds = append(binds, args.Get(1).(string))
+				}).
+				Once()
+			vm.On("Create", mock.Anything, "/volume").
+				Return(nil).
+				Run(func(args mock.Arguments) {
+					binds = append(binds, args.Get(1).(string))
+				}).
+				Once()
+			vm.On("Binds").
+				Return(func() []string {
+					return binds
+				}).
+				Once()
+		},
+		clientAssertions: func(c *docker.MockClient) {
+			hostConfigMatcher := mock.MatchedBy(func(conf *container.HostConfig) bool {
+				return assert.Equal(t, []string{"/volume", "/builds"}, conf.Binds)
+			})
 
-			err := e.createDependencies()
-			assert.Equal(t, testError, err)
-		})
+			c.On("ImageInspectWithRaw", mock.Anything, "alpine:latest").
+				Return(types.ImageInspect{}, nil, nil).
+				Once()
+			c.On("NetworkList", mock.Anything, mock.Anything).
+				Return(nil, nil).
+				Times(2)
+			c.On("ContainerRemove", mock.Anything, containerNameMatcher, mock.Anything).
+				Return(nil).
+				Once()
+			c.On("ContainerRemove", mock.Anything, containerID, mock.Anything).
+				Return(nil).
+				Once()
+			c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, containerNameMatcher).
+				Return(container.ContainerCreateCreatedBody{ID: containerID}, nil).
+				Once()
+			c.On("ContainerStart", mock.Anything, containerID, mock.Anything).
+				Return(testError).
+				Once()
+		},
 	}
+
+	e, closureFn := getExecutorForVolumesTests(t, testCase)
+	defer closureFn()
+
+	err = e.createDependencies()
+	assert.Equal(t, testError, err)
 }
 
 var testFileAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"aW52YWxpZF91c2VyOmludmFsaWRfcGFzc3dvcmQ="},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
 var testVariableAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
 
-func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) executor {
+func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) *executor {
 	tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
 	require.NoError(t, err)
 
@@ -1089,7 +1120,7 @@ func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) executor 
 		docker.HomeDirectory = ""
 	}
 
-	e := executor{}
+	e := new(executor)
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
 	}
@@ -1144,13 +1175,13 @@ func assertCredentials(t *testing.T, serverAddress, username, password string, a
 	assert.Equal(t, password, ac.Password, "Password for %v", messageElements)
 }
 
-func getTestAuthConfig(t *testing.T, e executor, imageName string) *types.AuthConfig {
+func getTestAuthConfig(t *testing.T, e *executor, imageName string) *types.AuthConfig {
 	ac := e.getAuthConfig(imageName)
 
 	return ac
 }
 
-func testVariableAuthConfig(t *testing.T, e executor) {
+func testVariableAuthConfig(t *testing.T, e *executor) {
 	t.Run("withoutGitLabRegistry", func(t *testing.T) {
 		ac := getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
 		assertCredentials(t, "https://registry.domain.tld:5005/v1/", "test_user", "test_password", ac, "registry.domain.tld:5005/image/name:version")
@@ -1163,7 +1194,7 @@ func testVariableAuthConfig(t *testing.T, e executor) {
 	})
 
 	t.Run("withGitLabRegistry", func(t *testing.T) {
-		addGitLabRegistryCredentials(&e)
+		addGitLabRegistryCredentials(e)
 
 		ac := getTestAuthConfig(t, e, "registry.domain.tld:5005/image/name:version")
 		assertCredentials(t, "https://registry.domain.tld:5005/v1/", "test_user", "test_password", ac, "registry.domain.tld:5005/image/name:version")
@@ -1178,14 +1209,14 @@ func testVariableAuthConfig(t *testing.T, e executor) {
 
 func TestGetRemoteVariableAuthConfig(t *testing.T) {
 	e := getAuthConfigTestExecutor(t, true)
-	addRemoteVariableCredentials(&e)
+	addRemoteVariableCredentials(e)
 
 	testVariableAuthConfig(t, e)
 }
 
 func TestGetLocalVariableAuthConfig(t *testing.T) {
 	e := getAuthConfigTestExecutor(t, true)
-	addLocalVariableCredentials(&e)
+	addLocalVariableCredentials(e)
 
 	testVariableAuthConfig(t, e)
 }
@@ -1206,7 +1237,7 @@ func TestGetDefaultAuthConfig(t *testing.T) {
 
 	t.Run("withGitLabRegistry", func(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(&e)
+		addGitLabRegistryCredentials(e)
 
 		ac := getTestAuthConfig(t, e, "docker:dind")
 		assertEmptyCredentials(t, ac, "docker:dind")
@@ -1227,7 +1258,7 @@ func TestAuthConfigOverwritingOrder(t *testing.T) {
 
 	t.Run("gitlabRegistryOnly", func(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(&e)
+		addGitLabRegistryCredentials(e)
 
 		ac := getTestAuthConfig(t, e, imageName)
 		assertCredentials(t, "registry.gitlab.tld:1234", "gitlab-ci-token", e.Build.Token, ac, imageName)
@@ -1235,8 +1266,8 @@ func TestAuthConfigOverwritingOrder(t *testing.T) {
 
 	t.Run("withConfigFromRemoteVariable", func(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(&e)
-		addRemoteVariableCredentials(&e)
+		addGitLabRegistryCredentials(e)
+		addRemoteVariableCredentials(e)
 
 		ac := getTestAuthConfig(t, e, imageName)
 		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
@@ -1244,8 +1275,8 @@ func TestAuthConfigOverwritingOrder(t *testing.T) {
 
 	t.Run("withConfigFromLocalVariable", func(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, false)
-		addGitLabRegistryCredentials(&e)
-		addLocalVariableCredentials(&e)
+		addGitLabRegistryCredentials(e)
+		addLocalVariableCredentials(e)
 
 		ac := getTestAuthConfig(t, e, imageName)
 		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
@@ -1253,7 +1284,7 @@ func TestAuthConfigOverwritingOrder(t *testing.T) {
 
 	t.Run("withConfigFromFile", func(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(&e)
+		addGitLabRegistryCredentials(e)
 
 		ac := getTestAuthConfig(t, e, imageName)
 		assertCredentials(t, "registry.gitlab.tld:1234", "from_file", "password", ac, imageName)
@@ -1261,8 +1292,8 @@ func TestAuthConfigOverwritingOrder(t *testing.T) {
 
 	t.Run("withConfigFromVariableAndFromFile", func(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(&e)
-		addRemoteVariableCredentials(&e)
+		addGitLabRegistryCredentials(e)
+		addRemoteVariableCredentials(e)
 
 		ac := getTestAuthConfig(t, e, imageName)
 		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
@@ -1270,17 +1301,17 @@ func TestAuthConfigOverwritingOrder(t *testing.T) {
 
 	t.Run("withConfigFromLocalAndRemoteVariable", func(t *testing.T) {
 		e := getAuthConfigTestExecutor(t, true)
-		addGitLabRegistryCredentials(&e)
-		addRemoteVariableCredentials(&e)
+		addGitLabRegistryCredentials(e)
+		addRemoteVariableCredentials(e)
 		testVariableAuthConfigs = `{"auths":{"registry.gitlab.tld:1234":{"auth":"ZnJvbV9sb2NhbF92YXJpYWJsZTpwYXNzd29yZA=="}}}`
-		addLocalVariableCredentials(&e)
+		addLocalVariableCredentials(e)
 
 		ac := getTestAuthConfig(t, e, imageName)
 		assertCredentials(t, "registry.gitlab.tld:1234", "from_variable", "password", ac, imageName)
 	})
 }
 
-func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
+func testGetDockerImage(t *testing.T, e *executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
 	t.Run("get:"+imageName, func(t *testing.T) {
 		c := new(docker.MockClient)
 		defer c.AssertExpectations(t)
@@ -1295,7 +1326,7 @@ func testGetDockerImage(t *testing.T, e executor, imageName string, setClientExp
 	})
 }
 
-func testDeniesDockerImage(t *testing.T, e executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
+func testDeniesDockerImage(t *testing.T, e *executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
 	t.Run("deny:"+imageName, func(t *testing.T) {
 		c := new(docker.MockClient)
 		defer c.AssertExpectations(t)
@@ -1371,7 +1402,7 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 		return
 	}
 
-	e := executor{
+	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executors.ExecutorOptions{
 				Metadata: map[string]string{
@@ -1452,7 +1483,7 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 		t:   t,
 	}
 
-	e := &executor{}
+	e := new(executor)
 	e.client = c
 	e.volumeParser = parser.NewLinuxParser()
 	e.info = types.Info{
@@ -1475,8 +1506,6 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 	})
 	require.NoError(t, err)
 
-	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner-helper:x86_64-latest").
-		Return(types.ImageInspect{ID: "helper-image-id"}, nil, nil).Once()
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
@@ -1572,7 +1601,7 @@ func TestDockerCPUSSetting(t *testing.T) {
 			}
 
 			cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
-				assert.Equal(t, int64(example.nanocpus), hostConfig.NanoCPUs)
+				assert.Equal(t, example.nanocpus, hostConfig.NanoCPUs)
 			}
 
 			testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
@@ -1665,7 +1694,6 @@ func TestDockerUserNSSetting(t *testing.T) {
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
-
 }
 
 func TestDockerRuntimeSetting(t *testing.T) {
@@ -1953,7 +1981,7 @@ func TestCheckOSType(t *testing.T) {
 }
 
 func TestGetServiceDefinitions(t *testing.T) {
-	e := executor{}
+	e := new(executor)
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
 	}
@@ -1961,16 +1989,17 @@ func TestGetServiceDefinitions(t *testing.T) {
 	e.Config.Docker = &common.DockerConfig{}
 
 	tests := map[string]struct {
-		services         []*common.DockerService
+		services         []common.Service
 		buildServices    []common.Image
 		allowedServices  []string
 		expectedServices common.Services
 		expectedErr      string
 	}{
 		"all services with proper name and alias": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: "name", Alias: "alias"},
+					Name:  "name",
+					Alias: "alias",
 				},
 			},
 			expectedServices: common.Services{
@@ -1981,9 +2010,10 @@ func TestGetServiceDefinitions(t *testing.T) {
 			},
 		},
 		"build service not in internal images but empty allowed services": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: "name", Alias: "alias"},
+					Name:  "name",
+					Alias: "alias",
 				},
 			},
 			buildServices: []common.Image{
@@ -2002,9 +2032,9 @@ func TestGetServiceDefinitions(t *testing.T) {
 			},
 		},
 		"build service not in internal images": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: "name"},
+					Name: "name",
 				},
 			},
 			buildServices: []common.Image{
@@ -2016,9 +2046,9 @@ func TestGetServiceDefinitions(t *testing.T) {
 			expectedErr:     "invalid image",
 		},
 		"build service not in allowed services but in internal images": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: "name"},
+					Name: "name",
 				},
 			},
 			buildServices: []common.Image{
@@ -2037,9 +2067,9 @@ func TestGetServiceDefinitions(t *testing.T) {
 			},
 		},
 		"empty service name": {
-			services: []*common.DockerService{
+			services: []common.Service{
 				{
-					Service: common.Service{Name: ""},
+					Name: "",
 				},
 			},
 			buildServices: []common.Image{},

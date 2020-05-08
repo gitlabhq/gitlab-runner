@@ -33,7 +33,7 @@ in the chart repository.
 
 ### Required configuration
 
-In order for GitLab Runner to function, your config file **must** specify the following:
+In order for GitLab Runner to function, your configuration file **must** specify the following:
 
 - `gitlabUrl` - the GitLab server full URL (e.g., `https://example.gitlab.com`) to register the Runner against.
 - `runnerRegistrationToken` - The registration token for adding new Runners to
@@ -194,6 +194,19 @@ runners:
   privileged: true
 ```
 
+### Best practices for building containers without privileged mode
+
+Building containers within containers with Docker-in-docker requires docker privileged
+mode. Google's [Kaniko](https://github.com/GoogleContainerTools/kaniko) is an alternative
+that works without privileged mode, and it has been tested on the GitLab Kubernetes Runner.
+
+The [Least Privilege Container Builds with Kaniko on GitLab](https://www.youtube.com/watch?v=d96ybcELpFs)
+video is a walkthrough of the [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build)
+working example project. It makes use of the documentation for
+[Building images with Kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
+
+The working example project can be copied to your own group or instance for testing. More details on what other GitLab CI patterns are demonstrated are available at the project page [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build).
+
 ### Providing a custom certificate for accessing GitLab
 
 You can provide a [Kubernetes Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
@@ -269,7 +282,11 @@ Versions of Helm Chart and GitLab Runner application do not follow the same vers
 Use the command below to get version mappings between Helm Chart and GitLab Runner:
 
 ```shell
+# For Helm 2
 helm search -l gitlab/gitlab-runner
+
+# For Helm 3
+helm search repo -l gitlab/gitlab-runner
 ```
 
 Example of the output is shown below:

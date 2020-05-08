@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 	"os/user"
@@ -53,7 +53,11 @@ func SplitDockerImageName(reposName string) (string, string) {
 }
 
 var HomeDirectory = homedir.Get()
+var errNoHomeDir = errors.New("no home directory found")
 
+// ReadDockerAuthConfigsFromHomeDir reads known docker config from home
+// directory. If no username is provided it will get the home directory for the
+// current user.
 func ReadDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types.AuthConfig, error) {
 	homeDir := HomeDirectory
 
@@ -66,14 +70,12 @@ func ReadDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types
 	}
 
 	if homeDir == "" {
-		return "", nil, fmt.Errorf("Failed to get home directory")
+		return "", nil, errNoHomeDir
 	}
 
 	configFile := path.Join(homeDir, ".docker", "config.json")
 
 	r, err := os.Open(configFile)
-	defer r.Close()
-
 	if err != nil {
 		configFile = path.Join(homeDir, ".dockercfg")
 		r, err = os.Open(configFile)
@@ -81,6 +83,7 @@ func ReadDockerAuthConfigsFromHomeDir(userName string) (string, map[string]types
 			return "", nil, err
 		}
 	}
+	defer r.Close()
 
 	if r == nil {
 		return "", make(map[string]types.AuthConfig), nil

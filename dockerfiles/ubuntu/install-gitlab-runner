@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -e
+
+ARCH="$1"
+
+dpkg -i "/tmp/gitlab-runner_${ARCH}.deb"
+apt-get update
+apt-get -f install -y
+rm -rf /var/lib/apt/lists/*
+rm "/tmp/gitlab-runner_${ARCH}.deb"

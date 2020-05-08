@@ -1,6 +1,5 @@
 .binaries: &binaries
   extends:
-  - .gitlab_org_runners
   - .merge_request_pipelines
   - .except_docs
   stage: build
@@ -13,7 +12,7 @@
     - out/binaries/
     expire_in: 7d
 
-binaries darwin/386 darwin/amd64: *binaries
+binaries darwin/amd64: *binaries
 binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
 binaries linux/386 linux/amd64 linux/arm linux/arm64: *binaries
 binaries windows/386 windows/amd64: *binaries

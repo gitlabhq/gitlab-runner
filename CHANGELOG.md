@@ -1,3 +1,44 @@
+## v12.10.0 (2020-04-21)
+
+### New features
+
+- Allow Windows 1909 for Docker executor !1999
+- Allow windows 1903 for Docker executor !1984
+- Add support for `raw` variables !1882
+
+### Bug fixes
+
+- Add attempts to Docker executor for container not found !1995
+- Use Docker volumes instead of cache containers !1989
+- Use unique container names for Docker executor !1801
+
+### Maintenance
+
+- Fix TestScanHandlesCancelledContext having a WaitGroup without a delta and a few other log processor flaky tests !1961
+- Rename `docker_helpers` to `docker` !1943
+- Add retry when executing commands with kube attach !1907
+- Fix golint issue for error starting with capital letter !1851
+- Fix some Windows docker executor test !1789
+
+### Documentation changes
+
+- Minor Update index.md !2004 (KATO Tomoyuki @tomo667a)
+- Minor rewording in PROCESS.md templates !2003
+- Add further checks from GitLab project !2001
+- Add info that ssh is also required to be accessible in the security group !1997 (Daniel Schwiperich @d.schwiperich)
+- Add Vale version text rule !1994
+- Clean up note style !1993
+- Fix redirected links in docs !1992
+- Updates Markdownlint configuration from GitLab project !1991
+- Added link to the git download page !1972
+- Pull policy security concerns apply to Kubernetes executors too !1886 (Ben Bodenmiller @bbodenmiller)
+
+### Other changes
+
+- Clean Temporary Directories created by the Custom Executor !1978 (Mark McGuire @TronPaul)
+- Fix broken master for non existent method call !1974
+- Rely on `git ls-files` and `git diff` for checking mocks !1973
+
 ## v12.9.0 (2020-03-20)
 
 ### New features

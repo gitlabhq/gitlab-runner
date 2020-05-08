@@ -36,7 +36,7 @@ const (
 
 func PrlctlOutput(args ...string) (string, error) {
 	if runtime.GOOS != "darwin" {
-		return "", fmt.Errorf("Parallels works only on \"darwin\" platform")
+		return "", fmt.Errorf("parallels works only on \"darwin\" platform")
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -50,7 +50,7 @@ func PrlctlOutput(args ...string) (string, error) {
 	stderrString := strings.TrimSpace(stderr.String())
 
 	if _, ok := err.(*exec.ExitError); ok {
-		err = fmt.Errorf("PrlctlOutput error: %s", stderrString)
+		err = fmt.Errorf("calling prlctl: %s", stderrString)
 	}
 
 	return stdout.String(), err
@@ -73,10 +73,10 @@ func Version() (string, error) {
 	}
 
 	versionRe := regexp.MustCompile(`prlctl version (\d+\.\d+.\d+)`)
-	matches := versionRe.FindStringSubmatch(string(out))
+	matches := versionRe.FindStringSubmatch(out)
 	if matches == nil {
 		return "", fmt.Errorf(
-			"Could not find Parallels Desktop version in output:\n%s", string(out))
+			"could not find Parallels Desktop version in output:\n%s", out)
 	}
 
 	version := matches[1]
@@ -86,10 +86,7 @@ func Version() (string, error) {
 
 func Exist(name string) bool {
 	err := Prlctl("list", name, "--no-header", "--output", "status")
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func CreateTemplate(vmName, templateName string) error {
@@ -122,7 +119,7 @@ func GetDefaultSnapshot(vmName string) (string, error) {
 		}
 	}
 
-	return "", errors.New("No snapshot")
+	return "", errors.New("no snapshot")
 }
 
 func RevertToSnapshot(vmName, snapshotID string) error {
@@ -209,7 +206,7 @@ func Mac(vmName string) (string, error) {
 // IP Address   ="Lease expiry, Lease time, MAC, MAC or DUID"
 func IPAddress(mac string) (string, error) {
 	if len(mac) != 12 {
-		return "", fmt.Errorf("Not a valid MAC address: %s. It should be exactly 12 digits", mac)
+		return "", fmt.Errorf("not a valid MAC address: %s. It should be exactly 12 digits", mac)
 	}
 
 	leases, err := ioutil.ReadFile(dhcpLeases)

@@ -231,7 +231,6 @@ func TestOverwrites(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-
 			variables := buildOverwriteVariables(
 				variableOverwrites{
 					NamespaceOverwriteVariableName:      test.NamespaceOverwriteVariableValue,

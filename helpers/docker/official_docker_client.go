@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
@@ -24,6 +26,10 @@ const DefaultAPIVersion = "1.25"
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.
 func IsErrNotFound(err error) bool {
+	unwrapped := errors.Unwrap(err)
+	if unwrapped != nil {
+		err = unwrapped
+	}
 	return client.IsErrNotFound(err)
 }
 
@@ -75,6 +81,12 @@ func (c *officialDockerClient) ImageInspectWithRaw(ctx context.Context, imageID 
 	started := time.Now()
 	image, data, err := c.client.ImageInspectWithRaw(ctx, imageID)
 	return image, data, wrapError("ImageInspectWithRaw", err, started)
+}
+
+func (c *officialDockerClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+	started := time.Now()
+	containers, err := c.client.ContainerList(ctx, options)
+	return containers, wrapError("ContainerList", err, started)
 }
 
 func (c *officialDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error) {
@@ -159,6 +171,18 @@ func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID str
 	started := time.Now()
 	resource, err := c.client.NetworkInspect(ctx, networkID, types.NetworkInspectOptions{})
 	return resource, wrapError("NetworkInspect", err, started)
+}
+
+func (c *officialDockerClient) VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error) {
+	started := time.Now()
+	v, err := c.client.VolumeCreate(ctx, options)
+	return v, wrapError("VolumeCreate", err, started)
+}
+
+func (c *officialDockerClient) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
+	started := time.Now()
+	err := c.client.VolumeRemove(ctx, volumeID, force)
+	return wrapError("VolumeRemove", err, started)
 }
 
 func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {

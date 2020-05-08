@@ -186,7 +186,10 @@ func (n *GitLabClient) RegisterRunner(runner common.RunnerCredentials, parameter
 	}
 
 	var response common.RegisterRunnerResponse
-	result, statusText, _ := n.doJSON(&runner, "POST", "runners", http.StatusCreated, &request, &response)
+	result, statusText, resp := n.doJSON(&runner, http.MethodPost, "runners", http.StatusCreated, &request, &response)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 
 	switch result {
 	case http.StatusCreated:
@@ -209,7 +212,10 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, _ := n.doJSON(&runner, "POST", "runners/verify", http.StatusOK, &request, nil)
+	result, statusText, resp := n.doJSON(&runner, http.MethodPost, "runners/verify", http.StatusOK, &request, nil)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 
 	switch result {
 	case http.StatusOK:
@@ -233,7 +239,10 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, _ := n.doJSON(&runner, "DELETE", "runners", http.StatusNoContent, &request, nil)
+	result, statusText, resp := n.doJSON(&runner, http.MethodDelete, "runners", http.StatusNoContent, &request, nil)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 
 	const baseLogText = "Unregistering runner from GitLab"
 	switch result {
@@ -266,7 +275,6 @@ func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
 		if err == nil {
 			response.TLSAuthKey = string(data)
 		}
-
 	}
 }
 
@@ -279,7 +287,7 @@ func (n *GitLabClient) RequestJob(config common.RunnerConfig, sessionInfo *commo
 	}
 
 	var response common.JobResponse
-	result, statusText, httpResponse := n.doJSON(&config.RunnerCredentials, "POST", "jobs/request", http.StatusCreated, &request, &response)
+	result, statusText, httpResponse := n.doJSON(&config.RunnerCredentials, http.MethodPost, "jobs/request", http.StatusCreated, &request, &response)
 
 	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointRequestJob, result)
 
@@ -321,7 +329,14 @@ func (n *GitLabClient) UpdateJob(config common.RunnerConfig, jobCredentials *com
 		FailureReason: jobInfo.FailureReason,
 	}
 
-	result, statusText, response := n.doJSON(&config.RunnerCredentials, "PUT", fmt.Sprintf("jobs/%d", jobInfo.ID), http.StatusOK, &request, nil)
+	result, statusText, response := n.doJSON(
+		&config.RunnerCredentials,
+		http.MethodPut,
+		fmt.Sprintf("jobs/%d", jobInfo.ID),
+		http.StatusOK,
+		&request,
+		nil,
+	)
 	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, result)
 
 	remoteJobStateResponse := NewRemoteJobStateResponse(response)
@@ -489,7 +504,7 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 
 	headers := make(http.Header)
 	headers.Set("JOB-TOKEN", config.Token)
-	res, err := n.doRaw(&config, "POST", fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()), pr, mpw.FormDataContentType(), headers)
+	res, err := n.doRaw(&config, http.MethodPost, fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()), pr, mpw.FormDataContentType(), headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,
@@ -529,7 +544,7 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {
 	headers := make(http.Header)
 	headers.Set("JOB-TOKEN", config.Token)
-	res, err := n.doRaw(&config, "GET", fmt.Sprintf("jobs/%d/artifacts", config.ID), nil, "", headers)
+	res, err := n.doRaw(&config, http.MethodGet, fmt.Sprintf("jobs/%d/artifacts", config.ID), nil, "", headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,

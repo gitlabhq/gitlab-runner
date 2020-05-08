@@ -25,7 +25,7 @@ DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64
 RPM_PLATFORMS ?= el/6 el/7 \
     ol/6 ol/7 \
-    fedora/29 fedora/30
+    fedora/30
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
@@ -77,7 +77,8 @@ help:
 	#
 	# Testing commands:
 	# make test - run project tests
-	# make codequality - run code quality analysis
+	# make lint - run code quality analysis
+	# make lint-docs - run documentation linting
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -97,9 +98,13 @@ version:
 
 deps: $(DEVELOPMENT_TOOLS)
 
-codequality:
-	./scripts/codequality analyze --dev
+lint: OUT_FORMAT ?= colored-line-number
+lint: LINT_FLAGS ?=
+lint:
+	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
+lint-docs:
+	@scripts/lint-docs
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
@@ -262,7 +267,6 @@ prepare_index: $(RELEASE_INDEX_GENERATOR)
 						      -gpg-key-env GPG_KEY \
 						      -gpg-password-env GPG_PASSPHRASE
 
-release_docker_images: export RUNNER_BINARY := out/binaries/gitlab-runner-linux-amd64
 release_docker_images:
 	# Releasing Docker images
 	@./ci/release_docker_images

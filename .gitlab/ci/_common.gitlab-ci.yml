@@ -1,18 +1,22 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-2
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-4
   GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 19.03.5
   DOCKER_MACHINE_VERSION: "0.16.2"
-  DUMB_INIT_VERSION: "1.0.2"
+  BUILDX_VERSION: 0.3.1
+  DUMB_INIT_VERSION: "1.2.2"
   GIT_VERSION: "2.21.0"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "2.7.1"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
 
-image: $CI_IMAGE
+default:
+  image: $CI_IMAGE
+  tags:
+  - gitlab-org
 
 before_script:
 - unset GPG_KEY
@@ -52,24 +56,21 @@ before_script:
   - .no_cache
   - .no_dependencies
 
-.gitlab_org_runners:
-  tags:
-  - gitlab-org
-
 .docker:
   extends:
   - .except_docs
   services:
-  - docker:${DOCKER_VERSION}-dind
+  - name: docker:${DOCKER_VERSION}-dind
+    command: ["--experimental"]
   variables:
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-2
+    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-4
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_VERIFY: 1
     DOCKER_TLS_CERTDIR: "/certs"
     DOCKER_CERT_PATH: "/certs/client"
   tags:
-  - docker
+  - gitlab-org-docker
 
 .windows_base:
   variables:
@@ -78,18 +79,6 @@ before_script:
     GOPATH: "$CI_PROJECT_DIR\\.gopath"
     PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
     PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
-
-.windows1803_variables:
-  variables:
-    WINDOWS_VERSION: servercore1803
-
-.windows1803:
-  extends:
-  - .windows_base
-  - .windows1803_variables
-  tags:
-  - windows-1803
-  - shell
 
 .windows1809_variables:
   variables:

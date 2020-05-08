@@ -122,12 +122,12 @@ Supported features by different executors:
 
 Supported systems by different shells:
 
-| Shells  | Bash        | Windows Batch | PowerShell |
-|:-------:|:-----------:|:-------------:|:----------:|
-| Windows | ✗ (4)       | ✓ (2)         | ✓ (3)      |
-| Linux   | ✓ (1)       | ✗             | ✗          |
-| macOS     | ✓ (1)       | ✗             | ✗          |
-| FreeBSD | ✓ (1)       | ✗             | ✗          |
+| Shells  | Bash        | PowerShell |
+|:-------:|:-----------:|:----------:|
+| Windows | ✗ (4)       | ✓ (2) (3)  |
+| Linux   | ✓ (1)       | ✗          |
+| macOS   | ✓ (1)       | ✗          |
+| FreeBSD | ✓ (1)       | ✗          |
 
 1. Default shell.
 1. Default shell if no
@@ -140,9 +140,9 @@ Supported systems by different shells:
 
 Supported systems for interactive web terminals by different shells:
 
-| Shells  | Bash        | Windows Batch | PowerShell |
-|:-------:|:-----------:|:-------------:|:----------:|
-| Windows | ✗           | ✗             | ✗          |
-| Linux   | ✓           | ✗             | ✗          |
-| macOS     | ✓           | ✗             | ✗          |
-| FreeBSD | ✓           | ✗             | ✗          |
+| Shells  | Bash        | PowerShell |
+|:-------:|:-----------:|:----------:|
+| Windows | ✗           | ✗          |
+| Linux   | ✓           | ✗          |
+| macOS   | ✓           | ✗          |
+| FreeBSD | ✓           | ✗          |

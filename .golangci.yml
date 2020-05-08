@@ -1,0 +1,83 @@
+run:
+  concurrency: 8
+  deadline: 1m
+  issues-exit-code: 1
+  modules-download-mode: vendor
+  tests: true
+  skip-dirs:
+    - vendor
+  skip-files:
+    - mock_*.go
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  gocyclo:
+    min-complexity: 10
+  govet:
+    check-shadowing: false
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - dogsled
+    - goconst
+    - gocyclo
+    - goimports
+    - golint
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - structcheck
+    - typecheck
+    - unconvert
+    - unused
+    - varcheck
+    - whitespace
+  fast: false
+
+issues:
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    - path: helpers/shell_escape.go
+      linters:
+        - gocyclo
+    - path: executors/kubernetes/kubernetes_test.go
+      linters:
+        - gocyclo
+    - path: executors/kubernetes/util_test.go
+      linters:
+        - gocyclo
+    - path: executors/kubernetes/exec_test.go
+      linters:
+        - gocyclo
+    - path: executors/parallels/
+      linters:
+        - gocyclo
+    - path: executors/virtualbox/
+      linters:
+        - gocyclo
+    - linters:
+        - golint
+      text: "don't use ALL_CAPS in Go names; use CamelCase"
+    - linters:
+        - golint
+      text: "don't use an underscore in package name"
+    - path: ".*_test.go"
+      linters:
+        - goconst
+    - path: ".*_test.go"
+      linters:
+        - bodyclose
+    - path: referees/prometheus_api.go
+      linters:
+        - deadcode

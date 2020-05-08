@@ -18,7 +18,6 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Mint         | sarah                      | approx. 2021          |
 | RHEL/CentOS  | 7                          | June 2024             |
 | RHEL/CentOS  | 6                          | November 2020         |
-| Fedora       | 29                         | approx. November 2019 *Deprecated* |
 | Fedora       | 30                         | approx. June 2020 |
 
 ## Prerequisites

@@ -276,7 +276,7 @@ GitLab Runner will execute the executable with the following arguments:
 /path/to/run_exec.sh Arg1 Arg2 /path/to/tmp/script1 get_sources
 ```
 
-This executable should be responsible of executing the scripts that are
+This executable should be responsible for executing the scripts that are
 specified in the first argument. They contain all the scripts any GitLab
 Runner executor would run normally to clone, download artifacts, run
 user scripts and all the other steps described below. The scripts can be
@@ -284,7 +284,6 @@ of the following shells:
 
 - Bash
 - PowerShell
-- Batch (Deprecated)
 
 We generate the script using the shell configured by `shell` inside of
 [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section).
@@ -295,15 +294,15 @@ what the main goal of that script is.
 
 | Script Name | Script Contents |
 |:-----------:|:---------------:|
-| `prepare_script` | Simple debug info on which machine the Job is running on. |
-| `get_sources`    | Prepares the Git config, and clone/fetch the repository. We suggest you keep this as is since you get all of the benefits of Git strategies that GitLab provides. |
+| `prepare_script` | Simple debug information which machine the Job is running on. |
+| `get_sources`    | Prepares the Git configuration, and clone/fetch the repository. We suggest you keep this as is since you get all of the benefits of Git strategies that GitLab provides. |
 | `restore_cache` | Extract the cache if any are defined. This expects the `gitlab-runner` binary is available in `$PATH`. |
 | `download_artifacts` | Download artifacts, if any are defined. This expects `gitlab-runner` binary is available in `$PATH`. |
 | `build_script` | This is a combination of [`before_script`](https://docs.gitlab.com/ee/ci/yaml/#before_script-and-after_script) and [script](https://docs.gitlab.com/ee/ci/yaml/#script). |
 | `after_script` | This is the [`after_script`](https://docs.gitlab.com/ee/ci/yaml/#before_script-and-after_script) defined from the job. This is always called even if any of the previous steps failed. |
 | `archive_cache` | Will create an archive of all the cache, if any are defined. |
 | `upload_artifacts_on_success` | Upload any artifacts that are defined. Only executed when `build_script` was successful. |
-| `upload_artifacts_on_failure` | Upload any artifacts that are defined. Only exected when `build_script` fails. |
+| `upload_artifacts_on_failure` | Upload any artifacts that are defined. Only executed when `build_script` fails. |
 
 ### Cleanup
 

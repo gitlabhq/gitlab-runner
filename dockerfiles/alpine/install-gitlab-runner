@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -e
+
+ARCH="$1"
+
+mv "/usr/bin/gitlab-runner-linux-${ARCH}" /usr/bin/gitlab-runner
+
+chmod +x /usr/bin/gitlab-runner
+ln -s /usr/bin/gitlab-runner /usr/bin/gitlab-ci-multi-runner

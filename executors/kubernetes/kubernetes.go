@@ -108,7 +108,6 @@ type executor struct {
 	featureChecker featureChecker
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
-	logProcessor            logProcessor
 }
 
 type serviceDeleteResponse struct {
@@ -153,7 +152,7 @@ func (s *executor) setupResources() error {
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if err = s.AbstractExecutor.Prepare(options); err != nil {
-		return fmt.Errorf("AbstractExecutor Prepare() failed with: %w", err)
+		return fmt.Errorf("prepare AbstractExecutor: %w", err)
 	}
 
 	if s.BuildShell.PassFile {
@@ -166,7 +165,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	if err = s.setupResources(); err != nil {
 		return fmt.Errorf("couldn't setup Kubernetes resources: %w", err)
-
 	}
 
 	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
@@ -638,7 +636,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.Secrets {
-		items := []api.KeyToPath{}
+		var items []api.KeyToPath
 		for key, path := range volume.Items {
 			items = append(items, api.KeyToPath{Key: key, Path: path})
 		}
@@ -667,7 +665,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 	}
 
 	for _, volume := range s.Config.Kubernetes.Volumes.ConfigMaps {
-		items := []api.KeyToPath{}
+		var items []api.KeyToPath
 		for key, path := range volume.Items {
 			items = append(items, api.KeyToPath{Key: key, Path: path})
 		}
@@ -815,11 +813,17 @@ func (s *executor) createHostAlias() (*api.HostAlias, error) {
 func (s *executor) setupBuildPod() error {
 	s.Debugln("Setting up build pod")
 
-	services := make([]api.Container, len(s.options.Services))
+	podServices := make([]api.Container, len(s.options.Services))
 
 	for i, service := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
-		services[i] = s.buildContainer(fmt.Sprintf("svc-%d", i), resolvedImage, service, s.serviceRequests, s.serviceLimits)
+		podServices[i] = s.buildContainer(
+			fmt.Sprintf("svc-%d", i),
+			resolvedImage,
+			service,
+			s.serviceRequests,
+			s.serviceLimits,
+		)
 	}
 
 	// We set a default label to the pod. This label will be used later
@@ -848,7 +852,7 @@ func (s *executor) setupBuildPod() error {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(labels, annotations, services, imagePullSecrets, hostAlias)
+	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAlias)
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -932,7 +936,7 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 		close(ch)
 	}()
 
-	var services []api.Service
+	var proxyServices []api.Service
 	for res := range ch {
 		if res.err != nil {
 			err := fmt.Errorf("error creating the proxy service %q: %w", res.service.Name, res.err)
@@ -941,10 +945,10 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 			return []api.Service{}, err
 		}
 
-		services = append(services, *res.service)
+		proxyServices = append(proxyServices, *res.service)
 	}
 
-	return services, nil
+	return proxyServices, nil
 }
 
 func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) api.Service {
@@ -1046,7 +1050,9 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 			Executor: &DefaultRemoteExecutor{},
 		}
 
-		if err := attach.Run(); err != nil {
+		retryable := retry.New(retry.WithBuildLog(&attach, &s.BuildLogger))
+		err = retryable.Run()
+		if err != nil {
 			errCh <- err
 		}
 

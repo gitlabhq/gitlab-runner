@@ -207,7 +207,7 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	details, _ := m.details[machineName]
+	details := m.details[machineName]
 	if details == nil {
 		return errors.New("machine not found")
 	}

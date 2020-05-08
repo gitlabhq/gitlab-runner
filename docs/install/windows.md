@@ -51,8 +51,8 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
 1. (Optional) Update Runners `concurrent` value in `C:\GitLab-Runner\config.toml`
    to allow multiple concurrent jobs as detailed in [advanced configuration details](../configuration/advanced-configuration.md).
-   Additionally you can use the advanced configuration details to update your
-   shell executor to use Bash or PowerShell rather than Batch.
+   Additionally, you can use the advanced configuration details to update your
+   shell executor to use Bash rather than PowerShell.
 
 Voila! Runner is installed, running, and will start again after each system reboot.
 Logs are stored in Windows Event Log.
@@ -122,7 +122,7 @@ remove it in the next major change. For example, in 12.x we started
 supporting [`Windows
 1803`](https://support.microsoft.com/en-us/lifecycle/search?alpha=1803)
 because it came out on `2018-04-30`. Mainstream support ended on
-`2019-11-12`, so we deprecated `Windows 1803` in 12.x and it will be
+`2019-11-12`, so we deprecated `Windows 1803` in 12.x and it was
 [removed](https://gitlab.com/gitlab-org/gitlab-runner/issues/6553) in
 GitLab 13.0.
 
@@ -135,9 +135,7 @@ date:
 
 | OS                                  | Mainstream support end of life date |
 |-------------------------------------|-------------------------------------|
-| Windows 10 1803                     | November 2019 *Deprecated*          |
 | Windows 10 1809/2019                | January 2024                        |
-| Windows Server Datacenter 1803      | November 2019 *Deprecated*          |
 | Windows Server Datacenter 1809/2019 | January 2024                        |
 | Windows Server Datacenter 1903      | December 2020                       |
 

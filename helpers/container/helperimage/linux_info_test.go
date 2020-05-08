@@ -88,7 +88,6 @@ func Test_linuxInfo_create(t *testing.T) {
 func getExpectedArch() string {
 	if runtime.GOARCH == "amd64" {
 		return "x86_64"
-
 	}
 
 	return runtime.GOARCH

@@ -90,9 +90,9 @@ See [an example of a user issue][1105].
 [recipes]: https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server
 [1105]: https://gitlab.com/gitlab-org/gitlab-runner/issues/1105
 
-### `zoneinfo.zip: no such file or directory` error when using `OffPeakTimezone`
+### `zoneinfo.zip: no such file or directory` error when using `Timezone` or `OffPeakTimezone`
 
-In `v1.11.0` we made it possible to configure the timezone in which `OffPeakPeriods`
+It's possible to configure the timezone in which `OffPeakPeriods` or `[[docker.machine.autoscaling]]` periods
 are described. This feature should work on most Unix systems out of the box. However on some
 Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
 Runner's binaries), when used, the Runner will crash at start with an error similar to:
@@ -133,7 +133,7 @@ working by following the steps below:
 
 1. Store this file in a well known directory. We're suggesting to use the same directory where
    the `config.toml` file is present. So for example, if you're hosting Runner on Windows machine
-   and your config file is stored at `C:\gitlab-runner\config.toml`, then save the `zoneinfo.zip`
+   and your configuration file is stored at `C:\gitlab-runner\config.toml`, then save the `zoneinfo.zip`
    at `C:\gitlab-runner\zoneinfo.zip`.
 
 1. Set the `ZONEINFO` environment variable containing a full path to the `zoneinfo.zip` file. If you
@@ -159,7 +159,7 @@ working by following the steps below:
 
 You can, but not sharing the same `config.toml` file.
 
-Running multiple instances of Runner using the same config file can cause
+Running multiple instances of Runner using the same configuration file can cause
 unexpected and hard-to-debug behavior. In
 [GitLab Runner 12.2](https://gitlab.com/gitlab-org/gitlab-runner/issues/4407),
 only a single instance of Runner can use a specific `config.toml` file at
@@ -188,18 +188,6 @@ a *Remove-Item2* method which supports long paths. The GitLab CI Multi Runner wi
 detect it if it is available and automatically make use of it.
 
 [zoneinfo-file]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip
-
-### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
-
-You need to prepend `call` to your batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
-is a more complete example:
-
-```yaml
-before_script:
-  - call C:\path\to\test.bat
-```
-
-Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-runner/issues/1025).
 
 ### How can I get colored output on the web terminal?
 
@@ -319,3 +307,12 @@ causes to why this happens:
 
    Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
    `SessionCreate` set to `false`.
+
+### `fatal: unable to access 'https://path:3000/user/repo.git/': Failed to connect to path port 3000: Operation timed out` error in the job
+
+If one of the jobs fails with this error, make sure the Runner can connect to your GitLab instance. The connection could be blocked by things like:
+
+- firewalls
+- proxies
+- permissions
+- routing configurations

@@ -50,10 +50,6 @@ func TestDefaultWindowsShell(t *testing.T) {
 		expectedShell string
 	}{
 		{
-			shell:         "cmd",
-			expectedShell: "cmd",
-		},
-		{
 			shell:         "powershell",
 			expectedShell: "powershell",
 		},

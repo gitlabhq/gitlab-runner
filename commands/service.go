@@ -5,13 +5,13 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/ayufan/golang-kardianos-service"
+	service "github.com/ayufan/golang-kardianos-service"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/service"
+	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 )
 
 const (
@@ -96,7 +96,7 @@ func createServiceConfig(c *cli.Context) (svcConfig *service.Config) {
 	svcConfig.Arguments = append(svcConfig.Arguments, getServiceArguments(c)...)
 
 	switch runtime.GOOS {
-	case "linux":
+	case osTypeLinux:
 		if os.Getuid() != 0 {
 			logrus.Fatal("Please run the commands as root")
 		}
@@ -104,7 +104,7 @@ func createServiceConfig(c *cli.Context) (svcConfig *service.Config) {
 			svcConfig.Arguments = append(svcConfig.Arguments, "--user", user)
 		}
 
-	case "darwin":
+	case osTypeDarwin:
 		svcConfig.Option = service.KeyValue{
 			"KeepAlive":   true,
 			"RunAtLoad":   true,
@@ -119,7 +119,7 @@ func createServiceConfig(c *cli.Context) (svcConfig *service.Config) {
 			}
 		}
 
-	case "windows":
+	case osTypeWindows:
 		svcConfig.Option = service.KeyValue{
 			"Password": c.String("password"),
 		}
@@ -177,7 +177,7 @@ func getInstallFlags() []cli.Flag {
 		Usage: "Setup system logging integration",
 	})
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == osTypeWindows {
 		installFlags = append(installFlags, cli.StringFlag{
 			Name:  "user, u",
 			Value: "",

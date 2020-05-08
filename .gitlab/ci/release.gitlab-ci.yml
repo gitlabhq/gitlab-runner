@@ -5,16 +5,20 @@
   variables:
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "true"
-    DOCKER_MACHINE_CHECKSUM: "a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097"
-    DUMB_INIT_CHECKSUM: "a8defac40aaca2ca0896c7c5adbc241af60c7c3df470c1a4c469a860bd805429"
-    GIT_LFS_VERSION: "2.7.1"
-    GIT_LFS_CHECKSUM: "c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920"
+    TARGET_ARCHS: "amd64,arm64"
+    DOCKER_MACHINE_AMD64_CHECKSUM: "a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097"
+    DOCKER_MACHINE_ARM64_CHECKSUM: "109f534bfb8b9b852c938cad978e60a86b13f5ecf92da5e24320dacd2a7216ac"
+    DUMB_INIT_AMD64_CHECKSUM: "37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9"
+    DUMB_INIT_ARM64_CHECKSUM: "45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3"
+    GIT_LFS_AMD64_CHECKSUM: "c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920"
+    GIT_LFS_ARM64_CHECKSUM: "7a80464be13acc23ac99fd33e4b4352894f0fe3a8794b270e964c9532941834d"
   needs:
   - 'helper images'
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
   - 'package-deb'
   script:
   - source ci/touch_make_dependencies
+  - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   - make release_docker_images
 
 .build_windows_docker_images:
@@ -47,7 +51,7 @@
   needs:
   - 'helper images'
   - 'test coverage report'
-  - 'binaries darwin/386 darwin/amd64'
+  - 'binaries darwin/amd64'
   - 'binaries freebsd/386 freebsd/amd64 freebsd/arm'
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
   - 'binaries windows/386 windows/amd64'
@@ -106,12 +110,6 @@ development docker images:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
 
-development servercore1803 helper docker image:
-  extends:
-  - .build_windows_docker_images
-  - .windows1803
-  - .release_development
-
 development servercore1809 helper docker image:
   extends:
   - .build_windows_docker_images
@@ -140,17 +138,6 @@ bleeding edge docker images:
   - .release_bleeding_edge
   environment:
     name: bleeding_edge/docker_images
-    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
-
-bleeding edge servercore1803 docker images:
-  extends:
-  - .build_windows_docker_images
-  - .windows1803
-  - .release_bleeding_edge
-  variables:
-    PUSH_TO_DOCKER_HUB: "true"
-  environment:
-    name: bleeding_edge/docker_images/windows1803
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 bleeding edge servercore1809 docker images:
@@ -186,17 +173,6 @@ stable docker images:
   - .release_stable
   environment:
     name: stable/docker_images
-    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
-
-stable servercore1803 docker images:
-  extends:
-  - .build_windows_docker_images
-  - .windows1803
-  - .release_stable
-  variables:
-    PUSH_TO_DOCKER_HUB: "true"
-  environment:
-    name: stable/docker_images/windows1803
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable servercore1809 docker images:

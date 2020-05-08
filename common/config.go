@@ -33,6 +33,30 @@ const (
 	PullPolicyIfNotPresent = "if-not-present"
 )
 
+// InvalidTimePeriodsError represents that the time period specified is not valid.
+type InvalidTimePeriodsError struct {
+	periods []string
+	cause   error
+}
+
+func NewInvalidTimePeriodsError(periods []string, cause error) *InvalidTimePeriodsError {
+	return &InvalidTimePeriodsError{periods: periods, cause: cause}
+}
+
+func (e *InvalidTimePeriodsError) Error() string {
+	return fmt.Sprintf("invalid time periods %v, caused by: %v", e.periods, e.cause)
+}
+
+func (e *InvalidTimePeriodsError) Is(err error) bool {
+	_, ok := err.(*InvalidTimePeriodsError)
+
+	return ok
+}
+
+func (e *InvalidTimePeriodsError) Unwrap() error {
+	return e.cause
+}
+
 // Get returns one of the predefined values or returns an error if the value can't match the predefined
 func (p DockerPullPolicy) Get() (DockerPullPolicy, error) {
 	// Default policy is always
@@ -79,7 +103,7 @@ type DockerConfig struct {
 	VolumesFrom                []string          `toml:"volumes_from,omitempty" json:"volumes_from" long:"volumes-from" env:"DOCKER_VOLUMES_FROM" description:"A list of volumes to inherit from another container"`
 	NetworkMode                string            `toml:"network_mode,omitempty" json:"network_mode" long:"network-mode" env:"DOCKER_NETWORK_MODE" description:"Add container to a custom network"`
 	Links                      []string          `toml:"links,omitempty" json:"links" long:"links" env:"DOCKER_LINKS" description:"Add link to another container"`
-	Services                   []*DockerService  `toml:"services,omitempty"`
+	Services                   []Service         `toml:"services,omitempty"`
 	WaitForServicesTimeout     int               `toml:"wait_for_services_timeout,omitzero" json:"wait_for_services_timeout" long:"wait-for-services-timeout" env:"DOCKER_WAIT_FOR_SERVICES_TIMEOUT" description:"How long to wait for service startup"`
 	AllowedImages              []string          `toml:"allowed_images,omitempty" json:"allowed_images" long:"allowed-images" env:"DOCKER_ALLOWED_IMAGES" description:"Whitelist allowed images"`
 	AllowedServices            []string          `toml:"allowed_services,omitempty" json:"allowed_services" long:"allowed-services" env:"DOCKER_ALLOWED_SERVICES" description:"Whitelist allowed services"`
@@ -99,12 +123,22 @@ type DockerMachine struct {
 	MachineName    string   `long:"machine-name" env:"MACHINE_NAME" description:"The template for machine name (needs to include %s)"`
 	MachineOptions []string `long:"machine-options" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
 
-	OffPeakPeriods   []string `long:"off-peak-periods" env:"MACHINE_OFF_PEAK_PERIODS" description:"Time periods when the scheduler is in the OffPeak mode"`
-	OffPeakTimezone  string   `long:"off-peak-timezone" env:"MACHINE_OFF_PEAK_TIMEZONE" description:"Timezone for the OffPeak periods (defaults to Local)"`
-	OffPeakIdleCount int      `long:"off-peak-idle-count" env:"MACHINE_OFF_PEAK_IDLE_COUNT" description:"Maximum idle machines when the scheduler is in the OffPeak mode"`
-	OffPeakIdleTime  int      `long:"off-peak-idle-time" env:"MACHINE_OFF_PEAK_IDLE_TIME" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode"`
+	OffPeakPeriods   []string `long:"off-peak-periods" env:"MACHINE_OFF_PEAK_PERIODS" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`                                    // DEPRECATED
+	OffPeakTimezone  string   `long:"off-peak-timezone" env:"MACHINE_OFF_PEAK_TIMEZONE" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                    // DEPRECATED
+	OffPeakIdleCount int      `long:"off-peak-idle-count" env:"MACHINE_OFF_PEAK_IDLE_COUNT" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                     // DEPRECATED
+	OffPeakIdleTime  int      `long:"off-peak-idle-time" env:"MACHINE_OFF_PEAK_IDLE_TIME" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode. DEPRECATED"` // DEPRECATED
 
-	offPeakTimePeriods *timeperiod.TimePeriod
+	AutoscalingConfigs []*DockerMachineAutoscaling `toml:"autoscaling" description:"Ordered list of configurations for autoscaling periods (last match wins)"`
+
+	offPeakTimePeriods *timeperiod.TimePeriod // DEPRECATED
+}
+
+type DockerMachineAutoscaling struct {
+	Periods         []string `long:"periods" description:"List of crontab expressions for this autoscaling configuration"`
+	Timezone        string   `long:"timezone" description:"Timezone for the periods (defaults to Local)"`
+	IdleCount       int      `long:"idle-count" description:"Maximum idle machines when this configuration is active"`
+	IdleTime        int      `long:"idle-time" description:"Minimum time after which and idle machine can be destroyed when this configuration is active"`
+	compiledPeriods *timeperiod.TimePeriod
 }
 
 type ParallelsConfig struct {
@@ -249,56 +283,6 @@ type KubernetesPodSecurityContext struct {
 	RunAsNonRoot       *bool   `toml:"run_as_non_root,omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
 	RunAsUser          *int64  `toml:"run_as_user,omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
-}
-
-// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4922
-type DockerService struct {
-	Service
-}
-
-// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4922
-// we should fallback to the default toml parsing
-func (s *DockerService) UnmarshalTOML(data interface{}) error {
-	switch v := data.(type) {
-	case string:
-		logrus.Warning("Setting runners.docker.services as array is deprecated and will be removed in 13.0. " +
-			"Please use the array of tables syntax instead. More info at " +
-			"[https://docs.gitlab.com/runner/executors/docker.html#define-image-and-services-in-configtoml].")
-		s.Name = v
-
-		return nil
-	case map[string]interface{}:
-		name, err := tryGetTomlValue(v, "name")
-		if err != nil {
-			return err
-		}
-
-		alias, err := tryGetTomlValue(v, "alias")
-		if err != nil {
-			return err
-		}
-
-		s.Name = name
-		s.Alias = alias
-
-		return nil
-	}
-
-	return fmt.Errorf("toml: type mismatch for config.DockerService: expected table but found %T", data)
-}
-
-func tryGetTomlValue(data map[string]interface{}, key string) (string, error) {
-	value, ok := data[key]
-	if !ok {
-		return "", nil
-	}
-
-	switch v := value.(type) {
-	case string:
-		return v, nil
-	}
-
-	return "", fmt.Errorf("toml: cannot load TOML value of type %T into a Go string", value)
 }
 
 type Service struct {
@@ -539,36 +523,109 @@ func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
 }
 
 func (c *DockerMachine) GetIdleCount() int {
-	if c.isOffPeak() {
-		return c.OffPeakIdleCount
+	autoscaling := c.getActiveAutoscalingConfig()
+	if autoscaling != nil {
+		return autoscaling.IdleCount
 	}
 
 	return c.IdleCount
 }
 
 func (c *DockerMachine) GetIdleTime() int {
-	if c.isOffPeak() {
-		return c.OffPeakIdleTime
+	autoscaling := c.getActiveAutoscalingConfig()
+	if autoscaling != nil {
+		return autoscaling.IdleTime
 	}
 
 	return c.IdleTime
 }
 
-func (c *DockerMachine) isOffPeak() bool {
-	if c.offPeakTimePeriods == nil {
-		c.CompileOffPeakPeriods()
+// getActiveAutoscalingConfig returns the autoscaling config matching the current time.
+// It goes through the [[docker.machine.autoscaling]] entries and returns the last one to match.
+// Returns nil on no matching entries.
+func (c *DockerMachine) getActiveAutoscalingConfig() *DockerMachineAutoscaling {
+	if len(c.AutoscalingConfigs) == 0 && len(c.OffPeakPeriods) > 0 {
+		return c.getLegacyAutoscalingConfigWithOffpeak()
 	}
 
-	return c.offPeakTimePeriods != nil && c.offPeakTimePeriods.InPeriod()
+	var activeConf *DockerMachineAutoscaling
+	for _, conf := range c.AutoscalingConfigs {
+		if conf.compiledPeriods.InPeriod() {
+			activeConf = conf
+		}
+	}
+
+	return activeConf
 }
 
-func (c *DockerMachine) CompileOffPeakPeriods() (err error) {
-	c.offPeakTimePeriods, err = timeperiod.TimePeriods(c.OffPeakPeriods, c.OffPeakTimezone)
-	if err != nil {
-		err = fmt.Errorf("invalid OffPeakPeriods value: %w", err)
+// TODO: remove in 14.0: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555
+func (c *DockerMachine) getLegacyAutoscalingConfigWithOffpeak() *DockerMachineAutoscaling {
+	if c.offPeakTimePeriods.InPeriod() {
+		return &DockerMachineAutoscaling{
+			IdleCount: c.OffPeakIdleCount,
+			IdleTime:  c.OffPeakIdleTime,
+		}
 	}
 
-	return
+	return nil
+}
+
+func (c *DockerMachine) CompilePeriods() error {
+	err := c.legacyCompilePeriods()
+	if err != nil {
+		return err
+	}
+
+	for _, a := range c.AutoscalingConfigs {
+		err = a.compilePeriods()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+var periodTimer = func() time.Time {
+	return time.Now()
+}
+
+// TODO: remove in 14.0: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555
+func (c *DockerMachine) legacyCompilePeriods() error {
+	if len(c.OffPeakPeriods) != 0 {
+		periods, err := timeperiod.TimePeriodsWithTimer(c.OffPeakPeriods, c.OffPeakTimezone, periodTimer)
+		if err != nil {
+			return NewInvalidTimePeriodsError(c.OffPeakPeriods, err)
+		}
+
+		c.offPeakTimePeriods = periods
+	}
+
+	return nil
+}
+
+func (a *DockerMachineAutoscaling) compilePeriods() error {
+	periods, err := timeperiod.TimePeriodsWithTimer(a.Periods, a.Timezone, periodTimer)
+	if err != nil {
+		return NewInvalidTimePeriodsError(a.Periods, err)
+	}
+
+	a.compiledPeriods = periods
+
+	return nil
+}
+
+func (c *DockerMachine) logDeprecationWarning() {
+	if len(c.OffPeakPeriods) != 0 {
+		logrus.Warning("OffPeak docker machine configuration is deprecated and will be removed in 14.0. " +
+			"Please use [[docker.machine.autoscaling]] configuration instead: " +
+			"https://docs.gitlab.com/runner/configuration/autoscale.html#autoscaling-periods-configuration")
+	}
+	if len(c.AutoscalingConfigs) != 0 && len(c.OffPeakPeriods) != 0 {
+		logrus.Warning("You are using both deprecated Offpeak config and [[docker.machine.autoscaling]] setting. " +
+			"The legacy configuration will be ignored. See: " +
+			"https://docs.gitlab.com/runner/configuration/autoscale.html#deprecated-off-peak-time-mode-configuration")
+	}
 }
 
 func (c *RunnerCredentials) GetURL() string {
@@ -689,10 +746,11 @@ func (c *Config) LoadConfig(configFile string) error {
 			continue
 		}
 
-		err := runner.Machine.CompileOffPeakPeriods()
+		err := runner.Machine.CompilePeriods()
 		if err != nil {
 			return err
 		}
+		runner.Machine.logDeprecationWarning()
 	}
 
 	c.ModTime = info.ModTime()

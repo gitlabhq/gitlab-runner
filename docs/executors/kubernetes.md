@@ -95,14 +95,14 @@ The following keywords help to define the behaviour of the Runner within Kuberne
 - `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
   the pod annotations overwrite environment variable. When empty,
   it disables the pod annotations overwrite feature
-- `pod_security_context`: Configured through the config file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)
+- `pod_security_context`: Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)
 - `service_account`: default service account to be used for making Kubernetes API calls.
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
   it disables the service account overwrite feature
 - `bearer_token`: Default bearer token used to launch build pods.
 - `bearer_token_overwrite_allowed`: Boolean to allow projects to specify a bearer token that will be used to create the build pod.
-- `volumes`: configured through the config file, the list of volumes that will be mounted in the build container. [Read more about using volumes.](#using-volumes)
+- `volumes`: configured through the configuration file, the list of volumes that will be mounted in the build container. [Read more about using volumes](#using-volumes)
 - `services`:
   [Since GitLab Runner
   12.5](https://gitlab.com/gitlab-org/gitlab-runner/issues/4470), list of
@@ -152,7 +152,10 @@ with an appropriate regular expression. When left empty the overwrite behaviour 
 
 ### Setting Bearer Token to be Used When Making Kubernetes API calls
 
-In conjunction with setting the namespace and service account as mentioned above, you may set the bearer token used when making API calls to create the build pods. This will allow project owners to use project secret variables to specify a bearer token. When specifying the bearer token, it is required that you set the `Host` config keyword.
+In conjunction with setting the namespace and service account as mentioned above, you may set the
+bearer token used when making API calls to create the build pods. This will allow project owners to
+use project secret variables to specify a bearer token. When specifying the bearer token, you must
+set the `Host` configuration keyword.
 
 ``` yaml
 variables:
@@ -190,7 +193,7 @@ following variables:
 The values for these variables are restricted to what the max overwrite
 for that resource has been set to.
 
-## Define keywords in the config toml
+## Define keywords in the configuration TOML
 
 Each of the keywords can be defined in the `config.toml` for the GitLab Runner.
 
@@ -301,7 +304,7 @@ can be configured with following options:
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
 
-### Config Map volumes
+### ConfigMap volumes
 
 _ConfigMap_ volume configuration instructs Kubernetes to use a [_configMap_][k8s-config-map-docs]
 that is defined in Kubernetes cluster and mount it inside of the container.

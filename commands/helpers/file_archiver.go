@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,7 +102,7 @@ func (c *fileArchiver) process(match string) bool {
 
 func (c *fileArchiver) processPaths() {
 	for _, path := range c.Paths {
-		matches, err := filepath.Glob(path)
+		matches, err := doublestar.Glob(path)
 		if err != nil {
 			logrus.Warningf("%s: %v", path, err)
 			continue
@@ -171,7 +172,7 @@ func (c *fileArchiver) processUntracked() {
 func (c *fileArchiver) enumerate() error {
 	wd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Failed to get current working directory: %w", err)
+		return fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
 	c.wd = wd

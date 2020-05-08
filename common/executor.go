@@ -146,7 +146,7 @@ func GetExecutorProvider(executor string) ExecutorProvider {
 		return nil
 	}
 
-	provider, _ := executorProviders[executor]
+	provider := executorProviders[executor]
 	return provider
 }
 

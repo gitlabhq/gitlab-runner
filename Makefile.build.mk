@@ -18,7 +18,7 @@ build_current: helper-docker build_simple
 
 build_current_docker: export CI_COMMIT_REF_SLUG=$(shell echo $(BRANCH) | cut -c -63 | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-*([a-z0-9-]+[a-z0-9])-*$$/\1/g')
 build_current_docker: build_current_deb
-	$(MAKE) release_docker_images RUNNER_BINARY=$(RUNNER_BINARY)
+	$(MAKE) release_docker_images
 
 build_current_deb: build_current package-deps package-prepare
 	$(MAKE) package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64 RUNNER_BINARY=$(RUNNER_BINARY)

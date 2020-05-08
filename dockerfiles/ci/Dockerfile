@@ -19,11 +19,18 @@ ENV LC_ALL=en_US.UTF-8
 ARG DOCKER_VERSION
 
 # Install docker client
-RUN wget -q https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz -O /tmp/docker.tar.gz; \
-    tar -xzf /tmp/docker.tar.gz -C /tmp/; \
-    cp /tmp/docker/docker* /usr/bin; \
-    chmod +x /usr/bin/docker*; \
+RUN wget -q https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz -O /tmp/docker.tar.gz && \
+    tar -xzf /tmp/docker.tar.gz -C /tmp/ && \
+    cp /tmp/docker/docker* /usr/bin && \
+    chmod +x /usr/bin/docker* && \
     rm -rf /tmp/*
+
+ARG BUILDX_VERSION
+
+# Install docker buildx plugin
+RUN mkdir -p ~/.docker/cli-plugins && \
+    wget -q https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64 -O ~/.docker/cli-plugins/docker-buildx && \
+    chmod a+x ~/.docker/cli-plugins/docker-buildx
 
 COPY Makefile* /tmp/
 WORKDIR /tmp

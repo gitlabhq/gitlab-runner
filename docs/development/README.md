@@ -64,6 +64,7 @@ This is required for building ARM images that are embedded into the GitLab Runne
   # Support for ARM binaries through Qemu:
   { echo ':arm:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-arm-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
   { echo ':armeb:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-armeb-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
+  { echo ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:CF' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
   ```
 
 ## 3. Download runner sources
@@ -139,9 +140,23 @@ To execute the tests run:
 make test
 ```
 
-## 8. Contribute
+## 8. Install optional tools
 
-You can start hacking GitLab-Runner code. If you are interested you can use Intellij IDEA Community Edition with [go-lang-idea-plugin](https://github.com/go-lang-plugin-org/go-lang-idea-plugin) to edit and debug code.
+- Install `golangci-lint`, used for the `make lint` target.
+- Install `markdown-lint` and `vale`, used for the `make lint-docs` target.
+
+Installation instructions will pop up when running a Makefile target
+if a tool is missing.
+
+## 9. Contribute
+
+You can start hacking GitLab-Runner code.
+If you need an IDE to edit and debug code, there are a few free suggestions you can use:
+
+- [JetBrains GoLand IDE](https://www.jetbrains.com/go/).
+- Visual Studio Code using the
+  [workspace recommended extensions](https://code.visualstudio.com/docs/editor/extension-gallery#_workspace-recommended-extensions),
+  located in `.vscode/extensions.json`.
 
 ## Managing build dependencies
 
@@ -183,10 +198,8 @@ For both machines, the GitLab Runner source code is synced
 bi-directionally so that you can edit from your machine with your
 favorite editor. The source code can be found under the `$GOROOT`
 environment variable. We have a `RUNNER_SRC` environment variable which
-you can use to find out the full path so when using:
-
-- Windows batch scripts, you can run `cd %RUNNER_SRC`.
-- PowerShell, you can use `cd $Env:RUNNER_SRC`.
+you can use to find out the full path so when using PowerShell,
+you can use `cd $Env:RUNNER_SRC`.
 
 ## Troubleshooting
 

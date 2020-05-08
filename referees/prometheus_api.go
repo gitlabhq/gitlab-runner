@@ -11,10 +11,12 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+//nolint:unused
 type prometheusAPI interface {
 	prometheusV1.API
 }
 
+//nolint:unused
 type prometheusValue interface {
 	model.Value
 }

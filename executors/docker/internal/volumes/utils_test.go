@@ -1,6 +1,7 @@
 package volumes
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,7 +75,11 @@ func TestManagedList_Add(t *testing.T) {
 		},
 		"add duplicated path": {
 			path:          "/duplicate",
-			expectedError: NewErrVolumeAlreadyDefined("/duplicate"),
+			expectedError: NewErrVolumeAlreadyDefined(filepath.FromSlash("/duplicate")),
+		},
+		"add non-normalized duplicated path": {
+			path:          "/duplicate/",
+			expectedError: NewErrVolumeAlreadyDefined(filepath.FromSlash("/duplicate")),
 		},
 		"add child path": {
 			path: "/duplicate/child",

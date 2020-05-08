@@ -30,7 +30,7 @@ and OS are supported.
 NOTE: **Note:**
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
-Engine. This means means the
+Engine. This means the
 [minimum supported version](https://docs.docker.com/develop/sdk/#api-version-matrix)
 of Docker is `1.13.0`.
 
@@ -88,7 +88,6 @@ follows our [support lifecycle for
 Windows](../install/windows.md#windows-version-support-policy):
 
 - Windows Server 1809.
-- Windows Server 1803 *Deprecated*.
 
 For future Windows Server versions, we have a [future version support
 policy](../install/windows.md#windows-version-support-policy).
@@ -101,7 +100,6 @@ be used:
 - `mcr.microsoft.com/windows/servercore:1809`
 - `mcr.microsoft.com/windows/servercore:1809-amd64`
 - `mcr.microsoft.com/windows/servercore:ltsc2019`
-- `mcr.microsoft.com/windows/servercore:1803`
 
 ### Configuring a Windows Docker executor
 
@@ -178,7 +176,7 @@ don't specify a tag (like `image: ruby`), `latest` is implied.
 NOTE: **Note:**
 The image you choose to run your build in via `image` directive must have a
 working shell in its operating system `PATH`. Supported shells are `sh` or
-`bash` for Linux, `cmd` or PowerShell for Windows. GitLab Runner cannot
+`bash` for Linux, and PowerShell for Windows. GitLab Runner cannot
 execute a command using the underlying OS system calls (like `exec`).
 
 ## The `services` keyword
@@ -316,8 +314,6 @@ Look for the `[runners.docker]` section:
 
 NOTE: **Note:**
 The example above uses the [array of tables syntax](https://github.com/toml-lang/toml#user-content-array-of-tables).
-Defining services with the [array of strings syntax](https://github.com/toml-lang/toml#user-content-array)
-is deprecated and will be removed in a future version.
 
 The image and services defined this way will be added to all builds run by
 that Runner, so even if you don't define an `image` inside `.gitlab-ci.yml`,
@@ -486,7 +482,7 @@ build container. One of these options is the [`privileged` mode][privileged].
 The configured `privileged` flag is passed to the build container and all
 services, thus allowing to easily use the docker-in-docker approach.
 
-First, configure your Runner (config.toml) to run in `privileged` mode:
+First, configure your Runner (`config.toml`) to run in `privileged` mode:
 
 ```toml
 [[runners]]
@@ -654,8 +650,11 @@ when used with private images, read the
 
 The `always` pull policy will ensure that the image is **always** pulled.
 When `always` is used, the Runner will try to pull the image even if a local
-copy is available. If the image is not found, then the build will
-fail with an error similar to:
+copy is available. The [caching semantics](https://kubernetes.io/docs/concepts/configuration/overview/#container-images))
+of the underlying image provider make this policy efficient.
+The pull attempt is fast because all image layers are cached.
+
+If the image is not found, then the build will fail with an error similar to:
 
 ```plaintext
 Pulling docker image registry.tld/my/image:latest ...
@@ -690,7 +689,7 @@ configuration of the Runner.
 
 This pull policy will definitely not work if you need to use locally
 stored images. In this case, the Runner will skip the local copy of the image
-and try to pull it from the remote registry. If the image was build locally
+and try to pull it from the remote registry. If the image was built locally
 and doesn't exist in any public registry (and especially in the default
 Docker registry), the build will fail with:
 
