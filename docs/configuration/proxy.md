@@ -1,7 +1,6 @@
 # Running GitLab Runner behind a proxy
 
-This guide aims specifically to making GitLab Runner with Docker executor to
-work behind a proxy.
+This guide aims specifically to making GitLab Runner with Docker executor work behind a proxy.
 
 Before proceeding further, you need to make sure that you've already
 [installed Docker](https://docs.docker.com/install/) and
@@ -31,7 +30,7 @@ For extra security, and to protect your server from the outside world, you can
 bind CNTLM to listen on the `docker0` interface which has an IP that is reachable
 from inside the containers. If you tell CNTLM on the Docker host to bind only
 to this address, Docker containers will be able to reach it, but the outside
-world won't be able to.
+world won't.
 
 1. Find the IP that Docker is using:
 
@@ -78,7 +77,7 @@ Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
 
 ## Adding Proxy variables to the Runner configuration
 
-The proxy variables need to also be added the Runner's configuration, so that it can
+The proxy variables need to also be added to the Runner's configuration, so that it can
 get builds assigned from GitLab behind the proxy.
 
 This is basically the same as adding the proxy to the Docker service above:
