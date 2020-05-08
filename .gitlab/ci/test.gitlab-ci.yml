@@ -1,10 +1,10 @@
 include:
-- template: License-Management.gitlab-ci.yml
+- template: Security/License-Scanning.gitlab-ci.yml
 
-# Overriding 'License-Management.gitlab-ci.yml' template, because
+# Overriding 'License-Scanning.gitlab-ci.yml' template, because
 # we need to replace the only:refs: rules with our own, the same
 # as in `.merge_request_pipelines` template.
-license_management:
+license_scanning:
   only:
     refs:
     - merge_requests
