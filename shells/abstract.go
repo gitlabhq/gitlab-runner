@@ -69,6 +69,8 @@ func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, 
 }
 
 func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInfo) error {
+	skipRestoreCache := true
+
 	for _, cacheOptions := range info.Build.Cache {
 		// Create list of files to extract
 		var archiverArgs []string
@@ -84,6 +86,8 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		if len(archiverArgs) < 1 {
 			continue
 		}
+
+		skipRestoreCache = false
 
 		// Skip extraction if no cache is defined
 		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
@@ -121,6 +125,10 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		})
 	}
 
+	if skipRestoreCache {
+		return common.ErrSkipBuildStage
+	}
+
 	return nil
 }
 
@@ -150,10 +158,10 @@ func (b *AbstractShell) jobArtifacts(info common.ShellScriptInfo) (otherJobs []c
 	return
 }
 
-func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScriptInfo) {
+func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScriptInfo) error {
 	otherJobs := b.jobArtifacts(info)
 	if len(otherJobs) == 0 {
-		return
+		return common.ErrSkipBuildStage
 	}
 
 	b.guardRunnerCommand(w, info.RunnerCommand, "Artifacts downloading", func() {
@@ -161,13 +169,15 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScr
 			b.downloadArtifacts(w, otherJob, info)
 		}
 	})
-}
 
-func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
 	return nil
 }
 
-func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScriptInfo) error {
+	return nil
+}
+
+func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) error {
 	b.writeExports(w, info)
 
 	if !info.Build.IsSharedEnv() {
@@ -344,7 +354,7 @@ func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
 	}
 }
 
-func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.ShellScriptInfo) error {
 	build := info.Build
 
 	switch build.GetSubmoduleStrategy() {
@@ -399,7 +409,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	}
 }
 
-func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) error {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
@@ -407,13 +417,11 @@ func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.Shell
 	return b.cacheExtractor(w, info)
 }
 
-func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) error {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
-	// Process all artifacts
-	b.downloadAllArtifacts(w, info)
-	return nil
+	return b.downloadAllArtifacts(w, info)
 }
 
 // Write the given string of commands using the provided ShellWriter object.
@@ -436,7 +444,7 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands ...string) {
 	}
 }
 
-func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo) error {
 	var scriptStep *common.Step
 	for _, step := range info.Build.Steps {
 		if step.Name == common.StepNameScript {
@@ -446,7 +454,7 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 	}
 
 	if scriptStep == nil {
-		return nil
+		return common.ErrSkipBuildStage
 	}
 
 	b.writeExports(w, info)
@@ -466,7 +474,26 @@ func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptIn
 }
 
 func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo) error {
+	skipArchiveCache := true
+
 	for _, cacheOptions := range info.Build.Cache {
+		// Create list of files to archive
+		var archiverArgs []string
+		for _, path := range cacheOptions.Paths {
+			archiverArgs = append(archiverArgs, "--path", path)
+		}
+
+		if cacheOptions.Untracked {
+			archiverArgs = append(archiverArgs, "--untracked")
+		}
+
+		if len(archiverArgs) < 1 {
+			// Skip creating archive
+			continue
+		}
+
+		skipArchiveCache = false
+
 		// Skip archiving if no cache is defined
 		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 		if cacheKey == "" {
@@ -487,20 +514,6 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 			"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 		}
 
-		// Create list of files to archive
-		var archiverArgs []string
-		for _, path := range cacheOptions.Paths {
-			archiverArgs = append(archiverArgs, "--path", path)
-		}
-
-		if cacheOptions.Untracked {
-			archiverArgs = append(archiverArgs, "--untracked")
-		}
-
-		if len(archiverArgs) < 1 {
-			// Skip creating archive
-			continue
-		}
 		args = append(args, archiverArgs...)
 
 		// Generate cache upload address
@@ -519,10 +532,14 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		})
 	}
 
+	if skipArchiveCache {
+		return common.ErrSkipBuildStage
+	}
+
 	return nil
 }
 
-func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) {
+func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) bool {
 	args := []string{
 		"artifacts-uploader",
 		"--url",
@@ -545,8 +562,9 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 
 	if len(archiverArgs) < 1 {
 		// Skip creating archive
-		return
+		return false
 	}
+
 	args = append(args, archiverArgs...)
 
 	if artifact.Name != "" {
@@ -569,15 +587,19 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 		w.Notice("Uploading artifacts...")
 		w.Command(info.RunnerCommand, args...)
 	})
+
+	return true
 }
 
-func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) {
+func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) error {
 	if info.Build.Runner.URL == "" {
-		return
+		return common.ErrSkipBuildStage
 	}
 
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
+
+	skipUploadArtifacts := true
 
 	for _, artifact := range info.Build.Artifacts {
 		if onSuccess {
@@ -590,8 +612,16 @@ func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScr
 			}
 		}
 
-		b.writeUploadArtifact(w, info, artifact)
+		if b.writeUploadArtifact(w, info, artifact) {
+			skipUploadArtifacts = false
+		}
 	}
+
+	if skipUploadArtifacts {
+		return common.ErrSkipBuildStage
+	}
+
+	return nil
 }
 
 func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptInfo) error {
@@ -603,12 +633,8 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 		}
 	}
 
-	if afterScriptStep == nil {
-		return nil
-	}
-
-	if len(afterScriptStep.Script) == 0 {
-		return nil
+	if afterScriptStep == nil || len(afterScriptStep.Script) == 0 {
+		return common.ErrSkipBuildStage
 	}
 
 	b.writeExports(w, info)
@@ -619,7 +645,7 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 	return nil
 }
 
-func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
+func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.ShellScriptInfo) error {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
@@ -627,14 +653,12 @@ func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.Shell
 	return b.cacheArchiver(w, info)
 }
 
-func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeUploadArtifacts(w, info, true)
-	return
+func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) error {
+	return b.writeUploadArtifacts(w, info, true)
 }
 
-func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	b.writeUploadArtifacts(w, info, false)
-	return
+func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info common.ShellScriptInfo) error {
+	return b.writeUploadArtifacts(w, info, false)
 }
 
 func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {

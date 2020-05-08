@@ -89,6 +89,10 @@ const (
 	ExecutorJobSectionAttempts = "EXECUTOR_JOB_SECTION_ATTEMPTS"
 )
 
+// ErrSkipBuildStage is returned when there's nothing to be executed for the
+// build stage.
+var ErrSkipBuildStage = errors.New("skip build stage")
+
 type invalidAttemptError struct {
 	key string
 }
@@ -254,6 +258,15 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	}
 
 	script, err := GenerateShellScript(buildStage, *shell)
+	if errors.Is(err, ErrSkipBuildStage) {
+		if b.IsFeatureFlagOn(featureflags.SkipNoOpBuildStages) {
+			b.Log().WithField("build_stage", buildStage).Debug("Skipping stage (nothing to do)")
+			return nil
+		}
+
+		err = nil
+	}
+
 	if err != nil {
 		return err
 	}

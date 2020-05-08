@@ -8,6 +8,7 @@ const (
 	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
 	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
 	UseDirectDownload                    string = "FF_USE_DIRECT_DOWNLOAD"
+	SkipNoOpBuildStages                  string = "FF_SKIP_NOOP_BUILD_STAGES"
 )
 
 type FeatureFlag struct {
@@ -44,6 +45,13 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description:     "When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab",
+	},
+	{
+		Name:            SkipNoOpBuildStages,
+		DefaultValue:    "true",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description:     "When set to `false` all build stages are executed even if running them has no effect",
 	},
 }
 
