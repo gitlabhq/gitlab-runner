@@ -104,7 +104,7 @@ func (c *officialDockerClient) ContainerStart(ctx context.Context, containerID s
 func (c *officialDockerClient) ContainerKill(ctx context.Context, containerID string, signal string) error {
 	started := time.Now()
 	err := c.client.ContainerKill(ctx, containerID, signal)
-	return wrapError("ContainerWait", err, started)
+	return wrapError("ContainerKill", err, started)
 }
 
 func (c *officialDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
@@ -123,6 +123,10 @@ func (c *officialDockerClient) ContainerRemove(ctx context.Context, containerID 
 	started := time.Now()
 	err := c.client.ContainerRemove(ctx, containerID, options)
 	return wrapError("ContainerRemove", err, started)
+}
+
+func (c *officialDockerClient) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+	return c.client.ContainerWait(ctx, containerID, condition)
 }
 
 func (c *officialDockerClient) ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error) {

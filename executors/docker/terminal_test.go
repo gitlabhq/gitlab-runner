@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -21,6 +22,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -323,6 +325,7 @@ func TestTerminalConn_Start(t *testing.T) {
 				},
 			},
 			client: c,
+			waiter: wait.NewDockerWaiter(c),
 		},
 		buildContainer: &types.ContainerJSON{
 			ContainerJSONBase: &types.ContainerJSONBase{
@@ -348,13 +351,10 @@ func TestTerminalConn_Start(t *testing.T) {
 		Reader: bufio.NewReader(&nopReader{}),
 	}, nil).Once()
 
-	c.On("ContainerInspect", mock.Anything, "1234").Return(types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
-				Running: false,
-			},
-		},
-	}, nil)
+	bodyCh := make(chan container.ContainerWaitOKBody, 1)
+	bodyCh <- container.ContainerWaitOKBody{StatusCode: 0}
+	c.On("ContainerWait", mock.Anything, "1234", container.WaitConditionNotRunning).Return(
+		(<-chan container.ContainerWaitOKBody)(bodyCh), nil)
 
 	session, err := session.NewSession(nil)
 	require.NoError(t, err)
