@@ -16,12 +16,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bmatcuk/doublestar"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/kardianos/osext"
-	"github.com/mattn/go-zglob"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -954,7 +954,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 
 func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalImages []string) error {
 	for _, allowedImage := range allowedImages {
-		ok, _ := zglob.Match(allowedImage, image)
+		ok, _ := doublestar.Match(allowedImage, image)
 		if ok {
 			return nil
 		}
@@ -1232,7 +1232,16 @@ func (e *executor) Cleanup() {
 
 	wg.Wait()
 
-	err := e.cleanupNetwork(ctx)
+	err := e.cleanupVolume(ctx)
+	if err != nil {
+		volumeLogger := e.WithFields(logrus.Fields{
+			"error": err,
+		})
+
+		volumeLogger.Errorln("Failed to cleanup volumes")
+	}
+
+	err = e.cleanupNetwork(ctx)
 	if err != nil {
 		networkLogger := e.WithFields(logrus.Fields{
 			"network": e.networkMode.NetworkName(),
@@ -1247,6 +1256,20 @@ func (e *executor) Cleanup() {
 	}
 
 	e.AbstractExecutor.Cleanup()
+}
+
+func (e *executor) cleanupVolume(ctx context.Context) error {
+	if e.volumesManager == nil {
+		e.Debugln("Volumes manager is empty, skipping volumes cleanup")
+		return nil
+	}
+
+	err := e.volumesManager.RemoveTemporary(ctx)
+	if err != nil {
+		return fmt.Errorf("remove temporary volumes: %w", err)
+	}
+
+	return nil
 }
 
 type serviceHealthCheckError struct {
