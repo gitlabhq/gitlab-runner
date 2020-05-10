@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
@@ -1302,6 +1303,476 @@ func TestRunnerSettings_IsFeatureFlagOn(t *testing.T) {
 
 			on := cfg.IsFeatureFlagOn(tt.name)
 			assert.Equal(t, tt.expectedValue, on)
+		})
+	}
+}
+
+func TestEffectivePrivilege(t *testing.T) {
+	tests := map[string]struct {
+		pod       bool
+		container bool
+		expected  bool
+	}{
+		"pod and container privileged": {
+			pod:       true,
+			container: true,
+			expected:  true,
+		},
+		"pod privileged": {
+			pod:       true,
+			container: false,
+			expected:  false,
+		},
+		"container privileged": {
+			pod:       false,
+			container: true,
+			expected:  true,
+		},
+		"all unprivileged": {
+			pod:       false,
+			container: false,
+			expected:  false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			k8sConfig := KubernetesConfig{
+				Privileged: &tt.pod,
+			}
+			effectivePrivileged := k8sConfig.getPrivilegedEffective(&tt.container)
+			require.NotNil(t, effectivePrivileged)
+			assert.Equal(t, tt.expected, *effectivePrivileged)
+		})
+	}
+}
+
+func TestContainerSecurityContext(t *testing.T) {
+	boolPtr := func(v bool) *bool {
+		return &v
+	}
+
+	tests := map[string]struct {
+		assignSecurityContextFn             func(c *KubernetesConfig)
+		getSecurityContext                  func(c *KubernetesConfig) *v1.SecurityContext
+		getExpectedContainerSecurityContext func() *v1.SecurityContext
+	}{
+		"no build container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetBuildContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+				}
+			},
+		},
+		"run as user - build container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				runAsUser := int64(1000)
+				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
+					RunAsUser: &runAsUser,
+				}
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetBuildContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				runAsUser := int64(1000)
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+		},
+		"no service container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetServiceContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+				}
+			},
+		},
+		"run as user - service container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				runAsUser := int64(900)
+				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
+					RunAsUser: &runAsUser,
+				}
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetServiceContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				runAsUser := int64(900)
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+		},
+		"no helper container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetHelperContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+				}
+			},
+		},
+		"run as user - helper container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				runAsUser := int64(65535)
+				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
+					RunAsUser: &runAsUser,
+				}
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetHelperContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				runAsUser := int64(65535)
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+		},
+		"privileged - helper container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.Privileged = boolPtr(true)
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetHelperContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := true
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+				}
+			},
+		},
+		"privileged - service container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.Privileged = boolPtr(true)
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetServiceContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := true
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+				}
+			},
+		},
+		"privileged - build container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.Privileged = boolPtr(true)
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetBuildContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				return &v1.SecurityContext{
+					Privileged: boolPtr(true),
+				}
+			},
+		},
+		"container privileged override - helper container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.Privileged = boolPtr(true)
+
+				privileged := false
+				runAsUser := int64(65535)
+				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetHelperContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				runAsUser := int64(65535)
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+		},
+		"container privileged override - service container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.Privileged = boolPtr(true)
+
+				privileged := false
+				runAsUser := int64(65535)
+				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetServiceContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				runAsUser := int64(65535)
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+		},
+		"container privileged override - build container security context": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.Privileged = boolPtr(true)
+
+				privileged := false
+				runAsUser := int64(65535)
+				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
+				return c.GetBuildContainerSecurityContext()
+			},
+			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
+				privileged := false
+				runAsUser := int64(65535)
+				return &v1.SecurityContext{
+					Privileged: &privileged,
+					RunAsUser:  &runAsUser,
+				}
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			config := new(KubernetesConfig)
+			tt.assignSecurityContextFn(config)
+
+			tt.assignSecurityContextFn(config)
+			scExpected := tt.getExpectedContainerSecurityContext()
+			scActual := tt.getSecurityContext(config)
+			assert.Equal(t, scExpected, scActual)
+		})
+	}
+}
+
+func TestContainerSecurityCapabilities(t *testing.T) {
+	tests := map[string]struct {
+		assignSecurityContextFn func(c *KubernetesConfig)
+		getCapabilitiesFn       func(c *KubernetesConfig) *v1.Capabilities
+		expectedCapabilities    *v1.Capabilities
+	}{
+		"build container add": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
+					Capabilities: &KubernetesBuildContainerCapabilities{
+						Add: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getBuildContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  []v1.Capability{"SYS_TIME"},
+				Drop: nil,
+			},
+		},
+		"build container drop": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
+					Capabilities: &KubernetesBuildContainerCapabilities{
+						Drop: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getBuildContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  nil,
+				Drop: []v1.Capability{"SYS_TIME"},
+			},
+		},
+		"build container add and drop": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
+					Capabilities: &KubernetesBuildContainerCapabilities{
+						Add:  []v1.Capability{"SYS_TIME"},
+						Drop: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getBuildContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  []v1.Capability{"SYS_TIME"},
+				Drop: []v1.Capability{"SYS_TIME"},
+			},
+		},
+		"build container empty": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getBuildContainerCapabilities()
+			},
+			expectedCapabilities: nil,
+		},
+		"helper container add": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
+					Capabilities: &KubernetesHelperContainerCapabilities{
+						Add: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getHelperContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  []v1.Capability{"SYS_TIME"},
+				Drop: nil,
+			},
+		},
+		"helper container drop": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
+					Capabilities: &KubernetesHelperContainerCapabilities{
+						Drop: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getHelperContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  nil,
+				Drop: []v1.Capability{"SYS_TIME"},
+			},
+		},
+		"helper container add and drop": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
+					Capabilities: &KubernetesHelperContainerCapabilities{
+						Add:  []v1.Capability{"SYS_TIME"},
+						Drop: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getHelperContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  []v1.Capability{"SYS_TIME"},
+				Drop: []v1.Capability{"SYS_TIME"},
+			},
+		},
+		"helper container empty": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getHelperContainerCapabilities()
+			},
+			expectedCapabilities: nil,
+		},
+		"service container add": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
+					Capabilities: &KubernetesServiceContainerCapabilities{
+						Add: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getServiceContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  []v1.Capability{"SYS_TIME"},
+				Drop: nil,
+			},
+		},
+		"service container drop": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
+					Capabilities: &KubernetesServiceContainerCapabilities{
+						Drop: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getServiceContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  nil,
+				Drop: []v1.Capability{"SYS_TIME"},
+			},
+		},
+		"service container add and drop": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
+					Capabilities: &KubernetesServiceContainerCapabilities{
+						Add:  []v1.Capability{"SYS_TIME"},
+						Drop: []v1.Capability{"SYS_TIME"},
+					},
+				}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getServiceContainerCapabilities()
+			},
+
+			expectedCapabilities: &v1.Capabilities{
+				Add:  []v1.Capability{"SYS_TIME"},
+				Drop: []v1.Capability{"SYS_TIME"},
+			},
+		},
+		"service container empty": {
+			assignSecurityContextFn: func(c *KubernetesConfig) {
+				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{}
+			},
+			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
+				return c.getServiceContainerCapabilities()
+			},
+			expectedCapabilities: nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			config := new(KubernetesConfig)
+			tt.assignSecurityContextFn(config)
+
+			c := tt.getCapabilitiesFn(config)
+			assert.Equal(t, tt.expectedCapabilities, c)
 		})
 	}
 }
