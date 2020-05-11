@@ -29,6 +29,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
@@ -62,9 +64,10 @@ var errNetworksManagerUndefined = errors.New("networksManager is undefined")
 
 type executor struct {
 	executors.AbstractExecutor
-	client       docker.Client
-	volumeParser parser.Parser
-	info         types.Info
+	client                    docker.Client
+	volumeParser              parser.Parser
+	newVolumePermissionSetter func() (permission.Setter, error)
+	info                      types.Info
 
 	temporary []string // IDs of containers that should be removed
 
@@ -808,43 +811,9 @@ func (e *executor) killContainer(id string, waitCh chan error) (err error) {
 func (e *executor) waitForContainer(ctx context.Context, id string) error {
 	e.Debugln("Waiting for container", id, "...")
 
-	retries := 0
+	waiter := wait.NewDockerWaiter(e.client)
 
-	// Use active wait
-	for ctx.Err() == nil {
-		container, err := e.client.ContainerInspect(ctx, id)
-		if err != nil {
-			if docker.IsErrNotFound(err) {
-				return err
-			}
-
-			if retries > 3 {
-				return err
-			}
-
-			retries++
-			time.Sleep(time.Second)
-			continue
-		}
-
-		// Reset retry timer
-		retries = 0
-
-		if container.State.Running {
-			time.Sleep(time.Second)
-			continue
-		}
-
-		if container.State.ExitCode != 0 {
-			return &common.BuildError{
-				Inner: fmt.Errorf("exit code %d", container.State.ExitCode),
-			}
-		}
-
-		return nil
-	}
-
-	return ctx.Err()
+	return waiter.Wait(ctx, id)
 }
 
 func (e *executor) watchContainer(ctx context.Context, id string, input io.Reader) (err error) {

@@ -4,6 +4,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 )
 
 func init() {
@@ -32,6 +33,11 @@ func init() {
 				volumeParser: parser.NewWindowsParser(),
 			},
 		}
+
+		e.newVolumePermissionSetter = func() (permission.Setter, error) {
+			return permission.NewDockerWindowsSetter(), nil
+		}
+
 		e.SetCurrentStage(common.ExecutorStageCreated)
 		return e
 	}

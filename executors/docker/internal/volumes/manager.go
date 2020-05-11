@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types/volume"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
@@ -21,17 +22,19 @@ type Manager interface {
 }
 
 type ManagerConfig struct {
-	CacheDir     string
-	BasePath     string
-	UniqueName   string
-	DisableCache bool
+	CacheDir         string
+	BasePath         string
+	UniqueName       string
+	DisableCache     bool
+	PermissionSetter permission.Setter
 }
 
 type manager struct {
-	config ManagerConfig
-	logger debugLogger
-	parser parser.Parser
-	client docker.Client
+	config           ManagerConfig
+	logger           debugLogger
+	parser           parser.Parser
+	client           docker.Client
+	permissionSetter permission.Setter
 
 	volumeBindings   []string
 	temporaryVolumes []string
@@ -40,12 +43,13 @@ type manager struct {
 
 func NewManager(logger debugLogger, volumeParser parser.Parser, c docker.Client, config ManagerConfig) Manager {
 	return &manager{
-		config:         config,
-		logger:         logger,
-		parser:         volumeParser,
-		client:         c,
-		volumeBindings: make([]string, 0),
-		managedVolumes: pathList{},
+		config:           config,
+		logger:           logger,
+		parser:           volumeParser,
+		client:           c,
+		volumeBindings:   make([]string, 0),
+		managedVolumes:   pathList{},
+		permissionSetter: config.PermissionSetter,
 	}
 }
 
@@ -175,6 +179,13 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) (st
 	v, err := m.client.VolumeCreate(ctx, vBody)
 	if err != nil {
 		return "", fmt.Errorf("creating docker volume: %w", err)
+	}
+
+	if m.permissionSetter != nil {
+		err = m.permissionSetter.Set(ctx, v.Name)
+		if err != nil {
+			return "", fmt.Errorf("set volume permissions: %w", err)
+		}
 	}
 
 	m.appendVolumeBind(&parser.Volume{
