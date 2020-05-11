@@ -48,7 +48,10 @@ export CGO_ENABLED ?= 0
 
 # Development Tools
 GOX = gox
-MOCKERY = mockery
+
+MOCKERY_VERSION ?= 1.1.0
+MOCKERY ?= .tmp/mockery-$(MOCKERY_VERSION)
+
 DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
 
 RELEASE_INDEX_GEN_VERSION ?= latest
@@ -140,18 +143,18 @@ dockerfiles:
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
-	mockery -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
-	mockery -dir=./network -name='requester' -inpkg
-	mockery -dir=./helpers -all -inpkg
-	mockery -dir=./executors/docker -all -inpkg
-	mockery -dir=./executors/kubernetes -all -inpkg
-	mockery -dir=./executors/custom -all -inpkg
-	mockery -dir=./cache -all -inpkg
-	mockery -dir=./common -all -inpkg
-	mockery -dir=./log -all -inpkg
-	mockery -dir=./referees -all -inpkg
-	mockery -dir=./session -all -inpkg
-	mockery -dir=./shells -all -inpkg
+	$(MOCKERY) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
+	$(MOCKERY) -dir=./network -name='requester' -inpkg
+	$(MOCKERY) -dir=./helpers -all -inpkg
+	$(MOCKERY) -dir=./executors/docker -all -inpkg
+	$(MOCKERY) -dir=./executors/kubernetes -all -inpkg
+	$(MOCKERY) -dir=./executors/custom -all -inpkg
+	$(MOCKERY) -dir=./cache -all -inpkg
+	$(MOCKERY) -dir=./common -all -inpkg
+	$(MOCKERY) -dir=./log -all -inpkg
+	$(MOCKERY) -dir=./referees -all -inpkg
+	$(MOCKERY) -dir=./session -all -inpkg
+	$(MOCKERY) -dir=./shells -all -inpkg
 
 check_mocks:
 	# Checking if mocks are up-to-date
@@ -315,8 +318,13 @@ check_modules:
 $(GOX):
 	go get github.com/mitchellh/gox
 
+$(MOCKERY): OS_TYPE ?= $(shell uname -s)
+$(MOCKERY): DOWNLOAD_URL = "https://github.com/vektra/mockery/releases/download/v$(MOCKERY_VERSION)/mockery_$(MOCKERY_VERSION)_$(OS_TYPE)_x86_64.tar.gz"
 $(MOCKERY):
-	go get github.com/vektra/mockery/cmd/mockery
+	# Installing $(DOWNLOAD_URL) as $(MOCKERY)
+	@mkdir -p $(shell dirname $(MOCKERY))
+	@curl -sL "$(DOWNLOAD_URL)" | tar xz -O mockery > $(MOCKERY)
+	@chmod +x "$(MOCKERY)"
 
 $(RELEASE_INDEX_GENERATOR): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 $(RELEASE_INDEX_GENERATOR): DOWNLOAD_URL = "https://storage.googleapis.com/gitlab-runner-tools/release-index-generator/$(RELEASE_INDEX_GEN_VERSION)/release-index-gen-$(OS_TYPE)-amd64"
