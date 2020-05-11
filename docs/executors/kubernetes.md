@@ -389,7 +389,7 @@ USER 59417:59417
 
 This example creates a user and group called `nonroot` and sets the image to run as that user.
 
-Example of setting pod security context in your config.toml:
+Example of setting pod security context in your `config.toml`:
 
 ```toml
 concurrent = %(concurrent)s
