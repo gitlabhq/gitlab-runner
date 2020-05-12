@@ -1,3 +1,72 @@
+## v13.0.0-rc1 (2020-05-12)
+
+### Breaking Changes
+
+- Remove windows Batch from shell executor !2037
+- Remove support for --docker-services flag on register command !2036
+- Remove fedora/29 package !1905 (Fábio Matavelli @fabiomatavelli)
+- Remove /debug/jobs/list?v=1 endpoint !1894 (Fábio Matavelli @fabiomatavelli)
+- Remove backported os.Expand() implementation !1892 (Fábio Matavelli @fabiomatavelli)
+- Remove FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER feature flag !1889 (Fábio Matavelli @fabiomatavelli)
+- Remove macOS 32 bit support !2051
+- Remove support for Windows 1803 !2033
+- Remove legacy build directory caching in Docker Executor !2067
+- Remove support for array of strings when defining services for Docker Executor !2035
+
+### New features
+
+- Support more glob patterns for artifact/cache !1917
+- Add arm64 Docker images for gitlab/gitlab-runner !1861
+- Make docker machine configuration more elastic !1980
+
+### Bug fixes
+
+- Fix duplicate volume check with trailing slash !2050
+- Fix permissions of docker volumes created by Runner !2047
+- Fix removal of build volume when disable_cache set to true !2042
+- Fix err checks from volume manager !2034
+- Revert "Merge branch '4450-fix-container-wait' into 'master'" !2026
+
+### Maintenance
+
+- Retry Docker build jobs !2087
+- Update installation of mockery !2085
+- Fix Docker Auth config to be platform agnostic !2077
+- Refactor tests in builds_helper_test !2057
+- Enable unused linter !2043
+- Remove support for array of strings when defining services for Docker Executor !2035
+- Update assertion for Docker test !2031
+- Add tests for Docker config read when no username is specified !2024 (Andrii Zakharov @andriiz1)
+- Skip flaky TestDockerCommandRunAttempts until fix is merged !2017
+- Remove prealloc linter !2014
+- Pin CI jobs to gitlab-org runners !1979
+- Replace Code Climate with golangci-lint !1956
+
+### Documentation changes
+
+- Update capitalization configuration !2084
+- Update proxy.md documentation for grammar and clarity !2071 (Kade Cole @kadecole)
+- Add link to AWS Fargate documentation page !2070
+- Adds the link to new AWS Fargate page !2068
+- Add more Vale rules to project !2061
+- Remove tip alert box !2054
+- Added Kaniko reference materials to Runner helm charts page !2039
+- Sync Vale substitutions rules from GitLab project !2029
+- Update PowerShell documentation to include video and working example project. !2028
+- Handle situation where vale docs-lint error is overwritten by markdownlint success !2025
+- Update faq to include firewall troubleshooting !2023
+- Add recommended extensions for VS Code !2022
+- Move documentation linting to Makefile !2021
+- Add section about using TLS with custom CA in regular build scripts !2018
+- Sync Markdownlint settings from GitLab project !2015
+- Fixed helm search command !2007 (penguindustin @penguindustin)
+- Improve signals documentation and add a best practice for graceful shutdown !1988
+- Make docker machine configuration more elastic !1980
+- Autoscale GitLab Runner on AWS Fargate configuration doc !1914
+- Add details about how pull always is still fast and efficient !1885 (Ben Bodenmiller @bbodenmiller)
+- Correct documentation inaccuracies for `OffPeakPeriods` !1805 (Wes Cossick @wescossick)
+- Removed `CONTAINER_ID` in prepare.sh, so `CONTAINER_ID` in base.sh is used. !1723 (JUN JIE NAN @nanjj)
+
 ## v12.10.0 (2020-04-21)
 
 ### New features
