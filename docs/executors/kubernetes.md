@@ -63,25 +63,29 @@ The following keywords help to define the behavior of the Runner within Kubernet
   it disables the namespace overwrite feature
 - `privileged`: Run containers with the privileged flag
 - `cpu_limit`: The CPU allocation given to build containers
-- `cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for build containers. When empty,
-    it disables the cpu limit overwrite feature
+- `cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature
 - `memory_limit`: The amount of memory allocated to build containers
-- `memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for build containers. When empty,
-    it disables the memory limit overwrite feature
+- `memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature
 - `service_cpu_limit`: The CPU allocation given to build service containers
+- `service_cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for service containers. When empty, it disables the cpu limit overwrite feature
 - `service_memory_limit`: The amount of memory allocated to build service containers
+- `service_memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature
 - `helper_cpu_limit`: The CPU allocation given to build helper containers
+- `helper_cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for helper containers. When empty, it disables the cpu limit overwrite feature
 - `helper_memory_limit`: The amount of memory allocated to build helper containers
+- `helper_memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature
 - `cpu_request`: The CPU allocation requested for build containers
-- `cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for build containers. When empty,
-    it disables the cpu request overwrite feature
+- `cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for build containers. When empty, it disables the cpu request overwrite feature
 - `memory_request`: The amount of memory requested from build containers
-- `memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for build containers. When empty,
-    it disables the memory request overwrite feature
+- `memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature
 - `service_cpu_request`: The CPU allocation requested for build service containers
+- `service_cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for service containers. When empty, it disables the cpu request overwrite feature
 - `service_memory_request`: The amount of memory requested for build service containers
+- `service_memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature
 - `helper_cpu_request`: The CPU allocation requested for build helper containers
+- `helper_cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for helper containers. When empty, it disables the cpu request overwrite feature
 - `helper_memory_request`: The amount of memory requested for build helper containers
+- `helper_memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature
 - `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) will be used if not set.
   - See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs
@@ -178,11 +182,11 @@ variables:
 NOTE: **Note:**
 You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file.
 
-### Overwriting Build Resources
+### Overwriting Container Resources
 
 Additionally, Kubernetes CPU and memory allocations for requests and
-limits can be overwritten on the `.gitlab-ci.yml` file with the
-following variables:
+limits for the build, helper and service containers can be overwritten
+on the `.gitlab-ci.yml` file with the following variables:
 
 ``` yaml
  variables:
@@ -190,6 +194,16 @@ following variables:
    KUBERNETES_CPU_LIMIT: 5
    KUBERNETES_MEMORY_REQUEST: 2Gi
    KUBERNETES_MEMORY_LIMIT: 4Gi
+
+   KUBERNETES_HELPER_CPU_REQUEST: 3
+   KUBERNETES_HELPER_CPU_LIMIT: 5
+   KUBERNETES_HELPER_MEMORY_REQUEST: 2Gi
+   KUBERNETES_HELPER_MEMORY_LIMIT: 4Gi
+
+   KUBERNETES_SERVICE_CPU_REQUEST: 3
+   KUBERNETES_SERVICE_CPU_LIMIT: 5
+   KUBERNETES_SERVICE_MEMORY_REQUEST: 2Gi
+   KUBERNETES_SERVICE_MEMORY_LIMIT: 4Gi
 ```
 
 The values for these variables are restricted to what the max overwrite
