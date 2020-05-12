@@ -56,8 +56,6 @@ var (
 	}
 
 	detectShellScript = shells.BashDetectShellScript
-
-	newLogProcessor = newKubernetesLogProcessor
 )
 
 type commandTerminatedError struct {
@@ -108,7 +106,8 @@ type executor struct {
 
 	helperImageInfo helperimage.Info
 
-	featureChecker featureChecker
+	featureChecker  featureChecker
+	newLogProcessor func() (logProcessor, error)
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
 }
@@ -263,7 +262,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 	containerCommand := []string{
 		"sh",
 		s.scriptPath(detectShellScriptName),
-		fmt.Sprintf("%s 2>&1 | tee -a %s", s.scriptPath(cmd.Stage), s.logFile()),
+		s.buildCommandForStage(cmd.Stage),
 	}
 	if cmd.Predefined {
 		containerName = helperContainerName
@@ -273,7 +272,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		containerCommand = append(
 			s.helperImageInfo.Cmd,
 			"<<<",
-			fmt.Sprintf("%s 2>&1 | tee -a %s", s.scriptPath(cmd.Stage), s.logFile()),
+			s.buildCommandForStage(cmd.Stage),
 		)
 	}
 
@@ -330,38 +329,32 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("pod failed to enter running state: %s", status)
 	}
 
-	go s.processLogs(ctx)
+	processor, err := s.newLogProcessor()
+	if err != nil {
+		return err
+	}
+
+	go s.processLogs(ctx, processor)
 
 	return nil
 }
 
-func (s *executor) processLogs(ctx context.Context) {
-	config, _ := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
+func (s *executor) buildCommandForStage(stage common.BuildStage) string {
+	return fmt.Sprintf("%s 2>&1 | tee -a %s", s.scriptPath(stage), s.logFile())
+}
 
-	processor := newLogProcessor(
-		s.kubeClient,
-		config,
-		backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
-		&s.BuildLogger,
-		kubernetesLogProcessorPodConfig{
-			namespace: s.pod.Namespace,
-			pod:       s.pod.Name,
-			containers: []kubernetesLogProcessorContainer{{
-				name:    helperContainerName,
-				logPath: s.logFile(),
-			}},
-		},
-	)
+func (s *executor) processLogs(ctx context.Context, processor logProcessor) {
+	logsCh := make(chan string)
+	go processor.Process(ctx, logsCh)
 
-	logs := processor.Listen(ctx)
-	for line := range logs {
+	for line := range logsCh {
 		var status shells.TrapCommandExitStatus
 		if status.TryUnmarshal(line) {
 			s.remoteProcessTerminated <- status
 			continue
 		}
 
-		_, err := s.Trace.Write([]byte(line + "\n"))
+		_, err := s.Trace.Write(append([]byte(line), '\n'))
 		if err != nil {
 			s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
 		}
@@ -1207,7 +1200,7 @@ func (s *executor) checkDefaults() error {
 	return nil
 }
 
-func createFn() common.Executor {
+func newExecutor() *executor {
 	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
@@ -1216,13 +1209,38 @@ func createFn() common.Executor {
 		logrus.WithError(err).Fatal("Failed to set up helper image for kubernetes executor")
 	}
 
-	return &executor{
+	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
 		},
 		helperImageInfo:         helperImageInfo,
 		remoteProcessTerminated: make(chan shells.TrapCommandExitStatus),
 	}
+
+	e.newLogProcessor = func() (logProcessor, error) {
+		config, err := getKubeClientConfig(e.Config.Kubernetes, e.configurationOverwrites)
+		if err != nil {
+			return nil, err
+		}
+
+		kubernetesLogProcessor := newKubernetesLogProcessor(
+			e.kubeClient,
+			config,
+			&backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
+			&e.BuildLogger,
+			kubernetesLogProcessorPodConfig{
+				namespace:          e.pod.Namespace,
+				pod:                e.pod.Name,
+				container:          helperContainerName,
+				logPath:            e.logFile(),
+				waitLogFileTimeout: time.Second,
+			},
+		)
+
+		return kubernetesLogProcessor, nil
+	}
+
+	return e
 }
 
 func featuresFn(features *common.FeaturesInfo) {
@@ -1238,7 +1256,9 @@ func featuresFn(features *common.FeaturesInfo) {
 
 func init() {
 	common.RegisterExecutorProvider("kubernetes", executors.DefaultExecutorProvider{
-		Creator:          createFn,
+		Creator: func() common.Executor {
+			return newExecutor()
+		},
 		FeaturesUpdater:  featuresFn,
 		DefaultShellName: executorOptions.Shell.Shell,
 	})

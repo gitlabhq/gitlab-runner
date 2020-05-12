@@ -11,16 +11,17 @@ import (
 
 // BashTrapShellScript is used to wrap a shell script in a trap that makes sure the script always exits with exit code of 0
 // this can be useful in container environments where exiting with an exit code different from 0 would kill the container.
-// At the same time it prints to stdout the actual exit code of the script as well as the filename of the script as json.
+// At the same time it writes to a file the actual exit code of the script as well as the filename of the script as json.
 const bashTrapShellScript = `runner_script_trap() {
 	log_file=%s
-	out_json="{\"command_exit_code\": $?, \"script\": \"$0\"}\n"
+	out_json="{\"command_exit_code\": $?, \"script\": \"$0\"}"
 
+	# Make sure the command status will always be printed on a new line 
 	if [[ $(tail -c1 $log_file | wc -l) -gt 0 ]]; then
-        printf "$out_json" >> $log_file
-    else 
-        printf "\n$out_json" >> $log_file
-    fi
+		printf "$out_json\n" >> $log_file
+	else 
+		printf "\n$out_json\n" >> $log_file
+	fi
 	
 	exit 0
 }
@@ -29,8 +30,8 @@ trap runner_script_trap EXIT
 
 `
 
-func GenerateBashTrapShellScript(cmdStatusOutFile string) string {
-	return fmt.Sprintf(bashTrapShellScript, cmdStatusOutFile)
+func GenerateBashTrapShellScript(logFile string) string {
+	return fmt.Sprintf(bashTrapShellScript, logFile)
 }
 
 type BashTrapShellWriter struct {

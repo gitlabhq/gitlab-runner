@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -28,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -424,6 +422,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					Config:          tt.RunnerConfig,
 				},
 			}
+
 			setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
 			mounts := e.getVolumeMounts()
@@ -523,6 +522,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 				},
 				configMap: fakeConfigMap(),
 			}
+
 			setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
 			volumes := e.getVolumes()
@@ -1059,9 +1059,10 @@ func TestCleanup(t *testing.T) {
 				configMap:   test.ConfigMap,
 			}
 			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
+
 			errored := false
 			buildTrace := FakeBuildTrace{
-				testWriter{
+				testWriter: testWriter{
 					call: func(b []byte) (int, error) {
 						if !errored {
 							if s := string(b); strings.Contains(s, "Error cleaning up") {
@@ -2732,6 +2733,7 @@ func TestSetupBuildPod(t *testing.T) {
 
 			mockFc := &mockFeatureChecker{}
 			mockFc.On("IsHostAliasSupported").Return(true, nil)
+
 			ex := executor{
 				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
 				options:    options,
@@ -2776,50 +2778,35 @@ func TestSetupBuildPod(t *testing.T) {
 func TestProcessLogs(t *testing.T) {
 	mockTrace := &common.MockJobTrace{}
 	defer mockTrace.AssertExpectations(t)
-
-	mockTrace.On("Write", mock.MatchedBy(func(in []byte) bool {
-		return bytes.Equal(in, []byte("line\n"))
-	})).Return(0, nil).Once()
-
-	oldLogProcessor := newLogProcessor
-	defer func() {
-		newLogProcessor = oldLogProcessor
-	}()
+	mockTrace.On("Write", []byte("line\n")).Return(0, nil).Once()
 
 	mockLogProcessor := &mockLogProcessor{}
 	defer mockLogProcessor.AssertExpectations(t)
+	mockLogProcessor.On("Process", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			ch := args.Get(1).(chan string)
+			ch <- "line"
 
-	logsCh := make(chan string)
-	go func() {
-		logsCh <- "line"
+			exitCode := 1
+			script := "script"
+			status := shells.TrapCommandExitStatus{
+				CommandExitCode: &exitCode,
+				Script:          &script,
+			}
 
-		exitCode := 1
-		script := "script"
-		status := shells.TrapCommandExitStatus{
-			CommandExitCode: &exitCode,
-			Script:          &script,
-		}
+			b, err := json.Marshal(status)
+			require.NoError(t, err)
+			ch <- string(b)
+		}).
+		Once()
 
-		b, _ := json.Marshal(status)
-		logsCh <- string(b)
-		close(logsCh)
-	}()
-
-	var returnCh <-chan string = logsCh
-	mockLogProcessor.On("Listen", mock.Anything).Return(returnCh).Once()
-
-	newLogProcessor = func(client *kubernetes.Clientset, backoff backoff.Backoff, logger *common.BuildLogger, podCfg kubernetesLogProcessorPodConfig) logProcessor {
-		return mockLogProcessor
-	}
-
-	e := executor{}
-	e.remoteProcessTerminated = make(chan shells.TrapCommandExitStatus)
+	e := newExecutor()
 	e.Trace = mockTrace
 	e.pod = &api.Pod{}
 	e.pod.Name = "pod_name"
 	e.pod.Namespace = "namespace"
 
-	go e.processLogs(context.Background())
+	go e.processLogs(context.Background(), mockLogProcessor)
 
 	exitStatus := <-e.remoteProcessTerminated
 	assert.Equal(t, 1, *exitStatus.CommandExitCode)
