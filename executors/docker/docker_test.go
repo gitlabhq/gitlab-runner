@@ -981,40 +981,6 @@ func TestCreateBuildVolume(t *testing.T) {
 			},
 			createVolumeManager: true,
 		},
-		"git strategy fetch, non-empty buildsDir, no error, legacy builds dir": {
-			// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
-			gitStrategy: "fetch",
-			buildsDir:   "/builds",
-			adjustConfiguration: func(e *executor) {
-				e.Build.Variables = append(e.Build.Variables, common.JobVariable{
-					Key:   featureflags.UseLegacyBuildsDirForDocker,
-					Value: "true",
-				})
-			},
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("Create", mock.Anything, "/builds/group").
-					Return(nil).
-					Once()
-			},
-			createVolumeManager: true,
-		},
-		"git strategy clone, non-empty buildsDir, no error, legacy builds dir": {
-			// TODO: Remove in 13.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/4180
-			gitStrategy: "clone",
-			buildsDir:   "/builds",
-			adjustConfiguration: func(e *executor) {
-				e.Build.Variables = append(e.Build.Variables, common.JobVariable{
-					Key:   featureflags.UseLegacyBuildsDirForDocker,
-					Value: "true",
-				})
-			},
-			volumesManagerAssertions: func(vm *volumes.MockManager) {
-				vm.On("CreateTemporary", mock.Anything, "/builds/group").
-					Return(nil).
-					Once()
-			},
-			createVolumeManager: true,
-		},
 	}
 
 	for testName, test := range tests {
