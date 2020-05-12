@@ -30,22 +30,30 @@ var (
 	errNoHomeDir  = errors.New("no home directory found")
 )
 
+// RegistryInfo represents the source and authentication for a given registry.
+type RegistryInfo struct {
+	Source     string
+	AuthConfig types.AuthConfig
+}
+
 type authConfigResolver func() (string, map[string]types.AuthConfig)
 
 // GetConfigForImage returns the auth configuration for a particular image.
 // See GetAuthConfigs for source information.
-func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) (string, *types.AuthConfig) {
-	sources, authConfigs := GetConfigs(dockerAuthConfig, username, credentials)
+func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) *RegistryInfo {
+	authConfigs := GetConfigs(dockerAuthConfig, username, credentials)
 	if authConfigs == nil {
-		return "", nil
+		return &RegistryInfo{}
 	}
-	indexName, _ := SplitDockerImageName(imageName)
-	for registry, config := range authConfigs {
+
+	indexName, _ := splitDockerImageName(imageName)
+	for registry, info := range authConfigs {
 		if indexName == convertToHostname(registry) {
-			return sources[registry], &config
+			return info
 		}
 	}
-	return "", nil
+
+	return &RegistryInfo{}
 }
 
 // GetConfigs returns the authentication configuration for docker registries.
@@ -53,10 +61,9 @@ func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials
 // 1. DOCKER_AUTH_CONFIG
 // 2. ~/.docker/config.json or .dockercfg
 // 3. Build credentials
-// Returns two maps - one mapping registry to source and one mapping registry to config.
-func GetConfigs(dockerAuthConfig, username string, credentials []common.Credentials) (map[string]string, map[string]types.AuthConfig) {
-	sources := make(map[string]string)
-	res := make(map[string]types.AuthConfig)
+// Returns a map of registry hostname to RegistryInfo
+func GetConfigs(dockerAuthConfig, username string, credentials []common.Credentials) map[string]*RegistryInfo {
+	res := make(map[string]*RegistryInfo)
 
 	resolvers := []authConfigResolver{
 		func() (string, map[string]types.AuthConfig) {
@@ -73,14 +80,16 @@ func GetConfigs(dockerAuthConfig, username string, credentials []common.Credenti
 	for _, r := range resolvers {
 		source, configs := r()
 		for registry, conf := range configs {
-			if _, ok := sources[registry]; !ok {
-				sources[registry] = source
-				res[registry] = conf
+			if _, ok := res[registry]; !ok {
+				res[registry] = &RegistryInfo{
+					Source:     source,
+					AuthConfig: conf,
+				}
 			}
 		}
 	}
 
-	return sources, res
+	return res
 }
 
 func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig) {
@@ -92,24 +101,6 @@ func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.Aut
 	}
 
 	return authConfigSourceNameUserVariable, authConfigs
-}
-
-func getBuildConfiguration(credentials []common.Credentials) (string, map[string]types.AuthConfig) {
-	authConfigs := make(map[string]types.AuthConfig)
-
-	for _, credentials := range credentials {
-		if credentials.Type != "registry" {
-			continue
-		}
-
-		authConfigs[credentials.URL] = types.AuthConfig{
-			Username:      credentials.Username,
-			Password:      credentials.Password,
-			ServerAddress: credentials.URL,
-		}
-	}
-
-	return authConfigSourceNameJobPayload, authConfigs
 }
 
 func getHomeDirConfiguration(username string) (string, map[string]types.AuthConfig) {
@@ -132,8 +123,26 @@ func EncodeConfig(authConfig *types.AuthConfig) (string, error) {
 	return base64.URLEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-// SplitDockerImageName breaks a reposName into an index name and remote name
-func SplitDockerImageName(reposName string) (string, string) {
+func getBuildConfiguration(credentials []common.Credentials) (string, map[string]types.AuthConfig) {
+	authConfigs := make(map[string]types.AuthConfig)
+
+	for _, credentials := range credentials {
+		if credentials.Type != "registry" {
+			continue
+		}
+
+		authConfigs[credentials.URL] = types.AuthConfig{
+			Username:      credentials.Username,
+			Password:      credentials.Password,
+			ServerAddress: credentials.URL,
+		}
+	}
+
+	return authConfigSourceNameJobPayload, authConfigs
+}
+
+// splitDockerImageName breaks a reposName into an index name and remote name
+func splitDockerImageName(reposName string) (string, string) {
 	nameParts := strings.SplitN(reposName, "/", 2)
 	var indexName, remoteName string
 	if len(nameParts) == 1 || (!strings.Contains(nameParts[0], ".") &&

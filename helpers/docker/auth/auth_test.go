@@ -32,17 +32,17 @@ var (
 			Password: "test_password_3",
 		},
 	}
-	registryDomain1Config = &types.AuthConfig{
+	registryDomain1Config = types.AuthConfig{
 		Username:      "test_user_1",
 		Password:      "test_password_1",
 		ServerAddress: "https://registry.domain.tld:5005/v1/",
 	}
-	registryDomain2Config = &types.AuthConfig{
+	registryDomain2Config = types.AuthConfig{
 		Username:      "test_user_2",
 		Password:      "test_password_2",
 		ServerAddress: "registry2.domain.tld:5005",
 	}
-	registryGitlabConfig = &types.AuthConfig{
+	registryGitlabConfig = types.AuthConfig{
 		Username:      "test_user_3",
 		Password:      "test_password_3",
 		ServerAddress: "registry.gitlab.tld:1234",
@@ -52,111 +52,143 @@ var (
 
 func TestGetConfigForImage(t *testing.T) {
 	tests := map[string]struct {
-		precreateConfigFile bool
-		dockerAuthVariable  string
-		credentials         []common.Credentials
-		image               string
-		expectedSource      string
-		expectedConf        *types.AuthConfig
+		precreateConfigFile  bool
+		dockerAuthVariable   string
+		credentials          []common.Credentials
+		image                string
+		expectedResultGetter func(homeDir string) *RegistryInfo
 	}{
 		"registry1 from file only": {
-			true,
-			"",
-			emptyCredentials,
-			imageRegistryDomain1,
-			".dockercfg",
-			registryDomain1Config,
+			precreateConfigFile: true,
+			dockerAuthVariable:  "",
+			credentials:         emptyCredentials,
+			image:               imageRegistryDomain1,
+			expectedResultGetter: func(homeDir string) *RegistryInfo {
+				return &RegistryInfo{
+					Source:     filepath.Join(homeDir, ".dockercfg"),
+					AuthConfig: registryDomain1Config,
+				}
+			},
 		},
 		"registry2 from file only": {
-			true,
-			"",
-			emptyCredentials,
-			imageRegistryDomain2,
-			".dockercfg",
-			registryDomain2Config,
+			precreateConfigFile: true,
+			dockerAuthVariable:  "",
+			credentials:         emptyCredentials,
+			image:               imageRegistryDomain2,
+			expectedResultGetter: func(homeDir string) *RegistryInfo {
+				return &RegistryInfo{
+					Source:     filepath.Join(homeDir, ".dockercfg"),
+					AuthConfig: registryDomain2Config,
+				}
+			},
 		},
 		"missing credentials, file only": {
-			true,
-			"",
-			emptyCredentials,
-			imageGitlabDomain,
-			"",
-			nil,
+			precreateConfigFile: true,
+			dockerAuthVariable:  "",
+			credentials:         emptyCredentials,
+			image:               imageGitlabDomain,
+			expectedResultGetter: func(homeDir string) *RegistryInfo {
+				return &RegistryInfo{}
+			},
 		},
 		"no file and gitlab credentials. image in gitlab credentials": {
-			false,
-			"",
-			gitlabRegistryCredentials,
-			imageGitlabDomain,
-			authConfigSourceNameJobPayload,
-			registryGitlabConfig,
+			precreateConfigFile: false,
+			dockerAuthVariable:  "",
+			credentials:         gitlabRegistryCredentials,
+			image:               imageGitlabDomain,
+			expectedResultGetter: func(homeDir string) *RegistryInfo {
+				return &RegistryInfo{
+					Source:     authConfigSourceNameJobPayload,
+					AuthConfig: registryGitlabConfig,
+				}
+			},
 		},
 		"both file and gitlab credentials. image in gitlab credentials": {
-			true,
-			"",
-			gitlabRegistryCredentials,
-			imageGitlabDomain,
-			authConfigSourceNameJobPayload,
-			registryGitlabConfig,
+			precreateConfigFile: true,
+			dockerAuthVariable:  "",
+			credentials:         gitlabRegistryCredentials,
+			image:               imageGitlabDomain,
+			expectedResultGetter: func(homeDir string) *RegistryInfo {
+				return &RegistryInfo{
+					Source:     authConfigSourceNameJobPayload,
+					AuthConfig: registryGitlabConfig,
+				}
+			},
 		},
 		"DOCKER_AUTH_CONFIG only": {
-			false,
-			testVariableAuthConfigs,
-			emptyCredentials,
-			imageRegistryDomain1,
-			authConfigSourceNameUserVariable,
-			registryDomain1Config,
+			precreateConfigFile: false,
+			dockerAuthVariable:  testVariableAuthConfigs,
+			credentials:         emptyCredentials,
+			image:               imageRegistryDomain1,
+			expectedResultGetter: func(homeDir string) *RegistryInfo {
+				return &RegistryInfo{
+					Source:     authConfigSourceNameUserVariable,
+					AuthConfig: registryDomain1Config,
+				}
+			},
 		},
 		"DOCKER_AUTH_CONFIG overrides home dir": {
-			true,
-			testVariableAuthConfigs,
-			emptyCredentials,
-			imageRegistryDomain1,
-			authConfigSourceNameUserVariable,
-			registryDomain1Config,
+			precreateConfigFile: true,
+			dockerAuthVariable:  testVariableAuthConfigs,
+			credentials:         emptyCredentials,
+			image:               imageRegistryDomain1,
+			expectedResultGetter: func(homeDir string) *RegistryInfo {
+				return &RegistryInfo{
+					Source:     authConfigSourceNameUserVariable,
+					AuthConfig: registryDomain1Config,
+				}
+			},
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			setupTestHomeDirectoryConfig(t, tt.precreateConfigFile)
+			cleanup := setupTestHomeDirectoryConfig(t, tt.precreateConfigFile)
+			defer cleanup()
 
-			source, config := GetConfigForImage(tt.image, tt.dockerAuthVariable, "", tt.credentials)
+			result := GetConfigForImage(tt.image, tt.dockerAuthVariable, "", tt.credentials)
 
-			assert.Contains(t, source, tt.expectedSource)
-			assert.Equal(t, tt.expectedConf, config)
+			assert.Equal(t, tt.expectedResultGetter(HomeDirectory), result)
 		})
 	}
 }
 
 func TestGetConfigs(t *testing.T) {
-	setupTestHomeDirectoryConfig(t, true)
-	sources, configs := GetConfigs(testVariableAuthConfigs, "", gitlabRegistryCredentials)
-	assert.Len(t, sources, 3)
-	assert.Equal(t, authConfigSourceNameUserVariable, sources["https://registry.domain.tld:5005/v1/"])
-	assert.Equal(t, authConfigSourceNameJobPayload, sources["registry.gitlab.tld:1234"])
-	assert.Contains(t, sources["registry2.domain.tld:5005"], ".dockercfg")
+	cleanup := setupTestHomeDirectoryConfig(t, true)
+	defer cleanup()
+	result := GetConfigs(testVariableAuthConfigs, "", gitlabRegistryCredentials)
 
-	assert.Equal(t, map[string]types.AuthConfig{
+	assert.Equal(t, map[string]*RegistryInfo{
 		"https://registry.domain.tld:5005/v1/": {
-			Username:      "test_user_1",
-			Password:      "test_password_1",
-			ServerAddress: "https://registry.domain.tld:5005/v1/",
+			Source: authConfigSourceNameUserVariable,
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_1",
+				Password:      "test_password_1",
+				ServerAddress: "https://registry.domain.tld:5005/v1/",
+			},
 		},
 		"registry.gitlab.tld:1234": {
-			Username:      "test_user_3",
-			Password:      "test_password_3",
-			ServerAddress: "registry.gitlab.tld:1234",
+			Source: authConfigSourceNameJobPayload,
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_3",
+				Password:      "test_password_3",
+				ServerAddress: "registry.gitlab.tld:1234",
+			},
 		},
 		"registry2.domain.tld:5005": {
-			Username:      "test_user_2",
-			Password:      "test_password_2",
-			ServerAddress: "registry2.domain.tld:5005",
+			Source: filepath.Join(HomeDirectory, ".dockercfg"),
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_2",
+				Password:      "test_password_2",
+				ServerAddress: "registry2.domain.tld:5005",
+			},
 		},
-	}, configs)
+	}, result)
 }
 
-func setupTestHomeDirectoryConfig(t *testing.T, precreateConfigFile bool) {
+func setupTestHomeDirectoryConfig(t *testing.T, precreateConfigFile bool) func() {
+	oldHomeDirectory := HomeDirectory
+
 	if precreateConfigFile {
 		tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
 		require.NoError(t, err)
@@ -167,10 +199,17 @@ func setupTestHomeDirectoryConfig(t *testing.T, precreateConfigFile bool) {
 	} else {
 		HomeDirectory = ""
 	}
+
+	return func() {
+		if precreateConfigFile {
+			os.RemoveAll(HomeDirectory)
+		}
+		HomeDirectory = oldHomeDirectory
+	}
 }
 
 func TestSplitDockerImageName(t *testing.T) {
-	remote, image := SplitDockerImageName("tutum.co/user/ubuntu")
+	remote, image := splitDockerImageName("tutum.co/user/ubuntu")
 	expectedRemote := "tutum.co"
 	expectedImage := "user/ubuntu"
 
@@ -184,7 +223,7 @@ func TestSplitDockerImageName(t *testing.T) {
 }
 
 func TestSplitDefaultDockerImageName(t *testing.T) {
-	remote, image := SplitDockerImageName("user/ubuntu")
+	remote, image := splitDockerImageName("user/ubuntu")
 	expectedRemote := "docker.io"
 	expectedImage := "user/ubuntu"
 
@@ -198,7 +237,7 @@ func TestSplitDefaultDockerImageName(t *testing.T) {
 }
 
 func TestSplitDefaultIndexDockerImageName(t *testing.T) {
-	remote, image := SplitDockerImageName("index.docker.io/user/ubuntu")
+	remote, image := splitDockerImageName("index.docker.io/user/ubuntu")
 	expectedRemote := "docker.io"
 	expectedImage := "user/ubuntu"
 

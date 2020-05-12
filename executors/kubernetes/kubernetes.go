@@ -12,6 +12,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 
+	"github.com/docker/docker/api/types"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -713,13 +714,18 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 func (s *executor) setupCredentials() error {
 	s.Debugln("Setting up secrets")
 
-	_, authConfigs := auth.GetConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
+	authConfigs := auth.GetConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
 
 	if len(authConfigs) == 0 {
 		return nil
 	}
 
-	dockerCfgContent, err := json.Marshal(authConfigs)
+	dockerCfgs := make(map[string]types.AuthConfig)
+	for registry, registryInfo := range authConfigs {
+		dockerCfgs[registry] = registryInfo.AuthConfig
+	}
+
+	dockerCfgContent, err := json.Marshal(dockerCfgs)
 	if err != nil {
 		return err
 	}

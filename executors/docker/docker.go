@@ -168,14 +168,14 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		}
 	}
 
-	source, authConfig := auth.GetConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
-	if authConfig != nil {
-		e.Println("Authenticating with credentials from", source)
-		e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
+	registryInfo := auth.GetConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
+	if registryInfo != nil {
+		e.Println("Authenticating with credentials from", registryInfo.Source)
+		e.Debugln("Using", registryInfo.AuthConfig.Username, "to connect to", registryInfo.AuthConfig.ServerAddress,
 			"in order to resolve", imageName, "...")
 	}
 
-	return e.pullDockerImage(imageName, authConfig)
+	return e.pullDockerImage(imageName, &registryInfo.AuthConfig)
 }
 
 func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []string) (*types.ImageInspect, error) {
