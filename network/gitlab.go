@@ -515,11 +515,9 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 		log = log.WithField("responseStatus", res.Status)
 	}
 
-	var messagePrefix string
+	messagePrefix := "Uploading artifacts to coordinator..."
 	if options.Type != "" {
-		messagePrefix = fmt.Sprintf("Uploading artifacts as \"%s\" to coordinator...", options.Type)
-	} else {
-		messagePrefix = "Uploading artifacts to coordinator..."
+		messagePrefix = fmt.Sprintf("Uploading artifacts as %q to coordinator...", options.Type)
 	}
 
 	if err != nil {
