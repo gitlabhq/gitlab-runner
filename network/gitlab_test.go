@@ -1176,6 +1176,12 @@ func TestArtifactsUpload(t *testing.T) {
 }
 
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path == "/direct-download" {
+		w.WriteHeader(http.StatusOK)
+		w.Write(bytes.NewBufferString("Artifact: direct_download=true").Bytes())
+		return
+	}
+
 	if r.URL.Path != "/api/v4/jobs/10/artifacts" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -1191,8 +1197,28 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *tes
 		return
 	}
 
+	// parse status of direct download
+	directDownloadFlag := r.URL.Query().Get("direct_download")
+	if directDownloadFlag == "" {
+		w.WriteHeader(http.StatusOK)
+		w.Write(bytes.NewBufferString("Artifact: direct_download=missing").Bytes())
+		return
+	}
+
+	directDownload, err := strconv.ParseBool(directDownloadFlag)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if directDownload {
+		w.Header().Set("Location", "/direct-download")
+		w.WriteHeader(http.StatusTemporaryRedirect)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write(bytes.NewBufferString("Test artifact file content").Bytes())
+	w.Write(bytes.NewBufferString("Artifact: direct_download=false").Bytes())
 }
 
 func TestArtifactsDownload(t *testing.T) {
@@ -1203,7 +1229,7 @@ func TestArtifactsDownload(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(handler))
 	defer s.Close()
 
-	credentials := JobCredentials{
+	validCredentials := JobCredentials{
 		ID:    10,
 		URL:   s.URL,
 		Token: "token",
@@ -1219,22 +1245,68 @@ func TestArtifactsDownload(t *testing.T) {
 		Token: "token",
 	}
 
-	c := NewGitLabClient()
+	trueValue := true
+	falseValue := false
 
-	tempDir, err := ioutil.TempDir("", "artifacts")
-	assert.NoError(t, err)
+	testCases := map[string]struct {
+		credentials      JobCredentials
+		directDownload   *bool
+		expectedState    DownloadState
+		expectedArtifact string
+	}{
+		"successful download": {
+			credentials:      validCredentials,
+			expectedState:    DownloadSucceeded,
+			expectedArtifact: "Artifact: direct_download=missing",
+		},
+		"properly handles direct_download=false": {
+			credentials:      validCredentials,
+			directDownload:   &falseValue,
+			expectedState:    DownloadSucceeded,
+			expectedArtifact: "Artifact: direct_download=false",
+		},
+		"properly handles direct_download=true": {
+			credentials:      validCredentials,
+			directDownload:   &trueValue,
+			expectedState:    DownloadSucceeded,
+			expectedArtifact: "Artifact: direct_download=true",
+		},
+		"forbidden should be generated for invalid credentials": {
+			credentials:    invalidTokenCredentials,
+			directDownload: &trueValue,
+			expectedState:  DownloadForbidden,
+		},
+		"file should not be downloaded if not existing": {
+			credentials:    fileNotFoundTokenCredentials,
+			directDownload: &trueValue,
+			expectedState:  DownloadNotFound,
+		},
+	}
 
-	artifactsFileName := filepath.Join(tempDir, "downloaded-artifact")
-	defer os.Remove(artifactsFileName)
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			c := NewGitLabClient()
 
-	state := c.DownloadArtifacts(credentials, artifactsFileName)
-	assert.Equal(t, DownloadSucceeded, state, "Artifacts should be downloaded")
+			tempDir, err := ioutil.TempDir("", "artifacts")
+			require.NoError(t, err)
+			defer os.Remove(tempDir)
 
-	state = c.DownloadArtifacts(invalidTokenCredentials, artifactsFileName)
-	assert.Equal(t, DownloadForbidden, state, "Artifacts should be not downloaded if invalid token is used")
+			artifactsFileName := filepath.Join(tempDir, "downloaded-artifact")
 
-	state = c.DownloadArtifacts(fileNotFoundTokenCredentials, artifactsFileName)
-	assert.Equal(t, DownloadNotFound, state, "Artifacts should be bit downloaded if it's not found")
+			state := c.DownloadArtifacts(testCase.credentials, artifactsFileName, testCase.directDownload)
+			require.Equal(t, testCase.expectedState, state)
+
+			artifact, err := ioutil.ReadFile(artifactsFileName)
+
+			if testCase.expectedArtifact == "" {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, string(artifact), testCase.expectedArtifact)
+		})
+	}
 }
 
 func TestRunnerVersion(t *testing.T) {

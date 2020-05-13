@@ -7,6 +7,7 @@ import (
 const (
 	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
 	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
+	UseDirectDownload                    string = "FF_USE_DIRECT_DOWNLOAD"
 )
 
 type FeatureFlag struct {
@@ -36,6 +37,13 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description:     "When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119)",
+	},
+	{
+		Name:            UseDirectDownload,
+		DefaultValue:    "false",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description:     "When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab",
 	},
 }
 
