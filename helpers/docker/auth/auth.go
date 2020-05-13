@@ -114,6 +114,9 @@ func getHomeDirConfiguration(username string) (string, map[string]types.AuthConf
 // EncodeConfig constructs a token from an AuthConfig, suitable for
 // authorizing against the Docker API with.
 func EncodeConfig(authConfig *types.AuthConfig) (string, error) {
+	if authConfig == nil {
+		return "", nil
+	}
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(authConfig); err != nil {
 		return "", err

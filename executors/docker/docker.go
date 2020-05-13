@@ -114,9 +114,7 @@ func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 	}
 
 	options := types.ImagePullOptions{}
-	if ac != nil {
-		options.RegistryAuth, _ = auth.EncodeConfig(ac)
-	}
+	options.RegistryAuth, _ = auth.EncodeConfig(ac)
 
 	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
 	if err := e.client.ImagePullBlocking(e.Context, ref, options); err != nil {
