@@ -23,7 +23,6 @@ const (
 )
 
 const (
-	NoneFailure         JobFailureReason = ""
 	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 	JobExecutionTimeout JobFailureReason = "job_execution_timeout"

@@ -472,7 +472,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 			fmt.Fprintln(trace, err.Error())
 			trace.Fail(err, common.RunnerSystemFailure)
 		} else {
-			trace.Fail(nil, common.NoneFailure)
+			trace.Success()
 		}
 	}()
 
