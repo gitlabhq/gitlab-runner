@@ -344,7 +344,7 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 				}
 			}
 
-			configFile, authConfigs, err := ReadDockerAuthConfigsFromHomeDir("")
+			configFile, authConfigs, err := readDockerConfigsFromHomeDir("")
 
 			assert.True(t, errors.Is(err, test.expectedError), "expected err %T, but got %T", test.expectedError, err)
 			assert.Equal(t, expectedConfigFile, configFile)

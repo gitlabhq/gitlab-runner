@@ -93,8 +93,7 @@ func GetConfigs(dockerAuthConfig, username string, credentials []common.Credenti
 }
 
 func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig) {
-	buf := bytes.NewBufferString(dockerAuthConfig)
-	authConfigs, _ := readConfigsFromReader(buf)
+	authConfigs, _ := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig))
 
 	if authConfigs == nil {
 		return "", nil
