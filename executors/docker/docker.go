@@ -173,9 +173,11 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		e.Println("Authenticating with credentials from", registryInfo.Source)
 		e.Debugln("Using", registryInfo.AuthConfig.Username, "to connect to", registryInfo.AuthConfig.ServerAddress,
 			"in order to resolve", imageName, "...")
+		return e.pullDockerImage(imageName, &registryInfo.AuthConfig)
 	}
 
-	return e.pullDockerImage(imageName, &registryInfo.AuthConfig)
+	e.Debugln(fmt.Sprintf("No credentials found for %v", imageName))
+	return e.pullDockerImage(imageName, nil)
 }
 
 func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []string) (*types.ImageInspect, error) {

@@ -242,7 +242,7 @@ func TestDockerForNamedImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	options := buildImagePullOptions(e, "test")
 
 	c.On("ImagePullBlocking", e.Context, "test:latest", options).
@@ -270,18 +270,11 @@ func TestDockerForNamedImage(t *testing.T) {
 	assert.Nil(t, image)
 }
 
-func executorWithClient(c *docker.MockClient) *executor {
-	e := &executor{client: c}
-	e.Context = context.Background()
-	e.Build = &common.Build{}
-	return e
-}
-
 func TestDockerForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	options := buildImagePullOptions(e, "existing")
 
 	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
@@ -295,6 +288,13 @@ func TestDockerForExistingImage(t *testing.T) {
 	image, err := e.pullDockerImage("existing", nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
+}
+
+func executorWithMockClient(c *docker.MockClient) *executor {
+	e := &executor{client: c}
+	e.Context = context.Background()
+	e.Build = &common.Build{}
+	return e
 }
 
 func TestHelperImageWithVariable(t *testing.T) {
@@ -311,7 +311,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 		Return(types.ImageInspect{ID: "helper-image"}, nil, nil).
 		Once()
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{
@@ -339,7 +339,7 @@ func TestDockerGetImageById(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	// Use default policy
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	e.setPolicyMode("")
 
 	c.On("ImageInspectWithRaw", e.Context, "ID").
@@ -356,7 +356,7 @@ func TestDockerUnknownPolicyMode(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	e.setPolicyMode("unknown")
 
 	_, err := e.getDockerImage("not-existing")
@@ -367,7 +367,7 @@ func TestDockerPolicyModeNever(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	e.setPolicyMode(common.PullPolicyNever)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -390,7 +390,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -406,7 +406,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	e.setPolicyMode(common.PullPolicyIfNotPresent)
 
 	c.On("ImageInspectWithRaw", e.Context, "not-existing").
@@ -440,7 +440,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -465,7 +465,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "existing").
@@ -486,7 +486,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	e := executorWithClient(c)
+	e := executorWithMockClient(c)
 	e.setPolicyMode(common.PullPolicyAlways)
 
 	c.On("ImageInspectWithRaw", e.Context, "to-pull").
