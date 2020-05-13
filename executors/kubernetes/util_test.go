@@ -15,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -358,6 +359,78 @@ func TestWaitForPodRunning(t *testing.T) {
 				t.Errorf("[%s] Not enough retries. Expected: %d, got: %d", test.Name, test.Retries, retries)
 				return
 			}
+		})
+	}
+}
+
+func TestCreateResourceList(t *testing.T) {
+	mustGetParseError := func(t *testing.T, s string) error {
+		_, err := resource.ParseQuantity(s)
+		require.Error(t, err)
+		return err
+	}
+
+	tests := []struct {
+		Name     string
+		CPU      string
+		Memory   string
+		Expected api.ResourceList
+		Error    error
+	}{
+		{
+			Name:     "empty values",
+			Expected: api.ResourceList{},
+		},
+		{
+			Name:   "cpu and memory",
+			CPU:    "500m",
+			Memory: "1024Mi",
+			Expected: api.ResourceList{
+				api.ResourceCPU:    resource.MustParse("500m"),
+				api.ResourceMemory: resource.MustParse("1024Mi"),
+			},
+		},
+		{
+			Name: "only cpu",
+			CPU:  "500m",
+			Expected: api.ResourceList{
+				api.ResourceCPU: resource.MustParse("500m"),
+			},
+		},
+		{
+			Name:   "only memory",
+			Memory: "1024Mi",
+			Expected: api.ResourceList{
+				api.ResourceMemory: resource.MustParse("1024Mi"),
+			},
+		},
+		{
+			Name:     "invalid cpu",
+			CPU:      "100j",
+			Expected: api.ResourceList{},
+			Error: &resourceQuantityError{
+				resource: "cpu",
+				value:    "100j",
+				inner:    mustGetParseError(t, "100j"),
+			},
+		},
+		{
+			Name:     "invalid memory",
+			Memory:   "200j",
+			Expected: api.ResourceList{},
+			Error: &resourceQuantityError{
+				resource: "memory",
+				value:    "200j",
+				inner:    mustGetParseError(t, "200j"),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			actual, err := createResourceList(test.CPU, test.Memory)
+			assert.Equal(t, test.Error, err)
+			assert.Equal(t, test.Expected, actual)
 		})
 	}
 }

@@ -126,35 +126,33 @@ type serviceCreateResponse struct {
 	err     error
 }
 
-func (s *executor) setupResources() error {
-	var err error
-
-	s.buildLimits, err = limits(s.configurationOverwrites.cpuLimit, s.configurationOverwrites.memoryLimit)
+func (s *executor) setupResources() (err error) {
+	s.buildLimits, err = createResourceList(s.configurationOverwrites.cpuLimit, s.configurationOverwrites.memoryLimit)
 	if err != nil {
 		return fmt.Errorf("invalid build limits specified: %w", err)
 	}
 
-	s.buildRequests, err = limits(s.configurationOverwrites.cpuRequest, s.configurationOverwrites.memoryRequest)
+	s.buildRequests, err = createResourceList(s.configurationOverwrites.cpuRequest, s.configurationOverwrites.memoryRequest)
 	if err != nil {
 		return fmt.Errorf("invalid build requests specified: %w", err)
 	}
 
-	s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit)
+	s.serviceLimits, err = createResourceList(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit)
 	if err != nil {
 		return fmt.Errorf("invalid service limits specified: %w", err)
 	}
 
-	s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest)
+	s.serviceRequests, err = createResourceList(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest)
 	if err != nil {
 		return fmt.Errorf("invalid service requests specified: %w", err)
 	}
 
-	s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit)
+	s.helperLimits, err = createResourceList(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit)
 	if err != nil {
 		return fmt.Errorf("invalid helper limits specified: %w", err)
 	}
 
-	s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest)
+	s.helperRequests, err = createResourceList(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest)
 	if err != nil {
 		return fmt.Errorf("invalid helper requests specified: %w", err)
 	}

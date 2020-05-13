@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -3120,66 +3119,6 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			e.pod.Namespace = "namespace"
 
 			tt.verifyErr(t, e.watchPodStatus(ctx))
-		})
-	}
-}
-
-func TestLimits(t *testing.T) {
-	tests := []struct {
-		CPU, Memory string
-		Expected    api.ResourceList
-		ExpectedErr error
-	}{
-		{
-			CPU:    "100m",
-			Memory: "100Mi",
-			Expected: api.ResourceList{
-				api.ResourceCPU:    resource.MustParse("100m"),
-				api.ResourceMemory: resource.MustParse("100Mi"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			CPU: "100m",
-			Expected: api.ResourceList{
-				api.ResourceCPU: resource.MustParse("100m"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			Memory: "100Mi",
-			Expected: api.ResourceList{
-				api.ResourceMemory: resource.MustParse("100Mi"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			CPU:         "100j",
-			Expected:    api.ResourceList{},
-			ExpectedErr: resource.ErrFormatWrong,
-		},
-		{
-			Memory:      "100j",
-			Expected:    api.ResourceList{},
-			ExpectedErr: resource.ErrFormatWrong,
-		},
-		{
-			Expected:    api.ResourceList{},
-			ExpectedErr: nil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(fmt.Sprintf("CPU=%s/Memory=%s", tc.CPU, tc.Memory), func(t *testing.T) {
-			res, err := limits(tc.CPU, tc.Memory)
-			assert.True(
-				t,
-				errors.Is(err, tc.ExpectedErr),
-				"expected err %T, but got %T",
-				tc.ExpectedErr,
-				err,
-			)
-			assert.Equal(t, tc.Expected, res)
 		})
 	}
 }
