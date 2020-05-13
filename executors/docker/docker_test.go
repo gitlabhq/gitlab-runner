@@ -6,14 +6,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -33,6 +32,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	service_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
