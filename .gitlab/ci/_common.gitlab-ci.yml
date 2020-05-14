@@ -17,6 +17,10 @@ default:
   image: $CI_IMAGE
   tags:
   - gitlab-org
+  retry:
+    max: 2
+    when:
+    - runner_system_failure
 
 before_script:
 - unset GPG_KEY
