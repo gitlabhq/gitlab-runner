@@ -323,10 +323,12 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	// Prepare stage
 	err := b.executeStage(ctx, BuildStagePrepare, executor)
-
-	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
+	if err != nil {
+		return fmt.Errorf("prepare environment: %w. Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information", err)
 	}
+
+	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
+
 	if err == nil {
 		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts())
 	}
