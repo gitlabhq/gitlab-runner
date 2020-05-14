@@ -1,15 +1,14 @@
 include:
-- template: License-Management.gitlab-ci.yml
+  - template: Security/License-Scanning.gitlab-ci.yml
 
-# Overriding 'License-Management.gitlab-ci.yml' template, because
-# we need to replace the only:refs: rules with our own, the same
+# Overriding 'License-Scanning.gitlab-ci.yml' template, because
+# we need to replace the rules with our own, the same
 # as in `.merge_request_pipelines` template.
-license_management:
-  only:
-    refs:
-    - merge_requests
-    - master@gitlab-org/gitlab-runner
-    - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
+license_scanning:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/'
 
 docs lint:
   image: "registry.gitlab.com/gitlab-org/gitlab-docs:lint"
