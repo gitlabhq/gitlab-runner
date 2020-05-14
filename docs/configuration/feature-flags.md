@@ -41,6 +41,7 @@ The flags are defined in `./helpers/feature_flags/flags.go` file.
 |--------------|---------------|------------|--------------------|-------------|
 | `FF_NETWORK_PER_BUILD` | `false` | ✗ |  | Enables creation of a docker [network per build](../executors/docker.md#networking) with the docker executor |
 | `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` | `true` | ✗ |  | When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119) |
+| `FF_USE_DIRECT_DOWNLOAD` | `false` | ✗ |  | When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab |
 
 <!-- feature_flags_list_end -->
 

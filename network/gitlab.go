@@ -541,10 +541,18 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 	}
 }
 
-func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {
+func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string, directDownload *bool) common.DownloadState {
+	query := url.Values{}
+
+	if directDownload != nil {
+		query.Set("direct_download", strconv.FormatBool(*directDownload))
+	}
+
 	headers := make(http.Header)
 	headers.Set("JOB-TOKEN", config.Token)
-	res, err := n.doRaw(&config, http.MethodGet, fmt.Sprintf("jobs/%d/artifacts", config.ID), nil, "", headers)
+	uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
+
+	res, err := n.doRaw(&config, http.MethodGet, uri, nil, "", headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,
