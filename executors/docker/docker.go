@@ -819,7 +819,7 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	}()
 
 	// Write the input to the container and close its STDIN to get it to finish
-	stdinErrCh := make(chan error, 1)
+	stdinErrCh := make(chan error)
 	go func() {
 		_, err := io.Copy(hijacked.Conn, input)
 		hijacked.CloseWrite()

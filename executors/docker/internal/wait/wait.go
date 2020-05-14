@@ -58,7 +58,7 @@ func (d *dockerWaiter) retryWait(ctx context.Context, containerID string, fn fun
 func (d *dockerWaiter) wait(ctx context.Context, containerID string, fn func()) error {
 	statusCh, errCh := d.client.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
 
-	timer := time.NewTimer(time.Second)
+	timer := time.NewTicker(time.Second)
 	defer timer.Stop()
 
 	if fn != nil {
