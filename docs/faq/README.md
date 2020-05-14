@@ -92,7 +92,7 @@ See [an example of a user issue][1105].
 
 ### `zoneinfo.zip: no such file or directory` error when using `Timezone` or `OffPeakTimezone`
 
-It's possible to configure the timezone in which `OffPeakPeriods` or `[[docker.machine.autoscaling]]` periods
+It's possible to configure the timezone in which `[[docker.machine.autoscaling]]` periods
 are described. This feature should work on most Unix systems out of the box. However on some
 Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
 Runner's binaries), when used, the Runner will crash at start with an error similar to:
