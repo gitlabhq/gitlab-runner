@@ -82,12 +82,12 @@ func TestDockerWaiter_KillWait(t *testing.T) {
 	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).Return(
 		(<-chan container.ContainerWaitOKBody)(bodyCh), nil)
 
-	mClient.On("ContainerKill", mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(2)
+	mClient.On("ContainerKill", mock.Anything, mock.Anything, mock.Anything).Return(nil).Twice()
 
 	waiter := NewDockerWaiter(mClient)
 
 	go func() {
-		<-time.After(2 * time.Second)
+		time.Sleep(1500 * time.Millisecond)
 		bodyCh <- container.ContainerWaitOKBody{
 			StatusCode: 0,
 		}
