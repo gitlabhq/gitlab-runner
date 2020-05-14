@@ -395,7 +395,7 @@ type Network interface {
 	RequestJob(config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) PatchTraceResult
-	DownloadArtifacts(config JobCredentials, artifactsFile string) DownloadState
+	DownloadArtifacts(config JobCredentials, artifactsFile string, directDownload *bool) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) (JobTrace, error)
 }

@@ -18,10 +18,22 @@ type ArtifactsDownloaderCommand struct {
 	common.JobCredentials
 	retryHelper
 	network common.Network
+
+	DirectDownload bool `long:"direct-download" env:"FF_USE_DIRECT_DOWNLOAD" description:"Support direct download for data stored externally to GitLab"`
+}
+
+func (c *ArtifactsDownloaderCommand) directDownloadFlag() *bool {
+	// We want to send `?direct_download=true`
+	if c.DirectDownload {
+		return &c.DirectDownload
+	}
+
+	// We don't want to send `?direct_download=false`
+	return nil
 }
 
 func (c *ArtifactsDownloaderCommand) download(file string) error {
-	switch c.network.DownloadArtifacts(c.JobCredentials, file) {
+	switch c.network.DownloadArtifacts(c.JobCredentials, file, c.directDownloadFlag()) {
 	case common.DownloadSucceeded:
 		return nil
 	case common.DownloadNotFound:

@@ -32,7 +32,7 @@ type testNetwork struct {
 	uploadedFiles  []string
 }
 
-func (m *testNetwork) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {
+func (m *testNetwork) DownloadArtifacts(config common.JobCredentials, artifactsFile string, directDownload *bool) common.DownloadState {
 	m.downloadCalled++
 
 	if m.downloadState == common.DownloadSucceeded {
