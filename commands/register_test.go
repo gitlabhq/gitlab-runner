@@ -46,6 +46,17 @@ func TestRegisterDefaultDockerCacheVolume(t *testing.T) {
 	assert.Equal(t, "/cache", s.Docker.Volumes[0])
 }
 
+func TestDoNotRegisterDefaultDockerCacheVolumeWhenDisableCache(t *testing.T) {
+	s := setupDockerRegisterCommand(&common.DockerConfig{
+		Volumes:      []string{},
+		DisableCache: true,
+	})
+
+	s.askDocker()
+
+	assert.Len(t, s.Docker.Volumes, 0)
+}
+
 func TestRegisterCustomDockerCacheVolume(t *testing.T) {
 	s := setupDockerRegisterCommand(&common.DockerConfig{
 		Volumes: []string{"/cache"},

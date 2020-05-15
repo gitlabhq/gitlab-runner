@@ -169,7 +169,9 @@ func (s *RegisterCommand) askDocker() {
 			return
 		}
 	}
-	s.Docker.Volumes = append(s.Docker.Volumes, "/cache")
+	if !s.Docker.DisableCache {
+		s.Docker.Volumes = append(s.Docker.Volumes, "/cache")
+	}
 }
 
 func (s *RegisterCommand) askDockerWindows() {
