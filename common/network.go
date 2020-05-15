@@ -200,9 +200,8 @@ type Port struct {
 }
 
 type Services []Image
-
 type ArtifactPaths []string
-
+type ArtifactExclude []string
 type ArtifactWhen string
 
 const (
@@ -229,13 +228,14 @@ const (
 )
 
 type Artifact struct {
-	Name      string         `json:"name"`
-	Untracked bool           `json:"untracked"`
-	Paths     ArtifactPaths  `json:"paths"`
-	When      ArtifactWhen   `json:"when"`
-	Type      string         `json:"artifact_type"`
-	Format    ArtifactFormat `json:"artifact_format"`
-	ExpireIn  string         `json:"expire_in"`
+	Name      string          `json:"name"`
+	Untracked bool            `json:"untracked"`
+	Paths     ArtifactPaths   `json:"paths"`
+	Exclude   ArtifactExclude `json:"exclude,omitempty"`
+	When      ArtifactWhen    `json:"when"`
+	Type      string          `json:"artifact_type"`
+	Format    ArtifactFormat  `json:"artifact_format"`
+	ExpireIn  string          `json:"expire_in"`
 }
 
 type Artifacts []Artifact
