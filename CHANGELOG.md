@@ -1,3 +1,13 @@
+## v13.0.0-rc2 (2020-05-15)
+
+### New features
+
+- Add support for `direct_download` artifacts !2093
+
+### Maintenance
+
+- Change license management to use rules !2096
+
 ## v13.0.0-rc1 (2020-05-12)
 
 ### Breaking Changes
