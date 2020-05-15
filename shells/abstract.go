@@ -18,6 +18,7 @@ type AbstractShell struct {
 }
 
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
+	// TODO tests
 	features.Artifacts = true
 	features.UploadMultipleArtifacts = true
 	features.UploadRawArtifacts = true
@@ -25,6 +26,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Refspecs = true
 	features.Masking = true
 	features.RawVariables = true
+	features.ArtifactsExclude = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
@@ -537,6 +539,11 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	var archiverArgs []string
 	for _, path := range artifact.Paths {
 		archiverArgs = append(archiverArgs, "--path", path)
+	}
+
+	// Create list of files to exclude from the archive
+	for _, path := range artifact.Exclude {
+		archiverArgs = append(archiverArgs, "--exclude", path)
 	}
 
 	if artifact.Untracked {
