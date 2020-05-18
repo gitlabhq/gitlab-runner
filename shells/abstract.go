@@ -25,9 +25,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Refspecs = true
 	features.Masking = true
 	features.RawVariables = true
-	// TODO, enable this when the feature is fully implemented
-	// See https://gitlab.com/gitlab-org/gitlab/-/issues/15122
-	features.ArtifactsExclude = false
+	features.ArtifactsExclude = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
