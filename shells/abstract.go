@@ -18,7 +18,6 @@ type AbstractShell struct {
 }
 
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
-	// TODO tests
 	features.Artifacts = true
 	features.UploadMultipleArtifacts = true
 	features.UploadRawArtifacts = true
@@ -26,7 +25,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Refspecs = true
 	features.Masking = true
 	features.RawVariables = true
-	features.ArtifactsExclude = true
+	features.ArtifactsExclude = false // TODO, enable this when the feature is fully implemented
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
