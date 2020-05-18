@@ -14,17 +14,15 @@ import (
 )
 
 func TestWriteGitSSLConfig(t *testing.T) {
-	gitlabURL := "https://example.com:3443"
-	runnerURL := gitlabURL + "/ci/"
+	expectedURL := "https://example.com:3443"
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		Runner: &common.RunnerConfig{
-			RunnerCredentials: common.RunnerCredentials{
-				URL: runnerURL,
-			},
-		},
+		Runner: &common.RunnerConfig{},
 		JobResponse: common.JobResponse{
+			GitInfo: common.GitInfo{
+				RepoURL: "https://gitlab-ci-token:xxx@example.com:3443/project/repo.git",
+			},
 			TLSAuthCert: "TLS_CERT",
 			TLSAuthKey:  "TLS_KEY",
 			TLSCAChain:  "CA_CHAIN",
@@ -40,19 +38,19 @@ func TestWriteGitSSLConfig(t *testing.T) {
 		"Command",
 		"git",
 		"config",
-		fmt.Sprintf("http.%s.%s", gitlabURL, "sslCAInfo"),
+		fmt.Sprintf("http.%s.%s", expectedURL, "sslCAInfo"),
 		"VariableCAFile").Once()
 	mockWriter.On(
 		"Command",
 		"git",
 		"config",
-		fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"),
+		fmt.Sprintf("http.%s.%s", expectedURL, "sslCert"),
 		"VariableCertFile").Once()
 	mockWriter.On(
 		"Command",
 		"git",
 		"config",
-		fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"),
+		fmt.Sprintf("http.%s.%s", expectedURL, "sslKey"),
 		"VariableKeyFile").Once()
 
 	shell.writeGitSSLConfig(mockWriter, build, nil)
