@@ -541,7 +541,7 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 		archiverArgs = append(archiverArgs, "--path", path)
 	}
 
-	// Create list of files to exclude from the archive
+	// Create list of paths to be excluded from the archive
 	for _, path := range artifact.Exclude {
 		archiverArgs = append(archiverArgs, "--exclude", path)
 	}

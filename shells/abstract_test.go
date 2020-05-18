@@ -194,6 +194,57 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
+	shell := AbstractShell{}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			ID:    1001,
+			Token: "token",
+			Artifacts: common.Artifacts{
+				common.Artifact{
+					Paths:   []string{"include/**"},
+					Exclude: []string{"include/exclude/*"},
+					When:    common.ArtifactWhenAlways,
+					Format:  common.ArtifactFormatZip,
+					Type:    "archive",
+				},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				URL: "https://gitlab.example.com",
+			},
+		},
+	}
+
+	info := common.ShellScriptInfo{
+		RunnerCommand: "gitlab-runner-helper",
+		Build:         build,
+	}
+
+	mockWriter := new(MockShellWriter)
+	defer mockWriter.AssertExpectations(t)
+	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("Cd", mock.Anything)
+	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
+	mockWriter.On("Notice", mock.Anything)
+	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--url", "https://gitlab.example.com",
+		"--token", "token",
+		"--id", "1001",
+		"--path", "include/**",
+		"--exclude", "include/exclude/*",
+		"--artifact-format", "zip",
+		"--artifact-type", "archive").Once()
+	mockWriter.On("Else")
+	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything)
+	mockWriter.On("EndIf")
+
+	err := shell.writeScript(mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
+	require.NoError(t, err)
+}
+
 func TestGitCleanFlags(t *testing.T) {
 	tests := map[string]struct {
 		value string
