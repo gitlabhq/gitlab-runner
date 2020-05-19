@@ -226,9 +226,9 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 	mockWriter.On("Variable", mock.Anything)
-	mockWriter.On("Cd", mock.Anything)
-	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
-	mockWriter.On("Notice", mock.Anything)
+	mockWriter.On("Cd", mock.Anything).Once()
+	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Once()
+	mockWriter.On("Notice", mock.Anything).Once()
 	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", "https://gitlab.example.com",
 		"--token", "token",
@@ -237,9 +237,9 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 		"--exclude", "include/exclude/*",
 		"--artifact-format", "zip",
 		"--artifact-type", "archive").Once()
-	mockWriter.On("Else")
-	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything)
-	mockWriter.On("EndIf")
+	mockWriter.On("Else").Once()
+	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything).Once()
+	mockWriter.On("EndIf").Once()
 
 	err := shell.writeScript(mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
 	require.NoError(t, err)
