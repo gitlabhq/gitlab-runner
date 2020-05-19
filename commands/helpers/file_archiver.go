@@ -19,6 +19,7 @@ import (
 
 type fileArchiver struct {
 	Paths     []string `long:"path" description:"Add paths to archive"`
+	Exclude   []string `long:"exclude" description:"Exclude paths from the archive"`
 	Untracked bool     `long:"untracked" description:"Add git untracked files"`
 	Verbose   bool     `long:"verbose" description:"Detailed information"`
 
@@ -170,6 +171,12 @@ func (c *fileArchiver) processUntracked() {
 }
 
 func (c *fileArchiver) enumerate() error {
+	// TODO, support for `artifacts/exclude` will be added in a separate merge
+	// request https://gitlab.com/gitlab-org/gitlab/-/issues/15122
+	if len(c.Exclude) > 0 {
+		return errors.New("artifacts/exclude is not supported yet")
+	}
+
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current working directory: %w", err)
