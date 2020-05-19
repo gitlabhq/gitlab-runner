@@ -1,9 +1,11 @@
 package shells
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -288,4 +290,193 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	mockWriter.On("EndIf").Once()
 
 	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, false)
+}
+
+func TestSkipBuildStage(t *testing.T) {
+	stageTests := map[common.BuildStage]map[string]struct {
+		JobResponse common.JobResponse
+		Runner      common.RunnerConfig
+	}{
+		common.BuildStageRestoreCache: {
+			"don't skip if cache has paths": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Paths: []string{"default"},
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+			"don't skip if cache uses untracked files": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Untracked: true,
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageDownloadArtifacts: {
+			"don't skip if job has any dependencies": {
+				common.JobResponse{
+					Dependencies: common.Dependencies{
+						common.Dependency{
+							ID:            1,
+							ArtifactsFile: common.DependencyArtifactsFile{Filename: "dependency.txt"},
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageUserScript: {
+			"don't skip if user script is defined": {
+				common.JobResponse{
+					Steps: common.Steps{
+						common.Step{
+							Name: common.StepNameScript,
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageAfterScript: {
+			"don't skip if an after script is defined and has content": {
+				common.JobResponse{
+					Steps: common.Steps{
+						common.Step{
+							Name:   common.StepNameAfterScript,
+							Script: common.StepScript{"echo 'hello world'"},
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageArchiveCache: {
+			"don't skip if cache has paths": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Paths: []string{"default"},
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+			"don't skip if cache uses untracked files": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Untracked: true,
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageUploadOnSuccessArtifacts: {
+			"don't skip if artifact has paths and URL defined": {
+				common.JobResponse{
+					Artifacts: common.Artifacts{
+						common.Artifact{
+							When:  common.ArtifactWhenOnSuccess,
+							Paths: []string{"default"},
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+			"don't skip if artifact uses untracked files and URL defined": {
+				common.JobResponse{
+					Artifacts: common.Artifacts{
+						common.Artifact{
+							When:      common.ArtifactWhenOnSuccess,
+							Untracked: true,
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+		},
+
+		common.BuildStageUploadOnFailureArtifacts: {
+			"don't skip if artifact has paths and URL defined": {
+				common.JobResponse{
+					Artifacts: common.Artifacts{
+						common.Artifact{
+							When:  common.ArtifactWhenOnFailure,
+							Paths: []string{"default"},
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+			"don't skip if artifact uses untracked files and URL defined": {
+				common.JobResponse{
+					Artifacts: common.Artifacts{
+						common.Artifact{
+							When:      common.ArtifactWhenOnFailure,
+							Untracked: true,
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+		},
+	}
+
+	shell := AbstractShell{}
+	for stage, tests := range stageTests {
+		t.Run(string(stage), func(t *testing.T) {
+			for tn, tc := range tests {
+				t.Run(tn, func(t *testing.T) {
+					build := &common.Build{
+						JobResponse: common.JobResponse{},
+						Runner:      &common.RunnerConfig{},
+					}
+					info := common.ShellScriptInfo{
+						RunnerCommand: "gitlab-runner-helper",
+						Build:         build,
+					}
+
+					// empty stages should always be skipped
+					err := shell.writeScript(&BashWriter{}, stage, info)
+					assert.True(t, errors.Is(err, common.ErrSkipBuildStage),
+						"expected err %T, but got %T", common.ErrSkipBuildStage, err)
+
+					// stages with bare minimum requirements should not be skipped
+					build.JobResponse = tc.JobResponse
+					build.Runner = &tc.Runner
+					err = shell.writeScript(&BashWriter{}, stage, info)
+					assert.NoError(t, err, "stage %v should not have been skipped", stage)
+				})
+			}
+		})
+	}
 }
