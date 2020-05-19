@@ -256,7 +256,7 @@ prepare_zoneinfo:
 copy_helper_binaries:
 	# copying helper binaries
 	@mkdir -p out/binaries/gitlab-runner-helper
-	@cp dockerfiles/build/binaries/gitlab-runner-helper* out/binaries/gitlab-runner-helper/
+	@cp dockerfiles/runner-helper/binaries/gitlab-runner-helper* out/binaries/gitlab-runner-helper/
 
 prepare_index: export CI_COMMIT_REF_NAME ?= $(BRANCH)
 prepare_index: export CI_COMMIT_SHA ?= $(REVISION)

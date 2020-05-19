@@ -28,7 +28,7 @@ $InformationPreference = "Continue"
 # - $Env:PUSH_TO_DOCKER_HUB - If set to true, it will login to the registry and
 #   push the tags.
 # ---------------------------------------------------------------------------
-$imagesBasePath = "dockerfiles\build\Dockerfile.x86_64"
+$imagesBasePath = "dockerfiles\runner-helper\Dockerfile.x86_64"
 
 function Main
 {
@@ -71,7 +71,7 @@ function Build-Image($tag)
     Write-Information "Build image for x86_64_${windowsFlavor}${windowsVersion}"
 
     $dockerFile = "${imagesBasePath}_${windowsFlavor}"
-    $context = "dockerfiles\build"
+    $context = "dockerfiles\runner-helper"
     $buildArgs = @(
         '--build-arg', "BASE_IMAGE_TAG=mcr.microsoft.com/windows/${windowsFlavor}:${windowsVersion}-amd64",
         '--build-arg', "GIT_VERSION=$Env:GIT_VERSION",

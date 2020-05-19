@@ -8,7 +8,7 @@ helper images:
   artifacts:
     paths:
     - out/helper-images/
-    - dockerfiles/build/binaries/gitlab-runner-helper*
+    - dockerfiles/runner-helper/binaries/gitlab-runner-helper*
     - .gopath/bin
     - .gopath/.ok
     expire_in: 7d

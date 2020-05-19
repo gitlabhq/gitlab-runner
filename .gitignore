@@ -6,10 +6,10 @@ out
 builds/
 commands/helpers/archive.zip
 dockerfiles/**/checksums-*
-dockerfiles/*/install-deps
-dockerfiles/alpine/gitlab-runner-linux-*
-dockerfiles/build/binaries/gitlab-runner-helper.*
-dockerfiles/ubuntu/gitlab-runner_*.deb
+dockerfiles/runner/*/install-deps
+dockerfiles/runner/alpine/gitlab-runner-linux-*
+dockerfiles/runner/ubuntu/gitlab-runner_*.deb
+dockerfiles/runner-helper/binaries/gitlab-runner-helper.*
 .DS_Store
 .idea/
 .editorconfig
