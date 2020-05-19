@@ -172,7 +172,7 @@ func (c *fileArchiver) processUntracked() {
 
 func (c *fileArchiver) enumerate() error {
 	// TODO, support for `artifacts/exclude` will be added in a separate merge
-	// request.
+	// request https://gitlab.com/gitlab-org/gitlab/-/issues/15122
 	if len(c.Exclude) > 0 {
 		return errors.New("artifacts/exclude is not supported yet")
 	}
