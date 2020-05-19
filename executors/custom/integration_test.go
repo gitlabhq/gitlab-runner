@@ -367,6 +367,7 @@ func TestBuildMultilineCommand(t *testing.T) {
 	buildGenerators := map[string]func() (common.JobResponse, error){
 		"bash":       common.GetMultilineBashBuild,
 		"powershell": common.GetMultilineBashBuildPowerShell,
+		"cmd":        common.GetMultilineBashBuildCmd,
 	}
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
@@ -390,6 +391,10 @@ func TestBuildMultilineCommand(t *testing.T) {
 
 func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" {
+			t.Skip("This test doesn't support Windows CMD (which is deprecated)")
+		}
+
 		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
 		require.NoError(t, err)
 
@@ -496,6 +501,10 @@ func TestBuildOnCustomDirectory(t *testing.T) {
 	}
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" {
+			t.Skip("This test doesn't support Windows CMD (which is deprecated)")
+		}
+
 		for testName, tt := range tests {
 			t.Run(testName, func(t *testing.T) {
 				cmd, ok := commands[shell]
