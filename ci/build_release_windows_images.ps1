@@ -72,6 +72,8 @@ function Build-Image($tag)
 
     $dockerFile = "${imagesBasePath}_${windowsFlavor}"
     $context = "dockerfiles\runner-helper"
+    New-Item -ItemType Directory -Force -Path $context\binaries
+    Copy-Item -Path "out\binaries\gitlab-runner-helper\gitlab-runner-helper.x86_64-windows.exe" -Destination "$context\binaries"
     $buildArgs = @(
         '--build-arg', "BASE_IMAGE_TAG=mcr.microsoft.com/windows/${windowsFlavor}:${windowsVersion}-amd64",
         '--build-arg', "GIT_VERSION=$Env:GIT_VERSION",
