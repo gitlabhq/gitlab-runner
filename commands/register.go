@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 
 	"github.com/imdario/mergo"
@@ -321,6 +322,11 @@ func (s *RegisterCommand) askExecutorOptions() {
 			s.VirtualBox = virtualbox
 			s.askVirtualBox()
 			s.askSSHLogin()
+		},
+		"shell": func() {
+			if runtime.GOOS == osTypeWindows && s.RunnerConfig.Shell == "" {
+				s.Shell = "powershell"
+			}
 		},
 		"custom": func() {
 			s.Custom = custom
