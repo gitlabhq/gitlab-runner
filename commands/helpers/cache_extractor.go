@@ -40,7 +40,7 @@ func checkIfUpToDate(path string, resp *http.Response) (bool, time.Time) {
 	return fi != nil && !date.After(fi.ModTime()), date
 }
 
-func (c *CacheExtractorCommand) download() error {
+func (c *CacheExtractorCommand) download(_ int) error {
 	err := os.MkdirAll(filepath.Dir(c.File), 0700)
 	if err != nil {
 		return err
