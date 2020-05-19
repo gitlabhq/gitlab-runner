@@ -98,7 +98,8 @@ test:
 
 1. Go to [https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard](https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard).
 1. Select the Ubuntu Server 18.04 LTS AMI for the instance, the 64-bit (x86) version.
-1. Choose t2.micro instance size. `Click Next: Configure Instance Details`.
+   The name can be different depending on the AWS region selected.
+1. Choose t2.micro instance size. Click `Next: Configure Instance Details`.
 1. Leave the number of instances as 1. We can leave the default chosen network and
    subnet. Let's also set the `Auto-assign Public IP` to **enabled**. We also need
    to create the IAM role that this instance will use:
@@ -114,7 +115,7 @@ test:
       and click `Create role` to continue.
 1. Go back to the window/tab where the instance is being created.
 1. Click the refresh button near the `IAM role` select input. After refreshing,
-   choose the `fargate-test-instance` role. `Click Next: Add Storage`.
+   choose the `fargate-test-instance` role. Click `Next: Add Storage`.
 1. Click `Next: Add Tags`.
 1. Click `Next: Configure Security Group`.
 1. Select the `Create a new security group`, give it a name `fargate-test`, and
@@ -131,17 +132,17 @@ test:
 
 ## Step 5: Install and configure GitLab Runner with the AWS Fargate Custom Executor driver
 
-1. SSH into the EC2 instance that you created in the previous step,
-   `ssh ubuntu@[ip_address] -i path/to/downloaded/key/file`. Note: you need to make
-   sure that the key file for accessing the EC2 instance has the right permissions.
-   `chmod 400 path/to/downloaded/key/file`.
+Assign the right permissions for the downloaded key via `chmod 400 path/to/downloaded/key/file`
+and SSH into the EC2 instance that you created in the previous step via
+`ssh ubuntu@[ip_address] -i path/to/downloaded/key/file`. After that, run the following commands on this EC2 instance:
+
 1. `sudo mkdir -p /opt/gitlab-runner/{metadata,builds,cache}`
 1. `curl -s https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash`
 1. `sudo apt install gitlab-runner`
 1. `sudo gitlab-runner register --url https://gitlab.com/ --registration-token TOKEN_HERE --name fargate-test-runner --run-untagged --executor custom -n`.
    Use the GitLab URL and registration token taken from the project settings page
    opened in step 3 above.
-1. `sudo vim /etc/gitlab-runner/config.toml` and add the following content:
+1. Run `sudo vim /etc/gitlab-runner/config.toml` and add the following content:
 
    ```toml
    concurrent = 1
@@ -168,17 +169,23 @@ test:
        cleanup_args = ["--config", "/etc/gitlab-runner/fargate.toml", "custom", "cleanup"]
    ```
 
-   Note: This section in the `config.toml` will be created by the registration command.
-   The other content sections in the `config.toml` file above is what you will need to add.
+   Note: The section of the `config.toml` file shown below will be created by the registration command, do not change it.
+   The other sections in the `config.toml` file above is what you need to add.
 
    ```toml
+   concurrent = 1
+   check_interval = 0
+
+   [session_server]
+     session_timeout = 1800
+
    name = "fargate-test"
    url = "https://gitlab.com/"
    token = "__REDACTED__"
    executor = "custom"
    ```
 
-1. `sudo vim /etc/gitlab-runner/fargate.toml` and add the following content:
+1. Run `sudo vim /etc/gitlab-runner/fargate.toml` and add the following content:
 
    ```toml
    LogLevel = "info"
@@ -200,10 +207,16 @@ test:
      PrivateKeyPath = "/root/.ssh/id_rsa"
    ```
 
-   - Remember the value for `Cluster` - we will use it later. As well as the `test-task`,
-     the name of the `TaskDefinition` (`:1` is the revision number).
+   - Remember the value for `Cluster`, as well as the name of the `TaskDefinition` (for example `test-task`
+     with `:1` as the revision number). If a revision is not specified, the latest **active** revision is used.
    - Choose your region. Take the `Subnet` value from the Runner Manager instance
-     details. Get the SecurityGroup ID from its details. Note - in a production setting,
+   - Get the SecurityGroup ID from its details:
+
+     1. Find `Security groups` on the Runner Manager instance details page
+     1. Click the security group you created earlier
+     1. Copy the `Security group ID`
+
+     In a production setting,
      you should follow [AWS guidelines](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)
      for setting up and using Security groups.
 
@@ -230,22 +243,22 @@ following steps:
 1. For `Name` type `SSH_PUBLIC_KEY`.
 1. Tier = `Standard`.
 1. Type = `String`.
-1. Copy the value from the `id_rsa_pub` file on the Runner Manager instance, from `/root/.ssh/id_rsa.pub`.
-1. In the `value` field, paste the value from the `id_rsa_pub` file.
+1. Copy the contents of the file `/root/.ssh/id_rsa.pub` on the Runner Manager instance and paste it to the `value` field.
+1. Click `Create parameter`.
 
 ## Step 7. Create an ECS Fargate cluster
 
 An Amazon ECS cluster is a grouping of ECS Container Instances.
 
 1. Go to [http://console.aws.amazon.com/ecs/home#/clusters](http://console.aws.amazon.com/ecs/home#/clusters).
-1. Click `create cluster`.
-1. Choose `Network only` type. Click `Next`.
+1. Click `Create Cluster`.
+1. Choose `Network only` type. Click `Next step`.
 1. Give it the name `test-fargate` (the same as in `fargate.toml`). We don't
    need to specify anything else here.
-1. Click Create.
+1. Click `Create`.
 1. Click `View cluster`. Note the region and account id parts from the `Cluster ARN` value.
 1. Click `Update Cluster` button.
-1. Click `Define capacity provider` and chose `FARGATE`. Click `Update`.
+1. Click `Add another provider` next to `Default capacity provider strategy` and choose `FARGATE`. Click `Update`.
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/userguide/create_cluster.html)
 for detailed instructions on setting up and working with a cluster on ECS Fargate.
@@ -255,41 +268,52 @@ for detailed instructions on setting up and working with a cluster on ECS Fargat
 In this step you will create a task definition of type `Fargate` with a reference
 to the container image that you are going to use for your CI builds.
 
-1. Go to [http://console.aws.amazon.com/ecs/home#/taskDefinitions](http://console.aws.amazon.com/ecs/home#/taskDefinitions)
-1. Click `Create new task definition`.
-1. Choose Fargate.
+1. Go to [http://console.aws.amazon.com/ecs/home#/taskDefinitions](http://console.aws.amazon.com/ecs/home#/taskDefinitions).
+1. Click `Create new Task Definition`.
+1. Choose `Fargate` and click `Next step`.
 1. Give it a name `test-task` (Note: the name is the same as the value defined in
-   the `fargate.toml` file).
-1. Select values for `Task memory (GB)` and `Task CPU (vCPU)`
+   the `fargate.toml` file but without `:1`).
+1. Select values for `Task memory (GB)` and `Task CPU (vCPU)`.
 1. Click `Add Container`, then:
    1. Give it a name (for example `job-container`)
    1. Define image (for example `registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`).
    1. Define port mapping for 22/TCP.
    1. Define a new environment variable `SSH_PUBLIC_KEY`, set it as `ValueFrom` and
       use `arn:aws:ssm:<region>:<account-id>:parameter/SSH_PUBLIC_KEY` as the value.
-      Use the region and account-id noted previously.
-   1. Click `Add`
+      Use the region and account-id noted previously. For example, if your `Cluster ARN` looked like
+      `arn:aws:ecs:eu-west-1:1234567890:cluster/fargate-test-cluster/`, then the value for `SSH_PUBLIC_KEY`
+      should be `arn:aws:ssm:eu-west-1:1234567890:parameter/SSH_PUBLIC_KEY`.
+   1. Click `Add`.
 1. Click `Create`.
-1. Click `View task definitions`.
+1. Click `View task definition`.
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)
 for detailed instructions on setting up and working with task definitions.
 
 ## Step 9: Update permissions of `ecsTaskExecutionRole` role
 
-1. Go to [https://console.aws.amazon.com/iam/home#/roles](https://console.aws.amazon.com/iam/home#/roles)
-1. Choose the ecsTaskExecutionRole
-1. Click Attach policies
-1. Choose AmazonSSMReadOnlyAccess
-1. Click Attach policy
+1. Go to [https://console.aws.amazon.com/iam/home#/roles](https://console.aws.amazon.com/iam/home#/roles).
+1. Find `ecsTaskExecutionRole` using search and click this role.
+1. Click `Attach policies`.
+1. Choose `AmazonSSMReadOnlyAccess`.
+1. Click `Attach policy`.
 
 At this point the GitLab Runner Manager and Fargate Driver are configured and ready
 to start executing jobs on AWS Fargate.
 
-### Step 10: Testing the configuration
+## Step 10: Testing the configuration
 
 Your configuration should now be ready to use.
 
-1. Go to your test project -> CI/CD -> Pipelines
-1. Click New
+1. Go to your test project -> CI/CD -> Pipelines.
+1. Click `Run Pipeline`.
 1. Schedule a new pipeline for master branch.
+
+## Cleanup
+
+If you want to perform a cleanup after testing the custom executor with AWS Fargate, you should remove the following objects:
+
+- EC2 instance, key pair, IAM role and security group created at [step 4](#step-4-create-a-runner-manager-ec2-instance)
+- ECS Fargate cluster created at [step 7](#step-7-create-an-ecs-fargate-cluster)
+- ECS Task Definition created at [step 8](#step-8-create-an-ecs-task-definition)
+- `AmazonSSMReadOnlyAccess` policy from the role `ecsTaskExecutionRole` added at [step 9](#step-9-update-permissions-of-ecstaskexecutionrole-role)
