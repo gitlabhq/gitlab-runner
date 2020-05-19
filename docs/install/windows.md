@@ -52,7 +52,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 1. (Optional) Update Runners `concurrent` value in `C:\GitLab-Runner\config.toml`
    to allow multiple concurrent jobs as detailed in [advanced configuration details](../configuration/advanced-configuration.md).
    Additionally, you can use the advanced configuration details to update your
-   shell executor to use Bash rather than PowerShell.
+   shell executor to use Bash or PowerShell rather than Batch.
 
 Voila! Runner is installed, running, and will start again after each system reboot.
 Logs are stored in Windows Event Log.

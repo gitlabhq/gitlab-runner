@@ -1010,6 +1010,12 @@ func TestInteractiveTerminal(t *testing.T) {
 			expectedStatusCode: http.StatusSwitchingProtocols,
 		},
 		{
+			app:                "cmd.exe",
+			shell:              "cmd",
+			command:            "timeout 2",
+			expectedStatusCode: http.StatusInternalServerError,
+		},
+		{
 			app:                "powershell.exe",
 			shell:              "powershell",
 			command:            "Start-Sleep -s 2",
@@ -1019,10 +1025,6 @@ func TestInteractiveTerminal(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.shell, func(t *testing.T) {
-			if c.shell == "powershell" {
-				// Interactive web terminals aren't supported on Windows at the moment
-				t.Skip()
-			}
 			if helpers.SkipIntegrationTests(t, c.app) {
 				t.Skip()
 			}

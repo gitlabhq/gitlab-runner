@@ -201,6 +201,18 @@ detect it if it is available and automatically make use of it.
 
 [zoneinfo-file]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip
 
+### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
+
+You need to prepend `call` to your batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
+is a more complete example:
+
+```yaml
+before_script:
+  - call C:\path\to\test.bat
+```
+
+Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-runner/issues/1025).
+
 ### How can I get colored output on the web terminal?
 
 **Short answer:**
