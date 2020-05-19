@@ -57,6 +57,8 @@ to implement a pattern for configuring the Fargate driver to use Kaniko.
 - The container image needs to be able to accept an SSH connection through public-key
   authentication. This SSH connection is used by the Runner manager to send the build
   commands defined in the `gitlab-ci.yml` file to the container running on AWS Fargate.
+- Note that if you specify an image for a job using the `image:` keyword, it will be ignored
+  and the image specified in the task definition will be used.
 
 A Debian example, that includes GitLab Runner and the SSH configuration can be found
 in this [repository](https://gitlab.com/tmaczukin-test-projects/fargate-driver-debian).
