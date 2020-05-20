@@ -1,8 +1,7 @@
-## v13.0.0-rc1 (2020-05-12)
+## v13.0.0 (2020-05-20)
 
 ### Breaking Changes
 
-- Remove windows Batch from shell executor !2037
 - Remove support for --docker-services flag on register command !2036
 - Remove fedora/29 package !1905 (Fábio Matavelli @fabiomatavelli)
 - Remove /debug/jobs/list?v=1 endpoint !1894 (Fábio Matavelli @fabiomatavelli)
@@ -18,6 +17,7 @@
 - Support more glob patterns for artifact/cache !1917
 - Add arm64 Docker images for gitlab/gitlab-runner !1861
 - Make docker machine configuration more elastic !1980
+- Add support for `direct_download` artifacts !2093
 
 ### Bug fixes
 
@@ -41,6 +41,7 @@
 - Remove prealloc linter !2014
 - Pin CI jobs to gitlab-org runners !1979
 - Replace Code Climate with golangci-lint !1956
+- Change license management to use rules !2096
 
 ### Documentation changes
 
