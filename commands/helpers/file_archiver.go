@@ -70,7 +70,8 @@ func (c *fileArchiver) add(path string) (err error) {
 	if err == nil {
 		c.files[path] = info
 	}
-	return
+
+	return err
 }
 
 func (c *fileArchiver) process(match string) bool {
