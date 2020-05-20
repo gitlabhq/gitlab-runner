@@ -1,3 +1,9 @@
+## v13.0.0-rc3 (2020-05-20)
+
+### Other changes
+
+- Revert removal of Windows Batch support !2112
+
 ## v13.0.0-rc2 (2020-05-15)
 
 ### New features
