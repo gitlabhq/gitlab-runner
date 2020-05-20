@@ -23,8 +23,9 @@ type fileArchiver struct {
 	Untracked bool     `long:"untracked" description:"Add git untracked files"`
 	Verbose   bool     `long:"verbose" description:"Detailed information"`
 
-	wd    string
-	files map[string]os.FileInfo
+	wd       string
+	files    map[string]os.FileInfo
+	excluded int64
 }
 
 func (c *fileArchiver) isChanged(modTime time.Time) bool {
@@ -61,6 +62,16 @@ func (c *fileArchiver) sortedFiles() []string {
 	return files
 }
 
+func (c *fileArchiver) isExcluded(path string) bool {
+	for _, exclude := range c.Exclude {
+		if excluded, err := doublestar.Match(exclude, path); err == nil && excluded {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (c *fileArchiver) add(path string) (err error) {
 	// Always use slashes
 	path = filepath.ToSlash(path)
@@ -74,6 +85,10 @@ func (c *fileArchiver) add(path string) (err error) {
 	return err
 }
 
+func (c *fileArchiver) exclude(path string) {
+	c.excluded++
+}
+
 func (c *fileArchiver) process(match string) bool {
 	var absolute, relative string
 	var err error
@@ -83,14 +98,22 @@ func (c *fileArchiver) process(match string) bool {
 		// Let's try to find a real relative path to an absolute from working directory
 		relative, err = filepath.Rel(c.wd, absolute)
 	}
+
 	if err == nil {
 		// Process path only if it lives in our build directory
 		if !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			if c.isExcluded(relative) {
+				c.exclude(relative)
+
+				return false
+			}
+
 			err = c.add(relative)
 		} else {
 			err = errors.New("not supported: outside build directory")
 		}
 	}
+
 	if err == nil {
 		return true
 	} else if os.IsNotExist(err) {
@@ -172,12 +195,6 @@ func (c *fileArchiver) processUntracked() {
 }
 
 func (c *fileArchiver) enumerate() error {
-	// TODO, support for `artifacts/exclude` will be added in a separate merge
-	// request https://gitlab.com/gitlab-org/gitlab/-/issues/15122
-	if len(c.Exclude) > 0 {
-		return errors.New("artifacts/exclude is not supported yet")
-	}
-
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current working directory: %w", err)
@@ -188,5 +205,7 @@ func (c *fileArchiver) enumerate() error {
 
 	c.processPaths()
 	c.processUntracked()
+
+	// TODO, print the number of excluded files
 	return nil
 }
