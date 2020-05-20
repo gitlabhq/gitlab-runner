@@ -1207,7 +1207,7 @@ func (e *executor) Cleanup() {
 			"error":   err,
 		})
 
-		networkLogger.Errorln("Removing network for build")
+		networkLogger.Errorln("Failed to remove network for build")
 	}
 
 	if e.client != nil {
