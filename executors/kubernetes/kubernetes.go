@@ -354,9 +354,6 @@ func (s *executor) processLogs(ctx context.Context) {
 func (s *executor) setupScriptsConfigMap() error {
 	s.Debugln("Setting up scripts config map")
 
-	scripts := map[string]string{}
-	scripts[detectShellScriptName] = detectShellScript
-
 	// After issue https://gitlab.com/gitlab-org/gitlab-runner/issues/10342 is resolved and the legacy execution mode is removed
 	// we can remove the manual construction of trapShell and just use "bash+trap"
 	// in the exec options
@@ -366,12 +363,9 @@ func (s *executor) setupScriptsConfigMap() error {
 	}
 
 	trapShell := &shells.BashTrapShell{BashShell: bashShell}
-	for _, stage := range common.BuildStages {
-		script, err := trapShell.GenerateScript(stage, *s.Shell())
-		if err != nil {
-			return fmt.Errorf("generating trap shell script: %w", err)
-		}
-		scripts[string(stage)] = script
+	scripts, err := s.generateScripts(trapShell)
+	if err != nil {
+		return err
 	}
 
 	configMap := &api.ConfigMap{
@@ -382,13 +376,30 @@ func (s *executor) setupScriptsConfigMap() error {
 		Data: scripts,
 	}
 
-	var err error
 	s.configMap, err = s.kubeClient.CoreV1().ConfigMaps(s.configurationOverwrites.namespace).Create(configMap)
 	if err != nil {
 		return fmt.Errorf("generating scripts config map: %w", err)
 	}
 
 	return nil
+}
+
+func (s *executor) generateScripts(shell common.Shell) (map[string]string, error) {
+	scripts := map[string]string{}
+	scripts[detectShellScriptName] = detectShellScript
+
+	for _, stage := range common.BuildStages {
+		script, err := shell.GenerateScript(stage, *s.Shell())
+		if errors.Is(err, common.ErrSkipBuildStage) {
+			continue
+		} else if err != nil {
+			return nil, fmt.Errorf("generating trap shell script: %w", err)
+		}
+
+		scripts[string(stage)] = script
+	}
+
+	return scripts, nil
 }
 
 func (s *executor) Cleanup() {

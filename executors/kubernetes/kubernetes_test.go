@@ -2997,3 +2997,82 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateScripts(t *testing.T) {
+	testErr := errors.New("testErr")
+
+	e := &executor{}
+	e.ExecutorOptions.Shell = common.ShellScriptInfo{}
+
+	setupMockShellGenerateScript := func(m *common.MockShell, stages []common.BuildStage) {
+		for _, s := range stages {
+			m.On("GenerateScript", s, e.ExecutorOptions.Shell).
+				Return("OK", nil).
+				Once()
+		}
+	}
+
+	setupScripts := func(stages []common.BuildStage) map[string]string {
+		scripts := map[string]string{}
+		scripts[detectShellScriptName] = detectShellScript
+
+		for _, s := range stages {
+			scripts[string(s)] = "OK"
+		}
+
+		return scripts
+	}
+
+	tests := map[string]struct {
+		setupMockShell  func() *common.MockShell
+		expectedScripts map[string]string
+		expectedErr     error
+	}{
+		"all stages OK": {
+			setupMockShell: func() *common.MockShell {
+				m := new(common.MockShell)
+				setupMockShellGenerateScript(m, common.BuildStages)
+
+				return m
+			},
+			expectedScripts: setupScripts(common.BuildStages),
+			expectedErr:     nil,
+		},
+		"stage returns skip build stage error": {
+			setupMockShell: func() *common.MockShell {
+				m := new(common.MockShell)
+				m.On("GenerateScript", common.BuildStages[0], e.ExecutorOptions.Shell).
+					Return("", common.ErrSkipBuildStage).
+					Once()
+				setupMockShellGenerateScript(m, common.BuildStages[1:])
+
+				return m
+			},
+			expectedScripts: setupScripts(common.BuildStages[1:]),
+			expectedErr:     nil,
+		},
+		"stage returns error": {
+			setupMockShell: func() *common.MockShell {
+				m := new(common.MockShell)
+				m.On("GenerateScript", common.BuildStages[0], e.ExecutorOptions.Shell).
+					Return("", testErr).
+					Once()
+
+				return m
+			},
+			expectedScripts: nil,
+			expectedErr:     testErr,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			m := tt.setupMockShell()
+			defer m.AssertExpectations(t)
+
+			scripts, err := e.generateScripts(m)
+			assert.True(t, errors.Is(err, tt.expectedErr))
+			assert.Equal(t, tt.expectedScripts, scripts)
+		})
+	}
+}
