@@ -1,5 +1,5 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-4
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-5
   GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
@@ -63,7 +63,6 @@ before_script:
   - name: docker:${DOCKER_VERSION}-dind
     command: ["--experimental"]
   variables:
-    CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-4
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_VERIFY: 1
