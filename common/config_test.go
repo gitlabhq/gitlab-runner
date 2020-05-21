@@ -323,7 +323,7 @@ func TestConfigParse(t *testing.T) {
 											key = "security"
 											operator = "In"
 											values = ["S1"]
-								
+
 								[[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution]]
 								weight = 100
 								[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
@@ -406,7 +406,7 @@ func TestConfigParse(t *testing.T) {
 											key = "security"
 											operator = "In"
 											values = ["S1"]
-								
+
 								[[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution]]
 								weight = 100
 								[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
@@ -1271,6 +1271,59 @@ func TestRunnerSettings_IsFeatureFlagOn(t *testing.T) {
 
 			on := cfg.IsFeatureFlagOn(tt.name)
 			assert.Equal(t, tt.expectedValue, on)
+		})
+	}
+}
+
+func TestKubernetesTerminationPeriod(t *testing.T) {
+	tests := map[string]struct {
+		cfg                                      KubernetesConfig
+		expectedPodTerminationGracePeriodSeconds *int64
+		expectedCleanupGracePeriodSeconds        *int64
+	}{
+		"all default values": {
+			cfg:                                      KubernetesConfig{},
+			expectedPodTerminationGracePeriodSeconds: Int64Ptr(0),
+			expectedCleanupGracePeriodSeconds:        nil,
+		},
+		"only TerminationGracePeriodSeconds is specified": {
+			cfg: KubernetesConfig{
+				TerminationGracePeriodSeconds: Int64Ptr(10),
+			},
+			expectedPodTerminationGracePeriodSeconds: Int64Ptr(10),
+			expectedCleanupGracePeriodSeconds:        Int64Ptr(10),
+		},
+		"all specified": {
+			cfg: KubernetesConfig{
+				TerminationGracePeriodSeconds:    Int64Ptr(10),
+				CleanupGracePeriodSeconds:        Int64Ptr(5),
+				PodTerminationGracePeriodSeconds: Int64Ptr(3),
+			},
+			expectedPodTerminationGracePeriodSeconds: Int64Ptr(10),
+			expectedCleanupGracePeriodSeconds:        Int64Ptr(10),
+		},
+		"only CleanupGracePeriodSeconds and PodTerminationGracePeriodSeconds specified": {
+			cfg: KubernetesConfig{
+				CleanupGracePeriodSeconds:        Int64Ptr(8),
+				PodTerminationGracePeriodSeconds: Int64Ptr(10),
+			},
+			expectedCleanupGracePeriodSeconds:        Int64Ptr(8),
+			expectedPodTerminationGracePeriodSeconds: Int64Ptr(10),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.EqualValues(
+				t,
+				tt.expectedPodTerminationGracePeriodSeconds,
+				tt.cfg.GetPodTerminationGracePeriodSeconds(),
+			)
+			assert.EqualValues(
+				t,
+				tt.expectedCleanupGracePeriodSeconds,
+				tt.cfg.GetCleanupGracePeriodSeconds(),
+			)
 		})
 	}
 }

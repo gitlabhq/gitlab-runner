@@ -337,7 +337,9 @@ type KubernetesConfig struct {
 	ImagePullSecrets                                  []string                     `toml:"image_pull_secrets,omitempty" json:"image_pull_secrets" long:"image-pull-secrets" env:"KUBERNETES_IMAGE_PULL_SECRETS" description:"A list of image pull secrets that are used for pulling docker image"`
 	HelperImage                                       string                       `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 	HelperImageFlavor                                 string                       `toml:"helper_image_flavor,omitempty" json:"helper_image_flavor" long:"helper-image-flavor" env:"KUBERNETES_HELPER_IMAGE_FLAVOR" description:"Set helper image flavor (alpine, ubuntu), defaults to alpine"`
-	TerminationGracePeriodSeconds                     int64                        `toml:"terminationGracePeriodSeconds,omitzero" json:"terminationGracePeriodSeconds" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal."`
+	TerminationGracePeriodSeconds                     *int64                       `toml:"terminationGracePeriodSeconds,omitzero" json:"terminationGracePeriodSeconds" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. DEPRECATED: use KUBERNETES_POD_TERMINATION_GRACE_PERIOD_SECONDS and KUBERNETES_CLEANUP_GRACE_PERIOD_SECONDS instead."`
+	PodTerminationGracePeriodSeconds                  *int64                       `toml:"pod_termination_grace_period_seconds,omitzero" json:"pod_termination_grace_period_seconds" long:"pod_termination_grace_period_seconds" env:"KUBERNETES_POD_TERMINATION_GRACE_PERIOD_SECONDS" description:"Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if KUBERNETES_TERMINATIONGRACEPERIODSECONDS is specified."`
+	CleanupGracePeriodSeconds                         *int64                       `toml:"cleanup_grace_period_seconds,omitzero" json:"cleanup_grace_period_seconds" long:"cleanup_grace_period_seconds" env:"KUBERNETES_CLEANUP_GRACE_PERIOD_SECONDS" description:"When cleaning up a pod on completion of a job, the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if KUBERNETES_TERMINATIONGRACEPERIODSECONDS is specified."`
 	PollInterval                                      int                          `toml:"poll_interval,omitzero" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status"`
 	PollTimeout                                       int                          `toml:"poll_timeout,omitzero" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The total amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the pod it has just created (useful for queueing more builds that the cluster can handle at a time)"`
 	PodLabels                                         map[string]string            `toml:"pod_labels,omitempty" json:"pod_labels" long:"pod-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create pods with the given pod labels. Environment variables will be substituted for values here."`
@@ -905,6 +907,40 @@ func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
 		RunAsUser:          podSecurityContext.RunAsUser,
 		SupplementalGroups: podSecurityContext.SupplementalGroups,
 	}
+}
+
+// GetCleanupGracePeriodSeconds returns the effective value of CleanupGracePeriodSeconds
+// depending on TerminationGracePeriodSeconds.
+// Support for TerminationGracePeriodSeconds will be removed with
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165.
+func (c *KubernetesConfig) GetCleanupGracePeriodSeconds() *int64 {
+	if c.TerminationGracePeriodSeconds != nil {
+		return c.TerminationGracePeriodSeconds
+	}
+
+	return c.CleanupGracePeriodSeconds
+}
+
+// GetPodTerminationGracePeriodSeconds returns the effective value of PodTerminationGracePeriodSeconds
+// depending on TerminationGracePeriodSeconds.
+// Support for TerminationGracePeriodSeconds will be removed with
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165.
+func (c *KubernetesConfig) GetPodTerminationGracePeriodSeconds() *int64 {
+	if c.TerminationGracePeriodSeconds != nil {
+		return c.TerminationGracePeriodSeconds
+	}
+
+	// For backwards compatibility, the default value of the Pod termination should remain zero since that means
+	//nolint:lll
+	// "terminate immediately" as opposed to nil, which by default is a timeout of 30 seconds as per http://gitlab.com/gitlab-org/gitlab-runner/blob/45472cdf02591942c9a95d2ce38ef5ff3a38d842/vendor/k8s.io/api/core/v1/types.go#L2988-2988.
+	// For details refer to https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2130.
+	// Will be removed with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165.
+	var defaultPodTerminationGracePeriod int64 = 0
+	if c.PodTerminationGracePeriodSeconds == nil {
+		return &defaultPodTerminationGracePeriod
+	}
+
+	return c.PodTerminationGracePeriodSeconds
 }
 
 func (c *KubernetesConfig) GetAffinity() *api.Affinity {

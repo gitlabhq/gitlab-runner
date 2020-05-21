@@ -643,7 +643,8 @@ func (s *executor) cleanupResources() {
 			CoreV1().
 			Pods(s.pod.Namespace).
 			Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{
-				PropagationPolicy: &PropagationPolicy,
+				GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
+				PropagationPolicy:  &PropagationPolicy,
 			})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
@@ -654,7 +655,9 @@ func (s *executor) cleanupResources() {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			Secrets(s.configurationOverwrites.namespace).
-			Delete(context.TODO(), s.credentials.Name, metav1.DeleteOptions{})
+			Delete(context.TODO(), s.credentials.Name, metav1.DeleteOptions{
+				GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
+			})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
@@ -663,7 +666,9 @@ func (s *executor) cleanupResources() {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			ConfigMaps(s.configurationOverwrites.namespace).
-			Delete(context.TODO(), s.configMap.Name, metav1.DeleteOptions{})
+			Delete(context.TODO(), s.configMap.Name, metav1.DeleteOptions{
+				GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
+			})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
 		}
@@ -1281,7 +1286,7 @@ func (s *executor) preparePodConfig(
 				buildContainer,
 				helperContainer,
 			}, services...),
-			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
+			TerminationGracePeriodSeconds: s.Config.Kubernetes.GetPodTerminationGracePeriodSeconds(),
 			ImagePullSecrets:              imagePullSecrets,
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
 			HostAliases:                   hostAliases,
