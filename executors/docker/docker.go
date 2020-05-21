@@ -66,7 +66,7 @@ type executor struct {
 	volumeParser              parser.Parser
 	newVolumePermissionSetter func() (permission.Setter, error)
 	info                      types.Info
-	waiter                    wait.Waiter
+	waiter                    wait.KillWaiter
 
 	temporary []string // IDs of containers that should be removed
 
@@ -831,8 +831,8 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	// Wait until either:
 	// - the job is aborted/cancelled/deadline exceeded
 	// - stdin has an error
-	// - stdout returns an error or nil (indicating the stream has ended and
-	//   the container has exited)
+	// - stdout returns an error or nil, indicating the stream has ended and
+	//   the container has exited
 	select {
 	case <-ctx.Done():
 		err = errors.New("aborted")
@@ -975,7 +975,6 @@ func (e *executor) connectDocker() error {
 		Architecture:    e.info.Architecture,
 		OperatingSystem: e.info.OperatingSystem,
 	})
-
 	e.waiter = wait.NewDockerWaiter(e.client)
 
 	return err
@@ -1266,10 +1265,20 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	return &serviceHealthCheckError{
-		Inner: e.waiter.Wait(ctx, resp.ID),
-		Logs:  e.readContainerLogs(resp.ID),
+	if err := e.waiter.Wait(ctx, resp.ID); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			err = fmt.Errorf("service %q timeout", containerName)
+		} else {
+			err = fmt.Errorf("service %q health check: %w", containerName, err)
+		}
+
+		return &serviceHealthCheckError{
+			Inner: err,
+			Logs:  e.readContainerLogs(resp.ID),
+		}
 	}
+
+	return nil
 }
 
 // addServiceHealthCheckEnvironment will create the environment variables needed
