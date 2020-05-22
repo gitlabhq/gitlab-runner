@@ -4,7 +4,7 @@ table_display_block: true
 
 # Advanced configuration
 
-GitLab Runner configuration uses the [TOML][] format.
+GitLab Runner configuration uses the [TOML](https://github.com/toml-lang/toml) format.
 
 The file to be edited can be found in:
 
@@ -166,9 +166,9 @@ There are a couple of available executors currently.
 | Executor | Description |
 | -------- | ----------- |
 | `shell`       | run build locally, default |
-| `docker`      | run build using Docker container. This requires the presence of `[runners.docker]` and [Docker Engine][] installed on a system that the Runner will run the job on. |
-| `docker-windows` | run build using Windows Docker container. This requires the presence of `[runners.docker]` and [Docker Engine][] installed on a Windows system. |
-| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine][] installed on the system that the Runner runs. **Note: This will run the docker container on the local machine, it just changes how the commands are run inside that container. If you want to run docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
+| `docker`      | run build using Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a system that the Runner will run the job on. |
+| `docker-windows` | run build using Windows Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a Windows system. |
+| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine](https://docs.docker.com/engine/) installed on the system that the Runner runs. **Note: This will run the docker container on the local machine, it just changes how the commands are run inside that container. If you want to run docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
 | `ssh`         | run build remotely with SSH - this requires the presence of `[runners.ssh]` |
 | `parallels`   | run build using Parallels VM, but connect to it with SSH - this requires the presence of `[runners.parallels]` and `[runners.ssh]` |
 | `virtualbox`  | run build using VirtualBox VM, but connect to it with SSH - this requires the presence of `[runners.virtualbox]` and `[runners.ssh]` |
@@ -349,15 +349,15 @@ well.
 >  of credentials on runner's host. We recommend to upgrade your Runner to
 >  at least version **1.8** if you want to use private registries.
 >- Using private registries with the `if-not-present` pull policy may introduce
->  [security implications][secpull]. To fully understand how pull policies work,
+>  [security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). To fully understand how pull policies work,
 >  read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
 If you want to use private registries as a source of images for your builds,
 you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
-[variable]. It can be set in both GitLab Variables section of
+[variable](https://docs.gitlab.com/ee/ci/variables/#variables). It can be set in both GitLab Variables section of
 a project and in the `config.toml` file.
 
-For a detailed example, visit the [Using Docker images documentation][priv-example].
+For a detailed example, visit the [Using Docker images documentation](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry).
 
 The steps performed by the Runner can be summed up to:
 
@@ -368,7 +368,7 @@ The steps performed by the Runner can be summed up to:
    found, subsequent pulls will make use of it.
 
 Now that the Runner is set up to authenticate against your private registry,
-learn [how to configure `.gitlab-ci.yml`][yaml-priv-reg] in order to use that
+learn [how to configure `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html#image-and-services) in order to use that
 registry.
 
 #### Support for GitLab integrated registry
@@ -388,7 +388,7 @@ configuration added with `DOCKER_AUTH_CONFIG` variable.
 Thanks to this, in your builds you can use any image from you GitLab integrated
 registry, even if the image is private/protected. To fully understand for
 which images the builds will have access, read the
-[New CI build permissions model][ci-build-permissions-model] documentation.
+[New CI build permissions model](https://docs.gitlab.com/ee/user/project/new_ci_build_permissions_model.html) documentation.
 
 #### Precedence of Docker authorization resolving
 
@@ -553,7 +553,7 @@ following fields:
 
 Like in the standard cron configuration file, the fields can contain single
 values, ranges, lists and asterisks. A detailed description of the syntax
-can be found [here][cronvendor].
+can be found [here](https://github.com/gorhill/cronexpr#implementation).
 
 ## The `[runners.custom]` section
 
@@ -915,13 +915,3 @@ For example, a shared Runner environment using the docker-machine executor would
 If you'd like to deploy to multiple servers using GitLab CI, you can create a
 single script that deploys to multiple servers or you can create many scripts.
 It depends on what you'd like to do.
-
-[TOML]: https://github.com/toml-lang/toml
-[Docker Engine]: https://docs.docker.com/engine/
-[yaml-priv-reg]: https://docs.gitlab.com/ee/ci/yaml/README.html#image-and-services
-[ci-build-permissions-model]: https://docs.gitlab.com/ee/user/project/new_ci_build_permissions_model.html
-[secpull]: ../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy
-
-[priv-example]: https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry
-[variable]: https://docs.gitlab.com/ee/ci/variables/#variables
-[cronvendor]: https://github.com/gorhill/cronexpr#implementation

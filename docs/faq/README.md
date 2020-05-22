@@ -75,20 +75,16 @@ Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
 **main entrypoint** of GitLab.
 
 If you are using Omnibus GitLab, but don't want to use the bundled NGINX
-server, please read [using a non-bundled web-server][omnibus-ext-nginx].
+server, please read [using a non-bundled web-server](https://docs.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server).
 
 In the GitLab Recipes repository there are [web-server configuration
-examples][recipes] for Apache and NGINX.
+examples](https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server) for Apache and NGINX.
 
 If you are using GitLab installed from source, please also read the above
 documentation and examples, and make sure that all HTTP(S) traffic is going
 through the **GitLab Workhorse**.
 
-See [an example of a user issue][1105].
-
-[omnibus-ext-nginx]: http://doc.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server
-[recipes]: https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server
-[1105]: https://gitlab.com/gitlab-org/gitlab-runner/issues/1105
+See [an example of a user issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1105).
 
 ### `zoneinfo.zip: no such file or directory` error when using `Timezone` or `OffPeakTimezone`
 
@@ -127,7 +123,7 @@ sudo apk add -U tzdata
 If your system doesn't provide this database in a _native_ way, then you can make `OffPeakTimezone`
 working by following the steps below:
 
-1. Downloading the [`zoneinfo.zip`][zoneinfo-file]. Starting with version v9.1.0 you can download
+1. Downloading the [`zoneinfo.zip`](https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip). Starting with version v9.1.0 you can download
    the file from a tagged path. In that case you should replace `latest` with the tag name (e.g., `v9.1.0`)
    in the `zoneinfo.zip` download URL.
 
@@ -198,8 +194,6 @@ project to use `git fetch` from the GitLab CI project settings page.
 The [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShell module provides
 a *Remove-Item2* method which supports long paths. The GitLab CI Multi Runner will
 detect it if it is available and automatically make use of it.
-
-[zoneinfo-file]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip
 
 ### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
 

@@ -13,7 +13,7 @@ so ensure Git LFS is up-to-date when GitLab Runner will run using the shell exec
 ## Overview
 
 The scripts can be run as unprivileged user if the `--user` is added to the
-[`gitlab-runner run` command][run]. This feature is only supported by Bash.
+[`gitlab-runner run` command](../commands/README.md#gitlab-runner-run). This feature is only supported by Bash.
 
 The source project is checked out to:
 `<working-directory>/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`.
@@ -39,7 +39,7 @@ in [`config.toml`](../configuration/advanced-configuration.md).
 ## Running as unprivileged user
 
 If GitLab Runner is installed on Linux from the [official `.deb` or `.rpm`
-packages][packages], the installer will try to use the `gitlab_ci_multi_runner`
+packages](https://packages.gitlab.com/runner/gitlab-runner), the installer will try to use the `gitlab_ci_multi_runner`
 user if found. If it is not found, it will create a `gitlab-runner` user and use
 this instead.
 
@@ -74,6 +74,3 @@ Generally it's unsafe to run tests with shell executors. The jobs are run with
 the user's permissions (`gitlab-runner`) and can "steal" code from other
 projects that are run on this server. Use it only for running builds on a
 server you trust and own.
-
-[run]: ../commands/README.md#gitlab-runner-run
-[packages]: https://packages.gitlab.com/runner/gitlab-runner

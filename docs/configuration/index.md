@@ -8,7 +8,7 @@ Below you can find some specific documentation on configuring GitLab Runner, the
 shells supported, the security implications using the various executors, as
 well as information how to set up Prometheus metrics:
 
-- [Advanced configuration options](advanced-configuration.md) Learn how to use the [TOML][] configuration file that GitLab Runner uses.
+- [Advanced configuration options](advanced-configuration.md) Learn how to use the [TOML](https://github.com/toml-lang/toml) configuration file that GitLab Runner uses.
 - [Use self-signed certificates](tls-self-signed.md) Configure certificates that are used to verify TLS peer when connecting to the GitLab server.
 - [Autoscaling using Docker machine](autoscale.md) Execute jobs on machines that are created on demand using Docker machine.
 - [Autoscaling GitLab Runner on AWS EC2](runner_autoscale_aws/index.md)
@@ -22,5 +22,3 @@ well as information how to set up Prometheus metrics:
 - [Configure GitLab Runner to run behind a proxy](proxy.md) Learn how to set up a Linux proxy and configure GitLab Runner. Especially useful for the Docker executor.
 - [Best practice for using GitLab Runner](../best_practice/index.md).
 - [Handling rate limited requests](rate_limiting.md)
-
-[TOML]: https://github.com/toml-lang/toml

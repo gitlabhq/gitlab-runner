@@ -33,13 +33,13 @@ To download the appropriate package for your system:
 
 For example, for Debian or Ubuntu:
 
-```sh
+```shell
 curl -LJO https://gitlab-runner-downloads.s3.amazonaws.com/latest/deb/gitlab-runner_<arch>.deb
 ```
 
 For example, for CentOS or Red Hat Enterprise Linux:
 
-```sh
+```shell
 curl -LJO https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_<arch>.rpm
 ```
 
@@ -49,13 +49,13 @@ curl -LJO https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-run
 
    For example, for Debian or Ubuntu:
 
-   ```sh
+   ```shell
    dpkg -i gitlab-runner_<arch>.deb
    ```
 
    For example, for CentOS or Red Hat Enterprise Linux:
 
-   ```sh
+   ```shell
    rpm -i gitlab-runner_<arch>.rpm
    ```
 
@@ -67,13 +67,13 @@ Download the latest package for your system then upgrade as follows:
 
 For example, for Debian or Ubuntu:
 
-```sh
+```shell
 dpkg -i gitlab-runner_<arch>.deb
 ```
 
 For example, for CentOS or Red Hat Enterprise Linux:
 
-```sh
+```shell
 rpm -Uvh gitlab-runner_<arch>.rpm
 ```
 
@@ -89,7 +89,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
 1. Simply download one of the binaries for your system:
 
-   ```sh
+   ```shell
    # Linux x86-64
    sudo curl -L --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64
 
@@ -108,19 +108,19 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
 1. Give it permissions to execute:
 
-   ```sh
+   ```shell
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
 1. Create a GitLab CI user:
 
-   ```sh
+   ```shell
    sudo useradd --comment 'GitLab Runner' --create-home gitlab-runner --shell /bin/bash
    ```
 
 1. Install and run as service:
 
-   ```sh
+   ```shell
    sudo gitlab-runner install --user=gitlab-runner --working-directory=/home/gitlab-runner
    sudo gitlab-runner start
    ```
@@ -138,13 +138,13 @@ therefore the user under which jobs are run, needs to have access to the executa
 
 1. Stop the service (you need elevated command prompt as before):
 
-   ```sh
+   ```shell
    sudo gitlab-runner stop
    ```
 
 1. Download the binary to replace Runner's executable. For example:
 
-   ```sh
+   ```shell
    sudo curl -L --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64
    ```
 
@@ -153,12 +153,12 @@ therefore the user under which jobs are run, needs to have access to the executa
 
 1. Give it permissions to execute:
 
-   ```sh
+   ```shell
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
 1. Start the service:
 
-   ```sh
+   ```shell
    sudo gitlab-runner start
    ```

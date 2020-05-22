@@ -14,7 +14,7 @@ Ensure Git LFS is up-to-date on any remote systems where GitLab Runner will run 
 ## Overview
 
 To use the SSH executor you need to specify `executor = "ssh"` under the
-[`[runners.ssh]`][runners-ssh] section. For example:
+[`[runners.ssh]`](../configuration/advanced-configuration.md#the-runnersssh-section) section. For example:
 
 ```toml
 [[runners]]
@@ -44,7 +44,7 @@ Where:
 - `<project-name>` is the name of the project as it is stored on GitLab
 
 To overwrite the `~/builds` directory, specify the `builds_dir` options under
-`[[runners]]` section in [`config.toml`][toml].
+`[[runners]]` section in [`config.toml`](../configuration/advanced-configuration.md).
 
 If you want to upload job artifacts, install `gitlab-runner` on the host you are
 connecting to via SSH.
@@ -54,6 +54,3 @@ connecting to via SSH.
 The SSH executor is susceptible to MITM attacks (man-in-the-middle), because of
 the missing `StrictHostKeyChecking` option. This will be fixed in one of the
 future releases.
-
-[runners-ssh]: ../configuration/advanced-configuration.md#the-runnersssh-section
-[toml]: ../configuration/advanced-configuration.md

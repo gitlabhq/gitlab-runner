@@ -1,6 +1,6 @@
 # GitLab Runner monitoring
 
-GitLab Runner can be monitored using [Prometheus].
+GitLab Runner can be monitored using [Prometheus](https://prometheus.io).
 
 ## Embedded Prometheus metrics
 
@@ -52,7 +52,7 @@ the `pprof` HTTP endpoints.
 `pprof` endpoints will be available via an embedded HTTP server on `/debug/pprof/`
 path.
 
-You can read more about using `pprof` in its [documentation][go-pprof].
+You can read more about using `pprof` in its [documentation](https://golang.org/pkg/net/http/pprof/).
 
 ## Configuration of the metrics HTTP server
 
@@ -87,6 +87,3 @@ The HTTP server is opened on the selected `host:port`
 to a public interface then you should consider to use your firewall to
 limit access to this server or add an HTTP proxy which will add the
 authorization and access control layer.
-
-[go-pprof]: https://golang.org/pkg/net/http/pprof/
-[prometheus]: https://prometheus.io

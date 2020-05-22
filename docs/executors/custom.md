@@ -124,7 +124,7 @@ specific keys.
 
 For example:
 
-```sh
+```shell
 #!/usr/bin/env bash
 
 cat << EOS
@@ -247,7 +247,7 @@ executed with:
 
 For example:
 
-```sh
+```shell
 /path/to/run_exec.sh /path/to/tmp/script1 prepare_executor
 /path/to/run_exec.sh /path/to/tmp/script1 prepare_script
 /path/to/run_exec.sh /path/to/tmp/script1 get_sources
@@ -268,7 +268,7 @@ example, suppose we have the following `config.toml`:
 
 GitLab Runner will execute the executable with the following arguments:
 
-```sh
+```shell
 /path/to/run_exec.sh Arg1 Arg2 /path/to/tmp/script1 prepare_executor
 /path/to/run_exec.sh Arg1 Arg2 /path/to/tmp/script1 prepare_script
 /path/to/run_exec.sh Arg1 Arg2 /path/to/tmp/script1 get_sources
