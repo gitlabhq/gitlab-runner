@@ -256,6 +256,68 @@ func TestGitCleanFlags(t *testing.T) {
 	}
 }
 
+func TestGitFetchFlags(t *testing.T) {
+	tests := map[string]struct {
+		value string
+
+		expectedGitFetchFlags []interface{}
+	}{
+		"empty fetch flags": {
+			value:                 "",
+			expectedGitFetchFlags: []interface{}{"--prune", "--quiet"},
+		},
+		"use custom flags": {
+			value:                 "--prune",
+			expectedGitFetchFlags: []interface{}{"--prune"},
+		},
+		"disabled": {
+			value: "none",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			const dummySha = "01234567abcdef"
+			const dummyRef = "master"
+			const dummyProjectDir = "./"
+			const dummyGitDir = "./.git"
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{},
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: 0},
+					Variables: common.JobVariables{
+						{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			mockWriter := new(MockShellWriter)
+			defer mockWriter.AssertExpectations(t)
+
+			mockWriter.On("Notice", "Fetching changes...").Once()
+			mockWriter.On("MkTmpDir", mock.Anything).Return(mock.Anything).Once()
+			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
+			mockWriter.On("Command", "git", "init", dummyProjectDir, "--template", mock.Anything).Once()
+			mockWriter.On("Cd", mock.Anything)
+			mockWriter.On("IfCmd", "git", "remote", "add", "origin", mock.Anything)
+			mockWriter.On("RmFile", mock.Anything)
+			mockWriter.On("Notice", "Created fresh repository.").Once()
+			mockWriter.On("Else")
+			mockWriter.On("Command", "git", "remote", "set-url", "origin", mock.Anything)
+			mockWriter.On("EndIf")
+
+			command := []interface{}{"git", "fetch", "origin"}
+			command = append(command, test.expectedGitFetchFlags...)
+			mockWriter.On("Command", command...)
+
+			shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir, dummyGitDir)
+		})
+	}
+}
+
 func TestAbstractShell_writeSubmoduleUpdateCmdRecursive(t *testing.T) {
 	shell := AbstractShell{}
 	mockWriter := new(MockShellWriter)

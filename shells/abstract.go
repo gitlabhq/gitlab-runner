@@ -314,11 +314,13 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
 	w.EndIf()
 
-	fetchArgs := []string{"fetch", "origin", "--prune"}
+	fetchArgs := []string{"fetch", "origin"}
 	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
 	if depth > 0 {
 		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
 	}
+
+	fetchArgs = append(fetchArgs, build.GetGitFetchFlags()...)
 
 	w.Command("git", fetchArgs...)
 }
