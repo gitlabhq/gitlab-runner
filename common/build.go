@@ -38,6 +38,11 @@ const (
 	gitCleanFlagsNone    = "none"
 )
 
+const (
+	gitFetchFlagsDefault = "--prune --quiet"
+	gitFetchFlagsNone    = "none"
+)
+
 type SubmoduleStrategy int
 
 const (
@@ -894,6 +899,19 @@ func (b *Build) GetGitCleanFlags() []string {
 	}
 
 	if flags == gitCleanFlagsNone {
+		return []string{}
+	}
+
+	return strings.Fields(flags)
+}
+
+func (b *Build) GetGitFetchFlags() []string {
+	flags := b.GetAllVariables().Get("GIT_FETCH_EXTRA_FLAGS")
+	if flags == "" {
+		flags = gitFetchFlagsDefault
+	}
+
+	if flags == gitFetchFlagsNone {
 		return []string{}
 	}
 

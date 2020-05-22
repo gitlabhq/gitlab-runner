@@ -1448,6 +1448,46 @@ func TestGitCleanFlags(t *testing.T) {
 	}
 }
 
+func TestGitFetchFlags(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult []string
+	}{
+		"empty fetch flags": {
+			value:          "",
+			expectedResult: []string{"--prune", "--quiet"},
+		},
+		"use custom flags": {
+			value:          "custom-flags",
+			expectedResult: []string{"custom-flags"},
+		},
+		"use custom flags with multiple arguments": {
+			value:          "--prune --tags --quiet",
+			expectedResult: []string{"--prune", "--tags", "--quiet"},
+		},
+		"disabled": {
+			value:          "none",
+			expectedResult: []string{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			result := build.GetGitFetchFlags()
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
 func TestDefaultVariables(t *testing.T) {
 	tests := map[string]struct {
 		jobVariables  JobVariables
