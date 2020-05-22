@@ -61,7 +61,7 @@ enable feature flags:
 
 - For a single job:
 
-  ```yml
+  ```yaml
   job:
     stage: test
     variables:

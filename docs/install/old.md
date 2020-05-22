@@ -17,7 +17,7 @@ repository [was renamed as well](https://packages.gitlab.com/runner/gitlab-runne
 
 For versions **prior to 10.0**, the repository URLs are:
 
-```bash
+```shell
 # For Debian/Ubuntu
 curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | sudo bash
 

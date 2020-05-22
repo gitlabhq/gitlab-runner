@@ -19,14 +19,12 @@ In case of many cloud providers this helps to utilize the cost of already used
 instances.
 
 Below, you can see a real life example of the runners autoscale feature, tested
-on GitLab.com for the [GitLab Community Edition][ce] project:
+on GitLab.com for the [GitLab Community Edition](https://gitlab.com/gitlab-org/gitlab-foss) project:
 
 ![Real life example of autoscaling](img/autoscale-example.png)
 
 Each machine on the chart is an independent cloud instance, running jobs
 inside of Docker containers.
-
-[ce]: https://gitlab.com/gitlab-org/gitlab-ce
 
 ## System requirements
 
@@ -68,7 +66,7 @@ in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](ad
 ### `[runners.cache]` options
 
 Configuration parameters details can be found
-in [GitLab Runner - Advanced Configuration - The `[runners.cache]` section][runners-cache]
+in [GitLab Runner - Advanced Configuration - The `[runners.cache]` section](advanced-configuration.md#the-runnerscache-section)
 
 ### Additional configuration information
 
@@ -274,7 +272,7 @@ default can be stated as `Timezone = "Local"` explicitly.
 More information about the syntax of `[[runner.machine.autoscaling]]` sections can be found
 in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](advanced-configuration.md#the-runnersmachine-section).
 
-## [Deprecated] Off Peak time mode configuration
+## Off Peak time mode configuration (Deprecated)
 
 > This setting is deprecated and will be removed in 14.0. Use autoscaling periods instead.
 > If both settings are used, the Off Peak settings will be ignored.
@@ -322,7 +320,7 @@ the `OffPeakPeriods` pattern is fulfilled then it switches back to
 NOTE: **Note:**
 Read how to [install your own cache server](../install/registry_and_cache_servers.md#install-your-own-cache-server).
 
-To speed up your jobs, GitLab Runner provides a [cache mechanism][cache]
+To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/README.html#cache)
 where selected directories and/or files are saved and shared between subsequent
 jobs.
 
@@ -340,7 +338,7 @@ When restoring and archiving the cache, GitLab Runner will query the server
 and will download or upload the archive respectively.
 
 To enable distributed caching, you have to define it in `config.toml` using the
-[`[runners.cache]` directive][runners-cache]:
+[`[runners.cache]` directive](advanced-configuration.md#the-runnerscache-section):
 
 ```toml
 [[runners]]
@@ -372,7 +370,7 @@ NOTE: **Note:**
 Read how to [install a container registry](../install/registry_and_cache_servers.md#install-a-proxy-container-registry).
 
 To speed up jobs executed inside of Docker containers, you can use the [Docker
-registry mirroring service][registry]. This will provide a proxy between your
+registry mirroring service](https://docs.docker.com/registry/). This will provide a proxy between your
 Docker machines and all used registries. Images will be downloaded once by the
 registry mirror. On each new host, or on an existing host where the image is
 not available, it will be downloaded from the configured registry mirror.
@@ -452,10 +450,3 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
 Note that the `MachineOptions` parameter contains options for the `digitalocean`
 driver which is used by Docker Machine to spawn machines hosted on Digital Ocean,
 and one option for Docker Machine itself (`engine-registry-mirror`).
-
-[cache]: https://docs.gitlab.com/ee/ci/yaml/README.html#cache
-[docker-machine-docs]: https://docs.docker.com/machine/
-[docker-machine-driver]: https://docs.docker.com/machine/drivers/
-[docker-machine-installation]: https://docs.docker.com/machine/install-machine/
-[runners-cache]: advanced-configuration.md#the-runnerscache-section
-[registry]: https://docs.docker.com/registry/

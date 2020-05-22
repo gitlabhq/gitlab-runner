@@ -21,7 +21,7 @@ In this tutorial, we'll explore how to properly configure a GitLab Runner in
 AWS that will serve as the Runner Manager where it will spawn new Docker machines on
 demand.
 
-In addition, we'll make use of [Amazon's EC2 Spot instances][spot] which will
+In addition, we'll make use of [Amazon's EC2 Spot instances](https://aws.amazon.com/ec2/spot/) which will
 greatly reduce the costs of the Runner instances while still using quite
 powerful autoscaling machines.
 
@@ -350,7 +350,7 @@ check_interval = 0
 
 ## Cutting down costs with Amazon EC2 Spot instances
 
-As [described by][spot] Amazon:
+As [described by](https://aws.amazon.com/ec2/spot/) Amazon:
 
 >
 Amazon EC2 Spot instances allow you to bid on spare Amazon EC2 computing capacity.
@@ -417,7 +417,7 @@ are locked out for a bit because the call amount limit is exceeded.
 If you encounter that case, you can use the following command in the Runner Manager
 machine to see the Docker Machines state:
 
-```sh
+```shell
 docker-machine ls -q --filter state=Error --format "{{.NAME}}"
 ```
 
@@ -444,5 +444,3 @@ influenced:
 
 - [HumanGeo - Scaling GitLab CI](http://blog.thehumangeo.com/gitlab-autoscale-runners.html)
 - [Substrakt Health - Autoscale GitLab CI Runners and save 90% on EC2 costs](https://about.gitlab.com/blog/2017/11/23/autoscale-ci-runners/)
-
-[spot]: https://aws.amazon.com/ec2/spot/
