@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	defaultReaderBufferSize = 16 * 1024
+	defaultReaderBufferSize        = 16 * 1024
+	defaultCheckFileExistsInterval = time.Second
+	pollFileContentsTimeout        = 500 * time.Millisecond
 )
 
 var errWaitingFileTimeout = errors.New("timeout waiting for file to be created")
@@ -34,23 +36,19 @@ type fileLogStreamProvider struct {
 }
 
 func (p *fileLogStreamProvider) Open() (readSeekCloser, error) {
-	timeoutChan := time.After(p.cmd.WaitFileTimeout)
+	attempts := int(p.cmd.WaitFileTimeout / defaultCheckFileExistsInterval)
 
-	for {
-		select {
-		case <-timeoutChan:
-			return nil, errWaitingFileTimeout
-		default:
-		}
-
+	for i := 0; i < attempts; i++ {
 		f, err := os.Open(p.cmd.Path)
 		if os.IsNotExist(err) {
-			time.Sleep(time.Second)
+			time.Sleep(defaultCheckFileExistsInterval)
 			continue
 		}
 
 		return f, err
 	}
+
+	return nil, errWaitingFileTimeout
 }
 
 type logOutputWriter interface {
@@ -82,6 +80,8 @@ func newReadLogsCommand() *ReadLogsCommand {
 	}
 	cmd.logOutputWriter = &streamLogOutputWriter{stream: os.Stdout}
 	cmd.readerBufferSize = defaultReaderBufferSize
+	// by default check if the file exists at least once
+	cmd.WaitFileTimeout = defaultCheckFileExistsInterval
 
 	return cmd
 }
@@ -89,6 +89,7 @@ func newReadLogsCommand() *ReadLogsCommand {
 func (c *ReadLogsCommand) Execute(*cli.Context) {
 	if err := c.readLogs(); err != nil {
 		c.logOutputWriter.Write(fmt.Sprintf("error reading logs %v\n", err))
+		os.Exit(1)
 	}
 }
 
@@ -112,7 +113,7 @@ func (c *ReadLogsCommand) readLogs() error {
 		}
 
 		if err == io.EOF {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(pollFileContentsTimeout)
 		} else if err != nil && err != bufio.ErrBufferFull {
 			return err
 		}

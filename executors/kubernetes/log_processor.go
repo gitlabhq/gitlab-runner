@@ -148,6 +148,8 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outputCh cha
 		_ = writer.Close()
 	}()
 
+	// Using errgroup.WithContext here doesn't work since if either one of the goroutines
+	// exists with a nil error, we can't signal the other one to exit
 	ctx, cancel := context.WithCancel(ctx)
 
 	var gr errgroup.Group
