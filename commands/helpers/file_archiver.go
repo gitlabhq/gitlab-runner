@@ -206,6 +206,9 @@ func (c *fileArchiver) enumerate() error {
 	c.processPaths()
 	c.processUntracked()
 
-	// TODO, print the number of excluded files
+	if len(c.Exclude) > 0 {
+		logrus.Infof("excluded %d files", c.excluded)
+	}
+
 	return nil
 }
