@@ -92,7 +92,9 @@ func TestExcludedFilePaths(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, includedFiles, f.sortedFiles())
-	assert.Equal(t, int64(3), f.excluded)
+	assert.Equal(t, 2, len(f.excluded))
+	assert.Equal(t, int64(1), f.excluded["foo/test/bar/baz/3.txt"])
+	assert.Equal(t, int64(2), f.excluded["foo/**/*.md"])
 }
 
 func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {

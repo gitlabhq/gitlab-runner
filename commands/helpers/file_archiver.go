@@ -25,7 +25,7 @@ type fileArchiver struct {
 
 	wd       string
 	files    map[string]os.FileInfo
-	excluded int64
+	excluded map[string]int64
 }
 
 func (c *fileArchiver) isChanged(modTime time.Time) bool {
@@ -62,15 +62,15 @@ func (c *fileArchiver) sortedFiles() []string {
 	return files
 }
 
-func (c *fileArchiver) isExcluded(path string) bool {
-	for _, exclude := range c.Exclude {
-		excluded, err := doublestar.PathMatch(exclude, path)
+func (c *fileArchiver) isExcluded(path string) (bool, string) {
+	for _, pattern := range c.Exclude {
+		excluded, err := doublestar.PathMatch(pattern, path)
 		if err == nil && excluded {
-			return true
+			return true, pattern
 		}
 	}
 
-	return false
+	return false, ""
 }
 
 func (c *fileArchiver) add(path string) error {
@@ -86,8 +86,8 @@ func (c *fileArchiver) add(path string) error {
 	return err
 }
 
-func (c *fileArchiver) exclude(path string) {
-	c.excluded++
+func (c *fileArchiver) exclude(rule string) {
+	c.excluded[rule]++
 }
 
 func (c *fileArchiver) process(match string) bool {
@@ -103,8 +103,9 @@ func (c *fileArchiver) process(match string) bool {
 	if err == nil {
 		// Process path only if it lives in our build directory
 		if !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-			if c.isExcluded(relative) {
-				c.exclude(relative)
+			excluded, rule := c.isExcluded(relative)
+			if excluded {
+				c.exclude(rule)
 
 				return false
 			}
@@ -205,12 +206,13 @@ func (c *fileArchiver) enumerate() error {
 
 	c.wd = wd
 	c.files = make(map[string]os.FileInfo)
+	c.excluded = make(map[string]int64)
 
 	c.processPaths()
 	c.processUntracked()
 
-	if len(c.Exclude) > 0 {
-		logrus.Infof("excluded %d files", c.excluded)
+	for path, count := range c.excluded {
+		logrus.Infof("%s: excluded %d files", path, count)
 	}
 
 	return nil
