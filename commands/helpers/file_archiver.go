@@ -64,7 +64,7 @@ func (c *fileArchiver) sortedFiles() []string {
 
 func (c *fileArchiver) isExcluded(path string) bool {
 	for _, exclude := range c.Exclude {
-		excluded, err := doublestar.Match(exclude, path)
+		excluded, err := doublestar.PathMatch(exclude, path)
 		if err == nil && excluded {
 			return true
 		}
