@@ -58,7 +58,7 @@ func TestGlobbedFilePaths(t *testing.T) {
 }
 
 func TestExcludedFilePaths(t *testing.T) {
-	const fooTestDirectory = "foo/test/bar/baz"
+	fooTestDirectory := "foo/test/bar/baz"
 
 	err := os.MkdirAll(fooTestDirectory, 0700)
 	require.NoError(t, err, "could not create test directory")

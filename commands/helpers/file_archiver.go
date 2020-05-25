@@ -64,7 +64,8 @@ func (c *fileArchiver) sortedFiles() []string {
 
 func (c *fileArchiver) isExcluded(path string) bool {
 	for _, exclude := range c.Exclude {
-		if excluded, err := doublestar.Match(exclude, path); err == nil && excluded {
+		excluded, err := doublestar.Match(exclude, path)
+		if err == nil && excluded {
 			return true
 		}
 	}
@@ -72,7 +73,7 @@ func (c *fileArchiver) isExcluded(path string) bool {
 	return false
 }
 
-func (c *fileArchiver) add(path string) (err error) {
+func (c *fileArchiver) add(path string) error {
 	// Always use slashes
 	path = filepath.ToSlash(path)
 
@@ -116,7 +117,9 @@ func (c *fileArchiver) process(match string) bool {
 
 	if err == nil {
 		return true
-	} else if os.IsNotExist(err) {
+	}
+
+	if os.IsNotExist(err) {
 		// We hide the error that file doesn't exist
 		return false
 	}
