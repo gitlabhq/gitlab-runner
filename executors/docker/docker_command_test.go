@@ -3,6 +3,7 @@ package docker_test
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"fmt"
 	"io"
 	"net/url"
@@ -97,6 +98,9 @@ func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) 
 					Image:      image,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
+			},
+			RunnerCredentials: common.RunnerCredentials{
+				Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
 			},
 		},
 	}
@@ -1125,68 +1129,6 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDockerCommandUsingBuildsVolume(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
-
-	const buildsPath = "/builds"
-	// the path is taken from `repoRemoteURL`
-	const buildsGroupPath = "/builds/gitlab-org/ci-cd/tests"
-
-	tests := map[string]struct {
-		validPath   string
-		invalidPath string
-		variable    string
-	}{
-		"uses default state of FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER": {
-			validPath:   buildsPath,
-			invalidPath: buildsGroupPath,
-			variable:    "",
-		},
-		"disables FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER": {
-			validPath:   buildsPath,
-			invalidPath: buildsGroupPath,
-			variable:    "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER=false",
-		},
-		"enables FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER": {
-			validPath:   buildsGroupPath,
-			invalidPath: buildsPath,
-			variable:    "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER=true",
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			jobResponse, err := common.GetRemoteBuildResponse(
-				"mountpoint "+test.validPath,
-				"! mountpoint "+test.invalidPath,
-			)
-			require.NoError(t, err)
-
-			build := &common.Build{
-				JobResponse: jobResponse,
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Executor: "docker",
-						Docker: &common.DockerConfig{
-							Image:      common.TestAlpineImage,
-							PullPolicy: common.PullPolicyIfNotPresent,
-						},
-						Environment: []string{
-							"GIT_STRATEGY=none",
-							test.variable,
-						},
-					},
-				},
-			}
-
-			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-			assert.NoError(t, err)
-		})
-	}
-}
-
 func TestDockerCommandRunAttempts(t *testing.T) {
 	t.Skip("Skipping until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is resolved.")
 
@@ -1311,4 +1253,49 @@ func TestDockerCommandRunAttempts_InvalidAttempts(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.Error(t, err)
+}
+
+func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {
+	// non root images on Windows work differently, and `cache-init` doesn't
+	// work on Windows
+	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25480.
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping unix test on windows")
+	}
+
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	const volumeBind = "/test"
+	const helperImage = "gitlab/gitlab-runner-helper:x86_64-4c96e5ad"
+
+	client, err := docker.New(docker.Credentials{}, "")
+	require.NoError(t, err, "creating docker client")
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	build.Runner.Docker.Volumes = append(build.Runner.Docker.Volumes, volumeBind)
+	build.Runner.Docker.HelperImage = helperImage
+	build.JobResponse.Steps = common.Steps{
+		common.Step{
+			Name: common.StepNameScript,
+			Script: []string{
+				"echo test > /test/test.txt",
+			},
+			Timeout:      120,
+			When:         common.StepWhenAlways,
+			AllowFailure: false,
+		},
+	}
+	build.Image.Name = common.TestAlpineNoRootImage
+
+	defer func() {
+		volumeName := fmt.Sprintf("%s-cache-%x", build.ProjectUniqueName(), md5.Sum([]byte(volumeBind)))
+
+		err := client.VolumeRemove(context.Background(), volumeName, true)
+		require.NoError(t, err)
+	}()
+
+	defer client.Close()
+
+	err = buildtest.RunBuild(t, &build)
+	assert.NoError(t, err)
 }

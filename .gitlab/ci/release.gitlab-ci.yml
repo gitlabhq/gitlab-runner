@@ -20,6 +20,7 @@
   - source ci/touch_make_dependencies
   - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   - make release_docker_images
+  retry: 2
 
 .build_windows_docker_images:
   extends:
@@ -36,6 +37,7 @@
   - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
   script:
   - .\ci\build_release_windows_images.ps1
+  retry: 2
 
 .release:
   extends:

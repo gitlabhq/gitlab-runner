@@ -38,6 +38,11 @@ const (
 	gitCleanFlagsNone    = "none"
 )
 
+const (
+	gitFetchFlagsDefault = "--prune --quiet"
+	gitFetchFlagsNone    = "none"
+)
+
 type SubmoduleStrategy int
 
 const (
@@ -88,6 +93,10 @@ var BuildStages = []BuildStage{
 const (
 	ExecutorJobSectionAttempts = "EXECUTOR_JOB_SECTION_ATTEMPTS"
 )
+
+// ErrSkipBuildStage is returned when there's nothing to be executed for the
+// build stage.
+var ErrSkipBuildStage = errors.New("skip build stage")
 
 type invalidAttemptError struct {
 	key string
@@ -254,6 +263,15 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	}
 
 	script, err := GenerateShellScript(buildStage, *shell)
+	if errors.Is(err, ErrSkipBuildStage) {
+		if b.IsFeatureFlagOn(featureflags.SkipNoOpBuildStages) {
+			b.Log().WithField("build_stage", buildStage).Debug("Skipping stage (nothing to do)")
+			return nil
+		}
+
+		err = nil
+	}
+
 	if err != nil {
 		return err
 	}
@@ -323,10 +341,12 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	// Prepare stage
 	err := b.executeStage(ctx, BuildStagePrepare, executor)
-
-	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
+	if err != nil {
+		return fmt.Errorf("prepare environment: %w. Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information", err)
 	}
+
+	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
+
 	if err == nil {
 		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts())
 	}
@@ -879,6 +899,19 @@ func (b *Build) GetGitCleanFlags() []string {
 	}
 
 	if flags == gitCleanFlagsNone {
+		return []string{}
+	}
+
+	return strings.Fields(flags)
+}
+
+func (b *Build) GetGitFetchFlags() []string {
+	flags := b.GetAllVariables().Get("GIT_FETCH_EXTRA_FLAGS")
+	if flags == "" {
+		flags = gitFetchFlagsDefault
+	}
+
+	if flags == gitFetchFlagsNone {
 		return []string{}
 	}
 

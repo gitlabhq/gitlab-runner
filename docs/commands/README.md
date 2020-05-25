@@ -85,7 +85,7 @@ In the case of **Windows** you may need to run the **Command Prompt** in
 
 ## Configuration file
 
-GitLab Runner configuration uses the [TOML] format.
+GitLab Runner configuration uses the [TOML](https://github.com/toml-lang/toml) format.
 
 The file to be edited can be found in:
 
@@ -99,8 +99,6 @@ Most of the commands accept an argument to specify a custom configuration file,
 allowing you to have a multiple different configurations on a single machine.
 To specify a custom configuration file use the `-c` or `--config` flag, or use
 the `CONFIG_FILE` environment variable.
-
-[TOML]: https://github.com/toml-lang/toml
 
 ## Signals
 
@@ -500,7 +498,7 @@ With current implementation of `exec` some of the features of GitLab CI will
 not work or may work partially.
 
 We're currently thinking about how to replace current `exec` implementation,
-to make fully compatible with all features. Please track [the issue][exec-replacement-issue]
+to make fully compatible with all features. Please track [the issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2797)
 for more details.
 
 **Compatibility table - features based on `.gitlab-ci.yml`**
@@ -593,5 +591,3 @@ administrator privileges:
   The simplest way is to write `Command Prompt` in the Windows search field,
   right click and select `Run as administrator`. You will be asked to confirm
   that you want to execute the elevated command prompt.
-
-[exec-replacement-issue]: https://gitlab.com/gitlab-org/gitlab-runner/issues/2797

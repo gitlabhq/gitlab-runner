@@ -19,14 +19,12 @@ In case of many cloud providers this helps to utilize the cost of already used
 instances.
 
 Below, you can see a real life example of the runners autoscale feature, tested
-on GitLab.com for the [GitLab Community Edition][ce] project:
+on GitLab.com for the [GitLab Community Edition](https://gitlab.com/gitlab-org/gitlab-foss) project:
 
 ![Real life example of autoscaling](img/autoscale-example.png)
 
 Each machine on the chart is an independent cloud instance, running jobs
 inside of Docker containers.
-
-[ce]: https://gitlab.com/gitlab-org/gitlab-ce
 
 ## System requirements
 
@@ -51,7 +49,7 @@ autoscale feature point of view. For more configurations details read the
 
 | Parameter    | Value   | Description |
 |--------------|---------|-------------|
-| `concurrent` | integer | Limits how many jobs globally can be run concurrently. This is the most upper limit of number of jobs using _all_ defined runners, local and autoscale. Together with `limit` (from [`[[runners]]` section](#runners-options)) and `IdleCount` (from [`[runners.machine]` section][runners-machine]) it affects the upper limit of created machines. |
+| `concurrent` | integer | Limits how many jobs globally can be run concurrently. This is the most upper limit of number of jobs using _all_ defined runners, local and autoscale. Together with `limit` (from [`[[runners]]` section](#runners-options)) and `IdleCount` (from [`[runners.machine]` section](advanced-configuration.md#the-runnersmachine-section)) it affects the upper limit of created machines. |
 
 ### `[[runners]]` options
 
@@ -63,12 +61,12 @@ autoscale feature point of view. For more configurations details read the
 ### `[runners.machine]` options
 
 Configuration parameters details can be found
-in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section][runners-machine].
+in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](advanced-configuration.md#the-runnersmachine-section).
 
 ### `[runners.cache]` options
 
 Configuration parameters details can be found
-in [GitLab Runner - Advanced Configuration - The `[runners.cache]` section][runners-cache]
+in [GitLab Runner - Advanced Configuration - The `[runners.cache]` section](advanced-configuration.md#the-runnerscache-section)
 
 ### Additional configuration information
 
@@ -223,23 +221,23 @@ not be able to have 10 idle machines, but only 5, because the `limit` is 25.
 
 ## Autoscaling periods configuration
 
-> Introduced in [GitLab Runner 13.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/5069)
+> Introduced in [GitLab Runner 13.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/5069).
 
 Autoscaling can be configured to have different values depending on the time period.
-Organisations might have regular time periods with spikes of jobs being executed
-or some with little to no jobs.
-For example most commercial companies work from Monday to
-Friday in fixed hours, e.g. from 10am to 6pm. During the rest of the week -
-Workdays during the night and the weekends no pipelines are started.
+Organizations might have regular times when spikes of jobs are being executed,
+and other times with few to no jobs.
+For example, most commercial companies work from Monday to
+Friday in fixed hours, like 10am to 6pm. On nights and weekends
+for the rest of the week, and on the weekends, no pipelines are started.
 
 These periods can be configured with the help of `[[runners.machine.autoscaling]]` sections.
 Each of them supports setting `IdleCount` and `IdleTime` based on a set of `Periods`.
 
-**How does it work?**
+**How autoscaling periods work**
 
-In the `[runners.machine]` settings users can add multiple `[[runners.machine.autoscaling]]` sections, each one with its own `IdleCount`, `IdleTime`, `Periods` and `Timezone` properties. A section should be defined for each configuration, proceeding in order from the most general scenario to the most specific scenario.
+In the `[runners.machine]` settings, you can add multiple `[[runners.machine.autoscaling]]` sections, each one with its own `IdleCount`, `IdleTime`, `Periods` and `Timezone` properties. A section should be defined for each configuration, proceeding in order from the most general scenario to the most specific scenario.
 
-They will all be parsed and the last one to match the current time will be active. If none is matched the values from the root of `[runners.machine]` will be used.
+All sections will be parsed and the last one to match the current time will be active. If none matches, the values from the root of `[runners.machine]` are used.
 
 For example:
 
@@ -259,7 +257,7 @@ For example:
     Timezone = "UTC"
 ```
 
-In this configuration every week day between 9 and 17 UTC machines will be overprovisioned to handle the large traffic during operating hours. In the weekend `IdleCount` drops to 5 to account for the lesser traffic.
+In this configuration, every weekday between 9 and 17 UTC, machines will be overprovisioned to handle the large traffic during operating hours. On the weekend, `IdleCount` drops to 5 to account for the drop in traffic.
 During the rest of the time the values will be taken from the defaults in the root - `IdleCount = 10` and `IdleTime = 1800`.
 
 NOTE: **Note:**
@@ -267,24 +265,24 @@ The 59th second of the last
 minute in any period that you specify will *not* be considered part of the
 period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/issues/2170).
 
-You can specify the `Timezone` of a period e.g. `"Australia/Sydney"`. If you don't,
+You can specify the `Timezone` of a period, for example `"Australia/Sydney"`. If you don't,
 the system setting of the host machine of every runner will be used. This
 default can be stated as `Timezone = "Local"` explicitly.
 
 More information about the syntax of `[[runner.machine.autoscaling]]` sections can be found
-in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section][runners-machine].
+in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](advanced-configuration.md#the-runnersmachine-section).
 
-## [Deprecated] Off Peak time mode configuration
+## Off Peak time mode configuration (Deprecated)
 
 > This setting is deprecated and will be removed in 14.0. Use autoscaling periods instead.
-> If both settings are used the Off Peak settings will be ignored.
+> If both settings are used, the Off Peak settings will be ignored.
 
 Autoscale can be configured with the support for _Off Peak_ time mode periods.
 
 **What is _Off Peak_ time mode period?**
 
 Some organizations can select a regular time periods when no work is done.
-These time periods we're naming here as _Off Peak_.
+These time periods are called _Off Peak_.
 
 Organizations where _Off Peak_ time periods occurs probably don't want
 to pay for the _Idle_ machines when it's certain that no jobs will be
@@ -322,7 +320,7 @@ the `OffPeakPeriods` pattern is fulfilled then it switches back to
 NOTE: **Note:**
 Read how to [install your own cache server](../install/registry_and_cache_servers.md#install-your-own-cache-server).
 
-To speed up your jobs, GitLab Runner provides a [cache mechanism][cache]
+To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/README.html#cache)
 where selected directories and/or files are saved and shared between subsequent
 jobs.
 
@@ -340,7 +338,7 @@ When restoring and archiving the cache, GitLab Runner will query the server
 and will download or upload the archive respectively.
 
 To enable distributed caching, you have to define it in `config.toml` using the
-[`[runners.cache]` directive][runners-cache]:
+[`[runners.cache]` directive](advanced-configuration.md#the-runnerscache-section):
 
 ```toml
 [[runners]]
@@ -372,7 +370,7 @@ NOTE: **Note:**
 Read how to [install a container registry](../install/registry_and_cache_servers.md#install-a-proxy-container-registry).
 
 To speed up jobs executed inside of Docker containers, you can use the [Docker
-registry mirroring service][registry]. This will provide a proxy between your
+registry mirroring service](https://docs.docker.com/registry/). This will provide a proxy between your
 Docker machines and all used registries. Images will be downloaded once by the
 registry mirror. On each new host, or on an existing host where the image is
 not available, it will be downloaded from the configured registry mirror.
@@ -452,11 +450,3 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
 Note that the `MachineOptions` parameter contains options for the `digitalocean`
 driver which is used by Docker Machine to spawn machines hosted on Digital Ocean,
 and one option for Docker Machine itself (`engine-registry-mirror`).
-
-[cache]: https://docs.gitlab.com/ee/ci/yaml/README.html#cache
-[docker-machine-docs]: https://docs.docker.com/machine/
-[docker-machine-driver]: https://docs.docker.com/machine/drivers/
-[docker-machine-installation]: https://docs.docker.com/machine/install-machine/
-[runners-cache]: advanced-configuration.md#the-runnerscache-section
-[runners-machine]: advanced-configuration.md#the-runnersmachine-section
-[registry]: https://docs.docker.com/registry/

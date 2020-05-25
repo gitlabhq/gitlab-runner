@@ -75,24 +75,20 @@ Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
 **main entrypoint** of GitLab.
 
 If you are using Omnibus GitLab, but don't want to use the bundled NGINX
-server, please read [using a non-bundled web-server][omnibus-ext-nginx].
+server, please read [using a non-bundled web-server](https://docs.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server).
 
 In the GitLab Recipes repository there are [web-server configuration
-examples][recipes] for Apache and NGINX.
+examples](https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server) for Apache and NGINX.
 
 If you are using GitLab installed from source, please also read the above
 documentation and examples, and make sure that all HTTP(S) traffic is going
 through the **GitLab Workhorse**.
 
-See [an example of a user issue][1105].
-
-[omnibus-ext-nginx]: http://doc.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server
-[recipes]: https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server
-[1105]: https://gitlab.com/gitlab-org/gitlab-runner/issues/1105
+See [an example of a user issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1105).
 
 ### `zoneinfo.zip: no such file or directory` error when using `Timezone` or `OffPeakTimezone`
 
-It's possible to configure the timezone in which `OffPeakPeriods` or `[[docker.machine.autoscaling]]` periods
+It's possible to configure the timezone in which `[[docker.machine.autoscaling]]` periods
 are described. This feature should work on most Unix systems out of the box. However on some
 Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
 Runner's binaries), when used, the Runner will crash at start with an error similar to:
@@ -127,7 +123,7 @@ sudo apk add -U tzdata
 If your system doesn't provide this database in a _native_ way, then you can make `OffPeakTimezone`
 working by following the steps below:
 
-1. Downloading the [`zoneinfo.zip`][zoneinfo-file]. Starting with version v9.1.0 you can download
+1. Downloading the [`zoneinfo.zip`](https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip). Starting with version v9.1.0 you can download
    the file from a tagged path. In that case you should replace `latest` with the tag name (e.g., `v9.1.0`)
    in the `zoneinfo.zip` download URL.
 
@@ -165,6 +161,18 @@ unexpected and hard-to-debug behavior. In
 only a single instance of Runner can use a specific `config.toml` file at
 one time.
 
+### `Job failed (system failure): preparing environment:`
+
+This error is often due to your shell [loading your
+profile](../shells/index.md#shell-profile-loading), and one of the scripts is
+causing the failure.
+
+Example of dotfiles that are known to cause failure:
+
+- `.bash_logout`
+- `.condarc`
+- `.rvmrc`
+
 ## Windows troubleshooting
 
 The following relate to Runner troubleshooting on Windows.
@@ -187,7 +195,17 @@ The [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShell module p
 a *Remove-Item2* method which supports long paths. The GitLab CI Multi Runner will
 detect it if it is available and automatically make use of it.
 
-[zoneinfo-file]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/zoneinfo.zip
+### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
+
+You need to prepend `call` to your batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
+is a more complete example:
+
+```yaml
+before_script:
+  - call C:\path\to\test.bat
+```
+
+Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-runner/issues/1025).
 
 ### How can I get colored output on the web terminal?
 

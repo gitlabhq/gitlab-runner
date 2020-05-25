@@ -1,9 +1,11 @@
 package shells
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -194,6 +196,57 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
+	shell := AbstractShell{}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			ID:    1001,
+			Token: "token",
+			Artifacts: common.Artifacts{
+				common.Artifact{
+					Paths:   []string{"include/**"},
+					Exclude: []string{"include/exclude/*"},
+					When:    common.ArtifactWhenAlways,
+					Format:  common.ArtifactFormatZip,
+					Type:    "archive",
+				},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				URL: "https://gitlab.example.com",
+			},
+		},
+	}
+
+	info := common.ShellScriptInfo{
+		RunnerCommand: "gitlab-runner-helper",
+		Build:         build,
+	}
+
+	mockWriter := new(MockShellWriter)
+	defer mockWriter.AssertExpectations(t)
+	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("Cd", mock.Anything).Once()
+	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Once()
+	mockWriter.On("Notice", mock.Anything).Once()
+	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--url", "https://gitlab.example.com",
+		"--token", "token",
+		"--id", "1001",
+		"--path", "include/**",
+		"--exclude", "include/exclude/*",
+		"--artifact-format", "zip",
+		"--artifact-type", "archive").Once()
+	mockWriter.On("Else").Once()
+	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything).Once()
+	mockWriter.On("EndIf").Once()
+
+	err := shell.writeScript(mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
+	require.NoError(t, err)
+}
+
 func TestGitCleanFlags(t *testing.T) {
 	tests := map[string]struct {
 		value string
@@ -256,6 +309,68 @@ func TestGitCleanFlags(t *testing.T) {
 	}
 }
 
+func TestGitFetchFlags(t *testing.T) {
+	tests := map[string]struct {
+		value string
+
+		expectedGitFetchFlags []interface{}
+	}{
+		"empty fetch flags": {
+			value:                 "",
+			expectedGitFetchFlags: []interface{}{"--prune", "--quiet"},
+		},
+		"use custom flags": {
+			value:                 "--prune",
+			expectedGitFetchFlags: []interface{}{"--prune"},
+		},
+		"disabled": {
+			value: "none",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			const dummySha = "01234567abcdef"
+			const dummyRef = "master"
+			const dummyProjectDir = "./"
+			const dummyGitDir = "./.git"
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{},
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: 0},
+					Variables: common.JobVariables{
+						{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			mockWriter := new(MockShellWriter)
+			defer mockWriter.AssertExpectations(t)
+
+			mockWriter.On("Notice", "Fetching changes...").Once()
+			mockWriter.On("MkTmpDir", mock.Anything).Return(mock.Anything).Once()
+			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
+			mockWriter.On("Command", "git", "init", dummyProjectDir, "--template", mock.Anything).Once()
+			mockWriter.On("Cd", mock.Anything)
+			mockWriter.On("IfCmd", "git", "remote", "add", "origin", mock.Anything)
+			mockWriter.On("RmFile", mock.Anything)
+			mockWriter.On("Notice", "Created fresh repository.").Once()
+			mockWriter.On("Else")
+			mockWriter.On("Command", "git", "remote", "set-url", "origin", mock.Anything)
+			mockWriter.On("EndIf")
+
+			command := []interface{}{"git", "fetch", "origin"}
+			command = append(command, test.expectedGitFetchFlags...)
+			mockWriter.On("Command", command...)
+
+			shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir, dummyGitDir)
+		})
+	}
+}
+
 func TestAbstractShell_writeSubmoduleUpdateCmdRecursive(t *testing.T) {
 	shell := AbstractShell{}
 	mockWriter := new(MockShellWriter)
@@ -288,4 +403,193 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	mockWriter.On("EndIf").Once()
 
 	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, false)
+}
+
+func TestSkipBuildStage(t *testing.T) {
+	stageTests := map[common.BuildStage]map[string]struct {
+		JobResponse common.JobResponse
+		Runner      common.RunnerConfig
+	}{
+		common.BuildStageRestoreCache: {
+			"don't skip if cache has paths": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Paths: []string{"default"},
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+			"don't skip if cache uses untracked files": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Untracked: true,
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageDownloadArtifacts: {
+			"don't skip if job has any dependencies": {
+				common.JobResponse{
+					Dependencies: common.Dependencies{
+						common.Dependency{
+							ID:            1,
+							ArtifactsFile: common.DependencyArtifactsFile{Filename: "dependency.txt"},
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageUserScript: {
+			"don't skip if user script is defined": {
+				common.JobResponse{
+					Steps: common.Steps{
+						common.Step{
+							Name: common.StepNameScript,
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageAfterScript: {
+			"don't skip if an after script is defined and has content": {
+				common.JobResponse{
+					Steps: common.Steps{
+						common.Step{
+							Name:   common.StepNameAfterScript,
+							Script: common.StepScript{"echo 'hello world'"},
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageArchiveCache: {
+			"don't skip if cache has paths": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Paths: []string{"default"},
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+			"don't skip if cache uses untracked files": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Untracked: true,
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+
+		common.BuildStageUploadOnSuccessArtifacts: {
+			"don't skip if artifact has paths and URL defined": {
+				common.JobResponse{
+					Artifacts: common.Artifacts{
+						common.Artifact{
+							When:  common.ArtifactWhenOnSuccess,
+							Paths: []string{"default"},
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+			"don't skip if artifact uses untracked files and URL defined": {
+				common.JobResponse{
+					Artifacts: common.Artifacts{
+						common.Artifact{
+							When:      common.ArtifactWhenOnSuccess,
+							Untracked: true,
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+		},
+
+		common.BuildStageUploadOnFailureArtifacts: {
+			"don't skip if artifact has paths and URL defined": {
+				common.JobResponse{
+					Artifacts: common.Artifacts{
+						common.Artifact{
+							When:  common.ArtifactWhenOnFailure,
+							Paths: []string{"default"},
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+			"don't skip if artifact uses untracked files and URL defined": {
+				common.JobResponse{
+					Artifacts: common.Artifacts{
+						common.Artifact{
+							When:      common.ArtifactWhenOnFailure,
+							Untracked: true,
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+		},
+	}
+
+	shell := AbstractShell{}
+	for stage, tests := range stageTests {
+		t.Run(string(stage), func(t *testing.T) {
+			for tn, tc := range tests {
+				t.Run(tn, func(t *testing.T) {
+					build := &common.Build{
+						JobResponse: common.JobResponse{},
+						Runner:      &common.RunnerConfig{},
+					}
+					info := common.ShellScriptInfo{
+						RunnerCommand: "gitlab-runner-helper",
+						Build:         build,
+					}
+
+					// empty stages should always be skipped
+					err := shell.writeScript(&BashWriter{}, stage, info)
+					assert.True(t, errors.Is(err, common.ErrSkipBuildStage),
+						"expected err %T, but got %T", common.ErrSkipBuildStage, err)
+
+					// stages with bare minimum requirements should not be skipped
+					build.JobResponse = tc.JobResponse
+					build.Runner = &tc.Runner
+					err = shell.writeScript(&BashWriter{}, stage, info)
+					assert.NoError(t, err, "stage %v should not have been skipped", stage)
+				})
+			}
+		})
+	}
 }

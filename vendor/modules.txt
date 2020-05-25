@@ -240,9 +240,6 @@ github.com/stretchr/testify/require
 github.com/tevino/abool
 # github.com/urfave/cli v1.20.0
 github.com/urfave/cli
-# github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
-github.com/vektra/mockery/cmd/mockery
-github.com/vektra/mockery/mockery
 # gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
 gitlab.com/ayufan/golang-cli-helpers
 # gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20180924111848-5af59b871b1b
@@ -335,7 +332,6 @@ golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/go/types/typeutil
-golang.org/x/tools/imports
 golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports

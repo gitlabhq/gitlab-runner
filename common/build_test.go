@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -75,6 +76,12 @@ func TestBuildRun(t *testing.T) {
 	}
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func matchBuildStage(buildStage BuildStage) interface{} {
+	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
+		return cmd.Stage == buildStage
+	})
 }
 
 func TestBuildPredefinedVariables(t *testing.T) {
@@ -360,6 +367,43 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	assert.IsType(t, err, &BuildError{})
 }
 
+func TestPrepareEnvironmentFailure(t *testing.T) {
+	testErr := errors.New("test-err")
+
+	e := new(MockExecutor)
+	defer e.AssertExpectations(t)
+
+	p := new(MockExecutorProvider)
+	defer p.AssertExpectations(t)
+
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+	p.On("Create").Return(e).Once()
+
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	e.On("Cleanup").Once()
+	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(testErr).Once()
+	e.On("Finish", mock.Anything).Once()
+
+	RegisterExecutorProvider("build-run-prepare-environment-failure-on-build-error", p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	assert.NoError(t, err)
+	build := &Build{
+		JobResponse: successfulBuild,
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Executor: "build-run-prepare-environment-failure-on-build-error",
+			},
+		},
+	}
+
+	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.True(t, errors.Is(err, testErr))
+}
+
 func TestJobFailure(t *testing.T) {
 	e := new(MockExecutor)
 	defer e.AssertExpectations(t)
@@ -382,7 +426,8 @@ func TestJobFailure(t *testing.T) {
 	// Succeed a build script
 	thrownErr := &BuildError{Inner: errors.New("test error")}
 	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(thrownErr)
+	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	e.On("Run", mock.Anything).Return(thrownErr).Times(2)
 	e.On("Finish", thrownErr).Once()
 
 	RegisterExecutorProvider("build-run-job-failure", p)
@@ -465,12 +510,6 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 
 	err = build.Run(&Config{}, trace)
 	require.IsType(t, &BuildError{}, err)
-}
-
-func matchBuildStage(buildStage BuildStage) interface{} {
-	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
-		return cmd.Stage == buildStage
-	})
 }
 
 func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
@@ -1157,6 +1196,46 @@ func TestStartBuild(t *testing.T) {
 	}
 }
 
+func TestSkipBuildStageFeatureFlag(t *testing.T) {
+	featureFlagValues := []string{
+		"true",
+		"false",
+	}
+
+	s := MockShell{}
+	s.On("GetName").Return("skip-build-stage-shell")
+	RegisterShell(&s)
+
+	for _, value := range featureFlagValues {
+		t.Run(value, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						{
+							Key:   featureflags.SkipNoOpBuildStages,
+							Value: "false",
+						},
+					},
+				},
+			}
+
+			e := &MockExecutor{}
+			defer e.AssertExpectations(t)
+
+			s.On("GenerateScript", mock.Anything, mock.Anything).Return("script", ErrSkipBuildStage)
+			e.On("Shell").Return(&ShellScriptInfo{Shell: "skip-build-stage-shell"})
+
+			if !build.IsFeatureFlagOn(featureflags.SkipNoOpBuildStages) {
+				e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+			}
+
+			err := build.executeStage(context.Background(), BuildStageAfterScript, e)
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func TestWaitForTerminal(t *testing.T) {
 	cases := []struct {
 		name                   string
@@ -1364,6 +1443,46 @@ func TestGitCleanFlags(t *testing.T) {
 			}
 
 			result := build.GetGitCleanFlags()
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestGitFetchFlags(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult []string
+	}{
+		"empty fetch flags": {
+			value:          "",
+			expectedResult: []string{"--prune", "--quiet"},
+		},
+		"use custom flags": {
+			value:          "custom-flags",
+			expectedResult: []string{"custom-flags"},
+		},
+		"use custom flags with multiple arguments": {
+			value:          "--prune --tags --quiet",
+			expectedResult: []string{"--prune", "--tags", "--quiet"},
+		},
+		"disabled": {
+			value:          "none",
+			expectedResult: []string{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			result := build.GetGitFetchFlags()
 			assert.Equal(t, test.expectedResult, result)
 		})
 	}

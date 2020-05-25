@@ -159,7 +159,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
-	if err = s.prepareOverwrites(options.Build.Variables); err != nil {
+	if err = s.prepareOverwrites(options.Build.GetAllVariables()); err != nil {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
 	}
 

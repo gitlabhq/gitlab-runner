@@ -61,7 +61,6 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.20.0
-	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
 	gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20180924111848-5af59b871b1b
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d

@@ -515,8 +515,13 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 		log = log.WithField("responseStatus", res.Status)
 	}
 
+	messagePrefix := "Uploading artifacts to coordinator..."
+	if options.Type != "" {
+		messagePrefix = fmt.Sprintf("Uploading artifacts as %q to coordinator...", options.Type)
+	}
+
 	if err != nil {
-		log.WithError(err).Errorln("Uploading artifacts to coordinator...", "error")
+		log.WithError(err).Errorln(messagePrefix, "error")
 		return common.UploadFailed
 	}
 	defer res.Body.Close()
@@ -524,27 +529,35 @@ func (n *GitLabClient) UploadRawArtifacts(config common.JobCredentials, reader i
 
 	switch res.StatusCode {
 	case http.StatusCreated:
-		log.Println("Uploading artifacts to coordinator...", "ok")
+		log.Println(messagePrefix, "ok")
 		return common.UploadSucceeded
 	case http.StatusForbidden:
-		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "forbidden")
+		log.WithField("status", res.Status).Errorln(messagePrefix, "forbidden")
 		return common.UploadForbidden
 	case http.StatusRequestEntityTooLarge:
-		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "too large archive")
+		log.WithField("status", res.Status).Errorln(messagePrefix, "too large archive")
 		return common.UploadTooLarge
 	case http.StatusServiceUnavailable:
-		log.WithField("status", res.Status).Errorln("Uploading artifacts to coordinator...", "service unavailable")
+		log.WithField("status", res.Status).Errorln(messagePrefix, "service unavailable")
 		return common.UploadServiceUnavailable
 	default:
-		log.WithField("status", res.Status).Warningln("Uploading artifacts to coordinator...", "failed")
+		log.WithField("status", res.Status).Warningln(messagePrefix, "failed")
 		return common.UploadFailed
 	}
 }
 
-func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string) common.DownloadState {
+func (n *GitLabClient) DownloadArtifacts(config common.JobCredentials, artifactsFile string, directDownload *bool) common.DownloadState {
+	query := url.Values{}
+
+	if directDownload != nil {
+		query.Set("direct_download", strconv.FormatBool(*directDownload))
+	}
+
 	headers := make(http.Header)
 	headers.Set("JOB-TOKEN", config.Token)
-	res, err := n.doRaw(&config, http.MethodGet, fmt.Sprintf("jobs/%d/artifacts", config.ID), nil, "", headers)
+	uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
+
+	res, err := n.doRaw(&config, http.MethodGet, uri, nil, "", headers)
 
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,

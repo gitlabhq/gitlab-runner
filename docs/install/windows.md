@@ -17,7 +17,7 @@ With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
 want to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
 1. Create a folder somewhere in your system, ex.: `C:\GitLab-Runner`.
-1. Download the binary for [x86][] or [amd64][] and put it into the folder you
+1. Download the binary for [x86](https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-386.exe) or [amd64](https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-amd64.exe) and put it into the folder you
    created. Rename the binary to `gitlab-runner.exe`.
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged
@@ -52,7 +52,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 1. (Optional) Update Runners `concurrent` value in `C:\GitLab-Runner\config.toml`
    to allow multiple concurrent jobs as detailed in [advanced configuration details](../configuration/advanced-configuration.md).
    Additionally, you can use the advanced configuration details to update your
-   shell executor to use Bash rather than PowerShell.
+   shell executor to use Bash or PowerShell rather than Batch.
 
 Voila! Runner is installed, running, and will start again after each system reboot.
 Logs are stored in Windows Event Log.
@@ -66,7 +66,7 @@ Logs are stored in Windows Event Log.
    .\gitlab-runner.exe stop
    ```
 
-1. Download the binary for [x86][] or [amd64][] and replace runner's executable.
+1. Download the binary for [x86](https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-386.exe) or [amd64](https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-amd64.exe) and replace runner's executable.
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 
@@ -174,6 +174,3 @@ use the Built-in System Account.
 If you have issues with the Built-in System Account, please read
 [How to Configure the Service to Start Up with the Built-in System Account](https://support.microsoft.com/en-us/help/327545/how-to-troubleshoot-service-startup-permissions-in-windows-server-2003#6)
 on Microsoft's support website.
-
-[x86]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-386.exe
-[amd64]: https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-amd64.exe

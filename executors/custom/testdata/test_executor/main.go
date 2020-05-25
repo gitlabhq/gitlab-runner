@@ -188,6 +188,10 @@ func createCommand(shell string, script string, stage string) *exec.Cmd {
 			command: "powershell",
 			args:    []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
 		},
+		"cmd": {
+			command: "cmd",
+			args:    []string{"/C"},
+		},
 	}
 
 	shellConfig, ok := shellConfigs[shell]

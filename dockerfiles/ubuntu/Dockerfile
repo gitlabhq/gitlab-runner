@@ -4,9 +4,14 @@ ARG TARGETPLATFORM
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y && \
-    apt-get upgrade -y && \
-    apt-get install -y ca-certificates wget apt-transport-https vim nano tzdata git curl && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        git \
+        wget \
+        tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION

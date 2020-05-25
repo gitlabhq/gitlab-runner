@@ -36,13 +36,19 @@ func NewTracePatchResponse(response *http.Response, logger logrus.FieldLogger) *
 		return new(TracePatchResponse)
 	}
 
+	var (
+		err                       error
+		remoteTraceUpdateInterval int
+	)
 	updateIntervalRaw := response.Header.Get(traceUpdateIntervalHeader)
-	remoteTraceUpdateInterval, err := strconv.Atoi(updateIntervalRaw)
-	if err != nil {
-		remoteTraceUpdateInterval = emptyRemoteTraceUpdateInterval
-		logger.WithError(err).
-			WithField("header-value", updateIntervalRaw).
-			Warningf("Failed to parse %q header", traceUpdateIntervalHeader)
+	if updateIntervalRaw != "" {
+		remoteTraceUpdateInterval, err = strconv.Atoi(updateIntervalRaw)
+		if err != nil {
+			remoteTraceUpdateInterval = emptyRemoteTraceUpdateInterval
+			logger.WithError(err).
+				WithField("header-value", updateIntervalRaw).
+				Warningf("Failed to parse %q header", traceUpdateIntervalHeader)
+		}
 	}
 
 	return &TracePatchResponse{

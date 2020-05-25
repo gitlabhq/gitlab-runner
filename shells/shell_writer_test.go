@@ -23,6 +23,10 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) {
 	case "bash":
 		extension = "sh"
 
+	case "cmd":
+		extension = "cmd"
+		cmdArgs = append(cmdArgs, "/Q", "/C")
+
 	case "powershell":
 		extension = "ps1"
 		cmdArgs = append(cmdArgs, "-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command")
