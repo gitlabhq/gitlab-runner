@@ -210,6 +210,7 @@ The working example project can be copied to your own group or instance for test
 ### Using an image from a private registry
 
 Using an image from a private registry requires the configuration of imagePullSecrets. For more details on how to create imagePullSecrets [see the documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
+
 ```yaml
 runners:
   ## Specify one or more imagePullSecrets
@@ -218,8 +219,8 @@ runners:
   ##
   imagePullSecrets:
   - [your-image-pull-secret]
-
 ```
+
 Take note of the format. The value is not prefixed by a 'name' tag as is the convention in k8s resources.
 
 ### Providing a custom certificate for accessing GitLab
