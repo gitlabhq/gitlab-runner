@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+GIT_ROOT=$(cd "${BASH_SOURCE%/*}" && git rev-parse --show-toplevel)
+
 registry_credentials_available() {
     echo "Checking registry credentials"
     [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && return 0
@@ -40,7 +42,7 @@ build() {
            --build-arg BUILDX_VERSION="${BUILDX_VERSION}" \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
-           .
+           "${GIT_ROOT}"
 }
 
 login
