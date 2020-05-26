@@ -345,7 +345,8 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 The param `--access-level` was added in **GitLab 12.0**.  This param allows a Runner to 
 be set as a [Protected Runner](https://docs.gitlab.com/ee/ci/runners/#protected-runners) upon 
 Runner registration. To register a Runner as a Protected Runner, you can utilize the param 
-`--access-level="ref_protected"`.  This value can later be toggled on or off in the project's 
+`--access-level="ref_protected"`. To register a runner as an Unprotected Runner, set 
+`--access-level="not_protected" instead.  This value can later be toggled on or off in the project's 
 **Settings > CI/CD** menu.
 
 ## `[[runners]]` configuration template file
