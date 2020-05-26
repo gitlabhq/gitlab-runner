@@ -275,8 +275,10 @@ func (n *client) doJSON(
 	if err != nil {
 		return -1, err.Error(), nil
 	}
-	defer res.Body.Close()
-	defer io.Copy(ioutil.Discard, res.Body)
+	defer func() {
+		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode == statusCode && response != nil {
 		isApplicationJSON, err := isResponseApplicationJSON(res)

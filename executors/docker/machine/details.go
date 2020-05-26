@@ -68,7 +68,7 @@ func (m *machineDetails) writeDebugInformation() {
 	details.Time = time.Now().String()
 	details.CreatedAgo = time.Since(m.Created)
 	data := helpers.ToYAML(&details)
-	ioutil.WriteFile("machines/"+details.Details.Name+".yml", []byte(data), 0600)
+	_ = ioutil.WriteFile("machines/"+details.Details.Name+".yml", []byte(data), 0600)
 }
 
 func (m *machineDetails) logger() *logrus.Entry {

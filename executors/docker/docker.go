@@ -415,7 +415,7 @@ func (e *executor) createService(
 	containerName := fmt.Sprintf("%s-%s-%d", e.getProjectUniqRandomizedName(), serviceSlug, serviceIndex)
 
 	// this will fail potentially some builds if there's name collision
-	e.removeContainer(e.Context, containerName)
+	_ = e.removeContainer(e.Context, containerName)
 
 	config := &container.Config{
 		Image:  serviceImage.ID,
@@ -521,7 +521,7 @@ func (e *executor) waitForServices() {
 		for _, service := range e.services {
 			wg.Add(1)
 			go func(service *types.Container) {
-				e.waitForServiceContainer(service, time.Duration(waitForServicesTimeout)*time.Second)
+				_ = e.waitForServiceContainer(service, time.Duration(waitForServicesTimeout)*time.Second)
 				wg.Done()
 			}(service)
 		}
@@ -689,7 +689,7 @@ func (e *executor) createContainer(
 	networkConfig := e.networkConfig(aliases)
 
 	// this will fail potentially some builds if there's name collision
-	e.removeContainer(e.Context, containerName)
+	_ = e.removeContainer(e.Context, containerName)
 
 	e.Debugln("Creating container", containerName, "...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
@@ -810,7 +810,7 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 	stdinErrCh := make(chan error)
 	go func() {
 		_, errCopy := io.Copy(hijacked.Conn, input)
-		hijacked.CloseWrite()
+		_ = hijacked.CloseWrite()
 		if errCopy != nil {
 			stdinErrCh <- errCopy
 		}
@@ -1155,7 +1155,7 @@ func (e *executor) Cleanup() {
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {
-			e.removeContainer(ctx, id)
+			_ = e.removeContainer(ctx, id)
 			wg.Done()
 		}()
 	}
@@ -1242,7 +1242,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)
 	}
-	defer e.removeContainer(e.Context, resp.ID)
+	defer func() { _ = e.removeContainer(e.Context, resp.ID) }()
 
 	e.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
@@ -1368,7 +1368,7 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
 	buffer.WriteString("\n")
-	io.Copy(e.Trace, &buffer)
+	_, _ = io.Copy(e.Trace, &buffer)
 	return err
 }
 
@@ -1387,7 +1387,7 @@ func (e *executor) readContainerLogs(containerID string) string {
 	}
 	defer hijacked.Close()
 
-	stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
+	_, _ = stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
 	containerLog := containerBuffer.String()
 	return strings.TrimSpace(containerLog)
 }

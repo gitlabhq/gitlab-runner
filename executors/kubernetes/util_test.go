@@ -393,7 +393,7 @@ func testKubernetesClient(version string, httpClient *http.Client) *kubernetes.C
 func testVersionAndCodec() (version string, codec runtime.Codec) {
 	scheme := runtime.NewScheme()
 
-	scheme.AddIgnoredConversionType(&metav1.TypeMeta{}, &metav1.TypeMeta{})
+	_ = scheme.AddIgnoredConversionType(&metav1.TypeMeta{}, &metav1.TypeMeta{})
 	scheme.AddKnownTypes(
 		api.SchemeGroupVersion,
 		&api.Pod{},

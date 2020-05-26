@@ -255,14 +255,14 @@ func (b *PsWriter) Finish(trace bool) string {
 	w := bufio.NewWriter(&buffer)
 
 	// write BOM
-	io.WriteString(w, "\xef\xbb\xbf")
+	_, _ = io.WriteString(w, "\xef\xbb\xbf")
 	if trace {
-		io.WriteString(w, "Set-PSDebug -Trace 2\r\n")
+		_, _ = io.WriteString(w, "Set-PSDebug -Trace 2\r\n")
 	}
 
 	// add empty line to close code-block when it is piped to STDIN
 	b.Line("")
-	io.WriteString(w, b.String())
+	_, _ = io.WriteString(w, b.String())
 	w.Flush()
 	return buffer.String()
 }

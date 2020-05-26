@@ -106,7 +106,7 @@ func (c *ExecCommand) Execute(context *cli.Context) {
 	case 1:
 		c.Job = context.Args().Get(0)
 	default:
-		cli.ShowSubcommandHelp(context)
+		_ = cli.ShowSubcommandHelp(context)
 		os.Exit(1)
 		return
 	}

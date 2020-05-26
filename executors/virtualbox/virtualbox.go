@@ -100,7 +100,7 @@ func (s *executor) createVM(vmName string) (err error) {
 
 	_, err = vbox.Status(vmName)
 	if err != nil {
-		vbox.Unregister(vmName)
+		_ = vbox.Unregister(vmName)
 	}
 
 	if !vbox.Exist(vmName) {
@@ -251,9 +251,9 @@ func (s *executor) tryRestoreFromSnapshot() {
 }
 
 func killAndUnregisterVM(vmName string) {
-	vbox.Kill(vmName)
-	vbox.Delete(vmName)
-	vbox.Unregister(vmName)
+	_ = vbox.Kill(vmName)
+	_ = vbox.Delete(vmName)
+	_ = vbox.Unregister(vmName)
 }
 
 func (s *executor) ensureVMStarted() error {
@@ -326,10 +326,10 @@ func (s *executor) Cleanup() {
 	s.sshCommand.Cleanup()
 
 	if s.vmName != "" {
-		vbox.Kill(s.vmName)
+		_ = vbox.Kill(s.vmName)
 
 		if s.Config.VirtualBox.DisableSnapshots || !s.provisioned {
-			vbox.Delete(s.vmName)
+			_ = vbox.Delete(s.vmName)
 		}
 	}
 }

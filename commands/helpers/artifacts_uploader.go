@@ -41,12 +41,12 @@ type ArtifactsUploaderCommand struct {
 
 func (c *ArtifactsUploaderCommand) generateZipArchive(w *io.PipeWriter) {
 	err := archives.CreateZipArchive(w, c.sortedFiles())
-	w.CloseWithError(err)
+	_ = w.CloseWithError(err)
 }
 
 func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
 	err := archives.CreateGzipArchive(w, c.sortedFiles())
-	w.CloseWithError(err)
+	_ = w.CloseWithError(err)
 }
 
 func (c *ArtifactsUploaderCommand) openRawStream() (io.ReadCloser, error) {

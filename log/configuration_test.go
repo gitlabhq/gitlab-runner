@@ -36,7 +36,7 @@ func testCommandRun(args ...string) {
 	args = append([]string{"binary"}, args...)
 	args = append(args, "logtest")
 
-	app.Run(args)
+	_ = app.Run(args)
 }
 
 type handleCliCtxTestCase struct {

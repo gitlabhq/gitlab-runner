@@ -97,7 +97,7 @@ func (b *Buffer) advanceAll() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.advanceAllUnsafe()
+	_ = b.advanceAllUnsafe()
 }
 
 // advanceLogUnsafe is assumed to be run every character
@@ -174,7 +174,7 @@ func (b *Buffer) process(pipe *io.PipeReader) {
 
 		if err == nil {
 			// only write valid characters
-			b.writeRune(r)
+			_ = b.writeRune(r)
 		}
 	}
 

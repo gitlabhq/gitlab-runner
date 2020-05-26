@@ -171,7 +171,7 @@ func (s *Client) Run(ctx context.Context, cmd Command) error {
 
 	select {
 	case <-ctx.Done():
-		session.Signal(ssh.SIGKILL)
+		_ = session.Signal(ssh.SIGKILL)
 		session.Close()
 		return <-waitCh
 

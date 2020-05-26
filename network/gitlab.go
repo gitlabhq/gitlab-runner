@@ -142,7 +142,7 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 	}
 
 	if executorProvider := common.GetExecutorProvider(config.Executor); executorProvider != nil {
-		executorProvider.GetFeatures(&info.Features)
+		_ = executorProvider.GetFeatures(&info.Features)
 
 		if info.Shell == "" {
 			info.Shell = executorProvider.GetDefaultShell()
@@ -450,8 +450,8 @@ func (n *GitLabClient) PatchTrace(
 	)
 
 	defer func() {
-		io.Copy(ioutil.Discard, response.Body)
-		response.Body.Close()
+		_, _ = io.Copy(ioutil.Discard, response.Body)
+		_ = response.Body.Close()
 	}()
 
 	tracePatchResponse := NewTracePatchResponse(response, baseLog)
@@ -566,7 +566,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 		defer mpw.Close()
 		err := n.createArtifactsForm(mpw, reader, options.BaseName)
 		if err != nil {
-			pw.CloseWithError(err)
+			_ = pw.CloseWithError(err)
 		}
 	}()
 
@@ -602,8 +602,8 @@ func (n *GitLabClient) UploadRawArtifacts(
 		return common.UploadFailed
 	}
 	defer func() {
-		io.Copy(ioutil.Discard, res.Body)
-		res.Body.Close()
+		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_ = res.Body.Close()
 	}()
 
 	return n.determineUploadState(res.StatusCode, log, messagePrefix)
@@ -663,8 +663,10 @@ func (n *GitLabClient) DownloadArtifacts(
 		log.Errorln("Downloading artifacts from coordinator...", "error", err.Error())
 		return common.DownloadFailed
 	}
-	defer res.Body.Close()
-	defer io.Copy(ioutil.Discard, res.Body)
+	defer func() {
+		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
 
 	switch res.StatusCode {
 	case http.StatusOK:

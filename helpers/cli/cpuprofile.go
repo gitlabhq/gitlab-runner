@@ -23,7 +23,7 @@ func SetupCPUProfile(app *cli.App) {
 			if err != nil {
 				return err
 			}
-			pprof.StartCPUProfile(f)
+			_ = pprof.StartCPUProfile(f)
 		}
 
 		if appBefore != nil {

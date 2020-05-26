@@ -22,6 +22,6 @@ func (d *dockerTTY) Write(p []byte) (int, error) {
 
 func (d *dockerTTY) Close() error {
 	d.hijackedResp.Close()
-	d.hijackedResp.CloseWrite()
+	_ = d.hijackedResp.CloseWrite()
 	return nil
 }

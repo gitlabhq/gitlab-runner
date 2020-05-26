@@ -975,7 +975,7 @@ func testDockerVersion(t *testing.T, version string) {
 	}
 
 	defer func() {
-		exec.Command("docker", "rm", "-f", "-v", id).Run()
+		_ = exec.Command("docker", "rm", "-f", "-v", id).Run()
 	}()
 
 	t.Log("Getting address of", version, "...")
