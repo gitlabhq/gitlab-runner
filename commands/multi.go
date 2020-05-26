@@ -202,7 +202,7 @@ func (mr *RunCommand) run() {
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
 
-	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
 
 	startWorker := make(chan int)

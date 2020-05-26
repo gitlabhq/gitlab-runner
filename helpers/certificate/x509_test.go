@@ -56,7 +56,7 @@ func TestCertificate(t *testing.T) {
 	req, err = http.NewRequest(http.MethodPost, "https://"+srv.Addr, nil)
 	require.NoError(t, err)
 
-	resp, err = client.Do(req)
+	_, err = client.Do(req)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "certificate signed by unknown authority")
 }

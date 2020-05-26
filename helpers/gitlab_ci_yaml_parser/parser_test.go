@@ -122,7 +122,7 @@ func TestFileParsing(t *testing.T) {
 	assert.Equal(t, "global:image", jobResponse.Image.Name)
 
 	// file1 - job3
-	jobResponse = getJobResponse(t, testFile1, "job3", true)
+	_ = getJobResponse(t, testFile1, "job3", true)
 
 	// file1 - job4
 	jobResponse = getJobResponse(t, testFile1, "job4", false)
