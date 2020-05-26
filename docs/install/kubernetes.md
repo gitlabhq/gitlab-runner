@@ -221,7 +221,7 @@ runners:
   - [your-image-pull-secret]
 ```
 
-Take note of the format. The value is not prefixed by a 'name' tag as is the convention in k8s resources.
+Take note of the format. The value is not prefixed by a 'name' tag as is the convention in kubernetes resources.
 
 ### Providing a custom certificate for accessing GitLab
 
