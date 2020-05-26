@@ -122,12 +122,12 @@ Supported features by different executors:
 
 Supported systems by different shells:
 
-| Shells  | Bash        | PowerShell | Windows Batch |
-|:-------:|:-----------:|:----------:|:-------------:|
-| Windows | ✗ (4)       | ✓ (3)      | ✓ (2)         |
-| Linux   | ✓ (1)       | ✗          | ✗             |
-| macOS   | ✓ (1)       | ✗          | ✗             |
-| FreeBSD | ✓ (1)       | ✗          | ✗             |
+| Shells  | Bash        | PowerShell  | Windows Batch (deprecated) |
+|:-------:|:-----------:|:-----------:|:--------------------------:|
+| Windows | ✗ (4)       | ✓ (3)      | ✓ (2)                      |
+| Linux   | ✓ (1)       | ✗          | ✗                          |
+| macOS   | ✓ (1)       | ✗          | ✗                          |
+| FreeBSD | ✓ (1)       | ✗          | ✗                          |
 
 1. Default shell.
 1. Deprecated. Default shell if no
@@ -140,9 +140,9 @@ Supported systems by different shells:
 
 Supported systems for interactive web terminals by different shells:
 
-| Shells  | Bash        | Windows Batch | PowerShell |
-|:-------:|:-----------:|:-------------:|:----------:|
-| Windows | ✗           | ✗             | ✗          |
-| Linux   | ✓           | ✗             | ✗          |
-| macOS     | ✓           | ✗             | ✗          |
-| FreeBSD | ✓           | ✗             | ✗          |
+| Shells  | Bash        | PowerShell     | Windows Batch (deprecated) |
+|:-------:|:-----------:|:--------------:|:--------------------------:|
+| Windows | ✗           | ✗             | ✗                          |
+| Linux   | ✓           | ✗             | ✗                          |
+| macOS   | ✓           | ✗             | ✗                          |
+| FreeBSD | ✓           | ✗             | ✗                          |

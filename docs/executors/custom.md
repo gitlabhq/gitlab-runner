@@ -282,7 +282,7 @@ of the following shells:
 
 - Bash
 - PowerShell
-- Batch (Deprecated)
+- Batch (deprecated)
 
 We generate the script using the shell configured by `shell` inside of
 [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section).
