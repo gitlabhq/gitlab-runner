@@ -2880,6 +2880,7 @@ func TestLimits(t *testing.T) {
 	tests := []struct {
 		CPU, Memory string
 		Expected    api.ResourceList
+		ExpectedErr error
 	}{
 		{
 			CPU:    "100m",
@@ -2888,35 +2889,49 @@ func TestLimits(t *testing.T) {
 				api.ResourceCPU:    resource.MustParse("100m"),
 				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
+			ExpectedErr: nil,
 		},
 		{
 			CPU: "100m",
 			Expected: api.ResourceList{
 				api.ResourceCPU: resource.MustParse("100m"),
 			},
+			ExpectedErr: nil,
 		},
 		{
 			Memory: "100Mi",
 			Expected: api.ResourceList{
 				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
+			ExpectedErr: nil,
 		},
 		{
-			CPU:      "100j",
-			Expected: api.ResourceList{},
+			CPU:         "100j",
+			Expected:    api.ResourceList{},
+			ExpectedErr: resource.ErrFormatWrong,
 		},
 		{
-			Memory:   "100j",
-			Expected: api.ResourceList{},
+			Memory:      "100j",
+			Expected:    api.ResourceList{},
+			ExpectedErr: resource.ErrFormatWrong,
 		},
 		{
-			Expected: api.ResourceList{},
+			Expected:    api.ResourceList{},
+			ExpectedErr: nil,
 		},
 	}
 
-	for _, test := range tests {
-		res, _ := limits(test.CPU, test.Memory)
-		assert.Equal(t, test.Expected, res)
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("CPU=%s/Memory=%s", tc.CPU, tc.Memory), func(t *testing.T) {
+			res, err := limits(tc.CPU, tc.Memory)
+			assert.True(t,
+				errors.Is(err, tc.ExpectedErr),
+				"expected err %T, but got %T",
+				tc.ExpectedErr,
+				err,
+			)
+			assert.Equal(t, tc.Expected, res)
+		})
 	}
 }
 
