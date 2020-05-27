@@ -41,6 +41,7 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - nakedret
     - staticcheck
     - structcheck
     - typecheck

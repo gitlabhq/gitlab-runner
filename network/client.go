@@ -201,16 +201,16 @@ func (n *client) checkBackoffRequest(req *http.Request, res *http.Response) {
 	}
 }
 
-func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
+func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (*http.Response, error) {
 	url, err := n.url.Parse(uri)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	req, err := http.NewRequest(method, url.String(), request)
 	if err != nil {
 		err = fmt.Errorf("failed to create NewRequest: %w", err)
-		return
+		return nil, err
 	}
 
 	if headers != nil {
@@ -224,13 +224,13 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 
 	n.ensureTLSConfig()
 
-	res, err = n.requester.Do(req)
+	res, err := n.requester.Do(req)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	n.checkBackoffRequest(req, res)
-	return
+	return res, nil
 }
 
 func (n *client) doJSON(uri, method string, statusCode int, request interface{}, response interface{}) (int, string, *http.Response) {
@@ -343,18 +343,17 @@ func (n *client) findCertificate(certificate *string, base string, name string) 
 	}
 }
 
-func newClient(requestCredentials requestCredentials) (c *client, err error) {
+func newClient(requestCredentials requestCredentials) (*client, error) {
 	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if url.Scheme != "http" && url.Scheme != "https" {
-		err = errors.New("only http or https scheme supported")
-		return
+		return nil, errors.New("only http or https scheme supported")
 	}
 
-	c = &client{
+	c := &client{
 		url:             url,
 		caFile:          requestCredentials.GetTLSCAFile(),
 		certFile:        requestCredentials.GetTLSCertFile(),
@@ -370,5 +369,5 @@ func newClient(requestCredentials requestCredentials) (c *client, err error) {
 		c.findCertificate(&c.keyFile, CertificateDirectory, host+".auth.key")
 	}
 
-	return
+	return c, nil
 }

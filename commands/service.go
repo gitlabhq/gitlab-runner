@@ -125,7 +125,8 @@ func createServiceConfig(c *cli.Context) (svcConfig *service.Config) {
 		}
 		svcConfig.UserName = c.String("user")
 	}
-	return
+
+	return svcConfig
 }
 
 func RunServiceControl(c *cli.Context) {
