@@ -93,7 +93,7 @@ func (c *ReadLogsCommand) Execute(*cli.Context) {
 }
 
 func (c *ReadLogsCommand) readLogs() error {
-	s, r, err := c.openFileReader(c.Offset)
+	s, r, err := c.openFileReader()
 	if err != nil {
 		return err
 	}
@@ -119,13 +119,13 @@ func (c *ReadLogsCommand) readLogs() error {
 	}
 }
 
-func (c *ReadLogsCommand) openFileReader(offset int64) (readSeekCloser, *bufio.Reader, error) {
+func (c *ReadLogsCommand) openFileReader() (readSeekCloser, *bufio.Reader, error) {
 	s, err := c.logStreamProvider.Open()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, err = s.Seek(offset, 0)
+	_, err = s.Seek(c.Offset, 0)
 	if err != nil {
 		_ = s.Close()
 		return nil, nil, err
