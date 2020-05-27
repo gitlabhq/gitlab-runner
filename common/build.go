@@ -309,7 +309,13 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		Name:        string(buildStage),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			b.logger.Println(fmt.Sprintf("%s%s%s", helpers.ANSI_BOLD_CYAN, getStageDescription(buildStage), helpers.ANSI_RESET))
+			msg := fmt.Sprintf(
+				"%s%s%s",
+				helpers.ANSI_BOLD_CYAN,
+				getStageDescription(buildStage),
+				helpers.ANSI_RESET,
+			)
+			b.logger.Println(msg)
 			return executor.Run(cmd)
 		},
 	}
@@ -375,7 +381,10 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	// Prepare stage
 	err := b.executeStage(ctx, BuildStagePrepare, executor)
 	if err != nil {
-		return fmt.Errorf("prepare environment: %w. Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information", err)
+		return fmt.Errorf(
+			"prepare environment: %w. "+
+				"Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information",
+			err)
 	}
 
 	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
@@ -468,7 +477,12 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime time.Time, 
 	}
 }
 
-func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {
+func (b *Build) attemptExecuteStage(
+	ctx context.Context,
+	buildStage BuildStage,
+	executor Executor,
+	attempts int,
+) (err error) {
 	if attempts < 1 || attempts > 10 {
 		return fmt.Errorf("number of attempts out of the range [1, 10] for stage: %s", buildStage)
 	}
@@ -566,7 +580,10 @@ func (b *Build) waitForBuildFinish(buildFinish <-chan error, timeout time.Durati
 	}
 }
 
-func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider ExecutorProvider, logger BuildLogger) (executor Executor, err error) {
+func (b *Build) retryCreateExecutor(
+	options ExecutorPrepareOptions,
+	provider ExecutorProvider,
+	logger BuildLogger) (executor Executor, err error) {
 	for tries := 0; tries < PreparationRetries; tries++ {
 		executor = provider.Create()
 		if executor == nil {
@@ -732,7 +749,13 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		Name:        string(BuildStagePrepareExecutor),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			b.logger.Println(fmt.Sprintf("%sPreparing the %q executor%s", helpers.ANSI_BOLD_CYAN, b.Runner.Executor, helpers.ANSI_RESET))
+			msg := fmt.Sprintf(
+				"%sPreparing the %q executor%s",
+				helpers.ANSI_BOLD_CYAN,
+				b.Runner.Executor,
+				helpers.ANSI_RESET,
+			)
+			b.logger.Println(msg)
 			executor, err = b.retryCreateExecutor(options, provider, b.logger)
 			return err
 		},
@@ -759,11 +782,41 @@ func (b *Build) String() string {
 
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
-		{Key: "CI_BUILDS_DIR", Value: filepath.FromSlash(b.RootDir), Public: true, Internal: true, File: false},
-		{Key: "CI_PROJECT_DIR", Value: filepath.FromSlash(b.FullProjectDir()), Public: true, Internal: true, File: false},
-		{Key: "CI_CONCURRENT_ID", Value: strconv.Itoa(b.RunnerID), Public: true, Internal: true, File: false},
-		{Key: "CI_CONCURRENT_PROJECT_ID", Value: strconv.Itoa(b.ProjectRunnerID), Public: true, Internal: true, File: false},
-		{Key: "CI_SERVER", Value: "yes", Public: true, Internal: true, File: false},
+		{
+			Key:      "CI_BUILDS_DIR",
+			Value:    filepath.FromSlash(b.RootDir),
+			Public:   true,
+			Internal: true,
+			File:     false,
+		},
+		{
+			Key:      "CI_PROJECT_DIR",
+			Value:    filepath.FromSlash(b.FullProjectDir()),
+			Public:   true,
+			Internal: true,
+			File:     false,
+		},
+		{
+			Key:      "CI_CONCURRENT_ID",
+			Value:    strconv.Itoa(b.RunnerID),
+			Public:   true,
+			Internal: true,
+			File:     false,
+		},
+		{
+			Key:      "CI_CONCURRENT_PROJECT_ID",
+			Value:    strconv.Itoa(b.ProjectRunnerID),
+			Public:   true,
+			Internal: true,
+			File:     false,
+		},
+		{
+			Key:      "CI_SERVER",
+			Value:    "yes",
+			Public:   true,
+			Internal: true,
+			File:     false,
+		},
 	}
 }
 
@@ -846,7 +899,9 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables := make(JobVariables, 0)
 	variables = append(variables, b.GetDefaultFeatureFlagsVariables()...)
 	if b.Image.Name != "" {
-		variables = append(variables, JobVariable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false})
+		variables = append(
+			variables,
+			JobVariable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false})
 	}
 	if b.Runner != nil {
 		variables = append(variables, b.Runner.GetVariables()...)
@@ -1038,7 +1093,12 @@ func (b *Build) Duration() time.Duration {
 	return time.Since(b.createdAt)
 }
 
-func NewBuild(jobData JobResponse, runnerConfig *RunnerConfig, systemInterrupt chan os.Signal, executorData ExecutorData) (*Build, error) {
+func NewBuild(
+	jobData JobResponse,
+	runnerConfig *RunnerConfig,
+	systemInterrupt chan os.Signal,
+	executorData ExecutorData,
+) (*Build, error) {
 	// Attempt to perform a deep copy of the RunnerConfig
 	runnerConfigCopy, err := runnerConfig.DeepCopy()
 	if err != nil {

@@ -17,7 +17,10 @@ func TestMakeRFC1123Compatible(t *testing.T) {
 	}{
 		{name: "tOk3_?ofTHE-Runner", expected: "tok3ofthe-runner"},
 		{name: "----tOk3_?ofTHE-Runner", expected: "tok3ofthe-runner"},
-		{name: "very-long-token-----------------------------------------------end", expected: "very-long-token-----------------------------------------------e"},
+		{
+			name:     "very-long-token-----------------------------------------------end",
+			expected: "very-long-token-----------------------------------------------e",
+		},
 	}
 
 	for _, example := range examples {

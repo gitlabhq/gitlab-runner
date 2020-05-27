@@ -388,7 +388,12 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
-								{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true, HostPath: "/opt/test/rw"},
+								{
+									Name:      "test",
+									MountPath: "/opt/test/readonly",
+									ReadOnly:  true,
+									HostPath:  "/opt/test/rw",
+								},
 								{Name: "docker", MountPath: "/var/run/docker.sock"},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
@@ -428,13 +433,19 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 
 			mounts := e.getVolumeMounts()
 			for _, expected := range tt.Expected {
-				assert.Contains(t, mounts, expected, "Expected volumeMount definition for %s was not found", expected.Name)
+				assert.Contains(
+					t,
+					mounts,
+					expected,
+					"Expected volumeMount definition for %s was not found",
+					expected.Name)
 			}
 		})
 	}
 }
 
 func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	//nolint:lll
 	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
@@ -919,7 +930,8 @@ func TestCleanup(t *testing.T) {
 	podsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/pods/" + objectMeta.Name
 	servicesEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/services/" + objectMeta.Name
 	secretsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/secrets/" + objectMeta.Name
-	configMapsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
+	configMapsEndpointURI :=
+		"/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
 
 	tests := []struct {
 		Name        string
@@ -2410,7 +2422,11 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				assert.Equal(t, "servicename-non-compatble", e.services[0].GenerateName)
 				assert.NotEmpty(t, e.ProxyPool["service,name-.non-compat!ble"])
-				assert.Equal(t, "port,name-.non-compat!ble", e.ProxyPool["service,name-.non-compat!ble"].Settings.Ports[0].Name)
+				assert.Equal(
+					t,
+					"port,name-.non-compat!ble",
+					e.ProxyPool["service,name-.non-compat!ble"].Settings.Ports[0].Name,
+				)
 			},
 		},
 		"sets command (entrypoint) and args": {
@@ -3093,7 +3109,9 @@ func TestNewLogStreamerStream(t *testing.T) {
 
 		return true
 	})
-	remoteExecutor.On("Execute", http.MethodPost, urlMatcher, mock.Anything, nil, output, output, false).Return(abortErr)
+	remoteExecutor.
+		On("Execute", http.MethodPost, urlMatcher, mock.Anything, nil, output, output, false).
+		Return(abortErr)
 
 	p, ok := e.newLogProcessor().(*kubernetesLogProcessor)
 	require.True(t, ok)
@@ -3156,7 +3174,12 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			assert.Equal(t, tt.expectedIsResult, errors.Is(tt.err, new(commandTerminatedError)), "commandTerminatedError.Is incorrect result")
+			assert.Equal(
+				t,
+				tt.expectedIsResult,
+				errors.Is(tt.err, new(commandTerminatedError)),
+				"commandTerminatedError.Is incorrect result",
+			)
 		})
 	}
 }

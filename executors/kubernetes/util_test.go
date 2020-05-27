@@ -219,9 +219,11 @@ func TestWaitForPodRunning(t *testing.T) {
 						}
 					}
 					retries++
-					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
-						"Content-Type": {"application/json"},
-					}}, nil
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+					}, nil
 				default:
 					// Ensures no GET is performed when deleting by name
 					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
@@ -252,9 +254,11 @@ func TestWaitForPodRunning(t *testing.T) {
 							Phase: api.PodSucceeded,
 						},
 					}
-					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
-						"Content-Type": {"application/json"},
-					}}, nil
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+					}, nil
 				default:
 					// Ensures no GET is performed when deleting by name
 					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
@@ -305,9 +309,11 @@ func TestWaitForPodRunning(t *testing.T) {
 						t.Errorf("Too many retries for the given poll parameters. (Expected 3)")
 					}
 					retries++
-					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
-						"Content-Type": {"application/json"},
-					}}, nil
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+					}, nil
 				default:
 					// Ensures no GET is performed when deleting by name
 					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)

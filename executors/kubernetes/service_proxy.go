@@ -30,7 +30,13 @@ func (s *executor) newProxy(serviceName string, ports []proxy.Port) *proxy.Proxy
 	}
 }
 
-func (s *executor) ProxyRequest(w http.ResponseWriter, r *http.Request, requestedURI string, port string, settings *proxy.Settings) {
+func (s *executor) ProxyRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+	requestedURI string,
+	port string,
+	settings *proxy.Settings,
+) {
 	logger := logrus.WithFields(logrus.Fields{
 		"uri":      r.RequestURI,
 		"method":   r.Method,
@@ -74,7 +80,10 @@ func (s *executor) servicesRunning() bool {
 	return true
 }
 
-func (s *executor) serviceEndpointRequest(verb, serviceName, requestedURI string, port proxy.Port) (*rest.Request, error) {
+func (s *executor) serviceEndpointRequest(
+	verb, serviceName, requestedURI string,
+	port proxy.Port,
+) (*rest.Request, error) {
 	scheme, err := port.Scheme()
 	if err != nil {
 		return nil, err
@@ -90,7 +99,15 @@ func (s *executor) serviceEndpointRequest(verb, serviceName, requestedURI string
 	return result, nil
 }
 
-func proxyWSRequest(s *executor, w http.ResponseWriter, r *http.Request, requestedURI string, port proxy.Port, proxySettings *proxy.Settings, logger *logrus.Entry) {
+func proxyWSRequest(
+	s *executor,
+	w http.ResponseWriter,
+	r *http.Request,
+	requestedURI string,
+	port proxy.Port,
+	proxySettings *proxy.Settings,
+	logger *logrus.Entry,
+) {
 	// In order to avoid calling this method, and use one of its own,
 	// we should refactor the library "gitlab.com/gitlab-org/gitlab-terminal"
 	// and make it more generic, not so terminal focused, with a broader
@@ -118,7 +135,15 @@ func proxyWSRequest(s *executor, w http.ResponseWriter, r *http.Request, request
 	terminal.ProxyWebSocket(w, r, settings, serviceProxy)
 }
 
-func proxyHTTPRequest(s *executor, w http.ResponseWriter, r *http.Request, requestedURI string, port proxy.Port, proxy *proxy.Settings, logger *logrus.Entry) {
+func proxyHTTPRequest(
+	s *executor,
+	w http.ResponseWriter,
+	r *http.Request,
+	requestedURI string,
+	port proxy.Port,
+	proxy *proxy.Settings,
+	logger *logrus.Entry,
+) {
 	req, err := s.serviceEndpointRequest(r.Method, proxy.ServiceName, requestedURI, port)
 	if err != nil {
 		logger.WithError(err).Errorf("service proxy: error proxying HTTP request")

@@ -264,14 +264,22 @@ func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.She
 	return b.generateScript(w, buildStage, info)
 }
 
-func (b *BashShell) generateScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
+func (b *BashShell) generateScript(
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) (string, error) {
 	b.ensurePrepareStageHostnameMessage(w, buildStage, info)
 	err := b.writeScript(w, buildStage, info)
 	script := w.Finish(info.Build.IsDebugTraceEnabled())
 	return script, err
 }
 
-func (b *BashShell) ensurePrepareStageHostnameMessage(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) {
+func (b *BashShell) ensurePrepareStageHostnameMessage(
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) {
 	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo " + strconv.Quote("Running on $(hostname) via "+info.Build.Hostname+"..."))

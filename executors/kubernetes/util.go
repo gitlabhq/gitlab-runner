@@ -27,7 +27,10 @@ var (
 	defaultKubectlConfig kubeConfigProvider = loadDefaultKubectlConfig
 )
 
-func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites) (kubeConfig *restclient.Config, err error) {
+func getKubeClientConfig(
+	config *common.KubernetesConfig,
+	overwrites *overwrites,
+) (kubeConfig *restclient.Config, err error) {
 	if len(config.Host) > 0 {
 		kubeConfig, err = getOutClusterClientConfig(config)
 	} else {
@@ -176,7 +179,13 @@ func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) 
 // reached.
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
-func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
+func waitForPodRunning(
+	ctx context.Context,
+	c *kubernetes.Clientset,
+	pod *api.Pod,
+	out io.Writer,
+	config *common.KubernetesConfig,
+) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {

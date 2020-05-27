@@ -134,7 +134,13 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 			}
 
 			err = m.Create(context.Background(), testCase.volume)
-			assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
+			assert.True(
+				t,
+				errors.Is(err, testCase.expectedError),
+				"expected err %T, but got %T",
+				testCase.expectedError,
+				err,
+			)
 			assert.Equal(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
@@ -210,7 +216,13 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 			}
 
 			err = m.Create(context.Background(), testCase.volume)
-			assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
+			assert.True(
+				t,
+				errors.Is(err, testCase.expectedError),
+				"expected err %T, but got %T",
+				testCase.expectedError,
+				err,
+			)
 			assert.Equal(t, expectedBinding, m.volumeBindings)
 		})
 	}
@@ -300,7 +312,13 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 				Once()
 
 			err = m.Create(context.Background(), testCase.volume)
-			assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
+			assert.True(
+				t,
+				errors.Is(err, testCase.expectedError),
+				"expected err %T, but got %T",
+				testCase.expectedError,
+				err,
+			)
 			assert.Equal(t, testCase.expectedBinding, m.volumeBindings)
 		})
 	}
@@ -393,7 +411,13 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 
 			err = m.Create(context.Background(), testCase.volume)
 			if testCase.expectedError != nil {
-				assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
+				assert.True(
+					t,
+					errors.Is(err, testCase.expectedError),
+					"expected err %T, but got %T",
+					testCase.expectedError,
+					err,
+				)
 				return
 			}
 
@@ -529,13 +553,25 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 
 			err = m.CreateTemporary(context.Background(), testCase.volume)
 			if testCase.expectedError != nil {
-				assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
+				assert.True(
+					t,
+					errors.Is(err, testCase.expectedError),
+					"expected err %T, but got %T",
+					testCase.expectedError,
+					err,
+				)
 				return
 			}
 
 			require.Len(t, m.temporaryVolumes, 1)
 			assert.Equal(t, m.temporaryVolumes[0], testCase.expectedVolumeName)
-			assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
+			assert.True(
+				t,
+				errors.Is(err, testCase.expectedError),
+				"expected err %T, but got %T",
+				testCase.expectedError,
+				err,
+			)
 			assert.Equal(t, testCase.expectedBindings, m.Binds())
 		})
 	}
@@ -590,7 +626,13 @@ func TestDefaultManager_RemoveTemporary(t *testing.T) {
 			m.temporaryVolumes = testCase.temporaryVolumes
 
 			err := m.RemoveTemporary(context.Background())
-			assert.True(t, errors.Is(err, testCase.expectedError), "expected err %T, but got %T", testCase.expectedError, err)
+			assert.True(
+				t,
+				errors.Is(err, testCase.expectedError),
+				"expected err %T, but got %T",
+				testCase.expectedError,
+				err,
+			)
 		})
 	}
 }

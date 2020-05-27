@@ -20,7 +20,20 @@ var helperImages = map[string]string{
 	windows.V1909: baseImage1909,
 }
 
-var powerShellCmd = []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"}
+var powerShellCmd = []string{
+	"PowerShell",
+	"-NoProfile",
+	"-NoLogo",
+	"-InputFormat",
+	"text",
+	"-OutputFormat",
+	"text",
+	"-NonInteractive",
+	"-ExecutionPolicy",
+	"Bypass",
+	"-Command",
+	"-",
+}
 
 type windowsInfo struct{}
 

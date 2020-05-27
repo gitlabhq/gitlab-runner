@@ -77,25 +77,41 @@ func wrapError(method string, err error, started time.Time) error {
 	return fmt.Errorf("%w (%s:%ds)", err, method, seconds)
 }
 
-func (c *officialDockerClient) ImageInspectWithRaw(ctx context.Context, imageID string) (types.ImageInspect, []byte, error) {
+func (c *officialDockerClient) ImageInspectWithRaw(
+	ctx context.Context,
+	imageID string,
+) (types.ImageInspect, []byte, error) {
 	started := time.Now()
 	image, data, err := c.client.ImageInspectWithRaw(ctx, imageID)
 	return image, data, wrapError("ImageInspectWithRaw", err, started)
 }
 
-func (c *officialDockerClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+func (c *officialDockerClient) ContainerList(
+	ctx context.Context,
+	options types.ContainerListOptions,
+) ([]types.Container, error) {
 	started := time.Now()
 	containers, err := c.client.ContainerList(ctx, options)
 	return containers, wrapError("ContainerList", err, started)
 }
 
-func (c *officialDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error) {
+func (c *officialDockerClient) ContainerCreate(
+	ctx context.Context,
+	config *container.Config,
+	hostConfig *container.HostConfig,
+	networkingConfig *network.NetworkingConfig,
+	containerName string,
+) (container.ContainerCreateCreatedBody, error) {
 	started := time.Now()
 	container, err := c.client.ContainerCreate(ctx, config, hostConfig, networkingConfig, containerName)
 	return container, wrapError("ContainerCreate", err, started)
 }
 
-func (c *officialDockerClient) ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error {
+func (c *officialDockerClient) ContainerStart(
+	ctx context.Context,
+	containerID string,
+	options types.ContainerStartOptions,
+) error {
 	started := time.Now()
 	err := c.client.ContainerStart(ctx, containerID, options)
 	return wrapError("ContainerCreate", err, started)
@@ -113,41 +129,69 @@ func (c *officialDockerClient) ContainerInspect(ctx context.Context, containerID
 	return data, wrapError("ContainerInspect", err, started)
 }
 
-func (c *officialDockerClient) ContainerAttach(ctx context.Context, container string, options types.ContainerAttachOptions) (types.HijackedResponse, error) {
+func (c *officialDockerClient) ContainerAttach(
+	ctx context.Context,
+	container string,
+	options types.ContainerAttachOptions,
+) (types.HijackedResponse, error) {
 	started := time.Now()
 	response, err := c.client.ContainerAttach(ctx, container, options)
 	return response, wrapError("ContainerAttach", err, started)
 }
 
-func (c *officialDockerClient) ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error {
+func (c *officialDockerClient) ContainerRemove(
+	ctx context.Context,
+	containerID string,
+	options types.ContainerRemoveOptions,
+) error {
 	started := time.Now()
 	err := c.client.ContainerRemove(ctx, containerID, options)
 	return wrapError("ContainerRemove", err, started)
 }
 
-func (c *officialDockerClient) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+func (c *officialDockerClient) ContainerWait(
+	ctx context.Context,
+	containerID string,
+	condition container.WaitCondition,
+) (<-chan container.ContainerWaitOKBody, <-chan error) {
 	return c.client.ContainerWait(ctx, containerID, condition)
 }
 
-func (c *officialDockerClient) ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
+func (c *officialDockerClient) ContainerLogs(
+	ctx context.Context,
+	container string,
+	options types.ContainerLogsOptions,
+) (io.ReadCloser, error) {
 	started := time.Now()
 	rc, err := c.client.ContainerLogs(ctx, container, options)
 	return rc, wrapError("ContainerLogs", err, started)
 }
 
-func (c *officialDockerClient) ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error) {
+func (c *officialDockerClient) ContainerExecCreate(
+	ctx context.Context,
+	container string,
+	config types.ExecConfig,
+) (types.IDResponse, error) {
 	started := time.Now()
 	resp, err := c.client.ContainerExecCreate(ctx, container, config)
 	return resp, wrapError("ContainerExecCreate", err, started)
 }
 
-func (c *officialDockerClient) ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error) {
+func (c *officialDockerClient) ContainerExecAttach(
+	ctx context.Context,
+	execID string,
+	config types.ExecStartCheck,
+) (types.HijackedResponse, error) {
 	started := time.Now()
 	resp, err := c.client.ContainerExecAttach(ctx, execID, config)
 	return resp, wrapError("ContainerExecAttach", err, started)
 }
 
-func (c *officialDockerClient) NetworkCreate(ctx context.Context, networkName string, options types.NetworkCreate) (types.NetworkCreateResponse, error) {
+func (c *officialDockerClient) NetworkCreate(
+	ctx context.Context,
+	networkName string,
+	options types.NetworkCreate,
+) (types.NetworkCreateResponse, error) {
 	started := time.Now()
 	response, err := c.client.NetworkCreate(ctx, networkName, options)
 	return response, wrapError("NetworkCreate", err, started)
@@ -159,13 +203,20 @@ func (c *officialDockerClient) NetworkRemove(ctx context.Context, networkID stri
 	return wrapError("NetworkRemove", err, started)
 }
 
-func (c *officialDockerClient) NetworkDisconnect(ctx context.Context, networkID string, containerID string, force bool) error {
+func (c *officialDockerClient) NetworkDisconnect(
+	ctx context.Context,
+	networkID string,
+	containerID string,
+	force bool,
+) error {
 	started := time.Now()
 	err := c.client.NetworkDisconnect(ctx, networkID, containerID, force)
 	return wrapError("NetworkDisconnect", err, started)
 }
 
-func (c *officialDockerClient) NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error) {
+func (c *officialDockerClient) NetworkList(
+	ctx context.Context,
+	options types.NetworkListOptions) ([]types.NetworkResource, error) {
 	started := time.Now()
 	networks, err := c.client.NetworkList(ctx, options)
 	return networks, wrapError("NetworkList", err, started)
@@ -177,7 +228,10 @@ func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID str
 	return resource, wrapError("NetworkInspect", err, started)
 }
 
-func (c *officialDockerClient) VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error) {
+func (c *officialDockerClient) VolumeCreate(
+	ctx context.Context,
+	options volume.VolumeCreateBody,
+) (types.Volume, error) {
 	started := time.Now()
 	v, err := c.client.VolumeCreate(ctx, options)
 	return v, wrapError("VolumeCreate", err, started)
@@ -195,7 +249,11 @@ func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {
 	return info, wrapError("Info", err, started)
 }
 
-func (c *officialDockerClient) ImageImportBlocking(ctx context.Context, source types.ImageImportSource, ref string, options types.ImageImportOptions) error {
+func (c *officialDockerClient) ImageImportBlocking(
+	ctx context.Context,
+	source types.ImageImportSource,
+	ref string,
+	options types.ImageImportOptions) error {
 	started := time.Now()
 	readCloser, err := c.client.ImageImport(ctx, source, ref, options)
 	if err != nil {
@@ -211,7 +269,10 @@ func (c *officialDockerClient) ImageImportBlocking(ctx context.Context, source t
 	return nil
 }
 
-func (c *officialDockerClient) ImagePullBlocking(ctx context.Context, ref string, options types.ImagePullOptions) error {
+func (c *officialDockerClient) ImagePullBlocking(
+	ctx context.Context,
+	ref string,
+	options types.ImagePullOptions) error {
 	started := time.Now()
 	readCloser, err := c.client.ImagePull(ctx, ref, options)
 	if err != nil {

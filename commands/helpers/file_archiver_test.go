@@ -205,7 +205,11 @@ func TestFileArchiverFileIsNotChanged(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, os.Chtimes(fileArchiverUntrackedFile, now, now.Add(-time.Second)))
-	assert.False(t, f.isFileChanged(fileArchiverArchiveZipFile), "should return false if file was modified before the listed file")
+	assert.False(
+		t,
+		f.isFileChanged(fileArchiverArchiveZipFile),
+		"should return false if file was modified before the listed file",
+	)
 }
 
 func TestFileArchiverFileIsChanged(t *testing.T) {
@@ -237,5 +241,9 @@ func TestFileArchiverFileDoesNotExist(t *testing.T) {
 	err := f.enumerate()
 	require.NoError(t, err)
 
-	assert.True(t, f.isFileChanged(fileArchiverNotExistingFile), "should return true if file doesn't exist")
+	assert.True(
+		t,
+		f.isFileChanged(fileArchiverNotExistingFile),
+		"should return true if file doesn't exist",
+	)
 }

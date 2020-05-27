@@ -193,7 +193,9 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.jobDurationHistogram.WithLabelValues(deleteBuild.Runner.ShortDescription()).Observe(deleteBuild.Duration().Seconds())
+	b.jobDurationHistogram.
+		WithLabelValues(deleteBuild.Runner.ShortDescription()).
+		Observe(deleteBuild.Duration().Seconds())
 
 	for idx, build := range b.builds {
 		if build == deleteBuild {

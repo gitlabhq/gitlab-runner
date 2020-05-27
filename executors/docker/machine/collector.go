@@ -26,12 +26,42 @@ func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements prometheus.Collector.
 func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	data := m.collectDetails()
-	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Acquired), "acquired")
-	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Creating), "creating")
-	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Idle), "idle")
-	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Used), "used")
-	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.Removing), "removing")
-	ch <- prometheus.MustNewConstMetric(m.currentStatesDesc, prometheus.GaugeValue, float64(data.StuckOnRemoving), "stuck-on-removing")
+	ch <- prometheus.MustNewConstMetric(
+		m.currentStatesDesc,
+		prometheus.GaugeValue,
+		float64(data.Acquired),
+		"acquired",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		m.currentStatesDesc,
+		prometheus.GaugeValue,
+		float64(data.Creating),
+		"creating",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		m.currentStatesDesc,
+		prometheus.GaugeValue,
+		float64(data.Idle),
+		"idle",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		m.currentStatesDesc,
+		prometheus.GaugeValue,
+		float64(data.Used),
+		"used",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		m.currentStatesDesc,
+		prometheus.GaugeValue,
+		float64(data.Removing),
+		"removing",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		m.currentStatesDesc,
+		prometheus.GaugeValue,
+		float64(data.StuckOnRemoving),
+		"stuck-on-removing",
+	)
 
 	m.totalActions.Collect(ch)
 	m.creationHistogram.Collect(ch)

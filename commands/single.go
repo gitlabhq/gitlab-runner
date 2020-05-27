@@ -25,7 +25,12 @@ type RunSingleCommand struct {
 	interruptSignals chan os.Signal
 }
 
-func waitForInterrupts(finished *abool.AtomicBool, abortSignal chan os.Signal, doneSignal chan int, interruptSignals chan os.Signal) {
+func waitForInterrupts(
+	finished *abool.AtomicBool,
+	abortSignal chan os.Signal,
+	doneSignal chan int,
+	interruptSignals chan os.Signal,
+) {
 	if interruptSignals == nil {
 		interruptSignals = make(chan os.Signal)
 	}

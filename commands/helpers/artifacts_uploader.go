@@ -172,8 +172,12 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("artifacts-uploader", "create and upload build artifacts (internal)", &ArtifactsUploaderCommand{
-		network: network.NewGitLabClient(),
-		Name:    "artifacts",
-	})
+	common.RegisterCommand2(
+		"artifacts-uploader",
+		"create and upload build artifacts (internal)",
+		&ArtifactsUploaderCommand{
+			network: network.NewGitLabClient(),
+			Name:    "artifacts",
+		},
+	)
 }

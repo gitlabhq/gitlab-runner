@@ -22,7 +22,12 @@ var (
 	jobOutputLimit = common.RunnerConfig{OutputLimit: 1}
 )
 
-func matchJobState(jobInfo common.UpdateJobInfo, id int, state common.JobState, failureReason common.JobFailureReason) bool {
+func matchJobState(
+	jobInfo common.UpdateJobInfo,
+	id int,
+	state common.JobState,
+	failureReason common.JobFailureReason,
+) bool {
 	if jobInfo.ID != id {
 		return false
 	}
@@ -357,7 +362,11 @@ func TestTracePathIntervalChanges(t *testing.T) {
 			waitForPatch.Add(1)
 
 			client.On("PatchTrace", jobConfig, jobCredentials, []byte(testTrace), 0).
-				Return(common.NewPatchTraceResult(len(testTrace), common.UpdateSucceeded, tt.patchTraceUpdateIntervalValue)).
+				Return(common.NewPatchTraceResult(
+					len(testTrace),
+					common.UpdateSucceeded,
+					tt.patchTraceUpdateIntervalValue),
+				).
 				Run(func(_ mock.Arguments) {
 					waitForPatch.Done()
 				}).

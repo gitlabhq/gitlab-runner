@@ -71,7 +71,15 @@ func TestLogLineWithSecret(t *testing.T) {
 		l := newBuildLogger("log-line-with-secret", jt)
 
 		l.Errorln("Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234")
-		assert.Contains(t, jt.Read(), `Get http://localhost/?id=123&X-Amz-Signature=[FILTERED]&private_token=[FILTERED]`)
-		assert.Contains(t, output.String(), `Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234`)
+		assert.Contains(
+			t,
+			jt.Read(),
+			`Get http://localhost/?id=123&X-Amz-Signature=[FILTERED]&private_token=[FILTERED]`,
+		)
+		assert.Contains(
+			t,
+			output.String(),
+			`Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234`,
+		)
 	})
 }

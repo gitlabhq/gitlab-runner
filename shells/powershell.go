@@ -101,8 +101,13 @@ func (b *PsWriter) EnvVariableKey(name string) string {
 func (b *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
-		b.Line(fmt.Sprintf("New-Item -ItemType directory -Force -Path %s | out-null", psQuote(helpers.ToBackslash(b.TemporaryPath))))
-		b.Line(fmt.Sprintf("Set-Content %s -Value %s -Encoding UTF8 -Force", psQuote(variableFile), psQuoteVariable(variable.Value)))
+		b.Line(fmt.Sprintf(
+			"New-Item -ItemType directory -Force -Path %s | out-null",
+			psQuote(helpers.ToBackslash(b.TemporaryPath))))
+		b.Line(fmt.Sprintf(
+			"Set-Content %s -Value %s -Encoding UTF8 -Force",
+			psQuote(variableFile),
+			psQuoteVariable(variable.Value)))
 		b.Line("$" + variable.Key + "=" + psQuote(variableFile))
 	} else {
 		b.Line("$" + variable.Key + "=" + psQuoteVariable(variable.Value))
@@ -174,7 +179,9 @@ func (b *PsWriter) MkTmpDir(name string) string {
 
 func (b *PsWriter) RmDir(path string) {
 	path = psQuote(helpers.ToBackslash(path))
-	b.Line("if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path " + path + " -PathType Container) ) {")
+	b.Line(
+		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) " +
+			"-and (Test-Path " + path + " -PathType Container) ) {")
 	b.Indent()
 	b.Line("Remove-Item2 -Force -Recurse " + path)
 	b.Unindent()
@@ -188,7 +195,9 @@ func (b *PsWriter) RmDir(path string) {
 
 func (b *PsWriter) RmFile(path string) {
 	path = psQuote(helpers.ToBackslash(path))
-	b.Line("if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path " + path + " -PathType Leaf) ) {")
+	b.Line(
+		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) " +
+			"-and (Test-Path " + path + " -PathType Leaf) ) {")
 	b.Indent()
 	b.Line("Remove-Item2 -Force " + path)
 	b.Unindent()
@@ -256,16 +265,32 @@ func (b *PowerShell) GetName() string {
 
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
 	script = &common.ShellConfiguration{
-		Command:       "powershell",
-		Arguments:     []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
-		PassFile:      info.Build.Runner.Executor != dockerWindowsExecutor,
-		Extension:     "ps1",
-		DockerCommand: []string{"PowerShell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"},
+		Command:   "powershell",
+		Arguments: []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
+		PassFile:  info.Build.Runner.Executor != dockerWindowsExecutor,
+		Extension: "ps1",
+		DockerCommand: []string{
+			"PowerShell",
+			"-NoProfile",
+			"-NoLogo",
+			"-InputFormat",
+			"text",
+			"-OutputFormat",
+			"text",
+			"-NonInteractive",
+			"-ExecutionPolicy",
+			"Bypass",
+			"-Command",
+			"-",
+		},
 	}
 	return
 }
 
-func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
+func (b *PowerShell) GenerateScript(
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) (script string, err error) {
 	w := &PsWriter{
 		TemporaryPath: info.Build.TmpProjectDir(),
 	}

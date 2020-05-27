@@ -55,6 +55,7 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 	return nil, fmt.Errorf("could not find a runner with the name '%s'", name)
 }
 
+//nolint:lll
 type configOptionsWithListenAddress struct {
 	configOptions
 

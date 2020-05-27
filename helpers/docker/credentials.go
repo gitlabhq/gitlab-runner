@@ -5,6 +5,7 @@ import (
 	"strconv"
 )
 
+//nolint:lll
 type Credentials struct {
 	Host      string `toml:"host,omitempty" json:"host" long:"host" env:"DOCKER_HOST" description:"Docker daemon address"`
 	CertPath  string `toml:"tls_cert_path,omitempty" json:"tls_cert_path" long:"cert-path" env:"DOCKER_CERT_PATH" description:"Certificate path"`

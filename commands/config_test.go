@@ -22,7 +22,12 @@ const (
 	configurationFromConfig metricsServerConfigurationType = "from-config"
 )
 
-func testListenAddressSetting(t *testing.T, exampleName string, example metricsServerTestExample, testType metricsServerConfigurationType) {
+func testListenAddressSetting(
+	t *testing.T,
+	exampleName string,
+	example metricsServerTestExample,
+	testType metricsServerConfigurationType,
+) {
 	t.Run(fmt.Sprintf("%s-%s", exampleName, testType), func(t *testing.T) {
 		cfg := configOptionsWithListenAddress{}
 		cfg.config = &common.Config{}

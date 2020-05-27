@@ -116,7 +116,9 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 			logrus.Fatalln(err)
 		}
 	} else {
-		logrus.Infoln("No URL provided, cache will not be downloaded from shared cache server. Instead a local version of cache will be extracted.")
+		logrus.Infoln(
+			"No URL provided, cache will not be downloaded from shared cache server. " +
+				"Instead a local version of cache will be extracted.")
 	}
 
 	err := archives.ExtractZipFile(c.File)
@@ -126,10 +128,14 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("cache-extractor", "download and extract cache artifacts (internal)", &CacheExtractorCommand{
-		retryHelper: retryHelper{
-			Retry:     2,
-			RetryTime: time.Second,
+	common.RegisterCommand2(
+		"cache-extractor",
+		"download and extract cache artifacts (internal)",
+		&CacheExtractorCommand{
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
 		},
-	})
+	)
 }

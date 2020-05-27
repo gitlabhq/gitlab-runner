@@ -446,7 +446,11 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands ...string) {
 	}
 }
 
-func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo, buildStage common.BuildStage) error {
+func (b *AbstractShell) writeUserScript(
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	buildStage common.BuildStage,
+) error {
 	var scriptStep *common.Step
 	for _, step := range info.Build.Steps {
 		if common.StepToBuildStage(step) == buildStage {

@@ -33,9 +33,16 @@ type executorTestCase struct {
 	adjustExecutor func(t *testing.T, e *executor)
 
 	assertBuild          func(t *testing.T, b *common.Build)
-	assertCommandFactory func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions)
-	assertOutput         func(t *testing.T, output string)
-	expectedError        string
+	assertCommandFactory func(
+		t *testing.T,
+		tt executorTestCase,
+		ctx context.Context,
+		executable string,
+		args []string,
+		options process.CommandOptions,
+	)
+	assertOutput  func(t *testing.T, output string)
+	expectedError string
 }
 
 func getRunnerConfig(custom *common.CustomConfig) common.RunnerConfig {
@@ -148,16 +155,17 @@ func mockCommandFactory(t *testing.T, tt executorTestCase) func() {
 		Return(tt.commandErr)
 
 	oldFactory := commandFactory
-	commandFactory = func(ctx context.Context, executable string, args []string, options process.CommandOptions) command.Command {
-		if tt.assertCommandFactory != nil {
-			tt.assertCommandFactory(t, tt, ctx, executable, args, options)
+	commandFactory =
+		func(ctx context.Context, executable string, args []string, options process.CommandOptions) command.Command {
+			if tt.assertCommandFactory != nil {
+				tt.assertCommandFactory(t, tt, ctx, executable, args, options)
+			}
+
+			outputs.stdout = options.Stdout
+			outputs.stderr = options.Stderr
+
+			return cmd
 		}
-
-		outputs.stdout = options.Stdout
-		outputs.stderr = options.Stderr
-
-		return cmd
-	}
 
 	return func() {
 		cmd.AssertExpectations(t)
@@ -198,7 +206,14 @@ func TestExecutor_Prepare(t *testing.T) {
 				ConfigArgs: []string{"test"},
 			}),
 			commandErr: errors.New("test-error"),
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 				assert.Equal(t, tt.config.Custom.ConfigArgs, args)
 			},
@@ -214,7 +229,14 @@ func TestExecutor_Prepare(t *testing.T) {
 			}),
 			commandStdoutContent: "abcd",
 			commandErr:           nil,
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
@@ -229,7 +251,14 @@ func TestExecutor_Prepare(t *testing.T) {
 			}),
 			commandStdoutContent: "",
 			commandErr:           nil,
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
@@ -247,7 +276,14 @@ func TestExecutor_Prepare(t *testing.T) {
 			}),
 			commandStdoutContent: `{"builds_dir":""}`,
 			commandErr:           nil,
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
@@ -266,7 +302,14 @@ func TestExecutor_Prepare(t *testing.T) {
 				}
 			}`,
 			commandErr: nil,
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
@@ -284,7 +327,14 @@ func TestExecutor_Prepare(t *testing.T) {
 				}
 			}`,
 			commandErr: nil,
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
@@ -307,7 +357,14 @@ func TestExecutor_Prepare(t *testing.T) {
 				}
 			}`,
 			commandErr: nil,
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
@@ -325,7 +382,14 @@ func TestExecutor_Prepare(t *testing.T) {
 				PrepareExec: "echo",
 				PrepareArgs: []string{"test"},
 			}),
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.PrepareExec, executable)
 				assert.Equal(t, tt.config.Custom.PrepareArgs, args)
 			},
@@ -340,7 +404,14 @@ func TestExecutor_Prepare(t *testing.T) {
 				PrepareArgs: []string{"test"},
 			}),
 			commandErr: errors.New("test-error"),
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.PrepareExec, executable)
 				assert.Equal(t, tt.config.Custom.PrepareArgs, args)
 			},
@@ -403,7 +474,14 @@ func TestExecutor_Cleanup(t *testing.T) {
 				CleanupExec: "echo",
 				CleanupArgs: []string{"test"},
 			}),
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.CleanupExec, executable)
 				assert.Equal(t, tt.config.Custom.CleanupArgs, args)
 			},
@@ -419,7 +497,14 @@ func TestExecutor_Cleanup(t *testing.T) {
 			commandStdoutContent: "some output message in commands output",
 			commandStderrContent: "some error message in commands output",
 			commandErr:           errors.New("test-error"),
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.CleanupExec, executable)
 			},
 			assertOutput: func(t *testing.T, output string) {
@@ -464,7 +549,14 @@ func TestExecutor_Run(t *testing.T) {
 			config: getRunnerConfig(&common.CustomConfig{
 				RunExec: "bash",
 			}),
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.RunExec, executable)
 			},
 		},
@@ -474,7 +566,14 @@ func TestExecutor_Run(t *testing.T) {
 				CleanupExec: "unknown",
 			}),
 			commandErr: errors.New("test-error"),
-			assertCommandFactory: func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
 				assert.Equal(t, tt.config.Custom.RunExec, executable)
 			},
 			expectedError: "test-error",
@@ -521,8 +620,23 @@ func TestExecutor_Env(t *testing.T) {
 		CleanupExec: "bash",
 	})
 
-	assertCommandFactory := func(expectedImageName string) func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
-		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+	//nolint:lll
+	assertCommandFactory := func(expectedImageName string) func(
+		t *testing.T,
+		tt executorTestCase,
+		ctx context.Context,
+		executable string,
+		args []string,
+		options process.CommandOptions,
+	) {
+		return func(
+			t *testing.T,
+			tt executorTestCase,
+			ctx context.Context,
+			executable string,
+			args []string,
+			options process.CommandOptions,
+		) {
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == ciJobImageEnv {

@@ -116,7 +116,11 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 	}
 }
 
-func newKillerWithLoggerAndCommand(t *testing.T, duration string, skipTerminate bool) (killer, *MockLogger, Commander, func()) {
+func newKillerWithLoggerAndCommand(
+	t *testing.T,
+	duration string,
+	skipTerminate bool,
+) (killer, *MockLogger, Commander, func()) {
 	t.Helper()
 
 	loggerMock := new(MockLogger)

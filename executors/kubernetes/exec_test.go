@@ -44,7 +44,14 @@ type fakeRemoteExecutor struct {
 	execErr error
 }
 
-func (f *fakeRemoteExecutor) Execute(method string, url *url.URL, config *restclient.Config, stdin io.Reader, stdout, stderr io.Writer, tty bool) error {
+func (f *fakeRemoteExecutor) Execute(
+	method string,
+	url *url.URL,
+	config *restclient.Config,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+	tty bool,
+) error {
 	f.method = method
 	f.url = url
 	return f.execErr

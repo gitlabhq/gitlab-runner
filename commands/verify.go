@@ -10,6 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
+//nolint:lll
 type VerifyCommand struct {
 	configOptions
 	common.RunnerCredentials

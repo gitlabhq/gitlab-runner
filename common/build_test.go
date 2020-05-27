@@ -462,8 +462,13 @@ func TestRunWrongAttempts(t *testing.T) {
 	// Fail a build script
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	executor.On("Run", mock.Anything).Return(nil).Once()
-	executor.On("Run", mock.Anything).Return(errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
-	executor.On("Finish", errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
+	executor.
+		On("Run", mock.Anything).
+		Return(errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
+	executor.On(
+		"Finish",
+		errors.New("number of attempts out of the range [1, 10] for stage: get_sources"),
+	)
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
@@ -540,7 +545,10 @@ func TestDebugTrace(t *testing.T) {
 			}
 
 			if testCase.debugTraceVariableValue != "" {
-				build.Variables = append(build.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true})
+				build.Variables = append(
+					build.Variables,
+					JobVariable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true},
+				)
 			}
 
 			isTraceEnabled := build.IsDebugTraceEnabled()
@@ -800,7 +808,11 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             false,
 			},
 			jobVariables: JobVariables{
-				{Key: "GIT_CLONE_PATH", Value: "$CI_BUILDS_DIR/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+				{
+					Key:    "GIT_CLONE_PATH",
+					Value:  "$CI_BUILDS_DIR/go/src/gitlab.com/test-namespace/test-repo",
+					Public: true,
+				},
 			},
 			expectedBuildDir: "/builds/go/src/gitlab.com/test-namespace/test-repo",
 			expectedCacheDir: "/cache/test-namespace/test-repo",
@@ -850,7 +862,11 @@ func TestStartBuild(t *testing.T) {
 				},
 			}
 
-			err := build.StartBuild(test.args.rootDir, test.args.cacheDir, test.args.customBuildDirEnabled, test.args.sharedDir)
+			err := build.StartBuild(
+				test.args.rootDir,
+				test.args.cacheDir,
+				test.args.customBuildDirEnabled,
+				test.args.sharedDir)
 			if test.expectedError {
 				assert.Error(t, err)
 				return
@@ -1070,7 +1086,9 @@ func TestBuild_IsLFSSmudgeDisabled(t *testing.T) {
 			}
 
 			if !testCase.isVariableUnset {
-				b.Variables = append(b.Variables, JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true})
+				b.Variables = append(
+					b.Variables,
+					JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true})
 			}
 
 			assert.Equal(t, testCase.expectedResult, b.IsLFSSmudgeDisabled())

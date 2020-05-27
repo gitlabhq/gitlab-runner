@@ -49,8 +49,12 @@ func TestVerifyResolver_Resolve(t *testing.T) {
 			expectedOutput: nil,
 		},
 		"last certificate is not self signed, verifier fails with unknown authority": {
-			certs:         []*x509.Certificate{testCertificate},
-			mockVerifier:  newVerifierMock(testCertificate, [][]*x509.Certificate{{testCACertificate}}, testUnknownAuthorityError),
+			certs: []*x509.Certificate{testCertificate},
+			mockVerifier: newVerifierMock(
+				testCertificate,
+				[][]*x509.Certificate{{testCACertificate}},
+				testUnknownAuthorityError,
+			),
 			expectedError: "",
 			expectedCerts: []*x509.Certificate{testCertificate},
 			expectedOutput: []string{
@@ -68,8 +72,12 @@ func TestVerifyResolver_Resolve(t *testing.T) {
 			},
 		},
 		"last certificate is not self signed, duplicate of input certificate in verify chain": {
-			certs:         []*x509.Certificate{testCertificate},
-			mockVerifier:  newVerifierMock(testCertificate, [][]*x509.Certificate{{testCertificate, testCertificate}, {testCertificate}}, nil),
+			certs: []*x509.Certificate{testCertificate},
+			mockVerifier: newVerifierMock(
+				testCertificate,
+				[][]*x509.Certificate{{testCertificate, testCertificate}, {testCertificate}},
+				nil,
+			),
 			expectedError: "",
 			expectedCerts: []*x509.Certificate{testCertificate},
 			expectedOutput: []string{
@@ -77,8 +85,12 @@ func TestVerifyResolver_Resolve(t *testing.T) {
 			},
 		},
 		"last certificate is not self signed, other certificates in verify chain": {
-			certs:         []*x509.Certificate{testCertificate},
-			mockVerifier:  newVerifierMock(testCertificate, [][]*x509.Certificate{{testCACertificate}, {testCertificate}}, nil),
+			certs: []*x509.Certificate{testCertificate},
+			mockVerifier: newVerifierMock(
+				testCertificate,
+				[][]*x509.Certificate{{testCACertificate}, {testCertificate}},
+				nil,
+			),
 			expectedError: "",
 			expectedCerts: []*x509.Certificate{testCertificate, testCACertificate},
 			expectedOutput: []string{

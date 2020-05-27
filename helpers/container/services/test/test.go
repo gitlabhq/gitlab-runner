@@ -9,6 +9,8 @@ type ServiceDescription struct {
 	Alternative string
 }
 
+// Services is an array of test service descriptions representing different possibilities of names/identifiers
+//nolint:lll
 var Services = []ServiceDescription{
 	{"service", "service:latest", "service", "latest", "service", ""},
 	{"service:version", "service:version", "service", "version", "service", ""},

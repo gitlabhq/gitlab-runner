@@ -41,7 +41,10 @@ type authConfigResolver func() (string, map[string]types.AuthConfig)
 // ResolveConfigForImage returns the auth configuration for a particular image.
 // Returns nil on no config found.
 // See ResolveConfigs for source information.
-func ResolveConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) *RegistryInfo {
+func ResolveConfigForImage(
+	imageName, dockerAuthConfig, username string,
+	credentials []common.Credentials,
+) *RegistryInfo {
 	authConfigs := ResolveConfigs(dockerAuthConfig, username, credentials)
 	if authConfigs == nil {
 		return nil

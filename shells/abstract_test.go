@@ -36,9 +36,24 @@ func TestWriteGitSSLConfig(t *testing.T) {
 	mockWriter.On("EnvVariableKey", tls.VariableCertFile).Return("VariableCertFile").Once()
 	mockWriter.On("EnvVariableKey", tls.VariableKeyFile).Return("VariableKeyFile").Once()
 
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCAInfo"), "VariableCAFile").Once()
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"), "VariableCertFile").Once()
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"), "VariableKeyFile").Once()
+	mockWriter.On(
+		"Command",
+		"git",
+		"config",
+		fmt.Sprintf("http.%s.%s", gitlabURL, "sslCAInfo"),
+		"VariableCAFile").Once()
+	mockWriter.On(
+		"Command",
+		"git",
+		"config",
+		fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"),
+		"VariableCertFile").Once()
+	mockWriter.On(
+		"Command",
+		"git",
+		"config",
+		fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"),
+		"VariableKeyFile").Once()
 
 	shell.writeGitSSLConfig(mockWriter, build, nil)
 
