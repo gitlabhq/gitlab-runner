@@ -57,6 +57,48 @@ func TestGlobbedFilePaths(t *testing.T) {
 	assert.Equal(t, expectedMatchingFiles, f.sortedFiles())
 }
 
+func TestExcludedFilePaths(t *testing.T) {
+	fooTestDirectory := "foo/test/bar/baz"
+
+	err := os.MkdirAll(fooTestDirectory, 0700)
+	require.NoError(t, err, "could not create test directory")
+	defer os.RemoveAll(fooTestDirectory)
+
+	existingFiles := []string{
+		"foo/test/bar/baz/1.txt",
+		"foo/test/bar/baz/1.md",
+		"foo/test/bar/baz/2.txt",
+		"foo/test/bar/baz/2.md",
+		"foo/test/bar/baz/3.txt",
+	}
+	for _, f := range existingFiles {
+		writeTestFile(t, f)
+	}
+
+	f := fileArchiver{
+		Paths:   []string{"foo/test/"},
+		Exclude: []string{"foo/test/bar/baz/3.txt", "foo/**/*.md"},
+	}
+
+	err = f.enumerate()
+
+	includedFiles := []string{
+		"foo/test",
+		"foo/test/bar",
+		"foo/test/bar/baz",
+		"foo/test/bar/baz/1.txt",
+		"foo/test/bar/baz/2.txt",
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, includedFiles, f.sortedFiles())
+	assert.Equal(t, 2, len(f.excluded))
+	require.Contains(t, f.excluded, "foo/test/bar/baz/3.txt")
+	assert.Equal(t, int64(1), f.excluded["foo/test/bar/baz/3.txt"])
+	require.Contains(t, f.excluded, "foo/**/*.md")
+	assert.Equal(t, int64(2), f.excluded["foo/**/*.md"])
+}
+
 func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
 	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
