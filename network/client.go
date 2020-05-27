@@ -36,12 +36,12 @@ type requestCredentials interface {
 	GetTLSKeyFile() string
 }
 
-var (
-	dialer = net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}
+var dialer = net.Dialer{
+	Timeout:   30 * time.Second,
+	KeepAlive: 30 * time.Second,
+}
 
+const (
 	backOffDelayMin    = 100 * time.Millisecond
 	backOffDelayMax    = 60 * time.Second
 	backOffDelayFactor = 2.0

@@ -729,7 +729,8 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 	assert.Equal(t, UpdateAbort, state, "Update should continue when Job-Status=failed")
 }
 
-var patchToken = "token"
+const patchToken = "token"
+
 var patchTraceContent = []byte("trace trace trace")
 
 func getPatchServer(
