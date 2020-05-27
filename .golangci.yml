@@ -81,3 +81,6 @@ issues:
     - path: referees/prometheus_api.go
       linters:
         - deadcode
+    - path: executors/docker/docker_command_test.go # Ignore until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is solved
+      linters:
+        - unused

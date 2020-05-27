@@ -104,6 +104,7 @@ deps: $(DEVELOPMENT_TOOLS)
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
 lint:
+	@golangci-lint --version >/dev/stderr
 	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
 lint-docs:
