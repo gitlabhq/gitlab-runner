@@ -49,10 +49,10 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:            UseDirectDownload,
-		DefaultValue:    "false",
+		DefaultValue:    "true",
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description:     "When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab",
+		Description:     "When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab on a first try. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab",
 	},
 	{
 		Name:            SkipNoOpBuildStages,

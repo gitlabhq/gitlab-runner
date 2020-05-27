@@ -37,7 +37,7 @@ func TestDoRetry(t *testing.T) {
 			}
 
 			retryCount := 0
-			err := r.doRetry(func() error {
+			err := r.doRetry(func(_ int) error {
 				retryCount++
 				return c.err
 			})

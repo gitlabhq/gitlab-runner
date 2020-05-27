@@ -42,7 +42,7 @@ The flags are defined in `./helpers/feature_flags/flags.go` file.
 | `FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION` | `false` | ✗ |  | Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](../shells/index.md#windows-batch) shell |
 | `FF_NETWORK_PER_BUILD` | `false` | ✗ |  | Enables creation of a docker [network per build](../executors/docker.md#networking) with the docker executor |
 | `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` | `true` | ✗ |  | When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119) |
-| `FF_USE_DIRECT_DOWNLOAD` | `false` | ✗ |  | When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab |
+| `FF_USE_DIRECT_DOWNLOAD` | `true` | ✗ |  | When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab on a first try. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab |
 | `FF_SKIP_NOOP_BUILD_STAGES` | `true` | ✗ |  | When set to `false` all build stages are executed even if running them has no effect |
 
 <!-- feature_flags_list_end -->
