@@ -243,6 +243,8 @@ For example:
 
 ```toml
 [runners.machine]
+  MachineName = "auto-scale-%s"
+  MachineDriver = "digitalocean"
   IdleCount = 10
   IdleTime = 1800
   [[runners.machine.autoscaling]]
