@@ -105,43 +105,55 @@ func (n *client) ensureTLSConfig() {
 
 func (n *client) addTLSCA(tlsConfig *tls.Config) {
 	// load TLS CA certificate
-	if file := n.caFile; file != "" && !n.skipVerify {
-		logrus.Debugln("Trying to load", file, "...")
+	file := n.caFile
+	if file == "" || n.skipVerify {
+		return
+	}
 
-		data, err := ioutil.ReadFile(file)
-		if err == nil {
-			pool, err := x509.SystemCertPool()
-			if err != nil {
-				logrus.Warningln("Failed to load system CertPool:", err)
-			}
-			if pool == nil {
-				pool = x509.NewCertPool()
-			}
-			if pool.AppendCertsFromPEM(data) {
-				tlsConfig.RootCAs = pool
-				n.caData = data
-			} else {
-				logrus.Errorln("Failed to parse PEM in", n.caFile)
-			}
-		} else if !os.IsNotExist(err) {
+	logrus.Debugln("Trying to load", file, "...")
+
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		if !os.IsNotExist(err) {
 			logrus.Errorln("Failed to load", n.caFile, err)
 		}
+		return
 	}
+
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		logrus.Warningln("Failed to load system CertPool:", err)
+	}
+	if pool == nil {
+		pool = x509.NewCertPool()
+	}
+	if !pool.AppendCertsFromPEM(data) {
+		logrus.Errorln("Failed to parse PEM in", n.caFile)
+		return
+	}
+
+	tlsConfig.RootCAs = pool
+	n.caData = data
 }
 
 func (n *client) addTLSAuth(tlsConfig *tls.Config) {
-	// load TLS client keypair
-	if cert, key := n.certFile, n.keyFile; cert != "" && key != "" {
-		logrus.Debugln("Trying to load", cert, "and", key, "pair...")
-
-		certificate, err := tls.LoadX509KeyPair(cert, key)
-		if err == nil {
-			tlsConfig.Certificates = []tls.Certificate{certificate}
-			tlsConfig.BuildNameToCertificate()
-		} else if !os.IsNotExist(err) {
-			logrus.Errorln("Failed to load", cert, key, err)
-		}
+	if len(n.certFile) == 0 || len(n.keyFile) == 0 {
+		return
 	}
+
+	logrus.Debugln("Trying to load", n.certFile, "and", n.keyFile, "pair...")
+
+	// load TLS client keypair
+	certificate, err := tls.LoadX509KeyPair(n.certFile, n.keyFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logrus.Errorln("Failed to load", n.certFile, n.keyFile, err)
+		}
+		return
+	}
+
+	tlsConfig.Certificates = []tls.Certificate{certificate}
+	tlsConfig.BuildNameToCertificate()
 }
 
 func (n *client) createTransport() {
@@ -256,18 +268,16 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 	defer res.Body.Close()
 	defer io.Copy(ioutil.Discard, res.Body)
 
-	if res.StatusCode == statusCode {
-		if response != nil {
-			isApplicationJSON, err := isResponseApplicationJSON(res)
-			if !isApplicationJSON {
-				return -1, err.Error(), nil
-			}
+	if res.StatusCode == statusCode && response != nil {
+		isApplicationJSON, err := isResponseApplicationJSON(res)
+		if !isApplicationJSON {
+			return -1, err.Error(), nil
+		}
 
-			d := json.NewDecoder(res.Body)
-			err = d.Decode(response)
-			if err != nil {
-				return -1, fmt.Sprintf("Error decoding json payload %v", err), nil
-			}
+		d := json.NewDecoder(res.Body)
+		err = d.Decode(response)
+		if err != nil {
+			return -1, fmt.Sprintf("Error decoding json payload %v", err), nil
 		}
 	}
 
