@@ -62,34 +62,6 @@ func (c *fileArchiver) sortedFiles() []string {
 	return files
 }
 
-func (c *fileArchiver) isExcluded(path string) (bool, string) {
-	for _, pattern := range c.Exclude {
-		excluded, err := doublestar.PathMatch(pattern, path)
-		if err == nil && excluded {
-			return true, pattern
-		}
-	}
-
-	return false, ""
-}
-
-func (c *fileArchiver) add(path string) error {
-	// Always use slashes
-	path = filepath.ToSlash(path)
-
-	// Check if file exist
-	info, err := os.Lstat(path)
-	if err == nil {
-		c.files[path] = info
-	}
-
-	return err
-}
-
-func (c *fileArchiver) exclude(rule string) {
-	c.excluded[rule]++
-}
-
 func (c *fileArchiver) process(match string) bool {
 	var absolute, relative string
 	var err error
@@ -127,6 +99,34 @@ func (c *fileArchiver) process(match string) bool {
 
 	logrus.Warningf("%s: %v", match, err)
 	return false
+}
+
+func (c *fileArchiver) isExcluded(path string) (bool, string) {
+	for _, pattern := range c.Exclude {
+		excluded, err := doublestar.PathMatch(pattern, path)
+		if err == nil && excluded {
+			return true, pattern
+		}
+	}
+
+	return false, ""
+}
+
+func (c *fileArchiver) exclude(rule string) {
+	c.excluded[rule]++
+}
+
+func (c *fileArchiver) add(path string) error {
+	// Always use slashes
+	path = filepath.ToSlash(path)
+
+	// Check if file exist
+	info, err := os.Lstat(path)
+	if err == nil {
+		c.files[path] = info
+	}
+
+	return err
 }
 
 func (c *fileArchiver) processPaths() {
