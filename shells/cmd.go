@@ -194,22 +194,22 @@ func (b *CmdWriter) RmFile(path string) {
 	b.Line("del /f /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
 }
 
-func (b *CmdWriter) Print(format string, arguments ...interface{}) {
+func (b *CmdWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
-func (b *CmdWriter) Notice(format string, arguments ...interface{}) {
+func (b *CmdWriter) Noticef(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
-func (b *CmdWriter) Warning(format string, arguments ...interface{}) {
+func (b *CmdWriter) Warningf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
-func (b *CmdWriter) Error(format string, arguments ...interface{}) {
+func (b *CmdWriter) Errorf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
@@ -267,7 +267,7 @@ func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.Shel
 			w.Line("echo Running on %COMPUTERNAME%...")
 		}
 
-		w.Warning("DEPRECATION: CMD shell is deprecated and will no longer be supported")
+		w.Warningf("DEPRECATION: CMD shell is deprecated and will no longer be supported")
 	}
 
 	err = b.writeScript(w, buildStage, info)

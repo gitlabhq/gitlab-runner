@@ -58,14 +58,14 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, fil
 
 func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, action string, f func()) {
 	if runnerCommand == "" {
-		w.Warning("%s is not supported by this executor.", action)
+		w.Warningf("%s is not supported by this executor.", action)
 		return
 	}
 
 	w.IfCmd(runnerCommand, "--version")
 	f()
 	w.Else()
-	w.Warning("Missing %s. %s is disabled.", runnerCommand, action)
+	w.Warningf("Missing %s. %s is disabled.", runnerCommand, action)
 	w.EndIf()
 }
 
@@ -93,14 +93,14 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		// Skip extraction if no cache is defined
 		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 		if cacheKey == "" {
-			w.Notice("Skipping cache extraction due to empty cache key")
+			w.Noticef("Skipping cache extraction due to empty cache key")
 			continue
 		}
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPull); err != nil {
 			return fmt.Errorf("%w for %s", err, cacheKey)
 		} else if !ok {
-			w.Notice("Not downloading cache %s due to policy", cacheKey)
+			w.Noticef("Not downloading cache %s due to policy", cacheKey)
 			continue
 		}
 
@@ -117,11 +117,11 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 
 		// Execute cache-extractor command. Failure is not fatal.
 		b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-			w.Notice("Checking cache for %s...", cacheKey)
+			w.Noticef("Checking cache for %s...", cacheKey)
 			w.IfCmdWithOutput(info.RunnerCommand, args...)
-			w.Notice("Successfully extracted cache")
+			w.Noticef("Successfully extracted cache")
 			w.Else()
-			w.Warning("Failed to extract cache")
+			w.Warningf("Failed to extract cache")
 			w.EndIf()
 		})
 	}
@@ -144,7 +144,7 @@ func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, 
 		strconv.Itoa(job.ID),
 	}
 
-	w.Notice("Downloading artifacts for %s (%d)...", job.Name, job.ID)
+	w.Noticef("Downloading artifacts for %s (%d)...", job.Name, job.ID)
 	w.Command(info.RunnerCommand, args...)
 }
 
@@ -205,7 +205,7 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
 	repoURL, err := url.Parse(build.Runner.URL)
 	if err != nil {
-		w.Warning("git SSL config: Can't parse repository URL. %s", err)
+		w.Warningf("git SSL config: Can't parse repository URL. %s", err)
 		return
 	}
 
@@ -270,7 +270,7 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 			w.EndIf()
 		}
 	} else {
-		w.Notice("Skipping Git checkout")
+		w.Noticef("Skipping Git checkout")
 	}
 
 	return nil
@@ -287,7 +287,7 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 		w.RmDir(projectDir)
 		b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
 	case common.GitNone:
-		w.Notice("Skipping Git repository setup")
+		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
 	default:
 		return errors.New("unknown GIT_STRATEGY")
@@ -300,9 +300,9 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	depth := build.GitInfo.Depth
 
 	if depth > 0 {
-		w.Notice("Fetching changes with git depth set to %d...", depth)
+		w.Noticef("Fetching changes with git depth set to %d...", depth)
 	} else {
-		w.Notice("Fetching changes...")
+		w.Noticef("Fetching changes...")
 	}
 
 	// initializing
@@ -320,7 +320,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	// Add `git remote` or update existing
 	w.IfCmd("git", "remote", "add", "origin", build.GetRemoteURL())
-	w.Notice("Created fresh repository.")
+	w.Noticef("Created fresh repository.")
 	w.Else()
 	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
 	w.EndIf()
@@ -347,7 +347,7 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
-	w.Notice("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
+	w.Noticef("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
 	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
 
 	cleanFlags := build.GetGitCleanFlags()
@@ -368,7 +368,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 		b.writeSubmoduleUpdateCmd(w, build, true)
 
 	case common.SubmoduleNone:
-		w.Notice("Skipping Git submodules setup")
+		w.Noticef("Skipping Git submodules setup")
 
 	default:
 		return errors.New("unknown GIT_SUBMODULE_STRATEGY")
@@ -379,9 +379,9 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
 	if recursive {
-		w.Notice("Updating/initializing submodules recursively...")
+		w.Noticef("Updating/initializing submodules recursively...")
 	} else {
-		w.Notice("Updating/initializing submodules...")
+		w.Noticef("Updating/initializing submodules...")
 	}
 
 	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
@@ -435,9 +435,9 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands ...string) {
 			lines := strings.SplitN(command, "\n", 2)
 			if len(lines) > 1 {
 				// TODO: this should be collapsable once we introduce that in GitLab
-				w.Notice("$ %s # collapsed multi-line command", lines[0])
+				w.Noticef("$ %s # collapsed multi-line command", lines[0])
 			} else {
-				w.Notice("$ %s", lines[0])
+				w.Noticef("$ %s", lines[0])
 			}
 		} else {
 			w.EmptyLine()
@@ -500,14 +500,14 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		// Skip archiving if no cache is defined
 		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
 		if cacheKey == "" {
-			w.Notice("Skipping cache archiving due to empty cache key")
+			w.Noticef("Skipping cache archiving due to empty cache key")
 			continue
 		}
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPush); err != nil {
 			return fmt.Errorf("%w for %s", err, cacheKey)
 		} else if !ok {
-			w.Notice("Not uploading cache %s due to policy", cacheKey)
+			w.Noticef("Not uploading cache %s due to policy", cacheKey)
 			continue
 		}
 
@@ -526,11 +526,11 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 
 		// Execute cache-archiver command. Failure is not fatal.
 		b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
-			w.Notice("Creating cache %s...", cacheKey)
+			w.Noticef("Creating cache %s...", cacheKey)
 			w.IfCmdWithOutput(info.RunnerCommand, args...)
-			w.Notice("Created cache")
+			w.Noticef("Created cache")
 			w.Else()
-			w.Warning("Failed to create cache")
+			w.Warningf("Failed to create cache")
 			w.EndIf()
 		})
 	}
@@ -592,7 +592,7 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	}
 
 	b.guardRunnerCommand(w, info.RunnerCommand, "Uploading artifacts", func() {
-		w.Notice("Uploading artifacts...")
+		w.Noticef("Uploading artifacts...")
 		w.Command(info.RunnerCommand, args...)
 	})
 
@@ -648,7 +648,7 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
-	w.Notice("Running after script...")
+	w.Noticef("Running after script...")
 	b.writeCommands(w, afterScriptStep.Script...)
 	return nil
 }

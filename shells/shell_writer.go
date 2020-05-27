@@ -25,10 +25,10 @@ type ShellWriter interface {
 
 	MkTmpDir(name string) string
 
-	Print(fmt string, arguments ...interface{})
-	Notice(fmt string, arguments ...interface{})
-	Warning(fmt string, arguments ...interface{})
-	Error(fmt string, arguments ...interface{})
+	Printf(fmt string, arguments ...interface{})
+	Noticef(fmt string, arguments ...interface{})
+	Warningf(fmt string, arguments ...interface{})
+	Errorf(fmt string, arguments ...interface{})
 	EmptyLine()
 
 	Finish(trace bool) string
