@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -105,7 +104,7 @@ func (c *ReadLogsCommand) readLogs() error {
 		buf, err := r.ReadSlice('\n')
 		if len(buf) > 0 {
 			offset += int64(len(buf))
-			if !bytes.HasSuffix(buf, []byte{'\n'}) {
+			if buf[len(buf)-1] != '\n' {
 				buf = append(buf, '\n')
 			}
 
