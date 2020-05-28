@@ -41,4 +41,5 @@ const (
 	TestAlpineNoRootImage = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest"
 	TestDockerDindImage   = "docker:18-dind"
 	TestDockerGitImage    = "docker:18-git"
+	TestLivenessImage     = "registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0"
 )

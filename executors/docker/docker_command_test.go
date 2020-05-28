@@ -921,6 +921,122 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 	assert.NotRegexp(t, re, output, "Service's name should be expanded from variable")
 }
 
+func TestDockerServiceHealthcheck(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]struct {
+		command         []string
+		serviceStarted  bool
+		networkPerBuild string
+		skip            bool
+	}{
+		"successful service (FF_NETWORK_PER_BUILD=false)": {
+			command:         []string{"server"},
+			serviceStarted:  true,
+			networkPerBuild: "false",
+			skip:            runtime.GOOS == "windows",
+		},
+		"successful service (FF_NETWORK_PER_BUILD=true)": {
+			command:         []string{"server"},
+			serviceStarted:  true,
+			networkPerBuild: "true",
+			skip:            false,
+		},
+		"failed service (FF_NETWORK_PER_BUILD=false)": {
+			command:         []string{"server", "--addr", ":8888"},
+			serviceStarted:  false,
+			networkPerBuild: "false",
+			skip:            runtime.GOOS == "windows",
+		},
+		"failed service (FF_NETWORK_PER_BUILD=true)": {
+			command:         []string{"server", "--addr", ":8888"},
+			serviceStarted:  false,
+			networkPerBuild: "true",
+			skip:            false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip {
+				t.Skipf("OS %q does not support 'link' networking", runtime.GOOS)
+			}
+
+			resp, err := common.GetRemoteBuildResponse(
+				"liveness client db",
+				"liveness client registry.gitlab.com__gitlab-org__ci-cd__tests__liveness",
+				"liveness client registry.gitlab.com-gitlab-org-ci-cd-tests-liveness",
+			)
+			require.NoError(t, err)
+
+			build := common.Build{
+				JobResponse: resp,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker:   &common.DockerConfig{},
+					},
+				},
+			}
+
+			build.Image = common.Image{
+				Name:       common.TestLivenessImage,
+				Entrypoint: []string{"sh", "-c"},
+			}
+
+			if runtime.GOOS == "windows" {
+				build.Runner.RunnerSettings.Shell = "powershell"
+				build.Runner.RunnerSettings.Executor = "docker-windows"
+
+				// HACK: Runner's PowerShell Core shell is not yet fully
+				// supported: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139
+				//
+				// `liveness` only contains powershell core to keep the image
+				// small. Until there's full support, we perform this hack
+				// whereby we copy pwsh to powershell.exe. This is safe as this
+				// only occurs on the build container, which only executes the
+				// `liveness client` commands above.
+				//
+				// This entrypoint can be nullified with:
+				//   build.Image.Entrypoint = []string{""}
+				// once PowerShell Core is supported. Note that it cannot be
+				// set to nil, as that indicates that Runner should use the
+				// default image entrypoint.
+				build.Image.Entrypoint = []string{
+					"pwsh",
+					"-Command",
+					"cp $env:ProgramFiles\\PowerShell\\pwsh.exe $env:ProgramFiles\\PowerShell\\powershell.exe",
+					"&&",
+					"pwsh",
+					"-Command",
+				}
+			}
+
+			build.Services = append(build.Services, common.Image{
+				Name:    common.TestLivenessImage,
+				Alias:   "db",
+				Command: tc.command,
+			})
+
+			build.Variables = append(build.Variables, common.JobVariable{
+				Key:    "FF_NETWORK_PER_BUILD",
+				Value:  tc.networkPerBuild,
+				Public: true,
+			})
+
+			out, err := buildtest.RunBuildReturningOutput(t, &build)
+			if !tc.serviceStarted {
+				assert.Error(t, err)
+				assert.Contains(t, out, "probably didn't start properly")
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotContains(t, out, "probably didn't start properly")
+		})
+	}
+}
+
 func runDockerInDocker(version string) (id string, err error) {
 	cmd := exec.Command("docker", "run", "--detach", "--privileged", "-p", "2375", "docker:"+version+"-dind")
 	cmd.Stderr = os.Stderr
