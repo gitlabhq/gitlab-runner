@@ -196,7 +196,7 @@ runners:
 
 ### Best practices for building containers without privileged mode
 
-Building containers within containers with Docker-in-docker requires docker privileged
+Building containers within containers with Docker-in-Docker requires Docker privileged
 mode. Google's [Kaniko](https://github.com/GoogleContainerTools/kaniko) is an alternative
 that works without privileged mode, and it has been tested on the GitLab Kubernetes Runner.
 

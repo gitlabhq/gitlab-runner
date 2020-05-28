@@ -148,7 +148,7 @@ on these kinds of environment variables.
 
 ## Proxy settings when using dind service
 
-When using the [docker-in-docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor) (dind),
+When using the [Docker-in-Docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor) (dind),
 it can be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY`
 environment variable. This is because the proxy intercepts the TCP connection between:
 
@@ -156,7 +156,7 @@ environment variable. This is because the proxy intercepts the TCP connection be
 - `docker` from the client container.
 
 The ports can be required because otherwise `docker push` will be blocked
-as it originates from the IP mapped to docker. However, in that case, it is meant to go through the proxy.
+as it originates from the IP mapped to Docker. However, in that case, it is meant to go through the proxy.
 
 When testing the communication between `dockerd` from dind and a `docker` client locally
 (as described here: <https://hub.docker.com/_/docker/>),
@@ -185,7 +185,7 @@ In `.gitlab-ci.yml`, the environment variables will be picked up by any program 
 `wget`, `apt`, `apk`, `docker info` and `docker pull` (but not by `docker run` or `docker build` as per:
 <https://github.com/moby/moby/issues/24697#issuecomment-366680499>).
 
-`docker run` or `docker build` executed inside the container of the docker executor
+`docker run` or `docker build` executed inside the container of the Docker executor
 will look for the proxy settings in `$HOME/.docker/config.json`,
 which is now inside the executor container (and initially empty).
 Therefore, `docker run` or `docker build` executions will have no proxy settings. In order to pass on the settings,
