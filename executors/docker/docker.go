@@ -45,6 +45,8 @@ const (
 	DockerExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
 	DockerExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
 	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
+
+	logsCopyTimeout = 30 * time.Second
 )
 
 const (
@@ -887,9 +889,12 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	e.Debugln("Waiting for attach to finish", id, "...")
 	attachCh := make(chan error, 2)
 
+	logsDone := make(chan struct{})
 	// Copy any output to the build trace
 	go func() {
 		_, err := stdcopy.StdCopy(e.Trace, e.Trace, hijacked.Reader)
+		close(logsDone)
+
 		if err != nil {
 			attachCh <- err
 		}
@@ -921,6 +926,15 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	case err = <-waitCh:
 		e.Debugln("Container", id, "finished with", err)
 	}
+
+	// By this point the container is either killed or finished.
+	// Wait for logs to finish copying to the job trace.
+	select {
+	case <-logsDone:
+	case <-time.After(logsCopyTimeout):
+		e.Warningln("Timed out waiting for logs to finish copying from container")
+	}
+
 	return
 }
 
