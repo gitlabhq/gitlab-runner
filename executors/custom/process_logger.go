@@ -1,4 +1,4 @@
-package command
+package custom
 
 import (
 	"github.com/sirupsen/logrus"

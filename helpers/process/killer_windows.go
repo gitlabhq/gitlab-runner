@@ -9,10 +9,10 @@ type windowsKiller struct {
 	process *os.Process
 }
 
-func newKiller(logger Logger, process *os.Process) killer {
+func newKiller(logger Logger, cmd Commander) killer {
 	return &windowsKiller{
 		logger:  logger,
-		process: process,
+		process: cmd.Process(),
 	}
 }
 
