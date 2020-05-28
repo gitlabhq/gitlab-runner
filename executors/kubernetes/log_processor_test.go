@@ -515,6 +515,8 @@ func TestAttachReconnectWhenStreamEOF(t *testing.T) {
 }
 
 func TestResumesFromCorrectSinceTimeAfterSuccessThenFailure(t *testing.T) {
+	t.Skip()
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	expectedLineContents := "line"
