@@ -86,7 +86,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
   - See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs
 - `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration.
-- `image_pull_secrets`: A array of secrets that are used to authenticate docker image pulling
+- `image_pull_secrets`: A array of secrets that are used to authenticate Docker image pulling
 - `helper_image`: (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts.
 - `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
 - `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3).
@@ -435,7 +435,7 @@ check_interval = 30
 
 ## Using Docker in your builds
 
-There are a couple of caveats when using docker in your builds while running on
+There are a couple of caveats when using Docker in your builds while running on
 a Kubernetes cluster. Most of these issues are already discussed in the
 [**Using Docker Build**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html)
 section of the GitLab CI
@@ -455,7 +455,7 @@ containers it might not be wise to do that.
 Running the `docker:dind` also known as the `docker-in-docker` image is also
 possible but sadly needs the containers to be run in privileged mode.
 If you're willing to take that risk other problems will arise that might not
-seem as straight forward at first glance. Because the docker daemon is started
+seem as straight forward at first glance. Because the Docker daemon is started
 as a `service` usually in your `.gitlab-ci.yaml` it will be run as a separate
 container in your Pod. Basically containers in Pods only share volumes assigned
 to them and an IP address by which they can reach each other using `localhost`.
@@ -480,18 +480,18 @@ mount certificates as described in
 Do *not* try to use an image that doesn't supply Git and add the `GIT_STRATEGY=none`
 environment variable for a job that you think doesn't need to do a fetch or clone.
 Because Pods are ephemeral and do not keep state of previously run jobs your
-checked out code will not exist in both the build and the docker service container.
+checked out code will not exist in both the build and the Docker service container.
 Errors you might run into are things like `could not find git binary` and
-the docker service complaining that it cannot follow some symlinks into your
+the Docker service complaining that it cannot follow some symlinks into your
 build context because of the missing code.
 
 ### Resource separation
 
-In both the `docker:dind` and `/var/run/docker.sock` cases the docker daemon
+In both the `docker:dind` and `/var/run/docker.sock` cases the Docker daemon
 has access to the underlying kernel of the host machine. This means that any
-`limits` that had been set in the Pod will not work when building docker images.
-The docker daemon will report the full capacity of the node regardless of
-the limits imposed on the docker build containers spawned by Kubernetes.
+`limits` that had been set in the Pod will not work when building Docker images.
+The Docker daemon will report the full capacity of the node regardless of
+the limits imposed on the Docker build containers spawned by Kubernetes.
 
 One way to help minimize the exposure of the host's kernel to any build container
 when running in privileged mode or by exposing `/var/run/docker.sock` is to use

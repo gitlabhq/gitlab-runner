@@ -159,7 +159,7 @@ local Docker Engine (list all images with `docker images`) or any image that
 can be found at [Docker Hub](https://hub.docker.com/). For more information about images and Docker
 Hub please read the [Docker Fundamentals](https://docs.docker.com/engine/understanding-docker/) documentation.
 
-In short, with `image` we refer to the docker image, which will be used to
+In short, with `image` we refer to the Docker image, which will be used to
 create a container on which your build will run.
 
 If you don't specify the namespace, Docker implies `library` which includes all
@@ -384,7 +384,7 @@ Secure variables are only passed to the build container.
 ## Mounting a directory in RAM
 
 You can mount a path in RAM using tmpfs. This can speed up the time required to test if there is a lot of I/O related work, such as with databases.
-If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
+If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
 This is an example `config.toml` to mount the data directory for the official Mysql container in RAM.
 
 ```toml
@@ -477,10 +477,10 @@ If you make the `/builds` to be **the host-bound storage**, your builds will be 
 The Docker executor supports a number of options that allows to fine tune the
 build container. One of these options is the [`privileged` mode](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
 
-### Use docker-in-docker with privileged mode
+### Use Docker-in-Docker with privileged mode
 
 The configured `privileged` flag is passed to the build container and all
-services, thus allowing to easily use the docker-in-docker approach.
+services, thus allowing to easily use the Docker-in-Docker approach.
 
 First, configure your Runner (`config.toml`) to run in `privileged` mode:
 
@@ -517,7 +517,7 @@ would run the build script in a custom environment, or in secure mode.
 
 You may think of creating a Docker image that uses an `ENTRYPOINT` that doesn't
 execute the build script, but does execute a predefined set of commands, for
-example to build the docker image from your directory. In that case, you can
+example to build the Docker image from your directory. In that case, you can
 run the build container in [privileged mode](#the-privileged-mode), and make
 the build environment of the Runner secure.
 
@@ -586,7 +586,7 @@ Now let's see how these policies work.
 
 The `never` pull policy disables images pulling completely. If you set the
 `pull_policy` parameter of a Runner to `never`, then users will be able
-to use only the images that have been manually pulled on the docker host
+to use only the images that have been manually pulled on the Docker host
 the Runner runs on.
 
 If an image cannot be found locally, then the Runner will fail the build

@@ -103,7 +103,7 @@ Example:
 ```
 
 NOTE: **Note:**
-If using the GitLab Runner docker image, you will also need to expose port 8093 by
+If using the GitLab Runner Docker image, you will also need to expose port 8093 by
 adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
 
 ## The `[[runners]]` section
@@ -168,7 +168,7 @@ There are a couple of available executors currently.
 | `shell`       | run build locally, default |
 | `docker`      | run build using Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a system that the Runner will run the job on. |
 | `docker-windows` | run build using Windows Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a Windows system. |
-| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine](https://docs.docker.com/engine/) installed on the system that the Runner runs. **Note: This will run the docker container on the local machine, it just changes how the commands are run inside that container. If you want to run docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
+| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine](https://docs.docker.com/engine/) installed on the system that the Runner runs. **Note: This will run the Docker container on the local machine, it just changes how the commands are run inside that container. If you want to run Docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
 | `ssh`         | run build remotely with SSH - this requires the presence of `[runners.ssh]` |
 | `parallels`   | run build using Parallels VM, but connect to it with SSH - this requires the presence of `[runners.parallels]` and `[runners.ssh]` |
 | `virtualbox`  | run build using VirtualBox VM, but connect to it with SSH - this requires the presence of `[runners.virtualbox]` and `[runners.ssh]` |
@@ -205,20 +205,20 @@ This defines the Docker Container parameters.
 | `oom_score_adjust`             | OOM score adjustment, positive means kill earlier |
 | `cpuset_cpus`                  | String value containing the cgroups CpusetCpus to use |
 | `cpu_shares`                   | Number of CPU shares used to set relative cpu usage, default: 1024 |
-| `cpus`                         | String value of number of CPUs (available in docker 1.13 or later) |
+| `cpus`                         | String value of number of CPUs (available in Docker 1.13 or later) |
 | `dns`                          | A list of DNS servers for the container to use |
 | `dns_search`                   | A list of DNS search domains |
 | `privileged`                   | Make container run in Privileged mode (insecure) |
 | `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting |
-| `userns_mode`                  | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in docker 1.10 or later) |
+| `userns_mode`                  | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in Docker 1.10 or later) |
 | `cap_add`                      | Add additional Linux capabilities to the container |
 | `cap_drop`                     | Drop additional Linux capabilities from the container |
-| `security_opt`                 | Set security options (--security-opt in docker run), takes a list of ':' separated key/values |
+| `security_opt`                 | Set security options (--security-opt in `docker run`), takes a list of ':' separated key/values |
 | `devices`                      | Share additional host devices with the container |
 | `cache_dir`                    | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
 | `disable_cache`                | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the Runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
 | `network_mode`              | Add container to a custom network |
-| `wait_for_services_timeout` | Specify how long to wait for docker services, set to 0 to disable, default: 30 |
+| `wait_for_services_timeout` | Specify how long to wait for Docker services, set to 0 to disable, default: 30 |
 | `volumes`                   | Specify additional volumes that should be mounted (same syntax as Docker's `-v` flag) |
 | `extra_hosts`               | Specify hosts that should be defined in container environment |
 | `shm_size`                  | Specify shared memory size for images (in bytes) |
@@ -408,8 +408,8 @@ if you add some credentials for the _integrated registry_ with the
 
 #### Restrict `allowed_images` to private registry
 
-For certain setups you will restrict access of the build jobs to docker images
-which comes from your private docker registry. In that case set
+For certain setups you will restrict access of the build jobs to Docker images
+which comes from your private Docker registry. In that case set
 
 ```toml
 [runners.docker]
@@ -723,11 +723,11 @@ See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
 | `cert_file`      | string  | Optional Kubernetes master auth certificate |
 | `key_file`       | string  | Optional Kubernetes master auth private key |
 | `ca_file`        | string  | Optional Kubernetes master auth ca certificate |
-| `image`          | string  | Default docker image to use for builds when none is specified |
+| `image`          | string  | Default Docker image to use for builds when none is specified |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled |
 | `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs |
-| `image_pull_secrets` | array | A list of secrets that are used to authenticate docker image pulling |
+| `image_pull_secrets` | array | A list of secrets that are used to authenticate Docker image pulling |
 
 Example:
 
@@ -908,7 +908,7 @@ Metrics queries are in `canonical_name:query_string` format. The query string su
 | `{selector}` | Replaced with a `label_name=label_value` pair that selects metrics generated by a specific Runner instance within Prometheus. |
 | `{interval}` | Replaced with the `query_interval` parameter from the `[runners.referees.metrics]` configuration for this referee.            |
 
-For example, a shared Runner environment using the docker-machine executor would have a `{selector}` similar to `node=shared-runner-123`.
+For example, a shared Runner environment using the `docker-machine` executor would have a `{selector}` similar to `node=shared-runner-123`.
 
 ## Note
 

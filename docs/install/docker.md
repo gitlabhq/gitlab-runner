@@ -207,7 +207,7 @@ Special care must be taken when dealing with such configuration.
    However, if SELinux is in enforcing mode, you will see the `Permission denied` error when you're accessing `/var/run/docker.sock`.
    Install [selinux-dockersock](https://github.com/dpw/selinux-dockersock) to resolve this issue.
 1. Make sure that a persistent directory is created on host: `mkdir -p /srv/gitlab-runner/config`.
-1. Run docker with `:Z` on volumes:
+1. Run Docker with `:Z` on volumes:
 
 ```shell
 docker run -d --name gitlab-runner --restart always \

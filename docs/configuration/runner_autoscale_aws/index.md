@@ -32,7 +32,7 @@ A familiarity with Amazon Web Services (AWS) is required as this is where most
 of the configuration will take place.
 
 TIP: **Tip:**
-We suggest a quick read through docker machine [`amazonec2` driver
+We suggest a quick read through Docker machine [`amazonec2` driver
 documentation](https://docs.docker.com/machine/drivers/aws/) to familiarize
 yourself with the parameters we will set later in this article.
 
