@@ -3002,8 +3002,6 @@ func TestGenerateScripts(t *testing.T) {
 	testErr := errors.New("testErr")
 
 	e := &executor{}
-	e.ExecutorOptions.Shell = common.ShellScriptInfo{}
-
 	setupMockShellGenerateScript := func(m *common.MockShell, stages []common.BuildStage) {
 		for _, s := range stages {
 			m.On("GenerateScript", s, e.ExecutorOptions.Shell).
@@ -3071,7 +3069,7 @@ func TestGenerateScripts(t *testing.T) {
 			defer m.AssertExpectations(t)
 
 			scripts, err := e.generateScripts(m)
-			assert.True(t, errors.Is(err, tt.expectedErr))
+			assert.True(t, errors.Is(err, tt.expectedErr), "expected err %T, but got %T", tt.expectedErr, err)
 			assert.Equal(t, tt.expectedScripts, scripts)
 		})
 	}
