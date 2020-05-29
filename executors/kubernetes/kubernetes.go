@@ -772,12 +772,13 @@ func (e *invalidHostAliasDNSError) Is(err error) bool {
 
 func (s *executor) prepareHostAlias() (*api.HostAlias, error) {
 	supportsHostAliases, err := s.featureChecker.IsHostAliasSupported()
-	if errors.Is(err, &badVersionError{}) {
+	switch {
+	case errors.Is(err, &badVersionError{}):
 		s.Warningln("Checking for host alias support. Host aliases will be disabled.", err)
 		return nil, nil
-	} else if err != nil {
+	case err != nil:
 		return nil, err
-	} else if !supportsHostAliases {
+	case !supportsHostAliases:
 		return nil, nil
 	}
 

@@ -15,13 +15,16 @@ output:
   print-linter-name: true
 
 linters-settings:
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  gocritic:
+    disabled-checks:
+      - appendAssign
   gocyclo:
     min-complexity: 10
   govet:
     check-shadowing: false
-  goconst:
-    min-len: 3
-    min-occurrences: 3
 
 linters:
   disable-all: true
@@ -30,6 +33,7 @@ linters:
     - deadcode
     - dogsled
     - goconst
+    - gocritic
     - gocyclo
     - goimports
     - golint
@@ -78,6 +82,10 @@ issues:
     - path: ".*_test.go"
       linters:
         - bodyclose
+    - path: ".*_test.go"
+      text: "regexpMust"
+      linters:
+        - gocritic
     - path: referees/prometheus_api.go
       linters:
         - deadcode

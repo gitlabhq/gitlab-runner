@@ -153,9 +153,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+" + servicePart)
 	require.NoError(t, err)
 
-	containerNameMatcher := mock.MatchedBy(func(containerName string) bool {
-		return containerNameRegex.MatchString(containerName)
-	})
+	containerNameMatcher := mock.MatchedBy(containerNameRegex.MatchString)
 	networkID := "network-id"
 
 	e := &executor{
@@ -999,9 +997,7 @@ func TestCreateDependencies(t *testing.T) {
 	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+-alpine-0")
 	require.NoError(t, err)
 
-	containerNameMatcher := mock.MatchedBy(func(containerName string) bool {
-		return containerNameRegex.MatchString(containerName)
-	})
+	containerNameMatcher := mock.MatchedBy(containerNameRegex.MatchString)
 	testError := errors.New("test-error")
 
 	testCase := volumesTestCase{

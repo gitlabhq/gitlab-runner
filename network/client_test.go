@@ -40,12 +40,15 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	case "/api/v4/test/json":
 		if r.Header.Get("Content-Type") != "application/json" {
 			w.WriteHeader(http.StatusBadRequest)
-		} else if r.Header.Get("Accept") != "application/json" {
-			w.WriteHeader(http.StatusNotAcceptable)
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprint(w, "{\"key\":\"value\"}")
+			return
 		}
+		if r.Header.Get("Accept") != "application/json" {
+			w.WriteHeader(http.StatusNotAcceptable)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, "{\"key\":\"value\"}")
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
