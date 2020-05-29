@@ -55,6 +55,10 @@ func (b *PsWriter) Line(text string) {
 	b.WriteString(strings.Repeat("  ", b.indent) + text + "\r\n")
 }
 
+func (b *PsWriter) Linef(format string, arguments ...interface{}) {
+	b.Line(fmt.Sprintf(format, arguments...))
+}
+
 func (b *PsWriter) CheckForErrors() {
 	b.checkErrorLevel()
 }
@@ -101,28 +105,30 @@ func (b *PsWriter) EnvVariableKey(name string) string {
 func (b *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
-		b.Line(fmt.Sprintf(
+		b.Linef(
 			"New-Item -ItemType directory -Force -Path %s | out-null",
-			psQuote(helpers.ToBackslash(b.TemporaryPath))))
-		b.Line(fmt.Sprintf(
+			psQuote(helpers.ToBackslash(b.TemporaryPath)),
+		)
+		b.Linef(
 			"Set-Content %s -Value %s -Encoding UTF8 -Force",
 			psQuote(variableFile),
-			psQuoteVariable(variable.Value)))
-		b.Line("$" + variable.Key + "=" + psQuote(variableFile))
+			psQuoteVariable(variable.Value),
+		)
+		b.Linef("$%s=%s", variable.Key, psQuote(variableFile))
 	} else {
-		b.Line("$" + variable.Key + "=" + psQuoteVariable(variable.Value))
+		b.Linef("$%s=%s", variable.Key, psQuoteVariable(variable.Value))
 	}
 
-	b.Line("$env:" + variable.Key + "=$" + variable.Key)
+	b.Linef("$env:%s=$%s", variable.Key, variable.Key)
 }
 
 func (b *PsWriter) IfDirectory(path string) {
-	b.Line("if(Test-Path " + psQuote(helpers.ToBackslash(path)) + " -PathType Container) {")
+	b.Linef("if(Test-Path %s -PathType Container) {", psQuote(helpers.ToBackslash(path)))
 	b.Indent()
 }
 
 func (b *PsWriter) IfFile(path string) {
-	b.Line("if(Test-Path " + psQuote(helpers.ToBackslash(path)) + " -PathType Leaf) {")
+	b.Linef("if(Test-Path %s -PathType Leaf) {", psQuote(helpers.ToBackslash(path)))
 	b.Indent()
 }
 
@@ -167,7 +173,7 @@ func (b *PsWriter) Cd(path string) {
 }
 
 func (b *PsWriter) MkDir(path string) {
-	b.Line(fmt.Sprintf("New-Item -ItemType directory -Force -Path %s | out-null", psQuote(helpers.ToBackslash(path))))
+	b.Linef("New-Item -ItemType directory -Force -Path %s | out-null", psQuote(helpers.ToBackslash(path)))
 }
 
 func (b *PsWriter) MkTmpDir(name string) string {
@@ -179,13 +185,15 @@ func (b *PsWriter) MkTmpDir(name string) string {
 
 func (b *PsWriter) RmDir(path string) {
 	path = psQuote(helpers.ToBackslash(path))
-	b.Line(
-		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) " +
-			"-and (Test-Path " + path + " -PathType Container) ) {")
+	b.Linef(
+		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) "+
+			"-and (Test-Path %s -PathType Container) ) {",
+		path,
+	)
 	b.Indent()
 	b.Line("Remove-Item2 -Force -Recurse " + path)
 	b.Unindent()
-	b.Line("} elseif(Test-Path " + path + ") {")
+	b.Linef("} elseif(Test-Path %s) {", path)
 	b.Indent()
 	b.Line("Remove-Item -Force -Recurse " + path)
 	b.Unindent()
@@ -201,7 +209,7 @@ func (b *PsWriter) RmFile(path string) {
 	b.Indent()
 	b.Line("Remove-Item2 -Force " + path)
 	b.Unindent()
-	b.Line("} elseif(Test-Path " + path + ") {")
+	b.Linef("} elseif(Test-Path %s) {", path)
 	b.Indent()
 	b.Line("Remove-Item -Force " + path)
 	b.Unindent()
@@ -297,7 +305,7 @@ func (b *PowerShell) GenerateScript(
 
 	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
-			w.Line("echo \"Running on $env:computername via " + psQuoteVariable(info.Build.Hostname) + "...\"")
+			w.Linef("echo \"Running on $env:computername via %s...\"", psQuoteVariable(info.Build.Hostname))
 		} else {
 			w.Line("echo \"Running on $env:computername...\"")
 		}

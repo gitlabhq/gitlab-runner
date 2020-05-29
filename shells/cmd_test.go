@@ -80,9 +80,8 @@ func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
 		t.Run(
 			"disableDelayedErrorLevelExpansion_"+strconv.FormatBool(disableDelayedErrorLevelExpansion),
 			func(t *testing.T) {
-				writer := &CmdWriter{
-					disableDelayedErrorLevelExpansion: disableDelayedErrorLevelExpansion,
-				}
+				writer := &CmdWriter{}
+				writer.disableDelayedErrorLevelExpansion = disableDelayedErrorLevelExpansion
 				writer.Command("foo")
 
 				assert.Equal(t, expectedCmd, writer.String())
