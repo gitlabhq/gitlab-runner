@@ -586,9 +586,7 @@ func (c *DockerMachine) CompilePeriods() error {
 	return nil
 }
 
-var periodTimer = func() time.Time {
-	return time.Now()
-}
+var periodTimer = time.Now
 
 // TODO: remove in 14.0: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555
 func (c *DockerMachine) legacyCompilePeriods() error {

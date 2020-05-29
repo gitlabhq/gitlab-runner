@@ -21,11 +21,12 @@ func (c *HealthCheckCommand) Execute(ctx *cli.Context) {
 	for _, e := range os.Environ() {
 		parts := strings.Split(e, "=")
 
-		if len(parts) != 2 {
+		switch {
+		case len(parts) != 2:
 			continue
-		} else if strings.HasSuffix(parts[0], "_TCP_ADDR") {
+		case strings.HasSuffix(parts[0], "_TCP_ADDR"):
 			addr = parts[1]
-		} else if strings.HasSuffix(parts[0], "_TCP_PORT") {
+		case strings.HasSuffix(parts[0], "_TCP_PORT"):
 			port = parts[1]
 		}
 	}

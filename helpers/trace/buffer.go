@@ -165,11 +165,11 @@ func (b *Buffer) process(pipe *io.PipeReader) {
 		r, s, err := reader.ReadRune()
 		if s <= 0 {
 			break
-		} else if err == nil {
+		}
+
+		if err == nil {
+			// only write valid characters
 			b.writeRune(r)
-		} else {
-			// ignore invalid characters
-			continue
 		}
 	}
 

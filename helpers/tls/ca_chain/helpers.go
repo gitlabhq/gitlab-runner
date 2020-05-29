@@ -31,11 +31,12 @@ type ErrorInvalidCertificate struct {
 func (e *ErrorInvalidCertificate) Error() string {
 	msg := []string{"invalid certificate"}
 
-	if e.nilBlock {
+	switch {
+	case e.nilBlock:
 		msg = append(msg, "empty PEM block")
-	} else if e.nonCertBlockType {
+	case e.nonCertBlockType:
 		msg = append(msg, "non-certificate PEM block")
-	} else if e.inner != nil {
+	case e.inner != nil:
 		msg = append(msg, e.inner.Error())
 	}
 

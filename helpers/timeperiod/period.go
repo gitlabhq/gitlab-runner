@@ -26,7 +26,7 @@ func (t *TimePeriod) InPeriod() bool {
 }
 
 func TimePeriods(periods []string, timezone string) (*TimePeriod, error) {
-	return TimePeriodsWithTimer(periods, timezone, func() time.Time { return time.Now() })
+	return TimePeriodsWithTimer(periods, timezone, time.Now)
 }
 
 func TimePeriodsWithTimer(periods []string, timezone string, timer func() time.Time) (*TimePeriod, error) {
