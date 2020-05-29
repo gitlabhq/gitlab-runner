@@ -69,8 +69,8 @@ func (d *machinesData) writeDebugInformation() {
 	if err != nil {
 		return
 	}
-	defer file.Close()
-	fmt.Fprintln(file,
+	defer func() { _ = file.Close() }()
+	_, _ = fmt.Fprintln(file,
 		"time", time.Now(),
 		"runner", d.Runner,
 		"acquired", d.Acquired,

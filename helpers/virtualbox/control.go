@@ -155,7 +155,7 @@ func allocatePort(handler func(port string) error) (port string, err error) {
 		logrus.Debugln("VirtualBox ConfigureSSH:", err)
 		return
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	usedPorts, err := getUsedVirtualBoxPorts()
 	if err != nil {

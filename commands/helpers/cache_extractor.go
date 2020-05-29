@@ -51,7 +51,7 @@ func (c *CacheExtractorCommand) download(_ int) error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	upToDate, date := checkIfUpToDate(c.File, resp)
 	if upToDate {
@@ -63,8 +63,10 @@ func (c *CacheExtractorCommand) download(_ int) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(file.Name())
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+	}()
 
 	logrus.Infoln("Downloading", filepath.Base(c.File), "from", url_helpers.CleanURL(c.URL))
 	_, err = io.Copy(file, resp.Body)
@@ -96,7 +98,7 @@ func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, os.ErrNotExist
 	}
 

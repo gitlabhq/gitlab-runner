@@ -78,7 +78,7 @@ func (b *Buffer) Write(data []byte) (n int, err error) {
 
 func (b *Buffer) Finish() {
 	// wait for trace to finish
-	b.writer.Close()
+	_ = b.writer.Close()
 	<-b.finish
 }
 
@@ -162,7 +162,7 @@ func (b *Buffer) writeRune(r rune) error {
 }
 
 func (b *Buffer) process(pipe *io.PipeReader) {
-	defer pipe.Close()
+	defer func() { _ = pipe.Close() }()
 
 	reader := bufio.NewReader(pipe)
 

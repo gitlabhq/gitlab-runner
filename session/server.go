@@ -155,6 +155,6 @@ func (s *Server) Start() error {
 
 func (s *Server) Close() {
 	if s.httpServer != nil {
-		s.httpServer.Close()
+		_ = s.httpServer.Close()
 	}
 }

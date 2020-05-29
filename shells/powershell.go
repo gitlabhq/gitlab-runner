@@ -263,7 +263,7 @@ func (b *PsWriter) Finish(trace bool) string {
 	// add empty line to close code-block when it is piped to STDIN
 	b.Line("")
 	_, _ = io.WriteString(w, b.String())
-	w.Flush()
+	_ = w.Flush()
 	return buffer.String()
 }
 

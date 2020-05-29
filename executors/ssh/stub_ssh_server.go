@@ -54,7 +54,7 @@ func (s *StubSSHServer) Start() (int, error) {
 	go func() {
 		<-s.stop
 		s.shouldExit.Set()
-		listener.Close()
+		_ = listener.Close()
 	}()
 
 	address := strings.SplitN(listener.Addr().String(), ":", 2)

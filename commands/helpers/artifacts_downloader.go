@@ -64,8 +64,8 @@ func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 	if err != nil {
 		logrus.Fatalln(err)
 	}
-	file.Close()
-	defer os.Remove(file.Name())
+	_ = file.Close()
+	defer func() { _ = os.Remove(file.Name()) }()
 
 	// Download artifacts file
 	err = c.doRetry(func(retry int) error {

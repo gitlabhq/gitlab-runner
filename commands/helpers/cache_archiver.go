@@ -40,7 +40,7 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	fi, err := file.Stat()
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	if err != nil {
 		return retryableErr{err: err}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return retryOnServerError(resp)
 }

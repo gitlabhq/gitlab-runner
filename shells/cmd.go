@@ -244,7 +244,7 @@ func (b *CmdWriter) Finish(trace bool) string {
 	_, _ = io.WriteString(w, "set nl=^\r\n\r\n\r\n")
 
 	_, _ = io.WriteString(w, b.String())
-	w.Flush()
+	_ = w.Flush()
 	return buffer.String()
 }
 

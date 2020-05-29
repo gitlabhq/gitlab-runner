@@ -35,7 +35,7 @@ func (c *HealthCheckCommand) Execute(ctx *cli.Context) {
 		logrus.Fatalln("No HOST or PORT found")
 	}
 
-	fmt.Fprintf(os.Stdout, "waiting for TCP connection to %s:%s...", addr, port)
+	_, _ = fmt.Fprintf(os.Stdout, "waiting for TCP connection to %s:%s...", addr, port)
 
 	for {
 		conn, err := net.Dial("tcp", net.JoinHostPort(addr, port))
@@ -44,7 +44,7 @@ func (c *HealthCheckCommand) Execute(ctx *cli.Context) {
 			continue
 		}
 
-		conn.Close()
+		_ = conn.Close()
 		return
 	}
 }

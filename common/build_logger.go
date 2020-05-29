@@ -22,7 +22,7 @@ func (e *BuildLogger) WithFields(fields logrus.Fields) BuildLogger {
 
 func (e *BuildLogger) SendRawLog(args ...interface{}) {
 	if e.log != nil {
-		fmt.Fprint(e.log, args...)
+		_, _ = fmt.Fprint(e.log, args...)
 	}
 }
 

@@ -212,7 +212,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 
 		return nil, fmt.Errorf("cannot load prebuilt image: %s: %w", path, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	e.Debugln("Loading prebuilt image...")
 
@@ -1186,7 +1186,7 @@ func (e *executor) Cleanup() {
 	}
 
 	if e.client != nil {
-		e.client.Close()
+		_ = e.client.Close()
 	}
 
 	e.AbstractExecutor.Cleanup()
@@ -1385,7 +1385,7 @@ func (e *executor) readContainerLogs(containerID string) string {
 	if err != nil {
 		return strings.TrimSpace(err.Error())
 	}
-	defer hijacked.Close()
+	defer func() { _ = hijacked.Close() }()
 
 	_, _ = stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
 	containerLog := containerBuffer.String()

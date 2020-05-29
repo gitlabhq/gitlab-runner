@@ -101,7 +101,7 @@ func (c *ArtifactsUploaderCommand) Run() error {
 
 		return nil
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	// Create the archive
 	options := common.ArtifactsOptions{
