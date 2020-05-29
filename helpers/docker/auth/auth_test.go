@@ -56,15 +56,15 @@ func TestGetConfigForImage(t *testing.T) {
 		dockerAuthValue         string
 		credentials             []common.Credentials
 		image                   string
-		getExpectedRegistryInfo func() RegistryInfo
+		getExpectedRegistryInfo func() *RegistryInfo
 	}{
 		"registry1 from file only": {
 			createConfigFile: true,
 			dockerAuthValue:  "",
 			credentials:      emptyCredentials,
 			image:            imageRegistryDomain1,
-			getExpectedRegistryInfo: func() RegistryInfo {
-				return RegistryInfo{
+			getExpectedRegistryInfo: func() *RegistryInfo {
+				return &RegistryInfo{
 					Source:     filepath.Join(HomeDirectory, ".dockercfg"),
 					AuthConfig: registryDomain1Config,
 				}
@@ -75,8 +75,8 @@ func TestGetConfigForImage(t *testing.T) {
 			dockerAuthValue:  "",
 			credentials:      emptyCredentials,
 			image:            imageRegistryDomain2,
-			getExpectedRegistryInfo: func() RegistryInfo {
-				return RegistryInfo{
+			getExpectedRegistryInfo: func() *RegistryInfo {
+				return &RegistryInfo{
 					Source:     filepath.Join(HomeDirectory, ".dockercfg"),
 					AuthConfig: registryDomain2Config,
 				}
@@ -87,8 +87,8 @@ func TestGetConfigForImage(t *testing.T) {
 			dockerAuthValue:  "",
 			credentials:      emptyCredentials,
 			image:            imageGitlabDomain,
-			getExpectedRegistryInfo: func() RegistryInfo {
-				return RegistryInfo{}
+			getExpectedRegistryInfo: func() *RegistryInfo {
+				return nil
 			},
 		},
 		"no file and gitlab credentials. image in gitlab credentials": {
@@ -96,8 +96,8 @@ func TestGetConfigForImage(t *testing.T) {
 			dockerAuthValue:  "",
 			credentials:      gitlabRegistryCredentials,
 			image:            imageGitlabDomain,
-			getExpectedRegistryInfo: func() RegistryInfo {
-				return RegistryInfo{
+			getExpectedRegistryInfo: func() *RegistryInfo {
+				return &RegistryInfo{
 					Source:     authConfigSourceNameJobPayload,
 					AuthConfig: registryGitlabConfig,
 				}
@@ -108,8 +108,8 @@ func TestGetConfigForImage(t *testing.T) {
 			dockerAuthValue:  "",
 			credentials:      gitlabRegistryCredentials,
 			image:            imageGitlabDomain,
-			getExpectedRegistryInfo: func() RegistryInfo {
-				return RegistryInfo{
+			getExpectedRegistryInfo: func() *RegistryInfo {
+				return &RegistryInfo{
 					Source:     authConfigSourceNameJobPayload,
 					AuthConfig: registryGitlabConfig,
 				}
@@ -120,8 +120,8 @@ func TestGetConfigForImage(t *testing.T) {
 			dockerAuthValue:  testDockerAuthConfigs,
 			credentials:      emptyCredentials,
 			image:            imageRegistryDomain1,
-			getExpectedRegistryInfo: func() RegistryInfo {
-				return RegistryInfo{
+			getExpectedRegistryInfo: func() *RegistryInfo {
+				return &RegistryInfo{
 					Source:     authConfigSourceNameUserVariable,
 					AuthConfig: registryDomain1Config,
 				}
@@ -132,8 +132,8 @@ func TestGetConfigForImage(t *testing.T) {
 			dockerAuthValue:  testDockerAuthConfigs,
 			credentials:      emptyCredentials,
 			image:            imageRegistryDomain1,
-			getExpectedRegistryInfo: func() RegistryInfo {
-				return RegistryInfo{
+			getExpectedRegistryInfo: func() *RegistryInfo {
+				return &RegistryInfo{
 					Source:     authConfigSourceNameUserVariable,
 					AuthConfig: registryDomain1Config,
 				}

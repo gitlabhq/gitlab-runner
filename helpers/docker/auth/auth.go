@@ -39,21 +39,22 @@ type RegistryInfo struct {
 type authConfigResolver func() (string, map[string]types.AuthConfig)
 
 // ResolveConfigForImage returns the auth configuration for a particular image.
-// See GetAuthConfigs for source information.
-func ResolveConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) RegistryInfo {
+// Returns nil on no config found.
+// See ResolveConfigs for source information.
+func ResolveConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) *RegistryInfo {
 	authConfigs := ResolveConfigs(dockerAuthConfig, username, credentials)
 	if authConfigs == nil {
-		return RegistryInfo{}
+		return nil
 	}
 
 	indexName, _ := splitDockerImageName(imageName)
 	for registry, info := range authConfigs {
 		if indexName == convertToHostname(registry) {
-			return info
+			return &info
 		}
 	}
 
-	return RegistryInfo{}
+	return nil
 }
 
 // ResolveConfigs returns the authentication configuration for docker registries.
