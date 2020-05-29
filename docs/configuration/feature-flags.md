@@ -6,20 +6,20 @@ Feature flags are toggles that allow you to enable or disable specific features.
 
 - For beta features that are made available for volunteers to test, but that are not ready to be enabled for all users.
 
-    Beta features are sometimes incomplete or need further testing. A user who wants to use a beta feature
-    can choose to accept the risk and explicitly enable the feature with a feature flag. Other users who
-    do not need the feature or who are not willing to accept the risk on their system have the
-    feature disabled by default and are not impacted by possible bugs and regressions.
+  Beta features are sometimes incomplete or need further testing. A user who wants to use a beta feature
+  can choose to accept the risk and explicitly enable the feature with a feature flag. Other users who
+  do not need the feature or who are not willing to accept the risk on their system have the
+  feature disabled by default and are not impacted by possible bugs and regressions.
 
 - For breaking changes that result in functionality deprecation or feature removal in the near future.
 
-    As the product evolves, features are sometimes changed or removed entirely. Known bugs are often fixed,
-    but in some cases, users have already found a workaround for a bug that affected them; forcing users
-    to adopt the standardized bug fix might cause other problems with their customized configurations.
+  As the product evolves, features are sometimes changed or removed entirely. Known bugs are often fixed,
+  but in some cases, users have already found a workaround for a bug that affected them; forcing users
+  to adopt the standardized bug fix might cause other problems with their customized configurations.
 
-    In such cases, the feature flag is used to switch from the old behavior to the new one on demand. This
-    allows users to adopt new versions of the product while giving them time to plan for a smooth, permanent
-    transition from the old behavior to the new behavior.
+  In such cases, the feature flag is used to switch from the old behavior to the new one on demand. This
+  allows users to adopt new versions of the product while giving them time to plan for a smooth, permanent
+  transition from the old behavior to the new behavior.
 
 Feature flags are toggled using environment variables. To:
 
@@ -41,7 +41,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 |--------------|---------------|------------|--------------------|-------------|
 | `FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION` | `false` | ✗ |  | Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for error checking for when using [Window Batch](../shells/index.md#windows-batch) shell |
 | `FF_NETWORK_PER_BUILD` | `false` | ✗ |  | Enables creation of a Docker [network per build](../executors/docker.md#networking) with the `docker` executor |
-| `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` | `true` | ✗ |  | When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119) |
+| `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` | `true` | ✗ |  | When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119) |
 | `FF_USE_DIRECT_DOWNLOAD` | `true` | ✗ |  | When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab on a first try. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab |
 | `FF_SKIP_NOOP_BUILD_STAGES` | `true` | ✗ |  | When set to `false` all build stages are executed even if running them has no effect |
 

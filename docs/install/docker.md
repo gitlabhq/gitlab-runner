@@ -183,7 +183,7 @@ may need to restart it for the changes to take effect.
 
 NOTE: **Note:**
 No arm/arm64 images are provided for GitLab Runner. See the [related
-issue](https://gitlab.com/gitlab-org/gitlab-runner/issues/4871) for more
+issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4871) for more
 information. If needed, you can install arm/arm64 versions manually via
 [binary file](linux-manually.md#using-binary-file).
 

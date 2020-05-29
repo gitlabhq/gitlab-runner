@@ -255,7 +255,7 @@ gitlab-runner register
 
 #### `[[runners]]` configuration template file
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/4228) in GitLab Runner 12.2.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
 
 Additional options can be easily configured during Runner registration using the
 [configuration template file](../register/index.md#runners-configuration-template-file) feature.

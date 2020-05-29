@@ -426,8 +426,8 @@ There are some issues regarding making GitLab Runner gracefully handle Spot
 price changes, and there are reports of `docker-machine` attempting to
 continually remove a Docker Machine. GitLab has provided patches for both cases
 in the upstream project. For more information, see issues
-[#2771](https://gitlab.com/gitlab-org/gitlab-runner/issues/2771) and
-[#2772](https://gitlab.com/gitlab-org/gitlab-runner/issues/2772).
+[#2771](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2771) and
+[#2772](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2772).
 
 ## Conclusion
 

@@ -1,6 +1,6 @@
 # The Custom executor
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/2885) in GitLab Runner 12.1
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2885) in GitLab Runner 12.1
 
 GitLab Runner provides the Custom executor for environments that it
 doesn't support natively, for example, Podman or Libvirt.
@@ -20,7 +20,7 @@ Below are some current limitations when using the Custom executor:
 
 - No support for
   [`services`](https://docs.gitlab.com/ee/ci/yaml/#services). See
-  [#4358](https://gitlab.com/gitlab-org/gitlab-runner/issues/4358) for
+  [#4358](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) for
   more details.
 - No [Interactive Web
   Terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/) support.

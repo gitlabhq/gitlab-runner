@@ -123,7 +123,7 @@ supporting [`Windows
 1803`](https://support.microsoft.com/en-us/lifecycle/search?alpha=1803)
 because it came out on `2018-04-30`. Mainstream support ended on
 `2019-11-12`, so we deprecated `Windows 1803` in 12.x and it was
-[removed](https://gitlab.com/gitlab-org/gitlab-runner/issues/6553) in
+[removed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6553) in
 GitLab 13.0.
 
 As a single source of truth we use
