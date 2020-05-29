@@ -23,7 +23,7 @@ const (
 
 var (
 	testFileAuthConfigs       = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyXzI6dGVzdF9wYXNzd29yZF8y"}}}`
-	testVariableAuthConfigs   = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"}}}`
+	testDockerAuthConfigs     = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"}}}`
 	gitlabRegistryCredentials = []common.Credentials{
 		{
 			Type:     "registry",
@@ -52,88 +52,88 @@ var (
 
 func TestGetConfigForImage(t *testing.T) {
 	tests := map[string]struct {
-		precreateConfigFile  bool
-		dockerAuthVariable   string
-		credentials          []common.Credentials
-		image                string
-		expectedResultGetter func(homeDir string) *RegistryInfo
+		createConfigFile        bool
+		dockerAuthValue         string
+		credentials             []common.Credentials
+		image                   string
+		getExpectedRegistryInfo func() RegistryInfo
 	}{
 		"registry1 from file only": {
-			precreateConfigFile: true,
-			dockerAuthVariable:  "",
-			credentials:         emptyCredentials,
-			image:               imageRegistryDomain1,
-			expectedResultGetter: func(homeDir string) *RegistryInfo {
-				return &RegistryInfo{
-					Source:     filepath.Join(homeDir, ".dockercfg"),
+			createConfigFile: true,
+			dockerAuthValue:  "",
+			credentials:      emptyCredentials,
+			image:            imageRegistryDomain1,
+			getExpectedRegistryInfo: func() RegistryInfo {
+				return RegistryInfo{
+					Source:     filepath.Join(HomeDirectory, ".dockercfg"),
 					AuthConfig: registryDomain1Config,
 				}
 			},
 		},
 		"registry2 from file only": {
-			precreateConfigFile: true,
-			dockerAuthVariable:  "",
-			credentials:         emptyCredentials,
-			image:               imageRegistryDomain2,
-			expectedResultGetter: func(homeDir string) *RegistryInfo {
-				return &RegistryInfo{
-					Source:     filepath.Join(homeDir, ".dockercfg"),
+			createConfigFile: true,
+			dockerAuthValue:  "",
+			credentials:      emptyCredentials,
+			image:            imageRegistryDomain2,
+			getExpectedRegistryInfo: func() RegistryInfo {
+				return RegistryInfo{
+					Source:     filepath.Join(HomeDirectory, ".dockercfg"),
 					AuthConfig: registryDomain2Config,
 				}
 			},
 		},
 		"missing credentials, file only": {
-			precreateConfigFile: true,
-			dockerAuthVariable:  "",
-			credentials:         emptyCredentials,
-			image:               imageGitlabDomain,
-			expectedResultGetter: func(homeDir string) *RegistryInfo {
-				return &RegistryInfo{}
+			createConfigFile: true,
+			dockerAuthValue:  "",
+			credentials:      emptyCredentials,
+			image:            imageGitlabDomain,
+			getExpectedRegistryInfo: func() RegistryInfo {
+				return RegistryInfo{}
 			},
 		},
 		"no file and gitlab credentials. image in gitlab credentials": {
-			precreateConfigFile: false,
-			dockerAuthVariable:  "",
-			credentials:         gitlabRegistryCredentials,
-			image:               imageGitlabDomain,
-			expectedResultGetter: func(homeDir string) *RegistryInfo {
-				return &RegistryInfo{
+			createConfigFile: false,
+			dockerAuthValue:  "",
+			credentials:      gitlabRegistryCredentials,
+			image:            imageGitlabDomain,
+			getExpectedRegistryInfo: func() RegistryInfo {
+				return RegistryInfo{
 					Source:     authConfigSourceNameJobPayload,
 					AuthConfig: registryGitlabConfig,
 				}
 			},
 		},
 		"both file and gitlab credentials. image in gitlab credentials": {
-			precreateConfigFile: true,
-			dockerAuthVariable:  "",
-			credentials:         gitlabRegistryCredentials,
-			image:               imageGitlabDomain,
-			expectedResultGetter: func(homeDir string) *RegistryInfo {
-				return &RegistryInfo{
+			createConfigFile: true,
+			dockerAuthValue:  "",
+			credentials:      gitlabRegistryCredentials,
+			image:            imageGitlabDomain,
+			getExpectedRegistryInfo: func() RegistryInfo {
+				return RegistryInfo{
 					Source:     authConfigSourceNameJobPayload,
 					AuthConfig: registryGitlabConfig,
 				}
 			},
 		},
 		"DOCKER_AUTH_CONFIG only": {
-			precreateConfigFile: false,
-			dockerAuthVariable:  testVariableAuthConfigs,
-			credentials:         emptyCredentials,
-			image:               imageRegistryDomain1,
-			expectedResultGetter: func(homeDir string) *RegistryInfo {
-				return &RegistryInfo{
+			createConfigFile: false,
+			dockerAuthValue:  testDockerAuthConfigs,
+			credentials:      emptyCredentials,
+			image:            imageRegistryDomain1,
+			getExpectedRegistryInfo: func() RegistryInfo {
+				return RegistryInfo{
 					Source:     authConfigSourceNameUserVariable,
 					AuthConfig: registryDomain1Config,
 				}
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides home dir": {
-			precreateConfigFile: true,
-			dockerAuthVariable:  testVariableAuthConfigs,
-			credentials:         emptyCredentials,
-			image:               imageRegistryDomain1,
-			expectedResultGetter: func(homeDir string) *RegistryInfo {
-				return &RegistryInfo{
+			createConfigFile: true,
+			dockerAuthValue:  testDockerAuthConfigs,
+			credentials:      emptyCredentials,
+			image:            imageRegistryDomain1,
+			getExpectedRegistryInfo: func() RegistryInfo {
+				return RegistryInfo{
 					Source:     authConfigSourceNameUserVariable,
 					AuthConfig: registryDomain1Config,
 				}
@@ -143,22 +143,43 @@ func TestGetConfigForImage(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			cleanup := setupTestHomeDirectoryConfig(t, tt.precreateConfigFile)
+			cleanup := setupTestHomeDirectoryConfig(t, tt.createConfigFile)
 			defer cleanup()
 
-			result := GetConfigForImage(tt.image, tt.dockerAuthVariable, "", tt.credentials)
-
-			assert.Equal(t, tt.expectedResultGetter(HomeDirectory), result)
+			result := ResolveConfigForImage(tt.image, tt.dockerAuthValue, "", tt.credentials)
+			assert.Equal(t, tt.getExpectedRegistryInfo(), result)
 		})
+	}
+}
+
+func setupTestHomeDirectoryConfig(t *testing.T, createConfigFile bool) func() {
+	oldHomeDirectory := HomeDirectory
+
+	if createConfigFile {
+		tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
+		require.NoError(t, err)
+		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
+		err = ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
+		require.NoError(t, err)
+		HomeDirectory = tempHomeDir
+	} else {
+		HomeDirectory = ""
+	}
+
+	return func() {
+		if createConfigFile {
+			_ = os.RemoveAll(HomeDirectory)
+		}
+		HomeDirectory = oldHomeDirectory
 	}
 }
 
 func TestGetConfigs(t *testing.T) {
 	cleanup := setupTestHomeDirectoryConfig(t, true)
 	defer cleanup()
-	result := GetConfigs(testVariableAuthConfigs, "", gitlabRegistryCredentials)
+	result := ResolveConfigs(testDockerAuthConfigs, "", gitlabRegistryCredentials)
 
-	assert.Equal(t, map[string]*RegistryInfo{
+	assert.Equal(t, map[string]RegistryInfo{
 		"https://registry.domain.tld:5005/v1/": {
 			Source: authConfigSourceNameUserVariable,
 			AuthConfig: types.AuthConfig{
@@ -184,28 +205,6 @@ func TestGetConfigs(t *testing.T) {
 			},
 		},
 	}, result)
-}
-
-func setupTestHomeDirectoryConfig(t *testing.T, precreateConfigFile bool) func() {
-	oldHomeDirectory := HomeDirectory
-
-	if precreateConfigFile {
-		tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
-		require.NoError(t, err)
-		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
-		err = ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
-		require.NoError(t, err)
-		HomeDirectory = tempHomeDir
-	} else {
-		HomeDirectory = ""
-	}
-
-	return func() {
-		if precreateConfigFile {
-			os.RemoveAll(HomeDirectory)
-		}
-		HomeDirectory = oldHomeDirectory
-	}
 }
 
 func TestSplitDockerImageName(t *testing.T) {

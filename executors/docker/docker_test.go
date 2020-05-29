@@ -293,7 +293,7 @@ func TestDockerForExistingImage(t *testing.T) {
 func executorWithMockClient(c *docker.MockClient) *executor {
 	e := &executor{client: c}
 	e.Context = context.Background()
-	e.Build = &common.Build{}
+	e.Build = new(common.Build)
 	return e
 }
 

@@ -714,7 +714,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 func (s *executor) setupCredentials() error {
 	s.Debugln("Setting up secrets")
 
-	authConfigs := auth.GetConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
+	authConfigs := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
 
 	if len(authConfigs) == 0 {
 		return nil

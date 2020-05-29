@@ -166,11 +166,15 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		}
 	}
 
-	registryInfo := auth.GetConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
+	registryInfo := auth.ResolveConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
 	if registryInfo != nil {
-		e.Println("Authenticating with credentials from", registryInfo.Source)
-		e.Debugln("Using", registryInfo.AuthConfig.Username, "to connect to", registryInfo.AuthConfig.ServerAddress,
-			"in order to resolve", imageName, "...")
+		e.Println(fmt.Sprintf("Authenticating with credentials from %v", registryInfo.Source))
+		e.Debugln(fmt.Sprintf(
+			"Using %v to connect to %v in order to resolve %v...",
+			registryInfo.AuthConfig.Username,
+			registryInfo.AuthConfig.ServerAddress,
+			imageName,
+		))
 		return e.pullDockerImage(imageName, &registryInfo.AuthConfig)
 	}
 

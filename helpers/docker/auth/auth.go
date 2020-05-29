@@ -38,12 +38,12 @@ type RegistryInfo struct {
 
 type authConfigResolver func() (string, map[string]types.AuthConfig)
 
-// GetConfigForImage returns the auth configuration for a particular image.
+// ResolveConfigForImage returns the auth configuration for a particular image.
 // See GetAuthConfigs for source information.
-func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) *RegistryInfo {
-	authConfigs := GetConfigs(dockerAuthConfig, username, credentials)
+func ResolveConfigForImage(imageName, dockerAuthConfig, username string, credentials []common.Credentials) RegistryInfo {
+	authConfigs := ResolveConfigs(dockerAuthConfig, username, credentials)
 	if authConfigs == nil {
-		return &RegistryInfo{}
+		return RegistryInfo{}
 	}
 
 	indexName, _ := splitDockerImageName(imageName)
@@ -53,18 +53,16 @@ func GetConfigForImage(imageName, dockerAuthConfig, username string, credentials
 		}
 	}
 
-	return &RegistryInfo{}
+	return RegistryInfo{}
 }
 
-// GetConfigs returns the authentication configuration for docker registries.
+// ResolveConfigs returns the authentication configuration for docker registries.
 // Goes through several sources in this order:
 // 1. DOCKER_AUTH_CONFIG
 // 2. ~/.docker/config.json or .dockercfg
 // 3. Build credentials
 // Returns a map of registry hostname to RegistryInfo
-func GetConfigs(dockerAuthConfig, username string, credentials []common.Credentials) map[string]*RegistryInfo {
-	res := make(map[string]*RegistryInfo)
-
+func ResolveConfigs(dockerAuthConfig, username string, credentials []common.Credentials) map[string]RegistryInfo {
 	resolvers := []authConfigResolver{
 		func() (string, map[string]types.AuthConfig) {
 			return getUserConfiguration(dockerAuthConfig)
@@ -76,12 +74,13 @@ func GetConfigs(dockerAuthConfig, username string, credentials []common.Credenti
 			return getBuildConfiguration(credentials)
 		},
 	}
+	res := make(map[string]RegistryInfo)
 
 	for _, r := range resolvers {
 		source, configs := r()
 		for registry, conf := range configs {
 			if _, ok := res[registry]; !ok {
-				res[registry] = &RegistryInfo{
+				res[registry] = RegistryInfo{
 					Source:     source,
 					AuthConfig: conf,
 				}
@@ -94,7 +93,6 @@ func GetConfigs(dockerAuthConfig, username string, credentials []common.Credenti
 
 func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig) {
 	authConfigs, _ := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig))
-
 	if authConfigs == nil {
 		return "", nil
 	}
@@ -104,10 +102,10 @@ func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.Aut
 
 func getHomeDirConfiguration(username string) (string, map[string]types.AuthConfig) {
 	sourceFile, authConfigs, _ := readDockerConfigsFromHomeDir(username)
-
 	if authConfigs == nil {
 		return "", nil
 	}
+
 	return sourceFile, authConfigs
 }
 
@@ -117,6 +115,7 @@ func EncodeConfig(authConfig *types.AuthConfig) (string, error) {
 	if authConfig == nil {
 		return "", nil
 	}
+
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(authConfig); err != nil {
 		return "", err
