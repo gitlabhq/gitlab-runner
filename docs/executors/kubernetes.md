@@ -106,7 +106,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
 - `volumes`: configured through the configuration file, the list of volumes that will be mounted in the build container. [Read more about using volumes](#using-volumes)
 - `services`:
   [Since GitLab Runner
-  12.5](https://gitlab.com/gitlab-org/gitlab-runner/issues/4470), list of
+  12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of
   [services](https://docs.gitlab.com/ee/ci/services/) attached to the build
   container using the [sidecar
   pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar).
@@ -410,11 +410,11 @@ check_interval = 30
 
 ## Using services
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/4470) in GitLab Runner 12.5.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470) in GitLab Runner 12.5.
 
 Define a list of [services](https://docs.gitlab.com/ee/ci/services/).
 
-Service aliases are supported since [GitLab Runner 12.9](https://gitlab.com/gitlab-org/gitlab-runner/issues/4829).
+Service aliases are supported since [GitLab Runner 12.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4829).
 
 ```toml
 concurrent = 1
@@ -507,11 +507,11 @@ build pods without extra configuration for the other pods.
 
 At the moment we are using `kube exec` to run the scripts, which relies on
 having a stable network connection between the Runner and the pod for the duration of the command.
-This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119).
+This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119).
 If you are experiencing this problem turn off the feature flag [FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY](../configuration/feature-flags.md#available-feature-flags)
 to use `kube attach` for script execution, which is more stable.
 
-We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/issues/10341) for updates.
+We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.
 
 ### Using kaniko
 

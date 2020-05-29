@@ -344,7 +344,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 ## `[[runners]]` configuration template file
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/4228) in GitLab Runner 12.2.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
 
 Some Runner configuration settings can't be set with environment variables or command line options.
 

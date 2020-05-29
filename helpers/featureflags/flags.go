@@ -45,7 +45,7 @@ var flags = []FeatureFlag{
 		DefaultValue:    "true",
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description:     "When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119)",
+		Description:     "When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)",
 	},
 	{
 		Name:            UseDirectDownload,

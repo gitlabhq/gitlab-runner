@@ -53,7 +53,7 @@ To install the Runner:
    NOTE: **Note:**
    Debian buster users should [disable skel](#disable-skel) to prevent
    [No such file or directory Job
-   failures](https://gitlab.com/gitlab-org/gitlab-runner/issues/1379)
+   failures](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)
 
    ```shell
    # For Debian/Ubuntu/Mint
@@ -125,10 +125,10 @@ packages](linux-manually.md#using-debrpm-package) if necessary.
 
 ## Disable `skel`
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/1379) in GitLab 12.10.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379) in GitLab 12.10.
 
 Sometimes the default [skeleton (`skel`) directory](https://www.thegeekdiary.com/understanding-the-etc-skel-directory-in-linux/)
-causes [issues for GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/issues/4449),
+causes [issues for GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449),
 and it fails to run a job. When installing GitLab Runner, set the environment variable
 `GITLAB_RUNNER_DISABLE_SKEL` to `true` before you install the package. This will create
 the `$HOME` directory without the files inside of `skel`:
@@ -167,5 +167,5 @@ To upgrade GitLab Runner from a version prior to 10.0:
    ```
 
    CAUTION: **Important:** If you don't run the above command, you will be left
-   with no service file. Follow [issue #2786](https://gitlab.com/gitlab-org/gitlab-runner/issues/2786)
+   with no service file. Follow [issue #2786](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2786)
    for more information.

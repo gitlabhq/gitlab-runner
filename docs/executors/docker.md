@@ -49,7 +49,7 @@ Docker executor:
 
 - Nanoserver cannot be used because it requires PowerShell 6 but GitLab
   requires PowerShell 5 (see
-  [#3291](https://gitlab.com/gitlab-org/gitlab-runner/issues/3291)). See
+  [#3291](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3291)). See
   also the list of [supported Windows
   versions](#supported-windows-versions).
 - Docker-in-Docker is not supported, since it's [not
@@ -59,7 +59,7 @@ Docker executor:
 - Host device mounting not supported.
 - When mounting a volume directory it has to exist, or Docker will fail
   to start the container, see
-  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/issues/3754) for
+  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3754) for
   additional detail.
 - `docker-windows` executor can be run only using GitLab Runner running
   on Windows.
@@ -67,7 +67,7 @@ Docker executor:
   Windows](https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
   are not supported, since they are still experimental. Read [the
   relevant
-  issue](https://gitlab.com/gitlab-org/gitlab-runner/issues/4373) for
+  issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
   more details.
 - Because of a [limitation in
   Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
@@ -107,7 +107,7 @@ NOTE: **Note:**
 There is a known issue when a new Runner is registered with `c:\\cache`
 as a source directory when passing the `--docker-volumes` or
 `DOCKER_VOLUMES` environment variable. For more details check
-[#4312](https://gitlab.com/gitlab-org/gitlab-runner/issues/4312)
+[#4312](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312)
 
 Below is an example of what the configuration for a simple Docker
 executor running Windows
@@ -132,7 +132,7 @@ section.
 
 You can use [services](https://docs.gitlab.com/ee/ci/services/) by
 enabling [network per-build](#network-per-build) networking mode.
-[Available](https://gitlab.com/gitlab-org/gitlab-runner/issues/1042)
+[Available](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042)
 since GitLab Runner 12.9.
 
 ## Workflow
@@ -226,7 +226,7 @@ Linked containers will share their environment variables.
 
 ### Network per-build
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/1042) in GitLab Runner 12.9.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042) in GitLab Runner 12.9.
 
 This mode will create and use a new user-defined Docker bridge network per build.
 [User-defined bridge networks](https://docs.docker.com/network/bridge/) are covered in detail in the Docker documentation.
@@ -402,7 +402,7 @@ This is an example `config.toml` to mount the data directory for the official My
 
 Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.
 
-See an issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1520>.
+See an issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1520>.
 
 ### PostgreSQL service example
 
@@ -670,7 +670,7 @@ WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : 
 WARNING: Locally found image will be used instead.
 ```
 
-This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
+This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1905).
 
 **When to use this pull policy?**
 
