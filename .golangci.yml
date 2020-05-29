@@ -37,10 +37,10 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - staticcheck
     - structcheck
     - typecheck
     - unconvert
-    - unused
     - varcheck
     - whitespace
   fast: false
