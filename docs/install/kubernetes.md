@@ -282,6 +282,46 @@ At the moment it is not possible to use environment variables as pod labels with
 We are working on it in this issue: [Can't set environment variable key as pod label](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173).
 Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173#note_351057890) as a temporary solution.
 
+### Store registration tokens or Runner tokens in secrets
+
+To register a new GitLab Runner, you can specify
+`runnerRegistrationToken` in `values.yml`. To register an existing
+Runner, you can use `runnerToken`. It can be a security risk to store
+tokens in `values.yml`, especially if you commit these to `git`.
+
+Instead, you can store the values of these tokens inside of a
+[Kubernetes
+secret](https://kubernetes.io/docs/concepts/configuration/secret/), and
+then update the `runners.secret` value in `values.yml` with the name of
+the secret.
+
+If you have an existing registered Runner and want to use that, set the
+`runner-token` with the token used to identify that Runner. If you want
+to have a new Runner registered you can set the
+`runner-registration-token` with the [registration token that you would
+like](https://docs.gitlab.com/ee/ci/runners/).
+
+For example:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-runner-secret
+type: Opaque
+data:
+  runner-registration-token: "NlZrN1pzb3NxUXlmcmVBeFhUWnIK" #base64 encoded registration token
+  runner-token: ""
+```
+
+```yaml
+runners:
+  secret: gitlab-runner-secret
+```
+
+This example uses the secret `gitlab-runner-secret` and takes the value of
+`runner-registration-token` to register the new GitLab Runner.
+
 ## Check available GitLab Runner Helm Chart versions
 
 Versions of Helm Chart and GitLab Runner application do not follow the same versioning.
