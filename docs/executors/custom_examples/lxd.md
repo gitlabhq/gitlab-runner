@@ -3,9 +3,11 @@
 In this example, we use LXD to create a container per build and clean it
 up afterwards.
 
-Here, we are using a bash script for each stage. Users
-[can't yet specify which image to use](https://gitlab.com/gitlab-org/gitlab-runner/issues/4357),
-so we are going to use an Ubuntu 18.04 image to run the jobs.
+This example uses a bash script for each stage. You can specify your
+own image, which is exposed as
+[CI_JOB_IMAGE](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
+This example uses the `ubuntu:18.04` image for simplicity. If you
+want to support multiple images, you would have to modify the executor.
 
 These scripts have the following prerequisites:
 
@@ -73,10 +75,13 @@ start_container () {
         lxc delete -f "$CONTAINER_ID"
     fi
 
-    # Container image is harcoded at the moment, since Custom executor
-    # does not provide the value of `image`. See
-    # https://gitlab.com/gitlab-org/gitlab-runner/issues/4357 for
-    # details.
+    # The container image is hardcoded, but you can use
+    # the `CI_JOB_IMAGE` predefined variable
+    # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+    # which is available under `CUSTOM_ENV_CI_JOB_IMAGE` to allow the
+    # user to specify the image. The rest of the script assumes that
+    # you are running on an ubuntu image so modifications might be
+    # required.
     lxc launch ubuntu:18.04 "$CONTAINER_ID"
 
     # Wait for container to start, we are using systemd to check this,
