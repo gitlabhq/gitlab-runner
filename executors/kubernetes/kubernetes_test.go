@@ -693,6 +693,10 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 }
 
 func testKubernetesNoRootImageFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	if featureFlagValue == false {
+		t.Skip("Regression: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26422")
+	}
+
 	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
 		return
 	}
@@ -846,6 +850,10 @@ func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagNam
 func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
 		return
+	}
+
+	if os.Getenv("GITLAB_CI") == "true" {
+		t.Skip("Skipping inside of GitLab CI check https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26421")
 	}
 
 	config, err := getKubeClientConfig(new(common.KubernetesConfig), new(overwrites))

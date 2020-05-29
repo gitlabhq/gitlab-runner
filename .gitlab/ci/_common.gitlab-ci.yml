@@ -1,11 +1,12 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-5
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-6
   GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 19.03.5
   DOCKER_MACHINE_VERSION: "0.16.2"
   BUILDX_VERSION: 0.3.1
+  KUBECTL_VERSION: 1.18.0
   DUMB_INIT_VERSION: "1.2.2"
   GIT_VERSION: "2.21.0"
   GIT_VERSION_BUILD: "1"
