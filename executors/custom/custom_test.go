@@ -525,8 +525,8 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		}
 	}
 
-	assertEnvValue := func(expectedServices string) func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
-		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+	assertEnvValue := func(expectedServices string) func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == "CI_JOB_SERVICES" {
@@ -537,8 +537,8 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		}
 	}
 
-	assertNoEnv := func() func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
-		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options command.CreateOptions) {
+	assertNoEnv := func() func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
 			servicesEnvExists := false
 
 			for _, env := range options.Env {
