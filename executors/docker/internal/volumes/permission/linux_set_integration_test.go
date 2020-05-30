@@ -58,7 +58,7 @@ func TestDockerLinuxSetter(t *testing.T) {
 	err = client.ContainerStart(context.Background(), testContainer.ID, types.ContainerStartOptions{})
 	require.NoError(t, err)
 
-	waiter := wait.NewDockerWaiter(client)
+	waiter := wait.NewDockerKillWaiter(client)
 
 	err = waiter.Wait(context.Background(), testContainer.ID)
 	assert.NoError(t, err)

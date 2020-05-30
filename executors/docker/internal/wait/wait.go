@@ -28,7 +28,7 @@ type dockerWaiter struct {
 	client docker.Client
 }
 
-func NewDockerWaiter(c docker.Client) KillWaiter {
+func NewDockerKillWaiter(c docker.Client) KillWaiter {
 	return &dockerWaiter{
 		client: c,
 	}
@@ -43,15 +43,15 @@ func (d *dockerWaiter) Wait(ctx context.Context, containerID string) error {
 // specified container has stopped.
 func (d *dockerWaiter) KillWait(ctx context.Context, containerID string) error {
 	return d.retryWait(ctx, containerID, func() {
-		d.client.ContainerKill(ctx, containerID, "SIGKILL")
+		_ = d.client.ContainerKill(ctx, containerID, "SIGKILL")
 	})
 }
 
-func (d *dockerWaiter) retryWait(ctx context.Context, containerID string, fn func()) error {
+func (d *dockerWaiter) retryWait(ctx context.Context, containerID string, stopFn func()) error {
 	retries := 0
 
 	for ctx.Err() == nil {
-		err := d.wait(ctx, containerID, fn)
+		err := d.wait(ctx, containerID, stopFn)
 		if err == nil {
 			return nil
 		}
@@ -75,16 +75,13 @@ func (d *dockerWaiter) retryWait(ctx context.Context, containerID string, fn fun
 func (d *dockerWaiter) wait(ctx context.Context, containerID string, stopFn func()) error {
 	statusCh, errCh := d.client.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
 	if stopFn != nil {
 		stopFn()
 	}
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-time.After(time.Second):
 			if stopFn != nil {
 				stopFn()
 			}

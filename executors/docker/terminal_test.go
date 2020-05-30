@@ -325,7 +325,7 @@ func TestTerminalConn_Start(t *testing.T) {
 				},
 			},
 			client: c,
-			waiter: wait.NewDockerWaiter(c),
+			waiter: wait.NewDockerKillWaiter(c),
 		},
 		buildContainer: &types.ContainerJSON{
 			ContainerJSONBase: &types.ContainerJSONBase{

@@ -975,7 +975,7 @@ func (e *executor) connectDocker() error {
 		Architecture:    e.info.Architecture,
 		OperatingSystem: e.info.OperatingSystem,
 	})
-	e.waiter = wait.NewDockerWaiter(e.client)
+	e.waiter = wait.NewDockerKillWaiter(e.client)
 
 	return err
 }

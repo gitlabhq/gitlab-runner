@@ -3,8 +3,8 @@ package wait
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/assert"
@@ -66,7 +66,7 @@ func TestDockerWaiter_Wait(t *testing.T) {
 				Return((<-chan container.ContainerWaitOKBody)(bodyCh), (<-chan error)(errCh)).
 				Times(tt.attempts)
 
-			waiter := NewDockerWaiter(mClient)
+			waiter := NewDockerKillWaiter(mClient)
 
 			err := waiter.Wait(context.Background(), "id")
 			assert.True(t, errors.Is(err, tt.expectedErr), "expected err %T, but got %T", tt.expectedErr, err)
@@ -78,16 +78,25 @@ func TestDockerWaiter_KillWait(t *testing.T) {
 	mClient := new(docker.MockClient)
 	defer mClient.AssertExpectations(t)
 
-	bodyCh := make(chan container.ContainerWaitOKBody, 1)
-	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).Return(
-		(<-chan container.ContainerWaitOKBody)(bodyCh), nil)
+	bodyCh := make(chan container.ContainerWaitOKBody)
+	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+		Return((<-chan container.ContainerWaitOKBody)(bodyCh), nil).
+		Once()
 
-	mClient.On("ContainerKill", mock.Anything, mock.Anything, mock.Anything).Return(nil).Twice()
+	var wg sync.WaitGroup
 
-	waiter := NewDockerWaiter(mClient)
+	wg.Add(2)
+	mClient.On("ContainerKill", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(mock.Arguments) {
+			wg.Done()
+		}).
+		Return(nil).
+		Twice()
+
+	waiter := NewDockerKillWaiter(mClient)
 
 	go func() {
-		time.Sleep(1500 * time.Millisecond)
+		wg.Wait()
 		bodyCh <- container.ContainerWaitOKBody{
 			StatusCode: 0,
 		}
@@ -104,7 +113,7 @@ func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	waiter := NewDockerWaiter(mClient)
+	waiter := NewDockerKillWaiter(mClient)
 
 	err := waiter.Wait(ctx, "id")
 	assert.True(t, errors.Is(err, context.Canceled), "expected err %T, but got %T", context.Canceled, err)
@@ -120,10 +129,10 @@ func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
 
 	bodyCh := make(chan container.ContainerWaitOKBody, 1)
 	bodyCh <- failedContainer
-	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).Return(
-		(<-chan container.ContainerWaitOKBody)(bodyCh), nil)
+	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+		Return((<-chan container.ContainerWaitOKBody)(bodyCh), nil)
 
-	waiter := NewDockerWaiter(mClient)
+	waiter := NewDockerKillWaiter(mClient)
 
 	err := waiter.Wait(context.Background(), "id")
 
