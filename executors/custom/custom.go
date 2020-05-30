@@ -187,7 +187,7 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 	}
 }
 
-// Traverses the defined job services and appends them to
+// createServicesEnv traverses the defined job services and appends them to
 // CI_JOB_SERVICES as json
 func createServicesEnv(e *executor, opts *[]string) {
 	if len(e.Build.Services) == 0 {
@@ -213,7 +213,6 @@ func createServicesEnv(e *executor, opts *[]string) {
 	}
 
 	jsonData, err := json.Marshal(services)
-
 	if err != nil {
 		logrus.Errorln(
 			"Custom executor: unable to create CI_JOB_SERVICES json.",
