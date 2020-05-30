@@ -2,19 +2,15 @@ package command
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strconv"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/process"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
 const (
@@ -22,36 +18,26 @@ const (
 	SystemFailureExitCode = 2
 )
 
-type CreateOptions struct {
-	Dir string
-	Env []string
-
-	Stdout io.Writer
-	Stderr io.Writer
-
-	Logger common.BuildLogger
-
-	GracefulKillTimeout time.Duration
-	ForceKillTimeout    time.Duration
-}
-
 type Command interface {
 	Run() error
 }
 
+var newProcessKillWaiter = process.NewOSKillWait
+var newCommander = process.NewOSCmd
+
 type command struct {
 	context context.Context
-	cmd     commander
+	cmd     process.Commander
 
 	waitCh chan error
 
-	logger common.BuildLogger
+	logger process.Logger
 
 	gracefulKillTimeout time.Duration
 	forceKillTimeout    time.Duration
 }
 
-func New(ctx context.Context, executable string, args []string, options CreateOptions) Command {
+func New(ctx context.Context, executable string, args []string, options process.CommandOptions) Command {
 	defaultVariables := map[string]string{
 		"TMPDIR":                          options.Dir,
 		api.BuildFailureExitCodeVariable:  strconv.Itoa(BuildFailureExitCode),
@@ -66,7 +52,7 @@ func New(ctx context.Context, executable string, args []string, options CreateOp
 
 	return &command{
 		context:             ctx,
-		cmd:                 newCmd(executable, args, options),
+		cmd:                 newCommander(executable, args, options),
 		waitCh:              make(chan error),
 		logger:              options.Logger,
 		gracefulKillTimeout: options.GracefulKillTimeout,
@@ -87,7 +73,8 @@ func (c *command) Run() error {
 		return err
 
 	case <-c.context.Done():
-		return c.killAndWait()
+		return newProcessKillWaiter(c.logger, c.gracefulKillTimeout, c.forceKillTimeout).
+			KillAndWait(c.cmd, c.waitCh)
 	}
 }
 
@@ -110,35 +97,4 @@ func (c *command) waitForCommand() {
 	}
 
 	c.waitCh <- err
-}
-
-var newProcessKiller = process.NewKiller
-
-func (c *command) killAndWait() error {
-	if c.cmd.Process() == nil {
-		return errors.New("process not started yet")
-	}
-
-	logger := c.logger.WithFields(logrus.Fields{
-		"PID": c.cmd.Process().Pid,
-	})
-
-	processKiller := newProcessKiller(logger, c.cmd.Process())
-	processKiller.Terminate()
-
-	select {
-	case err := <-c.waitCh:
-		return err
-
-	case <-time.After(c.gracefulKillTimeout):
-		processKiller.ForceKill()
-
-		select {
-		case err := <-c.waitCh:
-			return err
-
-		case <-time.After(c.forceKillTimeout):
-			return errors.New("failed to kill process, likely process is dormant")
-		}
-	}
 }

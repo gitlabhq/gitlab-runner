@@ -22,18 +22,23 @@ const (
 
 type testNetwork struct {
 	common.MockNetwork
-	downloadState  common.DownloadState
-	downloadCalled int
-	uploadState    common.UploadState
-	uploadCalled   int
-	uploadFormat   common.ArtifactFormat
-	uploadName     string
-	uploadType     string
-	uploadedFiles  []string
+	downloadState        common.DownloadState
+	downloadCalled       int
+	directDownloadCalled int
+	uploadState          common.UploadState
+	uploadCalled         int
+	uploadFormat         common.ArtifactFormat
+	uploadName           string
+	uploadType           string
+	uploadedFiles        []string
 }
 
 func (m *testNetwork) DownloadArtifacts(config common.JobCredentials, artifactsFile string, directDownload *bool) common.DownloadState {
 	m.downloadCalled++
+
+	if directDownload != nil && *directDownload {
+		m.directDownloadCalled++
+	}
 
 	if m.downloadState == common.DownloadSucceeded {
 		file, err := os.Create(artifactsFile)

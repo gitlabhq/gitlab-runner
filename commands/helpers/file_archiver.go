@@ -23,8 +23,9 @@ type fileArchiver struct {
 	Untracked bool     `long:"untracked" description:"Add git untracked files"`
 	Verbose   bool     `long:"verbose" description:"Detailed information"`
 
-	wd    string
-	files map[string]os.FileInfo
+	wd       string
+	files    map[string]os.FileInfo
+	excluded map[string]int64
 }
 
 func (c *fileArchiver) isChanged(modTime time.Time) bool {
@@ -61,18 +62,6 @@ func (c *fileArchiver) sortedFiles() []string {
 	return files
 }
 
-func (c *fileArchiver) add(path string) (err error) {
-	// Always use slashes
-	path = filepath.ToSlash(path)
-
-	// Check if file exist
-	info, err := os.Lstat(path)
-	if err == nil {
-		c.files[path] = info
-	}
-	return
-}
-
 func (c *fileArchiver) process(match string) bool {
 	var absolute, relative string
 	var err error
@@ -82,23 +71,62 @@ func (c *fileArchiver) process(match string) bool {
 		// Let's try to find a real relative path to an absolute from working directory
 		relative, err = filepath.Rel(c.wd, absolute)
 	}
+
 	if err == nil {
 		// Process path only if it lives in our build directory
 		if !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			excluded, rule := c.isExcluded(relative)
+			if excluded {
+				c.exclude(rule)
+
+				return false
+			}
+
 			err = c.add(relative)
 		} else {
 			err = errors.New("not supported: outside build directory")
 		}
 	}
+
 	if err == nil {
 		return true
-	} else if os.IsNotExist(err) {
+	}
+
+	if os.IsNotExist(err) {
 		// We hide the error that file doesn't exist
 		return false
 	}
 
 	logrus.Warningf("%s: %v", match, err)
 	return false
+}
+
+func (c *fileArchiver) isExcluded(path string) (bool, string) {
+	for _, pattern := range c.Exclude {
+		excluded, err := doublestar.PathMatch(pattern, path)
+		if err == nil && excluded {
+			return true, pattern
+		}
+	}
+
+	return false, ""
+}
+
+func (c *fileArchiver) exclude(rule string) {
+	c.excluded[rule]++
+}
+
+func (c *fileArchiver) add(path string) error {
+	// Always use slashes
+	path = filepath.ToSlash(path)
+
+	// Check if file exist
+	info, err := os.Lstat(path)
+	if err == nil {
+		c.files[path] = info
+	}
+
+	return err
 }
 
 func (c *fileArchiver) processPaths() {
@@ -171,12 +199,6 @@ func (c *fileArchiver) processUntracked() {
 }
 
 func (c *fileArchiver) enumerate() error {
-	// TODO, support for `artifacts/exclude` will be added in a separate merge
-	// request https://gitlab.com/gitlab-org/gitlab/-/issues/15122
-	if len(c.Exclude) > 0 {
-		return errors.New("artifacts/exclude is not supported yet")
-	}
-
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current working directory: %w", err)
@@ -184,8 +206,14 @@ func (c *fileArchiver) enumerate() error {
 
 	c.wd = wd
 	c.files = make(map[string]os.FileInfo)
+	c.excluded = make(map[string]int64)
 
 	c.processPaths()
 	c.processUntracked()
+
+	for path, count := range c.excluded {
+		logrus.Infof("%s: excluded %d files", path, count)
+	}
+
 	return nil
 }

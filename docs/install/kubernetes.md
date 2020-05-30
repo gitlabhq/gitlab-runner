@@ -3,7 +3,7 @@
 NOTE: **Note:**
 This chart has been tested on Google Kubernetes Engine and Azure Container Service.
 Other Kubernetes installations may work as well, if not please
-[open an issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/issues).
+[open an issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues).
 
 The official way of deploying a GitLab Runner instance into your
 Kubernetes cluster is by using the `gitlab-runner` Helm chart.
@@ -196,7 +196,7 @@ runners:
 
 ### Best practices for building containers without privileged mode
 
-Building containers within containers with Docker-in-docker requires docker privileged
+Building containers within containers with Docker-in-Docker requires Docker privileged
 mode. Google's [Kaniko](https://github.com/GoogleContainerTools/kaniko) is an alternative
 that works without privileged mode, and it has been tested on the GitLab Kubernetes Runner.
 

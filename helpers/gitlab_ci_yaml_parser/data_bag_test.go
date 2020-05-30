@@ -47,7 +47,7 @@ variables:
 `
 
 func (o *buildTest) Unmarshal(data string) error {
-	return json.Unmarshal([]byte(data), o)
+	return json.Unmarshal([]byte(data), o) // nolint:staticcheck
 }
 
 func TestDataBagUnmarshaling(t *testing.T) {

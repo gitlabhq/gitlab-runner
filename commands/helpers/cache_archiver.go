@@ -33,7 +33,7 @@ func (c *CacheArchiverCommand) getClient() *CacheClient {
 	return c.client
 }
 
-func (c *CacheArchiverCommand) upload() error {
+func (c *CacheArchiverCommand) upload(_ int) error {
 	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.CleanURL(c.URL))
 
 	file, err := os.Open(c.File)

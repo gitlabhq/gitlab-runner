@@ -253,24 +253,24 @@ if(!$?) { Exit $LASTEXITCODE }
 if(!$?) { Exit $LASTEXITCODE }
 ```
 
-### Running windows batch
+### Running Windows Batch
 
-You can execute batch scripts from PowerShell using `Start-Process
-"cmd.exe" "/c C:\Path\file.bat"` for old batch scripts not ported to
+You can execute Batch scripts from PowerShell using `Start-Process
+"cmd.exe" "/c C:\Path\file.bat"` for old Batch scripts not ported to
 PowerShell.
 
 ## Windows Batch
 
 NOTE: **Note:**
 In GitLab 11.11, we announced the [deprecation](https://about.gitlab.com/handbook/product/#deprecated)
-of the Windows batch executor, `cmd` shell, for the GitLab Runner in favor
+of the Windows Batch executor, `cmd` shell, for the GitLab Runner in favor
 of [PowerShell](#powershell). The `cmd` shell remains included in future versions
-of GitLab Runner. However, any new Runner feature is to be tested and supported
+of GitLab Runner however, any new Runner feature for Windows is to be tested and supported
 only for use with PowerShell. Only critical bugs and regressions to the `cmd` shell
 will be investigated and fixed.
 
-You can execute batch scripts from PowerShell using `Start-Process
-"cmd.exe" "/c C:\Path\file.bat"` for old batch scripts not ported to
+You can execute Batch scripts from PowerShell using `Start-Process
+"cmd.exe" "/c C:\Path\file.bat"` for old Batch scripts not ported to
 PowerShell.
 
 Windows Batch is the default shell used on Windows when
@@ -286,7 +286,7 @@ passing the file name to the following command:
 cmd /Q /C generated-windows-batch.cmd
 ```
 
-This is how an example batch script looks like:
+This is how an example Batch script looks like:
 
 ```batch
 @echo off

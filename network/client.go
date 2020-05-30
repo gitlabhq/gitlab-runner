@@ -123,10 +123,8 @@ func (n *client) addTLSCA(tlsConfig *tls.Config) {
 			} else {
 				logrus.Errorln("Failed to parse PEM in", n.caFile)
 			}
-		} else {
-			if !os.IsNotExist(err) {
-				logrus.Errorln("Failed to load", n.caFile, err)
-			}
+		} else if !os.IsNotExist(err) {
+			logrus.Errorln("Failed to load", n.caFile, err)
 		}
 	}
 }
@@ -140,10 +138,8 @@ func (n *client) addTLSAuth(tlsConfig *tls.Config) {
 		if err == nil {
 			tlsConfig.Certificates = []tls.Certificate{certificate}
 			tlsConfig.BuildNameToCertificate()
-		} else {
-			if !os.IsNotExist(err) {
-				logrus.Errorln("Failed to load", cert, key, err)
-			}
+		} else if !os.IsNotExist(err) {
+			logrus.Errorln("Failed to load", cert, key, err)
 		}
 	}
 }
@@ -280,13 +276,13 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 	return res.StatusCode, res.Status, res
 }
 
-func (n *client) getResponseTLSData(TLS *tls.ConnectionState) (ResponseTLSData, error) {
+func (n *client) getResponseTLSData(tls *tls.ConnectionState) (ResponseTLSData, error) {
 	TLSData := ResponseTLSData{
 		CertFile: n.certFile,
 		KeyFile:  n.keyFile,
 	}
 
-	caChain, err := n.buildCAChain(TLS)
+	caChain, err := n.buildCAChain(tls)
 	if err != nil {
 		return TLSData, fmt.Errorf("couldn't build CA Chain: %w", err)
 	}

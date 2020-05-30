@@ -34,7 +34,7 @@ pkg install go-1.13.8 gmake git mercurial
 
 ## 2. Install Docker Engine
 
-The Docker Engine is required to create pre-built image that is embedded into runner and loaded when using docker executor.
+The Docker Engine is required to create pre-built image that is embedded into runner and loaded when using Docker executor.
 
 To install Docker, follow the Docker [installation
 instructions](https://docs.docker.com/install/) for your OS.
@@ -179,7 +179,7 @@ The following are required:
 
 Which virtual machine to use depends on your use case:
 
-- The Windows Server machine has docker pre-installed and should always
+- The Windows Server machine has Docker pre-installed and should always
   be used when you are developing on Runner for Windows.
 - The Windows 10 machine is there for you to have a windows environment
   with a GUI which sometimes can help you debugging some Windows
@@ -203,9 +203,9 @@ you can use `cd $Env:RUNNER_SRC`.
 
 ## Troubleshooting
 
-### docker.go missing Asset symbol
+### `docker.go missing Asset symbol`
 
-This error happens due to missing executors/docker/bindata.go file that is generated from docker prebuilts.
+This error happens due to missing `executors/docker/bindata.go` file that is generated from Docker prebuilts.
 Which is especially tricky on Windows.
 
 Try to execute: `make deps docker`, if it doesn't help you can do that in steps:

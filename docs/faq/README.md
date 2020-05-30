@@ -52,7 +52,7 @@ or this article about [control and configure with systemd](https://docs.docker.c
 
 This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of NGINX (<https://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
 
-Upgrade your NGINX to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1031>
+Upgrade your NGINX to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1031>
 
 ### `warning: You appear to have cloned an empty repository.`
 
@@ -157,7 +157,7 @@ You can, but not sharing the same `config.toml` file.
 
 Running multiple instances of Runner using the same configuration file can cause
 unexpected and hard-to-debug behavior. In
-[GitLab Runner 12.2](https://gitlab.com/gitlab-org/gitlab-runner/issues/4407),
+[GitLab Runner 12.2](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4407),
 only a single instance of Runner can use a specific `config.toml` file at
 one time.
 
@@ -197,7 +197,7 @@ detect it if it is available and automatically make use of it.
 
 ### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
 
-You need to prepend `call` to your batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
+You need to prepend `call` to your Batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
 is a more complete example:
 
 ```yaml
@@ -205,7 +205,7 @@ before_script:
   - call C:\path\to\test.bat
 ```
 
-Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-runner/issues/1025).
+Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1025).
 
 ### How can I get colored output on the web terminal?
 
@@ -226,7 +226,7 @@ them to win32 calls when running on a Windows system (example: [Colorama](https:
 
 If your program is doing the above, then you need to disable that conversion for the CI builds so that the ANSI codes remain in the string.
 
-See issue [#332](https://gitlab.com/gitlab-org/gitlab-runner/issues/332) for more information.
+See issue [#332](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/332) for more information.
 
 ### `The service did not start due to a logon failure` error when starting service
 

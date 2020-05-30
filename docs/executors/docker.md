@@ -49,7 +49,7 @@ Docker executor:
 
 - Nanoserver cannot be used because it requires PowerShell 6 but GitLab
   requires PowerShell 5 (see
-  [#3291](https://gitlab.com/gitlab-org/gitlab-runner/issues/3291)). See
+  [#3291](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3291)). See
   also the list of [supported Windows
   versions](#supported-windows-versions).
 - Docker-in-Docker is not supported, since it's [not
@@ -59,7 +59,7 @@ Docker executor:
 - Host device mounting not supported.
 - When mounting a volume directory it has to exist, or Docker will fail
   to start the container, see
-  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/issues/3754) for
+  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3754) for
   additional detail.
 - `docker-windows` executor can be run only using GitLab Runner running
   on Windows.
@@ -67,7 +67,7 @@ Docker executor:
   Windows](https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
   are not supported, since they are still experimental. Read [the
   relevant
-  issue](https://gitlab.com/gitlab-org/gitlab-runner/issues/4373) for
+  issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
   more details.
 - Because of a [limitation in
   Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
@@ -107,7 +107,7 @@ NOTE: **Note:**
 There is a known issue when a new Runner is registered with `c:\\cache`
 as a source directory when passing the `--docker-volumes` or
 `DOCKER_VOLUMES` environment variable. For more details check
-[#4312](https://gitlab.com/gitlab-org/gitlab-runner/issues/4312)
+[#4312](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312)
 
 Below is an example of what the configuration for a simple Docker
 executor running Windows
@@ -132,7 +132,7 @@ section.
 
 You can use [services](https://docs.gitlab.com/ee/ci/services/) by
 enabling [network per-build](#network-per-build) networking mode.
-[Available](https://gitlab.com/gitlab-org/gitlab-runner/issues/1042)
+[Available](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042)
 since GitLab Runner 12.9.
 
 ## Workflow
@@ -159,7 +159,7 @@ local Docker Engine (list all images with `docker images`) or any image that
 can be found at [Docker Hub](https://hub.docker.com/). For more information about images and Docker
 Hub please read the [Docker Fundamentals](https://docs.docker.com/engine/understanding-docker/) documentation.
 
-In short, with `image` we refer to the docker image, which will be used to
+In short, with `image` we refer to the Docker image, which will be used to
 create a container on which your build will run.
 
 If you don't specify the namespace, Docker implies `library` which includes all
@@ -226,7 +226,7 @@ Linked containers will share their environment variables.
 
 ### Network per-build
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/issues/1042) in GitLab Runner 12.9.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042) in GitLab Runner 12.9.
 
 This mode will create and use a new user-defined Docker bridge network per build.
 [User-defined bridge networks](https://docs.docker.com/network/bridge/) are covered in detail in the Docker documentation.
@@ -384,7 +384,7 @@ Secure variables are only passed to the build container.
 ## Mounting a directory in RAM
 
 You can mount a path in RAM using tmpfs. This can speed up the time required to test if there is a lot of I/O related work, such as with databases.
-If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
+If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
 This is an example `config.toml` to mount the data directory for the official Mysql container in RAM.
 
 ```toml
@@ -402,7 +402,7 @@ This is an example `config.toml` to mount the data directory for the official My
 
 Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.
 
-See an issue: <https://gitlab.com/gitlab-org/gitlab-runner/issues/1520>.
+See an issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1520>.
 
 ### PostgreSQL service example
 
@@ -477,10 +477,10 @@ If you make the `/builds` to be **the host-bound storage**, your builds will be 
 The Docker executor supports a number of options that allows to fine tune the
 build container. One of these options is the [`privileged` mode](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
 
-### Use docker-in-docker with privileged mode
+### Use Docker-in-Docker with privileged mode
 
 The configured `privileged` flag is passed to the build container and all
-services, thus allowing to easily use the docker-in-docker approach.
+services, thus allowing to easily use the Docker-in-Docker approach.
 
 First, configure your Runner (`config.toml`) to run in `privileged` mode:
 
@@ -517,7 +517,7 @@ would run the build script in a custom environment, or in secure mode.
 
 You may think of creating a Docker image that uses an `ENTRYPOINT` that doesn't
 execute the build script, but does execute a predefined set of commands, for
-example to build the docker image from your directory. In that case, you can
+example to build the Docker image from your directory. In that case, you can
 run the build container in [privileged mode](#the-privileged-mode), and make
 the build environment of the Runner secure.
 
@@ -586,7 +586,7 @@ Now let's see how these policies work.
 
 The `never` pull policy disables images pulling completely. If you set the
 `pull_policy` parameter of a Runner to `never`, then users will be able
-to use only the images that have been manually pulled on the docker host
+to use only the images that have been manually pulled on the Docker host
 the Runner runs on.
 
 If an image cannot be found locally, then the Runner will fail the build
@@ -670,7 +670,7 @@ WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : 
 WARNING: Locally found image will be used instead.
 ```
 
-This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/issues/1905).
+This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1905).
 
 **When to use this pull policy?**
 

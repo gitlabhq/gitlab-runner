@@ -8,42 +8,44 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/process"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
-func newCommand(ctx context.Context, t *testing.T, executable string, options CreateOptions) (*mockCommander, *process.MockKiller, Command, func()) {
-	commanderMock := new(mockCommander)
-	processKillerMock := new(process.MockKiller)
+func newCommand(ctx context.Context, t *testing.T, executable string, options process.CommandOptions) (*process.MockCommander, *process.MockKillWaiter, Command, func()) {
+	commanderMock := new(process.MockCommander)
+	processKillWaiterMock := new(process.MockKillWaiter)
 
-	oldNewCmd := newCmd
-	oldNewProcessKiller := newProcessKiller
+	oldNewCmd := newCommander
+	oldNewProcessKillWaiter := newProcessKillWaiter
 
 	cleanup := func() {
-		newCmd = oldNewCmd
-		newProcessKiller = oldNewProcessKiller
+		newCommander = oldNewCmd
+		newProcessKillWaiter = oldNewProcessKillWaiter
 
 		commanderMock.AssertExpectations(t)
-		processKillerMock.AssertExpectations(t)
+		processKillWaiterMock.AssertExpectations(t)
 	}
 
-	newCmd = func(executable string, args []string, options CreateOptions) commander {
+	newCommander = func(string, []string, process.CommandOptions) process.Commander {
 		return commanderMock
 	}
 
-	newProcessKiller = func(logger common.BuildLogger, process *os.Process) process.Killer {
-		return processKillerMock
+	newProcessKillWaiter = func(process.Logger, time.Duration, time.Duration) process.KillWaiter {
+		return processKillWaiterMock
 	}
 
 	c := New(ctx, executable, []string{}, options)
 
-	return commanderMock, processKillerMock, c, cleanup
+	return commanderMock, processKillWaiterMock, c, cleanup
 }
 
 func TestCommand_Run(t *testing.T) {
+	testErr := errors.New("test error")
+
 	tests := map[string]struct {
 		cmdStartErr       error
 		cmdWaitErr        error
@@ -75,14 +77,10 @@ func TestCommand_Run(t *testing.T) {
 			expectedError:     "unknown Custom executor executable exit code 255; executable execution terminated with: exit status 0",
 			expectedErrorType: &ErrUnknownFailure{},
 		},
-		"command times out - nil process": {
-			contextClosed: true,
-			expectedError: "process not started yet",
-		},
 		"command times out": {
 			contextClosed: true,
 			process:       &os.Process{Pid: 1234},
-			expectedError: "failed to kill process, likely process is dormant",
+			expectedError: testErr.Error(),
 		},
 	}
 
@@ -92,13 +90,13 @@ func TestCommand_Run(t *testing.T) {
 			ctx, ctxCancel := context.WithCancel(context.Background())
 			defer ctxCancel()
 
-			options := CreateOptions{
-				Logger:              common.NewBuildLogger(nil, logrus.NewEntry(logrus.New())),
+			options := process.CommandOptions{
+				Logger:              new(process.MockLogger),
 				GracefulKillTimeout: 100 * time.Millisecond,
 				ForceKillTimeout:    100 * time.Millisecond,
 			}
 
-			commanderMock, processKillerMock, c, cleanup := newCommand(ctx, t, "exec", options)
+			commanderMock, processKillWaiterMock, c, cleanup := newCommand(ctx, t, "exec", options)
 			defer cleanup()
 
 			commanderMock.On("Start").
@@ -120,13 +118,10 @@ func TestCommand_Run(t *testing.T) {
 
 			if tt.contextClosed {
 				ctxCancel()
-				commanderMock.On("Process").
-					Return(tt.process)
-
-				if tt.process != nil {
-					processKillerMock.On("Terminate")
-					processKillerMock.On("ForceKill")
-				}
+				processKillWaiterMock.
+					On("KillAndWait", commanderMock, mock.Anything).
+					Return(testErr).
+					Once()
 			}
 
 			err := c.Run()

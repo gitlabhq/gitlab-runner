@@ -51,8 +51,8 @@ type defaultBuilder struct {
 	logger logrus.FieldLogger
 }
 
-func (b *defaultBuilder) BuildChainFromTLSConnectionState(TLS *tls.ConnectionState) error {
-	for _, verifiedChain := range TLS.VerifiedChains {
+func (b *defaultBuilder) BuildChainFromTLSConnectionState(tls *tls.ConnectionState) error {
+	for _, verifiedChain := range tls.VerifiedChains {
 		b.logger.
 			WithField("chain-leaf", fmt.Sprintf("%v", verifiedChain)).
 			Debug("Processing chain")

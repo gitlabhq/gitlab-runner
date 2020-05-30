@@ -29,10 +29,10 @@ func (e retryableErr) Error() string {
 	return e.err.Error()
 }
 
-func (r *retryHelper) doRetry(handler func() error) error {
-	err := handler()
+func (r *retryHelper) doRetry(handler func(int) error) error {
+	err := handler(0)
 
-	for i := 0; i < r.Retry; i++ {
+	for retry := 1; retry <= r.Retry; retry++ {
 		if _, ok := err.(retryableErr); !ok {
 			return err
 		}
@@ -40,7 +40,7 @@ func (r *retryHelper) doRetry(handler func() error) error {
 		time.Sleep(r.RetryTime)
 		logrus.WithError(err).Warningln("Retrying...")
 
-		err = handler()
+		err = handler(retry)
 	}
 
 	return err

@@ -243,6 +243,8 @@ For example:
 
 ```toml
 [runners.machine]
+  MachineName = "auto-scale-%s"
+  MachineDriver = "digitalocean"
   IdleCount = 10
   IdleTime = 1800
   [[runners.machine.autoscaling]]
@@ -263,7 +265,7 @@ During the rest of the time the values will be taken from the defaults in the ro
 NOTE: **Note:**
 The 59th second of the last
 minute in any period that you specify will *not* be considered part of the
-period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/issues/2170).
+period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2170).
 
 You can specify the `Timezone` of a period, for example `"Australia/Sydney"`. If you don't,
 the system setting of the host machine of every runner will be used. This
