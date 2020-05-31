@@ -228,23 +228,23 @@ release_docker_helper_images() {
     import out/helper-images/prebuilt-arm.tar.xz "${helper_image_arm}"
     import out/helper-images/prebuilt-arm64.tar.xz "${helper_image_arm64}"
 
-    tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_version}"
     tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
-    tag_latest "${helper_image_arm}" "${helper_image_arm_version}"
     tag_latest "${helper_image_arm}" "${helper_image_arm_latest}"
-    tag_latest "${helper_image_arm64}" "${helper_image_arm64_version}"
     tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
+    tag "${helper_image_x86_64}" "${helper_image_x86_64_version}"
+    tag "${helper_image_arm}" "${helper_image_arm_version}"
+    tag "${helper_image_arm64}" "${helper_image_arm64_version}"
 
     push "${helper_image_x86_64}"
     push "${helper_image_arm}"
     push "${helper_image_arm64}"
 
     push_latest "${helper_image_x86_64_latest}"
-    push_latest "${helper_image_x86_64_version}"
     push_latest "${helper_image_arm_latest}"
-    push_latest "${helper_image_arm_version}"
     push_latest "${helper_image_arm64_latest}"
-    push_latest "${helper_image_arm64_version}"
+    push "${helper_image_x86_64_version}"
+    push "${helper_image_arm_version}"
+    push "${helper_image_arm64_version}"
 }
 
 login() {
