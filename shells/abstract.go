@@ -632,14 +632,11 @@ func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScr
 	skipUploadArtifacts := true
 
 	for _, artifact := range info.Build.Artifacts {
-		if onSuccess {
-			if !artifact.When.OnSuccess() {
-				continue
-			}
-		} else {
-			if !artifact.When.OnFailure() {
-				continue
-			}
+		if onSuccess && !artifact.When.OnSuccess() {
+			continue
+		}
+		if !onSuccess && !artifact.When.OnFailure() {
+			continue
 		}
 
 		if b.writeUploadArtifact(w, info, artifact) {
