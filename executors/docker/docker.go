@@ -428,21 +428,7 @@ func (e *executor) createService(
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
 
-	hostConfig := &container.HostConfig{
-		DNS:           e.Config.Docker.DNS,
-		DNSSearch:     e.Config.Docker.DNSSearch,
-		RestartPolicy: neverRestartPolicy,
-		ExtraHosts:    e.Config.Docker.ExtraHosts,
-		Privileged:    e.Config.Docker.Privileged,
-		NetworkMode:   e.networkMode,
-		Binds:         e.volumesManager.Binds(),
-		ShmSize:       e.Config.Docker.ShmSize,
-		Tmpfs:         e.Config.Docker.ServicesTmpfs,
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-	}
-
+	hostConfig := e.createHostConfigForService()
 	networkConfig := e.networkConfig(linkNames)
 
 	e.Debugln("Creating service container", containerName, "...")
@@ -459,6 +445,23 @@ func (e *executor) createService(
 	}
 
 	return fakeContainer(resp.ID, containerName), nil
+}
+
+func (e *executor) createHostConfigForService() *container.HostConfig {
+	return &container.HostConfig{
+		DNS:           e.Config.Docker.DNS,
+		DNSSearch:     e.Config.Docker.DNSSearch,
+		RestartPolicy: neverRestartPolicy,
+		ExtraHosts:    e.Config.Docker.ExtraHosts,
+		Privileged:    e.Config.Docker.Privileged,
+		NetworkMode:   e.networkMode,
+		Binds:         e.volumesManager.Binds(),
+		ShmSize:       e.Config.Docker.ShmSize,
+		Tmpfs:         e.Config.Docker.ServicesTmpfs,
+		LogConfig: container.LogConfig{
+			Type: "json-file",
+		},
+	}
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
