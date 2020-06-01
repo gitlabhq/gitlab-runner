@@ -154,7 +154,7 @@ func (c *fileArchiver) processPaths() {
 		if found == 0 {
 			logrus.Warningf("%s: no matching files", path)
 		} else {
-			logrus.Infof("%s: found %d matching files", path, found)
+			logrus.Infof("%s: found %d matching files and directories", path, found)
 		}
 	}
 }
