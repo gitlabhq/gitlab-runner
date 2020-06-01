@@ -716,13 +716,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.CurrentState = BuildRunStatePending
 
-	defer func() {
-		b.setTraceStatus(trace, err)
-
-		if executor != nil {
-			executor.Cleanup()
-		}
-	}()
+	defer func() { b.cleanupBuild(executor, trace, err) }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
@@ -774,6 +768,14 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	}
 
 	return err
+}
+
+func (b *Build) cleanupBuild(executor Executor, trace JobTrace, err error) {
+	b.setTraceStatus(trace, err)
+
+	if executor != nil {
+		executor.Cleanup()
+	}
 }
 
 func (b *Build) String() string {
