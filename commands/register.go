@@ -269,6 +269,7 @@ func (s *RegisterCommand) askRunner() {
 	}
 }
 
+//nolint:funlen
 func (s *RegisterCommand) askExecutorOptions() {
 	kubernetes := s.Kubernetes
 	machine := s.Machine
