@@ -16,8 +16,6 @@
   script:
   - source ci/touch_make_dependencies
   - make release_docker_images
-  tags:
-  - release
 
 .build_windows_docker_images:
   extends:
@@ -42,8 +40,6 @@
   before_script:
   - unset GPG_KEY
   - source ci/touch_make_dependencies
-  tags:
-  - release
 
 .release_s3:
   extends:
