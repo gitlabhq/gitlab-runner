@@ -187,8 +187,6 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 	}
 }
 
-// createServicesEnv traverses the defined job services and appends them to
-// CI_JOB_SERVICES as json
 func createServicesEnv(e *executor, opts *[]string) {
 	if len(e.Build.Services) == 0 {
 		return

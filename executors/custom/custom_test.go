@@ -513,6 +513,8 @@ func TestExecutor_Run(t *testing.T) {
 }
 
 func TestExecutor_ServicesEnv(t *testing.T) {
+  const CIJobServicesEnv = "CI_JOB_SERVICES"
+
 	runnerConfig := getRunnerConfig(&common.CustomConfig{
 		RunExec:     "bash",
 		PrepareExec: "echo",
@@ -529,7 +531,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
-				if pair[0] == "CI_JOB_SERVICES" {
+				if pair[0] == CIJobServicesEnv {
 					assert.Equal(t, expectedServices, pair[1])
 					break
 				}
@@ -543,7 +545,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
-				if pair[0] == "CI_JOB_SERVICES" {
+				if pair[0] == CIJobServicesEnv {
 					servicesEnvExists = true
 					break
 				}
