@@ -67,9 +67,10 @@ func (c *GitLabCiYamlParser) prepareJobInfo(job *common.JobResponse) (err error)
 }
 
 func (c *GitLabCiYamlParser) getCommands(commands interface{}) (common.StepScript, error) {
-	if lines, ok := commands.([]interface{}); ok {
+	switch t := commands.(type) {
+	case []interface{}:
 		var steps common.StepScript
-		for _, line := range lines {
+		for _, line := range t {
 			if lineText, ok := line.(string); ok {
 				steps = append(steps, lineText)
 			} else {
@@ -77,10 +78,12 @@ func (c *GitLabCiYamlParser) getCommands(commands interface{}) (common.StepScrip
 			}
 		}
 		return steps, nil
-	} else if text, ok := commands.(string); ok {
-		return common.StepScript(strings.Split(text, "\n")), nil
-	} else if commands != nil {
-		return common.StepScript{}, errors.New("unsupported script")
+	case string:
+		return strings.Split(t, "\n"), nil
+	default:
+		if commands != nil {
+			return common.StepScript{}, errors.New("unsupported script")
+		}
 	}
 
 	return common.StepScript{}, nil

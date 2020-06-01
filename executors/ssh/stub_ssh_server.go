@@ -82,7 +82,7 @@ func (s *StubSSHServer) mainLoop(listener net.Listener) {
 			return
 		}
 
-		//upgrade to ssh connection
+		// upgrade to ssh connection
 		cryptoSSH.NewServerConn(conn, s.Config)
 		// This is enough just for handling incoming connections
 	}

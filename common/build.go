@@ -860,20 +860,22 @@ func (b *Build) GetTLSVariables(caFile, certFile, keyFile string) JobVariables {
 	}
 
 	if b.TLSAuthCert != "" && b.TLSAuthKey != "" {
-		variables = append(variables, JobVariable{
-			Key:      certFile,
-			Value:    b.TLSAuthCert,
-			Public:   true,
-			Internal: true,
-			File:     true,
-		})
-
-		variables = append(variables, JobVariable{
-			Key:      keyFile,
-			Value:    b.TLSAuthKey,
-			Internal: true,
-			File:     true,
-		})
+		variables = append(
+			variables,
+			JobVariable{
+				Key:      certFile,
+				Value:    b.TLSAuthCert,
+				Public:   true,
+				Internal: true,
+				File:     true,
+			},
+			JobVariable{
+				Key:      keyFile,
+				Value:    b.TLSAuthKey,
+				Internal: true,
+				File:     true,
+			},
+		)
 	}
 
 	return variables
@@ -961,7 +963,7 @@ func (b *Build) GetGitCheckout() bool {
 	}
 
 	strCheckout := b.GetAllVariables().Get("GIT_CHECKOUT")
-	if len(strCheckout) == 0 {
+	if strCheckout == "" {
 		return true
 	}
 

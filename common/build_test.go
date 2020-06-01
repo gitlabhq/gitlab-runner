@@ -589,9 +589,7 @@ func TestSharedEnvVariables(t *testing.T) {
 			present := "CI_SHARED_ENVIRONMENT=true"
 			absent := "CI_DISPOSABLE_ENVIRONMENT=true"
 			if !shared {
-				tmp := present
-				present = absent
-				absent = tmp
+				present, absent = absent, present
 			}
 
 			assert.Contains(vars, present)

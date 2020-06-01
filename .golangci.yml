@@ -19,8 +19,44 @@ linters-settings:
     min-len: 3
     min-occurrences: 3
   gocritic:
-    disabled-checks:
-      - appendAssign
+    enabled-checks:
+      - appendCombine
+      - badCall
+      - badCond
+      - boolExprSimplify
+      - codegenComment
+      - commentFormatting
+      - commentedOutCode
+      - deprecatedComment
+      - dupImport
+      - emptyFallthrough
+      - emptyStringTest
+      - equalFold
+      - evalOrder
+      - exitAfterDefer
+      - flagName
+      - hexLiteral
+      - indexAlloc
+      - initClause
+      - methodExprCall
+      - nestingReduce
+      - newDeref
+      - nilValReturn
+      - offBy1
+      - ptrToRefParam
+      - rangeExprCopy
+      - regexpPattern
+      - sloppyReassign
+      - stringXbytes
+      - truncateCmp
+      - typeAssertChain
+      - typeUnparen
+      - underef
+      - unnecessaryBlock
+      - valSwap
+      - weakCond
+      - wrapperFunc
+      - yodaStyleExpr
   gocyclo:
     min-complexity: 10
   govet:

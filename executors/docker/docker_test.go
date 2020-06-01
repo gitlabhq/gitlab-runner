@@ -149,7 +149,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	servicePart := fmt.Sprintf("-%s-0", strings.Replace(serviceName, "/", "__", -1))
+	servicePart := fmt.Sprintf("-%s-0", strings.ReplaceAll(serviceName, "/", "__"))
 	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+" + servicePart)
 	require.NoError(t, err)
 

@@ -132,9 +132,9 @@ func ShellEscape(str string) string {
 }
 
 func ToBackslash(path string) string {
-	return strings.Replace(path, "/", "\\", -1)
+	return strings.ReplaceAll(path, "/", "\\")
 }
 
 func ToSlash(path string) string {
-	return strings.Replace(path, "\\", "/", -1)
+	return strings.ReplaceAll(path, "\\", "/")
 }

@@ -151,7 +151,7 @@ func newKillerWithLoggerAndCommand(
 func prepareTestBinary(t *testing.T) string {
 	t.Helper()
 
-	dir, err := ioutil.TempDir("", strings.Replace(t.Name(), "/", "", -1))
+	dir, err := ioutil.TempDir("", strings.ReplaceAll(t.Name(), "/", ""))
 	require.NoError(t, err)
 	binaryPath := filepath.Join(dir, strconv.FormatInt(time.Now().UnixNano(), 10))
 

@@ -32,19 +32,19 @@ func batchQuote(text string) string {
 
 func batchEscapeInsideQuotedString(text string) string {
 	// taken from: http://www.robvanderwoude.com/escapechars.php
-	text = strings.Replace(text, "^", "^^", -1)
-	text = strings.Replace(text, "!", "^^!", -1)
-	text = strings.Replace(text, "&", "^&", -1)
-	text = strings.Replace(text, "<", "^<", -1)
-	text = strings.Replace(text, ">", "^>", -1)
-	text = strings.Replace(text, "|", "^|", -1)
-	text = strings.Replace(text, "\r", "", -1)
-	text = strings.Replace(text, "\n", "!nl!", -1)
+	text = strings.ReplaceAll(text, "^", "^^")
+	text = strings.ReplaceAll(text, "!", "^^!")
+	text = strings.ReplaceAll(text, "&", "^&")
+	text = strings.ReplaceAll(text, "<", "^<")
+	text = strings.ReplaceAll(text, ">", "^>")
+	text = strings.ReplaceAll(text, "|", "^|")
+	text = strings.ReplaceAll(text, "\r", "")
+	text = strings.ReplaceAll(text, "\n", "!nl!")
 	return text
 }
 
 func batchEscapeVariable(text string) string {
-	text = strings.Replace(text, "%", "%%", -1)
+	text = strings.ReplaceAll(text, "%", "%%")
 	text = batchEscape(text)
 	return text
 }
@@ -52,8 +52,8 @@ func batchEscapeVariable(text string) string {
 // If not inside a quoted string (e.g., echo text), escape more things
 func batchEscape(text string) string {
 	text = batchEscapeInsideQuotedString(text)
-	text = strings.Replace(text, "(", "^(", -1)
-	text = strings.Replace(text, ")", "^)", -1)
+	text = strings.ReplaceAll(text, "(", "^(")
+	text = strings.ReplaceAll(text, ")", "^)")
 	return text
 }
 
@@ -93,7 +93,7 @@ func (b *CmdWriter) checkErrorLevel() {
 
 func (b *CmdWriter) updateErrLevelCheck(errCheck string) string {
 	if b.disableDelayedErrorLevelExpansion {
-		return strings.Replace(errCheck, "!", "%", -1)
+		return strings.ReplaceAll(errCheck, "!", "%")
 	}
 
 	return errCheck
@@ -269,7 +269,7 @@ func (b *CmdShell) GenerateScript(
 	}
 
 	if buildStage == common.BuildStagePrepare {
-		if len(info.Build.Hostname) != 0 {
+		if info.Build.Hostname != "" {
 			w.Line("echo Running on %COMPUTERNAME% via " + batchEscape(info.Build.Hostname) + "...")
 		} else {
 			w.Line("echo Running on %COMPUTERNAME%...")

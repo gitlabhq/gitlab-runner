@@ -234,7 +234,7 @@ func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*buf
 // The line doesn't include the new line character.
 // Lines without offset are acceptable and return -1 for offset.
 func (l *kubernetesLogProcessor) parseLogLine(line string) (int64, string) {
-	if len(line) == 0 {
+	if line == "" {
 		return -1, ""
 	}
 

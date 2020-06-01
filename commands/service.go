@@ -162,32 +162,37 @@ func getFlags() []cli.Flag {
 
 func getInstallFlags() []cli.Flag {
 	installFlags := getFlags()
-	installFlags = append(installFlags, cli.StringFlag{
-		Name:  "working-directory, d",
-		Value: helpers.GetCurrentWorkingDirectory(),
-		Usage: "Specify custom root directory where all data are stored",
-	})
-	installFlags = append(installFlags, cli.StringFlag{
-		Name:  "config, c",
-		Value: getDefaultConfigFile(),
-		Usage: "Specify custom config file",
-	})
-	installFlags = append(installFlags, cli.BoolFlag{
-		Name:  "syslog",
-		Usage: "Setup system logging integration",
-	})
+	installFlags = append(
+		installFlags,
+		cli.StringFlag{
+			Name:  "working-directory, d",
+			Value: helpers.GetCurrentWorkingDirectory(),
+			Usage: "Specify custom root directory where all data are stored",
+		},
+		cli.StringFlag{
+			Name:  "config, c",
+			Value: getDefaultConfigFile(),
+			Usage: "Specify custom config file",
+		},
+		cli.BoolFlag{
+			Name:  "syslog",
+			Usage: "Setup system logging integration",
+		},
+	)
 
 	if runtime.GOOS == osTypeWindows {
-		installFlags = append(installFlags, cli.StringFlag{
-			Name:  "user, u",
-			Value: "",
-			Usage: "Specify user-name to secure the runner",
-		})
-		installFlags = append(installFlags, cli.StringFlag{
-			Name:  "password, p",
-			Value: "",
-			Usage: "Specify user password to install service (required)",
-		})
+		installFlags = append(
+			installFlags,
+			cli.StringFlag{
+				Name:  "user, u",
+				Value: "",
+				Usage: "Specify user-name to secure the runner",
+			},
+			cli.StringFlag{
+				Name:  "password, p",
+				Value: "",
+				Usage: "Specify user password to install service (required)",
+			})
 	} else if os.Getuid() == 0 {
 		installFlags = append(installFlags, cli.StringFlag{
 			Name:  "user, u",

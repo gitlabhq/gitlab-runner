@@ -93,8 +93,8 @@ func (mr *MetricsReferee) queryMetrics(
 ) []model.SamplePair {
 	interval := fmt.Sprintf("%.0fs", mr.queryInterval.Seconds())
 
-	query = strings.Replace(query, "{selector}", mr.selector, -1)
-	query = strings.Replace(query, "{interval}", interval, -1)
+	query = strings.ReplaceAll(query, "{selector}", mr.selector)
+	query = strings.ReplaceAll(query, "{interval}", interval)
 
 	queryLogger := mr.logger.WithFields(logrus.Fields{
 		"query": query,

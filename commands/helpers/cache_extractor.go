@@ -106,7 +106,7 @@ func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
 func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 	log.SetRunnerFormatter()
 
-	if len(c.File) == 0 {
+	if c.File == "" {
 		logrus.Fatalln("Missing cache file")
 	}
 

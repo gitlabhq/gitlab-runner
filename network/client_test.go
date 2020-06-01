@@ -56,7 +56,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 
 func writeTLSCertificate(s *httptest.Server, file string) error {
 	c := s.TLS.Certificates[0]
-	if c.Certificate == nil || c.Certificate[0] == nil {
+	if len(c.Certificate) == 0 || c.Certificate[0] == nil {
 		return errors.New("no predefined certificate")
 	}
 
@@ -70,7 +70,7 @@ func writeTLSCertificate(s *httptest.Server, file string) error {
 
 func writeTLSKeyPair(s *httptest.Server, certFile string, keyFile string) error {
 	c := s.TLS.Certificates[0]
-	if c.Certificate == nil || c.Certificate[0] == nil {
+	if len(c.Certificate) == 0 || c.Certificate[0] == nil {
 		return errors.New("no predefined certificate")
 	}
 

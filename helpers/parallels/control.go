@@ -228,7 +228,7 @@ func IPAddress(mac string) (string, error) {
 		}
 	}
 
-	if len(mostRecentIP) == 0 {
+	if mostRecentIP == "" {
 		return "", fmt.Errorf("IP lease not found for MAC address %s in: %s", mac, dhcpLeases)
 	}
 
