@@ -1,3 +1,13 @@
+## v12.9.1 (2020-06-01)
+
+### Bug fixes
+
+- Fix missing logs from docker executor !2101
+
+### Maintenance
+
+- Change license management to use rules !2096
+
 ## v12.9.0 (2020-03-20)
 
 ### New features
