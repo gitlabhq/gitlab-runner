@@ -67,35 +67,30 @@ func (m *DataBag) Decode(result interface{}, keys ...string) error {
 }
 
 func convertMapToStringMap(in interface{}) (out interface{}, err error) {
-	mapString, ok := in.(map[string]interface{})
-	if ok {
-		for k, v := range mapString {
-			mapString[k], err = convertMapToStringMap(v)
-			if err != nil {
-				return
-			}
-		}
-		return mapString, nil
-	}
+	mapString := make(map[string]interface{})
 
-	mapInterface, ok := in.(map[interface{}]interface{})
-	if ok {
-		mapString := make(map[string]interface{})
-		for k, v := range mapInterface {
+	switch convMap := in.(type) {
+	case map[string]interface{}:
+		mapString = convMap
+	case map[interface{}]interface{}:
+		for k, v := range convMap {
 			key, ok := k.(string)
 			if !ok {
 				return nil, fmt.Errorf("failed to convert %v to string", k)
 			}
-
-			mapString[key], err = convertMapToStringMap(v)
-			if err != nil {
-				return
-			}
+			mapString[key] = v
 		}
-		return mapString, nil
+	default:
+		return in, nil
 	}
 
-	return in, nil
+	for k, v := range mapString {
+		mapString[k], err = convertMapToStringMap(v)
+		if err != nil {
+			return
+		}
+	}
+	return mapString, nil
 }
 
 func (m *DataBag) Sanitize() (err error) {
