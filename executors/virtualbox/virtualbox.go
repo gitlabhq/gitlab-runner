@@ -154,42 +154,21 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	if s.BuildShell.PassFile {
-		return errors.New("virtualbox doesn't support shells that require script file")
-	}
-
-	if s.Config.SSH == nil {
-		return errors.New("missing SSH config")
-	}
-
-	if s.Config.VirtualBox == nil {
-		return errors.New("missing VirtualBox configuration")
-	}
-
-	if s.Config.VirtualBox.BaseName == "" {
-		return errors.New("missing BaseName setting from VirtualBox configuration")
-	}
-
-	version, err := vbox.Version()
+	err = s.validateConfig()
 	if err != nil {
 		return err
 	}
 
-	s.Println("Using VirtualBox version", version, "executor...")
+	err = s.printVersion()
+	if err != nil {
+		return err
+	}
 
-	if s.Config.VirtualBox.DisableSnapshots {
-		s.vmName = s.Config.VirtualBox.BaseName + "-" + s.Build.ProjectUniqueName()
-		if vbox.Exist(s.vmName) {
-			s.Debugln("Deleting old VM...")
-			vbox.Kill(s.vmName)
-			vbox.Delete(s.vmName)
-			vbox.Unregister(s.vmName)
-		}
-	} else {
-		s.vmName = fmt.Sprintf("%s-runner-%s-concurrent-%d",
-			s.Config.VirtualBox.BaseName,
-			s.Build.Runner.ShortDescription(),
-			s.Build.RunnerID)
+	s.vmName = s.getVMName()
+
+	if s.Config.VirtualBox.DisableSnapshots && vbox.Exist(s.vmName) {
+		s.Debugln("Deleting old VM...")
+		killAndUnregisterVM(s.vmName)
 	}
 
 	if vbox.Exist(s.vmName) {
@@ -197,9 +176,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		err = s.restoreFromSnapshot()
 		if err != nil {
 			s.Println("Previous VM failed. Deleting, because", err)
-			vbox.Kill(s.vmName)
-			vbox.Delete(s.vmName)
-			vbox.Unregister(s.vmName)
+			killAndUnregisterVM(s.vmName)
 		}
 	}
 
@@ -219,6 +196,61 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		}
 	}
 
+	err = s.ensureVMStarted()
+	if err != nil {
+		return err
+	}
+
+	return s.sshConnect()
+}
+
+func (s *executor) printVersion() error {
+	version, err := vbox.Version()
+	if err != nil {
+		return err
+	}
+
+	s.Println("Using VirtualBox version", version, "executor...")
+	return nil
+}
+
+func (s *executor) validateConfig() error {
+	if s.BuildShell.PassFile {
+		return errors.New("virtualbox doesn't support shells that require script file")
+	}
+
+	if s.Config.SSH == nil {
+		return errors.New("missing SSH config")
+	}
+
+	if s.Config.VirtualBox == nil {
+		return errors.New("missing VirtualBox configuration")
+	}
+
+	if s.Config.VirtualBox.BaseName == "" {
+		return errors.New("missing BaseName setting from VirtualBox configuration")
+	}
+	return nil
+}
+
+func (s *executor) getVMName() string {
+	if s.Config.VirtualBox.DisableSnapshots {
+		return s.Config.VirtualBox.BaseName + "-" + s.Build.ProjectUniqueName()
+	}
+
+	return fmt.Sprintf("%s-runner-%s-concurrent-%d",
+		s.Config.VirtualBox.BaseName,
+		s.Build.Runner.ShortDescription(),
+		s.Build.RunnerID)
+}
+
+func killAndUnregisterVM(vmName string) {
+	vbox.Kill(vmName)
+	vbox.Delete(vmName)
+	vbox.Unregister(vmName)
+}
+
+func (s *executor) ensureVMStarted() error {
 	s.Debugln("Checking VM status...")
 	status, err := vbox.Status(s.vmName)
 	if err != nil {
@@ -255,7 +287,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	s.provisioned = true
+	return nil
+}
 
+func (s *executor) sshConnect() error {
 	s.Println("Starting SSH command...")
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
@@ -266,11 +301,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.sshCommand.Host = "localhost"
 
 	s.Debugln("Connecting to SSH server...")
-	err = s.sshCommand.Connect()
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.sshCommand.Connect()
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {

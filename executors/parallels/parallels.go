@@ -175,28 +175,15 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	if s.BuildShell.PassFile {
-		return errors.New("parallels doesn't support shells that require script file")
-	}
-
-	if s.Config.SSH == nil {
-		return errors.New("missing SSH configuration")
-	}
-
-	if s.Config.Parallels == nil {
-		return errors.New("missing Parallels configuration")
-	}
-
-	if s.Config.Parallels.BaseName == "" {
-		return errors.New("missing BaseName setting from Parallels config")
-	}
-
-	version, err := prl.Version()
+	err = s.validateConfig()
 	if err != nil {
 		return err
 	}
 
-	s.Println("Using Parallels", version, "executor...")
+	err = s.printVersion()
+	if err != nil {
+		return err
+	}
 
 	// remove invalid VM (removed?)
 	vmStatus, _ := prl.Status(s.vmName)
@@ -204,19 +191,11 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		prl.Unregister(s.vmName)
 	}
 
-	if s.Config.Parallels.DisableSnapshots {
-		s.vmName = s.Config.Parallels.BaseName + "-" + s.Build.ProjectUniqueName()
-		if prl.Exist(s.vmName) {
-			s.Debugln("Deleting old VM...")
-			prl.Kill(s.vmName)
-			prl.Delete(s.vmName)
-			prl.Unregister(s.vmName)
-		}
-	} else {
-		s.vmName = fmt.Sprintf("%s-runner-%s-concurrent-%d",
-			s.Config.Parallels.BaseName,
-			s.Build.Runner.ShortDescription(),
-			s.Build.RunnerID)
+	s.vmName = s.getVMName()
+
+	if s.Config.Parallels.DisableSnapshots && prl.Exist(s.vmName) {
+		s.Debugln("Deleting old VM...")
+		killAndUnregisterVM(s.vmName)
 	}
 
 	if prl.Exist(s.vmName) {
@@ -224,9 +203,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		err = s.restoreFromSnapshot()
 		if err != nil {
 			s.Println("Previous VM failed. Deleting, because", err)
-			prl.Kill(s.vmName)
-			prl.Delete(s.vmName)
-			prl.Unregister(s.vmName)
+			killAndUnregisterVM(s.vmName)
 		}
 	}
 
@@ -246,6 +223,61 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		}
 	}
 
+	err = s.ensureVMStarted()
+	if err != nil {
+		return err
+	}
+
+	return s.sshConnect()
+}
+
+func (s *executor) printVersion() error {
+	version, err := prl.Version()
+	if err != nil {
+		return err
+	}
+
+	s.Println("Using Parallels", version, "executor...")
+	return nil
+}
+
+func (s *executor) validateConfig() error {
+	if s.BuildShell.PassFile {
+		return errors.New("parallels doesn't support shells that require script file")
+	}
+
+	if s.Config.SSH == nil {
+		return errors.New("missing SSH configuration")
+	}
+
+	if s.Config.Parallels == nil {
+		return errors.New("missing Parallels configuration")
+	}
+
+	if s.Config.Parallels.BaseName == "" {
+		return errors.New("missing BaseName setting from Parallels config")
+	}
+	return nil
+}
+
+func (s *executor) getVMName() string {
+	if s.Config.Parallels.DisableSnapshots {
+		return s.Config.Parallels.BaseName + "-" + s.Build.ProjectUniqueName()
+	}
+
+	return fmt.Sprintf("%s-runner-%s-concurrent-%d",
+		s.Config.Parallels.BaseName,
+		s.Build.Runner.ShortDescription(),
+		s.Build.RunnerID)
+}
+
+func killAndUnregisterVM(vmName string) {
+	_ = prl.Kill(vmName)
+	_ = prl.Delete(vmName)
+	_ = prl.Unregister(vmName)
+}
+
+func (s *executor) ensureVMStarted() error {
 	s.Debugln("Checking VM status...")
 	status, err := prl.Status(s.vmName)
 	if err != nil {
@@ -286,6 +318,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
+	return nil
+}
+
+func (s *executor) sshConnect() error {
 	ipAddr, err := s.waitForIPAddress(s.vmName, 60)
 	if err != nil {
 		return err
@@ -300,11 +336,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.sshCommand.Host = ipAddr
 
 	s.Debugln("Connecting to SSH server...")
-	err = s.sshCommand.Connect()
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.sshCommand.Connect()
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
