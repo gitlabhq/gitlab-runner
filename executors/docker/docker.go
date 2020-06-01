@@ -758,7 +758,7 @@ func (e *executor) createContainer(
 	return &inspect, nil
 }
 
-func (e *executor) watchContainer(ctx context.Context, id string, input io.Reader) error {
+func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
 	options := types.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  true,

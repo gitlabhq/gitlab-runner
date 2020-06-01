@@ -1232,7 +1232,7 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1) // Avoid a race where assert.NoError() is called too late in the goroutine
 	go func() {
-		err = e.watchContainer(e.Context, container.ID, input)
+		err = e.startAndWatchContainer(e.Context, container.ID, input)
 		assert.NoError(t, err)
 		finished <- true
 		wg.Done()

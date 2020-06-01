@@ -114,7 +114,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 		s.Debugln("Executing on", ctr.Name, "the", cmd.Script)
 		s.SetCurrentStage(ExecutorStageRun)
 
-		runErr = s.watchContainer(cmd.Context, ctr.ID, bytes.NewBufferString(cmd.Script))
+		runErr = s.startAndWatchContainer(cmd.Context, ctr.ID, bytes.NewBufferString(cmd.Script))
 		if !docker.IsErrNotFound(runErr) {
 			return runErr
 		}
