@@ -1,3 +1,9 @@
+## v13.0.1 (2020-06-01)
+
+### Bug fixes
+
+- Fix missing logs from docker executor !2101
+
 ## v13.0.0 (2020-05-20)
 
 ### Breaking Changes
