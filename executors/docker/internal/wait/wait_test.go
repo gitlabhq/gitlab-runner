@@ -137,6 +137,5 @@ func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
 	err := waiter.Wait(context.Background(), "id")
 
 	var buildError *common.BuildError
-
 	assert.True(t, errors.As(err, &buildError), "expected err %T, but got %T", buildError, err)
 }
