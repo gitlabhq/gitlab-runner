@@ -353,8 +353,8 @@ func TestTerminalConn_Start(t *testing.T) {
 
 	bodyCh := make(chan container.ContainerWaitOKBody, 1)
 	bodyCh <- container.ContainerWaitOKBody{StatusCode: 0}
-	c.On("ContainerWait", mock.Anything, "1234", container.WaitConditionNotRunning).Return(
-		(<-chan container.ContainerWaitOKBody)(bodyCh), nil)
+	c.On("ContainerWait", mock.Anything, "1234", container.WaitConditionNotRunning).
+		Return((<-chan container.ContainerWaitOKBody)(bodyCh), nil)
 
 	session, err := session.NewSession(nil)
 	require.NoError(t, err)

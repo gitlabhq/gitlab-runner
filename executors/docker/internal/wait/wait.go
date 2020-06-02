@@ -67,7 +67,7 @@ func (d *dockerWaiter) retryWait(ctx context.Context, containerID string, stopFn
 
 // wait waits until the container has stopped.
 //
-// The function passed to stopFn() is periodically called (to ensure that the
+// The passed `stopFn` function is periodically called (to ensure that the
 // daemon absolutely receives the request) and is used to stop the container.
 func (d *dockerWaiter) wait(ctx context.Context, containerID string, stopFn func()) error {
 	statusCh, errCh := d.client.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
