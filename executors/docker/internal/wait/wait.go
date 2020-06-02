@@ -15,13 +15,10 @@ type Waiter interface {
 	Wait(ctx context.Context, containerID string) error
 }
 
-type Killer interface {
-	KillWait(ctx context.Context, containerID string) error
-}
-
 type KillWaiter interface {
 	Waiter
-	Killer
+
+	KillWait(ctx context.Context, containerID string) error
 }
 
 type dockerWaiter struct {
