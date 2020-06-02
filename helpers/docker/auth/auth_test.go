@@ -91,7 +91,7 @@ func TestGetConfigForImage(t *testing.T) {
 				return nil
 			},
 		},
-		"no file and gitlab credentials. image in gitlab credentials": {
+		"no file and gitlab credentials, image in gitlab credentials": {
 			createConfigFile: false,
 			dockerAuthValue:  "",
 			credentials:      gitlabRegistryCredentials,
