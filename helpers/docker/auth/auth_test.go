@@ -103,7 +103,7 @@ func TestGetConfigForImage(t *testing.T) {
 				}
 			},
 		},
-		"both file and gitlab credentials. image in gitlab credentials": {
+		"both file and gitlab credentials, image in gitlab credentials": {
 			createConfigFile: true,
 			dockerAuthValue:  "",
 			credentials:      gitlabRegistryCredentials,
