@@ -45,8 +45,6 @@ const (
 	DockerExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
 	DockerExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
 	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
-
-	logsCopyTimeout = 30 * time.Second
 )
 
 const (
@@ -68,6 +66,7 @@ type executor struct {
 	volumeParser              parser.Parser
 	newVolumePermissionSetter func() (permission.Setter, error)
 	info                      types.Info
+	waiter                    wait.KillWaiter
 
 	temporary []string // IDs of containers that should be removed
 
@@ -791,32 +790,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 	return &inspect, nil
 }
 
-func (e *executor) killContainer(id string, waitCh chan error) (err error) {
-	for {
-		e.disconnectNetwork(e.Context, id)
-		e.Debugln("Killing container", id, "...")
-		e.client.ContainerKill(e.Context, id, "SIGKILL")
-
-		// Wait for signal that container were killed
-		// or retry after some time
-		select {
-		case err = <-waitCh:
-			return
-
-		case <-time.After(time.Second):
-		}
-	}
-}
-
-func (e *executor) waitForContainer(ctx context.Context, id string) error {
-	e.Debugln("Waiting for container", id, "...")
-
-	waiter := wait.NewDockerWaiter(e.client)
-
-	return waiter.Wait(ctx, id)
-}
-
-func (e *executor) watchContainer(ctx context.Context, id string, input io.Reader) (err error) {
+func (e *executor) watchContainer(ctx context.Context, id string, input io.Reader) error {
 	options := types.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  true,
@@ -827,66 +801,52 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	e.Debugln("Attaching to container", id, "...")
 	hijacked, err := e.client.ContainerAttach(ctx, id, options)
 	if err != nil {
-		return
+		return err
 	}
 	defer hijacked.Close()
 
 	e.Debugln("Starting container", id, "...")
 	err = e.client.ContainerStart(ctx, id, types.ContainerStartOptions{})
 	if err != nil {
-		return
+		return err
 	}
 
-	e.Debugln("Waiting for attach to finish", id, "...")
-	attachCh := make(chan error, 2)
-
-	logsDone := make(chan struct{})
 	// Copy any output to the build trace
+	stdoutErrCh := make(chan error)
 	go func() {
 		_, err := stdcopy.StdCopy(e.Trace, e.Trace, hijacked.Reader)
-		close(logsDone)
-
-		if err != nil {
-			attachCh <- err
-		}
+		stdoutErrCh <- err
 	}()
 
 	// Write the input to the container and close its STDIN to get it to finish
+	stdinErrCh := make(chan error)
 	go func() {
 		_, err := io.Copy(hijacked.Conn, input)
 		hijacked.CloseWrite()
 		if err != nil {
-			attachCh <- err
+			stdinErrCh <- err
 		}
 	}()
 
-	waitCh := make(chan error, 1)
-	go func() {
-		waitCh <- e.waitForContainer(e.Context, id)
-	}()
-
+	// Wait until either:
+	// - the job is aborted/cancelled/deadline exceeded
+	// - stdin has an error
+	// - stdout returns an error or nil, indicating the stream has ended and
+	//   the container has exited
 	select {
 	case <-ctx.Done():
-		e.killContainer(id, waitCh)
 		err = errors.New("aborted")
+	case err = <-stdinErrCh:
+	case err = <-stdoutErrCh:
+	}
 
-	case err = <-attachCh:
-		e.killContainer(id, waitCh)
-		e.Debugln("Container", id, "finished with", err)
-
-	case err = <-waitCh:
+	if err != nil {
 		e.Debugln("Container", id, "finished with", err)
 	}
 
-	// By this point the container is either killed or finished.
-	// Wait for logs to finish copying to the job trace.
-	select {
-	case <-logsDone:
-	case <-time.After(logsCopyTimeout):
-		e.Warningln("Timed out waiting for logs to finish copying from container")
-	}
-
-	return
+	// Kill and wait for exit.
+	// Containers are stopped so that they can be reused by the job.
+	return e.waiter.KillWait(ctx, id)
 }
 
 func (e *executor) removeContainer(ctx context.Context, id string) error {
@@ -1015,6 +975,7 @@ func (e *executor) connectDocker() error {
 		Architecture:    e.info.Architecture,
 		OperatingSystem: e.info.OperatingSystem,
 	})
+	e.waiter = wait.NewDockerKillWaiter(e.client)
 
 	return err
 }
@@ -1301,27 +1262,23 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 		return fmt.Errorf("start service container: %w", err)
 	}
 
-	waitResult := make(chan error, 1)
-	go func() {
-		waitResult <- e.waitForContainer(e.Context, resp.ID)
-	}()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
 
-	// these are warnings and they don't make the build fail
-	select {
-	case err := <-waitResult:
-		if err == nil {
-			return nil
-		}
+	err = e.waiter.Wait(ctx, resp.ID)
+	if err == nil {
+		return nil
+	}
 
-		return &serviceHealthCheckError{
-			Inner: err,
-			Logs:  e.readContainerLogs(resp.ID),
-		}
-	case <-time.After(timeout):
-		return &serviceHealthCheckError{
-			Inner: fmt.Errorf("service %q timeout", containerName),
-			Logs:  e.readContainerLogs(resp.ID),
-		}
+	if errors.Is(err, context.DeadlineExceeded) {
+		err = fmt.Errorf("service %q timeout", containerName)
+	} else {
+		err = fmt.Errorf("service %q health check: %w", containerName, err)
+	}
+
+	return &serviceHealthCheckError{
+		Inner: err,
+		Logs:  e.readContainerLogs(resp.ID),
 	}
 }
 
