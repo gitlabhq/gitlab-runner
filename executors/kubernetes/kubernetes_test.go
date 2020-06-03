@@ -636,16 +636,16 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 	require.NoError(t, err)
 
 	tests := map[string]struct {
-		clonePath         string
-		expectedErrorType interface{}
+		clonePath   string
+		expectedErr bool
 	}{
 		"uses custom clone path": {
-			clonePath:         "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: nil,
+			clonePath:   "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr: false,
 		},
 		"path has to be within CI_BUILDS_DIR": {
-			clonePath:         "/unknown/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: &common.BuildError{},
+			clonePath:   "/unknown/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr: true,
 		},
 	}
 
@@ -669,7 +669,13 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-			assert.IsType(t, test.expectedErrorType, err)
+			if test.expectedErr {
+				var buildErr *common.BuildError
+				assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
+				return
+			}
+
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -722,7 +728,8 @@ func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string,
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	var buildErr *common.BuildError
+	assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
@@ -747,7 +754,8 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	var buildErr *common.BuildError
+	assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
