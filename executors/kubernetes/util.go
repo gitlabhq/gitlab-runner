@@ -217,17 +217,17 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 			return q, nil
 		}
 		if q, err = resource.ParseQuantity(s); err != nil {
-			return q, fmt.Errorf("error parsing resource limit: %w", err)
+			return q, fmt.Errorf("parsing resource limit: %w", err)
 		}
 		return q, nil
 	}
 
 	if rCPU, err = parse(cpu); err != nil {
-		return api.ResourceList{}, nil
+		return api.ResourceList{}, err
 	}
 
 	if rMem, err = parse(memory); err != nil {
-		return api.ResourceList{}, nil
+		return api.ResourceList{}, err
 	}
 
 	l := make(api.ResourceList)

@@ -192,11 +192,11 @@ func (o *overwrites) evaluateMaxResourceOverwrite(fieldName, value, maxResource,
 	var err error
 
 	if rMaxResource, err = resource.ParseQuantity(maxResource); err != nil {
-		return value, fmt.Errorf("error parsing resource limit: %q", err.Error())
+		return value, fmt.Errorf("parsing resource limit: %q", err.Error())
 	}
 
 	if rOverwriteValue, err = resource.ParseQuantity(overwriteValue); err != nil {
-		return value, fmt.Errorf("error parsing resource limit: %q", err.Error())
+		return value, fmt.Errorf("parsing resource limit: %q", err.Error())
 	}
 
 	ov := rOverwriteValue.Value()
