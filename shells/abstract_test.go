@@ -405,6 +405,98 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, false)
 }
 
+func TestWriteUserScript(t *testing.T) {
+	tests := map[string]struct {
+		inputSteps        common.Steps
+		prebuildScript    string
+		postBuildScript   string
+		buildStage        common.BuildStage
+		setupExpectations func(*MockShellWriter)
+		expectedErr       error
+	}{
+		"no build steps, after script": {
+			inputSteps:        common.Steps{},
+			prebuildScript:    "",
+			postBuildScript:   "",
+			buildStage:        common.BuildStageAfterScript,
+			setupExpectations: func(*MockShellWriter) {},
+			expectedErr:       common.ErrSkipBuildStage,
+		},
+		"single script step": {
+			inputSteps: common.Steps{
+				common.Step{
+					Name:   common.StepNameScript,
+					Script: common.StepScript{"echo hello"},
+				},
+			},
+			prebuildScript:  "",
+			postBuildScript: "",
+			buildStage:      "step_script",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Variable", mock.Anything)
+				m.On("Cd", mock.AnythingOfType("string"))
+				m.On("Notice", "$ %s", "echo hello").Once()
+				m.On("Line", "echo hello").Once()
+				m.On("CheckForErrors").Once()
+			},
+			expectedErr: nil,
+		},
+		"prebuild, multiple steps postBuild": {
+			inputSteps: common.Steps{
+				common.Step{
+					Name:   common.StepNameScript,
+					Script: common.StepScript{"echo script"},
+				},
+				common.Step{
+					Name:   "release",
+					Script: common.StepScript{"echo release"},
+				},
+				common.Step{
+					Name:   "a11y",
+					Script: common.StepScript{"echo a11y"},
+				},
+			},
+			prebuildScript:  "echo prebuild",
+			postBuildScript: "echo postbuild",
+			buildStage:      common.BuildStage("step_release"),
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Variable", mock.Anything)
+				m.On("Cd", mock.AnythingOfType("string"))
+				m.On("Notice", "$ %s", "echo prebuild").Once()
+				m.On("Notice", "$ %s", "echo release").Once()
+				m.On("Notice", "$ %s", "echo postbuild").Once()
+				m.On("Line", "echo prebuild").Once()
+				m.On("Line", "echo release").Once()
+				m.On("Line", "echo postbuild").Once()
+				m.On("CheckForErrors").Times(3)
+			},
+			expectedErr: nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			info := common.ShellScriptInfo{
+				PreBuildScript: tt.prebuildScript,
+				Build: &common.Build{
+					JobResponse: common.JobResponse{
+						Steps: tt.inputSteps,
+					},
+				},
+				PostBuildScript: tt.postBuildScript,
+			}
+			mockShellWriter := &MockShellWriter{}
+			defer mockShellWriter.AssertExpectations(t)
+
+			tt.setupExpectations(mockShellWriter)
+			shell := AbstractShell{}
+
+			err := shell.writeUserScript(mockShellWriter, info, tt.buildStage)
+			assert.True(t, errors.Is(err, tt.expectedErr), "expected: %v, got: %v", tt.expectedErr, err)
+		})
+	}
+}
+
 func TestSkipBuildStage(t *testing.T) {
 	stageTests := map[common.BuildStage]map[string]struct {
 		JobResponse common.JobResponse
@@ -447,7 +539,7 @@ func TestSkipBuildStage(t *testing.T) {
 			},
 		},
 
-		common.BuildStageUserScript: {
+		"step_script": {
 			"don't skip if user script is defined": {
 				common.JobResponse{
 					Steps: common.Steps{

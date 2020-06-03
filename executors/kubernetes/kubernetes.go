@@ -388,7 +388,7 @@ func (s *executor) generateScripts(shell common.Shell) (map[string]string, error
 	scripts := map[string]string{}
 	scripts[detectShellScriptName] = detectShellScript
 
-	for _, stage := range common.BuildStages {
+	for _, stage := range s.Build.BuildStages() {
 		script, err := shell.GenerateScript(stage, *s.Shell())
 		if errors.Is(err, common.ErrSkipBuildStage) {
 			continue

@@ -2,6 +2,7 @@ package shell_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -118,6 +119,80 @@ func TestBuildSuccess(t *testing.T) {
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
 	})
+}
+
+func TestMultistepBuild(t *testing.T) {
+	successfulBuild, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	failingScriptBuild, err := common.GetRemoteFailingMultistepBuild(common.StepNameScript)
+	require.NoError(t, err)
+
+	failingReleaseBuild, err := common.GetRemoteFailingMultistepBuild("release")
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		jobResponse    common.JobResponse
+		expectedOutput []string
+		unwantedOutput []string
+		errExpected    bool
+	}{
+		"Successful build with release and after_script step": {
+			jobResponse: successfulBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: false,
+		},
+		"Failure on script step. Release is skipped. After script runs.": {
+			jobResponse: failingScriptBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo After Script",
+			},
+			unwantedOutput: []string{
+				"echo Release",
+			},
+			errExpected: true,
+		},
+		"Failure on release step. After script runs.": {
+			jobResponse: failingReleaseBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				build, cleanup := newBuild(t, tt.jobResponse, shell)
+				defer cleanup()
+
+				out, err := buildtest.RunBuildReturningOutput(t, build)
+
+				for _, output := range tt.expectedOutput {
+					assert.Contains(t, out, output)
+				}
+
+				for _, output := range tt.unwantedOutput {
+					assert.NotContains(t, out, output)
+				}
+
+				if tt.errExpected {
+					var buildErr *common.BuildError
+					assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+					return
+				}
+				assert.NoError(t, err)
+			})
+		})
+	}
 }
 
 func TestRawVariableOutput(t *testing.T) {
