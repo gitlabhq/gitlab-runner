@@ -32,6 +32,12 @@ RUN mkdir -p ~/.docker/cli-plugins && \
     wget -q https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64 -O ~/.docker/cli-plugins/docker-buildx && \
     chmod a+x ~/.docker/cli-plugins/docker-buildx
 
+ARG GIT_LFS_VERSION
+ARG GIT_LFS_256_CHECKSUM
+
+COPY dockerfiles/ci/install_git_lfs /tmp/
+RUN /tmp/install_git_lfs
+
 COPY Makefile* /tmp/
 WORKDIR /tmp
 RUN make deps package-deps packagecloud-deps

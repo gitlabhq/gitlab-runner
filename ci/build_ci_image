@@ -40,6 +40,8 @@ build() {
            --cache-from "${BUILD_IMAGE}" \
            --build-arg DOCKER_VERSION="${DOCKER_VERSION}" \
            --build-arg BUILDX_VERSION="${BUILDX_VERSION}" \
+           --build-arg GIT_LFS_VERSION="${GIT_LFS_VERSION}" \
+           --build-arg GIT_LFS_256_CHECKSUM="${GIT_LFS_256_CHECKSUM}" \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
            "${GIT_ROOT}"
