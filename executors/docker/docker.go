@@ -1265,20 +1265,21 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	if err := e.waiter.Wait(ctx, resp.ID); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			err = fmt.Errorf("service %q timeout", containerName)
-		} else {
-			err = fmt.Errorf("service %q health check: %w", containerName, err)
-		}
-
-		return &serviceHealthCheckError{
-			Inner: err,
-			Logs:  e.readContainerLogs(resp.ID),
-		}
+	err = e.waiter.Wait(ctx, resp.ID)
+	if err == nil {
+		return nil
 	}
 
-	return nil
+	if errors.Is(err, context.DeadlineExceeded) {
+		err = fmt.Errorf("service %q timeout", containerName)
+	} else {
+		err = fmt.Errorf("service %q health check: %w", containerName, err)
+	}
+
+	return &serviceHealthCheckError{
+		Inner: err,
+		Logs:  e.readContainerLogs(resp.ID),
+	}
 }
 
 // addServiceHealthCheckEnvironment will create the environment variables needed
