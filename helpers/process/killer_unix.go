@@ -3,28 +3,27 @@
 package process
 
 import (
-	"os"
 	"syscall"
 )
 
 type unixKiller struct {
-	logger  Logger
-	process *os.Process
+	logger Logger
+	cmd    Commander
 }
 
 func newKiller(logger Logger, cmd Commander) killer {
 	return &unixKiller{
-		logger:  logger,
-		process: cmd.Process(),
+		logger: logger,
+		cmd:    cmd,
 	}
 }
 
 func (pk *unixKiller) Terminate() {
-	if pk.process == nil {
+	if pk.cmd.Process() == nil {
 		return
 	}
 
-	err := pk.process.Signal(syscall.SIGTERM)
+	err := syscall.Kill(pk.getPID(), syscall.SIGTERM)
 	if err != nil {
 		pk.logger.Warn("Failed to terminate process:", err)
 
@@ -34,12 +33,20 @@ func (pk *unixKiller) Terminate() {
 }
 
 func (pk *unixKiller) ForceKill() {
-	if pk.process == nil {
+	if pk.cmd.Process() == nil {
 		return
 	}
 
-	err := pk.process.Kill()
+	err := syscall.Kill(pk.getPID(), syscall.SIGKILL)
 	if err != nil {
 		pk.logger.Warn("Failed to force-kill:", err)
 	}
+}
+
+// getPID will return the negative PID (-PID) which is the process group. The
+// negative symbol comes from kill(2) https://linux.die.net/man/2/kill `If pid
+// is less than -1, then sig is sent to every process in the process group whose
+// ID is -pid.`
+func (pk *unixKiller) getPID() int {
+	return pk.cmd.Process().Pid * -1
 }

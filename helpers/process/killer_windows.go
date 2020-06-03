@@ -1,27 +1,23 @@
 package process
 
-import (
-	"os"
-)
-
 type windowsKiller struct {
-	logger  Logger
-	process *os.Process
+	logger Logger
+	cmd    Commander
 }
 
 func newKiller(logger Logger, cmd Commander) killer {
 	return &windowsKiller{
-		logger:  logger,
-		process: cmd.Process(),
+		logger: logger,
+		cmd:    cmd,
 	}
 }
 
 func (pk *windowsKiller) Terminate() {
-	if pk.process == nil {
+	if pk.cmd.Process() == nil {
 		return
 	}
 
-	err := pk.process.Kill()
+	err := pk.cmd.Process().Kill()
 	if err != nil {
 		pk.logger.Warn("Failed to terminate process:", err)
 
@@ -31,11 +27,11 @@ func (pk *windowsKiller) Terminate() {
 }
 
 func (pk *windowsKiller) ForceKill() {
-	if pk.process == nil {
+	if pk.cmd.Process() == nil {
 		return
 	}
 
-	err := pk.process.Kill()
+	err := pk.cmd.Process().Kill()
 	if err != nil {
 		pk.logger.Warn("Failed to force-kill:", err)
 	}
