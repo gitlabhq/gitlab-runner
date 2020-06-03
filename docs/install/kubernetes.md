@@ -276,6 +276,12 @@ Where:
 More information on how GitLab Runner uses these certificates can be found in the
 [Runner Documentation](../configuration/tls-self-signed.md#supported-options-for-self-signed-certificates).
 
+### Set pod labels to CI environment variables keys
+
+At the moment it is not possible to use environment variables as pod labels within the `values.yaml` file.
+We are working on it in this issue: [Can't set environment variable key as pod label](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173).
+Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173#note_351057890) as a temporary solution.
+
 ## Check available GitLab Runner Helm Chart versions
 
 Versions of Helm Chart and GitLab Runner application do not follow the same versioning.
