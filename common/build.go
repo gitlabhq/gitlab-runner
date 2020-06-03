@@ -71,19 +71,19 @@ const (
 	BuildStageGetSources               BuildStage = "get_sources"
 	BuildStageRestoreCache             BuildStage = "restore_cache"
 	BuildStageDownloadArtifacts        BuildStage = "download_artifacts"
-	BuildStageUserScript               BuildStage = "build_script"
 	BuildStageAfterScript              BuildStage = "after_script"
 	BuildStageArchiveCache             BuildStage = "archive_cache"
 	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
 )
 
-var BuildStages = []BuildStage{
+// staticBuildStages is a list of BuildStages which are executed on every build
+// and are not dynamically generated from steps.
+var staticBuildStages = []BuildStage{
 	BuildStagePrepare,
 	BuildStageGetSources,
 	BuildStageRestoreCache,
 	BuildStageDownloadArtifacts,
-	BuildStageUserScript,
 	BuildStageAfterScript,
 	BuildStageArchiveCache,
 	BuildStageUploadOnSuccessArtifacts,
@@ -207,6 +207,23 @@ func (b *Build) TmpProjectDir() string {
 	return helpers.ToSlash(b.BuildDir) + ".tmp"
 }
 
+// BuildStages returns a list of all BuildStages which will be executed.
+// Not in the order of execution.
+func (b *Build) BuildStages() []BuildStage {
+	stages := make([]BuildStage, len(staticBuildStages))
+	copy(stages, staticBuildStages)
+
+	for _, s := range b.Steps {
+		if s.Name == StepNameAfterScript {
+			continue
+		}
+
+		stages = append(stages, StepToBuildStage(s))
+	}
+
+	return stages
+}
+
 func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEnabled, sharedDir bool) (string, error) {
 	dir := b.GetAllVariables().Get(overrideKey)
 	if dir == "" {
@@ -282,16 +299,10 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	}
 
 	cmd := ExecutorCommand{
-		Context: ctx,
-		Script:  script,
-		Stage:   buildStage,
-	}
-
-	switch buildStage {
-	case BuildStageUserScript, BuildStageAfterScript: // use custom build environment
-		cmd.Predefined = false
-	default: // all other stages use a predefined build environment
-		cmd.Predefined = true
+		Context:    ctx,
+		Script:     script,
+		Stage:      buildStage,
+		Predefined: getPredefinedEnv(buildStage),
 	}
 
 	section := helpers.BuildSection{
@@ -302,7 +313,30 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 			return executor.Run(cmd)
 		},
 	}
+
 	return section.Execute(&b.logger)
+}
+
+// getPredefinedEnv returns whether a stage should be executed on
+//  the predefined environment that GitLab Runner provided.
+func getPredefinedEnv(buildStage BuildStage) bool {
+	env := map[BuildStage]bool{
+		BuildStagePrepare:                  true,
+		BuildStageGetSources:               true,
+		BuildStageRestoreCache:             true,
+		BuildStageDownloadArtifacts:        true,
+		BuildStageAfterScript:              false,
+		BuildStageArchiveCache:             true,
+		BuildStageUploadOnFailureArtifacts: true,
+		BuildStageUploadOnSuccessArtifacts: true,
+	}
+
+	predefined, ok := env[buildStage]
+	if !ok {
+		return false
+	}
+
+	return predefined
 }
 
 func getStageDescription(stage BuildStage) string {
@@ -311,7 +345,6 @@ func getStageDescription(stage BuildStage) string {
 		BuildStageGetSources:               "Getting source from Git repository",
 		BuildStageRestoreCache:             "Restoring cache",
 		BuildStageDownloadArtifacts:        "Downloading artifacts",
-		BuildStageUserScript:               "Running before_script and script",
 		BuildStageAfterScript:              "Running after_script",
 		BuildStageArchiveCache:             "Saving cache",
 		BuildStageUploadOnFailureArtifacts: "Uploading artifacts for failed job",
@@ -355,8 +388,16 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	}
 
 	if err == nil {
-		// Execute user build script (before_script + script)
-		err = b.executeStage(ctx, BuildStageUserScript, executor)
+		for _, s := range b.Steps {
+			// after_script has a separate BuildStage. See common.BuildStageAfterScript
+			if s.Name == StepNameAfterScript {
+				continue
+			}
+			err = b.executeStage(ctx, StepToBuildStage(s), executor)
+			if err != nil {
+				break
+			}
+		}
 
 		// Execute after script (after_script)
 		timeoutContext, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
@@ -383,6 +424,11 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	// Otherwise, use uploadError
 	return artifactUploadError
+}
+
+// StepToBuildStage returns the BuildStage corresponding to a step.
+func StepToBuildStage(s Step) BuildStage {
+	return BuildStage(fmt.Sprintf("step_%s", strings.ToLower(string(s.Name))))
 }
 
 func (b *Build) createReferees(executor Executor) {

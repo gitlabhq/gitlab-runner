@@ -47,6 +47,7 @@ type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
 func TestRunTestsWithFeatureFlag(t *testing.T) {
 	tests := map[string]featureFlagTest{
 		"testKubernetesSuccessRun":              testKubernetesSuccessRunFeatureFlag,
+		"testKubernetesMultistepRun":            testKubernetesMultistepRunFeatureFlag,
 		"testKubernetesTimeoutRun":              testKubernetesTimeoutRunFeatureFlag,
 		"testKubernetesBuildFail":               testKubernetesBuildFailFeatureFlag,
 		"testKubernetesBuildAbort":              testKubernetesBuildAbortFeatureFlag,
@@ -103,6 +104,96 @@ func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, f
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	successfulBuild, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	failingScriptBuild, err := common.GetRemoteFailingMultistepBuild(common.StepNameScript)
+	require.NoError(t, err)
+
+	failingReleaseBuild, err := common.GetRemoteFailingMultistepBuild("release")
+	require.NoError(t, err)
+
+	successfulBuild.Image.Name = common.TestDockerGitImage
+	failingScriptBuild.Image.Name = common.TestDockerGitImage
+	failingReleaseBuild.Image.Name = common.TestDockerGitImage
+
+	tests := map[string]struct {
+		jobResponse    common.JobResponse
+		expectedOutput []string
+		unwantedOutput []string
+		errExpected    bool
+	}{
+		"Successful build with release and after_script step": {
+			jobResponse: successfulBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: false,
+		},
+		"Failure on script step. Release is skipped. After script runs.": {
+			jobResponse: failingScriptBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo After Script",
+			},
+			unwantedOutput: []string{
+				"echo Release",
+			},
+			errExpected: true,
+		},
+		"Failure on release step. After script runs.": {
+			jobResponse: failingReleaseBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := &common.Build{
+				JobResponse: tt.jobResponse,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "kubernetes",
+						Kubernetes: &common.KubernetesConfig{
+							PullPolicy: common.PullPolicyIfNotPresent,
+						},
+					},
+				},
+			}
+			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+
+			out := buf.String()
+			for _, output := range tt.expectedOutput {
+				assert.Contains(t, out, output)
+			}
+
+			for _, output := range tt.unwantedOutput {
+				assert.NotContains(t, out, output)
+			}
+
+			if tt.errExpected {
+				var buildErr *common.BuildError
+				assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
@@ -3001,7 +3092,18 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 func TestGenerateScripts(t *testing.T) {
 	testErr := errors.New("testErr")
 
-	e := &executor{}
+	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Build: &common.Build{
+				JobResponse: successfulResponse,
+			},
+		},
+	}
+	buildStages := e.Build.BuildStages()
+
 	setupMockShellGenerateScript := func(m *common.MockShell, stages []common.BuildStage) {
 		for _, s := range stages {
 			m.On("GenerateScript", s, e.ExecutorOptions.Shell).
@@ -3029,30 +3131,30 @@ func TestGenerateScripts(t *testing.T) {
 		"all stages OK": {
 			setupMockShell: func() *common.MockShell {
 				m := new(common.MockShell)
-				setupMockShellGenerateScript(m, common.BuildStages)
+				setupMockShellGenerateScript(m, buildStages)
 
 				return m
 			},
-			expectedScripts: setupScripts(common.BuildStages),
+			expectedScripts: setupScripts(buildStages),
 			expectedErr:     nil,
 		},
 		"stage returns skip build stage error": {
 			setupMockShell: func() *common.MockShell {
 				m := new(common.MockShell)
-				m.On("GenerateScript", common.BuildStages[0], e.ExecutorOptions.Shell).
+				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", common.ErrSkipBuildStage).
 					Once()
-				setupMockShellGenerateScript(m, common.BuildStages[1:])
+				setupMockShellGenerateScript(m, buildStages[1:])
 
 				return m
 			},
-			expectedScripts: setupScripts(common.BuildStages[1:]),
+			expectedScripts: setupScripts(buildStages[1:]),
 			expectedErr:     nil,
 		},
 		"stage returns error": {
 			setupMockShell: func() *common.MockShell {
 				m := new(common.MockShell)
-				m.On("GenerateScript", common.BuildStages[0], e.ExecutorOptions.Shell).
+				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", testErr).
 					Once()
 

@@ -108,6 +108,43 @@ func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
 	return jobResponse, err
 }
 
+func GetRemoteSuccessfulMultistepBuild() (JobResponse, error) {
+	jobResponse, err := GetRemoteBuildResponse("echo Hello World")
+	if err != nil {
+		return JobResponse{}, err
+	}
+
+	jobResponse.Steps = append(jobResponse.Steps,
+		Step{
+			Name:   "release",
+			Script: []string{"echo Release"},
+			When:   StepWhenOnSuccess,
+		},
+		Step{
+			Name:   StepNameAfterScript,
+			Script: []string{"echo After Script"},
+			When:   StepWhenAlways,
+		},
+	)
+
+	return jobResponse, nil
+}
+
+func GetRemoteFailingMultistepBuild(failingStepName StepName) (JobResponse, error) {
+	jobResponse, err := GetRemoteSuccessfulMultistepBuild()
+	if err != nil {
+		return JobResponse{}, err
+	}
+
+	for i, step := range jobResponse.Steps {
+		if step.Name == failingStepName {
+			jobResponse.Steps[i].Script = append(step.Script, "exit 1")
+		}
+	}
+
+	return jobResponse, nil
+}
+
 func GetRemoteSuccessfulBuildWithDumpedVariables() (JobResponse, error) {
 	variableName := "test_dump"
 	variableValue := "test"

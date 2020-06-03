@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -75,6 +76,76 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func TestDockerCommandMultistepBuild(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]struct {
+		buildGetter    func() (common.JobResponse, error)
+		expectedOutput []string
+		unwantedOutput []string
+		errExpected    bool
+	}{
+		"Successful build with release and after_script step": {
+			buildGetter: common.GetRemoteSuccessfulMultistepBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: false,
+		},
+		"Failure on script step. Release is skipped. After script runs.": {
+			buildGetter: func() (common.JobResponse, error) {
+				return common.GetRemoteFailingMultistepBuild(common.StepNameScript)
+			},
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo After Script",
+			},
+			unwantedOutput: []string{
+				"echo Release",
+			},
+			errExpected: true,
+		},
+		"Failure on release step. After script runs.": {
+			buildGetter: func() (common.JobResponse, error) {
+				return common.GetRemoteFailingMultistepBuild("release")
+			},
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getBuildForOS(t, tt.buildGetter)
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+
+			out := buf.String()
+			for _, output := range tt.expectedOutput {
+				assert.Contains(t, out, output)
+			}
+
+			for _, output := range tt.unwantedOutput {
+				assert.NotContains(t, out, output)
+			}
+
+			if tt.errExpected {
+				var buildErr *common.BuildError
+				assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {
@@ -1185,7 +1256,7 @@ func TestDockerCommandRunAttempts(t *testing.T) {
 		assertFailedToInspectContainer(t, trace, &attempts)
 	}
 
-	assert.Equal(t, executorStageAttempts, attempts, "The %s stage should be retried at least once", common.BuildStageUserScript)
+	assert.Equal(t, executorStageAttempts, attempts, "The %s stage should be retried at least once", "step_script")
 	<-runFinished
 }
 
