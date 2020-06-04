@@ -34,6 +34,13 @@ type ConfigExecOutput struct {
 	api.ConfigExecOutput
 }
 
+type jsonService struct {
+  Name       string   `json:"name"`
+  Alias      string   `json:"alias"`
+  Entrypoint []string `json:"entrypoint"`
+  Command    []string `json:"command"`
+}
+
 func (c *ConfigExecOutput) InjectInto(executor *executor) {
 	if c.Hostname != nil {
 		executor.Build.Hostname = *c.Hostname
@@ -187,45 +194,6 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 	}
 }
 
-func createServicesEnv(e *executor, opts *[]string) {
-	if len(e.Build.Services) == 0 {
-		return
-	}
-
-	type JSONService struct {
-		Name       string   `json:"name"`
-		Alias      string   `json:"alias"`
-		Entrypoint []string `json:"entrypoint"`
-		Command    []string `json:"command"`
-	}
-
-	services := []JSONService{}
-
-	for _, service := range e.Build.Services {
-		services = append(services, JSONService{
-			Name:       service.Name,
-			Alias:      service.Alias,
-			Entrypoint: service.Entrypoint,
-			Command:    service.Command,
-		})
-	}
-
-	jsonData, err := json.Marshal(services)
-	if err != nil {
-		logrus.Errorln(
-			"Custom executor: unable to create CI_JOB_SERVICES json.",
-			err,
-		)
-		return
-	}
-
-	*opts = append(*opts, fmt.Sprintf(
-		"%s=%s",
-		"CI_JOB_SERVICES",
-		jsonData,
-	))
-}
-
 var commandFactory = command.New
 
 func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) command.Command {
@@ -247,9 +215,36 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 		cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("CUSTOM_ENV_%s=%s", variable.Key, variable.Value))
 	}
 
-	createServicesEnv(e, &cmdOpts.Env)
+	cmdOpts.Env = append(cmdOpts.Env, e.getCIJobServicesEnv())
 
 	return commandFactory(ctx, opts.executable, opts.args, cmdOpts)
+}
+
+func (e *executor) getCIJobServicesEnv() string {
+	if len(e.Build.Services) == 0 {
+		return "CI_JOB_SERVICES="
+	}
+
+  var services []jsonService
+	for _, service := range e.Build.Services {
+		services = append(services, jsonService{
+			Name:       service.Name,
+			Alias:      service.Alias,
+			Entrypoint: service.Entrypoint,
+			Command:    service.Command,
+		})
+	}
+
+	servicesSerialized, err := json.Marshal(services)
+  if err != nil {
+		e.Warningln("Unable to create CI_JOB_SERVICES json:", err)
+	}
+
+  return fmt.Sprintf(
+		"%s=%s",
+		"CI_JOB_SERVICES",
+		servicesSerialized,
+	)
 }
 
 func (e *executor) Run(cmd common.ExecutorCommand) error {

@@ -539,19 +539,15 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		}
 	}
 
-	assertNoEnv := func() func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+	assertEmptyEnv := func() func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
 		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
-			servicesEnvExists := false
-
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == CIJobServicesEnv {
-					servicesEnvExists = true
+					assert.Equal(t, "", pair[1])
 					break
 				}
 			}
-
-			assert.Equal(t, false, servicesEnvExists)
 		}
 	}
 
@@ -614,7 +610,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		"does not create env CI_JOB_SERVICES": {
 			config:               runnerConfig,
 			adjustExecutor:       adjustExecutorServices(common.Services{}),
-			assertCommandFactory: assertNoEnv(),
+			assertCommandFactory: assertEmptyEnv(),
 		},
 	}
 
