@@ -220,44 +220,44 @@ func TestDockerCommandUsingCustomClonePath(t *testing.T) {
 		return
 	}
 
-	jobResponse, err := common.GetRemoteBuildResponse(
-		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo")
-	require.NoError(t, err)
+	remoteBuild := func() (common.JobResponse, error) {
+		cmd := "ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+		if runtime.GOOS == "windows" {
+			cmd = "Get-Item -Path $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+		}
+
+		return common.GetRemoteBuildResponse(cmd)
+	}
 
 	tests := map[string]struct {
-		clonePath         string
-		expectedErrorType interface{}
+		clonePath   string
+		expectedErr bool
 	}{
 		"uses custom clone path": {
-			clonePath:         "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: nil,
+			clonePath:   "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr: false,
 		},
 		"path has to be within CI_BUILDS_DIR": {
-			clonePath:         "/unknown/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: &common.BuildError{},
+			clonePath:   "/unknown/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr: true,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			build := &common.Build{
-				JobResponse: jobResponse,
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Executor: "docker",
-						Docker: &common.DockerConfig{
-							Image:      common.TestAlpineImage,
-							PullPolicy: common.PullPolicyIfNotPresent,
-						},
-						Environment: []string{
-							"GIT_CLONE_PATH=" + test.clonePath,
-						},
-					},
-				},
+			build := getBuildForOS(t, remoteBuild)
+			build.Runner.Environment = []string{
+				"GIT_CLONE_PATH=" + test.clonePath,
 			}
 
-			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-			assert.IsType(t, test.expectedErrorType, err)
+			err := buildtest.RunBuild(t, &build)
+			if test.expectedErr {
+				var buildErr *common.BuildError
+				assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
+				return
+			}
+
+			assert.NoError(t, err)
 		})
 	}
 }
