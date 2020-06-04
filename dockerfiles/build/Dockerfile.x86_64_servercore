@@ -1,6 +1,8 @@
 # escape=`
 
-FROM mcr.microsoft.com/windows/servercore:1809_amd64 as builder
+ARG BASE_IMAGE_TAG
+
+FROM ${BASE_IMAGE_TAG} as builder
 
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
@@ -22,7 +24,7 @@ RUN powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:
 RUN Expand-Archive -Path git.zip -DestinationPath git
 RUN Expand-Archive -Path git-lfs.zip -DestinationPath git-lfs
 
-FROM mcr.microsoft.com/windows/servercore:1809_amd64
+FROM ${BASE_IMAGE_TAG}
 
 USER ContainerAdministrator
 

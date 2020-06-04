@@ -113,7 +113,7 @@ unit test with race:
   - .merge_request_pipelines_on_gitlab_org_gitlab_runner
   - .except_docs
   stage: test
-  parallel: 3
+  parallel: 8
   variables:
     GOROOT: "C:\\Go"
   before_script:
@@ -133,10 +133,17 @@ unit test with race:
   allow_failure: true
 
 windows 1809 tests:
-  parallel: 8
   extends:
   - .windows test
   - .windows1809
+
+windows 1903 tests:
+  extends:
+  - .windows test
+  - .windows1903
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner
 
 git 1.7.1:
   extends:

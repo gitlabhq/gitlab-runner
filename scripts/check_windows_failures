@@ -19,6 +19,7 @@ windowsTestOutputPattern="${testOutputDir}/*.windows.${WINDOWS_VERSION}.output.t
 
 trackedFailuresFile="./ci/.test-failures.${WINDOWS_VERSION}.txt"
 if [[ ! -f "${trackedFailuresFile}" ]]; then
+    echo "${trackedFailuresFile} not found, creating empty file"
     touch "${trackedFailuresFile}"
 fi
 
