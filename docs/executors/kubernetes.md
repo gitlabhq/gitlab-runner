@@ -499,7 +499,7 @@ the `node_selector` option to set one or more labels that have to match a node
 before any containers are deployed to it. For example build containers may only run
 on nodes that are labeled with `role=ci` while running all other production services
 on other nodes. Further separation of build containers can be achieved using node
-[taints](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/).
+[taints](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
 This will disallow other pods from scheduling on the same nodes as the
 build pods without extra configuration for the other pods.
 
