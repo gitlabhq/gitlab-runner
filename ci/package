@@ -64,7 +64,7 @@ create_package() {
         --before-remove "packaging/scripts/prerm.${packageType}" \
         \
         packaging/root/=/ \
-        "${RUNNER_BINARY}=/usr/lib/gitlab-runner/gitlab-runner" \
+        "${RUNNER_BINARY}=/usr/bin/gitlab-runner" \
         out/helper-images/=/usr/lib/gitlab-runner/helper-images/
 }
 
