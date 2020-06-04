@@ -374,7 +374,7 @@ func (s *executor) setupScriptsConfigMap() error {
 		return fmt.Errorf("kubernetes executor incorrect shell type")
 	}
 
-	trapShell := &shells.BashTrapShell{BashShell: bashShell}
+	trapShell := &shells.BashTrapShell{BashShell: bashShell, LogFile: s.logFile()}
 	scripts, err := s.generateScripts(trapShell)
 	if err != nil {
 		return err
