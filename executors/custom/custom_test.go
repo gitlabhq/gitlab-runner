@@ -3,6 +3,7 @@ package custom
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -513,7 +514,7 @@ func TestExecutor_Run(t *testing.T) {
 }
 
 func TestExecutor_ServicesEnv(t *testing.T) {
-  const CIJobServicesEnv = "CI_JOB_SERVICES"
+	const CIJobServicesEnv = "CI_JOB_SERVICES"
 
 	runnerConfig := getRunnerConfig(&common.CustomConfig{
 		RunExec:     "bash",
@@ -527,12 +528,14 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		}
 	}
 
-	assertEnvValue := func(expectedServices string) func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+	assertEnvValue := func(expectedServices []jsonService) func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
 		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == CIJobServicesEnv {
-					assert.Equal(t, expectedServices, pair[1])
+					expectedServicesSerialized, _ := json.Marshal(expectedServices)
+
+					assert.Equal(t, string(expectedServicesSerialized), pair[1])
 					break
 				}
 			}
@@ -560,10 +563,14 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 				},
 			}),
 			assertCommandFactory: assertEnvValue(
-				"[{\"name\":\"ruby:latest\"," +
-					"\"alias\":\"\"," +
-					"\"entrypoint\":null," +
-					"\"command\":null}]",
+				[]jsonService{
+					{
+						Name:       "ruby:latest",
+						Alias:      "",
+						Entrypoint: nil,
+						Command:    nil,
+					},
+				},
 			),
 		},
 		"returns full service definition": {
@@ -577,10 +584,14 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 				},
 			}),
 			assertCommandFactory: assertEnvValue(
-				"[{\"name\":\"ruby:latest\"," +
-					"\"alias\":\"henk-ruby\"," +
-					"\"entrypoint\":[\"path\",\"to\",\"entrypoint\"]," +
-					"\"command\":[\"path\",\"to\",\"command\"]}]",
+				[]jsonService{
+					{
+						Name:       "ruby:latest",
+						Alias:      "henk-ruby",
+						Entrypoint: []string{"path", "to", "entrypoint"},
+						Command:    []string{"path", "to", "command"},
+					},
+				},
 			),
 		},
 		"returns both simple and full service definitions": {
@@ -597,14 +608,20 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 				},
 			}),
 			assertCommandFactory: assertEnvValue(
-				"[{\"name\":\"python:latest\"," +
-					"\"alias\":\"henk-python\"," +
-					"\"entrypoint\":[\"entrypoint.sh\"]," +
-					"\"command\":[\"command --test\"]}," +
-					"{\"name\":\"python:alpine\"," +
-					"\"alias\":\"\"," +
-					"\"entrypoint\":null," +
-					"\"command\":null}]",
+				[]jsonService{
+					{
+						Name:       "python:latest",
+						Alias:      "henk-python",
+						Entrypoint: []string{"entrypoint.sh"},
+						Command:    []string{"command --test"},
+					},
+					{
+						Name:       "python:alpine",
+						Alias:      "",
+						Entrypoint: nil,
+						Command:    nil,
+					},
+				},
 			),
 		},
 		"does not create env CI_JOB_SERVICES": {

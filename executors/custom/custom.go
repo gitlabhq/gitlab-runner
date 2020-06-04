@@ -35,10 +35,10 @@ type ConfigExecOutput struct {
 }
 
 type jsonService struct {
-  Name       string   `json:"name"`
-  Alias      string   `json:"alias"`
-  Entrypoint []string `json:"entrypoint"`
-  Command    []string `json:"command"`
+	Name       string   `json:"name"`
+	Alias      string   `json:"alias"`
+	Entrypoint []string `json:"entrypoint"`
+	Command    []string `json:"command"`
 }
 
 func (c *ConfigExecOutput) InjectInto(executor *executor) {
@@ -225,7 +225,7 @@ func (e *executor) getCIJobServicesEnv() string {
 		return "CI_JOB_SERVICES="
 	}
 
-  var services []jsonService
+	var services []jsonService
 	for _, service := range e.Build.Services {
 		services = append(services, jsonService{
 			Name:       service.Name,
@@ -236,11 +236,11 @@ func (e *executor) getCIJobServicesEnv() string {
 	}
 
 	servicesSerialized, err := json.Marshal(services)
-  if err != nil {
+	if err != nil {
 		e.Warningln("Unable to create CI_JOB_SERVICES json:", err)
 	}
 
-  return fmt.Sprintf(
+	return fmt.Sprintf(
 		"%s=%s",
 		"CI_JOB_SERVICES",
 		servicesSerialized,
