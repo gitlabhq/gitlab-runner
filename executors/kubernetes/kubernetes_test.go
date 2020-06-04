@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -828,7 +829,9 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 		return
 	}
 
-	client, err := getKubeClient(&common.KubernetesConfig{}, &overwrites{})
+	config, err := getKubeClientConfig(new(common.KubernetesConfig), new(overwrites))
+	require.NoError(t, err)
+	client, err := kubernetes.NewForConfig(config)
 	require.NoError(t, err)
 	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
 	require.NoError(t, err)
@@ -1626,6 +1629,7 @@ func TestPrepare(t *testing.T) {
 			// It currently contains some moving parts that are failing, meaning
 			// we'll need to mock _something_
 			e.kubeClient = nil
+			e.kubeConfig = nil
 			e.featureChecker = nil
 			assert.Equal(t, test.Expected, e)
 		})
@@ -3055,8 +3059,6 @@ func TestNewLogStreamerStream(t *testing.T) {
 
 	e := newExecutor()
 	e.pod = pod
-	e.Config.Kubernetes = new(common.KubernetesConfig)
-	e.configurationOverwrites = new(overwrites)
 	e.Build = new(common.Build)
 
 	remoteExecutor := new(MockRemoteExecutor)
@@ -3081,23 +3083,19 @@ func TestNewLogStreamerStream(t *testing.T) {
 	})
 	remoteExecutor.On("Execute", http.MethodPost, urlMatcher, mock.Anything, nil, output, output, false).Return(abortErr)
 
-	p, err := e.newLogProcessor()
-	require.NoError(t, err)
-	kp, ok := p.(*kubernetesLogProcessor)
+	p, ok := e.newLogProcessor().(*kubernetesLogProcessor)
 	require.True(t, ok)
+	p.logsOffset = int64(offset)
 
-	kp.logsOffset = int64(offset)
-
-	s, ok := kp.logStreamer.(*kubernetesLogStreamer)
+	s, ok := p.logStreamer.(*kubernetesLogStreamer)
 	require.True(t, ok)
-
 	s.client = client
 	s.executor = remoteExecutor
 
 	assert.Equal(t, pod.Name, s.pod)
 	assert.Equal(t, pod.Namespace, s.namespace)
 
-	err = s.Stream(context.Background(), int64(offset), output)
+	err := s.Stream(context.Background(), int64(offset), output)
 	assert.True(t, errors.Is(err, abortErr))
 }
 

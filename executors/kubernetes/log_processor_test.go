@@ -78,7 +78,7 @@ func TestNewKubernetesLogProcessor(t *testing.T) {
 	assert.Equal(t, "namespace", k.namespace)
 	assert.Equal(t, "pod", k.pod)
 	assert.Equal(t, "container", k.container)
-	assert.Equal(t, "namespace/pod/container/logPath", p.logStreamer.String())
+	assert.Equal(t, "namespace/pod/container:logPath", p.logStreamer.String())
 }
 
 func TestKubernetesLogStreamProviderLogStream(t *testing.T) {

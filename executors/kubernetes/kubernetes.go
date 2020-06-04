@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	restclient "k8s.io/client-go/rest"
+
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 
 	"github.com/docker/docker/api/types"
@@ -91,6 +93,7 @@ type executor struct {
 	executors.AbstractExecutor
 
 	kubeClient  *kubernetes.Clientset
+	kubeConfig  *restclient.Config
 	pod         *api.Pod
 	configMap   *api.ConfigMap
 	credentials *api.Secret
@@ -108,8 +111,9 @@ type executor struct {
 
 	helperImageInfo helperimage.Info
 
-	featureChecker  featureChecker
-	newLogProcessor func() (logProcessor, error)
+	featureChecker featureChecker
+
+	newLogProcessor func() logProcessor
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
 }
@@ -181,8 +185,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("check defaults error: %w", err)
 	}
 
-	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes, s.configurationOverwrites); err != nil {
-		return fmt.Errorf("error connecting to Kubernetes: %w", err)
+	s.kubeConfig, err = getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
+	if err != nil {
+		return fmt.Errorf("getting kubernetes config: %w", err)
+	}
+
+	s.kubeClient, err = kubernetes.NewForConfig(s.kubeConfig)
+	if err != nil {
+		return fmt.Errorf("connecting to Kubernetes: %w", err)
 	}
 
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
@@ -331,11 +341,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("pod failed to enter running state: %s", status)
 	}
 
-	processor, err := s.newLogProcessor()
-	if err != nil {
-		return err
-	}
-
+	processor := s.newLogProcessor()
 	go s.processLogs(ctx, processor)
 
 	return nil
@@ -1067,25 +1073,19 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 	go func() {
 		defer close(errCh)
 
-		config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
-		if err != nil {
-			errCh <- err
-			return
-		}
-
 		attach := AttachOptions{
 			PodName:       s.pod.Name,
 			Namespace:     s.pod.Namespace,
 			ContainerName: name,
 			Command:       command,
 
-			Config:   config,
+			Config:   s.kubeConfig,
 			Client:   s.kubeClient,
 			Executor: &DefaultRemoteExecutor{},
 		}
 
 		retryable := retry.New(retry.WithBuildLog(&attach, &s.BuildLogger))
-		err = retryable.Run()
+		err := retryable.Run()
 		if err != nil {
 			errCh <- err
 		}
@@ -1119,13 +1119,6 @@ func (s *executor) runInContainerWithExecLegacy(ctx context.Context, name string
 			return
 		}
 
-		config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
-
-		if err != nil {
-			errCh <- err
-			return
-		}
-
 		exec := ExecOptions{
 			PodName:       s.pod.Name,
 			Namespace:     s.pod.Namespace,
@@ -1135,7 +1128,7 @@ func (s *executor) runInContainerWithExecLegacy(ctx context.Context, name string
 			Out:           s.Trace,
 			Err:           s.Trace,
 			Stdin:         true,
-			Config:        config,
+			Config:        s.kubeConfig,
 			Client:        s.kubeClient,
 			Executor:      &DefaultRemoteExecutor{},
 		}
@@ -1219,15 +1212,10 @@ func newExecutor() *executor {
 		remoteProcessTerminated: make(chan shells.TrapCommandExitStatus),
 	}
 
-	e.newLogProcessor = func() (logProcessor, error) {
-		config, err := getKubeClientConfig(e.Config.Kubernetes, e.configurationOverwrites)
-		if err != nil {
-			return nil, err
-		}
-
-		kubernetesLogProcessor := newKubernetesLogProcessor(
+	e.newLogProcessor = func() logProcessor {
+		return newKubernetesLogProcessor(
 			e.kubeClient,
-			config,
+			e.kubeConfig,
 			&backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
 			&e.BuildLogger,
 			kubernetesLogProcessorPodConfig{
@@ -1238,8 +1226,6 @@ func newExecutor() *executor {
 				waitLogFileTimeout: waitLogFileTimeout,
 			},
 		)
-
-		return kubernetesLogProcessor, nil
 	}
 
 	return e
