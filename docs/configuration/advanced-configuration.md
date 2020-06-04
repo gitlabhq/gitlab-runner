@@ -517,16 +517,6 @@ Example:
 [runners.machine]
   IdleCount = 5
   IdleTime = 600
-  [[runners.machine.autoscaling]]
-    Periods = ["* * 9-17 * * mon-fri *"]
-    IdleCount = 50
-    IdleTime = 3600
-    Timezone = "UTC"
-  [[runners.machine.autoscaling]]
-    Periods = ["* * * * * sat,sun *"]
-    IdleCount = 5
-    IdleTime = 60
-    Timezone = "UTC"
   MaxBuilds = 100
   MachineName = "auto-scale-%s"
   MachineDriver = "digitalocean"
@@ -539,6 +529,16 @@ Example:
       "digitalocean-private-networking",
       "engine-registry-mirror=http://10.11.12.13:12345"
   ]
+  [[runners.machine.autoscaling]]
+    Periods = ["* * 9-17 * * mon-fri *"]
+    IdleCount = 50
+    IdleTime = 3600
+    Timezone = "UTC"
+  [[runners.machine.autoscaling]]
+    Periods = ["* * * * * sat,sun *"]
+    IdleCount = 5
+    IdleTime = 60
+    Timezone = "UTC"
 ```
 
 ### Periods syntax

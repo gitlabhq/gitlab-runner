@@ -225,16 +225,6 @@ Here's an example of the `runners.machine` section:
     IdleCount = 1
     IdleTime = 1800
     MaxBuilds = 10
-     [[runners.machine.autoscaling]]
-      Periods = ["* * 9-17 * * mon-fri *"]
-      IdleCount = 50
-      IdleTime = 3600
-      Timezone = "UTC"
-    [[runners.machine.autoscaling]]
-      Periods = ["* * * * * sat,sun *"]
-      IdleCount = 5
-      IdleTime = 60
-      Timezone = "UTC"
     MachineDriver = "amazonec2"
     MachineName = "gitlab-docker-machine-%s"
     MachineOptions = [
@@ -249,6 +239,16 @@ Here's an example of the `runners.machine` section:
       "amazonec2-security-group=xxxxx",
       "amazonec2-instance-type=m4.2xlarge",
     ]
+    [[runners.machine.autoscaling]]
+      Periods = ["* * 9-17 * * mon-fri *"]
+      IdleCount = 50
+      IdleTime = 3600
+      Timezone = "UTC"
+    [[runners.machine.autoscaling]]
+      Periods = ["* * * * * sat,sun *"]
+      IdleCount = 5
+      IdleTime = 60
+      Timezone = "UTC"
 ```
 
 The Docker Machine driver is set to `amazonec2` and the machine name has a
