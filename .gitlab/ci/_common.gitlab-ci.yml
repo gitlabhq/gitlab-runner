@@ -81,7 +81,7 @@ before_script:
 
 .windows1809_variables:
   variables:
-    WINDOWS_VERSION: servercore_1809
+    WINDOWS_VERSION: servercore1809
 
 .windows1809:
   extends:
@@ -94,7 +94,7 @@ before_script:
 
 .windows1903_variables:
   variables:
-    WINDOWS_VERSION: servercore_1903
+    WINDOWS_VERSION: servercore1903
 
 .windows1903:
   extends:
