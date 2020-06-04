@@ -22,7 +22,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged
    release](bleeding-edge.md#download-any-other-tagged-release).
-1. Run an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/getting-started/starting-windows-powershell?view=powershell-6#with-administrative-privileges-run-as-administrator):
+1. Run an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
 1. [Register the Runner](../register/index.md).
 1. Install the Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
