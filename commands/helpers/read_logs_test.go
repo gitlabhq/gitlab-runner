@@ -18,10 +18,9 @@ import (
 func TestNewReadLogsCommandFileNotExist(t *testing.T) {
 	cmd := newReadLogsCommand()
 	cmd.logStreamProvider = &fileLogStreamProvider{
-		cmd: cmd,
+		waitFileTimeout: 2 * time.Second,
+		path:            "not_exists",
 	}
-	cmd.Path = "not_exists"
-	cmd.WaitFileTimeout = 2 * time.Second
 
 	err := cmd.readLogs()
 	assert.Equal(t, errWaitingFileTimeout, err)
@@ -29,10 +28,7 @@ func TestNewReadLogsCommandFileNotExist(t *testing.T) {
 
 func TestNewReadLogsCommandNoAttempts(t *testing.T) {
 	cmd := newReadLogsCommand()
-	cmd.logStreamProvider = &fileLogStreamProvider{
-		cmd: cmd,
-	}
-	cmd.WaitFileTimeout = 0
+	cmd.logStreamProvider = new(fileLogStreamProvider)
 
 	err := cmd.readLogs()
 	assert.Equal(t, errNoAttemptsToOpenFile, err)
@@ -43,7 +39,10 @@ func TestNewReadLogsCommandFileSeekToInvalidLocation(t *testing.T) {
 	defer cleanup()
 
 	cmd := newReadLogsCommand()
-	cmd.Path = testFile.Name()
+	cmd.logStreamProvider = &fileLogStreamProvider{
+		path:            testFile.Name(),
+		waitFileTimeout: time.Minute,
+	}
 	cmd.Offset = -1
 
 	err := cmd.readLogs()
@@ -61,6 +60,22 @@ func setupTestFile(t *testing.T) (*os.File, func()) {
 	}
 
 	return f, cleanup
+}
+
+func TestNewReadLogsCommandFileLogStreamProviderCorrect(t *testing.T) {
+	cmd := newReadLogsCommand()
+	cmd.WaitFileTimeout = 10 * time.Second
+	f, cleanup := setupTestFile(t)
+	defer cleanup()
+	cmd.Path = f.Name()
+
+	go cmd.Execute(nil)
+	time.Sleep(time.Second)
+
+	assert.Equal(t, &fileLogStreamProvider{
+		waitFileTimeout: cmd.WaitFileTimeout,
+		path:            cmd.Path,
+	}, cmd.logStreamProvider)
 }
 
 func TestNewReadLogsCommandLines(t *testing.T) {

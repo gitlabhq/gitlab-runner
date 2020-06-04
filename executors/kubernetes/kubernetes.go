@@ -187,7 +187,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.kubeConfig, err = getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
 	if err != nil {
-		return fmt.Errorf("getting kubernetes config: %w", err)
+		return fmt.Errorf("getting Kubernetes config: %w", err)
 	}
 
 	s.kubeClient, err = kubernetes.NewForConfig(s.kubeConfig)

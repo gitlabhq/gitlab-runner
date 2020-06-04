@@ -219,6 +219,8 @@ func TestParseLogs(t *testing.T) {
 func TestListenReadLines(t *testing.T) {
 	expectedLines := []string{"line 1", "line 2"}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	mockLogStreamer := newMockLogStreamer()
 	defer mockLogStreamer.AssertExpectations(t)
 	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
@@ -228,6 +230,7 @@ func TestListenReadLines(t *testing.T) {
 				log{line: expectedLines[0], offset: 10},
 				log{line: expectedLines[1], offset: 20},
 			)
+			cancel()
 		}).
 		Return(nil).
 		Once()
@@ -235,15 +238,10 @@ func TestListenReadLines(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ctx, cancel := context.WithCancel(context.Background())
-
 	ch := processor.Process(ctx)
 	receivedLogs := make([]string, 0)
 	for log := range ch {
 		receivedLogs = append(receivedLogs, log)
-		if len(receivedLogs) == len(expectedLines) {
-			cancel()
-		}
 	}
 
 	assert.Equal(t, expectedLines, receivedLogs)

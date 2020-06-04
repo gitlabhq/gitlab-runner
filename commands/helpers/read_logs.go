@@ -34,17 +34,18 @@ type readSeekCloser interface {
 }
 
 type fileLogStreamProvider struct {
-	cmd *ReadLogsCommand
+	waitFileTimeout time.Duration
+	path            string
 }
 
 func (p *fileLogStreamProvider) Open() (readSeekCloser, error) {
-	attempts := int(p.cmd.WaitFileTimeout / defaultCheckFileExistsInterval)
+	attempts := int(p.waitFileTimeout / defaultCheckFileExistsInterval)
 	if attempts < 1 {
 		return nil, errNoAttemptsToOpenFile
 	}
 
 	for i := 0; i < attempts; i++ {
-		f, err := os.Open(p.cmd.Path)
+		f, err := os.Open(p.path)
 		if os.IsNotExist(err) {
 			time.Sleep(defaultCheckFileExistsInterval)
 			continue
@@ -80,9 +81,6 @@ type ReadLogsCommand struct {
 
 func newReadLogsCommand() *ReadLogsCommand {
 	cmd := new(ReadLogsCommand)
-	cmd.logStreamProvider = &fileLogStreamProvider{
-		cmd: cmd,
-	}
 	cmd.logOutputWriter = &streamLogOutputWriter{stream: os.Stdout}
 	cmd.readerBufferSize = defaultReaderBufferSize
 	// by default check if the file exists at least once
@@ -92,6 +90,11 @@ func newReadLogsCommand() *ReadLogsCommand {
 }
 
 func (c *ReadLogsCommand) Execute(*cli.Context) {
+	c.logStreamProvider = &fileLogStreamProvider{
+		waitFileTimeout: c.WaitFileTimeout,
+		path:            c.Path,
+	}
+
 	if err := c.readLogs(); err != nil {
 		c.logOutputWriter.Write(fmt.Sprintf("error reading logs %v\n", err))
 		os.Exit(1)
