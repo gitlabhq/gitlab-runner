@@ -417,16 +417,6 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
   [runners.machine]
     IdleCount = 5                    # There must be 5 machines in Idle state - when Off Peak time mode is off
     IdleTime = 600                   # Each machine can be in Idle state up to 600 seconds (after this it will be removed) - when Off Peak time mode is off
-    [[runners.machine.autoscaling]]  # Define periods with different settings
-      Periods = ["* * 9-17 * * mon-fri *"] # Every workday between 9 and 17 UTC
-      IdleCount = 50
-      IdleTime = 3600
-      Timezone = "UTC"
-    [[runners.machine.autoscaling]]
-      Periods = ["* * * * * sat,sun *"] # During the weekends
-      IdleCount = 5
-      IdleTime = 60
-      Timezone = "UTC"
     MaxBuilds = 100                  # Each machine can handle up to 100 jobs in a row (after this it will be removed)
     MachineName = "auto-scale-%s"    # Each machine will have a unique name ('%s' is required)
     MachineDriver = "digitalocean"   # Docker Machine is using the 'digitalocean' driver
@@ -439,6 +429,16 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
         "digitalocean-private-networking",
         "engine-registry-mirror=http://10.11.12.13:12345"   # Docker Machine is using registry mirroring
     ]
+    [[runners.machine.autoscaling]]  # Define periods with different settings
+      Periods = ["* * 9-17 * * mon-fri *"] # Every workday between 9 and 17 UTC
+      IdleCount = 50
+      IdleTime = 3600
+      Timezone = "UTC"
+    [[runners.machine.autoscaling]]
+      Periods = ["* * * * * sat,sun *"] # During the weekends
+      IdleCount = 5
+      IdleTime = 60
+      Timezone = "UTC"
   [runners.cache]
     Type = "s3"
     [runners.cache.s3]
