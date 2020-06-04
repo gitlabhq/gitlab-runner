@@ -3042,6 +3042,65 @@ func setBuildFeatureFlag(build *common.Build, flag string, value bool) {
 	})
 }
 
+func TestNewLogStreamerStream(t *testing.T) {
+	abortErr := errors.New("abort")
+
+	pod := new(api.Pod)
+	pod.Namespace = "k8s_namespace"
+	pod.Name = "k8s_pod_name"
+
+	client := mockKubernetesClientWithHost("", "", nil)
+	output := new(bytes.Buffer)
+	offset := 15
+
+	e := newExecutor()
+	e.pod = pod
+	e.Config.Kubernetes = new(common.KubernetesConfig)
+	e.configurationOverwrites = new(overwrites)
+	e.Build = new(common.Build)
+
+	remoteExecutor := new(MockRemoteExecutor)
+	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
+		query := url.Query()
+		assert.Equal(t, helperContainerName, query.Get("container"))
+		assert.Equal(t, "true", query.Get("stdout"))
+		assert.Equal(t, "true", query.Get("stderr"))
+		command := query["command"]
+		assert.Equal(t, []string{
+			"gitlab-runner-helper",
+			"read-logs",
+			"--path",
+			e.logFile(),
+			"--offset",
+			strconv.Itoa(offset),
+			"--wait-file-timeout",
+			waitLogFileTimeout.String(),
+		}, command)
+
+		return true
+	})
+	remoteExecutor.On("Execute", http.MethodPost, urlMatcher, mock.Anything, nil, output, output, false).Return(abortErr)
+
+	p, err := e.newLogProcessor()
+	require.NoError(t, err)
+	kp, ok := p.(*kubernetesLogProcessor)
+	require.True(t, ok)
+
+	kp.logsOffset = int64(offset)
+
+	s, ok := kp.logStreamer.(*kubernetesLogStreamer)
+	require.True(t, ok)
+
+	s.client = client
+	s.executor = remoteExecutor
+
+	assert.Equal(t, pod.Name, s.pod)
+	assert.Equal(t, pod.Namespace, s.namespace)
+
+	err = s.Stream(context.Background(), int64(offset), output)
+	assert.True(t, errors.Is(err, abortErr))
+}
+
 type FakeReadCloser struct {
 	io.Reader
 }

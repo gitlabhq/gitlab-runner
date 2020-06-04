@@ -24,8 +24,18 @@ func TestNewReadLogsCommandFileNotExist(t *testing.T) {
 	cmd.WaitFileTimeout = 2 * time.Second
 
 	err := cmd.readLogs()
-
 	assert.Equal(t, errWaitingFileTimeout, err)
+}
+
+func TestNewReadLogsCommandNoAttempts(t *testing.T) {
+	cmd := newReadLogsCommand()
+	cmd.logStreamProvider = &fileLogStreamProvider{
+		cmd: cmd,
+	}
+	cmd.WaitFileTimeout = 0
+
+	err := cmd.readLogs()
+	assert.Equal(t, errNoAttemptsToOpenFile, err)
 }
 
 func TestNewReadLogsCommandFileSeekToInvalidLocation(t *testing.T) {
@@ -37,7 +47,6 @@ func TestNewReadLogsCommandFileSeekToInvalidLocation(t *testing.T) {
 	cmd.Offset = -1
 
 	err := cmd.readLogs()
-
 	var expectedErr *os.PathError
 	assert.True(t, errors.As(err, &expectedErr), "expected err %T, but got %T", expectedErr, err)
 }

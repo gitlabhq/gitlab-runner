@@ -125,7 +125,7 @@ func TestKubernetesLogStreamProviderLogStream(t *testing.T) {
 	s.pod = pod
 	s.container = container
 	s.logPath = logPath
-	s.waitFileTimeout = waitFileTimeout
+	s.waitLogFileTimeout = waitFileTimeout
 
 	err := s.Stream(context.Background(), int64(offset), output)
 	assert.True(t, errors.Is(err, abortErr))

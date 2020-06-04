@@ -22,10 +22,9 @@ type logStreamer interface {
 type kubernetesLogStreamer struct {
 	kubernetesLogProcessorPodConfig
 
-	client          *kubernetes.Clientset
-	clientConfig    *restclient.Config
-	executor        RemoteExecutor
-	waitFileTimeout time.Duration
+	client       *kubernetes.Clientset
+	clientConfig *restclient.Config
+	executor     RemoteExecutor
 }
 
 func (s *kubernetesLogStreamer) Stream(ctx context.Context, offset int64, output io.Writer) error {
@@ -42,7 +41,7 @@ func (s *kubernetesLogStreamer) Stream(ctx context.Context, offset int64, output
 			"--offset",
 			strconv.FormatInt(offset, 10),
 			"--wait-file-timeout",
-			s.waitFileTimeout.String(),
+			s.waitLogFileTimeout.String(),
 		},
 		Out:      output,
 		Err:      output,
@@ -148,11 +147,12 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outputCh cha
 		_ = writer.Close()
 	}()
 
-	// Using errgroup.WithContext here doesn't work since if either one of the goroutines
-	// exists with a nil error, we can't signal the other one to exit
+	// Using errgroup.WithContext doesn't work here since if either one of the goroutines
+	// exits with a nil error, we can't signal the other one to exit
 	ctx, cancel := context.WithCancel(ctx)
 
 	var gr errgroup.Group
+
 	gr.Go(func() error {
 		defer cancel()
 

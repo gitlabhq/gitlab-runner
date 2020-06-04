@@ -39,6 +39,8 @@ const (
 	helperContainerName = "helper"
 
 	detectShellScriptName = "detect_shell_script"
+
+	waitLogFileTimeout = time.Minute
 )
 
 var (
@@ -1233,7 +1235,7 @@ func newExecutor() *executor {
 				pod:                e.pod.Name,
 				container:          helperContainerName,
 				logPath:            e.logFile(),
-				waitLogFileTimeout: time.Second,
+				waitLogFileTimeout: waitLogFileTimeout,
 			},
 		)
 

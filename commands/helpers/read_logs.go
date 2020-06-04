@@ -19,7 +19,10 @@ const (
 	pollFileContentsTimeout        = 500 * time.Millisecond
 )
 
-var errWaitingFileTimeout = errors.New("timeout waiting for file to be created")
+var (
+	errWaitingFileTimeout   = errors.New("timeout waiting for file to be created")
+	errNoAttemptsToOpenFile = errors.New("no attempts to open log file configured")
+)
 
 type logStreamProvider interface {
 	Open() (readSeekCloser, error)
@@ -36,6 +39,9 @@ type fileLogStreamProvider struct {
 
 func (p *fileLogStreamProvider) Open() (readSeekCloser, error) {
 	attempts := int(p.cmd.WaitFileTimeout / defaultCheckFileExistsInterval)
+	if attempts < 1 {
+		return nil, errNoAttemptsToOpenFile
+	}
 
 	for i := 0; i < attempts; i++ {
 		f, err := os.Open(p.cmd.Path)
