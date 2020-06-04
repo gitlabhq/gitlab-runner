@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -54,7 +55,7 @@ func (s *kubernetesLogStreamer) Stream(ctx context.Context, offset int64, output
 }
 
 func (s *kubernetesLogStreamer) String() string {
-	return fmt.Sprintf("%s/%s/%s/%s", s.namespace, s.pod, s.container, s.logPath)
+	return fmt.Sprintf("%s/%s/%s:%s", s.namespace, s.pod, s.container, s.logPath)
 }
 
 type logProcessor interface {
@@ -157,6 +158,12 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outputCh cha
 		defer cancel()
 
 		err := l.logStreamer.Stream(ctx, l.logsOffset, writer)
+		// prevent printing an error that the container exited
+		// when the context is already cancelled
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return nil
+		}
+
 		if err != nil {
 			err = fmt.Errorf("streaming logs %s: %w", l.logStreamer, err)
 		}
