@@ -352,8 +352,7 @@ func (s *executor) buildCommandForStage(stage common.BuildStage) string {
 }
 
 func (s *executor) processLogs(ctx context.Context, processor logProcessor) {
-	logsCh := make(chan string)
-	go processor.Process(ctx, logsCh)
+	logsCh := processor.Process(ctx)
 
 	for line := range logsCh {
 		var status shells.TrapCommandExitStatus
@@ -1217,7 +1216,7 @@ func newExecutor() *executor {
 			e.kubeClient,
 			e.kubeConfig,
 			&backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
-			&e.BuildLogger,
+			e.Build.Log(),
 			kubernetesLogProcessorPodConfig{
 				namespace:          e.pod.Namespace,
 				pod:                e.pod.Name,

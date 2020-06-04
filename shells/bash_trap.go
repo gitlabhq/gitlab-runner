@@ -30,10 +30,6 @@ trap runner_script_trap EXIT
 
 `
 
-func GenerateBashTrapShellScript(logFile string) string {
-	return fmt.Sprintf(bashTrapShellScript, logFile)
-}
-
 type BashTrapShellWriter struct {
 	*BashWriter
 
@@ -54,7 +50,7 @@ func (b *BashTrapShellWriter) Finish(trace bool) string {
 }
 
 func (b *BashTrapShellWriter) writeTrap(w io.Writer) {
-	_, _ = io.WriteString(w, GenerateBashTrapShellScript(b.logFile))
+	_, _ = fmt.Fprintf(w, bashTrapShellScript, b.logFile)
 }
 
 type BashTrapShell struct {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -61,12 +62,7 @@ func (s *kubernetesLogStreamer) String() string {
 type logProcessor interface {
 	// Process listens for log lines
 	// consumers must read from the channel until it's closed
-	Process(ctx context.Context, outCh chan string)
-}
-
-type logger interface {
-	Debugln(args ...interface{})
-	Warningln(args ...interface{})
+	Process(ctx context.Context) <-chan string
 }
 
 type backoffCalculator interface {
@@ -77,7 +73,7 @@ type backoffCalculator interface {
 // to the stream constantly, stopping only when the passed context is cancelled.
 type kubernetesLogProcessor struct {
 	backoff     backoffCalculator
-	logger      logger
+	logger      logrus.FieldLogger
 	logStreamer logStreamer
 
 	logsOffset int64
@@ -95,7 +91,7 @@ func newKubernetesLogProcessor(
 	client *kubernetes.Clientset,
 	clientConfig *restclient.Config,
 	backoff backoffCalculator,
-	logger logger,
+	logger logrus.FieldLogger,
 	podCfg kubernetesLogProcessorPodConfig,
 ) *kubernetesLogProcessor {
 	logStreamer := &kubernetesLogStreamer{
@@ -112,12 +108,17 @@ func newKubernetesLogProcessor(
 	}
 }
 
-func (l *kubernetesLogProcessor) Process(ctx context.Context, outCh chan string) {
-	defer close(outCh)
-	l.attach(ctx, outCh)
+func (l *kubernetesLogProcessor) Process(ctx context.Context) <-chan string {
+	outCh := make(chan string)
+	go func() {
+		defer close(outCh)
+		l.attach(ctx, outCh)
+	}()
+
+	return outCh
 }
 
-func (l *kubernetesLogProcessor) attach(ctx context.Context, outputCh chan string) {
+func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string) {
 	var attempt float64 = -1
 
 	for {
@@ -134,14 +135,14 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outputCh chan strin
 			time.Sleep(backoffDuration)
 		}
 
-		err := l.processStream(ctx, outputCh)
+		err := l.processStream(ctx, outCh)
 		if err != nil {
 			l.logger.Warningln(fmt.Sprintf("Error %s. Retrying...", err))
 		}
 	}
 }
 
-func (l *kubernetesLogProcessor) processStream(ctx context.Context, outputCh chan string) error {
+func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan string) error {
 	reader, writer := io.Pipe()
 	defer func() {
 		_ = reader.Close()
@@ -154,10 +155,11 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outputCh cha
 
 	var gr errgroup.Group
 
+	logsOffset := l.logsOffset
 	gr.Go(func() error {
 		defer cancel()
 
-		err := l.logStreamer.Stream(ctx, l.logsOffset, writer)
+		err := l.logStreamer.Stream(ctx, logsOffset, writer)
 		// prevent printing an error that the container exited
 		// when the context is already cancelled
 		if errors.Is(ctx.Err(), context.Canceled) {
@@ -174,7 +176,7 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outputCh cha
 	gr.Go(func() error {
 		defer cancel()
 
-		err := l.readLogs(ctx, reader, outputCh)
+		err := l.readLogs(ctx, reader, outCh)
 		if err != nil {
 			err = fmt.Errorf("reading logs %s: %w", l.logStreamer, err)
 		}
@@ -185,7 +187,7 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outputCh cha
 	return gr.Wait()
 }
 
-func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, outputCh chan string) error {
+func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, outCh chan string) error {
 	logsScanner, linesCh := l.scan(ctx, logs)
 
 	for {
@@ -202,7 +204,7 @@ func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, o
 				l.logsOffset = newLogsOffset
 			}
 
-			outputCh <- logLine
+			outCh <- logLine
 		}
 	}
 }

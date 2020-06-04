@@ -110,6 +110,9 @@ func (c *ReadLogsCommand) readLogs() error {
 		buf, err := r.ReadSlice('\n')
 		if len(buf) > 0 {
 			offset += int64(len(buf))
+			// if the buffer was filled by a message larger than the
+			// buffer size we must make sure that it ends with a new line
+			// so it gets properly handled by the executor which splits by new lines
 			if buf[len(buf)-1] != '\n' {
 				buf = append(buf, '\n')
 			}
@@ -117,9 +120,14 @@ func (c *ReadLogsCommand) readLogs() error {
 			c.logOutputWriter.Write(fmt.Sprintf("%d %s", offset, buf))
 		}
 
-		if err == io.EOF {
+		// io.EOF means that we reached the end of the file
+		// we try reading from it again to see if there are new contents
+		// bufio.ErrBufferFull means that the message was larger than the buffer
+		// we print the message so far along with a new line character
+		// and continue reading the rest of it from the stream
+		if errors.Is(err, io.EOF) {
 			time.Sleep(pollFileContentsTimeout)
-		} else if err != nil && err != bufio.ErrBufferFull {
+		} else if err != nil && !errors.Is(err, bufio.ErrBufferFull) {
 			return err
 		}
 	}
@@ -141,5 +149,5 @@ func (c *ReadLogsCommand) openFileReader() (readSeekCloser, *bufio.Reader, error
 }
 
 func init() {
-	common.RegisterCommand2("read-logs", "reads logs from a file", newReadLogsCommand())
+	common.RegisterCommand2("read-logs", "reads job logs from a file, used by kubernetes executor (internal)", newReadLogsCommand())
 }

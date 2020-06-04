@@ -2784,24 +2784,23 @@ func TestProcessLogs(t *testing.T) {
 	defer mockTrace.AssertExpectations(t)
 	mockTrace.On("Write", []byte("line\n")).Return(0, nil).Once()
 
-	mockLogProcessor := &mockLogProcessor{}
+	mockLogProcessor := new(mockLogProcessor)
 	defer mockLogProcessor.AssertExpectations(t)
-	mockLogProcessor.On("Process", mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			ch := args.Get(1).(chan string)
-			ch <- "line"
 
-			exitCode := 1
-			script := "script"
-			status := shells.TrapCommandExitStatus{
-				CommandExitCode: &exitCode,
-				Script:          &script,
-			}
+	ch := make(chan string, 2)
+	ch <- "line"
+	exitCode := 1
+	script := "script"
+	status := shells.TrapCommandExitStatus{
+		CommandExitCode: &exitCode,
+		Script:          &script,
+	}
 
-			b, err := json.Marshal(status)
-			require.NoError(t, err)
-			ch <- string(b)
-		}).
+	b, err := json.Marshal(status)
+	require.NoError(t, err)
+	ch <- string(b)
+	mockLogProcessor.On("Process", mock.Anything).
+		Return((<-chan string)(ch)).
 		Once()
 
 	e := newExecutor()
@@ -3059,7 +3058,9 @@ func TestNewLogStreamerStream(t *testing.T) {
 
 	e := newExecutor()
 	e.pod = pod
-	e.Build = new(common.Build)
+	e.Build = &common.Build{
+		Runner: new(common.RunnerConfig),
+	}
 
 	remoteExecutor := new(MockRemoteExecutor)
 	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {

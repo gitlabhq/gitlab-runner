@@ -237,9 +237,7 @@ func TestListenReadLines(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	ch := make(chan string)
-	go processor.Process(ctx, ch)
-
+	ch := processor.Process(ctx)
 	receivedLogs := make([]string, 0)
 	for log := range ch {
 		receivedLogs = append(receivedLogs, log)
@@ -293,8 +291,7 @@ func TestListenCancelContext(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch := make(chan string)
-	go processor.Process(ctx, ch)
+	ch := processor.Process(ctx)
 	for range ch {
 	}
 }
@@ -328,8 +325,7 @@ func TestAttachReconnectLogStream(t *testing.T) {
 	processor.logStreamer = mockLogStreamer
 	processor.backoff = mockBackoffCalculator
 
-	ch := make(chan string)
-	go processor.Process(ctx, ch)
+	ch := processor.Process(ctx)
 	for range ch {
 	}
 }
@@ -365,8 +361,7 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 	processor.logStreamer = mockLogStreamer
 	processor.backoff = mockBackoffCalculator
 
-	ch := make(chan string)
-	go processor.Process(ctx, ch)
+	ch := processor.Process(ctx)
 	for range ch {
 	}
 }
@@ -400,8 +395,7 @@ func TestAttachCorrectOffset(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch := make(chan string)
-	go processor.Process(ctx, ch)
+	ch := processor.Process(ctx)
 	for range ch {
 	}
 }
