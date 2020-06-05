@@ -2,61 +2,37 @@ package kubernetes
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/jpillora/backoff"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest/fake"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	restclient "k8s.io/client-go/rest"
 )
 
-const testDate1 = "2020-01-30T16:28:25.479904159Z"
-const testDate2 = "2021-01-30T16:28:25.479904159Z"
-
-// delayBackoff is used in all instances of logProcessor which call Listen.
-// this ensures that there will be a delay when reconnecting and calling mocked methods
-// to avoid flaky tests
-var delayBackoff = backoff.Backoff{Min: 500 * time.Millisecond, Max: time.Second}
-
 type log struct {
-	line      string
-	timestamp *time.Time
+	line   string
+	offset int64
 }
 
-func (t log) String() string {
-	if t.timestamp == nil {
-		return t.line
+func (l log) String() string {
+	if l.offset < 0 {
+		return l.line
 	}
 
-	return fmt.Sprintf("%s %s", t.timestamp.Format(time.RFC3339Nano), t.line)
-}
-
-func mustParseTimestamp(t *testing.T, s string) *time.Time {
-	parsedTime, err := time.Parse(time.RFC3339, s)
-	require.NoError(t, err)
-	return &parsedTime
-}
-
-func logsToReadCloser(logs ...log) io.ReadCloser {
-	b := &bytes.Buffer{}
-	for _, l := range logs {
-		b.WriteString(l.String() + "\n")
-	}
-
-	return ioutil.NopCloser(b)
+	return fmt.Sprintf("%d %s", l.offset, l.line)
 }
 
 type brokenReaderError struct{}
@@ -82,25 +58,27 @@ func (b *brokenReader) Close() error {
 }
 
 func TestNewKubernetesLogProcessor(t *testing.T) {
-	client := &kubernetes.Clientset{}
-	testBackoff := backoff.Backoff{}
-	logger := &common.BuildLogger{}
-	p := newKubernetesLogProcessor(client, testBackoff, logger, kubernetesLogProcessorPodConfig{
-		namespace:  "namespace",
-		pod:        "pod",
-		containers: []string{"container"},
-	}).(*kubernetesLogProcessor)
+	client := new(kubernetes.Clientset)
+	testBackoff := new(backoff.Backoff)
+	logger := logrus.New()
+	clientConfig := new(restclient.Config)
+	p := newKubernetesLogProcessor(client, clientConfig, testBackoff, logger, kubernetesLogProcessorPodConfig{
+		namespace: "namespace",
+		pod:       "pod",
+		container: "container",
+		logPath:   "logPath",
+	})
 
 	assert.Equal(t, testBackoff, p.backoff)
 	assert.Equal(t, logger, p.logger)
-	require.Len(t, p.logProviders, 1)
+	require.NotNil(t, p.logStreamer)
 
-	k, ok := p.logProviders[0].(*kubernetesLogStreamProvider)
+	k, ok := p.logStreamer.(*kubernetesLogStreamer)
 	assert.True(t, ok)
 	assert.Equal(t, "namespace", k.namespace)
 	assert.Equal(t, "pod", k.pod)
 	assert.Equal(t, "container", k.container)
-	assert.Equal(t, "namespace/pod/container", p.logProviders[0].String())
+	assert.Equal(t, "namespace/pod/container:logPath", p.logStreamer.String())
 }
 
 func TestKubernetesLogStreamProviderLogStream(t *testing.T) {
@@ -109,160 +87,131 @@ func TestKubernetesLogStreamProviderLogStream(t *testing.T) {
 	namespace := "k8s_namespace"
 	pod := "k8s_pod_name"
 	container := "k8s_container_name"
+	logPath := "log_path"
 
-	tests := map[string]struct {
-		sinceTime *time.Time
-	}{
-		"existing since time": {
-			sinceTime: mustParseTimestamp(t, testDate1),
-		},
-		"non-existing since time": {
-			sinceTime: nil,
-		},
-	}
+	client := mockKubernetesClientWithHost("", "", nil)
+	cfg := new(restclient.Config)
+	output := new(bytes.Buffer)
+	offset := 15
+	waitFileTimeout := time.Minute
 
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			client := mockKubernetesClientWithHost("", "", fake.CreateHTTPClient(func(request *http.Request) (*http.Response, error) {
-				assert.Equal(t, fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/log", namespace, pod), request.URL.Path)
-				query := request.URL.Query()
-				assert.Equal(t, container, query.Get("container"))
+	executor := new(MockRemoteExecutor)
+	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
+		query := url.Query()
+		assert.Equal(t, container, query.Get("container"))
+		assert.Equal(t, "true", query.Get("stdout"))
+		assert.Equal(t, "true", query.Get("stderr"))
+		command := query["command"]
+		assert.Equal(t, []string{
+			"gitlab-runner-helper",
+			"read-logs",
+			"--path",
+			logPath,
+			"--offset",
+			strconv.Itoa(offset),
+			"--wait-file-timeout",
+			waitFileTimeout.String(),
+		}, command)
 
-				follow, err := strconv.ParseBool(query.Get("follow"))
-				assert.NoError(t, err)
-				assert.True(t, follow)
+		return true
+	})
+	executor.On("Execute", http.MethodPost, urlMatcher, cfg, nil, output, output, false).Return(abortErr)
 
-				timestamps, err := strconv.ParseBool(query.Get("timestamps"))
-				assert.NoError(t, err)
-				assert.True(t, timestamps)
+	s := kubernetesLogStreamer{}
+	s.client = client
+	s.clientConfig = cfg
+	s.executor = executor
+	s.namespace = namespace
+	s.pod = pod
+	s.container = container
+	s.logPath = logPath
+	s.waitLogFileTimeout = waitFileTimeout
 
-				sinceTimeQuery := query.Get("sinceTime")
-				if tt.sinceTime != nil {
-					sinceTime, err := time.Parse(time.RFC3339, sinceTimeQuery)
-					require.NoError(t, err)
-					assert.True(t, tt.sinceTime.Round(time.Second).Equal(sinceTime))
-				} else {
-					assert.Equal(t, "", sinceTimeQuery)
-				}
-
-				return nil, abortErr
-			}))
-
-			p := kubernetesLogStreamProvider{
-				client:    client,
-				namespace: namespace,
-				pod:       pod,
-				container: container,
-			}
-
-			_, err := p.LogStream(tt.sinceTime)
-			assert.True(t, errors.Is(err, abortErr))
-		})
-	}
+	err := s.Stream(context.Background(), int64(offset), output)
+	assert.True(t, errors.Is(err, abortErr))
 }
 
 func TestReadLogsBrokenReader(t *testing.T) {
-	proc := kubernetesLogProcessor{}
-	expectedTime := time.Time{}.Add(1 * time.Hour)
-	receivedTime, err := proc.readLogs(context.Background(), newBrokenReader(&brokenReaderError{}), timestampsSet{}, expectedTime, nil)
+	proc := new(kubernetesLogProcessor)
+	output := make(chan string)
+	err := proc.readLogs(context.Background(), newBrokenReader(new(brokenReaderError)), output)
 
 	assert.True(t, errors.Is(err, new(brokenReaderError)))
-	assert.Equal(t, expectedTime, receivedTime)
 }
 
-func TestProcessedTimestampsPopulated(t *testing.T) {
-	proc := kubernetesLogProcessor{}
-	ts := mustParseTimestamp(t, testDate1)
-	logs := logsToReadCloser(
-		log{line: "line 1", timestamp: ts},
-		log{line: "line 1", timestamp: ts},
-	)
-	timestamps := timestampsSet{}
+func TestProcessedOffsetSet(t *testing.T) {
+	proc := new(kubernetesLogProcessor)
 
 	ch := make(chan string)
-	defer close(ch)
-
 	go func() {
 		for range ch {
 		}
 	}()
 
-	_, err := proc.readLogs(context.Background(), logs, timestamps, time.Time{}, ch)
-
+	logs := logsToReader(
+		log{line: "line 1", offset: 10},
+		log{line: "line 1", offset: 20},
+	)
+	err := proc.readLogs(context.Background(), logs, ch)
 	assert.NoError(t, err)
+	assert.Equal(t, int64(20), proc.logsOffset)
+}
 
-	_, ok := timestamps[ts.UnixNano()]
-	assert.True(t, ok)
-	assert.Len(t, timestamps, 1)
+func logsToReader(logs ...log) io.Reader {
+	b := new(bytes.Buffer)
+	for _, l := range logs {
+		b.WriteString(l.String() + "\n")
+	}
+
+	return b
 }
 
 func TestParseLogs(t *testing.T) {
 	tests := map[string]struct {
-		log         log
-		verifyLogFn func(t *testing.T, parsedLog log, testLog log)
+		line string
 
-		assertErrorFn func(t *testing.T, err error)
+		expectedOffset int64
+		expectedText   string
 	}{
-		"parse log with date correct": {
-			log: log{
-				line:      "log line 1",
-				timestamp: mustParseTimestamp(t, testDate1),
-			},
-			verifyLogFn: func(t *testing.T, parsedLog log, testLog log) {
-				assert.Equal(t, testLog.line, parsedLog.line)
-				assert.Equal(t, *testLog.timestamp, *parsedLog.timestamp)
-			},
+		"with offset": {
+			line: "20 line",
+
+			expectedOffset: 20,
+			expectedText:   "line",
 		},
-		"invalid log with no date space": {
-			log: log{line: testDate1},
-			verifyLogFn: func(t *testing.T, parsedLog log, testLog log) {
-				assert.Equal(t, testDate1, parsedLog.line)
-				assert.Equal(t, *mustParseTimestamp(t, testDate1), *parsedLog.timestamp)
-			},
+		"with no offset": {
+			line: "line",
+
+			expectedOffset: -1,
+			expectedText:   "line",
 		},
-		"parse log with date not in RFC3339": {
-			log: log{
-				line: "2019-03-12 log",
-			},
-			assertErrorFn: func(t *testing.T, err error) {
-				var parseError *time.ParseError
-				assert.True(t, errors.As(err, &parseError))
-			},
+		"starts with space": {
+			line: " 20 line",
+
+			expectedOffset: -1,
+			expectedText:   " 20 line",
 		},
-		"invalid log with invalid date and no space": {
-			log: log{
-				line: "invalid",
-			},
-			assertErrorFn: func(t *testing.T, err error) {
-				var parseError *time.ParseError
-				assert.True(t, errors.As(err, &parseError))
-			},
+		"multiple spaces after offset": {
+			line: "20   line",
+
+			expectedOffset: 20,
+			expectedText:   "  line",
 		},
-		"invalid log empty": {
-			log: log{
-				line: "",
-			},
-			assertErrorFn: func(t *testing.T, err error) {
-				assert.True(t, errors.Is(err, io.EOF))
-			},
+		"empty log": {
+			line: "",
+
+			expectedOffset: -1,
+			expectedText:   "",
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			p := kubernetesLogProcessor{}
+			p := new(kubernetesLogProcessor)
 
-			timestamp, line, err := p.parseLogLine(tt.log.String())
-			if tt.assertErrorFn != nil {
-				tt.assertErrorFn(t, err)
-				return
-			}
-
-			assert.NoError(t, err)
-			tt.verifyLogFn(t, log{
-				line:      line,
-				timestamp: &timestamp,
-			}, tt.log)
+			offset, line := p.parseLogLine(tt.line)
+			assert.Equal(t, tt.expectedOffset, offset)
+			assert.Equal(t, tt.expectedText, line)
 		})
 	}
 }
@@ -270,296 +219,188 @@ func TestParseLogs(t *testing.T) {
 func TestListenReadLines(t *testing.T) {
 	expectedLines := []string{"line 1", "line 2"}
 
-	stream := logsToReadCloser(
-		log{line: expectedLines[0], timestamp: mustParseTimestamp(t, testDate1)},
-		log{line: expectedLines[1], timestamp: mustParseTimestamp(t, testDate2)},
-	)
-
-	mockStreamProvider := &mockLogStreamProvider{}
-	defer mockStreamProvider.AssertExpectations(t)
-	mockStreamProvider.On("LogStream", mock.Anything).Return(stream, nil).Once()
-
-	receivedLogs := make([]string, 0)
-	processor := &kubernetesLogProcessor{
-		backoff:      delayBackoff,
-		logger:       &common.BuildLogger{},
-		logProviders: []logStreamProvider{mockStreamProvider},
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	ch := processor.Listen(ctx)
+	mockLogStreamer := newMockLogStreamer()
+	defer mockLogStreamer.AssertExpectations(t)
+	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			writeLogs(
+				args.Get(2).(io.Writer),
+				log{line: expectedLines[0], offset: 10},
+				log{line: expectedLines[1], offset: 20},
+			)
+			cancel()
+		}).
+		Return(nil).
+		Once()
+
+	processor := newTestKubernetesLogProcessor()
+	processor.logStreamer = mockLogStreamer
+
+	ch := processor.Process(ctx)
+	receivedLogs := make([]string, 0)
 	for log := range ch {
 		receivedLogs = append(receivedLogs, log)
-		if len(receivedLogs) == len(expectedLines) {
-			break
-		}
 	}
 
 	assert.Equal(t, expectedLines, receivedLogs)
 }
 
+func newMockLogStreamer() *mockLogStreamer {
+	p := new(mockLogStreamer)
+	p.On("String").Return("mockLogStreamer").Maybe()
+
+	return p
+}
+
+func writeLogs(to io.Writer, logs ...log) {
+	for _, l := range logs {
+		_, _ = to.Write([]byte(l.String() + "\n"))
+	}
+}
+
+func newTestKubernetesLogProcessor() *kubernetesLogProcessor {
+	return &kubernetesLogProcessor{
+		logger:  logrus.New(),
+		backoff: newDefaultMockBackoffCalculator(),
+	}
+}
+
+func newDefaultMockBackoffCalculator() *mockBackoffCalculator {
+	c := new(mockBackoffCalculator)
+	c.On("ForAttempt", mock.Anything).Return(time.Duration(0)).Maybe()
+
+	return c
+}
+
 func TestListenCancelContext(t *testing.T) {
-	mockStreamProvider := &mockLogStreamProvider{}
-	defer mockStreamProvider.AssertExpectations(t)
+	mockLogStreamer := newMockLogStreamer()
+	defer mockLogStreamer.AssertExpectations(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
+	ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 
-	mockStreamProvider.On("LogStream", mock.Anything).
-		Run(func(args mock.Arguments) {
+	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(mock.Arguments) {
 			<-ctx.Done()
 		}).
-		Return(nil, io.EOF)
+		Return(io.EOF)
 
-	processor := &kubernetesLogProcessor{
-		backoff:      delayBackoff,
-		logger:       &common.BuildLogger{},
-		logProviders: []logStreamProvider{mockStreamProvider},
-	}
+	processor := newTestKubernetesLogProcessor()
+	processor.logStreamer = mockLogStreamer
 
-	<-processor.Listen(ctx)
-}
-
-func TestAttachReconnect(t *testing.T) {
-	const expectedReconnectCount = 3
-
-	tests := map[string]struct {
-		logStreamReturnReaderCloser io.ReadCloser
-		logStreamReturnError        error
-	}{
-		"request error": {
-			logStreamReturnReaderCloser: nil,
-			logStreamReturnError:        io.EOF,
-		},
-		"broken stream error": {
-			logStreamReturnReaderCloser: newBrokenReader(io.EOF),
-			logStreamReturnError:        nil,
-		},
-	}
-
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-
-			mockStreamProvider := &mockLogStreamProvider{}
-			defer mockStreamProvider.AssertExpectations(t)
-
-			var reconnects int
-			mockStreamProvider.
-				On("LogStream", mock.Anything).
-				Run(func(args mock.Arguments) {
-					reconnects++
-					if reconnects == expectedReconnectCount {
-						cancel()
-					}
-				}).
-				Return(tt.logStreamReturnReaderCloser, tt.logStreamReturnError).
-				Times(expectedReconnectCount)
-
-			minBackoff := 500 * time.Millisecond
-			processor := &kubernetesLogProcessor{
-				logProviders: []logStreamProvider{mockStreamProvider},
-				logger:       &common.BuildLogger{},
-				backoff:      backoff.Backoff{Min: minBackoff},
-			}
-
-			started := time.Now()
-
-			<-processor.Listen(ctx)
-			assert.True(t, time.Since(started) > minBackoff*expectedReconnectCount)
-		})
-	}
-}
-
-func TestAttachCorrectSinceTime(t *testing.T) {
-	stream := logsToReadCloser(
-		log{line: "line", timestamp: mustParseTimestamp(t, testDate1)},
-		log{line: "line", timestamp: mustParseTimestamp(t, testDate2)},
-	)
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	mockStreamProvider := &mockLogStreamProvider{}
-	defer mockStreamProvider.AssertExpectations(t)
-
-	mockStreamProvider.
-		On("LogStream", mock.MatchedBy(func(sinceTime *time.Time) bool {
-			require.NotNil(t, sinceTime)
-			return sinceTime.Equal(time.Time{})
-		})).
-		Return(stream, nil).
-		Once()
-
-	mockStreamProvider.
-		On("LogStream", mock.MatchedBy(func(sinceTime *time.Time) bool {
-			require.NotNil(t, sinceTime)
-			return mustParseTimestamp(t, testDate2).Equal(*sinceTime)
-		})).
-		Run(func(args mock.Arguments) {
-			cancel()
-		}).
-		Return(&brokenReader{}, nil).
-		Once()
-
-	processor := &kubernetesLogProcessor{
-		backoff:      delayBackoff,
-		logProviders: []logStreamProvider{mockStreamProvider},
-		logger:       &common.BuildLogger{},
-	}
-
-	ch := processor.Listen(ctx)
+	ch := processor.Process(ctx)
 	for range ch {
 	}
 }
 
-func TestAttachCloseStream(t *testing.T) {
+func TestAttachReconnectLogStream(t *testing.T) {
+	const expectedConnectCount = 3
 	ctx, cancel := context.WithCancel(context.Background())
 
-	r, w := io.Pipe()
-	go w.Write([]byte(log{line: "line", timestamp: mustParseTimestamp(t, testDate1)}.String() + "\n"))
-	go w.Write([]byte(log{line: "line", timestamp: mustParseTimestamp(t, testDate2)}.String() + "\n"))
+	mockLogStreamer := newMockLogStreamer()
+	defer mockLogStreamer.AssertExpectations(t)
 
-	mockStreamProvider := &mockLogStreamProvider{}
-	defer mockStreamProvider.AssertExpectations(t)
-
-	mockStreamProvider.
-		On("LogStream", mock.Anything).
-		Return(r, nil).
-		Once()
-
-	mockStreamProvider.
-		On("LogStream", mock.Anything).
-		Run(func(args mock.Arguments) {
-			cancel()
+	var connects int
+	mockLogStreamer.
+		On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(mock.Arguments) {
+			connects++
+			if connects == expectedConnectCount {
+				cancel()
+			}
 		}).
-		Return(newBrokenReader(io.EOF), nil).
-		Once()
+		Return(io.EOF).
+		Times(expectedConnectCount)
 
-	processor := &kubernetesLogProcessor{
-		backoff:      delayBackoff,
-		logProviders: []logStreamProvider{mockStreamProvider},
-		logger:       &common.BuildLogger{},
-	}
+	mockBackoffCalculator := new(mockBackoffCalculator)
+	defer mockBackoffCalculator.AssertExpectations(t)
+	mockBackoffCalculator.On("ForAttempt", float64(1)).Return(time.Duration(0)).Once()
+	mockBackoffCalculator.On("ForAttempt", float64(2)).Return(time.Duration(0)).Once()
 
-	ch := processor.Listen(ctx)
-	<-ch
+	processor := new(kubernetesLogProcessor)
+	processor.logger = logrus.New()
+	processor.logStreamer = mockLogStreamer
+	processor.backoff = mockBackoffCalculator
 
-	_ = r.CloseWithError(errors.New("closed"))
-
+	ch := processor.Process(ctx)
 	for range ch {
 	}
 }
 
-func TestAttachReconnectWhenStreamEOF(t *testing.T) {
-	line := log{line: "line", timestamp: mustParseTimestamp(t, testDate1)}
+func TestAttachReconnectReadLogs(t *testing.T) {
+	const expectedConnectCount = 3
+	ctx, cancel := context.WithCancel(context.Background())
 
-	logStreamError := errors.New("log stream err")
+	mockLogStreamer := newMockLogStreamer()
+	defer mockLogStreamer.AssertExpectations(t)
 
-	tests := map[string]struct {
-		mockStreamProviderAssertions func(*mockLogStreamProvider)
-	}{
-		"stream EOF": {
-			mockStreamProviderAssertions: func(m *mockLogStreamProvider) {
-				m.On("LogStream", mock.Anything).
-					Return(newBrokenReader(io.EOF), nil).
-					Once()
+	var connects int
+	mockLogStreamer.
+		On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			_ = args.Get(2).(*io.PipeWriter).Close()
 
-				m.On("LogStream", mock.Anything).
-					Return(logsToReadCloser(line), nil).
-					Once()
-
-				m.On("LogStream", mock.Anything).
-					Return(newBrokenReader(io.EOF), nil).
-					Maybe()
-			},
-		},
-		"log stream error": {
-			mockStreamProviderAssertions: func(m *mockLogStreamProvider) {
-				m.On("LogStream", mock.Anything).
-					Return(nil, logStreamError).
-					Once()
-
-				m.On("LogStream", mock.Anything).
-					Return(logsToReadCloser(line), nil).
-					Once()
-
-				m.On("LogStream", mock.Anything).
-					Return(nil, logStreamError).
-					Maybe()
-			},
-		},
-	}
-
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			mockStreamProvider := &mockLogStreamProvider{}
-			defer mockStreamProvider.AssertExpectations(t)
-
-			tt.mockStreamProviderAssertions(mockStreamProvider)
-
-			processor := &kubernetesLogProcessor{
-				backoff:      delayBackoff,
-				logProviders: []logStreamProvider{mockStreamProvider},
-				logger:       &common.BuildLogger{},
+			connects++
+			if connects == expectedConnectCount {
+				cancel()
 			}
+		}).
+		Return(nil).
+		Times(expectedConnectCount)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+	mockBackoffCalculator := new(mockBackoffCalculator)
+	defer mockBackoffCalculator.AssertExpectations(t)
+	mockBackoffCalculator.On("ForAttempt", float64(1)).Return(time.Duration(0)).Once()
+	mockBackoffCalculator.On("ForAttempt", float64(2)).Return(time.Duration(0)).Once()
 
-			received := <-processor.Listen(ctx)
-			assert.Equal(t, line.line, received)
-		})
+	processor := new(kubernetesLogProcessor)
+	processor.logger = logrus.New()
+	processor.logStreamer = mockLogStreamer
+	processor.backoff = mockBackoffCalculator
+
+	ch := processor.Process(ctx)
+	for range ch {
 	}
 }
 
-func TestResumesFromCorrectSinceTimeAfterSuccessThenFailure(t *testing.T) {
-	t.Skip()
-
+func TestAttachCorrectOffset(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	expectedLineContents := "line"
+	mockLogStreamer := newMockLogStreamer()
+	defer mockLogStreamer.AssertExpectations(t)
 
-	r, w := io.Pipe()
-	go w.Write([]byte(log{line: expectedLineContents, timestamp: mustParseTimestamp(t, testDate1)}.String() + "\n"))
-	go w.Write([]byte("\n"))
-
-	mockStreamProvider := &mockLogStreamProvider{}
-	defer mockStreamProvider.AssertExpectations(t)
-
-	mockStreamProvider.
-		On("LogStream", mock.Anything).
-		Return(r, nil).
+	mockLogStreamer.
+		On("Stream", mock.Anything, int64(0), mock.Anything).
+		Run(func(args mock.Arguments) {
+			writeLogs(
+				args.Get(2).(io.Writer),
+				log{line: "line", offset: 10},
+				log{line: "line", offset: 20},
+			)
+		}).
+		Return(nil).
 		Once()
 
-	mockStreamProvider.
-		On("LogStream", mock.MatchedBy(func(sinceTime *time.Time) bool {
-			require.NotNil(t, sinceTime)
-			return mustParseTimestamp(t, testDate1).Equal(*sinceTime)
-		})).
-		Run(func(args mock.Arguments) {
+	mockLogStreamer.
+		On("Stream", mock.Anything, int64(20), mock.Anything).
+		Run(func(mock.Arguments) {
 			cancel()
 		}).
-		Return(newBrokenReader(io.EOF), nil).
+		Return(new(brokenReaderError)).
 		Once()
 
-	processor := &kubernetesLogProcessor{
-		backoff:      delayBackoff,
-		logProviders: []logStreamProvider{mockStreamProvider},
-		logger:       &common.BuildLogger{},
+	processor := newTestKubernetesLogProcessor()
+	processor.logStreamer = mockLogStreamer
+
+	ch := processor.Process(ctx)
+	for range ch {
 	}
-
-	ch := processor.Listen(ctx)
-	line := <-ch
-	assert.Equal(t, expectedLineContents, line)
-
-	<-ch
 }
 
 func TestScanHandlesStreamError(t *testing.T) {
 	closedErr := errors.New("closed")
-	processor := &kubernetesLogProcessor{}
+	processor := new(kubernetesLogProcessor)
 
 	tests := map[string]struct {
 		readerError   error
@@ -592,18 +433,18 @@ func TestScanHandlesStreamError(t *testing.T) {
 }
 
 func TestScanHandlesCancelledContext(t *testing.T) {
-	processor := &kubernetesLogProcessor{}
+	processor := new(kubernetesLogProcessor)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	scanner, ch := processor.scan(ctx, logsToReadCloser(log{}))
+	scanner, ch := processor.scan(ctx, logsToReader(log{}))
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
 		// Block the channel, so there's no consumers
-		time.Sleep(1 * time.Second)
+		time.Sleep(time.Second)
 
 		// Assert that the channel is closed
 		line, more := <-ch

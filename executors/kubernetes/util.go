@@ -88,15 +88,6 @@ func loadDefaultKubectlConfig() (*restclient.Config, error) {
 	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
-func getKubeClient(config *common.KubernetesConfig, overwrites *overwrites) (*kubernetes.Clientset, error) {
-	restConfig, err := getKubeClientConfig(config, overwrites)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(restConfig)
-}
-
 func closeKubeClient(client *kubernetes.Clientset) bool {
 	if client == nil {
 		return false

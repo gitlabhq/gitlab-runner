@@ -156,6 +156,7 @@ mocks: $(MOCKERY)
 	$(MOCKERY) -dir=./referees -all -inpkg
 	$(MOCKERY) -dir=./session -all -inpkg
 	$(MOCKERY) -dir=./shells -all -inpkg
+	$(MOCKERY) -dir=./commands/helpers -all -inpkg
 
 check_mocks:
 	# Checking if mocks are up-to-date

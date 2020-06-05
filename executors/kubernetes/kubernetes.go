@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
-
 	"github.com/docker/docker/api/types"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
@@ -22,12 +20,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
+	restclient "k8s.io/client-go/rest"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
@@ -39,6 +39,8 @@ const (
 	helperContainerName = "helper"
 
 	detectShellScriptName = "detect_shell_script"
+
+	waitLogFileTimeout = time.Minute
 )
 
 var (
@@ -55,9 +57,7 @@ var (
 		ShowHostname: true,
 	}
 
-	detectShellScript = shells.BashTrapShellScript + shells.BashDetectShellScript
-
-	newLogProcessor = newKubernetesLogProcessor
+	detectShellScript = shells.BashDetectShellScript
 )
 
 type commandTerminatedError struct {
@@ -91,6 +91,7 @@ type executor struct {
 	executors.AbstractExecutor
 
 	kubeClient  *kubernetes.Clientset
+	kubeConfig  *restclient.Config
 	pod         *api.Pod
 	configMap   *api.ConfigMap
 	credentials *api.Secret
@@ -109,6 +110,8 @@ type executor struct {
 	helperImageInfo helperimage.Info
 
 	featureChecker featureChecker
+
+	newLogProcessor func() logProcessor
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
 }
@@ -180,8 +183,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("check defaults error: %w", err)
 	}
 
-	if s.kubeClient, err = getKubeClient(options.Config.Kubernetes, s.configurationOverwrites); err != nil {
-		return fmt.Errorf("error connecting to Kubernetes: %w", err)
+	s.kubeConfig, err = getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
+	if err != nil {
+		return fmt.Errorf("getting Kubernetes config: %w", err)
+	}
+
+	s.kubeClient, err = kubernetes.NewForConfig(s.kubeConfig)
+	if err != nil {
+		return fmt.Errorf("connecting to Kubernetes: %w", err)
 	}
 
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
@@ -260,13 +269,21 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 	// Translates to roughly "sh /detect/shell/path.sh /stage/script/path.sh"
 	// which when the detect shell exits becomes something like "bash /stage/script/path.sh".
 	// This works unlike "gitlab-runner-build" since the detect shell passes arguments with "$@"
-	containerCommand := []string{"sh", s.scriptPath(detectShellScriptName), s.scriptPath(cmd.Stage)}
+	containerCommand := []string{
+		"sh",
+		s.scriptPath(detectShellScriptName),
+		s.buildCommandForStage(cmd.Stage),
+	}
 	if cmd.Predefined {
 		containerName = helperContainerName
 		// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args
 		// to the shell it executes, so we technically pass the script to the stdin of the underlying shell
 		// translates roughly to "gitlab-runner-build <<< /stage/script/path.sh"
-		containerCommand = append(s.helperImageInfo.Cmd, "<<<", s.scriptPath(cmd.Stage))
+		containerCommand = append(
+			s.helperImageInfo.Cmd,
+			"<<<",
+			s.buildCommandForStage(cmd.Stage),
+		)
 	}
 
 	s.Debugln(fmt.Sprintf(
@@ -327,27 +344,22 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 	return nil
 }
 
-func (s *executor) processLogs(ctx context.Context) {
-	processor := newLogProcessor(
-		s.kubeClient,
-		backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
-		&s.BuildLogger,
-		kubernetesLogProcessorPodConfig{
-			namespace:  s.pod.Namespace,
-			pod:        s.pod.Name,
-			containers: []string{helperContainerName, buildContainerName},
-		},
-	)
+func (s *executor) buildCommandForStage(stage common.BuildStage) string {
+	return fmt.Sprintf("%s 2>&1 | tee -a %s", s.scriptPath(stage), s.logFile())
+}
 
-	logs := processor.Listen(ctx)
-	for line := range logs {
+func (s *executor) processLogs(ctx context.Context) {
+	processor := s.newLogProcessor()
+	logsCh := processor.Process(ctx)
+
+	for line := range logsCh {
 		var status shells.TrapCommandExitStatus
 		if status.TryUnmarshal(line) {
 			s.remoteProcessTerminated <- status
 			continue
 		}
 
-		_, err := s.Trace.Write([]byte(line + "\n"))
+		_, err := s.Trace.Write(append([]byte(line), '\n'))
 		if err != nil {
 			s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
 		}
@@ -365,7 +377,7 @@ func (s *executor) setupScriptsConfigMap() error {
 		return fmt.Errorf("kubernetes executor incorrect shell type")
 	}
 
-	trapShell := &shells.BashTrapShell{BashShell: bashShell}
+	trapShell := &shells.BashTrapShell{BashShell: bashShell, LogFile: s.logFile()}
 	scripts, err := s.generateScripts(trapShell)
 	if err != nil {
 		return err
@@ -523,6 +535,14 @@ func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...st
 	return command, args
 }
 
+func (s *executor) logFile() string {
+	return path.Join(s.logsDir(), "output.log")
+}
+
+func (s *executor) logsDir() string {
+	return path.Join(s.Build.TmpProjectDir(), "logs")
+}
+
 func (s *executor) scriptsDir() string {
 	return path.Join(s.Build.TmpProjectDir(), "scripts")
 }
@@ -544,6 +564,11 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      "scripts",
 			MountPath: s.scriptsDir(),
+		})
+
+		mounts = append(mounts, api.VolumeMount{
+			Name:      "logs",
+			MountPath: s.logsDir(),
 		})
 	}
 
@@ -623,6 +648,13 @@ func (s *executor) getVolumes() []api.Volume {
 				DefaultMode: &mode,
 				Optional:    &optional,
 			},
+		},
+	})
+
+	volumes = append(volumes, api.Volume{
+		Name: "logs",
+		VolumeSource: api.VolumeSource{
+			EmptyDir: &api.EmptyDirVolumeSource{},
 		},
 	})
 
@@ -1038,25 +1070,19 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 	go func() {
 		defer close(errCh)
 
-		config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
-		if err != nil {
-			errCh <- err
-			return
-		}
-
 		attach := AttachOptions{
 			PodName:       s.pod.Name,
 			Namespace:     s.pod.Namespace,
 			ContainerName: name,
 			Command:       command,
 
-			Config:   config,
+			Config:   s.kubeConfig,
 			Client:   s.kubeClient,
 			Executor: &DefaultRemoteExecutor{},
 		}
 
 		retryable := retry.New(retry.WithBuildLog(&attach, &s.BuildLogger))
-		err = retryable.Run()
+		err := retryable.Run()
 		if err != nil {
 			errCh <- err
 		}
@@ -1090,13 +1116,6 @@ func (s *executor) runInContainerWithExecLegacy(ctx context.Context, name string
 			return
 		}
 
-		config, err := getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
-
-		if err != nil {
-			errCh <- err
-			return
-		}
-
 		exec := ExecOptions{
 			PodName:       s.pod.Name,
 			Namespace:     s.pod.Namespace,
@@ -1106,7 +1125,7 @@ func (s *executor) runInContainerWithExecLegacy(ctx context.Context, name string
 			Out:           s.Trace,
 			Err:           s.Trace,
 			Stdin:         true,
-			Config:        config,
+			Config:        s.kubeConfig,
 			Client:        s.kubeClient,
 			Executor:      &DefaultRemoteExecutor{},
 		}
@@ -1173,7 +1192,7 @@ func (s *executor) checkDefaults() error {
 	return nil
 }
 
-func createFn() common.Executor {
+func newExecutor() *executor {
 	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
@@ -1182,13 +1201,31 @@ func createFn() common.Executor {
 		logrus.WithError(err).Fatal("Failed to set up helper image for kubernetes executor")
 	}
 
-	return &executor{
+	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
 		},
 		helperImageInfo:         helperImageInfo,
 		remoteProcessTerminated: make(chan shells.TrapCommandExitStatus),
 	}
+
+	e.newLogProcessor = func() logProcessor {
+		return newKubernetesLogProcessor(
+			e.kubeClient,
+			e.kubeConfig,
+			&backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
+			e.Build.Log(),
+			kubernetesLogProcessorPodConfig{
+				namespace:          e.pod.Namespace,
+				pod:                e.pod.Name,
+				container:          helperContainerName,
+				logPath:            e.logFile(),
+				waitLogFileTimeout: waitLogFileTimeout,
+			},
+		)
+	}
+
+	return e
 }
 
 func featuresFn(features *common.FeaturesInfo) {
@@ -1204,7 +1241,9 @@ func featuresFn(features *common.FeaturesInfo) {
 
 func init() {
 	common.RegisterExecutorProvider("kubernetes", executors.DefaultExecutorProvider{
-		Creator:          createFn,
+		Creator: func() common.Executor {
+			return newExecutor()
+		},
 		FeaturesUpdater:  featuresFn,
 		DefaultShellName: executorOptions.Shell.Shell,
 	})

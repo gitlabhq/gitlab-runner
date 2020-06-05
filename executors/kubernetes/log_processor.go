@@ -3,199 +3,208 @@ package kubernetes
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/jpillora/backoff"
-	api "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/kubernetes"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	restclient "k8s.io/client-go/rest"
 )
 
-type logStreamProvider interface {
-	LogStream(since *time.Time) (io.ReadCloser, error)
-	String() string
+type logStreamer interface {
+	Stream(ctx context.Context, offset int64, output io.Writer) error
+	fmt.Stringer
 }
 
-type kubernetesLogStreamProvider struct {
-	client    *kubernetes.Clientset
-	namespace string
-	pod       string
-	container string
+type kubernetesLogStreamer struct {
+	kubernetesLogProcessorPodConfig
+
+	client       *kubernetes.Clientset
+	clientConfig *restclient.Config
+	executor     RemoteExecutor
 }
 
-func (s *kubernetesLogStreamProvider) LogStream(since *time.Time) (io.ReadCloser, error) {
-	var sinceTime metav1.Time
-	if since != nil {
-		sinceTime = metav1.NewTime(*since)
+func (s *kubernetesLogStreamer) Stream(ctx context.Context, offset int64, output io.Writer) error {
+	exec := ExecOptions{
+		Namespace:     s.namespace,
+		PodName:       s.pod,
+		ContainerName: s.container,
+		Stdin:         false,
+		Command: []string{
+			"gitlab-runner-helper",
+			"read-logs",
+			"--path",
+			s.logPath,
+			"--offset",
+			strconv.FormatInt(offset, 10),
+			"--wait-file-timeout",
+			s.waitLogFileTimeout.String(),
+		},
+		Out:      output,
+		Err:      output,
+		Executor: s.executor,
+		Client:   s.client,
+		Config:   s.clientConfig,
 	}
 
-	return s.client.
-		CoreV1().
-		Pods(s.namespace).
-		GetLogs(s.pod, &api.PodLogOptions{
-			Container:  s.container,
-			SinceTime:  &sinceTime,
-			Follow:     true,
-			Timestamps: true,
-		}).Stream()
+	return exec.executeRequest(ctx)
 }
 
-func (s *kubernetesLogStreamProvider) String() string {
-	return fmt.Sprintf("%s/%s/%s", s.namespace, s.pod, s.container)
+func (s *kubernetesLogStreamer) String() string {
+	return fmt.Sprintf("%s/%s/%s:%s", s.namespace, s.pod, s.container, s.logPath)
 }
 
 type logProcessor interface {
-	// Listen listens for log lines
-	// consumers should read from the channel until it's closed
-	// otherwise, risk leaking goroutines
-	Listen(ctx context.Context) <-chan string
+	// Process listens for log lines
+	// consumers must read from the channel until it's closed
+	Process(ctx context.Context) <-chan string
 }
 
-type timestampsSet map[int64]struct{}
+type backoffCalculator interface {
+	ForAttempt(attempt float64) time.Duration
+}
 
-// kubernetesLogProcessor processes log from multiple containers in a pod and sends them out through one channel.
-// It also tries to reattach to the log constantly, stopping only when the passed context is cancelled.
+// kubernetesLogProcessor processes the logs from a container and tries to reattach
+// to the stream constantly, stopping only when the passed context is cancelled.
 type kubernetesLogProcessor struct {
-	backoff      backoff.Backoff
-	logger       *common.BuildLogger
-	logProviders []logStreamProvider
+	backoff     backoffCalculator
+	logger      logrus.FieldLogger
+	logStreamer logStreamer
+
+	logsOffset int64
 }
 
 type kubernetesLogProcessorPodConfig struct {
-	namespace  string
-	pod        string
-	containers []string
+	namespace          string
+	pod                string
+	container          string
+	logPath            string
+	waitLogFileTimeout time.Duration
 }
 
 func newKubernetesLogProcessor(
 	client *kubernetes.Clientset,
-	backoff backoff.Backoff,
-	logger *common.BuildLogger,
+	clientConfig *restclient.Config,
+	backoff backoffCalculator,
+	logger logrus.FieldLogger,
 	podCfg kubernetesLogProcessorPodConfig,
-) logProcessor {
-	logProviders := make([]logStreamProvider, len(podCfg.containers))
-	for i, container := range podCfg.containers {
-		logProviders[i] = &kubernetesLogStreamProvider{
-			client:    client,
-			namespace: podCfg.namespace,
-			pod:       podCfg.pod,
-			container: container,
-		}
+) *kubernetesLogProcessor {
+	logStreamer := &kubernetesLogStreamer{
+		kubernetesLogProcessorPodConfig: podCfg,
+		client:                          client,
+		clientConfig:                    clientConfig,
+		executor:                        new(DefaultRemoteExecutor),
 	}
 
 	return &kubernetesLogProcessor{
-		backoff:      backoff,
-		logger:       logger,
-		logProviders: logProviders,
+		backoff:     backoff,
+		logger:      logger,
+		logStreamer: logStreamer,
 	}
 }
 
-func (l *kubernetesLogProcessor) Listen(ctx context.Context) <-chan string {
+func (l *kubernetesLogProcessor) Process(ctx context.Context) <-chan string {
 	outCh := make(chan string)
-
-	var wg sync.WaitGroup
-	for _, logProvider := range l.logProviders {
-		wg.Add(1)
-		go func(logProvider logStreamProvider) {
-			defer wg.Done()
-			l.attach(ctx, logProvider, outCh)
-		}(logProvider)
-	}
-
 	go func() {
-		wg.Wait()
-		close(outCh)
+		defer close(outCh)
+		l.attach(ctx, outCh)
 	}()
 
 	return outCh
 }
 
-func (l *kubernetesLogProcessor) attach(ctx context.Context, logProvider logStreamProvider, outputCh chan string) {
-	var sinceTime time.Time
-	var attempt int32
-
-	processedTimestamps := timestampsSet{}
+func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string) {
+	var attempt float64 = -1
 
 	for {
 		select {
-		// If we have to exit, check for that before trying to (re)attach
 		case <-ctx.Done():
 			return
 		default:
 		}
 
+		attempt++
 		if attempt > 0 {
-			backoffDuration := l.backoff.ForAttempt(float64(attempt))
-			l.logger.Debugln(fmt.Sprintf("Backing off reattaching log for %s for %s", logProvider, backoffDuration))
+			backoffDuration := l.backoff.ForAttempt(attempt)
+			l.logger.Debugln(fmt.Sprintf("Backing off reattaching log for %s for %s", l.logStreamer, backoffDuration))
 			time.Sleep(backoffDuration)
 		}
 
-		attempt++
-
-		logs, err := logProvider.LogStream(&sinceTime)
+		err := l.processStream(ctx, outCh)
 		if err != nil {
-			l.logger.Warningln(fmt.Sprintf("Error attaching to log %s: %s. Retrying...", logProvider, err))
-			continue
-		}
-
-		// If we succeed in connecting to the stream, set the attempts to 1, so that next time we try to reconnect
-		// as soon as possible but also still have some delay, so we don't bombard kubernetes with requests in case
-		// readLogs fails too frequently
-		attempt = 1
-
-		sinceTime, err = l.readLogs(ctx, logs, processedTimestamps, sinceTime, outputCh)
-		if err != nil {
-			l.logger.Warningln(fmt.Sprintf("Error reading log for %s: %s. Retrying...", logProvider, err))
-		}
-
-		err = logs.Close()
-		if err != nil {
-			l.logger.Warningln(fmt.Sprintf("Error when closing Kubernetes log stream for %s. %v", logProvider, err))
+			l.logger.Warningln(fmt.Sprintf("Error %s. Retrying...", err))
 		}
 	}
 }
 
-func (l *kubernetesLogProcessor) readLogs(
-	ctx context.Context, logs io.Reader, timestamps timestampsSet,
-	sinceTime time.Time, outputCh chan string,
-) (time.Time, error) {
+func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan string) error {
+	reader, writer := io.Pipe()
+	defer func() {
+		_ = reader.Close()
+		_ = writer.Close()
+	}()
+
+	// Using errgroup.WithContext doesn't work here since if either one of the goroutines
+	// exits with a nil error, we can't signal the other one to exit
+	ctx, cancel := context.WithCancel(ctx)
+
+	var gr errgroup.Group
+
+	logsOffset := l.logsOffset
+	gr.Go(func() error {
+		defer cancel()
+
+		err := l.logStreamer.Stream(ctx, logsOffset, writer)
+		// prevent printing an error that the container exited
+		// when the context is already cancelled
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return nil
+		}
+
+		if err != nil {
+			err = fmt.Errorf("streaming logs %s: %w", l.logStreamer, err)
+		}
+
+		return err
+	})
+
+	gr.Go(func() error {
+		defer cancel()
+
+		err := l.readLogs(ctx, reader, outCh)
+		if err != nil {
+			err = fmt.Errorf("reading logs %s: %w", l.logStreamer, err)
+		}
+
+		return err
+	})
+
+	return gr.Wait()
+}
+
+func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, outCh chan string) error {
 	logsScanner, linesCh := l.scan(ctx, logs)
 
 	for {
 		select {
 		case <-ctx.Done():
-			return sinceTime, nil
+			return nil
 		case line, more := <-linesCh:
 			if !more {
-				return sinceTime, logsScanner.Err()
+				return logsScanner.Err()
 			}
 
-			newSinceTime, logLine, parseErr := l.parseLogLine(line)
-			if parseErr != nil {
-				return sinceTime, parseErr
+			newLogsOffset, logLine := l.parseLogLine(line)
+			if newLogsOffset != -1 {
+				l.logsOffset = newLogsOffset
 			}
 
-			// Cache log lines based on their timestamp. Since the reattaching precision of kubernetes logs is seconds
-			// we need to make sure that we won't process a line twice in case we reattach and get it again
-			// The size of the int64 key is 8 bytes and the empty struct is 0. Even with a million logs we should be fine
-			// using only 8 MB of memory.
-			// Since there's a network delay before a log line is processed by kubernetes itself,
-			// it's impossible to get two log lines with the same timestamp
-			timeUnix := newSinceTime.UnixNano()
-			_, alreadyProcessed := timestamps[timeUnix]
-			if alreadyProcessed {
-				continue
-			}
-			timestamps[timeUnix] = struct{}{}
-
-			sinceTime = newSinceTime
-			outputCh <- logLine
+			outCh <- logLine
 		}
 	}
 }
@@ -220,34 +229,26 @@ func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*buf
 	return logsScanner, linesCh
 }
 
-// Each line starts with an RFC3339Nano formatted date. We need this date to resume the log from that point
-// if we detach for some reason. The format is "2020-01-30T16:28:25.479904159Z log line continues as normal"
-// also the line doesn't include the "\n" at the end.
-func (l *kubernetesLogProcessor) parseLogLine(line string) (time.Time, string, error) {
+// Each line starts with its bytes offset. We need this to resume the log from that point
+// if we detach for some reason. The format is "10 log line continues as normal".
+// The line doesn't include the new line character.
+// Lines without offset are acceptable and return -1 for offset.
+func (l *kubernetesLogProcessor) parseLogLine(line string) (int64, string) {
 	if len(line) == 0 {
-		return time.Time{}, "", fmt.Errorf("empty line: %w", io.EOF)
+		return -1, ""
 	}
 
-	// Get the index where the date ends and parse it
-	dateEndIndex := strings.Index(line, " ")
-
-	// This should not happen but in case there's no space in the log try to parse them all as a date
-	// this way we could at least get an error without going out of the bounds of the line
-	var date string
-	if dateEndIndex > -1 {
-		date = line[:dateEndIndex]
-	} else {
-		date = line
+	offsetIndex := strings.Index(line, " ")
+	if offsetIndex == -1 {
+		return -1, line
 	}
 
-	parsedDate, err := time.Parse(time.RFC3339Nano, date)
+	offset := line[:offsetIndex]
+	parsedOffset, err := strconv.ParseInt(offset, 10, 64)
 	if err != nil {
-		return time.Time{}, "", fmt.Errorf("invalid log timestamp: %w", err)
+		return -1, line
 	}
 
-	// We are sure this will never get out of bounds since we know that kubernetes always inserts a
-	// date and space directly after. So if we get an empty log line, this slice will be simply empty
-	logLine := line[dateEndIndex+1:]
-
-	return parsedDate, logLine, nil
+	logLine := line[offsetIndex+1:]
+	return parsedOffset, logLine
 }
