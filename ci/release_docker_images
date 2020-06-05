@@ -104,15 +104,15 @@ cleanup_docker_context() {
     set -e
 }
 
-# buildx receives an array of tag names, and the image name as the last parameter
+# buildx receives an array of tag names, and the context path as the last parameter
 buildx() {
+    local contextPath="$1"
     local platforms=()
     local os
     os=$(_docker version -f '{{.Server.Os}}')
     for arch in "${TARGET_ARCHS[@]}"; do
         platforms+=("${os}/${arch}")
     done
-    local imageName="$1"
     shift
 
     local args=("$@")
@@ -133,16 +133,16 @@ buildx() {
     done
 
     if [[ "${PUBLISH_IMAGES}" == "true" ]]; then
-        echo -e "\033[1mBuilding and pushing image: \033[32m${imageName}\033[0m"
+        echo -e "\033[1mBuilding and pushing image: \033[32m${contextPath}\033[0m"
         buildxFlags+=("--push")
     else
         # If not pushing, just load the resulting image to local Docker
         if [ ${#TARGET_ARCHS[@]} -eq 1 ]; then
-            echo -e "\033[1mBuilding and loading image: \033[32m${imageName}\033[0m"
+            echo -e "\033[1mBuilding and loading image: \033[32m${contextPath}\033[0m"
             # But that is only possible if we are targeting a single platform
             buildxFlags+=("--load")
         else
-            echo -e "\033[1mBuilding image: \033[32m${imageName}\033[0m"
+            echo -e "\033[1mBuilding image: \033[32m${contextPath}\033[0m"
         fi
     fi
 
@@ -166,7 +166,7 @@ buildx() {
         --no-cache \
         "${tagOpts[@]}" \
         "${buildxFlags[@]}" \
-        "${imageName}"
+        "${contextPath}"
     trap - ERR SIGINT SIGTERM
     cleanup_docker_context
 
