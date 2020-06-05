@@ -255,7 +255,7 @@ To register a Runner using a Docker container:
    If you used a configuration volume other than `/srv/gitlab-runner/config` during
    install, then you should update the command with the correct volume.
 
-   For Docker volume mount
+   For Docker volume mounts:
 
    ```shell
    docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
