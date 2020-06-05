@@ -70,3 +70,13 @@ check windows 1903 test failures:
   only:
     refs:
     - master@gitlab-org/gitlab-runner
+
+check windows 1909 test failures:
+  extends:
+  - .check windows test failures
+  - .windows1909_variables
+  needs:
+  - windows 1909 tests
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner
