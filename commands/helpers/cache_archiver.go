@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"context"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,8 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/archives"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 )
@@ -66,6 +68,40 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	return retryOnServerError(resp)
 }
 
+func (c *CacheArchiverCommand) createZipFile(filename string) error {
+	err := os.MkdirAll(filepath.Dir(filename), 0700)
+	if err != nil {
+		return err
+	}
+
+	f, err := ioutil.TempFile(filepath.Dir(filename), "archive_")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	defer f.Close()
+
+	logrus.Debugln("Temporary file:", f.Name())
+
+	archiver, err := archive.NewArchiver(archive.Zip, f, c.wd, archive.DefaultCompression)
+	if err != nil {
+		return err
+	}
+
+	// Create archive
+	err = archiver.Archive(context.Background(), c.files)
+	if err != nil {
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+
+	return os.Rename(f.Name(), filename)
+}
+
 func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	log.SetRunnerFormatter()
 
@@ -87,7 +123,7 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	}
 
 	// Create archive
-	err = archives.CreateZipFile(c.File, c.sortedFiles())
+	err = c.createZipFile(c.File)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
