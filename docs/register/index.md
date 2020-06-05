@@ -245,6 +245,8 @@ To register a Runner using a Docker container:
 
 1. Run the register command:
 
+   For local system volume monuts
+   
    ```shell
    docker run --rm -t -i -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
    ```
@@ -252,7 +254,13 @@ To register a Runner using a Docker container:
    NOTE: **Note:**
    If you used a configuration volume other than `/srv/gitlab-runner/config` during
    install, then you should update the command with the correct volume.
-
+   
+   For Docker volume mount
+      
+   ```
+   docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
+   ```
+   
 1. Enter your GitLab instance URL:
 
    ```plaintext
