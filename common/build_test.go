@@ -322,7 +322,9 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 		},
 	}
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	assert.IsType(t, err, &BuildError{})
+
+	expectedErr := new(BuildError)
+	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
 }
 
 func TestPrepareEnvironmentFailure(t *testing.T) {
@@ -410,7 +412,9 @@ func TestJobFailure(t *testing.T) {
 	trace.On("Fail", thrownErr, ScriptFailure).Once()
 
 	err = build.Run(&Config{}, trace)
-	require.IsType(t, &BuildError{}, err)
+
+	expectedErr := new(BuildError)
+	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
 }
 
 func TestJobFailureOnExecutionTimeout(t *testing.T) {
@@ -467,7 +471,9 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	}).Once()
 
 	err = build.Run(&Config{}, trace)
-	require.IsType(t, &BuildError{}, err)
+
+	expectedErr := &BuildError{FailureReason: JobExecutionTimeout}
+	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
 }
 
 func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
