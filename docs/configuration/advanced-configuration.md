@@ -630,12 +630,12 @@ Below is a table containing a summary of `config.toml`, cli options and ENV vari
 NOTE: **Note:**
 Moved from the `[runners.cache]` section in GitLab Runner 11.3.0.
 
-Allows to configure S3 storage for cache. This section contains settings related to S3, that previously were
+Configure S3 storage for cache. This section contains settings related to S3, that previously were
 present globally in the `[runners.cache]` section.
 
 | Parameter        | Type             | Description |
 |------------------|------------------|-------------|
-| `ServerAddress`  | string           | A `host:port` to the used S3-compatible server. |
+| `ServerAddress`  | string           | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
 | `AccessKey`      | string           | The access key specified for your S3 instance. |
 | `SecretKey`      | string           | The secret key specified for your S3 instance. |
 | `BucketName`     | string           | Name of the storage bucket where cache will be stored. |
@@ -651,8 +651,8 @@ Example:
   Shared = false
   [runners.cache.s3]
     ServerAddress = "s3.amazonaws.com"
-    AccessKey = "AMAZON_S3_ACCESS_KEY"
-    SecretKey = "AMAZON_S3_SECRET_KEY"
+    AccessKey = "AWS_S3_ACCESS_KEY"
+    SecretKey = "AWS_S3_SECRET_KEY"
     BucketName = "runners-cache"
     BucketLocation = "eu-west-1"
     Insecure = false
