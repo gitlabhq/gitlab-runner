@@ -2808,12 +2808,15 @@ func TestProcessLogs(t *testing.T) {
 	e.pod = &api.Pod{}
 	e.pod.Name = "pod_name"
 	e.pod.Namespace = "namespace"
+	e.newLogProcessor = func() logProcessor {
+		return mockLogProcessor
+	}
 
-	go e.processLogs(context.Background(), mockLogProcessor)
+	go e.processLogs(context.Background())
 
 	exitStatus := <-e.remoteProcessTerminated
-	assert.Equal(t, 1, *exitStatus.CommandExitCode)
-	assert.Equal(t, "script", *exitStatus.Script)
+	assert.Equal(t, exitCode, *exitStatus.CommandExitCode)
+	assert.Equal(t, script, *exitStatus.Script)
 }
 
 func TestRunAttachCheckPodStatus(t *testing.T) {

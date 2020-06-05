@@ -10,10 +10,6 @@ import (
 	"sync"
 	"time"
 
-	restclient "k8s.io/client-go/rest"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
-
 	"github.com/docker/docker/api/types"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
@@ -24,12 +20,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
+	restclient "k8s.io/client-go/rest"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
@@ -341,8 +339,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("pod failed to enter running state: %s", status)
 	}
 
-	processor := s.newLogProcessor()
-	go s.processLogs(ctx, processor)
+	go s.processLogs(ctx)
 
 	return nil
 }
@@ -351,7 +348,8 @@ func (s *executor) buildCommandForStage(stage common.BuildStage) string {
 	return fmt.Sprintf("%s 2>&1 | tee -a %s", s.scriptPath(stage), s.logFile())
 }
 
-func (s *executor) processLogs(ctx context.Context, processor logProcessor) {
+func (s *executor) processLogs(ctx context.Context) {
+	processor := s.newLogProcessor()
 	logsCh := processor.Process(ctx)
 
 	for line := range logsCh {

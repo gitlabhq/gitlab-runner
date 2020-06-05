@@ -23,7 +23,7 @@ func TestNewReadLogsCommandFileNotExist(t *testing.T) {
 	}
 
 	err := cmd.readLogs()
-	assert.Equal(t, errWaitingFileTimeout, err)
+	assert.True(t, errors.Is(err, errWaitingFileTimeout), "expected err %T, but got %T", errWaitingFileTimeout, err)
 }
 
 func TestNewReadLogsCommandNoAttempts(t *testing.T) {
@@ -31,7 +31,7 @@ func TestNewReadLogsCommandNoAttempts(t *testing.T) {
 	cmd.logStreamProvider = new(fileLogStreamProvider)
 
 	err := cmd.readLogs()
-	assert.Equal(t, errNoAttemptsToOpenFile, err)
+	assert.True(t, errors.Is(err, errNoAttemptsToOpenFile), "expected err %T, but got %T", errNoAttemptsToOpenFile, err)
 }
 
 func TestNewReadLogsCommandFileSeekToInvalidLocation(t *testing.T) {
