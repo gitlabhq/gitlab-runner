@@ -145,6 +145,14 @@ windows 1903 tests:
     refs:
     - master@gitlab-org/gitlab-runner
 
+windows 1909 tests:
+  extends:
+  - .windows test
+  - .windows1909
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner
+
 git 1.7.1:
   extends:
   - .merge_request_pipelines
