@@ -327,6 +327,7 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 The AWS Fargate Driver requires the ECS Cluster to be configured with a default capacity provider strategy e.g. FARGATE - review Step 7.
 
 Further reading:
+
 - [capacityProviderStrategy](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RunTask.html#ECS-RunTask-request-capacityProviderStrategy)
   > If a capacityProviderStrategy is specified, the launchType parameter must be omitted. If no capacityProviderStrategy or launchType is specified, the defaultCapacityProviderStrategy for the cluster is used.
 - [Amazon ECS Cluster Capacity Providers](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html)
