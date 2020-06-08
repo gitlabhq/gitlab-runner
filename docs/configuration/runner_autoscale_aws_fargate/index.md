@@ -324,7 +324,7 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 
 `error="starting new Fargate task: running new task on Fargate: error starting AWS Fargate Task: InvalidParameterException: No Container Instances were found in your cluster."`
 
-The AWS Fargate Driver requires the ECS Cluster to be configured with a default capacity provider strategy e.g. FARGATE - review Step 7.
+The AWS Fargate Driver requires the ECS Cluster to be configured with a [default capacity provider strategy](#step-7-create-an-ecs-fargate-cluster).
 
 Further reading:
 
