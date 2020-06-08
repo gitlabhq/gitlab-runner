@@ -35,6 +35,27 @@ type readSeekCloser interface {
 	io.Closer
 }
 
+// checkedFile checks whether a file exists when the underlying
+// File's Read method returns io.EOF. If a file is deleted from
+// the outside the Go file descriptor isn't invalidated and we
+// keep getting io.EOF oblivious to the fact that the file
+// no longer exists
+type checkedFile struct {
+	*os.File
+}
+
+func (c *checkedFile) Read(p []byte) (int, error) {
+	n, err := c.File.Read(p)
+	if errors.Is(err, io.EOF) {
+		_, statErr := os.Stat(c.File.Name())
+		if os.IsNotExist(statErr) {
+			err = statErr
+		}
+	}
+
+	return n, err
+}
+
 type fileLogStreamProvider struct {
 	waitFileTimeout time.Duration
 	path            string
@@ -53,7 +74,7 @@ func (p *fileLogStreamProvider) Open() (readSeekCloser, error) {
 			continue
 		}
 
-		return f, err
+		return &checkedFile{File: f}, err
 	}
 
 	return nil, errWaitingFileTimeout
@@ -91,15 +112,19 @@ func newReadLogsCommand() *ReadLogsCommand {
 }
 
 func (c *ReadLogsCommand) Execute(*cli.Context) {
+	if err := c.execute(); err != nil {
+		c.logOutputWriter.Write(fmt.Sprintf("error reading logs %v\n", err))
+		os.Exit(1)
+	}
+}
+
+func (c *ReadLogsCommand) execute() error {
 	c.logStreamProvider = &fileLogStreamProvider{
 		waitFileTimeout: c.WaitFileTimeout,
 		path:            c.Path,
 	}
 
-	if err := c.readLogs(); err != nil {
-		c.logOutputWriter.Write(fmt.Sprintf("error reading logs %v\n", err))
-		os.Exit(1)
-	}
+	return c.readLogs()
 }
 
 func (c *ReadLogsCommand) readLogs() error {
