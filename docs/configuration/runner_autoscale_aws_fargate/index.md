@@ -261,9 +261,9 @@ to the container image that you are going to use for your CI builds.
    the `fargate.toml` file but without `:1`).
 1. Select values for `Task memory (GB)` and `Task CPU (vCPU)`.
 1. Click `Add Container`, then:
-   1. Give it the specific name `ci-coordinator` (Note: the Fargate driver
-      will inject the `SSH_PUBLIC_KEY` environment variable only in the
-      container having this name)
+   1. Give it the `ci-coordinator` name (warning: the Fargate driver
+      will inject the `SSH_PUBLIC_KEY` environment variable only in
+      containers with this name)
    1. Define image (for example `registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`).
    1. Define port mapping for 22/TCP.
    1. Click `Add`.
