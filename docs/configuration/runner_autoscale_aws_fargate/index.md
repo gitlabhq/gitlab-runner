@@ -320,7 +320,7 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 
 ## Troubleshooting
 
-### I get `Application execution failed` when I "Run Pipeline" in Step 10
+### `Application execution failed` error when testing the configuration
 
 `error="starting new Fargate task: running new task on Fargate: error starting AWS Fargate Task: InvalidParameterException: No Container Instances were found in your cluster."`
 
