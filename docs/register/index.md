@@ -248,7 +248,7 @@ To register a Runner using a Docker container:
    For local system volume monuts
 
    ```shell
-   docker run --rm -t -i -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
+   docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
    ```
 
    NOTE: **Note:**
