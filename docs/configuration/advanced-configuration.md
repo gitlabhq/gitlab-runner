@@ -22,16 +22,60 @@ This defines global settings of GitLab Runner.
 | ------- | ----------- |
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
 | `log_level`      | Log level (options: `debug`, `info`, `warn`, `error`, `fatal`, `panic`). Note that this setting has lower priority than level set by command line argument `--debug`, `-l`, or `--log-level` |
-| `log_format`     | Log format (options: `runner`, `text`, `json`). Note that this setting has lower priority than format set by command line argument `--log-format` |
+| `log_format`     | Log format (options: `runner`, `text`, `json`). Note that this setting has lower priority than format set by command line argument `--log-format` The default value is `runner`. |
 | `check_interval` | defines the interval length, in seconds, between new jobs check. The default value is `3`; if set to `0` or lower, the default value will be used. |
 | `sentry_dsn`     | enable tracking of all system level errors to Sentry |
 | `listen_address` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
 
-Example:
+Configuration example:
 
 ```toml
 concurrent = 4
 log_level = "warning"
+```
+
+### `log_format` examples (truncated)
+
+#### `runner`
+
+```shell
+Runtime platform                                    arch=amd64 os=darwin pid=37300 revision=HEAD version=development version
+Starting multi-runner from /etc/gitlab-runner/config.toml...  builds=0
+WARNING: Running in user-mode.
+WARNING: Use sudo for system-mode:
+WARNING: $ sudo gitlab-runner...
+
+Configuration loaded                                builds=0
+listen_address not defined, metrics & debug endpoints disabled  builds=0
+[session_server].listen_address not defined, session endpoints disabled  builds=0
+```
+
+#### `text`
+
+```shell
+INFO[0000] Runtime platform                              arch=amd64 os=darwin pid=37773 revision=HEAD version="development version"
+INFO[0000] Starting multi-runner from /etc/gitlab-runner/config.toml...  builds=0
+WARN[0000] Running in user-mode.
+WARN[0000] Use sudo for system-mode:
+WARN[0000] $ sudo gitlab-runner...
+INFO[0000]
+INFO[0000] Configuration loaded                          builds=0
+INFO[0000] listen_address not defined, metrics & debug endpoints disabled  builds=0
+INFO[0000] [session_server].listen_address not defined, session endpoints disabled  builds=0
+```
+
+#### `json`
+
+```shell
+{"arch":"amd64","level":"info","msg":"Runtime platform","os":"darwin","pid":38229,"revision":"HEAD","time":"2020-06-05T15:57:35+02:00","version":"development version"}
+{"builds":0,"level":"info","msg":"Starting multi-runner from /etc/gitlab-runner/config.toml...","time":"2020-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"Running in user-mode.","time":"2020-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"Use sudo for system-mode:","time":"2020-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"$ sudo gitlab-runner...","time":"2020-06-05T15:57:35+02:00"}
+{"level":"info","msg":"","time":"2020-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"Configuration loaded","time":"2020-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"listen_address not defined, metrics \u0026 debug endpoints disabled","time":"2020-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"[session_server].listen_address not defined, session endpoints disabled","time":"2020-06-05T15:57:35+02:00"}
 ```
 
 ### How `check_interval` works
