@@ -16,8 +16,9 @@ test coverage report:
   - make parallel_test_coverage_report
   artifacts:
     paths:
-    - out/coverage/*
+    - out/coverage/
     expire_in: 7d
+    expose_as: 'Code Coverage'
 
 test junit report:
   extends:
