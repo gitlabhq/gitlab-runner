@@ -19,6 +19,7 @@ type CommandOptions struct {
 
 	Stdout io.Writer
 	Stderr io.Writer
+	Stdin  io.Reader
 
 	Logger Logger
 
@@ -36,7 +37,7 @@ func NewOSCmd(executable string, args []string, options CommandOptions) Commande
 	c := exec.Command(executable, args...)
 	c.Dir = options.Dir
 	c.Env = options.Env
-	c.Stdin = nil
+	c.Stdin = options.Stdin
 	c.Stdout = options.Stdout
 	c.Stderr = options.Stderr
 

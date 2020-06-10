@@ -12,6 +12,14 @@ import (
 // process that hasn't started yet (still nil).
 var ErrProcessNotStarted = errors.New("process not started yet")
 
+// GracefulTimeout is the time a Killer should wait in general to the graceful
+// termination to timeout.
+const GracefulTimeout = 10 * time.Minute
+
+// KillTimeout is the time a killer should wait in general for the kill command
+// to finish.
+const KillTimeout = 10 * time.Second
+
 type killer interface {
 	Terminate()
 	ForceKill()

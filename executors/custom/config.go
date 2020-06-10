@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
 type config struct {
@@ -23,11 +24,11 @@ func (c *config) GetCleanupScriptTimeout() time.Duration {
 }
 
 func (c *config) GetGracefulKillTimeout() time.Duration {
-	return getDuration(c.GracefulKillTimeout, defaultGracefulKillTimeout)
+	return getDuration(c.GracefulKillTimeout, process.GracefulTimeout)
 }
 
 func (c *config) GetForceKillTimeout() time.Duration {
-	return getDuration(c.ForceKillTimeout, defaultForceKillTimeout)
+	return getDuration(c.ForceKillTimeout, process.KillTimeout)
 }
 
 func getDuration(source *int, defaultValue time.Duration) time.Duration {

@@ -1,14 +1,15 @@
 package shell
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/kardianos/osext"
@@ -17,7 +18,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
+
+var newProcessKillWaiter = process.NewOSKillWait
+var newCommander = process.NewOSCmd
 
 type executor struct {
 	executors.AbstractExecutor
@@ -56,6 +62,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	return nil
 }
 
+// TODO: Remove in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6413
 func (s *executor) killAndWait(cmd *exec.Cmd, waitCh chan error) error {
 	for {
 		s.Debugln("Aborting command...")
@@ -69,6 +76,16 @@ func (s *executor) killAndWait(cmd *exec.Cmd, waitCh chan error) error {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
+	if s.Build.IsFeatureFlagOn(featureflags.ShellExecutorUseLegacyProcessKill) {
+		return s.runLegacy(cmd)
+	}
+
+	return s.run(cmd)
+}
+
+// TODO: Remove in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6413
+func (s *executor) runLegacy(cmd common.ExecutorCommand) error {
+	s.BuildLogger.Debugln("Using legacy command execution")
 	// Create execution command
 	c := exec.Command(s.BuildShell.Command, s.BuildShell.Arguments...)
 	if c == nil {
@@ -83,35 +100,27 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	c.Stdout = s.Trace
 	c.Stderr = s.Trace
 
-	if s.BuildShell.PassFile {
-		scriptDir, err := ioutil.TempDir("", "build_script")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(scriptDir)
-
-		scriptFile := filepath.Join(scriptDir, "script."+s.BuildShell.Extension)
-		err = ioutil.WriteFile(scriptFile, []byte(cmd.Script), 0700)
-		if err != nil {
-			return err
-		}
-
-		c.Args = append(c.Args, scriptFile)
-	} else {
-		c.Stdin = bytes.NewBufferString(cmd.Script)
+	stdin, args, cleanup, err := s.shellScriptArgs(cmd, c.Args)
+	if err != nil {
+		return err
 	}
+	defer cleanup()
+
+	c.Stdin = stdin
+	c.Args = args
 
 	// Start a process
-	err := c.Start()
+	err = c.Start()
 	if err != nil {
-		return fmt.Errorf("failed to start process: %w", err)
+		return fmt.Errorf("starting process: %w", err)
 	}
 
 	// Wait for process to finish
 	waitCh := make(chan error)
 	go func() {
 		err := c.Wait()
-		if _, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			err = &common.BuildError{Inner: err}
 		}
 		waitCh <- err
@@ -121,9 +130,82 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	select {
 	case err = <-waitCh:
 		return err
-
 	case <-cmd.Context.Done():
 		return s.killAndWait(c, waitCh)
+	}
+}
+
+func (s *executor) shellScriptArgs(cmd common.ExecutorCommand, args []string) (io.Reader, []string, func(), error) {
+	if !s.BuildShell.PassFile {
+		return strings.NewReader(cmd.Script), args, func() {}, nil
+	}
+
+	scriptDir, err := ioutil.TempDir("", "build_script")
+	if err != nil {
+		return nil, nil, func() {}, fmt.Errorf("creating tmp build script dir: %w", err)
+	}
+
+	cleanup := func() {
+		err := os.RemoveAll(scriptDir)
+		if err != nil {
+			s.BuildLogger.Warningln("Failed to remove build script directory", scriptDir, err)
+		}
+	}
+
+	scriptFile := filepath.Join(scriptDir, "script."+s.BuildShell.Extension)
+	err = ioutil.WriteFile(scriptFile, []byte(cmd.Script), 0700)
+	if err != nil {
+		return nil, nil, cleanup, fmt.Errorf("writing script file: %w", err)
+	}
+
+	return nil, append(args, scriptFile), cleanup, nil
+}
+
+func (s *executor) run(cmd common.ExecutorCommand) error {
+	s.BuildLogger.Debugln("Using new shell command execution")
+	cmdOpts := process.CommandOptions{
+		Env:    append(os.Environ(), s.BuildShell.Environment...),
+		Stdout: s.Trace,
+		Stderr: s.Trace,
+	}
+
+	args := s.BuildShell.Arguments
+	stdin, args, cleanup, err := s.shellScriptArgs(cmd, args)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	cmdOpts.Stdin = stdin
+
+	// Create execution command
+	c := newCommander(s.BuildShell.Command, args, cmdOpts)
+
+	// Start a process
+	err = c.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start process: %w", err)
+	}
+
+	// Wait for process to finish
+	waitCh := make(chan error)
+	go func() {
+		err := c.Wait()
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			err = &common.BuildError{Inner: err}
+		}
+		waitCh <- err
+	}()
+
+	// Support process abort
+	select {
+	case err = <-waitCh:
+		return err
+	case <-cmd.Context.Done():
+		logger := common.NewProcessLoggerAdapter(s.BuildLogger)
+		return newProcessKillWaiter(logger, process.GracefulTimeout, process.KillTimeout).
+			KillAndWait(c, waitCh)
 	}
 }
 

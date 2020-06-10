@@ -10,6 +10,7 @@ const (
 	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
 	UseDirectDownload                    string = "FF_USE_DIRECT_DOWNLOAD"
 	SkipNoOpBuildStages                  string = "FF_SKIP_NOOP_BUILD_STAGES"
+	ShellExecutorUseLegacyProcessKill    string = "FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL"
 )
 
 type FeatureFlag struct {
@@ -60,6 +61,13 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description:     "When set to `false` all build stages are executed even if running them has no effect",
+	},
+	{
+		Name:            ShellExecutorUseLegacyProcessKill,
+		DefaultValue:    "false",
+		Deprecated:      true,
+		ToBeRemovedWith: "14.0",
+		Description:     "Use the old process termination that was used prior to GitLab 13.1 where only `SIGKILL` was sent",
 	},
 }
 

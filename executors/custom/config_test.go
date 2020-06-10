@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
 type getDurationTestCase struct {
@@ -73,7 +74,7 @@ func TestConfig_GetCleanupExecTimeout(t *testing.T) {
 }
 
 func TestConfig_GetTerminateTimeout(t *testing.T) {
-	testGetDuration(t, defaultGracefulKillTimeout, func(t *testing.T, tt getDurationTestCase) {
+	testGetDuration(t, process.GracefulTimeout, func(t *testing.T, tt getDurationTestCase) {
 		c := &config{
 			CustomConfig: &common.CustomConfig{
 				GracefulKillTimeout: tt.source,
@@ -85,7 +86,7 @@ func TestConfig_GetTerminateTimeout(t *testing.T) {
 }
 
 func TestConfig_GetForceKillTimeout(t *testing.T) {
-	testGetDuration(t, defaultForceKillTimeout, func(t *testing.T, tt getDurationTestCase) {
+	testGetDuration(t, process.KillTimeout, func(t *testing.T, tt getDurationTestCase) {
 		c := &config{
 			CustomConfig: &common.CustomConfig{
 				ForceKillTimeout: tt.source,
