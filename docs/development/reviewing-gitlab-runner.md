@@ -108,7 +108,7 @@ will be unavailable. But, a new pipeline execution, even without changes in the 
 To view a code coverage report for a merge request:
 
 1. In the merge request's **Overview** tab, under the pipeline
-      result, click on **View exposed artifact** to expand the section.
+   result, click on **View exposed artifact** to expand the section.
 1. Click on **Code Coverage**.
 1. Use the artifact browser to navigate to the `out/coverage/`
    directory. For example,
