@@ -13,7 +13,7 @@ func OnEachZipArchiver(t *testing.T, f func(t *testing.T)) {
 		"legacy":  ziplegacy.NewArchiver,
 		"fastzip": fastzip.NewArchiver,
 	}
-	
+
 	for name, archiver := range archivers {
 		archive.Register(archive.Zip, archiver, ziplegacy.NewExtractor)
 		t.Run(name, f)
@@ -25,7 +25,7 @@ func OnEachZipExtractor(t *testing.T, f func(t *testing.T)) {
 		"legacy":  ziplegacy.NewExtractor,
 		"fastzip": fastzip.NewExtractor,
 	}
-	
+
 	for name, extractor := range extractors {
 		archive.Register(archive.Zip, ziplegacy.NewArchiver, extractor)
 		t.Run(name, f)
