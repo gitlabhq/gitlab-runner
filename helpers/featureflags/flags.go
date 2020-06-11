@@ -13,6 +13,7 @@ const (
 	ShellExecutorUseLegacyProcessKill    string = "FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL"
 	ResetHelperImageEntrypoint           string = "FF_RESET_HELPER_IMAGE_ENTRYPOINT"
 	UseGoCloudWithCacheArchiver          string = "FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER"
+	UseFastzip                           string = "FF_USE_FASTZIP"
 )
 
 type FeatureFlag struct {
@@ -94,6 +95,13 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "14.0",
 		Description: "Enables the use of Go Cloud to write cache archives to object storage. " +
 			"This mode is only used by Azure Blob storage.",
+	},
+	{
+		Name:            UseFastzip,
+		DefaultValue:    "false",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description:     "Fastzip is a performant archiver for cache/artifact archiving and extraction",
 	},
 }
 
