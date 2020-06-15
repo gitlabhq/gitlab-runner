@@ -42,6 +42,18 @@ race conditions detector:
   - source ci/touch_make_dependencies
   - make check_race_conditions
 
+code navigation:
+  extends:
+  - .coverage_job
+  allow_failure: true
+  needs: []
+  script:
+    - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
+    - lsif-go
+  artifacts:
+    reports:
+      lsif: dump.lsif
+
 .check windows test failures:
   extends:
   - .merge_request_pipelines_on_gitlab_org_gitlab_runner
