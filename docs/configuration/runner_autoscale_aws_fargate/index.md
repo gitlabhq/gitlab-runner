@@ -317,3 +317,16 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 - ECS Fargate cluster created at [step 7](#step-7-create-an-ecs-fargate-cluster)
 - ECS Task Definition created at [step 8](#step-8-create-an-ecs-task-definition)
 - `AmazonSSMReadOnlyAccess` policy from the role `ecsTaskExecutionRole` added at [step 9](#step-9-update-permissions-of-ecstaskexecutionrole-role)
+
+## Troubleshooting
+
+### `Application execution failed` error when testing the configuration
+
+`error="starting new Fargate task: running new task on Fargate: error starting AWS Fargate Task: InvalidParameterException: No Container Instances were found in your cluster."`
+
+The AWS Fargate Driver requires the ECS Cluster to be configured with a [default capacity provider strategy](#step-7-create-an-ecs-fargate-cluster).
+
+Further reading:
+
+- A default [capacity provider strategy](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html) is associated with each Amazon ECS cluster. If no other capacity provider strategy or launch type is specified, the cluster uses this strategy when a task runs or a service is created.
+- If a [`capacityProviderStrategy`](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RunTask.html#ECS-RunTask-request-capacityProviderStrategy) is specified, the `launchType` parameter must be omitted. If no `capacityProviderStrategy` or `launchType` is specified, the `defaultCapacityProviderStrategy` for the cluster is used.
