@@ -13,6 +13,20 @@ type MockJobTrace struct {
 	mock.Mock
 }
 
+// Cancel provides a mock function with given fields:
+func (_m *MockJobTrace) Cancel() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // Fail provides a mock function with given fields: err, failureReason
 func (_m *MockJobTrace) Fail(err error, failureReason JobFailureReason) {
 	_m.Called(err, failureReason)

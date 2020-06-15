@@ -73,7 +73,22 @@ func (c *clientJobTrace) SetMasked(masked []string) {
 }
 
 func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.cancelFunc = cancelFunc
+}
+
+func (c *clientJobTrace) Cancel() bool {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if c.cancelFunc == nil {
+		return false
+	}
+
+	c.cancelFunc()
+	return true
 }
 
 func (c *clientJobTrace) SetFailuresCollector(fc common.FailuresCollector) {
@@ -246,12 +261,9 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 }
 
 func (c *clientJobTrace) abort() bool {
-	if c.cancelFunc != nil {
-		c.cancelFunc()
-		c.cancelFunc = nil
-		return true
-	}
-	return false
+	cancelled := c.Cancel()
+	c.SetCancelFunc(nil)
+	return cancelled
 }
 
 func (c *clientJobTrace) watch() {
