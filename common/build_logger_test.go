@@ -16,6 +16,7 @@ type fakeJobTrace struct {
 func (fjt *fakeJobTrace) Success()                                       {}
 func (fjt *fakeJobTrace) Fail(err error, failureReason JobFailureReason) {}
 func (fjt *fakeJobTrace) SetCancelFunc(cancelFunc context.CancelFunc)    {}
+func (fjt *fakeJobTrace) Cancel() bool                                   { return false }
 func (fjt *fakeJobTrace) SetFailuresCollector(fc FailuresCollector)      {}
 func (fjt *fakeJobTrace) SetMasked(masked []string)                      {}
 func (fjt *fakeJobTrace) IsStdout() bool                                 { return false }

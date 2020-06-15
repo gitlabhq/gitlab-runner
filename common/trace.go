@@ -9,7 +9,7 @@ import (
 
 type Trace struct {
 	Writer     io.Writer
-	CancelFunc context.CancelFunc
+	cancelFunc context.CancelFunc
 	mutex      sync.Mutex
 }
 
@@ -33,7 +33,22 @@ func (s *Trace) Fail(err error, failureReason JobFailureReason) {
 }
 
 func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {
-	s.CancelFunc = cancelFunc
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.cancelFunc = cancelFunc
+}
+
+func (s *Trace) Cancel() bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.cancelFunc == nil {
+		return false
+	}
+
+	s.cancelFunc()
+	return true
 }
 
 func (s *Trace) SetFailuresCollector(fc FailuresCollector) {}

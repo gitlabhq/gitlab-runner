@@ -373,6 +373,7 @@ type JobTrace interface {
 	Success()
 	Fail(err error, failureReason JobFailureReason)
 	SetCancelFunc(cancelFunc context.CancelFunc)
+	Cancel() bool
 	SetFailuresCollector(fc FailuresCollector)
 	SetMasked(values []string)
 	IsStdout() bool
