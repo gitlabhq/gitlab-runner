@@ -261,14 +261,19 @@ to the container image that you are going to use for your CI builds.
    the `fargate.toml` file but without `:1`).
 1. Select values for `Task memory (GB)` and `Task CPU (vCPU)`.
 1. Click `Add Container`, then:
-   1. Give it the `ci-coordinator` name (warning: the Fargate driver
-      will inject the `SSH_PUBLIC_KEY` environment variable only in
-      containers with this name)
+   1. Give it the `ci-coordinator` name, so the Fargate driver
+      can inject the `SSH_PUBLIC_KEY` environment variable.
    1. Define image (for example `registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`).
    1. Define port mapping for 22/TCP.
    1. Click `Add`.
 1. Click `Create`.
 1. Click `View task definition`.
+
+**Warning: a single Fargate Task may launch a single or multiple containers,
+but the Fargate driver will inject the `SSH_PUBLIC_KEY` environment variable
+only in containers with the `ci-coordinator` name. This means it is mandatory
+to have a container with this name in all Task Definitions used by the Fargate
+driver.**
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)
 for detailed instructions on setting up and working with task definitions.
