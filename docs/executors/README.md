@@ -118,7 +118,11 @@ Supported features by different executors:
 | `gitlab-ci.yml`: artifacts                   | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          | n/a    |
-| Interactive Web terminal                     | ✗    | ✓ (UNIX)       | ✗          | ✗         | ✓      | ✓          | ✗      |
+| Interactive Web terminal                     | ✗    | ✓ (UNIX)       | ✗          | ✗         | ✓      | ✓ (1)       | ✗      |
+
+1. Interactive web terminals are not yet supported by
+[`gitlab-runner` Helm chart](../install/kubernetes.md),
+but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/79).
 
 Supported systems by different shells:
 
