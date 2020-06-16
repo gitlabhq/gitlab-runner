@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -91,7 +90,7 @@ func (b *PsWriter) buildCommand(command string, arguments ...string) string {
 }
 
 func (b *PsWriter) TmpFile(name string) string {
-	filePath := b.Absolute(path.Join(b.TemporaryPath, name))
+	filePath := b.Absolute(filepath.Join(b.TemporaryPath, name))
 	return helpers.ToBackslash(filePath)
 }
 
@@ -167,10 +166,10 @@ func (b *PsWriter) MkDir(path string) {
 }
 
 func (b *PsWriter) MkTmpDir(name string) string {
-	path := helpers.ToBackslash(path.Join(b.TemporaryPath, name))
-	b.MkDir(path)
+	dirPath := helpers.ToBackslash(filepath.Join(b.TemporaryPath, name))
+	b.MkDir(dirPath)
 
-	return path
+	return dirPath
 }
 
 func (b *PsWriter) RmDir(path string) {
