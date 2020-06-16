@@ -240,7 +240,7 @@ release_packagecloud:
 	# Releasing to https://packages.gitlab.com/runner/
 	@./ci/release_packagecloud "$$CI_JOB_NAME"
 
-release_s3: copy_helper_binaries prepare_windows_zip prepare_zoneinfo prepare_index
+release_s3: prepare_windows_zip prepare_zoneinfo prepare_index
 	# Releasing to S3
 	@./ci/release_s3
 
@@ -253,11 +253,6 @@ prepare_windows_zip: out/binaries/gitlab-runner-windows-386.zip out/binaries/git
 prepare_zoneinfo:
 	# preparing the zoneinfo file
 	@cp $$GOROOT/lib/time/zoneinfo.zip out/
-
-copy_helper_binaries:
-	# copying helper binaries
-	@mkdir -p out/binaries/gitlab-runner-helper
-	@cp dockerfiles/build/binaries/gitlab-runner-helper* out/binaries/gitlab-runner-helper/
 
 prepare_index: export CI_COMMIT_REF_NAME ?= $(BRANCH)
 prepare_index: export CI_COMMIT_SHA ?= $(REVISION)
