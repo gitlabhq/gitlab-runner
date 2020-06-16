@@ -223,13 +223,25 @@ func TestListenReadLines(t *testing.T) {
 
 	mockLogStreamer := newMockLogStreamer()
 	defer mockLogStreamer.AssertExpectations(t)
+
+	logs := []log{
+		{line: expectedLines[0], offset: 10},
+		{line: expectedLines[1], offset: 20},
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(logs))
+
 	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			writeLogs(
 				args.Get(2).(io.Writer),
-				log{line: expectedLines[0], offset: 10},
-				log{line: expectedLines[1], offset: 20},
+				logs...,
 			)
+
+			// after writing the logs, this method must wait for them to be send out through the channel
+			// otherwise it will exit early and cancel the inner context responsible for receiving/sending
+			wg.Wait()
 			cancel()
 		}).
 		Return(nil).
@@ -241,6 +253,7 @@ func TestListenReadLines(t *testing.T) {
 	ch := processor.Process(ctx)
 	receivedLogs := make([]string, 0)
 	for log := range ch {
+		wg.Done()
 		receivedLogs = append(receivedLogs, log)
 	}
 
@@ -248,10 +261,10 @@ func TestListenReadLines(t *testing.T) {
 }
 
 func newMockLogStreamer() *mockLogStreamer {
-	p := new(mockLogStreamer)
-	p.On("String").Return("mockLogStreamer").Maybe()
+	s := new(mockLogStreamer)
+	s.On("String").Return("mockLogStreamer").Maybe()
 
-	return p
+	return s
 }
 
 func writeLogs(to io.Writer, logs ...log) {
@@ -313,15 +326,8 @@ func TestAttachReconnectLogStream(t *testing.T) {
 		Return(io.EOF).
 		Times(expectedConnectCount)
 
-	mockBackoffCalculator := new(mockBackoffCalculator)
-	defer mockBackoffCalculator.AssertExpectations(t)
-	mockBackoffCalculator.On("ForAttempt", float64(1)).Return(time.Duration(0)).Once()
-	mockBackoffCalculator.On("ForAttempt", float64(2)).Return(time.Duration(0)).Once()
-
-	processor := new(kubernetesLogProcessor)
-	processor.logger = logrus.New()
+	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
-	processor.backoff = mockBackoffCalculator
 
 	ch := processor.Process(ctx)
 	for range ch {
@@ -349,15 +355,8 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 		Return(nil).
 		Times(expectedConnectCount)
 
-	mockBackoffCalculator := new(mockBackoffCalculator)
-	defer mockBackoffCalculator.AssertExpectations(t)
-	mockBackoffCalculator.On("ForAttempt", float64(1)).Return(time.Duration(0)).Once()
-	mockBackoffCalculator.On("ForAttempt", float64(2)).Return(time.Duration(0)).Once()
-
-	processor := new(kubernetesLogProcessor)
-	processor.logger = logrus.New()
+	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
-	processor.backoff = mockBackoffCalculator
 
 	ch := processor.Process(ctx)
 	for range ch {
@@ -370,14 +369,25 @@ func TestAttachCorrectOffset(t *testing.T) {
 	mockLogStreamer := newMockLogStreamer()
 	defer mockLogStreamer.AssertExpectations(t)
 
+	logs := []log{
+		{line: "line", offset: 10},
+		{line: "line", offset: 20},
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(logs))
+
 	mockLogStreamer.
 		On("Stream", mock.Anything, int64(0), mock.Anything).
 		Run(func(args mock.Arguments) {
 			writeLogs(
 				args.Get(2).(io.Writer),
-				log{line: "line", offset: 10},
-				log{line: "line", offset: 20},
+				logs...,
 			)
+
+			// after writing the logs, this method must wait for them to be send out through the channel
+			// otherwise it will exit early and cancel the inner context responsible for receiving/sending
+			wg.Wait()
 		}).
 		Return(nil).
 		Once()
@@ -395,6 +405,7 @@ func TestAttachCorrectOffset(t *testing.T) {
 
 	ch := processor.Process(ctx)
 	for range ch {
+		wg.Done()
 	}
 }
 
