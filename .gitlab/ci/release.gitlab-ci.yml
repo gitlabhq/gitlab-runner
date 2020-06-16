@@ -14,7 +14,7 @@
     GIT_LFS_ARM64_CHECKSUM: "7a80464be13acc23ac99fd33e4b4352894f0fe3a8794b270e964c9532941834d"
   needs:
   - 'helper images'
-  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
   - 'package-deb'
   script:
   - source ci/touch_make_dependencies
@@ -55,7 +55,7 @@
   - 'test coverage report'
   - 'binaries darwin/amd64'
   - 'binaries freebsd/386 freebsd/amd64 freebsd/arm'
-  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
   - 'binaries windows/386 windows/amd64'
   - 'package-deb'
   - 'package-rpm'
