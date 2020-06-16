@@ -57,7 +57,7 @@ to implement a pattern for configuring the Fargate driver to use Kaniko.
 - The container image needs to be able to accept an SSH connection through public-key
   authentication. This SSH connection is used by the Runner manager to send the build
   commands defined in the `gitlab-ci.yml` file to the container running on AWS Fargate.
-  Please notice the SSH keys will be automatically managed by the Fargate driver,
+  The SSH keys will be automatically managed by the Fargate driver,
   but the container must be instrumented to receive the public key through the
   `SSH_PUBLIC_KEY` environment variable.
 - Note that if you specify an image for a job using the `image:` keyword, it will be ignored
@@ -269,11 +269,12 @@ to the container image that you are going to use for your CI builds.
 1. Click `Create`.
 1. Click `View task definition`.
 
-**Warning: a single Fargate Task may launch a single or multiple containers,
-but the Fargate driver will inject the `SSH_PUBLIC_KEY` environment variable
-only in containers with the `ci-coordinator` name. This means it is mandatory
-to have a container with this name in all Task Definitions used by the Fargate
-driver.**
+**Warning:**
+A single Fargate task may launch one or more containers.
+The Fargate driver injects the `SSH_PUBLIC_KEY` environment variable
+in containers with the `ci-coordinator` name only, so you must
+have a container with this name in all task definitions used by the Fargate
+driver.
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)
 for detailed instructions on setting up and working with task definitions.
