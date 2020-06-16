@@ -223,7 +223,7 @@ func (b *BashShell) GetName() string {
 	return b.Shell
 }
 
-func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
+func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {
 	var detectScript string
 	var shellCommand string
 	if info.Type == common.LoginShell {
@@ -234,7 +234,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 		shellCommand = b.Shell
 	}
 
-	script = &common.ShellConfiguration{}
+	script := &common.ShellConfiguration{}
 	script.DockerCommand = []string{"sh", "-c", detectScript}
 
 	// su
@@ -252,7 +252,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 		}
 	}
 
-	return
+	return script, nil
 }
 
 func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {

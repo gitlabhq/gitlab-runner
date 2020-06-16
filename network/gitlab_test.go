@@ -297,10 +297,10 @@ func TestVerifyRunner(t *testing.T) {
 	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
 }
 
-func getRequestJobResponse() (res map[string]interface{}) {
+func getRequestJobResponse() map[string]interface{} {
 	jobToken := "job-token"
 
-	res = make(map[string]interface{})
+	res := make(map[string]interface{})
 	res["id"] = 10
 	res["token"] = jobToken
 	res["allow_git_fetch"] = false
@@ -400,7 +400,7 @@ func getRequestJobResponse() (res map[string]interface{}) {
 	dependencies[0]["artifacts_file"] = artifactsFile0
 	res["dependencies"] = dependencies
 
-	return
+	return res
 }
 
 func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {

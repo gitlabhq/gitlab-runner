@@ -28,7 +28,7 @@ func (c *UnregisterCommand) unregisterAllRunners() (runners []*common.RunnerConf
 	return
 }
 
-func (c *UnregisterCommand) unregisterSingleRunner() (runners []*common.RunnerConfig) {
+func (c *UnregisterCommand) unregisterSingleRunner() []*common.RunnerConfig {
 	if len(c.Name) > 0 { // Unregister when given a name
 		runnerConfig, err := c.RunnerByName(c.Name)
 		if err != nil {
@@ -42,13 +42,13 @@ func (c *UnregisterCommand) unregisterSingleRunner() (runners []*common.RunnerCo
 		logrus.Fatalln("Failed to unregister runner", c.Name)
 	}
 
+	var runners []*common.RunnerConfig
 	for _, otherRunner := range c.config.Runners {
-		if otherRunner.RunnerCredentials == c.RunnerCredentials {
-			continue
+		if otherRunner.RunnerCredentials != c.RunnerCredentials {
+			runners = append(runners, otherRunner)
 		}
-		runners = append(runners, otherRunner)
 	}
-	return
+	return runners
 }
 
 func (c *UnregisterCommand) Execute(context *cli.Context) {

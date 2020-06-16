@@ -519,7 +519,7 @@ func (e *executor) buildServiceLinks(linksMap map[string]*types.Container) (link
 	return
 }
 
-func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefinition common.Image, linksMap map[string]*types.Container) (err error) {
+func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefinition common.Image, linksMap map[string]*types.Container) error {
 	var container *types.Container
 
 	serviceMeta := services.SplitNameAndVersion(serviceDefinition.Name)
@@ -536,9 +536,10 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 
 		// Create service if not yet created
 		if container == nil {
+			var err error
 			container, err = e.createService(serviceIndex, serviceMeta.Service, serviceMeta.Version, serviceMeta.ImageName, serviceDefinition, serviceMeta.Aliases)
 			if err != nil {
-				return
+				return err
 			}
 
 			e.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
@@ -547,7 +548,7 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 		}
 		linksMap[linkName] = container
 	}
-	return
+	return nil
 }
 
 func (e *executor) createBuildNetwork() error {

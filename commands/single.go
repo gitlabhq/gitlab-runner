@@ -67,7 +67,7 @@ func (r *RunSingleCommand) postBuild() {
 	r.lastBuild = time.Now()
 }
 
-func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) (err error) {
+func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) error {
 	jobData, healthy := r.network.RequestJob(r.RunnerConfig, nil)
 	if !healthy {
 		logrus.Println("Runner is not healthy!")
@@ -75,7 +75,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		case <-time.After(common.NotHealthyCheckInterval * time.Second):
 		case <-abortSignal:
 		}
-		return
+		return nil
 	}
 
 	if jobData == nil {
@@ -83,13 +83,13 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		case <-time.After(common.CheckInterval):
 		case <-abortSignal:
 		}
-		return
+		return nil
 	}
 
 	config := common.NewConfig()
 	newBuild, err := common.NewBuild(*jobData, &r.RunnerConfig, abortSignal, data)
 	if err != nil {
-		return
+		return err
 	}
 
 	jobCredentials := &common.JobCredentials{
@@ -107,7 +107,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 
 	r.postBuild()
 
-	return
+	return err
 }
 
 func (r *RunSingleCommand) checkFinishedConditions() {

@@ -43,6 +43,7 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - nakedret
     - staticcheck
     - nestif
     - structcheck
