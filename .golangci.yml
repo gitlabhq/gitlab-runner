@@ -25,6 +25,8 @@ linters-settings:
     min-complexity: 10
   govet:
     check-shadowing: false
+  nestif:
+    min-complexity: 5
 
 linters:
   disable-all: true
@@ -42,6 +44,7 @@ linters:
     - ineffassign
     - misspell
     - staticcheck
+    - nestif
     - structcheck
     - typecheck
     - unconvert
