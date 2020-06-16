@@ -103,7 +103,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
-	mockWriter.On("Notice", mock.Anything)
+	mockWriter.On("Noticef", mock.Anything)
 	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
@@ -134,7 +134,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		"--artifact-format", "gzip",
 		"--artifact-type", "junit").Once()
 	mockWriter.On("Else")
-	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything)
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
 	mockWriter.On("EndIf")
 
 	err := shell.writeScript(mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
@@ -163,7 +163,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
-	mockWriter.On("Notice", mock.Anything)
+	mockWriter.On("Noticef", mock.Anything)
 	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
@@ -189,7 +189,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		"--artifact-format", "gzip",
 		"--artifact-type", "junit").Once()
 	mockWriter.On("Else")
-	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything)
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
 	mockWriter.On("EndIf")
 
 	err := shell.writeScript(mockWriter, common.BuildStageUploadOnFailureArtifacts, info)
@@ -230,7 +230,7 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything).Once()
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Once()
-	mockWriter.On("Notice", mock.Anything).Once()
+	mockWriter.On("Noticef", mock.Anything).Once()
 	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", "https://gitlab.example.com",
 		"--token", "token",
@@ -240,7 +240,7 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 		"--artifact-format", "zip",
 		"--artifact-type", "archive").Once()
 	mockWriter.On("Else").Once()
-	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything).Once()
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
 	mockWriter.On("EndIf").Once()
 
 	err := shell.writeScript(mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
@@ -295,7 +295,7 @@ func TestGitCleanFlags(t *testing.T) {
 			mockWriter := new(MockShellWriter)
 			defer mockWriter.AssertExpectations(t)
 
-			mockWriter.On("Notice", "Checking out %s as %s...", dummySha[0:8], dummyRef).Once()
+			mockWriter.On("Noticef", "Checking out %s as %s...", dummySha[0:8], dummyRef).Once()
 			mockWriter.On("Command", "git", "checkout", "-f", "-q", dummySha).Once()
 
 			if test.expectedGitClean {
@@ -350,14 +350,14 @@ func TestGitFetchFlags(t *testing.T) {
 			mockWriter := new(MockShellWriter)
 			defer mockWriter.AssertExpectations(t)
 
-			mockWriter.On("Notice", "Fetching changes...").Once()
+			mockWriter.On("Noticef", "Fetching changes...").Once()
 			mockWriter.On("MkTmpDir", mock.Anything).Return(mock.Anything).Once()
 			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
 			mockWriter.On("Command", "git", "init", dummyProjectDir, "--template", mock.Anything).Once()
 			mockWriter.On("Cd", mock.Anything)
 			mockWriter.On("IfCmd", "git", "remote", "add", "origin", mock.Anything)
 			mockWriter.On("RmFile", mock.Anything)
-			mockWriter.On("Notice", "Created fresh repository.").Once()
+			mockWriter.On("Noticef", "Created fresh repository.").Once()
 			mockWriter.On("Else")
 			mockWriter.On("Command", "git", "remote", "set-url", "origin", mock.Anything)
 			mockWriter.On("EndIf")
@@ -376,7 +376,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdRecursive(t *testing.T) {
 	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 
-	mockWriter.On("Notice", "Updating/initializing submodules recursively...").Once()
+	mockWriter.On("Noticef", "Updating/initializing submodules recursively...").Once()
 	mockWriter.On("Command", "git", "submodule", "sync", "--recursive").Once()
 	mockWriter.On("Command", "git", "submodule", "update", "--init", "--recursive").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git clean -ffxd").Once()
@@ -393,7 +393,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 
-	mockWriter.On("Notice", "Updating/initializing submodules...").Once()
+	mockWriter.On("Noticef", "Updating/initializing submodules...").Once()
 	mockWriter.On("Command", "git", "submodule", "sync").Once()
 	mockWriter.On("Command", "git", "submodule", "update", "--init").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
@@ -435,7 +435,7 @@ func TestWriteUserScript(t *testing.T) {
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
 				m.On("Cd", mock.AnythingOfType("string"))
-				m.On("Notice", "$ %s", "echo hello").Once()
+				m.On("Noticef", "$ %s", "echo hello").Once()
 				m.On("Line", "echo hello").Once()
 				m.On("CheckForErrors").Once()
 			},
@@ -462,9 +462,9 @@ func TestWriteUserScript(t *testing.T) {
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
 				m.On("Cd", mock.AnythingOfType("string"))
-				m.On("Notice", "$ %s", "echo prebuild").Once()
-				m.On("Notice", "$ %s", "echo release").Once()
-				m.On("Notice", "$ %s", "echo postbuild").Once()
+				m.On("Noticef", "$ %s", "echo prebuild").Once()
+				m.On("Noticef", "$ %s", "echo release").Once()
+				m.On("Noticef", "$ %s", "echo postbuild").Once()
 				m.On("Line", "echo prebuild").Once()
 				m.On("Line", "echo release").Once()
 				m.On("Line", "echo postbuild").Once()

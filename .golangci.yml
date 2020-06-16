@@ -39,6 +39,7 @@ linters:
     - gocyclo
     - goimports
     - golint
+    - goprintffuncname
     - gosimple
     - govet
     - ineffassign

@@ -164,22 +164,22 @@ func (b *BashWriter) Absolute(dir string) string {
 	return path.Join("$PWD", dir)
 }
 
-func (b *BashWriter) Print(format string, arguments ...interface{}) {
+func (b *BashWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
 
-func (b *BashWriter) Notice(format string, arguments ...interface{}) {
+func (b *BashWriter) Noticef(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
 
-func (b *BashWriter) Warning(format string, arguments ...interface{}) {
+func (b *BashWriter) Warningf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
 
-func (b *BashWriter) Error(format string, arguments ...interface{}) {
+func (b *BashWriter) Errorf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
