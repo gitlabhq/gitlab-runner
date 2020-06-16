@@ -14,7 +14,7 @@ endif
 
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
-BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd' -arch '!mips' -arch '!mips64' -arch '!mipsle' -arch '!mips64le' -arch '!s390x'
+BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd' -arch '!mips' -arch '!mips64' -arch '!mipsle' -arch '!mips64le'
 S3_UPLOAD_PATH ?= master
 
 # Keep in sync with docs/install/linux-repository.md
