@@ -15,6 +15,7 @@ second: '(?:\b[A-Z][a-z]+ )+\(([A-Z]{3,5})\)'
 # ... with the exception of these:
 exceptions:
   - API
+  - ARN
   - ASCII
   - AWS
   - CNAME
@@ -23,6 +24,7 @@ exceptions:
   - CSV
   - DNS
   - EKS
+  - GDK
   - GET
   - GNU
   - GPG
@@ -30,6 +32,7 @@ exceptions:
   - HTML
   - HTTP
   - HTTPS
+  - IAM
   - IDE
   - JSON
   - LDAP
