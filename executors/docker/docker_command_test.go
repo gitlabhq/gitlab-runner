@@ -1362,7 +1362,7 @@ func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {
 	defer func() {
 		volumeName := fmt.Sprintf("%s-cache-%x", build.ProjectUniqueName(), md5.Sum([]byte(volumeBind)))
 
-		err := client.VolumeRemove(context.Background(), volumeName, true)
+		err = client.VolumeRemove(context.Background(), volumeName, true)
 		require.NoError(t, err)
 	}()
 

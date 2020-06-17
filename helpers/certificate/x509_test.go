@@ -28,8 +28,8 @@ func TestCertificate(t *testing.T) {
 		Addr: tlsListener.Addr().String(),
 	}
 	go func() {
-		err := srv.Serve(tlsListener)
-		require.EqualError(t, err, "http: Server closed")
+		errServe := srv.Serve(tlsListener)
+		require.EqualError(t, errServe, "http: Server closed")
 	}()
 	defer srv.Close()
 

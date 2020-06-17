@@ -194,7 +194,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	if vbox.Exist(s.vmName) {
 		s.Println("Restoring VM from snapshot...")
-		err := s.restoreFromSnapshot()
+		err = s.restoreFromSnapshot()
 		if err != nil {
 			s.Println("Previous VM failed. Deleting, because", err)
 			vbox.Kill(s.vmName)
@@ -205,7 +205,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	if !vbox.Exist(s.vmName) {
 		s.Println("Creating new VM...")
-		err := s.createVM(s.vmName)
+		err = s.createVM(s.vmName)
 		if err != nil {
 			return err
 		}
@@ -227,7 +227,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	if !vbox.IsStatusOnlineOrTransient(status) {
 		s.Println("Starting VM...")
-		err := vbox.Start(s.vmName)
+		err = vbox.Start(s.vmName)
 		if err != nil {
 			return err
 		}

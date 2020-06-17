@@ -97,8 +97,8 @@ func TestCertificate(t *testing.T) {
 	defer server.Close()
 
 	go func() {
-		err := server.Start()
-		require.NoError(t, err)
+		errStart := server.Start()
+		require.NoError(t, errStart)
 	}()
 
 	caCertPool := x509.NewCertPool()

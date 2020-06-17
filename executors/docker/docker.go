@@ -38,23 +38,24 @@ import (
 )
 
 const (
-	DockerExecutorStagePrepare common.ExecutorStage = "docker_prepare"
-	DockerExecutorStageRun     common.ExecutorStage = "docker_run"
-	DockerExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
+	ExecutorStagePrepare common.ExecutorStage = "docker_prepare"
+	ExecutorStageRun     common.ExecutorStage = "docker_run"
+	ExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
 
-	DockerExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
-	DockerExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
-	DockerExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
-	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
+	ExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
+	ExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
+	ExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
+	ExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 )
 
-var DockerPrebuiltImagesPaths []string
+var PrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
-var errVolumesManagerUndefined = errors.New("volumesManager is undefined")
-
-var errNetworksManagerUndefined = errors.New("networksManager is undefined")
+var (
+	errVolumesManagerUndefined  = errors.New("volumesManager is undefined")
+	errNetworksManagerUndefined = errors.New("networksManager is undefined")
+)
 
 type executor struct {
 	executors.AbstractExecutor
@@ -92,7 +93,7 @@ func init() {
 		logrus.Errorln("Docker executor: unable to detect gitlab-runner folder, prebuilt image helpers will be loaded from DockerHub.", err)
 	}
 
-	DockerPrebuiltImagesPaths = []string{
+	PrebuiltImagesPaths = []string{
 		filepath.Join(runnerFolder, "helper-images"),
 		filepath.Join(runnerFolder, "out/helper-images"),
 	}
@@ -103,7 +104,7 @@ func (e *executor) getServiceVariables() []string {
 }
 
 func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*types.ImageInspect, error) {
-	e.SetCurrentStage(DockerExecutorStagePullingImage)
+	e.SetCurrentStage(ExecutorStagePullingImage)
 	e.Println("Pulling docker image", imageName, "...")
 
 	ref := imageName
@@ -214,7 +215,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 	}
 	options := types.ImageImportOptions{Tag: tag}
 
-	if err := e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
+	if err = e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
 		return nil, fmt.Errorf("failed to import image: %w", err)
 	}
 
@@ -259,7 +260,7 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 	}
 
 	architecture := e.helperImageInfo.Architecture
-	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
+	for _, dockerPrebuiltImagesPath := range PrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, e.helperImageInfo.Tag)
 		if err != nil {
@@ -593,7 +594,7 @@ func (e *executor) cleanupNetwork(ctx context.Context) error {
 }
 
 func (e *executor) createServices() (err error) {
-	e.SetCurrentStage(DockerExecutorStageCreatingServices)
+	e.SetCurrentStage(ExecutorStageCreatingServices)
 	e.Debugln("Creating services...")
 
 	servicesDefinitions, err := e.getServicesDefinitions()
@@ -746,17 +747,17 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	// Copy any output to the build trace
 	stdoutErrCh := make(chan error)
 	go func() {
-		_, err := stdcopy.StdCopy(e.Trace, e.Trace, hijacked.Reader)
-		stdoutErrCh <- err
+		_, errCopy := stdcopy.StdCopy(e.Trace, e.Trace, hijacked.Reader)
+		stdoutErrCh <- errCopy
 	}()
 
 	// Write the input to the container and close its STDIN to get it to finish
 	stdinErrCh := make(chan error)
 	go func() {
-		_, err := io.Copy(hijacked.Conn, input)
+		_, errCopy := io.Copy(hijacked.Conn, input)
 		hijacked.CloseWrite()
-		if err != nil {
-			stdinErrCh <- err
+		if errCopy != nil {
+			stdinErrCh <- errCopy
 		}
 	}()
 
@@ -952,7 +953,7 @@ func (e *executor) createDependencies() error {
 }
 
 func (e *executor) createVolumes() error {
-	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
+	e.SetCurrentStage(ExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
 
 	if e.volumesManager == nil {
@@ -978,7 +979,7 @@ func (e *executor) createVolumes() error {
 }
 
 func (e *executor) createBuildVolume() error {
-	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
+	e.SetCurrentStage(ExecutorStageCreatingBuildVolumes)
 	e.Debugln("Creating build volume...")
 
 	if e.volumesManager == nil {
@@ -1013,7 +1014,7 @@ func (e *executor) createBuildVolume() error {
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
-	e.SetCurrentStage(DockerExecutorStagePrepare)
+	e.SetCurrentStage(ExecutorStagePrepare)
 
 	if options.Config.Docker == nil {
 		return errors.New("missing docker configuration")
@@ -1077,7 +1078,7 @@ func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error
 }
 
 func (e *executor) Cleanup() {
-	e.SetCurrentStage(DockerExecutorStageCleanup)
+	e.SetCurrentStage(ExecutorStageCleanup)
 
 	var wg sync.WaitGroup
 

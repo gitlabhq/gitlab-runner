@@ -552,15 +552,15 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	}
 
 	fakeRoundTripper := func(req *http.Request) (*http.Response, error) {
-		body, err := ioutil.ReadAll(req.Body)
-		if !assert.NoError(t, err, "failed to read request body") {
-			return nil, err
+		body, errRT := ioutil.ReadAll(req.Body)
+		if !assert.NoError(t, errRT, "failed to read request body") {
+			return nil, errRT
 		}
 
 		p := new(api.Pod)
-		err = json.Unmarshal(body, p)
-		if !assert.NoError(t, err, "failed to read request body") {
-			return nil, err
+		errRT = json.Unmarshal(body, p)
+		if !assert.NoError(t, errRT, "failed to read request body") {
+			return nil, errRT
 		}
 
 		if req.URL.Path == "/api/v1/namespaces/default/services" {

@@ -190,12 +190,12 @@ func (s *executor) run(cmd common.ExecutorCommand) error {
 	// Wait for process to finish
 	waitCh := make(chan error)
 	go func() {
-		err := c.Wait()
+		waitErr := c.Wait()
 		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			err = &common.BuildError{Inner: err}
+		if errors.As(waitErr, &exitErr) {
+			waitErr = &common.BuildError{Inner: waitErr}
 		}
-		waitCh <- err
+		waitCh <- waitErr
 	}()
 
 	// Support process abort

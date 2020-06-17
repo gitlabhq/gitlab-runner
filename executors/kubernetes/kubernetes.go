@@ -956,7 +956,7 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 	wg.Add(len(s.ProxyPool))
 
 	for serviceName, serviceProxy := range s.ProxyPool {
-		serviceName := dns.MakeRFC1123Compatible(serviceName)
+		serviceName = dns.MakeRFC1123Compatible(serviceName)
 		servicePorts := make([]api.ServicePort, len(serviceProxy.Settings.Ports))
 		for i, port := range serviceProxy.Settings.Ports {
 			// When there is more than one port Kubernetes requires a port name
