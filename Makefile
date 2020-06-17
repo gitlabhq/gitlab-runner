@@ -14,7 +14,8 @@ endif
 
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
-BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd' -arch '!mips' -arch '!mips64' -arch '!mipsle' -arch '!mips64le'
+BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x'
+BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
 S3_UPLOAD_PATH ?= master
 
 # Keep in sync with docs/install/linux-repository.md
@@ -59,24 +60,26 @@ RELEASE_INDEX_GENERATOR ?= .tmp/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
 GITLAB_CHANGELOG_VERSION ?= latest
 GITLAB_CHANGELOG = .tmp/gitlab-changelog-$(GITLAB_CHANGELOG_VERSION)
 
-.PHONY: clean version mocks
+.PHONY: all
+all: deps runner-and-helper-bin
 
-all: deps helper-docker build_all
-
+include Makefile.deprecation.mk
 include Makefile.runner_helper.mk
 include Makefile.build.mk
 include Makefile.package.mk
 
+.PHONY: help
 help:
 	# Commands:
-	# make all => deps build
+	# make all => install deps and build Runner binaries and Helper images
 	# make version - show information about current version
 	#
 	# Development commands:
 	# make development_setup - setup needed environment for tests
-	# make build_simple - build executable for your arch and OS
-	# make build_current - build executable for your arch and OS, including docker dependencies
-	# make helper-docker - build docker dependencies
+	# make runner-bin-host - build executable for your arch and OS
+	# make runner-and-helper-bin-host - build executable for your arch and OS, including docker dependencies
+	# make runner-and-helper-bin - build executable for all supported platforms, including docker dependencies
+	# make helper-dockerarchive - build Runner Helper docker dependencies for all supported platforms
 	#
 	# Testing commands:
 	# make test - run project tests
@@ -85,11 +88,12 @@ help:
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
-	# make build_all - build project for all supported OSes
+	# make runner-bin - build project for all supported platforms
 	# make package - package project using FPM
 	# make packagecloud - send all packages to packagecloud
 	# make packagecloud-yank - remove specific version from packagecloud
 
+.PHONY: version
 version:
 	@echo Current version: $(VERSION)
 	@echo Current revision: $(REVISION)
@@ -99,21 +103,25 @@ version:
 	@echo RPM platforms: $(RPM_PLATFORMS)
 	@echo IS_LATEST: $(IS_LATEST)
 
+.PHONY: deps
 deps: $(DEVELOPMENT_TOOLS)
 
+.PHONY: lint
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
 lint:
 	@golangci-lint --version >/dev/stderr
 	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
+.PHONY: lint-docs
 lint-docs:
 	@scripts/lint-docs
 
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
-test: helper-docker development_setup simple-test
+.PHONY: test
+test: helper-dockerarchive-host development_setup simple-test
 
 simple-test:
 	go test $(OUR_PACKAGES) $(TESTFLAGS)
@@ -141,6 +149,7 @@ pull_images_for_tests:
 dockerfiles:
 	$(MAKE) -C dockerfiles all
 
+.PHONY: mocks
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
@@ -179,16 +188,21 @@ test-docker-image:
 	tests/test_installation.sh $(IMAGE) out/$(TYPE)/$(PACKAGE_NAME)_amd64.$(TYPE)
 	tests/test_installation.sh $(IMAGE) out/$(TYPE)/$(PACKAGE_NAME)_amd64.$(TYPE) Y
 
+build-and-deploy: ARCH ?= amd64
 build-and-deploy:
-	$(MAKE) build_all BUILD_PLATFORMS="-os=linux -arch=amd64"
-	$(MAKE) package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64
-	scp out/deb/$(PACKAGE_NAME)_amd64.deb $(SERVER):
-	ssh $(SERVER) dpkg -i $(PACKAGE_NAME)_amd64.deb
+	$(MAKE) runner-and-helper-bin BUILD_PLATFORMS="-osarch=linux/$(ARCH)"
+	$(MAKE) package-deb-arch ARCH=$(ARCH) PACKAGE_ARCH=$(ARCH)
+	@[ -z "$(SERVER)" ] && echo "SERVER variable not specified!" && exit 1
+	scp out/deb/$(PACKAGE_NAME)_$(ARCH).deb $(SERVER):
+	ssh $(SERVER) dpkg -i $(PACKAGE_NAME)_$(ARCH).deb
 
+build-and-deploy-binary: ARCH ?= amd64
 build-and-deploy-binary:
-	$(MAKE) build_all BUILD_PLATFORMS="-os=linux -arch=amd64"
-	scp out/binaries/$(PACKAGE_NAME)-linux-amd64 $(SERVER):/usr/bin/gitlab-runner
+	$(MAKE) runner-bin BUILD_PLATFORMS="-osarch=linux/$(ARCH)"
+	@[ -z "$(SERVER)" ] && echo "SERVER variable not specified!" && exit 1
+	scp out/binaries/$(PACKAGE_NAME)-linux-$(ARCH) $(SERVER):/usr/bin/gitlab-runner
 
+.PHONY: packagecloud
 packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
 
 packagecloud-deps:
@@ -259,13 +273,13 @@ prepare_index: export CI_COMMIT_SHA ?= $(REVISION)
 prepare_index: $(RELEASE_INDEX_GENERATOR)
 	# Preparing index file
 	@$(RELEASE_INDEX_GENERATOR) -working-directory out/ \
-						      -project-version $(VERSION) \
-						      -project-git-ref $(CI_COMMIT_REF_NAME) \
-						      -project-git-revision $(CI_COMMIT_SHA) \
-						      -project-name "GitLab Runner" \
-						      -project-repo-url "https://gitlab.com/gitlab-org/gitlab-runner" \
-						      -gpg-key-env GPG_KEY \
-						      -gpg-password-env GPG_PASSPHRASE
+								-project-version $(VERSION) \
+								-project-git-ref $(CI_COMMIT_REF_NAME) \
+								-project-git-revision $(CI_COMMIT_SHA) \
+								-project-name "GitLab Runner" \
+								-project-repo-url "https://gitlab.com/gitlab-org/gitlab-runner" \
+								-gpg-key-env GPG_KEY \
+								-gpg-password-env GPG_PASSPHRASE
 
 release_docker_images:
 	# Releasing Docker images
@@ -339,5 +353,6 @@ $(GITLAB_CHANGELOG):
 	@curl -sL "$(DOWNLOAD_URL)" -o "$(GITLAB_CHANGELOG)"
 	@chmod +x "$(GITLAB_CHANGELOG)"
 
+.PHONY: clean
 clean:
 	-$(RM) -rf $(TARGET_DIR)
