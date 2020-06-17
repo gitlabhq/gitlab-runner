@@ -269,7 +269,7 @@ to the container image that you are going to use for your CI builds.
 1. Click `Create`.
 1. Click `View task definition`.
 
-**Warning:**
+CAUTION: **Caution:**
 A single Fargate task may launch one or more containers.
 The Fargate driver injects the `SSH_PUBLIC_KEY` environment variable
 in containers with the `ci-coordinator` name only, so you must
