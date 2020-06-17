@@ -1116,13 +1116,13 @@ func TestInteractiveTerminal(t *testing.T) {
 
 			go func() {
 				buf := bytes.NewBuffer(nil)
-				err := buildtest.RunBuildWithOptions(
+				errRun := buildtest.RunBuildWithOptions(
 					t,
 					build,
 					&common.Trace{Writer: buf},
 					&common.Config{SessionServer: common.SessionServer{SessionTimeout: 2}},
 				)
-				require.NoError(t, err)
+				require.NoError(t, errRun)
 
 				buildOut <- buf.String()
 			}()

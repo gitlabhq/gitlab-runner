@@ -64,7 +64,7 @@ func (s *sshExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 }
 
 func (s *sshExecutor) Run(cmd common.ExecutorCommand) error {
-	s.SetCurrentStage(DockerExecutorStageRun)
+	s.SetCurrentStage(ExecutorStageRun)
 
 	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Environment: s.BuildShell.Environment,

@@ -37,7 +37,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	DockerPrebuiltImagesPaths = []string{"../../out/helper-images/"}
+	PrebuiltImagesPaths = []string{"../../out/helper-images/"}
 
 	flag.Parse()
 	os.Exit(m.Run())
@@ -1720,7 +1720,7 @@ func TestCheckOSType(t *testing.T) {
 
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
-			executor := executor{
+			e := executor{
 				info: types.Info{
 					OSType: c.dockerInfoOSType,
 				},
@@ -1731,7 +1731,7 @@ func TestCheckOSType(t *testing.T) {
 				},
 			}
 
-			err := executor.validateOSType()
+			err := e.validateOSType()
 			if c.expectedErr == "" {
 				assert.NoError(t, err)
 				return

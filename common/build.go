@@ -741,8 +741,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	if err == nil {
 		err = b.run(ctx, executor)
-		if err := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); err != nil {
-			b.Log().WithError(err).Debug("Stopped waiting for terminal")
+		if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
+			b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
 		}
 	}
 

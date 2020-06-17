@@ -221,7 +221,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	if prl.Exist(s.vmName) {
 		s.Println("Restoring VM from snapshot...")
-		err := s.restoreFromSnapshot()
+		err = s.restoreFromSnapshot()
 		if err != nil {
 			s.Println("Previous VM failed. Deleting, because", err)
 			prl.Kill(s.vmName)
@@ -232,7 +232,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	if !prl.Exist(s.vmName) {
 		s.Println("Creating new VM...")
-		err := s.createVM()
+		err = s.createVM()
 		if err != nil {
 			return err
 		}
@@ -255,7 +255,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	// Start VM if stopped
 	if status == prl.Stopped || status == prl.Suspended {
 		s.Println("Starting VM...")
-		err := prl.Start(s.vmName)
+		err = prl.Start(s.vmName)
 		if err != nil {
 			return err
 		}

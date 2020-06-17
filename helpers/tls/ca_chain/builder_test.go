@@ -179,10 +179,10 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 			builder := NewBuilder(logrus.StandardLogger()).(*defaultBuilder)
 
 			if tc.setupResolverMock != nil {
-				resolver, cleanup := tc.setupResolverMock(t)
+				resolverMock, cleanup := tc.setupResolverMock(t)
 				defer cleanup()
 
-				builder.resolver = resolver
+				builder.resolver = resolverMock
 			}
 
 			TLS := new(tls.ConnectionState)

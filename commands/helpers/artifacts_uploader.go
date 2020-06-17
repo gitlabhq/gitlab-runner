@@ -129,13 +129,13 @@ func (c *ArtifactsUploaderCommand) Run() error {
 }
 
 func (c *ArtifactsUploaderCommand) ShouldRetry(tries int, err error) bool {
-	var retryableErr retryableErr
-	if !errors.As(err, &retryableErr) {
+	var errAs retryableErr
+	if !errors.As(err, &errAs) {
 		return false
 	}
 
 	maxTries := defaultTries
-	if errors.Is(retryableErr, errServiceUnavailable) {
+	if errors.Is(errAs, errServiceUnavailable) {
 		maxTries = serviceUnavailableTries
 	}
 

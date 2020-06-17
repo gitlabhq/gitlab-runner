@@ -211,8 +211,8 @@ func TestMetricsRefereeExecute(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse request
 		buf := new(bytes.Buffer)
-		_, err := buf.ReadFrom(r.Body)
-		require.NoError(t, err)
+		_, errReq := buf.ReadFrom(r.Body)
+		require.NoError(t, errReq)
 		actual := buf.String()
 		t.Log("REQUEST: " + actual)
 		query := fmt.Sprintf("metric%d", requestIndex)
@@ -221,8 +221,8 @@ func TestMetricsRefereeExecute(t *testing.T) {
 		require.Equal(t, expected, actual)
 		// send response
 		t.Log("RESPONSE: " + string(responseJSON))
-		_, err = w.Write(responseJSON)
-		require.NoError(t, err)
+		_, errReq = w.Write(responseJSON)
+		require.NoError(t, errReq)
 		requestIndex++
 	}))
 	defer ts.Close()
