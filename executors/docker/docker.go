@@ -1270,7 +1270,12 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	}
 }
 
-func (e *executor) createConfigForServiceHealthCheckContainer(service *types.Container, cmd []string, waitImage *types.ImageInspect, environment []string) *container.Config {
+func (e *executor) createConfigForServiceHealthCheckContainer(
+	service *types.Container,
+	cmd []string,
+	waitImage *types.ImageInspect,
+	environment []string,
+) *container.Config {
 	return &container.Config{
 		Cmd:    cmd,
 		Image:  waitImage.ID,

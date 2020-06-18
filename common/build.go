@@ -739,6 +739,28 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	provider.GetFeatures(&b.ExecutorFeatures)
 
+	executor, err = b.executeBuildSection(executor, options, provider)
+
+	if err == nil {
+		err = b.run(ctx, executor)
+		if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
+			b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
+		}
+	}
+
+	if executor != nil {
+		executor.Finish(err)
+	}
+
+	return err
+}
+
+func (b *Build) executeBuildSection(
+	executor Executor,
+	options ExecutorPrepareOptions,
+	provider ExecutorProvider,
+) (Executor, error) {
+	var err error
 	section := helpers.BuildSection{
 		Name:        string(BuildStagePrepareExecutor),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
@@ -755,19 +777,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		},
 	}
 	err = section.Execute(&b.logger)
-
-	if err == nil {
-		err = b.run(ctx, executor)
-		if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
-			b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
-		}
-	}
-
-	if executor != nil {
-		executor.Finish(err)
-	}
-
-	return err
+	return executor, err
 }
 
 func (b *Build) cleanupBuild(executor Executor, trace JobTrace, err error) {

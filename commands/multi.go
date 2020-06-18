@@ -471,14 +471,7 @@ func (mr *RunCommand) processRunner(
 	if err != nil || jobData == nil {
 		return
 	}
-	defer func() {
-		if err != nil {
-			fmt.Fprintln(trace, err.Error())
-			trace.Fail(err, common.RunnerSystemFailure)
-		} else {
-			trace.Success()
-		}
-	}()
+	defer func() { mr.traceOutcome(trace, err) }()
 
 	// Create a new build
 	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData)
@@ -498,6 +491,15 @@ func (mr *RunCommand) processRunner(
 
 	// Process a build
 	return build.Run(mr.config, trace)
+}
+
+func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
+	if err != nil {
+		fmt.Fprintln(trace, err.Error())
+		trace.Fail(err, common.RunnerSystemFailure)
+	} else {
+		trace.Success()
+	}
 }
 
 // createSession checks if debug server is supported by configured executor and if the

@@ -114,7 +114,12 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 	return nil
 }
 
-func (b *AbstractShell) addExtractCacheCommand(w ShellWriter, info common.ShellScriptInfo, cacheFile string, cacheKey string) {
+func (b *AbstractShell) addExtractCacheCommand(
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	cacheFile string,
+	cacheKey string,
+) {
 	args := []string{
 		"cache-extractor",
 		"--file", cacheFile,
@@ -528,7 +533,13 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 	return nil
 }
 
-func (b *AbstractShell) addCacheUploadCommand(w ShellWriter, info common.ShellScriptInfo, cacheFile string, archiverArgs []string, cacheKey string) {
+func (b *AbstractShell) addCacheUploadCommand(
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	cacheFile string,
+	archiverArgs []string,
+	cacheKey string,
+) {
 	args := []string{
 		"cache-archiver",
 		"--file", cacheFile,
