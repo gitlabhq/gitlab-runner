@@ -182,13 +182,13 @@ func countIdleMachines(p *machineProvider) (count int) {
 	return
 }
 
-func assertIdleMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...interface{}) bool {
+func assertIdleMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...interface{}) {
 	var idle int
 	for i := 0; i < 10; i++ {
 		idle = countIdleMachines(p)
 
 		if expected == idle {
-			return true
+			return
 		}
 
 		time.Sleep(50 * time.Microsecond)
@@ -196,7 +196,6 @@ func assertIdleMachines(t *testing.T, p *machineProvider, expected int, msgAndAr
 
 	result := fmt.Sprintf("should have %d idle, but has %d", expected, idle)
 	assert.Fail(t, result, msgAndArgs...)
-	return false
 }
 
 func countTotalMachines(p *machineProvider) (count int) {
@@ -211,13 +210,13 @@ func countTotalMachines(p *machineProvider) (count int) {
 	return
 }
 
-func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...interface{}) bool {
+func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...interface{}) {
 	var total int
 	for i := 0; i < 10; i++ {
 		total = countTotalMachines(p)
 
 		if expected == total {
-			return true
+			return
 		}
 
 		time.Sleep(50 * time.Microsecond)
@@ -225,7 +224,6 @@ func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndA
 
 	result := fmt.Sprintf("should have %d total, but has %d", expected, total)
 	assert.Fail(t, result, msgAndArgs...)
-	return false
 }
 
 func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {

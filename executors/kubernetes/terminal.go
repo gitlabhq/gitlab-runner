@@ -5,13 +5,11 @@ import (
 	"net/http"
 	"net/url"
 
+	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
+	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	terminal "gitlab.com/gitlab-org/gitlab-terminal"
 	api "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
-	restclient "k8s.io/client-go/rest"
-
-	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
-	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
 func (s *executor) Connect() (terminalsession.Conn, error) {
@@ -50,7 +48,7 @@ func (s *executor) getTerminalSettings() (*terminal.TerminalSettings, error) {
 		return nil, err
 	}
 
-	wsURL, err := s.getTerminalWebSocketURL(config)
+	wsURL := s.getTerminalWebSocketURL()
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +73,7 @@ func (s *executor) getTerminalSettings() (*terminal.TerminalSettings, error) {
 	return term, nil
 }
 
-func (s *executor) getTerminalWebSocketURL(config *restclient.Config) (*url.URL, error) {
+func (s *executor) getTerminalWebSocketURL() *url.URL {
 	wsURL := s.kubeClient.CoreV1().RESTClient().Post().
 		Namespace(s.pod.Namespace).
 		Resource("pods").
@@ -91,5 +89,5 @@ func (s *executor) getTerminalWebSocketURL(config *restclient.Config) (*url.URL,
 		}, scheme.ParameterCodec).URL()
 
 	wsURL.Scheme = proxy.WebsocketProtocolFor(wsURL.Scheme)
-	return wsURL, nil
+	return wsURL
 }

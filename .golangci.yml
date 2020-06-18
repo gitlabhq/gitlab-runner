@@ -50,6 +50,7 @@ linters:
     - structcheck
     - typecheck
     - unconvert
+    - unparam
     - varcheck
     - whitespace
   fast: false

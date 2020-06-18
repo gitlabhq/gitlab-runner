@@ -56,6 +56,7 @@ func TestInvalidTimezone(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// nolint:unparam
 func testTimeperiodsWithTimezone(t *testing.T, period, timezone string, month time.Month, day, hour, minute int, inPeriod bool) {
 	timePeriods, _ := TimePeriods([]string{period}, timezone)
 	timePeriods.GetCurrentTime = func() time.Time {

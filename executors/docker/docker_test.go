@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 
 // ImagePullOptions contains the RegistryAuth which is inferred from the docker
 // configuration for the user, so just mock it out here.
-func buildImagePullOptions(e *executor, configName string) mock.AnythingOfTypeArgument {
+func buildImagePullOptions() mock.AnythingOfTypeArgument {
 	return mock.AnythingOfType("ImagePullOptions")
 }
 
@@ -165,7 +165,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		volumeParser: parser.NewLinuxParser(),
 	}
 
-	options := buildImagePullOptions(e, imageName)
+	options := buildImagePullOptions()
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{}
 	e.Build = &common.Build{
@@ -243,7 +243,7 @@ func TestDockerForNamedImage(t *testing.T) {
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
 
 	e := executorWithMockClient(c)
-	options := buildImagePullOptions(e, "test")
+	options := buildImagePullOptions()
 
 	c.On("ImagePullBlocking", e.Context, "test:latest", options).
 		Return(os.ErrNotExist).
@@ -275,7 +275,7 @@ func TestDockerForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	e := executorWithMockClient(c)
-	options := buildImagePullOptions(e, "existing")
+	options := buildImagePullOptions()
 
 	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
 		Return(nil).
@@ -413,7 +413,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Return(types.ImageInspect{}, nil, os.ErrNotExist).
 		Once()
 
-	options := buildImagePullOptions(e, "not-existing")
+	options := buildImagePullOptions()
 	c.On("ImagePullBlocking", e.Context, "not-existing:latest", options).
 		Return(nil).
 		Once()
@@ -447,7 +447,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	options := buildImagePullOptions(e, "existing:latest")
+	options := buildImagePullOptions()
 	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
 		Return(nil).
 		Once()
@@ -472,7 +472,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	options := buildImagePullOptions(e, "existing:lastest")
+	options := buildImagePullOptions()
 	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
 		Return(fmt.Errorf("not found")).
 		Once()
@@ -493,7 +493,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	options := buildImagePullOptions(e, "to-pull")
+	options := buildImagePullOptions()
 	c.On("ImagePullBlocking", e.Context, "to-pull:latest", options).
 		Return(os.ErrNotExist).
 		Once()
@@ -1056,7 +1056,7 @@ func TestCreateDependencies(t *testing.T) {
 	assert.Equal(t, testError, err)
 }
 
-func getTestExecutor(t *testing.T) *executor {
+func getTestExecutor() *executor {
 	e := new(executor)
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
@@ -1135,7 +1135,7 @@ func TestPullPolicyWhenAlwaysIsSet(t *testing.T) {
 	remoteImage := "registry.domain.tld:5005/image/name:version"
 	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
 
-	e := getTestExecutor(t)
+	e := getTestExecutor()
 	e.Context = context.Background()
 	e.Config.Docker.PullPolicy = common.PullPolicyAlways
 
@@ -1150,7 +1150,7 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 	remoteImage := "registry.domain.tld:5005/image/name:version"
 	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
 
-	e := getTestExecutor(t)
+	e := getTestExecutor()
 	e.Context = context.Background()
 	e.Config.Docker.PullPolicy = common.PullPolicyIfNotPresent
 

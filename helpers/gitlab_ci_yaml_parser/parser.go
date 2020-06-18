@@ -143,8 +143,8 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) error {
 	return nil
 }
 
-func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) (defaultVariables common.JobVariables, err error) {
-	defaultVariables = common.JobVariables{
+func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) common.JobVariables {
+	return common.JobVariables{
 		{Key: "CI", Value: "true", Public: true, Internal: true, File: false},
 		{Key: "GITLAB_CI", Value: "true", Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER_NAME", Value: "GitLab CI", Public: true, Internal: true, File: false},
@@ -160,7 +160,6 @@ func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) (def
 		{Key: "CI_COMMIT_BEFORE_SHA", Value: job.GitInfo.BeforeSha, Public: true, Internal: true, File: false},
 		{Key: "CI_COMMIT_REF_NAME", Value: job.GitInfo.Ref, Public: true, Internal: true, File: false},
 	}
-	return
 }
 
 func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildVariables common.JobVariables, err error) {
@@ -186,11 +185,7 @@ func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildV
 func (c *GitLabCiYamlParser) prepareVariables(job *common.JobResponse) error {
 	job.Variables = common.JobVariables{}
 
-	defaultVariables, err := c.buildDefaultVariables(job)
-	if err != nil {
-		return err
-	}
-
+	defaultVariables := c.buildDefaultVariables(job)
 	job.Variables = append(job.Variables, defaultVariables...)
 
 	globalVariables, err := c.buildVariables(c.config["variables"])

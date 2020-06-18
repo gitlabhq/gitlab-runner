@@ -278,14 +278,13 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 
 func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Build) error {
 	projectDir := build.FullProjectDir()
-	gitDir := path.Join(build.FullProjectDir(), ".git")
 
 	switch build.GetGitStrategy() {
 	case common.GitFetch:
-		b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
+		b.writeRefspecFetchCmd(w, build, projectDir)
 	case common.GitClone:
 		w.RmDir(projectDir)
-		b.writeRefspecFetchCmd(w, build, projectDir, gitDir)
+		b.writeRefspecFetchCmd(w, build, projectDir)
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
@@ -296,7 +295,7 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 	return nil
 }
 
-func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string, gitDir string) {
+func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string) {
 	depth := build.GitInfo.Depth
 
 	if depth > 0 {
@@ -316,7 +315,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	w.Command("git", "init", projectDir, "--template", templateDir)
 	w.Cd(projectDir)
-	b.writeGitCleanup(w, build)
+	b.writeGitCleanup(w)
 
 	// Add `git remote` or update existing
 	w.IfCmd("git", "remote", "add", "origin", build.GetRemoteURL())
@@ -336,7 +335,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	w.Command("git", fetchArgs...)
 }
 
-func (b *AbstractShell) writeGitCleanup(w ShellWriter, build *common.Build) {
+func (b *AbstractShell) writeGitCleanup(w ShellWriter) {
 	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
 	w.RmFile(".git/index.lock")
