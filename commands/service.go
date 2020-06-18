@@ -54,7 +54,7 @@ func runServiceInstall(s service.Service, c *cli.Context) error {
 	return service.Control(s, "install")
 }
 
-func runServiceStatus(displayName string, s service.Service) error {
+func runServiceStatus(displayName string, s service.Service) {
 	err := s.Status()
 	if err == nil {
 		fmt.Println(displayName+":", "Service is running!")
@@ -62,7 +62,6 @@ func runServiceStatus(displayName string, s service.Service) error {
 		fmt.Fprintln(os.Stderr, displayName+":", err)
 		os.Exit(1)
 	}
-	return nil
 }
 
 func getServiceArguments(c *cli.Context) (arguments []string) {
@@ -141,7 +140,7 @@ func RunServiceControl(c *cli.Context) {
 	case "install":
 		err = runServiceInstall(s, c)
 	case "status":
-		err = runServiceStatus(svcConfig.DisplayName, s)
+		runServiceStatus(svcConfig.DisplayName, s)
 	default:
 		err = service.Control(s, c.Command.Name)
 	}

@@ -1175,7 +1175,7 @@ func TestArtifactsUpload(t *testing.T) {
 	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
 }
 
-func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/direct-download" {
 		w.WriteHeader(http.StatusOK)
 		w.Write(bytes.NewBufferString("Artifact: direct_download=true").Bytes())
@@ -1223,7 +1223,7 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *tes
 
 func TestArtifactsDownload(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testArtifactsDownloadHandler(w, r, t)
+		testArtifactsDownloadHandler(w, r)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))

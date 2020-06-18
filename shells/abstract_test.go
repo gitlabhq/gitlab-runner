@@ -45,7 +45,7 @@ func TestWriteGitSSLConfig(t *testing.T) {
 	mockWriter.AssertExpectations(t)
 }
 
-func getJobResponseWithMultipleArtifacts(t *testing.T) common.JobResponse {
+func getJobResponseWithMultipleArtifacts() common.JobResponse {
 	return common.JobResponse{
 		ID:    1000,
 		Token: "token",
@@ -86,7 +86,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		JobResponse: getJobResponseWithMultipleArtifacts(t),
+		JobResponse: getJobResponseWithMultipleArtifacts(),
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: gitlabURL,
@@ -146,7 +146,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		JobResponse: getJobResponseWithMultipleArtifacts(t),
+		JobResponse: getJobResponseWithMultipleArtifacts(),
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: gitlabURL,
@@ -335,7 +335,6 @@ func TestGitFetchFlags(t *testing.T) {
 			const dummySha = "01234567abcdef"
 			const dummyRef = "master"
 			const dummyProjectDir = "./"
-			const dummyGitDir = "./.git"
 
 			build := &common.Build{
 				Runner: &common.RunnerConfig{},
@@ -366,7 +365,7 @@ func TestGitFetchFlags(t *testing.T) {
 			command = append(command, test.expectedGitFetchFlags...)
 			mockWriter.On("Command", command...)
 
-			shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir, dummyGitDir)
+			shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir)
 		})
 	}
 }

@@ -20,7 +20,7 @@ type executor struct {
 	machineVerified bool
 }
 
-func (s *executor) verifyMachine(vmName string, sshPort string) error {
+func (s *executor) verifyMachine(sshPort string) error {
 	if s.machineVerified {
 		return nil
 	}
@@ -140,7 +140,7 @@ func (s *executor) createVM(vmName string) (err error) {
 
 	s.Debugln("Waiting for VM to become responsive...")
 	time.Sleep(10 * time.Second)
-	err = s.verifyMachine(s.vmName, s.sshPort)
+	err = s.verifyMachine(s.sshPort)
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	s.Println("Waiting VM to become responsive...")
-	err = s.verifyMachine(s.vmName, s.sshPort)
+	err = s.verifyMachine(s.sshPort)
 	if err != nil {
 		return err
 	}

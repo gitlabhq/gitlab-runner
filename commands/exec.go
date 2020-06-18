@@ -27,6 +27,7 @@ type ExecCommand struct {
 	Timeout int `long:"timeout" description:"Job execution timeout (in seconds)"`
 }
 
+// nolint:unparam
 func (c *ExecCommand) runCommand(name string, arg ...string) (string, error) {
 	cmd := exec.Command(name, arg...)
 	cmd.Env = os.Environ()
