@@ -52,7 +52,7 @@ func (c *ArtifactsDownloaderCommand) download(file string, retry int) error {
 func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 	log.SetRunnerFormatter()
 
-	if len(c.URL) == 0 || len(c.Token) == 0 {
+	if c.URL == "" || c.Token == "" {
 		logrus.Fatalln("Missing runner credentials")
 	}
 	if c.ID <= 0 {

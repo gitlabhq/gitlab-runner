@@ -578,15 +578,16 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 
 	// The configMap is nil when using legacy execution
 	if s.configMap != nil {
-		mounts = append(mounts, api.VolumeMount{
-			Name:      "scripts",
-			MountPath: s.scriptsDir(),
-		})
-
-		mounts = append(mounts, api.VolumeMount{
-			Name:      "logs",
-			MountPath: s.logsDir(),
-		})
+		mounts = append(
+			mounts,
+			api.VolumeMount{
+				Name:      "scripts",
+				MountPath: s.scriptsDir(),
+			},
+			api.VolumeMount{
+				Name:      "logs",
+				MountPath: s.logsDir(),
+			})
 	}
 
 	mounts = append(mounts, s.getVolumeMountsForConfig()...)
@@ -655,25 +656,26 @@ func (s *executor) getVolumes() []api.Volume {
 
 	mode := int32(0777)
 	optional := false
-	volumes = append(volumes, api.Volume{
-		Name: "scripts",
-		VolumeSource: api.VolumeSource{
-			ConfigMap: &api.ConfigMapVolumeSource{
-				LocalObjectReference: api.LocalObjectReference{
-					Name: s.configMap.Name,
+	volumes = append(
+		volumes,
+		api.Volume{
+			Name: "scripts",
+			VolumeSource: api.VolumeSource{
+				ConfigMap: &api.ConfigMapVolumeSource{
+					LocalObjectReference: api.LocalObjectReference{
+						Name: s.configMap.Name,
+					},
+					DefaultMode: &mode,
+					Optional:    &optional,
 				},
-				DefaultMode: &mode,
-				Optional:    &optional,
 			},
 		},
-	})
-
-	volumes = append(volumes, api.Volume{
-		Name: "logs",
-		VolumeSource: api.VolumeSource{
-			EmptyDir: &api.EmptyDirVolumeSource{},
-		},
-	})
+		api.Volume{
+			Name: "logs",
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{},
+			},
+		})
 
 	return volumes
 }

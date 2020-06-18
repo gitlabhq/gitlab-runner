@@ -231,10 +231,10 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 	var detectScript string
 	var shellCommand string
 	if info.Type == common.LoginShell {
-		detectScript = strings.Replace(BashDetectShellScript, "$@", "--login", -1)
+		detectScript = strings.ReplaceAll(BashDetectShellScript, "$@", "--login")
 		shellCommand = b.Shell + " --login"
 	} else {
-		detectScript = strings.Replace(BashDetectShellScript, "$@", "", -1)
+		detectScript = strings.ReplaceAll(BashDetectShellScript, "$@", "")
 		shellCommand = b.Shell
 	}
 
@@ -247,8 +247,11 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 		if runtime.GOOS == "linux" {
 			script.Arguments = append(script.Arguments, "-s", "/bin/"+b.Shell)
 		}
-		script.Arguments = append(script.Arguments, info.User)
-		script.Arguments = append(script.Arguments, "-c", shellCommand)
+		script.Arguments = append(
+			script.Arguments,
+			info.User,
+			"-c", shellCommand,
+		)
 	} else {
 		script.Command = b.Shell
 		if info.Type == common.LoginShell {
@@ -285,7 +288,7 @@ func (b *BashShell) ensurePrepareStageHostnameMessage(
 	info common.ShellScriptInfo,
 ) {
 	if buildStage == common.BuildStagePrepare {
-		if len(info.Build.Hostname) != 0 {
+		if info.Build.Hostname != "" {
 			w.Line("echo " + strconv.Quote("Running on $(hostname) via "+info.Build.Hostname+"..."))
 		} else {
 			w.Line("echo " + strconv.Quote("Running on $(hostname)..."))

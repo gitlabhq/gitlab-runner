@@ -34,7 +34,7 @@ type logWriter struct {
 func (l *logWriter) write(line string) {
 	line = strings.TrimRight(line, "\n")
 
-	if len(line) == 0 {
+	if line == "" {
 		return
 	}
 

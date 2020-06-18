@@ -137,7 +137,7 @@ func (n *client) addTLSCA(tlsConfig *tls.Config) {
 }
 
 func (n *client) addTLSAuth(tlsConfig *tls.Config) {
-	if len(n.certFile) == 0 || len(n.keyFile) == 0 {
+	if n.certFile == "" || n.keyFile == "" {
 		return
 	}
 

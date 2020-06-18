@@ -40,8 +40,8 @@ func getKubeClientConfig(
 		return nil, err
 	}
 
-	//apply overwrites
-	if len(overwrites.bearerToken) > 0 {
+	// apply overwrites
+	if overwrites.bearerToken != "" {
 		kubeConfig.BearerToken = overwrites.bearerToken
 	}
 
@@ -60,8 +60,8 @@ func getOutClusterClientConfig(config *common.KubernetesConfig) (*restclient.Con
 	}
 
 	// certificate based auth
-	if len(config.CertFile) > 0 {
-		if len(config.KeyFile) == 0 || len(config.CAFile) == 0 {
+	if config.CertFile != "" {
+		if config.KeyFile == "" || config.CAFile == "" {
 			return nil, fmt.Errorf("ca file, cert file and key file must be specified when using file based auth")
 		}
 
@@ -213,7 +213,7 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 
 	parse := func(s string) (resource.Quantity, error) {
 		var q resource.Quantity
-		if len(s) == 0 {
+		if s == "" {
 			return q, nil
 		}
 		if q, err = resource.ParseQuantity(s); err != nil {

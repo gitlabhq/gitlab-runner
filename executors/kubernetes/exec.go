@@ -167,7 +167,7 @@ func (p *ExecOptions) Run() error {
 			p.PodName, p.Namespace, pod.Status.Phase)
 	}
 
-	if len(p.ContainerName) == 0 {
+	if p.ContainerName == "" {
 		logrus.Infof("defaulting container name to '%s'", pod.Spec.Containers[0].Name)
 		p.ContainerName = pod.Spec.Containers[0].Name
 	}

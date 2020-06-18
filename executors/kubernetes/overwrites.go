@@ -255,19 +255,21 @@ func (o *overwrites) evaluateMapOverwrite(
 	}
 
 	for _, variable := range variables {
-		if strings.HasPrefix(variable.Key, variablesSelector) {
-			if err := overwriteRegexCheck(regex, variable.Value); err != nil {
-				return nil, err
-			}
-
-			key, value, err := splitMapOverwrite(variable.Value)
-			if err != nil {
-				return nil, err
-			}
-
-			finalValues[key] = value
-			logger.Println(fmt.Sprintf("%q %q overwritten with %q", fieldName, key, value))
+		if !strings.HasPrefix(variable.Key, variablesSelector) {
+			continue
 		}
+
+		if err := overwriteRegexCheck(regex, variable.Value); err != nil {
+			return nil, err
+		}
+
+		key, value, err := splitMapOverwrite(variable.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		finalValues[key] = value
+		logger.Println(fmt.Sprintf("%q %q overwritten with %q", fieldName, key, value))
 	}
 	return finalValues, nil
 }

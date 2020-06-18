@@ -22,7 +22,7 @@ func (c *UnregisterCommand) unregisterAllRunners() (runners []*common.RunnerConf
 	for _, r := range c.config.Runners {
 		if !c.network.UnregisterRunner(r.RunnerCredentials) {
 			logrus.Errorln("Failed to unregister runner", r.Name)
-			//If unregister fails, leave the runner in the config
+			// If unregister fails, leave the runner in the config
 			runners = append(runners, r)
 		}
 	}

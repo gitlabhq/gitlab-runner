@@ -299,8 +299,11 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"})
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
+			common.JobVariable{Key: "GIT_CHECKOUT", Value: "false"},
+		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -322,8 +325,11 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "none"},
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+		)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -468,8 +474,11 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 
 	build, cleanup := newBuild(t, successfulBuild, "powershell")
 	defer cleanup()
-	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"})
-	build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+	build.Variables = append(
+		build.Variables,
+		common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"},
+		common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+	)
 
 	out, err := buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)

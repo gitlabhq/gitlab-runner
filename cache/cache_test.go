@@ -259,7 +259,7 @@ func TestGenerateObjectName(t *testing.T) {
 			objectName, err := generateObjectName(test.build, test.cache, test.key)
 
 			assert.Equal(t, test.expectedObjectName, objectName)
-			if len(test.expectedError) == 0 {
+			if test.expectedError == "" {
 				assert.NoError(t, err)
 			} else {
 				assert.EqualError(t, err, test.expectedError)

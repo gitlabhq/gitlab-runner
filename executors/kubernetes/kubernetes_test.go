@@ -214,7 +214,7 @@ func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, f
 			},
 		},
 	}
-	build.RunnerInfo.Timeout = 10 //seconds
+	build.RunnerInfo.Timeout = 10 // seconds
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})

@@ -26,24 +26,24 @@ type PsWriter struct {
 
 func psQuote(text string) string {
 	// taken from: http://www.robvanderwoude.com/escapechars.php
-	text = strings.Replace(text, "`", "``", -1)
-	// text = strings.Replace(text, "\0", "`0", -1)
-	text = strings.Replace(text, "\a", "`a", -1)
-	text = strings.Replace(text, "\b", "`b", -1)
-	text = strings.Replace(text, "\f", "^f", -1)
-	text = strings.Replace(text, "\r", "`r", -1)
-	text = strings.Replace(text, "\n", "`n", -1)
-	text = strings.Replace(text, "\t", "^t", -1)
-	text = strings.Replace(text, "\v", "^v", -1)
-	text = strings.Replace(text, "#", "`#", -1)
-	text = strings.Replace(text, "'", "`'", -1)
-	text = strings.Replace(text, "\"", "`\"", -1)
+	text = strings.ReplaceAll(text, "`", "``")
+	// text = strings.ReplaceAll(text, "\0", "`0")
+	text = strings.ReplaceAll(text, "\a", "`a")
+	text = strings.ReplaceAll(text, "\b", "`b")
+	text = strings.ReplaceAll(text, "\f", "^f")
+	text = strings.ReplaceAll(text, "\r", "`r")
+	text = strings.ReplaceAll(text, "\n", "`n")
+	text = strings.ReplaceAll(text, "\t", "^t")
+	text = strings.ReplaceAll(text, "\v", "^v")
+	text = strings.ReplaceAll(text, "#", "`#")
+	text = strings.ReplaceAll(text, "'", "`'")
+	text = strings.ReplaceAll(text, "\"", "`\"")
 	return "\"" + text + "\""
 }
 
 func psQuoteVariable(text string) string {
 	text = psQuote(text)
-	text = strings.Replace(text, "$", "`$", -1)
+	text = strings.ReplaceAll(text, "$", "`$")
 	return text
 }
 
@@ -304,7 +304,7 @@ func (b *PowerShell) GenerateScript(
 	}
 
 	if buildStage == common.BuildStagePrepare {
-		if len(info.Build.Hostname) != 0 {
+		if info.Build.Hostname != "" {
 			w.Linef("echo \"Running on $env:computername via %s...\"", psQuoteVariable(info.Build.Hostname))
 		} else {
 			w.Line("echo \"Running on $env:computername...\"")

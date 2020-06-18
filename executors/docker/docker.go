@@ -397,7 +397,7 @@ func (e *executor) createService(
 	serviceDefinition common.Image,
 	linkNames []string,
 ) (*types.Container, error) {
-	if len(service) == 0 {
+	if service == "" {
 		return nil, fmt.Errorf("invalid service name: %s", serviceDefinition.Name)
 	}
 
@@ -411,7 +411,7 @@ func (e *executor) createService(
 		return nil, err
 	}
 
-	serviceSlug := strings.Replace(service, "/", "__", -1)
+	serviceSlug := strings.ReplaceAll(service, "/", "__")
 	containerName := fmt.Sprintf("%s-%s-%d", e.getProjectUniqRandomizedName(), serviceSlug, serviceIndex)
 
 	// this will fail potentially some builds if there's name collision

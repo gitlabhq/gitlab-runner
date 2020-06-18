@@ -77,7 +77,7 @@ func (c *configOptionsWithListenAddress) listenAddress() (string, error) {
 		return "", err
 	}
 
-	if len(port) == 0 {
+	if port == "" {
 		return fmt.Sprintf("%s:%d", address, common.DefaultMetricsServerPort), nil
 	}
 	return address, nil

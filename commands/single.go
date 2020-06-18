@@ -127,13 +127,13 @@ func (r *RunSingleCommand) checkFinishedConditions() {
 }
 
 func (r *RunSingleCommand) Execute(c *cli.Context) {
-	if len(r.URL) == 0 {
+	if r.URL == "" {
 		logrus.Fatalln("Missing URL")
 	}
-	if len(r.Token) == 0 {
+	if r.Token == "" {
 		logrus.Fatalln("Missing Token")
 	}
-	if len(r.Executor) == 0 {
+	if r.Executor == "" {
 		logrus.Fatalln("Missing Executor")
 	}
 

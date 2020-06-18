@@ -77,7 +77,7 @@ func mockingExecutionStack(
 	p := common.MockExecutorProvider{}
 	mockNetwork := common.MockNetwork{}
 
-	//Network
+	// Network
 	jobData := common.JobResponse{}
 	_, cancel := context.WithCancel(context.Background())
 	jobTrace := common.Trace{Writer: ioutil.Discard}
@@ -88,7 +88,7 @@ func mockingExecutionStack(
 		processJob.Run(job)
 	}
 
-	//ExecutorProvider
+	// ExecutorProvider
 	p.On("CanCreate").Return(true).Once()
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil).Times(maxBuilds + 1)
@@ -97,7 +97,7 @@ func mockingExecutionStack(
 	p.On("Acquire", mock.Anything).Return(&common.MockExecutorData{}, nil).Times(maxBuilds)
 	p.On("Release", mock.Anything, mock.Anything).Return(nil).Times(maxBuilds)
 
-	//Executor
+	// Executor
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(maxBuilds)
 	e.On("Finish", nil).Times(maxBuilds)
 	e.On("Cleanup").Times(maxBuilds)
