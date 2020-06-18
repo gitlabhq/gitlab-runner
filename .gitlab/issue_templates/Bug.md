@@ -1,13 +1,13 @@
 ## Summary
 
 <!--
-Summarize the bug encountered concisely
+Briefly summarize the bug
 -->
 
 ## Steps to reproduce
 
 <!--
-How one can reproduce the issue, such as the job definition, git repository structure.
+What do you need to do to reproduce the bug? Please include job definitions or git repository structure if relevant
 -->
 
 <!--
@@ -18,7 +18,7 @@ inside of the code blocks (```) below.
 <summary> .gitlab-ci.yml </summary>
 
 ```yml
-Add the job defection that is failing here
+Add the job definition that is failing here
 ```
 </details>
 
