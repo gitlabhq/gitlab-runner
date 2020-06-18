@@ -18,7 +18,7 @@ func FixHOME(app *cli.App) {
 			if value == "" {
 				return fmt.Errorf("the %q is not set", key)
 			}
-			os.Setenv(key, value)
+			_ = os.Setenv(key, value)
 		}
 
 		if appBefore != nil {

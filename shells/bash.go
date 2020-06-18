@@ -200,7 +200,7 @@ func (b *BashWriter) Finish(trace bool) string {
 	b.writeTrace(w, trace)
 	b.writeScript(w)
 
-	w.Flush()
+	_ = w.Flush()
 	return buffer.String()
 }
 

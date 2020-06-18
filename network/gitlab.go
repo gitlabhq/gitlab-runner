@@ -142,7 +142,7 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 	}
 
 	if executorProvider := common.GetExecutorProvider(config.Executor); executorProvider != nil {
-		executorProvider.GetFeatures(&info.Features)
+		_ = executorProvider.GetFeatures(&info.Features)
 
 		if info.Shell == "" {
 			info.Shell = executorProvider.GetDefaultShell()
@@ -219,7 +219,7 @@ func (n *GitLabClient) RegisterRunner(
 		&response,
 	)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 	}
 
 	switch result {
@@ -245,7 +245,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 
 	result, statusText, resp := n.doJSON(&runner, http.MethodPost, "runners/verify", http.StatusOK, &request, nil)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 	}
 
 	switch result {
@@ -272,7 +272,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 
 	result, statusText, resp := n.doJSON(&runner, http.MethodDelete, "runners", http.StatusNoContent, &request, nil)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 	}
 
 	const baseLogText = "Unregistering runner from GitLab"
@@ -450,8 +450,8 @@ func (n *GitLabClient) PatchTrace(
 	)
 
 	defer func() {
-		io.Copy(ioutil.Discard, response.Body)
-		response.Body.Close()
+		_, _ = io.Copy(ioutil.Discard, response.Body)
+		_ = response.Body.Close()
 	}()
 
 	tracePatchResponse := NewTracePatchResponse(response, baseLog)
@@ -557,16 +557,18 @@ func (n *GitLabClient) UploadRawArtifacts(
 	options common.ArtifactsOptions,
 ) common.UploadState {
 	pr, pw := io.Pipe()
-	defer pr.Close()
+	defer func() { _ = pr.Close() }()
 
 	mpw := multipart.NewWriter(pw)
 
 	go func() {
-		defer pw.Close()
-		defer mpw.Close()
+		defer func() {
+			_ = mpw.Close()
+			_ = pw.Close()
+		}()
 		err := n.createArtifactsForm(mpw, reader, options.BaseName)
 		if err != nil {
-			pw.CloseWithError(err)
+			_ = pw.CloseWithError(err)
 		}
 	}()
 
@@ -602,8 +604,8 @@ func (n *GitLabClient) UploadRawArtifacts(
 		return common.UploadFailed
 	}
 	defer func() {
-		io.Copy(ioutil.Discard, res.Body)
-		res.Body.Close()
+		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_ = res.Body.Close()
 	}()
 
 	return n.determineUploadState(res.StatusCode, log, messagePrefix)
@@ -663,19 +665,21 @@ func (n *GitLabClient) DownloadArtifacts(
 		log.Errorln("Downloading artifacts from coordinator...", "error", err.Error())
 		return common.DownloadFailed
 	}
-	defer res.Body.Close()
-	defer io.Copy(ioutil.Discard, res.Body)
+	defer func() {
+		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
 
 	switch res.StatusCode {
 	case http.StatusOK:
 		file, err := os.Create(artifactsFile)
 		if err == nil {
-			defer file.Close()
+			defer func() { _ = file.Close() }()
 			_, err = io.Copy(file, res.Body)
 		}
 		if err != nil {
-			file.Close()
-			os.Remove(file.Name())
+			_ = file.Close()
+			_ = os.Remove(file.Name())
 			log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
 			return common.DownloadFailed
 		}

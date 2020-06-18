@@ -26,7 +26,7 @@ func extractZipSymlinkEntry(file *zip.File) (err error) {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	data, err = ioutil.ReadAll(in)
 	if err != nil {
@@ -34,7 +34,7 @@ func extractZipSymlinkEntry(file *zip.File) (err error) {
 	}
 
 	// Remove symlink before creating a new one, otherwise we can error that file does exist
-	os.Remove(file.Name)
+	_ = os.Remove(file.Name)
 	err = os.Symlink(string(data), file.Name)
 	return
 }
@@ -45,15 +45,15 @@ func extractZipFileEntry(file *zip.File) (err error) {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	// Remove file before creating a new one, otherwise we can error that file does exist
-	os.Remove(file.Name)
+	_ = os.Remove(file.Name)
 	out, err = os.OpenFile(file.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode().Perm())
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 	_, err = io.Copy(out, in)
 
 	return
@@ -116,7 +116,7 @@ func ExtractZipFile(fileName string) error {
 	if err != nil {
 		return err
 	}
-	defer archive.Close()
+	defer func() { _ = archive.Close() }()
 
 	return ExtractZipArchive(&archive.Reader)
 }

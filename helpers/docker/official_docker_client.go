@@ -259,7 +259,7 @@ func (c *officialDockerClient) ImageImportBlocking(
 	if err != nil {
 		return wrapError("ImageImport", err, started)
 	}
-	defer readCloser.Close()
+	defer func() { _ = readCloser.Close() }()
 
 	// TODO: respect the context here
 	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {
@@ -278,7 +278,7 @@ func (c *officialDockerClient) ImagePullBlocking(
 	if err != nil {
 		return wrapError("ImagePull", err, started)
 	}
-	defer readCloser.Close()
+	defer func() { _ = readCloser.Close() }()
 
 	// TODO: respect the context here
 	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {

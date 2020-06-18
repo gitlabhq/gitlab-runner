@@ -42,7 +42,7 @@ func TestBuildSection(t *testing.T) {
 				SkipMetrics: tc.skipMetrics,
 				Run:         func() error { return tc.error },
 			}
-			section.Execute(logger)
+			_ = section.Execute(logger)
 
 			output := logger.String()
 			assert.Nil(t, logger.Error, "case %d: Error: %s", num, logger.Error)

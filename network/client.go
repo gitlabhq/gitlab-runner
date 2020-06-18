@@ -36,12 +36,12 @@ type requestCredentials interface {
 	GetTLSKeyFile() string
 }
 
-var (
-	dialer = net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}
+var dialer = net.Dialer{
+	Timeout:   30 * time.Second,
+	KeepAlive: 30 * time.Second,
+}
 
+const (
 	backOffDelayMin    = 100 * time.Millisecond
 	backOffDelayMax    = 60 * time.Second
 	backOffDelayFactor = 2.0
@@ -275,8 +275,10 @@ func (n *client) doJSON(
 	if err != nil {
 		return -1, err.Error(), nil
 	}
-	defer res.Body.Close()
-	defer io.Copy(ioutil.Discard, res.Body)
+	defer func() {
+		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode == statusCode && response != nil {
 		isApplicationJSON, err := isResponseApplicationJSON(res)

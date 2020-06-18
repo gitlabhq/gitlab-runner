@@ -234,17 +234,17 @@ func (b *CmdWriter) Finish(trace bool) string {
 	w := bufio.NewWriter(&buffer)
 
 	if trace {
-		io.WriteString(w, "@echo on\r\n")
+		_, _ = io.WriteString(w, "@echo on\r\n")
 	} else {
-		io.WriteString(w, "@echo off\r\n")
+		_, _ = io.WriteString(w, "@echo off\r\n")
 	}
 
-	io.WriteString(w, "setlocal enableextensions\r\n")
-	io.WriteString(w, "setlocal enableDelayedExpansion\r\n")
-	io.WriteString(w, "set nl=^\r\n\r\n\r\n")
+	_, _ = io.WriteString(w, "setlocal enableextensions\r\n")
+	_, _ = io.WriteString(w, "setlocal enableDelayedExpansion\r\n")
+	_, _ = io.WriteString(w, "set nl=^\r\n\r\n\r\n")
 
-	io.WriteString(w, b.String())
-	w.Flush()
+	_, _ = io.WriteString(w, b.String())
+	_ = w.Flush()
 	return buffer.String()
 }
 

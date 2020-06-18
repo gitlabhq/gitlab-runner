@@ -53,7 +53,7 @@ func (m *testNetwork) DownloadArtifacts(
 		defer file.Close()
 
 		archive := zip.NewWriter(file)
-		archive.Create(artifactsTestArchivedFile)
+		_, _ = archive.Create(artifactsTestArchivedFile)
 		archive.Close()
 	}
 	return m.downloadState
@@ -61,7 +61,7 @@ func (m *testNetwork) DownloadArtifacts(
 
 func (m *testNetwork) consumeZipUpload(reader io.Reader) common.UploadState {
 	var buffer bytes.Buffer
-	io.Copy(&buffer, reader)
+	_, _ = io.Copy(&buffer, reader)
 	archive, err := zip.NewReader(bytes.NewReader(buffer.Bytes()), int64(buffer.Len()))
 	if err != nil {
 		logrus.Warningln(err)
@@ -79,7 +79,7 @@ func (m *testNetwork) consumeZipUpload(reader io.Reader) common.UploadState {
 
 func (m *testNetwork) consumeGzipUpload(reader io.Reader) common.UploadState {
 	var buffer bytes.Buffer
-	io.Copy(&buffer, reader)
+	_, _ = io.Copy(&buffer, reader)
 
 	stream := bytes.NewReader(buffer.Bytes())
 
@@ -112,7 +112,7 @@ func (m *testNetwork) consumeGzipUpload(reader io.Reader) common.UploadState {
 }
 
 func (m *testNetwork) consumeRawUpload(reader io.Reader) common.UploadState {
-	io.Copy(ioutil.Discard, reader)
+	_, _ = io.Copy(ioutil.Discard, reader)
 
 	m.uploadedFiles = append(m.uploadedFiles, "raw")
 	m.uploadFormat = common.ArtifactFormatRaw

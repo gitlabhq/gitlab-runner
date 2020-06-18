@@ -31,7 +31,7 @@ func testServiceCommandRun(command func(*cli.Context), args ...string) {
 	}
 
 	args = append([]string{"binary", "test-command"}, args...)
-	app.Run(args)
+	_ = app.Run(args)
 }
 
 type getServiceArgumentsTestCase struct {

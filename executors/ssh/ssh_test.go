@@ -75,6 +75,6 @@ func TestSharedEnv(t *testing.T) {
 	provider := common.GetExecutorProvider("ssh")
 	features := &common.FeaturesInfo{}
 
-	provider.GetFeatures(features)
+	_ = provider.GetFeatures(features)
 	assert.True(t, features.Shared)
 }

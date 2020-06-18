@@ -32,7 +32,7 @@ func TestFailuresCollector_Collect_MetricsValues(t *testing.T) {
 
 	metric := &prometheus_go.Metric{}
 	m := <-ch
-	m.Write(metric)
+	_ = m.Write(metric)
 
 	labels := make(map[string]string)
 	for _, labelPair := range metric.Label {

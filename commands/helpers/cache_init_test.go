@@ -54,6 +54,6 @@ func TestCacheInit_NoArguments(t *testing.T) {
 	args := []string{os.Args[0], "cache-init"}
 
 	assert.Panics(t, func() {
-		newCacheInitTestApp().Run(args)
+		_ = newCacheInitTestApp().Run(args)
 	})
 }

@@ -82,7 +82,10 @@ func (mr *MetricsReferee) Execute(
 	}
 
 	// convert metrics sample pairs to JSON
-	output, _ := json.Marshal(metrics)
+	output, err := json.Marshal(metrics)
+	if err != nil {
+		return nil, err
+	}
 	return bytes.NewReader(output), nil
 }
 

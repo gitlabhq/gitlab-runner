@@ -121,7 +121,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(output)
+	_, _ = w.Write(output)
 }
 
 func TestRegisterRunner(t *testing.T) {
@@ -492,7 +492,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(output)
+	_, _ = w.Write(output)
 	t.Logf("JobRequest response: %s\n", output)
 }
 
@@ -729,7 +729,8 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 	assert.Equal(t, UpdateAbort, state, "Update should continue when Job-Status=failed")
 }
 
-var patchToken = "token"
+const patchToken = "token"
+
 var patchTraceContent = []byte("trace trace trace")
 
 func getPatchServer(
@@ -1217,23 +1218,23 @@ func TestArtifactsUpload(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600))
 	state := uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("too-large"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("too-large"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadTooLarge, state, "Artifacts should be not uploaded, because of too large archive")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("zip"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("zip"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatZip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as zip")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("gzip"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("gzip"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatGzip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("junit"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("junit"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "junit", ArtifactFormatGzip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
 
@@ -1243,7 +1244,7 @@ func TestArtifactsUpload(t *testing.T) {
 	state = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
 }
@@ -1251,7 +1252,7 @@ func TestArtifactsUpload(t *testing.T) {
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/direct-download" {
 		w.WriteHeader(http.StatusOK)
-		w.Write(bytes.NewBufferString("Artifact: direct_download=true").Bytes())
+		_, _ = w.Write(bytes.NewBufferString("Artifact: direct_download=true").Bytes())
 		return
 	}
 
@@ -1274,7 +1275,7 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	directDownloadFlag := r.URL.Query().Get("direct_download")
 	if directDownloadFlag == "" {
 		w.WriteHeader(http.StatusOK)
-		w.Write(bytes.NewBufferString("Artifact: direct_download=missing").Bytes())
+		_, _ = w.Write(bytes.NewBufferString("Artifact: direct_download=missing").Bytes())
 		return
 	}
 
@@ -1291,7 +1292,7 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(bytes.NewBufferString("Artifact: direct_download=false").Bytes())
+	_, _ = w.Write(bytes.NewBufferString("Artifact: direct_download=false").Bytes())
 }
 
 func TestArtifactsDownload(t *testing.T) {

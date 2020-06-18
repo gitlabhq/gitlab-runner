@@ -36,11 +36,12 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 
 	details, ok := m.details[name]
 	if !ok {
+		now := time.Now()
 		details = &machineDetails{
 			Name:      name,
-			Created:   time.Now(),
-			Used:      time.Now(),
-			LastSeen:  time.Now(),
+			Created:   now,
+			Used:      now,
+			LastSeen:  now,
 			UsedCount: 1, // any machine that we find we mark as already used
 			State:     machineStateIdle,
 		}
@@ -87,7 +88,7 @@ func (m *machineProvider) create(
 				WithField("time", time.Since(started)).
 				WithError(err).
 				Errorln("Machine creation failed")
-			m.remove(details.Name, "Failed to create")
+			_ = m.remove(details.Name, "Failed to create")
 		} else {
 			details.State = state
 			details.Used = time.Now()
@@ -118,7 +119,7 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 		// Check if node is running
 		canConnect := m.machine.CanConnect(name, skipCache)
 		if !canConnect {
-			m.remove(name, "machine is unavailable")
+			_ = m.remove(name, "machine is unavailable")
 			continue
 		}
 		return details
@@ -274,7 +275,7 @@ func (m *machineProvider) updateMachines(
 		if err == nil {
 			validMachines = append(validMachines, name)
 		} else {
-			m.remove(details.Name, err)
+			_ = m.remove(details.Name, err)
 		}
 
 		data.Add(details)

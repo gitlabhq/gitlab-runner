@@ -323,7 +323,7 @@ func getGitLabComTLSChain() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var buff bytes.Buffer
 	for _, certs := range resp.TLS.VerifiedChains {

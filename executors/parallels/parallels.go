@@ -111,7 +111,7 @@ func (s *executor) createVM() error {
 	// remove invalid template (removed?)
 	templateStatus, _ := prl.Status(templateName)
 	if templateStatus == prl.Invalid {
-		prl.Unregister(templateName)
+		_ = prl.Unregister(templateName)
 	}
 
 	if !prl.Exist(templateName) {
@@ -277,7 +277,7 @@ func unregisterInvalidVM(vmName string) {
 	// remove invalid VM (removed?)
 	vmStatus, _ := prl.Status(vmName)
 	if vmStatus == prl.Invalid {
-		prl.Unregister(vmName)
+		_ = prl.Unregister(vmName)
 	}
 }
 
@@ -365,10 +365,10 @@ func (s *executor) Cleanup() {
 	s.sshCommand.Cleanup()
 
 	if s.vmName != "" {
-		prl.Kill(s.vmName)
+		_ = prl.Kill(s.vmName)
 
 		if s.Config.Parallels.DisableSnapshots || !s.provisioned {
-			prl.Delete(s.vmName)
+			_ = prl.Delete(s.vmName)
 		}
 	}
 

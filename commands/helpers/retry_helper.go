@@ -54,7 +54,7 @@ func retryOnServerError(resp *http.Response) error {
 		return nil
 	}
 
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	err := fmt.Errorf("received: %s", resp.Status)
 

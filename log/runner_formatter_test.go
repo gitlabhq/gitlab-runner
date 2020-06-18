@@ -104,7 +104,7 @@ func testOutputColoringAndPrefix(
 	colored bool,
 	hook *test.Hook,
 ) {
-	recover()
+	_ = recover()
 
 	entry := hook.LastEntry()
 	require.NotNil(t, entry)
@@ -125,7 +125,8 @@ func testOutputColoringAndPrefix(
 			t,
 			logrusOutput,
 			fmt.Sprintf("%s%s%s=%s", testCase.expectedColorCode, key, helpers.ANSI_RESET, value),
-			"Should color field key")
+			"Should color field key",
+		)
 	} else {
 		if testCase.expectedColorCode != "" {
 			assert.NotContains(t, logrusOutput, testCase.expectedColorCode, "Shouldn't contain color code")

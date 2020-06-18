@@ -412,7 +412,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
 		defer timeoutCancel()
 
-		b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
+		_ = b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
 	}
 
 	// Execute post script (cache store, artifacts upload)
@@ -737,7 +737,10 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return errors.New("executor not found")
 	}
 
-	provider.GetFeatures(&b.ExecutorFeatures)
+	err = provider.GetFeatures(&b.ExecutorFeatures)
+	if err != nil {
+		return fmt.Errorf("retrieving executor features: %w", err)
+	}
 
 	executor, err = b.executeBuildSection(executor, options, provider)
 
