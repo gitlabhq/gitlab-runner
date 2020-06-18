@@ -42,19 +42,18 @@ func (l *logWriter) write(line string) {
 }
 
 func (l *logWriter) watch() {
-	for {
-		line, err := l.reader.ReadString('\n')
-		if err == nil || err == io.EOF {
-			l.write(line)
-			if err == io.EOF {
-				return
-			}
-		} else {
+	var err error
+	for err != io.EOF {
+		var line string
+		line, err = l.reader.ReadString('\n')
+		if err != nil && err != io.EOF {
 			if !strings.Contains(err.Error(), "bad file descriptor") {
 				logrus.WithError(err).Warn("Problem while reading command output")
 			}
 			return
 		}
+
+		l.write(line)
 	}
 }
 

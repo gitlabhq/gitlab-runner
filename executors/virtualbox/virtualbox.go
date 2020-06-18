@@ -171,14 +171,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		killAndUnregisterVM(s.vmName)
 	}
 
-	if vbox.Exist(s.vmName) {
-		s.Println("Restoring VM from snapshot...")
-		err = s.restoreFromSnapshot()
-		if err != nil {
-			s.Println("Previous VM failed. Deleting, because", err)
-			killAndUnregisterVM(s.vmName)
-		}
-	}
+	s.tryRestoreFromSnapshot()
 
 	if !vbox.Exist(s.vmName) {
 		s.Println("Creating new VM...")
@@ -242,6 +235,19 @@ func (s *executor) getVMName() string {
 		s.Config.VirtualBox.BaseName,
 		s.Build.Runner.ShortDescription(),
 		s.Build.RunnerID)
+}
+
+func (s *executor) tryRestoreFromSnapshot() {
+	if !vbox.Exist(s.vmName) {
+		return
+	}
+
+	s.Println("Restoring VM from snapshot...")
+	err := s.restoreFromSnapshot()
+	if err != nil {
+		s.Println("Previous VM failed. Deleting, because", err)
+		killAndUnregisterVM(s.vmName)
+	}
 }
 
 func killAndUnregisterVM(vmName string) {

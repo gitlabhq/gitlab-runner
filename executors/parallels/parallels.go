@@ -185,11 +185,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	// remove invalid VM (removed?)
-	vmStatus, _ := prl.Status(s.vmName)
-	if vmStatus == prl.Invalid {
-		prl.Unregister(s.vmName)
-	}
+	unregisterInvalidVM(s.vmName)
 
 	s.vmName = s.getVMName()
 
@@ -198,14 +194,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		killAndUnregisterVM(s.vmName)
 	}
 
-	if prl.Exist(s.vmName) {
-		s.Println("Restoring VM from snapshot...")
-		err = s.restoreFromSnapshot()
-		if err != nil {
-			s.Println("Previous VM failed. Deleting, because", err)
-			killAndUnregisterVM(s.vmName)
-		}
-	}
+	s.tryRestoreFromSnapshot()
 
 	if !prl.Exist(s.vmName) {
 		s.Println("Creating new VM...")
@@ -260,6 +249,19 @@ func (s *executor) validateConfig() error {
 	return nil
 }
 
+func (s *executor) tryRestoreFromSnapshot() {
+	if !prl.Exist(s.vmName) {
+		return
+	}
+
+	s.Println("Restoring VM from snapshot...")
+	err := s.restoreFromSnapshot()
+	if err != nil {
+		s.Println("Previous VM failed. Deleting, because", err)
+		killAndUnregisterVM(s.vmName)
+	}
+}
+
 func (s *executor) getVMName() string {
 	if s.Config.Parallels.DisableSnapshots {
 		return s.Config.Parallels.BaseName + "-" + s.Build.ProjectUniqueName()
@@ -269,6 +271,14 @@ func (s *executor) getVMName() string {
 		s.Config.Parallels.BaseName,
 		s.Build.Runner.ShortDescription(),
 		s.Build.RunnerID)
+}
+
+func unregisterInvalidVM(vmName string) {
+	// remove invalid VM (removed?)
+	vmStatus, _ := prl.Status(vmName)
+	if vmStatus == prl.Invalid {
+		prl.Unregister(vmName)
+	}
 }
 
 func killAndUnregisterVM(vmName string) {
