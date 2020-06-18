@@ -104,26 +104,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			continue
 		}
 
-		args := []string{
-			"cache-extractor",
-			"--file", cacheFile,
-			"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
-		}
-
-		// Generate cache download address
-		if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
-			args = append(args, "--url", url.String())
-		}
-
-		// Execute cache-extractor command. Failure is not fatal.
-		b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-			w.Noticef("Checking cache for %s...", cacheKey)
-			w.IfCmdWithOutput(info.RunnerCommand, args...)
-			w.Noticef("Successfully extracted cache")
-			w.Else()
-			w.Warningf("Failed to extract cache")
-			w.EndIf()
-		})
+		b.addExtractCacheCommand(w, info, cacheFile, cacheKey)
 	}
 
 	if skipRestoreCache {
@@ -131,6 +112,34 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 	}
 
 	return nil
+}
+
+func (b *AbstractShell) addExtractCacheCommand(
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	cacheFile string,
+	cacheKey string,
+) {
+	args := []string{
+		"cache-extractor",
+		"--file", cacheFile,
+		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
+	}
+
+	// Generate cache download address
+	if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
+		args = append(args, "--url", url.String())
+	}
+
+	// Execute cache-extractor command. Failure is not fatal.
+	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
+		w.Noticef("Checking cache for %s...", cacheKey)
+		w.IfCmdWithOutput(info.RunnerCommand, args...)
+		w.Noticef("Successfully extracted cache")
+		w.Else()
+		w.Warningf("Failed to extract cache")
+		w.EndIf()
+	})
 }
 
 func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
@@ -514,28 +523,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 			continue
 		}
 
-		args := []string{
-			"cache-archiver",
-			"--file", cacheFile,
-			"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
-		}
-
-		args = append(args, archiverArgs...)
-
-		// Generate cache upload address
-		if url := cache.GetCacheUploadURL(info.Build, cacheKey); url != nil {
-			args = append(args, "--url", url.String())
-		}
-
-		// Execute cache-archiver command. Failure is not fatal.
-		b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
-			w.Noticef("Creating cache %s...", cacheKey)
-			w.IfCmdWithOutput(info.RunnerCommand, args...)
-			w.Noticef("Created cache")
-			w.Else()
-			w.Warningf("Failed to create cache")
-			w.EndIf()
-		})
+		b.addCacheUploadCommand(w, info, cacheFile, archiverArgs, cacheKey)
 	}
 
 	if skipArchiveCache {
@@ -543,6 +531,37 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 	}
 
 	return nil
+}
+
+func (b *AbstractShell) addCacheUploadCommand(
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	cacheFile string,
+	archiverArgs []string,
+	cacheKey string,
+) {
+	args := []string{
+		"cache-archiver",
+		"--file", cacheFile,
+		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
+	}
+
+	args = append(args, archiverArgs...)
+
+	// Generate cache upload address
+	if url := cache.GetCacheUploadURL(info.Build, cacheKey); url != nil {
+		args = append(args, "--url", url.String())
+	}
+
+	// Execute cache-archiver command. Failure is not fatal.
+	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
+		w.Noticef("Creating cache %s...", cacheKey)
+		w.IfCmdWithOutput(info.RunnerCommand, args...)
+		w.Noticef("Created cache")
+		w.Else()
+		w.Warningf("Failed to create cache")
+		w.EndIf()
+	})
 }
 
 func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) bool {

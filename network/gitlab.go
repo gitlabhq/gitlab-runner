@@ -449,8 +449,10 @@ func (n *GitLabClient) PatchTrace(
 		response.StatusCode,
 	)
 
-	defer response.Body.Close()
-	defer io.Copy(ioutil.Discard, response.Body)
+	defer func() {
+		io.Copy(ioutil.Discard, response.Body)
+		response.Body.Close()
+	}()
 
 	tracePatchResponse := NewTracePatchResponse(response, baseLog)
 	log := baseLog.WithFields(logrus.Fields{
@@ -462,6 +464,16 @@ func (n *GitLabClient) PatchTrace(
 		"update-interval": tracePatchResponse.RemoteTraceUpdateInterval,
 	})
 
+	return n.createPatchTraceResult(startOffset, tracePatchResponse, response, endOffset, log)
+}
+
+func (n *GitLabClient) createPatchTraceResult(
+	startOffset int,
+	tracePatchResponse *TracePatchResponse,
+	response *http.Response,
+	endOffset int,
+	log *logrus.Entry,
+) common.PatchTraceResult {
 	result := common.PatchTraceResult{
 		SentOffset:        startOffset,
 		NewUpdateInterval: tracePatchResponse.RemoteTraceUpdateInterval,
@@ -589,24 +601,34 @@ func (n *GitLabClient) UploadRawArtifacts(
 		log.WithError(err).Errorln(messagePrefix, "error")
 		return common.UploadFailed
 	}
-	defer res.Body.Close()
-	defer io.Copy(ioutil.Discard, res.Body)
+	defer func() {
+		io.Copy(ioutil.Discard, res.Body)
+		res.Body.Close()
+	}()
 
-	switch res.StatusCode {
+	return n.determineUploadState(res.StatusCode, log, messagePrefix)
+}
+
+func (n *GitLabClient) determineUploadState(
+	statusCode int,
+	log *logrus.Entry,
+	messagePrefix string,
+) common.UploadState {
+	switch statusCode {
 	case http.StatusCreated:
 		log.Println(messagePrefix, "ok")
 		return common.UploadSucceeded
 	case http.StatusForbidden:
-		log.WithField("status", res.Status).Errorln(messagePrefix, "forbidden")
+		log.WithField("status", statusCode).Errorln(messagePrefix, "forbidden")
 		return common.UploadForbidden
 	case http.StatusRequestEntityTooLarge:
-		log.WithField("status", res.Status).Errorln(messagePrefix, "too large archive")
+		log.WithField("status", statusCode).Errorln(messagePrefix, "too large archive")
 		return common.UploadTooLarge
 	case http.StatusServiceUnavailable:
-		log.WithField("status", res.Status).Errorln(messagePrefix, "service unavailable")
+		log.WithField("status", statusCode).Errorln(messagePrefix, "service unavailable")
 		return common.UploadServiceUnavailable
 	default:
-		log.WithField("status", res.Status).Warningln(messagePrefix, "failed")
+		log.WithField("status", statusCode).Warningln(messagePrefix, "failed")
 		return common.UploadFailed
 	}
 }

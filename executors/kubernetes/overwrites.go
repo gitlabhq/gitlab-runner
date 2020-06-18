@@ -70,6 +70,7 @@ type overwrites struct {
 	memoryRequest  string
 }
 
+//nolint:funlen
 func createOverwrites(
 	config *common.KubernetesConfig,
 	variables common.JobVariables,

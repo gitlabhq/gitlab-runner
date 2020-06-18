@@ -428,21 +428,7 @@ func (e *executor) createService(
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
 
-	hostConfig := &container.HostConfig{
-		DNS:           e.Config.Docker.DNS,
-		DNSSearch:     e.Config.Docker.DNSSearch,
-		RestartPolicy: neverRestartPolicy,
-		ExtraHosts:    e.Config.Docker.ExtraHosts,
-		Privileged:    e.Config.Docker.Privileged,
-		NetworkMode:   e.networkMode,
-		Binds:         e.volumesManager.Binds(),
-		ShmSize:       e.Config.Docker.ShmSize,
-		Tmpfs:         e.Config.Docker.ServicesTmpfs,
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-	}
-
+	hostConfig := e.createHostConfigForService()
 	networkConfig := e.networkConfig(linkNames)
 
 	e.Debugln("Creating service container", containerName, "...")
@@ -459,6 +445,23 @@ func (e *executor) createService(
 	}
 
 	return fakeContainer(resp.ID, containerName), nil
+}
+
+func (e *executor) createHostConfigForService() *container.HostConfig {
+	return &container.HostConfig{
+		DNS:           e.Config.Docker.DNS,
+		DNSSearch:     e.Config.Docker.DNSSearch,
+		RestartPolicy: neverRestartPolicy,
+		ExtraHosts:    e.Config.Docker.ExtraHosts,
+		Privileged:    e.Config.Docker.Privileged,
+		NetworkMode:   e.networkMode,
+		Binds:         e.volumesManager.Binds(),
+		ShmSize:       e.Config.Docker.ShmSize,
+		Tmpfs:         e.Config.Docker.ServicesTmpfs,
+		LogConfig: container.LogConfig{
+			Type: "json-file",
+		},
+	}
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
@@ -673,11 +676,50 @@ func (e *executor) createContainer(
 
 	// Always create unique, but sequential name
 	containerIndex := len(e.builds)
-	containerName := e.getProjectUniqRandomizedName() + "-" +
-		containerType + "-" + strconv.Itoa(containerIndex)
+	containerName := e.getProjectUniqRandomizedName() + "-" + containerType + "-" + strconv.Itoa(containerIndex)
 
+	config := e.createContainerConfig(containerType, imageDefinition, image.ID, hostname, cmd)
+
+	hostConfig, err := e.createHostConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	aliases := []string{"build", containerName}
+	networkConfig := e.networkConfig(aliases)
+
+	// this will fail potentially some builds if there's name collision
+	e.removeContainer(e.Context, containerName)
+
+	e.Debugln("Creating container", containerName, "...")
+	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
+	if err != nil {
+		if resp.ID != "" {
+			e.temporary = append(e.temporary, resp.ID)
+		}
+		return nil, err
+	}
+
+	inspect, err := e.client.ContainerInspect(e.Context, resp.ID)
+	if err != nil {
+		e.temporary = append(e.temporary, resp.ID)
+		return nil, err
+	}
+
+	e.builds = append(e.builds, resp.ID)
+	e.temporary = append(e.temporary, resp.ID)
+	return &inspect, nil
+}
+
+func (e *executor) createContainerConfig(
+	containerType string,
+	imageDefinition common.Image,
+	imageID string,
+	hostname string,
+	cmd []string,
+) *container.Config {
 	config := &container.Config{
-		Image:        image.ID,
+		Image:        imageID,
 		Hostname:     hostname,
 		Cmd:          cmd,
 		Labels:       e.getLabels(containerType),
@@ -689,15 +731,18 @@ func (e *executor) createContainer(
 		StdinOnce:    true,
 		Env:          append(e.Build.GetAllVariables().StringList(), e.BuildShell.Environment...),
 	}
-
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 
+	return config
+}
+
+func (e *executor) createHostConfig() (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
 		return nil, err
 	}
 
-	hostConfig := &container.HostConfig{
+	return &container.HostConfig{
 		Resources: container.Resources{
 			Memory:            e.Config.Docker.GetMemory(),
 			MemorySwap:        e.Config.Docker.GetMemorySwap(),
@@ -730,35 +775,10 @@ func (e *executor) createContainer(
 		},
 		Tmpfs:   e.Config.Docker.Tmpfs,
 		Sysctls: e.Config.Docker.SysCtls,
-	}
-
-	aliases := []string{"build", containerName}
-	networkConfig := e.networkConfig(aliases)
-
-	// this will fail potentially some builds if there's name collision
-	e.removeContainer(e.Context, containerName)
-
-	e.Debugln("Creating container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
-	if err != nil {
-		if resp.ID != "" {
-			e.temporary = append(e.temporary, resp.ID)
-		}
-		return nil, err
-	}
-
-	inspect, err := e.client.ContainerInspect(e.Context, resp.ID)
-	if err != nil {
-		e.temporary = append(e.temporary, resp.ID)
-		return nil, err
-	}
-
-	e.builds = append(e.builds, resp.ID)
-	e.temporary = append(e.temporary, resp.ID)
-	return &inspect, nil
+	}, nil
 }
 
-func (e *executor) watchContainer(ctx context.Context, id string, input io.Reader) error {
+func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
 	options := types.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  true,
@@ -1214,20 +1234,8 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 
 	cmd := []string{"gitlab-runner-helper", "health-check"}
 
-	config := &container.Config{
-		Cmd:    cmd,
-		Image:  waitImage.ID,
-		Labels: e.getLabels("wait", "wait="+service.ID),
-		Env:    environment,
-	}
-	hostConfig := &container.HostConfig{
-		RestartPolicy: neverRestartPolicy,
-		Links:         []string{service.Names[0] + ":service"},
-		NetworkMode:   e.networkMode,
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-	}
+	config := e.createConfigForServiceHealthCheckContainer(service, cmd, waitImage, environment)
+	hostConfig := e.createHostConfigForServiceHealthCheck(service)
 
 	e.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
@@ -1259,6 +1267,31 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	return &serviceHealthCheckError{
 		Inner: err,
 		Logs:  e.readContainerLogs(resp.ID),
+	}
+}
+
+func (e *executor) createConfigForServiceHealthCheckContainer(
+	service *types.Container,
+	cmd []string,
+	waitImage *types.ImageInspect,
+	environment []string,
+) *container.Config {
+	return &container.Config{
+		Cmd:    cmd,
+		Image:  waitImage.ID,
+		Labels: e.getLabels("wait", "wait="+service.ID),
+		Env:    environment,
+	}
+}
+
+func (e *executor) createHostConfigForServiceHealthCheck(service *types.Container) *container.HostConfig {
+	return &container.HostConfig{
+		RestartPolicy: neverRestartPolicy,
+		Links:         []string{service.Names[0] + ":service"},
+		NetworkMode:   e.networkMode,
+		LogConfig: container.LogConfig{
+			Type: "json-file",
+		},
 	}
 }
 

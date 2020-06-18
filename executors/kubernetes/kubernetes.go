@@ -681,6 +681,18 @@ func (s *executor) getVolumes() []api.Volume {
 func (s *executor) getVolumesForConfig() []api.Volume {
 	var volumes []api.Volume
 
+	volumes = append(volumes, s.getVolumesForHostPaths()...)
+	volumes = append(volumes, s.getVolumesForSecrets()...)
+	volumes = append(volumes, s.getVolumesForPVCs()...)
+	volumes = append(volumes, s.getVolumesForConfigMaps()...)
+	volumes = append(volumes, s.getVolumesForEmptyDirs()...)
+
+	return volumes
+}
+
+func (s *executor) getVolumesForHostPaths() []api.Volume {
+	var volumes []api.Volume
+
 	for _, volume := range s.Config.Kubernetes.Volumes.HostPaths {
 		path := volume.HostPath
 		// Make backward compatible with syntax introduced in version 9.3.0
@@ -697,6 +709,12 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 			},
 		})
 	}
+
+	return volumes
+}
+
+func (s *executor) getVolumesForSecrets() []api.Volume {
+	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.Secrets {
 		var items []api.KeyToPath
@@ -715,6 +733,12 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 		})
 	}
 
+	return volumes
+}
+
+func (s *executor) getVolumesForPVCs() []api.Volume {
+	var volumes []api.Volume
+
 	for _, volume := range s.Config.Kubernetes.Volumes.PVCs {
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
@@ -726,6 +750,12 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 			},
 		})
 	}
+
+	return volumes
+}
+
+func (s *executor) getVolumesForConfigMaps() []api.Volume {
+	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.ConfigMaps {
 		var items []api.KeyToPath
@@ -746,6 +776,12 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 		})
 	}
 
+	return volumes
+}
+
+func (s *executor) getVolumesForEmptyDirs() []api.Volume {
+	var volumes []api.Volume
+
 	for _, volume := range s.Config.Kubernetes.Volumes.EmptyDirs {
 		volumes = append(volumes, api.Volume{
 			Name: volume.Name,
@@ -756,7 +792,6 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 			},
 		})
 	}
-
 	return volumes
 }
 

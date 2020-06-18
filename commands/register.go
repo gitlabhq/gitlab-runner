@@ -269,6 +269,7 @@ func (s *RegisterCommand) askRunner() {
 	}
 }
 
+//nolint:funlen
 func (s *RegisterCommand) askExecutorOptions() {
 	kubernetes := s.Kubernetes
 	machine := s.Machine
@@ -368,26 +369,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	s.askRunner()
 
 	if !s.LeaveRunner {
-		defer func() {
-			// De-register runner on panic
-			if r := recover(); r != nil {
-				if s.registered {
-					s.network.UnregisterRunner(s.RunnerCredentials)
-				}
-
-				// pass panic to next defer
-				panic(r)
-			}
-		}()
-
-		signals := make(chan os.Signal, 1)
-		signal.Notify(signals, os.Interrupt)
-
-		go func() {
-			signal := <-signals
-			s.network.UnregisterRunner(s.RunnerCredentials)
-			logrus.Fatalf("RECEIVED SIGNAL: %v", signal)
-		}()
+		defer s.unregisterRunner()()
 	}
 
 	if s.config.Concurrent < s.Limit {
@@ -413,6 +395,29 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	logrus.Printf(
 		"Runner registered successfully. " +
 			"Feel free to start it, but if it's running already the config should be automatically reloaded!")
+}
+
+func (s *RegisterCommand) unregisterRunner() func() {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt)
+
+	go func() {
+		signal := <-signals
+		s.network.UnregisterRunner(s.RunnerCredentials)
+		logrus.Fatalf("RECEIVED SIGNAL: %v", signal)
+	}()
+
+	return func() {
+		// De-register runner on panic
+		if r := recover(); r != nil {
+			if s.registered {
+				s.network.UnregisterRunner(s.RunnerCredentials)
+			}
+
+			// pass panic to next defer
+			panic(r)
+		}
+	}
 }
 
 func (s *RegisterCommand) mergeTemplate() {

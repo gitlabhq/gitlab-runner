@@ -37,6 +37,7 @@ linters:
     - bodyclose
     - deadcode
     - dogsled
+    - funlen
     - goconst
     - gocritic
     - gocyclo
@@ -92,6 +93,7 @@ issues:
     - path: ".*_test.go"
       linters:
         - bodyclose
+        - funlen
     - path: ".*_test.go"
       text: "regexpMust"
       linters:
