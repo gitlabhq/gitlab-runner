@@ -90,7 +90,9 @@ type executor struct {
 func init() {
 	runnerFolder, err := osext.ExecutableFolder()
 	if err != nil {
-		logrus.Errorln("Docker executor: unable to detect gitlab-runner folder, prebuilt image helpers will be loaded from DockerHub.", err)
+		logrus.Errorln(
+			"Docker executor: unable to detect gitlab-runner folder, "+
+				"prebuilt image helpers will be loaded from DockerHub.", err)
 	}
 
 	PrebuiltImagesPaths = []string{
@@ -166,7 +168,12 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		}
 	}
 
-	registryInfo := auth.ResolveConfigForImage(imageName, e.Build.GetDockerAuthConfig(), e.Shell().User, e.Build.Credentials)
+	registryInfo := auth.ResolveConfigForImage(
+		imageName,
+		e.Build.GetDockerAuthConfig(),
+		e.Shell().User,
+		e.Build.Credentials,
+	)
 	if registryInfo != nil {
 		e.Println(fmt.Sprintf("Authenticating with credentials from %v", registryInfo.Source))
 		e.Debugln(fmt.Sprintf(
@@ -232,7 +239,11 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	if imageNameFromConfig := e.Config.Docker.HelperImage; imageNameFromConfig != "" {
 		imageNameFromConfig = common.AppVersion.Variables().ExpandValue(imageNameFromConfig)
 
-		e.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
+		e.Debugln(
+			"Pull configured helper_image for predefined container instead of import bundled image",
+			imageNameFromConfig,
+			"...",
+		)
 
 		return e.getDockerImage(imageNameFromConfig)
 	}
@@ -261,7 +272,10 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 
 	architecture := e.helperImageInfo.Architecture
 	for _, dockerPrebuiltImagesPath := range PrebuiltImagesPaths {
-		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
+		dockerPrebuiltImageFilePath := filepath.Join(
+			dockerPrebuiltImagesPath,
+			"prebuilt-"+architecture+prebuiltImageExtension,
+		)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, e.helperImageInfo.Tag)
 		if err != nil {
 			e.Debugln("Failed to load prebuilt image from:", dockerPrebuiltImageFilePath, "error:", err)
@@ -377,7 +391,12 @@ func (e *executor) markImageAsUsed(imageName, imageID string) {
 	}
 }
 
-func (e *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image, linkNames []string) (*types.Container, error) {
+func (e *executor) createService(
+	serviceIndex int,
+	service, version, image string,
+	serviceDefinition common.Image,
+	linkNames []string,
+) (*types.Container, error) {
 	if len(service) == 0 {
 		return nil, fmt.Errorf("invalid service name: %s", serviceDefinition.Name)
 	}
@@ -520,7 +539,11 @@ func (e *executor) buildServiceLinks(linksMap map[string]*types.Container) (link
 	return
 }
 
-func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefinition common.Image, linksMap map[string]*types.Container) error {
+func (e *executor) createFromServiceDefinition(
+	serviceIndex int,
+	serviceDefinition common.Image,
+	linksMap map[string]*types.Container,
+) error {
 	var container *types.Container
 
 	serviceMeta := services.SplitNameAndVersion(serviceDefinition.Name)
@@ -538,7 +561,14 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 		// Create service if not yet created
 		if container == nil {
 			var err error
-			container, err = e.createService(serviceIndex, serviceMeta.Service, serviceMeta.Version, serviceMeta.ImageName, serviceDefinition, serviceMeta.Aliases)
+			container, err = e.createService(
+				serviceIndex,
+				serviceMeta.Service,
+				serviceMeta.Version,
+				serviceMeta.ImageName,
+				serviceDefinition,
+				serviceMeta.Aliases,
+			)
 			if err != nil {
 				return err
 			}
@@ -621,7 +651,12 @@ func (e *executor) createServices() (err error) {
 	return
 }
 
-func (e *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
+func (e *executor) createContainer(
+	containerType string,
+	imageDefinition common.Image,
+	cmd []string,
+	allowedInternalImages []string,
+) (*types.ContainerJSON, error) {
 	if e.volumesManager == nil {
 		return nil, errVolumesManagerUndefined
 	}
@@ -816,9 +851,19 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 			if id == pluggedContainer.Name {
 				err = e.client.NetworkDisconnect(ctx, network.ID, id, true)
 				if err != nil {
-					e.Warningln("Can't disconnect possibly zombie container", pluggedContainer.Name, "from network", network.Name, "->", err)
+					e.Warningln(
+						"Can't disconnect possibly zombie container",
+						pluggedContainer.Name,
+						"from network",
+						network.Name,
+						"->",
+						err)
 				} else {
-					e.Warningln("Possibly zombie container", pluggedContainer.Name, "is disconnected from network", network.Name)
+					e.Warningln(
+						"Possibly zombie container",
+						pluggedContainer.Name,
+						"is disconnected from network",
+						network.Name)
 				}
 				break
 			}
@@ -852,7 +897,9 @@ func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []
 		return nil
 	}
 
-	e.Println("Please check runner's configuration: http://doc.gitlab.com/ci/docker/using_docker_images.html#overwrite-image-and-services")
+	e.Println(
+		"Please check runner's configuration: " +
+			"http://doc.gitlab.com/ci/docker/using_docker_images.html#overwrite-image-and-services")
 	return errors.New("invalid image")
 }
 
@@ -1265,7 +1312,9 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 
 	var buffer bytes.Buffer
 	buffer.WriteString("\n")
-	buffer.WriteString(helpers.ANSI_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + service.Names[0] + " probably didn't start properly.\n")
+	buffer.WriteString(
+		helpers.ANSI_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + service.Names[0] +
+			" probably didn't start properly.\n")
 	buffer.WriteString("\n")
 	buffer.WriteString("Health check error:\n")
 	buffer.WriteString(strings.TrimSpace(err.Error()))

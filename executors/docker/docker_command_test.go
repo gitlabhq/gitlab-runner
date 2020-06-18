@@ -814,15 +814,35 @@ func TestCacheInContainer(t *testing.T) {
 	// The first job lacks any cache to pull, but tries to both pull and push
 	output := runTestJobWithOutput(t, build)
 	assert.Regexp(t, cacheNotPresentRE, output, "First job execution should not have cached data")
-	assert.NotContains(t, output, skipCacheDownload, "Cache download should be performed with policy: %s", common.CachePolicyPullPush)
-	assert.NotContains(t, output, skipCacheUpload, "Cache upload should be performed with policy: %s", common.CachePolicyPullPush)
+	assert.NotContains(
+		t,
+		output,
+		skipCacheDownload,
+		"Cache download should be performed with policy: %s",
+		common.CachePolicyPullPush)
+	assert.NotContains(
+		t,
+		output,
+		skipCacheUpload,
+		"Cache upload should be performed with policy: %s",
+		common.CachePolicyPullPush)
 
 	// pull-only jobs should skip the push step
 	build.JobResponse.Cache[0].Policy = common.CachePolicyPull
 	output = runTestJobWithOutput(t, build)
 	assert.NotRegexp(t, cacheNotPresentRE, output, "Second job execution should have cached data")
-	assert.NotContains(t, output, skipCacheDownload, "Cache download should be performed with policy: %s", common.CachePolicyPull)
-	assert.Contains(t, output, skipCacheUpload, "Cache upload should be skipped with policy: %s", common.CachePolicyPull)
+	assert.NotContains(
+		t,
+		output,
+		skipCacheDownload,
+		"Cache download should be performed with policy: %s",
+		common.CachePolicyPull)
+	assert.Contains(
+		t,
+		output,
+		skipCacheUpload,
+		"Cache upload should be skipped with policy: %s",
+		common.CachePolicyPull)
 
 	// push-only jobs should skip the pull step
 	build.JobResponse.Cache[0].Policy = common.CachePolicyPush
@@ -1158,7 +1178,11 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
-	assert.Contains(t, out, "Using docker image sha256:3cf24b1b62b6a4c55c5de43db4f50c0ff8b455238c836945d4b5c645411bfc77 for gitlab/gitlab-runner-helper:x86_64-5a147c92 ...")
+	assert.Contains(
+		t,
+		out,
+		"Using docker image sha256:3cf24b1b62b6a4c55c5de43db4f50c0ff8b455238c836945d4b5c645411bfc77 for "+
+			"gitlab/gitlab-runner-helper:x86_64-5a147c92 ...")
 }
 
 func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
@@ -1257,7 +1281,13 @@ func TestDockerCommandRunAttempts(t *testing.T) {
 		assertFailedToInspectContainer(t, trace, &attempts)
 	}
 
-	assert.Equal(t, executorStageAttempts, attempts, "The %s stage should be retried at least once", "step_script")
+	assert.Equal(
+		t,
+		executorStageAttempts,
+		attempts,
+		"The %s stage should be retried at least once",
+		"step_script",
+	)
 	<-runFinished
 }
 

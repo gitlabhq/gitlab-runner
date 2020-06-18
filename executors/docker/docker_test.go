@@ -197,7 +197,12 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Twice()
 
-	c.On("ContainerRemove", e.Context, containerNameMatcher, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true}).
+	c.On(
+		"ContainerRemove",
+		e.Context,
+		containerNameMatcher,
+		types.ContainerRemoveOptions{RemoveVolumes: true, Force: true},
+	).
 		Return(nil).
 		Once()
 
@@ -1040,7 +1045,14 @@ func TestCreateDependencies(t *testing.T) {
 			c.On("ContainerRemove", mock.Anything, containerID, mock.Anything).
 				Return(nil).
 				Once()
-			c.On("ContainerCreate", mock.Anything, mock.Anything, hostConfigMatcher, mock.Anything, containerNameMatcher).
+			c.On(
+				"ContainerCreate",
+				mock.Anything,
+				mock.Anything,
+				hostConfigMatcher,
+				mock.Anything,
+				containerNameMatcher,
+			).
 				Return(container.ContainerCreateCreatedBody{ID: containerID}, nil).
 				Once()
 			c.On("ContainerStart", mock.Anything, containerID, mock.Anything).
@@ -1072,7 +1084,12 @@ func getTestExecutor() *executor {
 	return e
 }
 
-func testGetDockerImage(t *testing.T, e *executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
+func testGetDockerImage(
+	t *testing.T,
+	e *executor,
+	imageName string,
+	setClientExpectations func(c *docker.MockClient, imageName string),
+) {
 	t.Run("get:"+imageName, func(t *testing.T) {
 		c := new(docker.MockClient)
 		defer c.AssertExpectations(t)
@@ -1087,7 +1104,12 @@ func testGetDockerImage(t *testing.T, e *executor, imageName string, setClientEx
 	})
 }
 
-func testDeniesDockerImage(t *testing.T, e *executor, imageName string, setClientExpectations func(c *docker.MockClient, imageName string)) {
+func testDeniesDockerImage(
+	t *testing.T,
+	e *executor,
+	imageName string,
+	setClientExpectations func(c *docker.MockClient, imageName string),
+) {
 	t.Run("deny:"+imageName, func(t *testing.T) {
 		c := new(docker.MockClient)
 		defer c.AssertExpectations(t)
@@ -1196,7 +1218,11 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	err = e.createVolumesManager()
 	require.NoError(t, err)
 
-	container, err := e.createContainer("build", common.Image{Name: common.TestAlpineImage}, []string{"/bin/sh"}, []string{})
+	container, err := e.createContainer(
+		"build",
+		common.Image{Name: common.TestAlpineImage},
+		[]string{"/bin/sh"},
+		[]string{})
 	assert.NoError(t, err)
 	assert.NotNil(t, container)
 
@@ -1233,12 +1259,22 @@ type dockerConfigurationTestFakeDockerClient struct {
 	t   *testing.T
 }
 
-func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error) {
+func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(
+	ctx context.Context,
+	config *container.Config,
+	hostConfig *container.HostConfig,
+	networkingConfig *network.NetworkingConfig,
+	containerName string,
+) (container.ContainerCreateCreatedBody, error) {
 	c.cce(c.t, config, hostConfig)
 	return container.ContainerCreateCreatedBody{ID: "abc"}, nil
 }
 
-func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerConfig, cce containerConfigExpectations) (*dockerConfigurationTestFakeDockerClient, *executor) {
+func prepareTestDockerConfiguration(
+	t *testing.T,
+	dockerConfig *common.DockerConfig,
+	cce containerConfigExpectations,
+) (*dockerConfigurationTestFakeDockerClient, *executor) {
 	c := &dockerConfigurationTestFakeDockerClient{
 		cce: cce,
 		t:   t,
@@ -1279,7 +1315,10 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 	return c, e
 }
 
-func testDockerConfigurationWithJobContainer(t *testing.T, dockerConfig *common.DockerConfig, cce containerConfigExpectations) {
+func testDockerConfigurationWithJobContainer(
+	t *testing.T,
+	dockerConfig *common.DockerConfig,
+	cce containerConfigExpectations) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
 	defer c.AssertExpectations(t)
 
@@ -1293,7 +1332,11 @@ func testDockerConfigurationWithJobContainer(t *testing.T, dockerConfig *common.
 	assert.NoError(t, err, "Should create container without errors")
 }
 
-func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *common.DockerConfig, cce containerConfigExpectations) {
+func testDockerConfigurationWithServiceContainer(
+	t *testing.T,
+	dockerConfig *common.DockerConfig,
+	cce containerConfigExpectations,
+) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
 	defer c.AssertExpectations(t)
 
@@ -1303,7 +1346,14 @@ func testDockerConfigurationWithServiceContainer(t *testing.T, dockerConfig *com
 	err := e.createVolumesManager()
 	require.NoError(t, err)
 
-	_, err = e.createService(0, "build", "latest", "alpine", common.Image{Command: []string{"/bin/sh"}}, nil)
+	_, err = e.createService(
+		0,
+		"build",
+		"latest",
+		"alpine",
+		common.Image{Command: []string{"/bin/sh"}},
+		nil,
+	)
 	assert.NoError(t, err, "Should create service container without errors")
 }
 

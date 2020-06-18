@@ -213,7 +213,12 @@ func (n *client) checkBackoffRequest(req *http.Request, res *http.Response) {
 	}
 }
 
-func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (*http.Response, error) {
+func (n *client) do(
+	uri, method string,
+	request io.Reader,
+	requestType string,
+	headers http.Header,
+) (*http.Response, error) {
 	url, err := n.url.Parse(uri)
 	if err != nil {
 		return nil, err
@@ -245,7 +250,12 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 	return res, nil
 }
 
-func (n *client) doJSON(uri, method string, statusCode int, request interface{}, response interface{}) (int, string, *http.Response) {
+func (n *client) doJSON(
+	uri, method string,
+	statusCode int,
+	request interface{},
+	response interface{},
+) (int, string, *http.Response) {
 	var body io.Reader
 
 	if request != nil {

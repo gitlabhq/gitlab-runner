@@ -59,6 +59,7 @@ func TestOverwrites(t *testing.T) {
 		MemoryRequestOverwriteMaxAllowed: "10Gi",
 	}
 
+	//nolint:lll
 	tests := []struct {
 		Name                                 string
 		Config                               *common.KubernetesConfig

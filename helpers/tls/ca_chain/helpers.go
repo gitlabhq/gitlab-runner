@@ -81,7 +81,11 @@ func prepareCertificateLogger(logger logrus.FieldLogger, cert *x509.Certificate)
 	return preparePrefixedCertificateLogger(logger, cert, "")
 }
 
-func preparePrefixedCertificateLogger(logger logrus.FieldLogger, cert *x509.Certificate, prefix string) logrus.FieldLogger {
+func preparePrefixedCertificateLogger(
+	logger logrus.FieldLogger,
+	cert *x509.Certificate,
+	prefix string,
+) logrus.FieldLogger {
 	return logger.
 		WithFields(logrus.Fields{
 			fmt.Sprintf("%sSubject", prefix):       cert.Subject.CommonName,

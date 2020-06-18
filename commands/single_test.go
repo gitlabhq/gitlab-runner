@@ -66,7 +66,12 @@ func newRunSingleCommand(executorName string, network common.Network) *RunSingle
 	}
 }
 
-func mockingExecutionStack(t *testing.T, executorName string, maxBuilds int, job jobSimulation) (*RunSingleCommand, func()) {
+func mockingExecutionStack(
+	t *testing.T,
+	executorName string,
+	maxBuilds int,
+	job jobSimulation,
+) (*RunSingleCommand, func()) {
 	// mocking the whole stack
 	e := common.MockExecutor{}
 	p := common.MockExecutorProvider{}

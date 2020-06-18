@@ -35,7 +35,9 @@ func (c X509Generator) Generate(host string) (tls.Certificate, []byte, error) {
 		Subject: pkix.Name{
 			Organization: []string{x509CertificateOrganization},
 		},
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageDataEncipherment,
+		KeyUsage: x509.KeyUsageKeyEncipherment |
+			x509.KeyUsageDigitalSignature |
+			x509.KeyUsageDataEncipherment,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}

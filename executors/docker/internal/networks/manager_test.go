@@ -81,7 +81,12 @@ func TestCreateNetwork(t *testing.T) {
 			networkPerBuild:     "true",
 			expectedNetworkMode: container.NetworkMode("runner--project-0-concurrent-0-job-0-network"),
 			clientAssertions: func(mc *docker.MockClient) {
-				mc.On("NetworkCreate", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("types.NetworkCreate")).
+				mc.On(
+					"NetworkCreate",
+					mock.Anything,
+					mock.AnythingOfType("string"),
+					mock.AnythingOfType("types.NetworkCreate"),
+				).
 					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
 					Once()
 				mc.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
@@ -98,7 +103,12 @@ func TestCreateNetwork(t *testing.T) {
 			expectedNetworkMode: "",
 			expectedErr:         errors.New("test-network failed"),
 			clientAssertions: func(mc *docker.MockClient) {
-				mc.On("NetworkCreate", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("types.NetworkCreate")).
+				mc.On(
+					"NetworkCreate",
+					mock.Anything,
+					mock.AnythingOfType("string"),
+					mock.AnythingOfType("types.NetworkCreate"),
+				).
 					Return(types.NetworkCreateResponse{ID: "test-network"}, errors.New("test-network failed")).
 					Once()
 			},
@@ -109,10 +119,19 @@ func TestCreateNetwork(t *testing.T) {
 			expectedNetworkMode: "",
 			expectedErr:         errors.New("network-inspect-failed"),
 			clientAssertions: func(mc *docker.MockClient) {
-				mc.On("NetworkCreate", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("types.NetworkCreate")).
+				mc.On(
+					"NetworkCreate",
+					mock.Anything,
+					mock.AnythingOfType("string"),
+					mock.AnythingOfType("types.NetworkCreate"),
+				).
 					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
 					Once()
-				mc.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
+				mc.On(
+					"NetworkInspect",
+					mock.Anything,
+					mock.AnythingOfType("string"),
+				).
 					Return(types.NetworkResource{}, errors.New("network-inspect-failed")).
 					Once()
 			},

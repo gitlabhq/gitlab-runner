@@ -7,7 +7,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var numErrorsDesc = prometheus.NewDesc("gitlab_runner_errors_total", "The  number of catched errors.", []string{"level"}, nil)
+var numErrorsDesc = prometheus.NewDesc(
+	"gitlab_runner_errors_total",
+	"The number of caught errors.",
+	[]string{"level"},
+	nil,
+)
 
 type LogHook struct {
 	errorsNumber map[logrus.Level]*int64

@@ -33,7 +33,11 @@ type testNetwork struct {
 	uploadedFiles        []string
 }
 
-func (m *testNetwork) DownloadArtifacts(config common.JobCredentials, artifactsFile string, directDownload *bool) common.DownloadState {
+func (m *testNetwork) DownloadArtifacts(
+	config common.JobCredentials,
+	artifactsFile string,
+	directDownload *bool,
+) common.DownloadState {
 	m.downloadCalled++
 
 	if directDownload != nil && *directDownload {
@@ -115,7 +119,11 @@ func (m *testNetwork) consumeRawUpload(reader io.Reader) common.UploadState {
 	return m.uploadState
 }
 
-func (m *testNetwork) UploadRawArtifacts(config common.JobCredentials, reader io.Reader, options common.ArtifactsOptions) common.UploadState {
+func (m *testNetwork) UploadRawArtifacts(
+	config common.JobCredentials,
+	reader io.Reader,
+	options common.ArtifactsOptions,
+) common.UploadState {
 	m.uploadCalled++
 
 	if m.uploadState == common.UploadSucceeded {

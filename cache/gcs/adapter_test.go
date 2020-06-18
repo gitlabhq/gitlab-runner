@@ -105,7 +105,13 @@ func prepareMockedCredentialsResolverForInvalidConfig(adapter *gcsAdapter, tc ad
 	adapter.credentialsResolver = cr
 }
 
-func testAdapterOperationWithInvalidConfig(t *testing.T, name string, tc adapterOperationInvalidConfigTestCase, adapter *gcsAdapter, operation func() *url.URL) {
+func testAdapterOperationWithInvalidConfig(
+	t *testing.T,
+	name string,
+	tc adapterOperationInvalidConfigTestCase,
+	adapter *gcsAdapter,
+	operation func() *url.URL,
+) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 		hook := test.NewGlobal()
@@ -213,7 +219,13 @@ func prepareMockedCredentialsResolver(adapter *gcsAdapter) func(t *testing.T) {
 	}
 }
 
-func prepareMockedSignedURLGenerator(t *testing.T, tc adapterOperationTestCase, expectedMethod string, expectedContentType string, adapter *gcsAdapter) {
+func prepareMockedSignedURLGenerator(
+	t *testing.T,
+	tc adapterOperationTestCase,
+	expectedMethod string,
+	expectedContentType string,
+	adapter *gcsAdapter,
+) {
 	adapter.generateSignedURL = func(bucket string, name string, opts *storage.SignedURLOptions) (string, error) {
 		require.Equal(t, accessID, opts.GoogleAccessID)
 		require.Equal(t, privateKey, string(opts.PrivateKey))
@@ -224,7 +236,15 @@ func prepareMockedSignedURLGenerator(t *testing.T, tc adapterOperationTestCase, 
 	}
 }
 
-func testAdapterOperation(t *testing.T, tc adapterOperationTestCase, name string, expectedMethod string, expectedContentType string, adapter *gcsAdapter, operation func() *url.URL) {
+func testAdapterOperation(
+	t *testing.T,
+	tc adapterOperationTestCase,
+	name string,
+	expectedMethod string,
+	expectedContentType string,
+	adapter *gcsAdapter,
+	operation func() *url.URL,
+) {
 	t.Run(name, func(t *testing.T) {
 		cleanupCredentialsResolverMock := prepareMockedCredentialsResolver(adapter)
 		defer cleanupCredentialsResolverMock(t)
@@ -248,6 +268,7 @@ func testAdapterOperation(t *testing.T, tc adapterOperationTestCase, name string
 }
 
 func TestAdapterOperation(t *testing.T) {
+	//nolint:lll
 	tests := map[string]adapterOperationTestCase{
 		"error-on-URL-signing": {
 			returnedURL:   "",
@@ -276,8 +297,24 @@ func TestAdapterOperation(t *testing.T) {
 			adapter, ok := a.(*gcsAdapter)
 			require.True(t, ok, "Adapter should be properly casted to *adapter type")
 
-			testAdapterOperation(t, tc, "GetDownloadURL", http.MethodGet, "", adapter, a.GetDownloadURL)
-			testAdapterOperation(t, tc, "GetUploadURL", http.MethodPut, "application/octet-stream", adapter, a.GetUploadURL)
+			testAdapterOperation(
+				t,
+				tc,
+				"GetDownloadURL",
+				http.MethodGet,
+				"",
+				adapter,
+				a.GetDownloadURL,
+			)
+			testAdapterOperation(
+				t,
+				tc,
+				"GetUploadURL",
+				http.MethodPut,
+				"application/octet-stream",
+				adapter,
+				a.GetUploadURL,
+			)
 		})
 	}
 }

@@ -57,7 +57,10 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 	return details
 }
 
-func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
+func (m *machineProvider) create(
+	config *common.RunnerConfig,
+	state machineState,
+) (*machineDetails, chan error) {
 	name := newMachineName(config)
 	details := m.machineDetails(name, true)
 	details.State = machineStateCreating
@@ -228,7 +231,11 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	return nil
 }
 
-func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machinesData, details *machineDetails) error {
+func (m *machineProvider) updateMachine(
+	config *common.RunnerConfig,
+	data *machinesData,
+	details *machineDetails,
+) error {
 	if details.State != machineStateIdle {
 		return nil
 	}
@@ -252,7 +259,10 @@ func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machi
 	return nil
 }
 
-func (m *machineProvider) updateMachines(machines []string, config *common.RunnerConfig) (data machinesData, validMachines []string) {
+func (m *machineProvider) updateMachines(
+	machines []string,
+	config *common.RunnerConfig,
+) (data machinesData, validMachines []string) {
 	data.Runner = config.ShortDescription()
 	validMachines = make([]string, 0, len(machines))
 
@@ -376,7 +386,10 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 }
 
 //nolint:nakedret
-func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorData) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
+func (m *machineProvider) Use(
+	config *common.RunnerConfig,
+	data common.ExecutorData,
+) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
 	// Find a new machine
 	details, _ := data.(*machineDetails)
 	if details == nil || !details.canBeUsed() || !m.machine.CanConnect(details.Name, true) {

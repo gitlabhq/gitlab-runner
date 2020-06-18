@@ -17,7 +17,8 @@ const (
 	ServiceAccountOverwriteVariableName = "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE"
 	// BearerTokenOverwriteVariableValue is the key for the JobVariable containing user overwritten BearerToken
 	BearerTokenOverwriteVariableValue = "KUBERNETES_BEARER_TOKEN"
-	// PodAnnotationsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing user overwritten PodAnnotations
+	// PodAnnotationsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
+	// user overwritten PodAnnotations
 	PodAnnotationsOverwriteVariablePrefix = "KUBERNETES_POD_ANNOTATIONS_"
 	// CPULimitOverwriteVariableValue is the key for the JobVariable containing user overwritten cpu limit
 	CPULimitOverwriteVariableValue = "KUBERNETES_CPU_LIMIT"
@@ -69,55 +70,103 @@ type overwrites struct {
 	memoryRequest  string
 }
 
-func createOverwrites(config *common.KubernetesConfig, variables common.JobVariables, logger common.BuildLogger) (*overwrites, error) {
+func createOverwrites(
+	config *common.KubernetesConfig,
+	variables common.JobVariables,
+	logger common.BuildLogger) (*overwrites, error) {
 	var err error
 	o := &overwrites{}
 
 	variables = variables.Expand()
 
 	namespaceOverwrite := variables.Get(NamespaceOverwriteVariableName)
-	o.namespace, err = o.evaluateOverwrite("Namespace", config.Namespace, config.NamespaceOverwriteAllowed, namespaceOverwrite, logger)
+	o.namespace, err = o.evaluateOverwrite(
+		"Namespace",
+		config.Namespace,
+		config.NamespaceOverwriteAllowed,
+		namespaceOverwrite,
+		logger)
 	if err != nil {
 		return nil, err
 	}
 
 	serviceAccountOverwrite := variables.Get(ServiceAccountOverwriteVariableName)
-	o.serviceAccount, err = o.evaluateOverwrite("ServiceAccount", config.ServiceAccount, config.ServiceAccountOverwriteAllowed, serviceAccountOverwrite, logger)
+	o.serviceAccount, err = o.evaluateOverwrite(
+		"ServiceAccount",
+		config.ServiceAccount,
+		config.ServiceAccountOverwriteAllowed,
+		serviceAccountOverwrite,
+		logger)
 	if err != nil {
 		return nil, err
 	}
 
 	bearerTokenOverwrite := variables.Get(BearerTokenOverwriteVariableValue)
-	o.bearerToken, err = o.evaluateBoolControlledOverwrite("BearerToken", config.BearerToken, config.BearerTokenOverwriteAllowed, bearerTokenOverwrite, logger)
+	o.bearerToken, err = o.evaluateBoolControlledOverwrite(
+		"BearerToken",
+		config.BearerToken,
+		config.BearerTokenOverwriteAllowed,
+		bearerTokenOverwrite,
+		logger)
 	if err != nil {
 		return nil, err
 	}
 
-	o.podAnnotations, err = o.evaluateMapOverwrite("PodAnnotations", config.PodAnnotations, config.PodAnnotationsOverwriteAllowed, variables, PodAnnotationsOverwriteVariablePrefix, logger)
+	o.podAnnotations, err = o.evaluateMapOverwrite(
+		"PodAnnotations",
+		config.PodAnnotations,
+		config.PodAnnotationsOverwriteAllowed,
+		variables,
+		PodAnnotationsOverwriteVariablePrefix,
+		logger)
 	if err != nil {
 		return nil, err
 	}
 
 	cpuLimitOverwrite := variables.Get(CPULimitOverwriteVariableValue)
-	o.cpuLimit, err = o.evaluateMaxResourceOverwrite("CPULimit", config.CPULimit, config.CPULimitOverwriteMaxAllowed, cpuLimitOverwrite, logger)
+	o.cpuLimit, err = o.evaluateMaxResourceOverwrite(
+		"CPULimit",
+		config.CPULimit,
+		config.CPULimitOverwriteMaxAllowed,
+		cpuLimitOverwrite,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	cpuRequestOverwrite := variables.Get(CPURequestOverwriteVariableValue)
-	o.cpuRequest, err = o.evaluateMaxResourceOverwrite("CPURequest", config.CPURequest, config.CPURequestOverwriteMaxAllowed, cpuRequestOverwrite, logger)
+	o.cpuRequest, err = o.evaluateMaxResourceOverwrite(
+		"CPURequest",
+		config.CPURequest,
+		config.CPURequestOverwriteMaxAllowed,
+		cpuRequestOverwrite,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	memoryLimitOverwrite := variables.Get(MemoryLimitOverwriteVariableValue)
-	o.memoryLimit, err = o.evaluateMaxResourceOverwrite("MemoryLimit", config.MemoryLimit, config.MemoryLimitOverwriteMaxAllowed, memoryLimitOverwrite, logger)
+	o.memoryLimit, err = o.evaluateMaxResourceOverwrite(
+		"MemoryLimit",
+		config.MemoryLimit,
+		config.MemoryLimitOverwriteMaxAllowed,
+		memoryLimitOverwrite,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	memoryRequestOverwrite := variables.Get(MemoryRequestOverwriteVariableValue)
-	o.memoryRequest, err = o.evaluateMaxResourceOverwrite("MemoryRequest", config.MemoryRequest, config.MemoryRequestOverwriteMaxAllowed, memoryRequestOverwrite, logger)
+	o.memoryRequest, err = o.evaluateMaxResourceOverwrite(
+		"MemoryRequest",
+		config.MemoryRequest,
+		config.MemoryRequestOverwriteMaxAllowed,
+		memoryRequestOverwrite,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -125,14 +174,22 @@ func createOverwrites(config *common.KubernetesConfig, variables common.JobVaria
 	return o, nil
 }
 
-func (o *overwrites) evaluateBoolControlledOverwrite(fieldName, value string, canOverride bool, overwriteValue string, logger common.BuildLogger) (string, error) {
+func (o *overwrites) evaluateBoolControlledOverwrite(
+	fieldName, value string,
+	canOverride bool,
+	overwriteValue string,
+	logger common.BuildLogger,
+) (string, error) {
 	if canOverride {
 		return o.evaluateOverwrite(fieldName, value, ".+", overwriteValue, logger)
 	}
 	return o.evaluateOverwrite(fieldName, value, "", overwriteValue, logger)
 }
 
-func (o *overwrites) evaluateOverwrite(fieldName, value, regex, overwriteValue string, logger common.BuildLogger) (string, error) {
+func (o *overwrites) evaluateOverwrite(
+	fieldName, value, regex, overwriteValue string,
+	logger common.BuildLogger,
+) (string, error) {
 	if regex == "" {
 		logger.Debugln("Regex allowing overrides for", fieldName, "is empty, disabling override.")
 		return value, nil
@@ -178,7 +235,14 @@ func splitMapOverwrite(str string) (string, string, error) {
 	return "", "", &malformedOverwriteError{value: str, pattern: "k=v"}
 }
 
-func (o *overwrites) evaluateMapOverwrite(fieldName string, values map[string]string, regex string, variables common.JobVariables, variablesSelector string, logger common.BuildLogger) (map[string]string, error) {
+func (o *overwrites) evaluateMapOverwrite(
+	fieldName string,
+	values map[string]string,
+	regex string,
+	variables common.JobVariables,
+	variablesSelector string,
+	logger common.BuildLogger,
+) (map[string]string, error) {
 	if regex == "" {
 		logger.Debugln("Regex allowing overrides for", fieldName, "is empty, disabling override.")
 		return values, nil
@@ -207,7 +271,10 @@ func (o *overwrites) evaluateMapOverwrite(fieldName string, values map[string]st
 	return finalValues, nil
 }
 
-func (o *overwrites) evaluateMaxResourceOverwrite(fieldName, value, maxResource, overwriteValue string, logger common.BuildLogger) (string, error) {
+func (o *overwrites) evaluateMaxResourceOverwrite(
+	fieldName, value, maxResource, overwriteValue string,
+	logger common.BuildLogger,
+) (string, error) {
 	if maxResource == "" {
 		logger.Debugln("setting allowing overrides for", fieldName, "is empty, disabling override.")
 		return value, nil

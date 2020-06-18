@@ -47,7 +47,13 @@ func (v *AppVersionInfo) Variables() JobVariables {
 	return JobVariables{
 		{Key: "CI_RUNNER_VERSION", Value: v.Version, Public: true, Internal: true, File: false},
 		{Key: "CI_RUNNER_REVISION", Value: v.Revision, Public: true, Internal: true, File: false},
-		{Key: "CI_RUNNER_EXECUTABLE_ARCH", Value: fmt.Sprintf("%s/%s", v.OS, v.Architecture), Public: true, Internal: true, File: false},
+		{
+			Key:      "CI_RUNNER_EXECUTABLE_ARCH",
+			Value:    fmt.Sprintf("%s/%s", v.OS, v.Architecture),
+			Public:   true,
+			Internal: true,
+			File:     false,
+		},
 	}
 }
 

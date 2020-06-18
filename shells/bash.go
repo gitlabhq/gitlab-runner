@@ -55,6 +55,10 @@ func (b *BashWriter) Line(text string) {
 	b.WriteString(strings.Repeat("  ", b.indent) + text + "\n")
 }
 
+func (b *BashWriter) Linef(format string, arguments ...interface{}) {
+	b.Line(fmt.Sprintf(format, arguments...))
+}
+
 func (b *BashWriter) CheckForErrors() {
 }
 
@@ -93,33 +97,33 @@ func (b *BashWriter) EnvVariableKey(name string) string {
 func (b *BashWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
-		b.Line(fmt.Sprintf("mkdir -p %q", helpers.ToSlash(b.TemporaryPath)))
-		b.Line(fmt.Sprintf("echo -n %s > %q", helpers.ShellEscape(variable.Value), variableFile))
-		b.Line(fmt.Sprintf("export %s=%q", helpers.ShellEscape(variable.Key), variableFile))
+		b.Linef("mkdir -p %q", helpers.ToSlash(b.TemporaryPath))
+		b.Linef("echo -n %s > %q", helpers.ShellEscape(variable.Value), variableFile)
+		b.Linef("export %s=%q", helpers.ShellEscape(variable.Key), variableFile)
 	} else {
-		b.Line(fmt.Sprintf("export %s=%s", helpers.ShellEscape(variable.Key), helpers.ShellEscape(variable.Value)))
+		b.Linef("export %s=%s", helpers.ShellEscape(variable.Key), helpers.ShellEscape(variable.Value))
 	}
 }
 
 func (b *BashWriter) IfDirectory(path string) {
-	b.Line(fmt.Sprintf("if [[ -d %q ]]; then", path))
+	b.Linef("if [[ -d %q ]]; then", path)
 	b.Indent()
 }
 
 func (b *BashWriter) IfFile(path string) {
-	b.Line(fmt.Sprintf("if [[ -e %q ]]; then", path))
+	b.Linef("if [[ -e %q ]]; then", path)
 	b.Indent()
 }
 
 func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
-	b.Line(fmt.Sprintf("if %s >/dev/null 2>/dev/null; then", cmdline))
+	b.Linef("if %s >/dev/null 2>/dev/null; then", cmdline)
 	b.Indent()
 }
 
 func (b *BashWriter) IfCmdWithOutput(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
-	b.Line(fmt.Sprintf("if %s; then", cmdline))
+	b.Linef("if %s; then", cmdline)
 	b.Indent()
 }
 
@@ -264,14 +268,22 @@ func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.She
 	return b.generateScript(w, buildStage, info)
 }
 
-func (b *BashShell) generateScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
+func (b *BashShell) generateScript(
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) (string, error) {
 	b.ensurePrepareStageHostnameMessage(w, buildStage, info)
 	err := b.writeScript(w, buildStage, info)
 	script := w.Finish(info.Build.IsDebugTraceEnabled())
 	return script, err
 }
 
-func (b *BashShell) ensurePrepareStageHostnameMessage(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) {
+func (b *BashShell) ensurePrepareStageHostnameMessage(
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) {
 	if buildStage == common.BuildStagePrepare {
 		if len(info.Build.Hostname) != 0 {
 			w.Line("echo " + strconv.Quote("Running on $(hostname) via "+info.Build.Hostname+"..."))

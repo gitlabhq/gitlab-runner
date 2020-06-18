@@ -77,13 +77,14 @@ func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
 	}
 
 	for disableDelayedErrorLevelExpansion, expectedCmd := range cases {
-		t.Run("disableDelayedErrorLevelExpansion_"+strconv.FormatBool(disableDelayedErrorLevelExpansion), func(t *testing.T) {
-			writer := &CmdWriter{
-				disableDelayedErrorLevelExpansion: disableDelayedErrorLevelExpansion,
-			}
-			writer.Command("foo")
+		t.Run(
+			"disableDelayedErrorLevelExpansion_"+strconv.FormatBool(disableDelayedErrorLevelExpansion),
+			func(t *testing.T) {
+				writer := &CmdWriter{}
+				writer.disableDelayedErrorLevelExpansion = disableDelayedErrorLevelExpansion
+				writer.Command("foo")
 
-			assert.Equal(t, expectedCmd, writer.String())
-		})
+				assert.Equal(t, expectedCmd, writer.String())
+			})
 	}
 }

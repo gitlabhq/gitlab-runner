@@ -299,7 +299,11 @@ func (c *clientJobTrace) setupLogLimit() {
 	c.buffer.SetLimit(bytesLimit)
 }
 
-func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentials *common.JobCredentials) (*clientJobTrace, error) {
+func newJobTrace(
+	client common.Network,
+	config common.RunnerConfig,
+	jobCredentials *common.JobCredentials,
+) (*clientJobTrace, error) {
 	buffer, err := trace.New()
 	if err != nil {
 		return nil, err

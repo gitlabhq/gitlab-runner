@@ -69,7 +69,12 @@ func prepareFakeBuild(tc cacheOperationTest) *common.Build {
 	return build
 }
 
-func testCacheOperation(t *testing.T, operationName string, operation func(build *common.Build, key string) *url.URL, tc cacheOperationTest) {
+func testCacheOperation(
+	t *testing.T,
+	operationName string,
+	operation func(build *common.Build, key string) *url.URL,
+	tc cacheOperationTest,
+) {
 	t.Run(operationName, func(t *testing.T) {
 		hook := test.NewGlobal()
 

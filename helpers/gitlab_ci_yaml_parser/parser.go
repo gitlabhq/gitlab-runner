@@ -162,7 +162,9 @@ func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) comm
 	}
 }
 
-func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildVariables common.JobVariables, err error) {
+func (c *GitLabCiYamlParser) buildVariables(
+	configVariables interface{},
+) (buildVariables common.JobVariables, err error) {
 	if variables, ok := configVariables.(map[string]interface{}); ok {
 		for key, value := range variables {
 			if valueText, ok := value.(string); ok {

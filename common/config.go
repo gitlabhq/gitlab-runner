@@ -73,6 +73,7 @@ func (p DockerPullPolicy) Get() (DockerPullPolicy, error) {
 	return p, nil
 }
 
+//nolint:lll
 type DockerConfig struct {
 	docker.Credentials
 	Hostname                   string            `toml:"hostname,omitempty" json:"hostname" long:"hostname" env:"DOCKER_HOSTNAME" description:"Custom container hostname"`
@@ -115,6 +116,7 @@ type DockerConfig struct {
 	HelperImage                string            `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"DOCKER_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 }
 
+//nolint:lll
 type DockerMachine struct {
 	IdleCount      int      `long:"idle-nodes" env:"MACHINE_IDLE_COUNT" description:"Maximum idle machines"`
 	IdleTime       int      `toml:"IdleTime,omitzero" long:"idle-time" env:"MACHINE_IDLE_TIME" description:"Minimum time after node can be destroyed"`
@@ -133,6 +135,7 @@ type DockerMachine struct {
 	offPeakTimePeriods *timeperiod.TimePeriod // DEPRECATED
 }
 
+//nolint:lll
 type DockerMachineAutoscaling struct {
 	Periods         []string `long:"periods" description:"List of crontab expressions for this autoscaling configuration"`
 	Timezone        string   `long:"timezone" description:"Timezone for the periods (defaults to Local)"`
@@ -141,6 +144,7 @@ type DockerMachineAutoscaling struct {
 	compiledPeriods *timeperiod.TimePeriod
 }
 
+//nolint:lll
 type ParallelsConfig struct {
 	BaseName         string `toml:"base_name" json:"base_name" long:"base-name" env:"PARALLELS_BASE_NAME" description:"VM name to be used"`
 	TemplateName     string `toml:"template_name,omitempty" json:"template_name" long:"template-name" env:"PARALLELS_TEMPLATE_NAME" description:"VM template to be created"`
@@ -148,12 +152,14 @@ type ParallelsConfig struct {
 	TimeServer       string `toml:"time_server,omitempty" json:"time_server" long:"time-server" env:"PARALLELS_TIME_SERVER" description:"Timeserver to sync the guests time from. Defaults to time.apple.com"`
 }
 
+//nolint:lll
 type VirtualBoxConfig struct {
 	BaseName         string `toml:"base_name" json:"base_name" long:"base-name" env:"VIRTUALBOX_BASE_NAME" description:"VM name to be used"`
 	BaseSnapshot     string `toml:"base_snapshot,omitempty" json:"base_snapshot" long:"base-snapshot" env:"VIRTUALBOX_BASE_SNAPSHOT" description:"Name or UUID of a specific VM snapshot to clone"`
 	DisableSnapshots bool   `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
 }
 
+//nolint:lll
 type CustomConfig struct {
 	ConfigExec        string   `toml:"config_exec,omitempty" json:"config_exec" long:"config-exec" env:"CUSTOM_CONFIG_EXEC" description:"Executable that allows to inject configuration values to the executor"`
 	ConfigArgs        []string `toml:"config_args,omitempty" json:"config_args" long:"config-args" description:"Arguments for the config executable"`
@@ -176,7 +182,8 @@ type CustomConfig struct {
 
 type KubernetesPullPolicy string
 
-// Get returns one of the predefined values in kubernetes notation or returns an error if the value can't match the predefined
+// Get returns one of the predefined values in kubernetes notation
+// or returns an error if the value can't match the predefined
 func (p KubernetesPullPolicy) Get() (KubernetesPullPolicy, error) {
 	switch {
 	case p == "":
@@ -191,6 +198,7 @@ func (p KubernetesPullPolicy) Get() (KubernetesPullPolicy, error) {
 	return "", fmt.Errorf("unsupported kubernetes-pull-policy: %v", p)
 }
 
+//nolint:lll
 type KubernetesConfig struct {
 	Host                             string                       `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
 	CertFile                         string                       `toml:"cert_file,omitempty" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
@@ -244,6 +252,7 @@ type KubernetesVolumes struct {
 	EmptyDirs  []KubernetesEmptyDir  `toml:"empty_dir" description:"The empty dirs which will be mounted"`
 }
 
+//nolint:lll
 type KubernetesConfigMap struct {
 	Name      string            `toml:"name" json:"name" description:"The name of the volume and ConfigMap to use"`
 	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
@@ -264,6 +273,7 @@ type KubernetesPVC struct {
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 }
 
+//nolint:lll
 type KubernetesSecret struct {
 	Name      string            `toml:"name" json:"name" description:"The name of the volume and Secret to use"`
 	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
@@ -277,6 +287,7 @@ type KubernetesEmptyDir struct {
 	Medium    string `toml:"medium,omitempty" description:"Set to 'Memory' to have a tmpfs"`
 }
 
+//nolint:lll
 type KubernetesPodSecurityContext struct {
 	FSGroup            *int64  `toml:"fs_group,omitempty" long:"fs-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_FS_GROUP" description:"A special supplemental group that applies to all containers in a pod"`
 	RunAsGroup         *int64  `toml:"run_as_group,omitempty" long:"run-as-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_GROUP" description:"The GID to run the entrypoint of the container process"`
@@ -297,6 +308,7 @@ func (s *Service) ToImageDefinition() Image {
 	}
 }
 
+//nolint:lll
 type RunnerCredentials struct {
 	URL         string `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"Runner URL"`
 	Token       string `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token"`
@@ -305,17 +317,20 @@ type RunnerCredentials struct {
 	TLSKeyFile  string `toml:"tls-key-file,omitempty" json:"tls-key-file" long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth when using HTTPS"`
 }
 
+//nolint:lll
 type CacheGCSCredentials struct {
 	AccessID   string `toml:"AccessID,omitempty" long:"access-id" env:"CACHE_GCS_ACCESS_ID" description:"ID of GCP Service Account used to access the storage"`
 	PrivateKey string `toml:"PrivateKey,omitempty" long:"private-key" env:"CACHE_GCS_PRIVATE_KEY" description:"Private key used to sign GCS requests"`
 }
 
+//nolint:lll
 type CacheGCSConfig struct {
 	CacheGCSCredentials
 	CredentialsFile string `toml:"CredentialsFile,omitempty" long:"credentials-file" env:"GOOGLE_APPLICATION_CREDENTIALS" description:"File with GCP credentials, containing AccessID and PrivateKey"`
 	BucketName      string `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_GCS_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
 }
 
+//nolint:lll
 type CacheS3Config struct {
 	ServerAddress  string `toml:"ServerAddress,omitempty" long:"server-address" env:"CACHE_S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
 	AccessKey      string `toml:"AccessKey,omitempty" long:"access-key" env:"CACHE_S3_ACCESS_KEY" description:"S3 Access Key"`
@@ -325,6 +340,7 @@ type CacheS3Config struct {
 	Insecure       bool   `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_INSECURE" description:"Use insecure mode (without https)"`
 }
 
+//nolint:lll
 type CacheConfig struct {
 	Type   string `toml:"Type,omitempty" long:"type" env:"CACHE_TYPE" description:"Select caching method"`
 	Path   string `toml:"Path,omitempty" long:"path" env:"CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
@@ -334,6 +350,7 @@ type CacheConfig struct {
 	GCS *CacheGCSConfig `toml:"gcs,omitempty" json:"gcs" namespace:"gcs"`
 }
 
+//nolint:lll
 type RunnerSettings struct {
 	Executor  string `toml:"executor" json:"executor" long:"executor" env:"RUNNER_EXECUTOR" required:"true" description:"Select executor, eg. shell, docker, etc."`
 	BuildsDir string `toml:"builds_dir,omitempty" json:"builds_dir" long:"builds-dir" env:"RUNNER_BUILDS_DIR" description:"Directory where builds are stored"`
@@ -361,6 +378,7 @@ type RunnerSettings struct {
 	Custom     *CustomConfig     `toml:"custom,omitempty" json:"custom" group:"custom executor" namespace:"custom"`
 }
 
+//nolint:lll
 type RunnerConfig struct {
 	Name               string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
 	Limit              int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
@@ -371,12 +389,14 @@ type RunnerConfig struct {
 	RunnerSettings
 }
 
+//nolint:lll
 type SessionServer struct {
 	ListenAddress    string `toml:"listen_address,omitempty" json:"listen_address" description:"Address that the runner will communicate directly with"`
 	AdvertiseAddress string `toml:"advertise_address,omitempty" json:"advertise_address" description:"Address the runner will expose to the world to connect to the session server"`
 	SessionTimeout   int    `toml:"session_timeout,omitempty" json:"session_timeout" description:"How long a terminal session can be active after a build completes, in seconds"`
 }
 
+//nolint:lll
 type Config struct {
 	ListenAddress string        `toml:"listen_address,omitempty" json:"listen_address"`
 	SessionServer SessionServer `toml:"session_server,omitempty" json:"session_server"`
@@ -392,6 +412,7 @@ type Config struct {
 	Loaded        bool            `toml:"-"`
 }
 
+//nolint:lll
 type CustomBuildDir struct {
 	Enabled bool `toml:"enabled,omitempty" json:"enabled" long:"enabled" env:"CUSTOM_BUILD_DIR_ENABLED" description:"Enable job specific build directories"`
 }

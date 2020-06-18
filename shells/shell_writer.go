@@ -1,6 +1,8 @@
 package shells
 
-import "gitlab.com/gitlab-org/gitlab-runner/common"
+import (
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+)
 
 type ShellWriter interface {
 	EnvVariableKey(name string) string

@@ -147,21 +147,65 @@ func TestRegisterRunner(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res := c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
+	res := c.RegisterRunner(
+		validToken,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			Active:      true,
+		})
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
 	}
 
-	res = c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "invalid description", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
+	res = c.RegisterRunner(
+		validToken,
+		RegisterRunnerParameters{
+			Description: "invalid description",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			AccessLevel: "not_protected",
+			Active:      true,
+		})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(invalidToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
+	res = c.RegisterRunner(
+		invalidToken,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			AccessLevel: "not_protected",
+			Active:      true,
+		})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(otherToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
+	res = c.RegisterRunner(
+		otherToken,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			AccessLevel: "not_protected",
+			Active:      true,
+		})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(brokenCredentials, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
+	res = c.RegisterRunner(
+		brokenCredentials,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			AccessLevel: "not_protected",
+			Active:      true,
+		})
 	assert.Nil(t, res)
 }
 
@@ -595,16 +639,32 @@ func TestUpdateJob(t *testing.T) {
 	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state", FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown job")
 
-	state = c.UpdateJob(brokenConfig, jobCredentials, UpdateJobInfo{ID: 4, State: "state", FailureReason: ""})
+	state = c.UpdateJob(
+		brokenConfig,
+		jobCredentials,
+		UpdateJobInfo{ID: 4, State: "state", FailureReason: ""},
+	)
 	assert.Equal(t, UpdateAbort, state)
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: "script_failure"})
+	state = c.UpdateJob(
+		config,
+		jobCredentials,
+		UpdateJobInfo{ID: 10, State: "failed", FailureReason: "script_failure"},
+	)
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: "unknown_failure_reason"})
+	state = c.UpdateJob(
+		config,
+		jobCredentials,
+		UpdateJobInfo{ID: 10, State: "failed", FailureReason: "unknown_failure_reason"},
+	)
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: ""})
+	state = c.UpdateJob(
+		config,
+		jobCredentials,
+		UpdateJobInfo{ID: 10, State: "failed", FailureReason: ""},
+	)
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 }
 
@@ -672,7 +732,14 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 var patchToken = "token"
 var patchTraceContent = []byte("trace trace trace")
 
-func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int)) (*httptest.Server, *GitLabClient, RunnerConfig) {
+func getPatchServer(
+	t *testing.T,
+	handler func(
+		w http.ResponseWriter,
+		r *http.Request,
+		body []byte,
+		offset, limit int),
+) (*httptest.Server, *GitLabClient, RunnerConfig) {
 	patchHandler := func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v4/jobs/1/trace" {
 			w.WriteHeader(http.StatusNotFound)
@@ -1096,7 +1163,13 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 	checkTestArtifactsUploadHandlerContent(w, r, string(body))
 }
 
-func uploadArtifacts(client *GitLabClient, config JobCredentials, artifactsFile, artifactType string, artifactFormat ArtifactFormat) UploadState {
+func uploadArtifacts(
+	client *GitLabClient,
+	config JobCredentials,
+	artifactsFile,
+	artifactType string,
+	artifactFormat ArtifactFormat,
+) UploadState {
 	file, err := os.Open(artifactsFile)
 	if err != nil {
 		return UploadFailed

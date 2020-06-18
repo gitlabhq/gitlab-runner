@@ -136,7 +136,11 @@ func setupProcessMocks(t *testing.T) (*process.MockKillWaiter, *process.MockComm
 	oldNewProcessKillWaiter := newProcessKillWaiter
 	oldCmd := newCommander
 
-	newProcessKillWaiter = func(logger process.Logger, gracefulKillTimeout time.Duration, forceKillTimeout time.Duration) process.KillWaiter {
+	newProcessKillWaiter = func(
+		logger process.Logger,
+		gracefulKillTimeout time.Duration,
+		forceKillTimeout time.Duration,
+	) process.KillWaiter {
 		return mProcessKillWaiter
 	}
 

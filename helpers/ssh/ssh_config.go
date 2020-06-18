@@ -1,5 +1,6 @@
 package ssh
 
+//nolint:lll
 type Config struct {
 	User         string `toml:"user,omitempty" json:"user" long:"user" env:"SSH_USER" description:"User name"`
 	Password     string `toml:"password,omitempty" json:"password" long:"password" env:"SSH_PASSWORD" description:"User password"`

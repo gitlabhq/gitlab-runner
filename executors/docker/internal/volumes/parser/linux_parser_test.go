@@ -69,8 +69,13 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			expectedParts: &Volume{Source: "/source", Destination: "/destination", BindPropagation: "rslave"},
 		},
 		"mode with bind propagation": {
-			volumeSpec:    "/source:/destination:ro,rslave",
-			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "ro", BindPropagation: "rslave"},
+			volumeSpec: "/source:/destination:ro,rslave",
+			expectedParts: &Volume{
+				Source:          "/source",
+				Destination:     "/destination",
+				Mode:            "ro",
+				BindPropagation: "rslave",
+			},
 		},
 		"unsupported bind propagation": {
 			volumeSpec:    "/source:/destination:unknown",
@@ -89,8 +94,13 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 		// https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1632#note_240079623
 		// for the discussion and rationale.
 		"too much colons for bind propagation": {
-			volumeSpec:    "/source:/destination:rw:rslave",
-			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "rw", BindPropagation: "rslave"},
+			volumeSpec: "/source:/destination:rw:rslave",
+			expectedParts: &Volume{
+				Source:          "/source",
+				Destination:     "/destination",
+				Mode:            "rw",
+				BindPropagation: "rslave",
+			},
 		},
 	}
 

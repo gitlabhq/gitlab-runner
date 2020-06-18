@@ -129,27 +129,33 @@ type serviceCreateResponse struct {
 func (s *executor) setupResources() error {
 	var err error
 
-	if s.buildLimits, err = limits(s.configurationOverwrites.cpuLimit, s.configurationOverwrites.memoryLimit); err != nil {
+	s.buildLimits, err = limits(s.configurationOverwrites.cpuLimit, s.configurationOverwrites.memoryLimit)
+	if err != nil {
 		return fmt.Errorf("invalid build limits specified: %w", err)
 	}
 
-	if s.buildRequests, err = limits(s.configurationOverwrites.cpuRequest, s.configurationOverwrites.memoryRequest); err != nil {
+	s.buildRequests, err = limits(s.configurationOverwrites.cpuRequest, s.configurationOverwrites.memoryRequest)
+	if err != nil {
 		return fmt.Errorf("invalid build requests specified: %w", err)
 	}
 
-	if s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit); err != nil {
+	s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit)
+	if err != nil {
 		return fmt.Errorf("invalid service limits specified: %w", err)
 	}
 
-	if s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest); err != nil {
+	s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest)
+	if err != nil {
 		return fmt.Errorf("invalid service requests specified: %w", err)
 	}
 
-	if s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit); err != nil {
+	s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit)
+	if err != nil {
 		return fmt.Errorf("invalid helper limits specified: %w", err)
 	}
 
-	if s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest); err != nil {
+	s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest)
+	if err != nil {
 		return fmt.Errorf("invalid helper requests specified: %w", err)
 	}
 
@@ -369,8 +375,8 @@ func (s *executor) processLogs(ctx context.Context) {
 func (s *executor) setupScriptsConfigMap() error {
 	s.Debugln("Setting up scripts config map")
 
-	// After issue https://gitlab.com/gitlab-org/gitlab-runner/issues/10342 is resolved and the legacy execution mode is removed
-	// we can remove the manual construction of trapShell and just use "bash+trap"
+	// After issue https://gitlab.com/gitlab-org/gitlab-runner/issues/10342 is resolved and
+	// the legacy execution mode is removed we can remove the manual construction of trapShell and just use "bash+trap"
 	// in the exec options
 	bashShell, ok := common.GetShell(s.Shell().Shell).(*shells.BashShell)
 	if !ok {
@@ -448,7 +454,9 @@ func (s *executor) cleanupServices() {
 func (s *executor) deleteKubernetesService(serviceName string, ch chan<- serviceDeleteResponse, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	err := s.kubeClient.CoreV1().Services(s.configurationOverwrites.namespace).Delete(serviceName, &metav1.DeleteOptions{})
+	err := s.kubeClient.CoreV1().
+		Services(s.configurationOverwrites.namespace).
+		Delete(serviceName, &metav1.DeleteOptions{})
 	ch <- serviceDeleteResponse{serviceName: serviceName, err: err}
 }
 
@@ -460,20 +468,29 @@ func (s *executor) cleanupResources() {
 		}
 	}
 	if s.credentials != nil {
-		err := s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Delete(s.credentials.Name, &metav1.DeleteOptions{})
+		err := s.kubeClient.CoreV1().
+			Secrets(s.configurationOverwrites.namespace).
+			Delete(s.credentials.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
 	}
 	if s.configMap != nil {
-		err := s.kubeClient.CoreV1().ConfigMaps(s.configurationOverwrites.namespace).Delete(s.configMap.Name, &metav1.DeleteOptions{})
+		err := s.kubeClient.CoreV1().
+			ConfigMaps(s.configurationOverwrites.namespace).
+			Delete(s.configMap.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
 		}
 	}
 }
 
-func (s *executor) buildContainer(name, image string, imageDefinition common.Image, requests, limits api.ResourceList, containerCommand ...string) api.Container {
+func (s *executor) buildContainer(
+	name, image string,
+	imageDefinition common.Image,
+	requests, limits api.ResourceList,
+	containerCommand ...string,
+) api.Container {
 	privileged := false
 	containerPorts := make([]api.ContainerPort, len(imageDefinition.Ports))
 	proxyPorts := make([]proxy.Port, len(imageDefinition.Ports))
@@ -906,7 +923,12 @@ func (s *executor) setupBuildPod() error {
 	return nil
 }
 
-func (s *executor) preparePodConfig(labels, annotations map[string]string, services []api.Container, imagePullSecrets []api.LocalObjectReference, hostAlias *api.HostAlias) api.Pod {
+func (s *executor) preparePodConfig(
+	labels, annotations map[string]string,
+	services []api.Container,
+	imagePullSecrets []api.LocalObjectReference,
+	hostAlias *api.HostAlias,
+) api.Pod {
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
 
 	pod := api.Pod{
@@ -924,8 +946,22 @@ func (s *executor) preparePodConfig(labels, annotations map[string]string, servi
 			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
 			Containers: append([]api.Container{
 				// TODO use the build and helper template here
-				s.buildContainer(buildContainerName, buildImage, s.options.Image, s.buildRequests, s.buildLimits, s.BuildShell.DockerCommand...),
-				s.buildContainer(helperContainerName, s.getHelperImage(), common.Image{}, s.helperRequests, s.helperLimits, s.BuildShell.DockerCommand...),
+				s.buildContainer(
+					buildContainerName,
+					buildImage,
+					s.options.Image,
+					s.buildRequests,
+					s.buildLimits,
+					s.BuildShell.DockerCommand...,
+				),
+				s.buildContainer(
+					helperContainerName,
+					s.getHelperImage(),
+					common.Image{},
+					s.helperRequests,
+					s.helperLimits,
+					s.BuildShell.DockerCommand...,
+				),
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
@@ -961,7 +997,11 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 		for i, port := range serviceProxy.Settings.Ports {
 			// When there is more than one port Kubernetes requires a port name
 			portName := fmt.Sprintf("%s-%d", serviceName, port.Number)
-			servicePorts[i] = api.ServicePort{Port: int32(port.Number), TargetPort: intstr.FromInt(port.Number), Name: portName}
+			servicePorts[i] = api.ServicePort{
+				Port:       int32(port.Number),
+				TargetPort: intstr.FromInt(port.Number),
+				Name:       portName,
+			}
 		}
 
 		serviceConfig := s.prepareServiceConfig(serviceName, servicePorts)
@@ -1002,7 +1042,12 @@ func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) ap
 	}
 }
 
-func (s *executor) createKubernetesService(service *api.Service, proxySettings *proxy.Settings, ch chan<- serviceCreateResponse, wg *sync.WaitGroup) {
+func (s *executor) createKubernetesService(
+	service *api.Service,
+	proxySettings *proxy.Settings,
+	ch chan<- serviceCreateResponse,
+	wg *sync.WaitGroup,
+) {
 	defer wg.Done()
 
 	service, err := s.kubeClient.CoreV1().Services(s.pod.Namespace).Create(service)
@@ -1099,7 +1144,12 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 	return errCh
 }
 
-func (s *executor) runInContainerWithExecLegacy(ctx context.Context, name string, command []string, script string) <-chan error {
+func (s *executor) runInContainerWithExecLegacy(
+	ctx context.Context,
+	name string,
+	command []string,
+	script string,
+) <-chan error {
 	errCh := make(chan error, 1)
 	go func() {
 		defer close(errCh)

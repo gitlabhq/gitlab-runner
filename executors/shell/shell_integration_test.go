@@ -365,7 +365,12 @@ func assertLFSFileNotDownloaded(t *testing.T, build *common.Build) {
 	lfsFilePath := filepath.Join(build.FullProjectDir(), "files", "lfs", "file_1.lfs")
 	info, err := os.Stat(lfsFilePath)
 	require.NoError(t, err)
-	assert.True(t, info.Size() < common.FilesLFSFile1LFSsize, "invalid size of %q file - expected to be less then downloaded LFS object", lfsFilePath)
+	assert.True(
+		t,
+		info.Size() < common.FilesLFSFile1LFSsize,
+		"invalid size of %q file - expected to be less then downloaded LFS object",
+		lfsFilePath,
+	)
 }
 
 func assertLFSFileNotPresent(t *testing.T, build *common.Build) {
@@ -473,7 +478,10 @@ func TestBuildWithGitStrategyFetchWithUserDisabledLFS(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
+		)
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -483,7 +491,10 @@ func TestBuildWithGitStrategyFetchWithUserDisabledLFS(t *testing.T) {
 		assertLFSFileNotPresent(t, build)
 
 		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
+		)
 
 		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -594,8 +605,10 @@ func TestBuildWithGitStrategyCloneWithUserDisabledLFS(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
+			common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
@@ -677,9 +690,12 @@ func TestBuildWithSubmoduleLFSDisabledSmudging(t *testing.T) {
 		assert.NoError(t, err)
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
-		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true})
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+			common.JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: "1", Public: true},
+		)
 		build.GitInfo = common.GetSubmoduleLFSGitInfo(build.GitInfo.RepoURL)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -701,7 +717,10 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 				build, cleanup := newBuild(t, successfulBuild, shell)
 				defer cleanup()
 
-				build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"})
+				build.Variables = append(
+					build.Variables,
+					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "none"},
+				)
 
 				out, err := buildtest.RunBuildReturningOutput(t, build)
 				assert.NoError(t, err)
@@ -1064,7 +1083,10 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 	assert.NotContains(t, out, "Created fresh repository")
 	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
-	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"})
+	build.Variables = append(
+		build.Variables,
+		common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"},
+	)
 	out, err = buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.NotContains(t, out, "Created fresh repository")
@@ -1180,9 +1202,11 @@ func TestBuildWithGitCleanFlags(t *testing.T) {
 		build, cleanup := newBuild(t, jobResponse, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables,
+		build.Variables = append(
+			build.Variables,
 			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
-			common.JobVariable{Key: "GIT_CLEAN_FLAGS", Value: "-ffdx cleanup_file"})
+			common.JobVariable{Key: "GIT_CLEAN_FLAGS", Value: "-ffdx cleanup_file"},
+		)
 
 		// Run build and save file
 		err = buildtest.RunBuild(t, build)

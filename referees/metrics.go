@@ -23,6 +23,7 @@ type MetricsReferee struct {
 	logger        logrus.FieldLogger
 }
 
+//nolint:lll
 type MetricsRefereeConfig struct {
 	PrometheusAddress string   `toml:"prometheus_address,omitempty" json:"prometheus_address" description:"A host:port to a prometheus metrics server"`
 	QueryInterval     int      `toml:"query_interval,omitempty" json:"query_interval" description:"Query interval (in seconds)"`
@@ -85,7 +86,11 @@ func (mr *MetricsReferee) Execute(
 	return bytes.NewReader(output), nil
 }
 
-func (mr *MetricsReferee) queryMetrics(ctx context.Context, query string, queryRange prometheusV1.Range) []model.SamplePair {
+func (mr *MetricsReferee) queryMetrics(
+	ctx context.Context,
+	query string,
+	queryRange prometheusV1.Range,
+) []model.SamplePair {
 	interval := fmt.Sprintf("%.0fs", mr.queryInterval.Seconds())
 
 	query = strings.Replace(query, "{selector}", mr.selector, -1)
@@ -113,7 +118,9 @@ func (mr *MetricsReferee) queryMetrics(ctx context.Context, query string, queryR
 	// ensure matrix result
 	matrix, ok := result.(model.Matrix)
 	if !ok {
-		queryLogger.WithField("result-type", reflect.TypeOf(result)).Info("Failed to type assert result into model.Matrix")
+		queryLogger.
+			WithField("result-type", reflect.TypeOf(result)).
+			Info("Failed to type assert result into model.Matrix")
 		return nil
 	}
 

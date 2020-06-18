@@ -321,6 +321,7 @@ type UpdateJobRequest struct {
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
 }
 
+//nolint:lll
 type JobCredentials struct {
 	ID          int    `long:"id" env:"CI_JOB_ID" description:"The build ID to upload artifacts for"`
 	Token       string `long:"token" env:"CI_JOB_TOKEN" required:"true" description:"Build token"`

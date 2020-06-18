@@ -47,7 +47,14 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 	}{
 		"successful update of permission container": {
 			clientAssertions: func(c *docker.MockClient) {
-				c.On("ContainerCreate", mock.Anything, containerCmdMatcher, volumeBindingsMatcher, mock.Anything, mock.Anything).
+				c.On(
+					"ContainerCreate",
+					mock.Anything,
+					containerCmdMatcher,
+					volumeBindingsMatcher,
+					mock.Anything,
+					mock.Anything,
+				).
 					Return(container.ContainerCreateCreatedBody{ID: permissionContainerID}, nil).
 					Once()
 				c.On("ContainerStart", mock.Anything, permissionContainerID, mock.Anything).
@@ -64,7 +71,14 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 		},
 		"failed to start container container still removed": {
 			clientAssertions: func(c *docker.MockClient) {
-				c.On("ContainerCreate", mock.Anything, containerCmdMatcher, volumeBindingsMatcher, mock.Anything, mock.Anything).
+				c.On(
+					"ContainerCreate",
+					mock.Anything,
+					containerCmdMatcher,
+					volumeBindingsMatcher,
+					mock.Anything,
+					mock.Anything,
+				).
 					Return(container.ContainerCreateCreatedBody{ID: permissionContainerID}, nil).
 					Once()
 				c.On("ContainerStart", mock.Anything, permissionContainerID, mock.Anything).
@@ -79,7 +93,14 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 		},
 		"failed to create container": {
 			clientAssertions: func(c *docker.MockClient) {
-				c.On("ContainerCreate", mock.Anything, containerCmdMatcher, volumeBindingsMatcher, mock.Anything, mock.Anything).
+				c.On(
+					"ContainerCreate",
+					mock.Anything,
+					containerCmdMatcher,
+					volumeBindingsMatcher,
+					mock.Anything,
+					mock.Anything,
+				).
 					Return(container.ContainerCreateCreatedBody{}, testErr).
 					Once()
 			},
@@ -88,7 +109,14 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 		},
 		"container exit code is 1": {
 			clientAssertions: func(c *docker.MockClient) {
-				c.On("ContainerCreate", mock.Anything, containerCmdMatcher, volumeBindingsMatcher, mock.Anything, mock.Anything).
+				c.On(
+					"ContainerCreate",
+					mock.Anything,
+					containerCmdMatcher,
+					volumeBindingsMatcher,
+					mock.Anything,
+					mock.Anything,
+				).
 					Return(container.ContainerCreateCreatedBody{ID: permissionContainerID}, nil).
 					Once()
 				c.On("ContainerStart", mock.Anything, permissionContainerID, mock.Anything).

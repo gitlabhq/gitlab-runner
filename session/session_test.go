@@ -309,7 +309,13 @@ func TestProxy(t *testing.T) {
 	}
 }
 
-func mockProxy(serviceName string, port int, protocol string, portName string, connectionHandler proxy.Requester) *proxy.Proxy {
+func mockProxy(
+	serviceName string,
+	port int,
+	protocol string,
+	portName string,
+	connectionHandler proxy.Requester,
+) *proxy.Proxy {
 	p := &proxy.Proxy{
 		Settings: &proxy.Settings{
 			ServiceName: serviceName,

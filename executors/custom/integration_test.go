@@ -486,7 +486,10 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 	assert.NotContains(t, out, "Created fresh repository")
 	assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 
-	build.Variables = append(build.Variables, common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"})
+	build.Variables = append(
+		build.Variables,
+		common.JobVariable{Key: "ErrorActionPreference", Value: "SilentlyContinue"},
+	)
 	out, err = buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.NotContains(t, out, "Created fresh repository")

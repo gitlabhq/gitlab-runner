@@ -69,6 +69,10 @@ func (b *CmdWriter) Line(text string) {
 	b.WriteString(strings.Repeat("  ", b.indent) + text + "\r\n")
 }
 
+func (b *CmdWriter) Linef(format string, arguments ...interface{}) {
+	b.Line(fmt.Sprintf(format, arguments...))
+}
+
 func (b *CmdWriter) CheckForErrors() {
 	b.checkErrorLevel()
 }
@@ -124,27 +128,27 @@ func (b *CmdWriter) EnvVariableKey(name string) string {
 func (b *CmdWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
-		b.Line(fmt.Sprintf("md %q 2>NUL 1>NUL", batchEscape(helpers.ToBackslash(b.TemporaryPath))))
-		b.Line(fmt.Sprintf("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile)))
-		b.Line("SET " + batchEscapeVariable(variable.Key) + "=" + batchEscape(variableFile))
+		b.Linef("md %q 2>NUL 1>NUL", batchEscape(helpers.ToBackslash(b.TemporaryPath)))
+		b.Linef("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile))
+		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscape(variableFile))
 	} else {
-		b.Line("SET " + batchEscapeVariable(variable.Key) + "=" + batchEscapeVariable(variable.Value))
+		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscapeVariable(variable.Value))
 	}
 }
 
 func (b *CmdWriter) IfDirectory(path string) {
-	b.Line("IF EXIST " + batchQuote(helpers.ToBackslash(path)) + " (")
+	b.Linef("IF EXIST %s (", batchQuote(helpers.ToBackslash(path)))
 	b.Indent()
 }
 
 func (b *CmdWriter) IfFile(path string) {
-	b.Line("IF EXIST " + batchQuote(helpers.ToBackslash(path)) + " (")
+	b.Linef("IF EXIST %s (", batchQuote(helpers.ToBackslash(path)))
 	b.Indent()
 }
 
 func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
-	b.Line(fmt.Sprintf("%s 2>NUL 1>NUL", cmdline))
+	b.Linef("%s 2>NUL 1>NUL", cmdline)
 	errCheck := "IF !errorlevel! EQU 0 ("
 	b.Line(b.updateErrLevelCheck(errCheck))
 	b.Indent()
@@ -176,7 +180,7 @@ func (b *CmdWriter) Cd(path string) {
 
 func (b *CmdWriter) MkDir(path string) {
 	args := batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL"
-	b.Line("dir " + args + " || md " + args)
+	b.Linef("dir %s || md %s", args, args)
 }
 
 func (b *CmdWriter) MkTmpDir(name string) string {
@@ -187,11 +191,11 @@ func (b *CmdWriter) MkTmpDir(name string) string {
 }
 
 func (b *CmdWriter) RmDir(path string) {
-	b.Line("rd /s /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
+	b.Linef("rd /s /q %s 2>NUL 1>NUL", batchQuote(helpers.ToBackslash(path)))
 }
 
 func (b *CmdWriter) RmFile(path string) {
-	b.Line("del /f /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
+	b.Linef("del /f /q %s 2>NUL 1>NUL", batchQuote(helpers.ToBackslash(path)))
 }
 
 func (b *CmdWriter) Printf(format string, arguments ...interface{}) {
@@ -254,7 +258,11 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 	return
 }
 
-func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
+func (b *CmdShell) GenerateScript(
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) (script string, err error) {
+	//nolint:lll
 	w := &CmdWriter{
 		TemporaryPath:                     info.Build.TmpProjectDir(),
 		disableDelayedErrorLevelExpansion: info.Build.IsFeatureFlagOn(featureflags.CmdDisableDelayedErrorLevelExpansion),

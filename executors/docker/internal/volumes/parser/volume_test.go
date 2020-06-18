@@ -36,7 +36,12 @@ func TestVolume_Definition(t *testing.T) {
 			expectedOutput: "source:destination:bindPropagation",
 		},
 		"all values": {
-			volume:         &Volume{Source: "source", Destination: "destination", Mode: "mode", BindPropagation: "bindPropagation"},
+			volume: &Volume{
+				Source:          "source",
+				Destination:     "destination",
+				Mode:            "mode",
+				BindPropagation: "bindPropagation",
+			},
 			expectedOutput: "source:destination:mode,bindPropagation",
 		},
 	}

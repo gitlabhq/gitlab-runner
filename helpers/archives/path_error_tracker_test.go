@@ -24,8 +24,16 @@ func TestPathErrorIsActionableTheFirstTimeOnly(t *testing.T) {
 	tracker := newPathErrorTracker()
 
 	assert.True(t, tracker.actionable(pathErr1), "Should be actionable the first time an Op is seen")
-	assert.False(t, tracker.actionable(pathErr2), "Should not be actionable if the same Op is seen in a different instance")
-	assert.False(t, tracker.actionable(pathErr1), "Should not be actionable if the same instance is passed again")
+	assert.False(
+		t,
+		tracker.actionable(pathErr2),
+		"Should not be actionable if the same Op is seen in a different instance",
+	)
+	assert.False(
+		t,
+		tracker.actionable(pathErr1),
+		"Should not be actionable if the same instance is passed again",
+	)
 	assert.True(t, tracker.actionable(pathErr3), "Another Op should be actionable")
 }
 

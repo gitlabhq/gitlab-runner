@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
+//nolint:lll
 type ArtifactsDownloaderCommand struct {
 	common.JobCredentials
 	retryHelper
@@ -82,11 +83,15 @@ func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("artifacts-downloader", "download and extract build artifacts (internal)", &ArtifactsDownloaderCommand{
-		network: network.NewGitLabClient(),
-		retryHelper: retryHelper{
-			Retry:     2,
-			RetryTime: time.Second,
+	common.RegisterCommand2(
+		"artifacts-downloader",
+		"download and extract build artifacts (internal)",
+		&ArtifactsDownloaderCommand{
+			network: network.NewGitLabClient(),
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
 		},
-	})
+	)
 }

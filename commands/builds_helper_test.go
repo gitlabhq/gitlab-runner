@@ -202,6 +202,7 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 }
 
 func TestCreateJobURL(t *testing.T) {
+	//nolint:lll
 	testCases := map[string]string{
 		"http://gitlab.example.com/my-namespace/my-project.git":     "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
 		"http://gitlab.example.com/my-namespace/my-project":         "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",

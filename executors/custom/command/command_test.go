@@ -15,7 +15,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
-func newCommand(ctx context.Context, t *testing.T, executable string, options process.CommandOptions) (*process.MockCommander, *process.MockKillWaiter, Command, func()) {
+func newCommand(
+	ctx context.Context,
+	t *testing.T,
+	executable string,
+	options process.CommandOptions,
+) (*process.MockCommander, *process.MockKillWaiter, Command, func()) {
 	commanderMock := new(process.MockCommander)
 	processKillWaiterMock := new(process.MockKillWaiter)
 
@@ -72,9 +77,10 @@ func TestCommand_Run(t *testing.T) {
 			expectedErrorType: &exec.ExitError{},
 		},
 		"command ends with a unknown failure": {
-			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
-			getExitCode:       func(err *exec.ExitError) int { return 255 },
-			expectedError:     "unknown Custom executor executable exit code 255; executable execution terminated with: exit status 0",
+			cmdWaitErr:  &exec.ExitError{ProcessState: &os.ProcessState{}},
+			getExitCode: func(err *exec.ExitError) int { return 255 },
+			expectedError: "unknown Custom executor executable exit code 255; " +
+				"executable execution terminated with: exit status 0",
 			expectedErrorType: &ErrUnknownFailure{},
 		},
 		"command times out": {

@@ -59,6 +59,7 @@ func (c *configTemplate) loadConfigTemplate() error {
 	return nil
 }
 
+//nolint:lll
 type RegisterCommand struct {
 	context    *cli.Context
 	network    common.Network
@@ -193,7 +194,9 @@ func (s *RegisterCommand) askBasicDocker(exampleHelperImage string) {
 		s.Docker = &common.DockerConfig{}
 	}
 
-	s.Docker.Image = s.ask("docker-image", fmt.Sprintf("Please enter the default Docker image (e.g. %s):", exampleHelperImage))
+	s.Docker.Image = s.ask(
+		"docker-image",
+		fmt.Sprintf("Please enter the default Docker image (e.g. %s):", exampleHelperImage))
 }
 
 func (s *RegisterCommand) askParallels() {
@@ -211,8 +214,16 @@ func (s *RegisterCommand) askSSHServer() {
 
 func (s *RegisterCommand) askSSHLogin() {
 	s.SSH.User = s.ask("ssh-user", "Please enter the SSH user (e.g. root):")
-	s.SSH.Password = s.ask("ssh-password", "Please enter the SSH password (e.g. docker.io):", true)
-	s.SSH.IdentityFile = s.ask("ssh-identity-file", "Please enter path to SSH identity file (e.g. /home/user/.ssh/id_rsa):", true)
+	s.SSH.Password = s.ask(
+		"ssh-password",
+		"Please enter the SSH password (e.g. docker.io):",
+		true,
+	)
+	s.SSH.IdentityFile = s.ask(
+		"ssh-identity-file",
+		"Please enter path to SSH identity file (e.g. /home/user/.ssh/id_rsa):",
+		true,
+	)
 }
 
 func (s *RegisterCommand) addRunner(runner *common.RunnerConfig) {
@@ -380,7 +391,12 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	}
 
 	if s.config.Concurrent < s.Limit {
-		logrus.Warningf("Specified limit (%d) larger then current concurrent limit (%d). Concurrent limit will not be enlarged.", s.Limit, s.config.Concurrent)
+		logrus.Warningf(
+			"Specified limit (%d) larger then current concurrent limit (%d). "+
+				"Concurrent limit will not be enlarged.",
+			s.Limit,
+			s.config.Concurrent,
+		)
 	}
 
 	s.askExecutor()
@@ -394,7 +410,9 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 		logrus.Panicln(err)
 	}
 
-	logrus.Printf("Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!")
+	logrus.Printf(
+		"Runner registered successfully. " +
+			"Feel free to start it, but if it's running already the config should be automatically reloaded!")
 }
 
 func (s *RegisterCommand) mergeTemplate() {
