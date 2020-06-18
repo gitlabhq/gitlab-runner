@@ -110,7 +110,7 @@ unit test with race:
 
 .windows test:
   extends:
-  - .merge_request_pipelines_on_gitlab_org_gitlab_runner
+  - .merge_request_pipelines
   - .except_docs
   stage: test
   parallel: 8
