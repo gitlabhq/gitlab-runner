@@ -48,7 +48,10 @@ func skipOnGitWithMessage(t *testing.T, constraints string, message string) {
 		return
 	}
 
-	gitVersion, err := version.NewVersion(strings.TrimSpace(split[2]))
+	// Take the first 3 components of the version (so we ignore suffix in e.g. 2.23.0.windows.1)
+	versionComponents := strings.Split(strings.TrimSpace(split[2]), ".")
+	versionStr := strings.Join(versionComponents[:3], ".")
+	gitVersion, err := version.NewVersion(versionStr)
 	if err != nil {
 		t.Fatal("Can't detect git version", err)
 		return
