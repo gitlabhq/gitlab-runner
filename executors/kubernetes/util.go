@@ -148,7 +148,7 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 		}
 
 		switch container.State.Waiting.Reason {
-		case "ErrImagePull", "ImagePullBackOff":
+		case "ErrImagePull", "ImagePullBackOff", "InvalidImageName":
 			err = fmt.Errorf("image pull failed: %s", container.State.Waiting.Message)
 			err = &common.BuildError{Inner: err}
 			return podPhaseResponse{true, api.PodUnknown, err}
