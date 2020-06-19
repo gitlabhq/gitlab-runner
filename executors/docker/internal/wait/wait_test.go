@@ -3,9 +3,10 @@ package wait
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -18,47 +19,30 @@ func TestDockerWaiter_Wait(t *testing.T) {
 	testErr := errors.New("testErr")
 
 	tests := map[string]struct {
-		containerInspect types.ContainerJSON
-		inspectErr       error
-		attempts         int
-		expectedErr      error
+		containerOKBody container.ContainerWaitOKBody
+		waitErr         error
+		attempts        int
+		expectedErr     error
 	}{
 		"container exited successfully": {
-			containerInspect: types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
-						Status:   "exited",
-						ExitCode: 0,
-					},
-				},
+			containerOKBody: container.ContainerWaitOKBody{
+				StatusCode: 0,
 			},
-			inspectErr:  nil,
+			waitErr:     nil,
 			attempts:    1,
 			expectedErr: nil,
 		},
-		"container not running": {
-			containerInspect: types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
-						Status: "created",
-					},
-				},
-			},
-			inspectErr:  nil,
-			attempts:    1,
-			expectedErr: nil,
-		},
-		"container inspect failed": {
-			containerInspect: types.ContainerJSON{},
-			inspectErr:       testErr,
-			attempts:         5,
-			expectedErr:      testErr,
+		"container wait failed": {
+			containerOKBody: container.ContainerWaitOKBody{},
+			waitErr:         testErr,
+			attempts:        5,
+			expectedErr:     testErr,
 		},
 		"container not found": {
-			containerInspect: types.ContainerJSON{},
-			inspectErr:       &test.NotFoundError{},
-			attempts:         1,
-			expectedErr:      &test.NotFoundError{},
+			containerOKBody: container.ContainerWaitOKBody{},
+			waitErr:         new(test.NotFoundError),
+			attempts:        1,
+			expectedErr:     new(test.NotFoundError),
 		},
 	}
 
@@ -67,16 +51,59 @@ func TestDockerWaiter_Wait(t *testing.T) {
 			mClient := new(docker.MockClient)
 			defer mClient.AssertExpectations(t)
 
-			mClient.On("ContainerInspect", mock.Anything, mock.Anything).
-				Return(tt.containerInspect, tt.inspectErr).
+			bodyCh := make(chan container.ContainerWaitOKBody, 1)
+			errCh := make(chan error, tt.attempts)
+
+			if tt.expectedErr != nil {
+				for i := 0; i < tt.attempts; i++ {
+					errCh <- tt.waitErr
+				}
+			} else {
+				bodyCh <- tt.containerOKBody
+			}
+
+			mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+				Return((<-chan container.ContainerWaitOKBody)(bodyCh), (<-chan error)(errCh)).
 				Times(tt.attempts)
 
-			waiter := NewDockerWaiter(mClient)
+			waiter := NewDockerKillWaiter(mClient)
 
 			err := waiter.Wait(context.Background(), "id")
 			assert.True(t, errors.Is(err, tt.expectedErr), "expected err %T, but got %T", tt.expectedErr, err)
 		})
 	}
+}
+
+func TestDockerWaiter_KillWait(t *testing.T) {
+	mClient := new(docker.MockClient)
+	defer mClient.AssertExpectations(t)
+
+	bodyCh := make(chan container.ContainerWaitOKBody)
+	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+		Return((<-chan container.ContainerWaitOKBody)(bodyCh), nil).
+		Once()
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+	mClient.On("ContainerKill", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(mock.Arguments) {
+			wg.Done()
+		}).
+		Return(nil).
+		Twice()
+
+	waiter := NewDockerKillWaiter(mClient)
+
+	go func() {
+		wg.Wait()
+		bodyCh <- container.ContainerWaitOKBody{
+			StatusCode: 0,
+		}
+	}()
+
+	err := waiter.KillWait(context.Background(), "id")
+	assert.NoError(t, err)
 }
 
 func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
@@ -86,67 +113,29 @@ func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	waiter := NewDockerWaiter(mClient)
+	waiter := NewDockerKillWaiter(mClient)
 
 	err := waiter.Wait(ctx, "id")
 	assert.True(t, errors.Is(err, context.Canceled), "expected err %T, but got %T", context.Canceled, err)
 }
 
 func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
-	failedContainer := types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
-				Status:   "exited",
-				ExitCode: 1,
-			},
-		},
+	failedContainer := container.ContainerWaitOKBody{
+		StatusCode: 1,
 	}
 
 	mClient := new(docker.MockClient)
 	defer mClient.AssertExpectations(t)
 
-	mClient.On("ContainerInspect", mock.Anything, mock.Anything).
-		Return(failedContainer, nil).
-		Once()
+	bodyCh := make(chan container.ContainerWaitOKBody, 1)
+	bodyCh <- failedContainer
+	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+		Return((<-chan container.ContainerWaitOKBody)(bodyCh), nil)
 
-	waiter := NewDockerWaiter(mClient)
+	waiter := NewDockerKillWaiter(mClient)
 
 	err := waiter.Wait(context.Background(), "id")
+
 	var buildError *common.BuildError
 	assert.True(t, errors.As(err, &buildError), "expected err %T, but got %T", buildError, err)
-}
-
-func TestDockerWaiter_WaitRunningContainer(t *testing.T) {
-	runningContainer := types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
-				Running: true,
-			},
-		},
-	}
-
-	exitedSuccessContainer := types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
-				Status:   "exited",
-				ExitCode: 0,
-			},
-		},
-	}
-
-	mClient := new(docker.MockClient)
-	defer mClient.AssertExpectations(t)
-
-	mClient.On("ContainerInspect", mock.Anything, mock.Anything).
-		Return(runningContainer, nil).
-		Times(2)
-
-	mClient.On("ContainerInspect", mock.Anything, mock.Anything).
-		Return(exitedSuccessContainer, nil).
-		Once()
-
-	waiter := NewDockerWaiter(mClient)
-
-	err := waiter.Wait(context.Background(), "id")
-	assert.NoError(t, err)
 }

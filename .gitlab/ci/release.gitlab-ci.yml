@@ -14,7 +14,7 @@
     GIT_LFS_ARM64_CHECKSUM: "7a80464be13acc23ac99fd33e4b4352894f0fe3a8794b270e964c9532941834d"
   needs:
   - 'helper images'
-  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
   - 'package-deb'
   script:
   - source ci/touch_make_dependencies
@@ -55,7 +55,7 @@
   - 'test coverage report'
   - 'binaries darwin/amd64'
   - 'binaries freebsd/386 freebsd/amd64 freebsd/arm'
-  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
   - 'binaries windows/386 windows/amd64'
   - 'package-deb'
   - 'package-rpm'
@@ -118,6 +118,18 @@ development servercore1809 helper docker image:
   - .windows1809
   - .release_development
 
+development servercore1903 helper docker image:
+  extends:
+  - .build_windows_docker_images
+  - .windows1903
+  - .release_development
+
+development servercore1909 helper docker image:
+  extends:
+  - .build_windows_docker_images
+  - .windows1909
+  - .release_development
+
 bleeding edge S3:
   extends:
   - .release_s3
@@ -153,6 +165,28 @@ bleeding edge servercore1809 docker images:
     name: bleeding_edge/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
+bleeding edge servercore1903 docker images:
+  extends:
+  - .build_windows_docker_images
+  - .windows1903
+  - .release_bleeding_edge
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+  environment:
+    name: bleeding_edge/docker_images/windows1903
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+bleeding edge servercore1909 docker images:
+  extends:
+  - .build_windows_docker_images
+  - .windows1909
+  - .release_bleeding_edge
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+  environment:
+    name: bleeding_edge/docker_images/windows1909
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
 stable S3:
   extends:
   - .release_s3
@@ -186,6 +220,28 @@ stable servercore1809 docker images:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: stable/docker_images/windows1809
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore1903 docker images:
+  extends:
+  - .build_windows_docker_images
+  - .windows1903
+  - .release_stable
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+  environment:
+    name: stable/docker_images/windows1903
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore1908 docker images:
+  extends:
+  - .build_windows_docker_images
+  - .windows1909
+  - .release_stable
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+  environment:
+    name: stable/docker_images/windows1909
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 static QA:

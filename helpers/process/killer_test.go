@@ -116,7 +116,11 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 	}
 }
 
-func newKillerWithLoggerAndCommand(t *testing.T, duration string, skipTerminate bool) (killer, *MockLogger, Commander, func()) {
+func newKillerWithLoggerAndCommand(
+	t *testing.T,
+	duration string,
+	skipTerminate bool,
+) (killer, *MockLogger, Commander, func()) {
 	t.Helper()
 
 	loggerMock := new(MockLogger)
@@ -147,7 +151,7 @@ func newKillerWithLoggerAndCommand(t *testing.T, duration string, skipTerminate 
 func prepareTestBinary(t *testing.T) string {
 	t.Helper()
 
-	dir, err := ioutil.TempDir("", strings.Replace(t.Name(), "/", "", -1))
+	dir, err := ioutil.TempDir("", strings.ReplaceAll(t.Name(), "/", ""))
 	require.NoError(t, err)
 	binaryPath := filepath.Join(dir, strconv.FormatInt(time.Now().UnixNano(), 10))
 

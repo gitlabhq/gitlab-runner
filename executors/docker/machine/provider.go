@@ -36,11 +36,12 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 
 	details, ok := m.details[name]
 	if !ok {
+		now := time.Now()
 		details = &machineDetails{
 			Name:      name,
-			Created:   time.Now(),
-			Used:      time.Now(),
-			LastSeen:  time.Now(),
+			Created:   now,
+			Used:      now,
+			LastSeen:  now,
 			UsedCount: 1, // any machine that we find we mark as already used
 			State:     machineStateIdle,
 		}
@@ -57,14 +58,17 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 	return details
 }
 
-func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (details *machineDetails, errCh chan error) {
+func (m *machineProvider) create(
+	config *common.RunnerConfig,
+	state machineState,
+) (*machineDetails, chan error) {
 	name := newMachineName(config)
-	details = m.machineDetails(name, true)
+	details := m.machineDetails(name, true)
 	details.State = machineStateCreating
 	details.UsedCount = 0
 	details.RetryCount = 0
 	details.LastSeen = time.Now()
-	errCh = make(chan error, 1)
+	errCh := make(chan error, 1)
 
 	// Create machine asynchronously
 	go func() {
@@ -84,7 +88,7 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 				WithField("time", time.Since(started)).
 				WithError(err).
 				Errorln("Machine creation failed")
-			m.remove(details.Name, "Failed to create")
+			_ = m.remove(details.Name, "Failed to create")
 		} else {
 			details.State = state
 			details.Used = time.Now()
@@ -99,7 +103,8 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 		}
 		errCh <- err
 	}()
-	return
+
+	return details, errCh
 }
 
 func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (details *machineDetails) {
@@ -114,7 +119,7 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 		// Check if node is running
 		canConnect := m.machine.CanConnect(name, skipCache)
 		if !canConnect {
-			m.remove(name, "machine is unavailable")
+			_ = m.remove(name, "machine is unavailable")
 			continue
 		}
 		return details
@@ -227,7 +232,11 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	return nil
 }
 
-func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machinesData, details *machineDetails) error {
+func (m *machineProvider) updateMachine(
+	config *common.RunnerConfig,
+	data *machinesData,
+	details *machineDetails,
+) error {
 	if details.State != machineStateIdle {
 		return nil
 	}
@@ -251,7 +260,10 @@ func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machi
 	return nil
 }
 
-func (m *machineProvider) updateMachines(machines []string, config *common.RunnerConfig) (data machinesData, validMachines []string) {
+func (m *machineProvider) updateMachines(
+	machines []string,
+	config *common.RunnerConfig,
+) (data machinesData, validMachines []string) {
 	data.Runner = config.ShortDescription()
 	validMachines = make([]string, 0, len(machines))
 
@@ -263,7 +275,7 @@ func (m *machineProvider) updateMachines(machines []string, config *common.Runne
 		if err == nil {
 			validMachines = append(validMachines, name)
 		} else {
-			m.remove(details.Name, err)
+			_ = m.remove(details.Name, err)
 		}
 
 		data.Add(details)
@@ -333,10 +345,9 @@ func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []
 	return
 }
 
-func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.ExecutorData, err error) {
+func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorData, error) {
 	if config.Machine == nil || config.Machine.MachineName == "" {
-		err = fmt.Errorf("missing Machine options")
-		return
+		return nil, fmt.Errorf("missing Machine options")
 	}
 
 	// Lock updating machines, because two Acquires can be run at the same time
@@ -345,7 +356,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 
 	machines, err := m.loadMachines(config)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// Update a list of currently configured machines
@@ -365,18 +376,21 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 	// Try to find a free machine
 	details := m.findFreeMachine(false, validMachines...)
 	if details != nil {
-		data = details
-		return
+		return details, nil
 	}
 
 	// If we have a free machines we can process a build
 	if config.Machine.GetIdleCount() != 0 && machinesData.Idle == 0 {
 		err = errors.New("no free machines that can process builds")
 	}
-	return
+	return nil, err
 }
 
-func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorData) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
+//nolint:nakedret
+func (m *machineProvider) Use(
+	config *common.RunnerConfig,
+	data common.ExecutorData,
+) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
 	// Find a new machine
 	details, _ := data.(*machineDetails)
 	if details == nil || !details.canBeUsed() || !m.machine.CanConnect(details.Name, true) {

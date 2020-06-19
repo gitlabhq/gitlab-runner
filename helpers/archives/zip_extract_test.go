@@ -27,7 +27,11 @@ func createArchiveWithGitPath(t *testing.T, archive *zip.Writer) {
 	require.NoError(t, err)
 }
 
-func testOnArchive(t *testing.T, createArchive func(t *testing.T, archive *zip.Writer), testCase func(t *testing.T, fileName string)) {
+func testOnArchive(
+	t *testing.T,
+	createArchive func(t *testing.T, archive *zip.Writer),
+	testCase func(t *testing.T, fileName string),
+) {
 	tempFile, err := ioutil.TempFile("", "archive")
 	require.NoError(t, err)
 	defer tempFile.Close()

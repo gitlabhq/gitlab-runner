@@ -67,9 +67,10 @@ func (c *GitLabCiYamlParser) prepareJobInfo(job *common.JobResponse) (err error)
 }
 
 func (c *GitLabCiYamlParser) getCommands(commands interface{}) (common.StepScript, error) {
-	if lines, ok := commands.([]interface{}); ok {
+	switch t := commands.(type) {
+	case []interface{}:
 		var steps common.StepScript
-		for _, line := range lines {
+		for _, line := range t {
 			if lineText, ok := line.(string); ok {
 				steps = append(steps, lineText)
 			} else {
@@ -77,19 +78,20 @@ func (c *GitLabCiYamlParser) getCommands(commands interface{}) (common.StepScrip
 			}
 		}
 		return steps, nil
-	} else if text, ok := commands.(string); ok {
-		return common.StepScript(strings.Split(text, "\n")), nil
-	} else if commands != nil {
-		return common.StepScript{}, errors.New("unsupported script")
+	case string:
+		return strings.Split(t, "\n"), nil
+	default:
+		if commands != nil {
+			return common.StepScript{}, errors.New("unsupported script")
+		}
 	}
 
 	return common.StepScript{}, nil
 }
 
-func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
+func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) error {
 	if c.jobConfig["script"] == nil {
-		err = fmt.Errorf("missing 'script' for job")
-		return
+		return fmt.Errorf("missing 'script' for job")
 	}
 
 	var scriptCommands, afterScriptCommands common.StepScript
@@ -97,13 +99,13 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 	// get before_script
 	beforeScript, err := c.getCommands(c.config["before_script"])
 	if err != nil {
-		return
+		return err
 	}
 
 	// get job before_script
 	jobBeforeScript, err := c.getCommands(c.jobConfig["before_script"])
 	if err != nil {
-		return
+		return err
 	}
 
 	if len(jobBeforeScript) < 1 {
@@ -115,13 +117,13 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 	// get script
 	script, err := c.getCommands(c.jobConfig["script"])
 	if err != nil {
-		return
+		return err
 	}
 	scriptCommands = append(scriptCommands, script...)
 
 	afterScriptCommands, err = c.getCommands(c.jobConfig["after_script"])
 	if err != nil {
-		return
+		return err
 	}
 
 	job.Steps = common.Steps{
@@ -141,11 +143,11 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) (err error) {
 		},
 	}
 
-	return
+	return nil
 }
 
-func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) (defaultVariables common.JobVariables, err error) {
-	defaultVariables = common.JobVariables{
+func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) common.JobVariables {
+	return common.JobVariables{
 		{Key: "CI", Value: "true", Public: true, Internal: true, File: false},
 		{Key: "GITLAB_CI", Value: "true", Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER_NAME", Value: "GitLab CI", Public: true, Internal: true, File: false},
@@ -161,10 +163,11 @@ func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) (def
 		{Key: "CI_COMMIT_BEFORE_SHA", Value: job.GitInfo.BeforeSha, Public: true, Internal: true, File: false},
 		{Key: "CI_COMMIT_REF_NAME", Value: job.GitInfo.Ref, Public: true, Internal: true, File: false},
 	}
-	return
 }
 
-func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildVariables common.JobVariables, err error) {
+func (c *GitLabCiYamlParser) buildVariables(
+	configVariables interface{},
+) (buildVariables common.JobVariables, err error) {
 	if variables, ok := configVariables.(map[string]interface{}); ok {
 		for key, value := range variables {
 			if valueText, ok := value.(string); ok {
@@ -184,59 +187,55 @@ func (c *GitLabCiYamlParser) buildVariables(configVariables interface{}) (buildV
 	return
 }
 
-func (c *GitLabCiYamlParser) prepareVariables(job *common.JobResponse) (err error) {
+func (c *GitLabCiYamlParser) prepareVariables(job *common.JobResponse) error {
 	job.Variables = common.JobVariables{}
 
-	defaultVariables, err := c.buildDefaultVariables(job)
-	if err != nil {
-		return
-	}
-
+	defaultVariables := c.buildDefaultVariables(job)
 	job.Variables = append(job.Variables, defaultVariables...)
 
 	globalVariables, err := c.buildVariables(c.config["variables"])
 	if err != nil {
-		return
+		return err
 	}
 
 	job.Variables = append(job.Variables, globalVariables...)
 
 	jobVariables, err := c.buildVariables(c.jobConfig["variables"])
 	if err != nil {
-		return
+		return err
 	}
 
 	job.Variables = append(job.Variables, jobVariables...)
 
-	return
+	return nil
 }
 
-func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) (err error) {
+func (c *GitLabCiYamlParser) prepareImage(job *common.JobResponse) error {
 	job.Image = common.Image{}
 
 	if imageName, ok := c.jobConfig.GetString("image"); ok {
 		job.Image.Name = imageName
-		return
+		return nil
 	}
 
 	if imageDefinition, ok := c.jobConfig.GetSubOptions("image"); ok {
 		job.Image.Name, _ = imageDefinition.GetString("name")
 		job.Image.Entrypoint, _ = imageDefinition.GetStringSlice("entrypoint")
-		return
+		return nil
 	}
 
 	if imageName, ok := c.config.GetString("image"); ok {
 		job.Image.Name = imageName
-		return
+		return nil
 	}
 
 	if imageDefinition, ok := c.config.GetSubOptions("image"); ok {
 		job.Image.Name, _ = imageDefinition.GetString("name")
 		job.Image.Entrypoint, _ = imageDefinition.GetStringSlice("entrypoint")
-		return
+		return nil
 	}
 
-	return
+	return nil
 }
 
 func parseExtendedServiceDefinitionMap(serviceDefinition map[interface{}]interface{}) (image common.Image) {
@@ -273,7 +272,7 @@ func (c *GitLabCiYamlParser) prepareServices(job *common.JobResponse) (err error
 	return
 }
 
-func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err error) {
+func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) error {
 	var ok bool
 
 	artifactsMap := getOptionsMap("artifacts", c.jobConfig, c.config)
@@ -313,10 +312,10 @@ func (c *GitLabCiYamlParser) prepareArtifacts(job *common.JobResponse) (err erro
 		ExpireIn:  artifactsExpireIn,
 	}
 
-	return
+	return nil
 }
 
-func (c *GitLabCiYamlParser) prepareCache(job *common.JobResponse) (err error) {
+func (c *GitLabCiYamlParser) prepareCache(job *common.JobResponse) error {
 	var ok bool
 
 	cacheMap := getOptionsMap("cache", c.jobConfig, c.config)
@@ -344,7 +343,7 @@ func (c *GitLabCiYamlParser) prepareCache(job *common.JobResponse) (err error) {
 		Paths:     paths,
 	}
 
-	return
+	return nil
 }
 
 func (c *GitLabCiYamlParser) ParseYaml(job *common.JobResponse) (err error) {

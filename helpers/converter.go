@@ -54,12 +54,13 @@ func GetMapKey(value map[string]interface{}, keys ...string) (result interface{}
 	result = value
 
 	for _, key := range keys {
-		if stringMap, ok := result.(map[string]interface{}); ok {
-			if result, ok = stringMap[key]; ok {
+		switch t := result.(type) {
+		case map[string]interface{}:
+			if result, ok = t[key]; ok {
 				continue
 			}
-		} else if interfaceMap, ok := result.(map[interface{}]interface{}); ok {
-			if result, ok = interfaceMap[key]; ok {
+		case map[interface{}]interface{}:
+			if result, ok = t[key]; ok {
 				continue
 			}
 		}

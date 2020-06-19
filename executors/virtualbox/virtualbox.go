@@ -20,7 +20,7 @@ type executor struct {
 	machineVerified bool
 }
 
-func (s *executor) verifyMachine(vmName string, sshPort string) error {
+func (s *executor) verifyMachine(sshPort string) error {
 	if s.machineVerified {
 		return nil
 	}
@@ -100,7 +100,7 @@ func (s *executor) createVM(vmName string) (err error) {
 
 	_, err = vbox.Status(vmName)
 	if err != nil {
-		vbox.Unregister(vmName)
+		_ = vbox.Unregister(vmName)
 	}
 
 	if !vbox.Exist(vmName) {
@@ -140,7 +140,7 @@ func (s *executor) createVM(vmName string) (err error) {
 
 	s.Debugln("Waiting for VM to become responsive...")
 	time.Sleep(10 * time.Second)
-	err = s.verifyMachine(s.vmName, s.sshPort)
+	err = s.verifyMachine(s.sshPort)
 	if err != nil {
 		return err
 	}
@@ -154,6 +154,60 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
+	err = s.validateConfig()
+	if err != nil {
+		return err
+	}
+
+	err = s.printVersion()
+	if err != nil {
+		return err
+	}
+
+	s.vmName = s.getVMName()
+
+	if s.Config.VirtualBox.DisableSnapshots && vbox.Exist(s.vmName) {
+		s.Debugln("Deleting old VM...")
+		killAndUnregisterVM(s.vmName)
+	}
+
+	s.tryRestoreFromSnapshot()
+
+	if !vbox.Exist(s.vmName) {
+		s.Println("Creating new VM...")
+		err = s.createVM(s.vmName)
+		if err != nil {
+			return err
+		}
+
+		if !s.Config.VirtualBox.DisableSnapshots {
+			s.Println("Creating default snapshot...")
+			err = vbox.CreateSnapshot(s.vmName, "Started")
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	err = s.ensureVMStarted()
+	if err != nil {
+		return err
+	}
+
+	return s.sshConnect()
+}
+
+func (s *executor) printVersion() error {
+	version, err := vbox.Version()
+	if err != nil {
+		return err
+	}
+
+	s.Println("Using VirtualBox version", version, "executor...")
+	return nil
+}
+
+func (s *executor) validateConfig() error {
 	if s.BuildShell.PassFile {
 		return errors.New("virtualbox doesn't support shells that require script file")
 	}
@@ -169,56 +223,40 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if s.Config.VirtualBox.BaseName == "" {
 		return errors.New("missing BaseName setting from VirtualBox configuration")
 	}
+	return nil
+}
 
-	version, err := vbox.Version()
-	if err != nil {
-		return err
-	}
-
-	s.Println("Using VirtualBox version", version, "executor...")
-
+func (s *executor) getVMName() string {
 	if s.Config.VirtualBox.DisableSnapshots {
-		s.vmName = s.Config.VirtualBox.BaseName + "-" + s.Build.ProjectUniqueName()
-		if vbox.Exist(s.vmName) {
-			s.Debugln("Deleting old VM...")
-			vbox.Kill(s.vmName)
-			vbox.Delete(s.vmName)
-			vbox.Unregister(s.vmName)
-		}
-	} else {
-		s.vmName = fmt.Sprintf("%s-runner-%s-concurrent-%d",
-			s.Config.VirtualBox.BaseName,
-			s.Build.Runner.ShortDescription(),
-			s.Build.RunnerID)
+		return s.Config.VirtualBox.BaseName + "-" + s.Build.ProjectUniqueName()
 	}
 
-	if vbox.Exist(s.vmName) {
-		s.Println("Restoring VM from snapshot...")
-		err := s.restoreFromSnapshot()
-		if err != nil {
-			s.Println("Previous VM failed. Deleting, because", err)
-			vbox.Kill(s.vmName)
-			vbox.Delete(s.vmName)
-			vbox.Unregister(s.vmName)
-		}
-	}
+	return fmt.Sprintf("%s-runner-%s-concurrent-%d",
+		s.Config.VirtualBox.BaseName,
+		s.Build.Runner.ShortDescription(),
+		s.Build.RunnerID)
+}
 
+func (s *executor) tryRestoreFromSnapshot() {
 	if !vbox.Exist(s.vmName) {
-		s.Println("Creating new VM...")
-		err := s.createVM(s.vmName)
-		if err != nil {
-			return err
-		}
-
-		if !s.Config.VirtualBox.DisableSnapshots {
-			s.Println("Creating default snapshot...")
-			err = vbox.CreateSnapshot(s.vmName, "Started")
-			if err != nil {
-				return err
-			}
-		}
+		return
 	}
 
+	s.Println("Restoring VM from snapshot...")
+	err := s.restoreFromSnapshot()
+	if err != nil {
+		s.Println("Previous VM failed. Deleting, because", err)
+		killAndUnregisterVM(s.vmName)
+	}
+}
+
+func killAndUnregisterVM(vmName string) {
+	_ = vbox.Kill(vmName)
+	_ = vbox.Delete(vmName)
+	_ = vbox.Unregister(vmName)
+}
+
+func (s *executor) ensureVMStarted() error {
 	s.Debugln("Checking VM status...")
 	status, err := vbox.Status(s.vmName)
 	if err != nil {
@@ -227,7 +265,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	if !vbox.IsStatusOnlineOrTransient(status) {
 		s.Println("Starting VM...")
-		err := vbox.Start(s.vmName)
+		err = vbox.Start(s.vmName)
 		if err != nil {
 			return err
 		}
@@ -249,13 +287,16 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	s.Println("Waiting VM to become responsive...")
-	err = s.verifyMachine(s.vmName, s.sshPort)
+	err = s.verifyMachine(s.sshPort)
 	if err != nil {
 		return err
 	}
 
 	s.provisioned = true
+	return nil
+}
 
+func (s *executor) sshConnect() error {
 	s.Println("Starting SSH command...")
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
@@ -266,11 +307,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.sshCommand.Host = "localhost"
 
 	s.Debugln("Connecting to SSH server...")
-	err = s.sshCommand.Connect()
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.sshCommand.Connect()
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
@@ -289,10 +326,10 @@ func (s *executor) Cleanup() {
 	s.sshCommand.Cleanup()
 
 	if s.vmName != "" {
-		vbox.Kill(s.vmName)
+		_ = vbox.Kill(s.vmName)
 
 		if s.Config.VirtualBox.DisableSnapshots || !s.provisioned {
-			vbox.Delete(s.vmName)
+			_ = vbox.Delete(s.vmName)
 		}
 	}
 }

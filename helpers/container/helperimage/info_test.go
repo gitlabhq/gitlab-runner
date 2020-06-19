@@ -19,7 +19,11 @@ func TestGetInfo(t *testing.T) {
 		expectedError error
 	}{
 		{osType: OSTypeLinux, expectedError: nil},
-		{osType: OSTypeWindows, version: unsupportedVersion, expectedError: windows.NewUnsupportedWindowsVersionError(unsupportedVersion)},
+		{
+			osType:        OSTypeWindows,
+			version:       unsupportedVersion,
+			expectedError: windows.NewUnsupportedWindowsVersionError(unsupportedVersion),
+		},
 		{osType: "unsupported", expectedError: errors.NewErrOSNotSupported("unsupported")},
 	}
 
@@ -27,7 +31,13 @@ func TestGetInfo(t *testing.T) {
 		t.Run(test.osType, func(t *testing.T) {
 			_, err := Get(headRevision, Config{OSType: test.osType, OperatingSystem: test.version})
 
-			assert.True(t, stderrors.Is(err, test.expectedError), "expected err %T, but got %T", test.expectedError, err)
+			assert.True(
+				t,
+				stderrors.Is(err, test.expectedError),
+				"expected err %T, but got %T",
+				test.expectedError,
+				err,
+			)
 		})
 	}
 }

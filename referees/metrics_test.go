@@ -83,7 +83,11 @@ func newDefaultTestMetricsReferee(t *testing.T, executor *MockMetricsExecutor) *
 	return newTestMetricsRefereeWithConfig(t, config, executor)
 }
 
-func newTestMetricsRefereeWithConfig(t *testing.T, mrConfig *MetricsRefereeConfig, executor *MockMetricsExecutor) *MetricsReferee {
+func newTestMetricsRefereeWithConfig(
+	t *testing.T,
+	mrConfig *MetricsRefereeConfig,
+	executor *MockMetricsExecutor,
+) *MetricsReferee {
 	t.Helper()
 
 	config := &Config{
@@ -129,7 +133,9 @@ func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
 	ctx := context.Background()
 	prometheusAPI := new(mockPrometheusAPI)
 	matrix := model.Matrix([]*model.SampleStream{})
-	prometheusAPI.On("QueryRange", mock.Anything, mock.Anything, mock.Anything).Return(matrix, api.Warnings([]string{}), errors.New("test"))
+	prometheusAPI.
+		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
+		Return(matrix, api.Warnings([]string{}), errors.New("test"))
 
 	mr.prometheusAPI = prometheusAPI
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
@@ -147,7 +153,9 @@ func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
 
 	ctx := context.Background()
 	prometheusAPI := new(mockPrometheusAPI)
-	prometheusAPI.On("QueryRange", mock.Anything, mock.Anything, mock.Anything).Return(new(mockPrometheusValue), api.Warnings([]string{}), nil)
+	prometheusAPI.
+		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
+		Return(new(mockPrometheusValue), api.Warnings([]string{}), nil)
 
 	mr.prometheusAPI = prometheusAPI
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
@@ -166,7 +174,9 @@ func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
 	matrix := model.Matrix([]*model.SampleStream{})
 	ctx := context.Background()
 	prometheusAPI := new(mockPrometheusAPI)
-	prometheusAPI.On("QueryRange", mock.Anything, mock.Anything, mock.Anything).Return(matrix, api.Warnings([]string{}), nil)
+	prometheusAPI.
+		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
+		Return(matrix, api.Warnings([]string{}), nil)
 
 	mr.prometheusAPI = prometheusAPI
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
@@ -211,18 +221,23 @@ func TestMetricsRefereeExecute(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse request
 		buf := new(bytes.Buffer)
-		_, err := buf.ReadFrom(r.Body)
-		require.NoError(t, err)
+		_, errReq := buf.ReadFrom(r.Body)
+		require.NoError(t, errReq)
 		actual := buf.String()
 		t.Log("REQUEST: " + actual)
 		query := fmt.Sprintf("metric%d", requestIndex)
-		expected := fmt.Sprintf("end=%d&query=%s%%7Bname%%3D%%22value%%22%%7D&start=%d&step=10", endTime.Unix(), query, startTime.Unix())
+		expected := fmt.Sprintf(
+			"end=%d&query=%s%%7Bname%%3D%%22value%%22%%7D&start=%d&step=10",
+			endTime.Unix(),
+			query,
+			startTime.Unix(),
+		)
 		// validate request
 		require.Equal(t, expected, actual)
 		// send response
 		t.Log("RESPONSE: " + string(responseJSON))
-		_, err = w.Write(responseJSON)
-		require.NoError(t, err)
+		_, errReq = w.Write(responseJSON)
+		require.NoError(t, errReq)
 		requestIndex++
 	}))
 	defer ts.Close()

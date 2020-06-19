@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -57,6 +59,7 @@ func TestOverwrites(t *testing.T) {
 		MemoryRequestOverwriteMaxAllowed: "10Gi",
 	}
 
+	//nolint:lll
 	tests := []struct {
 		Name                                 string
 		Config                               *common.KubernetesConfig
@@ -69,7 +72,7 @@ func TestOverwrites(t *testing.T) {
 		MemoryLimitOverwriteVariableValue    string
 		MemoryRequestOverwriteVariableValue  string
 		Expected                             *overwrites
-		Error                                bool
+		Error                                error
 	}{
 		{
 			Name:     "Empty Configuration",
@@ -152,12 +155,31 @@ func TestOverwrites(t *testing.T) {
 			},
 		},
 		{
+			Name: "Resource overwrites the same",
+			Config: &common.KubernetesConfig{
+				CPURequestOverwriteMaxAllowed:    "10",
+				CPULimitOverwriteMaxAllowed:      "12",
+				MemoryRequestOverwriteMaxAllowed: "10",
+				MemoryLimitOverwriteMaxAllowed:   "12",
+			},
+			CPURequestOverwriteVariableValue:    "10",
+			CPULimitOverwriteVariableValue:      "12",
+			MemoryRequestOverwriteVariableValue: "10",
+			MemoryLimitOverwriteVariableValue:   "12",
+			Expected: &overwrites{
+				cpuRequest:    "10",
+				cpuLimit:      "12",
+				memoryRequest: "10",
+				memoryLimit:   "12",
+			},
+		},
+		{
 			Name: "Namespace failure",
 			Config: &common.KubernetesConfig{
 				NamespaceOverwriteAllowed: "not-a-match",
 			},
 			NamespaceOverwriteVariableValue: "my_namespace",
-			Error:                           true,
+			Error:                           new(malformedOverwriteError),
 		},
 		{
 			Name: "ServiceAccount failure",
@@ -165,7 +187,7 @@ func TestOverwrites(t *testing.T) {
 				ServiceAccountOverwriteAllowed: "not-a-match",
 			},
 			ServiceAccountOverwriteVariableValue: "my_service_account",
-			Error:                                true,
+			Error:                                new(malformedOverwriteError),
 		},
 		{
 			Name: "PodAnnotations failure",
@@ -175,7 +197,7 @@ func TestOverwrites(t *testing.T) {
 			PodAnnotationsOverwriteValues: map[string]string{
 				"KUBERNETES_POD_ANNOTATIONS_1": "test1=test1",
 			},
-			Error: true,
+			Error: new(malformedOverwriteError),
 		},
 		{
 			Name: "PodAnnotations malformed key",
@@ -185,7 +207,7 @@ func TestOverwrites(t *testing.T) {
 			PodAnnotationsOverwriteValues: map[string]string{
 				"KUBERNETES_POD_ANNOTATIONS_1": "test1",
 			},
-			Error: true,
+			Error: new(malformedOverwriteError),
 		},
 		{
 			Name: "CPULimit too high",
@@ -193,7 +215,15 @@ func TestOverwrites(t *testing.T) {
 				CPULimitOverwriteMaxAllowed: "10",
 			},
 			CPULimitOverwriteVariableValue: "12",
-			Error:                          true,
+			Error:                          new(overwriteTooHighError),
+		},
+		{
+			Name: "CPULimit too high using millicpu",
+			Config: &common.KubernetesConfig{
+				CPULimitOverwriteMaxAllowed: "500m",
+			},
+			CPULimitOverwriteVariableValue: "600m",
+			Error:                          new(overwriteTooHighError),
 		},
 		{
 			Name: "CPURequest too high",
@@ -201,7 +231,15 @@ func TestOverwrites(t *testing.T) {
 				CPURequestOverwriteMaxAllowed: "10",
 			},
 			CPURequestOverwriteVariableValue: "12",
-			Error:                            true,
+			Error:                            new(overwriteTooHighError),
+		},
+		{
+			Name: "CPURequest too high using millicpu",
+			Config: &common.KubernetesConfig{
+				CPURequestOverwriteMaxAllowed: "500m",
+			},
+			CPURequestOverwriteVariableValue: "600m",
+			Error:                            new(overwriteTooHighError),
 		},
 		{
 			Name: "MemoryLimit too high",
@@ -209,7 +247,15 @@ func TestOverwrites(t *testing.T) {
 				MemoryLimitOverwriteMaxAllowed: "2Gi",
 			},
 			MemoryLimitOverwriteVariableValue: "10Gi",
-			Error:                             true,
+			Error:                             new(overwriteTooHighError),
+		},
+		{
+			Name: "MemoryLimit too high Mi",
+			Config: &common.KubernetesConfig{
+				MemoryLimitOverwriteMaxAllowed: "20Mi",
+			},
+			MemoryLimitOverwriteVariableValue: "10Gi",
+			Error:                             new(overwriteTooHighError),
 		},
 		{
 			Name: "MemoryRequest too high",
@@ -217,7 +263,15 @@ func TestOverwrites(t *testing.T) {
 				MemoryRequestOverwriteMaxAllowed: "2Gi",
 			},
 			MemoryRequestOverwriteVariableValue: "10Gi",
-			Error:                               true,
+			Error:                               new(overwriteTooHighError),
+		},
+		{
+			Name: "MemoryRequest too high Mi",
+			Config: &common.KubernetesConfig{
+				MemoryRequestOverwriteMaxAllowed: "20Mi",
+			},
+			MemoryRequestOverwriteVariableValue: "100Mi",
+			Error:                               new(overwriteTooHighError),
 		},
 		{
 			Name: "MemoryRequest too high different suffix",
@@ -225,7 +279,7 @@ func TestOverwrites(t *testing.T) {
 				MemoryRequestOverwriteMaxAllowed: "2Gi",
 			},
 			MemoryRequestOverwriteVariableValue: "5000Mi",
-			Error:                               true,
+			Error:                               new(overwriteTooHighError),
 		},
 	}
 
@@ -245,14 +299,41 @@ func TestOverwrites(t *testing.T) {
 			)
 
 			values, err := createOverwrites(test.Config, variables, logger)
-
-			if test.Error {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "does not match")
-				return
-			}
-			assert.NoError(t, err)
+			assert.True(t, errors.Is(err, test.Error), "expected err %T, but got %T", test.Error, err)
 			assert.Equal(t, test.Expected, values)
 		})
 	}
+}
+
+func Test_overwriteTooHighError_Is(t *testing.T) {
+	tests := []struct {
+		err        error
+		expectedIs bool
+	}{
+		{
+			err:        errors.New("false"),
+			expectedIs: false,
+		},
+		{
+			err:        new(emptyTestError),
+			expectedIs: false,
+		},
+		{
+			err:        new(overwriteTooHighError),
+			expectedIs: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%T", tt.err), func(t *testing.T) {
+			err := overwriteTooHighError{}
+			assert.Equal(t, tt.expectedIs, err.Is(tt.err))
+		})
+	}
+}
+
+type emptyTestError struct{}
+
+func (e *emptyTestError) Error() string {
+	return ""
 }

@@ -1,5 +1,5 @@
 ---
-last_updated: 2020-03-14
+last_updated: 2020-06-09
 ---
 
 # Install GitLab Runner using the official GitLab repositories
@@ -8,16 +8,18 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 
 | Distribution | Version                    | End of Life date      |
 |--------------|----------------------------|-----------------------|
-| Debian       | buster                     |                       |
-| Debian       | stretch                    | approx. 2022          |
 | Debian       | jessie                     | June 2020             |
-| Ubuntu       | bionic                     | April 2023            |
+| Debian       | stretch                    | approx. 2022          |
+| Debian       | buster                     |                       |
 | Ubuntu       | xenial                     | April 2021            |
-| Mint         | sonya                      | approx. 2021          |
-| Mint         | serena                     | approx. 2021          |
+| Ubuntu       | bionic                     | April 2023            |
+| Ubuntu       | focal                      | April 2025            |
 | Mint         | sarah                      | approx. 2021          |
-| RHEL/CentOS  | 7                          | June 2024             |
+| Mint         | serena                     | approx. 2021          |
+| Mint         | sonya                      | approx. 2021          |
 | RHEL/CentOS  | 6                          | November 2020         |
+| RHEL/CentOS  | 7                          | June 2024             |
+| RHEL/CentOS  | 8                          | May 2029              |
 | Fedora       | 30                         | approx. June 2020 |
 
 ## Prerequisites

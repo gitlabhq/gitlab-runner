@@ -17,7 +17,8 @@ const (
 	ServiceAccountOverwriteVariableName = "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE"
 	// BearerTokenOverwriteVariableValue is the key for the JobVariable containing user overwritten BearerToken
 	BearerTokenOverwriteVariableValue = "KUBERNETES_BEARER_TOKEN"
-	// PodAnnotationsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing user overwritten PodAnnotations
+	// PodAnnotationsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
+	// user overwritten PodAnnotations
 	PodAnnotationsOverwriteVariablePrefix = "KUBERNETES_POD_ANNOTATIONS_"
 	// CPULimitOverwriteVariableValue is the key for the JobVariable containing user overwritten cpu limit
 	CPULimitOverwriteVariableValue = "KUBERNETES_CPU_LIMIT"
@@ -28,6 +29,35 @@ const (
 	// MemoryRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten memory limit
 	MemoryRequestOverwriteVariableValue = "KUBERNETES_MEMORY_REQUEST"
 )
+
+type overwriteTooHighError struct {
+	resource  string
+	max       string
+	overwrite string
+}
+
+func (o *overwriteTooHighError) Error() string {
+	return fmt.Sprintf("the resource %q requested %q is higher than limit allowed %q", o.resource, o.overwrite, o.max)
+}
+
+func (o *overwriteTooHighError) Is(err error) bool {
+	_, ok := err.(*overwriteTooHighError)
+	return ok
+}
+
+type malformedOverwriteError struct {
+	value   string
+	pattern string
+}
+
+func (m *malformedOverwriteError) Error() string {
+	return fmt.Sprintf("provided value %q does not match %q", m.value, m.pattern)
+}
+
+func (m *malformedOverwriteError) Is(err error) bool {
+	_, ok := err.(*malformedOverwriteError)
+	return ok
+}
 
 type overwrites struct {
 	namespace      string
@@ -40,55 +70,104 @@ type overwrites struct {
 	memoryRequest  string
 }
 
-func createOverwrites(config *common.KubernetesConfig, variables common.JobVariables, logger common.BuildLogger) (*overwrites, error) {
+//nolint:funlen
+func createOverwrites(
+	config *common.KubernetesConfig,
+	variables common.JobVariables,
+	logger common.BuildLogger) (*overwrites, error) {
 	var err error
 	o := &overwrites{}
 
 	variables = variables.Expand()
 
 	namespaceOverwrite := variables.Get(NamespaceOverwriteVariableName)
-	o.namespace, err = o.evaluateOverwrite("Namespace", config.Namespace, config.NamespaceOverwriteAllowed, namespaceOverwrite, logger)
+	o.namespace, err = o.evaluateOverwrite(
+		"Namespace",
+		config.Namespace,
+		config.NamespaceOverwriteAllowed,
+		namespaceOverwrite,
+		logger)
 	if err != nil {
 		return nil, err
 	}
 
 	serviceAccountOverwrite := variables.Get(ServiceAccountOverwriteVariableName)
-	o.serviceAccount, err = o.evaluateOverwrite("ServiceAccount", config.ServiceAccount, config.ServiceAccountOverwriteAllowed, serviceAccountOverwrite, logger)
+	o.serviceAccount, err = o.evaluateOverwrite(
+		"ServiceAccount",
+		config.ServiceAccount,
+		config.ServiceAccountOverwriteAllowed,
+		serviceAccountOverwrite,
+		logger)
 	if err != nil {
 		return nil, err
 	}
 
 	bearerTokenOverwrite := variables.Get(BearerTokenOverwriteVariableValue)
-	o.bearerToken, err = o.evaluateBoolControlledOverwrite("BearerToken", config.BearerToken, config.BearerTokenOverwriteAllowed, bearerTokenOverwrite, logger)
+	o.bearerToken, err = o.evaluateBoolControlledOverwrite(
+		"BearerToken",
+		config.BearerToken,
+		config.BearerTokenOverwriteAllowed,
+		bearerTokenOverwrite,
+		logger)
 	if err != nil {
 		return nil, err
 	}
 
-	o.podAnnotations, err = o.evaluateMapOverwrite("PodAnnotations", config.PodAnnotations, config.PodAnnotationsOverwriteAllowed, variables, PodAnnotationsOverwriteVariablePrefix, logger)
+	o.podAnnotations, err = o.evaluateMapOverwrite(
+		"PodAnnotations",
+		config.PodAnnotations,
+		config.PodAnnotationsOverwriteAllowed,
+		variables,
+		PodAnnotationsOverwriteVariablePrefix,
+		logger)
 	if err != nil {
 		return nil, err
 	}
 
 	cpuLimitOverwrite := variables.Get(CPULimitOverwriteVariableValue)
-	o.cpuLimit, err = o.evaluateMaxResourceOverwrite("CPULimit", config.CPULimit, config.CPULimitOverwriteMaxAllowed, cpuLimitOverwrite, logger)
+	o.cpuLimit, err = o.evaluateMaxResourceOverwrite(
+		"CPULimit",
+		config.CPULimit,
+		config.CPULimitOverwriteMaxAllowed,
+		cpuLimitOverwrite,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	cpuRequestOverwrite := variables.Get(CPURequestOverwriteVariableValue)
-	o.cpuRequest, err = o.evaluateMaxResourceOverwrite("CPURequest", config.CPURequest, config.CPURequestOverwriteMaxAllowed, cpuRequestOverwrite, logger)
+	o.cpuRequest, err = o.evaluateMaxResourceOverwrite(
+		"CPURequest",
+		config.CPURequest,
+		config.CPURequestOverwriteMaxAllowed,
+		cpuRequestOverwrite,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	memoryLimitOverwrite := variables.Get(MemoryLimitOverwriteVariableValue)
-	o.memoryLimit, err = o.evaluateMaxResourceOverwrite("MemoryLimit", config.MemoryLimit, config.MemoryLimitOverwriteMaxAllowed, memoryLimitOverwrite, logger)
+	o.memoryLimit, err = o.evaluateMaxResourceOverwrite(
+		"MemoryLimit",
+		config.MemoryLimit,
+		config.MemoryLimitOverwriteMaxAllowed,
+		memoryLimitOverwrite,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	memoryRequestOverwrite := variables.Get(MemoryRequestOverwriteVariableValue)
-	o.memoryRequest, err = o.evaluateMaxResourceOverwrite("MemoryRequest", config.MemoryRequest, config.MemoryRequestOverwriteMaxAllowed, memoryRequestOverwrite, logger)
+	o.memoryRequest, err = o.evaluateMaxResourceOverwrite(
+		"MemoryRequest",
+		config.MemoryRequest,
+		config.MemoryRequestOverwriteMaxAllowed,
+		memoryRequestOverwrite,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -96,14 +175,22 @@ func createOverwrites(config *common.KubernetesConfig, variables common.JobVaria
 	return o, nil
 }
 
-func (o *overwrites) evaluateBoolControlledOverwrite(fieldName, value string, canOverride bool, overwriteValue string, logger common.BuildLogger) (string, error) {
+func (o *overwrites) evaluateBoolControlledOverwrite(
+	fieldName, value string,
+	canOverride bool,
+	overwriteValue string,
+	logger common.BuildLogger,
+) (string, error) {
 	if canOverride {
 		return o.evaluateOverwrite(fieldName, value, ".+", overwriteValue, logger)
 	}
 	return o.evaluateOverwrite(fieldName, value, "", overwriteValue, logger)
 }
 
-func (o *overwrites) evaluateOverwrite(fieldName, value, regex, overwriteValue string, logger common.BuildLogger) (string, error) {
+func (o *overwrites) evaluateOverwrite(
+	fieldName, value, regex, overwriteValue string,
+	logger common.BuildLogger,
+) (string, error) {
 	if regex == "" {
 		logger.Debugln("Regex allowing overrides for", fieldName, "is empty, disabling override.")
 		return value, nil
@@ -134,7 +221,7 @@ func overwriteRegexCheck(regex, value string) error {
 		return err
 	}
 	if match := r.MatchString(value); !match {
-		return fmt.Errorf("provided value %q does not match regex %q", value, regex)
+		return &malformedOverwriteError{value: value, pattern: regex}
 	}
 	return nil
 }
@@ -146,10 +233,17 @@ func splitMapOverwrite(str string) (string, string, error) {
 		return split[0], split[1], nil
 	}
 
-	return "", "", fmt.Errorf("provided value %q is malformed, does not match k=v", str)
+	return "", "", &malformedOverwriteError{value: str, pattern: "k=v"}
 }
 
-func (o *overwrites) evaluateMapOverwrite(fieldName string, values map[string]string, regex string, variables common.JobVariables, variablesSelector string, logger common.BuildLogger) (map[string]string, error) {
+func (o *overwrites) evaluateMapOverwrite(
+	fieldName string,
+	values map[string]string,
+	regex string,
+	variables common.JobVariables,
+	variablesSelector string,
+	logger common.BuildLogger,
+) (map[string]string, error) {
 	if regex == "" {
 		logger.Debugln("Regex allowing overrides for", fieldName, "is empty, disabling override.")
 		return values, nil
@@ -161,24 +255,29 @@ func (o *overwrites) evaluateMapOverwrite(fieldName string, values map[string]st
 	}
 
 	for _, variable := range variables {
-		if strings.HasPrefix(variable.Key, variablesSelector) {
-			if err := overwriteRegexCheck(regex, variable.Value); err != nil {
-				return nil, err
-			}
-
-			key, value, err := splitMapOverwrite(variable.Value)
-			if err != nil {
-				return nil, err
-			}
-
-			finalValues[key] = value
-			logger.Println(fmt.Sprintf("%q %q overwritten with %q", fieldName, key, value))
+		if !strings.HasPrefix(variable.Key, variablesSelector) {
+			continue
 		}
+
+		if err := overwriteRegexCheck(regex, variable.Value); err != nil {
+			return nil, err
+		}
+
+		key, value, err := splitMapOverwrite(variable.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		finalValues[key] = value
+		logger.Println(fmt.Sprintf("%q %q overwritten with %q", fieldName, key, value))
 	}
 	return finalValues, nil
 }
 
-func (o *overwrites) evaluateMaxResourceOverwrite(fieldName, value, maxResource, overwriteValue string, logger common.BuildLogger) (string, error) {
+func (o *overwrites) evaluateMaxResourceOverwrite(
+	fieldName, value, maxResource, overwriteValue string,
+	logger common.BuildLogger,
+) (string, error) {
 	if maxResource == "" {
 		logger.Debugln("setting allowing overrides for", fieldName, "is empty, disabling override.")
 		return value, nil
@@ -192,18 +291,20 @@ func (o *overwrites) evaluateMaxResourceOverwrite(fieldName, value, maxResource,
 	var err error
 
 	if rMaxResource, err = resource.ParseQuantity(maxResource); err != nil {
-		return value, fmt.Errorf("error parsing resource limit: %q", err.Error())
+		return value, fmt.Errorf("parsing resource limit: %q", err.Error())
 	}
 
 	if rOverwriteValue, err = resource.ParseQuantity(overwriteValue); err != nil {
-		return value, fmt.Errorf("error parsing resource limit: %q", err.Error())
+		return value, fmt.Errorf("parsing resource limit: %q", err.Error())
 	}
 
-	ov := rOverwriteValue.Value()
-	mr := rMaxResource.Value()
-
-	if ov > mr {
-		return value, fmt.Errorf("the resource %q requested by the build %q does not match or is less than limit allowed %q", fieldName, overwriteValue, maxResource)
+	cmp := rOverwriteValue.Cmp(rMaxResource)
+	if cmp == 1 {
+		return "", &overwriteTooHighError{
+			resource:  fieldName,
+			max:       maxResource,
+			overwrite: overwriteValue,
+		}
 	}
 
 	logger.Println(fmt.Sprintf("%q overwritten with %q", fieldName, overwriteValue))

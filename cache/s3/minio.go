@@ -13,7 +13,12 @@ import (
 const DefaultAWSS3Server = "s3.amazonaws.com"
 
 type minioClient interface {
-	PresignedGetObject(bucketName string, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error)
+	PresignedGetObject(
+		bucketName string,
+		objectName string,
+		expires time.Duration,
+		reqParams url.Values,
+	) (*url.URL, error)
 	PresignedPutObject(bucketName string, objectName string, expires time.Duration) (*url.URL, error)
 }
 

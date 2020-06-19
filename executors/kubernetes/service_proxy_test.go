@@ -74,9 +74,18 @@ func TestProxyRequestError(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ex := executor{
 				pod: &api.Pod{ObjectMeta: objectInfo},
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-					return mockPodRunningStatus(req, version, codec, objectInfo, test.podStatus, test.containerReady)
-				})),
+				kubeClient: testKubernetesClient(
+					version,
+					fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+						return mockPodRunningStatus(
+							req,
+							version,
+							codec,
+							objectInfo,
+							test.podStatus,
+							test.containerReady,
+						)
+					})),
 			}
 
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +127,9 @@ func TestProxyRequestHTTP(t *testing.T) {
 	require.NoError(t, err)
 
 	serviceName := "service-name"
-	proxyEndpointURI := "/api/" + version + "/namespaces/" + objectInfo.Namespace + "/services/http:" + serviceName + ":" + defaultPort + "/proxy"
+	proxyEndpointURI :=
+		"/api/" + version + "/namespaces/" + objectInfo.Namespace + "/services/http:" +
+			serviceName + ":" + defaultPort + "/proxy"
 	defaultProxySettings := proxy.Settings{
 		ServiceName: serviceName,
 		Ports: []proxy.Port{
@@ -187,7 +198,8 @@ func TestProxyRequestHTTP(t *testing.T) {
 					},
 				},
 			},
-			endpointURI:        "/api/" + version + "/namespaces/" + objectInfo.Namespace + "/services/https:" + serviceName + ":" + defaultPort + "/proxy",
+			endpointURI: "/api/" + version + "/namespaces/" + objectInfo.Namespace + "/services/https:" +
+				serviceName + ":" + defaultPort + "/proxy",
 			expectedBody:       defaultBody,
 			expectedStatusCode: http.StatusOK,
 		},
@@ -199,14 +211,19 @@ func TestProxyRequestHTTP(t *testing.T) {
 				ex.ProxyRequest(w, r, test.requestedURI, defaultPort, &test.proxySettings)
 			})
 
-			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-				switch p, m := req.URL.Path, req.Method; {
-				case p == test.endpointURI && m == http.MethodGet:
-					return &http.Response{StatusCode: http.StatusOK, Body: ioutil.NopCloser(bytes.NewReader([]byte(defaultBody)))}, nil
-				default:
-					return mockPodRunningStatus(req, version, codec, objectInfo, test.podStatus, true)
-				}
-			}))
+			ex.kubeClient = testKubernetesClient(
+				version,
+				fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					switch p, m := req.URL.Path, req.Method; {
+					case p == test.endpointURI && m == http.MethodGet:
+						return &http.Response{
+							StatusCode: http.StatusOK,
+							Body:       ioutil.NopCloser(bytes.NewReader([]byte(defaultBody))),
+						}, nil
+					default:
+						return mockPodRunningStatus(req, version, codec, objectInfo, test.podStatus, true)
+					}
+				}))
 
 			rw := httptest.NewRecorder()
 			req, err := http.NewRequest(http.MethodGet, "/", nil)
@@ -266,14 +283,19 @@ func TestProxyRequestHTTPError(t *testing.T) {
 				ex.ProxyRequest(w, r, "", "80", &proxySettings)
 			})
 
-			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-				switch p, m := req.URL.Path, req.Method; {
-				case p == endpointURI && m == http.MethodGet:
-					return &http.Response{StatusCode: test.expectedErrorCode, Body: ioutil.NopCloser(bytes.NewReader([]byte(errorMessage)))}, nil
-				default:
-					return mockPodRunningStatus(req, version, codec, objectInfo, api.PodRunning, true)
-				}
-			}))
+			ex.kubeClient = testKubernetesClient(
+				version,
+				fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					switch p, m := req.URL.Path, req.Method; {
+					case p == endpointURI && m == http.MethodGet:
+						return &http.Response{
+							StatusCode: test.expectedErrorCode,
+							Body:       ioutil.NopCloser(bytes.NewReader([]byte(errorMessage))),
+						}, nil
+					default:
+						return mockPodRunningStatus(req, version, codec, objectInfo, api.PodRunning, true)
+					}
+				}))
 
 			rw := httptest.NewRecorder()
 			req, err := http.NewRequest(http.MethodGet, "/", nil)
@@ -292,7 +314,14 @@ func TestProxyRequestHTTPError(t *testing.T) {
 	}
 }
 
-func mockPodRunningStatus(req *http.Request, version string, codec runtime.Codec, objectInfo metav1.ObjectMeta, status api.PodPhase, servicesReady bool) (*http.Response, error) {
+func mockPodRunningStatus(
+	req *http.Request,
+	version string,
+	codec runtime.Codec,
+	objectInfo metav1.ObjectMeta,
+	status api.PodPhase,
+	servicesReady bool,
+) (*http.Response, error) {
 	switch p, m := req.URL.Path, req.Method; {
 	case p == "/api/"+version+"/namespaces/"+objectInfo.Namespace+"/pods/"+objectInfo.Name && m == http.MethodGet:
 		pod := &api.Pod{
@@ -318,7 +347,9 @@ func TestProxyRequestWebsockets(t *testing.T) {
 	require.NoError(t, err)
 
 	serviceName := "service-name"
-	proxyEndpointURI := "/api/" + version + "/namespaces/" + objectInfo.Namespace + "/services/http:" + serviceName + ":" + defaultPort + "/proxy"
+	proxyEndpointURI :=
+		"/api/" + version + "/namespaces/" + objectInfo.Namespace + "/services/http:" +
+			serviceName + ":" + defaultPort + "/proxy"
 	defaultProxySettings := proxy.Settings{
 		ServiceName: serviceName,
 		Ports: []proxy.Port{
@@ -392,7 +423,8 @@ func TestProxyRequestWebsockets(t *testing.T) {
 					},
 				},
 			},
-			endpointURI:        "/api/" + version + "/namespaces/" + objectInfo.Namespace + "/services/https:service-name:80/proxy",
+			endpointURI: "/api/" + version + "/namespaces/" + objectInfo.Namespace +
+				"/services/https:service-name:80/proxy",
 			expectedStatusCode: http.StatusSwitchingProtocols,
 		},
 	}
@@ -425,9 +457,12 @@ func TestProxyRequestWebsockets(t *testing.T) {
 			}))
 			defer kubeAPISrv.Close()
 
-			ex.kubeClient = mockKubernetesClientWithHost(version, kubeAPISrv.Listener.Addr().String(), fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-				return mockPodRunningStatus(req, version, codec, objectInfo, test.podStatus, true)
-			}))
+			ex.kubeClient = mockKubernetesClientWithHost(
+				version,
+				kubeAPISrv.Listener.Addr().String(),
+				fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					return mockPodRunningStatus(req, version, codec, objectInfo, test.podStatus, true)
+				}))
 
 			// HTTP server
 			srv := httptest.NewServer(h)

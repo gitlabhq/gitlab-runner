@@ -69,7 +69,12 @@ func prepareFakeBuild(tc cacheOperationTest) *common.Build {
 	return build
 }
 
-func testCacheOperation(t *testing.T, operationName string, operation func(build *common.Build, key string) *url.URL, tc cacheOperationTest) {
+func testCacheOperation(
+	t *testing.T,
+	operationName string,
+	operation func(build *common.Build, key string) *url.URL,
+	tc cacheOperationTest,
+) {
 	t.Run(operationName, func(t *testing.T) {
 		hook := test.NewGlobal()
 
@@ -254,7 +259,7 @@ func TestGenerateObjectName(t *testing.T) {
 			objectName, err := generateObjectName(test.build, test.cache, test.key)
 
 			assert.Equal(t, test.expectedObjectName, objectName)
-			if len(test.expectedError) == 0 {
+			if test.expectedError == "" {
 				assert.NoError(t, err)
 			} else {
 				assert.EqualError(t, err, test.expectedError)

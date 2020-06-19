@@ -55,6 +55,7 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 	return nil, fmt.Errorf("could not find a runner with the name '%s'", name)
 }
 
+//nolint:lll
 type configOptionsWithListenAddress struct {
 	configOptions
 
@@ -76,7 +77,7 @@ func (c *configOptionsWithListenAddress) listenAddress() (string, error) {
 		return "", err
 	}
 
-	if len(port) == 0 {
+	if port == "" {
 		return fmt.Sprintf("%s:%d", address, common.DefaultMetricsServerPort), nil
 	}
 	return address, nil

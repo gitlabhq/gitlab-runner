@@ -27,6 +27,7 @@ type ExecCommand struct {
 	Timeout int `long:"timeout" description:"Job execution timeout (in seconds)"`
 }
 
+// nolint:unparam
 func (c *ExecCommand) runCommand(name string, arg ...string) (string, error) {
 	cmd := exec.Command(name, arg...)
 	cmd.Env = os.Environ()
@@ -35,9 +36,9 @@ func (c *ExecCommand) runCommand(name string, arg ...string) (string, error) {
 	return string(result), err
 }
 
-func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (build *common.Build, err error) {
+func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (*common.Build, error) {
 	// Check if we have uncommitted changes
-	_, err = c.runCommand("git", "diff", "--quiet", "HEAD")
+	_, err := c.runCommand("git", "diff", "--quiet", "HEAD")
 	if err != nil {
 		logrus.Warningln("You most probably have uncommitted changes.")
 		logrus.Warningln("These changes will not be tested.")
@@ -46,7 +47,7 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 	// Parse Git settings
 	sha, err := c.runCommand("git", "rev-parse", "HEAD")
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	beforeSha, err := c.runCommand("git", "rev-parse", "HEAD~1")
@@ -56,7 +57,7 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 
 	refName, err := c.runCommand("git", "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	jobResponse := common.JobResponse{
@@ -84,9 +85,7 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (b
 		RunnerSettings: c.RunnerSettings,
 	}
 
-	build, err = common.NewBuild(jobResponse, runner, abortSignal, nil)
-
-	return
+	return common.NewBuild(jobResponse, runner, abortSignal, nil)
 }
 
 func (c *ExecCommand) getTimeout() int {
@@ -107,7 +106,7 @@ func (c *ExecCommand) Execute(context *cli.Context) {
 	case 1:
 		c.Job = context.Args().Get(0)
 	default:
-		cli.ShowSubcommandHelp(context)
+		_ = cli.ShowSubcommandHelp(context)
 		os.Exit(1)
 		return
 	}

@@ -16,8 +16,9 @@ test coverage report:
   - make parallel_test_coverage_report
   artifacts:
     paths:
-    - out/coverage/*
+    - out/coverage/
     expire_in: 7d
+    expose_as: 'Code Coverage'
 
 test junit report:
   extends:
@@ -41,9 +42,21 @@ race conditions detector:
   - source ci/touch_make_dependencies
   - make check_race_conditions
 
+code navigation:
+  extends:
+  - .coverage_job
+  allow_failure: true
+  needs: []
+  script:
+    - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
+    - lsif-go
+  artifacts:
+    reports:
+      lsif: dump.lsif
+
 .check windows test failures:
   extends:
-  - .merge_request_pipelines_on_gitlab_org_gitlab_runner
+  - .merge_request_pipelines
   - .except_docs
   stage: coverage
   script:
@@ -60,3 +73,23 @@ check windows 1809 test failures:
   - .windows1809_variables
   needs:
   - windows 1809 tests
+
+check windows 1903 test failures:
+  extends:
+  - .check windows test failures
+  - .windows1903_variables
+  needs:
+  - windows 1903 tests
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner
+
+check windows 1909 test failures:
+  extends:
+  - .check windows test failures
+  - .windows1909_variables
+  needs:
+  - windows 1909 tests
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner

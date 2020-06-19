@@ -96,8 +96,15 @@ func TestRunnerTextFormatter_ColorsAndPrefixes(t *testing.T) {
 	}
 }
 
-func testOutputColoringAndPrefix(t *testing.T, key string, value string, testCase colorsAndPrefixesTestCase, colored bool, hook *test.Hook) {
-	recover()
+func testOutputColoringAndPrefix(
+	t *testing.T,
+	key string,
+	value string,
+	testCase colorsAndPrefixesTestCase,
+	colored bool,
+	hook *test.Hook,
+) {
+	_ = recover()
 
 	entry := hook.LastEntry()
 	require.NotNil(t, entry)
@@ -114,7 +121,12 @@ func testOutputColoringAndPrefix(t *testing.T, key string, value string, testCas
 			assert.Contains(t, logrusOutput, testCase.expectedColorCode, "Should contain color code")
 		}
 		assert.Contains(t, logrusOutput, helpers.ANSI_RESET, "Should contain reset color code")
-		assert.Contains(t, logrusOutput, fmt.Sprintf("%s%s%s=%s", testCase.expectedColorCode, key, helpers.ANSI_RESET, value), "Should color field key")
+		assert.Contains(
+			t,
+			logrusOutput,
+			fmt.Sprintf("%s%s%s=%s", testCase.expectedColorCode, key, helpers.ANSI_RESET, value),
+			"Should color field key",
+		)
 	} else {
 		if testCase.expectedColorCode != "" {
 			assert.NotContains(t, logrusOutput, testCase.expectedColorCode, "Shouldn't contain color code")

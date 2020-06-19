@@ -32,58 +32,6 @@ func init() {
 	RegisterShell(&s)
 }
 
-func TestBuildRun(t *testing.T) {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor only once
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Once()
-
-	// We run everything once
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	e.On("Finish", nil).Once()
-	e.On("Cleanup").Once()
-
-	// Run script successfully
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
-
-	RegisterExecutorProvider("build-run-test", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-run-test",
-			},
-		},
-	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
-}
-
-func matchBuildStage(buildStage BuildStage) interface{} {
-	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
-		return cmd.Stage == buildStage
-	})
-}
-
 func TestBuildPredefinedVariables(t *testing.T) {
 	for _, rootDir := range []string{"/root/dir1", "/root/dir2"} {
 		t.Run(rootDir, func(t *testing.T) {
@@ -97,52 +45,14 @@ func TestBuildPredefinedVariables(t *testing.T) {
 	}
 }
 
-func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepareOptions) error) *Build {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
+func matchBuildStage(buildStage BuildStage) interface{} {
+	return mock.MatchedBy(func(cmd ExecutorCommand) bool {
+		return cmd.Stage == buildStage
+	})
+}
 
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor only once
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Once()
-
-	// We run everything once
-	e.On("Prepare", mock.Anything).Return(prepareFn).Once()
-	e.On("Finish", nil).Once()
-	e.On("Cleanup").Once()
-
-	// Run script successfully
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
-
-	RegisterExecutorProvider(t.Name(), &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: t.Name(),
-			},
-		},
-	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
-
-	return build
+func TestBuildRun(t *testing.T) {
+	runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error { return nil })
 }
 
 func TestJobImageExposed(t *testing.T) {
@@ -195,60 +105,27 @@ func TestJobImageExposed(t *testing.T) {
 }
 
 func TestBuildRunNoModifyConfig(t *testing.T) {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
+	expectHostAddr := "10.0.0.1"
+	p, assertFn := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error {
+		options.Config.Docker.Credentials.Host = "10.0.0.2"
+		return nil
+	})
+	defer assertFn()
 
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor only once
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-	p.On("Create").Return(&e).Once()
-
-	// Attempt to modify the Config object
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(func(options ExecutorPrepareOptions) error {
-			options.Config.Docker.Credentials.Host = "10.0.0.2"
-			return nil
-		}).Once()
-
-	// We run everything else once
-	e.On("Finish", nil).Once()
-	e.On("Cleanup").Once()
-
-	// Run script successfully
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
-
-	RegisterExecutorProvider("build-run-nomodify-test", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
 	rc := &RunnerConfig{
 		RunnerSettings: RunnerSettings{
-			Executor: "build-run-nomodify-test",
 			Docker: &DockerConfig{
 				Credentials: docker.Credentials{
-					Host: "10.0.0.1",
+					Host: expectHostAddr,
 				},
 			},
 		},
 	}
-	build, err := NewBuild(successfulBuild, rc, nil, nil)
-	assert.NoError(t, err)
+	build := registerExecutorWithSuccessfulBuild(t, p, rc)
 
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
-	assert.Equal(t, "10.0.0.1", rc.Docker.Credentials.Host)
+	assert.Equal(t, expectHostAddr, rc.Docker.Credentials.Host)
 }
 
 func TestRetryPrepare(t *testing.T) {
@@ -279,19 +156,8 @@ func TestRetryPrepare(t *testing.T) {
 	e.On("Run", mock.Anything).Return(nil)
 	e.On("Finish", nil).Once()
 
-	RegisterExecutorProvider("build-run-retry-prepare", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-run-retry-prepare",
-			},
-		},
-	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	build := registerExecutorWithSuccessfulBuild(t, &p, new(RunnerConfig))
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -316,55 +182,24 @@ func TestPrepareFailure(t *testing.T) {
 		Return(errors.New("prepare failed")).Times(3)
 	e.On("Cleanup").Times(3)
 
-	RegisterExecutorProvider("build-run-prepare-failure", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-run-prepare-failure",
-			},
-		},
-	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	build := registerExecutorWithSuccessfulBuild(t, &p, new(RunnerConfig))
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "prepare failed")
 }
 
 func TestPrepareFailureOnBuildError(t *testing.T) {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(&BuildError{}).Once()
+	executor.On("Cleanup").Once()
 
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Times(1)
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(&BuildError{}).Times(1)
-	e.On("Cleanup").Times(1)
-
-	RegisterExecutorProvider("build-run-prepare-failure-on-build-error", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-run-prepare-failure-on-build-error",
-			},
-		},
-	}
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	assert.IsType(t, err, &BuildError{})
+	expectedErr := new(BuildError)
+	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
 }
 
 func TestPrepareEnvironmentFailure(t *testing.T) {
@@ -405,32 +240,21 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 }
 
 func TestJobFailure(t *testing.T) {
-	e := new(MockExecutor)
-	defer e.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
 
-	p := new(MockExecutorProvider)
-	defer p.AssertExpectations(t)
-
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(e).Times(1)
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil).Times(1)
-	e.On("Cleanup").Times(1)
-
-	// Succeed a build script
+	// Set up a failing a build script
 	thrownErr := &BuildError{Inner: errors.New("test error")}
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", mock.Anything).Return(thrownErr).Times(2)
-	e.On("Finish", thrownErr).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", mock.Anything).Return(thrownErr).Times(2)
+	executor.On("Finish", thrownErr).Once()
 
-	RegisterExecutorProvider("build-run-job-failure", p)
+	RegisterExecutorProvider("build-run-job-failure", provider)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
@@ -452,51 +276,30 @@ func TestJobFailure(t *testing.T) {
 	trace.On("Fail", thrownErr, ScriptFailure).Once()
 
 	err = build.Run(&Config{}, trace)
-	require.IsType(t, &BuildError{}, err)
+
+	expectedErr := new(BuildError)
+	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
 }
 
 func TestJobFailureOnExecutionTimeout(t *testing.T) {
-	e := new(MockExecutor)
-	defer e.AssertExpectations(t)
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
 
-	p := new(MockExecutorProvider)
-	defer p.AssertExpectations(t)
-
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(e).Times(1)
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil).Times(1)
-	e.On("Cleanup").Times(1)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
 
 	// Succeed a build script
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStageUserScript)).Run(func(arguments mock.Arguments) {
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage("step_script")).Run(func(mock.Arguments) {
 		time.Sleep(2 * time.Second)
 	}).Return(nil)
-	e.On("Run", mock.Anything).Return(nil)
-	e.On("Finish", mock.Anything).Once()
+	executor.On("Run", mock.Anything).Return(nil)
+	executor.On("Finish", mock.Anything).Once()
 
-	RegisterExecutorProvider("build-run-job-failure-on-execution-timeout", p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-
-	successfulBuild.RunnerInfo.Timeout = 1
-
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-run-job-failure-on-execution-timeout",
-			},
-		},
-	}
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+	build.JobResponse.RunnerInfo.Timeout = 1
 
 	trace := new(MockJobTrace)
 	defer trace.AssertExpectations(t)
@@ -508,40 +311,32 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 		assert.Error(t, arguments.Get(0).(error))
 	}).Once()
 
-	err = build.Run(&Config{}, trace)
-	require.IsType(t, &BuildError{}, err)
+	err := build.Run(&Config{}, trace)
+
+	expectedErr := &BuildError{FailureReason: JobExecutionTimeout}
+	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
 }
 
 func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Once()
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup").Once()
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
 
 	// Fail a build script
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(errors.New("build fail")).Once()
-	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	e.On("Finish", errors.New("build fail")).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage("step_script")).Return(errors.New("build fail")).Once()
+	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutorProvider("build-run-run-failure", &p)
+	RegisterExecutorProvider("build-run-run-failure", provider)
 
 	failedBuild, err := GetFailedBuild()
 	assert.NoError(t, err)
@@ -558,126 +353,71 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 }
 
 func TestGetSourcesRunFailure(t *testing.T) {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Once()
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup")
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
 
 	// Fail a build script
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail")).Times(3)
-	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	e.On("Finish", errors.New("build fail")).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail")).Times(3)
+	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutorProvider("build-get-sources-run-failure", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-get-sources-run-failure",
-			},
-		},
-	}
-
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
 
 func TestArtifactDownloadRunFailure(t *testing.T) {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Once()
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup")
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
 
 	// Fail a build script
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(errors.New("build fail")).Times(3)
-	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	e.On("Finish", errors.New("build fail")).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(errors.New("build fail")).Times(3)
+	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutorProvider("build-artifacts-run-failure", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-artifacts-run-failure",
-			},
-		},
-	}
-
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "ARTIFACT_DOWNLOAD_ATTEMPTS", Value: "3"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
 
 func TestArtifactUploadRunFailure(t *testing.T) {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Once()
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup")
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
 
 	// Successful build script
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Times(8)
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUserScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(errors.New("upload fail")).Once()
-	e.On("Finish", errors.New("upload fail")).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Times(8)
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage("step_script")).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(errors.New("upload fail")).Once()
+	executor.On("Finish", errors.New("upload fail")).Once()
 
-	RegisterExecutorProvider("build-upload-artifacts-run-failure", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+	successfulBuild := build.JobResponse
 	successfulBuild.Artifacts = make(Artifacts, 1)
 	successfulBuild.Artifacts[0] = Artifact{
 		Name:      "my-artifact",
@@ -685,143 +425,76 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 		Paths:     ArtifactPaths{"cached/*"},
 		When:      ArtifactWhenAlways,
 	}
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-upload-artifacts-run-failure",
-			},
-		},
-	}
-
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "upload fail")
 }
 
 func TestRestoreCacheRunFailure(t *testing.T) {
-	e := MockExecutor{}
-	defer e.AssertExpectations(t)
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Once()
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup")
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
 
 	// Fail a build script
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
-	e.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(errors.New("build fail")).Times(3)
-	e.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	e.On("Finish", errors.New("build fail")).Once()
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(errors.New("build fail")).Times(3)
+	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Finish", errors.New("build fail")).Once()
 
-	RegisterExecutorProvider("build-cache-run-failure", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-cache-run-failure",
-			},
-		},
-	}
-
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "RESTORE_CACHE_ATTEMPTS", Value: "3"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "build fail")
 }
 
 func TestRunWrongAttempts(t *testing.T) {
-	e := MockExecutor{}
-
-	p := MockExecutorProvider{}
-	defer p.AssertExpectations(t)
-
-	// Create executor
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e)
-
-	// Prepare plan
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	e.On("Cleanup")
+	executor, provider := setupMockExecutorAndProvider()
+	defer provider.AssertExpectations(t)
+	defer executor.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
 
 	// Fail a build script
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
-	e.On("Run", mock.Anything).Return(nil).Once()
-	e.On("Run", mock.Anything).Return(errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
-	e.On("Finish", errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", mock.Anything).Return(nil).Once()
+	executor.
+		On("Run", mock.Anything).
+		Return(errors.New("number of attempts out of the range [1, 10] for stage: get_sources"))
+	executor.On(
+		"Finish",
+		errors.New("number of attempts out of the range [1, 10] for stage: get_sources"),
+	)
 
-	RegisterExecutorProvider("build-run-attempt-failure", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-run-attempt-failure",
-			},
-		},
-	}
-
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "0"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.EqualError(t, err, "number of attempts out of the range [1, 10] for stage: get_sources")
 }
 
 func TestRunSuccessOnSecondAttempt(t *testing.T) {
-	e := MockExecutor{}
-	p := MockExecutorProvider{}
-
-	// Create executor only once
-	p.On("CanCreate").Return(true).Once()
-	p.On("GetDefaultShell").Return("bash").Once()
-	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
-
-	p.On("Create").Return(&e).Once()
+	executor, provider := setupMockExecutorAndProvider()
+	defer provider.AssertExpectations(t)
 
 	// We run everything once
-	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	e.On("Finish", mock.Anything).Twice()
-	e.On("Cleanup").Twice()
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	executor.On("Finish", mock.Anything).Twice()
+	executor.On("Cleanup").Twice()
 
 	// Run script successfully
-	e.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 
-	e.On("Run", mock.Anything).Return(nil)
-	e.On("Run", mock.Anything).Return(errors.New("build fail")).Once()
-	e.On("Run", mock.Anything).Return(nil)
+	executor.On("Run", mock.Anything).Return(nil)
+	executor.On("Run", mock.Anything).Return(errors.New("build fail")).Once()
+	executor.On("Run", mock.Anything).Return(nil)
 
-	RegisterExecutorProvider("build-run-success-second-attempt", &p)
-
-	successfulBuild, err := GetSuccessfulBuild()
-	assert.NoError(t, err)
-	build := &Build{
-		JobResponse: successfulBuild,
-		Runner: &RunnerConfig{
-			RunnerSettings: RunnerSettings{
-				Executor: "build-run-success-second-attempt",
-			},
-		},
-	}
-
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
 	build.Variables = append(build.Variables, JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "3"})
-	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -872,7 +545,10 @@ func TestDebugTrace(t *testing.T) {
 			}
 
 			if testCase.debugTraceVariableValue != "" {
-				build.Variables = append(build.Variables, JobVariable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true})
+				build.Variables = append(
+					build.Variables,
+					JobVariable{Key: "CI_DEBUG_TRACE", Value: testCase.debugTraceVariableValue, Public: true},
+				)
 			}
 
 			isTraceEnabled := build.IsDebugTraceEnabled()
@@ -913,9 +589,7 @@ func TestSharedEnvVariables(t *testing.T) {
 			present := "CI_SHARED_ENVIRONMENT=true"
 			absent := "CI_DISPOSABLE_ENVIRONMENT=true"
 			if !shared {
-				tmp := present
-				present = absent
-				absent = tmp
+				present, absent = absent, present
 			}
 
 			assert.Contains(vars, present)
@@ -1132,7 +806,11 @@ func TestStartBuild(t *testing.T) {
 				sharedDir:             false,
 			},
 			jobVariables: JobVariables{
-				{Key: "GIT_CLONE_PATH", Value: "$CI_BUILDS_DIR/go/src/gitlab.com/test-namespace/test-repo", Public: true},
+				{
+					Key:    "GIT_CLONE_PATH",
+					Value:  "$CI_BUILDS_DIR/go/src/gitlab.com/test-namespace/test-repo",
+					Public: true,
+				},
 			},
 			expectedBuildDir: "/builds/go/src/gitlab.com/test-namespace/test-repo",
 			expectedCacheDir: "/cache/test-namespace/test-repo",
@@ -1182,7 +860,11 @@ func TestStartBuild(t *testing.T) {
 				},
 			}
 
-			err := build.StartBuild(test.args.rootDir, test.args.cacheDir, test.args.customBuildDirEnabled, test.args.sharedDir)
+			err := build.StartBuild(
+				test.args.rootDir,
+				test.args.cacheDir,
+				test.args.customBuildDirEnabled,
+				test.args.sharedDir)
 			if test.expectedError {
 				assert.Error(t, err)
 				return
@@ -1312,16 +994,18 @@ func TestWaitForTerminal(t *testing.T) {
 			mockConn.On("Close").Maybe().Return(nil)
 			// On Start upgrade the web socket connection and wait for the
 			// timeoutCh to exit, to mock real work made on the websocket.
-			mockConn.On("Start", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-				upgrader := &websocket.Upgrader{}
-				r := args[1].(*http.Request)
-				w := args[0].(http.ResponseWriter)
+			mockConn.
+				On("Start", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Run(func(args mock.Arguments) {
+					upgrader := &websocket.Upgrader{}
+					r := args[1].(*http.Request)
+					w := args[0].(http.ResponseWriter)
 
-				_, _ = upgrader.Upgrade(w, r, nil)
-				timeoutCh := args[2].(chan error)
+					_, _ = upgrader.Upgrade(w, r, nil)
+					timeoutCh := args[2].(chan error)
 
-				<-timeoutCh
-			}).Once()
+					<-timeoutCh
+				}).Once()
 
 			mockTerminal := terminal.MockInteractiveTerminal{}
 			defer mockTerminal.AssertExpectations(t)
@@ -1400,7 +1084,9 @@ func TestBuild_IsLFSSmudgeDisabled(t *testing.T) {
 			}
 
 			if !testCase.isVariableUnset {
-				b.Variables = append(b.Variables, JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true})
+				b.Variables = append(
+					b.Variables,
+					JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true})
 			}
 
 			assert.Equal(t, testCase.expectedResult, b.IsLFSSmudgeDisabled())
@@ -1637,6 +1323,37 @@ func TestProjectUniqueName(t *testing.T) {
 	}
 }
 
+func TestBuildStages(t *testing.T) {
+	scriptOnlyBuild, err := GetRemoteSuccessfulBuild()
+	require.NoError(t, err)
+
+	multistepBuild, err := GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		jobResponse    JobResponse
+		expectedStages []BuildStage
+	}{
+		"script only build": {
+			jobResponse:    scriptOnlyBuild,
+			expectedStages: append(staticBuildStages, "step_script"),
+		},
+		"multistep build": {
+			jobResponse:    multistepBuild,
+			expectedStages: append(staticBuildStages, "step_script", "step_release"),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := &Build{
+				JobResponse: tt.jobResponse,
+			}
+			assert.ElementsMatch(t, tt.expectedStages, build.BuildStages())
+		})
+	}
+}
+
 func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
 	tests := []struct {
 		attempts         string
@@ -1681,4 +1398,74 @@ func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
 			assert.Equal(t, tt.expectedAttempts, attempts)
 		})
 	}
+}
+
+func setupSuccessfulMockExecutor(
+	t *testing.T,
+	prepareFn func(options ExecutorPrepareOptions) error,
+) (*MockExecutorProvider, func()) {
+	executor, provider := setupMockExecutorAndProvider()
+	assertFn := func() {
+		executor.AssertExpectations(t)
+		provider.AssertExpectations(t)
+	}
+
+	// We run everything once
+	executor.On("Prepare", mock.Anything).Return(prepareFn).Once()
+	executor.On("Finish", nil).Once()
+	executor.On("Cleanup").Once()
+
+	// Run script successfully
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage("step_script")).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).
+		Return(nil).
+		Once()
+
+	return provider, assertFn
+}
+
+func setupMockExecutorAndProvider() (*MockExecutor, *MockExecutorProvider) {
+	e := new(MockExecutor)
+	p := new(MockExecutorProvider)
+
+	p.On("CanCreate").Return(true).Once()
+	p.On("GetDefaultShell").Return("bash").Once()
+	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
+	p.On("Create").Return(e).Once()
+
+	return e, p
+}
+
+func registerExecutorWithSuccessfulBuild(t *testing.T, p *MockExecutorProvider, rc *RunnerConfig) *Build {
+	require.NotNil(t, rc)
+
+	RegisterExecutorProvider(t.Name(), p)
+
+	successfulBuild, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+	if rc.RunnerSettings.Executor == "" {
+		// Ensure we set the executor name if not already defined
+		rc.RunnerSettings.Executor = t.Name()
+	}
+	build, err := NewBuild(successfulBuild, rc, nil, nil)
+	assert.NoError(t, err)
+	return build
+}
+
+func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepareOptions) error) *Build {
+	p, assertFn := setupSuccessfulMockExecutor(t, prepareFn)
+	defer assertFn()
+
+	build := registerExecutorWithSuccessfulBuild(t, p, new(RunnerConfig))
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+
+	return build
 }

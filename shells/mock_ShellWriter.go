@@ -77,8 +77,8 @@ func (_m *MockShellWriter) EnvVariableKey(name string) string {
 	return r0
 }
 
-// Error provides a mock function with given fields: fmt, arguments
-func (_m *MockShellWriter) Error(fmt string, arguments ...interface{}) {
+// Errorf provides a mock function with given fields: fmt, arguments
+func (_m *MockShellWriter) Errorf(fmt string, arguments ...interface{}) {
 	var _ca []interface{}
 	_ca = append(_ca, fmt)
 	_ca = append(_ca, arguments...)
@@ -157,16 +157,16 @@ func (_m *MockShellWriter) MkTmpDir(name string) string {
 	return r0
 }
 
-// Notice provides a mock function with given fields: fmt, arguments
-func (_m *MockShellWriter) Notice(fmt string, arguments ...interface{}) {
+// Noticef provides a mock function with given fields: fmt, arguments
+func (_m *MockShellWriter) Noticef(fmt string, arguments ...interface{}) {
 	var _ca []interface{}
 	_ca = append(_ca, fmt)
 	_ca = append(_ca, arguments...)
 	_m.Called(_ca...)
 }
 
-// Print provides a mock function with given fields: fmt, arguments
-func (_m *MockShellWriter) Print(fmt string, arguments ...interface{}) {
+// Printf provides a mock function with given fields: fmt, arguments
+func (_m *MockShellWriter) Printf(fmt string, arguments ...interface{}) {
 	var _ca []interface{}
 	_ca = append(_ca, fmt)
 	_ca = append(_ca, arguments...)
@@ -202,8 +202,8 @@ func (_m *MockShellWriter) Variable(variable common.JobVariable) {
 	_m.Called(variable)
 }
 
-// Warning provides a mock function with given fields: fmt, arguments
-func (_m *MockShellWriter) Warning(fmt string, arguments ...interface{}) {
+// Warningf provides a mock function with given fields: fmt, arguments
+func (_m *MockShellWriter) Warningf(fmt string, arguments ...interface{}) {
 	var _ca []interface{}
 	_ca = append(_ca, fmt)
 	_ca = append(_ca, arguments...)

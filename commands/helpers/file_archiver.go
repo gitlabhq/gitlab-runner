@@ -154,7 +154,7 @@ func (c *fileArchiver) processPaths() {
 		if found == 0 {
 			logrus.Warningf("%s: no matching files", path)
 		} else {
-			logrus.Infof("%s: found %d matching files", path, found)
+			logrus.Infof("%s: found %d matching files and directories", path, found)
 		}
 	}
 }
@@ -173,28 +173,29 @@ func (c *fileArchiver) processUntracked() {
 	cmd.Stderr = os.Stderr
 	logrus.Debugln("Executing command:", strings.Join(cmd.Args, " "))
 	err := cmd.Run()
-	if err == nil {
-		reader := bufio.NewReader(&output)
-		for {
-			line, err := reader.ReadString(0)
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				logrus.Warningln(err)
-				break
-			}
-			if c.process(line[:len(line)-1]) {
-				found++
-			}
-		}
-
-		if found == 0 {
-			logrus.Warningf("untracked: no files")
-		} else {
-			logrus.Infof("untracked: found %d files", found)
-		}
-	} else {
+	if err != nil {
 		logrus.Warningf("untracked: %v", err)
+		return
+	}
+
+	reader := bufio.NewReader(&output)
+	for {
+		line, err := reader.ReadString(0)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			logrus.Warningln(err)
+			break
+		}
+		if c.process(line[:len(line)-1]) {
+			found++
+		}
+	}
+
+	if found == 0 {
+		logrus.Warningf("untracked: no files")
+	} else {
+		logrus.Infof("untracked: found %d files", found)
 	}
 }
 

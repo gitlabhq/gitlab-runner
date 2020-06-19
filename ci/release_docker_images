@@ -104,15 +104,15 @@ cleanup_docker_context() {
     set -e
 }
 
-# buildx receives an array of tag names, and the image name as the last parameter
+# buildx receives an array of tag names, and the context path as the last parameter
 buildx() {
+    local contextPath="$1"
     local platforms=()
     local os
     os=$(_docker version -f '{{.Server.Os}}')
     for arch in "${TARGET_ARCHS[@]}"; do
         platforms+=("${os}/${arch}")
     done
-    local imageName="$1"
     shift
 
     local args=("$@")
@@ -133,16 +133,16 @@ buildx() {
     done
 
     if [[ "${PUBLISH_IMAGES}" == "true" ]]; then
-        echo -e "\033[1mBuilding and pushing image: \033[32m${imageName}\033[0m"
+        echo -e "\033[1mBuilding and pushing image: \033[32m${contextPath}\033[0m"
         buildxFlags+=("--push")
     else
         # If not pushing, just load the resulting image to local Docker
         if [ ${#TARGET_ARCHS[@]} -eq 1 ]; then
-            echo -e "\033[1mBuilding and loading image: \033[32m${imageName}\033[0m"
+            echo -e "\033[1mBuilding and loading image: \033[32m${contextPath}\033[0m"
             # But that is only possible if we are targeting a single platform
             buildxFlags+=("--load")
         else
-            echo -e "\033[1mBuilding image: \033[32m${imageName}\033[0m"
+            echo -e "\033[1mBuilding image: \033[32m${contextPath}\033[0m"
         fi
     fi
 
@@ -166,7 +166,7 @@ buildx() {
         --no-cache \
         "${tagOpts[@]}" \
         "${buildxFlags[@]}" \
-        "${imageName}"
+        "${contextPath}"
     trap - ERR SIGINT SIGTERM
     cleanup_docker_context
 
@@ -272,23 +272,25 @@ add_tags() {
 
 [ "${#TARGET_ARCHS[@]}" -eq 0 ] && TARGET_ARCHS=("$(_docker version -f '{{.Server.Arch}}')")
 
+runner_home_dir="dockerfiles/runner"
+
 for arch in "${TARGET_ARCHS[@]}"; do
     echo "${arch}:"
     ARCH=$(echo "${arch}" | tr '[:lower:]' '[:upper:]')
-    tee "dockerfiles/checksums-${arch}" <<EOF
+    tee "${runner_home_dir}/checksums-${arch}" <<EOF
 ${checksums["DOCKER_MACHINE_${ARCH}"]}  /usr/bin/docker-machine
 ${checksums["DUMB_INIT_${ARCH}"]}  /usr/bin/dumb-init
 ${checksums["GIT_LFS_${ARCH}"]}  /usr/bin/git-lfs
 EOF
 done
 
-cp dockerfiles/install-deps dockerfiles/ubuntu/
-cp dockerfiles/install-deps dockerfiles/alpine/
+cp "${runner_home_dir}/install-deps" "${runner_home_dir}/ubuntu/"
+cp "${runner_home_dir}/install-deps" "${runner_home_dir}/alpine/"
 for arch in "${TARGET_ARCHS[@]}"; do
-    cp "dockerfiles/checksums-${arch}" "out/deb/gitlab-runner_${arch}.deb" \
-        dockerfiles/ubuntu/
-    cp "dockerfiles/checksums-${arch}" "out/binaries/gitlab-runner-linux-${arch}" \
-        dockerfiles/alpine/
+    cp "${runner_home_dir}/checksums-${arch}" "out/deb/gitlab-runner_${arch}.deb" \
+        "${runner_home_dir}/ubuntu/"
+    cp "${runner_home_dir}/checksums-${arch}" "out/binaries/gitlab-runner-linux-${arch}" \
+        "${runner_home_dir}/alpine/"
 done
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${PUSH_TO_DOCKER_HUB}" ]]; then
@@ -301,8 +303,8 @@ if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY}" ]] && [[ -n "${
 fi
 
 # Build and publish multi-platform images using `docker buildx`
-buildx dockerfiles/ubuntu "${ubuntuTags[@]}"
-buildx dockerfiles/alpine "${alpineTags[@]}"
+buildx "${runner_home_dir}/ubuntu" "${ubuntuTags[@]}"
+buildx "${runner_home_dir}/alpine" "${alpineTags[@]}"
 
 if [[ -z "${PUSH_TO_DOCKER_HUB}" ]] || [[ "${PUSH_TO_DOCKER_HUB}" != "true" ]]; then
     echo "Skipping push to Docker Hub"

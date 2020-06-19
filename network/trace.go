@@ -39,10 +39,10 @@ type clientJobTrace struct {
 }
 
 func (c *clientJobTrace) Success() {
-	c.Fail(nil, common.NoneFailure)
+	c.complete(nil, "")
 }
 
-func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {
+func (c *clientJobTrace) complete(err error, failureReason common.JobFailureReason) {
 	c.lock.Lock()
 
 	if c.state != common.Running {
@@ -60,6 +60,10 @@ func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) 
 	c.finish()
 }
 
+func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {
+	c.complete(err, failureReason)
+}
+
 func (c *clientJobTrace) Write(data []byte) (n int, err error) {
 	return c.buffer.Write(data)
 }
@@ -69,7 +73,22 @@ func (c *clientJobTrace) SetMasked(masked []string) {
 }
 
 func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.cancelFunc = cancelFunc
+}
+
+func (c *clientJobTrace) Cancel() bool {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if c.cancelFunc == nil {
+		return false
+	}
+
+	c.cancelFunc()
+	return true
 }
 
 func (c *clientJobTrace) SetFailuresCollector(fc common.FailuresCollector) {
@@ -242,12 +261,9 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 }
 
 func (c *clientJobTrace) abort() bool {
-	if c.cancelFunc != nil {
-		c.cancelFunc()
-		c.cancelFunc = nil
-		return true
-	}
-	return false
+	cancelled := c.Cancel()
+	c.SetCancelFunc(nil)
+	return cancelled
 }
 
 func (c *clientJobTrace) watch() {
@@ -283,7 +299,11 @@ func (c *clientJobTrace) setupLogLimit() {
 	c.buffer.SetLimit(bytesLimit)
 }
 
-func newJobTrace(client common.Network, config common.RunnerConfig, jobCredentials *common.JobCredentials) (*clientJobTrace, error) {
+func newJobTrace(
+	client common.Network,
+	config common.RunnerConfig,
+	jobCredentials *common.JobCredentials,
+) (*clientJobTrace, error) {
 	buffer, err := trace.New()
 	if err != nil {
 		return nil, err

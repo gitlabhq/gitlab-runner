@@ -19,6 +19,7 @@ This file was modified by James Munnelly (https://gitlab.com/u/munnerz)
 package kubernetes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -44,13 +45,27 @@ const (
 
 // RemoteExecutor defines the interface accepted by the Exec command - provided for test stubbing
 type RemoteExecutor interface {
-	Execute(method string, url *url.URL, config *restclient.Config, stdin io.Reader, stdout, stderr io.Writer, tty bool) error
+	Execute(
+		method string,
+		url *url.URL,
+		config *restclient.Config,
+		stdin io.Reader,
+		stdout, stderr io.Writer,
+		tty bool,
+	) error
 }
 
 // DefaultRemoteExecutor is the standard implementation of remote command execution
 type DefaultRemoteExecutor struct{}
 
-func (*DefaultRemoteExecutor) Execute(method string, url *url.URL, config *restclient.Config, stdin io.Reader, stdout, stderr io.Writer, tty bool) error {
+func (*DefaultRemoteExecutor) Execute(
+	method string,
+	url *url.URL,
+	config *restclient.Config,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+	tty bool,
+) error {
 	exec, err := remotecommand.NewSPDYExecutor(config, method, url)
 	if err != nil {
 		return err
@@ -152,27 +167,30 @@ func (p *ExecOptions) Run() error {
 			p.PodName, p.Namespace, pod.Status.Phase)
 	}
 
-	containerName := p.ContainerName
-	if len(containerName) == 0 {
+	if p.ContainerName == "" {
 		logrus.Infof("defaulting container name to '%s'", pod.Spec.Containers[0].Name)
-		containerName = pod.Spec.Containers[0].Name
+		p.ContainerName = pod.Spec.Containers[0].Name
 	}
 
-	// TODO: refactor with terminal helpers from the edit utility once that is merged
+	return p.executeRequest(context.Background())
+}
+
+func (p *ExecOptions) executeRequest(ctx context.Context) error {
+	req := p.Client.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(p.PodName).
+		Namespace(p.Namespace).
+		SubResource("exec").
+		Param("container", p.ContainerName).
+		Context(ctx)
+
 	var stdin io.Reader
 	if p.Stdin {
 		stdin = p.In
 	}
 
-	// TODO: consider abstracting into a client invocation or client helper
-	req := p.Client.CoreV1().RESTClient().Post().
-		Resource("pods").
-		Name(pod.Name).
-		Namespace(pod.Namespace).
-		SubResource("exec").
-		Param("container", containerName)
 	req.VersionedParams(&api.PodExecOptions{
-		Container: containerName,
+		Container: p.ContainerName,
 		Command:   p.Command,
 		Stdin:     stdin != nil,
 		Stdout:    p.Out != nil,

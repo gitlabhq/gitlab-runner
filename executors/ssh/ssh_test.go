@@ -26,6 +26,7 @@ var (
 	}
 )
 
+//nolint:lll
 const SSH_SERVER_PRIVATE_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIJCgNhsvCiKATDBXmRYHQfXIatKKOXGrmBLEVtGZtVv7oAoGCCqGSM49\nAwEHoUQDQgAE+36GvpVV34STGaV+YU4HHXCtJjburfo8IQDVTgLRwAkoLqLIl1cO\nduKDmdmeG/n66BNH1rJUkXFfEr4OYbZH5g==\n-----END EC PRIVATE KEY-----"
 
 func TestPrepare(t *testing.T) {
@@ -74,6 +75,6 @@ func TestSharedEnv(t *testing.T) {
 	provider := common.GetExecutorProvider("ssh")
 	features := &common.FeaturesInfo{}
 
-	provider.GetFeatures(features)
+	_ = provider.GetFeatures(features)
 	assert.True(t, features.Shared)
 }

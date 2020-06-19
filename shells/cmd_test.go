@@ -28,10 +28,10 @@ func TestCMD_EchoShellEscapes(t *testing.T) {
 	} {
 		writer := &CmdWriter{}
 		for j, functionsToTest := range []outputColor{
-			{writer.Notice, "\x1b[32;1m"},
-			{writer.Warning, "\x1b[0;33m"},
-			{writer.Error, "\x1b[31;1m"},
-			{writer.Print, "\x1b[0;m"},
+			{writer.Noticef, "\x1b[32;1m"},
+			{writer.Warningf, "\x1b[0;33m"},
+			{writer.Errorf, "\x1b[31;1m"},
+			{writer.Printf, "\x1b[0;m"},
 		} {
 			functionsToTest.fn(tc.in)
 			expected := fmt.Sprintf("echo %s%s\x1b[0;m\r\n", functionsToTest.color, tc.out)
@@ -77,13 +77,14 @@ func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
 	}
 
 	for disableDelayedErrorLevelExpansion, expectedCmd := range cases {
-		t.Run("disableDelayedErrorLevelExpansion_"+strconv.FormatBool(disableDelayedErrorLevelExpansion), func(t *testing.T) {
-			writer := &CmdWriter{
-				disableDelayedErrorLevelExpansion: disableDelayedErrorLevelExpansion,
-			}
-			writer.Command("foo")
+		t.Run(
+			"disableDelayedErrorLevelExpansion_"+strconv.FormatBool(disableDelayedErrorLevelExpansion),
+			func(t *testing.T) {
+				writer := &CmdWriter{}
+				writer.disableDelayedErrorLevelExpansion = disableDelayedErrorLevelExpansion
+				writer.Command("foo")
 
-			assert.Equal(t, expectedCmd, writer.String())
-		})
+				assert.Equal(t, expectedCmd, writer.String())
+			})
 	}
 }

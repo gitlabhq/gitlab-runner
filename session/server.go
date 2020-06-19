@@ -33,7 +33,12 @@ type ServerConfig struct {
 	ShutdownTimeout  time.Duration
 }
 
-func NewServer(config ServerConfig, logger *logrus.Entry, certGen certificate.Generator, sessionFinder sessionFinderFn) (*Server, error) {
+func NewServer(
+	config ServerConfig,
+	logger *logrus.Entry,
+	certGen certificate.Generator,
+	sessionFinder sessionFinderFn,
+) (*Server, error) {
 	if logger == nil {
 		logger = logrus.NewEntry(logrus.StandardLogger())
 	}
@@ -150,6 +155,6 @@ func (s *Server) Start() error {
 
 func (s *Server) Close() {
 	if s.httpServer != nil {
-		s.httpServer.Close()
+		_ = s.httpServer.Close()
 	}
 }

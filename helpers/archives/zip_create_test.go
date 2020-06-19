@@ -52,7 +52,7 @@ func createTestGitPathFile(t *testing.T) string {
 func testInWorkDir(t *testing.T, testCase func(t *testing.T, fileName string)) {
 	wd, err := os.Getwd()
 	assert.NoError(t, err)
-	defer os.Chdir(wd)
+	defer func() { _ = os.Chdir(wd) }()
 
 	td, err := ioutil.TempDir("", "zip_create")
 	require.NoError(t, err)

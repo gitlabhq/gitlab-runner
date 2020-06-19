@@ -13,8 +13,8 @@ type mockLogProcessor struct {
 	mock.Mock
 }
 
-// Listen provides a mock function with given fields: ctx
-func (_m *mockLogProcessor) Listen(ctx context.Context) <-chan string {
+// Process provides a mock function with given fields: ctx
+func (_m *mockLogProcessor) Process(ctx context.Context) <-chan string {
 	ret := _m.Called(ctx)
 
 	var r0 <-chan string

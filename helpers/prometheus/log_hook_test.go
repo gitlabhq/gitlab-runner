@@ -10,7 +10,7 @@ import (
 
 func callFireConcurrent(lh *LogHook, repeats int, finish chan bool) {
 	for i := 0; i < repeats; i++ {
-		lh.Fire(&logrus.Entry{
+		_ = lh.Fire(&logrus.Entry{
 			Level: logrus.ErrorLevel,
 		})
 		finish <- true

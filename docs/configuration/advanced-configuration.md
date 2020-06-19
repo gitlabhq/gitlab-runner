@@ -22,16 +22,60 @@ This defines global settings of GitLab Runner.
 | ------- | ----------- |
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
 | `log_level`      | Log level (options: `debug`, `info`, `warn`, `error`, `fatal`, `panic`). Note that this setting has lower priority than level set by command line argument `--debug`, `-l`, or `--log-level` |
-| `log_format`     | Log format (options: `runner`, `text`, `json`). Note that this setting has lower priority than format set by command line argument `--log-format` |
+| `log_format`     | Log format (options: `runner`, `text`, `json`). Note that this setting has lower priority than format set by command line argument `--log-format` The default value is `runner`. |
 | `check_interval` | defines the interval length, in seconds, between new jobs check. The default value is `3`; if set to `0` or lower, the default value will be used. |
 | `sentry_dsn`     | enable tracking of all system level errors to Sentry |
 | `listen_address` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
 
-Example:
+Configuration example:
 
 ```toml
 concurrent = 4
 log_level = "warning"
+```
+
+### `log_format` examples (truncated)
+
+#### `runner`
+
+```shell
+Runtime platform                                    arch=amd64 os=darwin pid=37300 revision=HEAD version=development version
+Starting multi-runner from /etc/gitlab-runner/config.toml...  builds=0
+WARNING: Running in user-mode.
+WARNING: Use sudo for system-mode:
+WARNING: $ sudo gitlab-runner...
+
+Configuration loaded                                builds=0
+listen_address not defined, metrics & debug endpoints disabled  builds=0
+[session_server].listen_address not defined, session endpoints disabled  builds=0
+```
+
+#### `text`
+
+```shell
+INFO[0000] Runtime platform                              arch=amd64 os=darwin pid=37773 revision=HEAD version="development version"
+INFO[0000] Starting multi-runner from /etc/gitlab-runner/config.toml...  builds=0
+WARN[0000] Running in user-mode.
+WARN[0000] Use sudo for system-mode:
+WARN[0000] $ sudo gitlab-runner...
+INFO[0000]
+INFO[0000] Configuration loaded                          builds=0
+INFO[0000] listen_address not defined, metrics & debug endpoints disabled  builds=0
+INFO[0000] [session_server].listen_address not defined, session endpoints disabled  builds=0
+```
+
+#### `json`
+
+```shell
+{"arch":"amd64","level":"info","msg":"Runtime platform","os":"darwin","pid":38229,"revision":"HEAD","time":"2020-06-05T15:57:35+02:00","version":"development version"}
+{"builds":0,"level":"info","msg":"Starting multi-runner from /etc/gitlab-runner/config.toml...","time":"2020-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"Running in user-mode.","time":"2020-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"Use sudo for system-mode:","time":"2020-06-05T15:57:35+02:00"}
+{"level":"warning","msg":"$ sudo gitlab-runner...","time":"2020-06-05T15:57:35+02:00"}
+{"level":"info","msg":"","time":"2020-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"Configuration loaded","time":"2020-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"listen_address not defined, metrics \u0026 debug endpoints disabled","time":"2020-06-05T15:57:35+02:00"}
+{"builds":0,"level":"info","msg":"[session_server].listen_address not defined, session endpoints disabled","time":"2020-06-05T15:57:35+02:00"}
 ```
 
 ### How `check_interval` works
@@ -517,16 +561,6 @@ Example:
 [runners.machine]
   IdleCount = 5
   IdleTime = 600
-  [[runners.machine.autoscaling]]
-    Periods = ["* * 9-17 * * mon-fri *"]
-    IdleCount = 50
-    IdleTime = 3600
-    Timezone = "UTC"
-  [[runners.machine.autoscaling]]
-    Periods = ["* * * * * sat,sun *"]
-    IdleCount = 5
-    IdleTime = 60
-    Timezone = "UTC"
   MaxBuilds = 100
   MachineName = "auto-scale-%s"
   MachineDriver = "digitalocean"
@@ -539,6 +573,16 @@ Example:
       "digitalocean-private-networking",
       "engine-registry-mirror=http://10.11.12.13:12345"
   ]
+  [[runners.machine.autoscaling]]
+    Periods = ["* * 9-17 * * mon-fri *"]
+    IdleCount = 50
+    IdleTime = 3600
+    Timezone = "UTC"
+  [[runners.machine.autoscaling]]
+    Periods = ["* * * * * sat,sun *"]
+    IdleCount = 5
+    IdleTime = 60
+    Timezone = "UTC"
 ```
 
 ### Periods syntax
@@ -630,12 +674,12 @@ Below is a table containing a summary of `config.toml`, cli options and ENV vari
 NOTE: **Note:**
 Moved from the `[runners.cache]` section in GitLab Runner 11.3.0.
 
-Allows to configure S3 storage for cache. This section contains settings related to S3, that previously were
+Configure S3 storage for cache. This section contains settings related to S3, that previously were
 present globally in the `[runners.cache]` section.
 
 | Parameter        | Type             | Description |
 |------------------|------------------|-------------|
-| `ServerAddress`  | string           | A `host:port` to the used S3-compatible server. |
+| `ServerAddress`  | string           | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
 | `AccessKey`      | string           | The access key specified for your S3 instance. |
 | `SecretKey`      | string           | The secret key specified for your S3 instance. |
 | `BucketName`     | string           | Name of the storage bucket where cache will be stored. |
@@ -651,8 +695,8 @@ Example:
   Shared = false
   [runners.cache.s3]
     ServerAddress = "s3.amazonaws.com"
-    AccessKey = "AMAZON_S3_ACCESS_KEY"
-    SecretKey = "AMAZON_S3_SECRET_KEY"
+    AccessKey = "AWS_S3_ACCESS_KEY"
+    SecretKey = "AWS_S3_SECRET_KEY"
     BucketName = "runners-cache"
     BucketLocation = "eu-west-1"
     Insecure = false

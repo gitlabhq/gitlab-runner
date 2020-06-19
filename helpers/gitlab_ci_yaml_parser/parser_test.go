@@ -73,7 +73,7 @@ func prepareTestFile(t *testing.T, fileContent string) string {
 	require.NoError(t, err)
 	defer file.Close()
 
-	file.WriteString(fileContent)
+	_, _ = file.WriteString(fileContent)
 	return file.Name()
 }
 

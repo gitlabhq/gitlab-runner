@@ -53,12 +53,12 @@ func SplitNameAndVersion(serviceDescription string) Service {
 		service.Version = imageVersionLatest
 	}
 
-	alias := strings.Replace(service.Service, "/", "__", -1)
+	alias := strings.ReplaceAll(service.Service, "/", "__")
 	service.Aliases = append(service.Aliases, alias)
 
 	// Create alternative link name according to RFC 1123
 	// Where you can use only `a-zA-Z0-9-`
-	alternativeName := strings.Replace(service.Service, "/", "-", -1)
+	alternativeName := strings.ReplaceAll(service.Service, "/", "-")
 	if alias != alternativeName {
 		service.Aliases = append(service.Aliases, alternativeName)
 	}

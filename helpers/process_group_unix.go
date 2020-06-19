@@ -7,6 +7,7 @@ import (
 	"syscall"
 )
 
+// TODO: Remove in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6413
 func SetProcessGroup(cmd *exec.Cmd) {
 	// Create process group
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -14,6 +15,7 @@ func SetProcessGroup(cmd *exec.Cmd) {
 	}
 }
 
+// TODO: Remove in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6413
 func KillProcessGroup(cmd *exec.Cmd) {
 	if cmd == nil {
 		return
@@ -22,10 +24,10 @@ func KillProcessGroup(cmd *exec.Cmd) {
 	process := cmd.Process
 	if process != nil {
 		if process.Pid > 0 {
-			syscall.Kill(-process.Pid, syscall.SIGKILL)
+			_ = syscall.Kill(-process.Pid, syscall.SIGKILL)
 		} else {
 			// doing normal kill
-			process.Kill()
+			_ = process.Kill()
 		}
 	}
 }

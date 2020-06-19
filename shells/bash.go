@@ -55,6 +55,10 @@ func (b *BashWriter) Line(text string) {
 	b.WriteString(strings.Repeat("  ", b.indent) + text + "\n")
 }
 
+func (b *BashWriter) Linef(format string, arguments ...interface{}) {
+	b.Line(fmt.Sprintf(format, arguments...))
+}
+
 func (b *BashWriter) CheckForErrors() {
 }
 
@@ -93,33 +97,33 @@ func (b *BashWriter) EnvVariableKey(name string) string {
 func (b *BashWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
-		b.Line(fmt.Sprintf("mkdir -p %q", helpers.ToSlash(b.TemporaryPath)))
-		b.Line(fmt.Sprintf("echo -n %s > %q", helpers.ShellEscape(variable.Value), variableFile))
-		b.Line(fmt.Sprintf("export %s=%q", helpers.ShellEscape(variable.Key), variableFile))
+		b.Linef("mkdir -p %q", helpers.ToSlash(b.TemporaryPath))
+		b.Linef("echo -n %s > %q", helpers.ShellEscape(variable.Value), variableFile)
+		b.Linef("export %s=%q", helpers.ShellEscape(variable.Key), variableFile)
 	} else {
-		b.Line(fmt.Sprintf("export %s=%s", helpers.ShellEscape(variable.Key), helpers.ShellEscape(variable.Value)))
+		b.Linef("export %s=%s", helpers.ShellEscape(variable.Key), helpers.ShellEscape(variable.Value))
 	}
 }
 
 func (b *BashWriter) IfDirectory(path string) {
-	b.Line(fmt.Sprintf("if [[ -d %q ]]; then", path))
+	b.Linef("if [[ -d %q ]]; then", path)
 	b.Indent()
 }
 
 func (b *BashWriter) IfFile(path string) {
-	b.Line(fmt.Sprintf("if [[ -e %q ]]; then", path))
+	b.Linef("if [[ -e %q ]]; then", path)
 	b.Indent()
 }
 
 func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
-	b.Line(fmt.Sprintf("if %s >/dev/null 2>/dev/null; then", cmdline))
+	b.Linef("if %s >/dev/null 2>/dev/null; then", cmdline)
 	b.Indent()
 }
 
 func (b *BashWriter) IfCmdWithOutput(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
-	b.Line(fmt.Sprintf("if %s; then", cmdline))
+	b.Linef("if %s; then", cmdline)
 	b.Indent()
 }
 
@@ -164,22 +168,22 @@ func (b *BashWriter) Absolute(dir string) string {
 	return path.Join("$PWD", dir)
 }
 
-func (b *BashWriter) Print(format string, arguments ...interface{}) {
+func (b *BashWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
 
-func (b *BashWriter) Notice(format string, arguments ...interface{}) {
+func (b *BashWriter) Noticef(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
 
-func (b *BashWriter) Warning(format string, arguments ...interface{}) {
+func (b *BashWriter) Warningf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
 
-func (b *BashWriter) Error(format string, arguments ...interface{}) {
+func (b *BashWriter) Errorf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + helpers.ShellEscape(coloredText))
 }
@@ -196,7 +200,7 @@ func (b *BashWriter) Finish(trace bool) string {
 	b.writeTrace(w, trace)
 	b.writeScript(w)
 
-	w.Flush()
+	_ = w.Flush()
 	return buffer.String()
 }
 
@@ -223,18 +227,18 @@ func (b *BashShell) GetName() string {
 	return b.Shell
 }
 
-func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
+func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {
 	var detectScript string
 	var shellCommand string
 	if info.Type == common.LoginShell {
-		detectScript = strings.Replace(BashDetectShellScript, "$@", "--login", -1)
+		detectScript = strings.ReplaceAll(BashDetectShellScript, "$@", "--login")
 		shellCommand = b.Shell + " --login"
 	} else {
-		detectScript = strings.Replace(BashDetectShellScript, "$@", "", -1)
+		detectScript = strings.ReplaceAll(BashDetectShellScript, "$@", "")
 		shellCommand = b.Shell
 	}
 
-	script = &common.ShellConfiguration{}
+	script := &common.ShellConfiguration{}
 	script.DockerCommand = []string{"sh", "-c", detectScript}
 
 	// su
@@ -243,8 +247,11 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 		if runtime.GOOS == "linux" {
 			script.Arguments = append(script.Arguments, "-s", "/bin/"+b.Shell)
 		}
-		script.Arguments = append(script.Arguments, info.User)
-		script.Arguments = append(script.Arguments, "-c", shellCommand)
+		script.Arguments = append(
+			script.Arguments,
+			info.User,
+			"-c", shellCommand,
+		)
 	} else {
 		script.Command = b.Shell
 		if info.Type == common.LoginShell {
@@ -252,7 +259,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *commo
 		}
 	}
 
-	return
+	return script, nil
 }
 
 func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
@@ -264,16 +271,24 @@ func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.She
 	return b.generateScript(w, buildStage, info)
 }
 
-func (b *BashShell) generateScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
+func (b *BashShell) generateScript(
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) (string, error) {
 	b.ensurePrepareStageHostnameMessage(w, buildStage, info)
 	err := b.writeScript(w, buildStage, info)
 	script := w.Finish(info.Build.IsDebugTraceEnabled())
 	return script, err
 }
 
-func (b *BashShell) ensurePrepareStageHostnameMessage(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) {
+func (b *BashShell) ensurePrepareStageHostnameMessage(
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) {
 	if buildStage == common.BuildStagePrepare {
-		if len(info.Build.Hostname) != 0 {
+		if info.Build.Hostname != "" {
 			w.Line("echo " + strconv.Quote("Running on $(hostname) via "+info.Build.Hostname+"..."))
 		} else {
 			w.Line("echo " + strconv.Quote("Running on $(hostname)..."))

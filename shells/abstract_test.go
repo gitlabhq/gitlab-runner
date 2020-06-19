@@ -36,16 +36,31 @@ func TestWriteGitSSLConfig(t *testing.T) {
 	mockWriter.On("EnvVariableKey", tls.VariableCertFile).Return("VariableCertFile").Once()
 	mockWriter.On("EnvVariableKey", tls.VariableKeyFile).Return("VariableKeyFile").Once()
 
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCAInfo"), "VariableCAFile").Once()
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"), "VariableCertFile").Once()
-	mockWriter.On("Command", "git", "config", fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"), "VariableKeyFile").Once()
+	mockWriter.On(
+		"Command",
+		"git",
+		"config",
+		fmt.Sprintf("http.%s.%s", gitlabURL, "sslCAInfo"),
+		"VariableCAFile").Once()
+	mockWriter.On(
+		"Command",
+		"git",
+		"config",
+		fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"),
+		"VariableCertFile").Once()
+	mockWriter.On(
+		"Command",
+		"git",
+		"config",
+		fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"),
+		"VariableKeyFile").Once()
 
 	shell.writeGitSSLConfig(mockWriter, build, nil)
 
 	mockWriter.AssertExpectations(t)
 }
 
-func getJobResponseWithMultipleArtifacts(t *testing.T) common.JobResponse {
+func getJobResponseWithMultipleArtifacts() common.JobResponse {
 	return common.JobResponse{
 		ID:    1000,
 		Token: "token",
@@ -86,7 +101,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		JobResponse: getJobResponseWithMultipleArtifacts(t),
+		JobResponse: getJobResponseWithMultipleArtifacts(),
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: gitlabURL,
@@ -103,7 +118,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
-	mockWriter.On("Notice", mock.Anything)
+	mockWriter.On("Noticef", mock.Anything)
 	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
@@ -134,7 +149,7 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 		"--artifact-format", "gzip",
 		"--artifact-type", "junit").Once()
 	mockWriter.On("Else")
-	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything)
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
 	mockWriter.On("EndIf")
 
 	err := shell.writeScript(mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
@@ -146,7 +161,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		JobResponse: getJobResponseWithMultipleArtifacts(t),
+		JobResponse: getJobResponseWithMultipleArtifacts(),
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
 				URL: gitlabURL,
@@ -163,7 +178,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
-	mockWriter.On("Notice", mock.Anything)
+	mockWriter.On("Noticef", mock.Anything)
 	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
@@ -189,7 +204,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 		"--artifact-format", "gzip",
 		"--artifact-type", "junit").Once()
 	mockWriter.On("Else")
-	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything)
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
 	mockWriter.On("EndIf")
 
 	err := shell.writeScript(mockWriter, common.BuildStageUploadOnFailureArtifacts, info)
@@ -230,7 +245,7 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything).Once()
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Once()
-	mockWriter.On("Notice", mock.Anything).Once()
+	mockWriter.On("Noticef", mock.Anything).Once()
 	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", "https://gitlab.example.com",
 		"--token", "token",
@@ -240,7 +255,7 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 		"--artifact-format", "zip",
 		"--artifact-type", "archive").Once()
 	mockWriter.On("Else").Once()
-	mockWriter.On("Warning", mock.Anything, mock.Anything, mock.Anything).Once()
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
 	mockWriter.On("EndIf").Once()
 
 	err := shell.writeScript(mockWriter, common.BuildStageUploadOnSuccessArtifacts, info)
@@ -295,7 +310,7 @@ func TestGitCleanFlags(t *testing.T) {
 			mockWriter := new(MockShellWriter)
 			defer mockWriter.AssertExpectations(t)
 
-			mockWriter.On("Notice", "Checking out %s as %s...", dummySha[0:8], dummyRef).Once()
+			mockWriter.On("Noticef", "Checking out %s as %s...", dummySha[0:8], dummyRef).Once()
 			mockWriter.On("Command", "git", "checkout", "-f", "-q", dummySha).Once()
 
 			if test.expectedGitClean {
@@ -335,7 +350,6 @@ func TestGitFetchFlags(t *testing.T) {
 			const dummySha = "01234567abcdef"
 			const dummyRef = "master"
 			const dummyProjectDir = "./"
-			const dummyGitDir = "./.git"
 
 			build := &common.Build{
 				Runner: &common.RunnerConfig{},
@@ -350,14 +364,14 @@ func TestGitFetchFlags(t *testing.T) {
 			mockWriter := new(MockShellWriter)
 			defer mockWriter.AssertExpectations(t)
 
-			mockWriter.On("Notice", "Fetching changes...").Once()
+			mockWriter.On("Noticef", "Fetching changes...").Once()
 			mockWriter.On("MkTmpDir", mock.Anything).Return(mock.Anything).Once()
 			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
 			mockWriter.On("Command", "git", "init", dummyProjectDir, "--template", mock.Anything).Once()
 			mockWriter.On("Cd", mock.Anything)
 			mockWriter.On("IfCmd", "git", "remote", "add", "origin", mock.Anything)
 			mockWriter.On("RmFile", mock.Anything)
-			mockWriter.On("Notice", "Created fresh repository.").Once()
+			mockWriter.On("Noticef", "Created fresh repository.").Once()
 			mockWriter.On("Else")
 			mockWriter.On("Command", "git", "remote", "set-url", "origin", mock.Anything)
 			mockWriter.On("EndIf")
@@ -366,7 +380,7 @@ func TestGitFetchFlags(t *testing.T) {
 			command = append(command, test.expectedGitFetchFlags...)
 			mockWriter.On("Command", command...)
 
-			shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir, dummyGitDir)
+			shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir)
 		})
 	}
 }
@@ -376,7 +390,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdRecursive(t *testing.T) {
 	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 
-	mockWriter.On("Notice", "Updating/initializing submodules recursively...").Once()
+	mockWriter.On("Noticef", "Updating/initializing submodules recursively...").Once()
 	mockWriter.On("Command", "git", "submodule", "sync", "--recursive").Once()
 	mockWriter.On("Command", "git", "submodule", "update", "--init", "--recursive").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git clean -ffxd").Once()
@@ -393,7 +407,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 
-	mockWriter.On("Notice", "Updating/initializing submodules...").Once()
+	mockWriter.On("Noticef", "Updating/initializing submodules...").Once()
 	mockWriter.On("Command", "git", "submodule", "sync").Once()
 	mockWriter.On("Command", "git", "submodule", "update", "--init").Once()
 	mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
@@ -403,6 +417,98 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	mockWriter.On("EndIf").Once()
 
 	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, false)
+}
+
+func TestWriteUserScript(t *testing.T) {
+	tests := map[string]struct {
+		inputSteps        common.Steps
+		prebuildScript    string
+		postBuildScript   string
+		buildStage        common.BuildStage
+		setupExpectations func(*MockShellWriter)
+		expectedErr       error
+	}{
+		"no build steps, after script": {
+			inputSteps:        common.Steps{},
+			prebuildScript:    "",
+			postBuildScript:   "",
+			buildStage:        common.BuildStageAfterScript,
+			setupExpectations: func(*MockShellWriter) {},
+			expectedErr:       common.ErrSkipBuildStage,
+		},
+		"single script step": {
+			inputSteps: common.Steps{
+				common.Step{
+					Name:   common.StepNameScript,
+					Script: common.StepScript{"echo hello"},
+				},
+			},
+			prebuildScript:  "",
+			postBuildScript: "",
+			buildStage:      "step_script",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Variable", mock.Anything)
+				m.On("Cd", mock.AnythingOfType("string"))
+				m.On("Noticef", "$ %s", "echo hello").Once()
+				m.On("Line", "echo hello").Once()
+				m.On("CheckForErrors").Once()
+			},
+			expectedErr: nil,
+		},
+		"prebuild, multiple steps postBuild": {
+			inputSteps: common.Steps{
+				common.Step{
+					Name:   common.StepNameScript,
+					Script: common.StepScript{"echo script"},
+				},
+				common.Step{
+					Name:   "release",
+					Script: common.StepScript{"echo release"},
+				},
+				common.Step{
+					Name:   "a11y",
+					Script: common.StepScript{"echo a11y"},
+				},
+			},
+			prebuildScript:  "echo prebuild",
+			postBuildScript: "echo postbuild",
+			buildStage:      common.BuildStage("step_release"),
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Variable", mock.Anything)
+				m.On("Cd", mock.AnythingOfType("string"))
+				m.On("Noticef", "$ %s", "echo prebuild").Once()
+				m.On("Noticef", "$ %s", "echo release").Once()
+				m.On("Noticef", "$ %s", "echo postbuild").Once()
+				m.On("Line", "echo prebuild").Once()
+				m.On("Line", "echo release").Once()
+				m.On("Line", "echo postbuild").Once()
+				m.On("CheckForErrors").Times(3)
+			},
+			expectedErr: nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			info := common.ShellScriptInfo{
+				PreBuildScript: tt.prebuildScript,
+				Build: &common.Build{
+					JobResponse: common.JobResponse{
+						Steps: tt.inputSteps,
+					},
+				},
+				PostBuildScript: tt.postBuildScript,
+			}
+			mockShellWriter := &MockShellWriter{}
+			defer mockShellWriter.AssertExpectations(t)
+
+			tt.setupExpectations(mockShellWriter)
+			shell := AbstractShell{}
+
+			err := shell.writeUserScript(mockShellWriter, info, tt.buildStage)
+			assert.True(t, errors.Is(err, tt.expectedErr), "expected: %v, got: %v", tt.expectedErr, err)
+		})
+	}
 }
 
 func TestSkipBuildStage(t *testing.T) {
@@ -447,7 +553,7 @@ func TestSkipBuildStage(t *testing.T) {
 			},
 		},
 
-		common.BuildStageUserScript: {
+		"step_script": {
 			"don't skip if user script is defined": {
 				common.JobResponse{
 					Steps: common.Steps{

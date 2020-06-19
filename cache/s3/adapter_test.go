@@ -44,8 +44,12 @@ func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 		err = errors.New("test error")
 	}
 
-	client.On("PresignedGetObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.presignedURL, err)
-	client.On("PresignedPutObject", mock.Anything, mock.Anything, mock.Anything).Return(tc.presignedURL, err)
+	client.
+		On("PresignedGetObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(tc.presignedURL, err)
+	client.
+		On("PresignedPutObject", mock.Anything, mock.Anything, mock.Anything).
+		Return(tc.presignedURL, err)
 
 	oldNewMinioURLGenerator := newMinioClient
 	newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
@@ -60,7 +64,11 @@ func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 	}
 }
 
-func testCacheOperation(t *testing.T, operationName string, operation func(adapter cache.Adapter) *url.URL, tc cacheOperationTest) {
+func testCacheOperation(
+	t *testing.T,
+	operationName string,
+	operation func(adapter cache.Adapter) *url.URL, tc cacheOperationTest,
+) {
 	t.Run(operationName, func(t *testing.T) {
 		cleanupMinioURLGeneratorMock := onFakeMinioURLGenerator(tc)
 		defer cleanupMinioURLGeneratorMock()
@@ -102,8 +110,16 @@ func TestCacheOperation(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			testCacheOperation(t, "GetDownloadURL", func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() }, test)
-			testCacheOperation(t, "GetUploadURL", func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() }, test)
+			testCacheOperation(
+				t,
+				"GetDownloadURL",
+				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() },
+				test)
+			testCacheOperation(
+				t,
+				"GetUploadURL",
+				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() },
+				test)
 		})
 	}
 }

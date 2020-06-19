@@ -150,7 +150,8 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 
 				return mock, cleanup
 			},
-			expectedError:       "error while fetching certificates into the CA Chain: couldn't resolve certificates chain from the leaf certificate: test-error",
+			expectedError: "error while fetching certificates into the CA Chain: couldn't resolve certificates " +
+				"chain from the leaf certificate: test-error",
 			expectedChainLength: 0,
 		},
 		"certificates chain prepared properly": {
@@ -179,10 +180,10 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 			builder := NewBuilder(logrus.StandardLogger()).(*defaultBuilder)
 
 			if tc.setupResolverMock != nil {
-				resolver, cleanup := tc.setupResolverMock(t)
+				resolverMock, cleanup := tc.setupResolverMock(t)
 				defer cleanup()
 
-				builder.resolver = resolver
+				builder.resolver = resolverMock
 			}
 
 			TLS := new(tls.ConnectionState)

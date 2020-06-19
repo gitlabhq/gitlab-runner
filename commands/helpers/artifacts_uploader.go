@@ -41,12 +41,12 @@ type ArtifactsUploaderCommand struct {
 
 func (c *ArtifactsUploaderCommand) generateZipArchive(w *io.PipeWriter) {
 	err := archives.CreateZipArchive(w, c.sortedFiles())
-	w.CloseWithError(err)
+	_ = w.CloseWithError(err)
 }
 
 func (c *ArtifactsUploaderCommand) generateGzipStream(w *io.PipeWriter) {
 	err := archives.CreateGzipArchive(w, c.sortedFiles())
-	w.CloseWithError(err)
+	_ = w.CloseWithError(err)
 }
 
 func (c *ArtifactsUploaderCommand) openRawStream() (io.ReadCloser, error) {
@@ -101,7 +101,7 @@ func (c *ArtifactsUploaderCommand) Run() error {
 
 		return nil
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	// Create the archive
 	options := common.ArtifactsOptions{
@@ -129,13 +129,13 @@ func (c *ArtifactsUploaderCommand) Run() error {
 }
 
 func (c *ArtifactsUploaderCommand) ShouldRetry(tries int, err error) bool {
-	var retryableErr retryableErr
-	if !errors.As(err, &retryableErr) {
+	var errAs retryableErr
+	if !errors.As(err, &errAs) {
 		return false
 	}
 
 	maxTries := defaultTries
-	if errors.Is(retryableErr, errServiceUnavailable) {
+	if errors.Is(errAs, errServiceUnavailable) {
 		maxTries = serviceUnavailableTries
 	}
 
@@ -149,7 +149,7 @@ func (c *ArtifactsUploaderCommand) ShouldRetry(tries int, err error) bool {
 func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 	log.SetRunnerFormatter()
 
-	if len(c.URL) == 0 || len(c.Token) == 0 {
+	if c.URL == "" || c.Token == "" {
 		logrus.Fatalln("Missing runner credentials")
 	}
 	if c.ID <= 0 {
@@ -172,8 +172,12 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("artifacts-uploader", "create and upload build artifacts (internal)", &ArtifactsUploaderCommand{
-		network: network.NewGitLabClient(),
-		Name:    "artifacts",
-	})
+	common.RegisterCommand2(
+		"artifacts-uploader",
+		"create and upload build artifacts (internal)",
+		&ArtifactsUploaderCommand{
+			network: network.NewGitLabClient(),
+			Name:    "artifacts",
+		},
+	)
 }

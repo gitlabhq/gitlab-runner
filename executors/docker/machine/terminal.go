@@ -4,10 +4,9 @@ import (
 	"errors"
 
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
-	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
-func (e *machineExecutor) Connect() (terminalsession.Conn, error) {
+func (e *machineExecutor) Connect() (terminal.Conn, error) {
 	if term, ok := e.executor.(terminal.InteractiveTerminal); ok {
 		return term.Connect()
 	}

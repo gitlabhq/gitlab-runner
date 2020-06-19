@@ -32,19 +32,19 @@ func batchQuote(text string) string {
 
 func batchEscapeInsideQuotedString(text string) string {
 	// taken from: http://www.robvanderwoude.com/escapechars.php
-	text = strings.Replace(text, "^", "^^", -1)
-	text = strings.Replace(text, "!", "^^!", -1)
-	text = strings.Replace(text, "&", "^&", -1)
-	text = strings.Replace(text, "<", "^<", -1)
-	text = strings.Replace(text, ">", "^>", -1)
-	text = strings.Replace(text, "|", "^|", -1)
-	text = strings.Replace(text, "\r", "", -1)
-	text = strings.Replace(text, "\n", "!nl!", -1)
+	text = strings.ReplaceAll(text, "^", "^^")
+	text = strings.ReplaceAll(text, "!", "^^!")
+	text = strings.ReplaceAll(text, "&", "^&")
+	text = strings.ReplaceAll(text, "<", "^<")
+	text = strings.ReplaceAll(text, ">", "^>")
+	text = strings.ReplaceAll(text, "|", "^|")
+	text = strings.ReplaceAll(text, "\r", "")
+	text = strings.ReplaceAll(text, "\n", "!nl!")
 	return text
 }
 
 func batchEscapeVariable(text string) string {
-	text = strings.Replace(text, "%", "%%", -1)
+	text = strings.ReplaceAll(text, "%", "%%")
 	text = batchEscape(text)
 	return text
 }
@@ -52,8 +52,8 @@ func batchEscapeVariable(text string) string {
 // If not inside a quoted string (e.g., echo text), escape more things
 func batchEscape(text string) string {
 	text = batchEscapeInsideQuotedString(text)
-	text = strings.Replace(text, "(", "^(", -1)
-	text = strings.Replace(text, ")", "^)", -1)
+	text = strings.ReplaceAll(text, "(", "^(")
+	text = strings.ReplaceAll(text, ")", "^)")
 	return text
 }
 
@@ -67,6 +67,10 @@ func (b *CmdWriter) GetTemporaryPath() string {
 
 func (b *CmdWriter) Line(text string) {
 	b.WriteString(strings.Repeat("  ", b.indent) + text + "\r\n")
+}
+
+func (b *CmdWriter) Linef(format string, arguments ...interface{}) {
+	b.Line(fmt.Sprintf(format, arguments...))
 }
 
 func (b *CmdWriter) CheckForErrors() {
@@ -89,7 +93,7 @@ func (b *CmdWriter) checkErrorLevel() {
 
 func (b *CmdWriter) updateErrLevelCheck(errCheck string) string {
 	if b.disableDelayedErrorLevelExpansion {
-		return strings.Replace(errCheck, "!", "%", -1)
+		return strings.ReplaceAll(errCheck, "!", "%")
 	}
 
 	return errCheck
@@ -124,27 +128,27 @@ func (b *CmdWriter) EnvVariableKey(name string) string {
 func (b *CmdWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
-		b.Line(fmt.Sprintf("md %q 2>NUL 1>NUL", batchEscape(helpers.ToBackslash(b.TemporaryPath))))
-		b.Line(fmt.Sprintf("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile)))
-		b.Line("SET " + batchEscapeVariable(variable.Key) + "=" + batchEscape(variableFile))
+		b.Linef("md %q 2>NUL 1>NUL", batchEscape(helpers.ToBackslash(b.TemporaryPath)))
+		b.Linef("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile))
+		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscape(variableFile))
 	} else {
-		b.Line("SET " + batchEscapeVariable(variable.Key) + "=" + batchEscapeVariable(variable.Value))
+		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscapeVariable(variable.Value))
 	}
 }
 
 func (b *CmdWriter) IfDirectory(path string) {
-	b.Line("IF EXIST " + batchQuote(helpers.ToBackslash(path)) + " (")
+	b.Linef("IF EXIST %s (", batchQuote(helpers.ToBackslash(path)))
 	b.Indent()
 }
 
 func (b *CmdWriter) IfFile(path string) {
-	b.Line("IF EXIST " + batchQuote(helpers.ToBackslash(path)) + " (")
+	b.Linef("IF EXIST %s (", batchQuote(helpers.ToBackslash(path)))
 	b.Indent()
 }
 
 func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
-	b.Line(fmt.Sprintf("%s 2>NUL 1>NUL", cmdline))
+	b.Linef("%s 2>NUL 1>NUL", cmdline)
 	errCheck := "IF !errorlevel! EQU 0 ("
 	b.Line(b.updateErrLevelCheck(errCheck))
 	b.Indent()
@@ -176,7 +180,7 @@ func (b *CmdWriter) Cd(path string) {
 
 func (b *CmdWriter) MkDir(path string) {
 	args := batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL"
-	b.Line("dir " + args + " || md " + args)
+	b.Linef("dir %s || md %s", args, args)
 }
 
 func (b *CmdWriter) MkTmpDir(name string) string {
@@ -187,29 +191,29 @@ func (b *CmdWriter) MkTmpDir(name string) string {
 }
 
 func (b *CmdWriter) RmDir(path string) {
-	b.Line("rd /s /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
+	b.Linef("rd /s /q %s 2>NUL 1>NUL", batchQuote(helpers.ToBackslash(path)))
 }
 
 func (b *CmdWriter) RmFile(path string) {
-	b.Line("del /f /q " + batchQuote(helpers.ToBackslash(path)) + " 2>NUL 1>NUL")
+	b.Linef("del /f /q %s 2>NUL 1>NUL", batchQuote(helpers.ToBackslash(path)))
 }
 
-func (b *CmdWriter) Print(format string, arguments ...interface{}) {
+func (b *CmdWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
-func (b *CmdWriter) Notice(format string, arguments ...interface{}) {
+func (b *CmdWriter) Noticef(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
-func (b *CmdWriter) Warning(format string, arguments ...interface{}) {
+func (b *CmdWriter) Warningf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
 
-func (b *CmdWriter) Error(format string, arguments ...interface{}) {
+func (b *CmdWriter) Errorf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))
 }
@@ -230,17 +234,17 @@ func (b *CmdWriter) Finish(trace bool) string {
 	w := bufio.NewWriter(&buffer)
 
 	if trace {
-		io.WriteString(w, "@echo on\r\n")
+		_, _ = io.WriteString(w, "@echo on\r\n")
 	} else {
-		io.WriteString(w, "@echo off\r\n")
+		_, _ = io.WriteString(w, "@echo off\r\n")
 	}
 
-	io.WriteString(w, "setlocal enableextensions\r\n")
-	io.WriteString(w, "setlocal enableDelayedExpansion\r\n")
-	io.WriteString(w, "set nl=^\r\n\r\n\r\n")
+	_, _ = io.WriteString(w, "setlocal enableextensions\r\n")
+	_, _ = io.WriteString(w, "setlocal enableDelayedExpansion\r\n")
+	_, _ = io.WriteString(w, "set nl=^\r\n\r\n\r\n")
 
-	io.WriteString(w, b.String())
-	w.Flush()
+	_, _ = io.WriteString(w, b.String())
+	_ = w.Flush()
 	return buffer.String()
 }
 
@@ -254,20 +258,24 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 	return
 }
 
-func (b *CmdShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (script string, err error) {
+func (b *CmdShell) GenerateScript(
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) (script string, err error) {
+	//nolint:lll
 	w := &CmdWriter{
 		TemporaryPath:                     info.Build.TmpProjectDir(),
 		disableDelayedErrorLevelExpansion: info.Build.IsFeatureFlagOn(featureflags.CmdDisableDelayedErrorLevelExpansion),
 	}
 
 	if buildStage == common.BuildStagePrepare {
-		if len(info.Build.Hostname) != 0 {
+		if info.Build.Hostname != "" {
 			w.Line("echo Running on %COMPUTERNAME% via " + batchEscape(info.Build.Hostname) + "...")
 		} else {
 			w.Line("echo Running on %COMPUTERNAME%...")
 		}
 
-		w.Warning("DEPRECATION: CMD shell is deprecated and will no longer be supported")
+		w.Warningf("DEPRECATION: CMD shell is deprecated and will no longer be supported")
 	}
 
 	err = b.writeScript(w, buildStage, info)

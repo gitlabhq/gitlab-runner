@@ -91,7 +91,11 @@ func getLogrusOutput(t *testing.T, hook *test.Hook) string {
 	return buf.String()
 }
 
-func testRegisterCommandRun(t *testing.T, network common.Network, args ...string) (content string, output string, err error) {
+func testRegisterCommandRun(
+	t *testing.T,
+	network common.Network,
+	args ...string,
+) (content string, output string, err error) {
 	hook := test.NewGlobal()
 
 	defer func() {
@@ -186,7 +190,8 @@ func TestAccessLevelSetting(t *testing.T) {
 			_, output, err := testRegisterCommandRun(t, network, arguments...)
 
 			if testCase.failureExpected {
-				assert.EqualError(t, err, "command error: Given access-level is not valid. Please refer to gitlab-runner register -h for the correct options.")
+				assert.EqualError(t, err, "command error: Given access-level is not valid. "+
+					"Please refer to gitlab-runner register -h for the correct options.")
 				assert.NotContains(t, output, "Runner registered successfully.")
 
 				return
@@ -275,6 +280,7 @@ var (
 )
 
 func TestConfigTemplate_MergeTo(t *testing.T) {
+	//nolint:lll
 	tests := map[string]struct {
 		templateContent string
 		config          *common.RunnerConfig
@@ -326,7 +332,10 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 		},
 		"error on merging": {
 			templateContent: configTemplateMergeToAdditionalConfiguration,
-			expectedError:   errors.Wrap(mergo.ErrNotSupported, "error while merging configuration with configuration template"),
+			expectedError: errors.Wrap(
+				mergo.ErrNotSupported,
+				"error while merging configuration with configuration template",
+			),
 		},
 	}
 

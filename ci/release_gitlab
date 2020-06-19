@@ -30,6 +30,7 @@ release=$(cat <<EOS
     "links": [
       { "name": "linux amd64", "url": "$s3/binaries/gitlab-runner-linux-amd64" },
       { "name": "linux arm", "url": "$s3/binaries/gitlab-runner-linux-arm" },
+      { "name": "linux s390x", "url": "$s3/binaries/gitlab-runner-linux-s390x" },
       { "name": "macOS", "url": "$s3/binaries/gitlab-runner-darwin-amd64" },
       { "name": "Windows 64 bits", "url": "$s3/binaries/gitlab-runner-windows-amd64.zip" },
       { "name": "Windows 32 bits", "url": "$s3/binaries/gitlab-runner-windows-386.zip" },

@@ -38,7 +38,7 @@ func newHTTPFetcher(timeout time.Duration) *httpFetcher {
 func (f *httpFetcher) Fetch(url string) ([]byte, error) {
 	resp, err := f.client.Get(url)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 	}
 	if err != nil {
 		return nil, err

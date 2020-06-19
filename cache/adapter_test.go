@@ -74,9 +74,11 @@ func TestCreateAdapter(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			factories.Register("additional-adapter", func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
-				return new(MockAdapter), nil
-			})
+			_ = factories.Register(
+				"additional-adapter",
+				func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
+					return new(MockAdapter), nil
+				})
 
 			config := &common.CacheConfig{
 				Type: adapterTypeName,

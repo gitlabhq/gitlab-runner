@@ -25,7 +25,7 @@ func TestStackDumping(t *testing.T) {
 
 	proc, err := os.FindProcess(os.Getpid())
 	require.NoError(t, err)
-	proc.Signal(syscall.SIGUSR1)
+	require.NoError(t, proc.Signal(syscall.SIGUSR1))
 
 	<-dumpedCh
 	logrusOutput, err := hook.LastEntry().String()

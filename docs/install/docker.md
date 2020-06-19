@@ -45,16 +45,20 @@ command stays as it is described in the [register documentation](../register/ind
 The only difference is that the `gitlab-runner` command is executed inside of a
 Docker container.
 
-## Docker image installation
+## Install the Docker image and start the container
 
-1. Install Docker first:
+Before you begin, ensure [Docker is installed](https://docs.docker.com/get-docker/).
 
-   ```shell
-   curl -sSL https://get.docker.com/ | sh
-   ```
+To run `gitlab-runner` inside a Docker container, you need to make sure that the configuration is not lost when the container is restarted. To do this, there are two options, which are described below.
 
-1. You need to mount a configuration volume into the `gitlab-runner` container to
-   be used for configs and other resources:
+Make sure that you read the [FAQ](../faq/README.md) section which describes some of the most common problems with GitLab Runner.
+
+NOTE: **Note:**
+If you are using a [`session_server`](../configuration/advanced-configuration.md), you will also need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command.
+
+### Option 1: Use local system volume mounts to start the Runner container
+
+This example uses the local system for the configuration volume that is mounted into the `gitlab-runner` container. This volume is used for configs and other resources.
 
    ```shell
    docker run -d --name gitlab-runner --restart always \
@@ -63,37 +67,30 @@ Docker container.
      gitlab/gitlab-runner:latest
    ```
 
-   TIP: **Tip:**
-   On macOS, use `/Users/Shared` instead of `/srv`.
+   TIP: **Tip:** On macOS, use `/Users/Shared` instead of `/srv`.
 
-   Or, you can use a configuration container to mount your custom data volume:
+### Option 2: Use Docker volumes to start the Runner container
+
+In this example, you can use a configuration container to mount your custom data volume.
+
+1. Create the Docker volume:
 
    ```shell
-   docker run -d --name gitlab-runner-config \
-       -v /etc/gitlab-runner \
-       busybox:latest \
-       /bin/true
+   docker volume create gitlab-runner-config
    ```
 
-   And then, run the Runner:
+1. Start the Runner container using the volume we just created:
 
    ```shell
    docker run -d --name gitlab-runner --restart always \
        -v /var/run/docker.sock:/var/run/docker.sock \
-       --volumes-from gitlab-runner-config \
+       -v gitlab-runner-config:/etc/gitlab-runner \
        gitlab/gitlab-runner:latest
    ```
 
-1. Register the runner you just launched by following the instructions in the
-   [Docker section of Registering Runners](../register/index.md#docker).
-   The runner won't pick up any jobs until it's registered.
+### Register the Runner
 
-Make sure that you read the [FAQ](../faq/README.md) section which describes
-some of the most common problems with GitLab Runner.
-
-NOTE: **Note:**
-If you are using a [`session_server`](../configuration/advanced-configuration.md),
-you will also need to expose port 8093 by adding `-p 8093:8093` to your `docker run` command.
+The final step is to [register a new Runner](../register/index.md#docker). The GitLab Runner Container won't pick up any jobs until it's registered.
 
 ## Update configuration
 
@@ -181,13 +178,7 @@ may need to restart it for the changes to take effect.
 
 ## Docker images
 
-NOTE: **Note:**
-No arm/arm64 images are provided for GitLab Runner. See the [related
-issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4871) for more
-information. If needed, you can install arm/arm64 versions manually via
-[binary file](linux-manually.md#using-binary-file).
-
-The following Docker images are available:
+The following multi-platform Docker images are available:
 
 - `gitlab/gitlab-runner:latest` based on Ubuntu.
 - `gitlab/gitlab-runner:alpine` based on Alpine with much a smaller footprint
@@ -201,10 +192,10 @@ source for possible build instructions for both Ubuntu and Alpine images.
 
 Some distributions (CentOS, RedHat, Fedora) use SELinux by default to enhance the security of the underlying system.
 
-Special care must be taken when dealing with such configuration.
+Special care must be taken when dealing with such a configuration.
 
 1. If you want to use the [Docker executor](../executors/docker.md) to run builds in containers, you'll need access to `/var/run/docker.sock`.
-   However, if SELinux is in enforcing mode, you will see the `Permission denied` error when you're accessing `/var/run/docker.sock`.
+   However, if SELinux is in enforcing mode, you will see a `Permission denied` error when you're accessing `/var/run/docker.sock`.
    Install [selinux-dockersock](https://github.com/dpw/selinux-dockersock) to resolve this issue.
 1. Make sure that a persistent directory is created on host: `mkdir -p /srv/gitlab-runner/config`.
 1. Run Docker with `:Z` on volumes:

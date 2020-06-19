@@ -230,6 +230,31 @@ func (_m *MockClient) ContainerStart(ctx context.Context, containerID string, op
 	return r0
 }
 
+// ContainerWait provides a mock function with given fields: ctx, containerID, condition
+func (_m *MockClient) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+	ret := _m.Called(ctx, containerID, condition)
+
+	var r0 <-chan container.ContainerWaitOKBody
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.WaitCondition) <-chan container.ContainerWaitOKBody); ok {
+		r0 = rf(ctx, containerID, condition)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan container.ContainerWaitOKBody)
+		}
+	}
+
+	var r1 <-chan error
+	if rf, ok := ret.Get(1).(func(context.Context, string, container.WaitCondition) <-chan error); ok {
+		r1 = rf(ctx, containerID, condition)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(<-chan error)
+		}
+	}
+
+	return r0, r1
+}
+
 // ImageImportBlocking provides a mock function with given fields: ctx, source, ref, options
 func (_m *MockClient) ImageImportBlocking(ctx context.Context, source types.ImageImportSource, ref string, options types.ImageImportOptions) error {
 	ret := _m.Called(ctx, source, ref, options)

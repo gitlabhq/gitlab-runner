@@ -121,7 +121,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(output)
+	_, _ = w.Write(output)
 }
 
 func TestRegisterRunner(t *testing.T) {
@@ -147,21 +147,65 @@ func TestRegisterRunner(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res := c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, Active: true})
+	res := c.RegisterRunner(
+		validToken,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			Active:      true,
+		})
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
 	}
 
-	res = c.RegisterRunner(validToken, RegisterRunnerParameters{Description: "invalid description", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
+	res = c.RegisterRunner(
+		validToken,
+		RegisterRunnerParameters{
+			Description: "invalid description",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			AccessLevel: "not_protected",
+			Active:      true,
+		})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(invalidToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
+	res = c.RegisterRunner(
+		invalidToken,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			AccessLevel: "not_protected",
+			Active:      true,
+		})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(otherToken, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
+	res = c.RegisterRunner(
+		otherToken,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			AccessLevel: "not_protected",
+			Active:      true,
+		})
 	assert.Nil(t, res)
 
-	res = c.RegisterRunner(brokenCredentials, RegisterRunnerParameters{Description: "test", Tags: "tags", RunUntagged: true, Locked: true, AccessLevel: "not_protected", Active: true})
+	res = c.RegisterRunner(
+		brokenCredentials,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			AccessLevel: "not_protected",
+			Active:      true,
+		})
 	assert.Nil(t, res)
 }
 
@@ -297,10 +341,10 @@ func TestVerifyRunner(t *testing.T) {
 	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
 }
 
-func getRequestJobResponse() (res map[string]interface{}) {
+func getRequestJobResponse() map[string]interface{} {
 	jobToken := "job-token"
 
-	res = make(map[string]interface{})
+	res := make(map[string]interface{})
 	res["id"] = 10
 	res["token"] = jobToken
 	res["allow_git_fetch"] = false
@@ -400,7 +444,7 @@ func getRequestJobResponse() (res map[string]interface{}) {
 	dependencies[0]["artifacts_file"] = artifactsFile0
 	res["dependencies"] = dependencies
 
-	return
+	return res
 }
 
 func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
@@ -448,7 +492,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(output)
+	_, _ = w.Write(output)
 	t.Logf("JobRequest response: %s\n", output)
 }
 
@@ -595,16 +639,32 @@ func TestUpdateJob(t *testing.T) {
 	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state", FailureReason: ""})
 	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown job")
 
-	state = c.UpdateJob(brokenConfig, jobCredentials, UpdateJobInfo{ID: 4, State: "state", FailureReason: ""})
+	state = c.UpdateJob(
+		brokenConfig,
+		jobCredentials,
+		UpdateJobInfo{ID: 4, State: "state", FailureReason: ""},
+	)
 	assert.Equal(t, UpdateAbort, state)
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: "script_failure"})
+	state = c.UpdateJob(
+		config,
+		jobCredentials,
+		UpdateJobInfo{ID: 10, State: "failed", FailureReason: "script_failure"},
+	)
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: "unknown_failure_reason"})
+	state = c.UpdateJob(
+		config,
+		jobCredentials,
+		UpdateJobInfo{ID: 10, State: "failed", FailureReason: "unknown_failure_reason"},
+	)
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed", FailureReason: ""})
+	state = c.UpdateJob(
+		config,
+		jobCredentials,
+		UpdateJobInfo{ID: 10, State: "failed", FailureReason: ""},
+	)
 	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
 }
 
@@ -669,10 +729,18 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 	assert.Equal(t, UpdateAbort, state, "Update should continue when Job-Status=failed")
 }
 
-var patchToken = "token"
+const patchToken = "token"
+
 var patchTraceContent = []byte("trace trace trace")
 
-func getPatchServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int)) (*httptest.Server, *GitLabClient, RunnerConfig) {
+func getPatchServer(
+	t *testing.T,
+	handler func(
+		w http.ResponseWriter,
+		r *http.Request,
+		body []byte,
+		offset, limit int),
+) (*httptest.Server, *GitLabClient, RunnerConfig) {
 	patchHandler := func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v4/jobs/1/trace" {
 			w.WriteHeader(http.StatusNotFound)
@@ -1096,7 +1164,13 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 	checkTestArtifactsUploadHandlerContent(w, r, string(body))
 }
 
-func uploadArtifacts(client *GitLabClient, config JobCredentials, artifactsFile, artifactType string, artifactFormat ArtifactFormat) UploadState {
+func uploadArtifacts(
+	client *GitLabClient,
+	config JobCredentials,
+	artifactsFile,
+	artifactType string,
+	artifactFormat ArtifactFormat,
+) UploadState {
 	file, err := os.Open(artifactsFile)
 	if err != nil {
 		return UploadFailed
@@ -1144,23 +1218,23 @@ func TestArtifactsUpload(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600))
 	state := uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("too-large"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("too-large"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadTooLarge, state, "Artifacts should be not uploaded, because of too large archive")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("zip"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("zip"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatZip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as zip")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("gzip"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("gzip"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatGzip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("junit"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("junit"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "junit", ArtifactFormatGzip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
 
@@ -1170,15 +1244,15 @@ func TestArtifactsUpload(t *testing.T) {
 	state = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
 
-	ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600)
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
 }
 
-func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/direct-download" {
 		w.WriteHeader(http.StatusOK)
-		w.Write(bytes.NewBufferString("Artifact: direct_download=true").Bytes())
+		_, _ = w.Write(bytes.NewBufferString("Artifact: direct_download=true").Bytes())
 		return
 	}
 
@@ -1201,7 +1275,7 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *tes
 	directDownloadFlag := r.URL.Query().Get("direct_download")
 	if directDownloadFlag == "" {
 		w.WriteHeader(http.StatusOK)
-		w.Write(bytes.NewBufferString("Artifact: direct_download=missing").Bytes())
+		_, _ = w.Write(bytes.NewBufferString("Artifact: direct_download=missing").Bytes())
 		return
 	}
 
@@ -1218,12 +1292,12 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request, t *tes
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(bytes.NewBufferString("Artifact: direct_download=false").Bytes())
+	_, _ = w.Write(bytes.NewBufferString("Artifact: direct_download=false").Bytes())
 }
 
 func TestArtifactsDownload(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testArtifactsDownloadHandler(w, r, t)
+		testArtifactsDownloadHandler(w, r)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))

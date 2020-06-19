@@ -13,6 +13,7 @@ from `master` branch. Use at your own risk.
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-linux-386>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-linux-amd64>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-linux-arm>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-linux-s390x>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-darwin-amd64>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-windows-386.exe>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-windows-amd64.exe>

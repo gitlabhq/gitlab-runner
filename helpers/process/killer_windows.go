@@ -1,27 +1,31 @@
 package process
 
 import (
-	"os"
+	"os/exec"
+	"strconv"
 )
 
 type windowsKiller struct {
-	logger  Logger
-	process *os.Process
+	logger Logger
+	cmd    Commander
 }
 
 func newKiller(logger Logger, cmd Commander) killer {
 	return &windowsKiller{
-		logger:  logger,
-		process: cmd.Process(),
+		logger: logger,
+		cmd:    cmd,
 	}
 }
 
+// Terminate on windows sends a taskkill to the command and it's child processes
+// forcefully `/F` since most time the process can't be killed and ends up
+// erroring out.
 func (pk *windowsKiller) Terminate() {
-	if pk.process == nil {
+	if pk.cmd.Process() == nil {
 		return
 	}
 
-	err := pk.process.Kill()
+	err := taskKill(pk.cmd.Process().Pid)
 	if err != nil {
 		pk.logger.Warn("Failed to terminate process:", err)
 
@@ -31,12 +35,16 @@ func (pk *windowsKiller) Terminate() {
 }
 
 func (pk *windowsKiller) ForceKill() {
-	if pk.process == nil {
+	if pk.cmd.Process() == nil {
 		return
 	}
 
-	err := pk.process.Kill()
+	err := taskKill(pk.cmd.Process().Pid)
 	if err != nil {
 		pk.logger.Warn("Failed to force-kill:", err)
 	}
+}
+
+func taskKill(pid int) error {
+	return exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(pid)).Run()
 }

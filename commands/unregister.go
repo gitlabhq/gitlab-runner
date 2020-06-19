@@ -8,6 +8,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
+//nolint:lll
 type UnregisterCommand struct {
 	configOptions
 	common.RunnerCredentials
@@ -21,14 +22,14 @@ func (c *UnregisterCommand) unregisterAllRunners() (runners []*common.RunnerConf
 	for _, r := range c.config.Runners {
 		if !c.network.UnregisterRunner(r.RunnerCredentials) {
 			logrus.Errorln("Failed to unregister runner", r.Name)
-			//If unregister fails, leave the runner in the config
+			// If unregister fails, leave the runner in the config
 			runners = append(runners, r)
 		}
 	}
 	return
 }
 
-func (c *UnregisterCommand) unregisterSingleRunner() (runners []*common.RunnerConfig) {
+func (c *UnregisterCommand) unregisterSingleRunner() []*common.RunnerConfig {
 	if len(c.Name) > 0 { // Unregister when given a name
 		runnerConfig, err := c.RunnerByName(c.Name)
 		if err != nil {
@@ -42,13 +43,13 @@ func (c *UnregisterCommand) unregisterSingleRunner() (runners []*common.RunnerCo
 		logrus.Fatalln("Failed to unregister runner", c.Name)
 	}
 
+	var runners []*common.RunnerConfig
 	for _, otherRunner := range c.config.Runners {
-		if otherRunner.RunnerCredentials == c.RunnerCredentials {
-			continue
+		if otherRunner.RunnerCredentials != c.RunnerCredentials {
+			runners = append(runners, otherRunner)
 		}
-		runners = append(runners, otherRunner)
 	}
-	return
+	return runners
 }
 
 func (c *UnregisterCommand) Execute(context *cli.Context) {

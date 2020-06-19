@@ -23,7 +23,6 @@ const (
 )
 
 const (
-	NoneFailure         JobFailureReason = ""
 	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 	JobExecutionTimeout JobFailureReason = "job_execution_timeout"
@@ -322,6 +321,7 @@ type UpdateJobRequest struct {
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
 }
 
+//nolint:lll
 type JobCredentials struct {
 	ID          int    `long:"id" env:"CI_JOB_ID" description:"The build ID to upload artifacts for"`
 	Token       string `long:"token" env:"CI_JOB_TOKEN" required:"true" description:"Build token"`
@@ -373,6 +373,7 @@ type JobTrace interface {
 	Success()
 	Fail(err error, failureReason JobFailureReason)
 	SetCancelFunc(cancelFunc context.CancelFunc)
+	Cancel() bool
 	SetFailuresCollector(fc FailuresCollector)
 	SetMasked(values []string)
 	IsStdout() bool

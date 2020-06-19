@@ -197,9 +197,7 @@ func (e *executor) defaultCommandOutputs() commandOutputs {
 var commandFactory = command.New
 
 func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) command.Command {
-	logger := &processLogger{
-		buildLogger: e.BuildLogger,
-	}
+	logger := common.NewProcessLoggerAdapter(e.BuildLogger)
 
 	cmdOpts := process.CommandOptions{
 		Dir:                 e.tempDir,
@@ -281,7 +279,7 @@ func (e *executor) Cleanup() {
 		return
 	}
 
-	defer os.RemoveAll(e.tempDir)
+	defer func() { _ = os.RemoveAll(e.tempDir) }()
 
 	// nothing to do, as there's no cleanup_script
 	if e.config.CleanupExec == "" {

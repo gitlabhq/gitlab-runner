@@ -169,7 +169,7 @@ Don't add dependency from upstream master branch when version tags are available
 
 We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/Vagrantfile)
 to help you run a Windows Server 2019 or Windows 10 instance, since we
-are using [multiple machines](https://www.vagrantup.com/docs/multi-machine/) inside of Vagrant.
+are using [multiple machines](https://www.vagrantup.com/docs/multi-machine) inside of Vagrant.
 
 The following are required:
 

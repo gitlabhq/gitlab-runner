@@ -34,6 +34,9 @@ const (
 	DEL           = 127
 )
 
+type shellEscaper struct {
+}
+
 // ShellEscape is taken from https://github.com/solidsnack/shell-escape/blob/master/Text/ShellEscape/Bash.hs
 /*
 A Bash escaped string. The strings are wrapped in @$\'...\'@ if any
@@ -43,87 +46,61 @@ sequences. High bytes are represented as hex codes. Thus Bash escaped
 strings will always fit on one line and never contain non-ASCII bytes.
 */
 func ShellEscape(str string) string {
+	e := newShellEscaper()
+	outStr := e.getEscapedString(str)
+
+	return outStr
+}
+
+func newShellEscaper() *shellEscaper {
+	e := &shellEscaper{}
+
+	return e
+}
+
+func (e *shellEscaper) hex(char byte, out *bytes.Buffer) bool {
+	data := []byte{BACKSLASH, 'x', 0, 0}
+	hex.Encode(data[2:], []byte{char})
+	out.Write(data)
+	return true
+}
+
+func (e *shellEscaper) backslash(char byte, out *bytes.Buffer) bool {
+	out.Write([]byte{BACKSLASH, char})
+	return true
+}
+
+func (e *shellEscaper) escaped(str string, out *bytes.Buffer) bool {
+	out.WriteString(str)
+	return true
+}
+
+func (e *shellEscaper) quoted(char byte, out *bytes.Buffer) bool {
+	out.WriteByte(char)
+	return true
+}
+
+func (e *shellEscaper) literal(char byte, out *bytes.Buffer) bool {
+	out.WriteByte(char)
+	return false
+}
+
+func (e *shellEscaper) getEscapedString(str string) string {
 	if str == "" {
 		return "''"
 	}
+
+	escape := false
 	in := []byte(str)
 	out := bytes.NewBuffer(make([]byte, 0, len(str)*2))
-	i := 0
-	l := len(in)
-	escape := false
 
-	hex := func(char byte) {
-		escape = true
-
-		data := []byte{BACKSLASH, 'x', 0, 0}
-		hex.Encode(data[2:], []byte{char})
-		out.Write(data)
-	}
-
-	backslash := func(char byte) {
-		escape = true
-		out.Write([]byte{BACKSLASH, char})
-	}
-
-	escaped := func(str string) {
-		escape = true
-		out.WriteString(str)
-	}
-
-	quoted := func(char byte) {
-		escape = true
-		out.WriteByte(char)
-	}
-
-	literal := func(char byte) {
-		out.WriteByte(char)
-	}
-
-	for i < l {
-		char := in[i]
-		switch {
-		case char == TAB:
-			escaped(`\t`)
-		case char == LF:
-			escaped(`\n`)
-		case char == CR:
-			escaped(`\r`)
-		case char <= US:
-			hex(char)
-		case char <= AMPERSTAND:
-			quoted(char)
-		case char == SINGLE_QUOTE:
-			backslash(char)
-		case char <= PLUS:
-			quoted(char)
-		case char <= NINE:
-			literal(char)
-		case char <= QUESTION:
-			quoted(char)
-		case char <= LOWERCASE_Z:
-			literal(char)
-		case char == OPEN_BRACKET:
-			quoted(char)
-		case char == BACKSLASH:
-			backslash(char)
-		case char <= CLOSE_BRACKET:
-			quoted(char)
-		case char == UNDERSCORE:
-			literal(char)
-		case char <= BACKTICK:
-			quoted(char)
-		case char <= TILDA:
-			quoted(char)
-		case char == DEL:
-			hex(char)
-		default:
-			hex(char)
+	for _, c := range in {
+		if e.processChar(c, out) {
+			escape = true
 		}
-		i++
 	}
 
 	outStr := out.String()
-
 	if escape {
 		outStr = "$'" + outStr + "'"
 	}
@@ -131,10 +108,51 @@ func ShellEscape(str string) string {
 	return outStr
 }
 
+func (e *shellEscaper) processChar(char byte, out *bytes.Buffer) bool {
+	switch {
+	case char == TAB:
+		return e.escaped(`\t`, out)
+	case char == LF:
+		return e.escaped(`\n`, out)
+	case char == CR:
+		return e.escaped(`\r`, out)
+	case char <= US:
+		return e.hex(char, out)
+	case char <= AMPERSTAND:
+		return e.quoted(char, out)
+	case char == SINGLE_QUOTE:
+		return e.backslash(char, out)
+	case char <= PLUS:
+		return e.quoted(char, out)
+	case char <= NINE:
+		return e.literal(char, out)
+	case char <= QUESTION:
+		return e.quoted(char, out)
+	case char <= LOWERCASE_Z:
+		return e.literal(char, out)
+	case char == OPEN_BRACKET:
+		return e.quoted(char, out)
+	case char == BACKSLASH:
+		return e.backslash(char, out)
+	case char <= CLOSE_BRACKET:
+		return e.quoted(char, out)
+	case char == UNDERSCORE:
+		return e.literal(char, out)
+	case char <= BACKTICK:
+		return e.quoted(char, out)
+	case char <= TILDA:
+		return e.quoted(char, out)
+	case char == DEL:
+		return e.hex(char, out)
+	default:
+		return e.hex(char, out)
+	}
+}
+
 func ToBackslash(path string) string {
-	return strings.Replace(path, "/", "\\", -1)
+	return strings.ReplaceAll(path, "/", "\\")
 }
 
 func ToSlash(path string) string {
-	return strings.Replace(path, "\\", "/", -1)
+	return strings.ReplaceAll(path, "\\", "/")
 }

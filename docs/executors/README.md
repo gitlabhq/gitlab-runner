@@ -41,7 +41,7 @@ you decide which executor to use.
 1. It's possible, but in most cases it is problematic if the build uses services
    installed on the build machine
 1. It requires to install all dependencies by hand
-1. For example using [Vagrant](https://www.vagrantup.com/docs/virtualbox/ "Vagrant documentation for VirtualBox")
+1. For example using [Vagrant](https://www.vagrantup.com/docs/providers/virtualbox/ "Vagrant documentation for VirtualBox")
 1. Dependent on what kind of environment you are provisioning. It can be
    completely isolated or shared between each build.
 1. When a Runner's file system access is not protected, jobs can access the entire
@@ -118,7 +118,11 @@ Supported features by different executors:
 | `gitlab-ci.yml`: artifacts                   | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          | n/a    |
-| Interactive Web terminal                     | ✗    | ✓ (UNIX)       | ✗          | ✗         | ✓      | ✓          | ✗      |
+| Interactive Web terminal                     | ✗    | ✓ (UNIX)       | ✗          | ✗         | ✓      | ✓ (1)       | ✗      |
+
+1. Interactive web terminals are not yet supported by
+[`gitlab-runner` Helm chart](../install/kubernetes.md),
+but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/79).
 
 Supported systems by different shells:
 

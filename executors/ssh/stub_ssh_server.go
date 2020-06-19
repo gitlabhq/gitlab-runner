@@ -54,7 +54,7 @@ func (s *StubSSHServer) Start() (int, error) {
 	go func() {
 		<-s.stop
 		s.shouldExit.Set()
-		listener.Close()
+		_ = listener.Close()
 	}()
 
 	address := strings.SplitN(listener.Addr().String(), ":", 2)
@@ -82,8 +82,8 @@ func (s *StubSSHServer) mainLoop(listener net.Listener) {
 			return
 		}
 
-		//upgrade to ssh connection
-		cryptoSSH.NewServerConn(conn, s.Config)
+		// upgrade to ssh connection
+		_, _, _, _ = cryptoSSH.NewServerConn(conn, s.Config)
 		// This is enough just for handling incoming connections
 	}
 }

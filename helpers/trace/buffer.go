@@ -78,7 +78,7 @@ func (b *Buffer) Write(data []byte) (n int, err error) {
 
 func (b *Buffer) Finish() {
 	// wait for trace to finish
-	b.writer.Close()
+	_ = b.writer.Close()
 	<-b.finish
 }
 
@@ -97,7 +97,7 @@ func (b *Buffer) advanceAll() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.advanceAllUnsafe()
+	_ = b.advanceAllUnsafe()
 }
 
 // advanceLogUnsafe is assumed to be run every character
@@ -126,7 +126,12 @@ func (b *Buffer) advanceLogUnsafe() error {
 }
 
 func (b *Buffer) limitExceededMessage() string {
-	return fmt.Sprintf("\n%sJob's log exceeded limit of %v bytes.%s\n", helpers.ANSI_BOLD_RED, b.bytesLimit, helpers.ANSI_RESET)
+	return fmt.Sprintf(
+		"\n%sJob's log exceeded limit of %v bytes.%s\n",
+		helpers.ANSI_BOLD_RED,
+		b.bytesLimit,
+		helpers.ANSI_RESET,
+	)
 }
 
 func (b *Buffer) writeRune(r rune) error {
@@ -157,7 +162,7 @@ func (b *Buffer) writeRune(r rune) error {
 }
 
 func (b *Buffer) process(pipe *io.PipeReader) {
-	defer pipe.Close()
+	defer func() { _ = pipe.Close() }()
 
 	reader := bufio.NewReader(pipe)
 
@@ -169,7 +174,7 @@ func (b *Buffer) process(pipe *io.PipeReader) {
 
 		if err == nil {
 			// only write valid characters
-			b.writeRune(r)
+			_ = b.writeRune(r)
 		}
 	}
 

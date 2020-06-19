@@ -34,33 +34,28 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 )
 
 const (
-	DockerExecutorStagePrepare common.ExecutorStage = "docker_prepare"
-	DockerExecutorStageRun     common.ExecutorStage = "docker_run"
-	DockerExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
+	ExecutorStagePrepare common.ExecutorStage = "docker_prepare"
+	ExecutorStageRun     common.ExecutorStage = "docker_run"
+	ExecutorStageCleanup common.ExecutorStage = "docker_cleanup"
 
-	DockerExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
-	DockerExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
-	DockerExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
-	DockerExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
-
-	logsCopyTimeout = 30 * time.Second
+	ExecutorStageCreatingBuildVolumes common.ExecutorStage = "docker_creating_build_volumes"
+	ExecutorStageCreatingServices     common.ExecutorStage = "docker_creating_services"
+	ExecutorStageCreatingUserVolumes  common.ExecutorStage = "docker_creating_user_volumes"
+	ExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 )
 
-const (
-	AuthConfigSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
-	AuthConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
-)
-
-var DockerPrebuiltImagesPaths []string
+var PrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
-var errVolumesManagerUndefined = errors.New("volumesManager is undefined")
-
-var errNetworksManagerUndefined = errors.New("networksManager is undefined")
+var (
+	errVolumesManagerUndefined  = errors.New("volumesManager is undefined")
+	errNetworksManagerUndefined = errors.New("networksManager is undefined")
+)
 
 type executor struct {
 	executors.AbstractExecutor
@@ -68,6 +63,7 @@ type executor struct {
 	volumeParser              parser.Parser
 	newVolumePermissionSetter func() (permission.Setter, error)
 	info                      types.Info
+	waiter                    wait.KillWaiter
 
 	temporary []string // IDs of containers that should be removed
 
@@ -94,10 +90,12 @@ type executor struct {
 func init() {
 	runnerFolder, err := osext.ExecutableFolder()
 	if err != nil {
-		logrus.Errorln("Docker executor: unable to detect gitlab-runner folder, prebuilt image helpers will be loaded from DockerHub.", err)
+		logrus.Errorln(
+			"Docker executor: unable to detect gitlab-runner folder, "+
+				"prebuilt image helpers will be loaded from DockerHub.", err)
 	}
 
-	DockerPrebuiltImagesPaths = []string{
+	PrebuiltImagesPaths = []string{
 		filepath.Join(runnerFolder, "helper-images"),
 		filepath.Join(runnerFolder, "out/helper-images"),
 	}
@@ -107,82 +105,8 @@ func (e *executor) getServiceVariables() []string {
 	return e.Build.GetAllVariables().PublicOrInternal().StringList()
 }
 
-func (e *executor) getUserAuthConfiguration(indexName string) (string, *types.AuthConfig) {
-	if e.Build == nil {
-		return "", nil
-	}
-
-	buf := bytes.NewBufferString(e.Build.GetDockerAuthConfig())
-	authConfigs, _ := docker.ReadAuthConfigsFromReader(buf)
-
-	if authConfigs == nil {
-		return "", nil
-	}
-
-	return AuthConfigSourceNameUserVariable, docker.ResolveDockerAuthConfig(indexName, authConfigs)
-}
-
-func (e *executor) getBuildAuthConfiguration(indexName string) (string, *types.AuthConfig) {
-	if e.Build == nil {
-		return "", nil
-	}
-
-	authConfigs := make(map[string]types.AuthConfig)
-
-	for _, credentials := range e.Build.Credentials {
-		if credentials.Type != "registry" {
-			continue
-		}
-
-		authConfigs[credentials.URL] = types.AuthConfig{
-			Username:      credentials.Username,
-			Password:      credentials.Password,
-			ServerAddress: credentials.URL,
-		}
-	}
-
-	return AuthConfigSourceNameJobPayload, docker.ResolveDockerAuthConfig(indexName, authConfigs)
-}
-
-func (e *executor) getHomeDirAuthConfiguration(indexName string) (string, *types.AuthConfig) {
-	sourceFile, authConfigs, _ := docker.ReadDockerAuthConfigsFromHomeDir(e.Shell().User)
-
-	if authConfigs == nil {
-		return "", nil
-	}
-	return sourceFile, docker.ResolveDockerAuthConfig(indexName, authConfigs)
-}
-
-type authConfigResolver func(indexName string) (string, *types.AuthConfig)
-
-func (e *executor) getAuthConfig(imageName string) *types.AuthConfig {
-	indexName, _ := docker.SplitDockerImageName(imageName)
-
-	resolvers := []authConfigResolver{
-		e.getUserAuthConfiguration,
-		e.getHomeDirAuthConfiguration,
-		e.getBuildAuthConfiguration,
-	}
-
-	for _, resolver := range resolvers {
-		source, authConfig := resolver(indexName)
-
-		if authConfig != nil {
-			e.Println("Authenticating with credentials from", source)
-			e.Debugln("Using", authConfig.Username, "to connect to", authConfig.ServerAddress,
-				"in order to resolve", imageName, "...")
-
-			return authConfig
-		}
-	}
-
-	e.Debugln(fmt.Sprintf("No credentials found for %v", indexName))
-
-	return nil
-}
-
 func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*types.ImageInspect, error) {
-	e.SetCurrentStage(DockerExecutorStagePullingImage)
+	e.SetCurrentStage(ExecutorStagePullingImage)
 	e.Println("Pulling docker image", imageName, "...")
 
 	ref := imageName
@@ -192,9 +116,7 @@ func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 	}
 
 	options := types.ImagePullOptions{}
-	if ac != nil {
-		options.RegistryAuth, _ = docker.EncodeAuthConfig(ac)
-	}
+	options.RegistryAuth, _ = auth.EncodeConfig(ac)
 
 	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
 	if err := e.client.ImagePullBlocking(e.Context, ref, options); err != nil {
@@ -213,8 +135,6 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 	if err != nil {
 		return nil, err
 	}
-
-	authConfig := e.getAuthConfig(imageName)
 
 	e.Debugln("Looking for image", imageName, "...")
 	existingImage, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
@@ -248,7 +168,25 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		}
 	}
 
-	return e.pullDockerImage(imageName, authConfig)
+	registryInfo := auth.ResolveConfigForImage(
+		imageName,
+		e.Build.GetDockerAuthConfig(),
+		e.Shell().User,
+		e.Build.Credentials,
+	)
+	if registryInfo != nil {
+		e.Println(fmt.Sprintf("Authenticating with credentials from %v", registryInfo.Source))
+		e.Debugln(fmt.Sprintf(
+			"Using %v to connect to %v in order to resolve %v...",
+			registryInfo.AuthConfig.Username,
+			registryInfo.AuthConfig.ServerAddress,
+			imageName,
+		))
+		return e.pullDockerImage(imageName, &registryInfo.AuthConfig)
+	}
+
+	e.Debugln(fmt.Sprintf("No credentials found for %v", imageName))
+	return e.pullDockerImage(imageName, nil)
 }
 
 func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []string) (*types.ImageInspect, error) {
@@ -274,7 +212,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 
 		return nil, fmt.Errorf("cannot load prebuilt image: %s: %w", path, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	e.Debugln("Loading prebuilt image...")
 
@@ -284,7 +222,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 	}
 	options := types.ImageImportOptions{Tag: tag}
 
-	if err := e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
+	if err = e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
 		return nil, fmt.Errorf("failed to import image: %w", err)
 	}
 
@@ -301,7 +239,11 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	if imageNameFromConfig := e.Config.Docker.HelperImage; imageNameFromConfig != "" {
 		imageNameFromConfig = common.AppVersion.Variables().ExpandValue(imageNameFromConfig)
 
-		e.Debugln("Pull configured helper_image for predefined container instead of import bundled image", imageNameFromConfig, "...")
+		e.Debugln(
+			"Pull configured helper_image for predefined container instead of import bundled image",
+			imageNameFromConfig,
+			"...",
+		)
 
 		return e.getDockerImage(imageNameFromConfig)
 	}
@@ -329,8 +271,11 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 	}
 
 	architecture := e.helperImageInfo.Architecture
-	for _, dockerPrebuiltImagesPath := range DockerPrebuiltImagesPaths {
-		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, "prebuilt-"+architecture+prebuiltImageExtension)
+	for _, dockerPrebuiltImagesPath := range PrebuiltImagesPaths {
+		dockerPrebuiltImageFilePath := filepath.Join(
+			dockerPrebuiltImagesPath,
+			"prebuilt-"+architecture+prebuiltImageExtension,
+		)
 		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, e.helperImageInfo.Tag)
 		if err != nil {
 			e.Debugln("Failed to load prebuilt image from:", dockerPrebuiltImageFilePath, "error:", err)
@@ -446,8 +391,13 @@ func (e *executor) markImageAsUsed(imageName, imageID string) {
 	}
 }
 
-func (e *executor) createService(serviceIndex int, service, version, image string, serviceDefinition common.Image, linkNames []string) (*types.Container, error) {
-	if len(service) == 0 {
+func (e *executor) createService(
+	serviceIndex int,
+	service, version, image string,
+	serviceDefinition common.Image,
+	linkNames []string,
+) (*types.Container, error) {
+	if service == "" {
 		return nil, fmt.Errorf("invalid service name: %s", serviceDefinition.Name)
 	}
 
@@ -461,11 +411,11 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 		return nil, err
 	}
 
-	serviceSlug := strings.Replace(service, "/", "__", -1)
+	serviceSlug := strings.ReplaceAll(service, "/", "__")
 	containerName := fmt.Sprintf("%s-%s-%d", e.getProjectUniqRandomizedName(), serviceSlug, serviceIndex)
 
 	// this will fail potentially some builds if there's name collision
-	e.removeContainer(e.Context, containerName)
+	_ = e.removeContainer(e.Context, containerName)
 
 	config := &container.Config{
 		Image:  serviceImage.ID,
@@ -478,21 +428,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
 
-	hostConfig := &container.HostConfig{
-		DNS:           e.Config.Docker.DNS,
-		DNSSearch:     e.Config.Docker.DNSSearch,
-		RestartPolicy: neverRestartPolicy,
-		ExtraHosts:    e.Config.Docker.ExtraHosts,
-		Privileged:    e.Config.Docker.Privileged,
-		NetworkMode:   e.networkMode,
-		Binds:         e.volumesManager.Binds(),
-		ShmSize:       e.Config.Docker.ShmSize,
-		Tmpfs:         e.Config.Docker.ServicesTmpfs,
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-	}
-
+	hostConfig := e.createHostConfigForService()
 	networkConfig := e.networkConfig(linkNames)
 
 	e.Debugln("Creating service container", containerName, "...")
@@ -509,6 +445,23 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	}
 
 	return fakeContainer(resp.ID, containerName), nil
+}
+
+func (e *executor) createHostConfigForService() *container.HostConfig {
+	return &container.HostConfig{
+		DNS:           e.Config.Docker.DNS,
+		DNSSearch:     e.Config.Docker.DNSSearch,
+		RestartPolicy: neverRestartPolicy,
+		ExtraHosts:    e.Config.Docker.ExtraHosts,
+		Privileged:    e.Config.Docker.Privileged,
+		NetworkMode:   e.networkMode,
+		Binds:         e.volumesManager.Binds(),
+		ShmSize:       e.Config.Docker.ShmSize,
+		Tmpfs:         e.Config.Docker.ServicesTmpfs,
+		LogConfig: container.LogConfig{
+			Type: "json-file",
+		},
+	}
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
@@ -568,7 +521,7 @@ func (e *executor) waitForServices() {
 		for _, service := range e.services {
 			wg.Add(1)
 			go func(service *types.Container) {
-				e.waitForServiceContainer(service, time.Duration(waitForServicesTimeout)*time.Second)
+				_ = e.waitForServiceContainer(service, time.Duration(waitForServicesTimeout)*time.Second)
 				wg.Done()
 			}(service)
 		}
@@ -589,7 +542,11 @@ func (e *executor) buildServiceLinks(linksMap map[string]*types.Container) (link
 	return
 }
 
-func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefinition common.Image, linksMap map[string]*types.Container) (err error) {
+func (e *executor) createFromServiceDefinition(
+	serviceIndex int,
+	serviceDefinition common.Image,
+	linksMap map[string]*types.Container,
+) error {
 	var container *types.Container
 
 	serviceMeta := services.SplitNameAndVersion(serviceDefinition.Name)
@@ -606,9 +563,17 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 
 		// Create service if not yet created
 		if container == nil {
-			container, err = e.createService(serviceIndex, serviceMeta.Service, serviceMeta.Version, serviceMeta.ImageName, serviceDefinition, serviceMeta.Aliases)
+			var err error
+			container, err = e.createService(
+				serviceIndex,
+				serviceMeta.Service,
+				serviceMeta.Version,
+				serviceMeta.ImageName,
+				serviceDefinition,
+				serviceMeta.Aliases,
+			)
 			if err != nil {
-				return
+				return err
 			}
 
 			e.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
@@ -617,7 +582,7 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 		}
 		linksMap[linkName] = container
 	}
-	return
+	return nil
 }
 
 func (e *executor) createBuildNetwork() error {
@@ -662,7 +627,7 @@ func (e *executor) cleanupNetwork(ctx context.Context) error {
 }
 
 func (e *executor) createServices() (err error) {
-	e.SetCurrentStage(DockerExecutorStageCreatingServices)
+	e.SetCurrentStage(ExecutorStageCreatingServices)
 	e.Debugln("Creating services...")
 
 	servicesDefinitions, err := e.getServicesDefinitions()
@@ -689,7 +654,12 @@ func (e *executor) createServices() (err error) {
 	return
 }
 
-func (e *executor) createContainer(containerType string, imageDefinition common.Image, cmd []string, allowedInternalImages []string) (*types.ContainerJSON, error) {
+func (e *executor) createContainer(
+	containerType string,
+	imageDefinition common.Image,
+	cmd []string,
+	allowedInternalImages []string,
+) (*types.ContainerJSON, error) {
 	if e.volumesManager == nil {
 		return nil, errVolumesManagerUndefined
 	}
@@ -706,11 +676,50 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 
 	// Always create unique, but sequential name
 	containerIndex := len(e.builds)
-	containerName := e.getProjectUniqRandomizedName() + "-" +
-		containerType + "-" + strconv.Itoa(containerIndex)
+	containerName := e.getProjectUniqRandomizedName() + "-" + containerType + "-" + strconv.Itoa(containerIndex)
 
+	config := e.createContainerConfig(containerType, imageDefinition, image.ID, hostname, cmd)
+
+	hostConfig, err := e.createHostConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	aliases := []string{"build", containerName}
+	networkConfig := e.networkConfig(aliases)
+
+	// this will fail potentially some builds if there's name collision
+	_ = e.removeContainer(e.Context, containerName)
+
+	e.Debugln("Creating container", containerName, "...")
+	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
+	if err != nil {
+		if resp.ID != "" {
+			e.temporary = append(e.temporary, resp.ID)
+		}
+		return nil, err
+	}
+
+	inspect, err := e.client.ContainerInspect(e.Context, resp.ID)
+	if err != nil {
+		e.temporary = append(e.temporary, resp.ID)
+		return nil, err
+	}
+
+	e.builds = append(e.builds, resp.ID)
+	e.temporary = append(e.temporary, resp.ID)
+	return &inspect, nil
+}
+
+func (e *executor) createContainerConfig(
+	containerType string,
+	imageDefinition common.Image,
+	imageID string,
+	hostname string,
+	cmd []string,
+) *container.Config {
 	config := &container.Config{
-		Image:        image.ID,
+		Image:        imageID,
 		Hostname:     hostname,
 		Cmd:          cmd,
 		Labels:       e.getLabels(containerType),
@@ -722,15 +731,18 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		StdinOnce:    true,
 		Env:          append(e.Build.GetAllVariables().StringList(), e.BuildShell.Environment...),
 	}
-
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 
+	return config
+}
+
+func (e *executor) createHostConfig() (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
 		return nil, err
 	}
 
-	hostConfig := &container.HostConfig{
+	return &container.HostConfig{
 		Resources: container.Resources{
 			Memory:            e.Config.Docker.GetMemory(),
 			MemorySwap:        e.Config.Docker.GetMemorySwap(),
@@ -763,60 +775,10 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		},
 		Tmpfs:   e.Config.Docker.Tmpfs,
 		Sysctls: e.Config.Docker.SysCtls,
-	}
-
-	aliases := []string{"build", containerName}
-	networkConfig := e.networkConfig(aliases)
-
-	// this will fail potentially some builds if there's name collision
-	e.removeContainer(e.Context, containerName)
-
-	e.Debugln("Creating container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
-	if err != nil {
-		if resp.ID != "" {
-			e.temporary = append(e.temporary, resp.ID)
-		}
-		return nil, err
-	}
-
-	inspect, err := e.client.ContainerInspect(e.Context, resp.ID)
-	if err != nil {
-		e.temporary = append(e.temporary, resp.ID)
-		return nil, err
-	}
-
-	e.builds = append(e.builds, resp.ID)
-	e.temporary = append(e.temporary, resp.ID)
-	return &inspect, nil
+	}, nil
 }
 
-func (e *executor) killContainer(id string, waitCh chan error) (err error) {
-	for {
-		e.disconnectNetwork(e.Context, id)
-		e.Debugln("Killing container", id, "...")
-		e.client.ContainerKill(e.Context, id, "SIGKILL")
-
-		// Wait for signal that container were killed
-		// or retry after some time
-		select {
-		case err = <-waitCh:
-			return
-
-		case <-time.After(time.Second):
-		}
-	}
-}
-
-func (e *executor) waitForContainer(ctx context.Context, id string) error {
-	e.Debugln("Waiting for container", id, "...")
-
-	waiter := wait.NewDockerWaiter(e.client)
-
-	return waiter.Wait(ctx, id)
-}
-
-func (e *executor) watchContainer(ctx context.Context, id string, input io.Reader) (err error) {
+func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
 	options := types.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  true,
@@ -827,66 +789,52 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	e.Debugln("Attaching to container", id, "...")
 	hijacked, err := e.client.ContainerAttach(ctx, id, options)
 	if err != nil {
-		return
+		return err
 	}
 	defer hijacked.Close()
 
 	e.Debugln("Starting container", id, "...")
 	err = e.client.ContainerStart(ctx, id, types.ContainerStartOptions{})
 	if err != nil {
-		return
+		return err
 	}
 
-	e.Debugln("Waiting for attach to finish", id, "...")
-	attachCh := make(chan error, 2)
-
-	logsDone := make(chan struct{})
 	// Copy any output to the build trace
+	stdoutErrCh := make(chan error)
 	go func() {
-		_, err := stdcopy.StdCopy(e.Trace, e.Trace, hijacked.Reader)
-		close(logsDone)
-
-		if err != nil {
-			attachCh <- err
-		}
+		_, errCopy := stdcopy.StdCopy(e.Trace, e.Trace, hijacked.Reader)
+		stdoutErrCh <- errCopy
 	}()
 
 	// Write the input to the container and close its STDIN to get it to finish
+	stdinErrCh := make(chan error)
 	go func() {
-		_, err := io.Copy(hijacked.Conn, input)
-		hijacked.CloseWrite()
-		if err != nil {
-			attachCh <- err
+		_, errCopy := io.Copy(hijacked.Conn, input)
+		_ = hijacked.CloseWrite()
+		if errCopy != nil {
+			stdinErrCh <- errCopy
 		}
 	}()
 
-	waitCh := make(chan error, 1)
-	go func() {
-		waitCh <- e.waitForContainer(e.Context, id)
-	}()
-
+	// Wait until either:
+	// - the job is aborted/cancelled/deadline exceeded
+	// - stdin has an error
+	// - stdout returns an error or nil, indicating the stream has ended and
+	//   the container has exited
 	select {
 	case <-ctx.Done():
-		e.killContainer(id, waitCh)
 		err = errors.New("aborted")
+	case err = <-stdinErrCh:
+	case err = <-stdoutErrCh:
+	}
 
-	case err = <-attachCh:
-		e.killContainer(id, waitCh)
-		e.Debugln("Container", id, "finished with", err)
-
-	case err = <-waitCh:
+	if err != nil {
 		e.Debugln("Container", id, "finished with", err)
 	}
 
-	// By this point the container is either killed or finished.
-	// Wait for logs to finish copying to the job trace.
-	select {
-	case <-logsDone:
-	case <-time.After(logsCopyTimeout):
-		e.Warningln("Timed out waiting for logs to finish copying from container")
-	}
-
-	return
+	// Kill and wait for exit.
+	// Containers are stopped so that they can be reused by the job.
+	return e.waiter.KillWait(ctx, id)
 }
 
 func (e *executor) removeContainer(ctx context.Context, id string) error {
@@ -923,9 +871,19 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 			if id == pluggedContainer.Name {
 				err = e.client.NetworkDisconnect(ctx, network.ID, id, true)
 				if err != nil {
-					e.Warningln("Can't disconnect possibly zombie container", pluggedContainer.Name, "from network", network.Name, "->", err)
+					e.Warningln(
+						"Can't disconnect possibly zombie container",
+						pluggedContainer.Name,
+						"from network",
+						network.Name,
+						"->",
+						err)
 				} else {
-					e.Warningln("Possibly zombie container", pluggedContainer.Name, "is disconnected from network", network.Name)
+					e.Warningln(
+						"Possibly zombie container",
+						pluggedContainer.Name,
+						"is disconnected from network",
+						network.Name)
 				}
 				break
 			}
@@ -959,7 +917,9 @@ func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []
 		return nil
 	}
 
-	e.Println("Please check runner's configuration: http://doc.gitlab.com/ci/docker/using_docker_images.html#overwrite-image-and-services")
+	e.Println(
+		"Please check runner's configuration: " +
+			"http://doc.gitlab.com/ci/docker/using_docker_images.html#overwrite-image-and-services")
 	return errors.New("invalid image")
 }
 
@@ -1015,6 +975,7 @@ func (e *executor) connectDocker() error {
 		Architecture:    e.info.Architecture,
 		OperatingSystem: e.info.OperatingSystem,
 	})
+	e.waiter = wait.NewDockerKillWaiter(e.client)
 
 	return err
 }
@@ -1059,7 +1020,7 @@ func (e *executor) createDependencies() error {
 }
 
 func (e *executor) createVolumes() error {
-	e.SetCurrentStage(DockerExecutorStageCreatingUserVolumes)
+	e.SetCurrentStage(ExecutorStageCreatingUserVolumes)
 	e.Debugln("Creating user-defined volumes...")
 
 	if e.volumesManager == nil {
@@ -1085,7 +1046,7 @@ func (e *executor) createVolumes() error {
 }
 
 func (e *executor) createBuildVolume() error {
-	e.SetCurrentStage(DockerExecutorStageCreatingBuildVolumes)
+	e.SetCurrentStage(ExecutorStageCreatingBuildVolumes)
 	e.Debugln("Creating build volume...")
 
 	if e.volumesManager == nil {
@@ -1120,7 +1081,7 @@ func (e *executor) createBuildVolume() error {
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
-	e.SetCurrentStage(DockerExecutorStagePrepare)
+	e.SetCurrentStage(ExecutorStagePrepare)
 
 	if options.Config.Docker == nil {
 		return errors.New("missing docker configuration")
@@ -1184,7 +1145,7 @@ func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error
 }
 
 func (e *executor) Cleanup() {
-	e.SetCurrentStage(DockerExecutorStageCleanup)
+	e.SetCurrentStage(ExecutorStageCleanup)
 
 	var wg sync.WaitGroup
 
@@ -1194,7 +1155,7 @@ func (e *executor) Cleanup() {
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {
-			e.removeContainer(ctx, id)
+			_ = e.removeContainer(ctx, id)
 			wg.Done()
 		}()
 	}
@@ -1225,7 +1186,7 @@ func (e *executor) Cleanup() {
 	}
 
 	if e.client != nil {
-		e.client.Close()
+		_ = e.client.Close()
 	}
 
 	e.AbstractExecutor.Cleanup()
@@ -1273,27 +1234,15 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 
 	cmd := []string{"gitlab-runner-helper", "health-check"}
 
-	config := &container.Config{
-		Cmd:    cmd,
-		Image:  waitImage.ID,
-		Labels: e.getLabels("wait", "wait="+service.ID),
-		Env:    environment,
-	}
-	hostConfig := &container.HostConfig{
-		RestartPolicy: neverRestartPolicy,
-		Links:         []string{service.Names[0] + ":service"},
-		NetworkMode:   e.networkMode,
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-		},
-	}
+	config := e.createConfigForServiceHealthCheckContainer(service, cmd, waitImage, environment)
+	hostConfig := e.createHostConfigForServiceHealthCheck(service)
 
 	e.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, containerName)
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)
 	}
-	defer e.removeContainer(e.Context, resp.ID)
+	defer func() { _ = e.removeContainer(e.Context, resp.ID) }()
 
 	e.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
@@ -1301,27 +1250,48 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 		return fmt.Errorf("start service container: %w", err)
 	}
 
-	waitResult := make(chan error, 1)
-	go func() {
-		waitResult <- e.waitForContainer(e.Context, resp.ID)
-	}()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
 
-	// these are warnings and they don't make the build fail
-	select {
-	case err := <-waitResult:
-		if err == nil {
-			return nil
-		}
+	err = e.waiter.Wait(ctx, resp.ID)
+	if err == nil {
+		return nil
+	}
 
-		return &serviceHealthCheckError{
-			Inner: err,
-			Logs:  e.readContainerLogs(resp.ID),
-		}
-	case <-time.After(timeout):
-		return &serviceHealthCheckError{
-			Inner: fmt.Errorf("service %q timeout", containerName),
-			Logs:  e.readContainerLogs(resp.ID),
-		}
+	if errors.Is(err, context.DeadlineExceeded) {
+		err = fmt.Errorf("service %q timeout", containerName)
+	} else {
+		err = fmt.Errorf("service %q health check: %w", containerName, err)
+	}
+
+	return &serviceHealthCheckError{
+		Inner: err,
+		Logs:  e.readContainerLogs(resp.ID),
+	}
+}
+
+func (e *executor) createConfigForServiceHealthCheckContainer(
+	service *types.Container,
+	cmd []string,
+	waitImage *types.ImageInspect,
+	environment []string,
+) *container.Config {
+	return &container.Config{
+		Cmd:    cmd,
+		Image:  waitImage.ID,
+		Labels: e.getLabels("wait", "wait="+service.ID),
+		Env:    environment,
+	}
+}
+
+func (e *executor) createHostConfigForServiceHealthCheck(service *types.Container) *container.HostConfig {
+	return &container.HostConfig{
+		RestartPolicy: neverRestartPolicy,
+		Links:         []string{service.Names[0] + ":service"},
+		NetworkMode:   e.networkMode,
+		LogConfig: container.LogConfig{
+			Type: "json-file",
+		},
 	}
 }
 
@@ -1375,7 +1345,9 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 
 	var buffer bytes.Buffer
 	buffer.WriteString("\n")
-	buffer.WriteString(helpers.ANSI_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + service.Names[0] + " probably didn't start properly.\n")
+	buffer.WriteString(
+		helpers.ANSI_YELLOW + "*** WARNING:" + helpers.ANSI_RESET + " Service " + service.Names[0] +
+			" probably didn't start properly.\n")
 	buffer.WriteString("\n")
 	buffer.WriteString("Health check error:\n")
 	buffer.WriteString(strings.TrimSpace(err.Error()))
@@ -1396,7 +1368,7 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
 	buffer.WriteString("\n")
-	io.Copy(e.Trace, &buffer)
+	_, _ = io.Copy(e.Trace, &buffer)
 	return err
 }
 
@@ -1413,9 +1385,9 @@ func (e *executor) readContainerLogs(containerID string) string {
 	if err != nil {
 		return strings.TrimSpace(err.Error())
 	}
-	defer hijacked.Close()
+	defer func() { _ = hijacked.Close() }()
 
-	stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
+	_, _ = stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
 	containerLog := containerBuffer.String()
 	return strings.TrimSpace(containerLog)
 }

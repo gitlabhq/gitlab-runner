@@ -1,3 +1,104 @@
+## v13.1.0-rc1 (2020-06-12)
+
+### New features
+
+- Fix file archiver message to include directories !2159
+- Use direct-download on a first attempt for artifacts !2115
+- Add full support for artifacts/exclude feature !2110
+- Add data format definition for build / artifacts / exclude !2105
+- Add support for `direct_download` artifacts !2093
+- Publish Windows 1909 helper image !2086
+- Support runner predefined variables inside overwrite variables kubernetes !2069
+- Add Centos8 and Ubuntu 19.10 & 20.04 packages !2002
+- Change default git fetch flags allowing user to overwrite them !2000 (Łukasz Groszkowski @falxcerebri)
+- Run any step from job response in a separate BuildSection !1963
+
+### Bug fixes
+
+- Fix missing logs from docker executor !2101
+- Fix automatically adding cache directory when cache disabled on register !2091 (Max Wittig @max-wittig)
+- Fix millicpu comparison for maxOverwrite !2019
+- Make commander start process group for each process !1743
+- Extract commander from custom executor !1654
+- Extract process killing from custom executor !1653
+
+### Maintenance
+
+- Increase allowed data races !2204
+- Fix test assertions for k8s integration tests !2171
+- Increase allowed data races !2164
+- Fix TestDockerCommandUsingCustomClonePath for Windows !2153
+- Rename network manager file for docker executor !2147
+- Enable staticcheck linter !2136
+- Update GitLab CI image to include git lfs !2124
+- Implement Is for *BuildError !2121
+- Update log message for failure of removing network for build !2119 (Max Wittig @max-wittig)
+- Change license management to use rules !2096
+- Use Docker client's ContainerWait !2073
+- Use taskkill windows !1797
+- Cleanup dependencies for alpine based docker image !1778 (J0WI @J0WI)
+
+### Documentation changes
+
+- Add all Vale rules from main GitLab project !2203
+- Docs: Fix distribution order !2200 (Martin @C0rn3j)
+- Update the register page to use the correct Docker registration commands - docs !2186
+- Sync spelling exceptions list from GitLab project !2184
+- Docs: fix broken links in Runner docs !2183
+- Remove reference to lack of arm64 Docker images !2178
+- Fix documentation toml examples with [[runners.machine.autoscaling]] !2177
+- Update GitLab Runner in a container documentation to prevent errors in using the Runner image - docs !2175
+- Docs: Edited runners.cache.s3 details !2167
+- Add example logs for `runner` and `json` log-format options - docs !2163
+- Adds workaround for env vars in config.toml !2156
+- Update redirected links !2152
+- Add Docker to capitalization rules !2146
+- Include MachineName and MachineDriver in autoscaling example !2140
+- Specify pull policy for kubernetes executor !2129
+- Improve Batch deprecated details !2128 (Ben Bodenmiller @bbodenmiller)
+- docs: Link to example of how to color PowerShell output !2127 (Ben Bodenmiller @bbodenmiller)
+- Docs: removed ubuntu from LXD instructions !2126
+- Refresh Vale rules !2125
+- Adds note about the image for AWS Fargate !2100
+- Add GDK to capitalization rules !2097
+- Docs: edited autoscaling period content !2094
+- Drop mention of 'OffPeakPeriods' from 'docs/faq/README.md' !2092
+- Skip build stages that have no operations !2081
+- Add vale plugin to recommended VS Code extensions !2078
+- AWS Fargate guide walkthrough !2075
+- Mark Prepare environment stage as system failure !1915
+- Expose Code coverage report artifact !1863
+- Send `SIGTERM` then `SIGKILL` to process in Shell executor !1770
+- Publish Windows 1903 helper image !1634
+
+### Other changes
+
+- Fix data race in TestNewReadLogsCommandFileLogStreamProviderCorrect !2193
+- Fix building of Windows helper image !2180
+- Rename ill-named script variable in release_docker_images !2173
+- Change alpine mirrors to default mirrors for arm/arm64 !2165
+- Skip flaky log processor test TestResumesFromCorrectSinceTimeAfterSuccessThenFailure !2151
+- Enable gocritic linter !2145
+- Return error from k8s `limits` function when parsing resource limits !2144
+- Upgrade golangci-lint to v1.27.0 !2139
+- Pass an explicit context path to docker build in `build_ci_image` !2133
+- Fix error when using attach strategy and ErrSkipBuildStage is returned when generating script !2123
+- Revert removal of Windows Batch support !2112
+- Do not log warning if trace update interval header value is empty !2103
+- Add retries for runner system failures in CI !2098
+- Remove `--kubernetes-services` command line flag !2074
+- More verbose logging for artifact uploading !2052 (Sashi @ksashikumar)
+- Fix file name typo !2049
+- Unify docker registry authentication in docker and kubernetes executors !2048
+- Improve kubernetes executor attach strategy command execution and handling by using a new read-logs command in the helper image !2038
+- Remove superfluous packages from ubuntu based docker image !1781 (J0WI @J0WI)
+
+## v13.0.1 (2020-06-01)
+
+### Bug fixes
+
+- Fix missing logs from docker executor !2101
+
 ## v13.0.0 (2020-05-20)
 
 ### Breaking Changes

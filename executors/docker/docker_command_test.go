@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -75,6 +76,76 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func TestDockerCommandMultistepBuild(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]struct {
+		buildGetter    func() (common.JobResponse, error)
+		expectedOutput []string
+		unwantedOutput []string
+		errExpected    bool
+	}{
+		"Successful build with release and after_script step": {
+			buildGetter: common.GetRemoteSuccessfulMultistepBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: false,
+		},
+		"Failure on script step. Release is skipped. After script runs.": {
+			buildGetter: func() (common.JobResponse, error) {
+				return common.GetRemoteFailingMultistepBuild(common.StepNameScript)
+			},
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo After Script",
+			},
+			unwantedOutput: []string{
+				"echo Release",
+			},
+			errExpected: true,
+		},
+		"Failure on release step. After script runs.": {
+			buildGetter: func() (common.JobResponse, error) {
+				return common.GetRemoteFailingMultistepBuild("release")
+			},
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getBuildForOS(t, tt.buildGetter)
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+
+			out := buf.String()
+			for _, output := range tt.expectedOutput {
+				assert.Contains(t, out, output)
+			}
+
+			for _, output := range tt.unwantedOutput {
+				assert.NotContains(t, out, output)
+			}
+
+			if tt.errExpected {
+				var buildErr *common.BuildError
+				assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {
@@ -149,44 +220,44 @@ func TestDockerCommandUsingCustomClonePath(t *testing.T) {
 		return
 	}
 
-	jobResponse, err := common.GetRemoteBuildResponse(
-		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo")
-	require.NoError(t, err)
+	remoteBuild := func() (common.JobResponse, error) {
+		cmd := "ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+		if runtime.GOOS == "windows" {
+			cmd = "Get-Item -Path $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+		}
+
+		return common.GetRemoteBuildResponse(cmd)
+	}
 
 	tests := map[string]struct {
-		clonePath         string
-		expectedErrorType interface{}
+		clonePath   string
+		expectedErr bool
 	}{
 		"uses custom clone path": {
-			clonePath:         "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: nil,
+			clonePath:   "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr: false,
 		},
 		"path has to be within CI_BUILDS_DIR": {
-			clonePath:         "/unknown/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: &common.BuildError{},
+			clonePath:   "/unknown/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr: true,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			build := &common.Build{
-				JobResponse: jobResponse,
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Executor: "docker",
-						Docker: &common.DockerConfig{
-							Image:      common.TestAlpineImage,
-							PullPolicy: common.PullPolicyIfNotPresent,
-						},
-						Environment: []string{
-							"GIT_CLONE_PATH=" + test.clonePath,
-						},
-					},
-				},
+			build := getBuildForOS(t, remoteBuild)
+			build.Runner.Environment = []string{
+				"GIT_CLONE_PATH=" + test.clonePath,
 			}
 
-			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-			assert.IsType(t, test.expectedErrorType, err)
+			err := buildtest.RunBuild(t, &build)
+			if test.expectedErr {
+				var buildErr *common.BuildError
+				assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
+				return
+			}
+
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -439,7 +510,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.CancelFunc()
+		trace.Cancel()
 	})
 	defer abortTimer.Stop()
 
@@ -743,15 +814,35 @@ func TestCacheInContainer(t *testing.T) {
 	// The first job lacks any cache to pull, but tries to both pull and push
 	output := runTestJobWithOutput(t, build)
 	assert.Regexp(t, cacheNotPresentRE, output, "First job execution should not have cached data")
-	assert.NotContains(t, output, skipCacheDownload, "Cache download should be performed with policy: %s", common.CachePolicyPullPush)
-	assert.NotContains(t, output, skipCacheUpload, "Cache upload should be performed with policy: %s", common.CachePolicyPullPush)
+	assert.NotContains(
+		t,
+		output,
+		skipCacheDownload,
+		"Cache download should be performed with policy: %s",
+		common.CachePolicyPullPush)
+	assert.NotContains(
+		t,
+		output,
+		skipCacheUpload,
+		"Cache upload should be performed with policy: %s",
+		common.CachePolicyPullPush)
 
 	// pull-only jobs should skip the push step
 	build.JobResponse.Cache[0].Policy = common.CachePolicyPull
 	output = runTestJobWithOutput(t, build)
 	assert.NotRegexp(t, cacheNotPresentRE, output, "Second job execution should have cached data")
-	assert.NotContains(t, output, skipCacheDownload, "Cache download should be performed with policy: %s", common.CachePolicyPull)
-	assert.Contains(t, output, skipCacheUpload, "Cache upload should be skipped with policy: %s", common.CachePolicyPull)
+	assert.NotContains(
+		t,
+		output,
+		skipCacheDownload,
+		"Cache download should be performed with policy: %s",
+		common.CachePolicyPull)
+	assert.Contains(
+		t,
+		output,
+		skipCacheUpload,
+		"Cache upload should be skipped with policy: %s",
+		common.CachePolicyPull)
 
 	// push-only jobs should skip the pull step
 	build.JobResponse.Cache[0].Policy = common.CachePolicyPush
@@ -884,7 +975,7 @@ func testDockerVersion(t *testing.T, version string) {
 	}
 
 	defer func() {
-		exec.Command("docker", "rm", "-f", "-v", id).Run()
+		_ = exec.Command("docker", "rm", "-f", "-v", id).Run()
 	}()
 
 	t.Log("Getting address of", version, "...")
@@ -1087,7 +1178,11 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 	out := buffer.String()
-	assert.Contains(t, out, "Using docker image sha256:3cf24b1b62b6a4c55c5de43db4f50c0ff8b455238c836945d4b5c645411bfc77 for gitlab/gitlab-runner-helper:x86_64-5a147c92 ...")
+	assert.Contains(
+		t,
+		out,
+		"Using docker image sha256:3cf24b1b62b6a4c55c5de43db4f50c0ff8b455238c836945d4b5c645411bfc77 for "+
+			"gitlab/gitlab-runner-helper:x86_64-5a147c92 ...")
 }
 
 func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
@@ -1186,7 +1281,13 @@ func TestDockerCommandRunAttempts(t *testing.T) {
 		assertFailedToInspectContainer(t, trace, &attempts)
 	}
 
-	assert.Equal(t, executorStageAttempts, attempts, "The %s stage should be retried at least once", common.BuildStageUserScript)
+	assert.Equal(
+		t,
+		executorStageAttempts,
+		attempts,
+		"The %s stage should be retried at least once",
+		"step_script",
+	)
 	<-runFinished
 }
 
@@ -1291,7 +1392,7 @@ func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {
 	defer func() {
 		volumeName := fmt.Sprintf("%s-cache-%x", build.ProjectUniqueName(), md5.Sum([]byte(volumeBind)))
 
-		err := client.VolumeRemove(context.Background(), volumeName, true)
+		err = client.VolumeRemove(context.Background(), volumeName, true)
 		require.NoError(t, err)
 	}()
 

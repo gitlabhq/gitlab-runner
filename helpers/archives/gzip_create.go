@@ -18,13 +18,13 @@ func writeGzipFile(w io.Writer, fileName string, fileInfo os.FileInfo) error {
 	gz.Header.Name = fileInfo.Name()
 	gz.Header.Comment = fileName
 	gz.Header.ModTime = fileInfo.ModTime()
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 
 	file, err := os.Open(fileName)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	_, err = io.Copy(gz, file)
 	return err

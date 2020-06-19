@@ -34,7 +34,12 @@ func testTimePeriods(t *testing.T, seconds int, getCurrentTime func(now time.Tim
 		return getCurrentTime(now)
 	}
 
-	t.Logf("Testing periodPattern '%s' with time '%s' and currentTime '%s'", periodPattern, now, timePeriods.GetCurrentTime())
+	t.Logf(
+		"Testing periodPattern %q with time %q and currentTime %q",
+		periodPattern,
+		now,
+		timePeriods.GetCurrentTime(),
+	)
 	if inPeriod {
 		assert.True(t, timePeriods.InPeriod(), "It should be inside of the period")
 	} else {
@@ -56,7 +61,14 @@ func TestInvalidTimezone(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func testTimeperiodsWithTimezone(t *testing.T, period, timezone string, month time.Month, day, hour, minute int, inPeriod bool) {
+// nolint:unparam
+func testTimeperiodsWithTimezone(
+	t *testing.T,
+	period, timezone string,
+	month time.Month,
+	day, hour, minute int,
+	inPeriod bool,
+) {
 	timePeriods, _ := TimePeriods([]string{period}, timezone)
 	timePeriods.GetCurrentTime = func() time.Time {
 		return time.Date(2017, month, day, hour, minute, 0, 0, time.UTC)

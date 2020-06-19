@@ -98,6 +98,15 @@ func (b *BuildError) Error() string {
 	return b.Inner.Error()
 }
 
+func (b *BuildError) Is(err error) bool {
+	buildErr, ok := err.(*BuildError)
+	if !ok {
+		return false
+	}
+
+	return buildErr.FailureReason == b.FailureReason
+}
+
 // MakeBuildError returns an new instance of BuildError.
 func MakeBuildError(format string, args ...interface{}) error {
 	return &BuildError{

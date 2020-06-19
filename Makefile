@@ -14,16 +14,16 @@ endif
 
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
-BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd' -arch '!mips' -arch '!mips64' -arch '!mipsle' -arch '!mips64le' -arch '!s390x'
+BUILD_PLATFORMS ?= -os '!netbsd' -os '!openbsd' -arch '!mips' -arch '!mips64' -arch '!mipsle' -arch '!mips64le'
 S3_UPLOAD_PATH ?= master
 
 # Keep in sync with docs/install/linux-repository.md
 DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
-    ubuntu/xenial ubuntu/bionic \
+    ubuntu/xenial ubuntu/bionic ubuntu/eoan ubuntu/focal \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64
-RPM_PLATFORMS ?= el/6 el/7 \
+RPM_PLATFORMS ?= el/6 el/7 el/8 \
     ol/6 ol/7 \
     fedora/30
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64
@@ -156,6 +156,7 @@ mocks: $(MOCKERY)
 	$(MOCKERY) -dir=./referees -all -inpkg
 	$(MOCKERY) -dir=./session -all -inpkg
 	$(MOCKERY) -dir=./shells -all -inpkg
+	$(MOCKERY) -dir=./commands/helpers -all -inpkg
 
 check_mocks:
 	# Checking if mocks are up-to-date
@@ -239,7 +240,7 @@ release_packagecloud:
 	# Releasing to https://packages.gitlab.com/runner/
 	@./ci/release_packagecloud "$$CI_JOB_NAME"
 
-release_s3: copy_helper_binaries prepare_windows_zip prepare_zoneinfo prepare_index
+release_s3: prepare_windows_zip prepare_zoneinfo prepare_index
 	# Releasing to S3
 	@./ci/release_s3
 
@@ -252,11 +253,6 @@ prepare_windows_zip: out/binaries/gitlab-runner-windows-386.zip out/binaries/git
 prepare_zoneinfo:
 	# preparing the zoneinfo file
 	@cp $$GOROOT/lib/time/zoneinfo.zip out/
-
-copy_helper_binaries:
-	# copying helper binaries
-	@mkdir -p out/binaries/gitlab-runner-helper
-	@cp dockerfiles/build/binaries/gitlab-runner-helper* out/binaries/gitlab-runner-helper/
 
 prepare_index: export CI_COMMIT_REF_NAME ?= $(BRANCH)
 prepare_index: export CI_COMMIT_SHA ?= $(REVISION)

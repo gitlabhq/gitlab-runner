@@ -225,7 +225,7 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.CancelFunc()
+		trace.Cancel()
 	})
 	defer abortTimer.Stop()
 

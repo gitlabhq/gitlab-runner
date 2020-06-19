@@ -53,12 +53,14 @@ func TestDockerLinuxSetter(t *testing.T) {
 	testContainer, err := client.ContainerCreate(context.Background(), config, hostConfig, nil, containerName)
 	require.NoError(t, err)
 
-	defer client.ContainerRemove(context.Background(), testContainer.ID, types.ContainerRemoveOptions{Force: true})
+	defer func() {
+		_ = client.ContainerRemove(context.Background(), testContainer.ID, types.ContainerRemoveOptions{Force: true})
+	}()
 
 	err = client.ContainerStart(context.Background(), testContainer.ID, types.ContainerStartOptions{})
 	require.NoError(t, err)
 
-	waiter := wait.NewDockerWaiter(client)
+	waiter := wait.NewDockerKillWaiter(client)
 
 	err = waiter.Wait(context.Background(), testContainer.ID)
 	assert.NoError(t, err)

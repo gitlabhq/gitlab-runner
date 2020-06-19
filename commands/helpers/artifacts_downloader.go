@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
+//nolint:lll
 type ArtifactsDownloaderCommand struct {
 	common.JobCredentials
 	retryHelper
@@ -51,7 +52,7 @@ func (c *ArtifactsDownloaderCommand) download(file string, retry int) error {
 func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 	log.SetRunnerFormatter()
 
-	if len(c.URL) == 0 || len(c.Token) == 0 {
+	if c.URL == "" || c.Token == "" {
 		logrus.Fatalln("Missing runner credentials")
 	}
 	if c.ID <= 0 {
@@ -63,8 +64,8 @@ func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 	if err != nil {
 		logrus.Fatalln(err)
 	}
-	file.Close()
-	defer os.Remove(file.Name())
+	_ = file.Close()
+	defer func() { _ = os.Remove(file.Name()) }()
 
 	// Download artifacts file
 	err = c.doRetry(func(retry int) error {
@@ -82,11 +83,15 @@ func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("artifacts-downloader", "download and extract build artifacts (internal)", &ArtifactsDownloaderCommand{
-		network: network.NewGitLabClient(),
-		retryHelper: retryHelper{
-			Retry:     2,
-			RetryTime: time.Second,
+	common.RegisterCommand2(
+		"artifacts-downloader",
+		"download and extract build artifacts (internal)",
+		&ArtifactsDownloaderCommand{
+			network: network.NewGitLabClient(),
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
 		},
-	})
+	)
 }

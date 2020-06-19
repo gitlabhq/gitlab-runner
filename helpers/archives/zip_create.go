@@ -44,7 +44,7 @@ func createZipFileEntry(archive *zip.Writer, fh *zip.FileHeader) error {
 	}
 
 	_, err = io.Copy(fw, file)
-	file.Close()
+	_ = file.Close()
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func CreateZipArchive(w io.Writer, fileNames []string) error {
 	tracker := newPathErrorTracker()
 
 	archive := zip.NewWriter(w)
-	defer archive.Close()
+	defer func() { _ = archive.Close() }()
 
 	for _, fileName := range fileNames {
 		if err := errorIfGitDirectory(fileName); tracker.actionable(err) {
@@ -113,15 +113,17 @@ func CreateZipFile(fileName string, fileNames []string) error {
 	if err != nil {
 		return err
 	}
-	defer tempFile.Close()
-	defer os.Remove(tempFile.Name())
+	defer func() {
+		_ = tempFile.Close()
+		_ = os.Remove(tempFile.Name())
+	}()
 
 	logrus.Debugln("Temporary file:", tempFile.Name())
 	err = CreateZipArchive(tempFile, fileNames)
 	if err != nil {
 		return err
 	}
-	tempFile.Close()
+	_ = tempFile.Close()
 
 	err = os.Rename(tempFile.Name(), fileName)
 	if err != nil {

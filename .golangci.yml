@@ -15,16 +15,61 @@ output:
   print-linter-name: true
 
 linters-settings:
+  errcheck:
+    check-type-assertions: true
+  gocognit:
+    min-complexity: 15
   goconst:
     min-len: 3
     min-occurrences: 3
   gocritic:
-    disabled-checks:
-      - appendAssign
+    enabled-checks:
+      - appendCombine
+      - badCall
+      - badCond
+      - boolExprSimplify
+      - codegenComment
+      - commentFormatting
+      - commentedOutCode
+      - deprecatedComment
+      - dupImport
+      - emptyFallthrough
+      - emptyStringTest
+      - equalFold
+      - evalOrder
+      - exitAfterDefer
+      - flagName
+      - hexLiteral
+      - indexAlloc
+      - initClause
+      - methodExprCall
+      - nestingReduce
+      - newDeref
+      - nilValReturn
+      - offBy1
+      - ptrToRefParam
+      - rangeExprCopy
+      - regexpPattern
+      - sloppyReassign
+      - stringXbytes
+      - truncateCmp
+      - typeAssertChain
+      - typeUnparen
+      - underef
+      - unnecessaryBlock
+      - valSwap
+      - weakCond
+      - wrapperFunc
+      - yodaStyleExpr
   gocyclo:
     min-complexity: 10
   govet:
     check-shadowing: false
+  lll:
+    line-length: 120
+    tab-width: 4
+  nestif:
+    min-complexity: 5
 
 linters:
   disable-all: true
@@ -32,19 +77,26 @@ linters:
     - bodyclose
     - deadcode
     - dogsled
+    - errcheck
+    - funlen
+    - gocognit
     - goconst
     - gocritic
-    - gocyclo
     - goimports
     - golint
+    - goprintffuncname
     - gosimple
     - govet
     - ineffassign
+    - lll
     - misspell
+    - nakedret
     - staticcheck
+    - nestif
     - structcheck
     - typecheck
     - unconvert
+    - unparam
     - varcheck
     - whitespace
   fast: false
@@ -78,13 +130,18 @@ issues:
       text: "don't use an underscore in package name"
     - path: ".*_test.go"
       linters:
+        - bodyclose
+        - funlen
+        - gocognit
         - goconst
     - path: ".*_test.go"
+      text: "Error return value is not checked"
       linters:
-        - bodyclose
+        - errcheck
     - path: ".*_test.go"
       text: "regexpMust"
       linters:
+        - errcheck
         - gocritic
     - path: referees/prometheus_api.go
       linters:

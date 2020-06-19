@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -47,6 +46,7 @@ type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
 func TestRunTestsWithFeatureFlag(t *testing.T) {
 	tests := map[string]featureFlagTest{
 		"testKubernetesSuccessRun":              testKubernetesSuccessRunFeatureFlag,
+		"testKubernetesMultistepRun":            testKubernetesMultistepRunFeatureFlag,
 		"testKubernetesTimeoutRun":              testKubernetesTimeoutRunFeatureFlag,
 		"testKubernetesBuildFail":               testKubernetesBuildFailFeatureFlag,
 		"testKubernetesBuildAbort":              testKubernetesBuildAbortFeatureFlag,
@@ -105,6 +105,96 @@ func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, f
 	assert.NoError(t, err)
 }
 
+func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	successfulBuild, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	failingScriptBuild, err := common.GetRemoteFailingMultistepBuild(common.StepNameScript)
+	require.NoError(t, err)
+
+	failingReleaseBuild, err := common.GetRemoteFailingMultistepBuild("release")
+	require.NoError(t, err)
+
+	successfulBuild.Image.Name = common.TestDockerGitImage
+	failingScriptBuild.Image.Name = common.TestDockerGitImage
+	failingReleaseBuild.Image.Name = common.TestDockerGitImage
+
+	tests := map[string]struct {
+		jobResponse    common.JobResponse
+		expectedOutput []string
+		unwantedOutput []string
+		errExpected    bool
+	}{
+		"Successful build with release and after_script step": {
+			jobResponse: successfulBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: false,
+		},
+		"Failure on script step. Release is skipped. After script runs.": {
+			jobResponse: failingScriptBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo After Script",
+			},
+			unwantedOutput: []string{
+				"echo Release",
+			},
+			errExpected: true,
+		},
+		"Failure on release step. After script runs.": {
+			jobResponse: failingReleaseBuild,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := &common.Build{
+				JobResponse: tt.jobResponse,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "kubernetes",
+						Kubernetes: &common.KubernetesConfig{
+							PullPolicy: common.PullPolicyIfNotPresent,
+						},
+					},
+				},
+			}
+			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+
+			out := buf.String()
+			for _, output := range tt.expectedOutput {
+				assert.Contains(t, out, output)
+			}
+
+			for _, output := range tt.unwantedOutput {
+				assert.NotContains(t, out, output)
+			}
+
+			if tt.errExpected {
+				var buildErr *common.BuildError
+				assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
 		return
@@ -124,7 +214,7 @@ func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, f
 			},
 		},
 	}
-	build.RunnerInfo.Timeout = 10 //seconds
+	build.RunnerInfo.Timeout = 10 // seconds
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -225,7 +315,7 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 
 	abortTimer := time.AfterFunc(time.Second, func() {
 		t.Log("Interrupt")
-		trace.CancelFunc()
+		trace.Cancel()
 	})
 	defer abortTimer.Stop()
 
@@ -298,7 +388,12 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
-								{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true, HostPath: "/opt/test/rw"},
+								{
+									Name:      "test",
+									MountPath: "/opt/test/readonly",
+									ReadOnly:  true,
+									HostPath:  "/opt/test/rw",
+								},
 								{Name: "docker", MountPath: "/var/run/docker.sock"},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
@@ -333,17 +428,24 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					Config:          tt.RunnerConfig,
 				},
 			}
+
 			setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
 			mounts := e.getVolumeMounts()
 			for _, expected := range tt.Expected {
-				assert.Contains(t, mounts, expected, "Expected volumeMount definition for %s was not found", expected.Name)
+				assert.Contains(
+					t,
+					mounts,
+					expected,
+					"Expected volumeMount definition for %s was not found",
+					expected.Name)
 			}
 		})
 	}
 }
 
 func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	//nolint:lll
 	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
@@ -432,6 +534,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 				},
 				configMap: fakeConfigMap(),
 			}
+
 			setBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
 			volumes := e.getVolumes()
@@ -460,15 +563,15 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	}
 
 	fakeRoundTripper := func(req *http.Request) (*http.Response, error) {
-		body, err := ioutil.ReadAll(req.Body)
-		if !assert.NoError(t, err, "failed to read request body") {
-			return nil, err
+		body, errRT := ioutil.ReadAll(req.Body)
+		if !assert.NoError(t, errRT, "failed to read request body") {
+			return nil, errRT
 		}
 
 		p := new(api.Pod)
-		err = json.Unmarshal(body, p)
-		if !assert.NoError(t, err, "failed to read request body") {
-			return nil, err
+		errRT = json.Unmarshal(body, p)
+		if !assert.NoError(t, errRT, "failed to read request body") {
+			return nil, errRT
 		}
 
 		if req.URL.Path == "/api/v1/namespaces/default/services" {
@@ -545,16 +648,16 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 	require.NoError(t, err)
 
 	tests := map[string]struct {
-		clonePath         string
-		expectedErrorType interface{}
+		clonePath   string
+		expectedErr bool
 	}{
 		"uses custom clone path": {
-			clonePath:         "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: nil,
+			clonePath:   "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr: false,
 		},
 		"path has to be within CI_BUILDS_DIR": {
-			clonePath:         "/unknown/go/src/gitlab.com/gitlab-org/repo",
-			expectedErrorType: &common.BuildError{},
+			clonePath:   "/unknown/go/src/gitlab.com/gitlab-org/repo",
+			expectedErr: true,
 		},
 	}
 
@@ -578,7 +681,13 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-			assert.IsType(t, test.expectedErrorType, err)
+			if test.expectedErr {
+				var buildErr *common.BuildError
+				assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
+				return
+			}
+
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -631,7 +740,8 @@ func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string,
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	var buildErr *common.BuildError
+	assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
@@ -656,7 +766,8 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	var buildErr *common.BuildError
+	assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
@@ -737,7 +848,9 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 		return
 	}
 
-	client, err := getKubeClient(&common.KubernetesConfig{}, &overwrites{})
+	config, err := getKubeClientConfig(new(common.KubernetesConfig), new(overwrites))
+	require.NoError(t, err)
+	client, err := kubernetes.NewForConfig(config)
 	require.NoError(t, err)
 	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
 	require.NoError(t, err)
@@ -817,7 +930,8 @@ func TestCleanup(t *testing.T) {
 	podsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/pods/" + objectMeta.Name
 	servicesEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/services/" + objectMeta.Name
 	secretsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/secrets/" + objectMeta.Name
-	configMapsEndpointURI := "/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
+	configMapsEndpointURI :=
+		"/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
 
 	tests := []struct {
 		Name        string
@@ -968,9 +1082,10 @@ func TestCleanup(t *testing.T) {
 				configMap:   test.ConfigMap,
 			}
 			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
+
 			errored := false
 			buildTrace := FakeBuildTrace{
-				testWriter{
+				testWriter: testWriter{
 					call: func(b []byte) (int, error) {
 						if !errored {
 							if s := string(b); strings.Contains(s, "Error cleaning up") {
@@ -1534,6 +1649,7 @@ func TestPrepare(t *testing.T) {
 			// It currently contains some moving parts that are failing, meaning
 			// we'll need to mock _something_
 			e.kubeClient = nil
+			e.kubeConfig = nil
 			e.featureChecker = nil
 			assert.Equal(t, test.Expected, e)
 		})
@@ -2306,7 +2422,11 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				assert.Equal(t, "servicename-non-compatble", e.services[0].GenerateName)
 				assert.NotEmpty(t, e.ProxyPool["service,name-.non-compat!ble"])
-				assert.Equal(t, "port,name-.non-compat!ble", e.ProxyPool["service,name-.non-compat!ble"].Settings.Ports[0].Name)
+				assert.Equal(
+					t,
+					"port,name-.non-compat!ble",
+					e.ProxyPool["service,name-.non-compat!ble"].Settings.Ports[0].Name,
+				)
 			},
 		},
 		"sets command (entrypoint) and args": {
@@ -2641,6 +2761,7 @@ func TestSetupBuildPod(t *testing.T) {
 
 			mockFc := &mockFeatureChecker{}
 			mockFc.On("IsHostAliasSupported").Return(true, nil)
+
 			ex := executor{
 				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
 				options:    options,
@@ -2685,54 +2806,41 @@ func TestSetupBuildPod(t *testing.T) {
 func TestProcessLogs(t *testing.T) {
 	mockTrace := &common.MockJobTrace{}
 	defer mockTrace.AssertExpectations(t)
+	mockTrace.On("Write", []byte("line\n")).Return(0, nil).Once()
 
-	mockTrace.On("Write", mock.MatchedBy(func(in []byte) bool {
-		return bytes.Equal(in, []byte("line\n"))
-	})).Return(0, nil).Once()
-
-	oldLogProcessor := newLogProcessor
-	defer func() {
-		newLogProcessor = oldLogProcessor
-	}()
-
-	mockLogProcessor := &mockLogProcessor{}
+	mockLogProcessor := new(mockLogProcessor)
 	defer mockLogProcessor.AssertExpectations(t)
 
-	logsCh := make(chan string)
-	go func() {
-		logsCh <- "line"
-
-		exitCode := 1
-		script := "script"
-		status := shells.TrapCommandExitStatus{
-			CommandExitCode: &exitCode,
-			Script:          &script,
-		}
-
-		b, _ := json.Marshal(status)
-		logsCh <- string(b)
-		close(logsCh)
-	}()
-
-	var returnCh <-chan string = logsCh
-	mockLogProcessor.On("Listen", mock.Anything).Return(returnCh).Once()
-
-	newLogProcessor = func(client *kubernetes.Clientset, backoff backoff.Backoff, logger *common.BuildLogger, podCfg kubernetesLogProcessorPodConfig) logProcessor {
-		return mockLogProcessor
+	ch := make(chan string, 2)
+	ch <- "line"
+	exitCode := 1
+	script := "script"
+	status := shells.TrapCommandExitStatus{
+		CommandExitCode: &exitCode,
+		Script:          &script,
 	}
 
-	e := executor{}
-	e.remoteProcessTerminated = make(chan shells.TrapCommandExitStatus)
+	b, err := json.Marshal(status)
+	require.NoError(t, err)
+	ch <- string(b)
+	mockLogProcessor.On("Process", mock.Anything).
+		Return((<-chan string)(ch)).
+		Once()
+
+	e := newExecutor()
 	e.Trace = mockTrace
 	e.pod = &api.Pod{}
 	e.pod.Name = "pod_name"
 	e.pod.Namespace = "namespace"
+	e.newLogProcessor = func() logProcessor {
+		return mockLogProcessor
+	}
 
 	go e.processLogs(context.Background())
 
 	exitStatus := <-e.remoteProcessTerminated
-	assert.Equal(t, 1, *exitStatus.CommandExitCode)
-	assert.Equal(t, "script", *exitStatus.Script)
+	assert.Equal(t, exitCode, *exitStatus.CommandExitCode)
+	assert.Equal(t, script, *exitStatus.Script)
 }
 
 func TestRunAttachCheckPodStatus(t *testing.T) {
@@ -2880,6 +2988,7 @@ func TestLimits(t *testing.T) {
 	tests := []struct {
 		CPU, Memory string
 		Expected    api.ResourceList
+		ExpectedErr error
 	}{
 		{
 			CPU:    "100m",
@@ -2888,35 +2997,49 @@ func TestLimits(t *testing.T) {
 				api.ResourceCPU:    resource.MustParse("100m"),
 				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
+			ExpectedErr: nil,
 		},
 		{
 			CPU: "100m",
 			Expected: api.ResourceList{
 				api.ResourceCPU: resource.MustParse("100m"),
 			},
+			ExpectedErr: nil,
 		},
 		{
 			Memory: "100Mi",
 			Expected: api.ResourceList{
 				api.ResourceMemory: resource.MustParse("100Mi"),
 			},
+			ExpectedErr: nil,
 		},
 		{
-			CPU:      "100j",
-			Expected: api.ResourceList{},
+			CPU:         "100j",
+			Expected:    api.ResourceList{},
+			ExpectedErr: resource.ErrFormatWrong,
 		},
 		{
-			Memory:   "100j",
-			Expected: api.ResourceList{},
+			Memory:      "100j",
+			Expected:    api.ResourceList{},
+			ExpectedErr: resource.ErrFormatWrong,
 		},
 		{
-			Expected: api.ResourceList{},
+			Expected:    api.ResourceList{},
+			ExpectedErr: nil,
 		},
 	}
 
-	for _, test := range tests {
-		res, _ := limits(test.CPU, test.Memory)
-		assert.Equal(t, test.Expected, res)
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("CPU=%s/Memory=%s", tc.CPU, tc.Memory), func(t *testing.T) {
+			res, err := limits(tc.CPU, tc.Memory)
+			assert.True(t,
+				errors.Is(err, tc.ExpectedErr),
+				"expected err %T, but got %T",
+				tc.ExpectedErr,
+				err,
+			)
+			assert.Equal(t, tc.Expected, res)
+		})
 	}
 }
 
@@ -2949,6 +3072,63 @@ func setBuildFeatureFlag(build *common.Build, flag string, value bool) {
 	})
 }
 
+func TestNewLogStreamerStream(t *testing.T) {
+	abortErr := errors.New("abort")
+
+	pod := new(api.Pod)
+	pod.Namespace = "k8s_namespace"
+	pod.Name = "k8s_pod_name"
+
+	client := mockKubernetesClientWithHost("", "", nil)
+	output := new(bytes.Buffer)
+	offset := 15
+
+	e := newExecutor()
+	e.pod = pod
+	e.Build = &common.Build{
+		Runner: new(common.RunnerConfig),
+	}
+
+	remoteExecutor := new(MockRemoteExecutor)
+	urlMatcher := mock.MatchedBy(func(url *url.URL) bool {
+		query := url.Query()
+		assert.Equal(t, helperContainerName, query.Get("container"))
+		assert.Equal(t, "true", query.Get("stdout"))
+		assert.Equal(t, "true", query.Get("stderr"))
+		command := query["command"]
+		assert.Equal(t, []string{
+			"gitlab-runner-helper",
+			"read-logs",
+			"--path",
+			e.logFile(),
+			"--offset",
+			strconv.Itoa(offset),
+			"--wait-file-timeout",
+			waitLogFileTimeout.String(),
+		}, command)
+
+		return true
+	})
+	remoteExecutor.
+		On("Execute", http.MethodPost, urlMatcher, mock.Anything, nil, output, output, false).
+		Return(abortErr)
+
+	p, ok := e.newLogProcessor().(*kubernetesLogProcessor)
+	require.True(t, ok)
+	p.logsOffset = int64(offset)
+
+	s, ok := p.logStreamer.(*kubernetesLogStreamer)
+	require.True(t, ok)
+	s.client = client
+	s.executor = remoteExecutor
+
+	assert.Equal(t, pod.Name, s.pod)
+	assert.Equal(t, pod.Namespace, s.namespace)
+
+	err := s.Stream(context.Background(), int64(offset), output)
+	assert.True(t, errors.Is(err, abortErr))
+}
+
 type FakeReadCloser struct {
 	io.Reader
 }
@@ -2965,6 +3145,7 @@ func (f FakeBuildTrace) Success()                                              {
 func (f FakeBuildTrace) Fail(err error, failureReason common.JobFailureReason) {}
 func (f FakeBuildTrace) Notify(func())                                         {}
 func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)           {}
+func (f FakeBuildTrace) Cancel() bool                                          { return false }
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)      {}
 func (f FakeBuildTrace) SetMasked(masked []string)                             {}
 func (f FakeBuildTrace) IsStdout() bool {
@@ -2993,7 +3174,12 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			assert.Equal(t, tt.expectedIsResult, errors.Is(tt.err, new(commandTerminatedError)), "commandTerminatedError.Is incorrect result")
+			assert.Equal(
+				t,
+				tt.expectedIsResult,
+				errors.Is(tt.err, new(commandTerminatedError)),
+				"commandTerminatedError.Is incorrect result",
+			)
 		})
 	}
 }
@@ -3001,7 +3187,18 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 func TestGenerateScripts(t *testing.T) {
 	testErr := errors.New("testErr")
 
-	e := &executor{}
+	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Build: &common.Build{
+				JobResponse: successfulResponse,
+			},
+		},
+	}
+	buildStages := e.Build.BuildStages()
+
 	setupMockShellGenerateScript := func(m *common.MockShell, stages []common.BuildStage) {
 		for _, s := range stages {
 			m.On("GenerateScript", s, e.ExecutorOptions.Shell).
@@ -3029,30 +3226,30 @@ func TestGenerateScripts(t *testing.T) {
 		"all stages OK": {
 			setupMockShell: func() *common.MockShell {
 				m := new(common.MockShell)
-				setupMockShellGenerateScript(m, common.BuildStages)
+				setupMockShellGenerateScript(m, buildStages)
 
 				return m
 			},
-			expectedScripts: setupScripts(common.BuildStages),
+			expectedScripts: setupScripts(buildStages),
 			expectedErr:     nil,
 		},
 		"stage returns skip build stage error": {
 			setupMockShell: func() *common.MockShell {
 				m := new(common.MockShell)
-				m.On("GenerateScript", common.BuildStages[0], e.ExecutorOptions.Shell).
+				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", common.ErrSkipBuildStage).
 					Once()
-				setupMockShellGenerateScript(m, common.BuildStages[1:])
+				setupMockShellGenerateScript(m, buildStages[1:])
 
 				return m
 			},
-			expectedScripts: setupScripts(common.BuildStages[1:]),
+			expectedScripts: setupScripts(buildStages[1:]),
 			expectedErr:     nil,
 		},
 		"stage returns error": {
 			setupMockShell: func() *common.MockShell {
 				m := new(common.MockShell)
-				m.On("GenerateScript", common.BuildStages[0], e.ExecutorOptions.Shell).
+				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", testErr).
 					Once()
 

@@ -51,7 +51,7 @@ func (c *CacheExtractorCommand) download(_ int) error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	upToDate, date := checkIfUpToDate(c.File, resp)
 	if upToDate {
@@ -63,8 +63,10 @@ func (c *CacheExtractorCommand) download(_ int) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(file.Name())
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+	}()
 
 	logrus.Infoln("Downloading", filepath.Base(c.File), "from", url_helpers.CleanURL(c.URL))
 	_, err = io.Copy(file, resp.Body)
@@ -96,7 +98,7 @@ func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, os.ErrNotExist
 	}
 
@@ -106,7 +108,7 @@ func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
 func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 	log.SetRunnerFormatter()
 
-	if len(c.File) == 0 {
+	if c.File == "" {
 		logrus.Fatalln("Missing cache file")
 	}
 
@@ -116,7 +118,9 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 			logrus.Fatalln(err)
 		}
 	} else {
-		logrus.Infoln("No URL provided, cache will not be downloaded from shared cache server. Instead a local version of cache will be extracted.")
+		logrus.Infoln(
+			"No URL provided, cache will not be downloaded from shared cache server. " +
+				"Instead a local version of cache will be extracted.")
 	}
 
 	err := archives.ExtractZipFile(c.File)
@@ -126,10 +130,14 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 }
 
 func init() {
-	common.RegisterCommand2("cache-extractor", "download and extract cache artifacts (internal)", &CacheExtractorCommand{
-		retryHelper: retryHelper{
-			Retry:     2,
-			RetryTime: time.Second,
+	common.RegisterCommand2(
+		"cache-extractor",
+		"download and extract cache artifacts (internal)",
+		&CacheExtractorCommand{
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
 		},
-	})
+	)
 }

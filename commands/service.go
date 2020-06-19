@@ -54,7 +54,7 @@ func runServiceInstall(s service.Service, c *cli.Context) error {
 	return service.Control(s, "install")
 }
 
-func runServiceStatus(displayName string, s service.Service) error {
+func runServiceStatus(displayName string, s service.Service) {
 	err := s.Status()
 	if err == nil {
 		fmt.Println(displayName+":", "Service is running!")
@@ -62,7 +62,6 @@ func runServiceStatus(displayName string, s service.Service) error {
 		fmt.Fprintln(os.Stderr, displayName+":", err)
 		os.Exit(1)
 	}
-	return nil
 }
 
 func getServiceArguments(c *cli.Context) (arguments []string) {
@@ -125,7 +124,8 @@ func createServiceConfig(c *cli.Context) (svcConfig *service.Config) {
 		}
 		svcConfig.UserName = c.String("user")
 	}
-	return
+
+	return svcConfig
 }
 
 func RunServiceControl(c *cli.Context) {
@@ -140,7 +140,7 @@ func RunServiceControl(c *cli.Context) {
 	case "install":
 		err = runServiceInstall(s, c)
 	case "status":
-		err = runServiceStatus(svcConfig.DisplayName, s)
+		runServiceStatus(svcConfig.DisplayName, s)
 	default:
 		err = service.Control(s, c.Command.Name)
 	}
@@ -162,32 +162,37 @@ func getFlags() []cli.Flag {
 
 func getInstallFlags() []cli.Flag {
 	installFlags := getFlags()
-	installFlags = append(installFlags, cli.StringFlag{
-		Name:  "working-directory, d",
-		Value: helpers.GetCurrentWorkingDirectory(),
-		Usage: "Specify custom root directory where all data are stored",
-	})
-	installFlags = append(installFlags, cli.StringFlag{
-		Name:  "config, c",
-		Value: getDefaultConfigFile(),
-		Usage: "Specify custom config file",
-	})
-	installFlags = append(installFlags, cli.BoolFlag{
-		Name:  "syslog",
-		Usage: "Setup system logging integration",
-	})
+	installFlags = append(
+		installFlags,
+		cli.StringFlag{
+			Name:  "working-directory, d",
+			Value: helpers.GetCurrentWorkingDirectory(),
+			Usage: "Specify custom root directory where all data are stored",
+		},
+		cli.StringFlag{
+			Name:  "config, c",
+			Value: getDefaultConfigFile(),
+			Usage: "Specify custom config file",
+		},
+		cli.BoolFlag{
+			Name:  "syslog",
+			Usage: "Setup system logging integration",
+		},
+	)
 
 	if runtime.GOOS == osTypeWindows {
-		installFlags = append(installFlags, cli.StringFlag{
-			Name:  "user, u",
-			Value: "",
-			Usage: "Specify user-name to secure the runner",
-		})
-		installFlags = append(installFlags, cli.StringFlag{
-			Name:  "password, p",
-			Value: "",
-			Usage: "Specify user password to install service (required)",
-		})
+		installFlags = append(
+			installFlags,
+			cli.StringFlag{
+				Name:  "user, u",
+				Value: "",
+				Usage: "Specify user-name to secure the runner",
+			},
+			cli.StringFlag{
+				Name:  "password, p",
+				Value: "",
+				Usage: "Specify user password to install service (required)",
+			})
 	} else if os.Getuid() == 0 {
 		installFlags = append(installFlags, cli.StringFlag{
 			Name:  "user, u",

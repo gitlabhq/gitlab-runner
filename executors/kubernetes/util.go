@@ -27,7 +27,10 @@ var (
 	defaultKubectlConfig kubeConfigProvider = loadDefaultKubectlConfig
 )
 
-func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites) (kubeConfig *restclient.Config, err error) {
+func getKubeClientConfig(
+	config *common.KubernetesConfig,
+	overwrites *overwrites,
+) (kubeConfig *restclient.Config, err error) {
 	if len(config.Host) > 0 {
 		kubeConfig, err = getOutClusterClientConfig(config)
 	} else {
@@ -37,8 +40,8 @@ func getKubeClientConfig(config *common.KubernetesConfig, overwrites *overwrites
 		return nil, err
 	}
 
-	//apply overwrites
-	if len(overwrites.bearerToken) > 0 {
+	// apply overwrites
+	if overwrites.bearerToken != "" {
 		kubeConfig.BearerToken = overwrites.bearerToken
 	}
 
@@ -57,8 +60,8 @@ func getOutClusterClientConfig(config *common.KubernetesConfig) (*restclient.Con
 	}
 
 	// certificate based auth
-	if len(config.CertFile) > 0 {
-		if len(config.KeyFile) == 0 || len(config.CAFile) == 0 {
+	if config.CertFile != "" {
+		if config.KeyFile == "" || config.CAFile == "" {
 			return nil, fmt.Errorf("ca file, cert file and key file must be specified when using file based auth")
 		}
 
@@ -86,15 +89,6 @@ func loadDefaultKubectlConfig() (*restclient.Config, error) {
 	}
 
 	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
-}
-
-func getKubeClient(config *common.KubernetesConfig, overwrites *overwrites) (*kubernetes.Clientset, error) {
-	restConfig, err := getKubeClientConfig(config, overwrites)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(restConfig)
 }
 
 func closeKubeClient(client *kubernetes.Clientset) bool {
@@ -157,14 +151,20 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 		}
 
 		switch container.State.Waiting.Reason {
-		case "ErrImagePull", "ImagePullBackOff":
+		case "ErrImagePull", "ImagePullBackOff", "InvalidImageName":
 			err = fmt.Errorf("image pull failed: %s", container.State.Waiting.Message)
 			err = &common.BuildError{Inner: err}
 			return podPhaseResponse{true, api.PodUnknown, err}
 		}
 	}
 
-	fmt.Fprintf(out, "Waiting for pod %s/%s to be running, status is %s\n", pod.Namespace, pod.Name, pod.Status.Phase)
+	_, _ = fmt.Fprintf(
+		out,
+		"Waiting for pod %s/%s to be running, status is %s\n",
+		pod.Namespace,
+		pod.Name,
+		pod.Status.Phase,
+	)
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
@@ -185,7 +185,13 @@ func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) 
 // reached.
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
-func waitForPodRunning(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer, config *common.KubernetesConfig) (api.PodPhase, error) {
+func waitForPodRunning(
+	ctx context.Context,
+	c *kubernetes.Clientset,
+	pod *api.Pod,
+	out io.Writer,
+	config *common.KubernetesConfig,
+) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {
@@ -213,21 +219,21 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 
 	parse := func(s string) (resource.Quantity, error) {
 		var q resource.Quantity
-		if len(s) == 0 {
+		if s == "" {
 			return q, nil
 		}
 		if q, err = resource.ParseQuantity(s); err != nil {
-			return q, fmt.Errorf("error parsing resource limit: %w", err)
+			return q, fmt.Errorf("parsing resource limit: %w", err)
 		}
 		return q, nil
 	}
 
 	if rCPU, err = parse(cpu); err != nil {
-		return api.ResourceList{}, nil
+		return api.ResourceList{}, err
 	}
 
 	if rMem, err = parse(memory); err != nil {
-		return api.ResourceList{}, nil
+		return api.ResourceList{}, err
 	}
 
 	l := make(api.ResourceList)

@@ -436,7 +436,11 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 // GitLab instance and finally creates and finishes the job.
 // To speed-up jobs handling before starting the job this method "requeues" the runner to another
 // worker (by feeding the channel normally handled by feedRunners).
-func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) (err error) {
+func (mr *RunCommand) processRunner(
+	id int,
+	runner *common.RunnerConfig,
+	runners chan *common.RunnerConfig,
+) (err error) {
 	provider := common.GetExecutorProvider(runner.Executor)
 	if provider == nil {
 		return
@@ -467,14 +471,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	if err != nil || jobData == nil {
 		return
 	}
-	defer func() {
-		if err != nil {
-			fmt.Fprintln(trace, err.Error())
-			trace.Fail(err, common.RunnerSystemFailure)
-		} else {
-			trace.Fail(nil, common.NoneFailure)
-		}
-	}()
+	defer func() { mr.traceOutcome(trace, err) }()
 
 	// Create a new build
 	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData)
@@ -494,6 +491,15 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 
 	// Process a build
 	return build.Run(mr.config, trace)
+}
+
+func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
+	if err != nil {
+		fmt.Fprintln(trace, err.Error())
+		trace.Fail(err, common.RunnerSystemFailure)
+	} else {
+		trace.Success()
+	}
 }
 
 // createSession checks if debug server is supported by configured executor and if the
@@ -526,7 +532,10 @@ func (mr *RunCommand) createSession(provider common.ExecutorProvider) (*session.
 
 // requestJob will check if the runner can send another concurrent request to
 // GitLab, if not the return value is nil.
-func (mr *RunCommand) requestJob(runner *common.RunnerConfig, sessionInfo *common.SessionInfo) (common.JobTrace, *common.JobResponse, error) {
+func (mr *RunCommand) requestJob(
+	runner *common.RunnerConfig,
+	sessionInfo *common.SessionInfo,
+) (common.JobTrace, *common.JobResponse, error) {
 	if !mr.buildsHelper.acquireRequest(runner) {
 		mr.log().WithField("runner", runner.ShortDescription()).
 			Debugln("Failed to request job: runner requestConcurrency meet")
@@ -857,12 +866,16 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 func init() {
 	requestStatusesCollector := network.NewAPIRequestStatusesMap()
 
-	common.RegisterCommand2("run", "run multi runner service", &RunCommand{
-		ServiceName:                     defaultServiceName,
-		network:                         network.NewGitLabClientWithRequestStatusesMap(requestStatusesCollector),
-		networkRequestStatusesCollector: requestStatusesCollector,
-		prometheusLogHook:               prometheus_helper.NewLogHook(),
-		failuresCollector:               prometheus_helper.NewFailuresCollector(),
-		buildsHelper:                    newBuildsHelper(),
-	})
+	common.RegisterCommand2(
+		"run",
+		"run multi runner service",
+		&RunCommand{
+			ServiceName:                     defaultServiceName,
+			network:                         network.NewGitLabClientWithRequestStatusesMap(requestStatusesCollector),
+			networkRequestStatusesCollector: requestStatusesCollector,
+			prometheusLogHook:               prometheus_helper.NewLogHook(),
+			failuresCollector:               prometheus_helper.NewFailuresCollector(),
+			buildsHelper:                    newBuildsHelper(),
+		},
+	)
 }

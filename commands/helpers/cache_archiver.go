@@ -40,7 +40,7 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	fi, err := file.Stat()
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	if err != nil {
 		return retryableErr{err: err}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return retryOnServerError(resp)
 }
@@ -97,15 +97,21 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 			logrus.Fatalln(err)
 		}
 	} else {
-		logrus.Infoln("No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.")
+		logrus.Infoln(
+			"No URL provided, cache will be not uploaded to shared cache server. " +
+				"Cache will be stored only locally.")
 	}
 }
 
 func init() {
-	common.RegisterCommand2("cache-archiver", "create and upload cache artifacts (internal)", &CacheArchiverCommand{
-		retryHelper: retryHelper{
-			Retry:     2,
-			RetryTime: time.Second,
+	common.RegisterCommand2(
+		"cache-archiver",
+		"create and upload cache artifacts (internal)",
+		&CacheArchiverCommand{
+			retryHelper: retryHelper{
+				Retry:     2,
+				RetryTime: time.Second,
+			},
 		},
-	})
+	)
 }
