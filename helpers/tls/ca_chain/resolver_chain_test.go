@@ -11,11 +11,7 @@ import (
 
 type resolverMockFactory func(t *testing.T) (resolver, func())
 
-func newResolverMock(
-	inputCerts []*x509.Certificate,
-	returnCerts []*x509.Certificate,
-	returnErr error,
-) resolverMockFactory {
+func newResolverMock(inputCerts, returnCerts []*x509.Certificate, returnErr error) resolverMockFactory {
 	return func(t *testing.T) (resolver, func()) {
 		mock := new(mockResolver)
 		cleanup := func() {

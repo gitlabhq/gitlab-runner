@@ -438,7 +438,8 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					mounts,
 					expected,
 					"Expected volumeMount definition for %s was not found",
-					expected.Name)
+					expected.Name,
+				)
 			}
 		})
 	}
@@ -644,7 +645,8 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 	}
 
 	jobResponse, err := common.GetRemoteBuildResponse(
-		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo")
+		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+	)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -3032,7 +3034,8 @@ func TestLimits(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("CPU=%s/Memory=%s", tc.CPU, tc.Memory), func(t *testing.T) {
 			res, err := limits(tc.CPU, tc.Memory)
-			assert.True(t,
+			assert.True(
+				t,
 				errors.Is(err, tc.ExpectedErr),
 				"expected err %T, but got %T",
 				tc.ExpectedErr,

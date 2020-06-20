@@ -814,13 +814,15 @@ func TestCacheInContainer(t *testing.T) {
 		output,
 		skipCacheDownload,
 		"Cache download should be performed with policy: %s",
-		common.CachePolicyPullPush)
+		common.CachePolicyPullPush,
+	)
 	assert.NotContains(
 		t,
 		output,
 		skipCacheUpload,
 		"Cache upload should be performed with policy: %s",
-		common.CachePolicyPullPush)
+		common.CachePolicyPullPush,
+	)
 
 	// pull-only jobs should skip the push step
 	build.JobResponse.Cache[0].Policy = common.CachePolicyPull
@@ -831,13 +833,15 @@ func TestCacheInContainer(t *testing.T) {
 		output,
 		skipCacheDownload,
 		"Cache download should be performed with policy: %s",
-		common.CachePolicyPull)
+		common.CachePolicyPull,
+	)
 	assert.Contains(
 		t,
 		output,
 		skipCacheUpload,
 		"Cache upload should be skipped with policy: %s",
-		common.CachePolicyPull)
+		common.CachePolicyPull,
+	)
 
 	// push-only jobs should skip the pull step
 	build.JobResponse.Cache[0].Policy = common.CachePolicyPush

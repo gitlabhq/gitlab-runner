@@ -67,7 +67,8 @@ func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 func testCacheOperation(
 	t *testing.T,
 	operationName string,
-	operation func(adapter cache.Adapter) *url.URL, tc cacheOperationTest,
+	operation func(adapter cache.Adapter) *url.URL,
+	tc cacheOperationTest,
 ) {
 	t.Run(operationName, func(t *testing.T) {
 		cleanupMinioURLGeneratorMock := onFakeMinioURLGenerator(tc)
@@ -114,12 +115,14 @@ func TestCacheOperation(t *testing.T) {
 				t,
 				"GetDownloadURL",
 				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() },
-				test)
+				test,
+			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
 				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() },
-				test)
+				test,
+			)
 		})
 	}
 }

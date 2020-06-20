@@ -28,10 +28,12 @@ import (
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
-	logrus.Debugln(r.Method, r.URL.String(),
+	logrus.Debugln(
+		r.Method, r.URL.String(),
 		"Content-Type:", r.Header.Get("Content-Type"),
 		"Accept:", r.Header.Get("Accept"),
-		"Body:", string(body))
+		"Body:", string(body),
+	)
 
 	switch r.URL.Path {
 	case "/api/v4/test/ok":
@@ -301,9 +303,11 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 	err = writeTLSCertificate(s, filepath.Join(tempDir, hostname+".crt"))
 	assert.NoError(t, err)
 
-	err = writeTLSKeyPair(s,
+	err = writeTLSKeyPair(
+		s,
 		filepath.Join(tempDir, hostname+".auth.crt"),
-		filepath.Join(tempDir, hostname+".auth.key"))
+		filepath.Join(tempDir, hostname+".auth.key"),
+	)
 	assert.NoError(t, err)
 
 	c, _ := newClient(&RunnerCredentials{

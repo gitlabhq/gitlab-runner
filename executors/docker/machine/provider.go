@@ -58,10 +58,7 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 	return details
 }
 
-func (m *machineProvider) create(
-	config *common.RunnerConfig,
-	state machineState,
-) (*machineDetails, chan error) {
+func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
 	name := newMachineName(config)
 	details := m.machineDetails(name, true)
 	details.State = machineStateCreating

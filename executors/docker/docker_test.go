@@ -1330,7 +1330,8 @@ func prepareTestDockerConfiguration(
 func testDockerConfigurationWithJobContainer(
 	t *testing.T,
 	dockerConfig *common.DockerConfig,
-	cce containerConfigExpectations) {
+	cce containerConfigExpectations,
+) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
 	defer c.AssertExpectations(t)
 

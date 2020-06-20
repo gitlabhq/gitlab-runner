@@ -111,7 +111,8 @@ func (s *Session) setMux() {
 	s.mux = mux.NewRouter()
 	s.mux.Handle(
 		s.Endpoint+"/proxy/{resource}/{port}/{requestedUri:.*}",
-		s.withAuthorization(http.HandlerFunc(s.proxyHandler)))
+		s.withAuthorization(http.HandlerFunc(s.proxyHandler)),
+	)
 	s.mux.Handle(s.Endpoint+"/exec", s.withAuthorization(http.HandlerFunc(s.execHandler)))
 }
 

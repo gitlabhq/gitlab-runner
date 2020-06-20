@@ -301,9 +301,11 @@ func TestBuildWithShallowLock(t *testing.T) {
 		build, cleanup := newBuild(t, successfulBuild, shell)
 		defer cleanup()
 
-		build.Variables = append(build.Variables,
+		build.Variables = append(
+			build.Variables,
 			common.JobVariable{Key: "GIT_DEPTH", Value: "1"},
-			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+		)
 
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)

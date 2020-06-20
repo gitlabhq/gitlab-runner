@@ -46,11 +46,7 @@ func (mr *MetricsReferee) ArtifactFormat() string {
 	return "gzip"
 }
 
-func (mr *MetricsReferee) Execute(
-	ctx context.Context,
-	startTime time.Time,
-	endTime time.Time,
-) (*bytes.Reader, error) {
+func (mr *MetricsReferee) Execute(ctx context.Context, startTime time.Time, endTime time.Time) (*bytes.Reader, error) {
 	// specify the range used for the PromQL query
 	queryRange := prometheusV1.Range{
 		Start: startTime.UTC(),
