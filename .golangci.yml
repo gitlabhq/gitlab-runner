@@ -15,6 +15,13 @@ output:
   print-linter-name: true
 
 linters-settings:
+### Custom linters are commented out as they currently are not being run locally
+### The `code_quality` CI job temporarily uncomments this section to perform the full linting
+##  custom:
+##    goargs:
+##      path: .tmp/goargs.so
+##      description: Checks for consistent formatting on argument lists
+##      original-url: gitlab.com/pedropombeiro/goargs
   errcheck:
     check-type-assertions: true
   gocognit:
