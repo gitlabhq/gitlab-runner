@@ -87,7 +87,7 @@ func prepareTable() string {
 	return buffer.String()
 }
 
-func replace(fileContent string, tableContent string) string {
+func replace(fileContent, tableContent string) string {
 	replacer := newBlockLineReplacer(startPlaceholder, endPlaceholder, fileContent, tableContent)
 
 	newContent, err := replacer.Replace()
@@ -165,7 +165,7 @@ func (r *blockLineReplacer) handleEnd(line string) {
 	r.output.WriteString(r.replaceContent)
 }
 
-func newBlockLineReplacer(startLine string, endLine string, input string, replaceContent string) *blockLineReplacer {
+func newBlockLineReplacer(startLine, endLine string, input, replaceContent string) *blockLineReplacer {
 	return &blockLineReplacer{
 		startLine:      startLine,
 		endLine:        endLine,

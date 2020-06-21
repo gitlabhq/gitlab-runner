@@ -898,7 +898,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	}
 }
 
-func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalImages []string) error {
+func (e *executor) verifyAllowedImage(image, optionName string, allowedImages, internalImages []string) error {
 	for _, allowedImage := range allowedImages {
 		ok, _ := doublestar.Match(allowedImage, image)
 		if ok {

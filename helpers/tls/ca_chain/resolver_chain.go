@@ -16,7 +16,7 @@ type chainResolver struct {
 	verifyResolver resolver
 }
 
-func newChainResolver(urlResolver resolver, verifyResolver resolver) resolver {
+func newChainResolver(urlResolver, verifyResolver resolver) resolver {
 	return &chainResolver{
 		urlResolver:    urlResolver,
 		verifyResolver: verifyResolver,

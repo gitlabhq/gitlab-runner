@@ -70,7 +70,7 @@ func writeTLSCertificate(s *httptest.Server, file string) error {
 	return ioutil.WriteFile(file, encoded, 0600)
 }
 
-func writeTLSKeyPair(s *httptest.Server, certFile string, keyFile string) error {
+func writeTLSKeyPair(s *httptest.Server, certFile, keyFile string) error {
 	c := s.TLS.Certificates[0]
 	if len(c.Certificate) == 0 || c.Certificate[0] == nil {
 		return errors.New("no predefined certificate")

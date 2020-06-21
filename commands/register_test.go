@@ -95,7 +95,7 @@ func testRegisterCommandRun(
 	t *testing.T,
 	network common.Network,
 	args ...string,
-) (content string, output string, err error) {
+) (content, output string, err error) {
 	hook := test.NewGlobal()
 
 	defer func() {

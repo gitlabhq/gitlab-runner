@@ -444,7 +444,7 @@ func (b *Build) createReferees(executor Executor) {
 	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
 }
 
-func (b *Build) executeUploadReferees(ctx context.Context, startTime time.Time, endTime time.Time) {
+func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime time.Time) {
 	if b.Referees == nil || b.ArtifactUploader == nil {
 		b.Log().Debug("Skipping referees execution")
 		return
