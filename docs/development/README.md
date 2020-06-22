@@ -140,7 +140,61 @@ To execute the tests run:
 make test
 ```
 
-## 7. Install optional tools
+## 7. Run tests with helper image version of choice
+
+When running tests without passing `-ldflags` the default version in `version.go` would be `development`.
+This means that the Runner will default to pulling a helper image with the `latest` tag.
+If you are developing functionality inside the helper, you'll most likely want to use the version of the Docker image
+that contains the newest changes to run tests.
+
+### Make targets
+
+The make targets inject `-ldflags` automatically. So if you want to run all tests you could run:
+
+```shell
+make simple-test
+```
+
+Same goes for `parallel_test_execute`, which is most commonly used by the CI jobs.
+
+### Custom go test arguments
+
+In case you want a more customised `go test` command, you could use the `print_ldflags` make target:
+
+```shell
+go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./executors/docker/...
+```
+
+### In GoLand
+
+Currently, GoLand doesn't support dynamic go tool arguments, so you'll need to run `make print_ldflags` first
+and then paste it the configuration.
+
+### Helper image
+
+Build the newest version of the helper image with:
+
+```shell
+make helper-docker
+```
+
+You will then have the image ready for use:
+
+```shell
+REPOSITORY                                                    TAG                      IMAGE ID            CREATED             SIZE
+gitlab/gitlab-runner-helper                                   x86_64-a6bc0800          f10d9b5bbb41        32 seconds ago      57.2MB
+```
+
+### Helper image with Kubernetes
+
+If you are running a local Kubernetes cluster make sure to reuse the cluster's Docker daemon to build images.
+For example, with Minikube:
+
+```shell
+eval $(minikube docker-env)
+```
+
+## 8. Install optional tools
 
 - Install `golangci-lint`, used for the `make lint` target.
 - Install `markdown-lint` and `vale`, used for the `make lint-docs` target.
@@ -148,7 +202,7 @@ make test
 Installation instructions will pop up when running a Makefile target
 if a tool is missing.
 
-## 8. Contribute
+## 9. Contribute
 
 You can start hacking GitLab-Runner code.
 If you need an IDE to edit and debug code, there are a few free suggestions you can use:
