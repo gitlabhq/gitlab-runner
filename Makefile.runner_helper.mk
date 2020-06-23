@@ -54,7 +54,7 @@ helper-docker: $(TAR)
 out/helper-images/prebuilt-%.tar.xz: out/helper-images/prebuilt-%.tar
 	xz -f -9 $<
 
-out/helper-images/prebuilt-%.tar: dockerfiles/runner-helper
+out/helper-images/prebuilt-%.tar: out/binaries/gitlab-runner-helper/gitlab-runner-helper.%
 	@mkdir -p $$(dirname $@_)
 	@cp out/binaries/gitlab-runner-helper/gitlab-runner-helper* dockerfiles/runner-helper/binaries/
 	docker build -t gitlab/gitlab-runner-helper:$*-$(REVISION) -f dockerfiles/runner-helper/Dockerfile.$* dockerfiles/runner-helper
