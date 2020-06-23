@@ -221,7 +221,13 @@ func (e *executor) Run(cmd common.ExecutorCommand) error {
 		return err
 	}
 
-	args := append(e.config.RunArgs, scriptFile, string(cmd.Stage))
+	// TODO: Remove this translation in 14.0 - https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426
+	stage := cmd.Stage
+	if stage == "step_script" {
+		stage = "build_script"
+	}
+
+	args := append(e.config.RunArgs, scriptFile, string(stage))
 
 	opts := prepareCommandOpts{
 		executable: e.config.RunExec,
