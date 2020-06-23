@@ -627,8 +627,22 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		}
 	}
 
-	assertEnvValue := func(expectedServices []jsonService) func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
-		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+	assertEnvValue := func(expectedServices []jsonService) func(
+		t *testing.T,
+		tt executorTestCase,
+		ctx context.Context,
+		executable string,
+		args []string,
+		options process.CommandOptions,
+	) {
+		return func(
+			t *testing.T,
+			tt executorTestCase,
+			ctx context.Context,
+			executable string,
+			args []string,
+			options process.CommandOptions,
+		) {
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == CIJobServicesEnv {
@@ -641,8 +655,22 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		}
 	}
 
-	assertEmptyEnv := func() func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
-		return func(t *testing.T, tt executorTestCase, ctx context.Context, executable string, args []string, options process.CommandOptions) {
+	assertEmptyEnv := func() func(
+		t *testing.T,
+		tt executorTestCase,
+		ctx context.Context,
+		executable string,
+		args []string,
+		options process.CommandOptions,
+	) {
+		return func(
+			t *testing.T,
+			tt executorTestCase,
+			ctx context.Context,
+			executable string,
+			args []string,
+			options process.CommandOptions,
+		) {
 			for _, env := range options.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == CIJobServicesEnv {
