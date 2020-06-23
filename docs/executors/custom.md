@@ -237,7 +237,7 @@ order:
 1. `upload_artifacts_on_success` OR `upload_artifacts_on_failure`
 
 NOTE: **Note:**
-Since GitLab Runner 13.1 dynamic build stages are also supported. These are prefixed with `step_` and are not of a predefined set. Starting 14.0 `build_script` will be replaced with `step_script` - [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426).
+Since GitLab Runner 13.1 dynamic build stages are also supported. They are prefixed with `step_` and are not of a predefined set. Starting 14.0 `build_script` will be replaced with `step_script` - [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426).
 
 For each stage mentioned above, the `run_exec` executable will be
 executed with:
