@@ -310,13 +310,14 @@ func TestHelperImageWithVariable(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner:"+common.REVISION).
+	runnerImageTag := "gitlab/gitlab-runner:" + common.REVISION
+	c.On("ImageInspectWithRaw", mock.Anything, runnerImageTag).
 		Return(types.ImageInspect{}, nil, errors.New("not found")).
 		Once()
-	c.On("ImagePullBlocking", mock.Anything, "gitlab/gitlab-runner:"+common.REVISION, mock.Anything).
+	c.On("ImagePullBlocking", mock.Anything, runnerImageTag, mock.Anything).
 		Return(nil).
 		Once()
-	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner:"+common.REVISION).
+	c.On("ImageInspectWithRaw", mock.Anything, runnerImageTag).
 		Return(types.ImageInspect{ID: "helper-image"}, nil, nil).
 		Once()
 

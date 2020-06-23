@@ -133,9 +133,10 @@ parallel_test_prepare:
 	# Preparing test commands
 	@./scripts/go_test_with_coverage_report prepare
 
+parallel_test_execute: export GO_LDFLAGS ?= "$(GO_LDFLAGS)"
 parallel_test_execute: pull_images_for_tests
 	# Executing tests
-	@GO_LDFLAGS="$(GO_LDFLAGS)" ./scripts/go_test_with_coverage_report execute
+	@./scripts/go_test_with_coverage_report execute
 
 parallel_test_coverage_report:
 	# Preparing coverage report

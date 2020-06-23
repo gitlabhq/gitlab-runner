@@ -143,7 +143,7 @@ make test
 ## 7. Run tests with helper image version of choice
 
 When running tests without passing `-ldflags` the default version in `version.go` would be `development`.
-This means that the Runner will default to pulling a helper image with the `latest` tag.
+This means that the Runner will default to pulling a [helper image](../configuration/advanced-configuration.md#helper-image) with the `latest` tag.
 If you are developing functionality inside the helper, you'll most likely want to use the version of the Docker image
 that contains the newest changes to run tests.
 
@@ -168,14 +168,16 @@ go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./
 ### In GoLand
 
 Currently, GoLand doesn't support dynamic go tool arguments, so you'll need to run `make print_ldflags` first
-and then paste it the configuration.
+and then paste it in the configuration.
+
+**Important:** Make sure to remove the last two flags `-s -w` to be able to use the debugger.
 
 ### Helper image
 
 Build the newest version of the helper image with:
 
 ```shell
-make helper-docker
+make helper-dockerarchive
 ```
 
 You will then have the image ready for use:
