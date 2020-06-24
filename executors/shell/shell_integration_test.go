@@ -969,6 +969,8 @@ func TestBuildWithDebugTrace(t *testing.T) {
 }
 
 func TestBuildMultilineCommand(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
 	multilineBuild, err := common.GetMultilineBashBuild()
 	assert.NoError(t, err)
 	build, cleanup := newBuild(t, multilineBuild, "bash")
