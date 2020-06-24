@@ -75,7 +75,7 @@ If you are using the AWS CLI, then you can refer to the [Getting Started with Am
 documentation for the steps required to push an image to ECR using the AWS CLI.
 
 In the Debian example, we use the [GitLab Container Registry](https://docs.gitlab.com/ee/user/packages/container_registry/)
-and the image is published to `registry.gitlab.com/tmaczukin-test-projects/fargate:latest`.
+and the image is published to `registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`.
 Similarly, the NodeJS example image is published to `registry.gitlab.com/aws-fargate-driver-demo/docker-nodejs-gitlab-ci-fargate:latest`.
 
 ## Step 3: Retrieve your project's Runner registration token
@@ -91,7 +91,7 @@ you can find a project with a very simple CI job for testing the driver:
 ```yaml
 test:
   script:
-  - echo "It works!"
+    - echo "It works!"
 ```
 
 ## Step 4: Create a Runner Manager EC2 instance
@@ -204,6 +204,7 @@ and SSH into the EC2 instance that you created in the previous step via
 
    [SSH]
      Username = "root"
+     Port = 22
      PrivateKeyPath = "/root/.ssh/id_rsa"
    ```
 
@@ -219,6 +220,8 @@ and SSH into the EC2 instance that you created in the previous step via
      In a production setting,
      you should follow [AWS guidelines](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)
      for setting up and using Security groups.
+
+   - The port number of the SSH server is optional. If omitted, will use the default SSH port (22).
 
 1. Create the SSH private key: `sudo ssh-keygen -t rsa -b 2048 -f /root/.ssh/id_rsa -N ""`
 1. Install the Fargate driver:
