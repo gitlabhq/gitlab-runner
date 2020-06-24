@@ -293,6 +293,8 @@ for arch in "${TARGET_ARCHS[@]}"; do
         "${runner_home_dir}/alpine/"
 done
 
+alpineTags=()
+ubuntuTags=()
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${PUSH_TO_DOCKER_HUB}" ]]; then
    add_tags alpineTags "alpine" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_REPOSITORY}" "${ref_tag}"
    add_tags ubuntuTags "ubuntu" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_REPOSITORY}" "${ref_tag}"

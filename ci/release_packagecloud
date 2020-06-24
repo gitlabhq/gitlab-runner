@@ -2,7 +2,7 @@
 
 set -eo pipefail
 
-target=$(echo ${1} | cut -f 1 -d ' ')
+target=$(echo "${1}" | cut -f 1 -d ' ')
 case "${target}" in
     bleeding)
         make packagecloud PACKAGE_CLOUD="runner/unstable" \
