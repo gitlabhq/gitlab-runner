@@ -605,6 +605,7 @@ func TestDockerCommandOutput(t *testing.T) {
 }
 
 func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
@@ -694,6 +695,7 @@ func getTestDockerJob(t *testing.T) *common.Build {
 }
 
 func TestDockerExtendedConfigurationFromJob(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
@@ -763,6 +765,7 @@ func runTestJobWithOutput(t *testing.T, build *common.Build) (output string) {
 }
 
 func TestCacheInContainer(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
@@ -845,6 +848,7 @@ func TestCacheInContainer(t *testing.T) {
 }
 
 func TestDockerImageNameFromVariable(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
@@ -879,6 +883,7 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 }
 
 func TestDockerServiceNameFromVariable(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
