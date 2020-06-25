@@ -183,6 +183,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	})
 	require.NoError(t, err)
 
+	err = e.createLabeler()
+	require.NoError(t, err)
+
 	e.BuildShell = &common.ShellConfiguration{
 		Environment: []string{},
 	}
@@ -1218,11 +1221,15 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	err = e.createVolumesManager()
 	require.NoError(t, err)
 
+	err = e.createLabeler()
+	require.NoError(t, err)
+
 	container, err := e.createContainer(
 		"build",
 		common.Image{Name: common.TestAlpineImage},
 		[]string{"/bin/sh"},
-		[]string{})
+		[]string{},
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, container)
 
@@ -1301,6 +1308,9 @@ func prepareTestDockerConfiguration(
 		Architecture:    e.info.Architecture,
 		OperatingSystem: e.info.OperatingSystem,
 	})
+	require.NoError(t, err)
+
+	err = e.createLabeler()
 	require.NoError(t, err)
 
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
