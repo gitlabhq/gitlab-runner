@@ -37,7 +37,7 @@ started](https://prometheus.io/docs/prometheus/latest/getting_started/) guide. A
 see the [Configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
 section for more details on how to configure Prometheus, as well as the section
 on [Alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/) and setting up
-an [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) to
+an [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) to
 dispatch alert notifications.
 
 ## `pprof` HTTP endpoints

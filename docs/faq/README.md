@@ -227,7 +227,7 @@ them to win32 calls when running on a Windows system (example: [Colorama](https:
 If your program is doing the above, then you need to disable that conversion for the CI builds so that the ANSI codes remain in the string.
 
 See [GitLab CI YAML docs](https://docs.gitlab.com/ee/ci/yaml/#coloring-script-output)
-for an example using PowerShell and issue [#332](https://gitlab.com/gitlab-org/gitlab-runner/issues/332)
+for an example using PowerShell and issue [#332](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/332)
 for more information.
 
 ### `The service did not start due to a logon failure` error when starting service
