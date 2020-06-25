@@ -13,8 +13,9 @@ import (
 // this can be useful in container environments where exiting with an exit code different from 0 would kill the container.
 // At the same time it writes to a file the actual exit code of the script as well as the filename of the script as json.
 const bashTrapShellScript = `runner_script_trap() {
+	exit_code=$?
 	log_file=%s
-	out_json="{\"command_exit_code\": $?, \"script\": \"$0\"}"
+	out_json="{\"command_exit_code\": $exit_code, \"script\": \"$0\"}"
 
 	# Make sure the command status will always be printed on a new line 
 	if [[ $(tail -c1 $log_file | wc -l) -gt 0 ]]; then
