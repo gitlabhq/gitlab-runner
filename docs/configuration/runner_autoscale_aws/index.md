@@ -1,11 +1,11 @@
 ---
+type: user guide
+level: intermediate
+author: Achilleas Pipinellis
+author_gitlab: axil
+date: 2017-11-24
 last_updated: 2019-08-21
 ---
-
-> **[Article Type](https://docs.gitlab.com/ee/development/writing_documentation.html#types-of-technical-articles):** Administration guide ||
-> **Level:** intermediary ||
-> **Author:** [Achilleas Pipinellis](https://gitlab.com/axil) ||
-> **Publication date:** 2017-11-24
 
 # Autoscaling GitLab Runner on AWS EC2
 

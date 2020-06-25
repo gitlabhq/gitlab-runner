@@ -1,6 +1,8 @@
-> **[Article Type](https://docs.gitlab.com/ee/development/writing_documentation.html#types-of-technical-articles):** Admin guide ||
-> **Level:** intermediary ||
-> **Publication date:** 2020-04-22
+---
+type: user guide
+level: intermediate
+date: 2020-04-22
+---
 
 # Autoscaling GitLab CI on AWS Fargate
 
