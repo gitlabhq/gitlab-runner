@@ -10,7 +10,7 @@ import (
 )
 
 // NOTE: The functionality of the rate limiting below as well as the constant values
-// are documented in `docs/configuration/rate_limiting.md`
+// are documented in `docs/configuration/proxy.md#handling-rate-limited-requests`
 
 const (
 	// RateLimit-ResetTime: Wed, 21 Oct 2015 07:28:00 GMT
