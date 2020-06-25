@@ -23,6 +23,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
@@ -968,6 +969,8 @@ func TestBuildWithDebugTrace(t *testing.T) {
 }
 
 func TestBuildMultilineCommand(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
 	multilineBuild, err := common.GetMultilineBashBuild()
 	assert.NoError(t, err)
 	build, cleanup := newBuild(t, multilineBuild, "bash")
@@ -1122,6 +1125,8 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 }
 
 func TestInteractiveTerminal(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
 	cases := []struct {
 		app                string
 		shell              string

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+borderTop() {
+    echo
+    echo "========================================================================================================================="
+}
+
+borderBottom() {
+    echo "========================================================================================================================="
+    echo
+}
+
+testOutputDir="./.testoutput"
+testOutputPattern="${testOutputDir}/*.output.txt"
+
+panicFailures=()
+for file in ${testOutputPattern}; do
+    set +e
+    if [[ "${file}" == *".windows."* ]]; then
+      panicMsgs="$(iconv -f utf-16 -t utf-8 "${file}" | grep "panic:")"
+    else
+      panicMsgs="$(grep "panic:" "${file}")"
+    fi
+    set -e
+
+    if [ -n "${panicMsgs}" ]; then
+        panicFailures+=("${file}: ${panicMsgs}")
+    fi
+done
+
+if [ ${#panicFailures[@]} -gt 0 ]; then
+    borderTop
+    echo "Panic failures found:"
+    for failure in "${panicFailures[@]}"; do
+        echo "  ${failure}"
+    done
+    borderBottom
+    exit 1
+fi
+
+borderTop
+echo "No panic test failures found!"
+borderBottom
