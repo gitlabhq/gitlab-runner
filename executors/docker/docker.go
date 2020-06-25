@@ -26,6 +26,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
@@ -50,6 +51,11 @@ const (
 )
 
 var PrebuiltImagesPaths []string
+
+const (
+	labelServiceType = "service"
+	labelWaitType    = "wait"
+)
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
@@ -82,6 +88,7 @@ type executor struct {
 
 	volumesManager  volumes.Manager
 	networksManager networks.Manager
+	labeler         labels.Labeler
 
 	networkMode container.NetworkMode
 
@@ -313,26 +320,6 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 	return image, nil
 }
 
-func (e *executor) getLabels(containerType string, otherLabels ...string) map[string]string {
-	labels := make(map[string]string)
-	labels[dockerLabelPrefix+".job.id"] = strconv.Itoa(e.Build.ID)
-	labels[dockerLabelPrefix+".job.sha"] = e.Build.GitInfo.Sha
-	labels[dockerLabelPrefix+".job.before_sha"] = e.Build.GitInfo.BeforeSha
-	labels[dockerLabelPrefix+".job.ref"] = e.Build.GitInfo.Ref
-	labels[dockerLabelPrefix+".project.id"] = strconv.Itoa(e.Build.JobInfo.ProjectID)
-	labels[dockerLabelPrefix+".pipeline.id"] = e.Build.GetAllVariables().Get("CI_PIPELINE_ID")
-	labels[dockerLabelPrefix+".runner.id"] = e.Build.Runner.ShortDescription()
-	labels[dockerLabelPrefix+".runner.local_id"] = strconv.Itoa(e.Build.RunnerID)
-	labels[dockerLabelPrefix+".type"] = containerType
-	for _, label := range otherLabels {
-		keyValue := strings.SplitN(label, "=", 2)
-		if len(keyValue) == 2 {
-			labels[dockerLabelPrefix+"."+keyValue[0]] = keyValue[1]
-		}
-	}
-	return labels
-}
-
 func fakeContainer(id string, names ...string) *types.Container {
 	return &types.Container{ID: id, Names: names}
 }
@@ -427,9 +414,15 @@ func (e *executor) createService(
 	// this will fail potentially some builds if there's name collision
 	_ = e.removeContainer(e.Context, containerName)
 
+	labels := map[string]string{
+		"type":            labelServiceType,
+		"service":         service,
+		"service.version": version,
+	}
+
 	config := &container.Config{
 		Image:  serviceImage.ID,
-		Labels: e.getLabels("service", "service="+service, "service.version="+version),
+		Labels: e.labeler.Labels(labels),
 		Env:    append(e.getServiceVariables(), e.BuildShell.Environment...),
 	}
 
@@ -732,7 +725,7 @@ func (e *executor) createContainerConfig(
 		Image:        imageID,
 		Hostname:     hostname,
 		Cmd:          cmd,
-		Labels:       e.getLabels(containerType),
+		Labels:       e.labeler.Labels(map[string]string{"type": containerType}),
 		Tty:          false,
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -1010,6 +1003,7 @@ func (e *executor) validateOSType() error {
 
 func (e *executor) createDependencies() error {
 	createDependenciesStrategy := []func() error{
+		e.createLabeler,
 		e.createNetworksManager,
 		e.createBuildNetwork,
 		e.bindDevices,
@@ -1289,7 +1283,7 @@ func (e *executor) createConfigForServiceHealthCheckContainer(
 	return &container.Config{
 		Cmd:    cmd,
 		Image:  waitImage.ID,
-		Labels: e.getLabels("wait", "wait="+service.ID),
+		Labels: e.labeler.Labels(map[string]string{"type": labelWaitType, "wait": service.ID}),
 		Env:    environment,
 	}
 }
