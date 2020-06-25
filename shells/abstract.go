@@ -212,13 +212,14 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 }
 
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
-	repoURL, err := url.Parse(build.Runner.URL)
+	repoURL, err := url.Parse(build.GetRemoteURL())
 	if err != nil {
 		w.Warningf("git SSL config: Can't parse repository URL. %s", err)
 		return
 	}
 
 	repoURL.Path = ""
+	repoURL.User = nil
 	host := repoURL.String()
 	variables := build.GetCITLSVariables()
 	args := append([]string{"config"}, where...)
