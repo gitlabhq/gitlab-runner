@@ -267,10 +267,12 @@ func (s *executor) getVMName() string {
 		return s.Config.Parallels.BaseName + "-" + s.Build.ProjectUniqueName()
 	}
 
-	return fmt.Sprintf("%s-runner-%s-concurrent-%d",
+	return fmt.Sprintf(
+		"%s-runner-%s-concurrent-%d",
 		s.Config.Parallels.BaseName,
 		s.Build.Runner.ShortDescription(),
-		s.Build.RunnerID)
+		s.Build.RunnerID,
+	)
 }
 
 func unregisterInvalidVM(vmName string) {

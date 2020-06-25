@@ -98,7 +98,8 @@ func GetRemoteSuccessfulLFSBuild() (JobResponse, error) {
 
 func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
 	jobResponse, err := GetRemoteBuildResponse("echo Hello World")
-	jobResponse.Steps = append(jobResponse.Steps,
+	jobResponse.Steps = append(
+		jobResponse.Steps,
 		Step{
 			Name:   StepNameAfterScript,
 			Script: []string{"echo Hello World"},
@@ -114,7 +115,8 @@ func GetRemoteSuccessfulMultistepBuild() (JobResponse, error) {
 		return JobResponse{}, err
 	}
 
-	jobResponse.Steps = append(jobResponse.Steps,
+	jobResponse.Steps = append(
+		jobResponse.Steps,
 		Step{
 			Name:   "release",
 			Script: []string{"echo Release"},
@@ -225,9 +227,11 @@ func getRemoteCustomTLSBuild(chain string) (JobResponse, error) {
 	}
 
 	job.TLSCAChain = chain
-	job.Variables = append(job.Variables,
+	job.Variables = append(
+		job.Variables,
 		JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
-		JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
+		JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+	)
 
 	return job, nil
 }

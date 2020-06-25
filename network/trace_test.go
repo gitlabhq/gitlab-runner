@@ -256,8 +256,7 @@ func TestJobFinishStatusUpdateRetry(t *testing.T) {
 func TestJobIncrementalPatchSend(t *testing.T) {
 	var wg sync.WaitGroup
 
-	finalUpdateMatcher := generateJobInfoMatcher(
-		jobCredentials.ID, common.Success, "")
+	finalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
@@ -287,11 +286,8 @@ func TestJobIncrementalPatchSend(t *testing.T) {
 func TestJobIncrementalStatusRefresh(t *testing.T) {
 	var wg sync.WaitGroup
 
-	incrementalUpdateMatcher := generateJobInfoMatcher(
-		jobCredentials.ID, common.Running, "")
-
-	finalUpdateMatcher := generateJobInfoMatcher(
-		jobCredentials.ID, common.Success, "")
+	incrementalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
+	finalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
@@ -365,8 +361,8 @@ func TestTracePathIntervalChanges(t *testing.T) {
 				Return(common.NewPatchTraceResult(
 					len(testTrace),
 					common.UpdateSucceeded,
-					tt.patchTraceUpdateIntervalValue),
-				).
+					tt.patchTraceUpdateIntervalValue,
+				)).
 				Run(func(_ mock.Arguments) {
 					waitForPatch.Done()
 				}).

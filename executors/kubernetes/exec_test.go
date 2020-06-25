@@ -265,8 +265,10 @@ func TestAttach(t *testing.T) {
 		b, _ := ioutil.ReadAll(stdin)
 		return string(b) == "sleep 1\n"
 	})
-	mockExecutor.On("Execute", http.MethodPost,
-		urlMatcher, clientConfig, stdinMatcher, nil, nil, false).Return(nil).Once()
+	mockExecutor.
+		On("Execute", http.MethodPost, urlMatcher, clientConfig, stdinMatcher, nil, nil, false).
+		Return(nil).
+		Once()
 
 	opts := &AttachOptions{
 		Namespace:     "test-resource",

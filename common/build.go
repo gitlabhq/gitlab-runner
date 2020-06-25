@@ -235,8 +235,7 @@ func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEna
 	}
 
 	if !strings.HasPrefix(dir, rootDir) {
-		return "", MakeBuildError("the %s=%q has to be within %q",
-			overrideKey, dir, rootDir)
+		return "", MakeBuildError("the %s=%q has to be within %q", overrideKey, dir, rootDir)
 	}
 
 	return dir, nil
@@ -384,7 +383,8 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		return fmt.Errorf(
 			"prepare environment: %w. "+
 				"Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information",
-			err)
+			err,
+		)
 	}
 
 	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
@@ -444,7 +444,7 @@ func (b *Build) createReferees(executor Executor) {
 	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
 }
 
-func (b *Build) executeUploadReferees(ctx context.Context, startTime time.Time, endTime time.Time) {
+func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime time.Time) {
 	if b.Referees == nil || b.ArtifactUploader == nil {
 		b.Log().Debug("Skipping referees execution")
 		return
@@ -583,24 +583,25 @@ func (b *Build) waitForBuildFinish(buildFinish <-chan error, timeout time.Durati
 func (b *Build) retryCreateExecutor(
 	options ExecutorPrepareOptions,
 	provider ExecutorProvider,
-	logger BuildLogger) (executor Executor, err error) {
+	logger BuildLogger,
+) (Executor, error) {
+	var err error
+
 	for tries := 0; tries < PreparationRetries; tries++ {
-		executor = provider.Create()
+		executor := provider.Create()
 		if executor == nil {
-			err = errors.New("failed to create executor")
-			return
+			return nil, errors.New("failed to create executor")
 		}
 
 		b.executorStageResolver = executor.GetCurrentStage
 
 		err = executor.Prepare(options)
 		if err == nil {
-			break
+			return executor, nil
 		}
 		executor.Cleanup()
-		executor = nil
 		if _, ok := err.(*BuildError); ok {
-			break
+			return nil, err
 		} else if options.Context.Err() != nil {
 			return nil, b.handleError(options.Context.Err())
 		}
@@ -609,7 +610,8 @@ func (b *Build) retryCreateExecutor(
 		logger.Infoln("Will be retried in", PreparationRetryInterval, "...")
 		time.Sleep(PreparationRetryInterval)
 	}
-	return
+
+	return nil, err
 }
 
 func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) error {
@@ -918,7 +920,8 @@ func (b *Build) GetAllVariables() JobVariables {
 	if b.Image.Name != "" {
 		variables = append(
 			variables,
-			JobVariable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false})
+			JobVariable{Key: "CI_JOB_IMAGE", Value: b.Image.Name, Public: true, Internal: true, File: false},
+		)
 	}
 	if b.Runner != nil {
 		variables = append(variables, b.Runner.GetVariables()...)

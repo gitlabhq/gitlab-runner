@@ -52,7 +52,7 @@ type osKillWait struct {
 	forceKillTimeout    time.Duration
 }
 
-func NewOSKillWait(logger Logger, gracefulKillTimeout time.Duration, forceKillTimeout time.Duration) KillWaiter {
+func NewOSKillWait(logger Logger, gracefulKillTimeout, forceKillTimeout time.Duration) KillWaiter {
 	return &osKillWait{
 		logger:              logger,
 		gracefulKillTimeout: gracefulKillTimeout,

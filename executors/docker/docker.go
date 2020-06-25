@@ -100,7 +100,9 @@ func init() {
 	if err != nil {
 		logrus.Errorln(
 			"Docker executor: unable to detect gitlab-runner folder, "+
-				"prebuilt image helpers will be loaded from DockerHub.", err)
+				"prebuilt image helpers will be loaded from DockerHub.",
+			err,
+		)
 	}
 
 	PrebuiltImagesPaths = []string{
@@ -880,13 +882,15 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 						"from network",
 						network.Name,
 						"->",
-						err)
+						err,
+					)
 				} else {
 					e.Warningln(
 						"Possibly zombie container",
 						pluggedContainer.Name,
 						"is disconnected from network",
-						network.Name)
+						network.Name,
+					)
 				}
 				break
 			}
@@ -894,7 +898,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	}
 }
 
-func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalImages []string) error {
+func (e *executor) verifyAllowedImage(image, optionName string, allowedImages, internalImages []string) error {
 	for _, allowedImage := range allowedImages {
 		ok, _ := doublestar.Match(allowedImage, image)
 		if ok {

@@ -24,8 +24,10 @@ func ProxyTerminal(timeoutCh, disconnectCh, proxyStopCh chan error, proxyFunc fu
 			proxyStopCh <- err
 		case <-disconnected:
 			// forward the disconnection event if there is any waiting receiver
-			nonBlockingSend(disconnectCh,
-				errors.New("finished proxying (client disconnected?)"))
+			nonBlockingSend(
+				disconnectCh,
+				errors.New("finished proxying (client disconnected?)"),
+			)
 		}
 	}()
 

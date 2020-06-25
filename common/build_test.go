@@ -864,7 +864,8 @@ func TestStartBuild(t *testing.T) {
 				test.args.rootDir,
 				test.args.cacheDir,
 				test.args.customBuildDirEnabled,
-				test.args.sharedDir)
+				test.args.sharedDir,
+			)
 			if test.expectedError {
 				assert.Error(t, err)
 				return
@@ -1086,7 +1087,8 @@ func TestBuild_IsLFSSmudgeDisabled(t *testing.T) {
 			if !testCase.isVariableUnset {
 				b.Variables = append(
 					b.Variables,
-					JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true})
+					JobVariable{Key: "GIT_LFS_SKIP_SMUDGE", Value: testCase.variableValue, Public: true},
+				)
 			}
 
 			assert.Equal(t, testCase.expectedResult, b.IsLFSSmudgeDisabled())

@@ -191,12 +191,16 @@ func TestKiller(t *testing.T) {
 			if testCase.alreadyStopped {
 				_ = cmd.Process().Kill()
 
-				loggerMock.On("Warn",
+				loggerMock.On(
+					"Warn",
 					"Failed to terminate process:",
-					mock.Anything)
-				loggerMock.On("Warn",
+					mock.Anything,
+				)
+				loggerMock.On(
+					"Warn",
 					"Failed to force-kill:",
-					mock.Anything)
+					mock.Anything,
+				)
 			}
 
 			go func() {

@@ -196,7 +196,8 @@ func (s *RegisterCommand) askBasicDocker(exampleHelperImage string) {
 
 	s.Docker.Image = s.ask(
 		"docker-image",
-		fmt.Sprintf("Please enter the default Docker image (e.g. %s):", exampleHelperImage))
+		fmt.Sprintf("Please enter the default Docker image (e.g. %s):", exampleHelperImage),
+	)
 }
 
 func (s *RegisterCommand) askParallels() {

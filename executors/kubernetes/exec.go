@@ -99,8 +99,10 @@ func (p *AttachOptions) Run() error {
 	}
 
 	if pod.Status.Phase != api.PodRunning {
-		return fmt.Errorf("pod %q (on namespace %q) is not running and cannot execute commands; current phase is %q",
-			p.PodName, p.Namespace, pod.Status.Phase)
+		return fmt.Errorf(
+			"pod %q (on namespace %q) is not running and cannot execute commands; current phase is %q",
+			p.PodName, p.Namespace, pod.Status.Phase,
+		)
 	}
 
 	// Ending with a newline is important to actually run the script
@@ -163,8 +165,10 @@ func (p *ExecOptions) Run() error {
 	}
 
 	if pod.Status.Phase != api.PodRunning {
-		return fmt.Errorf("pod %q (on namespace '%s') is not running and cannot execute commands; current phase is %q",
-			p.PodName, p.Namespace, pod.Status.Phase)
+		return fmt.Errorf(
+			"pod %q (on namespace '%s') is not running and cannot execute commands; current phase is %q",
+			p.PodName, p.Namespace, pod.Status.Phase,
+		)
 	}
 
 	if p.ContainerName == "" {
