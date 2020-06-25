@@ -634,7 +634,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	err = ex.prepareOverwrites(make(common.JobVariables, 0))
 	assert.NoError(t, err)
 
-	err = ex.setupBuildPod()
+	err = ex.setupBuildPod(nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error creating the proxy service")
 }
@@ -2798,7 +2798,7 @@ func TestSetupBuildPod(t *testing.T) {
 			err = ex.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err, "error preparing overwrites")
 
-			err = ex.setupBuildPod()
+			err = ex.setupBuildPod(nil)
 			if test.VerifySetupBuildPodErrFn == nil {
 				assert.NoError(t, err, "error setting up build pod")
 				assert.True(t, rt.executed, "RoundTrip for kubernetes client should be executed")
