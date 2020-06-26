@@ -15,16 +15,16 @@ import (
 
 var testZipFileContent = []byte("test content")
 
-type CharsetByte int
+type charsetByte int
 
 const (
-	SingleByte CharsetByte = iota
-	MultiBytes
+	singleByte charsetByte = iota
+	multiBytes
 )
 
-func createTestFile(t *testing.T, csb CharsetByte) string {
+func createTestFile(t *testing.T, csb charsetByte) string {
 	name := "test_file.txt"
-	if csb == MultiBytes {
+	if csb == multiBytes {
 		name = "テストファイル.txt"
 	}
 
@@ -33,9 +33,9 @@ func createTestFile(t *testing.T, csb CharsetByte) string {
 	return name
 }
 
-func createSymlinkFile(t *testing.T, csb CharsetByte) string {
+func createSymlinkFile(t *testing.T, csb charsetByte) string {
 	name := "new_symlink"
-	if csb == MultiBytes {
+	if csb == multiBytes {
 		name = "新しいシンボリックリンク"
 	}
 
@@ -44,9 +44,9 @@ func createSymlinkFile(t *testing.T, csb CharsetByte) string {
 	return name
 }
 
-func createTestDirectory(t *testing.T, csb CharsetByte) string {
+func createTestDirectory(t *testing.T, csb charsetByte) string {
 	name := "test_directory"
-	if csb == MultiBytes {
+	if csb == multiBytes {
 		name = "テストディレクトリ"
 	}
 
@@ -55,9 +55,9 @@ func createTestDirectory(t *testing.T, csb CharsetByte) string {
 	return name
 }
 
-func createTestPipe(t *testing.T, csb CharsetByte) string {
+func createTestPipe(t *testing.T, csb charsetByte) string {
 	name := "test_pipe"
-	if csb == MultiBytes {
+	if csb == multiBytes {
 		name = "テストパイプ"
 	}
 
@@ -66,7 +66,7 @@ func createTestPipe(t *testing.T, csb CharsetByte) string {
 	return name
 }
 
-func createTestGitPathFile(t *testing.T, csb CharsetByte) string {
+func createTestGitPathFile(t *testing.T, csb charsetByte) string {
 	_, err := os.Stat(".git")
 	if err != nil {
 		err = os.Mkdir(".git", 0711)
@@ -74,7 +74,7 @@ func createTestGitPathFile(t *testing.T, csb CharsetByte) string {
 	}
 
 	name := ".git/test_file"
-	if csb == MultiBytes {
+	if csb == multiBytes {
 		name = ".git/テストファイル"
 	}
 
@@ -106,14 +106,14 @@ func testInWorkDir(t *testing.T, testCase func(t *testing.T, fileName string)) {
 func TestZipCreate(t *testing.T) {
 	testInWorkDir(t, func(t *testing.T, fileName string) {
 		paths := []string{
-			createTestFile(t, SingleByte),
-			createSymlinkFile(t, SingleByte),
-			createTestDirectory(t, SingleByte),
-			createTestPipe(t, SingleByte),
-			createTestFile(t, MultiBytes),
-			createSymlinkFile(t, MultiBytes),
-			createTestDirectory(t, MultiBytes),
-			createTestPipe(t, MultiBytes),
+			createTestFile(t, singleByte),
+			createSymlinkFile(t, singleByte),
+			createTestDirectory(t, singleByte),
+			createTestPipe(t, singleByte),
+			createTestFile(t, multiBytes),
+			createSymlinkFile(t, multiBytes),
+			createTestDirectory(t, multiBytes),
+			createTestPipe(t, multiBytes),
 			"non_existing_file.txt",
 		}
 		err := CreateZipFile(fileName, paths)
@@ -155,8 +155,8 @@ func TestZipCreateWithGitPath(t *testing.T) {
 		defer logrus.SetOutput(output)
 
 		paths := []string{
-			createTestGitPathFile(t, SingleByte),
-			createTestGitPathFile(t, MultiBytes),
+			createTestGitPathFile(t, singleByte),
+			createTestGitPathFile(t, multiBytes),
 		}
 		err := CreateZipFile(fileName, paths)
 		require.NoError(t, err)
