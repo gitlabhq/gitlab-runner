@@ -125,23 +125,23 @@ func TestZipCreate(t *testing.T) {
 
 		assert.Len(t, archive.File, 6)
 
-		assert.Equal(t, "test_file.txt", archive.File[0].Name)
+		assert.Equal(t, paths[0], archive.File[0].Name)
 		assert.Equal(t, os.FileMode(0640), archive.File[0].Mode().Perm())
 		assert.NotEmpty(t, archive.File[0].Extra)
 
-		assert.Equal(t, "new_symlink", archive.File[1].Name)
+		assert.Equal(t, paths[1], archive.File[1].Name)
 
-		assert.Equal(t, "test_directory/", archive.File[2].Name)
+		assert.Equal(t, paths[2]+"/", archive.File[2].Name)
 		assert.NotEmpty(t, archive.File[2].Extra)
 		assert.True(t, archive.File[2].Mode().IsDir())
 
-		assert.Equal(t, "テストファイル.txt", archive.File[3].Name)
+		assert.Equal(t, paths[4], archive.File[3].Name)
 		assert.Equal(t, os.FileMode(0640), archive.File[3].Mode().Perm())
 		assert.NotEmpty(t, archive.File[3].Extra)
 
-		assert.Equal(t, "新しいシンボリックリンク", archive.File[4].Name)
+		assert.Equal(t, paths[5], archive.File[4].Name)
 
-		assert.Equal(t, "テストディレクトリ/", archive.File[5].Name)
+		assert.Equal(t, paths[6]+"/", archive.File[5].Name)
 		assert.NotEmpty(t, archive.File[5].Extra)
 		assert.True(t, archive.File[5].Mode().IsDir())
 	})
@@ -169,11 +169,11 @@ func TestZipCreateWithGitPath(t *testing.T) {
 
 		assert.Len(t, archive.File, 2)
 
-		assert.Equal(t, ".git/test_file", archive.File[0].Name)
+		assert.Equal(t, paths[0], archive.File[0].Name)
 		assert.Equal(t, os.FileMode(0640), archive.File[0].Mode().Perm())
 		assert.NotEmpty(t, archive.File[0].Extra)
 
-		assert.Equal(t, ".git/テストファイル", archive.File[1].Name)
+		assert.Equal(t, paths[1], archive.File[1].Name)
 		assert.Equal(t, os.FileMode(0640), archive.File[1].Mode().Perm())
 		assert.NotEmpty(t, archive.File[1].Extra)
 	})
