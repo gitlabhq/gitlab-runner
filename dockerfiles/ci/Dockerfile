@@ -38,6 +38,12 @@ ARG GIT_LFS_256_CHECKSUM
 COPY dockerfiles/ci/install_git_lfs /tmp/
 RUN /tmp/install_git_lfs
 
+ARG KUBECTL_VERSION
+
+# Install kubectl
+RUN wget -q https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl && \
+    chmod +x /usr/local/bin/kubectl
+
 COPY Makefile* /tmp/
 WORKDIR /tmp
 RUN make deps package-deps packagecloud-deps

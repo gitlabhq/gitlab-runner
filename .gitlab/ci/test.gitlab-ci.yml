@@ -172,3 +172,20 @@ git 1.7.1:
   - source ci/touch_make_dependencies
   script:
   - make simple-test
+
+integration_k8s:
+  extends:
+    - .merge_request_pipelines
+    - .docker
+  stage: test
+  services:
+  - name: registry.gitlab.com/gitlab-org/cluster-integration/test-utils/k3s-gitlab-ci/releases/v1.16.7-k3s1
+    alias: k3s
+  before_script:
+  - curl k3s:8081?service=k3s > k3s.yaml
+  - export KUBECONFIG=$(pwd)/k3s.yaml
+  - kubectl version
+  - kubectl cluster-info
+  script:
+  - go test -v gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes
+

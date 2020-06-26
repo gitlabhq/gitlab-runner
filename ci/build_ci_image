@@ -42,6 +42,7 @@ build() {
            --build-arg BUILDX_VERSION="${BUILDX_VERSION}" \
            --build-arg GIT_LFS_VERSION="${GIT_LFS_VERSION}" \
            --build-arg GIT_LFS_256_CHECKSUM="${GIT_LFS_256_CHECKSUM}" \
+           --build-arg KUBECTL_VERSION="${KUBECTL_VERSION}" \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
            "${GIT_ROOT}"
