@@ -23,6 +23,11 @@ create_package() {
     local customOptions
     read -r -a customOptions <<< "${@}"
 
+    if [ -z "${PACKAGE_ARCH}" ]; then
+      echo "PACKAGE_ARCH not specified, aborting."
+      exit 1
+    fi
+
     local uname_s
     uname_s=$(uname -s)
 

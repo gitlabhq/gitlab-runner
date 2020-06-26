@@ -4,7 +4,7 @@ helper images:
   - .docker
   stage: prebuild
   script:
-  - make helper-build helper-docker
+  - make helper-bin helper-dockerarchive
   artifacts:
     paths:
     - out/helper-images/
