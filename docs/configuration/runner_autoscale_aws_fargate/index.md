@@ -255,7 +255,7 @@ following steps:
 
 An Amazon ECS cluster is a grouping of ECS Container Instances.
 
-1. Go to [`http://console.aws.amazon.com/ecs/home#/clusters`](https://console.aws.amazon.com/ecs/home#/clusters).
+1. Go to [`https://console.aws.amazon.com/ecs/home#/clusters`](https://console.aws.amazon.com/ecs/home#/clusters).
 1. Click `Create Cluster`.
 1. Choose `Network only` type. Click `Next step`.
 1. Give it the name `test-fargate` (the same as in `fargate.toml`). We don't
@@ -273,7 +273,7 @@ for detailed instructions on setting up and working with a cluster on ECS Fargat
 In this step you will create a task definition of type `Fargate` with a reference
 to the container image that you are going to use for your CI builds.
 
-1. Go to [http://console.aws.amazon.com/ecs/home#/taskDefinitions](http://console.aws.amazon.com/ecs/home#/taskDefinitions).
+1. Go to [`https://console.aws.amazon.com/ecs/home#/taskDefinitions`](https://console.aws.amazon.com/ecs/home#/taskDefinitions).
 1. Click `Create new Task Definition`.
 1. Choose `Fargate` and click `Next step`.
 1. Give it a name `test-task` (Note: the name is the same as the value defined in

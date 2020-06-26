@@ -79,7 +79,7 @@ server you trust and own.
 
 The shell executor starts the script for each job in a new process. On
 UNIX systems, it sets the main process as a [process
-group](http://www.informit.com/articles/article.aspx?p=397655&seqNum=6).
+group](https://www.informit.com/articles/article.aspx?p=397655&seqNum=6).
 
 GitLab Runner terminates processes when:
 
