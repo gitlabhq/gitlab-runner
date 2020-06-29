@@ -86,7 +86,8 @@ func TestCreateNetwork(t *testing.T) {
 			networkPerBuild:     "true",
 			expectedNetworkMode: container.NetworkMode("runner-test-tok-project-0-concurrent-0-job-0-network"),
 			clientAssertions: func(mc *docker.MockClient) {
-				mc.On("NetworkCreate",
+				mc.On(
+					"NetworkCreate",
 					mock.Anything,
 					mock.AnythingOfType("string"),
 					mock.AnythingOfType("types.NetworkCreate"),

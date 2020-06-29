@@ -23,7 +23,8 @@ func TestCreateNetworkLabels(t *testing.T) {
 
 	manager := newDefaultManager()
 	manager.build.JobResponse = successfulJobResponse
-	manager.build.Variables = append(manager.build.Variables,
+	manager.build.Variables = append(
+		manager.build.Variables,
 		common.JobVariable{Key: featureflags.NetworkPerBuild, Value: "true"},
 		common.JobVariable{Key: "CI_PIPELINE_ID", Value: "1"},
 	)

@@ -33,12 +33,7 @@ type manager struct {
 	perBuild     bool
 }
 
-func NewManager(
-	logger debugLogger,
-	dockerClient docker.Client,
-	build *common.Build,
-	labeler labels.Labeler,
-) Manager {
+func NewManager(logger debugLogger, dockerClient docker.Client, build *common.Build, labeler labels.Labeler) Manager {
 	return &manager{
 		logger:  logger,
 		client:  dockerClient,

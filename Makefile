@@ -53,6 +53,10 @@ GOX = gox
 MOCKERY_VERSION ?= 1.1.0
 MOCKERY ?= .tmp/mockery-$(MOCKERY_VERSION)
 
+GOLANGLINT_VERSION ?= v1.27.0
+GOLANGLINT ?= .tmp/golangci-lint$(GOLANGLINT_VERSION)
+GOLANGLINT_GOARGS ?= .tmp/goargs.so
+
 DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
 
 RELEASE_INDEX_GEN_VERSION ?= latest
@@ -109,9 +113,8 @@ deps: $(DEVELOPMENT_TOOLS)
 .PHONY: lint
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
-lint:
-	@golangci-lint --version >/dev/stderr
-	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
+lint: $(GOLANGLINT)
+	@$(GOLANGLINT) run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
 .PHONY: lint-docs
 lint-docs:
@@ -328,6 +331,28 @@ check_modules:
 # development tools
 $(GOX):
 	go get github.com/mitchellh/gox
+
+$(GOLANGLINT): TOOL_BUILD_DIR := .tmp/build/golangci-lint
+$(GOLANGLINT): $(GOLANGLINT_GOARGS)
+	rm -rf $(TOOL_BUILD_DIR)
+	git clone https://github.com/golangci/golangci-lint.git --no-tags --depth 1 -b "$(GOLANGLINT_VERSION)" $(TOOL_BUILD_DIR) && \
+	cd $(TOOL_BUILD_DIR) && \
+	export COMMIT=$(shell git rev-parse --short HEAD) && \
+	export DATE=$(shell date -u '+%FT%TZ') && \
+	CGO_ENABLED=1 go build -o $(BUILD_DIR)/$(GOLANGLINT) \
+		-ldflags "-s -w -X main.version=$(GOLANGLINT_VERSION) -X main.commit=$${COMMIT} -X main.date=$${DATE}" \
+		./cmd/golangci-lint/ && \
+	cd $(BUILD_DIR) && \
+	rm -rf $(TOOL_BUILD_DIR) && \
+	$(GOLANGLINT) --version
+
+$(GOLANGLINT_GOARGS): TOOL_BUILD_DIR := .tmp/build/goargs
+$(GOLANGLINT_GOARGS):
+	rm -rf $(TOOL_BUILD_DIR)
+	git clone https://gitlab.com/gitlab-org/language-tools/go/linters/goargs.git --no-tags --depth 1 $(TOOL_BUILD_DIR)
+	cd $(TOOL_BUILD_DIR) && \
+	CGO_ENABLED=1 go build -buildmode=plugin -o $(BUILD_DIR)/$(GOLANGLINT_GOARGS) plugin/analyzer.go
+	rm -rf $(TOOL_BUILD_DIR)
 
 $(MOCKERY): OS_TYPE ?= $(shell uname -s)
 $(MOCKERY): DOWNLOAD_URL = "https://github.com/vektra/mockery/releases/download/v$(MOCKERY_VERSION)/mockery_$(MOCKERY_VERSION)_$(OS_TYPE)_x86_64.tar.gz"
