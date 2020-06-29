@@ -7,6 +7,13 @@ when connecting to the GitLab server.
 
 **This solves the `x509: certificate signed by unknown authority` problem when registering a runner.**
 
+For existing Runners, the same error can be shown in Runner logs when trying to check the jobs:
+
+```plaintext
+Couldn't execute POST against https://hostname.tld/api/v4/jobs/request:
+Post https://hostname.tld/api/v4/jobs/request: x509: certificate signed by unknown authority
+```
+
 ## Supported options for self-signed certificates
 
 GitLab Runner supports the following options:
@@ -22,17 +29,41 @@ GitLab Runner supports the following options:
   - `./certs/hostname.crt` on other systems. If running Runner as a Windows service,
     this will not work. Use the last option instead.
 
-  If your server address is: `https://my.gitlab.server.com:8443/`, create the
+- If your server address is: `https://my.gitlab.server.com:8443/`, create the
   certificate file at: `/etc/gitlab-runner/certs/my.gitlab.server.com.crt`.
+  To verify that the file looks correct, you can use a tool like `openssl`. For example:
+
+  ```shell
+  echo | openssl s_client -CAfile /etc/gitlab-runner/certs/gitlab-hostname.tld.crt -connect gitlab-hostname.tld:443
+  ```
 
   NOTE: **Note:**
   You may need to concatenate the intermediate and server certificate for the chain to
-  be properly identified.
+  be properly identified. For example, if you have a primary, intermediate, and root certificate,
+  you can put all of them into one file:
 
+    ```plaintext
+    -----BEGIN CERTIFICATE-----
+    (Your primary SSL certificate: your_domain_name.crt)
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    (Your intermediate certificate)
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    (Your root certificate)
+    -----END CERTIFICATE-----
+    ```
+
+- If you are updating the certificate for an existing Runner, [restart it](../commands/README.md#gitlab-runner-restart).
 - GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/README.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
   This file will be read every time the runner tries to access the GitLab server.
+
+- If you are using GitLab Runner Helm chart, [configure custom certificates](../install/kubernetes.md).
+
+- As a temporary and unsecure workaround, to skip the verification of certificates,
+in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
 
 NOTE: **Note:**
 If your GitLab server certificate is signed by your CA, use your CA certificate
