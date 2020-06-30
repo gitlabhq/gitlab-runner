@@ -278,7 +278,8 @@ func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEna
 		return "", MakeBuildError("setting %s is not allowed, enable `custom_build_dir` feature", overrideKey)
 	}
 
-	if !strings.HasPrefix(dir, rootDir) {
+	relDir, err := filepath.Rel(rootDir, dir)
+	if err != nil || strings.HasPrefix(relDir, "..") {
 		return "", MakeBuildError("the %s=%q has to be within %q", overrideKey, dir, rootDir)
 	}
 
