@@ -257,6 +257,9 @@ func GetRemoteBuildResponse(commands ...string) (JobResponse, error) {
 func GetLocalBuildResponse(commands ...string) (JobResponse, error) {
 	localRepoURL, err := getLocalRepoURL()
 	if err != nil {
+		if os.IsNotExist(err) {
+			panic("Local repo not found, please run `make development_setup`")
+		}
 		return JobResponse{}, err
 	}
 
