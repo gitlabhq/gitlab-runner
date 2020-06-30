@@ -1,5 +1,8 @@
-for file in $(find out -type f); do
-    echo "touching ${file}"
-    touch ${file}
-done
+#!/usr/bin/env bash
 
+if [ -d out ]; then
+  find out -type f -exec sh -c '
+    echo "touching $1"
+    touch "$1"
+  ' sh {} \;
+fi
