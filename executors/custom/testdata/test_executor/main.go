@@ -26,6 +26,18 @@ const (
 	stageCleanup = "cleanup"
 )
 
+var knownBuildStages = map[string]struct{}{
+	"prepare_script":              {},
+	"get_sources":                 {},
+	"restore_cache":               {},
+	"download_artifacts":          {},
+	"build_script":                {},
+	"after_script":                {},
+	"archive_cache":               {},
+	"upload_artifacts_on_success": {},
+	"upload_artifacts_on_failure": {},
+}
+
 func setBuildFailure(msg string, args ...interface{}) {
 	fmt.Println("setting build failure")
 	setFailure(api.BuildFailureExitCodeVariable, msg, args...)
@@ -176,6 +188,10 @@ func mockError() {
 }
 
 func createCommand(shell string, script string, stage string) *exec.Cmd {
+	if _, ok := knownBuildStages[stage]; !ok {
+		setSystemFailure("Unknown build stage %q", stage)
+	}
+
 	shellConfigs := map[string]struct {
 		command string
 		args    []string
