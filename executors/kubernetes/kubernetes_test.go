@@ -622,7 +622,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	err = ex.prepareOverwrites(make(common.JobVariables, 0))
 	assert.NoError(t, err)
 
-	err = ex.setupBuildPod()
+	err = ex.setupBuildPod(nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error creating the proxy service")
 }
@@ -1836,6 +1836,7 @@ type setupBuildPodTestDef struct {
 	RunnerConfig             common.RunnerConfig
 	Variables                []common.JobVariable
 	Options                  *kubernetesOptions
+	InitContainers           []api.Container
 	PrepareFn                func(*testing.T, setupBuildPodTestDef, *executor)
 	VerifyFn                 func(*testing.T, setupBuildPodTestDef, *api.Pod)
 	VerifyExecutorFn         func(*testing.T, setupBuildPodTestDef, *executor)
@@ -2718,6 +2719,37 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.NoError(t, err)
 			},
 		},
+		"no init container defined": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			InitContainers: []api.Container{},
+			VerifyFn: func(t *testing.T, def setupBuildPodTestDef, pod *api.Pod) {
+				assert.Nil(t, pod.Spec.InitContainers)
+			},
+		},
+		"init container defined": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			InitContainers: []api.Container{
+				{
+					Name:  "a-init-container",
+					Image: "alpine",
+				},
+			},
+			VerifyFn: func(t *testing.T, def setupBuildPodTestDef, pod *api.Pod) {
+				require.Equal(t, def.InitContainers, pod.Spec.InitContainers)
+			},
+		},
 	}
 
 	for testName, test := range tests {
@@ -2772,7 +2804,7 @@ func TestSetupBuildPod(t *testing.T) {
 			err = ex.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err, "error preparing overwrites")
 
-			err = ex.setupBuildPod()
+			err = ex.setupBuildPod(test.InitContainers)
 			if test.VerifySetupBuildPodErrFn == nil {
 				assert.NoError(t, err, "error setting up build pod")
 				assert.True(t, rt.executed, "RoundTrip for kubernetes client should be executed")
