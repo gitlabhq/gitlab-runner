@@ -695,10 +695,6 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 }
 
 func testKubernetesNoRootImageFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if featureFlagValue == false {
-		t.Skip("Regression: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26422")
-	}
-
 	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
 		return
 	}
