@@ -351,16 +351,17 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 }
 
 func (s *executor) buildLogPermissionsInitContainer() api.Container {
-	logFile := s.logFile()
-	logsDir := s.logsDir()
-	chmod := fmt.Sprintf("touch %s; chmod 777 %s; chmod 775 %s", logFile, logFile, logsDir)
+	// Since we mount the logs an emptyDir volume, the directory is owned by root.
+	// This makes it impossible for other users to write to the shared log without
+	// explicitly giving them permissions. More info at https://github.com/kubernetes/kubernetes/issues/2630
+	chmod := fmt.Sprintf("touch %s && chmod -R 777 %s", s.logFile(), s.logsDir())
 
 	return api.Container{
 		Name:            "change-logs-permissions",
 		Image:           "busybox",
 		Command:         []string{"sh", "-c", chmod},
 		VolumeMounts:    s.getVolumeMounts(),
-		ImagePullPolicy: api.PullIfNotPresent,
+		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
 	}
 }
 
