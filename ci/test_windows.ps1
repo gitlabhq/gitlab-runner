@@ -25,7 +25,7 @@ New-Item -ItemType "directory" -Path ".\" -Name ".testoutput"
 $failed = @()
 Get-Content $testsDefinitionsFile | Select-Object -skip $executionOffset -first $executionSize | ForEach-Object {
     $pkg, $index, $tests = $_.Split(" ", 3)
-    $pkgSlug = ((echo $pkg | % { $_ -replace "[^a-z0-9_]","_" }))
+    $pkgSlug = ((Write-Output $pkg | ForEach-Object { $_ -replace "[^a-z0-9_]","_" }))
 
     Write-Information "`r`n`r`n--- Starting part $index of go tests of '$pkg' package:`r`n`r`n"
 
