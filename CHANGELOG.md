@@ -1,3 +1,11 @@
+## v13.1.1 (2020-07-01)
+
+### Bug fixes
+
+- Fix Kube attach strategy to work with no root images !2236
+- Fix Kube attach strategy to return correct exit code for job !2231
+- Fix missing build_script step for custom executor !2227
+
 ## v13.1.0 (2020-06-19)
 
 ### New features
