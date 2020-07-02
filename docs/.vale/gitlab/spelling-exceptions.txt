@@ -5,6 +5,7 @@ Alibaba
 allowlist
 allowlisting
 allowlists
+anonymized
 Ansible
 Anthos
 API
@@ -34,6 +35,7 @@ awardable
 Axios
 Azure
 B-tree
+backfilling
 backport
 backported
 backporting
@@ -42,6 +44,7 @@ backtrace
 backtraced
 backtraces
 backtracing
+badging
 Bamboo
 Bitbucket
 blockquote
@@ -61,8 +64,11 @@ burndown
 cacheable
 CAS
 CentOS
+Certbot
 chai
-Chatops
+chatbot
+chatbots
+ChatOps
 checksummed
 checksumming
 Citrix
@@ -77,6 +83,7 @@ compilable
 composable
 Conda
 Consul
+Contentful
 Corosync
 cron
 crons
@@ -95,6 +102,7 @@ deduplicated
 deduplicates
 deduplicating
 deduplication
+deliverables
 denylist
 denylisting
 denylists
@@ -104,6 +112,9 @@ deprovision
 deprovisioned
 deprovisioning
 deprovisions
+dequarantine
+dequarantined
+dequarantining
 DevOps
 discoverability
 Disqus
@@ -121,6 +132,8 @@ Ecto
 Elasticsearch
 enablement
 enqueued
+enum
+enums
 ETag
 Excon
 expirable
@@ -130,6 +143,7 @@ failovers
 failsafe
 fastlane
 favicon
+Filebeat
 Fio
 firewalled
 Flawfinder
@@ -139,6 +153,7 @@ Forgerock
 Fugit
 Gantt
 Gemnasium
+Gemojione
 gettext
 Git
 Gitaly
@@ -148,6 +163,7 @@ GitLab
 gitlabsos
 Gitleaks
 Gitter
+globals
 Gmail
 Google
 Gosec
@@ -194,12 +210,14 @@ jsdom
 JupyterHub
 kanban
 kanbans
+Kaniko
 Karma
 Kerberos
 Kibana
 Kinesis
 Knative
 Kramdown
+kubectl
 Kubernetes
 Kubesec
 Laravel
@@ -217,16 +235,20 @@ lookups
 loopback
 Lucene
 Maildir
+Mailgun
 Makefile
 Makefiles
 Markdown
 markdownlint
+matcher
+matchers
 Mattermost
 mbox
 memoization
 memoize
 memoized
 memoizing
+Memorystore
 mergeable
 Microsoft
 middleware
@@ -255,6 +277,8 @@ nameservers
 namespace
 namespaced
 namespaces
+namespacing
+namespacings
 Nanoc
 NGINX
 Nokogiri
@@ -273,6 +297,7 @@ Packagist
 parallelization
 parallelizations
 passwordless
+Patroni
 performant
 phaser
 phasers
@@ -297,6 +322,7 @@ preloading
 preloads
 prepend
 prepended
+prepending
 prepends
 Pritaly
 profiler
@@ -310,8 +336,7 @@ Puma
 Python
 Qualys
 Rackspace
-Raketask
-Raketasks
+Raspbian
 reachability
 rebase
 rebased
@@ -321,9 +346,13 @@ Redcarpet
 Redis
 Redmine
 reCAPTCHA
+redirection
+redirections
 refactorings
 referer
 referers
+reflog
+reflogs
 reindex
 reindexed
 reindexes
@@ -337,6 +366,7 @@ requeue
 requeued
 requeues
 reusability
+Restlet
 resynced
 resyncing
 resyncs
@@ -362,6 +392,8 @@ Salesforce
 SAML
 sandboxing
 sbt
+scatterplot
+scatterplots
 Sendmail
 Sentry
 serverless
@@ -392,6 +424,7 @@ storages
 strace
 strikethrough
 strikethroughs
+stunnel
 subpath
 subfolder
 subfolders
@@ -415,6 +448,7 @@ substrings
 syslog
 tcpdump
 Tiller
+timecop
 todos
 tokenizer
 Tokenizers
@@ -426,13 +460,15 @@ tooltips
 Trello
 triaging
 TypeScript
+Twilio
 Twitter
 Ubuntu
 unarchive
 unarchived
 unarchives
-Unassign
-Unassigns
+unarchiving
+unassign
+unassigns
 uncheck
 unchecked
 unchecking
@@ -476,10 +512,12 @@ unresolve
 unresolved
 unresolving
 unschedule
+unscoped
 unstage
 unstaged
 unstages
 unstaging
+unstarted
 unstash
 unstashed
 unstashing
@@ -498,6 +536,8 @@ validator
 validators
 vendored
 versionless
+viewport
+viewports
 virtualized
 virtualizing
 Vue
