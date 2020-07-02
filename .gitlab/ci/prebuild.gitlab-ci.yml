@@ -17,7 +17,10 @@ clone test repo:
   extends:
   - .merge_request_pipelines
   - .except_docs
+  - .no_cache_and_dependencies
   stage: prebuild
+  variables:
+    GIT_STRATEGY: none
   script:
   - mkdir tmp
   - succeed=0
