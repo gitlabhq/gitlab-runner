@@ -250,7 +250,7 @@ static QA:
   - .except_docs
   - .no_cache
   stage: release
-  image: alpine:3.7
+  image: alpine:3.12.0
   needs:
   - code_quality
   script: |
