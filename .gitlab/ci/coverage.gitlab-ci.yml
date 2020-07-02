@@ -46,10 +46,9 @@ code navigation:
   extends:
   - .coverage_job
   allow_failure: true
-  needs: []
   script:
-    - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
-    - lsif-go
+  - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
+  - lsif-go
   artifacts:
     reports:
       lsif: dump.lsif
