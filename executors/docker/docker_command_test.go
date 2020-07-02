@@ -293,7 +293,7 @@ func TestDockerCommandBuildFail(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "exit code 1")
 }
 
@@ -515,7 +515,7 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	defer timeoutTimer.Stop()
 
 	err := build.Run(&common.Config{}, trace)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "canceled")
 }
 

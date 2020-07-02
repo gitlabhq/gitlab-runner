@@ -113,8 +113,8 @@ func TestParallelsBuildFail(t *testing.T) {
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
-	assert.IsType(t, err, &common.BuildError{})
-	assert.Contains(t, err.Error(), "Process exited with: 1")
+	assert.IsType(t, &common.BuildError{}, err)
+	assert.Contains(t, err.Error(), "Process exited with status 1")
 }
 
 func TestParallelsMissingImage(t *testing.T) {
@@ -159,7 +159,7 @@ func TestParallelsMissingSSHCredentials(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Missing SSH config")
+	assert.Contains(t, err.Error(), "missing SSH config")
 }
 
 func TestParallelsBuildAbort(t *testing.T) {
@@ -236,6 +236,6 @@ func TestParallelsBuildCancel(t *testing.T) {
 	defer timeoutTimer.Stop()
 
 	err = build.Run(&common.Config{}, trace)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.EqualError(t, err, "canceled")
 }
