@@ -860,10 +860,20 @@ of used image automatically, by using one of the
 With that configuration, GitLab Runner will instruct the executor to use the image in version `x86_64-${CI_RUNNER_REVISION}`,
 which is based on its compilation data. After updating the Runner to a new version, this will ensure that the
 Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
-before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error. Using the version instead of the
-revision is better because it ensures that the right version is picked, but it's up to you to decide.
+before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
 
-You can retrieve the helper image also by passing the runner version: `x86_64-v${CI_RUNNER_VERSION}`.
+In GitLab Runner 13.2 and later, the helper image is tagged by
+`$CI_RUNNER_VERSION` in addition to `$CI_RUNNER_REVISION`. Both tags are
+valid and point to the same image.
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
+```
 
 ## The `[runners.custom_build_dir]` section
 
