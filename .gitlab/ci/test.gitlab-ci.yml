@@ -75,7 +75,6 @@ code_quality:
     REPORT_FILE: gl-code-quality-report.json
     LINT_FLAGS: "--issues-exit-code 0 --color never --deadline 15m"
     OUT_FORMAT: code-climate
-    GOLANGCI_LINT_CACHE: ${CI_PROJECT_DIR}/.cache-${CI_COMMIT_REF_PROTECTED}/golangci-lint
     GOLANGLINT_VERSION: "" # Don't add version suffix to Makefile's GOLANGLINT (use plain golangci-lint from image)
   before_script:
   # Ensure the goargs linter plugin is available at .tmp/goargs.so to suit .golangci.yml
@@ -87,10 +86,6 @@ code_quality:
     # and print linting issues to stdout in the format: path/to/file:line description
   - make --silent lint | tee ${REPORT_FILE}
   timeout: 15 minutes
-  cache:
-    key: ${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}
-    paths:
-    - ${CI_PROJECT_DIR}/.cache-false/golangci-lint
   artifacts:
     reports:
       codequality: ${REPORT_FILE}
