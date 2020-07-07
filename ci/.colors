@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# Source this file to get color definitions for your script output.
+# e.g. `echo -e "${RED}message in red${RST}"`
+
+export YLW='\033[1;33m'
+export RED='\033[0;31m'
+export GRN='\033[0;32m'
+export RST='\033[0m'

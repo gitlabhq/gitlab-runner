@@ -2,6 +2,7 @@ helper images:
   extends:
   - .merge_request_pipelines
   - .docker
+  - .docker_qemu
   stage: prebuild
   script:
   - make helper-bin helper-dockerarchive

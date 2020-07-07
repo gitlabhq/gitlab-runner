@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+DOCKER_HOST=${DOCKER_HOST:-}
+DOCKER_CERT_PATH=${DOCKER_CERT_PATH:-}
+
+docker_buildx_ctx_name='docker-buildx'
+docker_builder_name='buildx-builder'
+
+_docker() {
+    docker "${@}"
+}
+
+_docker_experimental() {
+    DOCKER_CLI_EXPERIMENTAL=enabled docker "${@}"
+}
+
+_docker_buildx() {
+    # Run the command in a subshell so that we can safely unset DOCKER_HOST
+    (
+        unset DOCKER_HOST
+        _docker_experimental buildx "${@}"
+    )
+}
+
+setup_docker_context() {
+    # In order for `docker buildx create` to work, we need to replace DOCKER_HOST with a Docker context.
+    # Otherwise, we get the following error:
+    # > could not create a builder instance with TLS data loaded from environment.
+    local docker="host=unix:///var/run/docker.sock"
+    if [ -n "${DOCKER_CERT_PATH}" ]; then
+        docker="host=${DOCKER_HOST},ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/cert.pem,key=${DOCKER_CERT_PATH}/key.pem"
+    fi
+    _docker context create "${docker_buildx_ctx_name}" \
+        --default-stack-orchestrator=swarm \
+        --description "Temporary buildx Docker context" \
+        --docker "${docker}"
+
+    _docker_buildx create --use --name "${docker_builder_name}" "${docker_buildx_ctx_name}"
+}
+
+cleanup_docker_context_trap() {
+    local error_code=$?
+
+    cleanup_docker_context
+
+    exit "${error_code}"
+}
+
+cleanup_docker_context() {
+    set +e
+    _docker_buildx rm "${docker_builder_name}" >/dev/null 2>&1
+    _docker context rm -f "${docker_buildx_ctx_name}" >/dev/null 2>&1
+    set -e
+}
