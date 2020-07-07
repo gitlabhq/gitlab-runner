@@ -2,6 +2,11 @@
 
 set -eEo pipefail
 
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+
+# shellcheck source=ci/docker_buildx_commands
+source "${SCRIPTPATH}/docker_buildx_commands"
+
 declare -A checksums
 
 DOCKER_MACHINE_VERSION=${DOCKER_MACHINE_VERSION:-0.16.2}
@@ -25,17 +30,12 @@ CI_REGISTRY=${CI_REGISTRY:-}
 CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE:-}
 CI_REGISTRY_USER=${CI_REGISTRY_USER:-}
 CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD:-}
-DOCKER_HOST=${DOCKER_HOST:-}
-DOCKER_CERT_PATH=${DOCKER_CERT_PATH:-}
 DOCKER_HUB_REPOSITORY=${DOCKER_HUB_REPOSITORY:-'gitlab/gitlab-runner'}
 DOCKER_HUB_USER=${DOCKER_HUB_USER:-}
 DOCKER_HUB_PASSWORD=${DOCKER_HUB_PASSWORD:-}
 IS_LATEST=${IS_LATEST:-}
 PUBLISH_IMAGES=${PUBLISH_IMAGES:-false}
 PUSH_TO_DOCKER_HUB=${PUSH_TO_DOCKER_HUB:-false}
-
-docker_builder_name='buildx-builder'
-docker_buildx_ctx_name='docker-buildx'
 
 ref_tag="${CI_COMMIT_TAG}"
 if [[ -z "${ref_tag}" ]]; then
@@ -51,57 +51,10 @@ if [[ -z "${REVISION}" ]]; then
     REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
 fi
 
-_docker() {
-    docker "${@}"
-}
-
-_docker_experimental() {
-    DOCKER_CLI_EXPERIMENTAL=enabled docker "${@}"
-}
-
-_docker_buildx() {
-    # Run the command in a subshell so that we can safely unset DOCKER_HOST
-    (
-        unset DOCKER_HOST
-        _docker_experimental buildx "${@}"
-    )
-}
-
 join_by() {
     local IFS="$1"
     shift
     echo "$*"
-}
-
-setup_docker_context() {
-    # In order for `docker buildx create` to work, we need to replace DOCKER_HOST with a Docker context.
-    # Otherwise, we get the following error:
-    # > could not create a builder instance with TLS data loaded from environment.
-    local docker="host=unix:///var/run/docker.sock"
-    if [ -n "${DOCKER_CERT_PATH}" ]; then
-        docker="host=${DOCKER_HOST},ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/cert.pem,key=${DOCKER_CERT_PATH}/key.pem"
-    fi
-    _docker context create "${docker_buildx_ctx_name}" \
-        --default-stack-orchestrator=swarm \
-        --description "Temporary buildx Docker context" \
-        --docker "${docker}"
-
-    _docker_buildx create --use --name "${docker_builder_name}" "${docker_buildx_ctx_name}"
-}
-
-cleanup_docker_context_trap() {
-    local error_code=$?
-
-    cleanup_docker_context
-
-    exit "${error_code}"
-}
-
-cleanup_docker_context() {
-    set +e
-    _docker_buildx rm "${docker_builder_name}" >/dev/null 2>&1
-    _docker context rm -f "${docker_buildx_ctx_name}" >/dev/null 2>&1
-    set -e
 }
 
 # buildx receives an array of tag names, and the context path as the last parameter
@@ -223,28 +176,37 @@ release_docker_helper_images() {
     helper_image_arm64="gitlab/gitlab-runner-helper:arm64-${REVISION}"
     helper_image_arm64_version="gitlab/gitlab-runner-helper:arm64-${ref_tag}"
     helper_image_arm64_latest="gitlab/gitlab-runner-helper:arm64-latest"
+    helper_image_s390x="gitlab/gitlab-runner-helper:s390x-${REVISION}"
+    helper_image_s390x_version="gitlab/gitlab-runner-helper:s390x-${ref_tag}"
+    helper_image_s390x_latest="gitlab/gitlab-runner-helper:s390x-latest"
 
     import out/helper-images/prebuilt-x86_64.tar.xz "${helper_image_x86_64}"
     import out/helper-images/prebuilt-arm.tar.xz "${helper_image_arm}"
     import out/helper-images/prebuilt-arm64.tar.xz "${helper_image_arm64}"
+    import out/helper-images/prebuilt-s390x.tar.xz "${helper_image_s390x}"
 
     tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
     tag_latest "${helper_image_arm}" "${helper_image_arm_latest}"
     tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
+    tag_latest "${helper_image_s390x}" "${helper_image_s390x_latest}"
     tag "${helper_image_x86_64}" "${helper_image_x86_64_version}"
     tag "${helper_image_arm}" "${helper_image_arm_version}"
     tag "${helper_image_arm64}" "${helper_image_arm64_version}"
+    tag "${helper_image_s390x}" "${helper_image_s390x_version}"
 
     push "${helper_image_x86_64}"
     push "${helper_image_arm}"
     push "${helper_image_arm64}"
+    push "${helper_image_s390x}"
 
     push_latest "${helper_image_x86_64_latest}"
     push_latest "${helper_image_arm_latest}"
     push_latest "${helper_image_arm64_latest}"
+    push_latest "${helper_image_s390x_latest}"
     push "${helper_image_x86_64_version}"
     push "${helper_image_arm_version}"
     push "${helper_image_arm64_version}"
+    push "${helper_image_s390x_version}"
 }
 
 login() {

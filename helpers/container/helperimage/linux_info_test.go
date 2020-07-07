@@ -58,6 +58,17 @@ func Test_linuxInfo_create(t *testing.T) {
 				Cmd:                     bashCmd,
 			},
 		},
+		"Docker runs on s390x": {
+			dockerArch: "s390x",
+			revision:   "2923a43",
+			expectedInfo: Info{
+				Architecture:            "s390x",
+				Name:                    name,
+				Tag:                     "s390x-2923a43",
+				IsSupportingLocalImport: true,
+				Cmd:                     bashCmd,
+			},
+		},
 		"Configured architecture is unknown": {
 			dockerArch: "some-random-arch",
 			revision:   "2923a43",

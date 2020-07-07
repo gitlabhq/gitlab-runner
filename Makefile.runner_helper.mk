@@ -17,6 +17,7 @@ BASE_TAR_PATH := out/helper-images/prebuilt
 TAR_XZ += ${BASE_TAR_PATH}-x86_64.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-arm.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-arm64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-s390x.tar.xz
 
 # Binaries that we support for the helper image. We are using the following
 # pattern match:
@@ -28,6 +29,7 @@ BINARIES := ${BASE_BINARY_PATH}.x86_64-windows
 BINARIES += ${BASE_BINARY_PATH}.x86_64
 BINARIES += ${BASE_BINARY_PATH}.arm
 BINARIES += ${BASE_BINARY_PATH}.arm64
+BINARIES += ${BASE_BINARY_PATH}.s390x
 
 # Define variables with the architecture for each matching binary. We are using
 # the following pattern match GO_ARCH_{{arch}}-{{os}}, these should match up
@@ -35,6 +37,7 @@ BINARIES += ${BASE_BINARY_PATH}.arm64
 GO_ARCH_x86_64 = linux/amd64
 GO_ARCH_arm = linux/arm
 GO_ARCH_arm64 = linux/arm64
+GO_ARCH_s390x = linux/s390x
 GO_ARCH_x86_64-windows = windows/amd64
 
 # Go files that are used to create the helper binary.
@@ -64,9 +67,4 @@ ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 
 ${BASE_TAR_PATH}-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@cp ${BASE_BINARY_PATH}* dockerfiles/runner-helper/binaries/
-	docker build -t gitlab/gitlab-runner-helper:$*-$(REVISION) -f dockerfiles/runner-helper/Dockerfile.$* dockerfiles/runner-helper
-	-docker rm -f gitlab-runner-prebuilt-$*-$(REVISION)
-	docker create --name=gitlab-runner-prebuilt-$*-$(REVISION) gitlab/gitlab-runner-helper:$*-$(REVISION) /bin/sh
-	docker export -o $@ gitlab-runner-prebuilt-$*-$(REVISION)
-	docker rm -f gitlab-runner-prebuilt-$*-$(REVISION)
+	@./ci/build_helper_docker $* $@
