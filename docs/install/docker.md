@@ -188,6 +188,10 @@ TIP: **Tip:**
 See [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles)
 source for possible build instructions for both Ubuntu and Alpine images.
 
+NOTE: **Note:**
+The IBM Z image does not contain the `docker-machine` dependency, as it is not yet maintained for the Linux s390x
+platform. See [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26551) for current status.
+
 ## SELinux
 
 Some distributions (CentOS, RedHat, Fedora) use SELinux by default to enhance the security of the underlying system.
