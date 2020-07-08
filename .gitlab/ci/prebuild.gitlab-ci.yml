@@ -6,6 +6,7 @@ helper images:
   stage: prebuild
   script:
   - make helper-bin helper-dockerarchive
+  retry: 2
   artifacts:
     paths:
     - out/helper-images/
