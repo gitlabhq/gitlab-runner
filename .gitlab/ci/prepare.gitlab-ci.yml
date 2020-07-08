@@ -19,6 +19,7 @@ prepare ci image:
   only:
     changes:
     - dockerfiles/ci/*
+    - .gitlab/ci/_common.gitlab-ci.yml
     - .gitlab/ci/prepare.gitlab-ci.yml
 
 prepare alpine-no-root image:
