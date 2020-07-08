@@ -15,7 +15,7 @@ prepare ci image:
   variables:
     BUILD_IMAGE: $CI_IMAGE
     BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile
-    GIT_LFS_256_CHECKSUM: 46508eb932c2ec0003a940f179246708d4ddc2fec439dcacbf20ff9e98b957c9
+    GIT_LFS_AMD64_CHECKSUM: 46508eb932c2ec0003a940f179246708d4ddc2fec439dcacbf20ff9e98b957c9
   only:
     changes:
     - dockerfiles/ci/*

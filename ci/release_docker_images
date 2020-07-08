@@ -18,9 +18,9 @@ checksums['DUMB_INIT_AMD64']=${DUMB_INIT_AMD64_CHECKSUM:-37f2c1f0372a45554f1b899
 checksums['DUMB_INIT_ARM64']=${DUMB_INIT_ARM64_CHECKSUM:-45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3}
 checksums['DUMB_INIT_S390X']=${DUMB_INIT_S390X_CHECKSUM:-8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d}
 GIT_LFS_VERSION=${GIT_LFS_VERSION:-2.11.0}
-checksums['GIT_LFS_AMD64']=${GIT_LFS_AMD64_CHECKSUM:-f48f45cf8ca600cdde4a8f27b16faf761e2ab944eaf1b0d9a38f66e9979b7df0}
-checksums['GIT_LFS_ARM64']=${GIT_LFS_ARM64_CHECKSUM:-b7e65e7f336c465c7049b538f1bc829146f511237f83a55b5d27e51e2e2fcbf7}
-checksums['GIT_LFS_S390X']=${GIT_LFS_S390X_CHECKSUM:-8d3d5bb5ed98fe8df788011e890e2d47351ccec8bf47b679576b375840eb0610}
+checksums['GIT_LFS_AMD64']=${GIT_LFS_AMD64_CHECKSUM:-46508eb932c2ec0003a940f179246708d4ddc2fec439dcacbf20ff9e98b957c9}
+checksums['GIT_LFS_ARM64']=${GIT_LFS_ARM64_CHECKSUM:-ba6a2820d6afcdf94a83c9307bfbabcc2f8146b27404b450c673567798a81f67}
+checksums['GIT_LFS_S390X']=${GIT_LFS_S390X_CHECKSUM:-ca73776cb1cdc855aaf743c09ae70caae97f67d8d5e4147f19dcc4f959f9fc4d}
 
 if [ -n "${TARGET_ARCHS}" ]; then
     IFS=', ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
@@ -280,7 +280,7 @@ for arch in "${TARGET_ARCHS[@]}"; do
     rm -f "${runner_home_dir}/checksums-${arch}"
     writeChecksum 'DOCKER_MACHINE' "${arch}" '/usr/bin/docker-machine'
     writeChecksum 'DUMB_INIT' "${arch}" '/usr/bin/dumb-init'
-    writeChecksum 'GIT_LFS' "${arch}" '/usr/bin/git-lfs'
+    writeChecksum 'GIT_LFS' "${arch}" '/tmp/git-lfs.tar.gz'
 done
 
 cp "${runner_home_dir}/install-deps" "${runner_home_dir}/ubuntu/"

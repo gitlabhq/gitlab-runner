@@ -6,7 +6,7 @@ downloadURL="https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VER
 
 wget "${downloadURL}" -O /tmp/git-lfs.tar.gz
 
-echo "${GIT_LFS_256_CHECKSUM}  /tmp/git-lfs.tar.gz" > /tmp/checksums
+echo "${GIT_LFS_AMD64_CHECKSUM}  /tmp/git-lfs.tar.gz" > /tmp/checksums
 sha256sum -c /tmp/checksums
 
 tar -xzf /tmp/git-lfs.tar.gz -C /tmp
