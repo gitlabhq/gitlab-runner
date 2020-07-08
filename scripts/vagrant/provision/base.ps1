@@ -1,6 +1,6 @@
 ﻿$goVersion = "1.13.8"
 $gitVersion = "2.23.0"
-$powerShellCoreVersion = "7.0.0"
+$powerShellCoreVersion = "7.0.1"
 $srcFolder = "C:\GitLab-Runner"
 
 [environment]::SetEnvironmentVariable("RUNNER_SRC", $srcFolder, "Machine")

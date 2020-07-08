@@ -23,6 +23,7 @@ type ShellWriter interface {
 	RmDir(path string)
 	RmFile(path string)
 	Absolute(path string) string
+	Join(elem ...string) string
 	TmpFile(name string) string
 
 	MkTmpDir(name string) string

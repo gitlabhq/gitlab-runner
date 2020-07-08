@@ -26,6 +26,16 @@ RUN wget -q https://download.docker.com/linux/static/stable/x86_64/docker-${DOCK
     chmod +x /usr/bin/docker* && \
     rm -rf /tmp/*
 
+ARG PWSH_VERSION
+# Install Powershell Core
+RUN wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb && \
+    dpkg -i packages-microsoft-prod.deb && \
+    rm packages-microsoft-prod.deb && \
+    apt-get update && \
+    apt-get install -y powershell=${PWSH_VERSION}.debian.10 && \
+    rm -rf /var/lib/apt/lists/* && \
+    pwsh --version
+
 ARG BUILDX_VERSION
 
 # Install docker buildx plugin

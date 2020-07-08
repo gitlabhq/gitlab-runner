@@ -284,7 +284,8 @@ user scripts and all the other steps described below. The scripts can be
 of the following shells:
 
 - Bash
-- PowerShell
+- PowerShell Desktop
+- PowerShell Core
 - Batch (deprecated)
 
 We generate the script using the shell configured by `shell` inside of

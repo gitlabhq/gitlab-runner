@@ -7,9 +7,8 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
-
 	prl "gitlab.com/gitlab-org/gitlab-runner/helpers/parallels"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 )
 
 type executor struct {

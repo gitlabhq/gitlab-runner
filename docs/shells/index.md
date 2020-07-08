@@ -22,8 +22,9 @@ The currently supported shells are:
 | --------------| ------------------ |  ----------- |
 | `bash`        | Fully Supported    | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
 | `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `powershell`  | Fully Supported    | Windows PowerShell script. All commands are executed in PowerShell context. Default when registering a new Runner in version 12.0 or newer. |
-| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. |
+| `powershell`  | Fully Supported    | PowerShell script. All commands are executed in Windows PowerShell Desktop context. Default when registering a new Runner in version 12.0 or newer. |
+| `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. |
+| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Desktop. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. |
 
 If you want to select a particular shell to use other than the default, you will need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
@@ -80,7 +81,7 @@ The generated PowerShell script is executed by saving its content to a file and
 passing the file name to the following command:
 
 ```batch
-powershell -noprofile -noninteractive -executionpolicy Bypass -command generated-windows-powershell.ps1
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
 ```
 
 This is how an example PowerShell script looks like:
@@ -88,7 +89,7 @@ This is how an example PowerShell script looks like:
 ```powershell
 $ErrorActionPreference = "Continue"
 
-echo "Running on $env:computername..."
+echo "Running on $([Environment]::MachineName)..."
 
 & {
   $CI="true"
