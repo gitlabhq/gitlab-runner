@@ -168,6 +168,10 @@ func (b *BashWriter) Absolute(dir string) string {
 	return path.Join("$PWD", dir)
 }
 
+func (b *BashWriter) Join(elem ...string) string {
+	return path.Join(elem...)
+}
+
 func (b *BashWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
 	b.Line("echo " + helpers.ShellEscape(coloredText))
@@ -297,7 +301,7 @@ func (b *BashShell) ensurePrepareStageHostnameMessage(
 }
 
 func (b *BashShell) IsDefault() bool {
-	return runtime.GOOS != "windows" && b.Shell == "bash"
+	return runtime.GOOS != OSWindows && b.Shell == "bash"
 }
 
 func init() {

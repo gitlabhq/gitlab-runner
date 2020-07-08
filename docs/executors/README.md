@@ -118,7 +118,7 @@ Supported features by different executors:
 | `gitlab-ci.yml`: artifacts                   | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          | n/a    |
-| Interactive Web terminal                     | ✗    | ✓ (UNIX)       | ✗          | ✗         | ✓      | ✓ (1)       | ✗      |
+| Interactive Web terminal                     | ✗    | ✓ (UNIX)| ✗          | ✗         | ✓      | ✓ (1)      | ✗      |
 
 1. Interactive web terminals are not yet supported by
 [`gitlab-runner` Helm chart](../install/kubernetes.md),
@@ -126,12 +126,12 @@ but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/is
 
 Supported systems by different shells:
 
-| Shells  | Bash        | PowerShell  | Windows Batch (deprecated) |
-|:-------:|:-----------:|:-----------:|:--------------------------:|
-| Windows | ✗ (4)       | ✓ (3)      | ✓ (2)                      |
-| Linux   | ✓ (1)       | ✗          | ✗                          |
-| macOS   | ✓ (1)       | ✗          | ✗                          |
-| FreeBSD | ✓ (1)       | ✗          | ✗                          |
+| Shells  | Bash        | PowerShell Desktop | PowerShell Core | Windows Batch (deprecated) |
+|:-------:|:-----------:|:------------------:|:---------------:|:--------------------------:|
+| Windows | ✗ (4)       | ✓ (3)              | ✓               | ✓ (2)                      |
+| Linux   | ✓ (1)       | ✗                  | ✓               | ✗                          |
+| macOS   | ✓ (1)       | ✗                  | ✓               | ✗                          |
+| FreeBSD | ✓ (1)       | ✗                  | ✗               | ✗                          |
 
 1. Default shell.
 1. Deprecated. Default shell if no
@@ -144,9 +144,9 @@ Supported systems by different shells:
 
 Supported systems for interactive web terminals by different shells:
 
-| Shells  | Bash        | PowerShell     | Windows Batch (deprecated) |
-|:-------:|:-----------:|:--------------:|:--------------------------:|
-| Windows | ✗           | ✗             | ✗                          |
-| Linux   | ✓           | ✗             | ✗                          |
-| macOS   | ✓           | ✗             | ✗                          |
-| FreeBSD | ✓           | ✗             | ✗                          |
+| Shells  | Bash        | PowerShell Desktop    | PowerShell Core    | Windows Batch (deprecated) |
+|:-------:|:-----------:|:---------------------:|:------------------:|:--------------------------:|
+| Windows | ✗           | ✗                     | ✗                  | ✗                          |
+| Linux   | ✓           | ✗                     | ✗                  | ✗                          |
+| macOS   | ✓           | ✗                     | ✗                  | ✗                          |
+| FreeBSD | ✓           | ✗                     | ✗                  | ✗                          |

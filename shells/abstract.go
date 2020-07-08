@@ -317,7 +317,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	// initializing
 	templateDir := w.MkTmpDir("git-template")
-	templateFile := path.Join(templateDir, "config")
+	templateFile := w.Join(templateDir, "config")
 
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
 	if build.IsSharedEnv() {

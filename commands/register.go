@@ -337,6 +337,8 @@ func (s *RegisterCommand) askExecutorOptions() {
 		},
 		"shell": func() {
 			if runtime.GOOS == osTypeWindows && s.RunnerConfig.Shell == "" {
+				// TODO: Replace with `pwsh` in 14.0.
+				//  For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26419
 				s.Shell = "powershell"
 			}
 		},

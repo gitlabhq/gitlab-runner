@@ -9,6 +9,7 @@ import (
 	"os/exec"
 
 	"github.com/kr/pty"
+
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	terminal "gitlab.com/gitlab-org/gitlab-terminal"
 )
@@ -35,6 +36,10 @@ func (t terminalConn) Close() error {
 }
 
 func (s *executor) Connect() (terminalsession.Conn, error) {
+	if s.Shell().Shell == "pwsh" {
+		return nil, errors.New("not yet supported")
+	}
+
 	cmd := exec.Command(s.BuildShell.Command, s.BuildShell.Arguments...)
 	if cmd == nil {
 		return nil, errors.New("failed to generate shell command")

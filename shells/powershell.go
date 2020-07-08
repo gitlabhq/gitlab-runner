@@ -5,23 +5,34 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-const dockerWindowsExecutor = "docker-windows"
+const (
+	dockerWindowsExecutor = "docker-windows"
+
+	SNPwsh       = "pwsh"
+	SNPowershell = "powershell"
+)
 
 type PowerShell struct {
 	AbstractShell
+	Shell string
+	EOL   string
 }
 
 type PsWriter struct {
 	bytes.Buffer
 	TemporaryPath string
 	indent        int
+	Shell         string
+	EOL           string
 }
 
 func psQuote(text string) string {
@@ -38,7 +49,7 @@ func psQuote(text string) string {
 	text = strings.ReplaceAll(text, "#", "`#")
 	text = strings.ReplaceAll(text, "'", "`'")
 	text = strings.ReplaceAll(text, "\"", "`\"")
-	return "\"" + text + "\""
+	return `"` + text + `"`
 }
 
 func psQuoteVariable(text string) string {
@@ -47,41 +58,41 @@ func psQuoteVariable(text string) string {
 	return text
 }
 
-func (b *PsWriter) GetTemporaryPath() string {
-	return b.TemporaryPath
+func (p *PsWriter) GetTemporaryPath() string {
+	return p.TemporaryPath
 }
 
-func (b *PsWriter) Line(text string) {
-	b.WriteString(strings.Repeat("  ", b.indent) + text + "\r\n")
+func (p *PsWriter) Line(text string) {
+	p.WriteString(strings.Repeat("  ", p.indent) + text + p.EOL)
 }
 
-func (b *PsWriter) Linef(format string, arguments ...interface{}) {
-	b.Line(fmt.Sprintf(format, arguments...))
+func (p *PsWriter) Linef(format string, arguments ...interface{}) {
+	p.Line(fmt.Sprintf(format, arguments...))
 }
 
-func (b *PsWriter) CheckForErrors() {
-	b.checkErrorLevel()
+func (p *PsWriter) CheckForErrors() {
+	p.checkErrorLevel()
 }
 
-func (b *PsWriter) Indent() {
-	b.indent++
+func (p *PsWriter) Indent() {
+	p.indent++
 }
 
-func (b *PsWriter) Unindent() {
-	b.indent--
+func (p *PsWriter) Unindent() {
+	p.indent--
 }
 
-func (b *PsWriter) checkErrorLevel() {
-	b.Line("if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
-	b.Line("")
+func (p *PsWriter) checkErrorLevel() {
+	p.Line("if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
+	p.Line("")
 }
 
-func (b *PsWriter) Command(command string, arguments ...string) {
-	b.Line(b.buildCommand(command, arguments...))
-	b.checkErrorLevel()
+func (p *PsWriter) Command(command string, arguments ...string) {
+	p.Line(p.buildCommand(command, arguments...))
+	p.checkErrorLevel()
 }
 
-func (b *PsWriter) buildCommand(command string, arguments ...string) string {
+func (p *PsWriter) buildCommand(command string, arguments ...string) string {
 	list := []string{
 		psQuote(command),
 	}
@@ -93,192 +104,223 @@ func (b *PsWriter) buildCommand(command string, arguments ...string) string {
 	return "& " + strings.Join(list, " ")
 }
 
-func (b *PsWriter) TmpFile(name string) string {
-	filePath := b.Absolute(filepath.Join(b.TemporaryPath, name))
-	return helpers.ToBackslash(filePath)
+func (p *PsWriter) TmpFile(name string) string {
+	filePath := p.Absolute(filepath.Join(p.TemporaryPath, name))
+	return p.fromSlash(filePath)
 }
 
-func (b *PsWriter) EnvVariableKey(name string) string {
+func (p *PsWriter) fromSlash(path string) string {
+	if p.Shell == SNPwsh {
+		// pwsh wants OS slash style, not necessarily backslashes
+		return filepath.FromSlash(path)
+	}
+	return helpers.ToBackslash(path)
+}
+
+func (p *PsWriter) EnvVariableKey(name string) string {
 	return fmt.Sprintf("$%s", name)
 }
 
-func (b *PsWriter) Variable(variable common.JobVariable) {
+func (p *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
-		variableFile := b.TmpFile(variable.Key)
-		b.Linef(
+		variableFile := p.TmpFile(variable.Key)
+		p.Linef(
 			"New-Item -ItemType directory -Force -Path %s | out-null",
-			psQuote(helpers.ToBackslash(b.TemporaryPath)),
+			psQuote(p.fromSlash(p.TemporaryPath)),
 		)
-		b.Linef(
+		p.Linef(
 			"Set-Content %s -Value %s -Encoding UTF8 -Force",
 			psQuote(variableFile),
 			psQuoteVariable(variable.Value),
 		)
-		b.Linef("$%s=%s", variable.Key, psQuote(variableFile))
+		p.Linef("$%s=%s", variable.Key, psQuote(variableFile))
 	} else {
-		b.Linef("$%s=%s", variable.Key, psQuoteVariable(variable.Value))
+		p.Linef("$%s=%s", variable.Key, psQuoteVariable(variable.Value))
 	}
 
-	b.Linef("$env:%s=$%s", variable.Key, variable.Key)
+	p.Linef("$env:%s=$%s", variable.Key, variable.Key)
 }
 
-func (b *PsWriter) IfDirectory(path string) {
-	b.Linef("if(Test-Path %s -PathType Container) {", psQuote(helpers.ToBackslash(path)))
-	b.Indent()
+func (p *PsWriter) IfDirectory(path string) {
+	p.Linef("if(Test-Path %s -PathType Container) {", psQuote(p.fromSlash(path)))
+	p.Indent()
 }
 
-func (b *PsWriter) IfFile(path string) {
-	b.Linef("if(Test-Path %s -PathType Leaf) {", psQuote(helpers.ToBackslash(path)))
-	b.Indent()
+func (p *PsWriter) IfFile(path string) {
+	p.Linef("if(Test-Path %s -PathType Leaf) {", psQuote(p.fromSlash(path)))
+	p.Indent()
 }
 
-func (b *PsWriter) IfCmd(cmd string, arguments ...string) {
-	b.ifInTryCatch(b.buildCommand(cmd, arguments...) + " 2>$null")
+func (p *PsWriter) IfCmd(cmd string, arguments ...string) {
+	p.ifInTryCatch(p.buildCommand(cmd, arguments...) + " 2>$null")
 }
 
-func (b *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
-	b.ifInTryCatch(b.buildCommand(cmd, arguments...))
+func (p *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
+	p.ifInTryCatch(p.buildCommand(cmd, arguments...))
 }
 
-func (b *PsWriter) ifInTryCatch(cmd string) {
-	b.Line("Set-Variable -Name cmdErr -Value $false")
-	b.Line("Try {")
-	b.Indent()
-	b.Line(cmd)
-	b.Line("if(!$?) { throw &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
-	b.Unindent()
-	b.Line("} Catch {")
-	b.Indent()
-	b.Line("Set-Variable -Name cmdErr -Value $true")
-	b.Unindent()
-	b.Line("}")
-	b.Line("if(!$cmdErr) {")
-	b.Indent()
+func (p *PsWriter) ifInTryCatch(cmd string) {
+	p.Line("Set-Variable -Name cmdErr -Value $false")
+	p.Line("Try {")
+	p.Indent()
+	p.Line(cmd)
+	p.Line("if(!$?) { throw &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
+	p.Unindent()
+	p.Line("} Catch {")
+	p.Indent()
+	p.Line("Set-Variable -Name cmdErr -Value $true")
+	p.Unindent()
+	p.Line("}")
+	p.Line("if(!$cmdErr) {")
+	p.Indent()
 }
 
-func (b *PsWriter) Else() {
-	b.Unindent()
-	b.Line("} else {")
-	b.Indent()
+func (p *PsWriter) Else() {
+	p.Unindent()
+	p.Line("} else {")
+	p.Indent()
 }
 
-func (b *PsWriter) EndIf() {
-	b.Unindent()
-	b.Line("}")
+func (p *PsWriter) EndIf() {
+	p.Unindent()
+	p.Line("}")
 }
 
-func (b *PsWriter) Cd(path string) {
-	b.Line("cd " + psQuote(helpers.ToBackslash(path)))
-	b.checkErrorLevel()
+func (p *PsWriter) Cd(path string) {
+	p.Line("cd " + psQuote(p.fromSlash(path)))
+	p.checkErrorLevel()
 }
 
-func (b *PsWriter) MkDir(path string) {
-	b.Linef("New-Item -ItemType directory -Force -Path %s | out-null", psQuote(helpers.ToBackslash(path)))
+func (p *PsWriter) MkDir(path string) {
+	p.Linef("New-Item -ItemType directory -Force -Path %s | out-null", psQuote(p.fromSlash(path)))
 }
 
-func (b *PsWriter) MkTmpDir(name string) string {
-	dirPath := helpers.ToBackslash(filepath.Join(b.TemporaryPath, name))
-	b.MkDir(dirPath)
+func (p *PsWriter) MkTmpDir(name string) string {
+	dirPath := filepath.Join(p.TemporaryPath, name)
+	p.MkDir(dirPath)
 
 	return dirPath
 }
 
-func (b *PsWriter) RmDir(path string) {
-	path = psQuote(helpers.ToBackslash(path))
-	b.Linef(
+func (p *PsWriter) RmDir(path string) {
+	path = psQuote(p.fromSlash(path))
+	p.Linef(
 		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) "+
 			"-and (Test-Path %s -PathType Container) ) {",
 		path,
 	)
-	b.Indent()
-	b.Line("Remove-Item2 -Force -Recurse " + path)
-	b.Unindent()
-	b.Linef("} elseif(Test-Path %s) {", path)
-	b.Indent()
-	b.Line("Remove-Item -Force -Recurse " + path)
-	b.Unindent()
-	b.Line("}")
-	b.Line("")
+	p.Indent()
+	p.Line("Remove-Item2 -Force -Recurse " + path)
+	p.Unindent()
+	p.Linef("} elseif(Test-Path %s) {", path)
+	p.Indent()
+	p.Line("Remove-Item -Force -Recurse " + path)
+	p.Unindent()
+	p.Line("}")
+	p.Line("")
 }
 
-func (b *PsWriter) RmFile(path string) {
-	path = psQuote(helpers.ToBackslash(path))
-	b.Line(
+func (p *PsWriter) RmFile(path string) {
+	path = psQuote(p.fromSlash(path))
+	p.Line(
 		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) " +
 			"-and (Test-Path " + path + " -PathType Leaf) ) {")
-	b.Indent()
-	b.Line("Remove-Item2 -Force " + path)
-	b.Unindent()
-	b.Linef("} elseif(Test-Path %s) {", path)
-	b.Indent()
-	b.Line("Remove-Item -Force " + path)
-	b.Unindent()
-	b.Line("}")
-	b.Line("")
+	p.Indent()
+	p.Line("Remove-Item2 -Force " + path)
+	p.Unindent()
+	p.Linef("} elseif(Test-Path %s) {", path)
+	p.Indent()
+	p.Line("Remove-Item -Force " + path)
+	p.Unindent()
+	p.Line("}")
+	p.Line("")
 }
 
-func (b *PsWriter) Printf(format string, arguments ...interface{}) {
+func (p *PsWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
-	b.Line("echo " + psQuoteVariable(coloredText))
+	p.Line("echo " + psQuoteVariable(coloredText))
 }
 
-func (b *PsWriter) Noticef(format string, arguments ...interface{}) {
+func (p *PsWriter) Noticef(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
-	b.Line("echo " + psQuoteVariable(coloredText))
+	p.Line("echo " + psQuoteVariable(coloredText))
 }
 
-func (b *PsWriter) Warningf(format string, arguments ...interface{}) {
+func (p *PsWriter) Warningf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
-	b.Line("echo " + psQuoteVariable(coloredText))
+	p.Line("echo " + psQuoteVariable(coloredText))
 }
 
-func (b *PsWriter) Errorf(format string, arguments ...interface{}) {
+func (p *PsWriter) Errorf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
-	b.Line("echo " + psQuoteVariable(coloredText))
+	p.Line("echo " + psQuoteVariable(coloredText))
 }
 
-func (b *PsWriter) EmptyLine() {
-	b.Line("echo \"\"")
+func (p *PsWriter) EmptyLine() {
+	p.Line(`echo ""`)
 }
 
-func (b *PsWriter) Absolute(dir string) string {
+func (p *PsWriter) Absolute(dir string) string {
 	if filepath.IsAbs(dir) {
 		return dir
 	}
 
-	b.Line("$CurrentDirectory = (Resolve-Path .\\).Path")
+	p.Linef("$CurrentDirectory = (Resolve-Path .%s).Path", string(os.PathSeparator))
 	return filepath.Join("$CurrentDirectory", dir)
 }
 
-func (b *PsWriter) Finish(trace bool) string {
+func (p *PsWriter) Join(elem ...string) string {
+	newPath := filepath.Join(elem...)
+	return newPath
+}
+
+func (p *PsWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
 
 	// write BOM
 	_, _ = io.WriteString(w, "\xef\xbb\xbf")
-	if trace {
-		_, _ = io.WriteString(w, "Set-PSDebug -Trace 2\r\n")
+
+	p.writeShebang(w)
+	p.writeTrace(w, trace)
+	if p.Shell == SNPwsh {
+		_, _ = io.WriteString(w, `$ErrorActionPreference = "Stop"`+p.EOL+p.EOL)
 	}
 
 	// add empty line to close code-block when it is piped to STDIN
-	b.Line("")
-	_, _ = io.WriteString(w, b.String())
+	p.Line("")
+	_, _ = io.WriteString(w, p.String())
 	_ = w.Flush()
 	return buffer.String()
 }
 
+func (p *PsWriter) writeShebang(w io.Writer) {
+	switch p.Shell {
+	case SNPwsh:
+		_, _ = io.WriteString(w, "#requires -PSEdition Core"+p.EOL+p.EOL)
+	case SNPowershell:
+		_, _ = io.WriteString(w, "#requires -PSEdition Desktop"+p.EOL+p.EOL)
+	}
+}
+
+func (p *PsWriter) writeTrace(w io.Writer, trace bool) {
+	if trace {
+		_, _ = io.WriteString(w, "Set-PSDebug -Trace 2"+p.EOL)
+	}
+}
+
 func (b *PowerShell) GetName() string {
-	return "powershell"
+	return b.Shell
 }
 
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
 	script = &common.ShellConfiguration{
-		Command:   "powershell",
-		Arguments: []string{"-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command"},
+		Command:   b.Shell,
+		Arguments: []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"},
 		PassFile:  info.Build.Runner.Executor != dockerWindowsExecutor,
 		Extension: "ps1",
 		DockerCommand: []string{
-			"PowerShell",
+			b.Shell,
 			"-NoProfile",
 			"-NoLogo",
 			"-InputFormat",
@@ -300,14 +342,19 @@ func (b *PowerShell) GenerateScript(
 	info common.ShellScriptInfo,
 ) (script string, err error) {
 	w := &PsWriter{
+		Shell:         b.Shell,
+		EOL:           b.EOL,
 		TemporaryPath: info.Build.TmpProjectDir(),
 	}
 
 	if buildStage == common.BuildStagePrepare {
 		if info.Build.Hostname != "" {
-			w.Linef("echo \"Running on $env:computername via %s...\"", psQuoteVariable(info.Build.Hostname))
+			w.Linef(
+				`echo "Running on $([Environment]::MachineName) via %s..."`,
+				psQuoteVariable(info.Build.Hostname),
+			)
 		} else {
-			w.Line("echo \"Running on $env:computername...\"")
+			w.Line(`echo "Running on $([Environment]::MachineName)..."`)
 		}
 	}
 
@@ -326,5 +373,11 @@ func (b *PowerShell) IsDefault() bool {
 }
 
 func init() {
-	common.RegisterShell(&PowerShell{})
+	eol := "\r\n"
+	if runtime.GOOS != OSWindows {
+		eol = "\n"
+	}
+
+	common.RegisterShell(&PowerShell{Shell: SNPwsh, EOL: eol})
+	common.RegisterShell(&PowerShell{Shell: SNPowershell, EOL: "\r\n"})
 }

@@ -229,6 +229,11 @@ func (b *CmdWriter) Absolute(dir string) string {
 	return filepath.Join("%CD%", dir)
 }
 
+func (b *CmdWriter) Join(elem ...string) string {
+	newPath := path.Join(elem...)
+	return helpers.ToBackslash(newPath)
+}
+
 func (b *CmdWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
@@ -284,7 +289,7 @@ func (b *CmdShell) GenerateScript(
 }
 
 func (b *CmdShell) IsDefault() bool {
-	return runtime.GOOS == "windows"
+	return runtime.GOOS == OSWindows
 }
 
 func init() {

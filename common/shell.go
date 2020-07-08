@@ -76,14 +76,6 @@ func GetShell(shell string) Shell {
 	return shells[shell]
 }
 
-func GetShells() []string {
-	var names []string
-	for name := range shells {
-		names = append(names, name)
-	}
-	return names
-}
-
 func GetShellConfiguration(info ShellScriptInfo) (*ShellConfiguration, error) {
 	shell := GetShell(info.Shell)
 	if shell == nil {

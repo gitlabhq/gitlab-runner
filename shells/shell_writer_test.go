@@ -27,9 +27,9 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) {
 		extension = "cmd"
 		cmdArgs = append(cmdArgs, "/Q", "/C")
 
-	case "powershell":
+	case "powershell", "pwsh":
 		extension = "ps1"
-		cmdArgs = append(cmdArgs, "-noprofile", "-noninteractive", "-executionpolicy", "Bypass", "-command")
+		cmdArgs = append(cmdArgs, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command")
 
 	default:
 		require.FailNow(t, "unknown shell %q", shell)
@@ -47,6 +47,7 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) {
 
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "output: %s", string(output))
+	assert.Empty(t, string(output))
 }
 
 func TestMkDir(t *testing.T) {
