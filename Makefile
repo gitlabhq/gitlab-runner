@@ -23,11 +23,11 @@ DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
     ubuntu/xenial ubuntu/bionic ubuntu/eoan ubuntu/focal \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya
-DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64
+DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x
 RPM_PLATFORMS ?= el/6 el/7 el/8 \
     ol/6 ol/7 \
     fedora/30
-RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64
+RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
 COMMON_PACKAGE_NAMESPACE=$(PKG)/common

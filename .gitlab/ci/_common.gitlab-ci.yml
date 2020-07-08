@@ -10,7 +10,7 @@ variables:
   DUMB_INIT_VERSION: "1.2.2"
   GIT_VERSION: "2.21.0"
   GIT_VERSION_BUILD: "1"
-  GIT_LFS_VERSION: "2.7.1"
+  GIT_LFS_VERSION: "2.11.0"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
 
@@ -70,7 +70,7 @@ before_script:
 
 .docker_qemu:
   before_script:
-    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  - docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
 
 .windows_base:
   variables:

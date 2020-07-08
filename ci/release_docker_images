@@ -12,12 +12,15 @@ declare -A checksums
 DOCKER_MACHINE_VERSION=${DOCKER_MACHINE_VERSION:-0.16.2}
 checksums['DOCKER_MACHINE_AMD64']=${DOCKER_MACHINE_AMD64_CHECKSUM:-a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097}
 checksums['DOCKER_MACHINE_ARM64']=${DOCKER_MACHINE_ARM64_CHECKSUM:-109f534bfb8b9b852c938cad978e60a86b13f5ecf92da5e24320dacd2a7216ac}
+checksums['DOCKER_MACHINE_S390X']="" # No binary available yet for s390x, see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26551
 DUMB_INIT_VERSION=${DUMB_INIT_VERSION:-1.2.2}
 checksums['DUMB_INIT_AMD64']=${DUMB_INIT_AMD64_CHECKSUM:-37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9}
 checksums['DUMB_INIT_ARM64']=${DUMB_INIT_ARM64_CHECKSUM:-45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3}
-GIT_LFS_VERSION=${GIT_LFS_VERSION:-2.7.1}
-checksums['GIT_LFS_AMD64']=${GIT_LFS_AMD64_CHECKSUM:-c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920}
-checksums['GIT_LFS_ARM64']=${GIT_LFS_ARM64_CHECKSUM:-7a80464be13acc23ac99fd33e4b4352894f0fe3a8794b270e964c9532941834d}
+checksums['DUMB_INIT_S390X']=${DUMB_INIT_S390X_CHECKSUM:-8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d}
+GIT_LFS_VERSION=${GIT_LFS_VERSION:-2.11.0}
+checksums['GIT_LFS_AMD64']=${GIT_LFS_AMD64_CHECKSUM:-f48f45cf8ca600cdde4a8f27b16faf761e2ab944eaf1b0d9a38f66e9979b7df0}
+checksums['GIT_LFS_ARM64']=${GIT_LFS_ARM64_CHECKSUM:-b7e65e7f336c465c7049b538f1bc829146f511237f83a55b5d27e51e2e2fcbf7}
+checksums['GIT_LFS_S390X']=${GIT_LFS_S390X_CHECKSUM:-8d3d5bb5ed98fe8df788011e890e2d47351ccec8bf47b679576b375840eb0610}
 
 if [ -n "${TARGET_ARCHS}" ]; then
     IFS=', ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
@@ -245,14 +248,22 @@ add_tags() {
 
 runner_home_dir="dockerfiles/runner"
 
+function writeChecksum() {
+  local binVarNamePrefix="$1"
+  local targetArch="$2"
+  local binFile="$3"
+  local archVarNameSuffix=$(echo "${targetArch}" | tr '[:lower:]' '[:upper:]')
+  local checksum="${checksums["${binVarNamePrefix}_${archVarNameSuffix}"]}"
+
+  [[ -n "${checksum}" ]] && echo "${checksum}  ${binFile}" >> "${runner_home_dir}/checksums-${targetArch}" || return 0
+}
+
 for arch in "${TARGET_ARCHS[@]}"; do
     echo "${arch}:"
-    ARCH=$(echo "${arch}" | tr '[:lower:]' '[:upper:]')
-    tee "${runner_home_dir}/checksums-${arch}" <<EOF
-${checksums["DOCKER_MACHINE_${ARCH}"]}  /usr/bin/docker-machine
-${checksums["DUMB_INIT_${ARCH}"]}  /usr/bin/dumb-init
-${checksums["GIT_LFS_${ARCH}"]}  /usr/bin/git-lfs
-EOF
+    rm -f "${runner_home_dir}/checksums-${arch}"
+    writeChecksum 'DOCKER_MACHINE' "${arch}" '/usr/bin/docker-machine'
+    writeChecksum 'DUMB_INIT' "${arch}" '/usr/bin/dumb-init'
+    writeChecksum 'GIT_LFS' "${arch}" '/usr/bin/git-lfs'
 done
 
 cp "${runner_home_dir}/install-deps" "${runner_home_dir}/ubuntu/"

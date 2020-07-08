@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -eEo pipefail
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
@@ -22,6 +22,12 @@ case "${TARGETPLATFORM}" in
         DUMB_INIT_ARCH=x86_64
         GIT_LFS_ARCH=amd64
         ;;
+    "linux/s390x")
+        ARCH=s390x
+        DOCKER_MACHINE_ARCH=s390x
+        DUMB_INIT_ARCH=s390x
+        GIT_LFS_ARCH=s390x
+        ;;
     *)
         echo "Unexpected TARGETPLATFORM value: ${TARGETPLATFORM}"
         ;;
@@ -34,9 +40,13 @@ gitlab-runner --version
 mkdir -p /etc/gitlab-runner/certs
 chmod -R 700 /etc/gitlab-runner
 
-wget -nv "https://github.com/docker/machine/releases/download/v${DOCKER_MACHINE_VERSION}/docker-machine-Linux-${DOCKER_MACHINE_ARCH}" -O /usr/bin/docker-machine
-chmod +x /usr/bin/docker-machine
-docker-machine --version
+if grep 'docker-machine' "${SCRIPTPATH}/checksums-${ARCH}"; then
+  wget -nv "https://github.com/docker/machine/releases/download/v${DOCKER_MACHINE_VERSION}/docker-machine-Linux-${DOCKER_MACHINE_ARCH}" -O /usr/bin/docker-machine
+  chmod +x /usr/bin/docker-machine
+  docker-machine --version
+else
+  echo "No checksum specified for docker-machine, skipping."
+fi
 
 wget -nv "https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_${DUMB_INIT_ARCH}" -O /usr/bin/dumb-init
 chmod +x /usr/bin/dumb-init

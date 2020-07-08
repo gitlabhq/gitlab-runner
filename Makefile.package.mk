@@ -20,6 +20,7 @@ package-deb: package-deps package-prepare
 	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=arm64
 	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=armel
 	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=armhf
+	$(MAKE) package-deb-arch ARCH=s390x PACKAGE_ARCH=s390x
 
 .PHONY: package-rpm
 package-rpm: package-deps package-prepare
@@ -30,6 +31,7 @@ package-rpm: package-deps package-prepare
 	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=arm64
 	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=arm
 	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=armhf
+	$(MAKE) package-rpm-arch ARCH=s390x PACKAGE_ARCH=s390x
 
 .PHONY: package-deb-arch
 package-deb-arch: ARCH ?= amd64
