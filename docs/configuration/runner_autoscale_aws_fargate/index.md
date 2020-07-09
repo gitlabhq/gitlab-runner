@@ -230,7 +230,7 @@ and SSH into the EC2 instance that you created in the previous step via
 1. Install the Fargate driver:
 
    ```shell
-   sudo curl -Lo /opt/gitlab-runner/fargate https://gitlab-runner-custom-fargate-downloads.s3.amazonaws.com/master/fargate-linux-amd64
+   sudo curl -Lo /opt/gitlab-runner/fargate https://gitlab-runner-custom-fargate-downloads.s3.amazonaws.com/latest/fargate-linux-amd64
    sudo chmod +x /opt/gitlab-runner/fargate
    ```
 
