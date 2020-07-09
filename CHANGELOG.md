@@ -1,3 +1,88 @@
+## v13.2.0-rc1 (2020-07-09)
+
+### New features
+
+- Publish a GitLab Runner Docker image for Linux on IBM Z !2263
+- Pass `multi_build_steps` as a Runner Feature when requesting a job !2213
+- Leverage docker buildx for the helper image and build for s390x !2206
+- Enable PowerShell Core support in Shell Executor !2199
+- Build and release binary for s390x !2196
+- Label docker networks in the same way as containers !1930
+- Tag helper image with runner version !1919 (Fábio Matavelli @fabiomatavelli)
+
+### Bug fixes
+
+- Fix kubernetes runner timeout when the image name is invalid !2197 (Matthias van de Meent @matthias.vandemeent)
+- Install Runner in /usr/bin and helper in /usr/lib in Linux !2176
+- Update Git TLS settings to be configured for repo URL, not GitLab URL !2111
+- Fix support for UNC paths in Powershell executor !1976 (Pedro Pombeiro @pedropombeiro)
+- Set EFS flag to indicate that filenames and comments are UTF-8 encoded !1325 (Kazunori Yamamoto @kaz.yamamoto)
+
+### Maintenance
+
+- Unsilence the `make lint` target !2245
+- Fix warnings reported by goargs linter !2233
+- Fix shellcheck linter reported issues !2232
+- Add goargs to CI build !2224
+- Replace gocyclo linter with gocognit !2217
+- Enable Windows tests for community MRs !2215
+- Report `panic` failures in CI tests !2212
+- Fix integration tests on Windows that rely on Git version !2207
+- Enable optional checks in gocritic linter !2162
+- Enable shadowing checking in govet !2150
+- Enable funlen linter !2149
+- Enable goprintffuncname linter !2148
+- Enable nakedret linter !2143
+- Enable nestif linter !2142
+- Enable line limit linter !2141
+- Dockerfiles restructuring !2114
+- Rename trace.Fail to trace.Complete !2102
+- Remove duplication from build_test.go !1843
+- Ensure CI image is built if CI_IMAGE value changes !2267
+- Retry helper image build !2265
+- Remove `GOLANGCI_LINT_CACHE` usage !2257
+- Remove unnecessary indentation in method !2256
+- Update alpine image version in `static QA` job to 3.12.0 !2255
+- Write diagnostics for missing `make development_setup` call !2250
+- Run PSScriptAnalyzer on PowerShell scripts !2242
+- Fix helper-docker target !2226
+- Fix code navigation job to wait until the image job is done !2221
+- Fix a spelling error in the bug template and tidy up some other wording !2219
+- Standardize Makefile target names !2216
+- Fix data race in TestDockerCommandBuildCancel !2208
+- Add native code intelligence block to CI !2201
+- Speed up `clone test repo` job !2192
+- Fix flaky TestListenReadLines in log processor !2191
+- Run kubernetes integration tests !2155
+- Enable unparam linter and fix reported errors !2135
+- Enable errcheck linter !2134
+- Fix Dockerfile issues reported by halolint !2106
+- Fix out-of-date test expectations !2012
+- Update entrypoint shebang for docker images !1780 (J0WI @J0WI)
+- Reduced layer count on Windows helper images !1777 (Alexander Kutelev @kutelev)
+- Update to alpine v3.12 !1763
+
+### Documentation changes
+
+- Docs: Updated note to add install from UI instructions !2264
+- update "screenshot" of running gitlab-runner without arguments. from version 1.0.0 to 13.0 !2262 (@mxschumacher @mxschumacher)
+- Session server listen on IPv4 and IPv6 !2260
+- Update documentation for helper image tags !2258
+- Synchronize lint rules !2254
+- Update custom executor docs with `step_*` !2253
+- Docs: Fixed git commands !2244 (Stefan Zehe @szehe)
+- Docs: Updated broken links !2240
+- Adjust metadata and move page !2235
+- Docs: fix broken external links !2234
+- Fix Debian container path and SSH port in the Autoscaling GitLab CI on AWS Fargate guide !2230
+- New config for Vale and markdownlint !2214
+- Note that Interactive Web terminal don't work with helm yet !2189 (Ben Bodenmiller @bbodenmiller)
+- Update doc for Autoscaling GitLab CI on AWS Fargate, adds troubleshooting section. !2188 ( Rob @rwd4)
+- Update Fargate Task connection info in autoscaling aws fargate doc !2181
+- Review Handbook page: /runner/configuration/tls-self-signed.html !2170
+- Add docs how to use k8s secrets for registration !2154
+- Update index.md to include documentation in for the `--access-level` param values !2137
+
 ## v13.1.0 (2020-06-19)
 
 ### New features
