@@ -14,15 +14,15 @@ $InformationPreference = "Continue"
 #   the Docker image. This is done through Docker build args.
 # - $Env:GIT_VERSION_BUILD - Specify which build is needed to download for the
 #   GIT_VERSION you specified.
-# - $Env:GIT_AMD64_CHECKSUM - The checksum of the downloaded zip, usually found in
+# - $Env:GIT_WINDOWS_AMD64_CHECKSUM - The checksum of the downloaded zip, usually found in
 #   the GitHub release page.
 # - $Env:GIT_LFS_VERSION - The Git LFS version needed to install on the
 #   Docker image.
-# - $Env:GIT_LFS_AMD64_CHECKSUM - The checksum of the downloaded .tar.gz file, usually
+# - $Env:GIT_LFS_WINDOWS_AMD64_CHECKSUM - The checksum of the downloaded .tar.gz file, usually
 #   found in the GitHub release page.
 # - $Env:PWSH_VERSION - The Powershell Core version needed to install on the
 #   Docker image.
-# - $Env:PWSH_AMD64_CHECKSUM - The checksum of the downloaded MSI, usually
+# - $Env:PWSH_WINDOWS_AMD64_CHECKSUM - The checksum of the downloaded MSI, usually
 #   found in the GitHub release page.
 # - $Env:IS_LATEST - When we want to tag current tag as the latest, this is usually
 #   used when we are tagging a release for the runner (which is not a patch
@@ -165,12 +165,12 @@ function Build-Image($tag)
     $buildArgs = @(
         '--build-arg', "BASE_IMAGE_TAG=mcr.microsoft.com/windows/${windowsFlavor}:${windowsVersion}-amd64",
         '--build-arg', "PWSH_VERSION=$Env:PWSH_VERSION",
-        '--build-arg', "PWSH_AMD64_CHECKSUM=$Env:PWSH_AMD64_CHECKSUM",
+        '--build-arg', "PWSH_AMD64_CHECKSUM=$Env:PWSH_WINDOWS_AMD64_CHECKSUM",
         '--build-arg', "GIT_VERSION=$Env:GIT_VERSION",
         '--build-arg', "GIT_VERSION_BUILD=$Env:GIT_VERSION_BUILD",
-        '--build-arg', "GIT_AMD64_CHECKSUM=$Env:GIT_AMD64_CHECKSUM"
+        '--build-arg', "GIT_AMD64_CHECKSUM=$Env:GIT_WINDOWS_AMD64_CHECKSUM"
         '--build-arg', "GIT_LFS_VERSION=$Env:GIT_LFS_VERSION"
-        '--build-arg', "GIT_LFS_AMD64_CHECKSUM=$Env:GIT_LFS_AMD64_CHECKSUM"
+        '--build-arg', "GIT_LFS_AMD64_CHECKSUM=$Env:GIT_LFS_WINDOWS_AMD64_CHECKSUM"
     )
 
     $imageNames = @(
