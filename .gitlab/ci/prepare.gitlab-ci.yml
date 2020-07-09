@@ -12,7 +12,7 @@
 prepare ci image:
   extends:
   - .image_builder
-  - .dependency-checksums
+  - .linux-dependency-checksums
   variables:
     BUILD_IMAGE: $CI_IMAGE
     BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile

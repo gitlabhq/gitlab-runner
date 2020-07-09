@@ -2,7 +2,7 @@
   extends:
   - .docker
   - .docker_qemu
-  - .dependency-checksums
+  - .linux-dependency-checksums
   stage: release
   variables:
     PUBLISH_IMAGES: "true"
@@ -22,14 +22,12 @@
 .release_windows_docker_images:
   extends:
   - .except_docs
+  - .windows-dependency-checksums
   stage: release
   variables:
     PUSH_TO_DOCKER_HUB: "true"
     PUSH_TO_ECR_PUBLIC: "true"
     PUBLISH_IMAGES: "true"
-    GIT_AMD64_CHECKSUM: "bdb8c1560eca39f4d99b07705006c00d94a3f8612501046a0f89353afc5307fa"
-    GIT_LFS_AMD64_CHECKSUM: "ca05b0b9bd39d99665045776a5d0d5c7bfa2605a6118c2f489bfd40c2c3e4f2c"
-    PWSH_AMD64_CHECKSUM: "D234CFD6E9DD4A2CA68BFBC64C416DE42F31760E954812E8ADE02B6D57FE243F"
   dependencies:
   - 'helper images'
   - 'ecr public token'
