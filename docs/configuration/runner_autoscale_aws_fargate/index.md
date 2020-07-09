@@ -274,9 +274,11 @@ to the container image that you are going to use for your CI builds.
 CAUTION: **Caution:**
 A single Fargate task may launch one or more containers.
 The Fargate driver injects the `SSH_PUBLIC_KEY` environment variable
-in containers with the `ci-coordinator` name only, so you must
+in containers with the `ci-coordinator` name only. You must
 have a container with this name in all task definitions used by the Fargate
-driver.
+driver. The container with this name should be the one that has the
+SSH server and all GitLab Runner requirements installed, as described
+above.
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)
 for detailed instructions on setting up and working with task definitions.
