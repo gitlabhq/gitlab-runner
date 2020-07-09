@@ -57,6 +57,7 @@ ${BASE_BINARY_PATH}.%: $(HELPER_GO_FILES) $(GOX)
 # Build the Runner Helper tar files for host platform.
 .PHONY: helper-dockerarchive-host
 helper-dockerarchive-host: ${BASE_TAR_PATH}-$(shell uname -m).tar.xz
+	docker import ${BASE_TAR_PATH}-$(shell uname -m).tar.xz gitlab/gitlab-runner-helper:$(shell uname -m)-$(REVISION)
 
 # Build the Runner Helper tar files for all supported platforms.
 .PHONY: helper-dockerarchive
