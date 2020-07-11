@@ -371,23 +371,26 @@ func TestCreateResourceList(t *testing.T) {
 	}
 
 	tests := []struct {
-		Name     string
-		CPU      string
-		Memory   string
-		Expected api.ResourceList
-		Error    error
+		Name             string
+		CPU              string
+		Memory           string
+		EphemeralStorage string
+		Expected         api.ResourceList
+		Error            error
 	}{
 		{
 			Name:     "empty values",
 			Expected: api.ResourceList{},
 		},
 		{
-			Name:   "cpu and memory",
-			CPU:    "500m",
-			Memory: "1024Mi",
+			Name:             "cpu and memory",
+			CPU:              "500m",
+			Memory:           "1024Mi",
+			EphemeralStorage: "2048Mi",
 			Expected: api.ResourceList{
-				api.ResourceCPU:    resource.MustParse("500m"),
-				api.ResourceMemory: resource.MustParse("1024Mi"),
+				api.ResourceCPU:              resource.MustParse("500m"),
+				api.ResourceMemory:           resource.MustParse("1024Mi"),
+				api.ResourceEphemeralStorage: resource.MustParse("2048Mi"),
 			},
 		},
 		{
@@ -402,6 +405,13 @@ func TestCreateResourceList(t *testing.T) {
 			Memory: "1024Mi",
 			Expected: api.ResourceList{
 				api.ResourceMemory: resource.MustParse("1024Mi"),
+			},
+		},
+		{
+			Name:   "only ephemeral storage",
+			Memory: "3024Mi",
+			Expected: api.ResourceList{
+				api.ResourceEphemeralStorage: resource.MustParse("3024Mi"),
 			},
 		},
 		{
@@ -424,11 +434,21 @@ func TestCreateResourceList(t *testing.T) {
 				inner:    mustGetParseError(t, "200j"),
 			},
 		},
+		{
+			Name:     "invalid ephemeral storage",
+			Memory:   "200j",
+			Expected: api.ResourceList{},
+			Error: &resourceQuantityError{
+				resource: "ephemeral_storage",
+				value:    "200j",
+				inner:    mustGetParseError(t, "200j"),
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			actual, err := createResourceList(test.CPU, test.Memory)
+			actual, err := createResourceList(test.CPU, test.Memory, test.EphemeralStorage)
 			assert.Equal(t, test.Error, err)
 			assert.Equal(t, test.Expected, actual)
 		})

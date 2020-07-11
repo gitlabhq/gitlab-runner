@@ -224,12 +224,12 @@ func waitForPodRunning(
 	return api.PodUnknown, errors.New("timed out waiting for pod to start")
 }
 
-// limits takes a string representing CPU & memory limits,
+// limits takes a string representing CPU, memory and ephemeralStorage limits,
 // and returns a ResourceList with appropriately scaled Quantity
 // values for Kubernetes. This allows users to write "500m" for CPU,
-// and "50Mi" for memory (etc.)
-func createResourceList(cpu, memory string) (api.ResourceList, error) {
-	var rCPU, rMem resource.Quantity
+// "50Mi" for memory and "1Gi" for ephemeral storage (etc.)
+func createResourceList(cpu, memory, ephemeralStorage string) (api.ResourceList, error) {
+	var rCPU, rMem, rStor resource.Quantity
 	var err error
 
 	parse := func(s string) (resource.Quantity, error) {
@@ -251,6 +251,10 @@ func createResourceList(cpu, memory string) (api.ResourceList, error) {
 		return api.ResourceList{}, &resourceQuantityError{resource: "memory", value: memory, inner: err}
 	}
 
+	if rStor, err = parse(ephemeralStorage); err != nil {
+		return api.ResourceList{}, &resourceQuantityError{resource: "ephemeralStorage", value: ephemeralStorage, inner: err}
+	}
+
 	l := make(api.ResourceList)
 
 	q := resource.Quantity{}
@@ -259,6 +263,9 @@ func createResourceList(cpu, memory string) (api.ResourceList, error) {
 	}
 	if rMem != q {
 		l[api.ResourceMemory] = rMem
+	}
+	if rStor != q {
+		l[api.ResourceEphemeralStorage] = rStor
 	}
 
 	return l, nil
