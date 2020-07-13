@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -108,15 +107,6 @@ func init() {
 	PrebuiltImagesPaths = []string{
 		filepath.Join(runnerFolder, "helper-images"),
 		filepath.Join(runnerFolder, "out/helper-images"),
-	}
-	if runtime.GOOS == "linux" {
-		// This section covers the Linux packaged app scenario, with the binary in /usr/bin.
-		// The helper images are located in /usr/lib/gitlab-runner/helper-images,
-		// as part of the packaging done in the create_package function in ci/package
-		PrebuiltImagesPaths = append(
-			PrebuiltImagesPaths,
-			filepath.Join(runnerFolder, "../lib/gitlab-runner/helper-images"),
-		)
 	}
 }
 
