@@ -1,3 +1,13 @@
+## v13.2.0-rc2 (2020-07-14)
+
+### Bug fixes
+
+- Add openssh-client to Docker images !2281
+
+### Other changes
+
+- Revert to the old gitlab-runner install path !2282
+
 ## v13.2.0-rc1 (2020-07-09)
 
 ### New features
