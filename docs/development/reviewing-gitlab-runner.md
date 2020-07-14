@@ -115,7 +115,7 @@ To view a code coverage report for a merge request:
    <https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/172824578/artifacts/browse/out/coverage/>.
    This directory will always contain six files - three `.race.` files
    and three `.regular.` files, as explained in the [S3 coverage report
-   strategy](#test-coverage-report-from-S3).
+   strategy](#test-coverage-report-from-s3).
 
    For reviewing changes, we're mostly interested in looking at the `.regular.` HTML
    report (the `coverprofile.regular.html` file). As you can see, all files are visible
