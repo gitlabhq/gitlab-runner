@@ -12,6 +12,7 @@ RUN apt-get update -y && \
         git \
         wget \
         tzdata \
+        openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 ARG DOCKER_MACHINE_VERSION
