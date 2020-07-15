@@ -46,6 +46,8 @@ code navigation:
   extends:
   - .coverage_job
   allow_failure: true
+  needs:
+  - prepare done
   script:
   - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
   - lsif-go

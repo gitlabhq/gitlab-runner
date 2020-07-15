@@ -3,6 +3,8 @@
   - .merge_request_pipelines
   - .except_docs
   stage: build
+  needs:
+  - 'prepare done'
   script:
   - source ci/touch_make_dependencies
   - export platforms=$(echo $CI_JOB_NAME | sed 's|binaries ||')
