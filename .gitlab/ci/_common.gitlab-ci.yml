@@ -117,3 +117,16 @@ before_script:
   tags:
   - windows
   - windows-1909
+
+# .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
+# without explicitly waiting for the completion of the n-1 stage
+.stage_done:
+  extends:
+    - .merge_request_pipelines
+    - .except_docs
+    - .no_cache_and_dependencies
+  image: alpine:latest
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - exit 0

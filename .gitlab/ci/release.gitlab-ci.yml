@@ -17,6 +17,8 @@
     GIT_LFS_S390X_CHECKSUM: "8d3d5bb5ed98fe8df788011e890e2d47351ccec8bf47b679576b375840eb0610"
   needs:
   - 'helper images'
+  - job: 'test coverage report'
+    artifacts: false
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
   - 'package-deb'
   script:
@@ -24,7 +26,7 @@
   - make release_docker_images
   retry: 2
 
-.build_windows_docker_images:
+.release_windows_docker_images:
   extends:
   - .except_docs
   stage: release
@@ -35,6 +37,8 @@
   needs:
   - 'helper images'
   - 'binaries windows/386 windows/amd64'
+  - job: 'test coverage report'
+    artifacts: false
   before_script:
   - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
   script:
@@ -74,11 +78,13 @@
     fi
 
 .release_packagecloud:
-  needs:
-  - 'package-deb'
-  - 'package-rpm'
   extends:
   - .release
+  needs:
+  - job: 'test coverage report'
+    artifacts: false
+  - 'package-deb'
+  - 'package-rpm'
   script:
   - make release_packagecloud
 
@@ -98,6 +104,27 @@
   only:
   - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-runner
 
+.release_windows1809:
+  extends:
+  - .windows1809
+  needs:
+  - job: 'windows 1809 tests'
+    artifacts: false
+
+.release_windows1903:
+  extends:
+  - .windows1903
+  needs:
+  - job: 'windows 1809 tests'
+    artifacts: false
+
+.release_windows1909:
+  extends:
+  - .windows1909
+  needs:
+  - job: 'windows 1809 tests'
+    artifacts: false
+
 development S3:
   extends:
   - .release_s3
@@ -116,21 +143,27 @@ development docker images:
 
 development servercore1809 helper docker image:
   extends:
-  - .build_windows_docker_images
-  - .windows1809
   - .release_development
+  - .release_windows1809
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
 
 development servercore1903 helper docker image:
   extends:
-  - .build_windows_docker_images
-  - .windows1903
   - .release_development
+  - .release_windows1903
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
 
 development servercore1909 helper docker image:
   extends:
-  - .build_windows_docker_images
-  - .windows1909
   - .release_development
+  - .release_windows1909
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
 
 bleeding edge S3:
   extends:
@@ -158,9 +191,11 @@ bleeding edge docker images:
 
 bleeding edge servercore1809 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1809
   - .release_bleeding_edge
+  - .release_windows1809
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -169,9 +204,11 @@ bleeding edge servercore1809 docker images:
 
 bleeding edge servercore1903 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1903
   - .release_bleeding_edge
+  - .release_windows1903
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -180,9 +217,11 @@ bleeding edge servercore1903 docker images:
 
 bleeding edge servercore1909 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1909
   - .release_bleeding_edge
+  - .release_windows1909
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -215,9 +254,11 @@ stable docker images:
 
 stable servercore1809 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1809
   - .release_stable
+  - .release_windows1809
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -226,20 +267,24 @@ stable servercore1809 docker images:
 
 stable servercore1903 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1903
   - .release_stable
+  - .release_windows1903
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: stable/docker_images/windows1903
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-stable servercore1908 docker images:
+stable servercore1909 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1909
   - .release_stable
+  - .release_windows1909
+  # .release_windows_docker_images needs to be last because of the way `needs` arrays are merged:
+  #   https://docs.gitlab.com/ee/ci/yaml/#merge-details
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
