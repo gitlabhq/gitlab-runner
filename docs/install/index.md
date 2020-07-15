@@ -10,11 +10,15 @@ use a repository for rpm/deb packages.
 
 GitLab Runner officially supported binaries are available for the following architectures:
 
-- x86, amd64, ARM64, s390x
+- x86, AMD64, ARM64, ARM, s390x
 
-Official packages are available for the following distributions:
+Official packages are available for the following Linux distributions:
 
-- CentOS, Debian, Ubuntu, RHEL, Fedora
+- CentOS, Debian, Ubuntu, RHEL, Fedora, Mint
+
+Runner officialy supports the following operating systems:
+
+- Linux, Windows, macOS, FreeBSD
 
 You can find information on the different installation methods below.
 
