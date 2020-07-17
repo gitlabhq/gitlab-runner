@@ -2,6 +2,7 @@
   extends:
   - .merge_request_pipelines
   - .except_docs
+  - .go-cache
   stage: build
   needs:
   - 'prepare done'

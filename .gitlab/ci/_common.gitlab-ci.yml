@@ -69,9 +69,39 @@ before_script:
   tags:
   - gitlab-org-docker
 
+.docker_qemu-before_script: &docker_qemu-before_script
+  - docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
+
 .docker_qemu:
   before_script:
-  - docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
+  - *docker_qemu-before_script
+
+.go-cache:
+  variables:
+    GOCACHE: $CI_PROJECT_DIR/.gocache-$CI_COMMIT_REF_PROTECTED
+  before_script:
+  - mkdir -p $GOCACHE
+  cache:
+    paths:
+    - $CI_PROJECT_DIR/.gocache-false/
+    key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
+
+.go-cache-docker-qemu:
+  extends:
+  - .go-cache
+  before_script:
+  - *docker_qemu-before_script
+  - mkdir -p $GOCACHE
+
+.go-cache-windows:
+  variables:
+    GOCACHE: $CI_PROJECT_DIR\.gocache-$CI_COMMIT_REF_PROTECTED
+  before_script:
+  - New-Item -Path $Env:GOCACHE -Type Directory -Force
+  cache:
+    paths:
+    - $CI_PROJECT_DIR\.gocache-false\
+    key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
 
 .windows_base:
   variables:
