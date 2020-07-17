@@ -76,8 +76,10 @@ code_quality:
   stage: test
   extends:
   - .merge_request_pipelines
-  - .except_docs
-  - .no_cache_and_dependencies
+  - .no_dependencies
+    # Use GOCACHE instead of GOLANGCI_LINT_CACHE
+    # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
+  - .go-cache
   image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:v1.27.0-alpine
   needs: []
   allow_failure: true
@@ -108,6 +110,7 @@ unit test:
   extends:
   - .merge_request_pipelines
   - .docker
+  - .go-cache
   stage: test
   parallel: 8
   script:
@@ -123,15 +126,20 @@ unit test:
 unit test with race:
   extends:
   - unit test
+  - .go-cache
   allow_failure: true
   variables:
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
 
+.go-cache-windows_before_script: &go-cache-windows_before_script
+  - New-Item -Path .gocache-$CI_COMMIT_REF_PROTECTED -Type Directory -Force
+
 .windows test:
   extends:
   - .merge_request_pipelines
   - .except_docs
+  - .go-cache-windows
   stage: test
   needs:
   - 'tests definitions'
@@ -140,6 +148,7 @@ unit test with race:
   variables:
     GOROOT: "C:\\Go"
   before_script:
+  - *go-cache-windows_before_script
   - if (Test-Path $GOPATH) { Remove-Item -Force -Recurse $GOPATH }
   - New-Item $PKG_BASE_DIR -ItemType directory -Force
   - New-Item -ItemType SymbolicLink -Path $PKG_BUILD_DIR -Value $CI_PROJECT_DIR
@@ -180,6 +189,7 @@ git 1.7.1:
   extends:
   - .merge_request_pipelines
   - .except_docs
+  - .go-cache
   image: centos:6
   stage: test
   variables:
