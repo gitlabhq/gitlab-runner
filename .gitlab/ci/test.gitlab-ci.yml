@@ -36,8 +36,6 @@ check feature flags docs:
   extends:
   - .merge_request_pipelines
   - .no_cache_and_dependencies
-  needs:
-  - 'prepare done'
   script:
   - cp docs/configuration/feature-flags.md docs/configuration/feature-flags.md.orig
   - make update_feature_flags_docs
