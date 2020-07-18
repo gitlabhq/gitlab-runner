@@ -153,7 +153,6 @@ before_script:
 .stage_done:
   extends:
     - .merge_request_pipelines
-    - .except_docs
     - .no_cache_and_dependencies
   image: alpine:latest
   variables:
