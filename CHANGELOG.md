@@ -1,14 +1,4 @@
-## v13.2.0-rc2 (2020-07-14)
-
-### Bug fixes
-
-- Add openssh-client to Docker images !2281
-
-### Other changes
-
-- Revert to the old gitlab-runner install path !2282
-
-## v13.2.0-rc1 (2020-07-09)
+## v13.2.0 (2020-07-20)
 
 ### New features
 
@@ -23,10 +13,10 @@
 ### Bug fixes
 
 - Fix kubernetes runner timeout when the image name is invalid !2197 (Matthias van de Meent @matthias.vandemeent)
-- Install Runner in /usr/bin and helper in /usr/lib in Linux !2176
 - Update Git TLS settings to be configured for repo URL, not GitLab URL !2111
 - Fix support for UNC paths in Powershell executor !1976 (Pedro Pombeiro @pedropombeiro)
 - Set EFS flag to indicate that filenames and comments are UTF-8 encoded !1325 (Kazunori Yamamoto @kaz.yamamoto)
+- Add openssh-client to Docker images !2281
 
 ### Maintenance
 
