@@ -225,6 +225,7 @@ LDAP
 ldapsearch
 Leiningen
 Libravatar
+liveness
 Lograge
 Logstash
 lookahead
@@ -329,6 +330,7 @@ profiler
 Prometheus
 proxied
 proxies
+proxyable
 proxying
 pseudonymized
 pseudonymizer
