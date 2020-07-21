@@ -14,14 +14,21 @@ GitLab Runner can be installed on Openshift.
 
 1. In the main pane and underneath "All Items" search for keyword "GitLab"
 
+    ![GitLab Operator](openshift-runner1.png)
+
 1. Click on the GitLab Operator to install.
 
 1. On the GitLab Operator summary page, click "Install".
 
+    ![GitLab Operator Summary Page](openshift-runner2.png)
+
 1. On the Install Operator page, select the desired namespace under "Installed Namespace" and click "Install".
+
+    ![GitLab Operator Install Page](openshift-runner3.png)
 
 1. On the Installed Operators page, the GitLab Operator is ready when the status appears as "Suceeded".
 
+    ![GitLab Operator Install Status](openshift-runner4.png)
 
 #### GitLab Runner Installation
 
@@ -29,7 +36,7 @@ GitLab Runner can be installed on Openshift.
 
 1. Make note of the the token underneath "**Use the following registration token during setup:**"
 
-
+    ![GitLab Runner Install Page](openshift-runner5.png)
 
 1. Open an Openshift console, switch to the project namespace:
 
