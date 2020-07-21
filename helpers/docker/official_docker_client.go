@@ -50,7 +50,11 @@ func newOfficialDockerClient(c Credentials, apiVersion string) (*officialDockerC
 	}
 	httpClient := &http.Client{Transport: transport}
 
-	dockerClient, err := client.NewClient(c.Host, apiVersion, httpClient, nil)
+	dockerClient, err := client.NewClientWithOpts(
+		client.WithHost(c.Host),
+		client.WithVersion(apiVersion),
+		client.WithHTTPClient(httpClient),
+	)
 	if err != nil {
 		transport.CloseIdleConnections()
 		logrus.Errorln("Error creating Docker client:", err)
