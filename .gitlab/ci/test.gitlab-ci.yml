@@ -150,17 +150,13 @@ windows 1903 tests:
   extends:
   - .windows test
   - .windows1903
-  only:
-    refs:
-    - master@gitlab-org/gitlab-runner
+  - .runner_master
 
 windows 1909 tests:
   extends:
   - .windows test
   - .windows1909
-  only:
-    refs:
-    - master@gitlab-org/gitlab-runner
+  - .runner_master
 
 git 1.7.1:
   extends:

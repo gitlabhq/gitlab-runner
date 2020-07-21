@@ -85,6 +85,7 @@
 .release_development:
   only:
   - merge_requests@gitlab-org/gitlab-runner
+  - merge_requests@gitlab-org/security/gitlab-runner
   except:
     variables:
     - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
@@ -97,6 +98,7 @@
 .release_stable:
   only:
   - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/security/gitlab-runner
 
 development S3:
   extends:
@@ -105,6 +107,8 @@ development S3:
   environment:
     name: development/s3/${CI_COMMIT_REF_NAME}
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
+  only:
+    - merge_requests@gitlab-org/gitlab-runner
 
 development docker images:
   extends:
