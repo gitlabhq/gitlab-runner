@@ -1,3 +1,13 @@
+## v13.2.1 (2020-07-22)
+
+### Bug fixes
+
+- Fix untagged registration and add regression tests !2303
+
+### Other changes
+
+- Add release jobs to security fork !2300
+
 ## v13.2.0 (2020-07-20)
 
 ### New features
