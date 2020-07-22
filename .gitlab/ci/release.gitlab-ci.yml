@@ -30,7 +30,7 @@
   stage: release
   variables:
     PUSH_TO_DOCKER_HUB: "false"
-    GIT_256_CHECKSUM: "bd91db55bd95eaa80687df28877e2df8c8858a0266e9c67331cfddba2735f25c"
+    GIT_256_CHECKSUM: "bdb8c1560eca39f4d99b07705006c00d94a3f8612501046a0f89353afc5307fa"
     GIT_LFS_256_CHECKSUM: "ca05b0b9bd39d99665045776a5d0d5c7bfa2605a6118c2f489bfd40c2c3e4f2c"
   dependencies:
   - 'helper images'
