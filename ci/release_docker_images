@@ -2,17 +2,25 @@
 
 set -eEo pipefail
 
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+
+# shellcheck source=ci/docker_buildx_commands
+source "${SCRIPTPATH}/docker_buildx_commands"
+
 declare -A checksums
 
 DOCKER_MACHINE_VERSION=${DOCKER_MACHINE_VERSION:-0.16.2}
 checksums['DOCKER_MACHINE_AMD64']=${DOCKER_MACHINE_AMD64_CHECKSUM:-a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097}
 checksums['DOCKER_MACHINE_ARM64']=${DOCKER_MACHINE_ARM64_CHECKSUM:-109f534bfb8b9b852c938cad978e60a86b13f5ecf92da5e24320dacd2a7216ac}
+checksums['DOCKER_MACHINE_S390X']="" # No binary available yet for s390x, see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26551
 DUMB_INIT_VERSION=${DUMB_INIT_VERSION:-1.2.2}
 checksums['DUMB_INIT_AMD64']=${DUMB_INIT_AMD64_CHECKSUM:-37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9}
 checksums['DUMB_INIT_ARM64']=${DUMB_INIT_ARM64_CHECKSUM:-45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3}
-GIT_LFS_VERSION=${GIT_LFS_VERSION:-2.7.1}
-checksums['GIT_LFS_AMD64']=${GIT_LFS_AMD64_CHECKSUM:-c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920}
-checksums['GIT_LFS_ARM64']=${GIT_LFS_ARM64_CHECKSUM:-7a80464be13acc23ac99fd33e4b4352894f0fe3a8794b270e964c9532941834d}
+checksums['DUMB_INIT_S390X']=${DUMB_INIT_S390X_CHECKSUM:-8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d}
+GIT_LFS_VERSION=${GIT_LFS_VERSION:-2.11.0}
+checksums['GIT_LFS_AMD64']=${GIT_LFS_AMD64_CHECKSUM:-f48f45cf8ca600cdde4a8f27b16faf761e2ab944eaf1b0d9a38f66e9979b7df0}
+checksums['GIT_LFS_ARM64']=${GIT_LFS_ARM64_CHECKSUM:-b7e65e7f336c465c7049b538f1bc829146f511237f83a55b5d27e51e2e2fcbf7}
+checksums['GIT_LFS_S390X']=${GIT_LFS_S390X_CHECKSUM:-8d3d5bb5ed98fe8df788011e890e2d47351ccec8bf47b679576b375840eb0610}
 
 if [ -n "${TARGET_ARCHS}" ]; then
     IFS=', ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
@@ -25,17 +33,12 @@ CI_REGISTRY=${CI_REGISTRY:-}
 CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE:-}
 CI_REGISTRY_USER=${CI_REGISTRY_USER:-}
 CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD:-}
-DOCKER_HOST=${DOCKER_HOST:-}
-DOCKER_CERT_PATH=${DOCKER_CERT_PATH:-}
 DOCKER_HUB_REPOSITORY=${DOCKER_HUB_REPOSITORY:-'gitlab/gitlab-runner'}
 DOCKER_HUB_USER=${DOCKER_HUB_USER:-}
 DOCKER_HUB_PASSWORD=${DOCKER_HUB_PASSWORD:-}
 IS_LATEST=${IS_LATEST:-}
 PUBLISH_IMAGES=${PUBLISH_IMAGES:-false}
 PUSH_TO_DOCKER_HUB=${PUSH_TO_DOCKER_HUB:-false}
-
-docker_builder_name='buildx-builder'
-docker_buildx_ctx_name='docker-buildx'
 
 ref_tag="${CI_COMMIT_TAG}"
 if [[ -z "${ref_tag}" ]]; then
@@ -51,57 +54,10 @@ if [[ -z "${REVISION}" ]]; then
     REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
 fi
 
-_docker() {
-    docker "${@}"
-}
-
-_docker_experimental() {
-    DOCKER_CLI_EXPERIMENTAL=enabled docker "${@}"
-}
-
-_docker_buildx() {
-    # Run the command in a subshell so that we can safely unset DOCKER_HOST
-    (
-        unset DOCKER_HOST
-        _docker_experimental buildx "${@}"
-    )
-}
-
 join_by() {
     local IFS="$1"
     shift
     echo "$*"
-}
-
-setup_docker_context() {
-    # In order for `docker buildx create` to work, we need to replace DOCKER_HOST with a Docker context.
-    # Otherwise, we get the following error:
-    # > could not create a builder instance with TLS data loaded from environment.
-    local docker="host=unix:///var/run/docker.sock"
-    if [ -n "${DOCKER_CERT_PATH}" ]; then
-        docker="host=${DOCKER_HOST},ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/cert.pem,key=${DOCKER_CERT_PATH}/key.pem"
-    fi
-    _docker context create "${docker_buildx_ctx_name}" \
-        --default-stack-orchestrator=swarm \
-        --description "Temporary buildx Docker context" \
-        --docker "${docker}"
-
-    _docker_buildx create --use --name "${docker_builder_name}" "${docker_buildx_ctx_name}"
-}
-
-cleanup_docker_context_trap() {
-    local error_code=$?
-
-    cleanup_docker_context
-
-    exit "${error_code}"
-}
-
-cleanup_docker_context() {
-    set +e
-    _docker_buildx rm "${docker_builder_name}" >/dev/null 2>&1
-    _docker context rm -f "${docker_buildx_ctx_name}" >/dev/null 2>&1
-    set -e
 }
 
 # buildx receives an array of tag names, and the context path as the last parameter
@@ -215,27 +171,45 @@ push_latest() {
 
 release_docker_helper_images() {
     helper_image_x86_64="gitlab/gitlab-runner-helper:x86_64-${REVISION}"
+    helper_image_x86_64_version="gitlab/gitlab-runner-helper:x86_64-${ref_tag}"
     helper_image_x86_64_latest="gitlab/gitlab-runner-helper:x86_64-latest"
     helper_image_arm="gitlab/gitlab-runner-helper:arm-${REVISION}"
+    helper_image_arm_version="gitlab/gitlab-runner-helper:arm-${ref_tag}"
     helper_image_arm_latest="gitlab/gitlab-runner-helper:arm-latest"
     helper_image_arm64="gitlab/gitlab-runner-helper:arm64-${REVISION}"
+    helper_image_arm64_version="gitlab/gitlab-runner-helper:arm64-${ref_tag}"
     helper_image_arm64_latest="gitlab/gitlab-runner-helper:arm64-latest"
+    helper_image_s390x="gitlab/gitlab-runner-helper:s390x-${REVISION}"
+    helper_image_s390x_version="gitlab/gitlab-runner-helper:s390x-${ref_tag}"
+    helper_image_s390x_latest="gitlab/gitlab-runner-helper:s390x-latest"
 
     import out/helper-images/prebuilt-x86_64.tar.xz "${helper_image_x86_64}"
     import out/helper-images/prebuilt-arm.tar.xz "${helper_image_arm}"
     import out/helper-images/prebuilt-arm64.tar.xz "${helper_image_arm64}"
+    import out/helper-images/prebuilt-s390x.tar.xz "${helper_image_s390x}"
 
     tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
     tag_latest "${helper_image_arm}" "${helper_image_arm_latest}"
     tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
+    tag_latest "${helper_image_s390x}" "${helper_image_s390x_latest}"
+    tag "${helper_image_x86_64}" "${helper_image_x86_64_version}"
+    tag "${helper_image_arm}" "${helper_image_arm_version}"
+    tag "${helper_image_arm64}" "${helper_image_arm64_version}"
+    tag "${helper_image_s390x}" "${helper_image_s390x_version}"
 
     push "${helper_image_x86_64}"
     push "${helper_image_arm}"
     push "${helper_image_arm64}"
+    push "${helper_image_s390x}"
 
     push_latest "${helper_image_x86_64_latest}"
     push_latest "${helper_image_arm_latest}"
     push_latest "${helper_image_arm64_latest}"
+    push_latest "${helper_image_s390x_latest}"
+    push "${helper_image_x86_64_version}"
+    push "${helper_image_arm_version}"
+    push "${helper_image_arm64_version}"
+    push "${helper_image_s390x_version}"
 }
 
 login() {
@@ -274,14 +248,22 @@ add_tags() {
 
 runner_home_dir="dockerfiles/runner"
 
+function writeChecksum() {
+  local binVarNamePrefix="$1"
+  local targetArch="$2"
+  local binFile="$3"
+  local archVarNameSuffix=$(echo "${targetArch}" | tr '[:lower:]' '[:upper:]')
+  local checksum="${checksums["${binVarNamePrefix}_${archVarNameSuffix}"]}"
+
+  [[ -n "${checksum}" ]] && echo "${checksum}  ${binFile}" >> "${runner_home_dir}/checksums-${targetArch}" || return 0
+}
+
 for arch in "${TARGET_ARCHS[@]}"; do
     echo "${arch}:"
-    ARCH=$(echo "${arch}" | tr '[:lower:]' '[:upper:]')
-    tee "${runner_home_dir}/checksums-${arch}" <<EOF
-${checksums["DOCKER_MACHINE_${ARCH}"]}  /usr/bin/docker-machine
-${checksums["DUMB_INIT_${ARCH}"]}  /usr/bin/dumb-init
-${checksums["GIT_LFS_${ARCH}"]}  /usr/bin/git-lfs
-EOF
+    rm -f "${runner_home_dir}/checksums-${arch}"
+    writeChecksum 'DOCKER_MACHINE' "${arch}" '/usr/bin/docker-machine'
+    writeChecksum 'DUMB_INIT' "${arch}" '/usr/bin/dumb-init'
+    writeChecksum 'GIT_LFS' "${arch}" '/usr/bin/git-lfs'
 done
 
 cp "${runner_home_dir}/install-deps" "${runner_home_dir}/ubuntu/"
@@ -293,6 +275,8 @@ for arch in "${TARGET_ARCHS[@]}"; do
         "${runner_home_dir}/alpine/"
 done
 
+alpineTags=()
+ubuntuTags=()
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${PUSH_TO_DOCKER_HUB}" ]]; then
    add_tags alpineTags "alpine" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_REPOSITORY}" "${ref_tag}"
    add_tags ubuntuTags "ubuntu" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_REPOSITORY}" "${ref_tag}"

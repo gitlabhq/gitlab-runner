@@ -133,6 +133,26 @@ func (_m *MockShellWriter) IfFile(file string) {
 	_m.Called(file)
 }
 
+// Join provides a mock function with given fields: elem
+func (_m *MockShellWriter) Join(elem ...string) string {
+	_va := make([]interface{}, len(elem))
+	for _i := range elem {
+		_va[_i] = elem[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(...string) string); ok {
+		r0 = rf(elem...)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // Line provides a mock function with given fields: text
 func (_m *MockShellWriter) Line(text string) {
 	_m.Called(text)

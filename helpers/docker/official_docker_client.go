@@ -203,12 +203,7 @@ func (c *officialDockerClient) NetworkRemove(ctx context.Context, networkID stri
 	return wrapError("NetworkRemove", err, started)
 }
 
-func (c *officialDockerClient) NetworkDisconnect(
-	ctx context.Context,
-	networkID string,
-	containerID string,
-	force bool,
-) error {
+func (c *officialDockerClient) NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error {
 	started := time.Now()
 	err := c.client.NetworkDisconnect(ctx, networkID, containerID, force)
 	return wrapError("NetworkDisconnect", err, started)
@@ -216,7 +211,8 @@ func (c *officialDockerClient) NetworkDisconnect(
 
 func (c *officialDockerClient) NetworkList(
 	ctx context.Context,
-	options types.NetworkListOptions) ([]types.NetworkResource, error) {
+	options types.NetworkListOptions,
+) ([]types.NetworkResource, error) {
 	started := time.Now()
 	networks, err := c.client.NetworkList(ctx, options)
 	return networks, wrapError("NetworkList", err, started)
@@ -253,7 +249,8 @@ func (c *officialDockerClient) ImageImportBlocking(
 	ctx context.Context,
 	source types.ImageImportSource,
 	ref string,
-	options types.ImageImportOptions) error {
+	options types.ImageImportOptions,
+) error {
 	started := time.Now()
 	readCloser, err := c.client.ImageImport(ctx, source, ref, options)
 	if err != nil {
@@ -272,7 +269,8 @@ func (c *officialDockerClient) ImageImportBlocking(
 func (c *officialDockerClient) ImagePullBlocking(
 	ctx context.Context,
 	ref string,
-	options types.ImagePullOptions) error {
+	options types.ImagePullOptions,
+) error {
 	started := time.Now()
 	readCloser, err := c.client.ImagePull(ctx, ref, options)
 	if err != nil {

@@ -23,6 +23,11 @@ create_package() {
     local customOptions
     read -r -a customOptions <<< "${@}"
 
+    if [ -z "${PACKAGE_ARCH}" ]; then
+      echo "PACKAGE_ARCH not specified, aborting."
+      exit 1
+    fi
+
     local uname_s
     uname_s=$(uname -s)
 
@@ -64,7 +69,7 @@ create_package() {
         --before-remove "packaging/scripts/prerm.${packageType}" \
         \
         packaging/root/=/ \
-        "${RUNNER_BINARY}=/usr/bin/gitlab-runner" \
+        "${RUNNER_BINARY}=/usr/lib/gitlab-runner/gitlab-runner" \
         out/helper-images/=/usr/lib/gitlab-runner/helper-images/
 }
 

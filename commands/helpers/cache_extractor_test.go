@@ -168,9 +168,7 @@ func TestCacheExtractorRemoteServer(t *testing.T) {
 	err = os.Chtimes(cacheExtractorArchive, time.Now().Add(time.Hour), time.Now().Add(time.Hour))
 	assert.NoError(t, err)
 
-	assert.NotPanics(t, func() {
-		cmd.Execute(nil)
-	}, "archive is up to date")
+	assert.NotPanics(t, func() { cmd.Execute(nil) }, "archive is up to date")
 }
 
 func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {

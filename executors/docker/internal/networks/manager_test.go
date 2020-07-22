@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -25,22 +26,26 @@ func newDebugLoggerMock() *mockDebugLogger {
 func TestNewDefaultManager(t *testing.T) {
 	logger := newDebugLoggerMock()
 
-	m := NewManager(logger, nil, nil)
+	m := NewManager(logger, nil, nil, nil)
 	assert.IsType(t, &manager{}, m)
 }
 
 func newDefaultManager() *manager {
-	m := &manager{
-		logger: newDebugLoggerMock(),
-		build: &common.Build{
-			ProjectRunnerID: 0,
-			Runner:          &common.RunnerConfig{},
-			JobResponse: common.JobResponse{
-				JobInfo: common.JobInfo{
-					ProjectID: 0,
-				},
+	b := &common.Build{
+		ProjectRunnerID: 0,
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{Token: "test-token"},
+		},
+		JobResponse: common.JobResponse{
+			JobInfo: common.JobInfo{
+				ProjectID: 0,
 			},
 		},
+	}
+	m := &manager{
+		logger:  newDebugLoggerMock(),
+		build:   b,
+		labeler: labels.NewLabeler(b),
 	}
 	return m
 }
@@ -79,7 +84,7 @@ func TestCreateNetwork(t *testing.T) {
 		"network create per-build network": {
 			networkMode:         "",
 			networkPerBuild:     "true",
-			expectedNetworkMode: container.NetworkMode("runner--project-0-concurrent-0-job-0-network"),
+			expectedNetworkMode: container.NetworkMode("runner-test-tok-project-0-concurrent-0-job-0-network"),
 			clientAssertions: func(mc *docker.MockClient) {
 				mc.On(
 					"NetworkCreate",

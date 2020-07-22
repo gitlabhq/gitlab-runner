@@ -226,7 +226,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 			return err
 		}
 
-		err = s.setupBuildPod()
+		err = s.setupBuildPod(nil)
 		if err != nil {
 			return err
 		}
@@ -331,7 +331,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("setting up scripts configMap: %w", err)
 	}
 
-	err = s.setupBuildPod()
+	err = s.setupBuildPod([]api.Container{s.buildLogPermissionsInitContainer()})
 	if err != nil {
 		return fmt.Errorf("setting up build pod: %w", err)
 	}
@@ -348,6 +348,21 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 	go s.processLogs(ctx)
 
 	return nil
+}
+
+func (s *executor) buildLogPermissionsInitContainer() api.Container {
+	// Since we mount the logs an emptyDir volume, the directory is owned by root.
+	// This makes it impossible for other users to write to the shared log without
+	// explicitly giving them permissions. More info at https://github.com/kubernetes/kubernetes/issues/2630
+	chmod := fmt.Sprintf("touch %s && chmod -R 777 %s", s.logFile(), s.logsDir())
+
+	return api.Container{
+		Name:            "change-logs-permissions",
+		Image:           "busybox",
+		Command:         []string{"sh", "-c", chmod},
+		VolumeMounts:    s.getVolumeMounts(),
+		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
+	}
 }
 
 func (s *executor) buildCommandForStage(stage common.BuildStage) string {
@@ -901,7 +916,7 @@ func (s *executor) createHostAlias() (*api.HostAlias, error) {
 	return &servicesHostAlias, nil
 }
 
-func (s *executor) setupBuildPod() error {
+func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	s.Debugln("Setting up build pod")
 
 	podServices := make([]api.Container, len(s.options.Services))
@@ -943,7 +958,7 @@ func (s *executor) setupBuildPod() error {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAlias)
+	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAlias, initContainers)
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -965,6 +980,7 @@ func (s *executor) preparePodConfig(
 	services []api.Container,
 	imagePullSecrets []api.LocalObjectReference,
 	hostAlias *api.HostAlias,
+	initContainers []api.Container,
 ) api.Pod {
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
 
@@ -981,6 +997,7 @@ func (s *executor) preparePodConfig(
 			RestartPolicy:      api.RestartPolicyNever,
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
 			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
+			InitContainers:     initContainers,
 			Containers: append([]api.Container{
 				// TODO use the build and helper template here
 				s.buildContainer(

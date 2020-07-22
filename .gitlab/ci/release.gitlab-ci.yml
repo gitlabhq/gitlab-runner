@@ -1,36 +1,38 @@
 .release_docker_images:
   extends:
   - .docker
+  - .docker_qemu
   stage: release
   variables:
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "true"
-    TARGET_ARCHS: "amd64,arm64"
+    TARGET_ARCHS: "amd64,arm64,s390x"
     DOCKER_MACHINE_AMD64_CHECKSUM: "a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097"
     DOCKER_MACHINE_ARM64_CHECKSUM: "109f534bfb8b9b852c938cad978e60a86b13f5ecf92da5e24320dacd2a7216ac"
     DUMB_INIT_AMD64_CHECKSUM: "37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9"
     DUMB_INIT_ARM64_CHECKSUM: "45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3"
-    GIT_LFS_AMD64_CHECKSUM: "c8952ee72af214e3669f834d829e8a0a3becd160dead18237f99e40d75a3e920"
-    GIT_LFS_ARM64_CHECKSUM: "7a80464be13acc23ac99fd33e4b4352894f0fe3a8794b270e964c9532941834d"
-  needs:
+    DUMB_INIT_S390X_CHECKSUM: "8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d"
+    GIT_LFS_AMD64_CHECKSUM: "f48f45cf8ca600cdde4a8f27b16faf761e2ab944eaf1b0d9a38f66e9979b7df0"
+    GIT_LFS_ARM64_CHECKSUM: "b7e65e7f336c465c7049b538f1bc829146f511237f83a55b5d27e51e2e2fcbf7"
+    GIT_LFS_S390X_CHECKSUM: "8d3d5bb5ed98fe8df788011e890e2d47351ccec8bf47b679576b375840eb0610"
+  dependencies:
   - 'helper images'
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
   - 'package-deb'
   script:
   - source ci/touch_make_dependencies
-  - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   - make release_docker_images
   retry: 2
 
-.build_windows_docker_images:
+.release_windows_docker_images:
   extends:
   - .except_docs
   stage: release
   variables:
     PUSH_TO_DOCKER_HUB: "false"
     GIT_256_CHECKSUM: "bd91db55bd95eaa80687df28877e2df8c8858a0266e9c67331cfddba2735f25c"
-    GIT_LFS_256_CHECKSUM: "5c12db9728b53cba23e5f58f4a53d88cb2132e82fa1de0f8a79ce9d112e4d396"
-  needs:
+    GIT_LFS_256_CHECKSUM: "ca05b0b9bd39d99665045776a5d0d5c7bfa2605a6118c2f489bfd40c2c3e4f2c"
+  dependencies:
   - 'helper images'
   - 'binaries windows/386 windows/amd64'
   before_script:
@@ -50,7 +52,7 @@
 .release_s3:
   extends:
   - .release
-  needs:
+  dependencies:
   - 'helper images'
   - 'test coverage report'
   - 'binaries darwin/amd64'
@@ -72,17 +74,18 @@
     fi
 
 .release_packagecloud:
-  needs:
-  - 'package-deb'
-  - 'package-rpm'
   extends:
   - .release
+  dependencies:
+  - 'package-deb'
+  - 'package-rpm'
   script:
   - make release_packagecloud
 
 .release_development:
   only:
   - merge_requests@gitlab-org/gitlab-runner
+  - merge_requests@gitlab-org/security/gitlab-runner
   except:
     variables:
     - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
@@ -95,6 +98,7 @@
 .release_stable:
   only:
   - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-runner
+  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/security/gitlab-runner
 
 development S3:
   extends:
@@ -103,6 +107,8 @@ development S3:
   environment:
     name: development/s3/${CI_COMMIT_REF_NAME}
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
+  only:
+    - merge_requests@gitlab-org/gitlab-runner
 
 development docker images:
   extends:
@@ -114,21 +120,21 @@ development docker images:
 
 development servercore1809 helper docker image:
   extends:
-  - .build_windows_docker_images
-  - .windows1809
   - .release_development
+  - .windows1809
+  - .release_windows_docker_images
 
 development servercore1903 helper docker image:
   extends:
-  - .build_windows_docker_images
-  - .windows1903
   - .release_development
+  - .windows1903
+  - .release_windows_docker_images
 
 development servercore1909 helper docker image:
   extends:
-  - .build_windows_docker_images
-  - .windows1909
   - .release_development
+  - .windows1909
+  - .release_windows_docker_images
 
 bleeding edge S3:
   extends:
@@ -156,9 +162,9 @@ bleeding edge docker images:
 
 bleeding edge servercore1809 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1809
   - .release_bleeding_edge
+  - .windows1809
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -167,9 +173,9 @@ bleeding edge servercore1809 docker images:
 
 bleeding edge servercore1903 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1903
   - .release_bleeding_edge
+  - .windows1903
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -178,9 +184,9 @@ bleeding edge servercore1903 docker images:
 
 bleeding edge servercore1909 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1909
   - .release_bleeding_edge
+  - .windows1909
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -213,9 +219,9 @@ stable docker images:
 
 stable servercore1809 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1809
   - .release_stable
+  - .windows1809
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -224,20 +230,20 @@ stable servercore1809 docker images:
 
 stable servercore1903 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1903
   - .release_stable
+  - .windows1903
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
     name: stable/docker_images/windows1903
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-stable servercore1908 docker images:
+stable servercore1909 docker images:
   extends:
-  - .build_windows_docker_images
-  - .windows1909
   - .release_stable
+  - .windows1909
+  - .release_windows_docker_images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
   environment:
@@ -250,7 +256,7 @@ static QA:
   - .except_docs
   - .no_cache
   stage: release
-  image: alpine:3.7
+  image: alpine:3.12.0
   needs:
   - code_quality
   script: |

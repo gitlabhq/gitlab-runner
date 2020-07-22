@@ -12,7 +12,8 @@ import (
 func TestVariablesJSON(t *testing.T) {
 	var x JobVariable
 	data := []byte(
-		`{"key": "FOO", "value": "bar", "public": true, "internal": true, "file": true, "masked": true, "raw": true}`)
+		`{"key": "FOO", "value": "bar", "public": true, "internal": true, "file": true, "masked": true, "raw": true}`,
+	)
 
 	err := json.Unmarshal(data, &x)
 	assert.NoError(t, err)

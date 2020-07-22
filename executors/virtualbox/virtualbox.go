@@ -231,10 +231,12 @@ func (s *executor) getVMName() string {
 		return s.Config.VirtualBox.BaseName + "-" + s.Build.ProjectUniqueName()
 	}
 
-	return fmt.Sprintf("%s-runner-%s-concurrent-%d",
+	return fmt.Sprintf(
+		"%s-runner-%s-concurrent-%d",
 		s.Config.VirtualBox.BaseName,
 		s.Build.Runner.ShortDescription(),
-		s.Build.RunnerID)
+		s.Build.RunnerID,
+	)
 }
 
 func (s *executor) tryRestoreFromSnapshot() {

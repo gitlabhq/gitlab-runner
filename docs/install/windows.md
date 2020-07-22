@@ -59,7 +59,7 @@ Logs are stored in Windows Event Log.
 
 ## Update
 
-1. Stop the service (you need an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/getting-started/starting-windows-powershell?view=powershell-6#with-administrative-privileges-run-as-administrator) as before):
+1. Stop the service (you need an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator) as before):
 
    ```powershell
    cd C:\GitLab-Runner
@@ -78,7 +78,7 @@ Logs are stored in Windows Event Log.
 
 ## Uninstall
 
-From an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/getting-started/starting-windows-powershell?view=powershell-6#with-administrative-privileges-run-as-administrator):
+From an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
 
 ```powershell
 cd C:\GitLab-Runner

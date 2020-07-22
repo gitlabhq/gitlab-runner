@@ -103,19 +103,19 @@ and can cause fetches to hang. You can remove the line from the system `gitconfi
 with:
 
 ```shell
-git config --system --unset credentials.helper
+git config --system --unset credential.helper
 ```
 
-Alternatively, you can just disable `credentials.helper` for the GitLab user:
+Alternatively, you can just disable `credential.helper` for the GitLab user:
 
 ```shell
-git config --global --add credentials.helper ''
+git config --global --add credential.helper ''
 ```
 
-You can check the status of the `credentials.helper` with:
+You can check the status of the `credential.helper` with:
 
 ```shell
-git config credentials.helpers
+git config credential.helper
 ```
 
 ## Manual update

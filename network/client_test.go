@@ -28,10 +28,12 @@ import (
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
-	logrus.Debugln(r.Method, r.URL.String(),
+	logrus.Debugln(
+		r.Method, r.URL.String(),
 		"Content-Type:", r.Header.Get("Content-Type"),
 		"Accept:", r.Header.Get("Accept"),
-		"Body:", string(body))
+		"Body:", string(body),
+	)
 
 	switch r.URL.Path {
 	case "/api/v4/test/ok":
@@ -68,7 +70,7 @@ func writeTLSCertificate(s *httptest.Server, file string) error {
 	return ioutil.WriteFile(file, encoded, 0600)
 }
 
-func writeTLSKeyPair(s *httptest.Server, certFile string, keyFile string) error {
+func writeTLSKeyPair(s *httptest.Server, certFile, keyFile string) error {
 	c := s.TLS.Certificates[0]
 	if len(c.Certificate) == 0 || c.Certificate[0] == nil {
 		return errors.New("no predefined certificate")
@@ -301,9 +303,11 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 	err = writeTLSCertificate(s, filepath.Join(tempDir, hostname+".crt"))
 	assert.NoError(t, err)
 
-	err = writeTLSKeyPair(s,
+	err = writeTLSKeyPair(
+		s,
 		filepath.Join(tempDir, hostname+".auth.crt"),
-		filepath.Join(tempDir, hostname+".auth.key"))
+		filepath.Join(tempDir, hostname+".auth.key"),
+	)
 	assert.NoError(t, err)
 
 	c, _ := newClient(&RunnerCredentials{

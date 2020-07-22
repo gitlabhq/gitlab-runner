@@ -64,11 +64,10 @@ function Get-Tag
 
 function Build-Image($tag)
 {
-    $components = ${Env:WINDOWS_VERSION}.Split('_')
     $windowsFlavor = $env:WINDOWS_VERSION.Substring(0, $env:WINDOWS_VERSION.length -4)
     $windowsVersion = $env:WINDOWS_VERSION.Substring($env:WINDOWS_VERSION.length -4)
 
-    Write-Information "Build image for x86_64_${windowsFlavor}${windowsVersion}"
+    Write-Information "Build image for x86_64_${env:WINDOWS_VERSION}"
 
     $dockerFile = "${imagesBasePath}_${windowsFlavor}"
     $context = "dockerfiles\runner-helper"

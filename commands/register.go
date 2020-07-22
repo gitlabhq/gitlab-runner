@@ -196,7 +196,8 @@ func (s *RegisterCommand) askBasicDocker(exampleHelperImage string) {
 
 	s.Docker.Image = s.ask(
 		"docker-image",
-		fmt.Sprintf("Please enter the default Docker image (e.g. %s):", exampleHelperImage))
+		fmt.Sprintf("Please enter the default Docker image (e.g. %s):", exampleHelperImage),
+	)
 }
 
 func (s *RegisterCommand) askParallels() {
@@ -239,34 +240,35 @@ func (s *RegisterCommand) askRunner() {
 		if !s.network.VerifyRunner(s.RunnerCredentials) {
 			logrus.Panicln("Failed to verify this runner. Perhaps you are having network problems")
 		}
-	} else {
-		// we store registration token as token, since we pass that to RunnerCredentials
-		s.Token = s.ask("registration-token", "Please enter the gitlab-ci token for this runner:")
-		s.Name = s.ask("name", "Please enter the gitlab-ci description for this runner:")
-		s.TagList = s.ask("tag-list", "Please enter the gitlab-ci tags for this runner (comma separated):", true)
-
-		if s.TagList == "" {
-			s.RunUntagged = true
-		}
-
-		parameters := common.RegisterRunnerParameters{
-			Description:    s.Name,
-			Tags:           s.TagList,
-			Locked:         s.Locked,
-			AccessLevel:    s.AccessLevel,
-			RunUntagged:    s.RunUntagged,
-			MaximumTimeout: s.MaximumTimeout,
-			Active:         !s.Paused,
-		}
-
-		result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
-		if result == nil {
-			logrus.Panicln("Failed to register this runner. Perhaps you are having network problems")
-		}
-
-		s.Token = result.Token
-		s.registered = true
+		return
 	}
+
+	// we store registration token as token, since we pass that to RunnerCredentials
+	s.Token = s.ask("registration-token", "Please enter the gitlab-ci token for this runner:")
+	s.Name = s.ask("name", "Please enter the gitlab-ci description for this runner:")
+	s.TagList = s.ask("tag-list", "Please enter the gitlab-ci tags for this runner (comma separated):", true)
+
+	if s.TagList == "" {
+		s.RunUntagged = true
+	}
+
+	parameters := common.RegisterRunnerParameters{
+		Description:    s.Name,
+		Tags:           s.TagList,
+		Locked:         s.Locked,
+		AccessLevel:    s.AccessLevel,
+		RunUntagged:    s.RunUntagged,
+		MaximumTimeout: s.MaximumTimeout,
+		Active:         !s.Paused,
+	}
+
+	result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
+	if result == nil {
+		logrus.Panicln("Failed to register this runner. Perhaps you are having network problems")
+	}
+
+	s.Token = result.Token
+	s.registered = true
 }
 
 //nolint:funlen
@@ -337,6 +339,8 @@ func (s *RegisterCommand) askExecutorOptions() {
 		},
 		"shell": func() {
 			if runtime.GOOS == osTypeWindows && s.RunnerConfig.Shell == "" {
+				// TODO: Replace with `pwsh` in 14.0.
+				//  For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26419
 				s.Shell = "powershell"
 			}
 		},

@@ -46,13 +46,36 @@ code navigation:
   extends:
   - .coverage_job
   allow_failure: true
-  needs: []
+  needs:
+  - prepare done
   script:
-    - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
-    - lsif-go
+  - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
+  - lsif-go
   artifacts:
     reports:
       lsif: dump.lsif
+
+check race panic test failures:
+  extends:
+  - .merge_request_pipelines
+  - .except_docs
+  stage: coverage
+  needs:
+  - unit test with race
+  script:
+  - ./scripts/check_panic_test_failures
+  when: always
+
+check windows 1809 panic test failures:
+  extends:
+  - .merge_request_pipelines
+  - .except_docs
+  stage: coverage
+  needs:
+  - windows 1809 tests
+  script:
+  - ./scripts/check_panic_test_failures
+  when: always
 
 .check windows test failures:
   extends:
@@ -78,18 +101,14 @@ check windows 1903 test failures:
   extends:
   - .check windows test failures
   - .windows1903_variables
+  - .runner_master
   needs:
   - windows 1903 tests
-  only:
-    refs:
-    - master@gitlab-org/gitlab-runner
 
 check windows 1909 test failures:
   extends:
   - .check windows test failures
   - .windows1909_variables
+  - .runner_master
   needs:
   - windows 1909 tests
-  only:
-    refs:
-    - master@gitlab-org/gitlab-runner

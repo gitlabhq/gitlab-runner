@@ -1,14 +1,16 @@
-FROM alpine:3.10
+FROM alpine:3.12.0
 
 ARG TARGETPLATFORM
 
 RUN adduser -D -S -h /home/gitlab-runner gitlab-runner
 
+# hadolint ignore=DL3018
 RUN apk add --no-cache \
     bash \
     ca-certificates \
     git \
-    tzdata
+    tzdata \
+    openssh-client
 
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
@@ -18,6 +20,7 @@ COPY gitlab-runner-linux-* /usr/bin/
 COPY checksums-* install-deps install-gitlab-runner /tmp/
 
 # Install GNU wget for "-nv" flag support
+# hadolint ignore=DL3018
 RUN apk add --no-cache --virtual .fetch-deps wget && \
     /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}" "${GIT_LFS_VERSION}" && \
     apk del .fetch-deps

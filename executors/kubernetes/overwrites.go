@@ -74,7 +74,8 @@ type overwrites struct {
 func createOverwrites(
 	config *common.KubernetesConfig,
 	variables common.JobVariables,
-	logger common.BuildLogger) (*overwrites, error) {
+	logger common.BuildLogger,
+) (*overwrites, error) {
 	var err error
 	o := &overwrites{}
 
@@ -86,7 +87,8 @@ func createOverwrites(
 		config.Namespace,
 		config.NamespaceOverwriteAllowed,
 		namespaceOverwrite,
-		logger)
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +99,8 @@ func createOverwrites(
 		config.ServiceAccount,
 		config.ServiceAccountOverwriteAllowed,
 		serviceAccountOverwrite,
-		logger)
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +111,8 @@ func createOverwrites(
 		config.BearerToken,
 		config.BearerTokenOverwriteAllowed,
 		bearerTokenOverwrite,
-		logger)
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +123,8 @@ func createOverwrites(
 		config.PodAnnotationsOverwriteAllowed,
 		variables,
 		PodAnnotationsOverwriteVariablePrefix,
-		logger)
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}

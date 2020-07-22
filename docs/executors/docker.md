@@ -319,7 +319,7 @@ Look for the `[runners.docker]` section:
 ```
 
 NOTE: **Note:**
-The example above uses the [array of tables syntax](https://github.com/toml-lang/toml#user-content-array-of-tables).
+The example above uses the [array of tables syntax](https://toml.io/en/v0.4.0#array-of-tables).
 
 The image and services defined this way will be added to all builds run by
 that Runner, so even if you don't define an `image` inside `.gitlab-ci.yml`,

@@ -141,7 +141,7 @@ Example:
 
 ```toml
 [session_server]
-  listen_address = "0.0.0.0:8093" #  listen on all available interfaces on port 8093
+  listen_address = "[::]:8093" #  listen on all available interfaces on port 8093
   advertise_address = "runner-host-name.tld:8093"
   session_timeout = 1800
 ```
@@ -228,7 +228,8 @@ There are a couple of available shells that can be run on different platforms.
 | ----- | ----------- |
 | `bash`        | generate Bash (Bourne-shell) script. All commands executed in Bash context (default for all Unix systems) |
 | `sh`          | generate Sh (Bourne-shell) script. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `powershell`  | generate Windows PowerShell script. All commands are executed in PowerShell context (default for Windows) |
+| `powershell`  | generate PowerShell script. All commands are executed in Windows PowerShell Desktop context (default for Windows) |
+| `pwsh`        | generate PowerShell script. All commands are executed in PowerShell Core context |
 
 ## The `[runners.docker]` section
 
@@ -861,6 +862,19 @@ With that configuration, GitLab Runner will instruct the executor to use the ima
 which is based on its compilation data. After updating the Runner to a new version, this will ensure that the
 Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
 before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
+
+In GitLab Runner 13.2 and later, the helper image is tagged by
+`$CI_RUNNER_VERSION` in addition to `$CI_RUNNER_REVISION`. Both tags are
+valid and point to the same image.
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
+```
 
 ## The `[runners.custom_build_dir]` section
 

@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+set -eEo pipefail
+
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+
+# shellcheck source=ci/docker_buildx_commands
+source "${SCRIPTPATH}/docker_buildx_commands"
+# shellcheck source=ci/.colors
+source "${SCRIPTPATH}/.colors"
+
+experimental=$(_docker_experimental info -f '{{json .ExperimentalBuild}}')
+if [ "${experimental}" = 'false' ]; then
+    echo -e "${RED}Docker experimental mode needs to be enabled for multi-platform build support. Aborting."
+    echo -e "See https://github.com/docker/cli/blob/master/experimental/README.md#use-docker-experimental for more information.${RST}"
+    exit 1
+fi
+
+TARGET_ARCH=$1
+TARGET_FILE=$2
+
+if [ -z "${TARGET_ARCH}" ] || [ -z "${TARGET_FILE}" ] ; then
+    echo -e "${RED}Missing required arguments. Usage: build_helper_docker TARGET_ARCH TARGET_FILE${RST}"
+    exit 1
+fi
+
+REVISION=${REVISION:-}
+if [[ -z "${REVISION}" ]]; then
+    REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
+fi
+
+case "${TARGET_ARCH}" in
+    "x86_64")
+        platform_arch='amd64'
+        ;;
+    *)
+        platform_arch="${TARGET_ARCH}"
+        ;;
+esac;
+
+binary_file="out/binaries/gitlab-runner-helper/gitlab-runner-helper.${TARGET_ARCH}"
+
+if [ ! -f "$binary_file" ]; then
+    echo -e "${RED}Missing binary file. You probably need to run 'make helper-bin'.${RST}"
+    exit 1
+fi
+
+cp "$binary_file" dockerfiles/runner-helper/gitlab-runner-helper
+chmod +x dockerfiles/runner-helper/gitlab-runner-helper
+
+os=$(_docker version -f '{{.Server.Os}}')
+platform="${os}/${platform_arch}"
+
+echo -e "Building helper image for: ${GRN}${platform}${RST}"
+
+trap cleanup_docker_context_trap ERR SIGINT SIGTERM
+setup_docker_context
+
+_docker_buildx build \
+    --platform "${platform}" \
+    --no-cache \
+    --output "type=tar,dest=$TARGET_FILE" \
+    --tag "gitlab/gitlab-runner-helper:$TARGET_ARCH-$REVISION" \
+    dockerfiles/runner-helper
+
+trap - ERR SIGINT SIGTERM
+cleanup_docker_context

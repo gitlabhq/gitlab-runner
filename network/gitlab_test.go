@@ -932,8 +932,10 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 			defer server.Close()
 
 			traceContent = append(traceContent, update.traceUpdate...)
-			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-				traceContent[sentTrace:], sentTrace)
+			result := client.PatchTrace(
+				config, &JobCredentials{ID: 1, Token: patchToken},
+				traceContent[sentTrace:], sentTrace,
+			)
 			assert.Equal(t, update.expectedResult, result.State)
 
 			sentTrace = result.SentOffset
@@ -1014,8 +1016,7 @@ func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken},
-		patchTraceContent, 0)
+	client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
 }
 
 func TestPatchTraceUpdateIntervalHeaderHandling(t *testing.T) {

@@ -25,10 +25,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
 func TestInteractiveTerminal(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}

@@ -296,7 +296,11 @@ func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintf(
 			w,
 			"url=%s state=%s stage=%s executor_stage=%s duration=%s\n",
-			url, job.CurrentState, job.CurrentStage, job.CurrentExecutorStage(), job.Duration(),
+			url,
+			job.CurrentState,
+			job.CurrentStage,
+			job.CurrentExecutorStage(),
+			job.Duration(),
 		)
 	}
 }

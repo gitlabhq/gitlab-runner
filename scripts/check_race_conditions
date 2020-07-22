@@ -1,20 +1,14 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # This is the number of race conditions detected on master.
 # This number is not allowed to increase, and it has to be lowered when we
 # fix existing race conditions
 max=24
 
-tmpFile=$(mktemp)
-
 find .testoutput/
 
-grep -E "^WARNING: DATA RACE$" .testoutput/*.race.output.txt > ${tmpFile}
-
-cnt=$(cat ${tmpFile} | wc -l)
+cnt=$(cat .testoutput/*.race.output.txt | grep -E "^WARNING: DATA RACE$" -c)
 echo "Found ${cnt} race conditions. Maximum allowed value is ${max}"
-
-rm "$tmpFile" 2>/dev/null || true
 
 if [ "${cnt}" -gt "${max}" ]; then
   echo "Race conditions count increased"

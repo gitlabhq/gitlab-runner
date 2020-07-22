@@ -3,6 +3,7 @@ FROM ubuntu:18.04
 ARG TARGETPLATFORM
 
 ENV DEBIAN_FRONTEND=noninteractive
+# hadolint ignore=DL3008
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
         apt-transport-https \
@@ -11,6 +12,7 @@ RUN apt-get update -y && \
         git \
         wget \
         tzdata \
+        openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 ARG DOCKER_MACHINE_VERSION

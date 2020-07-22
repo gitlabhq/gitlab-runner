@@ -1,6 +1,7 @@
 FROM golang:1.13.8
 
 # Install required dependencies
+# hadolint ignore=DL3008,DL3015
 RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
                         ruby ruby-dev python-pip \
@@ -25,6 +26,16 @@ RUN wget -q https://download.docker.com/linux/static/stable/x86_64/docker-${DOCK
     chmod +x /usr/bin/docker* && \
     rm -rf /tmp/*
 
+ARG PWSH_VERSION
+# Install Powershell Core
+RUN wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb && \
+    dpkg -i packages-microsoft-prod.deb && \
+    rm packages-microsoft-prod.deb && \
+    apt-get update && \
+    apt-get install -y powershell=${PWSH_VERSION}.debian.10 && \
+    rm -rf /var/lib/apt/lists/* && \
+    pwsh --version
+
 ARG BUILDX_VERSION
 
 # Install docker buildx plugin
@@ -37,6 +48,12 @@ ARG GIT_LFS_256_CHECKSUM
 
 COPY dockerfiles/ci/install_git_lfs /tmp/
 RUN /tmp/install_git_lfs
+
+ARG KUBECTL_VERSION
+
+# Install kubectl
+RUN wget -q https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl && \
+    chmod +x /usr/local/bin/kubectl
 
 COPY Makefile* /tmp/
 WORKDIR /tmp

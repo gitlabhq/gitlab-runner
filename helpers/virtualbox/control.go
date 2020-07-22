@@ -201,8 +201,8 @@ func RevertToSnapshot(vmName string) error {
 
 func matchSnapshotName(snapshotName string, snapshotList string) bool {
 	snapshotRe := regexp.MustCompile(
-		fmt.Sprintf(`(?m)^Snapshot(Name|UUID)[^=]*="(%s)"\r?$`,
-			regexp.QuoteMeta(snapshotName)))
+		fmt.Sprintf(`(?m)^Snapshot(Name|UUID)[^=]*="(%s)"\r?$`, regexp.QuoteMeta(snapshotName)),
+	)
 	snapshot := snapshotRe.FindStringSubmatch(snapshotList)
 	return snapshot != nil
 }

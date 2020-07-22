@@ -53,6 +53,5 @@ func TestTraceLimit(t *testing.T) {
 	content, err := buffer.Bytes(0, 1000)
 	require.NoError(t, err)
 
-	assert.Equal(t, "This is the\n\x1b[31;1mJob's log exceeded limit of 10 bytes.\x1b[0;m\n",
-		string(content))
+	assert.Equal(t, "This is the\n\x1b[31;1mJob's log exceeded limit of 10 bytes.\x1b[0;m\n", string(content))
 }

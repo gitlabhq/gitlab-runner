@@ -70,12 +70,14 @@ func (d *machinesData) writeDebugInformation() {
 		return
 	}
 	defer func() { _ = file.Close() }()
-	_, _ = fmt.Fprintln(file,
+	_, _ = fmt.Fprintln(
+		file,
 		"time", time.Now(),
 		"runner", d.Runner,
 		"acquired", d.Acquired,
 		"creating", d.Creating,
 		"idle", d.Idle,
 		"used", d.Used,
-		"removing", d.Removing)
+		"removing", d.Removing,
+	)
 }

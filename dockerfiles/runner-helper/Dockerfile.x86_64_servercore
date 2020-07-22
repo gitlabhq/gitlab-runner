@@ -21,18 +21,18 @@ COPY [".\\helpers\\checksum.ps1", ".\\"]
 RUN powershell -File .\checksum.ps1 -TargetFile git.zip -ExpectedHash ${Env:GIT_256_CHECKSUM}
 RUN powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:GIT_LFS_256_CHECKSUM}
 
-RUN Expand-Archive -Path git.zip -DestinationPath git
-RUN Expand-Archive -Path git-lfs.zip -DestinationPath git-lfs
+RUN New-Item -ItemType directory -Path C:\Temp
+RUN Expand-Archive -Path git.zip -DestinationPath C:\Temp\git
+RUN Expand-Archive -Path git-lfs.zip -DestinationPath C:\Temp\git-lfs
+COPY [".\\binaries\\gitlab-runner-helper.x86_64-windows.exe", "C:\\Temp\\gitlab-runner-helper\\gitlab-runner-helper.exe"]
 
 FROM ${BASE_IMAGE_TAG}
 
 USER ContainerAdministrator
 
-COPY --from=builder ["git", "C:\\Program Files\\git"]
-COPY --from=builder ["git-lfs", "C:\\Program Files\\git-lfs"]
-RUN setx PATH "%PATH%;C:\Program Files\git\cmd;C:\Program Files\git-lfs;C:\Program Files\gitlab-runner-helper" /M
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
-RUN git config --system core.longpaths true
-RUN git lfs install --skip-repo
-
-COPY [".\\binaries\\gitlab-runner-helper.x86_64-windows.exe", "C:\\Program Files\\gitlab-runner-helper\\gitlab-runner-helper.exe"]
+COPY --from=builder ["C:\\Temp", "C:\\Program Files\\"]
+RUN [Environment]::SetEnvironmentVariable('Path', $env:Path + ';C:\Program Files\git\cmd;C:\Program Files\git-lfs;C:\Program Files\gitlab-runner-helper', [EnvironmentVariableTarget]::Machine); `
+    Start-Process -FilePath "$env:ProgramFiles\git\cmd\git.exe" -ArgumentList "lfs","install","--skip-repo" -Wait; `
+    Start-Process -FilePath "$env:ProgramFiles\git\cmd\git.exe" -ArgumentList "config","--system","core.longpaths","true" -Wait

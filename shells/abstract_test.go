@@ -14,17 +14,15 @@ import (
 )
 
 func TestWriteGitSSLConfig(t *testing.T) {
-	gitlabURL := "https://example.com:3443"
-	runnerURL := gitlabURL + "/ci/"
+	expectedURL := "https://example.com:3443"
 
 	shell := AbstractShell{}
 	build := &common.Build{
-		Runner: &common.RunnerConfig{
-			RunnerCredentials: common.RunnerCredentials{
-				URL: runnerURL,
-			},
-		},
+		Runner: &common.RunnerConfig{},
 		JobResponse: common.JobResponse{
+			GitInfo: common.GitInfo{
+				RepoURL: "https://gitlab-ci-token:xxx@example.com:3443/project/repo.git",
+			},
 			TLSAuthCert: "TLS_CERT",
 			TLSAuthKey:  "TLS_KEY",
 			TLSCAChain:  "CA_CHAIN",
@@ -40,20 +38,23 @@ func TestWriteGitSSLConfig(t *testing.T) {
 		"Command",
 		"git",
 		"config",
-		fmt.Sprintf("http.%s.%s", gitlabURL, "sslCAInfo"),
-		"VariableCAFile").Once()
+		fmt.Sprintf("http.%s.%s", expectedURL, "sslCAInfo"),
+		"VariableCAFile",
+	).Once()
 	mockWriter.On(
 		"Command",
 		"git",
 		"config",
-		fmt.Sprintf("http.%s.%s", gitlabURL, "sslCert"),
-		"VariableCertFile").Once()
+		fmt.Sprintf("http.%s.%s", expectedURL, "sslCert"),
+		"VariableCertFile",
+	).Once()
 	mockWriter.On(
 		"Command",
 		"git",
 		"config",
-		fmt.Sprintf("http.%s.%s", gitlabURL, "sslKey"),
-		"VariableKeyFile").Once()
+		fmt.Sprintf("http.%s.%s", expectedURL, "sslKey"),
+		"VariableKeyFile",
+	).Once()
 
 	shell.writeGitSSLConfig(mockWriter, build, nil)
 
@@ -119,35 +120,45 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
 	mockWriter.On("Noticef", mock.Anything)
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
-		"--path", "default").Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--path", "default",
+	).Once()
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
-		"--path", "on-success").Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--path", "on-success",
+	).Once()
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
-		"--path", "always").Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--path", "always",
+	).Once()
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
 		"--path", "zip-archive",
 		"--artifact-format", "zip",
-		"--artifact-type", "archive").Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--artifact-type", "archive",
+	).Once()
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
 		"--path", "gzip-junit",
 		"--artifact-format", "gzip",
-		"--artifact-type", "junit").Once()
+		"--artifact-type", "junit",
+	).Once()
 	mockWriter.On("Else")
 	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
 	mockWriter.On("EndIf")
@@ -179,30 +190,38 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
 	mockWriter.On("Noticef", mock.Anything)
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
-		"--path", "on-failure").Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--path", "on-failure",
+	).Once()
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
-		"--path", "always").Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--path", "always",
+	).Once()
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
 		"--path", "zip-archive",
 		"--artifact-format", "zip",
-		"--artifact-type", "archive").Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+		"--artifact-type", "archive",
+	).Once()
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", gitlabURL,
 		"--token", "token",
 		"--id", "1000",
 		"--path", "gzip-junit",
 		"--artifact-format", "gzip",
-		"--artifact-type", "junit").Once()
+		"--artifact-type", "junit",
+	).Once()
 	mockWriter.On("Else")
 	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything)
 	mockWriter.On("EndIf")
@@ -246,14 +265,16 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	mockWriter.On("Cd", mock.Anything).Once()
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Once()
 	mockWriter.On("Noticef", mock.Anything).Once()
-	mockWriter.On("Command", "gitlab-runner-helper", "artifacts-uploader",
+	mockWriter.On(
+		"Command", "gitlab-runner-helper", "artifacts-uploader",
 		"--url", "https://gitlab.example.com",
 		"--token", "token",
 		"--id", "1001",
 		"--path", "include/**",
 		"--exclude", "include/exclude/*",
 		"--artifact-format", "zip",
-		"--artifact-type", "archive").Once()
+		"--artifact-type", "archive",
+	).Once()
 	mockWriter.On("Else").Once()
 	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
 	mockWriter.On("EndIf").Once()
@@ -369,6 +390,7 @@ func TestGitFetchFlags(t *testing.T) {
 			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
 			mockWriter.On("Command", "git", "init", dummyProjectDir, "--template", mock.Anything).Once()
 			mockWriter.On("Cd", mock.Anything)
+			mockWriter.On("Join", mock.Anything, mock.Anything).Return(mock.Anything).Once()
 			mockWriter.On("IfCmd", "git", "remote", "add", "origin", mock.Anything)
 			mockWriter.On("RmFile", mock.Anything)
 			mockWriter.On("Noticef", "Created fresh repository.").Once()
@@ -686,8 +708,13 @@ func TestSkipBuildStage(t *testing.T) {
 
 					// empty stages should always be skipped
 					err := shell.writeScript(&BashWriter{}, stage, info)
-					assert.True(t, errors.Is(err, common.ErrSkipBuildStage),
-						"expected err %T, but got %T", common.ErrSkipBuildStage, err)
+					assert.True(
+						t,
+						errors.Is(err, common.ErrSkipBuildStage),
+						"expected err %T, but got %T",
+						common.ErrSkipBuildStage,
+						err,
+					)
 
 					// stages with bare minimum requirements should not be skipped
 					build.JobResponse = tc.JobResponse

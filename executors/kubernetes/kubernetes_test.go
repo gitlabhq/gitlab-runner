@@ -247,7 +247,7 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "command terminated with exit code 1")
 }
 
@@ -326,7 +326,7 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 	defer timeoutTimer.Stop()
 
 	err = build.Run(&common.Config{}, trace)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.EqualError(t, err, "canceled")
 }
 
@@ -438,7 +438,8 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					mounts,
 					expected,
 					"Expected volumeMount definition for %s was not found",
-					expected.Name)
+					expected.Name,
+				)
 			}
 		})
 	}
@@ -633,7 +634,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	err = ex.prepareOverwrites(make(common.JobVariables, 0))
 	assert.NoError(t, err)
 
-	err = ex.setupBuildPod()
+	err = ex.setupBuildPod(nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error creating the proxy service")
 }
@@ -644,7 +645,8 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 	}
 
 	jobResponse, err := common.GetRemoteBuildResponse(
-		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo")
+		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+	)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -846,6 +848,10 @@ func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagNam
 func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
 		return
+	}
+
+	if os.Getenv("GITLAB_CI") == "true" {
+		t.Skip("Skipping inside of GitLab CI check https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26421")
 	}
 
 	config, err := getKubeClientConfig(new(common.KubernetesConfig), new(overwrites))
@@ -1848,6 +1854,7 @@ type setupBuildPodTestDef struct {
 	RunnerConfig             common.RunnerConfig
 	Variables                []common.JobVariable
 	Options                  *kubernetesOptions
+	InitContainers           []api.Container
 	PrepareFn                func(*testing.T, setupBuildPodTestDef, *executor)
 	VerifyFn                 func(*testing.T, setupBuildPodTestDef, *api.Pod)
 	VerifyExecutorFn         func(*testing.T, setupBuildPodTestDef, *executor)
@@ -2734,6 +2741,37 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.NoError(t, err)
 			},
 		},
+		"no init container defined": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			InitContainers: []api.Container{},
+			VerifyFn: func(t *testing.T, def setupBuildPodTestDef, pod *api.Pod) {
+				assert.Nil(t, pod.Spec.InitContainers)
+			},
+		},
+		"init container defined": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			InitContainers: []api.Container{
+				{
+					Name:  "a-init-container",
+					Image: "alpine",
+				},
+			},
+			VerifyFn: func(t *testing.T, def setupBuildPodTestDef, pod *api.Pod) {
+				require.Equal(t, def.InitContainers, pod.Spec.InitContainers)
+			},
+		},
 	}
 
 	for testName, test := range tests {
@@ -2788,7 +2826,7 @@ func TestSetupBuildPod(t *testing.T) {
 			err = ex.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err, "error preparing overwrites")
 
-			err = ex.setupBuildPod()
+			err = ex.setupBuildPod(test.InitContainers)
 			if test.VerifySetupBuildPodErrFn == nil {
 				assert.NoError(t, err, "error setting up build pod")
 				assert.True(t, rt.executed, "RoundTrip for kubernetes client should be executed")
@@ -3032,7 +3070,8 @@ func TestLimits(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("CPU=%s/Memory=%s", tc.CPU, tc.Memory), func(t *testing.T) {
 			res, err := limits(tc.CPU, tc.Memory)
-			assert.True(t,
+			assert.True(
+				t,
 				errors.Is(err, tc.ExpectedErr),
 				"expected err %T, but got %T",
 				tc.ExpectedErr,

@@ -11,7 +11,7 @@ type Volume struct {
 	BindPropagation string
 }
 
-func newVolume(source string, destination string, mode string, bindPropagation string) *Volume {
+func newVolume(source, destination string, mode string, bindPropagation string) *Volume {
 	return &Volume{
 		Source:          source,
 		Destination:     destination,

@@ -1,15 +1,17 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-5
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-7
   GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 19.03.5
   DOCKER_MACHINE_VERSION: "0.16.2"
   BUILDX_VERSION: 0.3.1
+  KUBECTL_VERSION: 1.18.0
+  PWSH_VERSION: 7.0.1-1
   DUMB_INIT_VERSION: "1.2.2"
   GIT_VERSION: "2.21.0"
   GIT_VERSION_BUILD: "1"
-  GIT_LFS_VERSION: "2.7.1"
+  GIT_LFS_VERSION: "2.11.0"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
 
@@ -38,8 +40,17 @@ before_script:
     refs:
     - merge_requests
     - master@gitlab-org/gitlab-runner
+    - master@gitlab-org/security/gitlab-runner
     - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/gitlab-runner
+    - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/security/gitlab-runner
     - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
+    - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/security/gitlab-runner
+
+.runner_master:
+  only:
+    refs:
+      - master@gitlab-org/gitlab-runner
+      - master@gitlab-org/security/gitlab-runner
 
 .no_cache:
   cache: {}
@@ -66,6 +77,40 @@ before_script:
     DOCKER_CERT_PATH: "/certs/client"
   tags:
   - gitlab-org-docker
+
+.docker_qemu-before_script: &docker_qemu-before_script
+  - docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
+
+.docker_qemu:
+  before_script:
+  - *docker_qemu-before_script
+
+.go-cache:
+  variables:
+    GOCACHE: $CI_PROJECT_DIR/.gocache-$CI_COMMIT_REF_PROTECTED
+  before_script:
+  - mkdir -p $GOCACHE
+  cache:
+    paths:
+    - $CI_PROJECT_DIR/.gocache-false/
+    key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
+
+.go-cache-docker-qemu:
+  extends:
+  - .go-cache
+  before_script:
+  - *docker_qemu-before_script
+  - mkdir -p $GOCACHE
+
+.go-cache-windows:
+  variables:
+    GOCACHE: $CI_PROJECT_DIR\.gocache-$CI_COMMIT_REF_PROTECTED
+  before_script:
+  - New-Item -Path $Env:GOCACHE -Type Directory -Force
+  cache:
+    paths:
+    - $CI_PROJECT_DIR\.gocache-false\
+    key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
 
 .windows_base:
   variables:
@@ -111,3 +156,15 @@ before_script:
   tags:
   - windows
   - windows-1909
+
+# .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
+# without explicitly waiting for the completion of the n-1 stage
+.stage_done:
+  extends:
+    - .merge_request_pipelines
+    - .no_cache_and_dependencies
+  image: alpine:latest
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - exit 0

@@ -14,9 +14,10 @@
 # Tar files that we want to generate from the Docker file system, this is
 # generally used for linux based Dockerfiles.
 BASE_TAR_PATH := out/helper-images/prebuilt
-TAR += ${BASE_TAR_PATH}-x86_64.tar.xz
-TAR += ${BASE_TAR_PATH}-arm.tar.xz
-TAR += ${BASE_TAR_PATH}-arm64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-x86_64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-arm.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-arm64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-s390x.tar.xz
 
 # Binaries that we support for the helper image. We are using the following
 # pattern match:
@@ -28,6 +29,7 @@ BINARIES := ${BASE_BINARY_PATH}.x86_64-windows
 BINARIES += ${BASE_BINARY_PATH}.x86_64
 BINARIES += ${BASE_BINARY_PATH}.arm
 BINARIES += ${BASE_BINARY_PATH}.arm64
+BINARIES += ${BASE_BINARY_PATH}.s390x
 
 # Define variables with the architecture for each matching binary. We are using
 # the following pattern match GO_ARCH_{{arch}}-{{os}}, these should match up
@@ -35,30 +37,35 @@ BINARIES += ${BASE_BINARY_PATH}.arm64
 GO_ARCH_x86_64 = linux/amd64
 GO_ARCH_arm = linux/arm
 GO_ARCH_arm64 = linux/arm64
+GO_ARCH_s390x = linux/s390x
 GO_ARCH_x86_64-windows = windows/amd64
 
 # Go files that are used to create the helper binary.
 HELPER_GO_FILES ?= $(shell find common network vendor -name '*.go')
 
-.PHONY: helper-build helper-docker
+# Build the Runner Helper binaries for the host platform.
+.PHONY: helper-bin-host
+helper-bin-host: ${BASE_BINARY_PATH}.$(shell uname -m)
 
-# PHONY command to help build the binaries.
-helper-build: $(BINARIES)
+# Build the Runner Helper binaries for all supported platforms.
+.PHONY: helper-bin
+helper-bin: $(BINARIES)
 
-out/binaries/gitlab-runner-helper/gitlab-runner-helper.%: $(HELPER_GO_FILES) $(GOX)
-	gox -osarch=$(GO_ARCH_$*) -ldflags "$(GO_LDFLAGS)" -output=$@ $(PKG)/apps/gitlab-runner-helper
+${BASE_BINARY_PATH}.%: $(HELPER_GO_FILES) $(GOX)
+	$(GOX) -osarch=$(GO_ARCH_$*) -ldflags "$(GO_LDFLAGS)" -output=$@ $(PKG)/apps/gitlab-runner-helper
 
-# PHONY command to help build the tar files for linux.
-helper-docker: $(TAR)
+# Build the Runner Helper tar files for host platform.
+.PHONY: helper-dockerarchive-host
+helper-dockerarchive-host: ${BASE_TAR_PATH}-$(shell uname -m).tar.xz
+	docker import ${BASE_TAR_PATH}-$(shell uname -m).tar.xz gitlab/gitlab-runner-helper:$(shell uname -m)-$(REVISION)
 
-out/helper-images/prebuilt-%.tar.xz: out/helper-images/prebuilt-%.tar
+# Build the Runner Helper tar files for all supported platforms.
+.PHONY: helper-dockerarchive
+helper-dockerarchive: $(TAR_XZ)
+
+${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz -f -9 $<
 
-out/helper-images/prebuilt-%.tar: dockerfiles/runner-helper
+${BASE_TAR_PATH}-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@cp out/binaries/gitlab-runner-helper/gitlab-runner-helper* dockerfiles/runner-helper/binaries/
-	docker build -t gitlab/gitlab-runner-helper:$*-$(REVISION) -f dockerfiles/runner-helper/Dockerfile.$* dockerfiles/runner-helper
-	-docker rm -f gitlab-runner-prebuilt-$*-$(REVISION)
-	docker create --name=gitlab-runner-prebuilt-$*-$(REVISION) gitlab/gitlab-runner-helper:$*-$(REVISION) /bin/sh
-	docker export -o $@ gitlab-runner-prebuilt-$*-$(REVISION)
-	docker rm -f gitlab-runner-prebuilt-$*-$(REVISION)
+	@./ci/build_helper_docker $* $@

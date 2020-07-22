@@ -34,6 +34,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 )
 
 func TestMain(m *testing.M) {
@@ -181,6 +182,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Architecture:    e.info.Architecture,
 		OperatingSystem: e.info.OperatingSystem,
 	})
+	require.NoError(t, err)
+
+	err = e.createLabeler()
 	require.NoError(t, err)
 
 	e.BuildShell = &common.ShellConfiguration{
@@ -1181,6 +1185,7 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 }
 
 func TestDockerWatchOn_1_12_4(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
@@ -1218,11 +1223,15 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	err = e.createVolumesManager()
 	require.NoError(t, err)
 
+	err = e.createLabeler()
+	require.NoError(t, err)
+
 	container, err := e.createContainer(
 		"build",
 		common.Image{Name: common.TestAlpineImage},
 		[]string{"/bin/sh"},
-		[]string{})
+		[]string{},
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, container)
 
@@ -1303,6 +1312,9 @@ func prepareTestDockerConfiguration(
 	})
 	require.NoError(t, err)
 
+	err = e.createLabeler()
+	require.NoError(t, err)
+
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
@@ -1318,7 +1330,8 @@ func prepareTestDockerConfiguration(
 func testDockerConfigurationWithJobContainer(
 	t *testing.T,
 	dockerConfig *common.DockerConfig,
-	cce containerConfigExpectations) {
+	cce containerConfigExpectations,
+) {
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
 	defer c.AssertExpectations(t)
 

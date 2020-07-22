@@ -26,6 +26,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Masking = true
 	features.RawVariables = true
 	features.ArtifactsExclude = true
+	features.MultiBuildSteps = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
@@ -212,13 +213,14 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 }
 
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
-	repoURL, err := url.Parse(build.Runner.URL)
+	repoURL, err := url.Parse(build.GetRemoteURL())
 	if err != nil {
 		w.Warningf("git SSL config: Can't parse repository URL. %s", err)
 		return
 	}
 
 	repoURL.Path = ""
+	repoURL.User = nil
 	host := repoURL.String()
 	variables := build.GetCITLSVariables()
 	args := append([]string{"config"}, where...)
@@ -315,7 +317,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	// initializing
 	templateDir := w.MkTmpDir("git-template")
-	templateFile := path.Join(templateDir, "config")
+	templateFile := w.Join(templateDir, "config")
 
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
 	if build.IsSharedEnv() {
