@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/imdario/mergo"
@@ -197,6 +199,181 @@ func TestAccessLevelSetting(t *testing.T) {
 				return
 			}
 
+			assert.NoError(t, err)
+			assert.Contains(t, output, "Runner registered successfully.")
+		})
+	}
+}
+
+func TestAskRunnerOverrideDefaults(t *testing.T) {
+	basicValidation := func(s *RegisterCommand) bool {
+		return s.URL == "http://gitlab.example.com/" &&
+			s.Token == "test-runner-token" &&
+			s.RunnerSettings.Executor == "docker" &&
+			s.RunnerSettings.Docker.Image == "busybox:latest"
+	}
+
+	tests := map[string]struct {
+		answers        []string
+		arguments      []string
+		validate       func(s *RegisterCommand) bool
+		expectedParams func(common.RegisterRunnerParameters) bool
+	}{
+		"basic answers": {
+			answers: []string{
+				"http://gitlab.example.com/",
+				"test-registration-token",
+				"name",
+				"tag,list",
+				"docker",
+				"busybox:latest",
+			},
+			validate: basicValidation,
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "name",
+					Tags:        "tag,list",
+					Locked:      true,
+					Active:      true,
+				}
+			},
+		},
+		"basic arguments, accepting provided": {
+			answers: []string{"", "", "", "", "", ""},
+			arguments: []string{
+				"--url", "http://gitlab.example.com/",
+				"-r", "test-registration-token",
+				"--name", "name",
+				"--tag-list", "tag,list",
+				"--executor", "docker",
+				"--docker-image", "busybox:latest",
+				"--paused",
+				"--locked=false",
+			},
+			validate: basicValidation,
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "name",
+					Tags:        "tag,list",
+				}
+			},
+		},
+		"basic arguments override": {
+			answers: []string{"", "", "new-name", "", "", "nginx:latest"},
+			arguments: []string{
+				"--url", "http://gitlab.example.com/",
+				"-r", "test-registration-token",
+				"--name", "name",
+				"--tag-list", "tag,list",
+				"--executor", "docker",
+				"--docker-image", "ruby:2.6.6",
+				"--paused",
+				"--locked=false",
+			},
+			validate: func(s *RegisterCommand) bool {
+				return s.URL == "http://gitlab.example.com/" &&
+					s.Token == "test-runner-token" &&
+					s.RunnerSettings.Executor == "docker" &&
+					s.RunnerSettings.Docker.Image == "nginx:latest"
+			},
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "new-name",
+					Tags:        "tag,list",
+				}
+			},
+		},
+		"untagged implicit": {
+			answers: []string{
+				"http://gitlab.example.com/",
+				"test-registration-token",
+				"name",
+				"",
+				"docker",
+				"busybox:latest",
+			},
+			validate: basicValidation,
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "name",
+					RunUntagged: true,
+					Locked:      true,
+					Active:      true,
+				}
+			},
+		},
+		"untagged explicit": {
+			answers: []string{
+				"http://gitlab.example.com/",
+				"test-registration-token",
+				"name",
+				"",
+				"docker",
+				"busybox:latest",
+			},
+			arguments: []string{"--run-untagged"},
+			validate:  basicValidation,
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "name",
+					RunUntagged: true,
+					Locked:      true,
+					Active:      true,
+				}
+			},
+		},
+		"untagged explicit with tags provided": {
+			answers: []string{
+				"http://gitlab.example.com/",
+				"test-registration-token",
+				"name",
+				"tag,list",
+				"docker",
+				"busybox:latest",
+			},
+			arguments: []string{"--run-untagged"},
+			validate:  basicValidation,
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "name",
+					Tags:        "tag,list",
+					RunUntagged: true,
+					Locked:      true,
+					Active:      true,
+				}
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			network := new(common.MockNetwork)
+			defer network.AssertExpectations(t)
+
+			network.On("RegisterRunner", mock.Anything, mock.MatchedBy(tc.expectedParams)).
+				Return(&common.RegisterRunnerResponse{
+					Token: "test-runner-token",
+				}).
+				Once()
+
+			cmd := newRegisterCommand()
+			cmd.reader = bufio.NewReader(strings.NewReader(strings.Join(tc.answers, "\n") + "\n"))
+			cmd.network = network
+
+			app := cli.NewApp()
+			app.Commands = []cli.Command{
+				{
+					Name:   "register",
+					Action: cmd.Execute,
+					Flags:  clihelpers.GetFlagsFromStruct(cmd),
+				},
+			}
+
+			hook := test.NewGlobal()
+			err := app.Run(append([]string{"runner", "register"}, tc.arguments...))
+			output := getLogrusOutput(t, hook)
+
+			assert.True(t, tc.validate(cmd))
 			assert.NoError(t, err)
 			assert.Contains(t, output, "Runner registered successfully.")
 		})

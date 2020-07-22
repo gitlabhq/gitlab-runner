@@ -248,7 +248,9 @@ func (s *RegisterCommand) askRunner() {
 	s.Name = s.ask("name", "Please enter the gitlab-ci description for this runner:")
 	s.TagList = s.ask("tag-list", "Please enter the gitlab-ci tags for this runner (comma separated):", true)
 
-	s.RunUntagged = s.TagList == ""
+	if s.TagList == "" {
+		s.RunUntagged = true
+	}
 
 	parameters := common.RegisterRunnerParameters{
 		Description:    s.Name,
