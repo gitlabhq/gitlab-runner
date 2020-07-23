@@ -42,7 +42,7 @@ You can find information on the different installation methods below.
 
 - [Install as a Docker service](docker.md)
 - [Install on Kubernetes](kubernetes.md)
-- [Install on Openshift](openshift-runner.md)
+- [Install on OpenShift](openshift-runner.md)
 
 ## Autoscale
 
