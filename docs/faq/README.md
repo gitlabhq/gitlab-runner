@@ -174,6 +174,7 @@ Example of dotfiles that are known to cause failure:
 - `.rvmrc`
 
 SELinux can also be the culprit of this error, you can check if this is the case by taking a look at the SELinux audit log:
+
 ```shell
 sealert -a /var/log/audit/audit.log
 ```
