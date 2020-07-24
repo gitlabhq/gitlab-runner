@@ -13,17 +13,17 @@ You can install GitLab Runner on Red Hat OpenShift.
 1. In the left pane, click **Operators**, then **OperatorHub**.
 1. In the main pane, below **All Items**, search for the keyword `GitLab`.
 
-   ![GitLab Operator](openshift-runner1.png)
+   ![GitLab Operator](img/openshift_allitems_v13_3.png)
 
 1. To install, click the GitLab Operator.
 1. On the GitLab Operator summary page, click **Install**.
 1. On the Install Operator page, under **Installed Namespace**, select the desired namespace and click **Install**.
 
-   ![GitLab Operator Install Page](openshift-runner3.png)
+   ![GitLab Operator Install Page](img/openshift_installoperator_v13_3.png)
 
 On the Installed Operators page, when the GitLab Operator is ready, the status changes to **Succeeded**.
 
-![GitLab Operator Install Status](openshift-runner4.png)
+![GitLab Operator Install Status](img/openshift_success_v13_3.png)
 
 #### Install GitLab Runner
 
