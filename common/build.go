@@ -67,6 +67,7 @@ const (
 type BuildStage string
 
 const (
+	BuildStageResolveSecrets           BuildStage = "resolve_secrets"
 	BuildStagePrepareExecutor          BuildStage = "prepare_executor"
 	BuildStagePrepare                  BuildStage = "prepare_script"
 	BuildStageGetSources               BuildStage = "get_sources"
@@ -141,8 +142,10 @@ type Build struct {
 
 	Session *session.Session
 
-	logger       BuildLogger
-	allVariables JobVariables
+	logger BuildLogger
+
+	allVariables     JobVariables
+	secretsVariables JobVariables
 
 	createdAt time.Time
 
@@ -762,6 +765,11 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	defer func() { b.cleanupBuild(executor, trace, err) }()
 
+	err = b.resolveSecrets()
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
 
@@ -800,6 +808,37 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	}
 
 	return err
+}
+
+func (b *Build) resolveSecrets() error {
+	if b.Secrets == nil {
+		return nil
+	}
+
+	b.Secrets.expandVariables(b.GetAllVariables())
+
+	section := helpers.BuildSection{
+		Name:        string(BuildStageResolveSecrets),
+		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		Run: func() error {
+			resolver, err := getSecretsResolver(&b.logger)
+			if err != nil {
+				return fmt.Errorf("creating secrets resolver: %w", err)
+			}
+
+			variables, err := resolver.Resolve(b.Secrets)
+			if err != nil {
+				return fmt.Errorf("resolving secrets: %w", err)
+			}
+
+			b.secretsVariables = variables
+			b.refreshAllVariables()
+
+			return nil
+		},
+	}
+
+	return section.Execute(&b.logger)
 }
 
 func (b *Build) executeBuildSection(
@@ -973,6 +1012,7 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, b.Variables...)
 	variables = append(variables, b.GetSharedEnvVariable())
 	variables = append(variables, AppVersion.Variables()...)
+	variables = append(variables, b.secretsVariables...)
 
 	b.allVariables = variables.Expand()
 
