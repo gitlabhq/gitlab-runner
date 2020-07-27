@@ -114,7 +114,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
 
 ### Configuring executor Service Account
 
-You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--service-account` flag.
+You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--kubernetes-service-account` flag.
 
 ### Overwriting Kubernetes Namespace
 
