@@ -242,12 +242,23 @@ func TestGenerateObjectName(t *testing.T) {
 			shared:             false,
 			expectedObjectName: "runner/longtoke/project/10/key",
 		},
-		"key escapes project namespace": {
+		"path traversal but within base path": {
 			cache:              cache,
 			build:              cacheBuild,
-			key:                "../9/key",
-			expectedObjectName: "",
-			expectedError:      "computed cache path outside of project bucket. Please remove `../` from cache key",
+			key:                "../10/key",
+			expectedObjectName: "runner/longtoke/project/10/key",
+		},
+		"path traversal resolves to empty key": {
+			cache:         cache,
+			build:         cacheBuild,
+			key:           "../10",
+			expectedError: "computed cache path outside of project bucket. Please remove `../` from cache key",
+		},
+		"path traversal escapes project namespace": {
+			cache:         cache,
+			build:         cacheBuild,
+			key:           "../10-outside",
+			expectedError: "computed cache path outside of project bucket. Please remove `../` from cache key",
 		},
 	}
 

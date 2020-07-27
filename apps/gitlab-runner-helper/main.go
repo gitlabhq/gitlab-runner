@@ -2,7 +2,7 @@ package main
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -25,7 +25,7 @@ func main() {
 	}()
 
 	app := cli.NewApp()
-	app.Name = path.Base(os.Args[0])
+	app.Name = filepath.Base(os.Args[0])
 	app.Usage = "a GitLab Runner Helper"
 	app.Version = common.AppVersion.ShortLine()
 	cli.VersionPrinter = common.AppVersion.Printer

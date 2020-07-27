@@ -3,7 +3,7 @@ package helpers
 import (
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +16,7 @@ import (
 func newCacheInitTestApp() *cli.App {
 	cmd := &CacheInitCommand{}
 	app := cli.NewApp()
-	app.Name = path.Base(os.Args[0])
+	app.Name = filepath.Base(os.Args[0])
 	app.Commands = append(app.Commands, cli.Command{
 		Name:   "cache-init",
 		Action: cmd.Execute,
