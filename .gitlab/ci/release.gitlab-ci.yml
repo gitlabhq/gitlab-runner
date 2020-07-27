@@ -49,6 +49,14 @@
   - unset GPG_KEY
   - source ci/touch_make_dependencies
 
+.release:with-rules:
+  extends:
+  - .docs:rules:skip
+  stage: release
+  before_script:
+  - unset GPG_KEY
+  - source ci/touch_make_dependencies
+
 .release_s3:
   extends:
   - .release
@@ -65,13 +73,6 @@
   - source ci/touch_make_dependencies
   script:
   - make release_s3
-  - |
-    # publish release on gitlab.com
-    if [[ -n "${CI_COMMIT_TAG}" ]]; then
-      ./ci/release_gitlab
-    else
-      echo -e "\033[0;31m****** gitlab publishing disabled ******\033[0m"
-    fi
 
 .release_packagecloud:
   extends:
@@ -200,6 +201,17 @@ stable S3:
   environment:
     name: stable/s3
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
+
+stable gitlab release:
+  extends:
+  - .release:with-rules
+  script:
+  - ./ci/release_gitlab
+  rules:
+  - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_URL == "https://gitlab.com/gitlab-org/gitlab-runner"'
+    when: on_success
+  - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_URL == "https://gitlab.com/gitlab-org/security/gitlab-runner"'
+    when: manual
 
 stable packagecloud:
   extends:
