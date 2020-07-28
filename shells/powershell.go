@@ -129,7 +129,7 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 			psQuote(p.fromSlash(p.TemporaryPath)),
 		)
 		p.Linef(
-			"Set-Content %s -Value %s -Encoding UTF8 -Force",
+			"[System.IO.File]::WriteAllText(%s, %s)",
 			psQuote(variableFile),
 			psQuoteVariable(variable.Value),
 		)
