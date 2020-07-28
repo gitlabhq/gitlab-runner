@@ -1,5 +1,7 @@
 # Install GitLab Runner on OpenShift
 
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26640) in GitLab 13.3.
+
 You can install GitLab Runner on Red Hat OpenShift.
 
 ## Prerequisites
