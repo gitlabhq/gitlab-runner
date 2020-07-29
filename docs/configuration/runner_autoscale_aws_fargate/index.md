@@ -241,7 +241,7 @@ An Amazon ECS cluster is a grouping of ECS Container Instances.
 1. Go to [`https://console.aws.amazon.com/ecs/home#/clusters`](https://console.aws.amazon.com/ecs/home#/clusters).
 1. Click **Create Cluster**.
 1. Choose **Network only** type. Click **Next step**.
-1. Give it the name `test-fargate` (the same as in `fargate.toml`). We don't
+1. Give it the name `test-cluster` (the same as in `fargate.toml`). We don't
    need to specify anything else here.
 1. Click **Create**.
 1. Click **View cluster**. Note the region and account id parts from the `Cluster ARN` value.
