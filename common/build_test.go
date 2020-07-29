@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -53,6 +54,115 @@ func matchBuildStage(buildStage BuildStage) interface{} {
 
 func TestBuildRun(t *testing.T) {
 	runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error { return nil })
+}
+
+func TestBuildPanic(t *testing.T) {
+	panicFn := func(mock.Arguments) {
+		panic("panic message")
+	}
+
+	tests := map[string]struct {
+		setupMockExecutor func(*MockExecutor)
+	}{
+		"prepare": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Run(panicFn).Once()
+			},
+		},
+		"run": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Run(panicFn).Once()
+				executor.On("Cleanup").Once()
+			},
+		},
+		"cleanup": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Once()
+				executor.On("Cleanup").Run(panicFn).Once()
+			},
+		},
+		"shell": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Once()
+				executor.On("Shell").Run(panicFn)
+				executor.On("Cleanup").Once()
+			},
+		},
+		"run+cleanup": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Run(panicFn).Once()
+				executor.On("Cleanup").Run(panicFn).Once()
+			},
+		},
+		"finish": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Run(panicFn).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Once()
+				executor.On("Cleanup").Once()
+			},
+		},
+		"finish+cleanup+shell": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Run(panicFn).Once()
+				executor.On("Shell").Run(panicFn).Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Cleanup").Run(panicFn).Once()
+			},
+		},
+		"run+finish+cleanup": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Run(panicFn).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Run(panicFn).Once()
+				executor.On("Cleanup").Run(panicFn).Once()
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			executor, provider := setupMockExecutorAndProvider()
+			defer executor.AssertExpectations(t)
+			defer provider.AssertExpectations(t)
+
+			tt.setupMockExecutor(executor)
+
+			RegisterExecutorProvider(t.Name(), provider)
+
+			res, err := GetSuccessfulBuild()
+			require.NoError(t, err)
+
+			cfg := &RunnerConfig{}
+			cfg.Executor = t.Name()
+			build, err := NewBuild(res, cfg, nil, nil)
+			require.NoError(t, err)
+			var out bytes.Buffer
+			err = build.Run(&Config{}, &Trace{Writer: &out})
+			assert.EqualError(t, err, "panic: panic message")
+			assert.Contains(t, out.String(), "panic: panic message")
+		})
+	}
 }
 
 func TestJobImageExposed(t *testing.T) {
