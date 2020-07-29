@@ -525,6 +525,7 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	b.CurrentState = BuildRunRuntimeRunning
 
 	buildFinish := make(chan error, 1)
+	buildPanic := make(chan error, 1)
 
 	runContext, runCancel := context.WithCancel(context.Background())
 	defer runCancel()
@@ -539,6 +540,12 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 
 	// Run build script
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				buildPanic <- &BuildError{FailureReason: RunnerSystemFailure, Inner: fmt.Errorf("panic: %s", r)}
+			}
+		}()
+
 		buildFinish <- b.executeScript(runContext, executor)
 	}()
 
@@ -554,6 +561,10 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 
 	case err = <-buildFinish:
 		b.CurrentState = BuildRunRuntimeFinished
+		return err
+
+	case err = <-buildPanic:
+		b.CurrentState = BuildRunRuntimeTerminated
 		return err
 	}
 
@@ -718,7 +729,17 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.CurrentState = BuildRunStatePending
 
-	defer func() { b.cleanupBuild(executor, trace, err) }()
+	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
+	// setTraceStatus needs to be last since it needs a correct error value to report the job's status
+	defer func() { b.setTraceStatus(trace, err) }()
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = &BuildError{FailureReason: RunnerSystemFailure, Inner: fmt.Errorf("panic: %s", r)}
+		}
+	}()
+
+	defer func() { b.cleanupBuild(executor) }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
@@ -785,9 +806,7 @@ func (b *Build) executeBuildSection(
 	return executor, err
 }
 
-func (b *Build) cleanupBuild(executor Executor, trace JobTrace, err error) {
-	b.setTraceStatus(trace, err)
-
+func (b *Build) cleanupBuild(executor Executor) {
 	if executor != nil {
 		executor.Cleanup()
 	}
