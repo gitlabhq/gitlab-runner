@@ -39,8 +39,6 @@ func TestPowershell_LineBreaks(t *testing.T) {
 			writer.Command("foo", "")
 
 			expectedOutput := "\xef\xbb\xbf" +
-				`#requires -PSEdition ` + tc.expectedEdition + eol +
-				eol +
 				tc.expectedErrorPreference +
 				`& "foo" ""` + eol + "if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }" + eol +
 				eol +
