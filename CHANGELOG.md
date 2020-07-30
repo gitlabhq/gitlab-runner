@@ -1,3 +1,13 @@
+## v13.2.2 (2020-07-30)
+
+### Security
+
+- Disallow redirects in Docker client
+
+### Other changes
+
+- Move GitLab release to its own job !2314
+
 ## v13.2.1 (2020-07-22)
 
 ### Bug fixes
