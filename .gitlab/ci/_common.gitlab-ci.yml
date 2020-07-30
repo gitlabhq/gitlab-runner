@@ -33,6 +33,15 @@ before_script:
     variables:
     - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
 
+# Skip all jobs except the ones that begin and end with 'docs'.
+# Used for commits including ONLY documentation changes.
+# https://docs.gitlab.com/ee/development/documentation/index.html#branch-naming
+.docs:rules:skip:
+  rules:
+  - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/'
+    when: never
+  - when: on_success
+
 .merge_request_pipelines:
   only:
     refs:
