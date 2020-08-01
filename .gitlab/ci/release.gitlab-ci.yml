@@ -109,7 +109,7 @@ development S3:
     name: development/s3/${CI_COMMIT_REF_NAME}
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
   only:
-    - merge_requests@gitlab-org/gitlab-runner
+  - merge_requests@gitlab-org/gitlab-runner
 
 development docker images:
   extends:

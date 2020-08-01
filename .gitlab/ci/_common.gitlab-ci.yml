@@ -59,8 +59,8 @@ before_script:
 .runner_master:
   only:
     refs:
-      - master@gitlab-org/gitlab-runner
-      - master@gitlab-org/security/gitlab-runner
+    - master@gitlab-org/gitlab-runner
+    - master@gitlab-org/security/gitlab-runner
 
 .no_cache:
   cache: {}
@@ -89,7 +89,7 @@ before_script:
   - gitlab-org-docker
 
 .docker_qemu-before_script: &docker_qemu-before_script
-  - docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
+- docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
 
 .docker_qemu:
   before_script:
@@ -171,10 +171,10 @@ before_script:
 # without explicitly waiting for the completion of the n-1 stage
 .stage_done:
   extends:
-    - .merge_request_pipelines
-    - .no_cache_and_dependencies
+  - .merge_request_pipelines
+  - .no_cache_and_dependencies
   image: alpine:latest
   variables:
     GIT_STRATEGY: none
   script:
-    - exit 0
+  - exit 0
