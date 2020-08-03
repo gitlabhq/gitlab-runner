@@ -1508,6 +1508,18 @@ func TestDockerServicesExtraHostsSetting(t *testing.T) {
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
 }
 
+func TestDockerServiceUserNSSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		UsernsMode: "host",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
+	}
+
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
+
 func TestDockerUserNSSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		UsernsMode: "host",
