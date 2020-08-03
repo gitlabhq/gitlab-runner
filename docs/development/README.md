@@ -125,7 +125,7 @@ These are the binaries that you can install:
 1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html)
 1. [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) with
    [Minikube](https://github.com/kubernetes/minikube)
-1. [Parallels](https://www.parallels.com/products/desktop/download/)
+1. [Parallels](https://www.parallels.com/products/desktop/)
 1. [PowerShell](https://docs.microsoft.com/en-us/powershell/)
 
 After installing the binaries run:
@@ -174,7 +174,7 @@ are using [multiple machines](https://www.vagrantup.com/docs/multi-machine) insi
 The following are required:
 
 - [Vagrant](https://www.vagrantup.com) installed.
-- [Virtualbox](https://www.virtualbox.com) installed.
+- [Virtualbox](https://www.virtualbox.org/) installed.
 - Around 30GB of free hard disk space on your computer.
 
 Which virtual machine to use depends on your use case:
