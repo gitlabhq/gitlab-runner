@@ -9,3 +9,5 @@ apt-get update
 apt-get -f install -y
 rm -rf /var/lib/apt/lists/*
 rm "/tmp/gitlab-runner_${ARCH}.deb"
+# TODO: Remove in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4845
+rm "/home/gitlab-runner/.bash_logout"
