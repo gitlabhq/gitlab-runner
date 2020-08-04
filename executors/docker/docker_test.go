@@ -1947,7 +1947,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 					Once()
 			},
 			expectedEnvironment: []string{
-				"WAIT_FOR_SERVICE_TCP_ADDR=default",
+				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
 				"WAIT_FOR_SERVICE_TCP_PORT=1000",
 			},
 		},
@@ -1968,7 +1968,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 					Once()
 			},
 			expectedEnvironment: []string{
-				"WAIT_FOR_SERVICE_TCP_ADDR=default",
+				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
 				"WAIT_FOR_SERVICE_TCP_PORT=600",
 			},
 		},
@@ -2011,6 +2011,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			}
 
 			service := &types.Container{
+				ID:    "0000000000000000000000000000000000000000000000000000000000000000",
 				Names: []string{"default"},
 			}
 

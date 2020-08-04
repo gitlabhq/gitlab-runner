@@ -1293,16 +1293,24 @@ func (e *executor) createHostConfigForServiceHealthCheck(service *types.Containe
 	}
 }
 
-// addServiceHealthCheckEnvironment will create the environment variables needed
-// for our healthcheck system if a network per build was created, until we
-// introduce the native HEALTHCHECK from docker in
-// https://gitlab.com/gitlab-org/gitlab-runner/issues/3984. This follows the
-// same principles as https://docs.docker.com/compose/link-env-deprecated/.
+// addServiceHealthCheckEnvironment returns environment variables mimicing
+// the legacy container links networking feature of Docker, where environment
+// variables are provided with the hostname and port of the linked service our
+// health check is performed against.
+//
+// The hostname we provide is the container's short ID (the first 12 characters
+// of a full container ID). The short ID, as opposed to the full ID, is
+// internally resolved to the container's IP address by Docker's built-in DNS
+// service.
+//
+// The legacy container links (https://docs.docker.com/network/links/) network
+// feature is deprecated. When we remove support for links, the healthcheck
+// system can be updated to no longer rely on environment variables
 func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([]string, error) {
 	environment := []string{}
 
 	if e.networkMode.UserDefined() != "" {
-		environment = append(environment, "WAIT_FOR_SERVICE_TCP_ADDR="+service.Names[0])
+		environment = append(environment, "WAIT_FOR_SERVICE_TCP_ADDR="+service.ID[:12])
 		ports, err := e.getContainerExposedPorts(service)
 		if err != nil {
 			return nil, fmt.Errorf("get container exposed ports: %v", err)
@@ -1310,6 +1318,7 @@ func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([
 		if len(ports) == 0 {
 			return nil, fmt.Errorf("service %q has no exposed ports", service.Names[0])
 		}
+
 		environment = append(environment, fmt.Sprintf("WAIT_FOR_SERVICE_TCP_PORT=%d", ports[0]))
 	}
 
