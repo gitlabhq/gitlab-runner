@@ -78,7 +78,12 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 		options.Build.Hostname = details.Name
 	}
 
-	e.log().Infoln("Starting docker-machine build...")
+	// e.data is only set if the docker-machine created is new
+	if e.data == nil {
+		e.log().Infoln("Using existing docker-machine")
+	} else {
+		e.log().Infoln("Created docker-machine")
+	}
 
 	// Create original executor
 	e.executor = e.provider.provider.Create()
@@ -86,7 +91,14 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 		return errors.New("failed to create an executor")
 	}
 
-	return e.executor.Prepare(options)
+	if err = e.executor.Prepare(options); err != nil {
+		e.log().Infoln("Preparing docker-machine wrapped executor failed")
+		return err
+	}
+
+	e.log().Infoln("Starting docker-machine build...")
+
+	return nil
 }
 
 func (e *machineExecutor) Run(cmd common.ExecutorCommand) error {
@@ -108,6 +120,8 @@ func (e *machineExecutor) Cleanup() {
 	if e.executor != nil {
 		e.executor.Cleanup()
 	}
+
+	e.log().Infoln("Cleaned up docker-machine")
 
 	// Release allocated machine
 	if e.data != nil {
