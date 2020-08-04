@@ -9,7 +9,7 @@ variables:
   KUBECTL_VERSION: 1.18.0
   PWSH_VERSION: 7.0.1-1
   DUMB_INIT_VERSION: "1.2.2"
-  GIT_VERSION: "2.21.0"
+  GIT_VERSION: "2.27.0"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "2.11.0"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
