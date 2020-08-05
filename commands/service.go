@@ -77,7 +77,12 @@ func getServiceArguments(c *cli.Context) (arguments []string) {
 		arguments = append(arguments, "--service", sn)
 	}
 
+	// syslogging doesn't make sense for systemd systems as those log straight to journald
 	syslog := !c.IsSet("syslog") || c.Bool("syslog")
+	if service.Platform() == "linux-systemd" && !c.IsSet("syslog") {
+		syslog = false
+	}
+
 	if syslog {
 		arguments = append(arguments, "--syslog")
 	}
