@@ -1545,14 +1545,6 @@ func TestSecretsResolving(t *testing.T) {
 			secretsResolverMock := new(MockSecretsResolver)
 			defer secretsResolverMock.AssertExpectations(t)
 
-			oldGetSecretsResolver := getSecretsResolver
-			defer func() {
-				getSecretsResolver = oldGetSecretsResolver
-			}()
-			getSecretsResolver = func(_ logger) (SecretsResolver, error) {
-				return secretsResolverMock, tt.resolverCreationError
-			}
-
 			p, assertFn := tt.prepareExecutorProvider(t)
 			defer assertFn()
 
@@ -1574,6 +1566,10 @@ func TestSecretsResolving(t *testing.T) {
 
 			build, err := NewBuild(successfulBuild, rc, nil, nil)
 			assert.NoError(t, err)
+
+			build.secretsResolver = func(_ logger, _ SecretResolverRegistry) (SecretsResolver, error) {
+				return secretsResolverMock, tt.resolverCreationError
+			}
 
 			err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
 

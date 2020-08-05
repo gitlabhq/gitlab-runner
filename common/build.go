@@ -140,6 +140,8 @@ type Build struct {
 	currentState          BuildRuntimeState
 	executorStageResolver func() ExecutorStage
 
+	secretsResolver func(l logger, registry SecretResolverRegistry) (SecretsResolver, error)
+
 	Session *session.Session
 
 	logger BuildLogger
@@ -821,7 +823,7 @@ func (b *Build) resolveSecrets() error {
 		Name:        string(BuildStageResolveSecrets),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			resolver, err := getSecretsResolver(&b.logger)
+			resolver, err := b.secretsResolver(&b.logger, GetSecretResolverRegistry())
 			if err != nil {
 				return fmt.Errorf("creating secrets resolver: %w", err)
 			}
@@ -1214,6 +1216,7 @@ func NewBuild(
 		SystemInterrupt: systemInterrupt,
 		ExecutorData:    executorData,
 		createdAt:       time.Now(),
+		secretsResolver: newSecretsResolver,
 	}, nil
 }
 
