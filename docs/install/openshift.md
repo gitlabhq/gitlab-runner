@@ -47,17 +47,17 @@ On the Installed Operators page, when the GitLab Operator is ready, the status c
 1. Next, create the Custom Resource Definition (CRD) file.
 
    ```shell
-      cat > gitlab-runner.yml << EOF
-      apiVersion: gitlab.com/v1beta1
-      kind: Runner
-      metadata:
-        name: gitlab-runner
-      spec:
-        gitlab:
-          url: "https://gitlab.example.com"
-        token: gitlab-runner-secret
-        tags: openshift
-      EOF
+   cat > gitlab-runner.yml << EOF
+   apiVersion: gitlab.com/v1beta1
+   kind: Runner
+   metadata:
+     name: gitlab-runner
+   spec:
+     gitlab:
+       url: "https://gitlab.example.com"
+     token: gitlab-runner-secret
+     tags: openshift
+   EOF
    ```
 
 1. Add the following to the CRD file and save:
