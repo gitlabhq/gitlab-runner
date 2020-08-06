@@ -7,9 +7,14 @@ Registering a Runner is the process that binds the Runner with a GitLab instance
 Before registering a Runner, you need to first:
 
 - [Install it](../install/index.md) on a server separate than where GitLab
-  is installed on
-- [Obtain a token](https://docs.gitlab.com/ee/ci/runners/) for a shared or
-  specific Runner via GitLab's interface
+  is installed
+- Obtain a token:
+  - For a [shared Runner](https://docs.gitlab.com/ee/ci/runners/#shared-runners),
+    have an administrator go to the GitLab Admin Area and click **Overview > Runners**
+  - For a [group Runner](https://docs.gitlab.com/ee/ci/runners/README.html#group-runners),
+    go to **Settings > CI/CD** and expand the **Runners** section
+  - For a [project-specific Runner](https://docs.gitlab.com/ee/ci/runners/README.html#specific-runners),
+    go to **Settings > CI/CD** and expand the **Runners** section
 
 ## GNU/Linux
 
