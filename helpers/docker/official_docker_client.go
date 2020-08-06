@@ -23,6 +23,10 @@ import (
 // The default API version used to create a new docker client.
 const DefaultAPIVersion = "1.25"
 
+// ErrRedirectNotAllowed is returned when we get a 3xx request from the Docker
+// client to prevent any redirections to malicious docker clients.
+var ErrRedirectNotAllowed = errors.New("redirects disallowed")
+
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.
 func IsErrNotFound(err error) bool {
@@ -48,7 +52,12 @@ func newOfficialDockerClient(c Credentials, apiVersion string) (*officialDockerC
 		logrus.Errorln("Error creating TLS Docker client:", err)
 		return nil, err
 	}
-	httpClient := &http.Client{Transport: transport}
+	httpClient := &http.Client{
+		Transport: transport,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return ErrRedirectNotAllowed
+		},
+	}
 
 	dockerClient, err := client.NewClient(c.Host, apiVersion, httpClient, nil)
 	if err != nil {
