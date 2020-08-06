@@ -29,8 +29,14 @@ On the Installed Operators page, when the GitLab Operator is ready, the status c
 
 #### Install GitLab Runner
 
-1. Obtain the Runner registration token by going to the project's **Settings > CI/CD** and
-   expanding the **Runners** section.
+1. Obtain a token that you'll use to register the runner:
+   - For a [shared Runner](https://docs.gitlab.com/ee/ci/runners/#shared-runners),
+     have an administrator go to the GitLab Admin Area and click **Overview > Runners**
+   - For a [group Runner](https://docs.gitlab.com/ee/ci/runners/README.html#group-runners),
+     go to **Settings > CI/CD** and expand the **Runners** section
+   - For a [project-specific Runner](https://docs.gitlab.com/ee/ci/runners/README.html#specific-runners),
+     go to **Settings > CI/CD** and expand the **Runners** section
+    expanding the **Runners** section.
 1. Under **Use the following registration token during setup:**, copy the token.
 1. Open an OpenShift console and switch to the project namespace:
 
