@@ -44,7 +44,8 @@ On the Installed Operators page, when the GitLab Operator is ready, the status c
    oc create secret generic gitlab-runner-secret --from-literal runner_registration_token="xxx"
    ```
 
-1. Next, create the Custom Resource Definition (CRD) file.
+1. Next, create the Custom Resource Definition (CRD) file and include
+   the following information. The `tags` value must be `openshift` for the job to run.
 
    ```shell
    cat > gitlab-runner.yml << EOF
