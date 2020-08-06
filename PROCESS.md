@@ -19,6 +19,7 @@
 - [Supported releases](#supported-releases)
 - [Releasing GitLab Runner](#releasing-gitlab-runner)
   - [Security release](#security-release)
+- [Renew expired GPG key](#renew-expired-gpg-key)
 - [Copy & paste responses](#copy--paste-responses)
   - [Improperly formatted issue](#improperly-formatted-issue)
   - [Issue report for old version](#issue-report-for-old-version)
@@ -293,6 +294,14 @@ We follow the GitLab Security process with the following exceptions.
 
 - [Security Engineer](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/security-engineer.md)
     - The Runner Application Security Engineer part is listed [here](https://about.gitlab.com/handbook/product/product-categories/#runner-group).
+
+## Renew expired GPG key
+
+We sign all of our packages with GPG, and this key is short-lived (1
+year) so every year we have to renew it. For this, we have a tool called
+[Key expiration
+wrapper](https://gitlab.com/gitlab-org/ci-cd/runner-tools/key-expiration-wrapper)
+that documents and automates the process.
 
 ## Copy & paste responses
 
