@@ -140,7 +140,7 @@ To execute the tests run:
 make test
 ```
 
-## 8. Install optional tools
+## 7. Install optional tools
 
 - Install `golangci-lint`, used for the `make lint` target.
 - Install `markdown-lint` and `vale`, used for the `make lint-docs` target.
@@ -148,7 +148,7 @@ make test
 Installation instructions will pop up when running a Makefile target
 if a tool is missing.
 
-## 9. Contribute
+## 8. Contribute
 
 You can start hacking GitLab-Runner code.
 If you need an IDE to edit and debug code, there are a few free suggestions you can use:
