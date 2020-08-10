@@ -199,6 +199,57 @@ func TestMultistepBuild(t *testing.T) {
 	}
 }
 
+func TestBuildJobStatusEnvVars(t *testing.T) {
+	tests := map[string]struct {
+		fail   bool
+		assert func(t *testing.T, err error, build *common.Build, out string)
+	}{
+		"state and stage on failure": {
+			fail: true,
+			assert: func(t *testing.T, err error, build *common.Build, out string) {
+				assert.Error(t, err)
+				assert.Contains(t, out, "CI_JOB_STATUS=failed")
+				assert.Equal(t, common.BuildRunRuntimeFailed, build.CurrentState())
+			},
+		},
+		"state and stage on success": {
+			fail: false,
+			assert: func(t *testing.T, err error, build *common.Build, out string) {
+				assert.NoError(t, err)
+				assert.Contains(t, out, "CI_JOB_STATUS=success")
+				assert.Equal(t, common.BuildRunRuntimeSuccess, build.CurrentState())
+			},
+		},
+	}
+
+	expectedStages := []common.BuildStage{
+		common.BuildStagePrepare,
+		common.BuildStage("step_env"),
+		common.BuildStageAfterScript,
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				multistepBuildScript, err := common.GetRemoteFailingMultistepBuildWithEnvs(shell, tc.fail)
+				require.NoError(t, err)
+
+				build, cleanup := newBuild(t, multistepBuildScript, shell)
+				defer cleanup()
+
+				out, err := buildtest.RunBuildReturningOutput(t, build)
+
+				assert.Contains(t, out, "CI_JOB_STATUS=running")
+				for _, stage := range expectedStages {
+					assert.Contains(t, out, common.GetStageDescription(stage))
+				}
+
+				tc.assert(t, err, build, out)
+			})
+		})
+	}
+}
+
 func TestRawVariableOutput(t *testing.T) {
 	tests := map[string]struct {
 		command string

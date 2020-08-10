@@ -58,7 +58,8 @@ type BuildRuntimeState string
 const (
 	BuildRunStatePending      BuildRuntimeState = "pending"
 	BuildRunRuntimeRunning    BuildRuntimeState = "running"
-	BuildRunRuntimeFinished   BuildRuntimeState = "finished"
+	BuildRunRuntimeSuccess    BuildRuntimeState = "success"
+	BuildRunRuntimeFailed     BuildRuntimeState = "failed"
 	BuildRunRuntimeCanceled   BuildRuntimeState = "canceled"
 	BuildRunRuntimeTerminated BuildRuntimeState = "terminated"
 	BuildRunRuntimeTimedout   BuildRuntimeState = "timedout"
@@ -313,6 +314,10 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	}
 
 	b.setCurrentStage(buildStage)
+	b.GetAllVariables().OverwriteKey("CI_JOB_STATUS", JobVariable{
+		Key:   "CI_JOB_STATUS",
+		Value: string(b.CurrentState()),
+	})
 
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
 
@@ -451,11 +456,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 			}
 		}
 
-		// Execute after script (after_script)
-		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
-		defer timeoutCancel()
-
-		_ = b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
+		b.executeAfterScript(ctx, err, executor)
 	}
 
 	// Execute post script (cache store, artifacts upload)
@@ -476,6 +477,17 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	// Otherwise, use uploadError
 	return artifactUploadErr
+}
+
+func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) {
+	// as we enter after_script, set the new build state based on previous
+	// stage errors
+	_ = b.handleError(err)
+
+	ctx, cancel := context.WithTimeout(ctx, AfterScriptTimeout)
+	defer cancel()
+
+	_ = b.executeStage(ctx, BuildStageAfterScript, executor)
 }
 
 // StepToBuildStage returns the BuildStage corresponding to a step.
@@ -561,8 +573,12 @@ func (b *Build) handleError(err error) error {
 			FailureReason: JobExecutionTimeout,
 		}
 
+	case nil:
+		b.setCurrentState(BuildRunRuntimeSuccess)
+		return nil
+
 	default:
-		b.setCurrentState(BuildRunRuntimeFinished)
+		b.setCurrentState(BuildRunRuntimeFailed)
 		return err
 	}
 }
@@ -609,7 +625,11 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 		b.setCurrentState(BuildRunRuntimeTerminated)
 
 	case err = <-buildFinish:
-		b.setCurrentState(BuildRunRuntimeFinished)
+		if err != nil {
+			b.setCurrentState(BuildRunRuntimeFailed)
+		} else {
+			b.setCurrentState(BuildRunRuntimeSuccess)
+		}
 		return err
 
 	case err = <-buildPanic:
@@ -952,6 +972,12 @@ func (b *Build) GetDefaultVariables() JobVariables {
 			Public:   true,
 			Internal: true,
 			File:     false,
+		},
+		{
+			Key:      "CI_JOB_STATUS",
+			Value:    "",
+			Public:   true,
+			Internal: true,
 		},
 	}
 }
