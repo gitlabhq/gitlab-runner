@@ -67,7 +67,8 @@ This example uses the local system for the configuration volume that is mounted 
      gitlab/gitlab-runner:latest
    ```
 
-   TIP: **Tip:** On macOS, use `/Users/Shared` instead of `/srv`.
+   TIP: **Tip:**
+   On macOS, use `/Users/Shared` instead of `/srv`.
 
 ### Option 2: Use Docker volumes to start the Runner container
 

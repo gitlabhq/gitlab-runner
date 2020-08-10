@@ -57,7 +57,7 @@ for more information.
 
 ## Systems with Docker installed
 
->**Note:**
+NOTE: **Note:**
 This applies to installations below 0.5.0 or ones that were upgraded to the
 newer version.
 

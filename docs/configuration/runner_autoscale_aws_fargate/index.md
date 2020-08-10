@@ -26,7 +26,7 @@ the `privileged` task definition parameter. To enable **Docker-in-Docker** build
 on AWS Fargate, we are working on a merge request, [#34](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate/-/merge_requests/34),
 to implement a pattern for configuring the Fargate driver to use Kaniko.
 
-**Note:**
+Note the following:
 
 - The configuration in this document is a basic configuration from an AWS security
   perspective. It is meant for the user to get an initial understanding of the Fargate

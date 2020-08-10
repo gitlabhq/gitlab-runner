@@ -124,7 +124,7 @@ For [graceful shutdowns](../best_practice/index.md#graceful-shutdown):
 sudo kill -SIGQUIT <main_runner_pid>
 ```
 
-CAUTION: **Warning**:
+CAUTION: **Caution:**
 Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
 or `docker` executors. This can cause improper handling of the signals due to subprocessess
 being killed as well. Use it only on the main process handling the jobs.
@@ -255,7 +255,8 @@ export REGISTER_NON_INTERACTIVE=true
 gitlab-runner register
 ```
 
-> **Note:** Boolean parameters must be passed in the command line with `--key={true|false}`.
+NOTE: **Note:**
+Boolean parameters must be passed in the command line with `--key={true|false}`.
 
 #### `[[runners]]` configuration template file
 
@@ -329,11 +330,12 @@ gitlab-runner unregister --url http://gitlab.example.com/ --token t0k3n
 
 #### By name
 
-> **Note:** If there is more than one runner with the given name, only the first one will be removed
-
 ```shell
 gitlab-runner unregister --name test-runner
 ```
+
+NOTE: **Note:**
+If there is more than one runner with the given name, only the first one will be removed.
 
 #### All Runners
 

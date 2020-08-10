@@ -67,7 +67,7 @@ Runner is installed and running.
 
 ### Limitations on macOS
 
->**Note:**
+NOTE: **Note:**
 The service needs to be installed from the Terminal by running its GUI
 interface as your current user. Only then will you be able to manage the service.
 

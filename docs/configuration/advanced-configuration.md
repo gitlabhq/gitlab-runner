@@ -422,7 +422,7 @@ registry.
 
 #### Support for GitLab integrated registry
 
-> **Note:**
+NOTE: **Note:**
 To work automatically with private/protected images from
 GitLab integrated registry it needs at least GitLab CE/EE **8.14**
 and GitLab Runner **1.8**.
