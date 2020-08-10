@@ -4,14 +4,20 @@ FROM alpine:3.12.0
 ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 
 # hadolint ignore=DL3018
-RUN apk add --no-cache bash ca-certificates git git-lfs miniperl \
+RUN apk add --no-cache bash ca-certificates dumb-init git git-lfs miniperl \
     && ln -s miniperl /usr/bin/perl
 
 RUN git lfs install --skip-repo
+
+COPY ./helpers/entrypoint /
+RUN chmod +x /entrypoint
 
 COPY ./scripts/ /usr/bin
 COPY ./gitlab-runner-helper /usr/bin/
 
 RUN echo 'hosts: files dns' >> /etc/nsswitch.conf
 
+# NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
+# See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
+ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]
 CMD ["sh"]

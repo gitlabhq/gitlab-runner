@@ -11,6 +11,7 @@ const (
 	UseDirectDownload                    string = "FF_USE_DIRECT_DOWNLOAD"
 	SkipNoOpBuildStages                  string = "FF_SKIP_NOOP_BUILD_STAGES"
 	ShellExecutorUseLegacyProcessKill    string = "FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL"
+	ResetHelperImageEntrypoint           string = "FF_RESET_HELPER_IMAGE_ENTRYPOINT"
 )
 
 type FeatureFlag struct {
@@ -75,6 +76,15 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "14.0",
 		Description: "Use the old process termination that was used prior to GitLab 13.1 where only `SIGKILL`" +
 			" was sent",
+	},
+	{
+		Name:            ResetHelperImageEntrypoint,
+		DefaultValue:    "true",
+		Deprecated:      true,
+		ToBeRemovedWith: "14.0",
+		Description: "Enables adding an ENTRYPOINT layer for Helper images imported from local Docker archives " +
+			"by the `docker` executor, in order to enable [importing of user certificate roots]" +
+			"(./tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages)",
 	},
 }
 
