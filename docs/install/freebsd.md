@@ -58,7 +58,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
    mkdir -p /usr/local/etc/rc.d
    ```
 
-1. Create the `rc.d` script:
+1. Create the `gitlab_runner` script inside `rc.d`:
 
    ```shell
    sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
