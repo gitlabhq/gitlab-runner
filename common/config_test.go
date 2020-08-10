@@ -302,6 +302,123 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, []string{"e2e-az1"}, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[1].MatchFields[0].Values)
 			},
 		},
+
+		//nolint:lll
+		"check pod affinities": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						[runners.kubernetes.affinity]
+							[runners.kubernetes.affinity.pod_affinity]
+								[[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution]]
+									topology_key = "failure-domain.beta.kubernetes.io/zone"
+									namespaces = ["namespace_1", "namespace_2"]
+									[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector]
+										[[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
+											key = "security"
+											operator = "In"
+											values = ["S1"]
+								
+								[[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution]]
+								weight = 100
+								[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+									topology_key = "failure-domain.beta.kubernetes.io/zone"
+									[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+										[[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+											key = "security_2"
+											operator = "In"
+											values = ["S2"]
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+				require.NotNil(t, config.Runners[0].Kubernetes.Affinity)
+				require.NotNil(t, config.Runners[0].Kubernetes.Affinity.PodAffinity)
+
+				podAffinity := config.Runners[0].Kubernetes.Affinity.PodAffinity
+				require.Len(t, podAffinity.RequiredDuringSchedulingIgnoredDuringExecution, 1)
+				required := podAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+
+				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", required[0].TopologyKey)
+				assert.Equal(t, []string{"namespace_1", "namespace_2"}, required[0].Namespaces)
+				require.NotNil(t, required[0].LabelSelector)
+				require.Len(t, required[0].LabelSelector.MatchExpressions, 1)
+				requiredMatchExp := required[0].LabelSelector.MatchExpressions[0]
+				assert.Equal(t, "security", requiredMatchExp.Key)
+				assert.Equal(t, "In", requiredMatchExp.Operator)
+				assert.Equal(t, []string{"S1"}, requiredMatchExp.Values)
+
+				require.Len(t, podAffinity.PreferredDuringSchedulingIgnoredDuringExecution, 1)
+				preferred := podAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+				assert.Equal(t, int32(100), preferred[0].Weight)
+				assert.NotNil(t, preferred[0].PodAffinityTerm.LabelSelector)
+				assert.Len(t, preferred[0].PodAffinityTerm.Namespaces, 0)
+				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", preferred[0].PodAffinityTerm.TopologyKey)
+
+				require.Len(t, preferred[0].PodAffinityTerm.LabelSelector.MatchExpressions, 1)
+				preferredMatchExp := preferred[0].PodAffinityTerm.LabelSelector.MatchExpressions[0]
+				assert.Equal(t, "security_2", preferredMatchExp.Key)
+				assert.Equal(t, "In", preferredMatchExp.Operator)
+				assert.Equal(t, []string{"S2"}, preferredMatchExp.Values)
+			},
+		},
+		//nolint:lll
+		"check pod anti affinities": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						[runners.kubernetes.affinity]
+							[runners.kubernetes.affinity.pod_anti_affinity]
+								[[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution]]
+									topology_key = "failure-domain.beta.kubernetes.io/zone"
+									namespaces = ["namespace_1", "namespace_2"]
+									[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector]
+										[[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
+											key = "security"
+											operator = "In"
+											values = ["S1"]
+								
+								[[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution]]
+								weight = 100
+								[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+									topology_key = "failure-domain.beta.kubernetes.io/zone"
+									[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+										[[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+											key = "security_2"
+											operator = "In"
+											values = ["S2"]
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+				require.NotNil(t, config.Runners[0].Kubernetes.Affinity)
+				require.NotNil(t, config.Runners[0].Kubernetes.Affinity.PodAntiAffinity)
+
+				podAntiAffinity := config.Runners[0].Kubernetes.Affinity.PodAntiAffinity
+				require.Len(t, podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution, 1)
+				required := podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+
+				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", required[0].TopologyKey)
+				assert.Equal(t, []string{"namespace_1", "namespace_2"}, required[0].Namespaces)
+				require.NotNil(t, required[0].LabelSelector)
+				require.Len(t, required[0].LabelSelector.MatchExpressions, 1)
+				requiredMatchExp := required[0].LabelSelector.MatchExpressions[0]
+				assert.Equal(t, "security", requiredMatchExp.Key)
+				assert.Equal(t, "In", requiredMatchExp.Operator)
+				assert.Equal(t, []string{"S1"}, requiredMatchExp.Values)
+
+				require.Len(t, podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution, 1)
+				preferred := podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+				assert.Equal(t, int32(100), preferred[0].Weight)
+				assert.NotNil(t, preferred[0].PodAffinityTerm.LabelSelector)
+				assert.Len(t, preferred[0].PodAffinityTerm.Namespaces, 0)
+				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", preferred[0].PodAffinityTerm.TopologyKey)
+
+				require.Len(t, preferred[0].PodAffinityTerm.LabelSelector.MatchExpressions, 1)
+				preferredMatchExp := preferred[0].PodAffinityTerm.LabelSelector.MatchExpressions[0]
+				assert.Equal(t, "security_2", preferredMatchExp.Key)
+				assert.Equal(t, "In", preferredMatchExp.Operator)
+				assert.Equal(t, []string{"S2"}, preferredMatchExp.Values)
+			},
+		},
 		"check that GracefulKillTimeout and ForceKillTimeout can't be set": {
 			config: `
 				[[runners]]
