@@ -18,7 +18,7 @@ label_matchers:
   - documentation
   scope: documentation
 - labels:
-  - feature
+  - feature::addition
   scope: new-feature
 - labels:
   - security
@@ -30,7 +30,9 @@ label_matchers:
   - technical debt
   scope: maintenance
 - labels:
-  - backstage
+  - feature::maintenance
+  - tooling::pipelines
+  - tooling::workflow
   scope: maintenance
 authorship_labels:
 - Community contribution
