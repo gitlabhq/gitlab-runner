@@ -168,6 +168,7 @@ To upgrade GitLab Runner from a version prior to 10.0:
    sudo /usr/share/gitlab-runner/post-install
    ```
 
-   CAUTION: **Important:** If you don't run the above command, you will be left
+   CAUTION: **Caution:**
+   If you don't run the above command, you will be left
    with no service file. Follow [issue #2786](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2786)
    for more information.

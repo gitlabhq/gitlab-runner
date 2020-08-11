@@ -382,7 +382,7 @@ service containers.
 For all possible configuration variables check the documentation of each image
 provided in their corresponding Docker hub page.
 
-NOTE: **Note**:
+NOTE: **Note:**
 All variables will be passed to all services containers. It's not designed to
 distinguish which variable should go where.
 Secure variables are only passed to the build container.
@@ -706,7 +706,7 @@ ERROR: Build failed: Error: image local_image:latest not found
 
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
-NOTE: **Note**:
+NOTE: **Note:**
 Starting with GitLab Runner 10.0, both Docker-SSH and Docker-SSH+machine executors
 are **deprecated** and will be removed in one of the upcoming releases.
 

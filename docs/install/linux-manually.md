@@ -130,7 +130,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
 1. [Register the Runner](../register/index.md)
 
-NOTE: **Note**
+NOTE: **Note:**
 If `gitlab-runner` is installed and run as service (what is described
 in this page), it will run as root, but will execute jobs as user specified by
 the `install` command. This means that some of the job functions like cache and
