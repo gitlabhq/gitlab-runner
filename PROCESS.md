@@ -285,7 +285,7 @@ We follow the GitLab Security process with the following exceptions.
 - [Release Manager](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/release-manager.md)
     - To create the security release task, run this command:
 
-      ```bash
+      ```shell
       # Using rrhelper https://gitlab.com/gitlab-org/ci-cd/runner-release-helper
       # $LINK_TO_MAIN_RELEASE_ISSUE can found in the #releases slack channel
       rrhelper create-security-release-checklist --runner-tags 13.2.2,13.1.2,13.0.2 --helm-tags 0.19.2,0.18.2,0.17.2 --project-id 250833 --security-url $LINK_TO_MAIN_RELEASE_ISSUE`
