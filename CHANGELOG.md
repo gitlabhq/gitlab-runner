@@ -1,3 +1,59 @@
+## v13.3.0-rc1 (2020-08-11)
+
+### Bug fixes
+
+- Install Runner in /usr/bin and helper in /usr/lib in Linux !2329
+- Fix powershell #requires use !2318
+- Fix untagged registration and add regression tests !2303
+- Add openssh-client to Docker images !2281
+- Use container ID, not name, for service's healthcheck hostname !2118
+
+### Maintenance
+
+- Add security harness !2315
+- Move GitLab release to its own job !2314
+- Fix typo for security branch !2304
+- Add MR piplines for security fork on master !2301
+- Add release jobs to security fork !2300
+- Add security issue and merge request templates !2298
+- Refresh linting rules !2297
+- Make `.stage_done` available also on docs MRs !2295
+- Remove needs from feature flags docs job !2293
+- Fix DAG dependencies of release jobs !2289
+- Run docker import for helper-dockerarchive-host !2275
+- Update changelog generator to accept new labels !2271
+- Fix typo in DUMB_INIT_S390X_CHECKSUM variable name !2270
+- Cache GOCACHE in CI !2187
+- Enable DAG for some jobs !2076
+- Upgrade git version !2306
+- Update Ubuntu Docker container to Ubuntu 20.04 !2286 (Markus Teufelberger @markusteufelberger)
+- Log additional docker-machine prep/cleanup info !2277
+
+### Documentation changes
+
+- Synchronize lint rules and fix where required !2341
+- Fix name script !2339 (Andros Fenollosa @tanrax)
+- Document how to renew GPG key !2336
+- Update Documentation template to reflect standard !2332
+- Fix broken external links !2331
+- Document security release process !2322
+- Fix incorrect Fargate cluster name !2321 (Matt Breden @mattbred56)
+- Added specific token steps !2317
+- Update docs.gitlab-ci.yml to use trigger-build script !2311
+- Add content describing Runner behavior for changes to config.toml - docs !2307
+- Made links descriptive !2302
+- Creation of Openshift Runner doc. !2296
+- Removed accidentally commited installation instructions in 13.2 !2290
+- Update info about support Linux/OS/archs !2287
+- Add explicit location for Windows logs !2285
+- Fix link to TOML docs Array of Tables. !2280 (Bheesham Persaud @bheesham)
+- Added architecture info !2278
+- Fixes mixed-case anchor !2272
+- Make it clear which Fargate container should have the specific name !2269
+- Update a link to download the latest Fargate driver version !2259 (Ricardo Mendes @ricardomendes)
+- Replace backticks with bold for UI elements !2099
+- Add an ENTRYPOINT script to the helper image Dockerfiles to add CA certificates !2058
+
 ## v13.2.0 (2020-07-20)
 
 ### New features
