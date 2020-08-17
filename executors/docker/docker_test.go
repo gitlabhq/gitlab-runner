@@ -1509,27 +1509,37 @@ func TestDockerServicesExtraHostsSetting(t *testing.T) {
 }
 
 func TestDockerServiceUserNSSetting(t *testing.T) {
-	dockerConfig := &common.DockerConfig{
+	dockerConfig := &common.DockerConfig{}
+	dockerConfigWithHostUsernsMode := &common.DockerConfig{
 		UsernsMode: "host",
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
-		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
-	}
+        assert.Equal(t, container.UsernsMode(""), hostConfig.UsernsMode)
+    }
+    cceWithHostUsernsMode := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+        assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
+    }
 
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+	testDockerConfigurationWithServiceContainer(t, dockerConfigWithHostUsernsMode, cceWithHostUsernsMode)
 }
 
 func TestDockerUserNSSetting(t *testing.T) {
-	dockerConfig := &common.DockerConfig{
+	dockerConfig := &common.DockerConfig{}
+    dockerConfigWithHostUsernsMode := &common.DockerConfig{
 		UsernsMode: "host",
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, container.UsernsMode(""), hostConfig.UsernsMode)
+    }
+    cceWithHostUsernsMode := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
 		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+	testDockerConfigurationWithJobContainer(t, dockerConfigWithHostUsernsMode, cceWithHostUsernsMode)
 }
 
 func TestDockerRuntimeSetting(t *testing.T) {
