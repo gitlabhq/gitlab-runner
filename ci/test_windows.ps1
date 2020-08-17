@@ -29,7 +29,7 @@ Get-Content $testsDefinitionsFile | Select-Object -skip $executionOffset -first 
 
     Write-Information "`r`n`r`n--- Starting part $index of go tests of '$pkg' package:`r`n`r`n"
 
-    go test -v $pkg -run "$tests" | Tee ".testoutput/${pkgSlug}.${index}.windows.${WINDOWS_VERSION}.output.txt"
+    go test -timeout 30m -v $pkg -run "$tests" | Tee ".testoutput/${pkgSlug}.${index}.windows.${WINDOWS_VERSION}.output.txt"
 
     if ($LASTEXITCODE -ne 0) {
         $failed += "$pkg-$index"
