@@ -82,7 +82,7 @@ acceptable, while `Fix timestamp in docker executor job output` would be accepta
 We have some additional labels plus those defined in [gitlab-ce workflow labels](https://docs.gitlab.com/ce/development/contributing/issue_workflow.html)
 
 - Additional subjects: ~cache, ~executors, ~"git operations"
-- OS: ~"os::Linux" ~"os::macOS" ~"os:FreeBSD" ~"os::Windows"
+- OS: ~"os::Linux" ~"os::macOS" ~"os::FreeBSD" ~"os::Windows"
 - executor: ~"executor::docker" ~"executor::kubernetes" ~"executor::docker\-machine" ~"executor::docker\-machine" ~"executor::shell" ~"executor::parallels" ~"executor::virtualbox"
 - For any [follow-up
   issues](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#technical-debt-in-follow-up-issues)
