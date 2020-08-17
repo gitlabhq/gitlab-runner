@@ -14,11 +14,11 @@ import (
 
 //nolint:funlen
 func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup func(build *common.Build)) {
-	cancelIncludeStages := []common.BuildStage{
+	abortIncludeStages := []common.BuildStage{
 		common.BuildStagePrepare,
 		common.BuildStageGetSources,
 	}
-	cancelExcludeStages := []common.BuildStage{
+	abortExcludeStages := []common.BuildStage{
 		common.BuildStageRestoreCache,
 		common.BuildStageDownloadArtifacts,
 		common.BuildStageAfterScript,
@@ -37,25 +37,35 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup func(bu
 			onUserStep: func(build *common.Build, _ common.JobTrace) {
 				build.SystemInterrupt <- os.Interrupt
 			},
-			includesStage: cancelIncludeStages,
-			excludesStage: cancelExcludeStages,
+			includesStage: abortIncludeStages,
+			excludesStage: abortExcludeStages,
 			expectedErr:   &common.BuildError{FailureReason: common.RunnerSystemFailure},
 		},
 		"job is aborted": {
 			onUserStep: func(_ *common.Build, trace common.JobTrace) {
 				trace.Abort()
 			},
-			includesStage: cancelIncludeStages,
-			excludesStage: cancelExcludeStages,
+			includesStage: abortIncludeStages,
+			excludesStage: abortExcludeStages,
 			expectedErr:   &common.BuildError{FailureReason: common.JobCanceled},
 		},
 		"job is canceling": {
 			onUserStep: func(_ *common.Build, trace common.JobTrace) {
 				trace.Cancel()
 			},
-			includesStage: cancelIncludeStages,
-			excludesStage: cancelExcludeStages,
-			expectedErr:   &common.BuildError{FailureReason: common.JobCanceled},
+			includesStage: []common.BuildStage{
+				common.BuildStagePrepare,
+				common.BuildStageGetSources,
+				common.BuildStageAfterScript,
+			},
+			excludesStage: []common.BuildStage{
+				common.BuildStageRestoreCache,
+				common.BuildStageDownloadArtifacts,
+				common.BuildStageArchiveCache,
+				common.BuildStageUploadOnFailureArtifacts,
+				common.BuildStageUploadOnSuccessArtifacts,
+			},
+			expectedErr: &common.BuildError{FailureReason: common.JobCanceled},
 		},
 	}
 

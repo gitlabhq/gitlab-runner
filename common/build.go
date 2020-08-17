@@ -151,6 +151,7 @@ type Build struct {
 	secretsVariables JobVariables
 
 	createdAt time.Time
+	context   context.Context
 
 	Referees         []referees.Referee
 	ArtifactUploader func(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
@@ -456,7 +457,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 			}
 		}
 
-		b.executeAfterScript(ctx, err, executor)
+		b.executeAfterScript(err, executor)
 	}
 
 	// Execute post script (cache store, artifacts upload)
@@ -479,12 +480,12 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	return artifactUploadErr
 }
 
-func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) {
+func (b *Build) executeAfterScript(err error, executor Executor) {
 	// as we enter after_script, set the new build state based on previous
 	// stage errors
 	_ = b.handleError(err)
 
-	ctx, cancel := context.WithTimeout(ctx, AfterScriptTimeout)
+	ctx, cancel := context.WithTimeout(b.context, AfterScriptTimeout)
 	defer cancel()
 
 	_ = b.executeStage(ctx, BuildStageAfterScript, executor)
@@ -583,14 +584,15 @@ func (b *Build) handleError(err error) error {
 	}
 }
 
-func (b *Build) run(ctx context.Context, executor Executor) (err error) {
+func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err error) {
 	b.setCurrentState(BuildRunRuntimeRunning)
 
 	buildFinish := make(chan error, 1)
 	buildPanic := make(chan error, 1)
 
-	runContext, runCancel := context.WithCancel(context.Background())
-	defer runCancel()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	trace.SetCancelFunc(cancel)
 
 	if term, ok := executor.(terminal.InteractiveTerminal); b.Session != nil && ok {
 		b.Session.SetInteractiveTerminal(term)
@@ -608,7 +610,7 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 			}
 		}()
 
-		buildFinish <- b.executeScript(runContext, executor)
+		buildFinish <- b.executeScript(ctx, executor)
 	}()
 
 	// Wait for signals: cancel, timeout, abort or finish
@@ -622,6 +624,7 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 			Inner:         fmt.Errorf("aborted: %v", signal),
 			FailureReason: RunnerSystemFailure,
 		}
+		trace.Abort()
 		b.setCurrentState(BuildRunRuntimeTerminated)
 
 	case err = <-buildFinish:
@@ -640,8 +643,13 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	b.Log().WithError(err).Debugln("Waiting for build to finish...")
 
 	// Wait till we receive that build did finish
-	runCancel()
-	b.waitForBuildFinish(buildFinish, WaitForBuildFinishTimeout)
+	cancel()
+
+	timeout := WaitForBuildFinishTimeout
+	if b.context.Err() == nil {
+		timeout += AfterScriptTimeout
+	}
+	b.waitForBuildFinish(buildFinish, timeout)
 
 	return err
 }
@@ -823,14 +831,15 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
+	var cancel context.CancelFunc
+	b.context, cancel = context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
 
 	trace.SetCancelFunc(cancel)
 	trace.SetAbortFunc(cancel)
 	trace.SetMasked(b.GetAllVariables().Masked())
 
-	options := b.createExecutorPrepareOptions(ctx, globalConfig, trace)
+	options := b.createExecutorPrepareOptions(b.context, globalConfig, trace)
 	provider := GetExecutorProvider(b.Runner.Executor)
 	if provider == nil {
 		return errors.New("executor not found")
@@ -842,10 +851,9 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	}
 
 	executor, err = b.executeBuildSection(executor, options, provider)
-
 	if err == nil {
-		err = b.run(ctx, executor)
-		if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
+		err = b.run(b.context, trace, executor)
+		if errWait := b.waitForTerminal(b.context, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
 			b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
 		}
 	}
