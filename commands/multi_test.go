@@ -50,6 +50,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	mJobTrace.On("Write", mock.Anything).Return(0, nil)
 	mJobTrace.On("IsStdout").Return(false)
 	mJobTrace.On("SetCancelFunc", mock.Anything)
+	mJobTrace.On("SetAbortFunc", mock.Anything)
 	mJobTrace.On("SetMasked", mock.Anything)
 	mJobTrace.On("Success")
 

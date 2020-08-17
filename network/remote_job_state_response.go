@@ -12,8 +12,9 @@ const (
 	updateIntervalHeader = "X-GitLab-Trace-Update-Interval"
 	remoteStateHeader    = "Job-Status"
 
-	statusCanceled = "canceled"
-	statusFailed   = "failed"
+	statusCanceling = "canceling"
+	statusCanceled  = "canceled"
+	statusFailed    = "failed"
 )
 
 type RemoteJobStateResponse struct {
@@ -22,7 +23,7 @@ type RemoteJobStateResponse struct {
 	RemoteUpdateInterval time.Duration
 }
 
-func (r *RemoteJobStateResponse) IsAborted() bool {
+func (r *RemoteJobStateResponse) IsFailed() bool {
 	if r.RemoteState == statusCanceled || r.RemoteState == statusFailed {
 		return true
 	}
@@ -32,6 +33,10 @@ func (r *RemoteJobStateResponse) IsAborted() bool {
 	}
 
 	return false
+}
+
+func (r *RemoteJobStateResponse) IsCanceled() bool {
+	return r.RemoteState == statusCanceling
 }
 
 func NewRemoteJobStateResponse(response *http.Response, logger logrus.FieldLogger) *RemoteJobStateResponse {

@@ -13,6 +13,20 @@ type MockJobTrace struct {
 	mock.Mock
 }
 
+// Abort provides a mock function with given fields:
+func (_m *MockJobTrace) Abort() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // Cancel provides a mock function with given fields:
 func (_m *MockJobTrace) Cancel() bool {
 	ret := _m.Called()
@@ -44,6 +58,11 @@ func (_m *MockJobTrace) IsStdout() bool {
 	}
 
 	return r0
+}
+
+// SetAbortFunc provides a mock function with given fields: abortFunc
+func (_m *MockJobTrace) SetAbortFunc(abortFunc context.CancelFunc) {
+	_m.Called(abortFunc)
 }
 
 // SetCancelFunc provides a mock function with given fields: cancelFunc

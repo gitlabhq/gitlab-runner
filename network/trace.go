@@ -15,6 +15,7 @@ type clientJobTrace struct {
 	jobCredentials *common.JobCredentials
 	id             int
 	cancelFunc     context.CancelFunc
+	abortFunc      context.CancelFunc
 
 	buffer *trace.Buffer
 
@@ -71,6 +72,10 @@ func (c *clientJobTrace) checksum() string {
 	return c.buffer.Checksum()
 }
 
+// SetCancelFunc sets the function to be called by Cancel(). The function
+// provided here should cancel the execution of any stages that are not
+// absolutely required, whilst allowing for stages such as `after_script` to
+// proceed.
 func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -78,6 +83,7 @@ func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	c.cancelFunc = cancelFunc
 }
 
+// Cancel calls the function set by SetCancelFunc.
 func (c *clientJobTrace) Cancel() bool {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -87,6 +93,33 @@ func (c *clientJobTrace) Cancel() bool {
 	}
 
 	c.cancelFunc()
+	return true
+}
+
+// SetAbortFunc sets the function to be called by Abort(). The function
+// provided here should abort the execution of all stages.
+func (c *clientJobTrace) SetAbortFunc(cancelFunc context.CancelFunc) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.abortFunc = cancelFunc
+}
+
+// Abort calls Cancel() followed by the function set by SetAbortFunc. This
+// sequence ensures that any logic Cancel() executes is handled first before
+// all execution is immediately prevented.
+func (c *clientJobTrace) Abort() bool {
+	// We call Cancel before the mutex lock because it locks the mutex itself.
+	c.Cancel()
+
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if c.abortFunc == nil {
+		return false
+	}
+
+	c.abortFunc()
 	return true
 }
 
@@ -115,7 +148,7 @@ func (c *clientJobTrace) start() {
 
 func (c *clientJobTrace) ensureAllTraceSent() {
 	for c.anyTraceToSend() {
-		switch c.sendPatch() {
+		switch c.sendPatch().State {
 		case common.PatchSucceeded:
 			// we continue sending till we succeed
 			continue
@@ -168,20 +201,28 @@ func (c *clientJobTrace) finish() {
 // incrementalUpdate returns a flag if jobs is supposed
 // to be running, or whether it should be finished
 func (c *clientJobTrace) incrementalUpdate() bool {
-	patchState := c.sendPatch()
+	patchResult := c.sendPatch()
+	if patchResult.CancelRequested {
+		c.cancel()
+	}
 
-	if patchState == common.PatchSucceeded {
+	switch patchResult.State {
+	case common.PatchSucceeded:
 		// We try to additionally touch job to check
 		// it might be required if no content was send
 		// for longer period of time.
 		// This is needed to discover if it should be aborted
-		touchState := c.touchJob()
+		touchResult := c.touchJob()
+		if touchResult.CancelRequested {
+			c.cancel()
+		}
 
-		// Try to abort job
-		if touchState == common.UpdateAbort && c.abort() {
+		if touchResult.State == common.UpdateAbort {
+			c.abort()
 			return false
 		}
-	} else if patchState == common.PatchAbort && c.abort() {
+	case common.PatchAbort:
+		c.abort()
 		return false
 	}
 
@@ -195,18 +236,18 @@ func (c *clientJobTrace) anyTraceToSend() bool {
 	return c.buffer.Size() != c.sentTrace
 }
 
-func (c *clientJobTrace) sendPatch() common.PatchState {
+func (c *clientJobTrace) sendPatch() common.PatchTraceResult {
 	c.lock.RLock()
 	content, err := c.buffer.Bytes(c.sentTrace, c.maxTracePatchSize)
 	sentTrace := c.sentTrace
 	c.lock.RUnlock()
 
 	if err != nil {
-		return common.PatchFailed
+		return common.PatchTraceResult{State: common.PatchFailed}
 	}
 
 	if len(content) == 0 {
-		return common.PatchSucceeded
+		return common.PatchTraceResult{State: common.PatchSucceeded}
 	}
 
 	result := c.client.PatchTrace(c.config, c.jobCredentials, content, sentTrace)
@@ -220,7 +261,7 @@ func (c *clientJobTrace) sendPatch() common.PatchState {
 		c.lock.Unlock()
 	}
 
-	return result.State
+	return result
 }
 
 func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
@@ -241,13 +282,13 @@ func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
 }
 
 // Update Coordinator that the job is still running.
-func (c *clientJobTrace) touchJob() common.UpdateState {
+func (c *clientJobTrace) touchJob() common.UpdateJobResult {
 	c.lock.RLock()
 	shouldRefresh := time.Since(c.sentTime) > c.forceSendInterval
 	c.lock.RUnlock()
 
 	if !shouldRefresh {
-		return common.UpdateSucceeded
+		return common.UpdateJobResult{State: common.UpdateSucceeded}
 	}
 
 	jobInfo := common.UpdateJobInfo{
@@ -266,7 +307,7 @@ func (c *clientJobTrace) touchJob() common.UpdateState {
 		c.lock.Unlock()
 	}
 
-	return result.State
+	return result
 }
 
 func (c *clientJobTrace) sendUpdate() common.UpdateState {
@@ -299,10 +340,15 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 	return result.State
 }
 
-func (c *clientJobTrace) abort() bool {
-	cancelled := c.Cancel()
+func (c *clientJobTrace) cancel() {
+	c.Cancel()
 	c.SetCancelFunc(nil)
-	return cancelled
+}
+
+func (c *clientJobTrace) abort() {
+	c.Abort()
+	c.SetCancelFunc(nil)
+	c.SetAbortFunc(nil)
 }
 
 func (c *clientJobTrace) watch() {

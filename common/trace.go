@@ -10,6 +10,7 @@ import (
 type Trace struct {
 	Writer     io.Writer
 	cancelFunc context.CancelFunc
+	abortFunc  context.CancelFunc
 	mutex      sync.Mutex
 }
 
@@ -48,6 +49,28 @@ func (s *Trace) Cancel() bool {
 	}
 
 	s.cancelFunc()
+	return true
+}
+
+func (s *Trace) SetAbortFunc(abortFunc context.CancelFunc) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.abortFunc = abortFunc
+}
+
+func (s *Trace) Abort() bool {
+	// We call Cancel before the mutex lock because it locks the mutex itself.
+	s.Cancel()
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.abortFunc == nil {
+		return false
+	}
+
+	s.abortFunc()
 	return true
 }
 
