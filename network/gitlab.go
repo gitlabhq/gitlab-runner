@@ -422,6 +422,10 @@ func (n *GitLabClient) createUpdateJobResult(
 	case remoteJobStateResponse.IsFailed():
 		log.Warningln("Submitting job to coordinator...", "job failed")
 		result.State = common.UpdateAbort
+	case remoteJobStateResponse.IsCanceled():
+		log.Warningln("Submitting job to coordinator...", "job canceled")
+		result.Canceling = true
+		result.State = common.UpdateSucceeded
 	case statusCode == http.StatusOK:
 		log.Debugln("Submitting job to coordinator...", "ok")
 		result.State = common.UpdateSucceeded
@@ -519,6 +523,14 @@ func (n *GitLabClient) createPatchTraceResult(
 	case tracePatchResponse.IsFailed():
 		log.Warningln("Appending trace to coordinator...", "job failed")
 		result.State = common.PatchAbort
+
+		return result
+
+	case tracePatchResponse.IsCanceled():
+		log.Warningln("Appending trace to coordinator...", "job canceled")
+		result.SentOffset = endOffset
+		result.Canceling = true
+		result.State = common.PatchSucceeded
 
 		return result
 
