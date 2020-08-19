@@ -184,7 +184,7 @@ func TestGetConfigs(t *testing.T) {
 	result := ResolveConfigs(testDockerAuthConfigs, "", gitlabRegistryCredentials)
 
 	assert.Equal(t, map[string]RegistryInfo{
-		"https://registry.domain.tld:5005/v1/": {
+		"registry.domain.tld:5005": {
 			Source: authConfigSourceNameUserVariable,
 			AuthConfig: types.AuthConfig{
 				Username:      "test_user_1",
