@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -208,6 +209,42 @@ func TestGetConfigs(t *testing.T) {
 			},
 		},
 	}, result)
+}
+
+func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
+	registryCredentials := []common.Credentials{
+		{
+			Type:     "registry",
+			URL:      "registry.domain.tld:5005",
+			Username: "test_user_1",
+			Password: "test_password_1",
+		},
+	}
+
+	cleanup := setupTestHomeDirectoryConfig(t, true)
+	defer cleanup()
+	result := ResolveConfigs("", "", registryCredentials)
+
+	expectedResult := map[string]RegistryInfo{
+		"registry.domain.tld:5005": {
+			Source: filepath.Join(HomeDirectory, ".dockercfg"),
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_1",
+				Password:      "test_password_1",
+				ServerAddress: "https://registry.domain.tld:5005/v1/",
+			},
+		},
+		"registry2.domain.tld:5005": {
+			Source: filepath.Join(HomeDirectory, ".dockercfg"),
+			AuthConfig: types.AuthConfig{
+				Username:      "test_user_2",
+				Password:      "test_password_2",
+				ServerAddress: "registry2.domain.tld:5005",
+			},
+		},
+	}
+
+	assert.Equal(t, expectedResult, result)
 }
 
 func TestSplitDockerImageName(t *testing.T) {
