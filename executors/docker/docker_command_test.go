@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
@@ -213,6 +214,30 @@ func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 	out, err := buildtest.RunBuildReturningOutput(t, &build)
 	assert.NoError(t, err)
 	assert.Contains(t, out, value)
+}
+
+func TestDockerCommandSuccessRunFileVariableContent(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
+	build := getBuildForOS(t, func() (common.JobResponse, error) {
+		if runtime.GOOS == "windows" {
+			return common.GetRemoteBuildResponse(`Get-Filehash -Algorithm SHA1 -Path $TEST`)
+		}
+		return common.GetRemoteBuildResponse(`sha1sum $TEST | tr "[a-z]" "[A-Z]"`)
+	})
+
+	value := "this is the content"
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   "TEST",
+		Value: value,
+		File:  true,
+		Raw:   true,
+	})
+
+	out, err := buildtest.RunBuildReturningOutput(t, &build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, fmt.Sprintf("%X", sha1.Sum([]byte(value))))
 }
 
 func TestDockerCommandUsingCustomClonePath(t *testing.T) {
