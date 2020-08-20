@@ -815,7 +815,10 @@ func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 func (s *executor) setupCredentials() error {
 	s.Debugln("Setting up secrets")
 
-	authConfigs := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
+	authConfigs, err := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
+	if err != nil {
+		return err
+	}
 
 	if len(authConfigs) == 0 {
 		return nil

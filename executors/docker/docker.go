@@ -177,12 +177,16 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		}
 	}
 
-	registryInfo := auth.ResolveConfigForImage(
+	registryInfo, err := auth.ResolveConfigForImage(
 		imageName,
 		e.Build.GetDockerAuthConfig(),
 		e.Shell().User,
 		e.Build.Credentials,
 	)
+	if err != nil {
+		return nil, err
+	}
+
 	if registryInfo != nil {
 		e.Println(fmt.Sprintf("Authenticating with credentials from %v", registryInfo.Source))
 		e.Debugln(fmt.Sprintf(
