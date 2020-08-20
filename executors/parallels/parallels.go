@@ -312,7 +312,7 @@ func (s *executor) ensureVMStarted() error {
 		}
 	}
 
-	s.Println("Waiting VM to become responsive...")
+	s.Println("Waiting for VM to become responsive...")
 	err = s.verifyMachine(s.vmName)
 	if err != nil {
 		return err
