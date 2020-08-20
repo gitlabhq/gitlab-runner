@@ -30,9 +30,13 @@ label_matchers:
   - technical debt
   scope: maintenance
 - labels:
-  - feature::maintenance
   - tooling::pipelines
+  scope: maintenance
+- labels:
   - tooling::workflow
+  scope: maintenance
+- labels:
+  - feature::maintenance
   scope: maintenance
 authorship_labels:
 - Community contribution
