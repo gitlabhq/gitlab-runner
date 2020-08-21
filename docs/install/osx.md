@@ -32,6 +32,17 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 **The rest of the commands should execute as the user who will run the Runner.**
 
 1. [Register the Runner](../register/index.md)
+
+   NOTE: **Note:**
+   For building iOS/macOS applications on macOS, be sure to set your runner to use
+   the shell executor. It's a requirement to operate directly as the user on the
+   machine rather than using containers. Note that when you're using the shell
+   executor, the build and tests run as the identity of the runner logged in
+   user, directly on the build host. This is less secure than using container
+   executors, so please take a look at our
+   [security implications documentation](../security/#usage-of-shell-executor)
+   for additional detail on what to keep in mind in this scenario.
+
 1. Install the Runner as a service and start it:
 
    ```shell
