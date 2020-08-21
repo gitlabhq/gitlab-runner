@@ -259,7 +259,7 @@ This defines the Docker Container parameters.
 | `dns_search`                   | A list of DNS search domains |
 | `privileged`                   | Make container run in Privileged mode (insecure) |
 | `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting |
-| `userns_mode`                  | Sets the usernamespace mode for the container when usernamespace remapping option is enabled. (available in Docker 1.10 or later) |
+| `userns_mode`                  | Sets the usernamespace mode for the container and Docker services when usernamespace remapping option is enabled. (available in Docker 1.10 or later) |
 | `cap_add`                      | Add additional Linux capabilities to the container |
 | `cap_drop`                     | Drop additional Linux capabilities from the container |
 | `security_opt`                 | Set security options (--security-opt in `docker run`), takes a list of ':' separated key/values |
