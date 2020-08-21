@@ -35,9 +35,8 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 
    NOTE: **Note:**
    When you build iOS or macOS applications on macOS, use [the shell executor](../executors/shell.md).
-   The runner operates as the user who is logged in on your machine. It does not run in a
-   container. The build and tests run as the identity of the logged-in user, directly on the build host.
-   This is less secure than using container executors. For more information, see the
+   The build and tests run as the identity of the logged-in user, directly on the build host.
+   It does not run in a container. This is less secure than using container executors. For more information, see the
    [security implications documentation](../security/index.md#usage-of-shell-executor)
    for additional detail on what to keep in mind in this scenario.
 
