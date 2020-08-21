@@ -34,12 +34,10 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 1. [Register the Runner](../register/index.md)
 
    NOTE: **Note:**
-   For building iOS/macOS applications on macOS, be sure to set your runner to use
-   the shell executor. It's a requirement to operate directly as the user on the
-   machine rather than using containers. Note that when you're using the shell
-   executor, the build and tests run as the identity of the runner logged in
-   user, directly on the build host. This is less secure than using container
-   executors, so please take a look at our
+   When you build iOS or macOS applications on macOS, use [the shell executor](../executors/shell.md).
+   The runner operates as the user who is logged in on your machine. It does not run in a
+   container. The build and tests run as the identity of the logged-in user, directly on the build host.
+   This is less secure than using container executors. For more information, see the
    [security implications documentation](../security/index.md#usage-of-shell-executor)
    for additional detail on what to keep in mind in this scenario.
 
