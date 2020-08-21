@@ -40,7 +40,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    executor, the build and tests run as the identity of the runner logged in
    user, directly on the build host. This is less secure than using container
    executors, so please take a look at our
-   [security implications documentation](../security/#usage-of-shell-executor)
+   [security implications documentation](../security/index.md#usage-of-shell-executor)
    for additional detail on what to keep in mind in this scenario.
 
 1. Install the Runner as a service and start it:
