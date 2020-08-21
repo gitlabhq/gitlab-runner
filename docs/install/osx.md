@@ -29,10 +29,10 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-**The rest of commands execute as the user who will run the Runner.**
+**The rest of the commands should execute as the user who will run the Runner.**
 
 1. [Register the Runner](../register/index.md)
-1. Install the Runner as service and start it:
+1. Install the Runner as a service and start it:
 
    ```shell
    cd ~
@@ -68,22 +68,22 @@ Runner is installed and running.
 ### Limitations on macOS
 
 NOTE: **Note:**
-The service needs to be installed from the Terminal by running its GUI
-interface as your current user. Only then will you be able to manage the service.
+The service needs to be installed from a Terminal window logged in
+as your current user. Only then will you be able to manage the service.
 
-Currently, the only proven to work mode for macOS is running service in user-mode.
+Currently, the only proven way for it to work in macOS is by running the service in user-mode.
 
 Since the service will be running only when the user is logged in, you should
 enable auto-login on your macOS machine.
 
-The service will be launched as one of `LaunchAgents`. By using `LaunchAgents`,
-the builds will be able to do UI interactions, making it possible to run and
-test on the iOS simulator.
+The service will be launched as a `LaunchAgent`. By using `LaunchAgents`,
+the builds will be able to perform UI interactions, making it possible to run and
+test in the iOS simulator.
 
-It's worth noting that macOS also has `LaunchDaemons`, the services running
+It's worth noting that macOS also has `LaunchDaemons`, services running
 completely in background. `LaunchDaemons` are run on system startup, but they
 don't have the same access to UI interactions as `LaunchAgents`. You can try to
-run the Runner's service as `LaunchDaemon`, but this mode of operation is not
+run the Runner's service as a `LaunchDaemon`, but this mode of operation is not
 currently supported.
 
 You can verify that the Runner created the service configuration file after
