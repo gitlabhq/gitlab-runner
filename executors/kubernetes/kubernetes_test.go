@@ -2544,6 +2544,108 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Empty(t, pod.Spec.SecurityContext, "Security context should be empty")
 			},
 		},
+		"supports pod node affinities": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						Affinity: common.KubernetesAffinity{
+							NodeAffinity: &common.KubernetesNodeAffinity{
+								PreferredDuringSchedulingIgnoredDuringExecution: []common.PreferredSchedulingTerm{
+									{
+										Weight: 100,
+										Preference: common.NodeSelectorTerm{
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "cpu_speed",
+													Operator: "In",
+													Values:   []string{"fast"},
+												},
+											},
+											MatchFields: []common.NodeSelectorRequirement{
+												{
+													Key:      "cpu_count",
+													Operator: "Gt",
+													Values:   []string{"12"},
+												},
+											},
+										},
+									},
+									{
+										Weight: 50,
+										Preference: common.NodeSelectorTerm{
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "kubernetes.io/e2e-az-name",
+													Operator: "In",
+													Values:   []string{"e2e-az1", "e2e-az2"},
+												},
+												{
+													Key:      "kubernetes.io/arch",
+													Operator: "NotIn",
+													Values:   []string{"arm"},
+												},
+											},
+										},
+									},
+								},
+								RequiredDuringSchedulingIgnoredDuringExecution: &common.NodeSelector{
+									NodeSelectorTerms: []common.NodeSelectorTerm{
+										{
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "kubernetes.io/e2e-az-name",
+													Operator: "In",
+													Values:   []string{"e2e-az1", "e2e-az2"},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			//nolint:lll
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.Affinity)
+				require.NotNil(t, pod.Spec.Affinity.NodeAffinity)
+
+				nodeAffinity := pod.Spec.Affinity.NodeAffinity
+				preferredNodeAffinity := nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+
+				require.Len(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, 2)
+				assert.Equal(t, int32(100), preferredNodeAffinity[0].Weight)
+				require.Len(t, preferredNodeAffinity[0].Preference.MatchExpressions, 1)
+				require.Len(t, preferredNodeAffinity[0].Preference.MatchFields, 1)
+				assert.Equal(t, "cpu_speed", preferredNodeAffinity[0].Preference.MatchExpressions[0].Key)
+				assert.Equal(t, api.NodeSelectorOperator("In"), preferredNodeAffinity[0].Preference.MatchExpressions[0].Operator)
+				assert.Equal(t, []string{"fast"}, preferredNodeAffinity[0].Preference.MatchExpressions[0].Values)
+				assert.Equal(t, "cpu_count", preferredNodeAffinity[0].Preference.MatchFields[0].Key)
+				assert.Equal(t, api.NodeSelectorOperator("Gt"), preferredNodeAffinity[0].Preference.MatchFields[0].Operator)
+				assert.Equal(t, []string{"12"}, preferredNodeAffinity[0].Preference.MatchFields[0].Values)
+
+				assert.Equal(t, int32(50), preferredNodeAffinity[1].Weight)
+				require.Len(t, preferredNodeAffinity[1].Preference.MatchExpressions, 2)
+				assert.Equal(t, "kubernetes.io/e2e-az-name", preferredNodeAffinity[1].Preference.MatchExpressions[0].Key)
+				assert.Equal(t, api.NodeSelectorOperator("In"), preferredNodeAffinity[1].Preference.MatchExpressions[0].Operator)
+				assert.Equal(t, []string{"e2e-az1", "e2e-az2"}, preferredNodeAffinity[1].Preference.MatchExpressions[0].Values)
+				assert.Equal(t, "kubernetes.io/arch", preferredNodeAffinity[1].Preference.MatchExpressions[1].Key)
+				assert.Equal(t, api.NodeSelectorOperator("NotIn"), preferredNodeAffinity[1].Preference.MatchExpressions[1].Operator)
+				assert.Equal(t, []string{"arm"}, preferredNodeAffinity[1].Preference.MatchExpressions[1].Values)
+
+				require.NotNil(t, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+				requiredNodeAffinity := nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+
+				require.Len(t, requiredNodeAffinity.NodeSelectorTerms, 1)
+				require.Len(t, requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions, 1)
+				require.Len(t, requiredNodeAffinity.NodeSelectorTerms[0].MatchFields, 0)
+				assert.Equal(t, "kubernetes.io/e2e-az-name", requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Key)
+				assert.Equal(t, api.NodeSelectorOperator("In"), requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Operator)
+				assert.Equal(t, []string{"e2e-az1", "e2e-az2"}, requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Values)
+			},
+		},
 		"supports services as host aliases": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{

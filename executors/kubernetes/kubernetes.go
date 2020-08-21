@@ -1020,6 +1020,7 @@ func (s *executor) preparePodConfig(
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
+			Affinity:                      s.Config.Kubernetes.GetAffinity(),
 		},
 	}
 

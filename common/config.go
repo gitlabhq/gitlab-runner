@@ -229,6 +229,7 @@ type KubernetesConfig struct {
 	PullPolicy                       KubernetesPullPolicy         `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 	NodeSelector                     map[string]string            `toml:"node_selector,omitempty" json:"node_selector" long:"node-selector" env:"KUBERNETES_NODE_SELECTOR" description:"A toml table/json object of key=value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key=value pairs."`
 	NodeTolerations                  map[string]string            `toml:"node_tolerations,omitempty" json:"node_tolerations" long:"node-tolerations" env:"KUBERNETES_NODE_TOLERATIONS" description:"A toml table/json object of key=value:effect. Value and effect are expected to be strings. When set, pods will tolerate the given taints. Only one toleration is supported through environment variable configuration."`
+	Affinity                         KubernetesAffinity           `toml:"affinity,omitempty" json:"affinity" long:"affinity" description:"Kubernetes Affinity setting that is used to select the node that spawns a pod"`
 	ImagePullSecrets                 []string                     `toml:"image_pull_secrets,omitempty" json:"image_pull_secrets" long:"image-pull-secrets" env:"KUBERNETES_IMAGE_PULL_SECRETS" description:"A list of image pull secrets that are used for pulling docker image"`
 	HelperImage                      string                       `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 	TerminationGracePeriodSeconds    int64                        `toml:"terminationGracePeriodSeconds,omitzero" json:"terminationGracePeriodSeconds" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal."`
@@ -294,6 +295,38 @@ type KubernetesPodSecurityContext struct {
 	RunAsNonRoot       *bool   `toml:"run_as_non_root,omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
 	RunAsUser          *int64  `toml:"run_as_user,omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
+}
+
+//nolint:lll
+type KubernetesAffinity struct {
+	NodeAffinity *KubernetesNodeAffinity `toml:"node_affinity,omitempty" json:"node_affinity" long:"node-affinity" description:"Node affinity is conceptually similar to nodeSelector -- it allows you to constrain which nodes your pod is eligible to be scheduled on, based on labels on the node."`
+}
+
+//nolint:lll
+type KubernetesNodeAffinity struct {
+	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector             `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
+	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
+}
+
+type NodeSelector struct {
+	NodeSelectorTerms []NodeSelectorTerm `toml:"node_selector_terms" json:"node_selector_terms"`
+}
+
+type PreferredSchedulingTerm struct {
+	Weight     int32            `toml:"weight" json:"weight"`
+	Preference NodeSelectorTerm `toml:"preference" json:"preference"`
+}
+
+type NodeSelectorTerm struct {
+	MatchExpressions []NodeSelectorRequirement `toml:"match_expressions,omitempty" json:"match_expressions"`
+	MatchFields      []NodeSelectorRequirement `toml:"match_fields,omitempty" json:"match_fields"`
+}
+
+//nolint:lll
+type NodeSelectorRequirement struct {
+	Key      string   `toml:"key,omitempty" json:"key"`
+	Operator string   `toml:"operator,omitempty" json:"operator"`
+	Values   []string `toml:"values,omitempty" json:"values"`
 }
 
 type Service struct {
@@ -540,6 +573,65 @@ func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
 		RunAsNonRoot:       podSecurityContext.RunAsNonRoot,
 		RunAsUser:          podSecurityContext.RunAsUser,
 		SupplementalGroups: podSecurityContext.SupplementalGroups,
+	}
+}
+
+func (c *KubernetesConfig) GetAffinity() *api.Affinity {
+	var affinity api.Affinity
+
+	if c.Affinity.NodeAffinity != nil {
+		affinity.NodeAffinity = c.GetNodeAffinity()
+	}
+
+	return &affinity
+}
+
+//nolint:lll
+func (c *KubernetesConfig) GetNodeAffinity() *api.NodeAffinity {
+	var nodeAffinity api.NodeAffinity
+
+	if c.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+		nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = c.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.GetNodeSelector()
+	}
+
+	for _, preferred := range c.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+		nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, preferred.GetPreferredSchedulingTerm())
+	}
+	return &nodeAffinity
+}
+
+func (c *NodeSelector) GetNodeSelector() *api.NodeSelector {
+	var nodeSelector api.NodeSelector
+	for _, selector := range c.NodeSelectorTerms {
+		nodeSelector.NodeSelectorTerms = append(nodeSelector.NodeSelectorTerms, selector.GetNodeSelectorTerm())
+	}
+	return &nodeSelector
+}
+
+func (c *NodeSelectorRequirement) GetNodeSelectorRequirement() api.NodeSelectorRequirement {
+	return api.NodeSelectorRequirement{
+		Key:      c.Key,
+		Operator: api.NodeSelectorOperator(c.Operator),
+		Values:   c.Values,
+	}
+}
+
+//nolint:lll
+func (c *NodeSelectorTerm) GetNodeSelectorTerm() api.NodeSelectorTerm {
+	var nodeSelectorTerm = api.NodeSelectorTerm{}
+	for _, expression := range c.MatchExpressions {
+		nodeSelectorTerm.MatchExpressions = append(nodeSelectorTerm.MatchExpressions, expression.GetNodeSelectorRequirement())
+	}
+	for _, fields := range c.MatchFields {
+		nodeSelectorTerm.MatchFields = append(nodeSelectorTerm.MatchFields, fields.GetNodeSelectorRequirement())
+	}
+	return nodeSelectorTerm
+}
+
+func (c *PreferredSchedulingTerm) GetPreferredSchedulingTerm() api.PreferredSchedulingTerm {
+	return api.PreferredSchedulingTerm{
+		Weight:     c.Weight,
+		Preference: c.Preference.GetNodeSelectorTerm(),
 	}
 }
 
