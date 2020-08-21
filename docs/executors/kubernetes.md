@@ -503,16 +503,6 @@ on other nodes. Further separation of build containers can be achieved using nod
 This will disallow other pods from scheduling on the same nodes as the
 build pods without extra configuration for the other pods.
 
-## Job execution
-
-At the moment we are using `kube exec` to run the scripts, which relies on
-having a stable network connection between the Runner and the pod for the duration of the command.
-This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119).
-If you are experiencing this problem turn off the feature flag [FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY](../configuration/feature-flags.md#available-feature-flags)
-to use `kube attach` for script execution, which is more stable.
-
-We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.
-
 ### Using kaniko
 
 Another approach for building Docker images inside a Kubernetes cluster is using [kaniko](https://github.com/GoogleContainerTools/kaniko).
@@ -522,3 +512,13 @@ kaniko:
 - Works without the Docker daemon.
 
 For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
+
+## Job execution
+
+At the moment we are using `kube exec` to run the scripts, which relies on
+having a stable network connection between the Runner and the pod for the duration of the command.
+This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119).
+If you are experiencing this problem turn off the feature flag [FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY](../configuration/feature-flags.md#available-feature-flags)
+to use `kube attach` for script execution, which is more stable.
+
+We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.
