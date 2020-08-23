@@ -283,6 +283,64 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func getJobResponseWithCachePaths() common.JobResponse {
+	return common.JobResponse{
+		ID:    1000,
+		Token: "token",
+		Cache: common.Caches{
+			common.Cache{
+				Key:       "cache-key1",
+				Untracked: true,
+				Policy:    common.CachePolicyPush,
+				Paths:     []string{"vendor/"},
+			},
+		},
+	}
+}
+
+func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
+	gitlabURL := "https://example.com:3443"
+
+	shell := AbstractShell{}
+	build := &common.Build{
+		CacheDir:    "cache_dir",
+		JobResponse: getJobResponseWithCachePaths(),
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				URL: gitlabURL,
+			},
+		},
+	}
+	info := common.ShellScriptInfo{
+		RunnerCommand: "gitlab-runner-helper",
+		Build:         build,
+	}
+
+	mockWriter := new(MockShellWriter)
+	defer mockWriter.AssertExpectations(t)
+	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("Cd", mock.Anything)
+	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
+	mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Once()
+	mockWriter.On(
+		"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
+		"--file", mock.Anything,
+		"--timeout", mock.Anything,
+		"--path", "vendor/",
+		"--untracked",
+	).Once()
+	mockWriter.On("Noticef", "Created cache").Once()
+	mockWriter.On("Else").Once()
+	mockWriter.On("Warningf", "Failed to create cache").Once()
+	mockWriter.On("EndIf").Once()
+	mockWriter.On("Else").Once()
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
+	mockWriter.On("EndIf").Once()
+
+	err := shell.writeScript(mockWriter, common.BuildStageArchiveCache, info)
+	require.NoError(t, err)
+}
+
 func TestGitCleanFlags(t *testing.T) {
 	tests := map[string]struct {
 		value string
