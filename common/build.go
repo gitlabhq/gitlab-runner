@@ -132,7 +132,7 @@ type Build struct {
 
 	// statusLock handles access to currentStage, currentState and
 	// executorStageResolver. These variables can be accessed via
-	// GetCurrentStage(), GetCurrentState() and CurrentExecutorStage() from the
+	// CurrentStage(), CurrentState() and CurrentExecutorStage() from the
 	// metrics go routine whilst a build is in-flight.
 	statusLock            sync.RWMutex
 	currentStage          BuildStage
@@ -157,7 +157,7 @@ func (b *Build) setCurrentStage(stage BuildStage) {
 	b.currentStage = stage
 }
 
-func (b *Build) GetCurrentStage() BuildStage {
+func (b *Build) CurrentStage() BuildStage {
 	b.statusLock.RLock()
 	defer b.statusLock.RUnlock()
 
@@ -171,7 +171,7 @@ func (b *Build) setCurrentState(state BuildRuntimeState) {
 	b.currentState = state
 }
 
-func (b *Build) GetCurrentState() BuildRuntimeState {
+func (b *Build) CurrentState() BuildRuntimeState {
 	b.statusLock.RLock()
 	defer b.statusLock.RUnlock()
 
