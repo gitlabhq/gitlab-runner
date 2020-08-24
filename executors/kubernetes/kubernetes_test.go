@@ -2615,7 +2615,7 @@ func TestSetupBuildPod(t *testing.T) {
 				nodeAffinity := pod.Spec.Affinity.NodeAffinity
 				preferredNodeAffinity := nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution
 
-				require.Len(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, 2)
+				require.Len(t, preferredNodeAffinity, 2)
 				assert.Equal(t, int32(100), preferredNodeAffinity[0].Weight)
 				require.Len(t, preferredNodeAffinity[0].Preference.MatchExpressions, 1)
 				require.Len(t, preferredNodeAffinity[0].Preference.MatchFields, 1)
