@@ -7,6 +7,7 @@ import (
 	"time"
 
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
 )
 
 type UpdateState int
@@ -385,6 +386,34 @@ func (s *VaultSecret) expandVariables(vars JobVariables) {
 	if ok {
 		s.Server.Auth.Data["role"] = vars.ExpandValue(fmt.Sprintf("%s", role))
 	}
+}
+
+func (s *VaultSecret) AuthName() string {
+	return s.Server.Auth.Name
+}
+
+func (s *VaultSecret) AuthPath() string {
+	return s.Server.Auth.Path
+}
+
+func (s *VaultSecret) AuthData() auth_methods.Data {
+	return auth_methods.Data(s.Server.Auth.Data)
+}
+
+func (s *VaultSecret) EngineName() string {
+	return s.Engine.Name
+}
+
+func (s *VaultSecret) EnginePath() string {
+	return s.Engine.Path
+}
+
+func (s *VaultSecret) SecretPath() string {
+	return s.Path
+}
+
+func (s *VaultSecret) SecretField() string {
+	return s.Field
 }
 
 func (j *JobResponse) RepoCleanURL() string {
