@@ -83,6 +83,7 @@ type FeaturesInfo struct {
 	MultiBuildSteps         bool `json:"multi_build_steps"`
 	TraceReset              bool `json:"trace_reset"`
 	TraceChecksum           bool `json:"trace_checksum"`
+	VaultSecrets            bool `json:"vault_secrets"`
 }
 
 type RegisterRunnerParameters struct {
