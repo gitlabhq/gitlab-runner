@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"math/big"
 	"os"
 	"path/filepath"
@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -453,11 +454,13 @@ type KubernetesNodeAffinity struct {
 	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
 }
 
+//nolint:lll
 type KubernetesPodAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
 	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
 }
 
+//nolint:lll
 type KubernetesPodAntiAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
 	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
@@ -1005,6 +1008,7 @@ func (c *KubernetesConfig) GetPodAffinity() *api.PodAffinity {
 	return &podAffinity
 }
 
+//nolint:lll
 func (c *KubernetesConfig) GetPodAntiAffinity() *api.PodAntiAffinity {
 	var PodAntiAffinity api.PodAntiAffinity
 
