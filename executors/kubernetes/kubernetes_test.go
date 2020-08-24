@@ -2807,6 +2807,55 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"e2e-az1", "e2e-az2"}, requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Values)
 			},
 		},
+		"supports pod pod affinities": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						Affinity: common.KubernetesAffinity{
+							PodAffinity: &common.KubernetesPodAffinity{
+								RequiredDuringSchedulingIgnoredDuringExecution: []common.PodAffinityTerm{
+									{
+										LabelSelector: &common.LabelSelector{
+											MatchLabels: map[string]string{"key": "value"},
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "cores",
+													Operator: "In",
+													Values:   []string{"many", "high_count"},
+												},
+											},
+										},
+										Namespaces:  []string{"namespace_1", "namespace_2"},
+										TopologyKey: "topo_key",
+									},
+								},
+								PreferredDuringSchedulingIgnoredDuringExecution: nil,
+							},
+						},
+					},
+				},
+			},
+			//nolint:lll
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.Affinity)
+				require.NotNil(t, pod.Spec.Affinity.PodAffinity)
+
+				podAffinity := pod.Spec.Affinity.PodAffinity
+				require.Len(t, podAffinity.RequiredDuringSchedulingIgnoredDuringExecution, 1)
+				preferredNodeAffinity := podAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+
+				assert.Equal(t, []string{"namespace_1", "namespace_2"}, preferredNodeAffinity[0].Namespaces)
+				assert.Equal(t, "topo_key", preferredNodeAffinity[0].TopologyKey)
+				require.NotNil(t, preferredNodeAffinity[0].LabelSelector)
+				assert.Equal(t, map[string]string{"key": "value"}, preferredNodeAffinity[0].LabelSelector.MatchLabels)
+				assert.Len(t, preferredNodeAffinity[0].LabelSelector.MatchExpressions, 1)
+				preferredMatchExp := preferredNodeAffinity[0].LabelSelector.MatchExpressions
+				assert.Equal(t, "cores", preferredMatchExp[0].Key)
+				assert.Equal(t, metav1.LabelSelectorOperator("In"), preferredMatchExp[0].Operator)
+				assert.Equal(t, []string{"many", "high_count"}, preferredMatchExp[0].Values)
+			},
+		},
 		"supports services and setting extra hosts using HostAliases": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
