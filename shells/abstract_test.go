@@ -283,6 +283,76 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func getJobResponseWithCachePaths() common.JobResponse {
+	return common.JobResponse{
+		ID:    1000,
+		Token: "token",
+		Cache: common.Caches{
+			common.Cache{
+				Key:       "cache-key1",
+				Untracked: true,
+				Policy:    common.CachePolicyPush,
+				Paths:     []string{"vendor/"},
+			},
+			common.Cache{
+				Key:    "cache-key1",
+				Policy: common.CachePolicyPush,
+				Paths:  []string{"some/path1", "other/path2"},
+			},
+		},
+	}
+}
+
+func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
+	gitlabURL := "https://example.com:3443"
+
+	shell := AbstractShell{}
+	build := &common.Build{
+		CacheDir:    "cache_dir",
+		JobResponse: getJobResponseWithCachePaths(),
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{
+				URL: gitlabURL,
+			},
+		},
+	}
+	info := common.ShellScriptInfo{
+		RunnerCommand: "gitlab-runner-helper",
+		Build:         build,
+	}
+
+	mockWriter := new(MockShellWriter)
+	defer mockWriter.AssertExpectations(t)
+	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("Cd", mock.Anything)
+	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
+	mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(2)
+	mockWriter.On(
+		"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
+		"--file", mock.Anything,
+		"--timeout", mock.Anything,
+		"--path", "vendor/",
+		"--untracked",
+	).Once()
+	mockWriter.On(
+		"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
+		"--file", mock.Anything,
+		"--timeout", mock.Anything,
+		"--path", "some/path1",
+		"--path", "other/path2",
+	).Once()
+	mockWriter.On("Noticef", "Created cache").Times(2)
+	mockWriter.On("Else").Times(2)
+	mockWriter.On("Warningf", "Failed to create cache").Times(2)
+	mockWriter.On("EndIf").Times(2)
+	mockWriter.On("Else").Times(2)
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(2)
+	mockWriter.On("EndIf").Times(2)
+
+	err := shell.writeScript(mockWriter, common.BuildStageArchiveCache, info)
+	require.NoError(t, err)
+}
+
 func TestGitCleanFlags(t *testing.T) {
 	tests := map[string]struct {
 		value string
