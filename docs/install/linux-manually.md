@@ -59,7 +59,7 @@ curl -LJO https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-run
    rpm -i gitlab-runner_<arch>.rpm
    ```
 
-1. [Register the Runner](../register/index.md#gnulinux)
+1. [Register the Runner](../register/index.md#linux)
 
 ### Update
 
