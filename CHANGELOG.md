@@ -1,3 +1,9 @@
+## v13.3.1 (2020-08-25)
+
+### Security
+
+- Fix Possible DOS via ci jobs
+
 ## v13.3.0 (2020-08-20)
 
 ### Bug fixes
