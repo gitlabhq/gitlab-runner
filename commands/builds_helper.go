@@ -45,8 +45,8 @@ type statePermutation struct {
 func newStatePermutationFromBuild(build *common.Build) statePermutation {
 	return statePermutation{
 		runner:        build.Runner.ShortDescription(),
-		buildState:    build.CurrentState,
-		buildStage:    build.CurrentStage,
+		buildState:    build.CurrentState(),
+		buildStage:    build.CurrentStage(),
 		executorStage: build.CurrentExecutorStage(),
 	}
 }
@@ -297,8 +297,8 @@ func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 			w,
 			"url=%s state=%s stage=%s executor_stage=%s duration=%s\n",
 			url,
-			job.CurrentState,
-			job.CurrentStage,
+			job.CurrentState(),
+			job.CurrentStage(),
 			job.CurrentExecutorStage(),
 			job.Duration(),
 		)

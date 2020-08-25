@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -129,19 +130,52 @@ type Build struct {
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
 
-	CurrentStage BuildStage
-	CurrentState BuildRuntimeState
+	// statusLock handles access to currentStage, currentState and
+	// executorStageResolver. These variables can be accessed via
+	// CurrentStage(), CurrentState() and CurrentExecutorStage() from the
+	// metrics go routine whilst a build is in-flight.
+	statusLock            sync.RWMutex
+	currentStage          BuildStage
+	currentState          BuildRuntimeState
+	executorStageResolver func() ExecutorStage
 
 	Session *session.Session
 
-	executorStageResolver func() ExecutorStage
-	logger                BuildLogger
-	allVariables          JobVariables
+	logger       BuildLogger
+	allVariables JobVariables
 
 	createdAt time.Time
 
 	Referees         []referees.Referee
 	ArtifactUploader func(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
+}
+
+func (b *Build) setCurrentStage(stage BuildStage) {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	b.currentStage = stage
+}
+
+func (b *Build) CurrentStage() BuildStage {
+	b.statusLock.RLock()
+	defer b.statusLock.RUnlock()
+
+	return b.currentStage
+}
+
+func (b *Build) setCurrentState(state BuildRuntimeState) {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	b.currentState = state
+}
+
+func (b *Build) CurrentState() BuildRuntimeState {
+	b.statusLock.RLock()
+	defer b.statusLock.RUnlock()
+
+	return b.currentState
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -269,7 +303,7 @@ func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, shar
 }
 
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
-	b.CurrentStage = buildStage
+	b.setCurrentStage(buildStage)
 
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
 
@@ -505,24 +539,24 @@ func (b *Build) GetBuildTimeout() time.Duration {
 func (b *Build) handleError(err error) error {
 	switch err {
 	case context.Canceled:
-		b.CurrentState = BuildRunRuntimeCanceled
+		b.setCurrentState(BuildRunRuntimeCanceled)
 		return &BuildError{Inner: errors.New("canceled")}
 
 	case context.DeadlineExceeded:
-		b.CurrentState = BuildRunRuntimeTimedout
+		b.setCurrentState(BuildRunRuntimeTimedout)
 		return &BuildError{
 			Inner:         fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()),
 			FailureReason: JobExecutionTimeout,
 		}
 
 	default:
-		b.CurrentState = BuildRunRuntimeFinished
+		b.setCurrentState(BuildRunRuntimeFinished)
 		return err
 	}
 }
 
 func (b *Build) run(ctx context.Context, executor Executor) (err error) {
-	b.CurrentState = BuildRunRuntimeRunning
+	b.setCurrentState(BuildRunRuntimeRunning)
 
 	buildFinish := make(chan error, 1)
 
@@ -550,10 +584,10 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 
 	case signal := <-b.SystemInterrupt:
 		err = fmt.Errorf("aborted: %v", signal)
-		b.CurrentState = BuildRunRuntimeTerminated
+		b.setCurrentState(BuildRunRuntimeTerminated)
 
 	case err = <-buildFinish:
-		b.CurrentState = BuildRunRuntimeFinished
+		b.setCurrentState(BuildRunRuntimeFinished)
 		return err
 	}
 
@@ -593,7 +627,7 @@ func (b *Build) retryCreateExecutor(
 			return nil, errors.New("failed to create executor")
 		}
 
-		b.executorStageResolver = executor.GetCurrentStage
+		b.setExecutorStageResolver(executor.GetCurrentStage)
 
 		err = executor.Prepare(options)
 		if err == nil {
@@ -697,11 +731,19 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	trace.Fail(err, RunnerSystemFailure)
 }
 
+func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	b.executorStageResolver = resolver
+}
+
 func (b *Build) CurrentExecutorStage() ExecutorStage {
+	b.statusLock.RLock()
+	defer b.statusLock.RUnlock()
+
 	if b.executorStageResolver == nil {
-		b.executorStageResolver = func() ExecutorStage {
-			return ExecutorStage("")
-		}
+		return ExecutorStage("")
 	}
 
 	return b.executorStageResolver()
@@ -716,7 +758,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		b.logger.Println("  on", b.Runner.Name, b.Runner.ShortDescription())
 	}
 
-	b.CurrentState = BuildRunStatePending
+	b.setCurrentState(BuildRunStatePending)
 
 	defer func() { b.cleanupBuild(executor, trace, err) }()
 
@@ -933,6 +975,7 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, AppVersion.Variables()...)
 
 	b.allVariables = variables.Expand()
+
 	return b.allVariables
 }
 

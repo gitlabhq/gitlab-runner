@@ -1265,11 +1265,11 @@ func TestBuildFinishTimeout(t *testing.T) {
 
 func TestProjectUniqueName(t *testing.T) {
 	tests := map[string]struct {
-		build        Build
+		build        *Build
 		expectedName string
 	}{
 		"project non rfc1132 unique name": {
-			build: Build{
+			build: &Build{
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
 						Token: "Ze_n8E6en622WxxSg4r8",
@@ -1285,7 +1285,7 @@ func TestProjectUniqueName(t *testing.T) {
 			expectedName: "runner-zen8e6e-project-1234567890-concurrent-0",
 		},
 		"project non rfc1132 unique name longer than 63 char": {
-			build: Build{
+			build: &Build{
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
 						Token: "Ze_n8E6en622WxxSg4r8",
@@ -1301,7 +1301,7 @@ func TestProjectUniqueName(t *testing.T) {
 			expectedName: "runner-zen8e6e-project-123456789012345-concurrent-1234567890123",
 		},
 		"project normal unique name": {
-			build: Build{
+			build: &Build{
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
 						Token: "xYzWabc-Ij3xlKjmoPO9",
