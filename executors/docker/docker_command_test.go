@@ -69,16 +69,6 @@ func (s *safeBuffer) String() string {
 	return s.buf.String()
 }
 
-func TestDockerCommandSuccessRun(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-
-	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
-}
-
 func TestDockerCommandMultistepBuild(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
@@ -143,6 +133,7 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 			if tt.errExpected {
 				var buildErr *common.BuildError
 				assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+				assert.Contains(t, err.Error(), "exit code 1")
 				return
 			}
 			assert.NoError(t, err)
@@ -308,18 +299,6 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
-}
-
-func TestDockerCommandBuildFail(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-
-	build := getBuildForOS(t, common.GetRemoteFailedBuild)
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	require.Error(t, err, "error")
-	assert.IsType(t, &common.BuildError{}, err)
-	assert.Contains(t, err.Error(), "exit code 1")
 }
 
 func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
