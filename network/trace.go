@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -65,6 +66,10 @@ func (c *clientJobTrace) Write(data []byte) (n int, err error) {
 
 func (c *clientJobTrace) SetMasked(masked []string) {
 	c.buffer.SetMasked(masked)
+}
+
+func (c *clientJobTrace) checksum() string {
+	return fmt.Sprintf("crc32:%x", c.buffer.Checksum())
 }
 
 func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
@@ -247,8 +252,9 @@ func (c *clientJobTrace) touchJob() common.UpdateState {
 	}
 
 	jobInfo := common.UpdateJobInfo{
-		ID:    c.id,
-		State: common.Running,
+		ID:       c.id,
+		State:    common.Running,
+		Checksum: c.checksum(),
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
@@ -273,6 +279,7 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 		ID:            c.id,
 		State:         state,
 		FailureReason: c.failureReason,
+		Checksum:      c.checksum(),
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)

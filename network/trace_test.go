@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"sync"
 	"testing"
 	"time"
@@ -660,4 +661,32 @@ func TestUpdateIntervalChanges(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestJobChecksum(t *testing.T) {
+	var message = []byte("foobar")
+
+	mockNetwork := new(common.MockNetwork)
+	defer mockNetwork.AssertExpectations(t)
+
+	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, message, 0).
+		Return(common.NewPatchTraceResult(len(message), common.UpdateSucceeded, 0))
+
+	mockNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).
+		Return(common.UpdateSucceeded)
+
+	jobTrace, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
+	jobTrace.start()
+
+	_, err = jobTrace.Write(message)
+	require.NoError(t, err)
+
+	jobTrace.Success()
+
+	crc32 := crc32.NewIEEE()
+	crc32.Write(message)
+
+	assert.Equal(t, fmt.Sprintf("crc32:%x", crc32.Sum32()), jobTrace.checksum())
 }
