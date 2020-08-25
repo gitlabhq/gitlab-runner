@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -11,17 +12,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
-	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
 func TestBuildsHelperCollect(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gitlab-runner-helper-collector")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	ch := make(chan prometheus.Metric, 50)
@@ -50,7 +49,7 @@ func TestBuildsHelperCollect(t *testing.T) {
 	go func() {
 		err = buildtest.RunBuildWithTrace(t, build, trace)
 		assert.EqualError(t, err, "canceled")
-		assert.IsType(t, &common.BuildError{}, err)
+		assert.True(t, errors.Is(err, &common.BuildError{}), "expected: %T, got: %T", common.BuildError{}, err)
 	}()
 
 	b.builds = append(b.builds, build)
