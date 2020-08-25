@@ -92,7 +92,7 @@ Before configuring the GitLab Runner, you need to first register it, so that
 it connects with your GitLab instance:
 
 1. [Obtain a Runner token](https://docs.gitlab.com/ee/ci/runners/)
-1. [Register the Runner](../../register/index.md#gnulinux)
+1. [Register the Runner](../../register/index.md#linux)
 1. When asked the executor type, enter `docker+machine`
 
 You can now move on to the most important part, configuring the GitLab Runner.
