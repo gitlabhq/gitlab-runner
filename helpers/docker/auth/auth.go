@@ -51,13 +51,12 @@ func ResolveConfigForImage(
 	}
 
 	indexName, _ := splitDockerImageName(imageName)
-	for registry, info := range authConfigs {
-		if indexName == convertToHostname(registry) {
-			return &info
-		}
+	info, ok := authConfigs[indexName]
+	if !ok {
+		return nil
 	}
 
-	return nil
+	return &info
 }
 
 // ResolveConfigs returns the authentication configuration for docker registries.
@@ -83,8 +82,9 @@ func ResolveConfigs(dockerAuthConfig, username string, credentials []common.Cred
 	for _, r := range resolvers {
 		source, configs := r()
 		for registry, conf := range configs {
-			if _, ok := res[registry]; !ok {
-				res[registry] = RegistryInfo{
+			registryHostname := convertToHostname(registry)
+			if _, ok := res[registryHostname]; !ok {
+				res[registryHostname] = RegistryInfo{
 					Source:     source,
 					AuthConfig: conf,
 				}
@@ -269,16 +269,16 @@ func addAll(to, from map[string]types.AuthConfig) {
 }
 
 func convertToHostname(url string) string {
-	stripped := url
-	if strings.HasPrefix(url, "http://") {
-		stripped = strings.Replace(url, "http://", "", 1)
-	} else if strings.HasPrefix(url, "https://") {
-		stripped = strings.Replace(url, "https://", "", 1)
-	}
+	url = strings.ToLower(url)
+	url = strings.TrimPrefix(url, "http://")
+	url = strings.TrimPrefix(url, "https://")
 
-	nameParts := strings.SplitN(stripped, "/", 2)
-	if nameParts[0] == "index."+DefaultDockerRegistry {
+	nameParts := strings.SplitN(url, "/", 2)
+	url = nameParts[0]
+
+	if url == "index."+DefaultDockerRegistry {
 		return DefaultDockerRegistry
 	}
-	return nameParts[0]
+
+	return url
 }
