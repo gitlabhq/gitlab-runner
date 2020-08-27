@@ -305,10 +305,72 @@ type JobResponse struct {
 	Credentials   []Credentials  `json:"credentials"`
 	Dependencies  Dependencies   `json:"dependencies"`
 	Features      GitlabFeatures `json:"features"`
+	Secrets       Secrets        `json:"secrets,omitempty"`
 
 	TLSCAChain  string `json:"-"`
 	TLSAuthCert string `json:"-"`
 	TLSAuthKey  string `json:"-"`
+}
+
+type Secrets map[string]Secret
+
+type Secret struct {
+	Vault *VaultSecret `json:"vault,omitempty"`
+}
+
+type VaultSecret struct {
+	Server VaultServer `json:"server"`
+	Engine VaultEngine `json:"engine"`
+	Path   string      `json:"path"`
+	Field  string      `json:"field"`
+}
+
+type VaultServer struct {
+	URL  string    `json:"url"`
+	Auth VaultAuth `json:"auth"`
+}
+
+type VaultAuth struct {
+	Name string        `json:"name"`
+	Path string        `json:"path"`
+	Data VaultAuthData `json:"data"`
+}
+
+type VaultAuthData map[string]interface{}
+
+type VaultEngine struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+func (s Secrets) expandVariables(vars JobVariables) {
+	for _, secret := range s {
+		secret.expandVariables(vars)
+	}
+}
+
+func (s Secret) expandVariables(vars JobVariables) {
+	if s.Vault != nil {
+		s.Vault.expandVariables(vars)
+	}
+}
+
+func (s *VaultSecret) expandVariables(vars JobVariables) {
+	if len(s.Server.Auth.Data) < 1 {
+		return
+	}
+
+	s.Server.Auth.Path = vars.ExpandValue(s.Server.Auth.Path)
+
+	jwt, ok := s.Server.Auth.Data["jwt"]
+	if ok {
+		s.Server.Auth.Data["jwt"] = vars.ExpandValue(fmt.Sprintf("%s", jwt))
+	}
+
+	role, ok := s.Server.Auth.Data["role"]
+	if ok {
+		s.Server.Auth.Data["role"] = vars.ExpandValue(fmt.Sprintf("%s", role))
+	}
 }
 
 func (j *JobResponse) RepoCleanURL() string {
