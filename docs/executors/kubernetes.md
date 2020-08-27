@@ -111,6 +111,8 @@ The following keywords help to define the behavior of the Runner within Kubernet
   container using the [sidecar
   pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar).
   Read more about [using services](#using-services).
+- `cap_add`: Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration).
+- `cap_drop`: Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration).
 
 ### Configuring executor Service Account
 
@@ -431,6 +433,71 @@ check_interval = 30
       [[runners.kubernetes.services]]
         name = "percona:latest"
         alias = "db2"
+```
+
+## Capabilities configuration
+
+[Kubernetes allows](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container)
+to configure different [Linux capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) that should be
+added or dropped from a container.
+
+GitLab Runner supports configuration of capabilities with the `cap_add` and `cap_drop` keywords in the `[runners.kubernetes]`
+section of the configuration file. By default, GitLab Runner provides
+a [list of capabilities](#default-list-of-dropped-capabilities) that should be dropped.
+
+Because the default list of dropped capabilities can intersect with user-defined capabilities, the following rules are
+applied to determine the final list:
+
+1. User-defined `cap_drop` has priority over user-defined `cap_add`. If
+   you define the same capability in both settings, only the one from `cap_drop` is passed
+   to the container.
+
+1. User-defined `cap_add` has priority over the default list of dropped capabilities.
+   If you want to add the capability that is dropped by default, explicitly add it to
+   `cap_add`.
+
+The final list of capabilities is added to all containers in the job's pod.
+
+A few notes:
+
+- Remove the `CAP_` prefix from capability identifiers passed to the container configuration.
+  For example, if you want to add or drop the `CAP_SYS_TIME` capability,
+  in the configuration file, set a `SYS_TIME` string for `cap_add` or `cap_drop`.
+
+- The owner of the Kubernetes cluster
+  [can define a PodSecurityPolicy](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#capabilities),
+  where specific capabilities are allowed, restricted, or added by default.
+  These rules take precedence over any user-defined configuration.
+
+  Container runtimes can also define a default list of capabilities that you can add,
+  like those seen in
+  [Docker](https://github.com/moby/moby/blob/19.03/oci/defaults.go#L14-L32)
+  or [containerd](https://github.com/containerd/containerd/blob/v1.4.0/oci/spec.go#L93-L110).
+
+### Default list of dropped capabilities
+
+GitLab Runner tries to drop these capabilities by default. If any of them are required for the job
+to be executed properly, you should explicitly add the capability with the `cap_add` setting:
+
+<!-- kubernetes_default_cap_drop_list_start -->
+- `NET_RAW`
+
+<!-- kubernetes_default_cap_drop_list_end -->
+
+### Example configuration
+
+```toml
+concurrent = 1
+check_interval = 30
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    # ...
+    cap_add = ["SYS_TIME", "IPC_LOCK"]
+    cap_drop = ["SYS_ADMIN"]
+    # ...
 ```
 
 ## Using Docker in your builds
