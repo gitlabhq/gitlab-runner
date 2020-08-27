@@ -111,6 +111,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
   container using the [sidecar
   pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar).
   Read more about [using services](#using-services).
+- `affinity`: Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity).      
 
 ### Configuring executor Service Account
 
@@ -431,6 +432,56 @@ check_interval = 30
       [[runners.kubernetes.services]]
         name = "percona:latest"
         alias = "db2"
+```
+
+## Using Affinity
+
+### Node Affinity
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 13.4.
+
+Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to be added to a pod specification at build time.
+
+```toml
+concurrent = 1
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+    [runners.kubernetes]
+      [runners.kubernetes.affinity]
+        [runners.kubernetes.affinity.node_affinity]
+          [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+            weight = 100
+            [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+               key = "cpu_speed"
+               operator = "In"
+               values = ["fast"]
+              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+               key = "mem_speed"
+               operator = "In"
+               values = ["fast"]
+          [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+            weight = 50
+            [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+                key = "core_count"
+                operator = "In"
+                values = ["high", "32"]
+              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields]]
+               key = "cpu_type"
+               operator = "In"
+               values = ["arm64"]
+        [runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution]
+          [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
+            [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
+              key = "kubernetes.io/e2e-az-name"
+              operator = "In"
+              values = [
+                "e2e-az1",
+                "e2e-az2"
+              ]
 ```
 
 ## Using Docker in your builds
