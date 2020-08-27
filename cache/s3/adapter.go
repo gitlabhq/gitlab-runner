@@ -2,6 +2,7 @@ package s3
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -38,6 +39,10 @@ func (a *s3Adapter) GetUploadURL() *url.URL {
 	}
 
 	return URL
+}
+
+func (a *s3Adapter) GetUploadHeaders() http.Header {
+	return nil
 }
 
 func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
