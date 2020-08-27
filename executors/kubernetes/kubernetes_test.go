@@ -2772,6 +2772,111 @@ func TestSetupBuildPod(t *testing.T) {
 				require.Equal(t, def.InitContainers, pod.Spec.InitContainers)
 			},
 		},
+		"support setting linux capabilities": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						CapAdd:    []string{"CAP_1", "CAP_2"},
+						CapDrop:   []string{"CAP_3", "CAP_4"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotEmpty(t, pod.Spec.Containers)
+				capabilities := pod.Spec.Containers[0].SecurityContext.Capabilities
+				require.NotNil(t, capabilities)
+				assert.Len(t, capabilities.Add, 2)
+				assert.Contains(t, capabilities.Add, api.Capability("CAP_1"))
+				assert.Contains(t, capabilities.Add, api.Capability("CAP_2"))
+				assert.Len(t, capabilities.Drop, 3)
+				assert.Contains(t, capabilities.Drop, api.Capability("CAP_3"))
+				assert.Contains(t, capabilities.Drop, api.Capability("CAP_4"))
+				assert.Contains(t, capabilities.Drop, api.Capability("NET_RAW"))
+			},
+		},
+		"setting linux capabilities overriding defaults": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						CapAdd:    []string{"NET_RAW", "CAP_2"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotEmpty(t, pod.Spec.Containers)
+				capabilities := pod.Spec.Containers[0].SecurityContext.Capabilities
+				require.NotNil(t, capabilities)
+				assert.Len(t, capabilities.Add, 2)
+				assert.Contains(t, capabilities.Add, api.Capability("NET_RAW"))
+				assert.Contains(t, capabilities.Add, api.Capability("CAP_2"))
+				assert.Empty(t, capabilities.Drop)
+			},
+		},
+		"setting same linux capabilities, drop wins": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						CapAdd:    []string{"CAP_1"},
+						CapDrop:   []string{"CAP_1"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotEmpty(t, pod.Spec.Containers)
+				capabilities := pod.Spec.Containers[0].SecurityContext.Capabilities
+				require.NotNil(t, capabilities)
+				assert.Empty(t, capabilities.Add)
+				assert.Len(t, capabilities.Drop, 2)
+				assert.Contains(t, capabilities.Drop, api.Capability("NET_RAW"))
+				assert.Contains(t, capabilities.Drop, api.Capability("CAP_1"))
+			},
+		},
+		"support setting linux capabilities on all containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						CapAdd:    []string{"CAP_1"},
+						CapDrop:   []string{"CAP_2"},
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:    "test-service-0",
+						Command: []string{"application", "--debug"},
+					},
+					{
+						Name:       "test-service-1",
+						Entrypoint: []string{"application", "--debug"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.Containers, 4)
+
+				assertContainerCap := func(container api.Container) {
+					t.Run("container-"+container.Name, func(t *testing.T) {
+						capabilities := container.SecurityContext.Capabilities
+						require.NotNil(t, capabilities)
+						assert.Len(t, capabilities.Add, 1)
+						assert.Contains(t, capabilities.Add, api.Capability("CAP_1"))
+						assert.Len(t, capabilities.Drop, 2)
+						assert.Contains(t, capabilities.Drop, api.Capability("CAP_2"))
+						assert.Contains(t, capabilities.Drop, api.Capability("NET_RAW"))
+					})
+				}
+
+				assertContainerCap(pod.Spec.Containers[0])
+				assertContainerCap(pod.Spec.Containers[1])
+				assertContainerCap(pod.Spec.Containers[2])
+				assertContainerCap(pod.Spec.Containers[3])
+			},
+		},
 	}
 
 	for testName, test := range tests {
