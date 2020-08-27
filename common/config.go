@@ -251,6 +251,8 @@ type KubernetesConfig struct {
 	PodSecurityContext                      KubernetesPodSecurityContext `toml:"pod_security_context,omitempty" namespace:"pod-security-context" description:"A security context attached to each build pod"`
 	Volumes                                 KubernetesVolumes            `toml:"volumes"`
 	Services                                []Service                    `toml:"services,omitempty" json:"services" description:"Add service that is started with container"`
+	CapAdd                                  []string                     `toml:"cap_add" json:"cap_add" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
+	CapDrop                                 []string                     `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
 }
 
 type KubernetesVolumes struct {
