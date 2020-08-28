@@ -3,6 +3,7 @@ package buildtest
 import (
 	"bytes"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,4 +39,29 @@ func RunBuild(t *testing.T, build *common.Build) error {
 	err := RunBuildWithTrace(t, build, &common.Trace{Writer: os.Stdout})
 
 	return err
+}
+
+// OnUserStage executes the provided function when the CurrentStage() enters
+// a non-predefined stage.
+func OnUserStage(build *common.Build, fn func()) func() {
+	exit := make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case <-exit:
+				return
+
+			case <-time.After(time.Second):
+				if strings.HasPrefix(string(build.CurrentStage()), "step_") {
+					fn()
+					return
+				}
+			}
+		}
+	}()
+
+	return func() {
+		close(exit)
+	}
 }

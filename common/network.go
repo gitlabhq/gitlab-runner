@@ -27,6 +27,8 @@ const (
 	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 	JobExecutionTimeout JobFailureReason = "job_execution_timeout"
+	// JobCanceled is only internal to runner, and not used inside of rails.
+	JobCanceled JobFailureReason = "job_canceled"
 )
 
 const (

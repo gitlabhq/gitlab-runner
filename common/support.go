@@ -185,6 +185,47 @@ func GetRemoteLongRunningBuild() (JobResponse, error) {
 	return GetRemoteBuildResponse("sleep 3600")
 }
 
+func GetRemoteLongRunningBuildCMD() (JobResponse, error) {
+	// Can't use TIMEOUT since it requires input redirection,
+	// https://knowledge.broadcom.com/external/article/29524/the-timeout-command-in-batch-script-job.html
+	return GetLocalBuildResponse("ping 127.0.0.1 -n 3600 > nul")
+}
+
+func GetRemoteLongRunningBuildWithAfterScript() (JobResponse, error) {
+	jobResponse, err := GetRemoteLongRunningBuild()
+	if err != nil {
+		return JobResponse{}, err
+	}
+
+	addAfterScript(&jobResponse)
+
+	return jobResponse, nil
+}
+
+func GetRemoteLongRunningBuildWithAfterScriptCMD() (JobResponse, error) {
+	jobResponse, err := GetRemoteLongRunningBuildCMD()
+	if err != nil {
+		return JobResponse{}, err
+	}
+
+	addAfterScript(&jobResponse)
+
+	return jobResponse, nil
+}
+
+func addAfterScript(jobResponse *JobResponse) {
+	jobResponse.Steps = append(
+		jobResponse.Steps,
+		Step{
+			Name: StepNameAfterScript,
+			Script: []string{
+				"echo Hello World from after_script",
+			},
+			When: StepWhenAlways,
+		},
+	)
+}
+
 func GetMultilineBashBuild() (JobResponse, error) {
 	return GetRemoteBuildResponse(`if true; then
 	echo 'Hello World'

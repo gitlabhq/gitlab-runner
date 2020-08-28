@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -49,7 +50,6 @@ func TestRunTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesMultistepRun":            testKubernetesMultistepRunFeatureFlag,
 		"testKubernetesTimeoutRun":              testKubernetesTimeoutRunFeatureFlag,
 		"testKubernetesBuildFail":               testKubernetesBuildFailFeatureFlag,
-		"testKubernetesBuildAbort":              testKubernetesBuildAbortFeatureFlag,
 		"testKubernetesBuildCancel":             testKubernetesBuildCancelFeatureFlag,
 		"testVolumeMounts":                      testVolumeMountsFeatureFlag,
 		"testVolumes":                           testVolumesFeatureFlag,
@@ -251,83 +251,26 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 	assert.Contains(t, err.Error(), "command terminated with exit code 1")
 }
 
-func testKubernetesBuildAbortFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-	build.Image.Name = common.TestDockerGitImage
-	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		build.SystemInterrupt <- os.Interrupt
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "aborted: interrupt")
-}
-
 func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
 		return
 	}
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
+	buildtest.RunBuildWithCancel(
+		t,
+		&common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "kubernetes",
 				Kubernetes: &common.KubernetesConfig{
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-	build.Image.Name = common.TestDockerGitImage
-	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-
-	trace := &common.Trace{Writer: os.Stdout}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		trace.Cancel()
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, trace)
-	assert.IsType(t, &common.BuildError{}, err)
-	assert.EqualError(t, err, "canceled")
+		func(build *common.Build) {
+			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+		},
+	)
 }
 
 func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
