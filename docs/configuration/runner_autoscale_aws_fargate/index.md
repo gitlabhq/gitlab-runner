@@ -244,7 +244,7 @@ An Amazon ECS cluster is a grouping of ECS Container Instances.
 1. Give it the name `test-cluster` (the same as in `fargate.toml`). We don't
    need to specify anything else here.
 1. Click **Create**.
-1. Click **View cluster**. Note the region and account id parts from the `Cluster ARN` value.
+1. Click **View cluster**. Note the region and account ID parts from the `Cluster ARN` value.
 1. Click **Update Cluster** button.
 1. Click **Add another provider** next to `Default capacity provider strategy` and choose `FARGATE`. Click **Update**.
 
