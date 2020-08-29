@@ -16,7 +16,7 @@ Official packages are available for the following Linux distributions:
 
 - CentOS, Debian, Ubuntu, RHEL, Fedora, Mint
 
-Runner officialy supports the following operating systems:
+Runner officially supports the following operating systems:
 
 - Linux, Windows, macOS, FreeBSD
 
