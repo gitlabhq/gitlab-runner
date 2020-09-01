@@ -3,12 +3,14 @@ package shells
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	_ "gitlab.com/gitlab-org/gitlab-runner/cache/test"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
@@ -439,6 +441,92 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	mockWriter.On("EndIf").Once()
 
 	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, false)
+}
+
+func TestAbstractShell_extractCacheWithFallbackKey(t *testing.T) {
+	testCacheKey := "test-cache-key"
+	testFallbackCacheKey := "test-fallback-cache-key"
+
+	shell := AbstractShell{}
+	runnerConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Cache: &common.CacheConfig{
+				Type:   "test",
+				Shared: true,
+			},
+		},
+	}
+	build := &common.Build{
+		BuildDir: "/builds",
+		CacheDir: "/cache",
+		Runner:   runnerConfig,
+		JobResponse: common.JobResponse{
+			ID: 1000,
+			JobInfo: common.JobInfo{
+				ProjectID: 1000,
+			},
+			Cache: common.Caches{
+				{
+					Key:    testCacheKey,
+					Policy: common.CachePolicyPullPush,
+					Paths:  []string{"path1", "path2"},
+				},
+			},
+			Variables: common.JobVariables{
+				{
+					Key:   "CACHE_FALLBACK_KEY",
+					Value: testFallbackCacheKey,
+				},
+			},
+		},
+	}
+	info := common.ShellScriptInfo{
+		RunnerCommand: "runner-command",
+		Build:         build,
+	}
+
+	mockWriter := new(MockShellWriter)
+	defer mockWriter.AssertExpectations(t)
+
+	mockWriter.On("IfCmd", "runner-command", "--version").Once()
+	mockWriter.On("Noticef", "Checking cache for %s...", testCacheKey).Once()
+	mockWriter.On(
+		"IfCmdWithOutput",
+		"runner-command",
+		"cache-extractor",
+		"--file",
+		filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
+		"--timeout",
+		"10",
+		"--url",
+		fmt.Sprintf("test://download/project/1000/%s", testCacheKey),
+	).Once()
+	mockWriter.On("Noticef", "Successfully extracted cache").Once()
+	mockWriter.On("Else").Once()
+	mockWriter.On("Warningf", "Failed to extract cache").Once()
+	mockWriter.On("Noticef", "Checking cache for %s...", testFallbackCacheKey).Once()
+	mockWriter.On(
+		"IfCmdWithOutput",
+		"runner-command",
+		"cache-extractor",
+		"--file",
+		filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
+		"--timeout",
+		"10",
+		"--url",
+		fmt.Sprintf("test://download/project/1000/%s", testFallbackCacheKey),
+	).Once()
+	mockWriter.On("Noticef", "Successfully extracted cache").Once()
+	mockWriter.On("Else").Once()
+	mockWriter.On("Warningf", "Failed to extract cache").Once()
+	mockWriter.On("EndIf").Once()
+	mockWriter.On("EndIf").Once()
+	mockWriter.On("Else").Once()
+	mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+	mockWriter.On("EndIf").Once()
+
+	err := shell.cacheExtractor(mockWriter, info)
+	assert.NoError(t, err)
 }
 
 func TestWriteUserScript(t *testing.T) {
