@@ -885,9 +885,11 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 		"false",
 	}
 
-	s := MockShell{}
+	s := new(MockShell)
+	defer s.AssertExpectations(t)
+
 	s.On("GetName").Return("skip-build-stage-shell")
-	RegisterShell(&s)
+	RegisterShell(s)
 
 	for _, value := range featureFlagValues {
 		t.Run(value, func(t *testing.T) {
