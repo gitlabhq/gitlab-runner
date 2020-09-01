@@ -39,6 +39,8 @@ require (
 	github.com/imdario/mergo v0.3.7
 	github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
 	github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
+	github.com/klauspost/compress v1.10.5 // indirect
+	github.com/klauspost/pgzip v1.2.3
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pty v1.1.1
 	github.com/markelog/trie v0.0.0-20171230083431-098fa99650c0

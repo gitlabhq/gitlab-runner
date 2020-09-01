@@ -1,11 +1,11 @@
 package archives
 
 import (
-	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
 
+	gzip "github.com/klauspost/pgzip"
 	"github.com/sirupsen/logrus"
 )
 
