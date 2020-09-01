@@ -142,24 +142,26 @@ make test
 
 ## 7. Run tests with helper image version of choice
 
-When running tests without passing `-ldflags` the default version in `version.go` would be `development`.
-This means that the Runner will default to pulling a [helper image](../configuration/advanced-configuration.md#helper-image) with the `latest` tag.
-If you are developing functionality inside the helper, you'll most likely want to use the version of the Docker image
-that contains the newest changes to run tests.
+If you are developing functionality inside a helper, you'll most likely want to run tests with
+the version of the Docker image that contains the newest changes.
+
+If you run tests without passing `-ldflags`, the default version in `version.go` is `development`.
+This means that the Runner defaults to pulling a [helper image](../configuration/advanced-configuration.md#helper-image)
+with the `latest` tag.
 
 ### Make targets
 
-The make targets inject `-ldflags` automatically. So if you want to run all tests you could run:
+The make targets inject `-ldflags` automatically. You can run all tests by using:
 
 ```shell
 make simple-test
 ```
 
-Same goes for `parallel_test_execute`, which is most commonly used by the CI jobs.
+The make targets also inject `-ldflags` for `parallel_test_execute`, which is most commonly used by the CI jobs.
 
-### Custom go test arguments
+### Custom `go test` arguments
 
-In case you want a more customised `go test` command, you could use the `print_ldflags` make target:
+In case you want a more customized `go test` command, you can use the `print_ldflags` make target:
 
 ```shell
 go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./executors/docker/...
@@ -170,14 +172,15 @@ go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./
 Currently, GoLand doesn't support dynamic go tool arguments, so you'll need to run `make print_ldflags` first
 and then paste it in the configuration.
 
-**Important:** Make sure to remove the last two flags `-s -w` to be able to use the debugger.
+NOTE: **Note:**
+To be able to use the debugger, make sure to remove the last two flags (`-s -w`).
 
 ### Helper image
 
 Build the newest version of the helper image with:
 
 ```shell
-make helper-dockerarchive
+make helper-dockerarchive-host
 ```
 
 You will then have the image ready for use:
