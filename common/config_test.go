@@ -409,7 +409,7 @@ func TestConfigParse(t *testing.T) {
 				preferred := podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution
 				assert.Equal(t, int32(100), preferred[0].Weight)
 				require.NotNil(t, preferred[0].PodAffinityTerm.LabelSelector)
-				assert.Len(t, preferred[0].PodAffinityTerm.Namespaces, 0)
+				assert.Empty(t, preferred[0].PodAffinityTerm.Namespaces)
 				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", preferred[0].PodAffinityTerm.TopologyKey)
 
 				require.Len(t, preferred[0].PodAffinityTerm.LabelSelector.MatchExpressions, 1)
