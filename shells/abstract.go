@@ -105,7 +105,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			continue
 		}
 
-		b.addExtractCacheCommand(w, info, cacheFile, cacheKey)
+		b.extractCacheOrFallbackCacheWrapper(w, info, cacheFile, cacheKey)
 	}
 
 	if skipRestoreCache {
@@ -115,11 +115,26 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 	return nil
 }
 
+func (b *AbstractShell) extractCacheOrFallbackCacheWrapper(
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	cacheFile string,
+	cacheKey string,
+) {
+	cacheFallbackKey := info.Build.GetAllVariables().Get("CACHE_FALLBACK_KEY")
+
+	// Execute cache-extractor command. Failure is not fatal.
+	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
+		b.addExtractCacheCommand(w, info, cacheFile, cacheKey, cacheFallbackKey)
+	})
+}
+
 func (b *AbstractShell) addExtractCacheCommand(
 	w ShellWriter,
 	info common.ShellScriptInfo,
 	cacheFile string,
 	cacheKey string,
+	cacheFallbackKey string,
 ) {
 	args := []string{
 		"cache-extractor",
@@ -127,20 +142,19 @@ func (b *AbstractShell) addExtractCacheCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
-	// Generate cache download address
 	if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
 		args = append(args, "--url", url.String())
 	}
 
-	// Execute cache-extractor command. Failure is not fatal.
-	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		w.Noticef("Checking cache for %s...", cacheKey)
-		w.IfCmdWithOutput(info.RunnerCommand, args...)
-		w.Noticef("Successfully extracted cache")
-		w.Else()
-		w.Warningf("Failed to extract cache")
-		w.EndIf()
-	})
+	w.Noticef("Checking cache for %s...", cacheKey)
+	w.IfCmdWithOutput(info.RunnerCommand, args...)
+	w.Noticef("Successfully extracted cache")
+	w.Else()
+	w.Warningf("Failed to extract cache")
+	if cacheFallbackKey != "" {
+		b.addExtractCacheCommand(w, info, cacheFile, cacheFallbackKey, "")
+	}
+	w.EndIf()
 }
 
 func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
