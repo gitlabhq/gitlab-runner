@@ -2836,7 +2836,6 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			//nolint:lll
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				require.NotNil(t, pod.Spec.Affinity)
 				require.NotNil(t, pod.Spec.Affinity.PodAffinity)

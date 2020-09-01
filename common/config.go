@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-
 	"math/big"
 	"os"
 	"path/filepath"
