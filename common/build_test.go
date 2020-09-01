@@ -1473,3 +1473,115 @@ func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepare
 
 	return build
 }
+
+func TestSecretsResolving(t *testing.T) {
+	exampleVariables := JobVariables{
+		{Key: "key", Value: "value"},
+	}
+
+	setupFailureExecutorMocks := func(t *testing.T) (*MockExecutorProvider, func()) {
+		e := new(MockExecutor)
+		p := new(MockExecutorProvider)
+
+		p.On("CanCreate").Return(true).Once()
+		p.On("GetDefaultShell").Return("bash").Once()
+		p.On("GetFeatures", mock.Anything).Return(nil).Once()
+
+		assertFn := func() {
+			e.AssertExpectations(t)
+			p.AssertExpectations(t)
+		}
+
+		return p, assertFn
+	}
+
+	secrets := Secrets{
+		"TEST_SECRET": Secret{
+			Vault: &VaultSecret{},
+		},
+	}
+
+	tests := map[string]struct {
+		secrets                 Secrets
+		resolverCreationError   error
+		prepareExecutorProvider func(t *testing.T) (*MockExecutorProvider, func())
+		returnVariables         JobVariables
+		resolvingError          error
+		expectedVariables       JobVariables
+		expectedError           error
+	}{
+		"secrets not present": {
+			prepareExecutorProvider: func(t *testing.T) (*MockExecutorProvider, func()) {
+				return setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
+			},
+			expectedError: nil,
+		},
+		"error on creating resolver": {
+			secrets:                 secrets,
+			resolverCreationError:   assert.AnError,
+			prepareExecutorProvider: setupFailureExecutorMocks,
+			expectedError:           assert.AnError,
+		},
+		"error on secrets resolving": {
+			secrets:                 secrets,
+			prepareExecutorProvider: setupFailureExecutorMocks,
+			returnVariables:         exampleVariables,
+			resolvingError:          assert.AnError,
+			expectedVariables:       nil,
+			expectedError:           assert.AnError,
+		},
+		"secrets resolved": {
+			secrets: secrets,
+			prepareExecutorProvider: func(t *testing.T) (*MockExecutorProvider, func()) {
+				return setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
+			},
+			returnVariables:   exampleVariables,
+			resolvingError:    nil,
+			expectedVariables: exampleVariables,
+			expectedError:     nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			secretsResolverMock := new(MockSecretsResolver)
+			defer secretsResolverMock.AssertExpectations(t)
+
+			p, assertFn := tt.prepareExecutorProvider(t)
+			defer assertFn()
+
+			RegisterExecutorProvider(t.Name(), p)
+
+			successfulBuild, err := GetSuccessfulBuild()
+			require.NoError(t, err)
+
+			successfulBuild.Secrets = tt.secrets
+
+			if tt.resolverCreationError == nil && tt.secrets != nil {
+				secretsResolverMock.On("Resolve", tt.secrets).
+					Return(tt.returnVariables, tt.resolvingError).
+					Once()
+			}
+
+			rc := new(RunnerConfig)
+			rc.RunnerSettings.Executor = t.Name()
+
+			build, err := NewBuild(successfulBuild, rc, nil, nil)
+			assert.NoError(t, err)
+
+			build.secretsResolver = func(_ logger, _ SecretResolverRegistry) (SecretsResolver, error) {
+				return secretsResolverMock, tt.resolverCreationError
+			}
+
+			err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+			assert.Equal(t, tt.expectedVariables, build.secretsVariables)
+
+			if tt.expectedError != nil {
+				assert.True(t, errors.As(err, &tt.expectedError))
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
