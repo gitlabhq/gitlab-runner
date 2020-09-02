@@ -151,17 +151,17 @@ with the `latest` tag.
 
 ### Make targets
 
-The make targets inject `-ldflags` automatically. You can run all tests by using:
+`make` targets inject `-ldflags` automatically. You can run all tests by using:
 
 ```shell
 make simple-test
 ```
 
-The make targets also inject `-ldflags` for `parallel_test_execute`, which is most commonly used by the CI jobs.
+`make` targets also inject `-ldflags` for `parallel_test_execute`, which is most commonly used by the CI/CD jobs.
 
 ### Custom `go test` arguments
 
-In case you want a more customized `go test` command, you can use the `print_ldflags` make target:
+In case you want a more customized `go test` command, you can use `print_ldflags` as `make` target:
 
 ```shell
 go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./executors/docker/...
@@ -169,11 +169,11 @@ go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./
 
 ### In GoLand
 
-Currently, GoLand doesn't support dynamic go tool arguments, so you'll need to run `make print_ldflags` first
+Currently, GoLand doesn't support dynamic Go tool arguments, so you'll need to run `make print_ldflags` first
 and then paste it in the configuration.
 
 NOTE: **Note:**
-To be able to use the debugger, make sure to remove the last two flags (`-s -w`).
+To use the debugger, make sure to remove the last two flags (`-s -w`).
 
 ### Helper image
 
@@ -183,7 +183,7 @@ Build the newest version of the helper image with:
 make helper-dockerarchive-host
 ```
 
-You will then have the image ready for use:
+Then you'll have the image ready for use:
 
 ```shell
 REPOSITORY                                                    TAG                      IMAGE ID            CREATED             SIZE
