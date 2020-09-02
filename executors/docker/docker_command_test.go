@@ -71,7 +71,6 @@ func (s *safeBuffer) String() string {
 
 func TestDockerCommandMultistepBuild(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	tests := map[string]struct {
 		buildGetter    func() (common.JobResponse, error)
@@ -189,7 +188,6 @@ func getWindowsImage(t *testing.T) string {
 
 func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	build := getBuildForOS(t, func() (common.JobResponse, error) {
 		return common.GetRemoteBuildResponse("echo $TEST")
@@ -209,7 +207,6 @@ func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 
 func TestDockerCommandSuccessRunFileVariableContent(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	build := getBuildForOS(t, func() (common.JobResponse, error) {
 		if runtime.GOOS == "windows" {
@@ -233,7 +230,6 @@ func TestDockerCommandSuccessRunFileVariableContent(t *testing.T) {
 
 func TestDockerCommandUsingCustomClonePath(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	remoteBuild := func() (common.JobResponse, error) {
 		cmd := "ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
