@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -69,7 +68,7 @@ func (c *clientJobTrace) SetMasked(masked []string) {
 }
 
 func (c *clientJobTrace) checksum() string {
-	return fmt.Sprintf("crc32:%x", c.buffer.Checksum())
+	return c.buffer.Checksum()
 }
 
 func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {

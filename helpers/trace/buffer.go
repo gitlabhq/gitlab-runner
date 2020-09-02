@@ -90,8 +90,8 @@ func (b *Buffer) Close() {
 	_ = os.Remove(b.logFile.Name())
 }
 
-func (b *Buffer) Checksum() uint32 {
-	return b.checksum.Sum32()
+func (b *Buffer) Checksum() string {
+	return fmt.Sprintf("crc32:%08x", b.checksum.Sum32())
 }
 
 func (b *Buffer) advanceAllUnsafe() error {
