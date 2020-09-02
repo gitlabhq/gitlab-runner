@@ -10,7 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-const testTimeout = 5 * time.Minute
+const testTimeout = 30 * time.Minute
 
 func RunBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {
 	buf := new(bytes.Buffer)
