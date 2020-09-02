@@ -667,13 +667,13 @@ func TestUpdateIntervalChanges(t *testing.T) {
 // of a masked content that is send in a chunks to Rails
 func TestJobChecksum(t *testing.T) {
 	maskedValues := []string{"masked"}
-	traceMessage := "This string should be masked"
-	traceMaskedMessage := "This string should be [MASKED]"
+	traceMessage := "This string should be masked $$$$"
+	traceMaskedMessage := "This string should be [MASKED] $$$$"
 
 	expectedJobInfo := common.UpdateJobInfo{
 		ID:       -1,
 		State:    "success",
-		Checksum: "crc32:9f5c9bcc", // this is a checksum of `traceMaskedMessage`
+		Checksum: "crc32:0fc72945", // this is a checksum of `traceMaskedMessage`
 	}
 
 	mockNetwork := new(common.MockNetwork)
