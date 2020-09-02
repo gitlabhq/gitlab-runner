@@ -176,6 +176,7 @@ check_mocks:
 	# Checking the differences
 	@git --no-pager diff --compact-summary --exit-code -- ./helpers/service/mocks \
 		$(shell git ls-files | grep 'mock_' | grep -v 'vendor/') && \
+		!(git ls-files -o | grep 'mock_' | grep -v 'vendor/') && \
 		echo "Mocks up-to-date!"
 
 test-docker:
