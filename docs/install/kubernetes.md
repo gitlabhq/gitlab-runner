@@ -207,6 +207,22 @@ working example project. It makes use of the documentation for
 
 The working example project can be copied to your own group or instance for testing. More details on what other GitLab CI patterns are demonstrated are available at the project page [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build).
 
+### Using an image from a private registry
+
+Using an image from a private registry requires the configuration of imagePullSecrets. For more details on how to create imagePullSecrets [see the documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
+
+```yaml
+runners:
+  ## Specify one or more imagePullSecrets
+  ##
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ##
+  imagePullSecrets:
+  - [your-image-pull-secret]
+```
+
+Take note of the format. The value is not prefixed by a 'name' tag as is the convention in Kubernetes resources.
+
 ### Providing a custom certificate for accessing GitLab
 
 You can provide a [Kubernetes Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
