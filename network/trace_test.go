@@ -681,13 +681,13 @@ func TestJobChecksum(t *testing.T) {
 
 	// 22 is an offset of a space before `[MASKED]`
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage[0:22]), 0).
-		Return(common.NewPatchTraceResult(22, common.UpdateSucceeded, 0)).Once()
+		Return(common.NewPatchTraceResult(22, common.PatchSucceeded, 0)).Once()
 
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage[22:]), 22).
-		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.UpdateSucceeded, 0)).Once()
+		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.PatchSucceeded, 0)).Once()
 
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, expectedJobInfo).
-		Return(common.UpdateSucceeded)
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded})
 
 	jobTrace, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
