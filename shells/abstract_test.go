@@ -657,7 +657,10 @@ func TestGitFetchFlags(t *testing.T) {
 			mockWriter.On("Command", "git", "remote", "set-url", "origin", mock.Anything)
 			mockWriter.On("EndIf")
 
-			command := []interface{}{"git", "fetch", "origin"}
+			v := common.AppVersion
+			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
+			command := []interface{}{"git", "-c", userAgent, "fetch", "origin"}
+
 			command = append(command, test.expectedGitFetchFlags...)
 			mockWriter.On("Command", command...)
 
