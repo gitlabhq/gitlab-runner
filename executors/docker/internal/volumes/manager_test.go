@@ -39,7 +39,9 @@ func TestNewDefaultManager(t *testing.T) {
 }
 
 func newDefaultManager(config ManagerConfig) *manager {
-	b := &common.Build{}
+	b := &common.Build{
+		Runner: &common.RunnerConfig{},
+	}
 
 	m := &manager{
 		logger:         newDebugLoggerMock(),
