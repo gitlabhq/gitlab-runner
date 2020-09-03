@@ -374,13 +374,27 @@ type CacheS3Config struct {
 }
 
 //nolint:lll
+type CacheAzureCredentials struct {
+	AccountName string `toml:"AccountName,omitempty" long:"account-name" env:"CACHE_AZURE_ACCOUNT_NAME" description:"Account name for Azure Blob Storage"`
+	AccountKey  string `toml:"AccountKey,omitempty" long:"account-key" env:"CACHE_AZURE_ACCOUNT_KEY" description:"Access key for Azure Blob Storage"`
+}
+
+//nolint:lll
+type CacheAzureConfig struct {
+	CacheAzureCredentials
+	ContainerName string `toml:"ContainerName,omitempty" long:"container-name" env:"CACHE_AZURE_CONTAINER_NAME" description:"Name of the Azure container where cache will be stored"`
+	StorageDomain string `toml:"StorageDomain,omitempty" long:"storage-domain" env:"CACHE_AZURE_STORAGE_DOMAIN" description:"Domain name of the Azure storage (e.g. blob.core.windows.net)"`
+}
+
+//nolint:lll
 type CacheConfig struct {
 	Type   string `toml:"Type,omitempty" long:"type" env:"CACHE_TYPE" description:"Select caching method"`
 	Path   string `toml:"Path,omitempty" long:"path" env:"CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
 	Shared bool   `toml:"Shared,omitempty" long:"shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
 
-	S3  *CacheS3Config  `toml:"s3,omitempty" json:"s3" namespace:"s3"`
-	GCS *CacheGCSConfig `toml:"gcs,omitempty" json:"gcs" namespace:"gcs"`
+	S3    *CacheS3Config    `toml:"s3,omitempty" json:"s3" namespace:"s3"`
+	GCS   *CacheGCSConfig   `toml:"gcs,omitempty" json:"gcs" namespace:"gcs"`
+	Azure *CacheAzureConfig `toml:"azure,omitempty" json:"azure" namespace:"azure"`
 }
 
 //nolint:lll

@@ -11,6 +11,7 @@ import (
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 
+	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcs"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands"
