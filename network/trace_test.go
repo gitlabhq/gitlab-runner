@@ -55,7 +55,7 @@ func TestIgnoreStatusChange(t *testing.T) {
 
 	// expect to receive just one status
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, jobInfoMatcher).
-		Return(common.UpdateSucceeded).Once()
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestIgnoreStatusChange(t *testing.T) {
 	b.Fail(errors.New("test"), "script_failure")
 }
 
-func TestJobAbort(t *testing.T) {
+func TestTouchJobAbort(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -77,11 +77,11 @@ func TestJobAbort(t *testing.T) {
 
 	// abort while running
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, keepAliveUpdateMatcher).
-		Return(common.UpdateAbort).Once()
+		Return(common.UpdateJobResult{State: common.UpdateAbort}).Once()
 
 	// try to send status at least once more
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
-		Return(common.UpdateAbort).Once()
+		Return(common.UpdateJobResult{State: common.UpdateAbort}).Once()
 
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
@@ -89,6 +89,36 @@ func TestJobAbort(t *testing.T) {
 	b.updateInterval = 0
 	b.SetCancelFunc(cancel)
 
+	b.start()
+	assert.NotNil(t, <-ctx.Done(), "should abort the job")
+	b.Success()
+}
+
+func TestSendPatchAbort(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
+
+	mockNetwork := new(common.MockNetwork)
+	defer mockNetwork.AssertExpectations(t)
+
+	// abort while running
+	// 1. on `incrementalUpdate() -> sendPatch()`
+	// 2. on `finalTraceUpdate() -> sendPatch()`
+	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(common.NewPatchTraceResult(0, common.PatchAbort, 0)).Twice()
+
+	// try to send status at least once more
+	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
+		Return(common.UpdateJobResult{State: common.UpdateAbort}).Once()
+
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
+	b.SetCancelFunc(cancel)
+
+	fmt.Fprint(b, "Trace")
 	b.start()
 	assert.NotNil(t, <-ctx.Done(), "should abort the job")
 	b.Success()
@@ -110,7 +140,7 @@ func TestJobOutputLimit(t *testing.T) {
 
 	receivedTrace := bytes.NewBuffer([]byte{})
 	mockNetwork.On("PatchTrace", jobOutputLimit, jobCredentials, mock.Anything, mock.Anything).
-		Return(common.NewPatchTraceResult(1078, common.UpdateSucceeded, 0)).
+		Return(common.NewPatchTraceResult(1078, common.PatchSucceeded, 0)).
 		Once().
 		Run(func(args mock.Arguments) {
 			// the 1078 == len(data)
@@ -119,7 +149,7 @@ func TestJobOutputLimit(t *testing.T) {
 		})
 
 	mockNetwork.On("UpdateJob", jobOutputLimit, jobCredentials, updateMatcher).
-		Return(common.UpdateSucceeded).Once()
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
 	b.start()
 	// Write 5k to the buffer
@@ -143,10 +173,10 @@ func TestJobMasking(t *testing.T) {
 	defer mockNetwork.AssertExpectations(t)
 
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage), 0).
-		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.UpdateSucceeded, 0))
+		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.PatchSucceeded, 0))
 
 	mockNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).
-		Return(common.UpdateSucceeded)
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded})
 
 	jobTrace, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
@@ -167,26 +197,26 @@ func TestJobFinishTraceUpdateRetry(t *testing.T) {
 
 	// accept just 3 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("My trace send"), 0).
-		Return(common.NewPatchTraceResult(3, common.UpdateSucceeded, 0)).Once()
+		Return(common.NewPatchTraceResult(3, common.PatchSucceeded, 0)).Once()
 
 	// retry when trying to send next bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("trace send"), 3).
-		Return(common.NewPatchTraceResult(0, common.UpdateFailed, 0)).Once()
+		Return(common.NewPatchTraceResult(0, common.PatchFailed, 0)).Once()
 
 	// accept 6 more bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("trace send"), 3).
-		Return(common.NewPatchTraceResult(9, common.UpdateSucceeded, 0)).Once()
+		Return(common.NewPatchTraceResult(9, common.PatchSucceeded, 0)).Once()
 
 	// restart most of trace
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("send"), 9).
-		Return(common.NewPatchTraceResult(6, common.UpdateRangeMismatch, 0)).Once()
+		Return(common.NewPatchTraceResult(6, common.PatchRangeMismatch, 0)).Once()
 
 	// accept rest of trace
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("ce send"), 6).
-		Return(common.NewPatchTraceResult(13, common.UpdateSucceeded, 0)).Once()
+		Return(common.NewPatchTraceResult(13, common.PatchSucceeded, 0)).Once()
 
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
-		Return(common.UpdateSucceeded).Once()
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
@@ -206,18 +236,18 @@ func TestJobMaxTracePatchSize(t *testing.T) {
 
 	// expect just 5 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("My tr"), 0).
-		Return(common.NewPatchTraceResult(5, common.UpdateSucceeded, 0)).Once()
+		Return(common.NewPatchTraceResult(5, common.PatchSucceeded, 0)).Once()
 
 	// expect next 5 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("ace s"), 5).
-		Return(common.NewPatchTraceResult(10, common.UpdateSucceeded, 0)).Once()
+		Return(common.NewPatchTraceResult(10, common.PatchSucceeded, 0)).Once()
 
 	// expect last 3 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("end"), 10).
-		Return(common.NewPatchTraceResult(13, common.UpdateSucceeded, 0)).Once()
+		Return(common.NewPatchTraceResult(13, common.PatchSucceeded, 0)).Once()
 
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
-		Return(common.UpdateSucceeded).Once()
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
@@ -238,11 +268,11 @@ func TestJobFinishStatusUpdateRetry(t *testing.T) {
 
 	// fail job 5 times
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
-		Return(common.UpdateFailed).Times(5)
+		Return(common.UpdateJobResult{State: common.UpdateFailed}).Times(5)
 
 	// accept job
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
-		Return(common.UpdateSucceeded).Once()
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
@@ -264,14 +294,14 @@ func TestJobIncrementalPatchSend(t *testing.T) {
 	// ensure that PatchTrace gets executed first
 	wg.Add(1)
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("test trace"), 0).
-		Return(common.NewPatchTraceResult(10, common.UpdateSucceeded, 0)).Once().
+		Return(common.NewPatchTraceResult(10, common.PatchSucceeded, 0)).Once().
 		Run(func(args mock.Arguments) {
 			wg.Done()
 		})
 
 	// wait for the final `UpdateJob` to be executed
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
-		Return(common.UpdateSucceeded).Once()
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
@@ -295,14 +325,14 @@ func TestJobIncrementalStatusRefresh(t *testing.T) {
 	// ensure that incremental UpdateJob gets executed first
 	wg.Add(1)
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, incrementalUpdateMatcher).
-		Return(common.UpdateSucceeded).Once().
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once().
 		Run(func(args mock.Arguments) {
 			wg.Done()
 		})
 
 	// wait for the final `UpdateJob` to be executed
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
-		Return(common.UpdateSucceeded).Once()
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
@@ -360,7 +390,7 @@ func TestTracePathIntervalChanges(t *testing.T) {
 			client.On("PatchTrace", jobConfig, jobCredentials, []byte(testTrace), 0).
 				Return(common.NewPatchTraceResult(
 					len(testTrace),
-					common.UpdateSucceeded,
+					common.PatchSucceeded,
 					tt.patchTraceUpdateIntervalValue,
 				)).
 				Run(func(_ mock.Arguments) {
@@ -369,7 +399,7 @@ func TestTracePathIntervalChanges(t *testing.T) {
 				Once()
 
 			client.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
-				Return(common.UpdateSucceeded).
+				Return(common.UpdateJobResult{State: common.UpdateSucceeded}).
 				Once()
 
 			trace, err := newJobTrace(client, jobConfig, jobCredentials)

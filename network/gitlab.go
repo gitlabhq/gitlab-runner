@@ -366,7 +366,7 @@ func (n *GitLabClient) UpdateJob(
 	config common.RunnerConfig,
 	jobCredentials *common.JobCredentials,
 	jobInfo common.UpdateJobInfo,
-) common.UpdateState {
+) common.UpdateJobResult {
 	request := common.UpdateJobRequest{
 		Info:          n.getRunnerVersion(config),
 		Token:         jobCredentials.Token,
@@ -374,7 +374,7 @@ func (n *GitLabClient) UpdateJob(
 		FailureReason: jobInfo.FailureReason,
 	}
 
-	result, statusText, response := n.doJSON(
+	statusCode, statusText, response := n.doJSON(
 		&config.RunnerCredentials,
 		http.MethodPut,
 		fmt.Sprintf("jobs/%d", jobInfo.ID),
@@ -382,35 +382,39 @@ func (n *GitLabClient) UpdateJob(
 		&request,
 		nil,
 	)
-	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, result)
+	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, statusCode)
 
 	remoteJobStateResponse := NewRemoteJobStateResponse(response)
 	log := config.Log().WithFields(logrus.Fields{
-		"code":       result,
+		"code":       statusCode,
 		"job":        jobInfo.ID,
 		"job-status": remoteJobStateResponse.RemoteState,
 	})
 
+	result := common.UpdateJobResult{}
+
 	switch {
 	case remoteJobStateResponse.IsAborted():
 		log.Warningln("Submitting job to coordinator...", "aborted")
-		return common.UpdateAbort
-	case result == http.StatusOK:
+		result.State = common.UpdateAbort
+	case statusCode == http.StatusOK:
 		log.Debugln("Submitting job to coordinator...", "ok")
-		return common.UpdateSucceeded
-	case result == http.StatusNotFound:
+		result.State = common.UpdateSucceeded
+	case statusCode == http.StatusNotFound:
 		log.Warningln("Submitting job to coordinator...", "aborted")
-		return common.UpdateAbort
-	case result == http.StatusForbidden:
+		result.State = common.UpdateAbort
+	case statusCode == http.StatusForbidden:
 		log.WithField("status", statusText).Errorln("Submitting job to coordinator...", "forbidden")
-		return common.UpdateAbort
-	case result == clientError:
+		result.State = common.UpdateAbort
+	case statusCode == clientError:
 		log.WithField("status", statusText).Errorln("Submitting job to coordinator...", "error")
-		return common.UpdateAbort
+		result.State = common.UpdateAbort
 	default:
 		log.WithField("status", statusText).Warningln("Submitting job to coordinator...", "failed")
-		return common.UpdateFailed
+		result.State = common.UpdateFailed
 	}
+
+	return result
 }
 
 func (n *GitLabClient) PatchTrace(
@@ -424,7 +428,7 @@ func (n *GitLabClient) PatchTrace(
 	baseLog := config.Log().WithField("job", id)
 	if len(content) == 0 {
 		baseLog.Debugln("Appending trace to coordinator...", "skipped due to empty patch")
-		return common.NewPatchTraceResult(startOffset, common.UpdateSucceeded, 0)
+		return common.NewPatchTraceResult(startOffset, common.PatchSucceeded, 0)
 	}
 
 	endOffset := startOffset + len(content)
@@ -440,7 +444,7 @@ func (n *GitLabClient) PatchTrace(
 	response, err := n.doRaw(&config.RunnerCredentials, "PATCH", uri, request, "text/plain", headers)
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
-		return common.NewPatchTraceResult(startOffset, common.UpdateFailed, 0)
+		return common.NewPatchTraceResult(startOffset, common.PatchFailed, 0)
 	}
 
 	n.requestsStatusesMap.Append(
@@ -482,39 +486,39 @@ func (n *GitLabClient) createPatchTraceResult(
 	switch {
 	case tracePatchResponse.IsAborted():
 		log.Warningln("Appending trace to coordinator...", "aborted")
-		result.State = common.UpdateAbort
+		result.State = common.PatchAbort
 
 		return result
 
 	case response.StatusCode == http.StatusAccepted:
 		log.Debugln("Appending trace to coordinator...", "ok")
 		result.SentOffset = endOffset
-		result.State = common.UpdateSucceeded
+		result.State = common.PatchSucceeded
 
 		return result
 
 	case response.StatusCode == http.StatusNotFound:
 		log.Warningln("Appending trace to coordinator...", "not-found")
-		result.State = common.UpdateNotFound
+		result.State = common.PatchNotFound
 
 		return result
 
 	case response.StatusCode == http.StatusRequestedRangeNotSatisfiable:
 		log.Warningln("Appending trace to coordinator...", "range mismatch")
 		result.SentOffset = tracePatchResponse.NewOffset()
-		result.State = common.UpdateRangeMismatch
+		result.State = common.PatchRangeMismatch
 
 		return result
 
 	case response.StatusCode == clientError:
 		log.Errorln("Appending trace to coordinator...", "error")
-		result.State = common.UpdateAbort
+		result.State = common.PatchAbort
 
 		return result
 
 	default:
 		log.Warningln("Appending trace to coordinator...", "failed")
-		result.State = common.UpdateFailed
+		result.State = common.PatchFailed
 
 		return result
 	}

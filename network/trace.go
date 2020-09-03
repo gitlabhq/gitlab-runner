@@ -117,16 +117,16 @@ func (c *clientJobTrace) start() {
 func (c *clientJobTrace) finalTraceUpdate() {
 	for c.anyTraceToSend() {
 		switch c.sendPatch() {
-		case common.UpdateSucceeded:
+		case common.PatchSucceeded:
 			// we continue sending till we succeed
 			continue
-		case common.UpdateAbort:
+		case common.PatchAbort:
 			return
-		case common.UpdateNotFound:
+		case common.PatchNotFound:
 			return
-		case common.UpdateRangeMismatch:
+		case common.PatchRangeMismatch:
 			time.Sleep(c.finishRetryInterval)
-		case common.UpdateFailed:
+		case common.PatchFailed:
 			time.Sleep(c.finishRetryInterval)
 		}
 	}
@@ -140,8 +140,6 @@ func (c *clientJobTrace) finalStatusUpdate() {
 		case common.UpdateAbort:
 			return
 		case common.UpdateNotFound:
-			return
-		case common.UpdateRangeMismatch:
 			return
 		case common.UpdateFailed:
 			time.Sleep(c.finishRetryInterval)
@@ -157,13 +155,27 @@ func (c *clientJobTrace) finish() {
 	c.buffer.Close()
 }
 
-func (c *clientJobTrace) incrementalUpdate() common.UpdateState {
-	state := c.sendPatch()
-	if state != common.UpdateSucceeded {
-		return state
+// incrementalUpdate returns a flag if jobs is supposed
+// to be running, or whether it should be finished
+func (c *clientJobTrace) incrementalUpdate() bool {
+	patchState := c.sendPatch()
+
+	if patchState == common.PatchSucceeded {
+		// We try to additionally touch job to check
+		// it might be required if no content was send
+		// for longer period of time.
+		// This is needed to discover if it should be aborted
+		touchState := c.touchJob()
+
+		// Try to abort job
+		if touchState == common.UpdateAbort && c.abort() {
+			return false
+		}
+	} else if patchState == common.PatchAbort && c.abort() {
+		return false
 	}
 
-	return c.touchJob()
+	return true
 }
 
 func (c *clientJobTrace) anyTraceToSend() bool {
@@ -173,25 +185,25 @@ func (c *clientJobTrace) anyTraceToSend() bool {
 	return c.buffer.Size() != c.sentTrace
 }
 
-func (c *clientJobTrace) sendPatch() common.UpdateState {
+func (c *clientJobTrace) sendPatch() common.PatchState {
 	c.lock.RLock()
 	content, err := c.buffer.Bytes(c.sentTrace, c.maxTracePatchSize)
 	sentTrace := c.sentTrace
 	c.lock.RUnlock()
 
 	if err != nil {
-		return common.UpdateFailed
+		return common.PatchFailed
 	}
 
 	if len(content) == 0 {
-		return common.UpdateSucceeded
+		return common.PatchSucceeded
 	}
 
 	result := c.client.PatchTrace(c.config, c.jobCredentials, content, sentTrace)
 
 	c.setUpdateInterval(result.NewUpdateInterval)
 
-	if result.State == common.UpdateSucceeded || result.State == common.UpdateRangeMismatch {
+	if result.State == common.PatchSucceeded || result.State == common.PatchRangeMismatch {
 		c.lock.Lock()
 		c.sentTime = time.Now()
 		c.sentTrace = result.SentOffset
@@ -229,13 +241,13 @@ func (c *clientJobTrace) touchJob() common.UpdateState {
 
 	status := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
 
-	if status == common.UpdateSucceeded {
+	if status.State == common.UpdateSucceeded {
 		c.lock.Lock()
 		c.sentTime = time.Now()
 		c.lock.Unlock()
 	}
 
-	return status
+	return status.State
 }
 
 func (c *clientJobTrace) sendUpdate() common.UpdateState {
@@ -251,13 +263,13 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 
 	status := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
 
-	if status == common.UpdateSucceeded {
+	if status.State == common.UpdateSucceeded {
 		c.lock.Lock()
 		c.sentTime = time.Now()
 		c.lock.Unlock()
 	}
 
-	return status
+	return status.State
 }
 
 func (c *clientJobTrace) abort() bool {
@@ -270,12 +282,11 @@ func (c *clientJobTrace) watch() {
 	for {
 		select {
 		case <-time.After(c.getUpdateInterval()):
-			state := c.incrementalUpdate()
-			if state == common.UpdateAbort && c.abort() {
+			if !c.incrementalUpdate() {
+				// job is no longer running, wait for finish
 				<-c.finished
 				return
 			}
-			break
 
 		case <-c.finished:
 			return

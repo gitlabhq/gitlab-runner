@@ -625,47 +625,37 @@ func TestUpdateJob(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	var state UpdateState
+	result := c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running"})
+	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running", FailureReason: ""})
-	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "forbidden"})
+	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should be aborted if the state is forbidden")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "forbidden", FailureReason: ""})
-	assert.Equal(t, UpdateAbort, state, "Update should be aborted if the state is forbidden")
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "other"})
+	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "other", FailureReason: ""})
-	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state"})
+	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should abort for unknown job")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state", FailureReason: ""})
-	assert.Equal(t, UpdateAbort, state, "Update should abort for unknown job")
+	result = c.UpdateJob(brokenConfig, jobCredentials, UpdateJobInfo{ID: 4, State: "state"})
+	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result)
 
-	state = c.UpdateJob(
-		brokenConfig,
-		jobCredentials,
-		UpdateJobInfo{ID: 4, State: "state", FailureReason: ""},
-	)
-	assert.Equal(t, UpdateAbort, state)
-
-	state = c.UpdateJob(
+	result = c.UpdateJob(
 		config,
 		jobCredentials,
 		UpdateJobInfo{ID: 10, State: "failed", FailureReason: "script_failure"},
 	)
-	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
+	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
 
-	state = c.UpdateJob(
+	result = c.UpdateJob(
 		config,
 		jobCredentials,
 		UpdateJobInfo{ID: 10, State: "failed", FailureReason: "unknown_failure_reason"},
 	)
-	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
+	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
 
-	state = c.UpdateJob(
-		config,
-		jobCredentials,
-		UpdateJobInfo{ID: 10, State: "failed", FailureReason: ""},
-	)
-	assert.Equal(t, UpdateFailed, state, "Update should fail for badly formatted request")
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed"})
+	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
 }
 
 func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
@@ -719,13 +709,13 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 
 	var state UpdateState
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running"})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running"}).State
 	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 11, State: "running"})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 11, State: "running"}).State
 	assert.Equal(t, UpdateAbort, state, "Update should be aborted when Job-Status=canceled")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 12, State: "running"})
+	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 12, State: "running"}).State
 	assert.Equal(t, UpdateAbort, state, "Update should continue when Job-Status=failed")
 }
 
@@ -789,7 +779,7 @@ func TestUnknownPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-	assert.Equal(t, UpdateNotFound, result.State)
+	assert.Equal(t, PatchNotFound, result.State)
 }
 
 func TestForbiddenPatchTrace(t *testing.T) {
@@ -801,7 +791,7 @@ func TestForbiddenPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-	assert.Equal(t, UpdateAbort, result.State)
+	assert.Equal(t, PatchAbort, result.State)
 }
 
 func TestPatchTrace(t *testing.T) {
@@ -814,15 +804,15 @@ func TestPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, PatchSucceeded, result.State)
 	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 
 	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:], 3)
-	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, PatchSucceeded, result.State)
 	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 
 	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:10], 3)
-	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, PatchSucceeded, result.State)
 	assert.Equal(t, 10, result.SentOffset)
 }
 
@@ -840,15 +830,15 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 	defer server.Close()
 
 	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[11:], 11)
-	assert.Equal(t, UpdateRangeMismatch, result.State)
+	assert.Equal(t, PatchRangeMismatch, result.State)
 	assert.Equal(t, 10, result.SentOffset)
 
 	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[15:], 15)
-	assert.Equal(t, UpdateRangeMismatch, result.State)
+	assert.Equal(t, PatchRangeMismatch, result.State)
 	assert.Equal(t, 10, result.SentOffset)
 
 	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[5:], 5)
-	assert.Equal(t, UpdateSucceeded, result.State)
+	assert.Equal(t, PatchSucceeded, result.State)
 	assert.Equal(t, len(patchTraceContent), result.SentOffset)
 }
 
@@ -862,7 +852,7 @@ func TestJobFailedStatePatchTrace(t *testing.T) {
 	defer server.Close()
 
 	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-	assert.Equal(t, UpdateAbort, result.State)
+	assert.Equal(t, PatchAbort, result.State)
 }
 
 func TestPatchTraceCantConnect(t *testing.T) {
@@ -872,7 +862,7 @@ func TestPatchTraceCantConnect(t *testing.T) {
 	server.Close()
 
 	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-	assert.Equal(t, UpdateFailed, result.State)
+	assert.Equal(t, PatchFailed, result.State)
 }
 
 func TestPatchTraceUpdatedTrace(t *testing.T) {
@@ -883,30 +873,32 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 		traceUpdate             []byte
 		expectedContentRange    string
 		expectedContentLength   int64
-		expectedResult          UpdateState
+		expectedResult          PatchState
 		shouldNotCallPatchTrace bool
 	}{
 		{
 			traceUpdate:           []byte("test"),
 			expectedContentRange:  "0-3",
 			expectedContentLength: 4,
-			expectedResult:        UpdateSucceeded,
+			expectedResult:        PatchSucceeded,
 		},
 		{
 			traceUpdate:             []byte{},
 			expectedContentLength:   4,
-			expectedResult:          UpdateSucceeded,
+			expectedResult:          PatchSucceeded,
 			shouldNotCallPatchTrace: true,
 		},
 		{
-			traceUpdate:          []byte(" "),
-			expectedContentRange: "4-4", expectedContentLength: 1,
-			expectedResult: UpdateSucceeded,
+			traceUpdate:           []byte(" "),
+			expectedContentRange:  "4-4",
+			expectedContentLength: 1,
+			expectedResult:        PatchSucceeded,
 		},
 		{
-			traceUpdate:          []byte("test"),
-			expectedContentRange: "5-8", expectedContentLength: 4,
-			expectedResult: UpdateSucceeded,
+			traceUpdate:           []byte("test"),
+			expectedContentRange:  "5-8",
+			expectedContentLength: 4,
+			expectedResult:        PatchSucceeded,
 		},
 	}
 
@@ -949,12 +941,12 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 		trace                   []byte
 		expectedContentRange    string
 		expectedContentLength   int64
-		expectedResult          UpdateState
+		expectedResult          PatchState
 		shouldNotCallPatchTrace bool
 	}{
 		"0 bytes": {
 			trace:                   []byte{},
-			expectedResult:          UpdateSucceeded,
+			expectedResult:          PatchSucceeded,
 			shouldNotCallPatchTrace: true,
 		},
 		"1 byte": {
@@ -962,14 +954,14 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 			trace:                   []byte("1"),
 			expectedContentRange:    "0-0",
 			expectedContentLength:   1,
-			expectedResult:          UpdateSucceeded,
+			expectedResult:          PatchSucceeded,
 			shouldNotCallPatchTrace: false,
 		},
 		"2 bytes": {
 			trace:                   []byte("12"),
 			expectedContentRange:    "0-1",
 			expectedContentLength:   2,
-			expectedResult:          UpdateSucceeded,
+			expectedResult:          PatchSucceeded,
 			shouldNotCallPatchTrace: false,
 		},
 	}
@@ -1089,7 +1081,7 @@ func TestAbortedPatchTrace(t *testing.T) {
 			defer server.Close()
 
 			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-			assert.Equal(t, UpdateAbort, result.State)
+			assert.Equal(t, PatchAbort, result.State)
 		})
 	}
 }
