@@ -10,6 +10,7 @@ import (
 )
 
 type UpdateState int
+type PatchState int
 type UploadState int
 type DownloadState int
 type JobState string
@@ -33,7 +34,14 @@ const (
 	UpdateNotFound
 	UpdateAbort
 	UpdateFailed
-	UpdateRangeMismatch
+)
+
+const (
+	PatchSucceeded PatchState = iota
+	PatchNotFound
+	PatchAbort
+	PatchRangeMismatch
+	PatchFailed
 )
 
 const (
@@ -442,13 +450,17 @@ type JobTrace interface {
 	IsStdout() bool
 }
 
+type UpdateJobResult struct {
+	State UpdateState
+}
+
 type PatchTraceResult struct {
 	SentOffset        int
-	State             UpdateState
+	State             PatchState
 	NewUpdateInterval time.Duration
 }
 
-func NewPatchTraceResult(sentOffset int, state UpdateState, newUpdateInterval int) PatchTraceResult {
+func NewPatchTraceResult(sentOffset int, state PatchState, newUpdateInterval int) PatchTraceResult {
 	return PatchTraceResult{
 		SentOffset:        sentOffset,
 		State:             state,
@@ -461,7 +473,7 @@ type Network interface {
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
-	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) PatchTraceResult
 	DownloadArtifacts(config JobCredentials, artifactsFile string, directDownload *bool) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
