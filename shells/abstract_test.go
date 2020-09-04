@@ -309,14 +309,22 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 	gitlabURL := "https://example.com:3443"
 
 	shell := AbstractShell{}
+	runnerConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Cache: &common.CacheConfig{
+				Type:   "test",
+				Shared: true,
+			},
+		},
+		RunnerCredentials: common.RunnerCredentials{
+			URL: gitlabURL,
+		},
+	}
+
 	build := &common.Build{
 		CacheDir:    "cache_dir",
 		JobResponse: getJobResponseWithCachePaths(),
-		Runner: &common.RunnerConfig{
-			RunnerCredentials: common.RunnerCredentials{
-				URL: gitlabURL,
-			},
-		},
+		Runner:      runnerConfig,
 	}
 	info := common.ShellScriptInfo{
 		RunnerCommand: "gitlab-runner-helper",
@@ -335,6 +343,8 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 		"--timeout", mock.Anything,
 		"--path", "vendor/",
 		"--untracked",
+		"--url", mock.Anything,
+		"--header", "Header-1: a value",
 	).Once()
 	mockWriter.On(
 		"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
@@ -342,6 +352,8 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 		"--timeout", mock.Anything,
 		"--path", "some/path1",
 		"--path", "other/path2",
+		"--url", mock.Anything,
+		"--header", "Header-1: a value",
 	).Once()
 	mockWriter.On("Noticef", "Created cache").Times(2)
 	mockWriter.On("Else").Times(2)

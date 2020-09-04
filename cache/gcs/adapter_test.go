@@ -315,6 +315,9 @@ func TestAdapterOperation(t *testing.T) {
 				adapter,
 				a.GetUploadURL,
 			)
+
+			headers := adapter.GetUploadHeaders()
+			assert.Nil(t, headers)
 		})
 	}
 }

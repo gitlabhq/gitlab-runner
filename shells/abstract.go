@@ -569,6 +569,13 @@ func (b *AbstractShell) addCacheUploadCommand(
 		args = append(args, "--url", url.String())
 	}
 
+	httpHeaders := cache.GetCacheUploadHeaders(info.Build, cacheKey)
+	for key, values := range httpHeaders {
+		for _, value := range values {
+			args = append(args, "--header", fmt.Sprintf("%s: %s", key, value))
+		}
+	}
+
 	// Execute cache-archiver command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
 		w.Noticef("Creating cache %s...", cacheKey)

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -18,9 +19,10 @@ import (
 type CacheArchiverCommand struct {
 	fileArchiver
 	retryHelper
-	File    string `long:"file" description:"The path to file"`
-	URL     string `long:"url" description:"URL of remote cache resource"`
-	Timeout int    `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
+	File    string   `long:"file" description:"The path to file"`
+	URL     string   `long:"url" description:"URL of remote cache resource"`
+	Timeout int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
+	Headers []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
 
 	client *CacheClient
 }
@@ -51,8 +53,8 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	if err != nil {
 		return retryableErr{err: err}
 	}
-	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
+
+	c.setHeaders(req, fi)
 	req.ContentLength = fi.Size()
 
 	resp, err := c.getClient().Do(req)
@@ -101,6 +103,26 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 			"No URL provided, cache will be not uploaded to shared cache server. " +
 				"Cache will be stored only locally.")
 	}
+}
+
+func (c *CacheArchiverCommand) setHeaders(req *http.Request, fi os.FileInfo) {
+	if len(c.Headers) > 0 {
+		for _, header := range c.Headers {
+			parsed := strings.SplitN(header, ":", 2)
+
+			if len(parsed) != 2 {
+				continue
+			}
+
+			req.Header.Set(strings.TrimSpace(parsed[0]), strings.TrimSpace(parsed[1]))
+		}
+
+		return
+	}
+
+	// Set default headers
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
 }
 
 func init() {

@@ -3,6 +3,7 @@
 package cache
 
 import (
+	http "net/http"
 	url "net/url"
 
 	mock "github.com/stretchr/testify/mock"
@@ -23,6 +24,22 @@ func (_m *MockAdapter) GetDownloadURL() *url.URL {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*url.URL)
+		}
+	}
+
+	return r0
+}
+
+// GetUploadHeaders provides a mock function with given fields:
+func (_m *MockAdapter) GetUploadHeaders() http.Header {
+	ret := _m.Called()
+
+	var r0 http.Header
+	if rf, ok := ret.Get(0).(func() http.Header); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(http.Header)
 		}
 	}
 

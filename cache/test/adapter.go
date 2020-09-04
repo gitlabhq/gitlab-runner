@@ -1,6 +1,7 @@
 package test
 
 import (
+	"net/http"
 	"net/url"
 	"time"
 
@@ -18,6 +19,13 @@ func (t *testAdapter) GetDownloadURL() *url.URL {
 
 func (t *testAdapter) GetUploadURL() *url.URL {
 	return t.getURL("upload")
+}
+
+func (t *testAdapter) GetUploadHeaders() http.Header {
+	headers := http.Header{}
+	headers.Set("header-1", "a value")
+
+	return headers
 }
 
 func (t *testAdapter) getURL(operation string) *url.URL {
