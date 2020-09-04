@@ -130,6 +130,11 @@ func (n *GitLabClient) getLastUpdate(credentials requestCredentials) (lu string)
 	return cli.getLastUpdate()
 }
 
+// getFeatures enables features that are properties of networking client
+func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
+	features.TraceReset = true
+}
+
 func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
 	info := common.VersionInfo{
 		Name:         common.NAME,
@@ -140,6 +145,8 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 		Executor:     config.Executor,
 		Shell:        config.Shell,
 	}
+
+	n.getFeatures(&info.Features)
 
 	if executorProvider := common.GetExecutorProvider(config.Executor); executorProvider != nil {
 		_ = executorProvider.GetFeatures(&info.Features)
@@ -386,17 +393,26 @@ func (n *GitLabClient) UpdateJob(
 
 	log := config.Log().WithField("job", jobInfo.ID)
 
+	return n.createUpdateJobResult(log, statusCode, statusText, response)
+}
+
+func (n *GitLabClient) createUpdateJobResult(
+	log *logrus.Entry,
+	statusCode int,
+	statusText string,
+	response *http.Response,
+) common.UpdateJobResult {
 	remoteJobStateResponse := NewRemoteJobStateResponse(response, log)
+
+	result := common.UpdateJobResult{
+		NewUpdateInterval: remoteJobStateResponse.RemoteUpdateInterval,
+	}
 
 	log = log.WithFields(logrus.Fields{
 		"code":            statusCode,
 		"job-status":      remoteJobStateResponse.RemoteState,
 		"update-interval": remoteJobStateResponse.RemoteUpdateInterval,
 	})
-
-	result := common.UpdateJobResult{
-		NewUpdateInterval: remoteJobStateResponse.RemoteUpdateInterval,
-	}
 
 	switch {
 	case remoteJobStateResponse.IsAborted():
@@ -405,6 +421,12 @@ func (n *GitLabClient) UpdateJob(
 	case statusCode == http.StatusOK:
 		log.Debugln("Submitting job to coordinator...", "ok")
 		result.State = common.UpdateSucceeded
+	case statusCode == http.StatusAccepted:
+		log.Debugln("Submitting job to coordinator...", "accepted, but not yet completed")
+		result.State = common.UpdateAcceptedButNotCompleted
+	case statusCode == http.StatusPreconditionFailed:
+		log.Debugln("Submitting job to coordinator...", "trace validation failed")
+		result.State = common.UpdateTraceValidationFailed
 	case statusCode == http.StatusNotFound:
 		log.Warningln("Submitting job to coordinator...", "aborted")
 		result.State = common.UpdateAbort

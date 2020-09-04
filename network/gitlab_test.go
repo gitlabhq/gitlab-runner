@@ -575,21 +575,30 @@ func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]i
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-	case "forbidden":
-		w.WriteHeader(http.StatusForbidden)
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 	}
 }
 
 func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
-	if r.URL.Path != "/api/v4/jobs/10" {
-		w.WriteHeader(http.StatusNotFound)
+	if r.Method != http.MethodPut {
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
-	if r.Method != http.MethodPut {
-		w.WriteHeader(http.StatusNotAcceptable)
+	switch r.URL.Path {
+	case "/api/v4/jobs/200":
+	case "/api/v4/jobs/202":
+		w.WriteHeader(http.StatusAccepted)
+		return
+	case "/api/v4/jobs/403":
+		w.WriteHeader(http.StatusForbidden)
+		return
+	case "/api/v4/jobs/412":
+		w.WriteHeader(http.StatusPreconditionFailed)
+		return
+	default:
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -625,36 +634,42 @@ func TestUpdateJob(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	result := c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running"})
+	result := c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 200, State: "running"})
 	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "forbidden"})
-	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should be aborted if the state is forbidden")
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 403, State: "success"})
+	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should be aborted if the access is forbidden")
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "other"})
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 200, State: "invalid-state"})
 	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 4, State: "state"})
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 404, State: "success"})
 	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should abort for unknown job")
 
-	result = c.UpdateJob(brokenConfig, jobCredentials, UpdateJobInfo{ID: 4, State: "state"})
-	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result)
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 202, State: "success"})
+	assert.Equal(
+		t, UpdateJobResult{State: UpdateAcceptedButNotCompleted}, result,
+		"Update should return accepted, but not completed if server returns `202 StatusAccepted`",
+	)
+
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 412, State: "trace-failed"})
+	assert.Equal(
+		t, UpdateJobResult{State: UpdateTraceValidationFailed}, result,
+		"Update should return reset content requested if server returns `412 Precondition Failed`",
+	)
 
 	result = c.UpdateJob(
 		config,
 		jobCredentials,
-		UpdateJobInfo{ID: 10, State: "failed", FailureReason: "script_failure"},
+		UpdateJobInfo{ID: 200, State: "failed", FailureReason: "script_failure"},
 	)
 	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
 
 	result = c.UpdateJob(
 		config,
 		jobCredentials,
-		UpdateJobInfo{ID: 10, State: "failed", FailureReason: "unknown_failure_reason"},
+		UpdateJobInfo{ID: 200, State: "failed", FailureReason: "invalid-failure-reason"},
 	)
-	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
-
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "failed"})
 	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
 }
 

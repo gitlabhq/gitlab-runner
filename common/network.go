@@ -31,6 +31,8 @@ const (
 
 const (
 	UpdateSucceeded UpdateState = iota
+	UpdateAcceptedButNotCompleted
+	UpdateTraceValidationFailed
 	UpdateNotFound
 	UpdateAbort
 	UpdateFailed
@@ -76,6 +78,7 @@ type FeaturesInfo struct {
 	RawVariables            bool `json:"raw_variables"`
 	ArtifactsExclude        bool `json:"artifacts_exclude"`
 	MultiBuildSteps         bool `json:"multi_build_steps"`
+	TraceReset              bool `json:"trace_reset"`
 }
 
 type RegisterRunnerParameters struct {
