@@ -88,6 +88,9 @@ In this example, you can use a configuration container to mount your custom data
        -v gitlab-runner-config:/etc/gitlab-runner \
        gitlab/gitlab-runner:latest
    ```
+   
+TIP: **Tip:**
+To set the container's timezone, in the `docker run` command, use the flag `--env TZ=<TIMEZONE>`. [View a list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 ### Register the Runner
 
