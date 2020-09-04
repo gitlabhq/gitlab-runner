@@ -634,25 +634,25 @@ func TestUpdateJob(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	result := c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 200, State: "running"})
+	result := c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 200, State: Running})
 	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 403, State: "success"})
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 403, State: Success})
 	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should be aborted if the access is forbidden")
 
 	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 200, State: "invalid-state"})
 	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 404, State: "success"})
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 404, State: Success})
 	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should abort for unknown job")
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 202, State: "success"})
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 202, State: Success})
 	assert.Equal(
 		t, UpdateJobResult{State: UpdateAcceptedButNotCompleted}, result,
 		"Update should return accepted, but not completed if server returns `202 StatusAccepted`",
 	)
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 412, State: "trace-failed"})
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 412, State: Success})
 	assert.Equal(
 		t, UpdateJobResult{State: UpdateTraceValidationFailed}, result,
 		"Update should return reset content requested if server returns `412 Precondition Failed`",
@@ -661,14 +661,14 @@ func TestUpdateJob(t *testing.T) {
 	result = c.UpdateJob(
 		config,
 		jobCredentials,
-		UpdateJobInfo{ID: 200, State: "failed", FailureReason: "script_failure"},
+		UpdateJobInfo{ID: 200, State: Failed, FailureReason: "script_failure"},
 	)
 	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
 
 	result = c.UpdateJob(
 		config,
 		jobCredentials,
-		UpdateJobInfo{ID: 200, State: "failed", FailureReason: "invalid-failure-reason"},
+		UpdateJobInfo{ID: 200, State: Failed, FailureReason: "invalid-failure-reason"},
 	)
 	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
 }
