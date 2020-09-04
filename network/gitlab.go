@@ -384,14 +384,19 @@ func (n *GitLabClient) UpdateJob(
 	)
 	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, statusCode)
 
-	remoteJobStateResponse := NewRemoteJobStateResponse(response)
-	log := config.Log().WithFields(logrus.Fields{
-		"code":       statusCode,
-		"job":        jobInfo.ID,
-		"job-status": remoteJobStateResponse.RemoteState,
+	log := config.Log().WithField("job", jobInfo.ID)
+
+	remoteJobStateResponse := NewRemoteJobStateResponse(response, log)
+
+	log = log.WithFields(logrus.Fields{
+		"code":            statusCode,
+		"job-status":      remoteJobStateResponse.RemoteState,
+		"update-interval": remoteJobStateResponse.RemoteUpdateInterval,
 	})
 
-	result := common.UpdateJobResult{}
+	result := common.UpdateJobResult{
+		NewUpdateInterval: remoteJobStateResponse.RemoteUpdateInterval,
+	}
 
 	switch {
 	case remoteJobStateResponse.IsAborted():
@@ -465,7 +470,7 @@ func (n *GitLabClient) PatchTrace(
 		"job-status":      tracePatchResponse.RemoteState,
 		"code":            response.StatusCode,
 		"status":          response.Status,
-		"update-interval": tracePatchResponse.RemoteTraceUpdateInterval,
+		"update-interval": tracePatchResponse.RemoteUpdateInterval,
 	})
 
 	return n.createPatchTraceResult(startOffset, tracePatchResponse, response, endOffset, log)
@@ -480,7 +485,7 @@ func (n *GitLabClient) createPatchTraceResult(
 ) common.PatchTraceResult {
 	result := common.PatchTraceResult{
 		SentOffset:        startOffset,
-		NewUpdateInterval: tracePatchResponse.RemoteTraceUpdateInterval,
+		NewUpdateInterval: tracePatchResponse.RemoteUpdateInterval,
 	}
 
 	switch {
