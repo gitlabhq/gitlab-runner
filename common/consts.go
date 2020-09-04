@@ -29,7 +29,6 @@ const (
 	DefaultTraceOutputLimit    = 4 * 1024 * 1024 // in bytes
 	DefaultTracePatchLimit     = 1024 * 1024     // in bytes
 	DefaultTraceUpdateInterval = 3 * time.Second
-	TraceFinishRetryInterval   = 3 * time.Second
 	TraceForceSendInterval     = 30 * time.Second
 )
 

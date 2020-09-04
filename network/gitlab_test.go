@@ -1011,7 +1011,7 @@ func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
 	client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
 }
 
-func TestPatchTraceUpdateIntervalHeaderHandling(t *testing.T) {
+func TestUpdateIntervalHeaderHandling(t *testing.T) {
 	tests := map[string]struct {
 		sendUpdateIntervalHeader  bool
 		updateIntervalHeaderValue string
@@ -1050,19 +1050,41 @@ func TestPatchTraceUpdateIntervalHeaderHandling(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
-				if tt.sendUpdateIntervalHeader {
-					w.Header().Add(traceUpdateIntervalHeader, tt.updateIntervalHeaderValue)
+			t.Run("UpdateJob", func(t *testing.T) {
+				handler := func(w http.ResponseWriter, r *http.Request) {
+					if tt.sendUpdateIntervalHeader {
+						w.Header().Add(updateIntervalHeader, tt.updateIntervalHeaderValue)
+					}
+
+					testUpdateJobHandler(w, r, t)
 				}
 
-				w.WriteHeader(http.StatusAccepted)
-			}
+				server := httptest.NewServer(http.HandlerFunc(handler))
+				defer server.Close()
 
-			server, client, config := getPatchServer(t, handler)
-			defer server.Close()
+				config := RunnerConfig{
+					RunnerCredentials: RunnerCredentials{URL: server.URL},
+				}
 
-			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-			assert.Equal(t, tt.expectedUpdateInterval, result.NewUpdateInterval)
+				result := NewGitLabClient().UpdateJob(config, &JobCredentials{ID: 10}, UpdateJobInfo{State: "success"})
+				assert.Equal(t, tt.expectedUpdateInterval, result.NewUpdateInterval)
+			})
+
+			t.Run("PatchTrace", func(t *testing.T) {
+				handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+					if tt.sendUpdateIntervalHeader {
+						w.Header().Add(updateIntervalHeader, tt.updateIntervalHeaderValue)
+					}
+
+					w.WriteHeader(http.StatusAccepted)
+				}
+
+				server, client, config := getPatchServer(t, handler)
+				defer server.Close()
+
+				result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+				assert.Equal(t, tt.expectedUpdateInterval, result.NewUpdateInterval)
+			})
 		})
 	}
 }

@@ -451,7 +451,8 @@ type JobTrace interface {
 }
 
 type UpdateJobResult struct {
-	State UpdateState
+	State             UpdateState
+	NewUpdateInterval time.Duration
 }
 
 type PatchTraceResult struct {

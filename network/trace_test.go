@@ -47,6 +47,14 @@ func generateJobInfoMatcher(id int, state common.JobState, failureReason common.
 	})
 }
 
+func ignoreOptionalTouchJob(mockNetwork *common.MockNetwork) {
+	touchMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
+
+	// due to timing the `trace.touchJob()` can be executed
+	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, touchMatcher).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Maybe()
+}
+
 func TestIgnoreStatusChange(t *testing.T) {
 	jobInfoMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
@@ -172,6 +180,8 @@ func TestJobMasking(t *testing.T) {
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
 
+	ignoreOptionalTouchJob(mockNetwork)
+
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage), 0).
 		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.PatchSucceeded, 0))
 
@@ -194,6 +204,8 @@ func TestJobFinishTraceUpdateRetry(t *testing.T) {
 
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
+
+	ignoreOptionalTouchJob(mockNetwork)
 
 	// accept just 3 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("My trace send"), 0).
@@ -221,7 +233,7 @@ func TestJobFinishTraceUpdateRetry(t *testing.T) {
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
 
-	b.finishRetryInterval = time.Microsecond
+	b.updateInterval = 10 * time.Millisecond
 
 	b.start()
 	fmt.Fprint(b, "My trace send")
@@ -233,6 +245,8 @@ func TestJobMaxTracePatchSize(t *testing.T) {
 
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
+
+	ignoreOptionalTouchJob(mockNetwork)
 
 	// expect just 5 bytes
 	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("My tr"), 0).
@@ -252,7 +266,7 @@ func TestJobMaxTracePatchSize(t *testing.T) {
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
 
-	b.finishRetryInterval = time.Microsecond
+	b.updateInterval = 10 * time.Millisecond
 	b.maxTracePatchSize = 5
 
 	b.start()
@@ -266,6 +280,8 @@ func TestJobFinishStatusUpdateRetry(t *testing.T) {
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
 
+	ignoreOptionalTouchJob(mockNetwork)
+
 	// fail job 5 times
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateJobResult{State: common.UpdateFailed}).Times(5)
@@ -277,7 +293,7 @@ func TestJobFinishStatusUpdateRetry(t *testing.T) {
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
 
-	b.finishRetryInterval = time.Microsecond
+	b.updateInterval = 10 * time.Millisecond
 
 	b.start()
 	b.Success()
@@ -290,6 +306,8 @@ func TestJobIncrementalPatchSend(t *testing.T) {
 
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
+
+	ignoreOptionalTouchJob(mockNetwork)
 
 	// ensure that PatchTrace gets executed first
 	wg.Add(1)
@@ -351,71 +369,144 @@ func TestJobIncrementalStatusRefresh(t *testing.T) {
 	b.finish()
 }
 
-func TestTracePathIntervalChanges(t *testing.T) {
+func TestUpdateIntervalChanges(t *testing.T) {
 	testTrace := "Test trace"
+	touchUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
 	finalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	traceUpdateIntervalDefault := 30 * time.Millisecond
+	traceUpdateIntervalDefault := 10 * time.Millisecond
 
 	tests := map[string]struct {
-		initialUpdateInterval         time.Duration
-		patchTraceUpdateIntervalValue int
-		finalUpdateInterval           time.Duration
+		initialUpdateInterval   time.Duration
+		requestedUpdateInterval int
+		finalUpdateInterval     time.Duration
 	}{
-		"negative updateInterval returned from PatchTrace": {
-			initialUpdateInterval:         traceUpdateIntervalDefault,
-			patchTraceUpdateIntervalValue: -10,
-			finalUpdateInterval:           traceUpdateIntervalDefault,
+		"negative updateInterval requested": {
+			initialUpdateInterval:   traceUpdateIntervalDefault,
+			requestedUpdateInterval: -10,
+			finalUpdateInterval:     traceUpdateIntervalDefault,
 		},
-		"zero updateInterval returned from PatchTrace": {
-			initialUpdateInterval:         traceUpdateIntervalDefault,
-			patchTraceUpdateIntervalValue: 0,
-			finalUpdateInterval:           traceUpdateIntervalDefault,
+		"zero updateInterval requested": {
+			initialUpdateInterval:   traceUpdateIntervalDefault,
+			requestedUpdateInterval: 0,
+			finalUpdateInterval:     traceUpdateIntervalDefault,
 		},
-		"positive updateInterval returned from PatchTrace": {
-			initialUpdateInterval:         traceUpdateIntervalDefault,
-			patchTraceUpdateIntervalValue: 10,
-			finalUpdateInterval:           10 * time.Second,
+		"positive updateInterval requested": {
+			initialUpdateInterval:   traceUpdateIntervalDefault,
+			requestedUpdateInterval: 10,
+			finalUpdateInterval:     10 * time.Second,
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			client := new(common.MockNetwork)
-			defer client.AssertExpectations(t)
+			t.Run("sendPatch", func(t *testing.T) {
+				client := new(common.MockNetwork)
+				defer client.AssertExpectations(t)
 
-			waitForPatch := new(sync.WaitGroup)
-			waitForPatch.Add(1)
+				waitForPatch := new(sync.WaitGroup)
+				waitForPatch.Add(1)
 
-			client.On("PatchTrace", jobConfig, jobCredentials, []byte(testTrace), 0).
-				Return(common.NewPatchTraceResult(
-					len(testTrace),
-					common.PatchSucceeded,
-					tt.patchTraceUpdateIntervalValue,
-				)).
-				Run(func(_ mock.Arguments) {
-					waitForPatch.Done()
-				}).
-				Once()
+				client.On("PatchTrace", jobConfig, jobCredentials, []byte(testTrace), 0).
+					Return(common.NewPatchTraceResult(
+						len(testTrace),
+						common.PatchSucceeded,
+						tt.requestedUpdateInterval,
+					)).
+					Run(func(_ mock.Arguments) {
+						waitForPatch.Done()
+					}).
+					Once()
 
-			client.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
-				Return(common.UpdateJobResult{State: common.UpdateSucceeded}).
-				Once()
+				// Ignore all subequent touch jobs
+				ignoreOptionalTouchJob(client)
 
-			trace, err := newJobTrace(client, jobConfig, jobCredentials)
-			require.NoError(t, err)
+				client.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
+					Return(common.UpdateJobResult{State: common.UpdateSucceeded}).
+					Once()
 
-			trace.updateInterval = tt.initialUpdateInterval
+				trace, err := newJobTrace(client, jobConfig, jobCredentials)
+				require.NoError(t, err)
 
-			trace.start()
-			assert.Equal(t, tt.initialUpdateInterval, trace.getUpdateInterval())
+				trace.updateInterval = tt.initialUpdateInterval
 
-			_, err = fmt.Fprint(trace, testTrace)
-			require.NoError(t, err)
+				trace.start()
+				assert.Equal(t, tt.initialUpdateInterval, trace.getUpdateInterval())
 
-			waitForPatch.Wait()
-			assert.Equal(t, tt.finalUpdateInterval, trace.getUpdateInterval())
-			trace.Success()
+				_, err = fmt.Fprint(trace, testTrace)
+				require.NoError(t, err)
+
+				waitForPatch.Wait()
+				assert.Equal(t, tt.finalUpdateInterval, trace.getUpdateInterval())
+				trace.Success()
+			})
+
+			t.Run("touchJob", func(t *testing.T) {
+				client := new(common.MockNetwork)
+				defer client.AssertExpectations(t)
+
+				waitForTouchJob := new(sync.WaitGroup)
+				waitForTouchJob.Add(1)
+
+				client.On("UpdateJob", jobConfig, jobCredentials, touchUpdateMatcher).
+					Return(common.UpdateJobResult{
+						State:             common.UpdateSucceeded,
+						NewUpdateInterval: time.Duration(tt.requestedUpdateInterval) * time.Second,
+					}).
+					Run(func(_ mock.Arguments) {
+						waitForTouchJob.Done()
+					}).
+					Once()
+
+				client.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
+					Return(common.UpdateJobResult{State: common.UpdateSucceeded}).
+					Once()
+
+				trace, err := newJobTrace(client, jobConfig, jobCredentials)
+				require.NoError(t, err)
+
+				trace.updateInterval = tt.initialUpdateInterval
+				trace.forceSendInterval = 0
+
+				trace.start()
+				assert.Equal(t, tt.initialUpdateInterval, trace.getUpdateInterval())
+
+				waitForTouchJob.Wait()
+				assert.Equal(t, tt.finalUpdateInterval, trace.getUpdateInterval())
+				trace.Success()
+			})
+
+			t.Run("finalStatusUpdate", func(t *testing.T) {
+				client := new(common.MockNetwork)
+				defer client.AssertExpectations(t)
+
+				waitForFinalUpdate := new(sync.WaitGroup)
+				waitForFinalUpdate.Add(1)
+
+				ignoreOptionalTouchJob(client)
+
+				client.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
+					Return(common.UpdateJobResult{
+						State:             common.UpdateSucceeded,
+						NewUpdateInterval: time.Duration(tt.requestedUpdateInterval) * time.Second,
+					}).
+					Run(func(_ mock.Arguments) {
+						waitForFinalUpdate.Done()
+					}).
+					Once()
+
+				trace, err := newJobTrace(client, jobConfig, jobCredentials)
+				require.NoError(t, err)
+
+				trace.updateInterval = tt.initialUpdateInterval
+
+				trace.start()
+				assert.Equal(t, tt.initialUpdateInterval, trace.getUpdateInterval())
+				trace.Success()
+
+				waitForFinalUpdate.Wait()
+				assert.Equal(t, tt.finalUpdateInterval, trace.getUpdateInterval())
+			})
 		})
 	}
 }
