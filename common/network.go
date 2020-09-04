@@ -79,6 +79,7 @@ type FeaturesInfo struct {
 	ArtifactsExclude        bool `json:"artifacts_exclude"`
 	MultiBuildSteps         bool `json:"multi_build_steps"`
 	TraceReset              bool `json:"trace_reset"`
+	TraceChecksum           bool `json:"trace_checksum"`
 }
 
 type RegisterRunnerParameters struct {

@@ -133,6 +133,7 @@ func (n *GitLabClient) getLastUpdate(credentials requestCredentials) (lu string)
 // getFeatures enables features that are properties of networking client
 func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
 	features.TraceReset = true
+	features.TraceChecksum = true
 }
 
 func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
