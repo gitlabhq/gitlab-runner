@@ -79,6 +79,7 @@ type FeaturesInfo struct {
 	ArtifactsExclude        bool `json:"artifacts_exclude"`
 	MultiBuildSteps         bool `json:"multi_build_steps"`
 	TraceReset              bool `json:"trace_reset"`
+	TraceChecksum           bool `json:"trace_checksum"`
 }
 
 type RegisterRunnerParameters struct {
@@ -393,6 +394,7 @@ type UpdateJobRequest struct {
 	Token         string           `json:"token,omitempty"`
 	State         JobState         `json:"state,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
+	Checksum      string           `json:"checksum,omitempty"`
 }
 
 //nolint:lll
@@ -429,6 +431,7 @@ type UpdateJobInfo struct {
 	ID            int
 	State         JobState
 	FailureReason JobFailureReason
+	Checksum      string
 }
 
 type ArtifactsOptions struct {

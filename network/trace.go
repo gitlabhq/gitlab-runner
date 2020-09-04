@@ -67,6 +67,10 @@ func (c *clientJobTrace) SetMasked(masked []string) {
 	c.buffer.SetMasked(masked)
 }
 
+func (c *clientJobTrace) checksum() string {
+	return c.buffer.Checksum()
+}
+
 func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -247,8 +251,9 @@ func (c *clientJobTrace) touchJob() common.UpdateState {
 	}
 
 	jobInfo := common.UpdateJobInfo{
-		ID:    c.id,
-		State: common.Running,
+		ID:       c.id,
+		State:    common.Running,
+		Checksum: c.checksum(),
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
@@ -273,6 +278,7 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 		ID:            c.id,
 		State:         state,
 		FailureReason: c.failureReason,
+		Checksum:      c.checksum(),
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)

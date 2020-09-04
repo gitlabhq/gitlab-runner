@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"hash"
+	"hash/crc32"
 	"io"
 	"io/ioutil"
 	"os"
@@ -26,6 +28,7 @@ type Buffer struct {
 	advanceBuffer bytes.Buffer
 	bytesLimit    int
 	finish        chan struct{}
+	checksum      hash.Hash32
 
 	maskTree *trie.Trie
 }
@@ -85,6 +88,10 @@ func (b *Buffer) Finish() {
 func (b *Buffer) Close() {
 	_ = b.logFile.Close()
 	_ = os.Remove(b.logFile.Name())
+}
+
+func (b *Buffer) Checksum() string {
+	return fmt.Sprintf("crc32:%08x", b.checksum.Sum32())
 }
 
 func (b *Buffer) advanceAllUnsafe() error {
@@ -188,13 +195,16 @@ func New() (*Buffer, error) {
 		return nil, err
 	}
 
+	checksum := crc32.NewIEEE()
+
 	reader, writer := io.Pipe()
 	buffer := &Buffer{
 		writer:     writer,
 		bytesLimit: defaultBytesLimit,
 		finish:     make(chan struct{}),
 		logFile:    logFile,
-		logWriter:  bufio.NewWriter(logFile),
+		checksum:   checksum,
+		logWriter:  bufio.NewWriter(io.MultiWriter(logFile, checksum)),
 	}
 	go buffer.process(reader)
 	return buffer, nil
