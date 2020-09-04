@@ -109,7 +109,7 @@ func (c *clientJobTrace) start() {
 	go c.watch()
 }
 
-func (c *clientJobTrace) finalTraceUpdate() {
+func (c *clientJobTrace) ensureAllTraceSent() {
 	for c.anyTraceToSend() {
 		switch c.sendPatch() {
 		case common.PatchSucceeded:
@@ -127,8 +127,16 @@ func (c *clientJobTrace) finalTraceUpdate() {
 	}
 }
 
-func (c *clientJobTrace) finalStatusUpdate() {
+func (c *clientJobTrace) finalUpdate() {
+	// On final-update we want the Runner to fallback
+	// to default interval and make Rails to override it
+	c.setUpdateInterval(common.DefaultUpdateInterval)
+
 	for {
+		// Before sending update to ensure that trace is sent
+		// as `sendUpdate()` can force Runner to rewind trace
+		c.ensureAllTraceSent()
+
 		switch c.sendUpdate() {
 		case common.UpdateSucceeded:
 			return
@@ -136,6 +144,10 @@ func (c *clientJobTrace) finalStatusUpdate() {
 			return
 		case common.UpdateNotFound:
 			return
+		case common.UpdateAcceptedButNotCompleted:
+			time.Sleep(c.getUpdateInterval())
+		case common.UpdateTraceValidationFailed:
+			time.Sleep(c.getUpdateInterval())
 		case common.UpdateFailed:
 			time.Sleep(c.getUpdateInterval())
 		}
@@ -145,8 +157,7 @@ func (c *clientJobTrace) finalStatusUpdate() {
 func (c *clientJobTrace) finish() {
 	c.buffer.Finish()
 	c.finished <- true
-	c.finalTraceUpdate()
-	c.finalStatusUpdate()
+	c.finalUpdate()
 	c.buffer.Close()
 }
 
@@ -217,6 +228,12 @@ func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
 	defer c.lock.Unlock()
 
 	c.updateInterval = newUpdateInterval
+
+	// Let's hope that this never happens,
+	// but if server behaves bogus do not have too long interval
+	if c.updateInterval > common.MaxUpdateInterval {
+		c.updateInterval = common.MaxUpdateInterval
+	}
 }
 
 // Update Coordinator that the job is still running.
@@ -265,6 +282,11 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 	if result.State == common.UpdateSucceeded {
 		c.lock.Lock()
 		c.sentTime = time.Now()
+		c.lock.Unlock()
+	} else if result.State == common.UpdateTraceValidationFailed {
+		c.lock.Lock()
+		c.sentTime = time.Now()
+		c.sentTrace = 0
 		c.lock.Unlock()
 	}
 
@@ -326,7 +348,7 @@ func newJobTrace(
 		jobCredentials:    jobCredentials,
 		id:                jobCredentials.ID,
 		maxTracePatchSize: common.DefaultTracePatchLimit,
-		updateInterval:    common.DefaultTraceUpdateInterval,
+		updateInterval:    common.DefaultUpdateInterval,
 		forceSendInterval: common.TraceForceSendInterval,
 	}, nil
 }
