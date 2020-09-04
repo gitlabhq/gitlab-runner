@@ -12,7 +12,7 @@ coordinates the jobs.
 
 ## Requirements
 
-GitLab Runner is written in [Go](https://golang.org) and can be run as a single binary, no
+GitLab Runner is written in [Go](https://golang.org) and can be run as a single binary. No
 language specific requirements are needed.
 
 It is designed to run on the GNU/Linux, macOS, and Windows operating systems.
@@ -33,7 +33,7 @@ GitLab Runner requires a minimum of Docker `v1.13.0`.
   - Using Docker containers.
   - Using Docker containers and executing job over SSH.
   - Using Docker containers with autoscaling on different clouds and virtualization hypervisors.
-  - Connecting to remote SSH server.
+  - Connecting to a remote SSH server.
 - Is written in Go and distributed as single binary without any other requirements.
 - Supports Bash and Windows PowerShell.
 - Works on GNU/Linux, macOS, and Windows (pretty much anywhere you can run Docker).
