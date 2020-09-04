@@ -11,14 +11,14 @@ of this base directory depends on the executor. For:
 
 - [Kubernetes](../executors/kubernetes.md),
   [Docker](../executors/docker.md) and [Docker
-  Machine](../executors/docker_machine.md) executors it will be
+  Machine](../executors/docker_machine.md) executors, it will be
   `/builds` inside of the container.
-- [Shell](../executors/shell.md) executor it will be `$PWD/builds`.
+- [Shell](../executors/shell.md) executor, it will be `$PWD/builds`.
 - [SSH](../executors/ssh.md), [VirtualBox](../executors/virtualbox.md)
-  and [Parallels](../executors/parallels.md) executors it will be
+  and [Parallels](../executors/parallels.md) executors, it will be
   `~/builds` in the home directory of the user configured to handle the
   SSH connection to the target machine.
-- [Custom](../executors/custom.md) executor no default is provided and
+- [Custom](../executors/custom.md) executors, no default is provided and
   it must be explicitly configured, otherwise, the job will fail.
 
 The used _Builds Directory_ may be defined explicitly by the user with the
