@@ -658,21 +658,25 @@ use the `CredentialsFile`, the file needs to be present on GitLab Runner's machi
 
 Below is a table containing a summary of `config.toml`, cli options and ENV variables for `register`:
 
-| Setting             | TOML field                               | CLI option for `register`      | ENV for `register`                | Before 12.0.0 TOML field            | Before 12.0.0 CLI option | Before 12.0.0 ENV         |
-|---------------------|------------------------------------------|--------------------------------|-----------------------------------|-------------------------------------|--------------------------|---------------------------|
-| Type                | `[runners.cache] -> Type`                | `--cache-type`                 | `$CACHE_TYPE`                     |                                     |                          |                           |
-| Path                | `[runners.cache] -> Path`                | `--cache-path`                 | `$CACHE_PATH`                     |                                     | `--cache-s3-cache-path`  | `$S3_CACHE_PATH`          |
-| Shared              | `[runners.cache] -> Shared`              | `--cache-shared`               | `$CACHE_SHARED`                   |                                     | `--cache-cache-shared`   |                           |
-| S3.ServerAddress    | `[runners.cache.s3] -> ServerAddress`    | `--cache-s3-server-address`    | `$CACHE_S3_SERVER_ADDRESS`        | `[runners.cache] -> ServerAddress`  |                          | `$S3_SERVER_ADDRESS`      |
-| S3.AccessKey        | `[runners.cache.s3] -> AccessKey`        | `--cache-s3-access-key`        | `$CACHE_S3_ACCESS_KEY`            | `[runners.cache] -> AccessKey`      |                          | `$S3_ACCESS_KEY`          |
-| S3.SecretKey        | `[runners.cache.s3] -> SecretKey`        | `--cache-s3-secret-key`        | `$CACHE_S3_SECRET_KEY`            | `[runners.cache] -> SecretKey`      |                          | `$S3_SECRET_KEY`          |
-| S3.BucketName       | `[runners.cache.s3] -> BucketName`       | `--cache-s3-bucket-name`       | `$CACHE_S3_BUCKET_NAME`           | `[runners.cache] -> BucketName`     |                          | `$S3_BUCKET_NAME`         |
-| S3.BucketLocation   | `[runners.cache.s3] -> BucketLocation`   | `--cache-s3-bucket-location`   | `$CACHE_S3_BUCKET_LOCATION`       | `[runners.cache] -> BucketLocation` |                          | `$S3_BUCKET_LOCATION`     |
-| S3.Insecure         | `[runners.cache.s3] -> Insecure`         | `--cache-s3-insecure`          | `$CACHE_S3_INSECURE`              | `[runners.cache] -> Insecure`       |                          | `$S3_INSECURE`            |
-| GCS.AccessID        | `[runners.cache.gcs] -> AccessID`        | `--cache-gcs-access-id`        | `$CACHE_GCS_ACCESS_ID`            |                                     |                          |                           |
-| GCS.PrivateKey      | `[runners.cache.gcs] -> PrivateKey`      | `--cache-gcs-private-key`      | `$CACHE_GCS_PRIVATE_KEY`          |                                     |                          |                           |
-| GCS.CredentialsFile | `[runners.cache.gcs] -> CredentialsFile` | `--cache-gcs-credentials-file` | `$GOOGLE_APPLICATION_CREDENTIALS` |                                     |                          |                           |
-| GCS.BucketName      | `[runners.cache.gcs] -> BucketName`      | `--cache-gcs-bucket-name`      | `$CACHE_GCS_BUCKET_NAME`          |                                     |                          |                           |
+| Setting               | TOML field                               | CLI option for `register`      | ENV for `register`                | Before 12.0.0 TOML field            | Before 12.0.0 CLI option | Before 12.0.0 ENV         |
+|-----------------------|------------------------------------------|--------------------------------|-----------------------------------|-------------------------------------|--------------------------|---------------------------|
+| `Type`                | `[runners.cache] -> Type`                | `--cache-type`                 | `$CACHE_TYPE`                     |                                     |                          |                           |
+| `Path`                | `[runners.cache] -> Path`                | `--cache-path`                 | `$CACHE_PATH`                     |                                     | `--cache-s3-cache-path`  | `$S3_CACHE_PATH`          |
+| `Shared`              | `[runners.cache] -> Shared`              | `--cache-shared`               | `$CACHE_SHARED`                   |                                     | `--cache-cache-shared`   |                           |
+| `S3.ServerAddress`    | `[runners.cache.s3] -> ServerAddress`    | `--cache-s3-server-address`    | `$CACHE_S3_SERVER_ADDRESS`        | `[runners.cache] -> ServerAddress`  |                          | `$S3_SERVER_ADDRESS`      |
+| `S3.AccessKey`        | `[runners.cache.s3] -> AccessKey`        | `--cache-s3-access-key`        | `$CACHE_S3_ACCESS_KEY`            | `[runners.cache] -> AccessKey`      |                          | `$S3_ACCESS_KEY`          |
+| `S3.SecretKey`        | `[runners.cache.s3] -> SecretKey`        | `--cache-s3-secret-key`        | `$CACHE_S3_SECRET_KEY`            | `[runners.cache] -> SecretKey`      |                          | `$S3_SECRET_KEY`          |
+| `S3.BucketName`       | `[runners.cache.s3] -> BucketName`       | `--cache-s3-bucket-name`       | `$CACHE_S3_BUCKET_NAME`           | `[runners.cache] -> BucketName`     |                          | `$S3_BUCKET_NAME`         |
+| `S3.BucketLocation`   | `[runners.cache.s3] -> BucketLocation`   | `--cache-s3-bucket-location`   | `$CACHE_S3_BUCKET_LOCATION`       | `[runners.cache] -> BucketLocation` |                          | `$S3_BUCKET_LOCATION`     |
+| `S3.Insecure`         | `[runners.cache.s3] -> Insecure`         | `--cache-s3-insecure`          | `$CACHE_S3_INSECURE`              | `[runners.cache] -> Insecure`       |                          | `$S3_INSECURE`            |
+| `GCS.AccessID`        | `[runners.cache.gcs] -> AccessID`        | `--cache-gcs-access-id`        | `$CACHE_GCS_ACCESS_ID`            |                                     |                          |                           |
+| `GCS.PrivateKey`      | `[runners.cache.gcs] -> PrivateKey`      | `--cache-gcs-private-key`      | `$CACHE_GCS_PRIVATE_KEY`          |                                     |                          |                           |
+| `GCS.CredentialsFile` | `[runners.cache.gcs] -> CredentialsFile` | `--cache-gcs-credentials-file` | `$GOOGLE_APPLICATION_CREDENTIALS` |                                     |                          |                           |
+| `GCS.BucketName`      | `[runners.cache.gcs] -> BucketName`      | `--cache-gcs-bucket-name`      | `$CACHE_GCS_BUCKET_NAME`          |                                     |                          |                           |
+| `Azure.AccountName`   | `[runners.cache.azure] -> AccountName`   | `--cache-azure-account-name`   | `$CACHE_AZURE_ACCOUNT_NAME`       |                                     |                          |                           |
+| `Azure.AccountKey`    | `[runners.cache.azure] -> AccountKey`    | `--cache-azure-account-key`    | `$CACHE_AZURE_ACCOUNT_KEY`        |                                     |                          |                           |
+| `Azure.ContainerName` | `[runners.cache.azure] -> ContainerName` | `--cache-azure-container-name` | `$CACHE_AZURE_CONTAINER_NAME`     |                                     |                          |                           |
+| `Azure.StorageDomain` | `[runners.cache.azure] -> StorageDomain` | `--cache-azure-storage-domain` | `$CACHE_AZURE_STORAGE_DOMAIN`     |                                     |                          |                           |
 
 ### The `[runners.cache.s3]` section
 
@@ -757,6 +761,36 @@ Examples:
   [runners.cache.gcs]
     CredentialsFile = "/etc/gitlab-runner/service-account.json"
     BucketName = "runners-cache"
+```
+
+### The `[runners.cache.azure]` section
+
+> Introduced in GitLab Runner 13.4.0.
+
+Configure native support for Azure Blob Storage. Read the
+[Azure Blob Storage documentation](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction)
+to learn more. Note that while S3 and GCS use the word `bucket` for a collection of objects, Azure uses the word
+`container` to denote a collection of blobs.
+
+| Parameter         | Type             | Description |
+|-------------------|------------------|-------------|
+| `AccountName`     | string           | Name of the Azure Blob Storage account used to access the storage. |
+| `AccountKey`      | string           | Storage account access key used to access the container. |
+| `ContainerName`   | string           | Name of the storage container in which to save cache data. |
+| `StorageDomain`   | string           | Domain name [used to service Azure storage endpoints](https://docs.microsoft.com/en-us/azure/china/resources-developer-guide#check-endpoints-in-azure) (optional). Default is `blob.core.windows.net`. |
+
+Example:
+
+```toml
+[runners.cache]
+  Type = "azure"
+  Path = "path/to/prefix"
+  Shared = false
+  [runners.cache.azure]
+    AccountName = "<AZURE STORAGE ACCOUNT NAME>"
+    AccountKey = "<AZURE STORAGE ACCOUNT KEY>"
+    ContainerName = "runners-cache"
+    StorageDomain = "blob.core.windows.net"
 ```
 
 ## The `[runners.kubernetes]` section
