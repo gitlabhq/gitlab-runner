@@ -239,42 +239,23 @@ func TestRawVariableOutput(t *testing.T) {
 	})
 }
 
-func TestBuildAbort(t *testing.T) {
-	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		longRunningBuild, err := common.GetLongRunningBuild()
-		assert.NoError(t, err)
-		build, cleanup := newBuild(t, longRunningBuild, shell)
-		defer cleanup()
-
-		abortTimer := time.AfterFunc(time.Second, func() {
-			t.Log("Interrupt")
-			build.SystemInterrupt <- os.Interrupt
-		})
-		defer abortTimer.Stop()
-
-		err = buildtest.RunBuild(t, build)
-		assert.EqualError(t, err, "aborted: interrupt")
-	})
-}
-
 func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		longRunningBuild, err := common.GetLongRunningBuild()
-		assert.NoError(t, err)
-		build, cleanup := newBuild(t, longRunningBuild, shell)
+		build, cleanup := newBuild(t, common.JobResponse{}, shell)
 		defer cleanup()
 
-		trace := &common.Trace{Writer: os.Stdout}
+		updateSleepForCMD := func(build *common.Build) {
+			if shell != "cmd" {
+				return
+			}
 
-		cancelTimer := time.AfterFunc(time.Second, func() {
-			t.Log("Cancel")
-			trace.Cancel()
-		})
-		defer cancelTimer.Stop()
+			resp, err := common.GetRemoteLongRunningBuildWithAfterScriptCMD()
+			require.NoError(t, err)
 
-		err = buildtest.RunBuildWithTrace(t, build, trace)
-		assert.EqualError(t, err, "canceled")
-		assert.IsType(t, &common.BuildError{}, err)
+			build.JobResponse = resp
+		}
+
+		buildtest.RunBuildWithCancel(t, build.Runner, updateSleepForCMD)
 	})
 }
 

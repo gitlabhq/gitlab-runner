@@ -11,9 +11,6 @@ TestBuildAbort/powershell
 TestBuildBuildFailure
 TestBuildBuildFailure/cmd
 TestBuildBuildFailure/powershell
-TestBuildCancel
-TestBuildCancel/cmd
-TestBuildCancel/powershell
 TestBuildMultilineCommand
 TestBuildMultilineCommand/cmd
 TestBuildMultilineCommand/powershell

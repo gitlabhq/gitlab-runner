@@ -308,6 +308,10 @@ func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, shar
 }
 
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	b.setCurrentStage(buildStage)
 
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
@@ -350,7 +354,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 			msg := fmt.Sprintf(
 				"%s%s%s",
 				helpers.ANSI_BOLD_CYAN,
-				getStageDescription(buildStage),
+				GetStageDescription(buildStage),
 				helpers.ANSI_RESET,
 			)
 			b.logger.Println(msg)
@@ -383,7 +387,7 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 	return predefined
 }
 
-func getStageDescription(stage BuildStage) string {
+func GetStageDescription(stage BuildStage) string {
 	descriptions := map[BuildStage]string{
 		BuildStagePrepare:                  "Preparing environment",
 		BuildStageGetSources:               "Getting source from Git repository",
@@ -545,7 +549,10 @@ func (b *Build) handleError(err error) error {
 	switch err {
 	case context.Canceled:
 		b.setCurrentState(BuildRunRuntimeCanceled)
-		return &BuildError{Inner: errors.New("canceled")}
+		return &BuildError{
+			Inner:         errors.New("canceled"),
+			FailureReason: JobCanceled,
+		}
 
 	case context.DeadlineExceeded:
 		b.setCurrentState(BuildRunRuntimeTimedout)
@@ -595,7 +602,10 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 		err = b.handleError(ctx.Err())
 
 	case signal := <-b.SystemInterrupt:
-		err = fmt.Errorf("aborted: %v", signal)
+		err = &BuildError{
+			Inner:         fmt.Errorf("aborted: %v", signal),
+			FailureReason: RunnerSystemFailure,
+		}
 		b.setCurrentState(BuildRunRuntimeTerminated)
 
 	case err = <-buildFinish:

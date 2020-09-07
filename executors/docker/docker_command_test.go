@@ -141,6 +141,16 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 }
 
 func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {
+	jobResp, err := getJobResp()
+	require.NoError(t, err)
+
+	return common.Build{
+		JobResponse: jobResp,
+		Runner:      getRunnerConfigForOS(t),
+	}
+}
+
+func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 	executor := "docker"
 	image := common.TestAlpineImage
 
@@ -149,22 +159,16 @@ func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) 
 		image = getWindowsImage(t)
 	}
 
-	jobResp, err := getJobResp()
-	require.NoError(t, err)
-
-	return common.Build{
-		JobResponse: jobResp,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: executor,
-				Docker: &common.DockerConfig{
-					Image:      image,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
+	return &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: executor,
+			Docker: &common.DockerConfig{
+				Image:      image,
+				PullPolicy: common.PullPolicyIfNotPresent,
 			},
-			RunnerCredentials: common.RunnerCredentials{
-				Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
-			},
+		},
+		RunnerCredentials: common.RunnerCredentials{
+			Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
 		},
 	}
 }
@@ -457,66 +461,12 @@ func TestDockerCommandMissingTag(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestDockerCommandBuildAbort(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		build.SystemInterrupt <- os.Interrupt
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "aborted: interrupt")
-}
-
 func TestDockerCommandBuildCancel(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
 
-	build := getBuildForOS(t, common.GetRemoteLongRunningBuild)
-
-	trace := &common.Trace{Writer: os.Stdout}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		trace.Cancel()
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err := build.Run(&common.Config{}, trace)
-	assert.IsType(t, &common.BuildError{}, err)
-	assert.Contains(t, err.Error(), "canceled")
+	buildtest.RunBuildWithCancel(t, getRunnerConfigForOS(t), nil)
 }
 
 func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
