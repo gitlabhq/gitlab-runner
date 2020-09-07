@@ -99,12 +99,6 @@ type executor struct {
 	services    []api.Service
 
 	configurationOverwrites *overwrites
-	buildLimits             api.ResourceList
-	serviceLimits           api.ResourceList
-	helperLimits            api.ResourceList
-	buildRequests           api.ResourceList
-	serviceRequests         api.ResourceList
-	helperRequests          api.ResourceList
 	pullPolicy              common.KubernetesPullPolicy
 
 	helperImageInfo helperimage.Info
@@ -126,42 +120,6 @@ type serviceCreateResponse struct {
 	err     error
 }
 
-func (s *executor) setupResources() error {
-	var err error
-
-	s.buildLimits, err = limits(s.configurationOverwrites.cpuLimit, s.configurationOverwrites.memoryLimit)
-	if err != nil {
-		return fmt.Errorf("invalid build limits specified: %w", err)
-	}
-
-	s.buildRequests, err = limits(s.configurationOverwrites.cpuRequest, s.configurationOverwrites.memoryRequest)
-	if err != nil {
-		return fmt.Errorf("invalid build requests specified: %w", err)
-	}
-
-	s.serviceLimits, err = limits(s.Config.Kubernetes.ServiceCPULimit, s.Config.Kubernetes.ServiceMemoryLimit)
-	if err != nil {
-		return fmt.Errorf("invalid service limits specified: %w", err)
-	}
-
-	s.serviceRequests, err = limits(s.Config.Kubernetes.ServiceCPURequest, s.Config.Kubernetes.ServiceMemoryRequest)
-	if err != nil {
-		return fmt.Errorf("invalid service requests specified: %w", err)
-	}
-
-	s.helperLimits, err = limits(s.Config.Kubernetes.HelperCPULimit, s.Config.Kubernetes.HelperMemoryLimit)
-	if err != nil {
-		return fmt.Errorf("invalid helper limits specified: %w", err)
-	}
-
-	s.helperRequests, err = limits(s.Config.Kubernetes.HelperCPURequest, s.Config.Kubernetes.HelperMemoryRequest)
-	if err != nil {
-		return fmt.Errorf("invalid helper requests specified: %w", err)
-	}
-
-	return nil
-}
-
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if err = s.AbstractExecutor.Prepare(options); err != nil {
 		return fmt.Errorf("prepare AbstractExecutor: %w", err)
@@ -173,10 +131,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	if err = s.prepareOverwrites(options.Build.GetAllVariables()); err != nil {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
-	}
-
-	if err = s.setupResources(); err != nil {
-		return fmt.Errorf("couldn't setup Kubernetes resources: %w", err)
 	}
 
 	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
@@ -927,8 +881,8 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 			fmt.Sprintf("svc-%d", i),
 			resolvedImage,
 			service,
-			s.serviceRequests,
-			s.serviceLimits,
+			s.configurationOverwrites.serviceRequests,
+			s.configurationOverwrites.serviceLimits,
 		)
 	}
 
@@ -1004,16 +958,16 @@ func (s *executor) preparePodConfig(
 					buildContainerName,
 					buildImage,
 					s.options.Image,
-					s.buildRequests,
-					s.buildLimits,
+					s.configurationOverwrites.buildRequests,
+					s.configurationOverwrites.buildLimits,
 					s.BuildShell.DockerCommand...,
 				),
 				s.buildContainer(
 					helperContainerName,
 					s.getHelperImage(),
 					common.Image{},
-					s.helperRequests,
-					s.helperLimits,
+					s.configurationOverwrites.helperRequests,
+					s.configurationOverwrites.helperLimits,
 					s.BuildShell.DockerCommand...,
 				),
 			}, services...),

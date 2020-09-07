@@ -20,6 +20,21 @@ import (
 
 type kubeConfigProvider func() (*restclient.Config, error)
 
+type resourceQuantityError struct {
+	resource string
+	value    string
+	inner    error
+}
+
+func (r *resourceQuantityError) Error() string {
+	return fmt.Sprintf("parsing resource %q with value %q: %q", r.resource, r.value, r.inner)
+}
+
+func (r *resourceQuantityError) Is(err error) bool {
+	t, ok := err.(*resourceQuantityError)
+	return ok && r.resource == t.resource && r.value == t.value && r.inner == t.inner
+}
+
 var (
 	// inClusterConfig parses kubernets configuration reading in cluster values
 	inClusterConfig kubeConfigProvider = restclient.InClusterConfig
@@ -213,7 +228,7 @@ func waitForPodRunning(
 // and returns a ResourceList with appropriately scaled Quantity
 // values for Kubernetes. This allows users to write "500m" for CPU,
 // and "50Mi" for memory (etc.)
-func limits(cpu, memory string) (api.ResourceList, error) {
+func createResourceList(cpu, memory string) (api.ResourceList, error) {
 	var rCPU, rMem resource.Quantity
 	var err error
 
@@ -223,17 +238,17 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 			return q, nil
 		}
 		if q, err = resource.ParseQuantity(s); err != nil {
-			return q, fmt.Errorf("parsing resource limit: %w", err)
+			return q, err
 		}
 		return q, nil
 	}
 
 	if rCPU, err = parse(cpu); err != nil {
-		return api.ResourceList{}, err
+		return api.ResourceList{}, &resourceQuantityError{resource: "cpu", value: cpu, inner: err}
 	}
 
 	if rMem, err = parse(memory); err != nil {
-		return api.ResourceList{}, err
+		return api.ResourceList{}, &resourceQuantityError{resource: "memory", value: memory, inner: err}
 	}
 
 	l := make(api.ResourceList)

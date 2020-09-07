@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -43,6 +42,13 @@ import (
 )
 
 type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
+
+func mustCreateResourceList(t *testing.T, cpu, memory string) api.ResourceList {
+	resources, err := createResourceList(cpu, memory)
+	require.NoError(t, err)
+
+	return resources
+}
 
 func TestRunTestsWithFeatureFlag(t *testing.T) {
 	tests := map[string]featureFlagTest{
@@ -1063,14 +1069,17 @@ func TestCleanup(t *testing.T) {
 
 func TestPrepare(t *testing.T) {
 	tests := []struct {
+		Name  string
+		Error string
+
 		GlobalConfig *common.Config
 		RunnerConfig *common.RunnerConfig
 		Build        *common.Build
 
 		Expected *executor
-		Error    bool
 	}{
 		{
+			Name:         "all with limits",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1108,29 +1117,19 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{
-					namespace:   "default",
-					cpuLimit:    "1.5",
-					memoryLimit: "4Gi",
+					namespace:       "default",
+					buildLimits:     mustCreateResourceList(t, "1.5", "4Gi"),
+					serviceLimits:   mustCreateResourceList(t, "100m", "200Mi"),
+					helperLimits:    mustCreateResourceList(t, "50m", "100Mi"),
+					buildRequests:   api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					helperRequests:  api.ResourceList{},
 				},
-				serviceLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				buildLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1.5"),
-					api.ResourceMemory: resource.MustParse("4Gi"),
-				},
-				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("50m"),
-					api.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				serviceRequests: api.ResourceList{},
-				buildRequests:   api.ResourceList{},
-				helperRequests:  api.ResourceList{},
-				pullPolicy:      "IfNotPresent",
+				pullPolicy: "IfNotPresent",
 			},
 		},
 		{
+			Name:         "all with limits and requests",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1176,42 +1175,20 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{
-					namespace:      "default",
-					serviceAccount: "not-default",
-					cpuLimit:       "1.5",
-					memoryLimit:    "4Gi",
-					cpuRequest:     "1",
-					memoryRequest:  "1.5Gi",
-				},
-				serviceLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				buildLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1.5"),
-					api.ResourceMemory: resource.MustParse("4Gi"),
-				},
-				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("50m"),
-					api.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				serviceRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("99m"),
-					api.ResourceMemory: resource.MustParse("5Mi"),
-				},
-				buildRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1"),
-					api.ResourceMemory: resource.MustParse("1.5Gi"),
-				},
-				helperRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("0.5m"),
-					api.ResourceMemory: resource.MustParse("42Mi"),
+					namespace:       "default",
+					serviceAccount:  "not-default",
+					buildLimits:     mustCreateResourceList(t, "1.5", "4Gi"),
+					buildRequests:   mustCreateResourceList(t, "1", "1.5Gi"),
+					serviceLimits:   mustCreateResourceList(t, "100m", "200Mi"),
+					serviceRequests: mustCreateResourceList(t, "99m", "5Mi"),
+					helperLimits:    mustCreateResourceList(t, "50m", "100Mi"),
+					helperRequests:  mustCreateResourceList(t, "0.5m", "42Mi"),
 				},
 			},
-			Error: false,
 		},
-
 		{
+			Name:         "unmatched service account",
+			Error:        "couldn't prepare overwrites: provided value \"not-default\" does not match \"allowed-.*\"",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1249,47 +1226,9 @@ func TestPrepare(t *testing.T) {
 				},
 				Runner: &common.RunnerConfig{},
 			},
-			Expected: &executor{
-				options: &kubernetesOptions{
-					Image: common.Image{
-						Name: "test-image",
-					},
-				},
-				configurationOverwrites: &overwrites{
-					namespace:     "namespacee",
-					cpuLimit:      "1.5",
-					memoryLimit:   "4Gi",
-					cpuRequest:    "1",
-					memoryRequest: "1.5Gi",
-				},
-				serviceLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				buildLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1.5"),
-					api.ResourceMemory: resource.MustParse("4Gi"),
-				},
-				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("50m"),
-					api.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				serviceRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("99m"),
-					api.ResourceMemory: resource.MustParse("5Mi"),
-				},
-				buildRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1"),
-					api.ResourceMemory: resource.MustParse("1.5Gi"),
-				},
-				helperRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("0.5m"),
-					api.ResourceMemory: resource.MustParse("42Mi"),
-				},
-			},
-			Error: true,
 		},
 		{
+			Name:         "regexp match on service account and namespace",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1324,7 +1263,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: NamespaceOverwriteVariableName, Value: "namespacee"},
+						{Key: NamespaceOverwriteVariableName, Value: "new-namespace-name"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -1336,41 +1275,19 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{
-					namespace:      "namespacee",
-					serviceAccount: "a_service_account",
-					cpuLimit:       "1.5",
-					memoryLimit:    "4Gi",
-					cpuRequest:     "1",
-					memoryRequest:  "1.5Gi",
-				},
-				serviceLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				buildLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1.5"),
-					api.ResourceMemory: resource.MustParse("4Gi"),
-				},
-				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("50m"),
-					api.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				serviceRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("99m"),
-					api.ResourceMemory: resource.MustParse("5Mi"),
-				},
-				buildRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1"),
-					api.ResourceMemory: resource.MustParse("1.5Gi"),
-				},
-				helperRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("0.5m"),
-					api.ResourceMemory: resource.MustParse("42Mi"),
+					namespace:       "new-namespace-name",
+					serviceAccount:  "a_service_account",
+					buildLimits:     mustCreateResourceList(t, "1.5", "4Gi"),
+					buildRequests:   mustCreateResourceList(t, "1", "1.5Gi"),
+					serviceLimits:   mustCreateResourceList(t, "100m", "200Mi"),
+					serviceRequests: mustCreateResourceList(t, "99m", "5Mi"),
+					helperLimits:    mustCreateResourceList(t, "50m", "100Mi"),
+					helperRequests:  mustCreateResourceList(t, "0.5m", "42Mi"),
 				},
 			},
-			Error: true,
 		},
 		{
+			Name:         "regexp match on namespace",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1401,16 +1318,19 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "namespace-0"},
-				serviceLimits:           api.ResourceList{},
-				buildLimits:             api.ResourceList{},
-				helperLimits:            api.ResourceList{},
-				serviceRequests:         api.ResourceList{},
-				buildRequests:           api.ResourceList{},
-				helperRequests:          api.ResourceList{},
+				configurationOverwrites: &overwrites{
+					namespace:       "namespace-0",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 		{
+			Name:         "minimal configuration",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1434,16 +1354,19 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits:           api.ResourceList{},
-				buildLimits:             api.ResourceList{},
-				helperLimits:            api.ResourceList{},
-				serviceRequests:         api.ResourceList{},
-				buildRequests:           api.ResourceList{},
-				helperRequests:          api.ResourceList{},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 		{
+			Name:         "image and one service",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1485,16 +1408,19 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits:           api.ResourceList{},
-				buildLimits:             api.ResourceList{},
-				helperLimits:            api.ResourceList{},
-				serviceRequests:         api.ResourceList{},
-				buildRequests:           api.ResourceList{},
-				helperRequests:          api.ResourceList{},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 		{
+			Name:         "merge services",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1550,19 +1476,21 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits:           api.ResourceList{},
-				buildLimits:             api.ResourceList{},
-				helperLimits:            api.ResourceList{},
-				serviceRequests:         api.ResourceList{},
-				buildRequests:           api.ResourceList{},
-				helperRequests:          api.ResourceList{},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 	}
 
-	for index, test := range tests {
-		t.Run(strconv.Itoa(index), func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
 			e := &executor{
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: executorOptions,
@@ -1576,17 +1504,12 @@ func TestPrepare(t *testing.T) {
 			}
 
 			err := e.Prepare(prepareOptions)
-
 			if err != nil {
 				assert.False(t, test.Build.IsSharedEnv())
-				if test.Error {
-					assert.Error(t, err)
-				} else {
-					assert.NoError(t, err)
-				}
-				if !test.Error {
-					t.Errorf("Got error. Expected: %v", test.Expected)
-				}
+			}
+			if test.Error != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.Error)
 				return
 			}
 
@@ -1600,6 +1523,8 @@ func TestPrepare(t *testing.T) {
 			e.kubeClient = nil
 			e.kubeConfig = nil
 			e.featureChecker = nil
+
+			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
 		})
 	}
@@ -3063,66 +2988,6 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			e.pod.Namespace = "namespace"
 
 			tt.verifyErr(t, e.watchPodStatus(ctx))
-		})
-	}
-}
-
-func TestLimits(t *testing.T) {
-	tests := []struct {
-		CPU, Memory string
-		Expected    api.ResourceList
-		ExpectedErr error
-	}{
-		{
-			CPU:    "100m",
-			Memory: "100Mi",
-			Expected: api.ResourceList{
-				api.ResourceCPU:    resource.MustParse("100m"),
-				api.ResourceMemory: resource.MustParse("100Mi"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			CPU: "100m",
-			Expected: api.ResourceList{
-				api.ResourceCPU: resource.MustParse("100m"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			Memory: "100Mi",
-			Expected: api.ResourceList{
-				api.ResourceMemory: resource.MustParse("100Mi"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			CPU:         "100j",
-			Expected:    api.ResourceList{},
-			ExpectedErr: resource.ErrFormatWrong,
-		},
-		{
-			Memory:      "100j",
-			Expected:    api.ResourceList{},
-			ExpectedErr: resource.ErrFormatWrong,
-		},
-		{
-			Expected:    api.ResourceList{},
-			ExpectedErr: nil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(fmt.Sprintf("CPU=%s/Memory=%s", tc.CPU, tc.Memory), func(t *testing.T) {
-			res, err := limits(tc.CPU, tc.Memory)
-			assert.True(
-				t,
-				errors.Is(err, tc.ExpectedErr),
-				"expected err %T, but got %T",
-				tc.ExpectedErr,
-				err,
-			)
-			assert.Equal(t, tc.Expected, res)
 		})
 	}
 }
