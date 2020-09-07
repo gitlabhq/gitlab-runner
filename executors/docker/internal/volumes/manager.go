@@ -43,8 +43,13 @@ type manager struct {
 	managedVolumes   pathList
 }
 
-//nolint:lll
-func NewManager(logger debugLogger, volumeParser parser.Parser, c docker.Client, config ManagerConfig, labeler labels.Labeler) Manager {
+func NewManager(
+	logger debugLogger,
+	volumeParser parser.Parser,
+	c docker.Client,
+	config ManagerConfig,
+	labeler labels.Labeler,
+) Manager {
 	return &manager{
 		config:           config,
 		logger:           logger,

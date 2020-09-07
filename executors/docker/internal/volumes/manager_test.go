@@ -663,6 +663,8 @@ func TestDefaultManager_CreateUserVolumes_CacheVolumeLabels(t *testing.T) {
 	mClient := new(docker.MockClient)
 	m.client = mClient
 
+	defer mClient.AssertExpectations(t)
+
 	mClient.On(
 		"VolumeCreate",
 		mock.Anything,
