@@ -338,6 +338,23 @@ runners:
 This example uses the secret `gitlab-runner-secret` and takes the value of
 `runner-registration-token` to register the new GitLab Runner.
 
+### Switching to the Ubuntu-based `gitlab-runner` Docker image
+
+By default GitLab Runner's Helm Chart uses the Alpine version of the `gitlab/gitlab-runner` image,
+which uses `musl libc`. In some cases, you may want to switch to the Ubuntu-based image, which uses `glibc`.
+
+To do so, update your `values.yaml` file with the following values:
+
+```yaml
+# Specify the Ubuntu image. Remember to set the version. You can also use the `ubuntu` or `latest` tags.
+image: gitlab/gitlab-runner:v13.0.0
+
+# Update the security context values to the user ID in the ubuntu image
+securityContext:
+  fsGroup: 999
+  runAsUser: 999
+```
+
 ## Check available GitLab Runner Helm Chart versions
 
 Versions of Helm Chart and GitLab Runner application do not follow the same versioning.
