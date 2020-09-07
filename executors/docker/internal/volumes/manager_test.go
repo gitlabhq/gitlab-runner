@@ -406,7 +406,8 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 					"VolumeCreate",
 					mock.Anything,
 					mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-						return v.Name == testCase.expectedVolumeName
+						// ensure labeler has been used, test for the full list of labels is part of the labels package.
+						return v.Name == testCase.expectedVolumeName && len(v.Labels) > 0
 					}),
 				).
 					Return(types.Volume{Name: testCase.expectedVolumeName}, nil).
@@ -651,31 +652,4 @@ func TestDefaultManager_Binds(t *testing.T) {
 	}
 
 	assert.Equal(t, expectedElements, m.Binds())
-}
-
-func TestDefaultManager_CreateUserVolumes_CacheVolumeLabels(t *testing.T) {
-	binding := "cache"
-	expectedName := "-cache-0fea6a13c52b4d4725368f24b045ca84"
-	config := ManagerConfig{}
-
-	m := newDefaultManager(config)
-	addParser(m)
-	mClient := new(docker.MockClient)
-	m.client = mClient
-
-	defer mClient.AssertExpectations(t)
-
-	mClient.On(
-		"VolumeCreate",
-		mock.Anything,
-		mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-			// ensure labeler has been used, test for the full list of labels is part of the labels package.
-			return v.Name == expectedName && len(v.Labels) > 0
-		}),
-	).
-		Return(types.Volume{Name: expectedName}, nil).
-		Once()
-
-	err := m.CreateTemporary(context.Background(), binding)
-	require.NoError(t, err)
 }
