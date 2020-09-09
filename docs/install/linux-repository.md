@@ -1,5 +1,7 @@
 ---
-last_updated: 2020-06-09
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
 ---
 
 # Install GitLab Runner using the official GitLab repositories
