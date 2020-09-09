@@ -2,10 +2,13 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,6 +25,26 @@ func prepareDockerClientAndFakeServer(t *testing.T, handler http.HandlerFunc) (C
 	require.NoError(t, err)
 
 	return client, server
+}
+
+func TestEventStreamError(t *testing.T) {
+	client, server := prepareDockerClientAndFakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{
+			"errorDetail": {
+				"code": 0,
+				"message": "stream error"
+			}
+		}`))
+	})
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := client.ImagePullBlocking(ctx, "test", types.ImagePullOptions{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "stream error")
+	assert.True(t, errors.As(new(jsonmessage.JSONError), &err))
 }
 
 func TestWrapError(t *testing.T) {

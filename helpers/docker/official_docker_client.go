@@ -16,6 +16,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
 )
@@ -265,18 +266,12 @@ func (c *officialDockerClient) ImageImportBlocking(
 	options types.ImageImportOptions,
 ) error {
 	started := time.Now()
-	readCloser, err := c.client.ImageImport(ctx, source, ref, options)
+	rc, err := c.client.ImageImport(ctx, source, ref, options)
 	if err != nil {
 		return wrapError("ImageImport", err, started)
 	}
-	defer func() { _ = readCloser.Close() }()
 
-	// TODO: respect the context here
-	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {
-		return wrapError("io.Copy: Failed to import image", err, started)
-	}
-
-	return nil
+	return wrapError("ImageImport", c.handleEventStream(rc), started)
 }
 
 func (c *officialDockerClient) ImagePullBlocking(
@@ -285,18 +280,18 @@ func (c *officialDockerClient) ImagePullBlocking(
 	options types.ImagePullOptions,
 ) error {
 	started := time.Now()
-	readCloser, err := c.client.ImagePull(ctx, ref, options)
+	rc, err := c.client.ImagePull(ctx, ref, options)
 	if err != nil {
 		return wrapError("ImagePull", err, started)
 	}
-	defer func() { _ = readCloser.Close() }()
 
-	// TODO: respect the context here
-	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {
-		return wrapError("io.Copy: Failed to pull image", err, started)
-	}
+	return wrapError("ImagePull", c.handleEventStream(rc), started)
+}
 
-	return nil
+func (c *officialDockerClient) handleEventStream(rc io.ReadCloser) error {
+	defer func() { _ = rc.Close() }()
+
+	return jsonmessage.DisplayJSONMessagesStream(rc, ioutil.Discard, 0, false, nil)
 }
 
 func (c *officialDockerClient) Close() error {
