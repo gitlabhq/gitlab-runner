@@ -75,9 +75,11 @@ go get gitlab.com/gitlab-org/gitlab-runner
 
 ## 4. Install runner dependencies
 
-This will download and restore all dependencies required to build runner:
+After you clone GitLab Runner, `cd` into the `gitlab-runner` directory and download and restore all build dependencies:
 
 ```shell
+git clone <gitlab-runner-uri>
+cd gitlab-runner
 make deps
 ```
 
@@ -122,7 +124,7 @@ skipped.
 
 These are the binaries that you can install:
 
-1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html)
+1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
 1. [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) with
    [Minikube](https://github.com/kubernetes/minikube)
 1. [Parallels](https://www.parallels.com/products/desktop/)
