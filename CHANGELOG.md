@@ -1,3 +1,78 @@
+## v13.4.0-rc1 (2020-09-09)
+
+### New features
+
+- Add Hashicorp Vault secret resolver !2374
+- Add Hashicorp Vault integration package !2373
+- Add Hashicorp Vault golang library !2371
+- Add secrets handling abstraction !2370
+
+### Bug fixes
+
+- Improved interrupt/cancelation build tests !2382
+- Fix Windows runner helper docker container !2379
+- Fix metric reading race conditions !2360
+- Record only first resolved credentials for each Docker registry !2357
+- Ensure Powershell file variables contain no BOM !2320
+
+### Maintenance
+
+- Use consts for job state in TestUpdateJob !2397
+- Support trace rewind !2390
+- Support update interval on update job !2389
+- Introduce `UpdateJobResult` and `PatchState` !2388
+- Fix check_mocks make target !2387
+- Update docs pipeline to use new image !2384
+- Add support for custom PUT HTTP headers in cache archiver !2378
+- Send trace checksum on job updates !2375
+- Update node affinity tests assertions !2369
+- Add test for cache archiver shell execution !2367
+- Update log message for starting VM in Parallels executor !2361 (Per Lundberg @perlun)
+- Fix changelog generator config to catch all maintenance related labels !2359
+- Update log message for starting VM in virtualbox executor !2356 (Per Lundberg @perlun)
+- Remove trailing spaces check !2352
+- Replace whitelist terminology with allowlist !2338
+- Use configured userns mode for services !2330 (Lukáš Brzobohatý @lukas.brzobohaty)
+- Add kubernetes node affinities settings !2324 (Alexander Petermann @lexxxel)
+- Re-enable windows docker tests !2308
+- Use new function to create Docker client !2299
+- Add Secrets entry to job payload structures !2288
+- Remove redundant docker executor integration tests !2211
+- Add missing assert for mock !2116
+- Allow overwriting Service and Helper container resources !2108 (Renan Gonçalves @renan.saddam)
+- Use parallel compression and decompression for gzip archives and caches !2055 (Ben Boeckel @ben.boeckel)
+- Add variable to enable fallback cache key !1534 (Erik Lindahl @erik.lindahl)
+- Print Docker image digest !1380 (David Nyström @nysan)
+
+### Documentation changes
+
+- Update docs-lint job to use latest image. !2398
+- Add note not to use AWS security group ID with docker machine !2396
+- Docs: improve documentation grammar !2395 (Jonston Chan @JonstonChan)
+- Fix grammar in documentation index page !2394 (AmeliaYura @AmeliaYura)
+- Add documentation on how to use Ubuntu image in kubernetes !2393
+- adding a tip on configuring timestamp in docker runner !2391
+- Docs: Fix misspelled word !2383
+- Update Vale and Markdownlint rules !2380
+- Docs: Fix minor typo in Registering runners page !2376
+- Add Azure Blob Storage support for cache !2366
+- Add note to docs about using shell executor when building macOS/iOS apps !2365
+- Cleaned up some of the wording for macOS install !2364
+- Document node affinity !2363
+- Change order of headers in exec docs !2362
+- Docs: Edited Fargate doc !2355
+- Fix broken link !2354
+- Update kubernetes.md documentation replace example gitlabUrl !2353 (Tyler Wellman @tylerwel)
+- Fix section numbering in docs/development !2349
+- CONTRIBUTING.md: fix FreeBSD label !2348 (Kenyon Ralph @kenyon)
+- Use `shell` instead of `bash` for markdown !2345
+- Update Registering Runners page !2337
+- Add documentation for configuring private registries with imagePullSecrets !2131 (Tom Bruyninx @TomBrx)
+
+### Other changes
+
+- Clarify --help text for --id flag !2385
+
 ## v13.3.0 (2020-08-20)
 
 ### Bug fixes
