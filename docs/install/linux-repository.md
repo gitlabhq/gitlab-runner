@@ -61,10 +61,10 @@ To install the Runner:
 
    ```shell
    # For Debian/Ubuntu/Mint
-   sudo apt-get install gitlab-runner
+   export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E apt-get install gitlab-runner
 
    # For RHEL/CentOS/Fedora
-   sudo yum install gitlab-runner
+   export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E yum install gitlab-runner
    ```
 
 1. To install a specific version of GitLab Runner:
@@ -72,11 +72,11 @@ To install the Runner:
    ```shell
    # for DEB based systems
    apt-cache madison gitlab-runner
-   sudo apt-get install gitlab-runner=10.0.0
+   export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E apt-get install gitlab-runner=10.0.0
 
    # for RPM based systems
    yum list gitlab-runner --showduplicates | sort -r
-   sudo yum install gitlab-runner-10.0.0-1
+   export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E yum install gitlab-runner-10.0.0-1
    ```
 
 1. [Register the Runner](../register/index.md)
