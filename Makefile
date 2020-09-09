@@ -38,6 +38,7 @@ TARGET_DIR := $(BUILD_DIR)/out
 # Packages in vendor/ are included in ./...
 # https://github.com/golang/go/issues/11659
 export OUR_PACKAGES ?= $(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
+export MAIN_PACKAGE ?= gitlab.com/gitlab-org/gitlab-runner
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
