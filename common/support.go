@@ -147,6 +147,44 @@ func GetRemoteFailingMultistepBuild(failingStepName StepName) (JobResponse, erro
 	return jobResponse, nil
 }
 
+func GetRemoteFailingMultistepBuildWithEnvs(shell string, fail bool) (JobResponse, error) {
+	jobResponse, err := GetRemoteBuildResponse("echo 'Hello World'")
+	if err != nil {
+		return JobResponse{}, err
+	}
+
+	var envCommand string
+	switch shell {
+	case "cmd":
+		envCommand = "set"
+	case "powershell", "pwsh":
+		envCommand = `dir env: | %{"{0}={1}" -f $_.Name,$_.Value}`
+	default:
+		envCommand = "env"
+	}
+
+	exitCommand := "exit 0"
+	if fail {
+		exitCommand = "exit 1"
+	}
+
+	jobResponse.Steps = append(
+		jobResponse.Steps,
+		Step{
+			Name:   "env",
+			Script: []string{envCommand, exitCommand},
+			When:   StepWhenOnSuccess,
+		},
+		Step{
+			Name:   StepNameAfterScript,
+			Script: []string{envCommand},
+			When:   StepWhenAlways,
+		},
+	)
+
+	return jobResponse, nil
+}
+
 func GetRemoteSuccessfulBuildWithDumpedVariables() (JobResponse, error) {
 	variableName := "test_dump"
 	variableValue := "test"

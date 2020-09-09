@@ -109,6 +109,46 @@ func TestSpecialVariablesExpansion(t *testing.T) {
 	assert.Equal(t, "aabb", expanded.Get("key4"))
 }
 
+func TestOverwriteKey(t *testing.T) {
+	vars := JobVariables{
+		{Key: "hello", Value: "world"},
+		{Key: "foo", Value: ""},
+	}
+
+	// Overwrite empty value
+	vars.OverwriteKey("foo", JobVariable{Key: "foo", Value: "bar"})
+
+	assert.Equal(t, "world", vars.Get("hello"))
+	assert.Equal(t, "bar", vars.Get("foo"))
+
+	// Overwrite existing value
+	vars.OverwriteKey("hello", JobVariable{Key: "hello", Value: "universe"})
+
+	assert.Equal(t, "universe", vars.Get("hello"))
+	assert.Equal(t, "bar", vars.Get("foo"))
+
+	// Overwrite key
+	vars.OverwriteKey("hello", JobVariable{Key: "goodbye", Value: "universe"})
+
+	assert.Equal(t, "universe", vars.Get("goodbye"))
+	assert.Equal(t, "", vars.Get("hello"))
+	assert.Equal(t, "bar", vars.Get("foo"))
+
+	// Overwrite properties
+	fooOverwriteVar := JobVariable{
+		Key:      "foo",
+		Value:    "baz",
+		Public:   true,
+		Internal: true,
+		File:     true,
+		Masked:   true,
+		Raw:      true,
+	}
+	vars.OverwriteKey("foo", fooOverwriteVar)
+
+	assert.Equal(t, fooOverwriteVar, vars[1])
+}
+
 type multipleKeyUsagesTestCase struct {
 	variables     JobVariables
 	expectedValue string
