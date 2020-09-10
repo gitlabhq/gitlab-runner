@@ -156,6 +156,8 @@ func TestSendPatchAbort(t *testing.T) {
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(common.NewPatchTraceResult(0, common.PatchAbort, 0)).Twice()
 
+	ignoreOptionalTouchJob(mockNetwork)
+
 	// try to send status at least once more
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateJobResult{State: common.UpdateAbort}).Once()
