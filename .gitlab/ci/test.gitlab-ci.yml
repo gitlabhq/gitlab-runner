@@ -1,5 +1,6 @@
 include:
   - template: Security/License-Scanning.gitlab-ci.yml
+  - template: Coverage-Fuzzing.gitlab-ci.yml
 
 # Overriding 'License-Scanning.gitlab-ci.yml' template, because
 # we need to replace the rules with our own, the same
@@ -129,6 +130,17 @@ unit test with race:
   variables:
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
+
+fuzz variable mask:
+  extends: .fuzz_base
+  image: golang:1.13
+  stage: test
+  script:
+    - apt update && apt install -y clang
+    - go get github.com/dvyukov/go-fuzz/go-fuzz && go get github.com/dvyukov/go-fuzz/go-fuzz-build
+    - go-fuzz-build -libfuzzer -o fuzz_variable_mask.a ./helpers/trace
+    - clang -fsanitize=fuzzer fuzz_variable_mask.a -o fuzz_variable_mask
+    - ./gitlab-cov-fuzz run -- ./fuzz_variable_mask -only_ascii=1 -max_len=128 -max_total_time=300
 
 .go-cache-windows_before_script: &go-cache-windows_before_script
   - New-Item -Path .gocache-$CI_COMMIT_REF_PROTECTED -Type Directory -Force
