@@ -39,7 +39,7 @@ func Fuzz(data []byte) int {
 	newstr := string(content)
 	for _, substr := range maskedValues {
 		if strings.Contains(newstr, substr) {
-			panic(fmt.Sprintf("orig string: \"%s\", new string: \"%s\" contains: \"%s\"", origstr, newstr, substr))
+			panic(fmt.Sprintf("orig string: %q, new string: %q contains: %q", origstr, newstr, substr))
 
 		}
 	}
