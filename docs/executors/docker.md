@@ -13,19 +13,23 @@ run on your workstation. The added benefit is that you can test all the
 commands that we will explore later from your shell, rather than having to test
 them on a dedicated CI server.
 
-The following table lists what combinations of containers, executors,
-and OS are supported.
+The following configurations are supported:
 
-| Container Type    | Executor         | OS Type | Supported |
-|:-----------------:|:----------------:|:-------:|:---------:|
-| Windows Container | `docker`         | Windows | ✗         |
-| Windows Container | `docker`         | Linux   | ✗         |
-| Windows Container | `docker-windows` | Windows | ✓         |
-| Windows Container | `docker-windows` | Linux   | ✗         |
-| Linux Containers  | `docker`         | Linux   | ✓         |
-| Linux Containers  | `docker`         | Windows | ✓         |
-| Linux Containers  | `docker-windows` | Linux   | ✗         |
-| Linux Containers  | `docker-windows` | Windows | ✗         |
+| Runner is installed on:  | Executor is:     | Container is running: |
+|--------------------------|------------------|------------------------|
+| Windows                  | `docker-windows` | Windows                |
+| Windows                  | `docker`         | Linux                  |
+| Linux                    | `docker`         | Linux                  |
+
+These configurations are **not** supported:
+
+| Runner is installed on:  | Executor is:     | Container is running: |
+|--------------------------|------------------|------------------------|
+| Linux                    | `docker-windows` | Linux                  |
+| Linux                    | `docker`         | Windows                |
+| Linux                    | `docker-windows` | Windows                |
+| Windows                  | `docker`         | Windows                |
+| Windows                  | `docker-windows` | Linux                  |
 
 NOTE: **Note:**
 GitLab Runner uses Docker Engine API
