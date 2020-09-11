@@ -936,18 +936,27 @@ func (b *Build) String() string {
 	return helpers.ToYAML(b)
 }
 
+func (b *Build) platformAppropriatePath(s string) string {
+	// Check if we're dealing with a Windows path on a Windows platform
+	// filepath.VolumeName will return empty otherwise
+	if filepath.VolumeName(s) != "" {
+		return filepath.FromSlash(s)
+	}
+	return s
+}
+
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
 		{
 			Key:      "CI_BUILDS_DIR",
-			Value:    filepath.FromSlash(b.RootDir),
+			Value:    b.platformAppropriatePath(b.RootDir),
 			Public:   true,
 			Internal: true,
 			File:     false,
 		},
 		{
 			Key:      "CI_PROJECT_DIR",
-			Value:    filepath.FromSlash(b.FullProjectDir()),
+			Value:    b.platformAppropriatePath(b.FullProjectDir()),
 			Public:   true,
 			Internal: true,
 			File:     false,
