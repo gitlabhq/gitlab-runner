@@ -1,10 +1,7 @@
 ---
-type: user guide
-level: intermediate
-author: Achilleas Pipinellis
-author_gitlab: axil
-date: 2017-11-24
-last_updated: 2019-08-21
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
 ---
 
 # Autoscaling GitLab Runner on AWS EC2
