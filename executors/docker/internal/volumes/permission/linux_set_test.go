@@ -153,7 +153,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 				},
 			}
 
-			err := setter.Set(context.Background(), volume)
+			err := setter.Set(context.Background(), volume, map[string]string{})
 			assert.True(t, errors.Is(err, tt.expectedErr), "expected err %T, but got %T", tt.expectedErr, err)
 		})
 	}
