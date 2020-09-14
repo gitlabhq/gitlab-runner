@@ -944,16 +944,19 @@ func (c *KubernetesConfig) GetDNSConfig() *api.PodDNSConfig {
 	return &config
 }
 
-//nolint:lll
 func (c *KubernetesConfig) GetNodeAffinity() *api.NodeAffinity {
 	var nodeAffinity api.NodeAffinity
 
 	if c.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
-		nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = c.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.GetNodeSelector()
+		nodeSelector := c.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.GetNodeSelector()
+		nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = nodeSelector
 	}
 
 	for _, preferred := range c.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
-		nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, preferred.GetPreferredSchedulingTerm())
+		nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+			nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
+			preferred.GetPreferredSchedulingTerm(),
+		)
 	}
 	return &nodeAffinity
 }
@@ -993,30 +996,40 @@ func (c *LabelSelector) GetLabelSelectorMatchExpressions() []metav1.LabelSelecto
 	return labelSelectorRequirement
 }
 
-//nolint:lll
 func (c *KubernetesConfig) GetPodAffinity() *api.PodAffinity {
 	var podAffinity api.PodAffinity
 
 	for _, required := range c.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
-		podAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(podAffinity.RequiredDuringSchedulingIgnoredDuringExecution, required.GetPodAffinityTerm())
+		podAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+			podAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+			required.GetPodAffinityTerm(),
+		)
 	}
 
 	for _, preferred := range c.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
-		podAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(podAffinity.PreferredDuringSchedulingIgnoredDuringExecution, preferred.GetWeightedPodAffinityTerm())
+		podAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+			podAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
+			preferred.GetWeightedPodAffinityTerm(),
+		)
 	}
 	return &podAffinity
 }
 
-//nolint:lll
 func (c *KubernetesConfig) GetPodAntiAffinity() *api.PodAntiAffinity {
 	var PodAntiAffinity api.PodAntiAffinity
 
 	for _, required := range c.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
-		PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution, required.GetPodAffinityTerm())
+		PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+			PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+			required.GetPodAffinityTerm(),
+		)
 	}
 
 	for _, preferred := range c.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
-		PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution, preferred.GetWeightedPodAffinityTerm())
+		PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+			PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
+			preferred.GetWeightedPodAffinityTerm(),
+		)
 	}
 	return &PodAntiAffinity
 }
@@ -1036,14 +1049,19 @@ func (c *WeightedPodAffinityTerm) GetWeightedPodAffinityTerm() api.WeightedPodAf
 	}
 }
 
-//nolint:lll
 func (c *NodeSelectorTerm) GetNodeSelectorTerm() api.NodeSelectorTerm {
 	var nodeSelectorTerm = api.NodeSelectorTerm{}
 	for _, expression := range c.MatchExpressions {
-		nodeSelectorTerm.MatchExpressions = append(nodeSelectorTerm.MatchExpressions, expression.GetNodeSelectorRequirement())
+		nodeSelectorTerm.MatchExpressions = append(
+			nodeSelectorTerm.MatchExpressions,
+			expression.GetNodeSelectorRequirement(),
+		)
 	}
 	for _, fields := range c.MatchFields {
-		nodeSelectorTerm.MatchFields = append(nodeSelectorTerm.MatchFields, fields.GetNodeSelectorRequirement())
+		nodeSelectorTerm.MatchFields = append(
+			nodeSelectorTerm.MatchFields,
+			fields.GetNodeSelectorRequirement(),
+		)
 	}
 	return nodeSelectorTerm
 }

@@ -2842,14 +2842,14 @@ func TestSetupBuildPod(t *testing.T) {
 
 				podAffinity := pod.Spec.Affinity.PodAffinity
 				require.Len(t, podAffinity.RequiredDuringSchedulingIgnoredDuringExecution, 1)
-				preferredNodeAffinity := podAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+				preferredNodeAffinity := podAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0]
 
-				assert.Equal(t, []string{"namespace_1", "namespace_2"}, preferredNodeAffinity[0].Namespaces)
-				assert.Equal(t, "topo_key", preferredNodeAffinity[0].TopologyKey)
-				require.NotNil(t, preferredNodeAffinity[0].LabelSelector)
-				assert.Equal(t, map[string]string{"key": "value"}, preferredNodeAffinity[0].LabelSelector.MatchLabels)
-				assert.Len(t, preferredNodeAffinity[0].LabelSelector.MatchExpressions, 1)
-				preferredMatchExp := preferredNodeAffinity[0].LabelSelector.MatchExpressions
+				assert.Equal(t, []string{"namespace_1", "namespace_2"}, preferredNodeAffinity.Namespaces)
+				assert.Equal(t, "topo_key", preferredNodeAffinity.TopologyKey)
+				require.NotNil(t, preferredNodeAffinity.LabelSelector)
+				assert.Equal(t, map[string]string{"key": "value"}, preferredNodeAffinity.LabelSelector.MatchLabels)
+				require.Len(t, preferredNodeAffinity.LabelSelector.MatchExpressions, 1)
+				preferredMatchExp := preferredNodeAffinity.LabelSelector.MatchExpressions
 				assert.Equal(t, "cores", preferredMatchExp[0].Key)
 				assert.Equal(t, metav1.LabelSelectorOperator("In"), preferredMatchExp[0].Operator)
 				assert.Equal(t, []string{"many", "high_count"}, preferredMatchExp[0].Values)

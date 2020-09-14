@@ -394,26 +394,27 @@ func TestConfigParse(t *testing.T) {
 
 				podAntiAffinity := config.Runners[0].Kubernetes.Affinity.PodAntiAffinity
 				require.Len(t, podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution, 1)
-				required := podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+				required := podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0]
 
-				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", required[0].TopologyKey)
-				assert.Equal(t, []string{"namespace_1", "namespace_2"}, required[0].Namespaces)
-				require.NotNil(t, required[0].LabelSelector)
-				require.Len(t, required[0].LabelSelector.MatchExpressions, 1)
-				requiredMatchExp := required[0].LabelSelector.MatchExpressions[0]
+				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", required.TopologyKey)
+				assert.Equal(t, []string{"namespace_1", "namespace_2"}, required.Namespaces)
+				require.NotNil(t, required.LabelSelector)
+
+				require.Len(t, required.LabelSelector.MatchExpressions, 1)
+				requiredMatchExp := required.LabelSelector.MatchExpressions[0]
 				assert.Equal(t, "security", requiredMatchExp.Key)
 				assert.Equal(t, "In", requiredMatchExp.Operator)
 				assert.Equal(t, []string{"S1"}, requiredMatchExp.Values)
 
 				require.Len(t, podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution, 1)
-				preferred := podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution
-				assert.Equal(t, int32(100), preferred[0].Weight)
-				require.NotNil(t, preferred[0].PodAffinityTerm.LabelSelector)
-				assert.Empty(t, preferred[0].PodAffinityTerm.Namespaces)
-				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", preferred[0].PodAffinityTerm.TopologyKey)
+				preferred := podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0]
+				assert.Equal(t, int32(100), preferred.Weight)
+				assert.Empty(t, preferred.PodAffinityTerm.Namespaces)
+				assert.Equal(t, "failure-domain.beta.kubernetes.io/zone", preferred.PodAffinityTerm.TopologyKey)
 
-				require.Len(t, preferred[0].PodAffinityTerm.LabelSelector.MatchExpressions, 1)
-				preferredMatchExp := preferred[0].PodAffinityTerm.LabelSelector.MatchExpressions[0]
+				require.NotNil(t, preferred.PodAffinityTerm.LabelSelector)
+				require.Len(t, preferred.PodAffinityTerm.LabelSelector.MatchExpressions, 1)
+				preferredMatchExp := preferred.PodAffinityTerm.LabelSelector.MatchExpressions[0]
 				assert.Equal(t, "security_2", preferredMatchExp.Key)
 				assert.Equal(t, "In", preferredMatchExp.Operator)
 				assert.Equal(t, []string{"S2"}, preferredMatchExp.Values)
