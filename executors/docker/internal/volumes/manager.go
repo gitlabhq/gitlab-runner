@@ -183,7 +183,7 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) (st
 	volumeName := fmt.Sprintf("%s-cache-%s", m.config.UniqueName, hashPath(destination))
 	vBody := volume.VolumeCreateBody{
 		Name:   volumeName,
-		Labels: m.labeler.Labels(map[string]string{}),
+		Labels: m.labeler.Labels(nil),
 	}
 
 	v, err := m.client.VolumeCreate(ctx, vBody)
