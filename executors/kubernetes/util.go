@@ -252,7 +252,11 @@ func createResourceList(cpu, memory, ephemeralStorage string) (api.ResourceList,
 	}
 
 	if rStor, err = parse(ephemeralStorage); err != nil {
-		return api.ResourceList{}, &resourceQuantityError{resource: "ephemeralStorage", value: ephemeralStorage, inner: err}
+		return api.ResourceList{}, &resourceQuantityError{
+			resource: "ephemeralStorage",
+			value:    ephemeralStorage,
+			inner:    err,
+		}
 	}
 
 	l := make(api.ResourceList)

@@ -29,9 +29,11 @@ const (
 	MemoryLimitOverwriteVariableValue = "KUBERNETES_MEMORY_LIMIT"
 	// MemoryRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten memory limit
 	MemoryRequestOverwriteVariableValue = "KUBERNETES_MEMORY_REQUEST"
-	// EphemeralStorageLimitOverwriteVariableValue is the key for the JobVariable containing user overwritten ephemeral storage limit
+	// EphemeralStorageLimitOverwriteVariableValue is the key for the JobVariable containing user overwritten
+	// ephemeral storage limit
 	EphemeralStorageLimitOverwriteVariableValue = "KUBERNETES_EPHEMERAL_STORAGE_LIMIT"
-	// EphemeralStorageRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten ephemeral storage limit
+	// EphemeralStorageRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten
+	// ephemeral storage limit
 	EphemeralStorageRequestOverwriteVariableValue = "KUBERNETES_EPHEMERAL_STORAGE_REQUEST"
 	// ServiceCPULimitOverwriteVariableValue is the key for the JobVariable containing user overwritten service cpu
 	// limit
@@ -45,11 +47,11 @@ const (
 	// ServiceMemoryRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten service
 	// memory limit
 	ServiceMemoryRequestOverwriteVariableValue = "KUBERNETES_SERVICE_MEMORY_REQUEST"
-	// ServiceEphemeralStorageLimitOverwriteVariableValue is the key for the JobVariable containing user overwritten service
-	// ephemeral storage
+	// ServiceEphemeralStorageLimitOverwriteVariableValue is the key for the JobVariable containing user overwritten
+	// service ephemeral storage
 	ServiceEphemeralStorageLimitOverwriteVariableValue = "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT"
-	// ServiceEphemeralStorageRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten service
-	// ephemeral storage
+	// ServiceEphemeralStorageRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten
+	// service ephemeral storage
 	ServiceEphemeralStorageRequestOverwriteVariableValue = "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST"
 	// HelperCPULimitOverwriteVariableValue is the key for the JobVariable containing user overwritten helper cpu limit
 	HelperCPULimitOverwriteVariableValue = "KUBERNETES_HELPER_CPU_LIMIT"
@@ -62,11 +64,11 @@ const (
 	// HelperMemoryRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten helper
 	// memory limit
 	HelperEphemeralStorageRequestOverwriteVariableValue = "KUBERNETES_HELPER_EPHEMERAL_STORAGE_REQUEST"
-	// HelperEphemeralStorageLimitOverwriteVariableValue is the key for the JobVariable containing user overwritten helper ephemeral
-	// storage
+	// HelperEphemeralStorageLimitOverwriteVariableValue is the key for the JobVariable containing user overwritten
+	// helper ephemeral storage
 	HelperEphemeralStorageLimitOverwriteVariableValue = "KUBERNETES_HELPER_EPHEMERAL_STORAGE_LIMIT"
-	// HelperEphemeralStorageRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten ephemeral
-	// storage
+	// HelperEphemeralStorageRequestOverwriteVariableValue is the key for the JobVariable containing user overwritten
+	// ephemeral storage
 	HelperMemoryRequestOverwriteVariableValue = "KUBERNETES_HELPER_MEMORY_REQUEST"
 )
 
