@@ -408,8 +408,8 @@ func TestCreateResourceList(t *testing.T) {
 			},
 		},
 		{
-			Name:   "only ephemeral storage",
-			Memory: "3024Mi",
+			Name:             "only ephemeral storage",
+			EphemeralStorage: "3024Mi",
 			Expected: api.ResourceList{
 				api.ResourceEphemeralStorage: resource.MustParse("3024Mi"),
 			},
@@ -435,11 +435,11 @@ func TestCreateResourceList(t *testing.T) {
 			},
 		},
 		{
-			Name:     "invalid ephemeral storage",
-			Memory:   "200j",
-			Expected: api.ResourceList{},
+			Name:             "invalid ephemeral storage",
+			EphemeralStorage: "200j",
+			Expected:         api.ResourceList{},
 			Error: &resourceQuantityError{
-				resource: "ephemeral_storage",
+				resource: "ephemeralStorage",
 				value:    "200j",
 				inner:    mustGetParseError(t, "200j"),
 			},
