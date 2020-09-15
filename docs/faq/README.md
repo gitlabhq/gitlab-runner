@@ -283,6 +283,37 @@ and the service should be started properly.
 
 Please see [Job execution](../executors/kubernetes.md#job-execution).
 
+### Docker executor: `unsupported Windows Version`
+
+GitLab Runner checks the version of Windows Server to verify that it's supported.
+
+It does this by running `docker info`.
+
+If GitLab Runner fails to start with the following error, but with no Windows
+Server version specified, then the likely root cause is that the Docker
+version is too old.
+
+```plaintext
+Preparation failed: detecting base image: unsupported Windows Version: Windows Server Datacenter
+```
+
+The error should contain detailed information about the Windows Server
+version, which is then compared with the versions that GitLab Runner supports.
+
+```plaintext
+unsupported Windows Version: Windows Server Datacenter Version 1909 (OS Build 18363.720)
+```
+
+Docker 17.06.2 on Windows Server 1909 returns the following in the output
+of `docker info`.
+
+```plaintext
+Operating System: Windows Server Datacenter
+```
+
+The fix in this case is to upgrade the Docker version. [Read more about supported
+Docker versions](../executors/docker.md#supported-docker-versions).
+
 ## macOS troubleshooting
 
 The following relate to Runner troubleshooting on macOS.
