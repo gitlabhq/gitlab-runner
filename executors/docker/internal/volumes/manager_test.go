@@ -407,7 +407,8 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 					mock.Anything,
 					mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
 						return v.Name == testCase.expectedVolumeName &&
-							// ensure labeler has been used, test for the full list of labels is part of the labels package.
+							// ensure labeler has been used
+							// test for the full list of labels is part of the labels package.
 							len(v.Labels) > 0 && v.Labels["com.gitlab.gitlab-runner.type"] == "cache"
 					}),
 				).
