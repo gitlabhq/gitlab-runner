@@ -454,7 +454,13 @@ func (o *overwrites) evaluateMaxResourceListOverwrite(
 		return nil, err
 	}
 
-	ephemeralStorage, err := o.evaluateMaxResourceOverwrite(ephemeralStorageFieldName, currentEphemeralStorage, maxEphemeralStorage, overwriteEphemeralStorage, logger)
+	ephemeralStorage, err := o.evaluateMaxResourceOverwrite(
+		ephemeralStorageFieldName,
+		currentEphemeralStorage,
+		maxEphemeralStorage,
+		overwriteEphemeralStorage,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}

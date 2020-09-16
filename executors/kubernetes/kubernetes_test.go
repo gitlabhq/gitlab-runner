@@ -43,8 +43,8 @@ import (
 
 type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
 
-func mustCreateResourceList(t *testing.T, cpu, memory, ephemeral string) api.ResourceList {
-	resources, err := createResourceList(cpu, memory, ephemeral)
+func mustCreateResourceList(t *testing.T, cpu, memory, ephemeralStorage string) api.ResourceList {
+	resources, err := createResourceList(cpu, memory, ephemeralStorage)
 	require.NoError(t, err)
 
 	return resources

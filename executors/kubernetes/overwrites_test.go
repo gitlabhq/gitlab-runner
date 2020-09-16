@@ -430,7 +430,8 @@ func TestOverwrites(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			variables := buildOverwriteVariables(
+ 			//nolint:lll
+ 			variables := buildOverwriteVariables(
 				variableOverwrites{
 					NamespaceOverwriteVariableName:                       test.NamespaceOverwriteVariableValue,
 					ServiceAccountOverwriteVariableName:                  test.ServiceAccountOverwriteVariableValue,
@@ -439,26 +440,20 @@ func TestOverwrites(t *testing.T) {
 					CPURequestOverwriteVariableValue:                     test.CPURequestOverwriteVariableValue,
 					MemoryLimitOverwriteVariableValue:                    test.MemoryLimitOverwriteVariableValue,
 					MemoryRequestOverwriteVariableValue:                  test.MemoryRequestOverwriteVariableValue,
-					EphemeralStorageLimitOverwriteVariableValue:
-						test.EphemeralStorageLimitOverwriteVariableValue,
-					EphemeralStorageRequestOverwriteVariableValue:
-						test.EphemeralStorageRequestOverwriteVariableValue,
+					EphemeralStorageLimitOverwriteVariableValue:          test.EphemeralStorageLimitOverwriteVariableValue,
+					EphemeralStorageRequestOverwriteVariableValue:        test.EphemeralStorageRequestOverwriteVariableValue,
 					ServiceCPULimitOverwriteVariableValue:                test.ServiceCPULimitOverwriteVariableValue,
 					ServiceCPURequestOverwriteVariableValue:              test.ServiceCPURequestOverwriteVariableValue,
 					ServiceMemoryLimitOverwriteVariableValue:             test.ServiceMemoryLimitOverwriteVariableValue,
 					ServiceMemoryRequestOverwriteVariableValue:           test.ServiceMemoryRequestOverwriteVariableValue,
-					ServiceEphemeralStorageLimitOverwriteVariableValue: 
-						test.ServiceEphemeralStorageLimitOverwriteVariableValue,
-					ServiceEphemeralStorageRequestOverwriteVariableValue:
-						test.ServiceEphemeralStorageRequestOverwriteVariableValue,
+					ServiceEphemeralStorageLimitOverwriteVariableValue:   test.ServiceEphemeralStorageLimitOverwriteVariableValue,
+					ServiceEphemeralStorageRequestOverwriteVariableValue: test.ServiceEphemeralStorageRequestOverwriteVariableValue,
 					HelperCPULimitOverwriteVariableValue:                 test.HelperCPULimitOverwriteVariableValue,
 					HelperCPURequestOverwriteVariableValue:               test.HelperCPURequestOverwriteVariableValue,
 					HelperMemoryLimitOverwriteVariableValue:              test.HelperMemoryLimitOverwriteVariableValue,
 					HelperMemoryRequestOverwriteVariableValue:            test.HelperMemoryRequestOverwriteVariableValue,
-					HelperEphemeralStorageLimitOverwriteVariableValue:
-						test.HelperEphemeralStorageLimitOverwriteVariableValue,
-					HelperEphemeralStorageRequestOverwriteVariableValue:
-						test.HelperEphemeralStorageRequestOverwriteVariableValue,
+					HelperEphemeralStorageLimitOverwriteVariableValue:    test.HelperEphemeralStorageLimitOverwriteVariableValue,
+					HelperEphemeralStorageRequestOverwriteVariableValue:  test.HelperEphemeralStorageRequestOverwriteVariableValue,
 				},
 				test.PodAnnotationsOverwriteValues,
 			)
