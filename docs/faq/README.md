@@ -314,6 +314,16 @@ Operating System: Windows Server Datacenter
 The fix in this case is to upgrade the Docker version. [Read more about supported
 Docker versions](../executors/docker.md#supported-docker-versions).
 
+### I'm using a mapped network drive and my build cannot find the correct path
+
+If GitLab Runner is not being run under an administrator account and instead is using a 
+standard user account, mapped network drives cannot be used and you'll receive an error stating
+`The system cannot find the path specified.`  This is because using a service logon session
+[creates some limitations](https://docs.microsoft.com/en-us/windows/win32/services/services-and-redirected-drives)
+on accessing resources for security. Use the 
+[UNC path](https://docs.microsoft.com/en-us/dotnet/standard/io/file-path-formats#unc-paths)
+of your drive instead.
+
 ## macOS troubleshooting
 
 The following relate to Runner troubleshooting on macOS.
