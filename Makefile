@@ -30,7 +30,7 @@ RPM_PLATFORMS ?= el/6 el/7 el/8 \
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
-COMMON_PACKAGE_NAMESPACE=$(PKG)/common
+COMMON_PACKAGE_NAMESPACE = $(PKG)/common
 
 BUILD_DIR := $(CURDIR)
 TARGET_DIR := $(BUILD_DIR)/out
@@ -128,14 +128,15 @@ check_race_conditions:
 test: helper-dockerarchive-host development_setup simple-test
 
 simple-test:
-	go test $(OUR_PACKAGES) $(TESTFLAGS)
+	go test $(OUR_PACKAGES) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
 
 parallel_test_prepare:
 	# Preparing test commands
 	@./scripts/go_test_with_coverage_report prepare
 
+parallel_test_execute: export GO_LDFLAGS ?= "$(GO_LDFLAGS)"
 parallel_test_execute: pull_images_for_tests
-	# executing tests
+	# Executing tests
 	@./scripts/go_test_with_coverage_report execute
 
 parallel_test_coverage_report:
@@ -383,3 +384,6 @@ $(GITLAB_CHANGELOG):
 .PHONY: clean
 clean:
 	-$(RM) -rf $(TARGET_DIR)
+
+print_ldflags:
+	@echo $(GO_LDFLAGS)

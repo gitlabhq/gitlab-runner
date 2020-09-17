@@ -142,7 +142,66 @@ To execute the tests run:
 make test
 ```
 
-## 7. Install optional tools
+## 7. Run tests with helper image version of choice
+
+If you are developing functionality inside a helper, you'll most likely want to run tests with
+the version of the Docker image that contains the newest changes.
+
+If you run tests without passing `-ldflags`, the default version in `version.go` is `development`.
+This means that the Runner defaults to pulling a [helper image](../configuration/advanced-configuration.md#helper-image)
+with the `latest` tag.
+
+### Make targets
+
+`make` targets inject `-ldflags` automatically. You can run all tests by using:
+
+```shell
+make simple-test
+```
+
+`make` targets also inject `-ldflags` for `parallel_test_execute`, which is most commonly used by the CI/CD jobs.
+
+### Custom `go test` arguments
+
+In case you want a more customized `go test` command, you can use `print_ldflags` as `make` target:
+
+```shell
+go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./executors/docker/...
+```
+
+### In GoLand
+
+Currently, GoLand doesn't support dynamic Go tool arguments, so you'll need to run `make print_ldflags` first
+and then paste it in the configuration.
+
+NOTE: **Note:**
+To use the debugger, make sure to remove the last two flags (`-s -w`).
+
+### Helper image
+
+Build the newest version of the helper image with:
+
+```shell
+make helper-dockerarchive-host
+```
+
+Then you'll have the image ready for use:
+
+```shell
+REPOSITORY                                                    TAG                      IMAGE ID            CREATED             SIZE
+gitlab/gitlab-runner-helper                                   x86_64-a6bc0800          f10d9b5bbb41        32 seconds ago      57.2MB
+```
+
+### Helper image with Kubernetes
+
+If you are running a local Kubernetes cluster make sure to reuse the cluster's Docker daemon to build images.
+For example, with Minikube:
+
+```shell
+eval $(minikube docker-env)
+```
+
+## 8. Install optional tools
 
 - Install `golangci-lint`, used for the `make lint` target.
 - Install `markdown-lint` and `vale`, used for the `make lint-docs` target.
@@ -150,7 +209,7 @@ make test
 Installation instructions will pop up when running a Makefile target
 if a tool is missing.
 
-## 8. Contribute
+## 9. Contribute
 
 You can start hacking GitLab-Runner code.
 If you need an IDE to edit and debug code, there are a few free suggestions you can use:

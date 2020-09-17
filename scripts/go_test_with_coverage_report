@@ -109,7 +109,7 @@ executeTestCommand() {
 
     local exitCode=0
     # shellcheck disable=SC2086
-    go test ${options} ${TESTFLAGS} -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=1
+    go test ${options} ${TESTFLAGS} -ldflags "${GO_LDFLAGS}" -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=1
 
     return ${exitCode}
 }

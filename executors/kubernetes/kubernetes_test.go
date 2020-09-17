@@ -1917,7 +1917,7 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				for _, c := range pod.Spec.Containers {
 					if c.Name == "helper" {
-						assert.Equal(t, "custom/helper-image:HEAD", c.Image)
+						assert.Equal(t, "custom/helper-image:"+common.REVISION, c.Image)
 					}
 				}
 			},
