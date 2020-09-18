@@ -26,6 +26,21 @@ Is it possible to run GitLab Runner in debug/verbose mode. From a terminal, run:
 gitlab-runner --debug run
 ```
 
+### Enable debug mode logging in `config.toml`
+
+Debug logging can be enabled in the [global section of the `config.toml`](../configuration/advanced-configuration.md#the-global-section) by setting the `log_level` setting to `debug`.
+
+### Enable debug mode logging for the Helm Chart
+
+If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runner Helm Chart](../install/kubernetes.md), you can enable debug logging by setting the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configuring-gitlab-runner-using-the-helm-chart):
+
+```yaml
+## Configure GitLab Runner's logging level. Available values are: debug, info, warn, error, fatal, panic
+## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section
+##
+logLevel: debug
+```
+
 ### I'm seeing `x509: certificate signed by unknown authority`
 
 Please see [the self-signed certificates](../configuration/tls-self-signed.md).
@@ -316,11 +331,11 @@ Docker versions](../executors/docker.md#supported-docker-versions).
 
 ### I'm using a mapped network drive and my build cannot find the correct path
 
-If GitLab Runner is not being run under an administrator account and instead is using a 
+If GitLab Runner is not being run under an administrator account and instead is using a
 standard user account, mapped network drives cannot be used and you'll receive an error stating
 `The system cannot find the path specified.`  This is because using a service logon session
 [creates some limitations](https://docs.microsoft.com/en-us/windows/win32/services/services-and-redirected-drives)
-on accessing resources for security. Use the 
+on accessing resources for security. Use the
 [UNC path](https://docs.microsoft.com/en-us/dotnet/standard/io/file-path-formats#unc-paths)
 of your drive instead.
 
