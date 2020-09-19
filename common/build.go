@@ -827,6 +827,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	defer cancel()
 
 	trace.SetCancelFunc(cancel)
+	trace.SetAbortFunc(cancel)
 	trace.SetMasked(b.GetAllVariables().Masked())
 
 	options := b.createExecutorPrepareOptions(ctx, globalConfig, trace)

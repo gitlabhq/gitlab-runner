@@ -565,7 +565,7 @@ func TestRequestJob(t *testing.T) {
 
 func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]interface{}) {
 	switch req["state"].(string) {
-	case "running":
+	case "running", "canceling":
 		w.WriteHeader(http.StatusOK)
 	case "failed":
 		failureReason, ok := req["failure_reason"].(string)
@@ -685,6 +685,8 @@ func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *te
 		w.Header().Set("Job-Status", "canceled")
 	case "/api/v4/jobs/12":
 		w.Header().Set("Job-Status", "failed")
+	case "/api/v4/jobs/13":
+		w.Header().Set("Job-Status", "canceling")
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -722,16 +724,22 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	var state UpdateState
+	result := c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: Running})
+	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 10, State: "running"}).State
-	assert.Equal(t, UpdateSucceeded, state, "Update should continue when running")
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 11, State: Running})
+	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should be aborted when Job-Status=canceled")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 11, State: "running"}).State
-	assert.Equal(t, UpdateAbort, state, "Update should be aborted when Job-Status=canceled")
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 12, State: Running})
+	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should continue when Job-Status=failed")
 
-	state = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 12, State: "running"}).State
-	assert.Equal(t, UpdateAbort, state, "Update should continue when Job-Status=failed")
+	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 13, State: Running})
+	assert.Equal(
+		t,
+		UpdateJobResult{State: UpdateSucceeded, CancelRequested: true},
+		result,
+		"Update should continue when Job-Status=canceling",
+	)
 }
 
 const patchToken = "token"
@@ -810,51 +818,104 @@ func TestForbiddenPatchTrace(t *testing.T) {
 }
 
 func TestPatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
-		assert.Equal(t, patchTraceContent[offset:limit+1], body)
-		w.WriteHeader(http.StatusAccepted)
+	tests := []struct {
+		remoteState    string
+		expectedResult PatchTraceResult
+	}{
+		{
+			remoteState: "running",
+			expectedResult: PatchTraceResult{
+				CancelRequested: false,
+				State:           PatchSucceeded,
+			},
+		},
+		{
+			remoteState: statusCanceling,
+			expectedResult: PatchTraceResult{
+				CancelRequested: true,
+				State:           PatchSucceeded,
+			},
+		},
 	}
 
-	server, client, config := getPatchServer(t, handler)
-	defer server.Close()
+	for _, tt := range tests {
+		t.Run(tt.remoteState, func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+				assert.Equal(t, patchTraceContent[offset:limit+1], body)
 
-	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-	assert.Equal(t, PatchSucceeded, result.State)
-	assert.Equal(t, len(patchTraceContent), result.SentOffset)
+				w.Header().Add(remoteStateHeader, tt.remoteState)
+				w.WriteHeader(http.StatusAccepted)
+			}
 
-	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:], 3)
-	assert.Equal(t, PatchSucceeded, result.State)
-	assert.Equal(t, len(patchTraceContent), result.SentOffset)
+			server, client, config := getPatchServer(t, handler)
+			defer server.Close()
 
-	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:10], 3)
-	assert.Equal(t, PatchSucceeded, result.State)
-	assert.Equal(t, 10, result.SentOffset)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+			assert.Equal(t, tt.expectedResult.State, result.State)
+			assert.Equal(t, tt.expectedResult.CancelRequested, result.CancelRequested)
+			assert.Equal(t, len(patchTraceContent), result.SentOffset)
+
+			result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:], 3)
+			assert.Equal(t, tt.expectedResult.State, result.State)
+			assert.Equal(t, tt.expectedResult.CancelRequested, result.CancelRequested)
+			assert.Equal(t, len(patchTraceContent), result.SentOffset)
+
+			result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:10], 3)
+			assert.Equal(t, tt.expectedResult.State, result.State)
+			assert.Equal(t, tt.expectedResult.CancelRequested, result.CancelRequested)
+			assert.Equal(t, 10, result.SentOffset)
+		})
+	}
 }
 
 func TestRangeMismatchPatchTrace(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
-		if offset > 10 {
-			w.Header().Set("Range", "0-10")
-			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
-		}
-
-		w.WriteHeader(http.StatusAccepted)
+	tests := []struct {
+		remoteState    string
+		expectedResult PatchTraceResult
+	}{
+		{
+			remoteState: "running",
+			expectedResult: PatchTraceResult{
+				SentOffset:      len(patchTraceContent),
+				CancelRequested: false,
+				State:           PatchSucceeded,
+			},
+		},
+		{
+			remoteState: statusCanceling,
+			expectedResult: PatchTraceResult{
+				SentOffset:      len(patchTraceContent),
+				CancelRequested: true,
+				State:           PatchSucceeded,
+			},
+		},
 	}
 
-	server, client, config := getPatchServer(t, handler)
-	defer server.Close()
+	for _, tt := range tests {
+		t.Run(tt.remoteState, func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+				if offset > 10 {
+					w.Header().Set("Range", "0-10")
+					w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+				}
 
-	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[11:], 11)
-	assert.Equal(t, PatchRangeMismatch, result.State)
-	assert.Equal(t, 10, result.SentOffset)
+				w.Header().Add(remoteStateHeader, tt.remoteState)
+				w.WriteHeader(http.StatusAccepted)
+			}
 
-	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[15:], 15)
-	assert.Equal(t, PatchRangeMismatch, result.State)
-	assert.Equal(t, 10, result.SentOffset)
+			server, client, config := getPatchServer(t, handler)
+			defer server.Close()
 
-	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[5:], 5)
-	assert.Equal(t, PatchSucceeded, result.State)
-	assert.Equal(t, len(patchTraceContent), result.SentOffset)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[11:], 11)
+			assert.Equal(t, PatchTraceResult{State: PatchRangeMismatch, SentOffset: 10}, result)
+
+			result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[15:], 15)
+			assert.Equal(t, PatchTraceResult{State: PatchRangeMismatch, SentOffset: 10}, result)
+
+			result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[5:], 5)
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
 }
 
 func TestJobFailedStatePatchTrace(t *testing.T) {
@@ -886,34 +947,95 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 
 	updates := []struct {
 		traceUpdate             []byte
+		remoteJobStatus         string
 		expectedContentRange    string
 		expectedContentLength   int64
-		expectedResult          PatchState
+		expectedResult          PatchTraceResult
 		shouldNotCallPatchTrace bool
 	}{
 		{
 			traceUpdate:           []byte("test"),
+			remoteJobStatus:       "running",
 			expectedContentRange:  "0-3",
 			expectedContentLength: 4,
-			expectedResult:        PatchSucceeded,
+			expectedResult: PatchTraceResult{
+				SentOffset:        4,
+				CancelRequested:   false,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
 		},
 		{
-			traceUpdate:             []byte{},
-			expectedContentLength:   4,
-			expectedResult:          PatchSucceeded,
+			traceUpdate:           []byte{},
+			remoteJobStatus:       "running",
+			expectedContentLength: 4,
+			expectedResult: PatchTraceResult{
+				SentOffset:        4,
+				CancelRequested:   false,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
 			shouldNotCallPatchTrace: true,
 		},
 		{
 			traceUpdate:           []byte(" "),
+			remoteJobStatus:       "running",
 			expectedContentRange:  "4-4",
 			expectedContentLength: 1,
-			expectedResult:        PatchSucceeded,
+			expectedResult: PatchTraceResult{
+				SentOffset:        5,
+				CancelRequested:   false,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
 		},
 		{
 			traceUpdate:           []byte("test"),
+			remoteJobStatus:       "running",
 			expectedContentRange:  "5-8",
 			expectedContentLength: 4,
-			expectedResult:        PatchSucceeded,
+			expectedResult: PatchTraceResult{
+				SentOffset:        9,
+				CancelRequested:   false,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
+		},
+		{
+			traceUpdate:           []byte("test"),
+			remoteJobStatus:       statusCanceling,
+			expectedContentRange:  "9-12",
+			expectedContentLength: 4,
+			expectedResult: PatchTraceResult{
+				SentOffset:        13,
+				CancelRequested:   true,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
+		},
+		{
+			traceUpdate:           []byte(" "),
+			remoteJobStatus:       statusCanceling,
+			expectedContentRange:  "13-13",
+			expectedContentLength: 1,
+			expectedResult: PatchTraceResult{
+				SentOffset:        14,
+				CancelRequested:   true,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
+		},
+		{
+			traceUpdate:           []byte(""),
+			remoteJobStatus:       statusCanceling,
+			expectedContentRange:  "13-13",
+			expectedContentLength: 0,
+			expectedResult: PatchTraceResult{
+				SentOffset:        14,
+				CancelRequested:   false, // Empty patches are not sent to remote.
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
 		},
 	}
 
@@ -932,6 +1054,8 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 				assert.Equal(t, update.traceUpdate, body)
 				assert.Equal(t, update.expectedContentRange, r.Header.Get("Content-Range"))
 				assert.Equal(t, update.expectedContentLength, r.ContentLength)
+
+				w.Header().Add(remoteStateHeader, update.remoteJobStatus)
 				w.WriteHeader(http.StatusAccepted)
 			}
 
@@ -943,7 +1067,7 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 				config, &JobCredentials{ID: 1, Token: patchToken},
 				traceContent[sentTrace:], sentTrace,
 			)
-			assert.Equal(t, update.expectedResult, result.State)
+			assert.Equal(t, update.expectedResult, result)
 
 			sentTrace = result.SentOffset
 		})
@@ -952,31 +1076,61 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 
 func TestPatchTraceContentRangeAndLength(t *testing.T) {
 	tests := map[string]struct {
-		name                    string
 		trace                   []byte
+		remoteJobStatus         string
 		expectedContentRange    string
 		expectedContentLength   int64
-		expectedResult          PatchState
+		expectedResult          PatchTraceResult
 		shouldNotCallPatchTrace bool
 	}{
 		"0 bytes": {
-			trace:                   []byte{},
-			expectedResult:          PatchSucceeded,
+			trace:           []byte{},
+			remoteJobStatus: "running",
+			expectedResult: PatchTraceResult{
+				SentOffset:        0,
+				CancelRequested:   false,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
 			shouldNotCallPatchTrace: true,
 		},
 		"1 byte": {
-			name:                    "1 byte",
-			trace:                   []byte("1"),
-			expectedContentRange:    "0-0",
-			expectedContentLength:   1,
-			expectedResult:          PatchSucceeded,
+			trace:                 []byte("1"),
+			remoteJobStatus:       "running",
+			expectedContentRange:  "0-0",
+			expectedContentLength: 1,
+			expectedResult: PatchTraceResult{
+				SentOffset:        1,
+				CancelRequested:   false,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
 			shouldNotCallPatchTrace: false,
 		},
 		"2 bytes": {
-			trace:                   []byte("12"),
-			expectedContentRange:    "0-1",
-			expectedContentLength:   2,
-			expectedResult:          PatchSucceeded,
+			trace:                 []byte("12"),
+			remoteJobStatus:       "running",
+			expectedContentRange:  "0-1",
+			expectedContentLength: 2,
+			expectedResult: PatchTraceResult{
+				SentOffset:        2,
+				CancelRequested:   false,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
+			shouldNotCallPatchTrace: false,
+		},
+		"2 bytes canceling job": {
+			trace:                 []byte("12"),
+			remoteJobStatus:       statusCanceling,
+			expectedContentRange:  "0-1",
+			expectedContentLength: 2,
+			expectedResult: PatchTraceResult{
+				SentOffset:        2,
+				CancelRequested:   true,
+				State:             PatchSucceeded,
+				NewUpdateInterval: 0,
+			},
 			shouldNotCallPatchTrace: false,
 		},
 	}
@@ -991,6 +1145,8 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 
 				assert.Equal(t, test.expectedContentRange, r.Header.Get("Content-Range"))
 				assert.Equal(t, test.expectedContentLength, r.ContentLength)
+
+				w.Header().Add(remoteStateHeader, test.remoteJobStatus)
 				w.WriteHeader(http.StatusAccepted)
 			}
 
@@ -998,7 +1154,7 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 			defer server.Close()
 
 			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, test.trace, 0)
-			assert.Equal(t, test.expectedResult, result.State)
+			assert.Equal(t, test.expectedResult, result)
 		})
 	}
 }
@@ -1105,9 +1261,13 @@ func TestUpdateIntervalHeaderHandling(t *testing.T) {
 }
 
 func TestAbortedPatchTrace(t *testing.T) {
-	statuses := []string{"canceled", "failed"}
+	tests := map[string]PatchTraceResult{
+		"canceling": {SentOffset: 17, CancelRequested: true, State: PatchSucceeded},
+		"canceled":  {State: PatchAbort},
+		"failed":    {State: PatchAbort},
+	}
 
-	for _, status := range statuses {
+	for status, expectedResult := range tests {
 		t.Run(status, func(t *testing.T) {
 			handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
 				w.Header().Set("Job-Status", status)
@@ -1118,7 +1278,7 @@ func TestAbortedPatchTrace(t *testing.T) {
 			defer server.Close()
 
 			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
-			assert.Equal(t, PatchAbort, result.State)
+			assert.Equal(t, expectedResult, result)
 		})
 	}
 }

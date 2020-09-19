@@ -63,7 +63,7 @@ func TestBuildsHelperCollect(t *testing.T) {
 			require.Eventually(
 				t,
 				func() bool {
-					return trace.Cancel()
+					return trace.Abort()
 				},
 				time.Minute,
 				10*time.Millisecond,

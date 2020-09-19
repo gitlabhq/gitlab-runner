@@ -84,6 +84,7 @@ type FeaturesInfo struct {
 	TraceReset              bool `json:"trace_reset"`
 	TraceChecksum           bool `json:"trace_checksum"`
 	VaultSecrets            bool `json:"vault_secrets"`
+	Cancelable              bool `json:"cancelable"`
 }
 
 type RegisterRunnerParameters struct {
@@ -483,6 +484,8 @@ type JobTrace interface {
 	Fail(err error, failureReason JobFailureReason)
 	SetCancelFunc(cancelFunc context.CancelFunc)
 	Cancel() bool
+	SetAbortFunc(abortFunc context.CancelFunc)
+	Abort() bool
 	SetFailuresCollector(fc FailuresCollector)
 	SetMasked(values []string)
 	IsStdout() bool
@@ -490,11 +493,13 @@ type JobTrace interface {
 
 type UpdateJobResult struct {
 	State             UpdateState
+	CancelRequested   bool
 	NewUpdateInterval time.Duration
 }
 
 type PatchTraceResult struct {
 	SentOffset        int
+	CancelRequested   bool
 	State             PatchState
 	NewUpdateInterval time.Duration
 }

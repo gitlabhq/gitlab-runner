@@ -74,7 +74,10 @@ func TestIgnoreStatusChange(t *testing.T) {
 }
 
 func TestTouchJobAbort(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	abortCtx, abort := context.WithCancel(context.Background())
+	defer abort()
+
+	cancelCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	keepAliveUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
@@ -95,10 +98,46 @@ func TestTouchJobAbort(t *testing.T) {
 	require.NoError(t, err)
 
 	b.updateInterval = 0
+	b.SetAbortFunc(abort)
 	b.SetCancelFunc(cancel)
 
 	b.start()
-	assert.NotNil(t, <-ctx.Done(), "should abort the job")
+	assert.NotNil(t, <-cancelCtx.Done(), "should cancel job first")
+	assert.NotNil(t, <-abortCtx.Done(), "should abort the job")
+	b.Success()
+}
+
+func TestTouchJobCancel(t *testing.T) {
+	cancelCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	abortCtx, abort := context.WithCancel(context.Background())
+	defer abort()
+
+	keepAliveUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
+	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
+
+	mockNetwork := new(common.MockNetwork)
+	defer mockNetwork.AssertExpectations(t)
+
+	// cancel while running
+	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, keepAliveUpdateMatcher).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded, CancelRequested: true}).Once()
+
+	// try to send status at least once more
+	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded, CancelRequested: true}).Once()
+
+	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
+	b.updateInterval = 0
+	b.SetCancelFunc(cancel)
+	b.SetAbortFunc(abort)
+
+	b.start()
+	assert.NotNil(t, <-cancelCtx.Done(), "should cancel the job")
+	assert.NoError(t, abortCtx.Err())
 	b.Success()
 }
 
@@ -117,6 +156,8 @@ func TestSendPatchAbort(t *testing.T) {
 	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(common.NewPatchTraceResult(0, common.PatchAbort, 0)).Twice()
 
+	ignoreOptionalTouchJob(mockNetwork)
+
 	// try to send status at least once more
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateJobResult{State: common.UpdateAbort}).Once()
@@ -124,7 +165,7 @@ func TestSendPatchAbort(t *testing.T) {
 	b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
 	require.NoError(t, err)
 
-	b.SetCancelFunc(cancel)
+	b.SetAbortFunc(cancel)
 	b.updateInterval = time.Microsecond
 
 	fmt.Fprint(b, "Trace")
@@ -455,6 +496,78 @@ func TestJobIncrementalStatusRefresh(t *testing.T) {
 
 	wg.Wait()
 	b.finish()
+}
+
+func TestCancelingJobIncrementalUpdate(t *testing.T) {
+	tests := map[string]struct {
+		patchCanceling bool
+	}{
+		"patch doesn't return canceling": {
+			patchCanceling: false,
+		},
+		"patch returns canceling": {
+			patchCanceling: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			var wg sync.WaitGroup
+
+			finalUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
+
+			mockNetwork := new(common.MockNetwork)
+			defer mockNetwork.AssertExpectations(t)
+
+			wg.Add(4)
+
+			mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("test trace"), 0).
+				Return(common.PatchTraceResult{
+					SentOffset:      10,
+					CancelRequested: tt.patchCanceling,
+					State:           common.PatchSucceeded,
+				}).
+				Run(func(args mock.Arguments) {
+					wg.Done()
+				}).
+				Once()
+
+			keepAliveUpdateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Running, "")
+			mockNetwork.On("UpdateJob", jobConfig, jobCredentials, keepAliveUpdateMatcher).
+				Return(common.UpdateJobResult{State: common.UpdateSucceeded, CancelRequested: true}).
+				Run(func(args mock.Arguments) {
+					wg.Done()
+				}).Twice()
+
+			// When `UpdateJob` requested cancelation we continue to send the trace.
+			mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte(" test trac"), 10).
+				Return(common.PatchTraceResult{SentOffset: 20, CancelRequested: true, State: common.PatchSucceeded}).
+				Run(func(args mock.Arguments) {
+					wg.Done()
+				}).
+				Once()
+
+			// We might get additional touch jobs calls we can ignore them.
+			mockNetwork.On("UpdateJob", jobConfig, jobCredentials, keepAliveUpdateMatcher).
+				Return(common.UpdateJobResult{State: common.UpdateSucceeded, CancelRequested: true}).
+				Maybe()
+
+			// Wait for the final `UpdateJob` to be executed
+			mockNetwork.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
+				Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
+
+			b, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+			require.NoError(t, err)
+
+			b.updateInterval = time.Millisecond * 10
+			b.maxTracePatchSize = 10
+			b.forceSendInterval = time.Millisecond
+			b.start()
+			fmt.Fprint(b, "test trace test trac")
+			wg.Wait()
+			b.Success()
+		})
+	}
 }
 
 func TestUpdateIntervalChanges(t *testing.T) {

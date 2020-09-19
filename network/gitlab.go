@@ -134,6 +134,7 @@ func (n *GitLabClient) getLastUpdate(credentials requestCredentials) (lu string)
 func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
 	features.TraceReset = true
 	features.TraceChecksum = true
+	features.Cancelable = true
 }
 
 func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
@@ -408,6 +409,7 @@ func (n *GitLabClient) createUpdateJobResult(
 
 	result := common.UpdateJobResult{
 		NewUpdateInterval: remoteJobStateResponse.RemoteUpdateInterval,
+		CancelRequested:   remoteJobStateResponse.IsCanceled(),
 	}
 
 	log = log.WithFields(logrus.Fields{
@@ -417,8 +419,8 @@ func (n *GitLabClient) createUpdateJobResult(
 	})
 
 	switch {
-	case remoteJobStateResponse.IsAborted():
-		log.Warningln("Submitting job to coordinator...", "aborted")
+	case remoteJobStateResponse.IsFailed():
+		log.Warningln("Submitting job to coordinator...", "job failed")
 		result.State = common.UpdateAbort
 	case statusCode == http.StatusOK:
 		log.Debugln("Submitting job to coordinator...", "ok")
@@ -430,7 +432,7 @@ func (n *GitLabClient) createUpdateJobResult(
 		log.Debugln("Submitting job to coordinator...", "trace validation failed")
 		result.State = common.UpdateTraceValidationFailed
 	case statusCode == http.StatusNotFound:
-		log.Warningln("Submitting job to coordinator...", "aborted")
+		log.Warningln("Submitting job to coordinator...", "not found")
 		result.State = common.UpdateAbort
 	case statusCode == http.StatusForbidden:
 		log.WithField("status", statusText).Errorln("Submitting job to coordinator...", "forbidden")
@@ -510,11 +512,12 @@ func (n *GitLabClient) createPatchTraceResult(
 	result := common.PatchTraceResult{
 		SentOffset:        startOffset,
 		NewUpdateInterval: tracePatchResponse.RemoteUpdateInterval,
+		CancelRequested:   tracePatchResponse.IsCanceled(),
 	}
 
 	switch {
-	case tracePatchResponse.IsAborted():
-		log.Warningln("Appending trace to coordinator...", "aborted")
+	case tracePatchResponse.IsFailed():
+		log.Warningln("Appending trace to coordinator...", "job failed")
 		result.State = common.PatchAbort
 
 		return result
