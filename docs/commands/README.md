@@ -1,6 +1,12 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+---
+
 # GitLab Runner commands
 
-GitLab Runner contains a set of commands with which you register, manage and
+GitLab Runner contains a set of commands you use to register, manage, and
 run your builds.
 
 You can check a recent list of commands by executing:
@@ -28,7 +34,7 @@ command:
 gitlab-runner run --help
 ```
 
-The output would be similar to:
+The output is similar to:
 
 ```plaintext
 NAME:
@@ -58,8 +64,7 @@ Commands that access the configuration of GitLab Runner behave differently when
 executed as super-user (`root`). The file location depends on the user executing
 the command.
 
-Be aware of the notice that is written when executing the commands that are
-used for running builds, registering services or managing registered runners:
+When you execute `gitlab-runner` commands, you see the mode it is running in:
 
 ```shell
 $ gitlab-runner run
@@ -70,7 +75,7 @@ WARN[0000] Use sudo for system-mode:
 WARN[0000] $ sudo gitlab-runner...
 ```
 
-You should use `user-mode` if you are really sure that this is a mode that you
+You should use `user-mode` if you are sure this is the mode you
 want to work with. Otherwise, prefix your command with `sudo`:
 
 ```shell
@@ -80,29 +85,29 @@ INFO[0000] Starting multi-runner from /etc/gitlab-runner/config.toml ...  builds
 INFO[0000] Running in system-mode.
 ```
 
-In the case of **Windows** you may need to run the **Command Prompt** in
-**Administrative Mode**.
+In the case of Windows, you may need to run the command prompt as
+an administrator.
 
 ## Configuration file
 
 GitLab Runner configuration uses the [TOML](https://github.com/toml-lang/toml) format.
 
-The file to be edited can be found in:
+You can find the file to be edited:
 
-1. `/etc/gitlab-runner/config.toml` on \*nix systems when GitLab Runner is
-   executed as super-user (`root`)
-1. `~/.gitlab-runner/config.toml` on \*nix systems when GitLab Runner is
-   executed as non-root
-1. `./config.toml` on other systems
+1. On *nix systems when GitLab Runner is
+   executed as super-user (`root`): `/etc/gitlab-runner/config.toml` 
+1. On *nix systems when GitLab Runner is
+   executed as non-root: `~/.gitlab-runner/config.toml` 
+1. On other systems: `./config.toml`
 
 Most of the commands accept an argument to specify a custom configuration file,
-allowing you to have a multiple different configurations on a single machine.
-To specify a custom configuration file use the `-c` or `--config` flag, or use
+so you can have a multiple different configurations on a single machine.
+To specify a custom configuration file, use the `-c` or `--config` flag, or use
 the `CONFIG_FILE` environment variable.
 
 ## Signals
 
-It is possible to use system signals to interact with GitLab Runner. The
+You can use system signals to interact with GitLab Runner. The
 following commands support the following signals:
 
 | Command | Signal | Action |
@@ -112,7 +117,7 @@ following commands support the following signals:
 | `run`, `exec`, `run-single` | **SIGQUIT** | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
 | `run` | **SIGHUP** | Force to reload configuration file |
 
-For example, to force a reload of the Runner's configuration file, run
+For example, to force a reload of the Runner's configuration file, run:
 
 ```shell
 sudo kill -SIGHUP <main_runner_pid>
@@ -171,11 +176,11 @@ COMMANDS:
      help, h               Shows a list of commands or help for one command
 ```
 
-Below we will explain what each command does in detail.
+Below we explain what each command does in detail.
 
 ## Registration-related commands
 
-The following commands allow you to register a new runner, or list and verify
+Use the following commands to register a new runner, or list and verify
 them if they are still registered.
 
 - [`gitlab-runner register`](#gitlab-runner-register)
@@ -185,7 +190,7 @@ them if they are still registered.
 - [`gitlab-runner verify`](#gitlab-runner-verify)
 - [`gitlab-runner unregister`](#gitlab-runner-unregister)
 
-The above commands support the following arguments:
+These commands support the following arguments:
 
 | Parameter   | Default | Description |
 |-------------|---------|-------------|
@@ -193,27 +198,27 @@ The above commands support the following arguments:
 
 ### `gitlab-runner register`
 
-This command registers your GitLab Runner in GitLab using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner).
+This command registers your runner in GitLab by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner).
 
 The registered runner is
 added to the [configuration file](#configuration-file).
 You can use multiple configurations in a single GitLab Runner. Executing
-`gitlab-runner register` adds a new configuration entry, it doesn't remove the
+`gitlab-runner register` adds a new configuration entry. It doesn't remove the
 previous ones.
 
-There are two options to register a Runner:
+There are two options to register a runner:
 
 - interactive.
 - non-interactive.
 
 NOTE: **Note:**
-Runners can be registered directly using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) but
-configuration will not be generated automatically.
+Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) but
+configuration is not generated automatically.
 
 #### Interactive registration
 
-This command is usually used in interactive mode (**default**). You will be
-asked multiple questions during a Runner's registration.
+This command is usually used in interactive mode (**default**). You are
+asked multiple questions during a runner's registration.
 
 This question can be pre-filled by adding arguments when invoking the registration command:
 
@@ -286,8 +291,8 @@ Verifying runner... is alive                        runner=32773c0f
 To delete the old and removed from GitLab runners, execute the following
 command.
 
->**Warning:**
-This operation cannot be undone, it will update the configuration file, so
+CAUTION: **Warning:**
+This operation cannot be undone. It updates the configuration file, so
 make sure to have a backup of `config.toml` before executing it.
 
 ```shell
@@ -296,18 +301,18 @@ gitlab-runner verify --delete
 
 ### `gitlab-runner unregister`
 
-This command unregisters registered runners using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner).
+This command unregisters registered runners by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner).
 
 It expects either:
 
 - A full URL and the runner's token.
 - The runner's name.
 
-With the `--all-runners` option, it will unregister all the attached runners.
+With the `--all-runners` option, it unregisters all the attached runners.
 
 NOTE: **Note:**
-Runners can be unregistered directly using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner) but
-configuration will not be modified for the user.
+Runners can be unregistered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner) but
+configuration is not modified for the user.
 
 To unregister a specific runner, first get the runner's details by executing
 `gitlab-runner list`:
@@ -318,8 +323,8 @@ test-runner     Executor=shell Token=t0k3n URL=http://gitlab.example.com
 
 Then use this information to unregister it, using one of the following commands.
 
->**Warning:**
-This operation cannot be undone, it will update the configuration file, so
+CAUTION: **Warning:**
+This operation cannot be undone. It updates the configuration file, so
 make sure to have a backup of `config.toml` before executing it.
 
 #### By URL and token
@@ -335,9 +340,9 @@ gitlab-runner unregister --name test-runner
 ```
 
 NOTE: **Note:**
-If there is more than one runner with the given name, only the first one will be removed.
+If there is more than one runner with the given name, only the first one is removed.
 
-#### All Runners
+#### All runners
 
 ```shell
 gitlab-runner unregister --all-runners
@@ -377,13 +382,13 @@ allows you to drop privileges of builds run with the **shell** executor.
 | `--service`           | `gitlab-runner`       | Specify service name to use |
 | `--config`           | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
 | `--syslog`            | `true`                | Specify if the service should integrate with system logging service |
-| `--working-directory` | the current directory | Specify the root directory where all data will be stored when builds will be run with the **shell** executor |
-| `--user`              | `root`                | Specify the user which will be used to execute builds |
-| `--password`          | none                  | Specify the password for the user that will be used to execute the builds |
+| `--working-directory` | the current directory | Specify the root directory where all data is stored when builds are run with the **shell** executor |
+| `--user`              | `root`                | Specify the user that executes the builds |
+| `--password`          | none                  | Specify the password for the user that executes the builds |
 
 ### `gitlab-runner uninstall`
 
-This command stops and uninstalls the GitLab Runner from being run as an
+This command stops and uninstalls GitLab Runner from being run as an
 service.
 
 ### `gitlab-runner start`
@@ -424,8 +429,8 @@ It accepts the following parameters.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `--config`  | See [configuration-file](#configuration-file) | Specify a custom configuration file to be used |
-| `--working-directory` | the current directory | Specify the root directory where all data will be stored when builds will be run with the **shell** executor |
-| `--user`    | the current user | Specify the user that will be used to execute builds |
+| `--working-directory` | the current directory | Specify the root directory where all data is stored when builds run with the **shell** executor |
+| `--user`    | the current user | Specify the user that executes builds |
 | `--syslog`  | `false` | Send all logs to SysLog (Unix) or EventLog (Windows) |
 | `--listen-address` | empty | Address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
 
@@ -448,15 +453,16 @@ You can see all possible configuration options by using the `--help` flag:
 gitlab-runner run-single --help
 ```
 
-You can use the `--max-builds` option to control how many builds the runner will execute before exiting. The
-default of `0` means that the runner has no build limit and will run jobs forever.
+You can use the `--max-builds` option to control how many builds the runner executes before exiting. The
+default of `0` means that the runner has no build limit and jobs run forever.
 
-You can also use the `--wait-timeout` option to control how long the runner will wait for a job before
-exiting. The default of `0` means that the runner has no timeout and will wait forever between jobs.
+You can also use the `--wait-timeout` option to control how long the runner waits for a job before
+exiting. The default of `0` means that the runner has no timeout and waits forever between jobs.
 
 ### `gitlab-runner exec`
 
-> Notice: Not all features of `.gitlab-ci.yml` are supported by `exec`. Please
+NOTE: **Note:**
+Not all features of `.gitlab-ci.yml` are supported by `exec`. Please
 check what exactly is supported in the [limitations of `gitlab-runner exec`](#limitations-of-gitlab-runner-exec)
 section.
 
@@ -472,10 +478,10 @@ When executing `exec` you need to specify the executor and the job name that is
 present in `.gitlab-ci.yml`. The command should be executed from the root
 directory of your Git repository that contains `.gitlab-ci.yml`.
 
-`gitlab-runner exec` will clone the current state of the local Git repository.
+`gitlab-runner exec` clones the current state of the local Git repository.
 Make sure you have committed any changes you want to test beforehand.
 
-For example, the following command will execute the job named **tests** locally
+For example, the following command executes the job named `tests` locally
 using a shell executor:
 
 ```shell
@@ -500,11 +506,11 @@ properly map your local directory to the directory inside the Docker container.
 
 #### Limitations of `gitlab-runner exec`
 
-With current implementation of `exec` some of the features of GitLab CI will
-not work or may work partially.
+With the current implementation of `exec`, some of the features of GitLab CI/CD
+may not work or may work partially.
 
 We're currently thinking about how to replace current `exec` implementation,
-to make fully compatible with all features. Please track [the issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2797)
+to make it fully compatible with all features. Please track [the issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2797)
 for more details.
 
 **Compatibility table - features based on `.gitlab-ci.yml`**
@@ -529,9 +535,9 @@ for more details.
 | dependencies      | no                    |          |
 | coverage          | no                    |          |
 | retry             | no                    |          |
-| hidden keys       | no                    | If explicitly asked to run, `exec` will try to run such job |
+| hidden keys       | no                    | If explicitly asked to run, `exec` tries to run the job |
 | YAML features     | yes                   | Anchors (`&`), aliases (`*`), map merging (`<<`) are part of YAML specification and are handled by the parser |
-| pages             | partially             | Job's script will be executed if explicitly asked, but it doesn't affect pages state, which is managed by GitLab |
+| pages             | partially             | Job's script is executed if explicitly asked, but it doesn't affect pages state, which is managed by GitLab |
 
 **Compatibility table - features based on variables**
 
