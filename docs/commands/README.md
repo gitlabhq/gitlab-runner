@@ -94,10 +94,10 @@ GitLab Runner configuration uses the [TOML](https://github.com/toml-lang/toml) f
 
 You can find the file to be edited:
 
-1. On *nix systems when GitLab Runner is
-   executed as super-user (`root`): `/etc/gitlab-runner/config.toml` 
-1. On *nix systems when GitLab Runner is
-   executed as non-root: `~/.gitlab-runner/config.toml` 
+1. On \*nix systems when GitLab Runner is
+   executed as super-user (`root`): `/etc/gitlab-runner/config.toml`
+1. On \*nix systems when GitLab Runner is
+   executed as non-root: `~/.gitlab-runner/config.toml`
 1. On other systems: `./config.toml`
 
 Most of the commands accept an argument to specify a custom configuration file,
