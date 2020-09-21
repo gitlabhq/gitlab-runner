@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+---
+
 # The Kubernetes executor
 
 GitLab Runner can use Kubernetes to run builds on a Kubernetes cluster. This is
@@ -391,7 +397,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 Assigning a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
 
-More about the helper image can be found [here](../configuration/advanced-configuration.md#helper-image).
+[Read more about the helper image](../configuration/advanced-configuration.md#helper-image).
 Example of building your own helper image:
 
 ```Dockerfile

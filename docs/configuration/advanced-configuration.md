@@ -1,5 +1,8 @@
 ---
 table_display_block: true
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
 ---
 
 # Advanced configuration
@@ -337,8 +340,7 @@ Example:
 
 ### Volumes in the `[runners.docker]` section
 
-You can find the complete guide of Docker volume usage
-[here](https://docs.docker.com/userguide/dockervolumes/).
+[View the complete guide of Docker volume usage](https://docs.docker.com/userguide/dockervolumes/).
 
 Let's use some examples to explain how it work (assuming you have a working
 runner).
