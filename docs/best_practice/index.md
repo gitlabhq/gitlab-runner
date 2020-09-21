@@ -38,7 +38,7 @@ if you want to clone to a custom directory, and the guideline below
 doesn't apply.
 
 GitLab Runner uses the _Builds Directory_ for all the Jobs that it
-runs, but nesting them using a specific pattern
+runs, but nests them using a specific pattern
 `{builds_dir}/$RUNNER_TOKEN_KEY/$CONCURRENT_ID/$NAMESPACE/$PROJECT_NAME`.
 For example: `/builds/2mn-ncv-/0/user/playground`.
 
