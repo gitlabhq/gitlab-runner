@@ -406,10 +406,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 					"VolumeCreate",
 					mock.Anything,
 					mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-						return v.Name == testCase.expectedVolumeName &&
-							// ensure labeler has been used
-							// test for the full list of labels is part of the labels package.
-							len(v.Labels) > 0 && v.Labels["com.gitlab.gitlab-runner.type"] == "cache"
+						return testVolumeCreateBodyContent(v, testCase.expectedVolumeName)
 					}),
 				).
 					Return(types.Volume{Name: testCase.expectedVolumeName}, nil).
@@ -458,7 +455,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_WithError(t *t
 		"VolumeCreate",
 		mock.Anything,
 		mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-			return v.Name == "unique-cache-f69aef9fb01e88e6213362a04877452d"
+			return testVolumeCreateBodyContent(v, "unique-cache-f69aef9fb01e88e6213362a04877452d")
 		}),
 	).
 		Return(types.Volume{}, testErr).
@@ -551,7 +548,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 					"VolumeCreate",
 					mock.Anything,
 					mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-						return v.Name == testCase.expectedVolumeName
+						return testVolumeCreateBodyContent(v, testCase.expectedVolumeName)
 					}),
 				).
 					Return(types.Volume{Name: testCase.expectedVolumeName}, testCase.volumeCreateErr).
@@ -654,4 +651,11 @@ func TestDefaultManager_Binds(t *testing.T) {
 	}
 
 	assert.Equal(t, expectedElements, m.Binds())
+}
+
+func testVolumeCreateBodyContent(v volume.VolumeCreateBody, expectedVolumeName string) bool {
+	return v.Name == expectedVolumeName &&
+		// ensure labeler has been used
+		// test for the full list of labels is part of the labels package.
+		len(v.Labels) > 0 && v.Labels["com.gitlab.gitlab-runner.type"] == "cache"
 }
