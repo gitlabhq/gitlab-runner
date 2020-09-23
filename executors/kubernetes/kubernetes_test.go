@@ -1818,6 +1818,67 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
+		"uses default security context flags for containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					assert.Empty(
+						t,
+						c.SecurityContext.Privileged,
+						"Container security context Privileged should be empty",
+					)
+					assert.Empty(
+						t,
+						c.SecurityContext.AllowPrivilegeEscalation,
+						"Container security context AllowPrivilegeEscalation should be empty",
+					)
+				}
+			},
+		},
+		"configures security context flags for un-privileged containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:                "default",
+						Privileged:               false,
+						AllowPrivilegeEscalation: false,
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					require.NotNil(t, c.SecurityContext.Privileged)
+					assert.False(t, *c.SecurityContext.Privileged)
+					require.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation)
+					assert.False(t, *c.SecurityContext.AllowPrivilegeEscalation)
+				}
+			},
+		},
+		"configures security context flags for privileged containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:                "default",
+						Privileged:               true,
+						AllowPrivilegeEscalation: true,
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					require.NotNil(t, c.SecurityContext.Privileged)
+					assert.True(t, *c.SecurityContext.Privileged)
+					require.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation)
+					assert.True(t, *c.SecurityContext.AllowPrivilegeEscalation)
+				}
+			},
+		},
 		"configures helper container": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{

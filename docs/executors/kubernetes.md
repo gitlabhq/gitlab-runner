@@ -68,6 +68,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
   the namespace overwrite environment variable (documented below). When empty,
   it disables the namespace overwrite feature
 - `privileged`: Run containers with the privileged flag
+- `allow_privilege_escalation`: Run all containers with the `allowPrivilegeEscalation` flag enabled.
 - `cpu_limit`: The CPU allocation given to build containers
 - `cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature
 - `memory_limit`: The amount of memory allocated to build containers
