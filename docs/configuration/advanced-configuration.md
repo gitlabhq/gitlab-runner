@@ -570,15 +570,15 @@ Example:
   IdleTime = 600
   MaxBuilds = 100
   MachineName = "auto-scale-%s"
-  MachineDriver = "digitalocean"
+  MachineDriver = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
   MachineOptions = [
-      "digitalocean-image=coreos-stable",
-      "digitalocean-ssh-user=core",
-      "digitalocean-access-token=DO_ACCESS_TOKEN",
-      "digitalocean-region=nyc2",
-      "digitalocean-size=4gb",
-      "digitalocean-private-networking",
-      "engine-registry-mirror=http://10.11.12.13:12345"
+      "google-project=GOOGLE-PROJECT-ID",
+      "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
+      "google-machine-type=GOOGLE-MACHINE-TYPE", # e.g. 'n1-standard-8'
+      "google-machine-image=ubuntu-os-cloud/global/images/family/ubuntu-1804-lts",
+      "google-username=root",
+      "google-use-internal-ip",
+      "engine-registry-mirror=https://mirror.gcr.io"
   ]
   [[runners.machine.autoscaling]]
     Periods = ["* * 9-17 * * mon-fri *"]
