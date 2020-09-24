@@ -690,6 +690,18 @@ func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info 
 	return b.writeUploadArtifacts(w, info, false)
 }
 
+func (b *AbstractShell) writeCleanupFileVariablesScript(w ShellWriter, info common.ShellScriptInfo) error {
+	for _, variable := range info.Build.GetAllVariables() {
+		if !variable.File {
+			continue
+		}
+
+		w.RmFile(w.TmpFile(variable.Key))
+	}
+
+	return nil
+}
+
 func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {
 	methods := map[common.BuildStage]func(ShellWriter, common.ShellScriptInfo) error{
 		common.BuildStagePrepare:                  b.writePrepareScript,
@@ -700,6 +712,7 @@ func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage,
 		common.BuildStageArchiveCache:             b.writeArchiveCacheScript,
 		common.BuildStageUploadOnSuccessArtifacts: b.writeUploadArtifactsOnSuccessScript,
 		common.BuildStageUploadOnFailureArtifacts: b.writeUploadArtifactsOnFailureScript,
+		common.BuildStageCleanupFileVariables:     b.writeCleanupFileVariablesScript,
 	}
 
 	fn, ok := methods[buildStage]
