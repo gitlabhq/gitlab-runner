@@ -419,15 +419,15 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
     IdleTime = 600                   # Each machine can be in Idle state up to 600 seconds (after this it will be removed) - when Off Peak time mode is off
     MaxBuilds = 100                  # Each machine can handle up to 100 jobs in a row (after this it will be removed)
     MachineName = "auto-scale-%s"    # Each machine will have a unique name ('%s' is required)
-    MachineDriver = "digitalocean"   # Docker Machine is using the 'digitalocean' driver
-    MachineOptions = [
-        "digitalocean-image=coreos-stable",
-        "digitalocean-ssh-user=core",
-        "digitalocean-access-token=DO_ACCESS_TOKEN",
-        "digitalocean-region=nyc2",
-        "digitalocean-size=4gb",
-        "digitalocean-private-networking",
-        "engine-registry-mirror=http://10.11.12.13:12345"   # Docker Machine is using registry mirroring
+    MachineOptions = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
+    MachineDrive = [
+      "google-project=GOOGLE-PROJECT-ID",
+      "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
+      "google-machine-type=GOOGLE-MACHINE-TYPE", # e.g. 'n1-standard-8'
+      "google-machine-image=ubuntu-os-cloud/global/images/family/ubuntu-1804-lts",
+      "google-username=root",
+      "google-use-internal-ip",
+      "engine-registry-mirror=https://mirror.gcr.io"
     ]
     [[runners.machine.autoscaling]]  # Define periods with different settings
       Periods = ["* * 9-17 * * mon-fri *"] # Every workday between 9 and 17 UTC
