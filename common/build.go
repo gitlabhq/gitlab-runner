@@ -75,6 +75,7 @@ const (
 	BuildStageArchiveCache             BuildStage = "archive_cache"
 	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
+	BuildStageCleanupFileVariables     BuildStage = "cleanup_file_variables"
 )
 
 // staticBuildStages is a list of BuildStages which are executed on every build
@@ -88,6 +89,7 @@ var staticBuildStages = []BuildStage{
 	BuildStageArchiveCache,
 	BuildStageUploadOnSuccessArtifacts,
 	BuildStageUploadOnFailureArtifacts,
+	BuildStageCleanupFileVariables,
 }
 
 const (
@@ -334,6 +336,7 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 		BuildStageArchiveCache:             true,
 		BuildStageUploadOnFailureArtifacts: true,
 		BuildStageUploadOnSuccessArtifacts: true,
+		BuildStageCleanupFileVariables:     true,
 	}
 
 	predefined, ok := env[buildStage]
@@ -354,6 +357,7 @@ func getStageDescription(stage BuildStage) string {
 		BuildStageArchiveCache:             "Saving cache",
 		BuildStageUploadOnFailureArtifacts: "Uploading artifacts for failed job",
 		BuildStageUploadOnSuccessArtifacts: "Uploading artifacts for successful job",
+		BuildStageCleanupFileVariables:     "Cleaning up file based variables",
 	}
 
 	description, ok := descriptions[stage]
@@ -408,11 +412,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 			}
 		}
 
-		// Execute after script (after_script)
-		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
-		defer timeoutCancel()
-
-		_ = b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
+		b.executeAfterScript(ctx, executor)
 	}
 
 	// Execute post script (cache store, artifacts upload)
@@ -425,6 +425,8 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	// track job end and execute referees
 	endTime := time.Now()
 	b.executeUploadReferees(ctx, startTime, endTime)
+
+	b.removeFileBasedVariables(ctx, executor)
 
 	// Use job's error as most important
 	if err != nil {
@@ -442,6 +444,20 @@ func StepToBuildStage(s Step) BuildStage {
 
 func (b *Build) createReferees(executor Executor) {
 	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
+}
+
+func (b *Build) executeAfterScript(ctx context.Context, executor Executor) {
+	timeoutCtx, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
+	defer timeoutCancel()
+
+	_ = b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
+}
+
+func (b *Build) removeFileBasedVariables(ctx context.Context, executor Executor) {
+	err := b.executeStage(ctx, BuildStageCleanupFileVariables, executor)
+	if err != nil {
+		b.Log().WithError(err).Warning("Error while executing file based variables removal script")
+	}
 }
 
 func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime time.Time) {
