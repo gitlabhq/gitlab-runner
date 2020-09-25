@@ -896,3 +896,39 @@ func TestSkipBuildStage(t *testing.T) {
 		})
 	}
 }
+
+func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
+	testVar1 := "VAR_1"
+	testVar2 := "VAR_2"
+	testVar3 := "VAR_3"
+	testVar4 := "VAR_4"
+
+	testPath1 := "path/VAR_1_file"
+	testPath3 := "path/VAR_3_file"
+
+	info := common.ShellScriptInfo{
+		Build: &common.Build{
+			JobResponse: common.JobResponse{
+				Variables: common.JobVariables{
+					{Key: testVar1, Value: "test", File: true},
+					{Key: testVar2, Value: "test", File: false},
+					{Key: testVar3, Value: "test", File: true},
+					{Key: testVar4, Value: "test", File: false},
+				},
+			},
+		},
+	}
+
+	mockShellWriter := &MockShellWriter{}
+	defer mockShellWriter.AssertExpectations(t)
+
+	mockShellWriter.On("TmpFile", testVar1).Return(testPath1).Once()
+	mockShellWriter.On("RmFile", testPath1).Once()
+	mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()
+	mockShellWriter.On("RmFile", testPath3).Once()
+
+	shell := new(AbstractShell)
+
+	err := shell.writeCleanupFileVariablesScript(mockShellWriter, info)
+	assert.NoError(t, err)
+}
