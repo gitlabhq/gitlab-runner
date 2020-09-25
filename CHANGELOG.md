@@ -1,3 +1,11 @@
+## v13.4.1 (2020-09-25)
+
+### Security
+
+- Path traversal for `DOCKER_AUTH_CONFIG` on Windows
+- Drop `CAP_NET_RAW` by default for Kubernetes executor
+- Delete file based variables at the end of the job
+
 ## v13.4.0 (2020-09-18)
 
 ### New features
