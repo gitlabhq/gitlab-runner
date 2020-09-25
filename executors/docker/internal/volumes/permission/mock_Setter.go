@@ -13,7 +13,7 @@ type MockSetter struct {
 	mock.Mock
 }
 
-// Set provides a mock function with given fields: ctx, volumeName
+// Set provides a mock function with given fields: ctx, volumeName, labels
 func (_m *MockSetter) Set(ctx context.Context, volumeName string, labels map[string]string) error {
 	ret := _m.Called(ctx, volumeName, labels)
 
