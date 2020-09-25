@@ -15,6 +15,7 @@ import (
 	"github.com/docker/cli/cli/config/credentials"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/homedir"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -26,8 +27,9 @@ const (
 )
 
 var (
-	HomeDirectory = homedir.Get()
-	errNoHomeDir  = errors.New("no home directory found")
+	HomeDirectory    = homedir.Get()
+	errNoHomeDir     = errors.New("no home directory found")
+	errPathTraversal = errors.New("path traversal is not allowed")
 )
 
 // RegistryInfo represents the source and authentication for a given registry.
@@ -36,7 +38,7 @@ type RegistryInfo struct {
 	AuthConfig types.AuthConfig
 }
 
-type authConfigResolver func() (string, map[string]types.AuthConfig)
+type authConfigResolver func() (string, map[string]types.AuthConfig, error)
 
 // ResolveConfigForImage returns the auth configuration for a particular image.
 // Returns nil on no config found.
@@ -44,20 +46,20 @@ type authConfigResolver func() (string, map[string]types.AuthConfig)
 func ResolveConfigForImage(
 	imageName, dockerAuthConfig, username string,
 	credentials []common.Credentials,
-) *RegistryInfo {
-	authConfigs := ResolveConfigs(dockerAuthConfig, username, credentials)
-	if authConfigs == nil {
-		return nil
+) (*RegistryInfo, error) {
+	authConfigs, err := ResolveConfigs(dockerAuthConfig, username, credentials)
+	if len(authConfigs) == 0 || err != nil {
+		return nil, err
 	}
 
 	indexName, _ := splitDockerImageName(imageName)
 	for registry, info := range authConfigs {
 		if indexName == convertToHostname(registry) {
-			return &info
+			return &info, nil
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ResolveConfigs returns the authentication configuration for docker registries.
@@ -66,22 +68,29 @@ func ResolveConfigForImage(
 // 2. ~/.docker/config.json or .dockercfg
 // 3. Build credentials
 // Returns a map of registry hostname to RegistryInfo
-func ResolveConfigs(dockerAuthConfig, username string, credentials []common.Credentials) map[string]RegistryInfo {
+func ResolveConfigs(
+	dockerAuthConfig, username string,
+	credentials []common.Credentials,
+) (map[string]RegistryInfo, error) {
 	resolvers := []authConfigResolver{
-		func() (string, map[string]types.AuthConfig) {
+		func() (string, map[string]types.AuthConfig, error) {
 			return getUserConfiguration(dockerAuthConfig)
 		},
-		func() (string, map[string]types.AuthConfig) {
+		func() (string, map[string]types.AuthConfig, error) {
 			return getHomeDirConfiguration(username)
 		},
-		func() (string, map[string]types.AuthConfig) {
+		func() (string, map[string]types.AuthConfig, error) {
 			return getBuildConfiguration(credentials)
 		},
 	}
 	res := make(map[string]RegistryInfo)
 
 	for _, r := range resolvers {
-		source, configs := r()
+		source, configs, err := r()
+		if errors.Is(err, errPathTraversal) {
+			return nil, err
+		}
+
 		for registry, conf := range configs {
 			if _, ok := res[registry]; !ok {
 				res[registry] = RegistryInfo{
@@ -92,25 +101,31 @@ func ResolveConfigs(dockerAuthConfig, username string, credentials []common.Cred
 		}
 	}
 
-	return res
+	return res, nil
 }
 
-func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig) {
-	authConfigs, _ := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig))
+func getUserConfiguration(dockerAuthConfig string) (string, map[string]types.AuthConfig, error) {
+	authConfigs, err := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig))
+	if errors.Is(err, errPathTraversal) {
+		return "", nil, err
+	}
 	if authConfigs == nil {
-		return "", nil
+		return "", nil, nil
 	}
 
-	return authConfigSourceNameUserVariable, authConfigs
+	return authConfigSourceNameUserVariable, authConfigs, nil
 }
 
-func getHomeDirConfiguration(username string) (string, map[string]types.AuthConfig) {
-	sourceFile, authConfigs, _ := readDockerConfigsFromHomeDir(username)
+func getHomeDirConfiguration(username string) (string, map[string]types.AuthConfig, error) {
+	sourceFile, authConfigs, err := readDockerConfigsFromHomeDir(username)
+	if errors.Is(err, errPathTraversal) {
+		return "", nil, err
+	}
 	if authConfigs == nil {
-		return "", nil
+		return "", nil, nil
 	}
 
-	return sourceFile, authConfigs
+	return sourceFile, authConfigs, nil
 }
 
 // EncodeConfig constructs a token from an AuthConfig, suitable for
@@ -128,7 +143,7 @@ func EncodeConfig(authConfig *types.AuthConfig) (string, error) {
 	return base64.URLEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-func getBuildConfiguration(credentials []common.Credentials) (string, map[string]types.AuthConfig) {
+func getBuildConfiguration(credentials []common.Credentials) (string, map[string]types.AuthConfig, error) {
 	authConfigs := make(map[string]types.AuthConfig)
 
 	for _, credentials := range credentials {
@@ -143,7 +158,7 @@ func getBuildConfiguration(credentials []common.Credentials) (string, map[string
 		}
 	}
 
-	return authConfigSourceNameJobPayload, authConfigs
+	return authConfigSourceNameJobPayload, authConfigs, nil
 }
 
 // splitDockerImageName breaks a reposName into an index name and remote name
@@ -210,6 +225,9 @@ func readConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
 	config := &configfile.ConfigFile{}
 
 	if err := config.LoadFromReader(r); err != nil {
+		if errors.Is(err, io.EOF) {
+			err = nil
+		}
 		return nil, err
 	}
 
@@ -236,6 +254,11 @@ func readConfigsFromReader(r io.Reader) (map[string]types.AuthConfig, error) {
 }
 
 func readConfigsFromCredentialsStore(config *configfile.ConfigFile) (map[string]types.AuthConfig, error) {
+	if config.CredentialsStore != filepath.Base(config.CredentialsStore) {
+		// Fail processing if credential store attempting path traversal are detected
+		return nil, errPathTraversal
+	}
+
 	store := credentials.NewNativeStore(config, config.CredentialsStore)
 	newAuths, err := store.GetAll()
 	if err != nil {
@@ -249,6 +272,11 @@ func readConfigsFromCredentialsHelper(config *configfile.ConfigFile) (map[string
 	helpersAuths := make(map[string]types.AuthConfig)
 
 	for registry, helper := range config.CredentialHelpers {
+		if helper != filepath.Base(helper) {
+			// Fail processing if credential helpers attempting path traversal are detected
+			return nil, errPathTraversal
+		}
+
 		store := credentials.NewNativeStore(config, helper)
 
 		newAuths, err := store.Get(registry)
