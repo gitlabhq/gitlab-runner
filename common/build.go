@@ -455,11 +455,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 			}
 		}
 
-		// Execute after script (after_script)
-		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
-		defer timeoutCancel()
-
-		_ = b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
+		b.executeAfterScript(ctx, executor)
 	}
 
 	// Execute post script (cache store, artifacts upload)
@@ -491,6 +487,13 @@ func StepToBuildStage(s Step) BuildStage {
 
 func (b *Build) createReferees(executor Executor) {
 	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
+}
+
+func (b *Build) executeAfterScript(ctx context.Context, executor Executor) {
+	timeoutCtx, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
+	defer timeoutCancel()
+
+	_ = b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
 }
 
 func (b *Build) removeFileBasedVariables(ctx context.Context, executor Executor) {
