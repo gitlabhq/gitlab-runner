@@ -261,3 +261,39 @@ func buildVariables(bv common.JobVariables) []api.EnvVar {
 	}
 	return e
 }
+
+func getCapabilities(defaultCapDrop []string, capAdd []string, capDrop []string) *api.Capabilities {
+	enabled := make(map[string]bool)
+
+	for _, v := range defaultCapDrop {
+		enabled[v] = false
+	}
+
+	for _, v := range capAdd {
+		enabled[v] = true
+	}
+
+	for _, v := range capDrop {
+		enabled[v] = false
+	}
+
+	if len(enabled) < 1 {
+		return nil
+	}
+
+	return buildCapabilities(enabled)
+}
+
+func buildCapabilities(enabled map[string]bool) *api.Capabilities {
+	capabilities := new(api.Capabilities)
+
+	for c, add := range enabled {
+		if add {
+			capabilities.Add = append(capabilities.Add, api.Capability(c))
+			continue
+		}
+		capabilities.Drop = append(capabilities.Drop, api.Capability(c))
+	}
+
+	return capabilities
+}
