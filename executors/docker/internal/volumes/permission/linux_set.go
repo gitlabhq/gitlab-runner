@@ -66,7 +66,11 @@ func (d *dockerLinuxSetter) Set(ctx context.Context, volumeName string, labels m
 	return nil
 }
 
-func (d *dockerLinuxSetter) createContainer(ctx context.Context, volumeName string, labels map[string]string) (string, error) {
+func (d *dockerLinuxSetter) createContainer(
+	ctx context.Context,
+	volumeName string,
+	labels map[string]string,
+) (string, error) {
 	volumeBinding := fmt.Sprintf("%s:%s", volumeName, dstMount)
 
 	config := &container.Config{
