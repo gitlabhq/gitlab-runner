@@ -37,7 +37,8 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 	containerCmdMatcher := mock.MatchedBy(func(cfg *container.Config) bool {
 		assert.Equal(t, helperImageID, cfg.Image)
 		assert.Len(t, cfg.Cmd, 3)
-		assert.Contains(t, cfg.Labels, "foo")
+		require.Contains(t, cfg.Labels, "foo")
+		assert.Equal(t, "bar", cfg.Labels["foo"])
 		return true
 	})
 
