@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
