@@ -76,6 +76,7 @@ Citus
 clonable
 Cloudwatch
 Cobertura
+Codepen
 Cognito
 colocated
 colocating
@@ -283,6 +284,7 @@ namespaces
 namespacing
 namespacings
 Nanoc
+Netlify
 NGINX
 Nokogiri
 npm
@@ -296,6 +298,7 @@ OmniAuth
 onboarding
 OpenID
 OpenShift
+Opsgenie
 Packagist
 parallelization
 parallelizations
@@ -380,6 +383,7 @@ reusability
 reverified
 reverifies
 reverify
+RHEL
 rollout
 rollouts
 rsync
@@ -402,6 +406,7 @@ sanitization
 sbt
 scatterplot
 scatterplots
+Schemastore
 Sendmail
 Sentry
 serializer
