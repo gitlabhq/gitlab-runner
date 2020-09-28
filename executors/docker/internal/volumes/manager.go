@@ -172,7 +172,7 @@ func (m *manager) createHostBasedCacheVolume(destination string) error {
 func (m *manager) createCacheVolume(ctx context.Context, destination string) (string, error) {
 	destination, err := m.absolutePath(destination)
 	if err != nil {
-		return "", fmt.Errorf("defining absolute path:%w", err)
+		return "", fmt.Errorf("defining absolute path: %w", err)
 	}
 
 	err = m.managedVolumes.Add(destination)
