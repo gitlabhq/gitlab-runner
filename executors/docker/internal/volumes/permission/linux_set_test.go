@@ -37,6 +37,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 	containerCmdMatcher := mock.MatchedBy(func(cfg *container.Config) bool {
 		assert.Equal(t, helperImageID, cfg.Image)
 		assert.Len(t, cfg.Cmd, 3)
+		assert.Contains(t, cfg.Labels, "foo")
 		return true
 	})
 
@@ -153,7 +154,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 				},
 			}
 
-			err := setter.Set(context.Background(), volume, map[string]string{})
+			err := setter.Set(context.Background(), volume, map[string]string{"foo": "bar"})
 			assert.True(t, errors.Is(err, tt.expectedErr), "expected err %T, but got %T", tt.expectedErr, err)
 		})
 	}
