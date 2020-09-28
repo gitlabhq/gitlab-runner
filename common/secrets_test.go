@@ -11,10 +11,7 @@ import (
 
 func TestDefaultResolver_Resolve(t *testing.T) {
 	variableKey := "TEST_VARIABLE"
-	returnVariable := JobVariable{
-		Key:   variableKey,
-		Value: "test",
-	}
+	returnValue := "test"
 	secrets := Secrets{
 		variableKey: Secret{
 			Vault: &VaultSecret{
@@ -78,8 +75,14 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			getLogger:                getLogger,
 			supportedResolverPresent: true,
 			secrets:                  secrets,
-			expectedVariables:        JobVariables{returnVariable},
-			expectedError:            nil,
+			expectedVariables: JobVariables{
+				{
+					Key:   variableKey,
+					Value: returnValue,
+					File:  true,
+				},
+			},
+			expectedError: nil,
 		},
 		"no supported resolvers present": {
 			getLogger: func(t *testing.T) (logger, func()) {
@@ -115,8 +118,8 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 					Return("supported_resolver").
 					Maybe()
 				if tt.supportedResolverPresent {
-					supportedResolver.On("Resolve", variableKey).
-						Return(&returnVariable, tt.errorOnSecretResolving).
+					supportedResolver.On("Resolve").
+						Return(returnValue, tt.errorOnSecretResolving).
 						Once()
 				}
 			}

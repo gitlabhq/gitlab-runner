@@ -32,9 +32,9 @@ func (v *resolver) IsSupported() bool {
 	return v.secret.Vault != nil
 }
 
-func (v *resolver) Resolve(variableKey string) (*common.JobVariable, error) {
+func (v *resolver) Resolve() (string, error) {
 	if !v.IsSupported() {
-		return nil, secrets.NewResolvingUnsupportedSecretError(resolverName)
+		return "", secrets.NewResolvingUnsupportedSecretError(resolverName)
 	}
 
 	secret := v.secret.Vault
@@ -43,21 +43,15 @@ func (v *resolver) Resolve(variableKey string) (*common.JobVariable, error) {
 
 	s, err := newVaultService(url, secret)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	data, err := s.GetField(secret, secret)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	variable := &common.JobVariable{
-		Key:   variableKey,
-		Value: fmt.Sprintf("%v", data),
-		File:  true,
-	}
-
-	return variable, nil
+	return fmt.Sprintf("%v", data), nil
 }
 
 func init() {

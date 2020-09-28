@@ -42,7 +42,6 @@ func TestResolver_IsSupported(t *testing.T) {
 }
 
 func TestResolver_Resolve(t *testing.T) {
-	variableKey := "TEST_VARIABLE"
 	secret := common.Secret{
 		Vault: &common.VaultSecret{
 			Server: common.VaultServer{
@@ -55,7 +54,7 @@ func TestResolver_Resolve(t *testing.T) {
 		secret                    common.Secret
 		vaultServiceCreationError error
 		assertVaultServiceMock    func(s *service.MockVault)
-		expectedVariable          *common.JobVariable
+		expectedValue             string
 		expectedError             error
 	}{
 		"error on support detection": {
@@ -82,11 +81,7 @@ func TestResolver_Resolve(t *testing.T) {
 					Return(struct{ Date string }{Date: "2020-08-24"}, nil).
 					Once()
 			},
-			expectedVariable: &common.JobVariable{
-				Key:   variableKey,
-				Value: "{2020-08-24}",
-				File:  true,
-			},
+			expectedValue: "{2020-08-24}",
 			expectedError: nil,
 		},
 	}
@@ -113,7 +108,7 @@ func TestResolver_Resolve(t *testing.T) {
 
 			r := newResolver(tt.secret)
 
-			variable, err := r.Resolve(variableKey)
+			value, err := r.Resolve()
 
 			if tt.expectedError != nil {
 				assert.True(t, errors.As(err, &tt.expectedError))
@@ -121,7 +116,7 @@ func TestResolver_Resolve(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedVariable, variable)
+			assert.Equal(t, tt.expectedValue, value)
 		})
 	}
 }

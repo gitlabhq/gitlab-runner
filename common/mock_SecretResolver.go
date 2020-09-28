@@ -37,22 +37,20 @@ func (_m *MockSecretResolver) Name() string {
 	return r0
 }
 
-// Resolve provides a mock function with given fields: variableKey
-func (_m *MockSecretResolver) Resolve(variableKey string) (*JobVariable, error) {
-	ret := _m.Called(variableKey)
+// Resolve provides a mock function with given fields:
+func (_m *MockSecretResolver) Resolve() (string, error) {
+	ret := _m.Called()
 
-	var r0 *JobVariable
-	if rf, ok := ret.Get(0).(func(string) *JobVariable); ok {
-		r0 = rf(variableKey)
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*JobVariable)
-		}
+		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(variableKey)
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
 	} else {
 		r1 = ret.Error(1)
 	}

@@ -26,7 +26,7 @@ type secretResolverFactory func(secret Secret) SecretResolver
 type SecretResolver interface {
 	Name() string
 	IsSupported() bool
-	Resolve(variableKey string) (*JobVariable, error)
+	Resolve() (string, error)
 }
 
 var (
@@ -116,5 +116,16 @@ func (r *defaultSecretsResolver) handleSecret(variableKey string, secret Secret)
 
 	r.logger.Println(fmt.Sprintf("Using %q secret resolver...", sr.Name()))
 
-	return sr.Resolve(variableKey)
+	value, err := sr.Resolve()
+	if err != nil {
+		return nil, err
+	}
+
+	variable := &JobVariable{
+		Key:   variableKey,
+		Value: value,
+		File:  true,
+	}
+
+	return variable, nil
 }
