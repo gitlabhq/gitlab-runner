@@ -244,7 +244,7 @@ For example:
 ```toml
 [runners.machine]
   MachineName = "auto-scale-%s"
-  MachineDriver = "digitalocean"
+  MachineDriver = "google"
   IdleCount = 10
   IdleTime = 1800
   [[runners.machine.autoscaling]]
