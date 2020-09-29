@@ -5,9 +5,9 @@ run:
   modules-download-mode: vendor
   tests: true
   skip-dirs:
-    - vendor
+  - vendor
   skip-files:
-    - mock_*.go
+  - mock_*.go
 
 output:
   format: colored-line-number
@@ -29,43 +29,43 @@ linters-settings:
     min-occurrences: 3
   gocritic:
     enabled-checks:
-      - appendCombine
-      - badCall
-      - badCond
-      - boolExprSimplify
-      - codegenComment
-      - commentFormatting
-      - commentedOutCode
-      - deprecatedComment
-      - dupImport
-      - emptyFallthrough
-      - emptyStringTest
-      - equalFold
-      - evalOrder
-      - exitAfterDefer
-      - flagName
-      - hexLiteral
-      - indexAlloc
-      - initClause
-      - methodExprCall
-      - nestingReduce
-      - newDeref
-      - nilValReturn
-      - offBy1
-      - ptrToRefParam
-      - rangeExprCopy
-      - regexpPattern
-      - sloppyReassign
-      - stringXbytes
-      - truncateCmp
-      - typeAssertChain
-      - typeUnparen
-      - underef
-      - unnecessaryBlock
-      - valSwap
-      - weakCond
-      - wrapperFunc
-      - yodaStyleExpr
+    - appendCombine
+    - badCall
+    - badCond
+    - boolExprSimplify
+    - codegenComment
+    - commentFormatting
+    - commentedOutCode
+    - deprecatedComment
+    - dupImport
+    - emptyFallthrough
+    - emptyStringTest
+    - equalFold
+    - evalOrder
+    - exitAfterDefer
+    - flagName
+    - hexLiteral
+    - indexAlloc
+    - initClause
+    - methodExprCall
+    - nestingReduce
+    - newDeref
+    - nilValReturn
+    - offBy1
+    - ptrToRefParam
+    - rangeExprCopy
+    - regexpPattern
+    - sloppyReassign
+    - stringXbytes
+    - truncateCmp
+    - typeAssertChain
+    - typeUnparen
+    - underef
+    - unnecessaryBlock
+    - valSwap
+    - weakCond
+    - wrapperFunc
+    - yodaStyleExpr
   gocyclo:
     min-complexity: 10
   govet:
@@ -79,79 +79,79 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - bodyclose
-    - deadcode
-    - dogsled
-    - errcheck
-    - funlen
-    - goargs
-    - gocognit
-    - goconst
-    - gocritic
-    - goimports
-    - golint
-    - goprintffuncname
-    - gosimple
-    - govet
-    - ineffassign
-    - lll
-    - misspell
-    - nakedret
-    - staticcheck
-    - nestif
-    - structcheck
-    - typecheck
-    - unconvert
-    - unparam
-    - varcheck
-    - whitespace
+  - bodyclose
+  - deadcode
+  - dogsled
+  - errcheck
+  - funlen
+  - goargs
+  - gocognit
+  - goconst
+  - gocritic
+  - goimports
+  - golint
+  - goprintffuncname
+  - gosimple
+  - govet
+  - ineffassign
+  - lll
+  - misspell
+  - nakedret
+  - staticcheck
+  - nestif
+  - structcheck
+  - typecheck
+  - unconvert
+  - unparam
+  - varcheck
+  - whitespace
   fast: false
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
-    - path: helpers/shell_escape.go
-      linters:
-        - gocyclo
-    - path: executors/kubernetes/kubernetes_test.go
-      linters:
-        - gocyclo
-    - path: executors/kubernetes/util_test.go
-      linters:
-        - gocyclo
-    - path: executors/kubernetes/exec_test.go
-      linters:
-        - gocyclo
-    - path: executors/parallels/
-      linters:
-        - gocyclo
-    - path: executors/virtualbox/
-      linters:
-        - gocyclo
-    - linters:
-        - golint
-      text: "don't use ALL_CAPS in Go names; use CamelCase"
-    - linters:
-        - golint
-      text: "don't use an underscore in package name"
-    - path: ".*_test.go"
-      linters:
-        - bodyclose
-        - funlen
-        - gocognit
-        - goconst
-    - path: ".*_test.go"
-      text: "Error return value is not checked"
-      linters:
-        - errcheck
-    - path: ".*_test.go"
-      text: "regexpMust"
-      linters:
-        - errcheck
-        - gocritic
-    - path: referees/prometheus_api.go
-      linters:
-        - deadcode
-    - path: executors/docker/docker_command_test.go # Ignore until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is solved
-      linters:
-        - unused
+  - path: helpers/shell_escape.go
+    linters:
+    - gocyclo
+  - path: executors/kubernetes/kubernetes_test.go
+    linters:
+    - gocyclo
+  - path: executors/kubernetes/util_test.go
+    linters:
+    - gocyclo
+  - path: executors/kubernetes/exec_test.go
+    linters:
+    - gocyclo
+  - path: executors/parallels/
+    linters:
+    - gocyclo
+  - path: executors/virtualbox/
+    linters:
+    - gocyclo
+  - linters:
+    - golint
+    text: "don't use ALL_CAPS in Go names; use CamelCase"
+  - linters:
+    - golint
+    text: "don't use an underscore in package name"
+  - path: ".*_test.go"
+    linters:
+    - bodyclose
+    - funlen
+    - gocognit
+    - goconst
+  - path: ".*_test.go"
+    text: "Error return value is not checked"
+    linters:
+    - errcheck
+  - path: ".*_test.go"
+    text: "regexpMust"
+    linters:
+    - errcheck
+    - gocritic
+  - path: referees/prometheus_api.go
+    linters:
+    - deadcode
+  - path: executors/docker/docker_command_test.go # Ignore until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is solved
+    linters:
+    - unused
