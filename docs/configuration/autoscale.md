@@ -401,7 +401,7 @@ each host created by Docker Machine.
 
 ## A complete example of `config.toml`
 
-The `config.toml` below uses the [`digitalocean` Docker Machine driver](https://docs.docker.com/machine/drivers/digital-ocean/):
+The `config.toml` below uses the [`google` Docker Machine driver](https://docs.docker.com/machine/drivers/gce/):
 
 ```toml
 concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
@@ -419,8 +419,8 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
     IdleTime = 600                   # Each machine can be in Idle state up to 600 seconds (after this it will be removed) - when Off Peak time mode is off
     MaxBuilds = 100                  # Each machine can handle up to 100 jobs in a row (after this it will be removed)
     MachineName = "auto-scale-%s"    # Each machine will have a unique name ('%s' is required)
-    MachineOptions = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
-    MachineDrive = [
+    MachineDriver = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
+    MachineOptions = [
       "google-project=GOOGLE-PROJECT-ID",
       "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
       "google-machine-type=GOOGLE-MACHINE-TYPE", # e.g. 'n1-standard-8'
@@ -449,6 +449,6 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
       Insecure = false
 ```
 
-Note that the `MachineOptions` parameter contains options for the `digitalocean`
-driver which is used by Docker Machine to spawn machines hosted on Digital Ocean,
+Note that the `MachineOptions` parameter contains options for the `google`
+driver which is used by Docker Machine to spawn machines hosted on Google Compute Engine,
 and one option for Docker Machine itself (`engine-registry-mirror`).
