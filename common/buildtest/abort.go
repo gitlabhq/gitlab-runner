@@ -47,7 +47,7 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup func(bu
 			},
 			includesStage: abortIncludeStages,
 			excludesStage: abortExcludeStages,
-			expectedErr:   &common.BuildError{FailureReason: common.JobCanceled},
+			expectedErr:   &common.BuildError{FailureReason: common.JobAborted},
 		},
 		"job is canceling": {
 			onUserStep: func(_ *common.Build, trace common.JobTrace) {

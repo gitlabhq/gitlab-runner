@@ -30,6 +30,8 @@ const (
 	JobExecutionTimeout JobFailureReason = "job_execution_timeout"
 	// JobCanceled is only internal to runner, and not used inside of rails.
 	JobCanceled JobFailureReason = "job_canceled"
+	// JobAborted is only internal to runner, and not used inside of rails.
+	JobAborted JobFailureReason = "job_aborted"
 )
 
 const (
