@@ -799,7 +799,7 @@ See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
 | `image`          | string  | Default Docker image to use for builds when none is specified |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled |
-| `allow_privilege_escalation` | boolean | Run all containers with the `allowPrivilegeEscalation` flag enabled |
+| `allow_privilege_escalation` | boolean | Optional runs all containers with the `allowPrivilegeEscalation` flag enabled |
 | `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs |
 | `image_pull_secrets` | array | A list of secrets that are used to authenticate Docker image pulling |
 

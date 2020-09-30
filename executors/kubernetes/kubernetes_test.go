@@ -1833,7 +1833,7 @@ func TestSetupBuildPod(t *testing.T) {
 						c.SecurityContext.Privileged,
 						"Container security context Privileged should be empty",
 					)
-					assert.Empty(
+					assert.Nil(
 						t,
 						c.SecurityContext.AllowPrivilegeEscalation,
 						"Container security context AllowPrivilegeEscalation should be empty",
@@ -1847,7 +1847,7 @@ func TestSetupBuildPod(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Namespace:                "default",
 						Privileged:               false,
-						AllowPrivilegeEscalation: false,
+						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(false),
 					},
 				},
 			},
@@ -1866,7 +1866,7 @@ func TestSetupBuildPod(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Namespace:                "default",
 						Privileged:               true,
-						AllowPrivilegeEscalation: true,
+						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(true),
 					},
 				},
 			},

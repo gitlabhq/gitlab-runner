@@ -471,7 +471,7 @@ func (s *executor) buildContainer(
 	containerCommand ...string,
 ) api.Container {
 	privileged := false
-	allowPrivilegeEscalation := false
+	var allowPrivilegeEscalation *bool
 	containerPorts := make([]api.ContainerPort, len(imageDefinition.Ports))
 	proxyPorts := make([]proxy.Port, len(imageDefinition.Ports))
 
@@ -515,7 +515,7 @@ func (s *executor) buildContainer(
 		VolumeMounts: s.getVolumeMounts(),
 		SecurityContext: &api.SecurityContext{
 			Privileged:               &privileged,
-			AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+			AllowPrivilegeEscalation: allowPrivilegeEscalation,
 			Capabilities: getCapabilities(
 				GetDefaultCapDrop(),
 				s.Config.Kubernetes.CapAdd,
