@@ -41,9 +41,8 @@ func RunBuild(t *testing.T, build *common.Build) error {
 	return err
 }
 
-// OnUserStage executes the provided function when the CurrentStage() enters
-// a non-predefined stage.
-func OnUserStage(build *common.Build, fn func()) func() {
+// OnStage executes the provided function when the provided stage is entered.
+func OnStage(build *common.Build, stage string, fn func()) func() {
 	exit := make(chan struct{})
 
 	go func() {
@@ -52,8 +51,9 @@ func OnUserStage(build *common.Build, fn func()) func() {
 			case <-exit:
 				return
 
-			case <-time.After(time.Second):
-				if strings.HasPrefix(string(build.CurrentStage()), "step_") {
+			case <-time.After(200 * time.Millisecond):
+				currentStage := string(build.CurrentStage())
+				if strings.HasPrefix(currentStage, stage) {
 					fn()
 					return
 				}
@@ -64,4 +64,10 @@ func OnUserStage(build *common.Build, fn func()) func() {
 	return func() {
 		close(exit)
 	}
+}
+
+// OnUserStage executes the provided function when the CurrentStage() enters
+// a non-predefined stage.
+func OnUserStage(build *common.Build, fn func()) func() {
+	return OnStage(build, "step_", fn)
 }
