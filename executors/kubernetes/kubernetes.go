@@ -862,7 +862,7 @@ func (e *invalidHostAliasDNSError) Is(err error) bool {
 	return ok
 }
 
-func (s *executor) prepareHostAlias() (*api.HostAlias, error) {
+func (s *executor) prepareHostAliases() ([]api.HostAlias, error) {
 	supportsHostAliases, err := s.featureChecker.IsHostAliasSupported()
 	switch {
 	case errors.Is(err, &badVersionError{}):
@@ -874,10 +874,44 @@ func (s *executor) prepareHostAlias() (*api.HostAlias, error) {
 		return nil, nil
 	}
 
-	return s.createHostAlias()
+	return s.createHostAliases()
 }
 
-func (s *executor) createHostAlias() (*api.HostAlias, error) {
+func getHostAliasEntry(hostAliases []api.HostAlias, alias string) *api.HostAlias {
+	localhostIdx := -1
+	for idx := range hostAliases {
+		if hostAliases[idx].IP == alias {
+			localhostIdx = idx
+			break
+		}
+	}
+	if localhostIdx < 0 {
+		return nil
+	}
+	return &hostAliases[localhostIdx]
+}
+
+func (s *executor) createHostAliases() ([]api.HostAlias, error) {
+	servicesHostAlias, err := s.createServicesHostAlias()
+	if err != nil {
+		return nil, err
+	}
+
+	hostAliases := s.Config.Kubernetes.GetHostAliases()
+
+	// if localhost IP is also defined in configuration then use it to avoid duplicating localhost entry
+	var localhostEntry = getHostAliasEntry(hostAliases, "127.0.0.1")
+	if localhostEntry != nil {
+		// append aliases to already existing "127.0.0.1" host alias
+		localhostEntry.Hostnames = append(localhostEntry.Hostnames, servicesHostAlias.Hostnames...)
+	} else {
+		// no entry found for "127.0.0.1", add new entry
+		hostAliases = append(hostAliases, *servicesHostAlias)
+	}
+	return hostAliases, err
+}
+
+func (s *executor) createServicesHostAlias() (*api.HostAlias, error) {
 	servicesHostAlias := api.HostAlias{IP: "127.0.0.1"}
 
 	for _, service := range s.options.Services {
@@ -951,12 +985,12 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
 	}
 
-	hostAlias, err := s.prepareHostAlias()
+	hostAliases, err := s.prepareHostAliases()
 	if err != nil {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAlias, initContainers)
+	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -977,7 +1011,7 @@ func (s *executor) preparePodConfig(
 	labels, annotations map[string]string,
 	services []api.Container,
 	imagePullSecrets []api.LocalObjectReference,
-	hostAlias *api.HostAlias,
+	hostAliases []api.HostAlias,
 	initContainers []api.Container,
 ) api.Pod {
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
@@ -1018,15 +1052,11 @@ func (s *executor) preparePodConfig(
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
-			HostAliases:                   s.Config.Kubernetes.GetHostAliases(),
+			HostAliases:                   hostAliases,
 			Affinity:                      s.Config.Kubernetes.GetAffinity(),
 			DNSPolicy:                     s.getDNSPolicy(),
 			DNSConfig:                     s.Config.Kubernetes.GetDNSConfig(),
 		},
-	}
-
-	if hostAlias != nil {
-		pod.Spec.HostAliases = []api.HostAlias{*hostAlias}
 	}
 
 	return pod

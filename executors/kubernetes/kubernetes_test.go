@@ -2826,13 +2826,12 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Len(t, pod.Spec.Containers, 4)
 				require.Len(t, pod.Spec.HostAliases, 1)
 
-				expectedHostnames := []string{
-					"test-service",
-					"svc-alias",
-					"docker",
-				}
-				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
-				assert.Equal(t, expectedHostnames, pod.Spec.HostAliases[0].Hostnames)
+				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"test-service", "svc-alias", "docker"},
+					},
+				}, pod.Spec.HostAliases)
 			},
 		},
 		"supports services as kubernetes host aliases with simple docker image syntax": {
@@ -2854,11 +2853,15 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Len(t, pod.Spec.Containers, 3)
 				require.Len(t, pod.Spec.HostAliases, 1)
 
-				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
-				assert.Equal(t, []string{"docker"}, pod.Spec.HostAliases[0].Hostnames)
+				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"docker"},
+					},
+				}, pod.Spec.HostAliases)
 			},
 		},
-		"ignores non RFC1123 aliases": {
+		"ignores non RFC1123 service aliases": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2920,11 +2923,15 @@ func TestSetupBuildPod(t *testing.T) {
 				require.Len(t, pod.Spec.Containers, 4)
 
 				require.Len(t, pod.Spec.HostAliases, 1)
-				assert.Equal(t, "127.0.0.1", pod.Spec.HostAliases[0].IP)
-				assert.Equal(t, []string{"test-service", "alias"}, pod.Spec.HostAliases[0].Hostnames)
+				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"test-service", "alias"},
+					},
+				}, pod.Spec.HostAliases)
 			},
 		},
-		"allows setting extra hosts using HostAlias": {
+		"allows setting extra hosts aliases using ExtraHosts": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2939,24 +2946,89 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				require.Len(t, pod.Spec.HostAliases, 2)
-				assert.Equal(t, []api.HostAlias{
-					api.HostAlias{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"redis"},
+
+				for _, hostAlias := range pod.Spec.HostAliases {
+					switch hostAlias.IP {
+					case "127.0.0.1":
+						assert.ElementsMatch(t, []string{"redis"}, hostAlias.Hostnames)
+					case "8.8.8.8":
+						assert.ElementsMatch(t, []string{"dns1", "dns2", "google"}, hostAlias.Hostnames)
+					}
+				}
+			},
+		},
+		"supports services and setting extra hosts for 127.0.0.1 using ExtraHosts": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						ExtraHosts: map[string]string{
+							"redis": "127.0.0.1",
+						},
 					},
-					api.HostAlias{
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "alias",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.HostAliases, 1)
+				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"redis", "test-service", "alias"},
+					},
+				}, pod.Spec.HostAliases)
+			},
+		},
+		"supports services and setting extra hosts using ExtraHosts": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						ExtraHosts: map[string]string{
+							"google": "8.8.8.8",
+						},
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "alias",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.HostAliases, 2)
+				assert.Equal(t, []api.HostAlias{
+					{
 						IP:        "8.8.8.8",
-						Hostnames: []string{"google", "dns1", "dns2"},
+						Hostnames: []string{"google"},
+					},
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"test-service", "alias"},
 					},
 				}, pod.Spec.HostAliases)
 			},
 		},
 
-		"no host aliases when feature is not supported": {
+		"no host aliases when feature is not supported in kubernetes": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
+						ExtraHosts: map[string]string{
+							"redis":  "127.0.0.1",
+							"google": "8.8.8.8",
+						},
 					},
 				},
 			},
@@ -2978,7 +3050,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Nil(t, pod.Spec.HostAliases)
 			},
 		},
-		"check host aliases non version error": {
+		"check host aliases with non kubernetes version error": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -3003,7 +3075,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.ErrorIs(t, err, testErr)
 			},
 		},
-		"check host aliases version error": {
+		"check host aliases with kubernetes version error": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
