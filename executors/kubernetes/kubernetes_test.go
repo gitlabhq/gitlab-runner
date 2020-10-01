@@ -90,23 +90,11 @@ func TestRunTestsWithFeatureFlag(t *testing.T) {
 func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	successfulBuild, err := common.GetRemoteSuccessfulBuild()
-	assert.NoError(t, err)
-	successfulBuild.Image.Name = common.TestDockerGitImage
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = common.TestDockerGitImage
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
@@ -165,17 +153,9 @@ func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string,
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			build := &common.Build{
-				JobResponse: tt.jobResponse,
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Executor: "kubernetes",
-						Kubernetes: &common.KubernetesConfig{
-							PullPolicy: common.PullPolicyIfNotPresent,
-						},
-					},
-				},
-			}
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return tt.jobResponse, nil
+			})
 			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			var buf bytes.Buffer
@@ -203,24 +183,12 @@ func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string,
 func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	longRunningBuild.Image.Name = common.TestDockerGitImage
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
+	build := getTestBuild(t, common.GetRemoteLongRunningBuild)
+	build.Image.Name = common.TestDockerGitImage
 	build.RunnerInfo.Timeout = 10 // seconds
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	var buildError *common.BuildError
 	assert.ErrorAs(t, err, &buildError)
@@ -230,23 +198,11 @@ func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, f
 func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
+	build := getTestBuild(t, common.GetRemoteFailedBuild)
 	build.Image.Name = common.TestDockerGitImage
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	var buildError *common.BuildError
 	assert.ErrorAs(t, err, &buildError)
@@ -257,17 +213,12 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.JobResponse{}, nil
+	})
 	buildtest.RunBuildWithCancel(
 		t,
-		&common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
+		build.Runner,
 		func(build *common.Build) {
 			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 		},
@@ -699,20 +650,11 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			build := &common.Build{
-				JobResponse: jobResponse,
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Executor: "kubernetes",
-						Kubernetes: &common.KubernetesConfig{
-							Image:      common.TestAlpineImage,
-							PullPolicy: common.PullPolicyIfNotPresent,
-						},
-						Environment: []string{
-							"GIT_CLONE_PATH=" + test.clonePath,
-						},
-					},
-				},
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return jobResponse, nil
+			})
+			build.Runner.Environment = []string{
+				"GIT_CLONE_PATH=" + test.clonePath,
 			}
 			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
@@ -731,46 +673,22 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 func testKubernetesNoRootImageFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
-
-	assert.NoError(t, err)
-	successfulBuild.Image.Name = common.TestAlpineNoRootImage
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-	}
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuildWithDumpedVariables)
+	build.Image.Name = common.TestAlpineNoRootImage
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 }
 
 func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
-			},
-		},
-	}
+	build := getTestBuild(t, common.GetRemoteFailedBuild)
 	build.Image.Name = "some/non-existing/image"
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	var buildErr *common.BuildError
 	assert.ErrorAs(t, err, &buildErr)
@@ -780,21 +698,11 @@ func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string,
 func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor:   "kubernetes",
-				Kubernetes: &common.KubernetesConfig{},
-			},
-		},
-	}
+	build := getTestBuild(t, common.GetRemoteFailedBuild)
 	build.Image.Name = "docker:missing-tag"
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	var buildErr *common.BuildError
 	assert.ErrorAs(t, err, &buildErr)
@@ -804,8 +712,8 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := &common.Build{
-		JobResponse: common.JobResponse{
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.JobResponse{
 			GitInfo: common.GitInfo{
 				Sha: "1234567890",
 			},
@@ -815,18 +723,10 @@ func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName str
 			Variables: []common.JobVariable{
 				{Key: NamespaceOverwriteVariableName, Value: "namespace"},
 			},
-		},
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					NamespaceOverwriteAllowed: "^not_a_match$",
-					PullPolicy:                common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
+		}, nil
+	})
+	build.Runner.Kubernetes.NamespaceOverwriteAllowed = "^not_a_match$"
+	build.SystemInterrupt = make(chan os.Signal, 1)
 	build.Image.Name = common.TestDockerGitImage
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
@@ -838,8 +738,8 @@ func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName str
 func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := &common.Build{
-		JobResponse: common.JobResponse{
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.JobResponse{
 			GitInfo: common.GitInfo{
 				Sha: "1234567890",
 			},
@@ -849,18 +749,10 @@ func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagNam
 			Variables: []common.JobVariable{
 				{Key: ServiceAccountOverwriteVariableName, Value: "service-account"},
 			},
-		},
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					ServiceAccountOverwriteAllowed: "^not_a_match$",
-					PullPolicy:                     common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
+		}, nil
+	})
+	build.Runner.Kubernetes.ServiceAccountOverwriteAllowed = "^not_a_match$"
+	build.SystemInterrupt = make(chan os.Signal, 1)
 	build.Image.Name = common.TestDockerGitImage
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
@@ -880,20 +772,11 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
 	require.NoError(t, err)
 
-	successfulBuild, err := common.GetRemoteBuildResponse("sleep 5")
-	require.NoError(t, err)
-	successfulBuild.Image.Name = "docker:git"
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					BearerToken: string(secrets.Items[0].Data["token"]),
-				},
-			},
-		},
-	}
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse("sleep 5")
+	})
+	build.Image.Name = "docker:git"
+	build.Runner.Kubernetes.BearerToken = string(secrets.Items[0].Data["token"])
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 	sess, err := session.NewSession(nil)
@@ -1779,15 +1662,14 @@ func TestPrepareIssue2583(t *testing.T) {
 		},
 	}
 
-	build := &common.Build{
-		JobResponse: common.JobResponse{
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.JobResponse{
 			Variables: []common.JobVariable{
 				{Key: NamespaceOverwriteVariableName, Value: "namespace"},
 				{Key: ServiceAccountOverwriteVariableName, Value: "sa"},
 			},
-		},
-		Runner: &common.RunnerConfig{},
-	}
+		}, nil
+	})
 
 	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
@@ -3724,24 +3606,12 @@ func TestHelperImageRegistryLogs(t *testing.T) {
 
 	for _, tt := range []bool{true, false} {
 		t.Run(fmt.Sprintf("%s is %t", featureflags.GitLabRegistryHelperImage, tt), func(t *testing.T) {
-			successfulBuild, err := common.GetRemoteSuccessfulBuild()
-			require.NoError(t, err)
-			build := &common.Build{
-				JobResponse: successfulBuild,
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Executor: "kubernetes",
-						Kubernetes: &common.KubernetesConfig{
-							Image:      "alpine:3.12",
-							PullPolicy: common.PullPolicyAlways,
-						},
-					},
-				},
-			}
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+			build.Runner.Kubernetes.PullPolicy = common.PullPolicyAlways
 			setBuildFeatureFlag(build, featureflags.GitLabRegistryHelperImage, tt)
 
 			trace := bytes.Buffer{}
-			err = build.Run(&common.Config{}, &common.Trace{Writer: &trace})
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &trace})
 			require.NoError(t, err)
 
 			if !tt {
@@ -3927,7 +3797,6 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {
 	jobResponse, err := getJobResponse()
 	assert.NoError(t, err)
-	jobResponse.Image.Name = common.TestAlpineImage
 
 	podUUID, err := helpers.GenerateRandomUUID(8)
 	require.NoError(t, err)
@@ -3938,6 +3807,7 @@ func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error
 			RunnerSettings: common.RunnerSettings{
 				Executor: "kubernetes",
 				Kubernetes: &common.KubernetesConfig{
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 					PodLabels: map[string]string{
 						"test.k8s.gitlab.com/name": podUUID,
