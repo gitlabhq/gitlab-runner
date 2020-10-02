@@ -32,9 +32,7 @@ func TestVirtualBoxCreateExecutor(t *testing.T) {
 }
 
 func TestVirtualBoxSuccessRun(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
@@ -57,9 +55,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 }
 
 func TestVirtualBoxSuccessRunRawVariable(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	successfulBuild, err := common.GetRemoteBuildResponse("echo $TEST")
 	assert.NoError(t, err)
@@ -90,9 +86,7 @@ func TestVirtualBoxSuccessRunRawVariable(t *testing.T) {
 }
 
 func TestVirtualBoxBuildFail(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
@@ -117,9 +111,7 @@ func TestVirtualBoxBuildFail(t *testing.T) {
 }
 
 func TestVirtualBoxMissingImage(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
@@ -140,9 +132,7 @@ func TestVirtualBoxMissingImage(t *testing.T) {
 }
 
 func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
@@ -162,9 +152,7 @@ func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
 }
 
 func TestVirtualBoxBuildCancel(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	config := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{

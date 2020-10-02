@@ -16,9 +16,7 @@ func OnEachShell(t *testing.T, f func(t *testing.T, shell string)) {
 
 	for _, shell := range shells {
 		t.Run(shell, func(t *testing.T) {
-			if helpers.SkipIntegrationTests(t, shell) {
-				t.Skip()
-			}
+			helpers.SkipIntegrationTests(t, shell)
 
 			f(t, shell)
 		})
