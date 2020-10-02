@@ -1306,3 +1306,52 @@ func TestBuildWithGitCleanFlags(t *testing.T) {
 		assert.Error(t, err, "cleanup_file does not exist")
 	})
 }
+
+func TestBuildFileVariablesRemoval(t *testing.T) {
+	getJobResponse := func(t *testing.T, jobResponseRequester func() (common.JobResponse, error)) common.JobResponse {
+		jobResponse, err := jobResponseRequester()
+		require.NoError(t, err)
+
+		return jobResponse
+	}
+
+	tests := map[string]struct {
+		jobResponse common.JobResponse
+	}{
+		"succeeded job": {
+			jobResponse: getJobResponse(t, common.GetSuccessfulBuild),
+		},
+		"failed job": {
+			jobResponse: getJobResponse(t, common.GetFailedBuild),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				build, cleanup := newBuild(t, tt.jobResponse, shell)
+				defer cleanup()
+
+				testVariableName := "TEST_VARIABLE"
+
+				build.Variables = append(
+					build.Variables,
+					common.JobVariable{Key: testVariableName, Value: "test", File: true},
+				)
+
+				_ = buildtest.RunBuild(t, build)
+
+				tmpDir := fmt.Sprintf("%s.tmp", build.BuildDir)
+				variableFile := filepath.Join(tmpDir, testVariableName)
+
+				_, err := os.Stat(variableFile)
+				assert.Error(t, err)
+				assert.True(
+					t,
+					errors.Is(err, os.ErrNotExist),
+					`Expected that os.Stat on the variable file will return the "doesn't exist" error`,
+				)
+			})
+		})
+	}
+}

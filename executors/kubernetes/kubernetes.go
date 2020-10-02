@@ -60,6 +60,16 @@ var (
 	detectShellScript = shells.BashDetectShellScript
 )
 
+// GetDefaultCapDrop returns the default capabilities that should be dropped
+// from a build container.
+func GetDefaultCapDrop() []string {
+	return []string{
+		// Reasons for disabling NET_RAW by default were
+		// discussed in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26833
+		"NET_RAW",
+	}
+}
+
 type commandTerminatedError struct {
 	exitCode int
 }
@@ -503,6 +513,11 @@ func (s *executor) buildContainer(
 		VolumeMounts: s.getVolumeMounts(),
 		SecurityContext: &api.SecurityContext{
 			Privileged: &privileged,
+			Capabilities: getCapabilities(
+				GetDefaultCapDrop(),
+				s.Config.Kubernetes.CapAdd,
+				s.Config.Kubernetes.CapDrop,
+			),
 		},
 		Stdin: true,
 	}
@@ -769,7 +784,10 @@ func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 func (s *executor) setupCredentials() error {
 	s.Debugln("Setting up secrets")
 
-	authConfigs := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
+	authConfigs, err := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
+	if err != nil {
+		return err
+	}
 
 	if len(authConfigs) == 0 {
 		return nil
