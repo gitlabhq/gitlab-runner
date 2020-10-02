@@ -497,6 +497,9 @@ check_interval = 30
 As described earlier, additional host entries can be added to the containers.
 This feature is available in Kubernetes 1.7+.
 
+Multiple host aliases for the same IP are supported and can be provided by defining multiple host entries for the same IP and
+each entry accepts a list of hosts as a space separated string.
+
 Here is an example configuration:
 
 ```toml
@@ -507,8 +510,9 @@ concurrent = 4
   executor = "kubernetes"
   [runners.kubernetes]
     [runners.kubernetes.extra_hosts]
-      "de.website.local" = "127.0.0.1"
+      "de1.website.local de2.website.local" = "127.0.0.1"
       "us.website.local" = "127.0.0.1"
+      "google" = "8.8.8.8"
 ```
 
 ## Using Affinity

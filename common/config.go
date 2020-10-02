@@ -296,7 +296,7 @@ type KubernetesConfig struct {
 	PodAnnotationsOverwriteAllowed                    string                       `toml:"pod_annotations_overwrite_allowed" json:"pod_annotations_overwrite_allowed" long:"pod_annotations_overwrite_allowed" env:"KUBERNETES_POD_ANNOTATIONS_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_POD_ANNOTATIONS_*' values"`
 	PodSecurityContext                                KubernetesPodSecurityContext `toml:"pod_security_context,omitempty" namespace:"pod-security-context" description:"A security context attached to each build pod"`
 	Volumes                                           KubernetesVolumes            `toml:"volumes"`
-	ExtraHosts                                        map[string]string            `toml:"extra_hosts"`
+	ExtraHosts                                        map[string]string            `toml:"extra_hosts,omitempty" json:"extra_hosts" long:"extra-hosts" description:"Add a custom host-to-IP mapping"`
 	Services                                          []Service                    `toml:"services,omitempty" json:"services" description:"Add service that is started with container"`
 	CapAdd                                            []string                     `toml:"cap_add" json:"cap_add" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                                           []string                     `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
@@ -783,12 +783,17 @@ func (c *PreferredSchedulingTerm) GetPreferredSchedulingTerm() api.PreferredSche
 }
 
 func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
-	var aliases []api.HostAlias
+	hostAliases := make(map[string][]string)
+	// group all aliases for each IP
+	for value, ip := range c.ExtraHosts {
+		hostAliases[ip] = append(hostAliases[ip], strings.Fields(value)...)
+	}
 
-	for hostname, ip := range c.ExtraHosts {
+	var aliases []api.HostAlias
+	for ip, hostnames := range hostAliases {
 		aliases = append(aliases, api.HostAlias{
 			IP:        ip,
-			Hostnames: []string{hostname},
+			Hostnames: hostnames,
 		})
 	}
 

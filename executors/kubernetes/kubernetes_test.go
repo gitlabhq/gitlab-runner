@@ -2930,8 +2930,9 @@ func TestSetupBuildPod(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
 						ExtraHosts: map[string]string{
-							"redis":  "127.0.0.1",
-							"google": "8.8.8.8",
+							"redis":     "127.0.0.1",
+							"google":    "8.8.8.8",
+							"dns1 dns2": "8.8.8.8",
 						},
 					},
 				},
@@ -2945,7 +2946,7 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 					api.HostAlias{
 						IP:        "8.8.8.8",
-						Hostnames: []string{"google"},
+						Hostnames: []string{"google", "dns1", "dns2"},
 					},
 				}, pod.Spec.HostAliases)
 			},
