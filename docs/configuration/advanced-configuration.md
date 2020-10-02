@@ -28,8 +28,8 @@ This defines global settings of GitLab Runner.
 | Setting | Description |
 | ------- | ----------- |
 | `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
-| `log_level`      | Log level (options: `debug`, `info`, `warn`, `error`, `fatal`, `panic`). Note that this setting has lower priority than level set by command line argument `--debug`, `-l`, or `--log-level` |
-| `log_format`     | Log format (options: `runner`, `text`, `json`). Note that this setting has lower priority than format set by command line argument `--log-format` The default value is `runner`. |
+| `log_level`      | Log level (options: `debug`, `info`, `warn`, `error`, `fatal`, `panic`). This setting has lower priority than level set by command line argument `--debug`, `-l`, or `--log-level` |
+| `log_format`     | Log format (options: `runner`, `text`, `json`). This setting has lower priority than format set by command line argument `--log-format` The default value is `runner`. |
 | `check_interval` | defines the interval length, in seconds, between new jobs check. The default value is `3`; if set to `0` or lower, the default value will be used. |
 | `sentry_dsn`     | enable tracking of all system level errors to Sentry |
 | `listen_address` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
@@ -153,8 +153,7 @@ Example:
   session_timeout = 1800
 ```
 
-NOTE: **Note:**
-If using the GitLab Runner Docker image, you will also need to expose port 8093 by
+If you are using the GitLab Runner Docker image, you must expose port 8093 by
 adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
 
 ## The `[[runners]]` section
@@ -219,7 +218,7 @@ There are a couple of available executors currently.
 | `shell`       | run build locally, default |
 | `docker`      | run build using Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a system that the Runner will run the job on. |
 | `docker-windows` | run build using Windows Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a Windows system. |
-| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine](https://docs.docker.com/engine/) installed on the system that the Runner runs. **Note: This will run the Docker container on the local machine, it just changes how the commands are run inside that container. If you want to run Docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
+| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine](https://docs.docker.com/engine/) installed on the system that the Runner runs. **This will run the Docker container on the local machine, it just changes how the commands are run inside that container. If you want to run Docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
 | `ssh`         | run build remotely with SSH - this requires the presence of `[runners.ssh]` |
 | `parallels`   | run build using Parallels VM, but connect to it with SSH - this requires the presence of `[runners.parallels]` and `[runners.ssh]` |
 | `virtualbox`  | run build using VirtualBox VM, but connect to it with SSH - this requires the presence of `[runners.virtualbox]` and `[runners.ssh]` |
@@ -384,24 +383,21 @@ when you want to store directories outside the container.
 This will use `/path/to/bind/from/host` of the CI host inside the container at
 `/path/to/bind/in/container`.
 
-NOTE: **Note:**
-GitLab Runner 11.11 and newer [will mount the host
+GitLab Runner 11.11 and later [will mount the host
 directory](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1261)
 for the defined [services](https://docs.gitlab.com/ee/ci/services/) as
 well.
 
 ### Using a private container registry
 
-> **Notes:**
->
->- This feature requires GitLab Runner **1.8** or higher
->- For GitLab Runner versions **>= 0.6, <1.8** there was a partial
->  support for using private registries, which required manual configuration
->  of credentials on runner's host. We recommend to upgrade your Runner to
->  at least version **1.8** if you want to use private registries.
->- Using private registries with the `if-not-present` pull policy may introduce
->  [security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). To fully understand how pull policies work,
->  read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
+- This feature requires GitLab Runner **1.8** or later.
+- For GitLab Runner versions **>= 0.6, <1.8** there was a partial
+  support for using private registries, which required manual configuration
+  of credentials on runner's host. We recommend to upgrade your Runner to
+  at least version **1.8** if you want to use private registries.
+- Using private registries with the `if-not-present` pull policy may introduce
+  [security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). To fully understand how pull policies work,
+  read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
 If you want to use private registries as a source of images for your builds,
 you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
@@ -424,9 +420,8 @@ registry.
 
 #### Support for GitLab integrated registry
 
-NOTE: **Note:**
 To work automatically with private/protected images from
-GitLab integrated registry it needs at least GitLab CE/EE **8.14**
+the GitLab integrated registry, you need at least GitLab CE/EE **8.14**
 and GitLab Runner **1.8**.
 
 Starting with GitLab CE/EE 8.14, GitLab will send credentials for its integrated
@@ -644,7 +639,6 @@ With GitLab Runner 11.3.0, the configuration parameters related to S3 were moved
 The old format of the configuration with S3 configured directly in `[runners.cache]` was deprecated with GitLab Runner 11.3.0.
 **With GitLab Runner 12.0.0 the old configuration syntax was removed and is no longer supported**.
 
-NOTE: **Note:**
 The cache mechanism uses pre-signed URLs to upload and download cache. URLs are being signed by GitLab Runner on its **own instance**.
 No matter if the job's script - so also the cache upload/download script - are being executed on local or external
 machines (e.g. `shell` or `docker` executors are running their scripts on the same
@@ -652,8 +646,7 @@ machine where GitLab Runner process is running, while `virtualbox` or `docker+ma
 connects to a separate VM to execute the script). This is done for security reasons:
 minimizing the possibility of leaking the cache adapter's credentials.
 
-NOTE: **Note:**
-Previous note implies [S3 cache adapter](#the-runnerscaches3-section), if configured to use
+This implies [S3 cache adapter](#the-runnerscaches3-section), if configured to use
 IAM instance profile, will use the profile attached with GitLab Runner's machine.
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
 use the `CredentialsFile`, the file needs to be present on GitLab Runner's machine.
@@ -682,11 +675,8 @@ Below is a table containing a summary of `config.toml`, cli options and ENV vari
 
 ### The `[runners.cache.s3]` section
 
-NOTE: **Note:**
-Moved from the `[runners.cache]` section in GitLab Runner 11.3.0.
-
-Configure S3 storage for cache. This section contains settings related to S3, that previously were
-present globally in the `[runners.cache]` section.
+Configure S3 storage for cache. This section contains settings related to S3 that were
+present globally in the `[runners.cache]` section in GitLab Runner 11.2 and earlier.
 
 | Parameter        | Type             | Description |
 |------------------|------------------|-------------|
@@ -713,11 +703,9 @@ Example:
     Insecure = false
 ```
 
-NOTE: **Note:**
 For Amazon's S3 service, the `ServerAddress` should always be `s3.amazonaws.com`. The MinIO S3 client will
 get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
 
-NOTE: **Note:**
 If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified, then the S3 client will use the
 IAM instance profile available to the `gitlab-runner` instance. In an
 [autoscale](autoscale.md) configuration, this is *NOT* the machine created on
@@ -771,7 +759,7 @@ Examples:
 
 Configure native support for Azure Blob Storage. Read the
 [Azure Blob Storage documentation](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction)
-to learn more. Note that while S3 and GCS use the word `bucket` for a collection of objects, Azure uses the word
+to learn more. While S3 and GCS use the word `bucket` for a collection of objects, Azure uses the word
 `container` to denote a collection of blobs.
 
 | Parameter         | Type             | Description |
@@ -879,7 +867,7 @@ that is available for the `docker`, `docker+machine` and `kubernetes` executors:
     helper_image = "my.registry.local/gitlab/gitlab-runner-helper:tag"
 ```
 
-Note that the version of the helper image should be considered as strictly coupled with the version of GitLab Runner.
+The version of the helper image should be considered as strictly coupled with the version of GitLab Runner.
 As it was described above, one of the main reasons of providing such images is that Runner is using the
 `gitlab-runner-helper` binary, and this binary is compiled from part of GitLab Runner sources which is using an internal
 API that is expected to be the same in both binaries.
@@ -1008,7 +996,7 @@ Metrics queries are in `canonical_name:query_string` format. The query string su
 
 For example, a shared Runner environment using the `docker-machine` executor would have a `{selector}` similar to `node=shared-runner-123`.
 
-## Note
+## Deploy to multiple servers using GitLab CI
 
 If you'd like to deploy to multiple servers using GitLab CI, you can create a
 single script that deploys to multiple servers or you can create many scripts.
