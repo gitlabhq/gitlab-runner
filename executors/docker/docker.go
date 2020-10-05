@@ -854,7 +854,7 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 
 	// Kill and wait for exit.
 	// Containers are stopped so that they can be reused by the job.
-	return e.waiter.KillWait(ctx, id)
+	return e.waiter.KillWait(e.Context, id)
 }
 
 func (e *executor) removeContainer(ctx context.Context, id string) error {
