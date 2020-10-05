@@ -268,8 +268,24 @@ type Cache struct {
 	Untracked bool          `json:"untracked"`
 	Policy    CachePolicy   `json:"policy"`
 	Paths     ArtifactPaths `json:"paths"`
+	When      CacheWhen     `json:"when"`
 }
 
+type CacheWhen string
+
+const (
+	CacheWhenOnFailure CacheWhen = "on_failure"
+	CacheWhenOnSuccess CacheWhen = "on_success"
+	CacheWhenAlways    CacheWhen = "always"
+)
+
+func (when CacheWhen) OnSuccess() bool {
+	return when == "" || when == CacheWhenOnSuccess || when == CacheWhenAlways
+}
+
+func (when CacheWhen) OnFailure() bool {
+	return when == CacheWhenOnFailure || when == CacheWhenAlways
+}
 func (c Cache) CheckPolicy(wanted CachePolicy) (bool, error) {
 	switch c.Policy {
 	case CachePolicyUndefined, CachePolicyPullPush:

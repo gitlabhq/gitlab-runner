@@ -22,7 +22,8 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup func(bu
 		common.BuildStageRestoreCache,
 		common.BuildStageDownloadArtifacts,
 		common.BuildStageAfterScript,
-		common.BuildStageArchiveCache,
+		common.BuildStageArchiveOnSuccessCache,
+		common.BuildStageArchiveOnFailureCache,
 		common.BuildStageUploadOnFailureArtifacts,
 		common.BuildStageUploadOnSuccessArtifacts,
 	}
@@ -61,7 +62,6 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup func(bu
 			excludesStage: []common.BuildStage{
 				common.BuildStageRestoreCache,
 				common.BuildStageDownloadArtifacts,
-				common.BuildStageArchiveCache,
 				common.BuildStageUploadOnFailureArtifacts,
 				common.BuildStageUploadOnSuccessArtifacts,
 			},

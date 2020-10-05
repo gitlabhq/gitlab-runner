@@ -505,19 +505,35 @@ func (b *AbstractShell) writeUserScript(
 	return nil
 }
 
-func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) error {
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+
+	skipArchiveCache, err := b.archiveCache(w, info, onSuccess)
+
+	if err != nil {
+		return err
+	}
+
+	if skipArchiveCache {
+		return common.ErrSkipBuildStage
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) (bool, error) {
 	skipArchiveCache := true
 
 	for _, cacheOptions := range info.Build.Cache {
+		if onSuccess && !cacheOptions.When.OnSuccess() {
+			continue
+		}
+		if !onSuccess && !cacheOptions.When.OnFailure() {
+			continue
+		}
 		// Create list of files to archive
-		var archiverArgs []string
-		for _, path := range cacheOptions.Paths {
-			archiverArgs = append(archiverArgs, "--path", path)
-		}
-
-		if cacheOptions.Untracked {
-			archiverArgs = append(archiverArgs, "--untracked")
-		}
+		archiverArgs := b.getFilesForArchive(cacheOptions)
 
 		if len(archiverArgs) < 1 {
 			// Skip creating archive
@@ -534,7 +550,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		}
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPush); err != nil {
-			return fmt.Errorf("%w for %s", err, cacheKey)
+			return false, fmt.Errorf("%w for %s", err, cacheKey)
 		} else if !ok {
 			w.Noticef("Not uploading cache %s due to policy", cacheKey)
 			continue
@@ -542,12 +558,19 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 
 		b.addCacheUploadCommand(w, info, cacheFile, archiverArgs, cacheKey)
 	}
+	return skipArchiveCache, nil
+}
 
-	if skipArchiveCache {
-		return common.ErrSkipBuildStage
+func (b *AbstractShell) getFilesForArchive(cacheOptions common.Cache) []string {
+	var archiverArgs []string
+	for _, path := range cacheOptions.Paths {
+		archiverArgs = append(archiverArgs, "--path", path)
 	}
 
-	return nil
+	if cacheOptions.Untracked {
+		archiverArgs = append(archiverArgs, "--untracked")
+	}
+	return archiverArgs
 }
 
 func (b *AbstractShell) addCacheUploadCommand(
@@ -696,20 +719,20 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 	return nil
 }
 
-func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.ShellScriptInfo) error {
-	b.writeExports(w, info)
-	b.writeCdBuildDir(w, info)
-
-	// Find cached files and archive them
-	return b.cacheArchiver(w, info)
-}
-
 func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) error {
 	return b.writeUploadArtifacts(w, info, true)
 }
 
 func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info common.ShellScriptInfo) error {
 	return b.writeUploadArtifacts(w, info, false)
+}
+
+func (b *AbstractShell) writeArchiveCacheOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) error {
+	return b.cacheArchiver(w, info, true)
+}
+
+func (b *AbstractShell) writeArchiveCacheOnFailureScript(w ShellWriter, info common.ShellScriptInfo) error {
+	return b.cacheArchiver(w, info, false)
 }
 
 func (b *AbstractShell) writeCleanupFileVariablesScript(w ShellWriter, info common.ShellScriptInfo) error {
@@ -731,7 +754,8 @@ func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage,
 		common.BuildStageRestoreCache:             b.writeRestoreCacheScript,
 		common.BuildStageDownloadArtifacts:        b.writeDownloadArtifactsScript,
 		common.BuildStageAfterScript:              b.writeAfterScript,
-		common.BuildStageArchiveCache:             b.writeArchiveCacheScript,
+		common.BuildStageArchiveOnSuccessCache:    b.writeArchiveCacheOnSuccessScript,
+		common.BuildStageArchiveOnFailureCache:    b.writeArchiveCacheOnFailureScript,
 		common.BuildStageUploadOnSuccessArtifacts: b.writeUploadArtifactsOnSuccessScript,
 		common.BuildStageUploadOnFailureArtifacts: b.writeUploadArtifactsOnFailureScript,
 		common.BuildStageCleanupFileVariables:     b.writeCleanupFileVariablesScript,

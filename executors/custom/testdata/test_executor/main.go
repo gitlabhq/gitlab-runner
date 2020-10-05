@@ -33,7 +33,8 @@ var knownBuildStages = map[string]struct{}{
 	"download_artifacts":          {},
 	"build_script":                {},
 	"after_script":                {},
-	"archive_cache":               {},
+	"archive_cache":    {},
+	"archive_cache_on_failure":    {},
 	"upload_artifacts_on_success": {},
 	"upload_artifacts_on_failure": {},
 }
