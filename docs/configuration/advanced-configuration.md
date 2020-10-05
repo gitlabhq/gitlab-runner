@@ -766,7 +766,7 @@ to learn more. While S3 and GCS use the word `bucket` for a collection of object
 |-------------------|------------------|-------------|
 | `AccountName`     | string           | Name of the Azure Blob Storage account used to access the storage. |
 | `AccountKey`      | string           | Storage account access key used to access the container. |
-| `ContainerName`   | string           | Name of the storage container in which to save cache data. |
+| `ContainerName`   | string           | Name of the [storage container](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers) in which to save cache data. |
 | `StorageDomain`   | string           | Domain name [used to service Azure storage endpoints](https://docs.microsoft.com/en-us/azure/china/resources-developer-guide#check-endpoints-in-azure) (optional). Default is `blob.core.windows.net`. |
 
 Example:
