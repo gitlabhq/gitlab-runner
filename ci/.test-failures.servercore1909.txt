@@ -18,6 +18,8 @@ TestBuildOnCustomDirectory
 TestBuildOnCustomDirectory/powershell
 TestBuildOnCustomDirectory/powershell/custom_directory_defined
 TestBuildOnCustomDirectory/powershell/custom_directory_not_defined
+TestBuildOnCustomDirectory/pwsh
+TestBuildOnCustomDirectory/pwsh/custom_directory_defined
 TestBuildSuccess
 TestBuildSuccess/cmd
 TestBuildSuccess/powershell

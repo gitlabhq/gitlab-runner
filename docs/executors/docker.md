@@ -95,6 +95,7 @@ GitLab Runner only supports the following versions of Windows which
 follows our [support lifecycle for
 Windows](../install/windows.md#windows-version-support-policy):
 
+- Windows Server 2004.
 - Windows Server 1909.
 - Windows Server 1903.
 - Windows Server 1809.
@@ -107,6 +108,8 @@ daemon is running on. For example, the following [`Windows Server
 Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
 be used:
 
+- `mcr.microsoft.com/windows/servercore:2004`
+- `mcr.microsoft.com/windows/servercore:2004-amd64`
 - `mcr.microsoft.com/windows/servercore:1909`
 - `mcr.microsoft.com/windows/servercore:1909-amd64`
 - `mcr.microsoft.com/windows/servercore:1903`

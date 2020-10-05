@@ -215,6 +215,12 @@ windows 1909 tests:
   - .windows1909
   - .runner_master
 
+windows 2004 tests:
+  extends:
+  - .windows test
+  - .windows2004
+  - .runner_master
+
 git 1.7.1:
   extends:
   - .merge_request_pipelines

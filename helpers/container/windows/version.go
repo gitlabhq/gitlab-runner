@@ -13,6 +13,8 @@ const (
 	V1903 = "1903"
 	// V1909 is the Windows version that is 1903 sac.
 	V1909 = "1909"
+	// V2004 is the Windows version that is 2004 sac.
+	V2004 = "2004"
 )
 
 // UnsupportedWindowsVersionError represents that the version specified is not
@@ -39,6 +41,7 @@ var supportedWindowsVersions = []string{
 	V1809,
 	V1903,
 	V1909,
+	V2004,
 }
 
 // Version checks the specified operatingSystem to see if it's one of the
