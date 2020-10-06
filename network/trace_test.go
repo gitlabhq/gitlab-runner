@@ -102,8 +102,8 @@ func TestTouchJobAbort(t *testing.T) {
 	b.SetCancelFunc(cancel)
 
 	b.start()
-	assert.NotNil(t, <-cancelCtx.Done(), "should cancel job first")
 	assert.NotNil(t, <-abortCtx.Done(), "should abort the job")
+	assert.Nil(t, cancelCtx.Err(), "should not cancel job")
 	b.Success()
 }
 

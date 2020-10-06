@@ -83,16 +83,18 @@ func (c *clientJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	c.cancelFunc = cancelFunc
 }
 
-// Cancel calls the function set by SetCancelFunc.
+// Cancel consumes the function set by SetCancelFunc.
 func (c *clientJobTrace) Cancel() bool {
 	c.lock.RLock()
-	defer c.lock.RUnlock()
+	cancelFunc := c.cancelFunc
+	c.lock.RUnlock()
 
-	if c.cancelFunc == nil {
+	if cancelFunc == nil {
 		return false
 	}
 
-	c.cancelFunc()
+	c.SetCancelFunc(nil)
+	cancelFunc()
 	return true
 }
 
@@ -105,21 +107,23 @@ func (c *clientJobTrace) SetAbortFunc(cancelFunc context.CancelFunc) {
 	c.abortFunc = cancelFunc
 }
 
-// Abort calls Cancel() followed by the function set by SetAbortFunc. This
-// sequence ensures that any logic Cancel() executes is handled first before
-// all execution is immediately prevented.
+// Abort consumes function set by SetAbortFunc
+// The abort always have much higher importance than Cancel
+// as abort interrupts the execution, thus cancel is never
+// called after the Abort
 func (c *clientJobTrace) Abort() bool {
-	// We call Cancel before the mutex lock because it locks the mutex itself.
-	c.Cancel()
-
 	c.lock.RLock()
-	defer c.lock.RUnlock()
+	abortFunc := c.abortFunc
+	c.lock.RUnlock()
 
-	if c.abortFunc == nil {
+	if abortFunc == nil {
 		return false
 	}
 
-	c.abortFunc()
+	c.SetCancelFunc(nil)
+	c.SetAbortFunc(nil)
+
+	abortFunc()
 	return true
 }
 
@@ -203,7 +207,7 @@ func (c *clientJobTrace) finish() {
 func (c *clientJobTrace) incrementalUpdate() bool {
 	patchResult := c.sendPatch()
 	if patchResult.CancelRequested {
-		c.cancel()
+		c.Cancel()
 	}
 
 	switch patchResult.State {
@@ -214,15 +218,15 @@ func (c *clientJobTrace) incrementalUpdate() bool {
 		// This is needed to discover if it should be aborted
 		touchResult := c.touchJob()
 		if touchResult.CancelRequested {
-			c.cancel()
+			c.Cancel()
 		}
 
 		if touchResult.State == common.UpdateAbort {
-			c.abort()
+			c.Abort()
 			return false
 		}
 	case common.PatchAbort:
-		c.abort()
+		c.Abort()
 		return false
 	}
 
@@ -338,17 +342,6 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 	}
 
 	return result.State
-}
-
-func (c *clientJobTrace) cancel() {
-	c.Cancel()
-	c.SetCancelFunc(nil)
-}
-
-func (c *clientJobTrace) abort() {
-	c.Abort()
-	c.SetCancelFunc(nil)
-	c.SetAbortFunc(nil)
 }
 
 func (c *clientJobTrace) watch() {

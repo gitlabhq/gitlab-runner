@@ -60,9 +60,6 @@ func (s *Trace) SetAbortFunc(abortFunc context.CancelFunc) {
 }
 
 func (s *Trace) Abort() bool {
-	// We call Cancel before the mutex lock because it locks the mutex itself.
-	s.Cancel()
-
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -70,6 +67,9 @@ func (s *Trace) Abort() bool {
 		return false
 	}
 
+	// Abort always have much higher importance than Cancel
+	// as abort interrupts the execution
+	s.cancelFunc = nil
 	s.abortFunc()
 	return true
 }
