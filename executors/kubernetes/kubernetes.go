@@ -793,11 +793,12 @@ func (s *executor) setupCredentials() error {
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
 	creds, err := s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Create(&secret)
-	if err == nil {
-		s.credentials = creds
+	if err != nil {
+		return err
 	}
 
-	return err
+	s.credentials = creds
+	return nil
 }
 
 type invalidHostAliasDNSError struct {
