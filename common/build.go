@@ -332,11 +332,6 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	}
 
 	b.setCurrentStage(buildStage)
-	b.GetAllVariables().OverwriteKey("CI_JOB_STATUS", JobVariable{
-		Key:   "CI_JOB_STATUS",
-		Value: string(b.CurrentState()),
-	})
-
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
 
 	shell := executor.Shell()
@@ -517,9 +512,11 @@ func (b *Build) executeScript(abortCtx context.Context, trace JobTrace, executor
 }
 
 func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) {
-	// as we enter after_script, set the new build state based on previous
-	// stage errors
-	_ = b.handleError(err)
+	state, _ := b.runtimeStateAndError(err)
+	b.GetAllVariables().OverwriteKey("CI_JOB_STATUS", JobVariable{
+		Key:   "CI_JOB_STATUS",
+		Value: string(state),
+	})
 
 	ctx, cancel := context.WithTimeout(ctx, AfterScriptTimeout)
 	defer cancel()
@@ -602,32 +599,34 @@ func (b *Build) GetBuildTimeout() time.Duration {
 }
 
 func (b *Build) handleError(err error) error {
+	state, err := b.runtimeStateAndError(err)
+	b.setCurrentState(state)
+
+	return err
+}
+
+func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 	switch err {
 	case errCanceledBuildError:
-		b.setCurrentState(BuildRunRuntimeCanceled)
-		return err
+		return BuildRunRuntimeCanceled, err
 
 	case context.Canceled:
 		// This is not obvious:
 		// it tries to discover a `abortCtx` being canceled,
 		// thus having an abort outcome
-		b.setCurrentState(BuildRunRuntimeAborted)
-		return errAbortedBuildError
+		return BuildRunRuntimeAborted, errAbortedBuildError
 
 	case context.DeadlineExceeded:
-		b.setCurrentState(BuildRunRuntimeTimedout)
-		return &BuildError{
+		return BuildRunRuntimeTimedout, &BuildError{
 			Inner:         fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()),
 			FailureReason: JobExecutionTimeout,
 		}
 
 	case nil:
-		b.setCurrentState(BuildRunRuntimeSuccess)
-		return nil
+		return BuildRunRuntimeSuccess, nil
 
 	default:
-		b.setCurrentState(BuildRunRuntimeFailed)
-		return err
+		return BuildRunRuntimeFailed, err
 	}
 }
 
@@ -1034,7 +1033,7 @@ func (b *Build) GetDefaultVariables() JobVariables {
 		},
 		{
 			Key:      "CI_JOB_STATUS",
-			Value:    "",
+			Value:    string(BuildRunRuntimeRunning),
 			Public:   true,
 			Internal: true,
 		},
