@@ -180,6 +180,22 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 		pod.Name,
 		pod.Status.Phase,
 	)
+
+	for _, condition := range pod.Status.Conditions {
+		// skip conditions with no reason, these are typically expected pod
+		// conditions
+		if condition.Reason == "" {
+			continue
+		}
+
+		_, _ = fmt.Fprintf(
+			out,
+			"\t%s: %q\n",
+			condition.Reason,
+			condition.Message,
+		)
+	}
+
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
