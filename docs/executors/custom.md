@@ -237,6 +237,7 @@ order:
 1. `after_script`
 1. `archive_cache`
 1. `upload_artifacts_on_success` OR `upload_artifacts_on_failure`
+1. `cleanup_file_variables`
 
 NOTE: **Note:**
 In GitLab Runner 14.0 and later, `build_script` will be replaced with `step_script`. For more information, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426).
@@ -309,6 +310,7 @@ what the main goal of that script is.
 | `archive_cache` | Will create an archive of all the cache, if any are defined. |
 | `upload_artifacts_on_success` | Upload any artifacts that are defined. Only executed when `build_script` was successful. |
 | `upload_artifacts_on_failure` | Upload any artifacts that are defined. Only executed when `build_script` fails. |
+| `cleanup_file_variables` | Deletes all [file based](https://docs.gitlab.com/ee/ci/variables/#custom-environment-variables-of-type-file) variables from disk. |
 
 ### Cleanup
 
