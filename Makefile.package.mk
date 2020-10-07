@@ -16,8 +16,8 @@ package-deb: package-deps package-prepare
 	# Building Debian compatible packages...
 	$(MAKE) package-deb-arch ARCH=amd64 PACKAGE_ARCH=amd64
 	$(MAKE) package-deb-arch ARCH=386 PACKAGE_ARCH=i386
-	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=aarch64
-	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=arm64
+	$(MAKE) package-deb-arch ARCH=arm64 PACKAGE_ARCH=aarch64
+	$(MAKE) package-deb-arch ARCH=arm64 PACKAGE_ARCH=arm64
 	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=armel
 	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=armhf
 	$(MAKE) package-deb-arch ARCH=s390x PACKAGE_ARCH=s390x
@@ -27,8 +27,8 @@ package-rpm: package-deps package-prepare
 	# Building RedHat compatible packages...
 	$(MAKE) package-rpm-arch ARCH=amd64 PACKAGE_ARCH=amd64
 	$(MAKE) package-rpm-arch ARCH=386 PACKAGE_ARCH=i686
-	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=aarch64
-	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=arm64
+	$(MAKE) package-rpm-arch ARCH=arm64 PACKAGE_ARCH=aarch64
+	$(MAKE) package-rpm-arch ARCH=arm64 PACKAGE_ARCH=arm64
 	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=arm
 	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=armhf
 	$(MAKE) package-rpm-arch ARCH=s390x PACKAGE_ARCH=s390x
