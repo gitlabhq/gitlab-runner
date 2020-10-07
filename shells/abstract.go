@@ -510,7 +510,6 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 	b.writeCdBuildDir(w, info)
 
 	skipArchiveCache, err := b.archiveCache(w, info, onSuccess)
-
 	if err != nil {
 		return err
 	}
@@ -526,14 +525,12 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 	skipArchiveCache := true
 
 	for _, cacheOptions := range info.Build.Cache {
-		if onSuccess && !cacheOptions.When.OnSuccess() {
+		if !cacheOptions.When.ShouldCache(onSuccess) {
 			continue
 		}
-		if !onSuccess && !cacheOptions.When.OnFailure() {
-			continue
-		}
+
 		// Create list of files to archive
-		archiverArgs := b.getFilesForArchive(cacheOptions)
+		archiverArgs := b.getArchiverArgs(cacheOptions)
 
 		if len(archiverArgs) < 1 {
 			// Skip creating archive
@@ -558,10 +555,11 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 
 		b.addCacheUploadCommand(w, info, cacheFile, archiverArgs, cacheKey)
 	}
+
 	return skipArchiveCache, nil
 }
 
-func (b *AbstractShell) getFilesForArchive(cacheOptions common.Cache) []string {
+func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache) []string {
 	var archiverArgs []string
 	for _, path := range cacheOptions.Paths {
 		archiverArgs = append(archiverArgs, "--path", path)
@@ -570,6 +568,7 @@ func (b *AbstractShell) getFilesForArchive(cacheOptions common.Cache) []string {
 	if cacheOptions.Untracked {
 		archiverArgs = append(archiverArgs, "--untracked")
 	}
+
 	return archiverArgs
 }
 

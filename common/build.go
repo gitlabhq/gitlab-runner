@@ -502,20 +502,22 @@ func (b *Build) executeScript(abortCtx context.Context, trace JobTrace, executor
 		b.executeAfterScript(abortCtx, err, executor)
 	}
 
-	archiveCacheErr, artifactUploadErr := b.executeUploads(ctx, executor, err)
+	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
+
+	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
 
 	// track job end and execute referees
 	b.executeUploadReferees(ctx, startTime, time.Now())
 
 	b.removeFileBasedVariables(ctx, executor)
 
-	return b.chooseJobErrorByImportance(err, archiveCacheErr, artifactUploadErr)
+	return b.pickPriorityError(err, archiveCacheErr, artifactUploadErr)
 }
 
-func (b *Build) chooseJobErrorByImportance(err error, archiveCacheErr error, artifactUploadErr error) error {
-	// Use job's errors that came before upload errors as most important to surface
-	if err != nil {
-		return err
+func (b *Build) pickPriorityError(jobErr error, archiveCacheErr error, artifactUploadErr error) error {
+	// Use job's errors which came before upload errors as most important to surface
+	if jobErr != nil {
+		return jobErr
 	}
 
 	// Otherwise, use uploading errors
@@ -524,15 +526,6 @@ func (b *Build) chooseJobErrorByImportance(err error, archiveCacheErr error, art
 	}
 
 	return artifactUploadErr
-}
-
-func (b *Build) executeUploads(ctx context.Context, executor Executor, err error) (error, error) {
-	// Execute post script (cache store, artifacts upload)
-	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
-
-	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
-
-	return archiveCacheErr, artifactUploadErr
 }
 
 func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) {

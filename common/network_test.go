@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,6 +38,36 @@ func TestCacheCheckPolicy(t *testing.T) {
 		}
 
 		assert.Equal(t, tc.expected, result, "case %d: %s", num, tc.description)
+	}
+}
+
+func TestShouldCache(t *testing.T) {
+	for _, params := range []struct {
+		jobSuccess          bool
+		when                CacheWhen
+		expectedShouldCache bool
+	}{
+		{true, CacheWhenOnSuccess, true},
+		{true, CacheWhenAlways, true},
+		{true, CacheWhenOnFailure, false},
+		{false, CacheWhenOnSuccess, false},
+		{false, CacheWhenAlways, true},
+		{false, CacheWhenOnFailure, true},
+	} {
+		tn := "jobSuccess=" + strconv.FormatBool(params.jobSuccess) + ",when=" + string(params.when)
+
+		t.Run(tn, func(t *testing.T) {
+			expected := params.expectedShouldCache
+
+			actual := params.when.ShouldCache(params.jobSuccess)
+
+			assert.Equal(
+				t,
+				actual,
+				expected,
+				"Value returned from ShouldCache was not as expected",
+			)
+		})
 	}
 }
 

@@ -279,6 +279,14 @@ const (
 	CacheWhenAlways    CacheWhen = "always"
 )
 
+func (when CacheWhen) ShouldCache(jobSuccess bool) bool {
+	if jobSuccess {
+		return when.OnSuccess()
+	}
+
+	return when.OnFailure()
+}
+
 func (when CacheWhen) OnSuccess() bool {
 	return when == "" || when == CacheWhenOnSuccess || when == CacheWhenAlways
 }
@@ -286,6 +294,7 @@ func (when CacheWhen) OnSuccess() bool {
 func (when CacheWhen) OnFailure() bool {
 	return when == CacheWhenOnFailure || when == CacheWhenAlways
 }
+
 func (c Cache) CheckPolicy(wanted CachePolicy) (bool, error) {
 	switch c.Policy {
 	case CachePolicyUndefined, CachePolicyPullPush:
