@@ -1,3 +1,56 @@
+## v13.5.0-rc1 (2020-10-08)
+
+### New features
+
+- Allow runner to archive cache on failure !2416
+- Add job status environment variables !2342
+- Add labels to docker cache volumes !2334
+- Set k8s runner ephemeral storage requests and limits !2279
+
+### Bug fixes
+
+- Docker executor: return error on pull/import failures !2113
+- Fix path separator for CI_PROJECT_DIR in Windows in bash shells !1977 (Pedro Pombeiro @pedropombeiro)
+
+### Maintenance
+
+- Ensure that for abort only abort is called !2463
+- Detach runtime state/metric from CI_JOB_STATUS !2462
+- Update stretchr/testify library to fix flaky test !2450
+- Report Kubernetes pods' conditions when they're pending !2434
+- Move variable creation out of specific resolver implementation !2413
+- Test more executors in TestAskRunnerOverrideDefaults !2406
+- Test for detecting overriding of CI server values !2403
+- Support 'canceling' remote job status. !2377
+- Add basic fuzz tests as part of dogfooding coverage guided fuzzing !2347
+- Standardize indentation in YAML code !2328
+- Use newest helper image version in tests !2223
+- Update calls for SkipIntegrationTests to not return !2065
+- Setup secure jobs !1897
+
+### Documentation changes
+
+- Doc `cleanup_file_variables` for custom executor !2455
+- Link Azure storage container docs !2454
+- Use google driver for examples !2442
+- Fix typo in k8s read_only config flag documentation !2441
+- Docs: Removed extra notes !2440
+- Removed many of the notes !2439
+- Harmonize docs linting rules !2435
+- Docs: Fixed here links and added metadata !2425
+- Minor edits of recent edits !2423
+- Remove contractions linting rule !2421
+- Docs: Edits for Vale rules and other style !2420
+- Documentation: Add log level mention to troubleshooting !2419
+- Switch autoscaling Docker Machine examples to GCP and Ubuntu !2417
+- Add troubleshooting about windows mapped drives !2415
+- Docs: Updating metadata !2405
+- Docs: Update docker tables to clarify what's supported !2404
+- Update default install docs to disable skel !2402
+- Docker version requirements in Windows Server !2401
+- Document vargrant-parallels plugin and add clone instructions !2399
+- Changing Kubernetes executor service-account command !2312
+
 ## v13.4.0 (2020-09-18)
 
 ### New features
