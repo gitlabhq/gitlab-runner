@@ -1,3 +1,9 @@
+## v13.5.0-rc2 (2020-10-08)
+
+### Maintenance
+
+- Disable secret_detection job !2471
+
 ## v13.5.0-rc1 (2020-10-08)
 
 ### New features
