@@ -7,21 +7,34 @@ package path
 
 import (
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
-type windowsPath struct{}
+type windowsPath struct {
+}
+
+// windowsNamedPipesExp matches a named pipe path (starts with `\\.\pipe\`, possibly with / instead of \)
+var windowsNamedPipe = regexp.MustCompile(`(?i)^[/\\]{2}\.[/\\]pipe[/\\][^:*?"<>|\r\n]+$`)
 
 func (p *windowsPath) Join(elem ...string) string {
 	return filepath.Join(elem...)
 }
 
 func (p *windowsPath) IsAbs(path string) bool {
+	if windowsNamedPipe.MatchString(path) {
+		return true
+	}
+
 	path = filepath.Clean(path)
 	return filepath.IsAbs(path)
 }
 
 func (p *windowsPath) IsRoot(path string) bool {
+	if windowsNamedPipe.MatchString(path) {
+		return false
+	}
+
 	path = filepath.Clean(path)
 	return filepath.IsAbs(path) && filepath.Dir(path) == path
 }

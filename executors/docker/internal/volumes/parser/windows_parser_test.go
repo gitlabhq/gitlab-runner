@@ -54,6 +54,14 @@ func TestWindowsParser_ParseVolume(t *testing.T) {
 			volumeSpec:    `volume_name:c:\destination`,
 			expectedParts: &Volume{Source: "volume_name", Destination: `c:\destination`},
 		},
+		"named pipes": {
+			volumeSpec:    `\\.\pipe\docker_engine1:\\.\pipe\docker_engine2`,
+			expectedParts: &Volume{Source: `\\.\pipe\docker_engine1`, Destination: `\\.\pipe\docker_engine2`},
+		},
+		"named pipes with forward slashes": {
+			volumeSpec:    `//./pipe/docker_engine1://./pipe/docker_engine2`,
+			expectedParts: &Volume{Source: `//./pipe/docker_engine1`, Destination: `//./pipe/docker_engine2`},
+		},
 	}
 
 	for testName, testCase := range testCases {

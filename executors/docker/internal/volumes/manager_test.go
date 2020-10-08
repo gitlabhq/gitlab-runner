@@ -53,9 +53,13 @@ func newDefaultManager(config ManagerConfig) *manager {
 	return m
 }
 
-func addParser(manager *manager) *parser.MockParser {
+func addUnixParser(manager *manager) *parser.MockParser {
+	return addParser(manager, path.NewUnixPath())
+}
+
+func addParser(manager *manager, p path.Path) *parser.MockParser {
 	parserMock := new(parser.MockParser)
-	parserMock.On("Path").Return(path.NewUnixPath())
+	parserMock.On("Path").Return(p)
 
 	manager.parser = parserMock
 	return parserMock
@@ -124,7 +128,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			volumeParser := addParser(m)
+			volumeParser := addUnixParser(m)
 			defer volumeParser.AssertExpectations(t)
 
 			volumeParser.On("ParseVolume", existingBinding).
@@ -206,7 +210,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			volumeParser := addParser(m)
+			volumeParser := addUnixParser(m)
 			defer volumeParser.AssertExpectations(t)
 
 			volumeParser.On("ParseVolume", "/host:/duplicated").
@@ -304,7 +308,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_HostBased(t *testing.T) {
 
 			m := newDefaultManager(config)
 
-			volumeParser := addParser(m)
+			volumeParser := addUnixParser(m)
 			defer volumeParser.AssertExpectations(t)
 
 			volumeParser.On("ParseVolume", existingBinding).
@@ -385,7 +389,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 			}
 
 			m := newDefaultManager(config)
-			volumeParser := addParser(m)
+			volumeParser := addUnixParser(m)
 			mClient := new(docker.MockClient)
 			m.client = mClient
 
@@ -442,7 +446,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_WithError(t *t
 	}
 
 	m := newDefaultManager(config)
-	volumeParser := addParser(m)
+	volumeParser := addUnixParser(m)
 	mClient := new(docker.MockClient)
 	m.client = mClient
 
@@ -530,7 +534,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 			}
 
 			m := newDefaultManager(config)
-			volumeParser := addParser(m)
+			volumeParser := addUnixParser(m)
 			mClient := new(docker.MockClient)
 			m.client = mClient
 
