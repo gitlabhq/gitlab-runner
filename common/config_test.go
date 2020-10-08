@@ -9,6 +9,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
 func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
@@ -292,6 +294,17 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, []string{"e2e-az1"}, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[1].MatchFields[0].Values)
 			},
 		},
+		"check that GracefulKillTimeout and ForceKillTimeout can't be set": {
+			config: `
+				[[runners]]
+					GracefulKillTimeout = 30
+					ForceKillTimeout = 10
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				assert.Nil(t, config.Runners[0].GracefulKillTimeout)
+				assert.Nil(t, config.Runners[0].ForceKillTimeout)
+			},
+		},
 	}
 
 	for tn, tt := range tests {
@@ -506,6 +519,43 @@ func TestDockerMachine(t *testing.T) {
 			assert.NoError(t, err, "should not return err on good period compile")
 			assert.Equal(t, tt.expectedIdleCount, tt.config.GetIdleCount())
 			assert.Equal(t, tt.expectedIdleTime, tt.config.GetIdleTime())
+		})
+	}
+}
+
+func TestRunnerSettings_GetGracefulKillTimeout_GetForceKillTimeout(t *testing.T) {
+	tests := map[string]struct {
+		config                      RunnerSettings
+		expectedGracefulKillTimeout time.Duration
+		expectedForceKillTimeout    time.Duration
+	}{
+		"undefined": {
+			config:                      RunnerSettings{},
+			expectedGracefulKillTimeout: process.GracefulTimeout,
+			expectedForceKillTimeout:    process.KillTimeout,
+		},
+		"timeouts lower than 0": {
+			config: RunnerSettings{
+				GracefulKillTimeout: func(i int) *int { return &i }(-10),
+				ForceKillTimeout:    func(i int) *int { return &i }(-10),
+			},
+			expectedGracefulKillTimeout: process.GracefulTimeout,
+			expectedForceKillTimeout:    process.KillTimeout,
+		},
+		"timeouts greater than 0": {
+			config: RunnerSettings{
+				GracefulKillTimeout: func(i int) *int { return &i }(30),
+				ForceKillTimeout:    func(i int) *int { return &i }(15),
+			},
+			expectedGracefulKillTimeout: 30 * time.Second,
+			expectedForceKillTimeout:    15 * time.Second,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.Equal(t, tt.expectedGracefulKillTimeout, tt.config.GetGracefulKillTimeout())
+			assert.Equal(t, tt.expectedForceKillTimeout, tt.config.GetForceKillTimeout())
 		})
 	}
 }

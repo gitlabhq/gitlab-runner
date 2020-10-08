@@ -94,9 +94,11 @@ func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (
 		JobResponse: getBuildResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				BuildsDir: dir,
-				Executor:  "shell",
-				Shell:     shell,
+				BuildsDir:           dir,
+				Executor:            "shell",
+				Shell:               shell,
+				GracefulKillTimeout: func(i int) *int { return &i }(5),
+				ForceKillTimeout:    func(i int) *int { return &i }(1),
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),

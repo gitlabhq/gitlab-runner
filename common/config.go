@@ -19,6 +19,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
@@ -438,6 +439,14 @@ type RunnerSettings struct {
 	Referees       *referees.Config `toml:"referees,omitempty" json:"referees" group:"referees configuration" namespace:"referees"`
 	Cache          *CacheConfig     `toml:"cache,omitempty" json:"cache" group:"cache configuration" namespace:"cache"`
 
+	// GracefulKillTimeout and ForceKillTimeout aren't exposed to the users yet
+	// because not every executor supports it. We also have to keep in mind that
+	// the CustomConfig has its configuration fields for termination so when
+	// every executor supports graceful termination we should expose this single
+	// configuration for all executors.
+	GracefulKillTimeout *int `toml:"-"`
+	ForceKillTimeout    *int `toml:"-"`
+
 	SSH        *ssh.Config       `toml:"ssh,omitempty" json:"ssh" group:"ssh executor" namespace:"ssh"`
 	Docker     *DockerConfig     `toml:"docker,omitempty" json:"docker" group:"docker executor" namespace:"docker"`
 	Parallels  *ParallelsConfig  `toml:"parallels,omitempty" json:"parallels" group:"parallels executor" namespace:"parallels"`
@@ -496,6 +505,27 @@ func (c *CacheConfig) GetPath() string {
 
 func (c *CacheConfig) GetShared() bool {
 	return c.Shared
+}
+
+func (r *RunnerSettings) GetGracefulKillTimeout() time.Duration {
+	return getDuration(r.GracefulKillTimeout, process.GracefulTimeout)
+}
+
+func (r *RunnerSettings) GetForceKillTimeout() time.Duration {
+	return getDuration(r.ForceKillTimeout, process.KillTimeout)
+}
+
+func getDuration(source *int, defaultValue time.Duration) time.Duration {
+	if source == nil {
+		return defaultValue
+	}
+
+	timeout := *source
+	if timeout <= 0 {
+		return defaultValue
+	}
+
+	return time.Duration(timeout) * time.Second
 }
 
 func (c *SessionServer) GetSessionTimeout() time.Duration {
