@@ -14,11 +14,11 @@ import (
 
 //nolint:funlen
 func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup func(build *common.Build)) {
-	abortIncludeStages := []common.BuildStage{
+	cancelIncludeStages := []common.BuildStage{
 		common.BuildStagePrepare,
 		common.BuildStageGetSources,
 	}
-	abortExcludeStages := []common.BuildStage{
+	cancelExcludeStages := []common.BuildStage{
 		common.BuildStageRestoreCache,
 		common.BuildStageDownloadArtifacts,
 		common.BuildStageAfterScript,
@@ -38,34 +38,25 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup func(bu
 			onUserStep: func(build *common.Build, _ common.JobTrace) {
 				build.SystemInterrupt <- os.Interrupt
 			},
-			includesStage: abortIncludeStages,
-			excludesStage: abortExcludeStages,
+			includesStage: cancelIncludeStages,
+			excludesStage: cancelExcludeStages,
 			expectedErr:   &common.BuildError{FailureReason: common.RunnerSystemFailure},
 		},
 		"job is aborted": {
 			onUserStep: func(_ *common.Build, trace common.JobTrace) {
 				trace.Abort()
 			},
-			includesStage: abortIncludeStages,
-			excludesStage: abortExcludeStages,
-			expectedErr:   &common.BuildError{FailureReason: common.JobAborted},
+			includesStage: cancelIncludeStages,
+			excludesStage: cancelExcludeStages,
+			expectedErr:   &common.BuildError{FailureReason: common.JobCanceled},
 		},
 		"job is canceling": {
 			onUserStep: func(_ *common.Build, trace common.JobTrace) {
 				trace.Cancel()
 			},
-			includesStage: []common.BuildStage{
-				common.BuildStagePrepare,
-				common.BuildStageGetSources,
-				common.BuildStageAfterScript,
-			},
-			excludesStage: []common.BuildStage{
-				common.BuildStageRestoreCache,
-				common.BuildStageDownloadArtifacts,
-				common.BuildStageUploadOnFailureArtifacts,
-				common.BuildStageUploadOnSuccessArtifacts,
-			},
-			expectedErr: &common.BuildError{FailureReason: common.JobCanceled},
+			includesStage: cancelIncludeStages,
+			excludesStage: cancelExcludeStages,
+			expectedErr:   &common.BuildError{FailureReason: common.JobCanceled},
 		},
 	}
 

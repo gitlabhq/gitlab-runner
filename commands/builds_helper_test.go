@@ -74,7 +74,7 @@ func TestBuildsHelperCollect(t *testing.T) {
 	}
 
 	err = <-done
-	expected := &common.BuildError{FailureReason: common.JobAborted}
+	expected := &common.BuildError{FailureReason: common.JobCanceled}
 	assert.True(t, errors.Is(err, expected), "expected: %[1]T (%[1]v), got: %[2]T (%[2]v)", expected, err)
 }
 
