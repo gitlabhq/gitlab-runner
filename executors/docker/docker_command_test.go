@@ -723,6 +723,7 @@ func TestCacheInContainer(t *testing.T) {
 			Key:    "key",
 			Paths:  common.ArtifactPaths{"cached/*"},
 			Policy: common.CachePolicyPullPush,
+			When:   common.CacheWhenOnSuccess,
 		},
 	}
 

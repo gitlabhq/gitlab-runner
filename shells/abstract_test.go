@@ -295,11 +295,26 @@ func getJobResponseWithCachePaths() common.JobResponse {
 				Untracked: true,
 				Policy:    common.CachePolicyPush,
 				Paths:     []string{"vendor/"},
+				When:      common.CacheWhenOnSuccess,
 			},
 			common.Cache{
 				Key:    "cache-key1",
 				Policy: common.CachePolicyPush,
 				Paths:  []string{"some/path1", "other/path2"},
+				When:   common.CacheWhenOnSuccess,
+			},
+			common.Cache{
+				Key:       "cache-key1",
+				Untracked: true,
+				Policy:    common.CachePolicyPush,
+				Paths:     []string{"when-on-failure"},
+				When:      common.CacheWhenOnFailure,
+			},
+			common.Cache{
+				Key:    "cache-key1",
+				Policy: common.CachePolicyPush,
+				Paths:  []string{"when-always"},
+				When:   common.CacheWhenAlways,
 			},
 		},
 	}
@@ -336,7 +351,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
-	mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(2)
+	mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(3)
 	mockWriter.On(
 		"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
 		"--file", mock.Anything,
@@ -355,6 +370,75 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 		"--url", mock.Anything,
 		"--header", "Header-1: a value",
 	).Once()
+	mockWriter.On(
+		"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
+		"--file", mock.Anything,
+		"--timeout", mock.Anything,
+		"--path", "when-always",
+		"--url", mock.Anything,
+		"--header", "Header-1: a value",
+	).Once()
+	mockWriter.On("Noticef", "Created cache").Times(3)
+	mockWriter.On("Else").Times(3)
+	mockWriter.On("Warningf", "Failed to create cache").Times(3)
+	mockWriter.On("EndIf").Times(3)
+	mockWriter.On("Else").Times(3)
+	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(3)
+	mockWriter.On("EndIf").Times(3)
+
+	err := shell.writeScript(mockWriter, common.BuildStageArchiveOnSuccessCache, info)
+	require.NoError(t, err)
+}
+
+func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
+	gitlabURL := "https://example.com:3443"
+
+	shell := AbstractShell{}
+	runnerConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Cache: &common.CacheConfig{
+				Type:   "test",
+				Shared: true,
+			},
+		},
+		RunnerCredentials: common.RunnerCredentials{
+			URL: gitlabURL,
+		},
+	}
+
+	build := &common.Build{
+		CacheDir:    "cache_dir",
+		JobResponse: getJobResponseWithCachePaths(),
+		Runner:      runnerConfig,
+	}
+	info := common.ShellScriptInfo{
+		RunnerCommand: "gitlab-runner-helper",
+		Build:         build,
+	}
+
+	mockWriter := new(MockShellWriter)
+	defer mockWriter.AssertExpectations(t)
+	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("Cd", mock.Anything)
+	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
+	mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(2)
+	mockWriter.On(
+		"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
+		"--file", mock.Anything,
+		"--timeout", mock.Anything,
+		"--path", "when-on-failure",
+		"--untracked",
+		"--url", mock.Anything,
+		"--header", "Header-1: a value",
+	).Once()
+	mockWriter.On(
+		"IfCmdWithOutput", "gitlab-runner-helper", "cache-archiver",
+		"--file", mock.Anything,
+		"--timeout", mock.Anything,
+		"--path", "when-always",
+		"--url", mock.Anything,
+		"--header", "Header-1: a value",
+	).Once()
 	mockWriter.On("Noticef", "Created cache").Times(2)
 	mockWriter.On("Else").Times(2)
 	mockWriter.On("Warningf", "Failed to create cache").Times(2)
@@ -363,7 +447,7 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 	mockWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Times(2)
 	mockWriter.On("EndIf").Times(2)
 
-	err := shell.writeScript(mockWriter, common.BuildStageArchiveCache, info)
+	err := shell.writeScript(mockWriter, common.BuildStageArchiveOnFailureCache, info)
 	require.NoError(t, err)
 }
 
@@ -772,12 +856,13 @@ func TestSkipBuildStage(t *testing.T) {
 			},
 		},
 
-		common.BuildStageArchiveCache: {
+		common.BuildStageArchiveOnSuccessCache: {
 			"don't skip if cache has paths": {
 				common.JobResponse{
 					Cache: common.Caches{
 						common.Cache{
 							Paths: []string{"default"},
+							When:  common.CacheWhenOnSuccess,
 						},
 					},
 				},
@@ -788,6 +873,31 @@ func TestSkipBuildStage(t *testing.T) {
 					Cache: common.Caches{
 						common.Cache{
 							Untracked: true,
+							When:      common.CacheWhenOnSuccess,
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+		},
+		common.BuildStageArchiveOnFailureCache: {
+			"don't skip if cache has paths": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Paths: []string{"default"},
+							When:  common.CacheWhenOnFailure,
+						},
+					},
+				},
+				common.RunnerConfig{},
+			},
+			"don't skip if cache uses untracked files": {
+				common.JobResponse{
+					Cache: common.Caches{
+						common.Cache{
+							Untracked: true,
+							When:      common.CacheWhenOnFailure,
 						},
 					},
 				},

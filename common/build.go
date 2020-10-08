@@ -79,7 +79,8 @@ const (
 	BuildStageRestoreCache             BuildStage = "restore_cache"
 	BuildStageDownloadArtifacts        BuildStage = "download_artifacts"
 	BuildStageAfterScript              BuildStage = "after_script"
-	BuildStageArchiveCache             BuildStage = "archive_cache"
+	BuildStageArchiveOnSuccessCache    BuildStage = "archive_cache"
+	BuildStageArchiveOnFailureCache    BuildStage = "archive_cache_on_failure"
 	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
 	BuildStageCleanupFileVariables     BuildStage = "cleanup_file_variables"
@@ -93,7 +94,8 @@ var staticBuildStages = []BuildStage{
 	BuildStageRestoreCache,
 	BuildStageDownloadArtifacts,
 	BuildStageAfterScript,
-	BuildStageArchiveCache,
+	BuildStageArchiveOnSuccessCache,
+	BuildStageArchiveOnFailureCache,
 	BuildStageUploadOnSuccessArtifacts,
 	BuildStageUploadOnFailureArtifacts,
 	BuildStageCleanupFileVariables,
@@ -392,7 +394,8 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 		BuildStageRestoreCache:             true,
 		BuildStageDownloadArtifacts:        true,
 		BuildStageAfterScript:              false,
-		BuildStageArchiveCache:             true,
+		BuildStageArchiveOnSuccessCache:    true,
+		BuildStageArchiveOnFailureCache:    false,
 		BuildStageUploadOnFailureArtifacts: true,
 		BuildStageUploadOnSuccessArtifacts: true,
 		BuildStageCleanupFileVariables:     true,
@@ -413,7 +416,8 @@ func GetStageDescription(stage BuildStage) string {
 		BuildStageRestoreCache:             "Restoring cache",
 		BuildStageDownloadArtifacts:        "Downloading artifacts",
 		BuildStageAfterScript:              "Running after_script",
-		BuildStageArchiveCache:             "Saving cache",
+		BuildStageArchiveOnSuccessCache:    "Saving cache for successful job",
+		BuildStageArchiveOnFailureCache:    "Saving cache for failed job",
 		BuildStageUploadOnFailureArtifacts: "Uploading artifacts for failed job",
 		BuildStageUploadOnSuccessArtifacts: "Uploading artifacts for successful job",
 		BuildStageCleanupFileVariables:     "Cleaning up file based variables",
@@ -433,6 +437,14 @@ func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executo
 	}
 
 	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor)
+}
+
+func (b *Build) executeArchiveCache(ctx context.Context, state error, executor Executor) (err error) {
+	if state == nil {
+		return b.executeStage(ctx, BuildStageArchiveOnSuccessCache, executor)
+	}
+
+	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
 }
 
 func (b *Build) executeSteps(ctx context.Context, executor Executor) error {
@@ -490,10 +502,7 @@ func (b *Build) executeScript(abortCtx context.Context, trace JobTrace, executor
 		b.executeAfterScript(abortCtx, err, executor)
 	}
 
-	// Execute post script (cache store, artifacts upload)
-	if err == nil {
-		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
-	}
+	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
 
 	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
 
@@ -502,12 +511,20 @@ func (b *Build) executeScript(abortCtx context.Context, trace JobTrace, executor
 
 	b.removeFileBasedVariables(ctx, executor)
 
-	// Use job's error as most important
-	if err != nil {
-		return err
+	return b.pickPriorityError(err, archiveCacheErr, artifactUploadErr)
+}
+
+func (b *Build) pickPriorityError(jobErr error, archiveCacheErr error, artifactUploadErr error) error {
+	// Use job's errors which came before upload errors as most important to surface
+	if jobErr != nil {
+		return jobErr
 	}
 
-	// Otherwise, use uploadError
+	// Otherwise, use uploading errors
+	if archiveCacheErr != nil {
+		return archiveCacheErr
+	}
+
 	return artifactUploadErr
 }
 
