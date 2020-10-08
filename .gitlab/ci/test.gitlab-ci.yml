@@ -2,7 +2,6 @@ include:
 - template: Security/Dependency-Scanning.gitlab-ci.yml
 - template: Coverage-Fuzzing.gitlab-ci.yml
 - template: Security/SAST.gitlab-ci.yml
-- template: Security/Secret-Detection.gitlab-ci.yml
 - template: Security/License-Scanning.gitlab-ci.yml
 
 .merge_request_pipelines_rules: &merge_request_pipelines_rules
@@ -29,17 +28,6 @@ license_scanning:
 # as in `.merge_request_pipelines` template.
 gosec-sast:
   rules: *merge_request_pipelines_rules
-
-# Overriding 'SAST.gitlab-ci.yml' template, because
-# we need to replace the rules with our own, the same
-# as in `.merge_request_pipelines` template.
-secret_detection:
-  rules: *merge_request_pipelines_rules
-
-# Disable secret detection for default branch
-secret_detection_default_branch:
-  rules:
-  - when: never
 
 docs lint:
   image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint:vale-2.3.4-markdownlint-0.23.2"
