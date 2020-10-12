@@ -72,26 +72,38 @@ The following keywords help to define the behavior of the Runner within Kubernet
 - `cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature
 - `memory_limit`: The amount of memory allocated to build containers
 - `memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature
+- `ephemeral_storage_limit`: The ephemeral storage limit for build containers
+- `ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature
 - `service_cpu_limit`: The CPU allocation given to build service containers
 - `service_cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for service containers. When empty, it disables the cpu limit overwrite feature
 - `service_memory_limit`: The amount of memory allocated to build service containers
 - `service_memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature
+- `service_ephemeral_storage_limit`: The ephemeral storage limit given to service containers
+- `service_ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature
 - `helper_cpu_limit`: The CPU allocation given to build helper containers
 - `helper_cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for helper containers. When empty, it disables the cpu limit overwrite feature
 - `helper_memory_limit`: The amount of memory allocated to build helper containers
 - `helper_memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature
+- `helper_ephemeral_storage_limit`: The ephemeral storage limit given to helper containers
+- `helper_ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature
 - `cpu_request`: The CPU allocation requested for build containers
 - `cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for build containers. When empty, it disables the cpu request overwrite feature
 - `memory_request`: The amount of memory requested from build containers
 - `memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature
+- `ephemeral_storage_request`: The ephemeral storage request given to build containers
+- `ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for build containers. When empty, it disables the ephemeral storage request overwrite feature
 - `service_cpu_request`: The CPU allocation requested for build service containers
 - `service_cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for service containers. When empty, it disables the cpu request overwrite feature
 - `service_memory_request`: The amount of memory requested for build service containers
 - `service_memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature
+- `service_ephemeral_storage_request`: The ephemeral storage request given to service containers
+- `service_ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature
 - `helper_cpu_request`: The CPU allocation requested for build helper containers
 - `helper_cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for helper containers. When empty, it disables the cpu request overwrite feature
 - `helper_memory_request`: The amount of memory requested for build helper containers
 - `helper_memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature
+- `helper_ephemeral_storage_request`: The ephemeral storage request given to helper containers
+- `helper_ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature
 - `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) will be used if not set.
   - See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs
@@ -202,16 +214,22 @@ on the `.gitlab-ci.yml` file with the following variables:
    KUBERNETES_CPU_LIMIT: 5
    KUBERNETES_MEMORY_REQUEST: 2Gi
    KUBERNETES_MEMORY_LIMIT: 4Gi
+   KUBERNETES_EPHEMERAL_STORAGE_REQUEST: 512Mi
+   KUBERNETES_EPHEMERAL_STORAGE_LIMIT: 1Gi
 
    KUBERNETES_HELPER_CPU_REQUEST: 3
    KUBERNETES_HELPER_CPU_LIMIT: 5
    KUBERNETES_HELPER_MEMORY_REQUEST: 2Gi
    KUBERNETES_HELPER_MEMORY_LIMIT: 4Gi
+   KUBERNETES_HELPER_EPHEMERAL_STORAGE_REQUEST: 512Mi
+   KUBERNETES_HELPER_EPHEMERAL_STORAGE_LIMIT: 1Gi
 
    KUBERNETES_SERVICE_CPU_REQUEST: 3
    KUBERNETES_SERVICE_CPU_LIMIT: 5
    KUBERNETES_SERVICE_MEMORY_REQUEST: 2Gi
    KUBERNETES_SERVICE_MEMORY_LIMIT: 4Gi
+   KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST: 512Mi
+   KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT: 1Gi
 ```
 
 The values for these variables are restricted to what the max overwrite
