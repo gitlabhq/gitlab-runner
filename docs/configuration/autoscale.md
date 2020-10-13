@@ -5,10 +5,10 @@
 Autoscale provides the ability to utilize resources in a more elastic and
 dynamic way.
 
-Thanks to Runners being able to autoscale, your infrastructure contains only as
-much build instances as necessary at anytime. If you configure the Runner to
+Runners can autoscale, so that your infrastructure contains only as
+many build instances as are necessary at any time. If you configure the Runner to
 only use autoscale, the system on which the Runner is installed acts as a
-bastion for all the machines it creates.
+bastion for all the machines it creates. This machine is referred to as a "Runner Manager."
 
 ## Overview
 
