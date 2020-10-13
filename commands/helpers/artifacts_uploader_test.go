@@ -78,76 +78,82 @@ func TestArtifactsUploaderForbidden(t *testing.T) {
 }
 
 func TestArtifactsUploaderRetry(t *testing.T) {
-	network := &testNetwork{
-		uploadState: common.UploadFailed,
-	}
-	cmd := ArtifactsUploaderCommand{
-		JobCredentials: UploaderCredentials,
-		network:        network,
-		fileArchiver: fileArchiver{
-			Paths: []string{artifactsTestArchivedFile},
-		},
-	}
+	OnEachZipArchiver(t, func(t *testing.T) {
+		network := &testNetwork{
+			uploadState: common.UploadFailed,
+		}
+		cmd := ArtifactsUploaderCommand{
+			JobCredentials: UploaderCredentials,
+			network:        network,
+			fileArchiver: fileArchiver{
+				Paths: []string{artifactsTestArchivedFile},
+			},
+		}
 
-	writeTestFile(t, artifactsTestArchivedFile)
-	defer os.Remove(artifactsTestArchivedFile)
+		writeTestFile(t, artifactsTestArchivedFile)
+		defer os.Remove(artifactsTestArchivedFile)
 
-	removeHook := helpers.MakeFatalToPanic()
-	defer removeHook()
+		removeHook := helpers.MakeFatalToPanic()
+		defer removeHook()
 
-	assert.Panics(t, func() {
-		cmd.Execute(nil)
+		assert.Panics(t, func() {
+			cmd.Execute(nil)
+		})
+
+		assert.Equal(t, defaultTries, network.uploadCalled)
 	})
-
-	assert.Equal(t, defaultTries, network.uploadCalled)
 }
 
 func TestArtifactsUploaderDefaultSucceeded(t *testing.T) {
-	network := &testNetwork{
-		uploadState: common.UploadSucceeded,
-	}
-	cmd := ArtifactsUploaderCommand{
-		JobCredentials: UploaderCredentials,
-		network:        network,
-		fileArchiver: fileArchiver{
-			Paths: []string{artifactsTestArchivedFile},
-		},
-	}
+	OnEachZipArchiver(t, func(t *testing.T) {
+		network := &testNetwork{
+			uploadState: common.UploadSucceeded,
+		}
+		cmd := ArtifactsUploaderCommand{
+			JobCredentials: UploaderCredentials,
+			network:        network,
+			fileArchiver: fileArchiver{
+				Paths: []string{artifactsTestArchivedFile},
+			},
+		}
 
-	writeTestFile(t, artifactsTestArchivedFile)
-	defer os.Remove(artifactsTestArchivedFile)
+		writeTestFile(t, artifactsTestArchivedFile)
+		defer os.Remove(artifactsTestArchivedFile)
 
-	cmd.Execute(nil)
-	assert.Equal(t, 1, network.uploadCalled)
-	assert.Equal(t, common.ArtifactFormatZip, network.uploadFormat)
-	assert.Equal(t, DefaultUploadName+".zip", network.uploadName)
-	assert.Empty(t, network.uploadType)
+		cmd.Execute(nil)
+		assert.Equal(t, 1, network.uploadCalled)
+		assert.Equal(t, common.ArtifactFormatZip, network.uploadFormat)
+		assert.Equal(t, DefaultUploadName+".zip", network.uploadName)
+		assert.Empty(t, network.uploadType)
+	})
 }
 
 func TestArtifactsUploaderZipSucceeded(t *testing.T) {
-	network := &testNetwork{
-		uploadState: common.UploadSucceeded,
-	}
-	cmd := ArtifactsUploaderCommand{
-		JobCredentials: UploaderCredentials,
-		Format:         common.ArtifactFormatZip,
-		Name:           "my-release",
-		Type:           "my-type",
-		network:        network,
-		fileArchiver: fileArchiver{
-			Paths: []string{artifactsTestArchivedFile},
-		},
-	}
+	OnEachZipArchiver(t, func(t *testing.T) {
+		network := &testNetwork{
+			uploadState: common.UploadSucceeded,
+		}
+		cmd := ArtifactsUploaderCommand{
+			JobCredentials: UploaderCredentials,
+			Format:         common.ArtifactFormatZip,
+			Name:           "my-release",
+			Type:           "my-type",
+			network:        network,
+			fileArchiver: fileArchiver{
+				Paths: []string{artifactsTestArchivedFile},
+			},
+		}
 
-	writeTestFile(t, artifactsTestArchivedFile)
-	defer os.Remove(artifactsTestArchivedFile)
+		writeTestFile(t, artifactsTestArchivedFile)
+		defer os.Remove(artifactsTestArchivedFile)
 
-	cmd.Execute(nil)
-	assert.Equal(t, 1, network.uploadCalled)
-	assert.Equal(t, common.ArtifactFormatZip, network.uploadFormat)
-	assert.Equal(t, "my-release.zip", network.uploadName)
-	assert.Equal(t, "my-type", network.uploadType)
-	assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile)
+		cmd.Execute(nil)
+		assert.Equal(t, 1, network.uploadCalled)
+		assert.Equal(t, common.ArtifactFormatZip, network.uploadFormat)
+		assert.Equal(t, "my-release.zip", network.uploadName)
+		assert.Equal(t, "my-type", network.uploadType)
+		assert.Contains(t, network.uploadedFiles, artifactsTestArchivedFile)
+	})
 }
 
 func TestArtifactsUploaderGzipSendsMultipleFiles(t *testing.T) {
