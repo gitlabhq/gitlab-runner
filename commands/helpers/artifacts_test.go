@@ -112,7 +112,10 @@ func (m *testNetwork) consumeGzipUpload(reader io.Reader) common.UploadState {
 }
 
 func (m *testNetwork) consumeRawUpload(reader io.Reader) common.UploadState {
-	_, _ = io.Copy(ioutil.Discard, reader)
+	_, err := io.Copy(ioutil.Discard, reader)
+	if err != nil {
+		return common.UploadFailed
+	}
 
 	m.uploadedFiles = append(m.uploadedFiles, "raw")
 	m.uploadFormat = common.ArtifactFormatRaw

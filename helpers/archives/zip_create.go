@@ -3,9 +3,7 @@ package archives
 import (
 	"archive/zip"
 	"io"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 )
@@ -99,37 +97,6 @@ func CreateZipArchive(w io.Writer, fileNames []string) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-func CreateZipFile(fileName string, fileNames []string) error {
-	// create directories to store archive
-	err := os.MkdirAll(filepath.Dir(fileName), 0700)
-	if err != nil {
-		return err
-	}
-
-	tempFile, err := ioutil.TempFile(filepath.Dir(fileName), "archive_")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = tempFile.Close()
-		_ = os.Remove(tempFile.Name())
-	}()
-
-	logrus.Debugln("Temporary file:", tempFile.Name())
-	err = CreateZipArchive(tempFile, fileNames)
-	if err != nil {
-		return err
-	}
-	_ = tempFile.Close()
-
-	err = os.Rename(tempFile.Name(), fileName)
-	if err != nil {
-		return err
 	}
 
 	return nil

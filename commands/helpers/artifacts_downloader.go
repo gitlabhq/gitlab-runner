@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"time"
@@ -8,8 +9,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/archives"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
@@ -49,8 +50,13 @@ func (c *ArtifactsDownloaderCommand) download(file string, retry int) error {
 	}
 }
 
-func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
+func (c *ArtifactsDownloaderCommand) Execute(cliContext *cli.Context) {
 	log.SetRunnerFormatter()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		logrus.Fatalln("Unable to get working directory")
+	}
 
 	if c.URL == "" || c.Token == "" {
 		logrus.Fatalln("Missing runner credentials")
@@ -75,11 +81,37 @@ func (c *ArtifactsDownloaderCommand) Execute(context *cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	// Extract artifacts file
-	err = archives.ExtractZipFile(file.Name())
+	f, size, err := openZip(file.Name())
 	if err != nil {
 		logrus.Fatalln(err)
 	}
+	defer f.Close()
+
+	extractor, err := archive.NewExtractor(archive.Zip, f, size, wd)
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+
+	// Extract artifacts file
+	err = extractor.Extract(context.Background())
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+}
+
+func openZip(filename string) (*os.File, int64, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		f.Close()
+		return nil, 0, err
+	}
+
+	return f, fi.Size(), nil
 }
 
 func init() {

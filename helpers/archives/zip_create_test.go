@@ -116,8 +116,14 @@ func TestZipCreate(t *testing.T) {
 			createTestPipe(t, multiBytes),
 			"non_existing_file.txt",
 		}
-		err := CreateZipFile(fileName, paths)
+
+		f, err := os.Create(fileName)
 		require.NoError(t, err)
+		defer f.Close()
+
+		err = CreateZipArchive(f, paths)
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
 
 		archive, err := zip.OpenReader(fileName)
 		require.NoError(t, err)
@@ -158,8 +164,14 @@ func TestZipCreateWithGitPath(t *testing.T) {
 			createTestGitPathFile(t, singleByte),
 			createTestGitPathFile(t, multiBytes),
 		}
-		err := CreateZipFile(fileName, paths)
+
+		f, err := os.Create(fileName)
 		require.NoError(t, err)
+		defer f.Close()
+
+		err = CreateZipArchive(f, paths)
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
 
 		assert.Contains(t, buf.String(), "Part of .git directory is on the list of files to archive")
 

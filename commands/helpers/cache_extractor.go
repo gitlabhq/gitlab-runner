@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,8 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/archives"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 )
@@ -105,8 +106,13 @@ func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
 	return resp, retryOnServerError(resp)
 }
 
-func (c *CacheExtractorCommand) Execute(context *cli.Context) {
+func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 	log.SetRunnerFormatter()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		logrus.Fatalln("Unable to get working directory")
+	}
 
 	if c.File == "" {
 		logrus.Fatalln("Missing cache file")
@@ -123,8 +129,22 @@ func (c *CacheExtractorCommand) Execute(context *cli.Context) {
 				"Instead a local version of cache will be extracted.")
 	}
 
-	err := archives.ExtractZipFile(c.File)
-	if err != nil && !os.IsNotExist(err) {
+	f, size, err := openZip(c.File)
+	if os.IsNotExist(err) {
+		return
+	}
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+	defer f.Close()
+
+	extractor, err := archive.NewExtractor(archive.Zip, f, size, wd)
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+
+	err = extractor.Extract(context.Background())
+	if err != nil {
 		logrus.Fatalln(err)
 	}
 }
