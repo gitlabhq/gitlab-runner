@@ -21,6 +21,8 @@ gemnasium-dependency_scanning:
 # we need to replace the rules with our own, the same
 # as in `.merge_request_pipelines` template.
 license_scanning:
+  variables:
+    LICENSE_FINDER_CLI_OPTS: '--decisions-file=.gitlab/dependency_decisions.yml'
   rules: *merge_request_pipelines_rules
 
 # Overriding 'SAST.gitlab-ci.yml' template, because
