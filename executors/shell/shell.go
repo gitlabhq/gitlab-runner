@@ -204,7 +204,7 @@ func (s *executor) run(cmd common.ExecutorCommand) error {
 		return err
 	case <-cmd.Context.Done():
 		logger := common.NewProcessLoggerAdapter(s.BuildLogger)
-		return newProcessKillWaiter(logger, process.GracefulTimeout, process.KillTimeout).
+		return newProcessKillWaiter(logger, s.Config.GetGracefulKillTimeout(), s.Config.GetForceKillTimeout()).
 			KillAndWait(c, waitCh)
 	}
 }
