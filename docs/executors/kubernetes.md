@@ -119,7 +119,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
   the pod annotations overwrite environment variable. When empty,
   it disables the pod annotations overwrite feature
 - `pod_security_context`: Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)
-- `service_account`: default service account to be used for making Kubernetes API calls.
+- `service_account`: default service account job/executor pods use to talk to Kubernetes API
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
   it disables the service account overwrite feature
