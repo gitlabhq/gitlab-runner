@@ -236,7 +236,6 @@ func (s *RegisterCommand) askRunner() {
 	if s.URL == "" {
 		s.URL = "https://gitlab.com/"
 	}
-	
 
 	if s.Token != "" {
 		logrus.Infoln("Token specified trying to verify runner...")
@@ -249,7 +248,7 @@ func (s *RegisterCommand) askRunner() {
 
 	// we store registration token as token, since we pass that to RunnerCredentials
 	s.Token = s.ask("registration-token", "Enter the registration token:")
-	s.Name = s.ask("name", "Enter a description for thr runner:")
+	s.Name = s.ask("name", "Enter a description for the runner:")
 	s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
 
 	if s.TagList == "" {
