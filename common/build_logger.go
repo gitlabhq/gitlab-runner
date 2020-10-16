@@ -16,6 +16,13 @@ type BuildLogger struct {
 	entry *logrus.Entry
 }
 
+func NewBuildLogger(log JobTrace, entry *logrus.Entry) BuildLogger {
+	return BuildLogger{
+		log:   log,
+		entry: entry,
+	}
+}
+
 func (e *BuildLogger) WithFields(fields logrus.Fields) BuildLogger {
 	return NewBuildLogger(e.log, e.entry.WithFields(fields))
 }
@@ -88,13 +95,6 @@ func (e *BuildLogger) Errorln(args ...interface{}) {
 		return
 	}
 	e.sendLog(e.entry.Errorln, helpers.ANSI_BOLD_RED+"ERROR: ", args...)
-}
-
-func NewBuildLogger(log JobTrace, entry *logrus.Entry) BuildLogger {
-	return BuildLogger{
-		log:   log,
-		entry: entry,
-	}
 }
 
 type ProcessLoggerAdapter struct {
