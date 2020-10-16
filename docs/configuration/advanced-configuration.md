@@ -822,11 +822,11 @@ Example:
 When one of `docker`, `docker+machine` or `kubernetes` executors is used, GitLab Runner uses a specific container
 to handle Git, artifacts and cache operations. This container is created from a special image, named `helper image`.
 
-The helper image is based on Alpine Linux and it's provided for amd64 and arm architectures. It contains
+The helper image is based on Alpine Linux and it's provided for amd64, arm, arm64, and s390x architectures. It contains
 a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner binary, that contains only a subset
 of available commands, as well as Git, Git LFS, SSL certificates store, and basic configuration of Alpine.
 
-When GitLab Runner is installed from the DEB/RPM packages, both images (`amd64` and `arm` based) are installed on the host.
+When GitLab Runner is installed from the DEB/RPM packages, images for the supported architectures are installed on the host.
 When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's Git
 revision) is not found on Docker Engine, it is automatically loaded. It works like that for both
 `docker` and `docker+machine` executors.
