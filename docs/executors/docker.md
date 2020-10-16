@@ -482,7 +482,7 @@ The `volumes` directive supports two types of storage:
 
 1. `<path>` - **the dynamic storage**. The `<path>` is persistent between subsequent
    runs of the same concurrent job for that project. The data is attached to a
-   custom cache container: `runner-<short-token>-project-<id>-concurrent-<job-id>-cache-<unique-id>`.
+   custom cache volume: `runner-<short-token>-project-<id>-concurrent-<concurrency-id>-cache-<md5-of-path>`.
 1. `<host-path>:<path>[:<mode>]` - **the host-bound storage**. The `<path>` is
    bind to `<host-path>` on the host system. The optional `<mode>` can specify
    that this storage is read-only or read-write (default).
