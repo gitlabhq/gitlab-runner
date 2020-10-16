@@ -32,7 +32,7 @@ RUN wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod
     dpkg -i packages-microsoft-prod.deb && \
     rm packages-microsoft-prod.deb && \
     apt-get update && \
-    apt-get install -y powershell=${PWSH_VERSION}.debian.10 && \
+    apt-get install -y powershell=${PWSH_VERSION}-1.debian.10 && \
     rm -rf /var/lib/apt/lists/* && \
     pwsh --version
 

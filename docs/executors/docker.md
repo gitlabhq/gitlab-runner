@@ -48,16 +48,18 @@ To use Windows containers with the Docker executor, note the following
 information about limitations, supported Windows versions, and
 configuring a Windows Docker executor.
 
+### Nanoserver support
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2492) in GitLab Runner 13.6.
+
+With the support for Powershell Core introduced in the Windows helper image, it is now possible to leverage
+the `nanoserver` variants for the helper image.
+
 ### Limitations
 
 The following are some limitations of using Windows containers with
 Docker executor:
 
-- Nanoserver cannot be used because it requires PowerShell 6 but GitLab
-  requires PowerShell 5 (see
-  [#3291](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3291)). See
-  also the list of [supported Windows
-  versions](#supported-windows-versions).
 - Docker-in-Docker is not supported, since it's [not
   supported](https://github.com/docker-library/docker/issues/49) by
   Docker itself.

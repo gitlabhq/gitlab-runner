@@ -11,28 +11,42 @@ ARG GIT_VERSION_BUILD
 ARG GIT_256_CHECKSUM
 ARG GIT_LFS_VERSION
 ARG GIT_LFS_256_CHECKSUM
+ARG PWSH_VERSION
+ARG PWSH_256_CHECKSUM
 
 # We have to enable TLS1.2 to download from GitHub.
-RUN [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; `
+RUN New-Item -ItemType directory -Path C:\Downloads; `
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; `
     Invoke-Webrequest "https://github.com/git-for-windows/git/releases/download/v${Env:GIT_VERSION}.windows.${Env:GIT_VERSION_BUILD}/MinGit-${Env:GIT_VERSION}-64-bit.zip" -OutFile git.zip -UseBasicParsing; `
-    Invoke-Webrequest "https://github.com/git-lfs/git-lfs/releases/download/v${Env:GIT_LFS_VERSION}/git-lfs-windows-amd64-v${Env:GIT_LFS_VERSION}.zip" -OutFile git-lfs.zip -UseBasicParsing
+    Invoke-Webrequest "https://github.com/git-lfs/git-lfs/releases/download/v${Env:GIT_LFS_VERSION}/git-lfs-windows-amd64-v${Env:GIT_LFS_VERSION}.zip" -OutFile git-lfs.zip -UseBasicParsing; `
+    Invoke-Webrequest "https://github.com/PowerShell/PowerShell/releases/download/v${Env:PWSH_VERSION}/PowerShell-${Env:PWSH_VERSION}-win-x64.msi" -OutFile C:\Downloads\pwsh.msi -UseBasicParsing
 
 COPY [".\\helpers\\checksum.ps1", ".\\"]
-RUN powershell -File .\checksum.ps1 -TargetFile git.zip -ExpectedHash ${Env:GIT_256_CHECKSUM}
-RUN powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:GIT_LFS_256_CHECKSUM}
+RUN powershell -File .\checksum.ps1 -TargetFile git.zip -ExpectedHash ${Env:GIT_256_CHECKSUM}; `
+    powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:GIT_LFS_256_CHECKSUM}; `
+    powershell -File .\checksum.ps1 -TargetFile C:\Downloads\pwsh.msi -ExpectedHash ${Env:PWSH_256_CHECKSUM}
 
-RUN New-Item -ItemType directory -Path C:\Temp
-RUN Expand-Archive -Path git.zip -DestinationPath C:\Temp\git
-RUN Expand-Archive -Path git-lfs.zip -DestinationPath C:\Temp\git-lfs
+RUN New-Item -ItemType directory -Path C:\Temp; `
+    Expand-Archive -Path git.zip -DestinationPath C:\Temp\git; `
+    Expand-Archive -Path git-lfs.zip -DestinationPath C:\Temp\git-lfs
+
 COPY [".\\binaries\\gitlab-runner-helper.x86_64-windows.exe", "C:\\Temp\\gitlab-runner-helper\\gitlab-runner-helper.exe"]
+
+########################################################################################################################
 
 FROM ${BASE_IMAGE_TAG}
 
 USER ContainerAdministrator
 
-SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
-
 COPY --from=builder ["C:\\Temp", "C:\\Program Files\\"]
+COPY --from=builder ["C:\\Downloads", "C:\\Downloads\\"]
+
+RUN msiexec.exe /package "C:\Downloads\pwsh.msi" /quiet REGISTER_MANIFEST=1 && `
+    rmdir /s /q "C:\Downloads"
+RUN pwsh --version
+
+SHELL ["pwsh", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+
 # We enable `GIT_CONFIG_NOSYSTEM` and unset `include.path` in order to avoid recursive includes in the Git configuration
 # This can be removed once we move the MinGit installation out of the `C:\Program Files\git` directory. See
 # https://gitlab.com/gitlab-org/gitlab/-/issues/239013#note_401347751
@@ -41,7 +55,7 @@ RUN [Environment]::SetEnvironmentVariable('Path', $env:Path + ';C:\Program Files
     $env:GIT_CONFIG_NOSYSTEM=1; `
     & $env:ProgramFiles\git\cmd\git.exe config --system --unset-all include.path; `
     & $env:ProgramFiles\git\cmd\git.exe config --system core.longpaths true; `
-    & $env:ProgramFiles\git\cmd\git.exe lfs install --skip-repo;
+    & $env:ProgramFiles\git\cmd\git.exe lfs install --skip-repo
 
 COPY [".\\helpers\\entrypoint.cmd", ".\\"]
 
