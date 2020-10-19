@@ -181,7 +181,7 @@ The Docker executor divides the job into multiple steps:
 The special Docker image is based on [Alpine Linux](https://alpinelinux.org/) and contains all the tools
 required to run the prepare, pre-job, and post-job steps, like the Git and the
 Runner binaries for supporting caching and artifacts. You can find the definition of
-this special image [in the official Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles/build).
+this special image [in the official Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
 
 ## The `image` keyword
 
