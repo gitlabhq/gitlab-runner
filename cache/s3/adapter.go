@@ -45,6 +45,14 @@ func (a *s3Adapter) GetUploadHeaders() http.Header {
 	return nil
 }
 
+func (a *s3Adapter) GetGoCloudURL() *url.URL {
+	return nil
+}
+
+func (a *s3Adapter) GetUploadEnv() map[string]string {
+	return nil
+}
+
 func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
 	s3 := config.S3
 	if s3 == nil {

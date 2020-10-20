@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
@@ -588,26 +590,49 @@ func (b *AbstractShell) addCacheUploadCommand(
 	args = append(args, archiverArgs...)
 
 	// Generate cache upload address
-	if url := cache.GetCacheUploadURL(info.Build, cacheKey); url != nil {
-		args = append(args, "--url", url.String())
-	}
+	args = append(args, getCacheUploadURL(info.Build, cacheKey)...)
 
-	httpHeaders := cache.GetCacheUploadHeaders(info.Build, cacheKey)
-	for key, values := range httpHeaders {
-		for _, value := range values {
-			args = append(args, "--header", fmt.Sprintf("%s: %s", key, value))
-		}
-	}
+	env := cache.GetCacheUploadEnv(info.Build, cacheKey)
 
 	// Execute cache-archiver command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {
 		w.Noticef("Creating cache %s...", cacheKey)
+
+		for key, value := range env {
+			w.Variable(common.JobVariable{Key: key, Value: value})
+		}
+
 		w.IfCmdWithOutput(info.RunnerCommand, args...)
 		w.Noticef("Created cache")
 		w.Else()
 		w.Warningf("Failed to create cache")
 		w.EndIf()
 	})
+}
+
+// getCacheUploadURL will first try to generate the GoCloud URL if it's
+// available then fallback to a pre-signed URL.
+func getCacheUploadURL(build *common.Build, cacheKey string) []string {
+	// Prefer Go Cloud URL if supported
+	goCloudURL := cache.GetCacheGoCloudURL(build, cacheKey)
+	if goCloudURL != nil && build.IsFeatureFlagOn(featureflags.UseGoCloudWithCacheArchiver) {
+		return []string{"--gocloud-url", goCloudURL.String()}
+	}
+
+	uploadURL := cache.GetCacheUploadURL(build, cacheKey)
+	if uploadURL == nil {
+		return []string{}
+	}
+
+	urlArgs := []string{"--url", uploadURL.String()}
+	httpHeaders := cache.GetCacheUploadHeaders(build, cacheKey)
+	for key, values := range httpHeaders {
+		for _, value := range values {
+			urlArgs = append(urlArgs, "--header", fmt.Sprintf("%s: %s", key, value))
+		}
+	}
+
+	return urlArgs
 }
 
 func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) bool {

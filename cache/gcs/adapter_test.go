@@ -318,6 +318,8 @@ func TestAdapterOperation(t *testing.T) {
 
 			headers := adapter.GetUploadHeaders()
 			assert.Nil(t, headers)
+			assert.Nil(t, adapter.GetGoCloudURL())
+			assert.Empty(t, adapter.GetUploadEnv())
 		})
 	}
 }

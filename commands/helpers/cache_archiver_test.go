@@ -2,14 +2,21 @@ package helpers
 
 import (
 	"bytes"
+	"context"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/fileblob"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
@@ -133,6 +140,33 @@ func TestCacheArchiverRemoteServer(t *testing.T) {
 	})
 }
 
+func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
+	mux, bucketDir, cleanup := setupGoCloudFileBucket(t, "testblob")
+	defer cleanup()
+
+	objectName := "path/to/cache.zip"
+
+	testData := "hello world\n"
+	err := ioutil.WriteFile(cacheArchiverArchive, []byte(testData), 0600)
+	require.NoError(t, err)
+	defer os.Remove(cacheArchiverArchive)
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+	os.Remove(cacheExtractorArchive)
+	cmd := CacheArchiverCommand{
+		File:       cacheArchiverArchive,
+		GoCloudURL: fmt.Sprintf("testblob://bucket/" + objectName),
+		Timeout:    0,
+		mux:        mux,
+	}
+	assert.NotPanics(t, func() {
+		cmd.Execute(nil)
+	})
+
+	goCloudObjectExists(t, bucketDir, objectName)
+}
+
 func TestCacheArchiverRemoteServerWithHeaders(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadWithCustomHeaders))
 	defer ts.Close()
@@ -190,4 +224,38 @@ func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
 
 	_, err := os.Stat(cacheExtractorTestArchivedFile)
 	assert.Error(t, err)
+}
+
+type dirOpener struct {
+	tmpDir string
+}
+
+func (o *dirOpener) OpenBucketURL(_ context.Context, u *url.URL) (*blob.Bucket, error) {
+	return fileblob.OpenBucket(o.tmpDir, nil)
+}
+
+func setupGoCloudFileBucket(t *testing.T, scheme string) (m *blob.URLMux, bucketDir string, cleanup func()) {
+	tmpDir, err := ioutil.TempDir("", "test-bucket")
+	require.NoError(t, err)
+
+	mux := new(blob.URLMux)
+	fake := &dirOpener{tmpDir: tmpDir}
+	mux.RegisterBucket(scheme, fake)
+	cleanup = func() {
+		os.RemoveAll(tmpDir)
+	}
+
+	return mux, tmpDir, cleanup
+}
+
+func goCloudObjectExists(t *testing.T, bucketDir string, objectName string) {
+	bucket, err := fileblob.OpenBucket(bucketDir, nil)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	exists, err := bucket.Exists(ctx, objectName)
+	require.NoError(t, err)
+	assert.True(t, exists)
 }

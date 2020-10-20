@@ -21,6 +21,7 @@ var (
 	accountKey     = base64.StdEncoding.EncodeToString([]byte("12345"))
 	containerName  = "test"
 	objectName     = "key"
+	storageDomain  = "example.com"
 	defaultTimeout = 1 * time.Hour
 )
 
@@ -28,7 +29,12 @@ func defaultAzureCache() *common.CacheConfig {
 	return &common.CacheConfig{
 		Type: "azure",
 		Azure: &common.CacheAzureConfig{
+			CacheAzureCredentials: common.CacheAzureCredentials{
+				AccountName: accountName,
+				AccountKey:  accountKey,
+			},
 			ContainerName: containerName,
+			StorageDomain: storageDomain,
 		},
 	}
 }
@@ -39,10 +45,11 @@ type adapterOperationInvalidConfigTestCase struct {
 	errorOnCredentialsResolverInitialization bool
 	credentialsResolverResolveError          bool
 
-	accountName      string
-	accountKey       string
-	containerName    string
-	expectedErrorMsg string
+	accountName        string
+	accountKey         string
+	containerName      string
+	expectedErrorMsg   string
+	expectedGoCloudURL string
 }
 
 func prepareMockedCredentialsResolverInitializer(tc adapterOperationInvalidConfigTestCase) func() {
@@ -98,6 +105,41 @@ func testAdapterOperationWithInvalidConfig(
 	})
 }
 
+func testGoCloudURLWithInvalidConfig(
+	t *testing.T,
+	name string,
+	tc adapterOperationInvalidConfigTestCase,
+	adapter *azureAdapter,
+	operation func() *url.URL,
+) {
+	t.Run(name, func(t *testing.T) {
+		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
+
+		u := operation()
+
+		if u != nil {
+			assert.Equal(t, tc.expectedGoCloudURL, u.String())
+		} else {
+			assert.Empty(t, tc.expectedGoCloudURL)
+		}
+	})
+}
+
+func testUploadEnvWithInvalidConfig(
+	t *testing.T,
+	name string,
+	tc adapterOperationInvalidConfigTestCase,
+	adapter *azureAdapter,
+	operation func() map[string]string,
+) {
+	t.Run(name, func(t *testing.T) {
+		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
+
+		u := operation()
+		assert.Empty(t, u)
+	})
+}
+
 func TestAdapterOperation_InvalidConfig(t *testing.T) {
 	tests := map[string]adapterOperationInvalidConfigTestCase{
 		"no-azure-config": {
@@ -112,24 +154,34 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 			provideAzureConfig:              true,
 			credentialsResolverResolveError: true,
 			containerName:                   containerName,
-			expectedErrorMsg:                "error while resolving Azure credentials: test error",
+			expectedErrorMsg:                `error resolving Azure credentials" error="test error"`,
+			expectedGoCloudURL:              "azblob://test/key",
 		},
 		"no-credentials": {
 			provideAzureConfig: true,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL: missing Azure storage account name",
+			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account name\"",
+			expectedGoCloudURL: "azblob://test/key",
 		},
 		"no-account-name": {
 			provideAzureConfig: true,
 			accountKey:         accountKey,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL: missing Azure storage account name",
+			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account name\"",
+			expectedGoCloudURL: "azblob://test/key",
 		},
 		"no-account-key": {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL: missing Azure storage account key",
+			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account key\"",
+			expectedGoCloudURL: "azblob://test/key",
+		},
+		"invalid-container-name-and-no-account-key": {
+			provideAzureConfig: true,
+			accountName:        accountName,
+			containerName:      "\x00",
+			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account key\"",
 		},
 		"container-not-specified": {
 			provideAzureConfig: true,
@@ -171,6 +223,8 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 
 			testAdapterOperationWithInvalidConfig(t, "GetDownloadURL", tc, adapter, a.GetDownloadURL)
 			testAdapterOperationWithInvalidConfig(t, "GetUploadURL", tc, adapter, a.GetUploadURL)
+			testGoCloudURLWithInvalidConfig(t, "GetGoCloudURL", tc, adapter, a.GetGoCloudURL)
+			testUploadEnvWithInvalidConfig(t, "GetUploadEnv", tc, adapter, a.GetUploadEnv)
 		})
 	}
 }
@@ -252,12 +306,12 @@ func TestAdapterOperation(t *testing.T) {
 		"error-on-URL-signing": {
 			returnedURL:   "",
 			returnedError: fmt.Errorf("test error"),
-			expectedError: "error generating Azure pre-signed URL: test error",
+			expectedError: "error generating Azure pre-signed URL\" error=\"test error\"",
 		},
 		"invalid-URL-returned": {
 			returnedURL:   "://test",
 			returnedError: nil,
-			expectedError: "error generating Azure pre-signed URL: parse",
+			expectedError: "error generating Azure pre-signed URL\" error=\"parse",
 		},
 		"valid-configuration": {
 			returnedURL:   "https://myaccount.blob.core.windows.net/mycontainer/mydirectory/myfile.txt?sig=XYZ&sp=r",
@@ -298,6 +352,16 @@ func TestAdapterOperation(t *testing.T) {
 			assert.Len(t, headers, 2)
 			assert.Equal(t, "application/octet-stream", headers.Get("Content-Type"))
 			assert.Equal(t, "BlockBlob", headers.Get("x-ms-blob-type"))
+
+			u := adapter.GetGoCloudURL()
+			assert.Equal(t, "azblob://test/key", u.String())
+
+			env := adapter.GetUploadEnv()
+			assert.Len(t, env, 3)
+			assert.Equal(t, accountName, env["AZURE_STORAGE_ACCOUNT"])
+			assert.NotEmpty(t, env["AZURE_STORAGE_SAS_TOKEN"])
+			assert.Empty(t, env["AZURE_STORAGE_KEY"])
+			assert.Equal(t, storageDomain, env["AZURE_STORAGE_DOMAIN"])
 		})
 	}
 }
