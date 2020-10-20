@@ -1,10 +1,4 @@
-## v13.5.0-rc2 (2020-10-08)
-
-### Maintenance
-
-- Disable secret_detection job !2471
-
-## v13.5.0-rc1 (2020-10-08)
+## v13.5.0 (2020-10-20)
 
 ### New features
 
@@ -16,7 +10,7 @@
 ### Bug fixes
 
 - Docker executor: return error on pull/import failures !2113
-- Fix path separator for CI_PROJECT_DIR in Windows in bash shells !1977 (Pedro Pombeiro @pedropombeiro)
+- Fix path separator for CI_PROJECT_DIR in Windows in bash shells !1977
 
 ### Maintenance
 
@@ -33,6 +27,7 @@
 - Use newest helper image version in tests !2223
 - Update calls for SkipIntegrationTests to not return !2065
 - Setup secure jobs !1897
+- Disable secret_detection job !2471
 
 ### Documentation changes
 
