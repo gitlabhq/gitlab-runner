@@ -262,6 +262,12 @@ environment variable. We have a `RUNNER_SRC` environment variable which
 you can use to find out the full path so when using PowerShell,
 you can use `cd $Env:RUNNER_SRC`.
 
+## Other resources
+
+1. [Reviewing GitLab Runner merge requests](reviewing-gitlab-runner.md)
+1. [Add support for new Windows Version](add-windows-version.md)
+1. [Runner Group - Team Resources](https://about.gitlab.com/handbook/engineering/development/ops/verify/runner/team-resources/#overview)
+
 ## Troubleshooting
 
 ### `docker.go missing Asset symbol`
