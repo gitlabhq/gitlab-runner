@@ -1,18 +1,36 @@
 include:
-  - template: Security/License-Scanning.gitlab-ci.yml
+- template: Security/Dependency-Scanning.gitlab-ci.yml
+- template: Coverage-Fuzzing.gitlab-ci.yml
+- template: Security/SAST.gitlab-ci.yml
+- template: Security/License-Scanning.gitlab-ci.yml
+
+.merge_request_pipelines_rules: &merge_request_pipelines_rules
+- if: $CI_MERGE_REQUEST_ID
+- if: $CI_COMMIT_BRANCH == "master" && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
+- if: $CI_COMMIT_REF_NAME =~ /\A[0-9]+-[0-9]+-stable\z/ && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
+- if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/ && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
+- if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+?\z/ && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+
+# Overriding 'Dependency-Scanning.gitlab-ci.yml' template, because
+# we need to replace the rules with our own, the same
+# as in `.merge_request_pipelines` template.
+gemnasium-dependency_scanning:
+  rules: *merge_request_pipelines_rules
 
 # Overriding 'License-Scanning.gitlab-ci.yml' template, because
 # we need to replace the rules with our own, the same
 # as in `.merge_request_pipelines` template.
 license_scanning:
-  needs: []
-  rules:
-    - if: $CI_MERGE_REQUEST_ID
-    - if: '$CI_COMMIT_BRANCH == "master"'
-    - if: '$CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/'
+  rules: *merge_request_pipelines_rules
+
+# Overriding 'SAST.gitlab-ci.yml' template, because
+# we need to replace the rules with our own, the same
+# as in `.merge_request_pipelines` template.
+gosec-sast:
+  rules: *merge_request_pipelines_rules
 
 docs lint:
-  image: "registry.gitlab.com/gitlab-org/gitlab-docs:lint"
+  image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint:ruby-2.7.2-alpine-3.12-vale-2.4.3-markdownlint-0.24.0"
   stage: test
   extends:
   - .merge_request_pipelines
@@ -76,7 +94,7 @@ code_quality:
   - .merge_request_pipelines
   - .no_dependencies
     # Use GOCACHE instead of GOLANGCI_LINT_CACHE
-    # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
+  # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
   - .go-cache
   image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:v1.27.0-alpine
   needs: []
@@ -92,8 +110,8 @@ code_quality:
   # Copy the Docker image's golangci-lint to the location expected by `make lint` so that it is not built
   - cp $(which golangci-lint) .tmp/golangci-lint
   script:
-    # Write the code coverage report to gl-code-quality-report.json
-    # and print linting issues to stdout in the format: path/to/file:line description
+  # Write the code coverage report to gl-code-quality-report.json
+  # and print linting issues to stdout in the format: path/to/file:line description
   - make --silent lint | tee ${REPORT_FILE}
   timeout: 15 minutes
   artifacts:
@@ -130,8 +148,19 @@ unit test with race:
     CGO_ENABLED: "1"
     TESTFLAGS: "-cover -race"
 
+fuzz variable mask:
+  extends: .fuzz_base
+  image: golang:1.13
+  stage: test
+  script:
+  - apt update && apt install -y clang
+  - go get github.com/dvyukov/go-fuzz/go-fuzz && go get github.com/dvyukov/go-fuzz/go-fuzz-build
+  - go-fuzz-build -libfuzzer -o fuzz_variable_mask.a ./helpers/trace
+  - clang -fsanitize=fuzzer fuzz_variable_mask.a -o fuzz_variable_mask
+  - ./gitlab-cov-fuzz run -- ./fuzz_variable_mask -only_ascii=1 -max_len=128 -max_total_time=300
+
 .go-cache-windows_before_script: &go-cache-windows_before_script
-  - New-Item -Path .gocache-$CI_COMMIT_REF_PROTECTED -Type Directory -Force
+- New-Item -Path .gocache-$CI_COMMIT_REF_PROTECTED -Type Directory -Force
 
 .windows test:
   extends:
@@ -217,4 +246,3 @@ integration_k8s:
   - kubectl cluster-info
   script:
   - go test -v gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes
-

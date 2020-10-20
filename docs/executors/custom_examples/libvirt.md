@@ -23,7 +23,7 @@ commands](https://docs.gitlab.com/ee/ssh/#generating-a-new-ssh-key-pair).
 
 A base disk VM image is created so that dependencies are not downloaded
 every build. In the following example,
-[virt-builder](http://libguestfs.org/virt-builder.1.html) is used to
+[virt-builder](https://libguestfs.org/virt-builder.1.html) is used to
 create a disk VM image.
 
 ```shell
@@ -55,7 +55,7 @@ earlier.
 `virt-builder` will set a root password automatically which is printed
 at the end. If you want to specify a password yourself, pass
 [`--root-password
-password:$SOME_PASSWORD`](http://libguestfs.org/virt-builder.1.html#setting-the-root-password).
+password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password).
 
 ## Configuration
 

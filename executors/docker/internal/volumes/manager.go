@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types/volume"
 
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -35,13 +36,20 @@ type manager struct {
 	parser           parser.Parser
 	client           docker.Client
 	permissionSetter permission.Setter
+	labeler          labels.Labeler
 
 	volumeBindings   []string
 	temporaryVolumes []string
 	managedVolumes   pathList
 }
 
-func NewManager(logger debugLogger, volumeParser parser.Parser, c docker.Client, config ManagerConfig) Manager {
+func NewManager(
+	logger debugLogger,
+	volumeParser parser.Parser,
+	c docker.Client,
+	config ManagerConfig,
+	labeler labels.Labeler,
+) Manager {
 	return &manager{
 		config:           config,
 		logger:           logger,
@@ -50,6 +58,7 @@ func NewManager(logger debugLogger, volumeParser parser.Parser, c docker.Client,
 		volumeBindings:   make([]string, 0),
 		managedVolumes:   pathList{},
 		permissionSetter: config.PermissionSetter,
+		labeler:          labeler,
 	}
 }
 
@@ -173,7 +182,8 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) (st
 
 	volumeName := fmt.Sprintf("%s-cache-%s", m.config.UniqueName, hashPath(destination))
 	vBody := volume.VolumeCreateBody{
-		Name: volumeName,
+		Name:   volumeName,
+		Labels: m.labeler.Labels(map[string]string{"type": "cache"}),
 	}
 
 	v, err := m.client.VolumeCreate(ctx, vBody)

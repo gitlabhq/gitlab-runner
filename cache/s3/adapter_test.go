@@ -87,6 +87,9 @@ func testCacheOperation(
 
 		URL := operation(adapter)
 		assert.Equal(t, tc.expectedURL, URL)
+
+		headers := adapter.GetUploadHeaders()
+		assert.Nil(t, headers)
 	})
 }
 

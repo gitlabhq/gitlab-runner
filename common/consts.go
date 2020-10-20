@@ -26,11 +26,11 @@ const DefaultSessionTimeout = 30 * time.Minute
 const WaitForBuildFinishTimeout = 5 * time.Minute
 
 const (
-	DefaultTraceOutputLimit    = 4 * 1024 * 1024 // in bytes
-	DefaultTracePatchLimit     = 1024 * 1024     // in bytes
-	DefaultTraceUpdateInterval = 3 * time.Second
-	TraceFinishRetryInterval   = 3 * time.Second
-	TraceForceSendInterval     = 30 * time.Second
+	DefaultTraceOutputLimit = 4 * 1024 * 1024 // in bytes
+	DefaultTracePatchLimit  = 1024 * 1024     // in bytes
+	DefaultUpdateInterval   = 3 * time.Second
+	MaxUpdateInterval       = 3 * time.Minute
+	TraceForceSendInterval  = 30 * time.Second
 )
 
 var PreparationRetryInterval = 3 * time.Second
@@ -41,4 +41,5 @@ const (
 	TestAlpineNoRootImage = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest"
 	TestDockerDindImage   = "docker:18-dind"
 	TestDockerGitImage    = "docker:18-git"
+	TestLivenessImage     = "registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0"
 )

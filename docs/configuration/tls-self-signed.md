@@ -55,6 +55,7 @@ GitLab Runner supports the following options:
     ```
 
 - If you are updating the certificate for an existing Runner, [restart it](../commands/README.md#gitlab-runner-restart).
+
 - GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/README.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
@@ -62,7 +63,7 @@ GitLab Runner supports the following options:
 
 - If you are using GitLab Runner Helm chart, [configure custom certificates](../install/kubernetes.md).
 
-- As a temporary and unsecure workaround, to skip the verification of certificates,
+- As a temporary and insecure workaround, to skip the verification of certificates,
 in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
 
 NOTE: **Note:**
@@ -77,18 +78,16 @@ trusted certificates.
 
 This approach is secure, but makes the runner a single point of trust.
 
-## Using TLS in build scripts
+## Trusting TLS certificates for Docker and Kubernetes executors
 
-The scenario described in the previous section applies to built-in Runner operations
-such as fetching a repository or uploading artifacts. These operations are performed
-by a separate Runner helper image, which installs the custom certificate with a
-[script](https://gitlab.com/gitlab-org/gitlab-runner/blob/3d9a706c59d014409f353da5b1fca1d3197504f0/dockerfiles/alpine/entrypoint#L10-14).
+### Trusting the certificate for user scripts
 
 If your build script needs to communicate with peers through TLS and needs to rely on
 a self-signed certificate or custom Certificate Authority, you will need to perform the
 certificate installation in the build job, as the user scripts are run in a Docker container
-that doesn't have the certificate files installed by default. This might be required to perform
-a secondary `git clone`, or fetch a file through a tool like `wget`, for example.
+that doesn't have the certificate files installed by default. This might be required to use
+a custom cache host, perform a secondary `git clone`, or fetch a file through a tool like `wget`,
+for example.
 
 To install the certificate:
 
@@ -96,10 +95,81 @@ To install the certificate:
    the scripts can see them. Do this by adding a volume inside the respective key inside
    the `[runners.docker]` in the `config.toml` file, for example:
 
-   ```toml
-   [[runners]]
+    - **Linux**:
+
+        ```toml
+        [[runners]]
+         name = "docker"
+         url = "https://example.com/"
+         token = "TOKEN"
+         executor = "docker"
+
+         [runners.docker]
+           image = "ubuntu:latest"
+
+           # Add path to your ca.crt file in the volumes list
+           volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
+        ```
+
+1. **Linux-only**: Use the mapped file (e.g `ca.crt`) in a [`pre_build_script`](./advanced-configuration.md#the-runners-section) that:
+    1. Copies it to `/usr/local/share/ca-certificates/ca.crt` inside the Docker container.
+    1. Installs it by running `update-ca-certificates --fresh`. For example (commands
+       vary based on the distribution you're using):
+
+        - On Ubuntu:
+
+            ```toml
+            [[runners]]
+              name = "docker"
+              url = "https://example.com/"
+              token = "TOKEN"
+              executor = "docker"
+
+              # Copy and install CA certificate before each job
+              pre_build_script = """
+              apt-get update -y > /dev/null
+              apt-get install -y ca-certificates > /dev/null
+
+              cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
+              update-ca-certificates --fresh > /dev/null
+              """
+            ```
+
+        - On Alpine:
+
+            ```toml
+            [[runners]]
+              name = "docker"
+              url = "https://example.com/"
+              token = "TOKEN"
+              executor = "docker"
+
+              # Copy and install CA certificate before each job
+              pre_build_script = """
+              apk update >/dev/null
+              apk add ca-certificates >/dev/null
+              rm -rf /var/cache/apk/*
+
+              cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
+              update-ca-certificates --fresh > /dev/null
+              """
+            ```
+
+### Trusting the certificate for the other CI/CD stages
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3371) in GitLab 13.3.
+
+You can map a certificate file to `/etc/gitlab-runner/certs/ca.crt` on Linux,
+or `C:\GitLab-Runner\certs\ca.crt` on Windows.
+This user-defined `ca.crt` file is installed by the Runner helper image at startup, and used
+when performing operations like cloning and uploading artifacts, for example.
+
+- **Linux**:
+
+    ```toml
+    [[runners]]
      name = "docker"
-     url = "https://CI/"
+     url = "https://example.com/"
      token = "TOKEN"
      executor = "docker"
 
@@ -108,48 +178,20 @@ To install the certificate:
 
        # Add path to your ca.crt file in the volumes list
        volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
-   ```
+    ```
 
-1. Use the mapped file (e.g `ca.crt`) in a [`pre_build_script`](./advanced-configuration.md#the-runners-section) that:
-    1. Copies it to `/usr/local/share/ca-certificates/ca.crt` inside the Docker container.
-    1. Install it by running `update-ca-certificates --fresh`. For example (commands
-       vary based on the distribution you're using):
+- **Windows**:
 
-        On Ubuntu:
+    ```toml
+    [[runners]]
+     name = "docker"
+     url = "https://example.com/"
+     token = "TOKEN"
+     executor = "docker"
 
-        ```toml
-        [[runners]]
-          name = "docker"
-          url = "https://CI/"
-          token = "TOKEN"
-          executor = "docker"
+     [runners.docker]
+       image = "mcr.microsoft.com/windows/servercore:1909"
 
-          # Copy and install CA certificate before each job
-          pre_build_script = """
-          apt-get update -y > /dev/null
-          apt-get install -y ca-certificates > /dev/null
-
-          cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
-          update-ca-certificates --fresh > /dev/null
-          """
-        ```
-
-        On Alpine:
-
-        ```toml
-        [[runners]]
-          name = "docker"
-          url = "https://CI/"
-          token = "TOKEN"
-          executor = "docker"
-
-          # Copy and install CA certificate before each job
-          pre_build_script = """
-          apk update >/dev/null
-          apk add ca-certificates >/dev/null
-          rm -rf /var/cache/apk/*
-
-          cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
-          update-ca-certificates --fresh > /dev/null
-          """
-        ```
+       # Add directory holding your ca.crt file in the volumes list
+       volumes = ["c:\\cache", "c:\\path\\to-ca-cert-dir:C:\\GitLab-Runner\\certs:ro"]
+    ```

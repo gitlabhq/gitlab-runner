@@ -33,6 +33,16 @@ USER ContainerAdministrator
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
 COPY --from=builder ["C:\\Temp", "C:\\Program Files\\"]
+# We enable `GIT_CONFIG_NOSYSTEM` and unset `include.path` in order to avoid recursive includes in the Git configuration
+# This can be removed once we move the MinGit installation out of the `C:\Program Files\git` directory. See
+# https://gitlab.com/gitlab-org/gitlab/-/issues/239013#note_401347751
 RUN [Environment]::SetEnvironmentVariable('Path', $env:Path + ';C:\Program Files\git\cmd;C:\Program Files\git-lfs;C:\Program Files\gitlab-runner-helper', [EnvironmentVariableTarget]::Machine); `
-    Start-Process -FilePath "$env:ProgramFiles\git\cmd\git.exe" -ArgumentList "lfs","install","--skip-repo" -Wait; `
-    Start-Process -FilePath "$env:ProgramFiles\git\cmd\git.exe" -ArgumentList "config","--system","core.longpaths","true" -Wait
+    $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine'); `
+    $env:GIT_CONFIG_NOSYSTEM=1; `
+    & $env:ProgramFiles\git\cmd\git.exe config --system --unset-all include.path; `
+    & $env:ProgramFiles\git\cmd\git.exe config --system core.longpaths true; `
+    & $env:ProgramFiles\git\cmd\git.exe lfs install --skip-repo;
+
+COPY [".\\helpers\\entrypoint.cmd", ".\\"]
+
+ENTRYPOINT ["entrypoint.cmd"]

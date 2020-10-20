@@ -56,7 +56,7 @@ func TestCacheArchiverForIfNoFileDefined(t *testing.T) {
 	})
 }
 
-func testCacheUploadHandler(w http.ResponseWriter, r *http.Request) {
+func testCacheBaseUploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "405 Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -67,6 +67,35 @@ func testCacheUploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		http.NotFound(w, r)
 		return
+	}
+}
+
+func testCacheUploadHandler(w http.ResponseWriter, r *http.Request) {
+	testCacheBaseUploadHandler(w, r)
+
+	if r.Header.Get("Content-Type") != "application/octet-stream" {
+		http.Error(w, "500 Wrong Content-Type header", http.StatusInternalServerError)
+		return
+	}
+	if r.Header.Get("Last-Modified") == "" {
+		http.Error(w, "500 Missing Last-Modified header", http.StatusInternalServerError)
+		return
+	}
+}
+
+func testCacheUploadWithCustomHeaders(w http.ResponseWriter, r *http.Request) {
+	testCacheBaseUploadHandler(w, r)
+
+	if r.Header.Get("Content-Type") != "application/zip" {
+		http.Error(w, "500 Wrong Content-Type header", http.StatusInternalServerError)
+	}
+
+	if r.Header.Get("x-ms-blob-type") != "BlockBlob" {
+		http.Error(w, "500 Wrong x-ms-blob-type header", http.StatusInternalServerError)
+	}
+
+	if r.Header.Get("Last-Modified") != "" {
+		http.Error(w, "500 Unexpected Last-Modified header included", http.StatusInternalServerError)
 	}
 }
 
@@ -97,6 +126,24 @@ func TestCacheArchiverRemoteServer(t *testing.T) {
 	cmd := CacheArchiverCommand{
 		File:    cacheExtractorArchive,
 		URL:     ts.URL + "/cache.zip",
+		Timeout: 0,
+	}
+	assert.NotPanics(t, func() {
+		cmd.Execute(nil)
+	})
+}
+
+func TestCacheArchiverRemoteServerWithHeaders(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testCacheUploadWithCustomHeaders))
+	defer ts.Close()
+
+	removeHook := helpers.MakeFatalToPanic()
+	defer removeHook()
+	os.Remove(cacheExtractorArchive)
+	cmd := CacheArchiverCommand{
+		File:    cacheExtractorArchive,
+		URL:     ts.URL + "/cache.zip",
+		Headers: []string{"Content-Type: application/zip", "x-ms-blob-type:   BlockBlob "},
 		Timeout: 0,
 	}
 	assert.NotPanics(t, func() {

@@ -5,10 +5,10 @@
 Autoscale provides the ability to utilize resources in a more elastic and
 dynamic way.
 
-Thanks to Runners being able to autoscale, your infrastructure contains only as
-much build instances as necessary at anytime. If you configure the Runner to
+Runners can autoscale, so that your infrastructure contains only as
+many build instances as are necessary at any time. If you configure the Runner to
 only use autoscale, the system on which the Runner is installed acts as a
-bastion for all the machines it creates.
+bastion for all the machines it creates. This machine is referred to as a "Runner Manager."
 
 ## Overview
 
@@ -244,7 +244,7 @@ For example:
 ```toml
 [runners.machine]
   MachineName = "auto-scale-%s"
-  MachineDriver = "digitalocean"
+  MachineDriver = "google"
   IdleCount = 10
   IdleTime = 1800
   [[runners.machine.autoscaling]]
@@ -401,7 +401,7 @@ each host created by Docker Machine.
 
 ## A complete example of `config.toml`
 
-The `config.toml` below uses the [`digitalocean` Docker Machine driver](https://docs.docker.com/machine/drivers/digital-ocean/):
+The `config.toml` below uses the [`google` Docker Machine driver](https://docs.docker.com/machine/drivers/gce/):
 
 ```toml
 concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
@@ -419,15 +419,15 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
     IdleTime = 600                   # Each machine can be in Idle state up to 600 seconds (after this it will be removed) - when Off Peak time mode is off
     MaxBuilds = 100                  # Each machine can handle up to 100 jobs in a row (after this it will be removed)
     MachineName = "auto-scale-%s"    # Each machine will have a unique name ('%s' is required)
-    MachineDriver = "digitalocean"   # Docker Machine is using the 'digitalocean' driver
+    MachineDriver = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
     MachineOptions = [
-        "digitalocean-image=coreos-stable",
-        "digitalocean-ssh-user=core",
-        "digitalocean-access-token=DO_ACCESS_TOKEN",
-        "digitalocean-region=nyc2",
-        "digitalocean-size=4gb",
-        "digitalocean-private-networking",
-        "engine-registry-mirror=http://10.11.12.13:12345"   # Docker Machine is using registry mirroring
+      "google-project=GOOGLE-PROJECT-ID",
+      "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
+      "google-machine-type=GOOGLE-MACHINE-TYPE", # e.g. 'n1-standard-8'
+      "google-machine-image=ubuntu-os-cloud/global/images/family/ubuntu-1804-lts",
+      "google-username=root",
+      "google-use-internal-ip",
+      "engine-registry-mirror=https://mirror.gcr.io"
     ]
     [[runners.machine.autoscaling]]  # Define periods with different settings
       Periods = ["* * 9-17 * * mon-fri *"] # Every workday between 9 and 17 UTC
@@ -449,6 +449,6 @@ concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
       Insecure = false
 ```
 
-Note that the `MachineOptions` parameter contains options for the `digitalocean`
-driver which is used by Docker Machine to spawn machines hosted on Digital Ocean,
+Note that the `MachineOptions` parameter contains options for the `google`
+driver which is used by Docker Machine to spawn machines hosted on Google Compute Engine,
 and one option for Docker Machine itself (`engine-registry-mirror`).

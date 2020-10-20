@@ -5,18 +5,14 @@ import (
 	"testing"
 )
 
-func SkipIntegrationTests(t *testing.T, app ...string) bool {
+func SkipIntegrationTests(t *testing.T, app ...string) {
 	if testing.Short() {
 		t.Skip("Skipping long tests")
-		return true
 	}
 
 	if ok, err := ExecuteCommandSucceeded(app...); !ok {
 		t.Skip(app[0], "failed", err)
-		return true
 	}
-
-	return false
 }
 
 // ExecuteCommandSucceeded tests whether a particular command execution successfully

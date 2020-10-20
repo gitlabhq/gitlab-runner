@@ -11,6 +11,7 @@ import (
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 
+	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcs"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands"
@@ -23,6 +24,7 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
+	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/vault"
 	_ "gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 

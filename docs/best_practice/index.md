@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+---
+
 # Best practices
 
 Below are some guidelines you should follow when you use and administer
@@ -5,21 +11,21 @@ GitLab Runner.
 
 ## Build Directory
 
-GitLab Runner will clone the repository to a path that exists under a
+GitLab Runner clones the repository to a path that exists under a
 base path better known as the _Builds Directory_. The default location
 of this base directory depends on the executor. For:
 
 - [Kubernetes](../executors/kubernetes.md),
   [Docker](../executors/docker.md) and [Docker
-  Machine](../executors/docker_machine.md) executors it will be
+  Machine](../executors/docker_machine.md) executors, it is
   `/builds` inside of the container.
-- [Shell](../executors/shell.md) executor it will be `$PWD/builds`.
+- [Shell](../executors/shell.md) executor, it is `$PWD/builds`.
 - [SSH](../executors/ssh.md), [VirtualBox](../executors/virtualbox.md)
-  and [Parallels](../executors/parallels.md) executors it will be
+  and [Parallels](../executors/parallels.md) executors, it is
   `~/builds` in the home directory of the user configured to handle the
   SSH connection to the target machine.
-- [Custom](../executors/custom.md) executor no default is provided and
-  it must be explicitly configured, otherwise, the job will fail.
+- [Custom](../executors/custom.md) executors, no default is provided and
+  it must be explicitly configured, otherwise, the job fails.
 
 The used _Builds Directory_ may be defined explicitly by the user with the
 [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
@@ -31,8 +37,8 @@ You can also specify
 if you want to clone to a custom directory, and the guideline below
 doesn't apply.
 
-GitLab Runner will use the _Builds Directory_ for all the Jobs that it
-will run, but nesting them using a specific pattern
+GitLab Runner uses the _Builds Directory_ for all the Jobs that it
+runs, but nests them using a specific pattern
 `{builds_dir}/$RUNNER_TOKEN_KEY/$CONCURRENT_ID/$NAMESPACE/$PROJECT_NAME`.
 For example: `/builds/2mn-ncv-/0/user/playground`.
 
@@ -47,7 +53,7 @@ place.
 
 ## Graceful shutdown
 
-When the runner is installed on a host and runs local executors it will start additional processes for some operations,
+When a runner is installed on a host and runs local executors, it starts additional processes for some operations,
 like downloading or uploading artifacts, or handling cache.
 These processes are executed as `gitlab-runner` commands, which means that using `pkill -QUIT gitlab-runner` or `killall QUIT gitlab-runner` can kill them as well, and the operations they are responsible for will fail.
 

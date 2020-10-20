@@ -1,5 +1,7 @@
 ---
-last_updated: 2017-10-09
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
 ---
 
 # Install GitLab Runner manually on GNU/Linux
@@ -59,7 +61,7 @@ curl -LJO https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-run
    rpm -i gitlab-runner_<arch>.rpm
    ```
 
-1. [Register the Runner](../register/index.md#gnulinux)
+1. [Register the Runner](../register/index.md#linux)
 
 ### Update
 
@@ -130,7 +132,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
 1. [Register the Runner](../register/index.md)
 
-NOTE: **Note**
+NOTE: **Note:**
 If `gitlab-runner` is installed and run as service (what is described
 in this page), it will run as root, but will execute jobs as user specified by
 the `install` command. This means that some of the job functions like cache and

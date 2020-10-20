@@ -54,6 +54,16 @@ func (b JobVariables) Get(key string) string {
 	return ""
 }
 
+// OverwriteKey overwrites an existing key with a new variable.
+func (b JobVariables) OverwriteKey(key string, variable JobVariable) {
+	for i, v := range b {
+		if v.Key == key {
+			b[i] = variable
+			return
+		}
+	}
+}
+
 func (b JobVariables) ExpandValue(value string) string {
 	return os.Expand(value, b.Get)
 }

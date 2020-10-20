@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+---
+
 # VirtualBox
 
 NOTE: **Note:**
@@ -81,4 +87,4 @@ When a new build is started:
 - Configure sshd and set it up as a service (see [Cygwin wiki](https://cygwin.fandom.com/wiki/Sshd))
 - Create a rule for the Windows Firewall to allow incoming TCP traffic on port 22
 - Add the GitLab server(s) to `~/.ssh/known_hosts`
-- To convert paths between cygwin and windows, use the `cygpath` utility which is documented [here](https://cygwin.fandom.com/wiki/Cygpath_utility)
+- To convert paths between Cygwin and Windows, use [the `cygpath` utility](https://cygwin.fandom.com/wiki/Cygpath_utility)

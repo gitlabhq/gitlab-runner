@@ -9,11 +9,12 @@ variables:
   KUBECTL_VERSION: 1.18.0
   PWSH_VERSION: 7.0.1-1
   DUMB_INIT_VERSION: "1.2.2"
-  GIT_VERSION: "2.21.0"
+  GIT_VERSION: "2.27.0"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "2.11.0"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
+  SAST_DEFAULT_ANALYZERS: "gosec,secrets"
 
 default:
   image: $CI_IMAGE
@@ -35,6 +36,15 @@ before_script:
     variables:
     - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
 
+# Skip all jobs except the ones that begin and end with 'docs'.
+# Used for commits including ONLY documentation changes.
+# https://docs.gitlab.com/ee/development/documentation/index.html#branch-naming
+.docs:rules:skip:
+  rules:
+  - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/'
+    when: never
+  - when: on_success
+
 .merge_request_pipelines:
   only:
     refs:
@@ -49,8 +59,8 @@ before_script:
 .runner_master:
   only:
     refs:
-      - master@gitlab-org/gitlab-runner
-      - master@gitlab-org/security/gitlab-runner
+    - master@gitlab-org/gitlab-runner
+    - master@gitlab-org/security/gitlab-runner
 
 .no_cache:
   cache: {}
@@ -79,7 +89,7 @@ before_script:
   - gitlab-org-docker
 
 .docker_qemu-before_script: &docker_qemu-before_script
-  - docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
+- docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
 
 .docker_qemu:
   before_script:
@@ -161,10 +171,10 @@ before_script:
 # without explicitly waiting for the completion of the n-1 stage
 .stage_done:
   extends:
-    - .merge_request_pipelines
-    - .no_cache_and_dependencies
+  - .merge_request_pipelines
+  - .no_cache_and_dependencies
   image: alpine:latest
   variables:
     GIT_STRATEGY: none
   script:
-    - exit 0
+  - exit 0

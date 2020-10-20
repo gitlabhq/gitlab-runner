@@ -15,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -362,6 +363,98 @@ func TestWaitForPodRunning(t *testing.T) {
 	}
 }
 
+func TestCreateResourceList(t *testing.T) {
+	mustGetParseError := func(t *testing.T, s string) error {
+		_, err := resource.ParseQuantity(s)
+		require.Error(t, err)
+		return err
+	}
+
+	tests := []struct {
+		Name             string
+		CPU              string
+		Memory           string
+		EphemeralStorage string
+		Expected         api.ResourceList
+		Error            error
+	}{
+		{
+			Name:     "empty values",
+			Expected: api.ResourceList{},
+		},
+		{
+			Name:             "cpu and memory",
+			CPU:              "500m",
+			Memory:           "1024Mi",
+			EphemeralStorage: "2048Mi",
+			Expected: api.ResourceList{
+				api.ResourceCPU:              resource.MustParse("500m"),
+				api.ResourceMemory:           resource.MustParse("1024Mi"),
+				api.ResourceEphemeralStorage: resource.MustParse("2048Mi"),
+			},
+		},
+		{
+			Name: "only cpu",
+			CPU:  "500m",
+			Expected: api.ResourceList{
+				api.ResourceCPU: resource.MustParse("500m"),
+			},
+		},
+		{
+			Name:   "only memory",
+			Memory: "1024Mi",
+			Expected: api.ResourceList{
+				api.ResourceMemory: resource.MustParse("1024Mi"),
+			},
+		},
+		{
+			Name:             "only ephemeral storage",
+			EphemeralStorage: "3024Mi",
+			Expected: api.ResourceList{
+				api.ResourceEphemeralStorage: resource.MustParse("3024Mi"),
+			},
+		},
+		{
+			Name:     "invalid cpu",
+			CPU:      "100j",
+			Expected: api.ResourceList{},
+			Error: &resourceQuantityError{
+				resource: "cpu",
+				value:    "100j",
+				inner:    mustGetParseError(t, "100j"),
+			},
+		},
+		{
+			Name:     "invalid memory",
+			Memory:   "200j",
+			Expected: api.ResourceList{},
+			Error: &resourceQuantityError{
+				resource: "memory",
+				value:    "200j",
+				inner:    mustGetParseError(t, "200j"),
+			},
+		},
+		{
+			Name:             "invalid ephemeral storage",
+			EphemeralStorage: "200j",
+			Expected:         api.ResourceList{},
+			Error: &resourceQuantityError{
+				resource: "ephemeralStorage",
+				value:    "200j",
+				inner:    mustGetParseError(t, "200j"),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			actual, err := createResourceList(test.CPU, test.Memory, test.EphemeralStorage)
+			assert.Equal(t, test.Error, err)
+			assert.Equal(t, test.Expected, actual)
+		})
+	}
+}
+
 type testWriter struct {
 	call func([]byte) (int, error)
 }
@@ -405,4 +498,106 @@ func testVersionAndCodec() (version string, codec runtime.Codec) {
 	version = api.SchemeGroupVersion.Version
 
 	return
+}
+
+func TestGetCapabilities(t *testing.T) {
+	tests := map[string]struct {
+		defaultCapDrop     []string
+		capAdd             []string
+		capDrop            []string
+		assertCapabilities func(t *testing.T, a *api.Capabilities)
+	}{
+		"no data provided": {
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				assert.Nil(t, a)
+			},
+		},
+		"only default_cap_drop provided": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 2)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+			},
+		},
+		"only custom cap_add provided": {
+			capAdd: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 2)
+				assert.Contains(t, a.Add, api.Capability("CAP_1"))
+				assert.Contains(t, a.Add, api.Capability("CAP_2"))
+				assert.Empty(t, a.Drop)
+			},
+		},
+		"only custom cap_drop provided": {
+			capDrop: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 2)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+			},
+		},
+		"default_cap_drop and custom cap_drop sums": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capDrop:        []string{"CAP_3", "CAP_4"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 4)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_3"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_4"))
+			},
+		},
+		"default_cap_drop and custom cap_drop duplicate": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capDrop:        []string{"CAP_2", "CAP_3"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 3)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_3"))
+			},
+		},
+		"default_cap_drop and custom cap_add intersect": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capAdd:         []string{"CAP_2", "CAP_3"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 2)
+				assert.Contains(t, a.Add, api.Capability("CAP_2"))
+				assert.Contains(t, a.Add, api.Capability("CAP_3"))
+				assert.Len(t, a.Drop, 1)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+			},
+		},
+		"default_cap_drop and custom cap_add intersect and cap_drop forces": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capAdd:         []string{"CAP_2", "CAP_3"},
+			capDrop:        []string{"CAP_2", "CAP_4"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 1)
+				assert.Contains(t, a.Add, api.Capability("CAP_3"))
+				assert.Len(t, a.Drop, 3)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_4"))
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			tt.assertCapabilities(t, getCapabilities(tt.defaultCapDrop, tt.capAdd, tt.capDrop))
+		})
+	}
 }

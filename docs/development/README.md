@@ -75,9 +75,11 @@ go get gitlab.com/gitlab-org/gitlab-runner
 
 ## 4. Install runner dependencies
 
-This will download and restore all dependencies required to build runner:
+After you clone GitLab Runner, `cd` into the `gitlab-runner` directory and download and restore all build dependencies:
 
 ```shell
+git clone <gitlab-runner-uri>
+cd gitlab-runner
 make deps
 ```
 
@@ -122,10 +124,10 @@ skipped.
 
 These are the binaries that you can install:
 
-1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html)
+1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
 1. [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) with
    [Minikube](https://github.com/kubernetes/minikube)
-1. [Parallels](https://www.parallels.com/products/desktop/download/)
+1. [Parallels](https://www.parallels.com/products/desktop/)
 1. [PowerShell](https://docs.microsoft.com/en-us/powershell/)
 
 After installing the binaries run:
@@ -138,6 +140,65 @@ To execute the tests run:
 
 ```shell
 make test
+```
+
+## 7. Run tests with helper image version of choice
+
+If you are developing functionality inside a helper, you'll most likely want to run tests with
+the version of the Docker image that contains the newest changes.
+
+If you run tests without passing `-ldflags`, the default version in `version.go` is `development`.
+This means that the Runner defaults to pulling a [helper image](../configuration/advanced-configuration.md#helper-image)
+with the `latest` tag.
+
+### Make targets
+
+`make` targets inject `-ldflags` automatically. You can run all tests by using:
+
+```shell
+make simple-test
+```
+
+`make` targets also inject `-ldflags` for `parallel_test_execute`, which is most commonly used by the CI/CD jobs.
+
+### Custom `go test` arguments
+
+In case you want a more customized `go test` command, you can use `print_ldflags` as `make` target:
+
+```shell
+go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./executors/docker/...
+```
+
+### In GoLand
+
+Currently, GoLand doesn't support dynamic Go tool arguments, so you'll need to run `make print_ldflags` first
+and then paste it in the configuration.
+
+NOTE: **Note:**
+To use the debugger, make sure to remove the last two flags (`-s -w`).
+
+### Helper image
+
+Build the newest version of the helper image with:
+
+```shell
+make helper-dockerarchive-host
+```
+
+Then you'll have the image ready for use:
+
+```shell
+REPOSITORY                                                    TAG                      IMAGE ID            CREATED             SIZE
+gitlab/gitlab-runner-helper                                   x86_64-a6bc0800          f10d9b5bbb41        32 seconds ago      57.2MB
+```
+
+### Helper image with Kubernetes
+
+If you are running a local Kubernetes cluster make sure to reuse the cluster's Docker daemon to build images.
+For example, with Minikube:
+
+```shell
+eval $(minikube docker-env)
 ```
 
 ## 8. Install optional tools
@@ -174,7 +235,7 @@ are using [multiple machines](https://www.vagrantup.com/docs/multi-machine) insi
 The following are required:
 
 - [Vagrant](https://www.vagrantup.com) installed.
-- [Virtualbox](https://www.virtualbox.com) installed.
+- [Virtualbox](https://www.virtualbox.org/) installed.
 - Around 30GB of free hard disk space on your computer.
 
 Which virtual machine to use depends on your use case:

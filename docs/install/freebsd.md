@@ -1,5 +1,7 @@
 ---
-last_updated: 2019-07-15
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
 ---
 
 # Install GitLab Runner on FreeBSD
@@ -58,7 +60,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
    mkdir -p /usr/local/etc/rc.d
    ```
 
-1. Create the `rc.d` script:
+1. Create the `gitlab_runner` script inside `rc.d`:
 
    ```shell
    sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"

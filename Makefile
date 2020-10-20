@@ -30,7 +30,7 @@ RPM_PLATFORMS ?= el/6 el/7 el/8 \
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
-COMMON_PACKAGE_NAMESPACE=$(PKG)/common
+COMMON_PACKAGE_NAMESPACE = $(PKG)/common
 
 BUILD_DIR := $(CURDIR)
 TARGET_DIR := $(BUILD_DIR)/out
@@ -38,6 +38,7 @@ TARGET_DIR := $(BUILD_DIR)/out
 # Packages in vendor/ are included in ./...
 # https://github.com/golang/go/issues/11659
 export OUR_PACKAGES ?= $(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
+export MAIN_PACKAGE ?= gitlab.com/gitlab-org/gitlab-runner
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
@@ -127,14 +128,15 @@ check_race_conditions:
 test: helper-dockerarchive-host development_setup simple-test
 
 simple-test:
-	go test $(OUR_PACKAGES) $(TESTFLAGS)
+	go test $(OUR_PACKAGES) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
 
 parallel_test_prepare:
 	# Preparing test commands
 	@./scripts/go_test_with_coverage_report prepare
 
+parallel_test_execute: export GO_LDFLAGS ?= "$(GO_LDFLAGS)"
 parallel_test_execute: pull_images_for_tests
-	# executing tests
+	# Executing tests
 	@./scripts/go_test_with_coverage_report execute
 
 parallel_test_coverage_report:
@@ -176,6 +178,7 @@ check_mocks:
 	# Checking the differences
 	@git --no-pager diff --compact-summary --exit-code -- ./helpers/service/mocks \
 		$(shell git ls-files | grep 'mock_' | grep -v 'vendor/') && \
+		!(git ls-files -o | grep 'mock_' | grep -v 'vendor/') && \
 		echo "Mocks up-to-date!"
 
 test-docker:
@@ -381,3 +384,6 @@ $(GITLAB_CHANGELOG):
 .PHONY: clean
 clean:
 	-$(RM) -rf $(TARGET_DIR)
+
+print_ldflags:
+	@echo $(GO_LDFLAGS)

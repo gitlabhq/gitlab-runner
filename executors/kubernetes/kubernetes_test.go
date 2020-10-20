@@ -24,13 +24,13 @@ import (
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -43,13 +43,19 @@ import (
 
 type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
 
+func mustCreateResourceList(t *testing.T, cpu, memory, ephemeralStorage string) api.ResourceList {
+	resources, err := createResourceList(cpu, memory, ephemeralStorage)
+	require.NoError(t, err)
+
+	return resources
+}
+
 func TestRunTestsWithFeatureFlag(t *testing.T) {
 	tests := map[string]featureFlagTest{
 		"testKubernetesSuccessRun":              testKubernetesSuccessRunFeatureFlag,
 		"testKubernetesMultistepRun":            testKubernetesMultistepRunFeatureFlag,
 		"testKubernetesTimeoutRun":              testKubernetesTimeoutRunFeatureFlag,
 		"testKubernetesBuildFail":               testKubernetesBuildFailFeatureFlag,
-		"testKubernetesBuildAbort":              testKubernetesBuildAbortFeatureFlag,
 		"testKubernetesBuildCancel":             testKubernetesBuildCancelFeatureFlag,
 		"testVolumeMounts":                      testVolumeMountsFeatureFlag,
 		"testVolumes":                           testVolumesFeatureFlag,
@@ -81,9 +87,7 @@ func TestRunTestsWithFeatureFlag(t *testing.T) {
 }
 
 func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
@@ -196,9 +200,7 @@ func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string,
 }
 
 func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	longRunningBuild, err := common.GetRemoteLongRunningBuild()
 	assert.NoError(t, err)
@@ -225,9 +227,7 @@ func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, f
 }
 
 func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
@@ -251,83 +251,24 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 	assert.Contains(t, err.Error(), "command terminated with exit code 1")
 }
 
-func testKubernetesBuildAbortFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
-
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
-				Kubernetes: &common.KubernetesConfig{
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-	build.Image.Name = common.TestDockerGitImage
-	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		build.SystemInterrupt <- os.Interrupt
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "aborted: interrupt")
-}
-
 func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	failedBuild, err := common.GetRemoteFailedBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: failedBuild,
-		Runner: &common.RunnerConfig{
+	buildtest.RunBuildWithCancel(
+		t,
+		&common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "kubernetes",
 				Kubernetes: &common.KubernetesConfig{
+					Image:      common.TestAlpineImage,
 					PullPolicy: common.PullPolicyIfNotPresent,
 				},
 			},
 		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-	build.Image.Name = common.TestDockerGitImage
-	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-
-	trace := &common.Trace{Writer: os.Stdout}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		trace.Cancel()
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, trace)
-	assert.IsType(t, &common.BuildError{}, err)
-	assert.EqualError(t, err, "canceled")
+		func(build *common.Build) {
+			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+		},
+	)
 }
 
 func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
@@ -640,9 +581,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 }
 
 func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	jobResponse, err := common.GetRemoteBuildResponse(
 		"ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
@@ -695,9 +634,7 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 }
 
 func testKubernetesNoRootImageFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
 
@@ -722,9 +659,7 @@ func testKubernetesNoRootImageFeatureFlag(t *testing.T, featureFlagName string, 
 }
 
 func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
@@ -748,9 +683,7 @@ func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string,
 }
 
 func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
@@ -774,9 +707,7 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 }
 
 func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	build := &common.Build{
 		JobResponse: common.JobResponse{
@@ -810,9 +741,7 @@ func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName str
 }
 
 func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	build := &common.Build{
 		JobResponse: common.JobResponse{
@@ -846,9 +775,7 @@ func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagNam
 }
 
 func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	if os.Getenv("GITLAB_CI") == "true" {
 		t.Skip("Skipping inside of GitLab CI check https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26421")
@@ -1120,27 +1047,33 @@ func TestCleanup(t *testing.T) {
 
 func TestPrepare(t *testing.T) {
 	tests := []struct {
+		Name  string
+		Error string
+
 		GlobalConfig *common.Config
 		RunnerConfig *common.RunnerConfig
 		Build        *common.Build
 
 		Expected *executor
-		Error    bool
 	}{
 		{
+			Name:         "all with limits",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Host:               "test-server",
-						ServiceCPULimit:    "100m",
-						ServiceMemoryLimit: "200Mi",
-						CPULimit:           "1.5",
-						MemoryLimit:        "4Gi",
-						HelperCPULimit:     "50m",
-						HelperMemoryLimit:  "100Mi",
-						Privileged:         true,
-						PullPolicy:         "if-not-present",
+						Host:                         "test-server",
+						ServiceCPULimit:              "100m",
+						ServiceMemoryLimit:           "200Mi",
+						ServiceEphemeralStorageLimit: "1Gi",
+						CPULimit:                     "1.5",
+						MemoryLimit:                  "4Gi",
+						EphemeralStorageLimit:        "6Gi",
+						HelperCPULimit:               "50m",
+						HelperMemoryLimit:            "100Mi",
+						HelperEphemeralStorageLimit:  "200Mi",
+						Privileged:                   true,
+						PullPolicy:                   "if-not-present",
 					},
 				},
 			},
@@ -1165,29 +1098,19 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{
-					namespace:   "default",
-					cpuLimit:    "1.5",
-					memoryLimit: "4Gi",
+					namespace:       "default",
+					buildLimits:     mustCreateResourceList(t, "1.5", "4Gi", "6Gi"),
+					serviceLimits:   mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+					helperLimits:    mustCreateResourceList(t, "50m", "100Mi", "200Mi"),
+					buildRequests:   api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					helperRequests:  api.ResourceList{},
 				},
-				serviceLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				buildLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1.5"),
-					api.ResourceMemory: resource.MustParse("4Gi"),
-				},
-				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("50m"),
-					api.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				serviceRequests: api.ResourceList{},
-				buildRequests:   api.ResourceList{},
-				helperRequests:  api.ResourceList{},
-				pullPolicy:      "IfNotPresent",
+				pullPolicy: "IfNotPresent",
 			},
 		},
 		{
+			Name:         "all with limits and requests",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1198,16 +1121,22 @@ func TestPrepare(t *testing.T) {
 						BearerTokenOverwriteAllowed:    true,
 						ServiceCPULimit:                "100m",
 						ServiceMemoryLimit:             "200Mi",
+						ServiceEphemeralStorageLimit:   "2Gi",
 						CPULimit:                       "1.5",
 						MemoryLimit:                    "4Gi",
+						EphemeralStorageLimit:          "3Gi",
 						HelperCPULimit:                 "50m",
 						HelperMemoryLimit:              "100Mi",
+						HelperEphemeralStorageLimit:    "300Mi",
 						ServiceCPURequest:              "99m",
 						ServiceMemoryRequest:           "5Mi",
+						ServiceEphemeralStorageRequest: "200Mi",
 						CPURequest:                     "1",
 						MemoryRequest:                  "1.5Gi",
+						EphemeralStorageRequest:        "1.3Gi",
 						HelperCPURequest:               "0.5m",
 						HelperMemoryRequest:            "42Mi",
+						HelperEphemeralStorageRequest:  "99Mi",
 						Privileged:                     false,
 					},
 				},
@@ -1233,42 +1162,20 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{
-					namespace:      "default",
-					serviceAccount: "not-default",
-					cpuLimit:       "1.5",
-					memoryLimit:    "4Gi",
-					cpuRequest:     "1",
-					memoryRequest:  "1.5Gi",
-				},
-				serviceLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				buildLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1.5"),
-					api.ResourceMemory: resource.MustParse("4Gi"),
-				},
-				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("50m"),
-					api.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				serviceRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("99m"),
-					api.ResourceMemory: resource.MustParse("5Mi"),
-				},
-				buildRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1"),
-					api.ResourceMemory: resource.MustParse("1.5Gi"),
-				},
-				helperRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("0.5m"),
-					api.ResourceMemory: resource.MustParse("42Mi"),
+					namespace:       "default",
+					serviceAccount:  "not-default",
+					buildLimits:     mustCreateResourceList(t, "1.5", "4Gi", "3Gi"),
+					buildRequests:   mustCreateResourceList(t, "1", "1.5Gi", "1.3Gi"),
+					serviceLimits:   mustCreateResourceList(t, "100m", "200Mi", "2Gi"),
+					serviceRequests: mustCreateResourceList(t, "99m", "5Mi", "200Mi"),
+					helperLimits:    mustCreateResourceList(t, "50m", "100Mi", "300Mi"),
+					helperRequests:  mustCreateResourceList(t, "0.5m", "42Mi", "99Mi"),
 				},
 			},
-			Error: false,
 		},
-
 		{
+			Name:         "unmatched service account",
+			Error:        "couldn't prepare overwrites: provided value \"not-default\" does not match \"allowed-.*\"",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1278,16 +1185,22 @@ func TestPrepare(t *testing.T) {
 						ServiceAccountOverwriteAllowed: "allowed-.*",
 						ServiceCPULimit:                "100m",
 						ServiceMemoryLimit:             "200Mi",
+						ServiceEphemeralStorageLimit:   "300Mi",
 						CPULimit:                       "1.5",
 						MemoryLimit:                    "4Gi",
+						EphemeralStorageLimit:          "5Gi",
 						HelperCPULimit:                 "50m",
 						HelperMemoryLimit:              "100Mi",
+						HelperEphemeralStorageLimit:    "200Mi",
 						ServiceCPURequest:              "99m",
 						ServiceMemoryRequest:           "5Mi",
+						ServiceEphemeralStorageRequest: "50Mi",
 						CPURequest:                     "1",
 						MemoryRequest:                  "1.5Gi",
+						EphemeralStorageRequest:        "40Mi",
 						HelperCPURequest:               "0.5m",
 						HelperMemoryRequest:            "42Mi",
+						HelperEphemeralStorageRequest:  "52Mi",
 						Privileged:                     false,
 					},
 				},
@@ -1306,47 +1219,9 @@ func TestPrepare(t *testing.T) {
 				},
 				Runner: &common.RunnerConfig{},
 			},
-			Expected: &executor{
-				options: &kubernetesOptions{
-					Image: common.Image{
-						Name: "test-image",
-					},
-				},
-				configurationOverwrites: &overwrites{
-					namespace:     "namespacee",
-					cpuLimit:      "1.5",
-					memoryLimit:   "4Gi",
-					cpuRequest:    "1",
-					memoryRequest: "1.5Gi",
-				},
-				serviceLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				buildLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1.5"),
-					api.ResourceMemory: resource.MustParse("4Gi"),
-				},
-				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("50m"),
-					api.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				serviceRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("99m"),
-					api.ResourceMemory: resource.MustParse("5Mi"),
-				},
-				buildRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1"),
-					api.ResourceMemory: resource.MustParse("1.5Gi"),
-				},
-				helperRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("0.5m"),
-					api.ResourceMemory: resource.MustParse("42Mi"),
-				},
-			},
-			Error: true,
 		},
 		{
+			Name:         "regexp match on service account and namespace",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1358,16 +1233,22 @@ func TestPrepare(t *testing.T) {
 						NamespaceOverwriteAllowed:      "^n.*?e$",
 						ServiceCPULimit:                "100m",
 						ServiceMemoryLimit:             "200Mi",
+						ServiceEphemeralStorageLimit:   "300Mi",
 						CPULimit:                       "1.5",
 						MemoryLimit:                    "4Gi",
+						EphemeralStorageLimit:          "5Gi",
 						HelperCPULimit:                 "50m",
 						HelperMemoryLimit:              "100Mi",
+						HelperEphemeralStorageLimit:    "300Mi",
 						ServiceCPURequest:              "99m",
 						ServiceMemoryRequest:           "5Mi",
+						ServiceEphemeralStorageRequest: "15Mi",
 						CPURequest:                     "1",
 						MemoryRequest:                  "1.5Gi",
+						EphemeralStorageRequest:        "1.7Gi",
 						HelperCPURequest:               "0.5m",
 						HelperMemoryRequest:            "42Mi",
+						HelperEphemeralStorageRequest:  "32Mi",
 						Privileged:                     false,
 					},
 				},
@@ -1381,7 +1262,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 					Variables: []common.JobVariable{
-						{Key: NamespaceOverwriteVariableName, Value: "namespacee"},
+						{Key: NamespaceOverwriteVariableName, Value: "new-namespace-name"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -1393,41 +1274,19 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				configurationOverwrites: &overwrites{
-					namespace:      "namespacee",
-					serviceAccount: "a_service_account",
-					cpuLimit:       "1.5",
-					memoryLimit:    "4Gi",
-					cpuRequest:     "1",
-					memoryRequest:  "1.5Gi",
-				},
-				serviceLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("100m"),
-					api.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				buildLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1.5"),
-					api.ResourceMemory: resource.MustParse("4Gi"),
-				},
-				helperLimits: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("50m"),
-					api.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				serviceRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("99m"),
-					api.ResourceMemory: resource.MustParse("5Mi"),
-				},
-				buildRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("1"),
-					api.ResourceMemory: resource.MustParse("1.5Gi"),
-				},
-				helperRequests: api.ResourceList{
-					api.ResourceCPU:    resource.MustParse("0.5m"),
-					api.ResourceMemory: resource.MustParse("42Mi"),
+					namespace:       "new-namespace-name",
+					serviceAccount:  "a_service_account",
+					buildLimits:     mustCreateResourceList(t, "1.5", "4Gi", "5Gi"),
+					buildRequests:   mustCreateResourceList(t, "1", "1.5Gi", "1.7Gi"),
+					serviceLimits:   mustCreateResourceList(t, "100m", "200Mi", "300Mi"),
+					serviceRequests: mustCreateResourceList(t, "99m", "5Mi", "15Mi"),
+					helperLimits:    mustCreateResourceList(t, "50m", "100Mi", "300Mi"),
+					helperRequests:  mustCreateResourceList(t, "0.5m", "42Mi", "32Mi"),
 				},
 			},
-			Error: true,
 		},
 		{
+			Name:         "regexp match on namespace",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1458,16 +1317,19 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "namespace-0"},
-				serviceLimits:           api.ResourceList{},
-				buildLimits:             api.ResourceList{},
-				helperLimits:            api.ResourceList{},
-				serviceRequests:         api.ResourceList{},
-				buildRequests:           api.ResourceList{},
-				helperRequests:          api.ResourceList{},
+				configurationOverwrites: &overwrites{
+					namespace:       "namespace-0",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 		{
+			Name:         "minimal configuration",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1491,16 +1353,19 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits:           api.ResourceList{},
-				buildLimits:             api.ResourceList{},
-				helperLimits:            api.ResourceList{},
-				serviceRequests:         api.ResourceList{},
-				buildRequests:           api.ResourceList{},
-				helperRequests:          api.ResourceList{},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 		{
+			Name:         "image and one service",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1542,16 +1407,19 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits:           api.ResourceList{},
-				buildLimits:             api.ResourceList{},
-				helperLimits:            api.ResourceList{},
-				serviceRequests:         api.ResourceList{},
-				buildRequests:           api.ResourceList{},
-				helperRequests:          api.ResourceList{},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 		{
+			Name:         "merge services",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1607,19 +1475,21 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: &overwrites{namespace: "default"},
-				serviceLimits:           api.ResourceList{},
-				buildLimits:             api.ResourceList{},
-				helperLimits:            api.ResourceList{},
-				serviceRequests:         api.ResourceList{},
-				buildRequests:           api.ResourceList{},
-				helperRequests:          api.ResourceList{},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 	}
 
-	for index, test := range tests {
-		t.Run(strconv.Itoa(index), func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
 			e := &executor{
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: executorOptions,
@@ -1633,17 +1503,12 @@ func TestPrepare(t *testing.T) {
 			}
 
 			err := e.Prepare(prepareOptions)
-
 			if err != nil {
 				assert.False(t, test.Build.IsSharedEnv())
-				if test.Error {
-					assert.Error(t, err)
-				} else {
-					assert.NoError(t, err)
-				}
-				if !test.Error {
-					t.Errorf("Got error. Expected: %v", test.Expected)
-				}
+			}
+			if test.Error != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.Error)
 				return
 			}
 
@@ -1657,6 +1522,8 @@ func TestPrepare(t *testing.T) {
 			e.kubeClient = nil
 			e.kubeConfig = nil
 			e.featureChecker = nil
+
+			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
 		})
 	}
@@ -1664,9 +1531,7 @@ func TestPrepare(t *testing.T) {
 
 // This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583
 func TestPrepareIssue2583(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	namespace := "my_namespace"
 	serviceAccount := "my_account"
@@ -1953,6 +1818,67 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
+		"uses default security context flags for containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					assert.Empty(
+						t,
+						c.SecurityContext.Privileged,
+						"Container security context Privileged should be empty",
+					)
+					assert.Nil(
+						t,
+						c.SecurityContext.AllowPrivilegeEscalation,
+						"Container security context AllowPrivilegeEscalation should be empty",
+					)
+				}
+			},
+		},
+		"configures security context flags for un-privileged containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:                "default",
+						Privileged:               false,
+						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(false),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					require.NotNil(t, c.SecurityContext.Privileged)
+					assert.False(t, *c.SecurityContext.Privileged)
+					require.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation)
+					assert.False(t, *c.SecurityContext.AllowPrivilegeEscalation)
+				}
+			},
+		},
+		"configures security context flags for privileged containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:                "default",
+						Privileged:               true,
+						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(true),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					require.NotNil(t, c.SecurityContext.Privileged)
+					assert.True(t, *c.SecurityContext.Privileged)
+					require.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation)
+					assert.True(t, *c.SecurityContext.AllowPrivilegeEscalation)
+				}
+			},
+		},
 		"configures helper container": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -2049,7 +1975,7 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				for _, c := range pod.Spec.Containers {
 					if c.Name == "helper" {
-						assert.Equal(t, "custom/helper-image:HEAD", c.Image)
+						assert.Equal(t, "custom/helper-image:"+common.REVISION, c.Image)
 					}
 				}
 			},
@@ -2544,6 +2470,108 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Empty(t, pod.Spec.SecurityContext, "Security context should be empty")
 			},
 		},
+		"supports pod node affinities": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						Affinity: common.KubernetesAffinity{
+							NodeAffinity: &common.KubernetesNodeAffinity{
+								PreferredDuringSchedulingIgnoredDuringExecution: []common.PreferredSchedulingTerm{
+									{
+										Weight: 100,
+										Preference: common.NodeSelectorTerm{
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "cpu_speed",
+													Operator: "In",
+													Values:   []string{"fast"},
+												},
+											},
+											MatchFields: []common.NodeSelectorRequirement{
+												{
+													Key:      "cpu_count",
+													Operator: "Gt",
+													Values:   []string{"12"},
+												},
+											},
+										},
+									},
+									{
+										Weight: 50,
+										Preference: common.NodeSelectorTerm{
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "kubernetes.io/e2e-az-name",
+													Operator: "In",
+													Values:   []string{"e2e-az1", "e2e-az2"},
+												},
+												{
+													Key:      "kubernetes.io/arch",
+													Operator: "NotIn",
+													Values:   []string{"arm"},
+												},
+											},
+										},
+									},
+								},
+								RequiredDuringSchedulingIgnoredDuringExecution: &common.NodeSelector{
+									NodeSelectorTerms: []common.NodeSelectorTerm{
+										{
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "kubernetes.io/e2e-az-name",
+													Operator: "In",
+													Values:   []string{"e2e-az1", "e2e-az2"},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			//nolint:lll
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.Affinity)
+				require.NotNil(t, pod.Spec.Affinity.NodeAffinity)
+
+				nodeAffinity := pod.Spec.Affinity.NodeAffinity
+				preferredNodeAffinity := nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution
+
+				require.Len(t, preferredNodeAffinity, 2)
+				assert.Equal(t, int32(100), preferredNodeAffinity[0].Weight)
+				require.Len(t, preferredNodeAffinity[0].Preference.MatchExpressions, 1)
+				require.Len(t, preferredNodeAffinity[0].Preference.MatchFields, 1)
+				assert.Equal(t, "cpu_speed", preferredNodeAffinity[0].Preference.MatchExpressions[0].Key)
+				assert.Equal(t, api.NodeSelectorOperator("In"), preferredNodeAffinity[0].Preference.MatchExpressions[0].Operator)
+				assert.Equal(t, []string{"fast"}, preferredNodeAffinity[0].Preference.MatchExpressions[0].Values)
+				assert.Equal(t, "cpu_count", preferredNodeAffinity[0].Preference.MatchFields[0].Key)
+				assert.Equal(t, api.NodeSelectorOperator("Gt"), preferredNodeAffinity[0].Preference.MatchFields[0].Operator)
+				assert.Equal(t, []string{"12"}, preferredNodeAffinity[0].Preference.MatchFields[0].Values)
+
+				assert.Equal(t, int32(50), preferredNodeAffinity[1].Weight)
+				require.Len(t, preferredNodeAffinity[1].Preference.MatchExpressions, 2)
+				assert.Equal(t, "kubernetes.io/e2e-az-name", preferredNodeAffinity[1].Preference.MatchExpressions[0].Key)
+				assert.Equal(t, api.NodeSelectorOperator("In"), preferredNodeAffinity[1].Preference.MatchExpressions[0].Operator)
+				assert.Equal(t, []string{"e2e-az1", "e2e-az2"}, preferredNodeAffinity[1].Preference.MatchExpressions[0].Values)
+				assert.Equal(t, "kubernetes.io/arch", preferredNodeAffinity[1].Preference.MatchExpressions[1].Key)
+				assert.Equal(t, api.NodeSelectorOperator("NotIn"), preferredNodeAffinity[1].Preference.MatchExpressions[1].Operator)
+				assert.Equal(t, []string{"arm"}, preferredNodeAffinity[1].Preference.MatchExpressions[1].Values)
+
+				require.NotNil(t, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+				requiredNodeAffinity := nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+
+				require.Len(t, requiredNodeAffinity.NodeSelectorTerms, 1)
+				require.Len(t, requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions, 1)
+				require.Len(t, requiredNodeAffinity.NodeSelectorTerms[0].MatchFields, 0)
+				assert.Equal(t, "kubernetes.io/e2e-az-name", requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Key)
+				assert.Equal(t, api.NodeSelectorOperator("In"), requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Operator)
+				assert.Equal(t, []string{"e2e-az1", "e2e-az2"}, requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Values)
+			},
+		},
 		"supports services as host aliases": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -2770,6 +2798,111 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, def setupBuildPodTestDef, pod *api.Pod) {
 				require.Equal(t, def.InitContainers, pod.Spec.InitContainers)
+			},
+		},
+		"support setting linux capabilities": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						CapAdd:    []string{"CAP_1", "CAP_2"},
+						CapDrop:   []string{"CAP_3", "CAP_4"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotEmpty(t, pod.Spec.Containers)
+				capabilities := pod.Spec.Containers[0].SecurityContext.Capabilities
+				require.NotNil(t, capabilities)
+				assert.Len(t, capabilities.Add, 2)
+				assert.Contains(t, capabilities.Add, api.Capability("CAP_1"))
+				assert.Contains(t, capabilities.Add, api.Capability("CAP_2"))
+				assert.Len(t, capabilities.Drop, 3)
+				assert.Contains(t, capabilities.Drop, api.Capability("CAP_3"))
+				assert.Contains(t, capabilities.Drop, api.Capability("CAP_4"))
+				assert.Contains(t, capabilities.Drop, api.Capability("NET_RAW"))
+			},
+		},
+		"setting linux capabilities overriding defaults": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						CapAdd:    []string{"NET_RAW", "CAP_2"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotEmpty(t, pod.Spec.Containers)
+				capabilities := pod.Spec.Containers[0].SecurityContext.Capabilities
+				require.NotNil(t, capabilities)
+				assert.Len(t, capabilities.Add, 2)
+				assert.Contains(t, capabilities.Add, api.Capability("NET_RAW"))
+				assert.Contains(t, capabilities.Add, api.Capability("CAP_2"))
+				assert.Empty(t, capabilities.Drop)
+			},
+		},
+		"setting same linux capabilities, drop wins": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						CapAdd:    []string{"CAP_1"},
+						CapDrop:   []string{"CAP_1"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotEmpty(t, pod.Spec.Containers)
+				capabilities := pod.Spec.Containers[0].SecurityContext.Capabilities
+				require.NotNil(t, capabilities)
+				assert.Empty(t, capabilities.Add)
+				assert.Len(t, capabilities.Drop, 2)
+				assert.Contains(t, capabilities.Drop, api.Capability("NET_RAW"))
+				assert.Contains(t, capabilities.Drop, api.Capability("CAP_1"))
+			},
+		},
+		"support setting linux capabilities on all containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						CapAdd:    []string{"CAP_1"},
+						CapDrop:   []string{"CAP_2"},
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:    "test-service-0",
+						Command: []string{"application", "--debug"},
+					},
+					{
+						Name:       "test-service-1",
+						Entrypoint: []string{"application", "--debug"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.Containers, 4)
+
+				assertContainerCap := func(container api.Container) {
+					t.Run("container-"+container.Name, func(t *testing.T) {
+						capabilities := container.SecurityContext.Capabilities
+						require.NotNil(t, capabilities)
+						assert.Len(t, capabilities.Add, 1)
+						assert.Contains(t, capabilities.Add, api.Capability("CAP_1"))
+						assert.Len(t, capabilities.Drop, 2)
+						assert.Contains(t, capabilities.Drop, api.Capability("CAP_2"))
+						assert.Contains(t, capabilities.Drop, api.Capability("NET_RAW"))
+					})
+				}
+
+				assertContainerCap(pod.Spec.Containers[0])
+				assertContainerCap(pod.Spec.Containers[1])
+				assertContainerCap(pod.Spec.Containers[2])
+				assertContainerCap(pod.Spec.Containers[3])
 			},
 		},
 	}
@@ -3022,66 +3155,6 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 	}
 }
 
-func TestLimits(t *testing.T) {
-	tests := []struct {
-		CPU, Memory string
-		Expected    api.ResourceList
-		ExpectedErr error
-	}{
-		{
-			CPU:    "100m",
-			Memory: "100Mi",
-			Expected: api.ResourceList{
-				api.ResourceCPU:    resource.MustParse("100m"),
-				api.ResourceMemory: resource.MustParse("100Mi"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			CPU: "100m",
-			Expected: api.ResourceList{
-				api.ResourceCPU: resource.MustParse("100m"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			Memory: "100Mi",
-			Expected: api.ResourceList{
-				api.ResourceMemory: resource.MustParse("100Mi"),
-			},
-			ExpectedErr: nil,
-		},
-		{
-			CPU:         "100j",
-			Expected:    api.ResourceList{},
-			ExpectedErr: resource.ErrFormatWrong,
-		},
-		{
-			Memory:      "100j",
-			Expected:    api.ResourceList{},
-			ExpectedErr: resource.ErrFormatWrong,
-		},
-		{
-			Expected:    api.ResourceList{},
-			ExpectedErr: nil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(fmt.Sprintf("CPU=%s/Memory=%s", tc.CPU, tc.Memory), func(t *testing.T) {
-			res, err := limits(tc.CPU, tc.Memory)
-			assert.True(
-				t,
-				errors.Is(err, tc.ExpectedErr),
-				"expected err %T, but got %T",
-				tc.ExpectedErr,
-				err,
-			)
-			assert.Equal(t, tc.Expected, res)
-		})
-	}
-}
-
 func fakeConfigMap() *api.ConfigMap {
 	configMap := &api.ConfigMap{}
 	configMap.Name = "fake"
@@ -3185,6 +3258,8 @@ func (f FakeBuildTrace) Fail(err error, failureReason common.JobFailureReason) {
 func (f FakeBuildTrace) Notify(func())                                         {}
 func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)           {}
 func (f FakeBuildTrace) Cancel() bool                                          { return false }
+func (f FakeBuildTrace) SetAbortFunc(cancelFunc context.CancelFunc)            {}
+func (f FakeBuildTrace) Abort() bool                                           { return false }
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)      {}
 func (f FakeBuildTrace) SetMasked(masked []string)                             {}
 func (f FakeBuildTrace) IsStdout() bool {

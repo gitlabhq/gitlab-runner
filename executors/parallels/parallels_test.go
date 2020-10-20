@@ -3,7 +3,6 @@ package parallels_test
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,9 +32,7 @@ func TestParallelsCreateExecutor(t *testing.T) {
 }
 
 func TestParallelsSuccessRun(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
@@ -58,9 +55,7 @@ func TestParallelsSuccessRun(t *testing.T) {
 }
 
 func TestParallelsSuccessRunRawVariable(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	successfulBuild, err := common.GetRemoteBuildResponse("echo $TEST")
 	assert.NoError(t, err)
@@ -91,9 +86,7 @@ func TestParallelsSuccessRunRawVariable(t *testing.T) {
 }
 
 func TestParallelsBuildFail(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
@@ -118,9 +111,7 @@ func TestParallelsBuildFail(t *testing.T) {
 }
 
 func TestParallelsMissingImage(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
@@ -141,9 +132,7 @@ func TestParallelsMissingImage(t *testing.T) {
 }
 
 func TestParallelsMissingSSHCredentials(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
@@ -162,80 +151,19 @@ func TestParallelsMissingSSHCredentials(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing SSH config")
 }
 
-func TestParallelsBuildAbort(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
-
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "parallels",
-				Parallels: &common.ParallelsConfig{
-					BaseName:         prlImage,
-					DisableSnapshots: true,
-				},
-				SSH: prlSSHConfig,
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		build.SystemInterrupt <- os.Interrupt
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "aborted: interrupt")
-}
-
 func TestParallelsBuildCancel(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, prlCtl, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
 
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "parallels",
-				Parallels: &common.ParallelsConfig{
-					BaseName:         prlImage,
-					DisableSnapshots: true,
-				},
-				SSH: prlSSHConfig,
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "parallels",
+			Parallels: &common.ParallelsConfig{
+				BaseName:         prlImage,
+				DisableSnapshots: true,
 			},
+			SSH: prlSSHConfig,
 		},
 	}
 
-	trace := &common.Trace{Writer: os.Stdout}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		trace.Cancel()
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, trace)
-	assert.IsType(t, &common.BuildError{}, err)
-	assert.EqualError(t, err, "canceled")
+	buildtest.RunBuildWithCancel(t, config, nil)
 }

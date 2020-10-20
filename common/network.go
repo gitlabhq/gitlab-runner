@@ -7,9 +7,11 @@ import (
 	"time"
 
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
 )
 
 type UpdateState int
+type PatchState int
 type UploadState int
 type DownloadState int
 type JobState string
@@ -26,14 +28,25 @@ const (
 	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 	JobExecutionTimeout JobFailureReason = "job_execution_timeout"
+	// JobCanceled is only internal to runner, and not used inside of rails.
+	JobCanceled JobFailureReason = "job_canceled"
 )
 
 const (
 	UpdateSucceeded UpdateState = iota
+	UpdateAcceptedButNotCompleted
+	UpdateTraceValidationFailed
 	UpdateNotFound
 	UpdateAbort
 	UpdateFailed
-	UpdateRangeMismatch
+)
+
+const (
+	PatchSucceeded PatchState = iota
+	PatchNotFound
+	PatchAbort
+	PatchRangeMismatch
+	PatchFailed
 )
 
 const (
@@ -68,6 +81,10 @@ type FeaturesInfo struct {
 	RawVariables            bool `json:"raw_variables"`
 	ArtifactsExclude        bool `json:"artifacts_exclude"`
 	MultiBuildSteps         bool `json:"multi_build_steps"`
+	TraceReset              bool `json:"trace_reset"`
+	TraceChecksum           bool `json:"trace_checksum"`
+	VaultSecrets            bool `json:"vault_secrets"`
+	Cancelable              bool `json:"cancelable"`
 }
 
 type RegisterRunnerParameters struct {
@@ -249,6 +266,31 @@ type Cache struct {
 	Untracked bool          `json:"untracked"`
 	Policy    CachePolicy   `json:"policy"`
 	Paths     ArtifactPaths `json:"paths"`
+	When      CacheWhen     `json:"when"`
+}
+
+type CacheWhen string
+
+const (
+	CacheWhenOnFailure CacheWhen = "on_failure"
+	CacheWhenOnSuccess CacheWhen = "on_success"
+	CacheWhenAlways    CacheWhen = "always"
+)
+
+func (when CacheWhen) ShouldCache(jobSuccess bool) bool {
+	if jobSuccess {
+		return when.OnSuccess()
+	}
+
+	return when.OnFailure()
+}
+
+func (when CacheWhen) OnSuccess() bool {
+	return when == "" || when == CacheWhenOnSuccess || when == CacheWhenAlways
+}
+
+func (when CacheWhen) OnFailure() bool {
+	return when == CacheWhenOnFailure || when == CacheWhenAlways
 }
 
 func (c Cache) CheckPolicy(wanted CachePolicy) (bool, error) {
@@ -305,10 +347,100 @@ type JobResponse struct {
 	Credentials   []Credentials  `json:"credentials"`
 	Dependencies  Dependencies   `json:"dependencies"`
 	Features      GitlabFeatures `json:"features"`
+	Secrets       Secrets        `json:"secrets,omitempty"`
 
 	TLSCAChain  string `json:"-"`
 	TLSAuthCert string `json:"-"`
 	TLSAuthKey  string `json:"-"`
+}
+
+type Secrets map[string]Secret
+
+type Secret struct {
+	Vault *VaultSecret `json:"vault,omitempty"`
+}
+
+type VaultSecret struct {
+	Server VaultServer `json:"server"`
+	Engine VaultEngine `json:"engine"`
+	Path   string      `json:"path"`
+	Field  string      `json:"field"`
+}
+
+type VaultServer struct {
+	URL  string    `json:"url"`
+	Auth VaultAuth `json:"auth"`
+}
+
+type VaultAuth struct {
+	Name string        `json:"name"`
+	Path string        `json:"path"`
+	Data VaultAuthData `json:"data"`
+}
+
+type VaultAuthData map[string]interface{}
+
+type VaultEngine struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+func (s Secrets) expandVariables(vars JobVariables) {
+	for _, secret := range s {
+		secret.expandVariables(vars)
+	}
+}
+
+func (s Secret) expandVariables(vars JobVariables) {
+	if s.Vault != nil {
+		s.Vault.expandVariables(vars)
+	}
+}
+
+func (s *VaultSecret) expandVariables(vars JobVariables) {
+	if len(s.Server.Auth.Data) < 1 {
+		return
+	}
+
+	s.Server.Auth.Path = vars.ExpandValue(s.Server.Auth.Path)
+
+	jwt, ok := s.Server.Auth.Data["jwt"]
+	if ok {
+		s.Server.Auth.Data["jwt"] = vars.ExpandValue(fmt.Sprintf("%s", jwt))
+	}
+
+	role, ok := s.Server.Auth.Data["role"]
+	if ok {
+		s.Server.Auth.Data["role"] = vars.ExpandValue(fmt.Sprintf("%s", role))
+	}
+}
+
+func (s *VaultSecret) AuthName() string {
+	return s.Server.Auth.Name
+}
+
+func (s *VaultSecret) AuthPath() string {
+	return s.Server.Auth.Path
+}
+
+func (s *VaultSecret) AuthData() auth_methods.Data {
+	return auth_methods.Data(s.Server.Auth.Data)
+}
+
+func (s *VaultSecret) EngineName() string {
+	return s.Engine.Name
+}
+
+func (s *VaultSecret) EnginePath() string {
+	return s.Engine.Path
+}
+
+func (s *VaultSecret) SecretPath() string {
+	return s.Path
+}
+
+func (s *VaultSecret) SecretField() string {
+	return s.Field
 }
 
 func (j *JobResponse) RepoCleanURL() string {
@@ -320,11 +452,12 @@ type UpdateJobRequest struct {
 	Token         string           `json:"token,omitempty"`
 	State         JobState         `json:"state,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
+	Checksum      string           `json:"checksum,omitempty"`
 }
 
 //nolint:lll
 type JobCredentials struct {
-	ID          int    `long:"id" env:"CI_JOB_ID" description:"The build ID to upload artifacts for"`
+	ID          int    `long:"id" env:"CI_JOB_ID" description:"The build ID to download and upload artifacts for"`
 	Token       string `long:"token" env:"CI_JOB_TOKEN" required:"true" description:"Build token"`
 	URL         string `long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab CI URL"`
 	TLSCAFile   string `long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
@@ -356,6 +489,7 @@ type UpdateJobInfo struct {
 	ID            int
 	State         JobState
 	FailureReason JobFailureReason
+	Checksum      string
 }
 
 type ArtifactsOptions struct {
@@ -375,18 +509,27 @@ type JobTrace interface {
 	Fail(err error, failureReason JobFailureReason)
 	SetCancelFunc(cancelFunc context.CancelFunc)
 	Cancel() bool
+	SetAbortFunc(abortFunc context.CancelFunc)
+	Abort() bool
 	SetFailuresCollector(fc FailuresCollector)
 	SetMasked(values []string)
 	IsStdout() bool
 }
 
-type PatchTraceResult struct {
-	SentOffset        int
+type UpdateJobResult struct {
 	State             UpdateState
+	CancelRequested   bool
 	NewUpdateInterval time.Duration
 }
 
-func NewPatchTraceResult(sentOffset int, state UpdateState, newUpdateInterval int) PatchTraceResult {
+type PatchTraceResult struct {
+	SentOffset        int
+	CancelRequested   bool
+	State             PatchState
+	NewUpdateInterval time.Duration
+}
+
+func NewPatchTraceResult(sentOffset int, state PatchState, newUpdateInterval int) PatchTraceResult {
 	return PatchTraceResult{
 		SentOffset:        sentOffset,
 		State:             state,
@@ -399,7 +542,7 @@ type Network interface {
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
 	RequestJob(config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
-	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateState
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) PatchTraceResult
 	DownloadArtifacts(config JobCredentials, artifactsFile string, directDownload *bool) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState

@@ -18,6 +18,8 @@
   - [Managing bugs](#managing-bugs)
 - [Supported releases](#supported-releases)
 - [Releasing GitLab Runner](#releasing-gitlab-runner)
+  - [Security release](#security-release)
+- [Renew expired GPG key](#renew-expired-gpg-key)
 - [Copy & paste responses](#copy--paste-responses)
   - [Improperly formatted issue](#improperly-formatted-issue)
   - [Issue report for old version](#issue-report-for-old-version)
@@ -262,6 +264,44 @@ All the technical details of how the Runner is released can be found in
 the [Release
 Checklist](https://gitlab.com/gitlab-org/ci-cd/runner-release-helper/tree/master/templates/issues)
 which is split into multiple templates.
+
+### Security release
+
+In addition to the Release Manager, the security process involves many
+other people and roles.
+
+We follow the GitLab Security process with the following exceptions.
+
+- [Overview](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/process.md)
+    - To create the release task issue, we use a different command than
+      `/chatops run release prepare --security`.
+- [Developer](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/developer.md)
+    - When the document specifies `gitlab-org/gitlab` and
+      `gitlab-org/security/gitlab`, assume `gitlab-org/gitlab-runner` and
+      `gitlab-org/security/gitlab` respectively.
+    - We have our own [Security Implementation
+      Issue](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/developer.md#security-implementation-issue)
+      that can be found
+      [here](https://gitlab.com/gitlab-org/security/gitlab-runner/-/issues/new?issuable_template=Security+developer+workflow).
+- [Release Manager](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/release-manager.md)
+    - To create the security release task, run this command:
+
+      ```shell
+      # Using rrhelper https://gitlab.com/gitlab-org/ci-cd/runner-release-helper
+      # $LINK_TO_MAIN_RELEASE_ISSUE can found in the #releases slack channel
+      rrhelper create-security-release-checklist --runner-tags 13.2.2,13.1.2,13.0.2 --helm-tags 0.19.2,0.18.2,0.17.2 --project-id 250833 --security-url $LINK_TO_MAIN_RELEASE_ISSUE`
+      ```
+
+- [Security Engineer](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/security-engineer.md)
+    - The Runner Application Security Engineer part is listed [here](https://about.gitlab.com/handbook/product/product-categories/#runner-group).
+
+## Renew expired GPG key
+
+We sign all of our packages with GPG, and this key is short-lived (1
+year) so every year we have to renew it. For this, we have a tool called
+[Key expiration
+wrapper](https://gitlab.com/gitlab-org/ci-cd/runner-tools/key-expiration-wrapper)
+that documents and automates the process.
 
 ## Copy & paste responses
 

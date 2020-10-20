@@ -40,6 +40,25 @@ on [Alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/a
 an [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) to
 dispatch alert notifications.
 
+## Available metrics
+
+To find a full list of all available metrics, `curl` the metrics endpoint after it is configured and enabled. For example, for a local runner configured with listening port `9252`:
+
+```shell
+$ curl -s http://localhost:9252/metrics | grep -E "# HELP" 
+
+# HELP gitlab_runner_api_request_statuses_total The total number of api requests, partitioned by runner, endpoint and status.
+# HELP gitlab_runner_autoscaling_machine_creation_duration_seconds Histogram of machine creation time.
+# HELP gitlab_runner_autoscaling_machine_states The current number of machines per state in this provider.
+# HELP gitlab_runner_concurrent The current value of concurrent setting
+# HELP gitlab_runner_errors_total The  number of catched errors.
+# HELP gitlab_runner_limit The current value of concurrent setting
+# HELP gitlab_runner_request_concurrency The current number of concurrent requests for a new job
+# HELP gitlab_runner_request_concurrency_exceeded_total Counter tracking exceeding of request concurrency
+# HELP gitlab_runner_version_info A metric with a constant '1' value labeled by different build stats fields.
+...
+```
+
 ## `pprof` HTTP endpoints
 
 > `pprof` integration was introduced in GitLab Runner 1.9.0.
@@ -56,7 +75,7 @@ You can read more about using `pprof` in its [documentation](https://golang.org/
 
 ## Configuration of the metrics HTTP server
 
-> **Note:**
+NOTE: **Note:**
 The metrics server exports data about the internal state of the
 GitLab Runner process and should not be publicly available!
 

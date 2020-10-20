@@ -20,7 +20,7 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 		config.PermissionSetter = setter
 	}
 
-	volumesManager := volumes.NewManager(&e.BuildLogger, e.volumeParser, e.client, config)
+	volumesManager := volumes.NewManager(&e.BuildLogger, e.volumeParser, e.client, config, e.labeler)
 
 	return volumesManager, nil
 }

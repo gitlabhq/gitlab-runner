@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+---
+
 # The Kubernetes executor
 
 GitLab Runner can use Kubernetes to run builds on a Kubernetes cluster. This is
@@ -62,26 +68,43 @@ The following keywords help to define the behavior of the Runner within Kubernet
   the namespace overwrite environment variable (documented below). When empty,
   it disables the namespace overwrite feature
 - `privileged`: Run containers with the privileged flag
+- `allow_privilege_escalation`: Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation) behavior.
 - `cpu_limit`: The CPU allocation given to build containers
-- `cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for build containers. When empty,
-    it disables the cpu limit overwrite feature
+- `cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature
 - `memory_limit`: The amount of memory allocated to build containers
-- `memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for build containers. When empty,
-    it disables the memory limit overwrite feature
+- `memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature
+- `ephemeral_storage_limit`: The ephemeral storage limit for build containers
+- `ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature
 - `service_cpu_limit`: The CPU allocation given to build service containers
+- `service_cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for service containers. When empty, it disables the cpu limit overwrite feature
 - `service_memory_limit`: The amount of memory allocated to build service containers
+- `service_memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature
+- `service_ephemeral_storage_limit`: The ephemeral storage limit given to service containers
+- `service_ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature
 - `helper_cpu_limit`: The CPU allocation given to build helper containers
+- `helper_cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for helper containers. When empty, it disables the cpu limit overwrite feature
 - `helper_memory_limit`: The amount of memory allocated to build helper containers
+- `helper_memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature
+- `helper_ephemeral_storage_limit`: The ephemeral storage limit given to helper containers
+- `helper_ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature
 - `cpu_request`: The CPU allocation requested for build containers
-- `cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for build containers. When empty,
-    it disables the cpu request overwrite feature
+- `cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for build containers. When empty, it disables the cpu request overwrite feature
 - `memory_request`: The amount of memory requested from build containers
-- `memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for build containers. When empty,
-    it disables the memory request overwrite feature
+- `memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature
+- `ephemeral_storage_request`: The ephemeral storage request given to build containers
+- `ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for build containers. When empty, it disables the ephemeral storage request overwrite feature
 - `service_cpu_request`: The CPU allocation requested for build service containers
+- `service_cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for service containers. When empty, it disables the cpu request overwrite feature
 - `service_memory_request`: The amount of memory requested for build service containers
+- `service_memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature
+- `service_ephemeral_storage_request`: The ephemeral storage request given to service containers
+- `service_ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature
 - `helper_cpu_request`: The CPU allocation requested for build helper containers
+- `helper_cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for helper containers. When empty, it disables the cpu request overwrite feature
 - `helper_memory_request`: The amount of memory requested for build helper containers
+- `helper_memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature
+- `helper_ephemeral_storage_request`: The ephemeral storage request given to helper containers
+- `helper_ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature
 - `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) will be used if not set.
   - See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 - `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs
@@ -97,7 +120,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
   the pod annotations overwrite environment variable. When empty,
   it disables the pod annotations overwrite feature
 - `pod_security_context`: Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)
-- `service_account`: default service account to be used for making Kubernetes API calls.
+- `service_account`: default service account job/executor pods use to talk to Kubernetes API
 - `service_account_overwrite_allowed`: Regular expression to validate the contents of
   the service account overwrite environment variable. When empty,
   it disables the service account overwrite feature
@@ -111,10 +134,13 @@ The following keywords help to define the behavior of the Runner within Kubernet
   container using the [sidecar
   pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar).
   Read more about [using services](#using-services).
+- `affinity`: Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity).      
+- `cap_add`: Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration).
+- `cap_drop`: Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration).
 
 ### Configuring executor Service Account
 
-You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--service-account` flag.
+You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--kubernetes-service-account` flag.
 
 ### Overwriting Kubernetes Namespace
 
@@ -177,11 +203,11 @@ variables:
 NOTE: **Note:**
 You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file.
 
-### Overwriting Build Resources
+### Overwriting Container Resources
 
 Additionally, Kubernetes CPU and memory allocations for requests and
-limits can be overwritten on the `.gitlab-ci.yml` file with the
-following variables:
+limits for the build, helper and service containers can be overwritten
+on the `.gitlab-ci.yml` file with the following variables:
 
 ``` yaml
  variables:
@@ -189,6 +215,22 @@ following variables:
    KUBERNETES_CPU_LIMIT: 5
    KUBERNETES_MEMORY_REQUEST: 2Gi
    KUBERNETES_MEMORY_LIMIT: 4Gi
+   KUBERNETES_EPHEMERAL_STORAGE_REQUEST: 512Mi
+   KUBERNETES_EPHEMERAL_STORAGE_LIMIT: 1Gi
+
+   KUBERNETES_HELPER_CPU_REQUEST: 3
+   KUBERNETES_HELPER_CPU_LIMIT: 5
+   KUBERNETES_HELPER_MEMORY_REQUEST: 2Gi
+   KUBERNETES_HELPER_MEMORY_LIMIT: 4Gi
+   KUBERNETES_HELPER_EPHEMERAL_STORAGE_REQUEST: 512Mi
+   KUBERNETES_HELPER_EPHEMERAL_STORAGE_LIMIT: 1Gi
+
+   KUBERNETES_SERVICE_CPU_REQUEST: 3
+   KUBERNETES_SERVICE_CPU_LIMIT: 5
+   KUBERNETES_SERVICE_MEMORY_REQUEST: 2Gi
+   KUBERNETES_SERVICE_MEMORY_LIMIT: 4Gi
+   KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST: 512Mi
+   KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT: 1Gi
 ```
 
 The values for these variables are restricted to what the max overwrite
@@ -291,7 +333,7 @@ following options:
 | name       | string  | yes      | The name of the volume |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | host_path  | string  | no       | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
-| read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
+| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
 
 ### PVC volumes
 
@@ -303,7 +345,7 @@ can be configured with following options:
 |------------|---------|----------|-------------|
 | name       | string  | yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
+| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
 
 ### ConfigMap volumes
 
@@ -314,7 +356,7 @@ that is defined in Kubernetes cluster and mount it inside of the container.
 |------------|---------|----------|-------------|
 | name       | string  | yes      | The name of the volume and at the same time the name of _configMap_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
+| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
 | items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _configMap_ volume, each key from selected _configMap_ will be changed into a file
@@ -337,7 +379,7 @@ a _secret_ that is defined in Kubernetes cluster and mount it inside of the cont
 |------------|---------|----------|-------------|
 | name       | string  | yes      | The name of the volume and at the same time the name of _secret_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Set's the volume in read-only mode (defaults to false) |
+| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
 | items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _secret_ volume each key from selected _secret_ will be changed into a file
@@ -376,7 +418,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 Assigning a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
 
-More about the helper image can be found [here](../configuration/advanced-configuration.md#helper-image).
+[Read more about the helper image](../configuration/advanced-configuration.md#helper-image).
 Example of building your own helper image:
 
 ```Dockerfile
@@ -431,6 +473,121 @@ check_interval = 30
       [[runners.kubernetes.services]]
         name = "percona:latest"
         alias = "db2"
+```
+
+## Using Affinity
+
+### Node Affinity
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 13.4.
+
+Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to be added to a pod specification at build time.
+
+```toml
+concurrent = 1
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+    [runners.kubernetes]
+      [runners.kubernetes.affinity]
+        [runners.kubernetes.affinity.node_affinity]
+          [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+            weight = 100
+            [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+               key = "cpu_speed"
+               operator = "In"
+               values = ["fast"]
+              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+               key = "mem_speed"
+               operator = "In"
+               values = ["fast"]
+          [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+            weight = 50
+            [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+                key = "core_count"
+                operator = "In"
+                values = ["high", "32"]
+              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields]]
+               key = "cpu_type"
+               operator = "In"
+               values = ["arm64"]
+        [runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution]
+          [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
+            [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
+              key = "kubernetes.io/e2e-az-name"
+              operator = "In"
+              values = [
+                "e2e-az1",
+                "e2e-az2"
+              ]
+```
+
+## Capabilities configuration
+
+[Kubernetes allows](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container)
+to configure different [Linux capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) that should be
+added or dropped from a container.
+
+GitLab Runner supports configuration of capabilities with the `cap_add` and `cap_drop` keywords in the `[runners.kubernetes]`
+section of the configuration file. By default, GitLab Runner provides
+a [list of capabilities](#default-list-of-dropped-capabilities) that should be dropped.
+
+Because the default list of dropped capabilities can intersect with user-defined capabilities, the following rules are
+applied to determine the final list:
+
+1. User-defined `cap_drop` has priority over user-defined `cap_add`. If
+   you define the same capability in both settings, only the one from `cap_drop` is passed
+   to the container.
+
+1. User-defined `cap_add` has priority over the default list of dropped capabilities.
+   If you want to add the capability that is dropped by default, explicitly add it to
+   `cap_add`.
+
+The final list of capabilities is added to all containers in the job's pod.
+
+A few notes:
+
+- Remove the `CAP_` prefix from capability identifiers passed to the container configuration.
+  For example, if you want to add or drop the `CAP_SYS_TIME` capability,
+  in the configuration file, set a `SYS_TIME` string for `cap_add` or `cap_drop`.
+
+- The owner of the Kubernetes cluster
+  [can define a PodSecurityPolicy](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#capabilities),
+  where specific capabilities are allowed, restricted, or added by default.
+  These rules take precedence over any user-defined configuration.
+
+  Container runtimes can also define a default list of capabilities that you can add,
+  like those seen in
+  [Docker](https://github.com/moby/moby/blob/19.03/oci/defaults.go#L14-L32)
+  or [containerd](https://github.com/containerd/containerd/blob/v1.4.0/oci/spec.go#L93-L110).
+
+### Default list of dropped capabilities
+
+GitLab Runner tries to drop these capabilities by default. If any of them are required for the job
+to be executed properly, you should explicitly add the capability with the `cap_add` setting:
+
+<!-- kubernetes_default_cap_drop_list_start -->
+- `NET_RAW`
+
+<!-- kubernetes_default_cap_drop_list_end -->
+
+### Example configuration
+
+```toml
+concurrent = 1
+check_interval = 30
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    # ...
+    cap_add = ["SYS_TIME", "IPC_LOCK"]
+    cap_drop = ["SYS_ADMIN"]
+    # ...
 ```
 
 ## Using Docker in your builds
@@ -503,16 +660,6 @@ on other nodes. Further separation of build containers can be achieved using nod
 This will disallow other pods from scheduling on the same nodes as the
 build pods without extra configuration for the other pods.
 
-## Job execution
-
-At the moment we are using `kube exec` to run the scripts, which relies on
-having a stable network connection between the Runner and the pod for the duration of the command.
-This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119).
-If you are experiencing this problem turn off the feature flag [FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY](../configuration/feature-flags.md#available-feature-flags)
-to use `kube attach` for script execution, which is more stable.
-
-We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.
-
 ### Using kaniko
 
 Another approach for building Docker images inside a Kubernetes cluster is using [kaniko](https://github.com/GoogleContainerTools/kaniko).
@@ -522,3 +669,13 @@ kaniko:
 - Works without the Docker daemon.
 
 For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
+
+## Job execution
+
+At the moment we are using `kube exec` to run the scripts, which relies on
+having a stable network connection between the Runner and the pod for the duration of the command.
+This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119).
+If you are experiencing this problem turn off the feature flag [FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY](../configuration/feature-flags.md#available-feature-flags)
+to use `kube attach` for script execution, which is more stable.
+
+We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.

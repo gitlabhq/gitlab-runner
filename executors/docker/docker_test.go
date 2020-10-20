@@ -310,13 +310,14 @@ func TestHelperImageWithVariable(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
-	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner:HEAD").
+	runnerImageTag := "gitlab/gitlab-runner:" + common.REVISION
+	c.On("ImageInspectWithRaw", mock.Anything, runnerImageTag).
 		Return(types.ImageInspect{}, nil, errors.New("not found")).
 		Once()
-	c.On("ImagePullBlocking", mock.Anything, "gitlab/gitlab-runner:HEAD", mock.Anything).
+	c.On("ImagePullBlocking", mock.Anything, runnerImageTag, mock.Anything).
 		Return(nil).
 		Once()
-	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner:HEAD").
+	c.On("ImageInspectWithRaw", mock.Anything, runnerImageTag).
 		Return(types.ImageInspect{ID: "helper-image"}, nil, nil).
 		Once()
 
@@ -1186,9 +1187,7 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 
 func TestDockerWatchOn_1_12_4(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
@@ -1508,16 +1507,38 @@ func TestDockerServicesExtraHostsSetting(t *testing.T) {
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
 }
 
-func TestDockerUserNSSetting(t *testing.T) {
-	dockerConfig := &common.DockerConfig{
+func TestDockerServiceUserNSSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{}
+	dockerConfigWithHostUsernsMode := &common.DockerConfig{
 		UsernsMode: "host",
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, container.UsernsMode(""), hostConfig.UsernsMode)
+	}
+	cceWithHostUsernsMode := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
+	}
+
+	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+	testDockerConfigurationWithServiceContainer(t, dockerConfigWithHostUsernsMode, cceWithHostUsernsMode)
+}
+
+func TestDockerUserNSSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{}
+	dockerConfigWithHostUsernsMode := &common.DockerConfig{
+		UsernsMode: "host",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, container.UsernsMode(""), hostConfig.UsernsMode)
+	}
+	cceWithHostUsernsMode := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
 		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+	testDockerConfigurationWithJobContainer(t, dockerConfigWithHostUsernsMode, cceWithHostUsernsMode)
 }
 
 func TestDockerRuntimeSetting(t *testing.T) {
@@ -1947,7 +1968,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 					Once()
 			},
 			expectedEnvironment: []string{
-				"WAIT_FOR_SERVICE_TCP_ADDR=default",
+				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
 				"WAIT_FOR_SERVICE_TCP_PORT=1000",
 			},
 		},
@@ -1968,7 +1989,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 					Once()
 			},
 			expectedEnvironment: []string{
-				"WAIT_FOR_SERVICE_TCP_ADDR=default",
+				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
 				"WAIT_FOR_SERVICE_TCP_PORT=600",
 			},
 		},
@@ -2011,6 +2032,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			}
 
 			service := &types.Container{
+				ID:    "0000000000000000000000000000000000000000000000000000000000000000",
 				Names: []string{"default"},
 			}
 

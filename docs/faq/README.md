@@ -26,6 +26,21 @@ Is it possible to run GitLab Runner in debug/verbose mode. From a terminal, run:
 gitlab-runner --debug run
 ```
 
+### Enable debug mode logging in `config.toml`
+
+Debug logging can be enabled in the [global section of the `config.toml`](../configuration/advanced-configuration.md#the-global-section) by setting the `log_level` setting to `debug`.
+
+### Enable debug mode logging for the Helm Chart
+
+If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runner Helm Chart](../install/kubernetes.md), you can enable debug logging by setting the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configuring-gitlab-runner-using-the-helm-chart):
+
+```yaml
+## Configure GitLab Runner's logging level. Available values are: debug, info, warn, error, fatal, panic
+## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section
+##
+logLevel: debug
+```
+
 ### I'm seeing `x509: certificate signed by unknown authority`
 
 Please see [the self-signed certificates](../configuration/tls-self-signed.md).
@@ -282,6 +297,47 @@ and the service should be started properly.
 ### Job marked as success and terminated midway using Kubernetes executor
 
 Please see [Job execution](../executors/kubernetes.md#job-execution).
+
+### Docker executor: `unsupported Windows Version`
+
+GitLab Runner checks the version of Windows Server to verify that it's supported.
+
+It does this by running `docker info`.
+
+If GitLab Runner fails to start with the following error, but with no Windows
+Server version specified, then the likely root cause is that the Docker
+version is too old.
+
+```plaintext
+Preparation failed: detecting base image: unsupported Windows Version: Windows Server Datacenter
+```
+
+The error should contain detailed information about the Windows Server
+version, which is then compared with the versions that GitLab Runner supports.
+
+```plaintext
+unsupported Windows Version: Windows Server Datacenter Version 1909 (OS Build 18363.720)
+```
+
+Docker 17.06.2 on Windows Server 1909 returns the following in the output
+of `docker info`.
+
+```plaintext
+Operating System: Windows Server Datacenter
+```
+
+The fix in this case is to upgrade the Docker version. [Read more about supported
+Docker versions](../executors/docker.md#supported-docker-versions).
+
+### I'm using a mapped network drive and my build cannot find the correct path
+
+If GitLab Runner is not being run under an administrator account and instead is using a
+standard user account, mapped network drives cannot be used and you'll receive an error stating
+`The system cannot find the path specified.`  This is because using a service logon session
+[creates some limitations](https://docs.microsoft.com/en-us/windows/win32/services/services-and-redirected-drives)
+on accessing resources for security. Use the
+[UNC path](https://docs.microsoft.com/en-us/dotnet/standard/io/file-path-formats#unc-paths)
+of your drive instead.
 
 ## macOS troubleshooting
 

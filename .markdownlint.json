@@ -7,6 +7,7 @@
   "ul-style": {
     "style": "dash"
   },
+  "no-trailing-spaces": false,
   "line-length": false,
   "no-duplicate-header": {
     "allow_different_nesting": true
@@ -44,9 +45,11 @@
       "Debian",
       "DevOps",
       "Docker",
+      "DockerSlim",
       "Elasticsearch",
       "Facebook",
       "fastlane",
+      "fluent-plugin-redis-slowlog",
       "GDK",
       "Geo",
       "Git LFS",
@@ -70,6 +73,7 @@
       "Gzip",
       "Helm",
       "HipChat",
+      "ID",
       "Ingress",
       "jasmine-jquery",
       "JavaScript",

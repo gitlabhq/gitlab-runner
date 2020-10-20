@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -52,25 +53,29 @@ func generateObjectName(build *common.Build, config *common.CacheConfig, key str
 	return path, nil
 }
 
-func onAdapter(build *common.Build, key string, handler func(adapter Adapter) *url.URL) *url.URL {
+func buildAdapter(build *common.Build, key string) (Adapter, error) {
 	config := getCacheConfig(build)
 	if config == nil {
 		logrus.Warning("Cache config not defined. Skipping cache operation.")
-		return nil
+		return nil, nil
 	}
 
 	objectName, err := generateObjectName(build, config, key)
 	if err != nil {
 		logrus.WithError(err).Error("Error while generating cache bucket.")
-		return nil
+		return nil, nil
 	}
 
 	if objectName == "" {
 		logrus.Warning("Empty cache key. Skipping adapter selection.")
-		return nil
+		return nil, nil
 	}
 
-	adapter, err := createAdapter(config, build.GetBuildTimeout(), objectName)
+	return createAdapter(config, build.GetBuildTimeout(), objectName)
+}
+
+func onAdapter(build *common.Build, key string, handler func(adapter Adapter) interface{}) interface{} {
+	adapter, err := buildAdapter(build, key)
 	if err != nil {
 		logrus.WithError(err).Error("Could not create cache adapter")
 	}
@@ -83,13 +88,41 @@ func onAdapter(build *common.Build, key string, handler func(adapter Adapter) *u
 }
 
 func GetCacheDownloadURL(build *common.Build, key string) *url.URL {
-	return onAdapter(build, key, func(adapter Adapter) *url.URL {
-		return adapter.GetDownloadURL()
+	return castToURL(func() interface{} {
+		return onAdapter(build, key, func(adapter Adapter) interface{} {
+			return adapter.GetDownloadURL()
+		})
 	})
 }
 
+func castToURL(handler func() interface{}) *url.URL {
+	result := handler()
+
+	u, ok := result.(*url.URL)
+	if !ok {
+		return nil
+	}
+
+	return u
+}
+
 func GetCacheUploadURL(build *common.Build, key string) *url.URL {
-	return onAdapter(build, key, func(adapter Adapter) *url.URL {
-		return adapter.GetUploadURL()
+	return castToURL(func() interface{} {
+		return onAdapter(build, key, func(adapter Adapter) interface{} {
+			return adapter.GetUploadURL()
+		})
 	})
+}
+
+func GetCacheUploadHeaders(build *common.Build, key string) http.Header {
+	result := onAdapter(build, key, func(adapter Adapter) interface{} {
+		return adapter.GetUploadHeaders()
+	})
+
+	h, ok := result.(http.Header)
+	if !ok {
+		return nil
+	}
+
+	return h
 }

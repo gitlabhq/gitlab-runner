@@ -288,7 +288,7 @@ func (s *executor) ensureVMStarted() error {
 		return err
 	}
 
-	s.Println("Waiting VM to become responsive...")
+	s.Println("Waiting for VM to become responsive...")
 	err = s.verifyMachine(s.sshPort)
 	if err != nil {
 		return err

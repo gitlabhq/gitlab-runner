@@ -3,7 +3,6 @@ package virtualbox_test
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,9 +32,7 @@ func TestVirtualBoxCreateExecutor(t *testing.T) {
 }
 
 func TestVirtualBoxSuccessRun(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
@@ -58,9 +55,7 @@ func TestVirtualBoxSuccessRun(t *testing.T) {
 }
 
 func TestVirtualBoxSuccessRunRawVariable(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	successfulBuild, err := common.GetRemoteBuildResponse("echo $TEST")
 	assert.NoError(t, err)
@@ -91,9 +86,7 @@ func TestVirtualBoxSuccessRunRawVariable(t *testing.T) {
 }
 
 func TestVirtualBoxBuildFail(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	failedBuild, err := common.GetRemoteFailedBuild()
 	assert.NoError(t, err)
@@ -118,9 +111,7 @@ func TestVirtualBoxBuildFail(t *testing.T) {
 }
 
 func TestVirtualBoxMissingImage(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
@@ -141,9 +132,7 @@ func TestVirtualBoxMissingImage(t *testing.T) {
 }
 
 func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
 	build := &common.Build{
 		Runner: &common.RunnerConfig{
@@ -162,80 +151,19 @@ func TestVirtualBoxMissingSSHCredentials(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing SSH config")
 }
 
-func TestVirtualBoxBuildAbort(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
-
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "virtualbox",
-				VirtualBox: &common.VirtualBoxConfig{
-					BaseName:         vboxImage,
-					DisableSnapshots: true,
-				},
-				SSH: vboxSSHConfig,
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		build.SystemInterrupt <- os.Interrupt
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "aborted: interrupt")
-}
-
 func TestVirtualBoxBuildCancel(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, vboxManage, "--version") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
 
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "virtualbox",
-				VirtualBox: &common.VirtualBoxConfig{
-					BaseName:         vboxImage,
-					DisableSnapshots: true,
-				},
-				SSH: vboxSSHConfig,
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "virtualbox",
+			VirtualBox: &common.VirtualBoxConfig{
+				BaseName:         vboxImage,
+				DisableSnapshots: true,
 			},
+			SSH: vboxSSHConfig,
 		},
 	}
 
-	trace := &common.Trace{Writer: os.Stdout}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		trace.Cancel()
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, trace)
-	assert.IsType(t, &common.BuildError{}, err)
-	assert.EqualError(t, err, "canceled")
+	buildtest.RunBuildWithCancel(t, config, nil)
 }

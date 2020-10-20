@@ -32,6 +32,10 @@ func (a *gcsAdapter) GetUploadURL() *url.URL {
 	return a.presignURL(http.MethodPut, "application/octet-stream")
 }
 
+func (a *gcsAdapter) GetUploadHeaders() http.Header {
+	return nil
+}
+
 func (a *gcsAdapter) presignURL(method string, contentType string) *url.URL {
 	err := a.credentialsResolver.Resolve()
 	if err != nil {

@@ -16,12 +16,17 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
 )
 
 // The default API version used to create a new docker client.
 const DefaultAPIVersion = "1.25"
+
+// ErrRedirectNotAllowed is returned when we get a 3xx request from the Docker
+// client to prevent any redirections to malicious docker clients.
+var ErrRedirectNotAllowed = errors.New("redirects disallowed")
 
 // IsErrNotFound checks whether a returned error is due to an image or container
 // not being found. Proxies the docker implementation.
@@ -48,9 +53,18 @@ func newOfficialDockerClient(c Credentials, apiVersion string) (*officialDockerC
 		logrus.Errorln("Error creating TLS Docker client:", err)
 		return nil, err
 	}
-	httpClient := &http.Client{Transport: transport}
+	httpClient := &http.Client{
+		Transport: transport,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return ErrRedirectNotAllowed
+		},
+	}
 
-	dockerClient, err := client.NewClient(c.Host, apiVersion, httpClient, nil)
+	dockerClient, err := client.NewClientWithOpts(
+		client.WithHost(c.Host),
+		client.WithVersion(apiVersion),
+		client.WithHTTPClient(httpClient),
+	)
 	if err != nil {
 		transport.CloseIdleConnections()
 		logrus.Errorln("Error creating Docker client:", err)
@@ -252,18 +266,12 @@ func (c *officialDockerClient) ImageImportBlocking(
 	options types.ImageImportOptions,
 ) error {
 	started := time.Now()
-	readCloser, err := c.client.ImageImport(ctx, source, ref, options)
+	rc, err := c.client.ImageImport(ctx, source, ref, options)
 	if err != nil {
 		return wrapError("ImageImport", err, started)
 	}
-	defer func() { _ = readCloser.Close() }()
 
-	// TODO: respect the context here
-	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {
-		return wrapError("io.Copy: Failed to import image", err, started)
-	}
-
-	return nil
+	return wrapError("ImageImport", c.handleEventStream(rc), started)
 }
 
 func (c *officialDockerClient) ImagePullBlocking(
@@ -272,18 +280,18 @@ func (c *officialDockerClient) ImagePullBlocking(
 	options types.ImagePullOptions,
 ) error {
 	started := time.Now()
-	readCloser, err := c.client.ImagePull(ctx, ref, options)
+	rc, err := c.client.ImagePull(ctx, ref, options)
 	if err != nil {
 		return wrapError("ImagePull", err, started)
 	}
-	defer func() { _ = readCloser.Close() }()
 
-	// TODO: respect the context here
-	if _, err := io.Copy(ioutil.Discard, readCloser); err != nil {
-		return wrapError("io.Copy: Failed to pull image", err, started)
-	}
+	return wrapError("ImagePull", c.handleEventStream(rc), started)
+}
 
-	return nil
+func (c *officialDockerClient) handleEventStream(rc io.ReadCloser) error {
+	defer func() { _ = rc.Close() }()
+
+	return jsonmessage.DisplayJSONMessagesStream(rc, ioutil.Discard, 0, false, nil)
 }
 
 func (c *officialDockerClient) Close() error {

@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 type Adapter interface {
 	GetDownloadURL() *url.URL
 	GetUploadURL() *url.URL
+	GetUploadHeaders() http.Header
 }
 
 type Factory func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error)

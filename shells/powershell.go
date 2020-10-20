@@ -129,7 +129,7 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 			psQuote(p.fromSlash(p.TemporaryPath)),
 		)
 		p.Linef(
-			"Set-Content %s -Value %s -Encoding UTF8 -Force",
+			"[System.IO.File]::WriteAllText(%s, %s)",
 			psQuote(variableFile),
 			psQuoteVariable(variable.Value),
 		)
@@ -281,7 +281,6 @@ func (p *PsWriter) Finish(trace bool) string {
 	// write BOM
 	_, _ = io.WriteString(w, "\xef\xbb\xbf")
 
-	p.writeShebang(w)
 	p.writeTrace(w, trace)
 	if p.Shell == SNPwsh {
 		_, _ = io.WriteString(w, `$ErrorActionPreference = "Stop"`+p.EOL+p.EOL)
@@ -292,15 +291,6 @@ func (p *PsWriter) Finish(trace bool) string {
 	_, _ = io.WriteString(w, p.String())
 	_ = w.Flush()
 	return buffer.String()
-}
-
-func (p *PsWriter) writeShebang(w io.Writer) {
-	switch p.Shell {
-	case SNPwsh:
-		_, _ = io.WriteString(w, "#requires -PSEdition Core"+p.EOL+p.EOL)
-	case SNPowershell:
-		_, _ = io.WriteString(w, "#requires -PSEdition Desktop"+p.EOL+p.EOL)
-	}
 }
 
 func (p *PsWriter) writeTrace(w io.Writer, trace bool) {

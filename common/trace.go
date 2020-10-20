@@ -10,6 +10,7 @@ import (
 type Trace struct {
 	Writer     io.Writer
 	cancelFunc context.CancelFunc
+	abortFunc  context.CancelFunc
 	mutex      sync.Mutex
 }
 
@@ -48,6 +49,28 @@ func (s *Trace) Cancel() bool {
 	}
 
 	s.cancelFunc()
+	return true
+}
+
+func (s *Trace) SetAbortFunc(abortFunc context.CancelFunc) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.abortFunc = abortFunc
+}
+
+func (s *Trace) Abort() bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.abortFunc == nil {
+		return false
+	}
+
+	// Abort always have much higher importance than Cancel
+	// as abort interrupts the execution
+	s.cancelFunc = nil
+	s.abortFunc()
 	return true
 }
 

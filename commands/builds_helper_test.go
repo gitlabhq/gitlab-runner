@@ -1,35 +1,81 @@
 package commands
 
 import (
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"runtime"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/session"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
-var fakeRunner = &common.RunnerConfig{
-	RunnerCredentials: common.RunnerCredentials{
-		Token: "a1b2c3d4e5f6",
-	},
-}
-
 func TestBuildsHelperCollect(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gitlab-runner-helper-collector")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
 	ch := make(chan prometheus.Metric, 50)
 	b := newBuildsHelper()
-	b.builds = append(b.builds, &common.Build{
-		CurrentState: common.BuildRunStatePending,
-		CurrentStage: common.BuildStagePrepare,
-		Runner:       fakeRunner,
-	})
-	b.Collect(ch)
-	assert.Len(t, ch, 1)
+
+	longRunningBuild, err := common.GetLongRunningBuild()
+	require.NoError(t, err)
+
+	shell := "bash"
+	if runtime.GOOS == "windows" {
+		shell = "powershell"
+	}
+
+	build := &common.Build{
+		JobResponse: longRunningBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				BuildsDir: dir,
+				Executor:  "shell",
+				Shell:     shell,
+			},
+		},
+	}
+	trace := &common.Trace{Writer: ioutil.Discard}
+
+	done := make(chan error)
+	go func() {
+		done <- buildtest.RunBuildWithTrace(t, build, trace)
+	}()
+
+	b.builds = append(b.builds, build)
+	// collect many logs whilst the build is being executed to trigger any
+	// potential race conditions that arise from the build progressing whilst
+	// metrics are collected.
+	for i := 0; i < 200; i++ {
+		if i == 100 {
+			// Build might have not started yet, wait until cancel is
+			// successful.
+			require.Eventually(
+				t,
+				func() bool {
+					return trace.Abort()
+				},
+				time.Minute,
+				10*time.Millisecond,
+			)
+		}
+		b.Collect(ch)
+		<-ch
+	}
+
+	err = <-done
+	expected := &common.BuildError{FailureReason: common.JobCanceled}
+	assert.True(t, errors.Is(err, expected), "expected: %[1]T (%[1]v), got: %[2]T (%[2]v)", expected, err)
 }
 
 func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {

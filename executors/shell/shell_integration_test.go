@@ -94,9 +94,11 @@ func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (
 		JobResponse: getBuildResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				BuildsDir: dir,
-				Executor:  "shell",
-				Shell:     shell,
+				BuildsDir:           dir,
+				Executor:            "shell",
+				Shell:               shell,
+				GracefulKillTimeout: func(i int) *int { return &i }(5),
+				ForceKillTimeout:    func(i int) *int { return &i }(1),
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
@@ -199,6 +201,57 @@ func TestMultistepBuild(t *testing.T) {
 	}
 }
 
+func TestBuildJobStatusEnvVars(t *testing.T) {
+	tests := map[string]struct {
+		fail   bool
+		assert func(t *testing.T, err error, build *common.Build, out string)
+	}{
+		"state and stage on failure": {
+			fail: true,
+			assert: func(t *testing.T, err error, build *common.Build, out string) {
+				assert.Error(t, err)
+				assert.Contains(t, out, "CI_JOB_STATUS=failed")
+				assert.Equal(t, common.BuildRunRuntimeFailed, build.CurrentState())
+			},
+		},
+		"state and stage on success": {
+			fail: false,
+			assert: func(t *testing.T, err error, build *common.Build, out string) {
+				assert.NoError(t, err)
+				assert.Contains(t, out, "CI_JOB_STATUS=success")
+				assert.Equal(t, common.BuildRunRuntimeSuccess, build.CurrentState())
+			},
+		},
+	}
+
+	expectedStages := []common.BuildStage{
+		common.BuildStagePrepare,
+		common.BuildStage("step_env"),
+		common.BuildStageAfterScript,
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				multistepBuildScript, err := common.GetRemoteFailingMultistepBuildWithEnvs(shell, tc.fail)
+				require.NoError(t, err)
+
+				build, cleanup := newBuild(t, multistepBuildScript, shell)
+				defer cleanup()
+
+				out, err := buildtest.RunBuildReturningOutput(t, build)
+
+				assert.Contains(t, out, "CI_JOB_STATUS=running")
+				for _, stage := range expectedStages {
+					assert.Contains(t, out, common.GetStageDescription(stage))
+				}
+
+				tc.assert(t, err, build, out)
+			})
+		})
+	}
+}
+
 func TestRawVariableOutput(t *testing.T) {
 	tests := map[string]struct {
 		command string
@@ -239,42 +292,23 @@ func TestRawVariableOutput(t *testing.T) {
 	})
 }
 
-func TestBuildAbort(t *testing.T) {
-	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		longRunningBuild, err := common.GetLongRunningBuild()
-		assert.NoError(t, err)
-		build, cleanup := newBuild(t, longRunningBuild, shell)
-		defer cleanup()
-
-		abortTimer := time.AfterFunc(time.Second, func() {
-			t.Log("Interrupt")
-			build.SystemInterrupt <- os.Interrupt
-		})
-		defer abortTimer.Stop()
-
-		err = buildtest.RunBuild(t, build)
-		assert.EqualError(t, err, "aborted: interrupt")
-	})
-}
-
 func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		longRunningBuild, err := common.GetLongRunningBuild()
-		assert.NoError(t, err)
-		build, cleanup := newBuild(t, longRunningBuild, shell)
+		build, cleanup := newBuild(t, common.JobResponse{}, shell)
 		defer cleanup()
 
-		trace := &common.Trace{Writer: os.Stdout}
+		updateSleepForCMD := func(build *common.Build) {
+			if shell != "cmd" {
+				return
+			}
 
-		cancelTimer := time.AfterFunc(time.Second, func() {
-			t.Log("Cancel")
-			trace.Cancel()
-		})
-		defer cancelTimer.Stop()
+			resp, err := common.GetRemoteLongRunningBuildWithAfterScriptCMD()
+			require.NoError(t, err)
 
-		err = buildtest.RunBuildWithTrace(t, build, trace)
-		assert.EqualError(t, err, "canceled")
-		assert.IsType(t, &common.BuildError{}, err)
+			build.JobResponse = resp
+		}
+
+		buildtest.RunBuildWithCancel(t, build.Runner, updateSleepForCMD)
 	})
 }
 
@@ -1165,9 +1199,7 @@ func TestInteractiveTerminal(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.shell, func(t *testing.T) {
-			if helpers.SkipIntegrationTests(t, c.app) {
-				t.Skip()
-			}
+			helpers.SkipIntegrationTests(t, c.app)
 
 			successfulBuild, err := common.GetLocalBuildResponse(c.command)
 			require.NoError(t, err)
@@ -1273,4 +1305,53 @@ func TestBuildWithGitCleanFlags(t *testing.T) {
 		_, err = os.Stat(cleanUpFilePath)
 		assert.Error(t, err, "cleanup_file does not exist")
 	})
+}
+
+func TestBuildFileVariablesRemoval(t *testing.T) {
+	getJobResponse := func(t *testing.T, jobResponseRequester func() (common.JobResponse, error)) common.JobResponse {
+		jobResponse, err := jobResponseRequester()
+		require.NoError(t, err)
+
+		return jobResponse
+	}
+
+	tests := map[string]struct {
+		jobResponse common.JobResponse
+	}{
+		"succeeded job": {
+			jobResponse: getJobResponse(t, common.GetSuccessfulBuild),
+		},
+		"failed job": {
+			jobResponse: getJobResponse(t, common.GetFailedBuild),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				build, cleanup := newBuild(t, tt.jobResponse, shell)
+				defer cleanup()
+
+				testVariableName := "TEST_VARIABLE"
+
+				build.Variables = append(
+					build.Variables,
+					common.JobVariable{Key: testVariableName, Value: "test", File: true},
+				)
+
+				_ = buildtest.RunBuild(t, build)
+
+				tmpDir := fmt.Sprintf("%s.tmp", build.BuildDir)
+				variableFile := filepath.Join(tmpDir, testVariableName)
+
+				_, err := os.Stat(variableFile)
+				assert.Error(t, err)
+				assert.True(
+					t,
+					errors.Is(err, os.ErrNotExist),
+					`Expected that os.Stat on the variable file will return the "doesn't exist" error`,
+				)
+			})
+		})
+	}
 }

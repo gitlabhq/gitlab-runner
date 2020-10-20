@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -57,7 +58,8 @@ type BuildRuntimeState string
 const (
 	BuildRunStatePending      BuildRuntimeState = "pending"
 	BuildRunRuntimeRunning    BuildRuntimeState = "running"
-	BuildRunRuntimeFinished   BuildRuntimeState = "finished"
+	BuildRunRuntimeSuccess    BuildRuntimeState = "success"
+	BuildRunRuntimeFailed     BuildRuntimeState = "failed"
 	BuildRunRuntimeCanceled   BuildRuntimeState = "canceled"
 	BuildRunRuntimeTerminated BuildRuntimeState = "terminated"
 	BuildRunRuntimeTimedout   BuildRuntimeState = "timedout"
@@ -66,15 +68,18 @@ const (
 type BuildStage string
 
 const (
+	BuildStageResolveSecrets           BuildStage = "resolve_secrets"
 	BuildStagePrepareExecutor          BuildStage = "prepare_executor"
 	BuildStagePrepare                  BuildStage = "prepare_script"
 	BuildStageGetSources               BuildStage = "get_sources"
 	BuildStageRestoreCache             BuildStage = "restore_cache"
 	BuildStageDownloadArtifacts        BuildStage = "download_artifacts"
 	BuildStageAfterScript              BuildStage = "after_script"
-	BuildStageArchiveCache             BuildStage = "archive_cache"
+	BuildStageArchiveOnSuccessCache    BuildStage = "archive_cache"
+	BuildStageArchiveOnFailureCache    BuildStage = "archive_cache_on_failure"
 	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
+	BuildStageCleanupFileVariables     BuildStage = "cleanup_file_variables"
 )
 
 // staticBuildStages is a list of BuildStages which are executed on every build
@@ -85,9 +90,11 @@ var staticBuildStages = []BuildStage{
 	BuildStageRestoreCache,
 	BuildStageDownloadArtifacts,
 	BuildStageAfterScript,
-	BuildStageArchiveCache,
+	BuildStageArchiveOnSuccessCache,
+	BuildStageArchiveOnFailureCache,
 	BuildStageUploadOnSuccessArtifacts,
 	BuildStageUploadOnFailureArtifacts,
+	BuildStageCleanupFileVariables,
 }
 
 const (
@@ -129,19 +136,56 @@ type Build struct {
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
 
-	CurrentStage BuildStage
-	CurrentState BuildRuntimeState
+	// statusLock handles access to currentStage, currentState and
+	// executorStageResolver. These variables can be accessed via
+	// CurrentStage(), CurrentState() and CurrentExecutorStage() from the
+	// metrics go routine whilst a build is in-flight.
+	statusLock            sync.RWMutex
+	currentStage          BuildStage
+	currentState          BuildRuntimeState
+	executorStageResolver func() ExecutorStage
+
+	secretsResolver func(l logger, registry SecretResolverRegistry) (SecretsResolver, error)
 
 	Session *session.Session
 
-	executorStageResolver func() ExecutorStage
-	logger                BuildLogger
-	allVariables          JobVariables
+	logger BuildLogger
+
+	allVariables     JobVariables
+	secretsVariables JobVariables
 
 	createdAt time.Time
 
 	Referees         []referees.Referee
 	ArtifactUploader func(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
+}
+
+func (b *Build) setCurrentStage(stage BuildStage) {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	b.currentStage = stage
+}
+
+func (b *Build) CurrentStage() BuildStage {
+	b.statusLock.RLock()
+	defer b.statusLock.RUnlock()
+
+	return b.currentStage
+}
+
+func (b *Build) setCurrentState(state BuildRuntimeState) {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	b.currentState = state
+}
+
+func (b *Build) CurrentState() BuildRuntimeState {
+	b.statusLock.RLock()
+	defer b.statusLock.RUnlock()
+
+	return b.currentState
 }
 
 func (b *Build) Log() *logrus.Entry {
@@ -269,8 +313,11 @@ func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, shar
 }
 
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
-	b.CurrentStage = buildStage
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 
+	b.setCurrentStage(buildStage)
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
 
 	shell := executor.Shell()
@@ -311,7 +358,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 			msg := fmt.Sprintf(
 				"%s%s%s",
 				helpers.ANSI_BOLD_CYAN,
-				getStageDescription(buildStage),
+				GetStageDescription(buildStage),
 				helpers.ANSI_RESET,
 			)
 			b.logger.Println(msg)
@@ -331,9 +378,11 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 		BuildStageRestoreCache:             true,
 		BuildStageDownloadArtifacts:        true,
 		BuildStageAfterScript:              false,
-		BuildStageArchiveCache:             true,
+		BuildStageArchiveOnSuccessCache:    true,
+		BuildStageArchiveOnFailureCache:    false,
 		BuildStageUploadOnFailureArtifacts: true,
 		BuildStageUploadOnSuccessArtifacts: true,
+		BuildStageCleanupFileVariables:     true,
 	}
 
 	predefined, ok := env[buildStage]
@@ -344,16 +393,18 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 	return predefined
 }
 
-func getStageDescription(stage BuildStage) string {
+func GetStageDescription(stage BuildStage) string {
 	descriptions := map[BuildStage]string{
 		BuildStagePrepare:                  "Preparing environment",
 		BuildStageGetSources:               "Getting source from Git repository",
 		BuildStageRestoreCache:             "Restoring cache",
 		BuildStageDownloadArtifacts:        "Downloading artifacts",
 		BuildStageAfterScript:              "Running after_script",
-		BuildStageArchiveCache:             "Saving cache",
+		BuildStageArchiveOnSuccessCache:    "Saving cache for successful job",
+		BuildStageArchiveOnFailureCache:    "Saving cache for failed job",
 		BuildStageUploadOnFailureArtifacts: "Uploading artifacts for failed job",
 		BuildStageUploadOnSuccessArtifacts: "Uploading artifacts for successful job",
+		BuildStageCleanupFileVariables:     "Cleaning up file based variables",
 	}
 
 	description, ok := descriptions[stage]
@@ -370,6 +421,14 @@ func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executo
 	}
 
 	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor)
+}
+
+func (b *Build) executeArchiveCache(ctx context.Context, state error, executor Executor) (err error) {
+	if state == nil {
+		return b.executeStage(ctx, BuildStageArchiveOnSuccessCache, executor)
+	}
+
+	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
 }
 
 func (b *Build) executeScript(ctx context.Context, executor Executor) error {
@@ -408,17 +467,10 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 			}
 		}
 
-		// Execute after script (after_script)
-		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
-		defer timeoutCancel()
-
-		_ = b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
+		b.executeAfterScript(ctx, err, executor)
 	}
 
-	// Execute post script (cache store, artifacts upload)
-	if err == nil {
-		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
-	}
+	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
 
 	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
 
@@ -426,13 +478,36 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	endTime := time.Now()
 	b.executeUploadReferees(ctx, startTime, endTime)
 
-	// Use job's error as most important
-	if err != nil {
-		return err
+	b.removeFileBasedVariables(ctx, executor)
+
+	return b.pickPriorityError(err, archiveCacheErr, artifactUploadErr)
+}
+
+func (b *Build) pickPriorityError(jobErr error, archiveCacheErr error, artifactUploadErr error) error {
+	// Use job's errors which came before upload errors as most important to surface
+	if jobErr != nil {
+		return jobErr
 	}
 
-	// Otherwise, use uploadError
+	// Otherwise, use uploading errors
+	if archiveCacheErr != nil {
+		return archiveCacheErr
+	}
+
 	return artifactUploadErr
+}
+
+func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) {
+	state, _ := b.runtimeStateAndError(err)
+	b.GetAllVariables().OverwriteKey("CI_JOB_STATUS", JobVariable{
+		Key:   "CI_JOB_STATUS",
+		Value: string(state),
+	})
+
+	ctx, cancel := context.WithTimeout(ctx, AfterScriptTimeout)
+	defer cancel()
+
+	_ = b.executeStage(ctx, BuildStageAfterScript, executor)
 }
 
 // StepToBuildStage returns the BuildStage corresponding to a step.
@@ -442,6 +517,13 @@ func StepToBuildStage(s Step) BuildStage {
 
 func (b *Build) createReferees(executor Executor) {
 	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
+}
+
+func (b *Build) removeFileBasedVariables(ctx context.Context, executor Executor) {
+	err := b.executeStage(ctx, BuildStageCleanupFileVariables, executor)
+	if err != nil {
+		b.Log().WithError(err).Warning("Error while executing file based variables removal script")
+	}
 }
 
 func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime time.Time) {
@@ -503,28 +585,39 @@ func (b *Build) GetBuildTimeout() time.Duration {
 }
 
 func (b *Build) handleError(err error) error {
+	state, err := b.runtimeStateAndError(err)
+	b.setCurrentState(state)
+
+	return err
+}
+
+func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 	switch err {
 	case context.Canceled:
-		b.CurrentState = BuildRunRuntimeCanceled
-		return &BuildError{Inner: errors.New("canceled")}
+		return BuildRunRuntimeCanceled, &BuildError{
+			Inner:         errors.New("canceled"),
+			FailureReason: JobCanceled,
+		}
 
 	case context.DeadlineExceeded:
-		b.CurrentState = BuildRunRuntimeTimedout
-		return &BuildError{
+		return BuildRunRuntimeTimedout, &BuildError{
 			Inner:         fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()),
 			FailureReason: JobExecutionTimeout,
 		}
 
+	case nil:
+		return BuildRunRuntimeSuccess, nil
+
 	default:
-		b.CurrentState = BuildRunRuntimeFinished
-		return err
+		return BuildRunRuntimeFailed, err
 	}
 }
 
 func (b *Build) run(ctx context.Context, executor Executor) (err error) {
-	b.CurrentState = BuildRunRuntimeRunning
+	b.setCurrentState(BuildRunRuntimeRunning)
 
 	buildFinish := make(chan error, 1)
+	buildPanic := make(chan error, 1)
 
 	runContext, runCancel := context.WithCancel(context.Background())
 	defer runCancel()
@@ -539,6 +632,12 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 
 	// Run build script
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				buildPanic <- &BuildError{FailureReason: RunnerSystemFailure, Inner: fmt.Errorf("panic: %s", r)}
+			}
+		}()
+
 		buildFinish <- b.executeScript(runContext, executor)
 	}()
 
@@ -549,11 +648,22 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 		err = b.handleError(ctx.Err())
 
 	case signal := <-b.SystemInterrupt:
-		err = fmt.Errorf("aborted: %v", signal)
-		b.CurrentState = BuildRunRuntimeTerminated
+		err = &BuildError{
+			Inner:         fmt.Errorf("aborted: %v", signal),
+			FailureReason: RunnerSystemFailure,
+		}
+		b.setCurrentState(BuildRunRuntimeTerminated)
 
 	case err = <-buildFinish:
-		b.CurrentState = BuildRunRuntimeFinished
+		if err != nil {
+			b.setCurrentState(BuildRunRuntimeFailed)
+		} else {
+			b.setCurrentState(BuildRunRuntimeSuccess)
+		}
+		return err
+
+	case err = <-buildPanic:
+		b.setCurrentState(BuildRunRuntimeTerminated)
 		return err
 	}
 
@@ -593,7 +703,7 @@ func (b *Build) retryCreateExecutor(
 			return nil, errors.New("failed to create executor")
 		}
 
-		b.executorStageResolver = executor.GetCurrentStage
+		b.setExecutorStageResolver(executor.GetCurrentStage)
 
 		err = executor.Prepare(options)
 		if err == nil {
@@ -697,11 +807,19 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	trace.Fail(err, RunnerSystemFailure)
 }
 
+func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
+
+	b.executorStageResolver = resolver
+}
+
 func (b *Build) CurrentExecutorStage() ExecutorStage {
+	b.statusLock.RLock()
+	defer b.statusLock.RUnlock()
+
 	if b.executorStageResolver == nil {
-		b.executorStageResolver = func() ExecutorStage {
-			return ExecutorStage("")
-		}
+		return ExecutorStage("")
 	}
 
 	return b.executorStageResolver()
@@ -716,24 +834,33 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		b.logger.Println("  on", b.Runner.Name, b.Runner.ShortDescription())
 	}
 
-	b.CurrentState = BuildRunStatePending
+	b.setCurrentState(BuildRunStatePending)
 
-	defer func() { b.cleanupBuild(executor, trace, err) }()
+	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
+	// setTraceStatus needs to be last since it needs a correct error value to report the job's status
+	defer func() { b.setTraceStatus(trace, err) }()
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = &BuildError{FailureReason: RunnerSystemFailure, Inner: fmt.Errorf("panic: %s", r)}
+		}
+	}()
+
+	defer func() { b.cleanupBuild(executor) }()
+
+	err = b.resolveSecrets()
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
 
 	trace.SetCancelFunc(cancel)
+	trace.SetAbortFunc(cancel)
 	trace.SetMasked(b.GetAllVariables().Masked())
 
-	options := ExecutorPrepareOptions{
-		Config:  b.Runner,
-		Build:   b,
-		Trace:   trace,
-		User:    globalConfig.User,
-		Context: ctx,
-	}
-
+	options := b.createExecutorPrepareOptions(ctx, globalConfig, trace)
 	provider := GetExecutorProvider(b.Runner.Executor)
 	if provider == nil {
 		return errors.New("executor not found")
@@ -758,6 +885,51 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	}
 
 	return err
+}
+
+func (b *Build) createExecutorPrepareOptions(
+	ctx context.Context,
+	globalConfig *Config,
+	trace JobTrace,
+) ExecutorPrepareOptions {
+	return ExecutorPrepareOptions{
+		Config:  b.Runner,
+		Build:   b,
+		Trace:   trace,
+		User:    globalConfig.User,
+		Context: ctx,
+	}
+}
+
+func (b *Build) resolveSecrets() error {
+	if b.Secrets == nil {
+		return nil
+	}
+
+	b.Secrets.expandVariables(b.GetAllVariables())
+
+	section := helpers.BuildSection{
+		Name:        string(BuildStageResolveSecrets),
+		SkipMetrics: !b.JobResponse.Features.TraceSections,
+		Run: func() error {
+			resolver, err := b.secretsResolver(&b.logger, GetSecretResolverRegistry())
+			if err != nil {
+				return fmt.Errorf("creating secrets resolver: %w", err)
+			}
+
+			variables, err := resolver.Resolve(b.Secrets)
+			if err != nil {
+				return fmt.Errorf("resolving secrets: %w", err)
+			}
+
+			b.secretsVariables = variables
+			b.refreshAllVariables()
+
+			return nil
+		},
+	}
+
+	return section.Execute(&b.logger)
 }
 
 func (b *Build) executeBuildSection(
@@ -785,9 +957,7 @@ func (b *Build) executeBuildSection(
 	return executor, err
 }
 
-func (b *Build) cleanupBuild(executor Executor, trace JobTrace, err error) {
-	b.setTraceStatus(trace, err)
-
+func (b *Build) cleanupBuild(executor Executor) {
 	if executor != nil {
 		executor.Cleanup()
 	}
@@ -797,18 +967,27 @@ func (b *Build) String() string {
 	return helpers.ToYAML(b)
 }
 
+func (b *Build) platformAppropriatePath(s string) string {
+	// Check if we're dealing with a Windows path on a Windows platform
+	// filepath.VolumeName will return empty otherwise
+	if filepath.VolumeName(s) != "" {
+		return filepath.FromSlash(s)
+	}
+	return s
+}
+
 func (b *Build) GetDefaultVariables() JobVariables {
 	return JobVariables{
 		{
 			Key:      "CI_BUILDS_DIR",
-			Value:    filepath.FromSlash(b.RootDir),
+			Value:    b.platformAppropriatePath(b.RootDir),
 			Public:   true,
 			Internal: true,
 			File:     false,
 		},
 		{
 			Key:      "CI_PROJECT_DIR",
-			Value:    filepath.FromSlash(b.FullProjectDir()),
+			Value:    b.platformAppropriatePath(b.FullProjectDir()),
 			Public:   true,
 			Internal: true,
 			File:     false,
@@ -833,6 +1012,12 @@ func (b *Build) GetDefaultVariables() JobVariables {
 			Public:   true,
 			Internal: true,
 			File:     false,
+		},
+		{
+			Key:      "CI_JOB_STATUS",
+			Value:    string(BuildRunRuntimeRunning),
+			Public:   true,
+			Internal: true,
 		},
 	}
 }
@@ -931,8 +1116,10 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, b.Variables...)
 	variables = append(variables, b.GetSharedEnvVariable())
 	variables = append(variables, AppVersion.Variables()...)
+	variables = append(variables, b.secretsVariables...)
 
 	b.allVariables = variables.Expand()
+
 	return b.allVariables
 }
 
@@ -1131,6 +1318,7 @@ func NewBuild(
 		SystemInterrupt: systemInterrupt,
 		ExecutorData:    executorData,
 		createdAt:       time.Now(),
+		secretsResolver: newSecretsResolver,
 	}, nil
 }
 

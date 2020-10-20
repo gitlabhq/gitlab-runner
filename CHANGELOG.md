@@ -1,3 +1,187 @@
+## v13.5.0-rc1 (2020-10-08)
+
+### New features
+
+- Allow runner to archive cache on failure !2416
+- Add job status environment variables !2342
+- Add labels to docker cache volumes !2334
+- Set k8s runner ephemeral storage requests and limits !2279
+
+### Bug fixes
+
+- Docker executor: return error on pull/import failures !2113
+- Fix path separator for CI_PROJECT_DIR in Windows in bash shells !1977 (Pedro Pombeiro @pedropombeiro)
+
+### Maintenance
+
+- Ensure that for abort only abort is called !2463
+- Detach runtime state/metric from CI_JOB_STATUS !2462
+- Update stretchr/testify library to fix flaky test !2450
+- Report Kubernetes pods' conditions when they're pending !2434
+- Move variable creation out of specific resolver implementation !2413
+- Test more executors in TestAskRunnerOverrideDefaults !2406
+- Test for detecting overriding of CI server values !2403
+- Support 'canceling' remote job status. !2377
+- Add basic fuzz tests as part of dogfooding coverage guided fuzzing !2347
+- Standardize indentation in YAML code !2328
+- Use newest helper image version in tests !2223
+- Update calls for SkipIntegrationTests to not return !2065
+- Setup secure jobs !1897
+
+### Documentation changes
+
+- Doc `cleanup_file_variables` for custom executor !2455
+- Link Azure storage container docs !2454
+- Use google driver for examples !2442
+- Fix typo in k8s read_only config flag documentation !2441
+- Docs: Removed extra notes !2440
+- Removed many of the notes !2439
+- Harmonize docs linting rules !2435
+- Docs: Fixed here links and added metadata !2425
+- Minor edits of recent edits !2423
+- Remove contractions linting rule !2421
+- Docs: Edits for Vale rules and other style !2420
+- Documentation: Add log level mention to troubleshooting !2419
+- Switch autoscaling Docker Machine examples to GCP and Ubuntu !2417
+- Add troubleshooting about windows mapped drives !2415
+- Docs: Updating metadata !2405
+- Docs: Update docker tables to clarify what's supported !2404
+- Update default install docs to disable skel !2402
+- Docker version requirements in Windows Server !2401
+- Document vargrant-parallels plugin and add clone instructions !2399
+- Changing Kubernetes executor service-account command !2312
+
+## v13.4.0 (2020-09-18)
+
+### New features
+
+- Add Hashicorp Vault secret resolver !2374
+- Add Hashicorp Vault integration package !2373
+- Add Hashicorp Vault golang library !2371
+- Add secrets handling abstraction !2370
+
+### Bug fixes
+
+- Improved interrupt/cancelation build tests !2382
+- Fix Windows runner helper docker container !2379
+- Fix metric reading race conditions !2360
+- Record only first resolved credentials for each Docker registry !2357
+- Ensure Powershell file variables contain no BOM !2320
+
+### Maintenance
+
+- Use consts for job state in TestUpdateJob !2397
+- Support trace rewind !2390
+- Support update interval on update job !2389
+- Introduce `UpdateJobResult` and `PatchState` !2388
+- Fix check_mocks make target !2387
+- Update docs pipeline to use new image !2384
+- Add support for custom PUT HTTP headers in cache archiver !2378
+- Send trace checksum on job updates !2375
+- Update node affinity tests assertions !2369
+- Add test for cache archiver shell execution !2367
+- Update log message for starting VM in Parallels executor !2361 (Per Lundberg @perlun)
+- Fix changelog generator config to catch all maintenance related labels !2359
+- Update log message for starting VM in virtualbox executor !2356 (Per Lundberg @perlun)
+- Remove trailing spaces check !2352
+- Replace whitelist terminology with allowlist !2338
+- Use configured userns mode for services !2330 (Lukáš Brzobohatý @lukas.brzobohaty)
+- Add kubernetes node affinities settings !2324 (Alexander Petermann @lexxxel)
+- Re-enable windows docker tests !2308
+- Use new function to create Docker client !2299
+- Add Secrets entry to job payload structures !2288
+- Remove redundant docker executor integration tests !2211
+- Add missing assert for mock !2116
+- Allow overwriting Service and Helper container resources !2108 (Renan Gonçalves @renan.saddam)
+- Use parallel compression and decompression for gzip archives and caches !2055 (Ben Boeckel @ben.boeckel)
+- Add variable to enable fallback cache key !1534 (Erik Lindahl @erik.lindahl)
+- Print Docker image digest !1380 (David Nyström @nysan)
+
+### Documentation changes
+
+- Update docs-lint job to use latest image. !2398
+- Add note not to use AWS security group ID with docker machine !2396
+- Docs: improve documentation grammar !2395 (Jonston Chan @JonstonChan)
+- Fix grammar in documentation index page !2394 (AmeliaYura @AmeliaYura)
+- Add documentation on how to use Ubuntu image in kubernetes !2393
+- adding a tip on configuring timestamp in docker runner !2391
+- Docs: Fix misspelled word !2383
+- Update Vale and Markdownlint rules !2380
+- Docs: Fix minor typo in Registering runners page !2376
+- Add Azure Blob Storage support for cache !2366
+- Add note to docs about using shell executor when building macOS/iOS apps !2365
+- Cleaned up some of the wording for macOS install !2364
+- Document node affinity !2363
+- Change order of headers in exec docs !2362
+- Docs: Edited Fargate doc !2355
+- Fix broken link !2354
+- Update kubernetes.md documentation replace example gitlabUrl !2353 (Tyler Wellman @tylerwel)
+- Fix section numbering in docs/development !2349
+- CONTRIBUTING.md: fix FreeBSD label !2348 (Kenyon Ralph @kenyon)
+- Use `shell` instead of `bash` for markdown !2345
+- Update Registering Runners page !2337
+- Add documentation for configuring private registries with imagePullSecrets !2131 (Tom Bruyninx @TomBrx)
+
+### Other changes
+
+- Clarify --help text for --id flag !2385
+
+## v13.3.0 (2020-08-20)
+
+### Bug fixes
+
+- Install Runner in /usr/bin and helper in /usr/lib in Linux !2329
+- Fix powershell #requires use !2318
+- Fix untagged registration and add regression tests !2303
+- Add openssh-client to Docker images !2281
+- Use container ID, not name, for service's healthcheck hostname !2118
+
+### Maintenance
+
+- Add security harness !2315
+- Move GitLab release to its own job !2314
+- Fix typo for security branch !2304
+- Add MR piplines for security fork on master !2301
+- Add release jobs to security fork !2300
+- Add security issue and merge request templates !2298
+- Refresh linting rules !2297
+- Make `.stage_done` available also on docs MRs !2295
+- Remove needs from feature flags docs job !2293
+- Fix DAG dependencies of release jobs !2289
+- Run docker import for helper-dockerarchive-host !2275
+- Update changelog generator to accept new labels !2271
+- Fix typo in DUMB_INIT_S390X_CHECKSUM variable name !2270
+- Cache GOCACHE in CI !2187
+- Enable DAG for some jobs !2076
+- Upgrade git version !2306
+- Update Ubuntu Docker container to Ubuntu 20.04 !2286 (Markus Teufelberger @markusteufelberger)
+- Log additional docker-machine prep/cleanup info !2277
+
+### Documentation changes
+
+- Synchronize lint rules and fix where required !2341
+- Fix name script !2339 (Andros Fenollosa @tanrax)
+- Document how to renew GPG key !2336
+- Update Documentation template to reflect standard !2332
+- Fix broken external links !2331
+- Document security release process !2322
+- Fix incorrect Fargate cluster name !2321 (Matt Breden @mattbred56)
+- Added specific token steps !2317
+- Update docs.gitlab-ci.yml to use trigger-build script !2311
+- Add content describing Runner behavior for changes to config.toml - docs !2307
+- Made links descriptive !2302
+- Creation of Openshift Runner doc. !2296
+- Removed accidentally commited installation instructions in 13.2 !2290
+- Update info about support Linux/OS/archs !2287
+- Add explicit location for Windows logs !2285
+- Fix link to TOML docs Array of Tables. !2280 (Bheesham Persaud @bheesham)
+- Added architecture info !2278
+- Fixes mixed-case anchor !2272
+- Make it clear which Fargate container should have the specific name !2269
+- Update a link to download the latest Fargate driver version !2259 (Ricardo Mendes @ricardomendes)
+- Replace backticks with bold for UI elements !2099
+- Add an ENTRYPOINT script to the helper image Dockerfiles to add CA certificates !2058
+
 ## v13.2.0 (2020-07-20)
 
 ### New features

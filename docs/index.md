@@ -1,6 +1,8 @@
 ---
 comments: false
-last_updated: 2019-01-17
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
 ---
 
 # GitLab Runner Docs
@@ -12,11 +14,11 @@ coordinates the jobs.
 
 ## Requirements
 
-GitLab Runner is written in [Go](https://golang.org) and can be run as a single binary, no
+GitLab Runner is written in [Go](https://golang.org) and can be run as a single binary. No
 language specific requirements are needed.
 
 It is designed to run on the GNU/Linux, macOS, and Windows operating systems.
-Other operating systems will probably work as long as you can compile a Go
+Other operating systems might work as long as you can compile a Go
 binary on them.
 
 If you want to [use Docker](executors/docker.md), install the latest version.
@@ -33,7 +35,7 @@ GitLab Runner requires a minimum of Docker `v1.13.0`.
   - Using Docker containers.
   - Using Docker containers and executing job over SSH.
   - Using Docker containers with autoscaling on different clouds and virtualization hypervisors.
-  - Connecting to remote SSH server.
+  - Connecting to a remote SSH server.
 - Is written in Go and distributed as single binary without any other requirements.
 - Supports Bash and Windows PowerShell.
 - Works on GNU/Linux, macOS, and Windows (pretty much anywhere you can run Docker).
@@ -47,13 +49,13 @@ GitLab Runner requires a minimum of Docker `v1.13.0`.
 
 ## Compatibility with GitLab versions
 
-The GitLab Runner version should be in sync with the GitLab version. While older
-Runners may still work with newer GitLab versions, and vice versa, in some cases,
-features may be not available or work properly if there's a version difference.
+The GitLab Runner version should be in sync with the GitLab version. Older runners may still work
+with newer GitLab versions (and vice versa). However, features may be not available or work properly
+if there's a version difference.
 
-Backward compatibility is guaranteed between minor version updates,
-but be aware that minor version updates of GitLab can introduce new features
-which will require the Runner to be on the same minor version.
+Backward compatibility is guaranteed between minor version updates. However, be aware that minor
+version updates of GitLab can introduce new features that require the Runner to be on the same minor
+version.
 
 ## Install GitLab Runner
 

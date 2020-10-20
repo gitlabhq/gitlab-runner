@@ -20,6 +20,21 @@ import (
 
 type kubeConfigProvider func() (*restclient.Config, error)
 
+type resourceQuantityError struct {
+	resource string
+	value    string
+	inner    error
+}
+
+func (r *resourceQuantityError) Error() string {
+	return fmt.Sprintf("parsing resource %q with value %q: %q", r.resource, r.value, r.inner)
+}
+
+func (r *resourceQuantityError) Is(err error) bool {
+	t, ok := err.(*resourceQuantityError)
+	return ok && r.resource == t.resource && r.value == t.value && r.inner == t.inner
+}
+
 var (
 	// inClusterConfig parses kubernets configuration reading in cluster values
 	inClusterConfig kubeConfigProvider = restclient.InClusterConfig
@@ -165,6 +180,22 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 		pod.Name,
 		pod.Status.Phase,
 	)
+
+	for _, condition := range pod.Status.Conditions {
+		// skip conditions with no reason, these are typically expected pod
+		// conditions
+		if condition.Reason == "" {
+			continue
+		}
+
+		_, _ = fmt.Fprintf(
+			out,
+			"\t%s: %q\n",
+			condition.Reason,
+			condition.Message,
+		)
+	}
+
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
@@ -209,12 +240,12 @@ func waitForPodRunning(
 	return api.PodUnknown, errors.New("timed out waiting for pod to start")
 }
 
-// limits takes a string representing CPU & memory limits,
+// limits takes a string representing CPU, memory and ephemeralStorage limits,
 // and returns a ResourceList with appropriately scaled Quantity
 // values for Kubernetes. This allows users to write "500m" for CPU,
-// and "50Mi" for memory (etc.)
-func limits(cpu, memory string) (api.ResourceList, error) {
-	var rCPU, rMem resource.Quantity
+// "50Mi" for memory and "1Gi" for ephemeral storage (etc.)
+func createResourceList(cpu, memory, ephemeralStorage string) (api.ResourceList, error) {
+	var rCPU, rMem, rStor resource.Quantity
 	var err error
 
 	parse := func(s string) (resource.Quantity, error) {
@@ -223,17 +254,25 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 			return q, nil
 		}
 		if q, err = resource.ParseQuantity(s); err != nil {
-			return q, fmt.Errorf("parsing resource limit: %w", err)
+			return q, err
 		}
 		return q, nil
 	}
 
 	if rCPU, err = parse(cpu); err != nil {
-		return api.ResourceList{}, err
+		return api.ResourceList{}, &resourceQuantityError{resource: "cpu", value: cpu, inner: err}
 	}
 
 	if rMem, err = parse(memory); err != nil {
-		return api.ResourceList{}, err
+		return api.ResourceList{}, &resourceQuantityError{resource: "memory", value: memory, inner: err}
+	}
+
+	if rStor, err = parse(ephemeralStorage); err != nil {
+		return api.ResourceList{}, &resourceQuantityError{
+			resource: "ephemeralStorage",
+			value:    ephemeralStorage,
+			inner:    err,
+		}
 	}
 
 	l := make(api.ResourceList)
@@ -244,6 +283,9 @@ func limits(cpu, memory string) (api.ResourceList, error) {
 	}
 	if rMem != q {
 		l[api.ResourceMemory] = rMem
+	}
+	if rStor != q {
+		l[api.ResourceEphemeralStorage] = rStor
 	}
 
 	return l, nil
@@ -260,4 +302,40 @@ func buildVariables(bv common.JobVariables) []api.EnvVar {
 		}
 	}
 	return e
+}
+
+func getCapabilities(defaultCapDrop []string, capAdd []string, capDrop []string) *api.Capabilities {
+	enabled := make(map[string]bool)
+
+	for _, v := range defaultCapDrop {
+		enabled[v] = false
+	}
+
+	for _, v := range capAdd {
+		enabled[v] = true
+	}
+
+	for _, v := range capDrop {
+		enabled[v] = false
+	}
+
+	if len(enabled) < 1 {
+		return nil
+	}
+
+	return buildCapabilities(enabled)
+}
+
+func buildCapabilities(enabled map[string]bool) *api.Capabilities {
+	capabilities := new(api.Capabilities)
+
+	for c, add := range enabled {
+		if add {
+			capabilities.Add = append(capabilities.Add, api.Capability(c))
+			continue
+		}
+		capabilities.Drop = append(capabilities.Drop, api.Capability(c))
+	}
+
+	return capabilities
 }

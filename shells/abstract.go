@@ -27,6 +27,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.RawVariables = true
 	features.ArtifactsExclude = true
 	features.MultiBuildSteps = true
+	features.VaultSecrets = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
@@ -105,7 +106,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			continue
 		}
 
-		b.addExtractCacheCommand(w, info, cacheFile, cacheKey)
+		b.extractCacheOrFallbackCacheWrapper(w, info, cacheFile, cacheKey)
 	}
 
 	if skipRestoreCache {
@@ -115,11 +116,26 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 	return nil
 }
 
+func (b *AbstractShell) extractCacheOrFallbackCacheWrapper(
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	cacheFile string,
+	cacheKey string,
+) {
+	cacheFallbackKey := info.Build.GetAllVariables().Get("CACHE_FALLBACK_KEY")
+
+	// Execute cache-extractor command. Failure is not fatal.
+	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
+		b.addExtractCacheCommand(w, info, cacheFile, cacheKey, cacheFallbackKey)
+	})
+}
+
 func (b *AbstractShell) addExtractCacheCommand(
 	w ShellWriter,
 	info common.ShellScriptInfo,
 	cacheFile string,
 	cacheKey string,
+	cacheFallbackKey string,
 ) {
 	args := []string{
 		"cache-extractor",
@@ -127,20 +143,19 @@ func (b *AbstractShell) addExtractCacheCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
-	// Generate cache download address
 	if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
 		args = append(args, "--url", url.String())
 	}
 
-	// Execute cache-extractor command. Failure is not fatal.
-	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		w.Noticef("Checking cache for %s...", cacheKey)
-		w.IfCmdWithOutput(info.RunnerCommand, args...)
-		w.Noticef("Successfully extracted cache")
-		w.Else()
-		w.Warningf("Failed to extract cache")
-		w.EndIf()
-	})
+	w.Noticef("Checking cache for %s...", cacheKey)
+	w.IfCmdWithOutput(info.RunnerCommand, args...)
+	w.Noticef("Successfully extracted cache")
+	w.Else()
+	w.Warningf("Failed to extract cache")
+	if cacheFallbackKey != "" {
+		b.addExtractCacheCommand(w, info, cacheFile, cacheFallbackKey, "")
+	}
+	w.EndIf()
 }
 
 func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
@@ -490,19 +505,32 @@ func (b *AbstractShell) writeUserScript(
 	return nil
 }
 
-func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) error {
+	b.writeExports(w, info)
+	b.writeCdBuildDir(w, info)
+
+	skipArchiveCache, err := b.archiveCache(w, info, onSuccess)
+	if err != nil {
+		return err
+	}
+
+	if skipArchiveCache {
+		return common.ErrSkipBuildStage
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) (bool, error) {
 	skipArchiveCache := true
 
 	for _, cacheOptions := range info.Build.Cache {
-		// Create list of files to archive
-		var archiverArgs []string
-		for _, path := range cacheOptions.Paths {
-			archiverArgs = append(archiverArgs, "--path", path)
+		if !cacheOptions.When.ShouldCache(onSuccess) {
+			continue
 		}
 
-		if cacheOptions.Untracked {
-			archiverArgs = append(archiverArgs, "--untracked")
-		}
+		// Create list of files to archive
+		archiverArgs := b.getArchiverArgs(cacheOptions)
 
 		if len(archiverArgs) < 1 {
 			// Skip creating archive
@@ -519,7 +547,7 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		}
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPush); err != nil {
-			return fmt.Errorf("%w for %s", err, cacheKey)
+			return false, fmt.Errorf("%w for %s", err, cacheKey)
 		} else if !ok {
 			w.Noticef("Not uploading cache %s due to policy", cacheKey)
 			continue
@@ -528,11 +556,20 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 		b.addCacheUploadCommand(w, info, cacheFile, archiverArgs, cacheKey)
 	}
 
-	if skipArchiveCache {
-		return common.ErrSkipBuildStage
+	return skipArchiveCache, nil
+}
+
+func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache) []string {
+	var archiverArgs []string
+	for _, path := range cacheOptions.Paths {
+		archiverArgs = append(archiverArgs, "--path", path)
 	}
 
-	return nil
+	if cacheOptions.Untracked {
+		archiverArgs = append(archiverArgs, "--untracked")
+	}
+
+	return archiverArgs
 }
 
 func (b *AbstractShell) addCacheUploadCommand(
@@ -553,6 +590,13 @@ func (b *AbstractShell) addCacheUploadCommand(
 	// Generate cache upload address
 	if url := cache.GetCacheUploadURL(info.Build, cacheKey); url != nil {
 		args = append(args, "--url", url.String())
+	}
+
+	httpHeaders := cache.GetCacheUploadHeaders(info.Build, cacheKey)
+	for key, values := range httpHeaders {
+		for _, value := range values {
+			args = append(args, "--header", fmt.Sprintf("%s: %s", key, value))
+		}
 	}
 
 	// Execute cache-archiver command. Failure is not fatal.
@@ -674,20 +718,32 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 	return nil
 }
 
-func (b *AbstractShell) writeArchiveCacheScript(w ShellWriter, info common.ShellScriptInfo) error {
-	b.writeExports(w, info)
-	b.writeCdBuildDir(w, info)
-
-	// Find cached files and archive them
-	return b.cacheArchiver(w, info)
-}
-
 func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) error {
 	return b.writeUploadArtifacts(w, info, true)
 }
 
 func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info common.ShellScriptInfo) error {
 	return b.writeUploadArtifacts(w, info, false)
+}
+
+func (b *AbstractShell) writeArchiveCacheOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) error {
+	return b.cacheArchiver(w, info, true)
+}
+
+func (b *AbstractShell) writeArchiveCacheOnFailureScript(w ShellWriter, info common.ShellScriptInfo) error {
+	return b.cacheArchiver(w, info, false)
+}
+
+func (b *AbstractShell) writeCleanupFileVariablesScript(w ShellWriter, info common.ShellScriptInfo) error {
+	for _, variable := range info.Build.GetAllVariables() {
+		if !variable.File {
+			continue
+		}
+
+		w.RmFile(w.TmpFile(variable.Key))
+	}
+
+	return nil
 }
 
 func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {
@@ -697,9 +753,11 @@ func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage,
 		common.BuildStageRestoreCache:             b.writeRestoreCacheScript,
 		common.BuildStageDownloadArtifacts:        b.writeDownloadArtifactsScript,
 		common.BuildStageAfterScript:              b.writeAfterScript,
-		common.BuildStageArchiveCache:             b.writeArchiveCacheScript,
+		common.BuildStageArchiveOnSuccessCache:    b.writeArchiveCacheOnSuccessScript,
+		common.BuildStageArchiveOnFailureCache:    b.writeArchiveCacheOnFailureScript,
 		common.BuildStageUploadOnSuccessArtifacts: b.writeUploadArtifactsOnSuccessScript,
 		common.BuildStageUploadOnFailureArtifacts: b.writeUploadArtifactsOnFailureScript,
+		common.BuildStageCleanupFileVariables:     b.writeCleanupFileVariablesScript,
 	}
 
 	fn, ok := methods[buildStage]

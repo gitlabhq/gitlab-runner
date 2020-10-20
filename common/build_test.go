@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -53,6 +54,115 @@ func matchBuildStage(buildStage BuildStage) interface{} {
 
 func TestBuildRun(t *testing.T) {
 	runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error { return nil })
+}
+
+func TestBuildPanic(t *testing.T) {
+	panicFn := func(mock.Arguments) {
+		panic("panic message")
+	}
+
+	tests := map[string]struct {
+		setupMockExecutor func(*MockExecutor)
+	}{
+		"prepare": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Run(panicFn).Once()
+			},
+		},
+		"run": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Run(panicFn).Once()
+				executor.On("Cleanup").Once()
+			},
+		},
+		"cleanup": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Once()
+				executor.On("Cleanup").Run(panicFn).Once()
+			},
+		},
+		"shell": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Once()
+				executor.On("Shell").Run(panicFn)
+				executor.On("Cleanup").Once()
+			},
+		},
+		"run+cleanup": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Run(panicFn).Once()
+				executor.On("Cleanup").Run(panicFn).Once()
+			},
+		},
+		"finish": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Run(panicFn).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Once()
+				executor.On("Cleanup").Once()
+			},
+		},
+		"finish+cleanup+shell": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Run(panicFn).Once()
+				executor.On("Shell").Run(panicFn).Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Cleanup").Run(panicFn).Once()
+			},
+		},
+		"run+finish+cleanup": {
+			setupMockExecutor: func(executor *MockExecutor) {
+				executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				executor.On("Finish", mock.Anything).Run(panicFn).Once()
+				executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+				executor.On("Run", mock.Anything).Run(panicFn).Once()
+				executor.On("Cleanup").Run(panicFn).Once()
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			executor, provider := setupMockExecutorAndProvider()
+			defer executor.AssertExpectations(t)
+			defer provider.AssertExpectations(t)
+
+			tt.setupMockExecutor(executor)
+
+			RegisterExecutorProvider(t.Name(), provider)
+
+			res, err := GetSuccessfulBuild()
+			require.NoError(t, err)
+
+			cfg := &RunnerConfig{}
+			cfg.Executor = t.Name()
+			build, err := NewBuild(res, cfg, nil, nil)
+			require.NoError(t, err)
+			var out bytes.Buffer
+			err = build.Run(&Config{}, &Trace{Writer: &out})
+			assert.EqualError(t, err, "panic: panic message")
+			assert.Contains(t, out.String(), "panic: panic message")
+		})
+	}
 }
 
 func TestJobImageExposed(t *testing.T) {
@@ -251,7 +361,8 @@ func TestJobFailure(t *testing.T) {
 	thrownErr := &BuildError{Inner: errors.New("test error")}
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	executor.On("Run", mock.Anything).Return(thrownErr).Times(2)
+	executor.On("Run", mock.Anything).Return(thrownErr).Times(3)
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
 	executor.On("Finish", thrownErr).Once()
 
 	RegisterExecutorProvider("build-run-job-failure", provider)
@@ -272,6 +383,7 @@ func TestJobFailure(t *testing.T) {
 	trace.On("Write", mock.Anything).Return(0, nil)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetMasked", mock.Anything).Once()
 	trace.On("Fail", thrownErr, ScriptFailure).Once()
 
@@ -306,6 +418,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	trace.On("Write", mock.Anything).Return(0, nil)
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetMasked", mock.Anything).Once()
 	trace.On("Fail", mock.Anything, JobExecutionTimeout).Run(func(arguments mock.Arguments) {
 		assert.Error(t, arguments.Get(0).(error))
@@ -334,6 +447,8 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage("step_script")).Return(errors.New("build fail")).Once()
 	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	RegisterExecutorProvider("build-run-run-failure", provider)
@@ -364,7 +479,9 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail")).Times(3)
+	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -387,7 +504,9 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(errors.New("build fail")).Times(3)
+	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -405,15 +524,16 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	executor.On("Cleanup").Once()
 
 	// Successful build script
-	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Times(8)
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Times(9)
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
 	executor.On("Run", matchBuildStage("step_script")).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(errors.New("upload fail")).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
 	executor.On("Finish", errors.New("upload fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -429,6 +549,58 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	assert.EqualError(t, err, "upload fail")
 }
 
+func TestArchiveCacheOnScriptFailure(t *testing.T) {
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
+
+	// Fail a build script
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Times(9)
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage("step_script")).Return(errors.New("script failure")).Once()
+	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Finish", errors.New("script failure")).Once()
+
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.EqualError(t, err, "script failure")
+}
+
+func TestUploadArtifactsOnArchiveCacheFailure(t *testing.T) {
+	executor, provider := setupMockExecutorAndProvider()
+	defer executor.AssertExpectations(t)
+	defer provider.AssertExpectations(t)
+	executor.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
+	executor.On("Cleanup").Once()
+
+	// Successful build script
+	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"}).Times(9)
+	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage("step_script")).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(errors.New("cache failure")).Once()
+	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Finish", errors.New("cache failure")).Once()
+
+	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
+	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
+	assert.EqualError(t, err, "cache failure")
+}
+
 func TestRestoreCacheRunFailure(t *testing.T) {
 	executor, provider := setupMockExecutorAndProvider()
 	defer executor.AssertExpectations(t)
@@ -442,7 +614,9 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(errors.New("build fail")).Times(3)
+	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -564,15 +738,48 @@ func TestDebugTrace(t *testing.T) {
 }
 
 func TestDefaultEnvVariables(t *testing.T) {
-	buildDir := "/tmp/test-build/dir"
-	build := Build{
-		BuildDir: buildDir,
+	tests := map[string]struct {
+		buildDir      string
+		expectedValue string
+	}{
+		"UNIX-style BuildDir": {
+			buildDir:      "/tmp/test-build/dir",
+			expectedValue: "CI_PROJECT_DIR=/tmp/test-build/dir",
+		},
+		// The next four tests' expected value will depend on the platform running the tests
+		"Windows UNC-style BuildDir (extended-length path support)": {
+			buildDir:      `\\?\C:\tmp\test-build\dir`,
+			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("//?/C:/tmp/test-build/dir"),
+		},
+		"Windows UNC-style BuildDir": {
+			buildDir:      `\\host\share\tmp\test-build\dir`,
+			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("//host/share/tmp/test-build/dir"),
+		},
+		"Windows-style BuildDir (CMD or PS)": {
+			buildDir:      `C:\tmp\test-build\dir`,
+			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
+		},
+		"Windows-style BuildDir with forward slashes and drive letter": {
+			buildDir:      "C:/tmp/test-build/dir",
+			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
+		},
+		"Windows-style BuildDir in MSYS bash executor and drive letter)": {
+			buildDir:      "/c/tmp/test-build/dir",
+			expectedValue: "CI_PROJECT_DIR=/c/tmp/test-build/dir",
+		},
 	}
 
-	vars := build.GetAllVariables().StringList()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := new(Build)
+			build.BuildDir = test.buildDir
 
-	assert.Contains(t, vars, "CI_PROJECT_DIR="+filepath.FromSlash(buildDir))
-	assert.Contains(t, vars, "CI_SERVER=yes")
+			vars := build.GetAllVariables().StringList()
+
+			assert.Contains(t, vars, test.expectedValue)
+			assert.Contains(t, vars, "CI_SERVER=yes")
+		})
+	}
 }
 
 func TestSharedEnvVariables(t *testing.T) {
@@ -885,9 +1092,11 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 		"false",
 	}
 
-	s := MockShell{}
+	s := new(MockShell)
+	defer s.AssertExpectations(t)
+
 	s.On("GetName").Return("skip-build-stage-shell")
-	RegisterShell(&s)
+	RegisterShell(s)
 
 	for _, value := range featureFlagValues {
 		t.Run(value, func(t *testing.T) {
@@ -1265,11 +1474,11 @@ func TestBuildFinishTimeout(t *testing.T) {
 
 func TestProjectUniqueName(t *testing.T) {
 	tests := map[string]struct {
-		build        Build
+		build        *Build
 		expectedName string
 	}{
 		"project non rfc1132 unique name": {
-			build: Build{
+			build: &Build{
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
 						Token: "Ze_n8E6en622WxxSg4r8",
@@ -1285,7 +1494,7 @@ func TestProjectUniqueName(t *testing.T) {
 			expectedName: "runner-zen8e6e-project-1234567890-concurrent-0",
 		},
 		"project non rfc1132 unique name longer than 63 char": {
-			build: Build{
+			build: &Build{
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
 						Token: "Ze_n8E6en622WxxSg4r8",
@@ -1301,7 +1510,7 @@ func TestProjectUniqueName(t *testing.T) {
 			expectedName: "runner-zen8e6e-project-123456789012345-concurrent-1234567890123",
 		},
 		"project normal unique name": {
-			build: Build{
+			build: &Build{
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
 						Token: "xYzWabc-Ij3xlKjmoPO9",
@@ -1425,8 +1634,11 @@ func setupSuccessfulMockExecutor(
 	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(nil).Once()
 	executor.On("Run", matchBuildStage("step_script")).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageArchiveCache)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).
+		Return(nil).
+		Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).
 		Return(nil).
 		Once()
 
@@ -1470,4 +1682,116 @@ func runSuccessfulMockBuild(t *testing.T, prepareFn func(options ExecutorPrepare
 	assert.NoError(t, err)
 
 	return build
+}
+
+func TestSecretsResolving(t *testing.T) {
+	exampleVariables := JobVariables{
+		{Key: "key", Value: "value"},
+	}
+
+	setupFailureExecutorMocks := func(t *testing.T) (*MockExecutorProvider, func()) {
+		e := new(MockExecutor)
+		p := new(MockExecutorProvider)
+
+		p.On("CanCreate").Return(true).Once()
+		p.On("GetDefaultShell").Return("bash").Once()
+		p.On("GetFeatures", mock.Anything).Return(nil).Once()
+
+		assertFn := func() {
+			e.AssertExpectations(t)
+			p.AssertExpectations(t)
+		}
+
+		return p, assertFn
+	}
+
+	secrets := Secrets{
+		"TEST_SECRET": Secret{
+			Vault: &VaultSecret{},
+		},
+	}
+
+	tests := map[string]struct {
+		secrets                 Secrets
+		resolverCreationError   error
+		prepareExecutorProvider func(t *testing.T) (*MockExecutorProvider, func())
+		returnVariables         JobVariables
+		resolvingError          error
+		expectedVariables       JobVariables
+		expectedError           error
+	}{
+		"secrets not present": {
+			prepareExecutorProvider: func(t *testing.T) (*MockExecutorProvider, func()) {
+				return setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
+			},
+			expectedError: nil,
+		},
+		"error on creating resolver": {
+			secrets:                 secrets,
+			resolverCreationError:   assert.AnError,
+			prepareExecutorProvider: setupFailureExecutorMocks,
+			expectedError:           assert.AnError,
+		},
+		"error on secrets resolving": {
+			secrets:                 secrets,
+			prepareExecutorProvider: setupFailureExecutorMocks,
+			returnVariables:         exampleVariables,
+			resolvingError:          assert.AnError,
+			expectedVariables:       nil,
+			expectedError:           assert.AnError,
+		},
+		"secrets resolved": {
+			secrets: secrets,
+			prepareExecutorProvider: func(t *testing.T) (*MockExecutorProvider, func()) {
+				return setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error { return nil })
+			},
+			returnVariables:   exampleVariables,
+			resolvingError:    nil,
+			expectedVariables: exampleVariables,
+			expectedError:     nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			secretsResolverMock := new(MockSecretsResolver)
+			defer secretsResolverMock.AssertExpectations(t)
+
+			p, assertFn := tt.prepareExecutorProvider(t)
+			defer assertFn()
+
+			RegisterExecutorProvider(t.Name(), p)
+
+			successfulBuild, err := GetSuccessfulBuild()
+			require.NoError(t, err)
+
+			successfulBuild.Secrets = tt.secrets
+
+			if tt.resolverCreationError == nil && tt.secrets != nil {
+				secretsResolverMock.On("Resolve", tt.secrets).
+					Return(tt.returnVariables, tt.resolvingError).
+					Once()
+			}
+
+			rc := new(RunnerConfig)
+			rc.RunnerSettings.Executor = t.Name()
+
+			build, err := NewBuild(successfulBuild, rc, nil, nil)
+			assert.NoError(t, err)
+
+			build.secretsResolver = func(_ logger, _ SecretResolverRegistry) (SecretsResolver, error) {
+				return secretsResolverMock, tt.resolverCreationError
+			}
+
+			err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
+
+			assert.Equal(t, tt.expectedVariables, build.secretsVariables)
+
+			if tt.expectedError != nil {
+				assert.True(t, errors.As(err, &tt.expectedError))
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }

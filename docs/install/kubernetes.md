@@ -35,7 +35,7 @@ in the chart repository.
 
 In order for GitLab Runner to function, your configuration file **must** specify the following:
 
-- `gitlabUrl` - the GitLab server full URL (e.g., `https://example.gitlab.com`) to register the Runner against.
+- `gitlabUrl` - the GitLab server full URL (e.g., `https://gitlab.example.com`) to register the Runner against.
 - `runnerRegistrationToken` - The registration token for adding new Runners to
   GitLab. This must be [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
 
@@ -207,6 +207,22 @@ working example project. It makes use of the documentation for
 
 The working example project can be copied to your own group or instance for testing. More details on what other GitLab CI patterns are demonstrated are available at the project page [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build).
 
+### Using an image from a private registry
+
+Using an image from a private registry requires the configuration of imagePullSecrets. For more details on how to create imagePullSecrets [see the documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
+
+```yaml
+runners:
+  ## Specify one or more imagePullSecrets
+  ##
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ##
+  imagePullSecrets:
+  - [your-image-pull-secret]
+```
+
+Take note of the format. The value is not prefixed by a 'name' tag as is the convention in Kubernetes resources.
+
 ### Providing a custom certificate for accessing GitLab
 
 You can provide a [Kubernetes Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
@@ -321,6 +337,23 @@ runners:
 
 This example uses the secret `gitlab-runner-secret` and takes the value of
 `runner-registration-token` to register the new GitLab Runner.
+
+### Switching to the Ubuntu-based `gitlab-runner` Docker image
+
+By default GitLab Runner's Helm Chart uses the Alpine version of the `gitlab/gitlab-runner` image,
+which uses `musl libc`. In some cases, you may want to switch to the Ubuntu-based image, which uses `glibc`.
+
+To do so, update your `values.yaml` file with the following values:
+
+```yaml
+# Specify the Ubuntu image. Remember to set the version. You can also use the `ubuntu` or `latest` tags.
+image: gitlab/gitlab-runner:v13.0.0
+
+# Update the security context values to the user ID in the ubuntu image
+securityContext:
+  fsGroup: 999
+  runAsUser: 999
+```
 
 ## Check available GitLab Runner Helm Chart versions
 

@@ -8,7 +8,7 @@ TESTFLAGS=${TESTFLAGS:-"-cover"}
 PARALLEL_TESTS_LIMIT=${PARALLEL_TESTS_LIMIT:-10}
 
 CI_NODE_TOTAL=${CI_NODE_TOTAL:-1}
-CI_NODE_INDEX=${CI_NODE_INDEX:-0}
+CI_NODE_INDEX=${CI_NODE_INDEX:-1}
 
 output="regular"
 coverMode="count"
@@ -100,7 +100,7 @@ executeTestCommand() {
         printMessage "\\n\\n--- Starting part ${index} of go tests of '${pkg}' package with coverprofile in '${coverMode}' mode:\\n"
 
         local profileFile=".cover/${pkgSlug}.${index}.${coverMode}.cover.txt"
-        options="-covermode=${coverMode} -coverprofile=${profileFile}"
+        options="-covermode=${coverMode} -coverprofile=${profileFile} -coverpkg=${MAIN_PACKAGE}/..."
     else
         echo "Starting go test"
     fi
@@ -109,7 +109,7 @@ executeTestCommand() {
 
     local exitCode=0
     # shellcheck disable=SC2086
-    go test ${options} ${TESTFLAGS} -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=1
+    go test ${options} ${TESTFLAGS} -ldflags "${GO_LDFLAGS}" -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=1
 
     return ${exitCode}
 }

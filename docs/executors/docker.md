@@ -13,30 +13,36 @@ run on your workstation. The added benefit is that you can test all the
 commands that we will explore later from your shell, rather than having to test
 them on a dedicated CI server.
 
-The following table lists what combinations of containers, executors,
-and OS are supported.
+The following configurations are supported:
 
-| Container Type    | Executor         | OS Type | Supported |
-|:-----------------:|:----------------:|:-------:|:---------:|
-| Windows Container | `docker`         | Windows | ✗         |
-| Windows Container | `docker`         | Linux   | ✗         |
-| Windows Container | `docker-windows` | Windows | ✓         |
-| Windows Container | `docker-windows` | Linux   | ✗         |
-| Linux Containers  | `docker`         | Linux   | ✓         |
-| Linux Containers  | `docker`         | Windows | ✓         |
-| Linux Containers  | `docker-windows` | Linux   | ✗         |
-| Linux Containers  | `docker-windows` | Windows | ✗         |
+| Runner is installed on:  | Executor is:     | Container is running: |
+|--------------------------|------------------|------------------------|
+| Windows                  | `docker-windows` | Windows                |
+| Windows                  | `docker`         | Linux                  |
+| Linux                    | `docker`         | Linux                  |
+
+These configurations are **not** supported:
+
+| Runner is installed on:  | Executor is:     | Container is running: |
+|--------------------------|------------------|------------------------|
+| Linux                    | `docker-windows` | Linux                  |
+| Linux                    | `docker`         | Windows                |
+| Linux                    | `docker-windows` | Windows                |
+| Windows                  | `docker`         | Windows                |
+| Windows                  | `docker-windows` | Linux                  |
 
 NOTE: **Note:**
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
 Engine. This means the
 [minimum supported version](https://docs.docker.com/develop/sdk/#api-version-matrix)
-of Docker is `1.13.0`.
+of Docker on a Linux server is `1.13.0`,
+[on Windows Server it needs to be more recent](#supported-docker-versions)
+to identify the Windows Server version.
 
 ## Using Windows containers
 
-> [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in 11.11.
+> [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in GitLab Runner 11.11.
 
 To use Windows containers with the Docker executor, note the following
 information about limitations, supported Windows versions, and
@@ -107,16 +113,35 @@ be used:
 - `mcr.microsoft.com/windows/servercore:1809-amd64`
 - `mcr.microsoft.com/windows/servercore:ltsc2019`
 
+### Supported Docker versions
+
+A Windows Server running GitLab Runner must be running a recent version of Docker
+because GitLab Runner uses Docker to detect what version of Windows Server is running.
+
+A combination known not to work with GitLab Runner is Docker 17.06
+and Server 1909. Docker does not identify the version of Windows Server
+resulting in the following error:
+
+```plaintext
+unsupported Windows Version: Windows Server Datacenter
+```
+
+This error should contain the Windows Server version. If you get this error,
+with no version specified, upgrade Docker. Try a Docker version of similar age,
+or later, than the Windows Server release.
+
+[Read more about troubleshooting this](../faq/README.md#docker-executor-unsupported-windows-version).
+
 ### Configuring a Windows Docker executor
 
 NOTE: **Note:**
-There is a known issue when a new Runner is registered with `c:\\cache`
+When a runner is registered with `c:\\cache`
 as a source directory when passing the `--docker-volumes` or
-`DOCKER_VOLUMES` environment variable. For more details check
-[#4312](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312)
+`DOCKER_VOLUMES` environment variable, there is a
+[known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312).
 
-Below is an example of what the configuration for a simple Docker
-executor running Windows
+Below is an example of the configuration for a simple Docker
+executor running Windows.
 
 ```toml
 [[runners]]
@@ -156,7 +181,7 @@ The Docker executor divides the job into multiple steps:
 The special Docker image is based on [Alpine Linux](https://alpinelinux.org/) and contains all the tools
 required to run the prepare, pre-job, and post-job steps, like the Git and the
 Runner binaries for supporting caching and artifacts. You can find the definition of
-this special image [in the official Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles/build).
+this special image [in the official Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
 
 ## The `image` keyword
 
@@ -179,7 +204,6 @@ These are defined with a colon (`:`) after the image name. For example, for
 Ruby you can see the supported tags at <https://hub.docker.com/_/ruby/>. If you
 don't specify a tag (like `image: ruby`), `latest` is implied.
 
-NOTE: **Note:**
 The image you choose to run your build in via `image` directive must have a
 working shell in its operating system `PATH`. Supported shells are `sh` or
 `bash` for Linux, and PowerShell for Windows. GitLab Runner cannot
@@ -227,8 +251,7 @@ job container to include the service container hostname (and alias). However,
 the service container will **not** be able to resolve the build job container
 name. To achieve that, use the `per-build` network mode.
 
-NOTE: **Note:**
-Linked containers will share their environment variables.
+Linked containers share their environment variables.
 
 ### Network per-build
 
@@ -237,11 +260,9 @@ Linked containers will share their environment variables.
 This mode will create and use a new user-defined Docker bridge network per build.
 [User-defined bridge networks](https://docs.docker.com/network/bridge/) are covered in detail in the Docker documentation.
 
-NOTE: **Note:**
 Unlike [legacy container links](#legacy-container-links) used in other network modes,
-Docker environment variables will **Not** be shared across the containers.
+Docker environment variables are **not** shared across the containers.
 
-NOTE: **Note:**
 Docker networks may conflict with other networks on the host, including other Docker networks,
 if the CIDR ranges are already in use. The default Docker address pool can be configured
 via `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
@@ -318,7 +339,6 @@ Look for the `[runners.docker]` section:
   alias = "cache"
 ```
 
-NOTE: **Note:**
 The example above uses the [array of tables syntax](https://toml.io/en/v0.4.0#array-of-tables).
 
 The image and services defined this way will be added to all builds run by
@@ -380,10 +400,9 @@ GitLab Runner 0.5.0 and up passes all YAML-defined variables to the created
 service containers.
 
 For all possible configuration variables check the documentation of each image
-provided in their corresponding Docker hub page.
+provided in their corresponding Docker Hub page.
 
-NOTE: **Note**:
-All variables will be passed to all services containers. It's not designed to
+All variables are passed to all services containers. It's not designed to
 distinguish which variable should go where.
 Secure variables are only passed to the build container.
 
@@ -452,7 +471,6 @@ ensuring a balance is struck between:
 - Maintaining some recent containers in the cache for performance.
 - Reclaiming disk space.
 
-NOTE: **Note:**
 `clear-docker-cache` does not clean build or cache volumes.
 
 ## The persistent storage
@@ -582,7 +600,6 @@ When using the `docker` or `docker+machine` executors, you can set the
 `pull_policy` parameter which defines how the Runner will work when pulling
 Docker images (for both `image` and `services` keywords).
 
-NOTE: **Note:**
 If you don't set any value for the `pull_policy` parameter, then
 Runner will use the `always` pull policy as the default value.
 
@@ -706,7 +723,7 @@ ERROR: Build failed: Error: image local_image:latest not found
 
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
-NOTE: **Note**:
+DANGER: **Deprecated:**
 Starting with GitLab Runner 10.0, both Docker-SSH and Docker-SSH+machine executors
 are **deprecated** and will be removed in one of the upcoming releases.
 

@@ -9,6 +9,134 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// predefinedServerJobVariables are variables that _only_ come from the CI
+// server.
+//
+// This list was extracted from:
+// https://gitlab.com/gitlab-org/gitlab/blob/master/doc/ci/variables/predefined_variables.md
+//
+// handy console js:
+// console.log(Object.values($("tr td:first-child code").map((_, val) => val.innerText)).join("\n"))
+//
+// commented out variables are non-server ci variables, they are handy to keep
+// here for reference/future update updating.
+var predefinedServerJobVariables = []string{
+	"CHAT_CHANNEL",
+	"CHAT_INPUT",
+	"CI",
+	"CI_API_V4_URL",
+	// "CI_BUILDS_DIR",
+	"CI_COMMIT_BEFORE_SHA",
+	"CI_COMMIT_DESCRIPTION",
+	"CI_COMMIT_MESSAGE",
+	"CI_COMMIT_REF_NAME",
+	"CI_COMMIT_REF_PROTECTED",
+	"CI_COMMIT_REF_SLUG",
+	"CI_COMMIT_SHA",
+	"CI_COMMIT_SHORT_SHA",
+	"CI_COMMIT_BRANCH",
+	"CI_COMMIT_TAG",
+	"CI_COMMIT_TITLE",
+	"CI_COMMIT_TIMESTAMP",
+	// "CI_CONCURRENT_ID",
+	// "CI_CONCURRENT_PROJECT_ID",
+	"CI_CONFIG_PATH",
+	"CI_DEBUG_TRACE",
+	"CI_DEFAULT_BRANCH",
+	"CI_DEPLOY_FREEZE",
+	"CI_DEPLOY_PASSWORD",
+	"CI_DEPLOY_USER",
+	// "CI_DISPOSABLE_ENVIRONMENT",
+	"CI_ENVIRONMENT_NAME",
+	"CI_ENVIRONMENT_SLUG",
+	"CI_ENVIRONMENT_URL",
+	"CI_EXTERNAL_PULL_REQUEST_IID",
+	"CI_EXTERNAL_PULL_REQUEST_SOURCE_REPOSITORY",
+	"CI_EXTERNAL_PULL_REQUEST_TARGET_REPOSITORY",
+	"CI_EXTERNAL_PULL_REQUEST_SOURCE_BRANCH_NAME",
+	"CI_EXTERNAL_PULL_REQUEST_SOURCE_BRANCH_SHA",
+	"CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_NAME",
+	"CI_EXTERNAL_PULL_REQUEST_TARGET_BRANCH_SHA",
+	"CI_HAS_OPEN_REQUIREMENTS",
+	"CI_JOB_ID",
+	"CI_JOB_IMAGE",
+	"CI_JOB_MANUAL",
+	"CI_JOB_NAME",
+	"CI_JOB_STAGE",
+	"CI_JOB_TOKEN",
+	"CI_JOB_JWT",
+	"CI_JOB_URL",
+	"CI_KUBERNETES_ACTIVE",
+	"CI_MERGE_REQUEST_ASSIGNEES",
+	"CI_MERGE_REQUEST_ID",
+	"CI_MERGE_REQUEST_IID",
+	"CI_MERGE_REQUEST_LABELS",
+	"CI_MERGE_REQUEST_MILESTONE",
+	"CI_MERGE_REQUEST_PROJECT_ID",
+	"CI_MERGE_REQUEST_PROJECT_PATH",
+	"CI_MERGE_REQUEST_PROJECT_URL",
+	"CI_MERGE_REQUEST_REF_PATH",
+	"CI_MERGE_REQUEST_SOURCE_BRANCH_NAME",
+	"CI_MERGE_REQUEST_SOURCE_BRANCH_SHA",
+	"CI_MERGE_REQUEST_SOURCE_PROJECT_ID",
+	"CI_MERGE_REQUEST_SOURCE_PROJECT_PATH",
+	"CI_MERGE_REQUEST_SOURCE_PROJECT_URL",
+	"CI_MERGE_REQUEST_TARGET_BRANCH_NAME",
+	"CI_MERGE_REQUEST_TARGET_BRANCH_SHA",
+	"CI_MERGE_REQUEST_TITLE",
+	"CI_MERGE_REQUEST_EVENT_TYPE",
+	"CI_NODE_INDEX",
+	"CI_NODE_TOTAL",
+	"CI_PAGES_DOMAIN",
+	"CI_PAGES_URL",
+	"CI_PIPELINE_ID",
+	"CI_PIPELINE_IID",
+	"CI_PIPELINE_SOURCE",
+	"CI_PIPELINE_TRIGGERED",
+	"CI_PIPELINE_URL",
+	// "CI_PROJECT_DIR",
+	"CI_PROJECT_ID",
+	"CI_PROJECT_NAME",
+	"CI_PROJECT_NAMESPACE",
+	"CI_PROJECT_ROOT_NAMESPACE",
+	"CI_PROJECT_PATH",
+	"CI_PROJECT_PATH_SLUG",
+	"CI_PROJECT_REPOSITORY_LANGUAGES",
+	"CI_PROJECT_TITLE",
+	"CI_PROJECT_URL",
+	"CI_PROJECT_VISIBILITY",
+	"CI_REGISTRY",
+	"CI_REGISTRY_IMAGE",
+	"CI_REGISTRY_PASSWORD",
+	"CI_REGISTRY_USER",
+	"CI_REPOSITORY_URL",
+	"CI_RUNNER_DESCRIPTION",
+	// "CI_RUNNER_EXECUTABLE_ARCH",
+	"CI_RUNNER_ID",
+	// "CI_RUNNER_REVISION",
+	"CI_RUNNER_SHORT_TOKEN",
+	"CI_RUNNER_TAGS",
+	// "CI_RUNNER_VERSION",
+	// "CI_SERVER",
+	"CI_SERVER_URL",
+	"CI_SERVER_HOST",
+	"CI_SERVER_PORT",
+	"CI_SERVER_PROTOCOL",
+	"CI_SERVER_NAME",
+	"CI_SERVER_REVISION",
+	"CI_SERVER_VERSION",
+	"CI_SERVER_VERSION_MAJOR",
+	"CI_SERVER_VERSION_MINOR",
+	"CI_SERVER_VERSION_PATCH",
+	"CI_SHARED_ENVIRONMENT",
+	"GITLAB_CI",
+	"GITLAB_FEATURES",
+	"GITLAB_USER_EMAIL",
+	"GITLAB_USER_ID",
+	"GITLAB_USER_LOGIN",
+	"GITLAB_USER_NAME",
+}
+
 func TestVariablesJSON(t *testing.T) {
 	var x JobVariable
 	data := []byte(
@@ -109,6 +237,46 @@ func TestSpecialVariablesExpansion(t *testing.T) {
 	assert.Equal(t, "aabb", expanded.Get("key4"))
 }
 
+func TestOverwriteKey(t *testing.T) {
+	vars := JobVariables{
+		{Key: "hello", Value: "world"},
+		{Key: "foo", Value: ""},
+	}
+
+	// Overwrite empty value
+	vars.OverwriteKey("foo", JobVariable{Key: "foo", Value: "bar"})
+
+	assert.Equal(t, "world", vars.Get("hello"))
+	assert.Equal(t, "bar", vars.Get("foo"))
+
+	// Overwrite existing value
+	vars.OverwriteKey("hello", JobVariable{Key: "hello", Value: "universe"})
+
+	assert.Equal(t, "universe", vars.Get("hello"))
+	assert.Equal(t, "bar", vars.Get("foo"))
+
+	// Overwrite key
+	vars.OverwriteKey("hello", JobVariable{Key: "goodbye", Value: "universe"})
+
+	assert.Equal(t, "universe", vars.Get("goodbye"))
+	assert.Equal(t, "", vars.Get("hello"))
+	assert.Equal(t, "bar", vars.Get("foo"))
+
+	// Overwrite properties
+	fooOverwriteVar := JobVariable{
+		Key:      "foo",
+		Value:    "baz",
+		Public:   true,
+		Internal: true,
+		File:     true,
+		Masked:   true,
+		Raw:      true,
+	}
+	vars.OverwriteKey("foo", fooOverwriteVar)
+
+	assert.Equal(t, fooOverwriteVar, vars[1])
+}
+
 type multipleKeyUsagesTestCase struct {
 	variables     JobVariables
 	expectedValue string
@@ -181,5 +349,20 @@ func TestRawVariableExpansion(t *testing.T) {
 			expanded := variables.Expand()
 			assert.Equal(t, expectedValue, expanded.Get("related"))
 		})
+	}
+}
+
+func TestPredefinedServerVariables(t *testing.T) {
+	build := &Build{}
+	for _, v := range build.GetAllVariables() {
+		for _, predefined := range predefinedServerJobVariables {
+			assert.NotEqual(
+				t,
+				predefined,
+				v.Key,
+				"%s is a predefined server variable and should not be set by runner",
+				predefined,
+			)
+		}
 	}
 }

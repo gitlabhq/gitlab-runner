@@ -1,16 +1,19 @@
 package helpers
 
 import (
+	"context"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/archives"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 )
@@ -18,9 +21,10 @@ import (
 type CacheArchiverCommand struct {
 	fileArchiver
 	retryHelper
-	File    string `long:"file" description:"The path to file"`
-	URL     string `long:"url" description:"URL of remote cache resource"`
-	Timeout int    `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
+	File    string   `long:"file" description:"The path to file"`
+	URL     string   `long:"url" description:"URL of remote cache resource"`
+	Timeout int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
+	Headers []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
 
 	client *CacheClient
 }
@@ -51,8 +55,8 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	if err != nil {
 		return retryableErr{err: err}
 	}
-	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
+
+	c.setHeaders(req, fi)
 	req.ContentLength = fi.Size()
 
 	resp, err := c.getClient().Do(req)
@@ -62,6 +66,40 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	defer func() { _ = resp.Body.Close() }()
 
 	return retryOnServerError(resp)
+}
+
+func (c *CacheArchiverCommand) createZipFile(filename string) error {
+	err := os.MkdirAll(filepath.Dir(filename), 0700)
+	if err != nil {
+		return err
+	}
+
+	f, err := ioutil.TempFile(filepath.Dir(filename), "archive_")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	defer f.Close()
+
+	logrus.Debugln("Temporary file:", f.Name())
+
+	archiver, err := archive.NewArchiver(archive.Zip, f, c.wd, archive.DefaultCompression)
+	if err != nil {
+		return err
+	}
+
+	// Create archive
+	err = archiver.Archive(context.Background(), c.files)
+	if err != nil {
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+
+	return os.Rename(f.Name(), filename)
 }
 
 func (c *CacheArchiverCommand) Execute(*cli.Context) {
@@ -85,7 +123,7 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	}
 
 	// Create archive
-	err = archives.CreateZipFile(c.File, c.sortedFiles())
+	err = c.createZipFile(c.File)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
@@ -101,6 +139,26 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 			"No URL provided, cache will be not uploaded to shared cache server. " +
 				"Cache will be stored only locally.")
 	}
+}
+
+func (c *CacheArchiverCommand) setHeaders(req *http.Request, fi os.FileInfo) {
+	if len(c.Headers) > 0 {
+		for _, header := range c.Headers {
+			parsed := strings.SplitN(header, ":", 2)
+
+			if len(parsed) != 2 {
+				continue
+			}
+
+			req.Header.Set(strings.TrimSpace(parsed[0]), strings.TrimSpace(parsed[1]))
+		}
+
+		return
+	}
+
+	// Set default headers
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
 }
 
 func init() {

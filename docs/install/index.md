@@ -16,7 +16,7 @@ Official packages are available for the following Linux distributions:
 
 - CentOS, Debian, Ubuntu, RHEL, Fedora, Mint
 
-Runner officialy supports the following operating systems:
+Runner officially supports the following operating systems:
 
 - Linux, Windows, macOS, FreeBSD
 
@@ -42,6 +42,7 @@ You can find information on the different installation methods below.
 
 - [Install as a Docker service](docker.md)
 - [Install on Kubernetes](kubernetes.md)
+- [Install on OpenShift](openshift.md)
 
 ## Autoscale
 

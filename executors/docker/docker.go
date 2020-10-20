@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -36,6 +37,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 const (
@@ -108,6 +110,15 @@ func init() {
 		filepath.Join(runnerFolder, "helper-images"),
 		filepath.Join(runnerFolder, "out/helper-images"),
 	}
+	if runtime.GOOS == "linux" {
+		// This section covers the Linux packaged app scenario, with the binary in /usr/bin.
+		// The helper images are located in /usr/lib/gitlab-runner/helper-images,
+		// as part of the packaging done in the create_package function in ci/package
+		PrebuiltImagesPaths = append(
+			PrebuiltImagesPaths,
+			filepath.Join(runnerFolder, "../lib/gitlab-runner/helper-images"),
+		)
+	}
 }
 
 func (e *executor) getServiceVariables() []string {
@@ -155,7 +166,7 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 
 	defer func() {
 		if err == nil {
-			e.markImageAsUsed(imageName, image.ID)
+			e.markImageAsUsed(imageName, image)
 		}
 	}()
 
@@ -177,12 +188,16 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 		}
 	}
 
-	registryInfo := auth.ResolveConfigForImage(
+	registryInfo, err := auth.ResolveConfigForImage(
 		imageName,
 		e.Build.GetDockerAuthConfig(),
 		e.Shell().User,
 		e.Build.Credentials,
 	)
+	if err != nil {
+		return nil, err
+	}
+
 	if registryInfo != nil {
 		e.Println(fmt.Sprintf("Authenticating with credentials from %v", registryInfo.Source))
 		e.Debugln(fmt.Sprintf(
@@ -230,6 +245,13 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 		SourceName: "-",
 	}
 	options := types.ImageImportOptions{Tag: tag}
+
+	// TODO: Remove check in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26679
+	if e.Build.IsFeatureFlagOn(featureflags.ResetHelperImageEntrypoint) {
+		// NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
+		// See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
+		options.Changes = append(options.Changes, `ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`)
+	}
 
 	if err = e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
 		return nil, fmt.Errorf("failed to import image: %w", err)
@@ -366,17 +388,19 @@ func (e *executor) wasImageUsed(imageName, imageID string) bool {
 	return e.usedImages[imageName] == imageID
 }
 
-func (e *executor) markImageAsUsed(imageName, imageID string) {
+func (e *executor) markImageAsUsed(imageName string, image *types.ImageInspect) {
 	e.usedImagesLock.Lock()
 	defer e.usedImagesLock.Unlock()
 
 	if e.usedImages == nil {
 		e.usedImages = make(map[string]string)
 	}
-	e.usedImages[imageName] = imageID
+	e.usedImages[imageName] = image.ID
 
-	if imageName != imageID {
-		e.Println("Using docker image", imageID, "for", imageName, "...")
+	if imageName != image.ID && len(image.RepoDigests) > 0 {
+		e.Println("Using docker image", image.ID, "for", imageName, "with digest", image.RepoDigests[0], "...")
+	} else if imageName != image.ID {
+		e.Println("Using docker image", image.ID, "for", imageName, "...")
 	}
 }
 
@@ -449,6 +473,7 @@ func (e *executor) createHostConfigForService() *container.HostConfig {
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    e.Config.Docker.Privileged,
+		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		NetworkMode:   e.networkMode,
 		Binds:         e.volumesManager.Binds(),
 		ShmSize:       e.Config.Docker.ShmSize,
@@ -1293,16 +1318,24 @@ func (e *executor) createHostConfigForServiceHealthCheck(service *types.Containe
 	}
 }
 
-// addServiceHealthCheckEnvironment will create the environment variables needed
-// for our healthcheck system if a network per build was created, until we
-// introduce the native HEALTHCHECK from docker in
-// https://gitlab.com/gitlab-org/gitlab-runner/issues/3984. This follows the
-// same principles as https://docs.docker.com/compose/link-env-deprecated/.
+// addServiceHealthCheckEnvironment returns environment variables mimicing
+// the legacy container links networking feature of Docker, where environment
+// variables are provided with the hostname and port of the linked service our
+// health check is performed against.
+//
+// The hostname we provide is the container's short ID (the first 12 characters
+// of a full container ID). The short ID, as opposed to the full ID, is
+// internally resolved to the container's IP address by Docker's built-in DNS
+// service.
+//
+// The legacy container links (https://docs.docker.com/network/links/) network
+// feature is deprecated. When we remove support for links, the healthcheck
+// system can be updated to no longer rely on environment variables
 func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([]string, error) {
 	environment := []string{}
 
 	if e.networkMode.UserDefined() != "" {
-		environment = append(environment, "WAIT_FOR_SERVICE_TCP_ADDR="+service.Names[0])
+		environment = append(environment, "WAIT_FOR_SERVICE_TCP_ADDR="+service.ID[:12])
 		ports, err := e.getContainerExposedPorts(service)
 		if err != nil {
 			return nil, fmt.Errorf("get container exposed ports: %v", err)
@@ -1310,6 +1343,7 @@ func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([
 		if len(ports) == 0 {
 			return nil, fmt.Errorf("service %q has no exposed ports", service.Names[0])
 		}
+
 		environment = append(environment, fmt.Sprintf("WAIT_FOR_SERVICE_TCP_PORT=%d", ports[0]))
 	}
 

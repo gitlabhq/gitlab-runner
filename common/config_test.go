@@ -9,6 +9,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
 func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
@@ -195,6 +197,112 @@ func TestConfigParse(t *testing.T) {
 				require.Equal(t, 1, len(config.Runners))
 				require.Equal(t, 2, len(config.Runners[0].Docker.Services))
 				assert.Equal(t, "image", config.Runners[0].Docker.Image)
+			},
+		},
+		//nolint:lll
+		"check node affinities": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						[runners.kubernetes.affinity]
+							[runners.kubernetes.affinity.node_affinity]
+								[[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+									weight = 100
+									[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+										[[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+											key = "cpu_speed"
+											operator = "In"
+											values = ["fast"]
+								[[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+									weight = 50
+									[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+										[[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+											key = "core_count"
+											operator = "In"
+											values = ["high", "32"]
+										[[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+											key = "cpu_type"
+											operator = "In"
+											values = ["x86, arm", "i386"]
+								[[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+									weight = 20
+									[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+										[[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields]]
+											key = "zone"
+											operator = "In"
+											values = ["us-east"]
+								[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution]
+									[[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
+										[[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
+											key = "kubernetes.io/e2e-az-name"
+											operator = "In"
+											values = [
+												"e2e-az1",
+												"e2e-az2"
+											]
+										[[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
+											[[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_fields]]
+												 key = "kubernetes.io/e2e-az-name/field"
+												 operator = "In"
+												 values = [
+												   "e2e-az1"
+												 ]
+
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+				require.NotNil(t, config.Runners[0].Kubernetes.Affinity)
+				require.NotNil(t, config.Runners[0].Kubernetes.Affinity.NodeAffinity)
+
+				nodeAffinity := config.Runners[0].Kubernetes.Affinity.NodeAffinity
+
+				require.Len(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, 3)
+				assert.Equal(t, int32(100), nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight)
+				require.NotNil(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Preference)
+				require.Len(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Preference.MatchExpressions, 1)
+				assert.Equal(t, "In", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Preference.MatchExpressions[0].Operator)
+				assert.Equal(t, "cpu_speed", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Preference.MatchExpressions[0].Key)
+				assert.Equal(t, "fast", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Preference.MatchExpressions[0].Values[0])
+
+				assert.Equal(t, int32(50), nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Weight)
+				require.NotNil(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Preference)
+				require.Len(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Preference.MatchExpressions, 2)
+				assert.Equal(t, "In", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Preference.MatchExpressions[0].Operator)
+				assert.Equal(t, "core_count", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Preference.MatchExpressions[0].Key)
+				assert.Equal(t, []string{"high", "32"}, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Preference.MatchExpressions[0].Values)
+				assert.Equal(t, "In", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Preference.MatchExpressions[1].Operator)
+				assert.Equal(t, "cpu_type", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Preference.MatchExpressions[1].Key)
+				assert.Equal(t, []string{"x86, arm", "i386"}, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[1].Preference.MatchExpressions[1].Values)
+
+				assert.Equal(t, int32(20), nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[2].Weight)
+				require.NotNil(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[2].Preference)
+				require.Len(t, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[2].Preference.MatchFields, 1)
+				assert.Equal(t, "zone", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[2].Preference.MatchFields[0].Key)
+				assert.Equal(t, "In", nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[2].Preference.MatchFields[0].Operator)
+				assert.Equal(t, []string{"us-east"}, nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution[2].Preference.MatchFields[0].Values)
+
+				require.NotNil(t, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+				require.Len(t, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, 2)
+				require.Len(t, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions, 1)
+				require.Len(t, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchFields, 0)
+				assert.Equal(t, "kubernetes.io/e2e-az-name", nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key)
+				assert.Equal(t, "In", nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Operator)
+				assert.Equal(t, []string{"e2e-az1", "e2e-az2"}, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Values)
+
+				assert.Equal(t, "kubernetes.io/e2e-az-name/field", nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[1].MatchFields[0].Key)
+				assert.Equal(t, "In", nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[1].MatchFields[0].Operator)
+				assert.Equal(t, []string{"e2e-az1"}, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[1].MatchFields[0].Values)
+			},
+		},
+		"check that GracefulKillTimeout and ForceKillTimeout can't be set": {
+			config: `
+				[[runners]]
+					GracefulKillTimeout = 30
+					ForceKillTimeout = 10
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				assert.Nil(t, config.Runners[0].GracefulKillTimeout)
+				assert.Nil(t, config.Runners[0].ForceKillTimeout)
 			},
 		},
 	}
@@ -411,6 +519,43 @@ func TestDockerMachine(t *testing.T) {
 			assert.NoError(t, err, "should not return err on good period compile")
 			assert.Equal(t, tt.expectedIdleCount, tt.config.GetIdleCount())
 			assert.Equal(t, tt.expectedIdleTime, tt.config.GetIdleTime())
+		})
+	}
+}
+
+func TestRunnerSettings_GetGracefulKillTimeout_GetForceKillTimeout(t *testing.T) {
+	tests := map[string]struct {
+		config                      RunnerSettings
+		expectedGracefulKillTimeout time.Duration
+		expectedForceKillTimeout    time.Duration
+	}{
+		"undefined": {
+			config:                      RunnerSettings{},
+			expectedGracefulKillTimeout: process.GracefulTimeout,
+			expectedForceKillTimeout:    process.KillTimeout,
+		},
+		"timeouts lower than 0": {
+			config: RunnerSettings{
+				GracefulKillTimeout: func(i int) *int { return &i }(-10),
+				ForceKillTimeout:    func(i int) *int { return &i }(-10),
+			},
+			expectedGracefulKillTimeout: process.GracefulTimeout,
+			expectedForceKillTimeout:    process.KillTimeout,
+		},
+		"timeouts greater than 0": {
+			config: RunnerSettings{
+				GracefulKillTimeout: func(i int) *int { return &i }(30),
+				ForceKillTimeout:    func(i int) *int { return &i }(15),
+			},
+			expectedGracefulKillTimeout: 30 * time.Second,
+			expectedForceKillTimeout:    15 * time.Second,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.Equal(t, tt.expectedGracefulKillTimeout, tt.config.GetGracefulKillTimeout())
+			assert.Equal(t, tt.expectedForceKillTimeout, tt.config.GetForceKillTimeout())
 		})
 	}
 }

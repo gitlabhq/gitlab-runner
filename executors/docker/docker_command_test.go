@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
@@ -68,19 +69,8 @@ func (s *safeBuffer) String() string {
 	return s.buf.String()
 }
 
-func TestDockerCommandSuccessRun(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-
-	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
-}
-
 func TestDockerCommandMultistepBuild(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	tests := map[string]struct {
 		buildGetter    func() (common.JobResponse, error)
@@ -142,6 +132,7 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 			if tt.errExpected {
 				var buildErr *common.BuildError
 				assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+				assert.Contains(t, err.Error(), "exit code 1")
 				return
 			}
 			assert.NoError(t, err)
@@ -150,6 +141,16 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 }
 
 func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {
+	jobResp, err := getJobResp()
+	require.NoError(t, err)
+
+	return common.Build{
+		JobResponse: jobResp,
+		Runner:      getRunnerConfigForOS(t),
+	}
+}
+
+func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 	executor := "docker"
 	image := common.TestAlpineImage
 
@@ -158,22 +159,16 @@ func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) 
 		image = getWindowsImage(t)
 	}
 
-	jobResp, err := getJobResp()
-	require.NoError(t, err)
-
-	return common.Build{
-		JobResponse: jobResp,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: executor,
-				Docker: &common.DockerConfig{
-					Image:      image,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
+	return &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: executor,
+			Docker: &common.DockerConfig{
+				Image:      image,
+				PullPolicy: common.PullPolicyIfNotPresent,
 			},
-			RunnerCredentials: common.RunnerCredentials{
-				Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
-			},
+		},
+		RunnerCredentials: common.RunnerCredentials{
+			Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
 		},
 	}
 }
@@ -197,7 +192,6 @@ func getWindowsImage(t *testing.T) string {
 
 func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	build := getBuildForOS(t, func() (common.JobResponse, error) {
 		return common.GetRemoteBuildResponse("echo $TEST")
@@ -215,9 +209,31 @@ func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 	assert.Contains(t, out, value)
 }
 
+func TestDockerCommandSuccessRunFileVariableContent(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	build := getBuildForOS(t, func() (common.JobResponse, error) {
+		if runtime.GOOS == "windows" {
+			return common.GetRemoteBuildResponse(`Get-Filehash -Algorithm SHA1 -Path $TEST`)
+		}
+		return common.GetRemoteBuildResponse(`sha1sum $TEST | tr "[a-z]" "[A-Z]"`)
+	})
+
+	value := "this is the content"
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   "TEST",
+		Value: value,
+		File:  true,
+		Raw:   true,
+	})
+
+	out, err := buildtest.RunBuildReturningOutput(t, &build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, fmt.Sprintf("%X", sha1.Sum([]byte(value))))
+}
+
 func TestDockerCommandUsingCustomClonePath(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
 	remoteBuild := func() (common.JobResponse, error) {
 		cmd := "ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
@@ -262,8 +278,8 @@ func TestDockerCommandUsingCustomClonePath(t *testing.T) {
 }
 
 func TestDockerCommandNoRootImage(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithDumpedVariables()
 
@@ -285,21 +301,9 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDockerCommandBuildFail(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-
-	build := getBuildForOS(t, common.GetRemoteFailedBuild)
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	require.Error(t, err, "error")
-	assert.IsType(t, &common.BuildError{}, err)
-	assert.Contains(t, err.Error(), "exit code 1")
-}
-
 func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	successfulBuild.Image = common.Image{Name: "$IMAGE_NAME"}
@@ -332,8 +336,8 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 }
 
 func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	tests := []struct {
 		name     string
@@ -424,9 +428,7 @@ func isDockerOlderThan17_07(t *testing.T) bool {
 }
 
 func TestDockerCommandMissingImage(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	build := getBuildForOS(t, common.GetSuccessfulBuild)
 	build.Runner.Docker.Image = "some/non-existing/image"
@@ -444,9 +446,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 }
 
 func TestDockerCommandMissingTag(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	build := getBuildForOS(t, common.GetSuccessfulBuild)
 	build.Runner.Docker.Image = "docker:missing-tag"
@@ -457,71 +457,15 @@ func TestDockerCommandMissingTag(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestDockerCommandBuildAbort(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: longRunningBuild,
-		Runner: &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
-				},
-			},
-		},
-		SystemInterrupt: make(chan os.Signal, 1),
-	}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		build.SystemInterrupt <- os.Interrupt
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.EqualError(t, err, "aborted: interrupt")
-}
-
 func TestDockerCommandBuildCancel(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	build := getBuildForOS(t, common.GetRemoteLongRunningBuild)
-
-	trace := &common.Trace{Writer: os.Stdout}
-
-	abortTimer := time.AfterFunc(time.Second, func() {
-		t.Log("Interrupt")
-		trace.Cancel()
-	})
-	defer abortTimer.Stop()
-
-	timeoutTimer := time.AfterFunc(time.Minute, func() {
-		t.Log("Timedout")
-		t.FailNow()
-	})
-	defer timeoutTimer.Stop()
-
-	err := build.Run(&common.Config{}, trace)
-	assert.IsType(t, &common.BuildError{}, err)
-	assert.Contains(t, err.Error(), "canceled")
+	buildtest.RunBuildWithCancel(t, getRunnerConfigForOS(t), nil)
 }
 
 func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	tests := map[string]struct {
 		variables common.JobVariables
@@ -575,8 +519,8 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 }
 
 func TestDockerCommandOutput(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
@@ -606,9 +550,7 @@ func TestDockerCommandOutput(t *testing.T) {
 
 func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	commands := []string{
 		"docker info",
@@ -696,9 +638,7 @@ func getTestDockerJob(t *testing.T) *common.Build {
 
 func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	examples := []struct {
 		image     common.Image
@@ -766,9 +706,7 @@ func runTestJobWithOutput(t *testing.T, build *common.Build) (output string) {
 
 func TestCacheInContainer(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
@@ -785,6 +723,7 @@ func TestCacheInContainer(t *testing.T) {
 			Key:    "key",
 			Paths:  common.ArtifactPaths{"cached/*"},
 			Policy: common.CachePolicyPullPush,
+			When:   common.CacheWhenOnSuccess,
 		},
 	}
 
@@ -853,9 +792,7 @@ func TestCacheInContainer(t *testing.T) {
 
 func TestDockerImageNameFromVariable(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
@@ -888,9 +825,7 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 
 func TestDockerServiceNameFromVariable(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
@@ -919,6 +854,122 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 
 	output := runTestJobWithOutput(t, build)
 	assert.NotRegexp(t, re, output, "Service's name should be expanded from variable")
+}
+
+func TestDockerServiceHealthcheck(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]struct {
+		command         []string
+		serviceStarted  bool
+		networkPerBuild string
+		skip            bool
+	}{
+		"successful service (FF_NETWORK_PER_BUILD=false)": {
+			command:         []string{"server"},
+			serviceStarted:  true,
+			networkPerBuild: "false",
+			skip:            runtime.GOOS == "windows",
+		},
+		"successful service (FF_NETWORK_PER_BUILD=true)": {
+			command:         []string{"server"},
+			serviceStarted:  true,
+			networkPerBuild: "true",
+			skip:            false,
+		},
+		"failed service (FF_NETWORK_PER_BUILD=false)": {
+			command:         []string{"server", "--addr", ":8888"},
+			serviceStarted:  false,
+			networkPerBuild: "false",
+			skip:            runtime.GOOS == "windows",
+		},
+		"failed service (FF_NETWORK_PER_BUILD=true)": {
+			command:         []string{"server", "--addr", ":8888"},
+			serviceStarted:  false,
+			networkPerBuild: "true",
+			skip:            false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip {
+				t.Skipf("OS %q does not support 'link' networking", runtime.GOOS)
+			}
+
+			resp, err := common.GetRemoteBuildResponse(
+				"liveness client db",
+				"liveness client registry.gitlab.com__gitlab-org__ci-cd__tests__liveness",
+				"liveness client registry.gitlab.com-gitlab-org-ci-cd-tests-liveness",
+			)
+			require.NoError(t, err)
+
+			build := common.Build{
+				JobResponse: resp,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker:   &common.DockerConfig{},
+					},
+				},
+			}
+
+			build.Image = common.Image{
+				Name:       common.TestLivenessImage,
+				Entrypoint: []string{"sh", "-c"},
+			}
+
+			if runtime.GOOS == "windows" {
+				build.Runner.RunnerSettings.Shell = "powershell"
+				build.Runner.RunnerSettings.Executor = "docker-windows"
+
+				// HACK: Runner's PowerShell Core shell is not yet fully
+				// supported: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139
+				//
+				// `liveness` only contains powershell core to keep the image
+				// small. Until there's full support, we perform this hack
+				// whereby we copy pwsh to powershell.exe. This is safe as this
+				// only occurs on the build container, which only executes the
+				// `liveness client` commands above.
+				//
+				// This entrypoint can be nullified with:
+				//   build.Image.Entrypoint = []string{""}
+				// once PowerShell Core is supported. Note that it cannot be
+				// set to nil, as that indicates that Runner should use the
+				// default image entrypoint.
+				build.Image.Entrypoint = []string{
+					"pwsh",
+					"-Command",
+					"cp $env:ProgramFiles\\PowerShell\\pwsh.exe $env:ProgramFiles\\PowerShell\\powershell.exe",
+					"&&",
+					"pwsh",
+					"-Command",
+				}
+			}
+
+			build.Services = append(build.Services, common.Image{
+				Name:    common.TestLivenessImage,
+				Alias:   "db",
+				Command: tc.command,
+			})
+
+			build.Variables = append(build.Variables, common.JobVariable{
+				Key:    "FF_NETWORK_PER_BUILD",
+				Value:  tc.networkPerBuild,
+				Public: true,
+			})
+
+			out, err := buildtest.RunBuildReturningOutput(t, &build)
+			if !tc.serviceStarted {
+				assert.Error(t, err)
+				assert.Contains(t, out, "probably didn't start properly")
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotContains(t, out, "probably didn't start properly")
+		})
+	}
 }
 
 func runDockerInDocker(version string) (id string, err error) {
@@ -1017,50 +1068,50 @@ func testDockerVersion(t *testing.T, version string) {
 }
 
 func TestDocker1_8Compatibility(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIWithMessage(t, "This test doesn't work in nested dind")
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	testDockerVersion(t, "1.8")
 }
 
 func TestDocker1_9Compatibility(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIWithMessage(t, "This test doesn't work in nested dind")
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	testDockerVersion(t, "1.9")
 }
 
 func TestDocker1_10Compatibility(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIWithMessage(t, "This test doesn't work in nested dind")
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	testDockerVersion(t, "1.10")
 }
 
 func TestDocker1_11Compatibility(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIWithMessage(t, "This test doesn't work in nested dind")
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	testDockerVersion(t, "1.11")
 }
 
 func TestDocker1_12Compatibility(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIWithMessage(t, "This test doesn't work in nested dind")
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	testDockerVersion(t, "1.12")
 }
 
 func TestDocker1_13Compatibility(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIWithMessage(t, "This test doesn't work in nested dind")
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	testDockerVersion(t, "1.13")
 }
 
 func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteBrokenTLSBuild()
 	assert.NoError(t, err)
@@ -1090,8 +1141,8 @@ func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
 }
 
 func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
 	assert.NoError(t, err)
@@ -1121,8 +1172,8 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 }
 
 func TestDockerCommandWithHelperImageConfig(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	helperImageConfig := "gitlab/gitlab-runner-helper:x86_64-5a147c92"
 
@@ -1150,12 +1201,14 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 		t,
 		out,
 		"Using docker image sha256:3cf24b1b62b6a4c55c5de43db4f50c0ff8b455238c836945d4b5c645411bfc77 for "+
-			"gitlab/gitlab-runner-helper:x86_64-5a147c92 ...")
+			"gitlab/gitlab-runner-helper:x86_64-5a147c92 with digest "+
+			"gitlab/gitlab-runner-helper@sha256:836120f351e800cd483402a5910b0a347f9e32e97ac3e94e67e2c005a289cc4c ...",
+	)
 }
 
 func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "docker", "info")
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithAfterScript()
 
@@ -1195,9 +1248,7 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 func TestDockerCommandRunAttempts(t *testing.T) {
 	t.Skip("Skipping until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25385 is resolved.")
 
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	sleepCMD := "sleep 60"
 	executorStageAttempts := 2
@@ -1309,9 +1360,7 @@ func removeBuildContainer(t *testing.T) <-chan string {
 }
 
 func TestDockerCommandRunAttempts_InvalidAttempts(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
+	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
 	build.JobResponse.Variables = append(build.JobResponse.Variables, common.JobVariable{
