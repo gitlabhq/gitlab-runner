@@ -20,8 +20,7 @@ var helperImages = map[string]string{
 	windows.V1909: baseImage1909,
 }
 
-var powerShellCmd = []string{
-	"PowerShell",
+var powerShellCmdArgs = []string{
 	"-NoProfile",
 	"-NoLogo",
 	"-InputFormat",
@@ -48,7 +47,7 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 		Name:                    name,
 		Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage),
 		IsSupportingLocalImport: false,
-		Cmd:                     powerShellCmd,
+		Cmd:                     append([]string{cfg.Shell}, powerShellCmdArgs...),
 	}, nil
 }
 

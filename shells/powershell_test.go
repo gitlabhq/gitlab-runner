@@ -14,19 +14,19 @@ func TestPowershell_LineBreaks(t *testing.T) {
 		expectedErrorPreference string
 	}{
 		"Windows newline on Desktop": {
-			shell:                   "powershell",
+			shell:                   SNPowershell,
 			eol:                     "\r\n",
 			expectedEdition:         "Desktop",
 			expectedErrorPreference: "",
 		},
 		"Windows newline on Core": {
-			shell:                   "pwsh",
+			shell:                   SNPwsh,
 			eol:                     "\r\n",
 			expectedEdition:         "Core",
 			expectedErrorPreference: `$ErrorActionPreference = "Stop"` + "\r\n\r\n",
 		},
 		"Linux newline on Core": {
-			shell:                   "pwsh",
+			shell:                   SNPwsh,
 			eol:                     "\n",
 			expectedEdition:         "Core",
 			expectedErrorPreference: `$ErrorActionPreference = "Stop"` + "\n\n",
@@ -38,18 +38,21 @@ func TestPowershell_LineBreaks(t *testing.T) {
 			writer := &PsWriter{Shell: tc.shell, EOL: eol}
 			writer.Command("foo", "")
 
-			expectedOutput := "\xef\xbb\xbf" +
+			expectedOutput :=
 				tc.expectedErrorPreference +
-				`& "foo" ""` + eol + "if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }" + eol +
-				eol +
-				eol
+					`& "foo" ""` + eol + "if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }" + eol +
+					eol +
+					eol
+			if tc.shell != SNPwsh {
+				expectedOutput = "\xef\xbb\xbf" + expectedOutput
+			}
 			assert.Equal(t, expectedOutput, writer.Finish(false))
 		})
 	}
 }
 
 func TestPowershell_CommandShellEscapes(t *testing.T) {
-	writer := &PsWriter{Shell: "powershell", EOL: "\r\n"}
+	writer := &PsWriter{Shell: SNPowershell, EOL: "\r\n"}
 	writer.Command("foo", "x&(y)")
 
 	assert.Equal(
@@ -60,7 +63,7 @@ func TestPowershell_CommandShellEscapes(t *testing.T) {
 }
 
 func TestPowershell_IfCmdShellEscapes(t *testing.T) {
-	writer := &PsWriter{Shell: "powershell", EOL: "\r\n"}
+	writer := &PsWriter{Shell: SNPowershell, EOL: "\r\n"}
 	writer.IfCmd("foo", "x&(y)")
 
 	//nolint:lll
