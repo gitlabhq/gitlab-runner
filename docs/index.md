@@ -7,14 +7,28 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # GitLab Runner Docs
 
-GitLab Runner is the open source project that is used to run your jobs and
-send the results back to GitLab. It is used in conjunction with [GitLab CI/CD](https://about.gitlab.com/stages-devops-lifecycle/continuous-integration/),
-the open-source continuous integration service included with GitLab that
-coordinates the jobs.
+GitLab Runner is the lightweight, highly-scalable agent that runs your build jobs
+and sends the results back to a GitLab instance.
+
+GitLab Runner works in conjunction with GitLab CI/CD, the open-source
+continuous integration service included with GitLab.
+
+This documentation includes details about installing and setting up GitLab Runner,
+and registering and configuring individual runners.
+
+If you already have runners set up and you need help using them
+in your GitLab instance, the information you need may be in the
+[main GitLab documentation](https://docs.gitlab.com/ee/ci/README.html).
+
+For example, visit the main GitLab documentation to learn more about:
+
+- [How to configure a runner in GitLab](https://docs.gitlab.com/ee/ci/runners/README.html).
+- [How to run a CI/CD job in a Docker container](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html).
+- [How GitLab CI/CD works](https://docs.gitlab.com/ee/ci/README.html).
 
 ## Requirements
 
-GitLab Runner is written in [Go](https://golang.org) and can be run as a single binary. No
+GitLab Runner is an open-source project written in [Go](https://golang.org) and can be run as a single binary. No
 language specific requirements are needed.
 
 It is designed to run on the GNU/Linux, macOS, and Windows operating systems.
