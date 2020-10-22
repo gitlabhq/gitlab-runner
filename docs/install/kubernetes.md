@@ -44,6 +44,10 @@ ready to [install the Runner](#installing-gitlab-runner-using-the-helm-chart).
 
 ### Additional configuration
 
+NOTE: **Note:**
+The settings under the `runner` key are now deprecated. User the `runner.config` key to configure your
+GitLab Runner instances: [Using configuration template](#using-configuration-template).
+
 The rest of the configuration is
 [documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository.
 
@@ -131,6 +135,29 @@ runners:
     # memoryLimit: 256Mi
     cpuRequests: 100m
     memoryRequests: 128Mi
+```
+
+### Using configuration template
+
+It's now possible to use a [configuration template file](../register/index.md#runners-configuration-template-file)
+to configure the runner. The configuration template allows to configure the Runner without the limitations which
+using the `values.yaml` config imposed.
+
+Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository:
+
+```yaml
+runners:
+  config: |
+    [[runners]]
+    concurrent = 10
+    check_interval = 30
+      [runners.kubernetes]
+      image = "ubuntu:16.04"
+      terminationGracePeriodSeconds = 3600
+      pull_policy = "IfNotPresent"
+      [runners.kubernetes.pod_security_context]
+        run_as_user = 100
+        fs_group = 65533
 ```
 
 ### Enabling RBAC support
