@@ -13,13 +13,13 @@ type MockSetter struct {
 	mock.Mock
 }
 
-// Set provides a mock function with given fields: ctx, volumeName
-func (_m *MockSetter) Set(ctx context.Context, volumeName string) error {
-	ret := _m.Called(ctx, volumeName)
+// Set provides a mock function with given fields: ctx, volumeName, labels
+func (_m *MockSetter) Set(ctx context.Context, volumeName string, labels map[string]string) error {
+	ret := _m.Called(ctx, volumeName, labels)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, volumeName)
+	if rf, ok := ret.Get(0).(func(context.Context, string, map[string]string) error); ok {
+		r0 = rf(ctx, volumeName, labels)
 	} else {
 		r0 = ret.Error(0)
 	}

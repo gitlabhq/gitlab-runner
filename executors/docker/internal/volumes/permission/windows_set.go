@@ -16,6 +16,6 @@ func NewDockerWindowsSetter() Setter {
 }
 
 // Set noop
-func (d dockerWindowsSetter) Set(_ context.Context, _ string) error {
+func (d dockerWindowsSetter) Set(_ context.Context, _ string, _ map[string]string) error {
 	return nil
 }
