@@ -148,7 +148,7 @@ func (s *RegisterCommand) askExecutor() {
 	for {
 		names := common.GetExecutorNames()
 		executors := strings.Join(names, ", ")
-		s.Executor = s.ask("executor", "Please enter the executor: "+executors+":", true)
+		s.Executor = s.ask("executor", "Enter an executor: "+executors+":", true)
 		if common.GetExecutorProvider(s.Executor) != nil {
 			return
 		}
@@ -196,33 +196,33 @@ func (s *RegisterCommand) askBasicDocker(exampleHelperImage string) {
 
 	s.Docker.Image = s.ask(
 		"docker-image",
-		fmt.Sprintf("Please enter the default Docker image (e.g. %s):", exampleHelperImage),
+		fmt.Sprintf("Enter the default Docker image (for example, %s):", exampleHelperImage),
 	)
 }
 
 func (s *RegisterCommand) askParallels() {
-	s.Parallels.BaseName = s.ask("parallels-base-name", "Please enter the Parallels VM (e.g. my-vm):")
+	s.Parallels.BaseName = s.ask("parallels-base-name", "Enter the Parallels VM (for example, my-vm):")
 }
 
 func (s *RegisterCommand) askVirtualBox() {
-	s.VirtualBox.BaseName = s.ask("virtualbox-base-name", "Please enter the VirtualBox VM (e.g. my-vm):")
+	s.VirtualBox.BaseName = s.ask("virtualbox-base-name", "Enter the VirtualBox VM (for example, my-vm):")
 }
 
 func (s *RegisterCommand) askSSHServer() {
-	s.SSH.Host = s.ask("ssh-host", "Please enter the SSH server address (e.g. my.server.com):")
-	s.SSH.Port = s.ask("ssh-port", "Please enter the SSH server port (e.g. 22):", true)
+	s.SSH.Host = s.ask("ssh-host", "Enter the SSH server address (for example, my.server.com):")
+	s.SSH.Port = s.ask("ssh-port", "Enter the SSH server port (for example, 22):", true)
 }
 
 func (s *RegisterCommand) askSSHLogin() {
-	s.SSH.User = s.ask("ssh-user", "Please enter the SSH user (e.g. root):")
+	s.SSH.User = s.ask("ssh-user", "Enter the SSH user (for example, root):")
 	s.SSH.Password = s.ask(
 		"ssh-password",
-		"Please enter the SSH password (e.g. docker.io):",
+		"Enter the SSH password (for example, docker.io):",
 		true,
 	)
 	s.SSH.IdentityFile = s.ask(
 		"ssh-identity-file",
-		"Please enter path to SSH identity file (e.g. /home/user/.ssh/id_rsa):",
+		"Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):",
 		true,
 	)
 }
@@ -232,21 +232,21 @@ func (s *RegisterCommand) addRunner(runner *common.RunnerConfig) {
 }
 
 func (s *RegisterCommand) askRunner() {
-	s.URL = s.ask("url", "Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com/):")
+	s.URL = s.ask("url", "Enter the GitLab instance URL (for example, https://gitlab.com/):")
 
 	if s.Token != "" {
 		logrus.Infoln("Token specified trying to verify runner...")
 		logrus.Warningln("If you want to register use the '-r' instead of '-t'.")
 		if !s.network.VerifyRunner(s.RunnerCredentials) {
-			logrus.Panicln("Failed to verify this runner. Perhaps you are having network problems")
+			logrus.Panicln("Failed to verify the runner. You may be having network problems.")
 		}
 		return
 	}
 
 	// we store registration token as token, since we pass that to RunnerCredentials
-	s.Token = s.ask("registration-token", "Please enter the gitlab-ci token for this runner:")
-	s.Name = s.ask("name", "Please enter the gitlab-ci description for this runner:")
-	s.TagList = s.ask("tag-list", "Please enter the gitlab-ci tags for this runner (comma separated):", true)
+	s.Token = s.ask("registration-token", "Enter the registration token:")
+	s.Name = s.ask("name", "Enter a description for the runner:")
+	s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
 
 	if s.TagList == "" {
 		s.RunUntagged = true
@@ -264,7 +264,7 @@ func (s *RegisterCommand) askRunner() {
 
 	result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
 	if result == nil {
-		logrus.Panicln("Failed to register this runner. Perhaps you are having network problems")
+		logrus.Panicln("Failed to register the runner. You may be having network problems.")
 	}
 
 	s.Token = result.Token
@@ -367,7 +367,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	validAccessLevels := []AccessLevel{NotProtected, RefProtected}
 	if !accessLevelValid(validAccessLevels, AccessLevel(s.AccessLevel)) {
 		logrus.Panicln("Given access-level is not valid. " +
-			"Please refer to gitlab-runner register -h for the correct options.")
+			"Refer to gitlab-runner register -h for the correct options.")
 	}
 
 	s.askRunner()
