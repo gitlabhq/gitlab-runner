@@ -232,10 +232,7 @@ func (s *RegisterCommand) addRunner(runner *common.RunnerConfig) {
 }
 
 func (s *RegisterCommand) askRunner() {
-	s.URL = s.ask("url", "Enter the GitLab instance URL [https://gitlab.com/]:", true)
-	if s.URL == "" {
-		s.URL = "https://gitlab.com/"
-	}
+	s.URL = s.ask("url", "Enter the GitLab instance URL (for example, https://gitlab.com/):")
 
 	if s.Token != "" {
 		logrus.Infoln("Token specified trying to verify runner...")
