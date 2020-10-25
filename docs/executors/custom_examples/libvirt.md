@@ -97,7 +97,7 @@ other scripts, in this case `/opt/libivirt-driver/`.
 ```shell
 #!/usr/bin/env bash
 
-# /opt/libivrt-driver/base.sh
+# /opt/libvirt-driver/base.sh
 
 VM_IMAGES_PATH="/var/lib/libvirt/images"
 BASE_VM_IMAGE="$VM_IMAGES_PATH/gitlab-runner-base.qcow2"
@@ -121,7 +121,7 @@ The prepare script:
 ```shell
 #!/usr/bin/env bash
 
-# /opt/libivrt-driver/prepare.sh
+# /opt/libvirt-driver/prepare.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base script.
@@ -192,7 +192,7 @@ the content of the script to the VM via `STDIN` through SSH.
 ```shell
 #!/usr/bin/env bash
 
-# /opt/libivrt-driver/run.sh
+# /opt/libvirt-driver/run.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base script.
@@ -214,7 +214,7 @@ This script removes the VM and deletes the disk.
 ```shell
 #!/usr/bin/env bash
 
-# /opt/libivrt-driver/cleanup.sh
+# /opt/libvirt-driver/cleanup.sh
 
 currentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${currentDir}/base.sh # Get variables from base script.
