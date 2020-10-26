@@ -382,6 +382,7 @@ func (n *GitLabClient) UpdateJob(
 		State:         jobInfo.State,
 		FailureReason: jobInfo.FailureReason,
 		Checksum:      jobInfo.Checksum,
+		Bytesize:      jobInfo.Bytesize,
 	}
 
 	statusCode, statusText, response := n.doJSON(

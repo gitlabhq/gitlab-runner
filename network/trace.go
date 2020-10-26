@@ -72,6 +72,10 @@ func (c *clientJobTrace) checksum() string {
 	return c.buffer.Checksum()
 }
 
+func (c *clientJobTrace) bytesize() int {
+	return c.buffer.Size()
+}
+
 // SetCancelFunc sets the function to be called by Cancel(). The function
 // provided here should cancel the execution of any stages that are not
 // absolutely required, whilst allowing for stages such as `after_script` to
@@ -299,6 +303,7 @@ func (c *clientJobTrace) touchJob() common.UpdateJobResult {
 		ID:       c.id,
 		State:    common.Running,
 		Checksum: c.checksum(),
+		Bytesize: c.bytesize(),
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)

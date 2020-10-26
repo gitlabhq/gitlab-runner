@@ -775,9 +775,9 @@ func TestUpdateIntervalChanges(t *testing.T) {
 	}
 }
 
-// TestJobChecksum validates a completness of crc32 checksum as send
-// in `UpdateJob`. It ensures that checksum engine generates a checksum
-// of a masked content that is send in a chunks to Rails
+// TestJobChecksum validates a completness of crc32 checksum as sent in
+// `UpdateJob`. It ensures that checksum engine generates a checksum of a
+// masked content that is send in a chunks to Rails
 func TestJobChecksum(t *testing.T) {
 	maskedValues := []string{"masked"}
 	traceMessage := "This string should be masked $$$$"

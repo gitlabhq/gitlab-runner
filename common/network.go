@@ -83,6 +83,7 @@ type FeaturesInfo struct {
 	MultiBuildSteps         bool `json:"multi_build_steps"`
 	TraceReset              bool `json:"trace_reset"`
 	TraceChecksum           bool `json:"trace_checksum"`
+	TraceBytesize           bool `json:"trace_bytesize"`
 	VaultSecrets            bool `json:"vault_secrets"`
 	Cancelable              bool `json:"cancelable"`
 }
@@ -453,6 +454,7 @@ type UpdateJobRequest struct {
 	State         JobState         `json:"state,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
 	Checksum      string           `json:"checksum,omitempty"`
+	Bytesize      int              `json:"bytesize,omitempty"`
 }
 
 //nolint:lll
@@ -490,6 +492,7 @@ type UpdateJobInfo struct {
 	State         JobState
 	FailureReason JobFailureReason
 	Checksum      string
+	Bytesize      int
 }
 
 type ArtifactsOptions struct {
