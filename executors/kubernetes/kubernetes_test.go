@@ -2936,25 +2936,31 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						ExtraHosts: map[string]string{
-							"redis":     "127.0.0.1",
-							"google":    "8.8.8.8",
-							"dns1 dns2": "8.8.8.8",
+						HostAliases: []common.KubernetesHostAliases{
+							{
+								IP:        "127.0.0.1",
+								Hostnames: []string{"redis"},
+							},
+							{
+								IP:        "8.8.8.8",
+								Hostnames: []string{"dns1", "dns2"},
+							},
 						},
 					},
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				require.Len(t, pod.Spec.HostAliases, 2)
-
-				for _, hostAlias := range pod.Spec.HostAliases {
-					switch hostAlias.IP {
-					case "127.0.0.1":
-						assert.ElementsMatch(t, []string{"redis"}, hostAlias.Hostnames)
-					case "8.8.8.8":
-						assert.ElementsMatch(t, []string{"dns1", "dns2", "google"}, hostAlias.Hostnames)
-					}
-				}
+				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"redis"},
+					},
+					{
+						IP:        "8.8.8.8",
+						Hostnames: []string{"dns1", "dns2"},
+					},
+				}, pod.Spec.HostAliases)
 			},
 		},
 		"supports services and setting extra hosts for 127.0.0.1 using ExtraHosts": {
@@ -2962,8 +2968,11 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						ExtraHosts: map[string]string{
-							"redis": "127.0.0.1",
+						HostAliases: []common.KubernetesHostAliases{
+							{
+								IP:        "127.0.0.1",
+								Hostnames: []string{"redis"},
+							},
 						},
 					},
 				},
@@ -2991,8 +3000,11 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						ExtraHosts: map[string]string{
-							"google": "8.8.8.8",
+						HostAliases: []common.KubernetesHostAliases{
+							{
+								IP:        "8.8.8.8",
+								Hostnames: []string{"google"},
+							},
 						},
 					},
 				},
@@ -3025,9 +3037,15 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace: "default",
-						ExtraHosts: map[string]string{
-							"redis":  "127.0.0.1",
-							"google": "8.8.8.8",
+						HostAliases: []common.KubernetesHostAliases{
+							{
+								IP:        "127.0.0.1",
+								Hostnames: []string{"redis"},
+							},
+							{
+								IP:        "8.8.8.8",
+								Hostnames: []string{"google"},
+							},
 						},
 					},
 				},

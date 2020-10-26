@@ -124,8 +124,8 @@ The following keywords help to define the behavior of the Runner within Kubernet
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
 | `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
 | `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
-| `extra_hosts` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases.](#adding-extra-host-aliases) |
 | `helper_image` | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
+| `host_aliases` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases](#adding-extra-host-aliases). |
 | `image_pull_secrets` | A array of secrets that are used to authenticate Docker image pulling. |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
 | `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
@@ -494,11 +494,17 @@ check_interval = 30
 
 ## Adding extra host aliases
 
-As described earlier, additional host entries can be added to the containers.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab 13.6.
+
 This feature is available in Kubernetes 1.7+.
 
-Multiple host aliases for the same IP are supported and can be provided by defining multiple host entries for the same IP and
-each entry accepts a list of hosts as a space separated string.
+[Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) configuration
+instructs Kubernetes to add entries to `/etc/hosts` file inside of the container. The host aliases can be configured with the following options:
+
+| Option     | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| IP         | string   | yes      | The IP address you want to attach hosts too |
+| Hostnames  | []string | yes      | A list of host name aliases that will be attached to the IP |
 
 Here is an example configuration:
 
@@ -509,10 +515,12 @@ concurrent = 4
   # usual configuration
   executor = "kubernetes"
   [runners.kubernetes]
-    [runners.kubernetes.extra_hosts]
-      "de1.website.local de2.website.local" = "127.0.0.1"
-      "us.website.local" = "127.0.0.1"
-      "google" = "8.8.8.8"
+    [[runners.kubernetes.host_aliases]]
+      ip = "127.0.0.1"
+      hostnames = ["web1", "web2"]
+    [[runners.kubernetes.host_aliases]]
+      ip = "192.168.1.1"
+      hostnames = ["web14", "web15"]
 ```
 
 ## Using Affinity

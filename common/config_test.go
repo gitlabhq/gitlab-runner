@@ -408,6 +408,102 @@ func TestConfigParse(t *testing.T) {
 	}
 }
 
+func TestKubernetesHostAliases(t *testing.T) {
+	tests := map[string]struct {
+		config         KubernetesConfig
+		validateConfig func(t *testing.T, hostAliases []api.HostAlias)
+		expectedErr    string
+	}{
+		"parse Kubernetes HostAliases with empty list": {
+			config: KubernetesConfig{},
+			validateConfig: func(t *testing.T, hostAliases []api.HostAlias) {
+				assert.Empty(t, hostAliases)
+			},
+		},
+		"parse Kubernetes HostAliases with unique ips": {
+			config: KubernetesConfig{
+				HostAliases: []KubernetesHostAliases{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web2"},
+					},
+					{
+						IP:        "192.168.1.1",
+						Hostnames: []string{"web14", "web15"},
+					},
+				},
+			},
+			validateConfig: func(t *testing.T, hostAliases []api.HostAlias) {
+				require.Equal(t, 2, len(hostAliases))
+				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web2"},
+					},
+					{
+						IP:        "192.168.1.1",
+						Hostnames: []string{"web14", "web15"},
+					},
+				}, hostAliases)
+			},
+		},
+		"parse Kubernetes HostAliases with duplicated ip": {
+			config: KubernetesConfig{
+				HostAliases: []KubernetesHostAliases{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web2"},
+					},
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web14", "web15"},
+					},
+				},
+			},
+			validateConfig: func(t *testing.T, hostAliases []api.HostAlias) {
+				require.Equal(t, 1, len(hostAliases))
+				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web2", "web14", "web15"},
+					},
+				}, hostAliases)
+			},
+		},
+		"parse Kubernetes HostAliases with duplicated hostname": {
+			config: KubernetesConfig{
+				HostAliases: []KubernetesHostAliases{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web1", "web2"},
+					},
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web15"},
+					},
+				},
+			},
+			validateConfig: func(t *testing.T, hostAliases []api.HostAlias) {
+				require.Equal(t, 1, len(hostAliases))
+				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web2", "web15"},
+					},
+				}, hostAliases)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			if tt.validateConfig != nil {
+				tt.validateConfig(t, tt.config.GetHostAliases())
+			}
+		})
+	}
+}
+
 func TestService_ToImageDefinition(t *testing.T) {
 	tests := map[string]struct {
 		service       Service

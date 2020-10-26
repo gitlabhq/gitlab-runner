@@ -877,10 +877,10 @@ func (s *executor) prepareHostAliases() ([]api.HostAlias, error) {
 	return s.createHostAliases()
 }
 
-func getHostAliasEntry(hostAliases []api.HostAlias, alias string) *api.HostAlias {
+func getHostAliasEntry(hostAliases []api.HostAlias, ip string) *api.HostAlias {
 	localhostIdx := -1
 	for idx := range hostAliases {
-		if hostAliases[idx].IP == alias {
+		if hostAliases[idx].IP == ip {
 			localhostIdx = idx
 			break
 		}
@@ -899,8 +899,12 @@ func (s *executor) createHostAliases() ([]api.HostAlias, error) {
 
 	hostAliases := s.Config.Kubernetes.GetHostAliases()
 
+	if servicesHostAlias == nil {
+		return hostAliases, nil
+	}
+
 	// if localhost IP is also defined in configuration then use it to avoid duplicating localhost entry
-	var localhostEntry = getHostAliasEntry(hostAliases, "127.0.0.1")
+	localhostEntry := getHostAliasEntry(hostAliases, servicesHostAlias.IP)
 	if localhostEntry != nil {
 		// append aliases to already existing "127.0.0.1" host alias
 		localhostEntry.Hostnames = append(localhostEntry.Hostnames, servicesHostAlias.Hostnames...)
@@ -908,41 +912,57 @@ func (s *executor) createHostAliases() ([]api.HostAlias, error) {
 		// no entry found for "127.0.0.1", add new entry
 		hostAliases = append(hostAliases, *servicesHostAlias)
 	}
-	return hostAliases, err
+	return hostAliases, nil
+}
+
+func getServiceHostnames(service common.Image) ([]string, error) {
+	var hostnames []string
+
+	// Services with ports are coming from .gitlab-webide.yml
+	// they are used for ports mapping and their aliases are in no way validated
+	// so we ignore them. Check out https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1170
+	// for details
+	if len(service.Ports) > 0 {
+		return hostnames, nil
+	}
+
+	serviceMeta := services.SplitNameAndVersion(service.Name)
+	for _, alias := range serviceMeta.Aliases {
+		// For backward compatibility reasons a non DNS1123 compliant alias might be generated,
+		// this will be removed in https://gitlab.com/gitlab-org/gitlab-runner/issues/6100
+		err := dns.ValidateDNS1123Subdomain(alias)
+		if err == nil {
+			hostnames = append(hostnames, alias)
+		}
+	}
+
+	if service.Alias != "" {
+		err := dns.ValidateDNS1123Subdomain(service.Alias)
+		if err != nil {
+			return nil, &invalidHostAliasDNSError{service: service, inner: err}
+		}
+
+		hostnames = append(hostnames, service.Alias)
+	}
+
+	return hostnames, nil
 }
 
 func (s *executor) createServicesHostAlias() (*api.HostAlias, error) {
 	servicesHostAlias := api.HostAlias{IP: "127.0.0.1"}
 
 	for _, service := range s.options.Services {
-		// Services with ports are coming from .gitlab-webide.yml
-		// they are used for ports mapping and their aliases are in no way validated
-		// so we ignore them. Check out https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1170
-		// for details
-		if len(service.Ports) > 0 {
-			continue
-		}
-
-		serviceMeta := services.SplitNameAndVersion(service.Name)
-		for _, alias := range serviceMeta.Aliases {
-			// For backward compatibility reasons a non DNS1123 compliant alias might be generated,
-			// this will be removed in https://gitlab.com/gitlab-org/gitlab-runner/issues/6100
-			err := dns.ValidateDNS1123Subdomain(alias)
-			if err == nil {
-				servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, alias)
-			}
-		}
-
-		if service.Alias == "" {
-			continue
-		}
-
-		err := dns.ValidateDNS1123Subdomain(service.Alias)
+		hostnames, err := getServiceHostnames(service)
 		if err != nil {
-			return nil, &invalidHostAliasDNSError{service: service, inner: err}
+			return nil, err
 		}
 
-		servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, service.Alias)
+		servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, hostnames...)
+	}
+
+	// no service hostnames to add to aliases
+	if len(servicesHostAlias.Hostnames) == 0 {
+		return nil, nil
 	}
 
 	return &servicesHostAlias, nil

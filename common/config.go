@@ -296,7 +296,7 @@ type KubernetesConfig struct {
 	PodAnnotationsOverwriteAllowed                    string                       `toml:"pod_annotations_overwrite_allowed" json:"pod_annotations_overwrite_allowed" long:"pod_annotations_overwrite_allowed" env:"KUBERNETES_POD_ANNOTATIONS_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_POD_ANNOTATIONS_*' values"`
 	PodSecurityContext                                KubernetesPodSecurityContext `toml:"pod_security_context,omitempty" namespace:"pod-security-context" description:"A security context attached to each build pod"`
 	Volumes                                           KubernetesVolumes            `toml:"volumes"`
-	ExtraHosts                                        map[string]string            `toml:"extra_hosts,omitempty" json:"extra_hosts" long:"extra-hosts" description:"Add a custom host-to-IP mapping"`
+	HostAliases                                       []KubernetesHostAliases      `toml:"host_aliases,omitempty" json:"host_aliases" long:"host_aliases" description:"Add a custom host-to-IP mapping"`
 	Services                                          []Service                    `toml:"services,omitempty" json:"services" description:"Add service that is started with container"`
 	CapAdd                                            []string                     `toml:"cap_add" json:"cap_add" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                                           []string                     `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
@@ -385,6 +385,12 @@ type KubernetesAffinity struct {
 type KubernetesNodeAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector             `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
 	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
+}
+
+//nolint:lll
+type KubernetesHostAliases struct {
+	IP        string   `toml:"ip" json:"ip" long:"ip" description:"The IP address you want to attach hosts to"`
+	Hostnames []string `toml:"hostnames" json:"hostnames" long:"hostnames" description:"A list of hostnames that will be attached to the IP"`
 }
 
 type NodeSelector struct {
@@ -783,21 +789,51 @@ func (c *PreferredSchedulingTerm) GetPreferredSchedulingTerm() api.PreferredSche
 }
 
 func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
-	hostAliases := make(map[string][]string)
-	// group all aliases for each IP
-	for value, ip := range c.ExtraHosts {
-		hostAliases[ip] = append(hostAliases[ip], strings.Fields(value)...)
+	kubernetesHostAliases := deduplicateKubernetesHostAliases(c.HostAliases)
+
+	var hostAliases []api.HostAlias
+	for _, hostAlias := range kubernetesHostAliases {
+		hostAliases = append(
+			hostAliases,
+			api.HostAlias{
+				IP:        hostAlias.IP,
+				Hostnames: hostAlias.Hostnames,
+			},
+		)
 	}
 
-	var aliases []api.HostAlias
-	for ip, hostnames := range hostAliases {
-		aliases = append(aliases, api.HostAlias{
-			IP:        ip,
-			Hostnames: hostnames,
-		})
+	return hostAliases
+}
+
+// Remove IP duplicates from slice while keeping order and deduplicate the merged hostnames slices
+func deduplicateKubernetesHostAliases(elements []KubernetesHostAliases) (nodups []KubernetesHostAliases) {
+	kubernetesHostAliases := make(map[string]int)
+
+	for _, element := range elements {
+		if idx, ok := kubernetesHostAliases[element.IP]; ok {
+			hostAlias := &nodups[idx]
+			hostAlias.Hostnames = append(hostAlias.Hostnames, element.Hostnames...)
+			hostAlias.Hostnames = deduplicateStrings(hostAlias.Hostnames)
+		} else {
+			idx = len(nodups)
+			nodups = append(nodups, element)
+			kubernetesHostAliases[element.IP] = idx
+		}
 	}
 
-	return aliases
+	return
+}
+
+// Remove duplicates from slice while keeping order. Only first occurrence is retained.
+func deduplicateStrings(elements []string) (nodups []string) {
+	encountered := make(map[string]bool)
+	for _, element := range elements {
+		if !encountered[element] {
+			nodups = append(nodups, element)
+			encountered[element] = true
+		}
+	}
+	return
 }
 
 func (c *DockerMachine) GetIdleCount() int {
