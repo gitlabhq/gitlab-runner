@@ -204,6 +204,12 @@ func (m *machineProvider) useMachine(config *common.RunnerConfig) (*machineDetai
 		select {
 		case err = <-errCh:
 			return m.prepareCreatedMachine(newMachineDetails, err)
+		case <-time.After(15 * time.Second):
+			// This is a deadlock avoidance path. Since the availableMachineSignal is not blocking, it is possible
+			// that when we are executing the for condition check above, a signal was sent, but we missed it.
+			//
+			// Duplicating the availableMachineSignal case because fallthrough is not allowed in select statements.
+			details, err = m.findFreeExistingMachine(config)
 		case <-coordinator.availableMachineSignal():
 			details, err = m.findFreeExistingMachine(config)
 		}
