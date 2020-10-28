@@ -15,6 +15,7 @@ const (
 	UseGoCloudWithCacheArchiver          string = "FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER"
 	UseFastzip                           string = "FF_USE_FASTZIP"
 	GitLabRegistryHelperImage            string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
+	DisableUmaskForDockerExecutor        string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
 )
 
 type FeatureFlag struct {
@@ -111,6 +112,18 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "Use GitLab Runner helper image for the Docker and " +
 			"Kubernetes executors from `registry.gitlab.com` instead of Docker Hub",
+	},
+	{
+		Name:            DisableUmaskForDockerExecutor,
+		DefaultValue:    "false",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "If enabled will remove the usage of `umask 0000` call for jobs executed with `docker` " +
+			"executor. Instead Runner will try to discover the UID and GID of the user configured for the image used " +
+			"by the build container and will change the ownership of the working directory and files by running the " +
+			"`chmod` command in the predefined container (after updating sources, restoring cache and " +
+			"downloading artifacts). POSIX utility `id` must be installed and operational in the build image " +
+			"for this feature flag. Runner will execute `id` with options `-u` and `-g` to retrieve the UID and GID.",
 	},
 }
 

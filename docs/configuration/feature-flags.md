@@ -49,6 +49,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER` | `true` | ✓ | 14.0 | Enables the use of Go Cloud to write cache archives to object storage. This mode is only used by Azure Blob storage. |
 | `FF_USE_FASTZIP` | `false` | ✗ |  | Fastzip is a performant archiver for cache/artifact archiving and extraction |
 | `FF_GITLAB_REGISTRY_HELPER_IMAGE` | `false` | ✗ |  | Use GitLab Runner helper image for the Docker and Kubernetes executors from `registry.gitlab.com` instead of Docker Hub |
+| `FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR` | `false` | ✗ |  | If enabled will remove the usage of `umask 0000` call for jobs executed with `docker` executor. Instead Runner will try to discover the UID and GID of the user configured for the image used by the build container and will change the ownership of the working directory and files by running the `chmod` command in the predefined container (after updating sources, restoring cache and downloading artifacts). POSIX utility `id` must be installed and operational in the build image for this feature flag. Runner will execute `id` with options `-u` and `-g` to retrieve the UID and GID. |
 
 <!-- feature_flags_list_end -->
 
