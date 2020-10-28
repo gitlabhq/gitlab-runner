@@ -7,7 +7,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 # Old GitLab Runner URLs
 
 NOTE: **Note:**
-Take a look at the [compatibility section](../index.md#compatibility-with-gitlab-versions) to check the Runner's compatibility
+Take a look at the [compatibility section](../index.md#gitlab-runner-versions) to check the Runner's compatibility
 with your version of GitLab.
 
 In GitLab Runner 10, the name of the executable was renamed from
