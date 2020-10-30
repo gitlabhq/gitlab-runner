@@ -1,6 +1,7 @@
 package azure
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -21,39 +22,10 @@ type signedURLOptions struct {
 	Timeout       time.Duration
 }
 
-func PresignedURL(name string, o *signedURLOptions) (*url.URL, error) {
-	if o.Credentials.AccountName == "" {
-		return nil, fmt.Errorf("missing Azure storage account name")
-	}
-	if o.Credentials.AccountKey == "" {
-		return nil, fmt.Errorf("missing Azure storage account key")
-	}
-
-	credential, err := azblob.NewSharedKeyCredential(o.Credentials.AccountName, o.Credentials.AccountKey)
+func presignedURL(name string, o *signedURLOptions) (*url.URL, error) {
+	sas, err := getSASQueryParameters(name, o)
 	if err != nil {
-		return nil, fmt.Errorf("creating Azure signature: %w", err)
-	}
-
-	permissions := azblob.AccountSASPermissions{Read: true}
-	if o.Method == http.MethodPut {
-		permissions = azblob.AccountSASPermissions{Write: true}
-	}
-
-	// Set the desired SAS signature values and sign them with the
-	// shared key credentials to get the SAS query parameters.
-	// See https://docs.microsoft.com/en-us/rest/api/storageservices/create-account-sas
-	sasSignatureValues := azblob.AccountSASSignatureValues{
-		Protocol:      azblob.SASProtocolHTTPS, // Users MUST use HTTPS (not HTTP)
-		StartTime:     time.Now().Add(-1 * time.Hour).UTC(),
-		ExpiryTime:    time.Now().Add(o.Timeout).UTC(),
-		Permissions:   permissions.String(),
-		Services:      azblob.AccountSASServices{Blob: true}.String(),
-		ResourceTypes: azblob.AccountSASResourceTypes{Object: true}.String(),
-	}
-
-	sas, err := sasSignatureValues.NewSASQueryParameters(credential)
-	if err != nil {
-		return nil, fmt.Errorf("creating Azure signature: %w", err)
+		return nil, err
 	}
 
 	domain := DefaultAzureServer
@@ -71,4 +43,53 @@ func PresignedURL(name string, o *signedURLOptions) (*url.URL, error) {
 
 	u := parts.URL()
 	return &u, nil
+}
+
+func getSASToken(name string, o *signedURLOptions) (string, error) {
+	sas, err := getSASQueryParameters(name, o)
+	if err != nil {
+		return "", err
+	}
+
+	return sas.Encode(), nil
+}
+
+func getSASQueryParameters(name string, o *signedURLOptions) (azblob.SASQueryParameters, error) {
+	empty := azblob.SASQueryParameters{}
+
+	if o.Credentials.AccountName == "" {
+		return empty, errors.New("missing Azure storage account name")
+	}
+	if o.Credentials.AccountKey == "" {
+		return empty, errors.New("missing Azure storage account key")
+	}
+
+	credential, err := azblob.NewSharedKeyCredential(o.Credentials.AccountName, o.Credentials.AccountKey)
+	if err != nil {
+		return empty, fmt.Errorf("creating Azure signature: %w", err)
+	}
+
+	permissions := azblob.AccountSASPermissions{Read: true}
+	if o.Method == http.MethodPut {
+		permissions = azblob.AccountSASPermissions{Write: true}
+	}
+
+	// Set the desired SAS signature values and sign them with the
+	// shared key credentials to get the SAS query parameters.
+	// See https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas
+	serviceSASValues := azblob.BlobSASSignatureValues{
+		Protocol:      azblob.SASProtocolHTTPS, // Users MUST use HTTPS (not HTTP)
+		StartTime:     time.Now().Add(-1 * time.Hour).UTC(),
+		ExpiryTime:    time.Now().Add(o.Timeout).UTC(),
+		Permissions:   permissions.String(),
+		ContainerName: o.ContainerName,
+		BlobName:      name,
+	}
+
+	sas, err := serviceSASValues.NewSASQueryParameters(credential)
+	if err != nil {
+		return empty, fmt.Errorf("creating Azure SAS: %w", err)
+	}
+
+	return sas, nil
 }

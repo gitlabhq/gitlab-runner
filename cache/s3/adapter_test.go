@@ -90,6 +90,8 @@ func testCacheOperation(
 
 		headers := adapter.GetUploadHeaders()
 		assert.Nil(t, headers)
+		assert.Nil(t, adapter.GetGoCloudURL())
+		assert.Empty(t, adapter.GetUploadEnv())
 	})
 }
 

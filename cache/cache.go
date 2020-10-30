@@ -126,3 +126,24 @@ func GetCacheUploadHeaders(build *common.Build, key string) http.Header {
 
 	return h
 }
+
+func GetCacheGoCloudURL(build *common.Build, key string) *url.URL {
+	return castToURL(func() interface{} {
+		return onAdapter(build, key, func(adapter Adapter) interface{} {
+			return adapter.GetGoCloudURL()
+		})
+	})
+}
+
+func GetCacheUploadEnv(build *common.Build, key string) map[string]string {
+	result := onAdapter(build, key, func(adapter Adapter) interface{} {
+		return adapter.GetUploadEnv()
+	})
+
+	m, ok := result.(map[string]string)
+	if !ok {
+		return nil
+	}
+
+	return m
+}

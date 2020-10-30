@@ -65,7 +65,7 @@ func TestAzureClientURLGeneration(t *testing.T) {
 				Timeout: 1 * time.Hour,
 			}
 
-			url, err := PresignedURL(objectName, opts)
+			url, err := presignedURL(objectName, opts)
 
 			if tt.expectedErrorOnGeneration {
 				assert.Error(t, err)
@@ -85,11 +85,14 @@ func TestAzureClientURLGeneration(t *testing.T) {
 			require.NotNil(t, url)
 
 			q := url.Query()
+			token, err := getSASToken(objectName, opts)
+			require.NoError(t, err)
+			assert.Equal(t, q.Encode(), token)
+
 			// Sanity check query parameters from
-			// https://docs.microsoft.com/en-us/rest/api/storageservices/create-account-sas
+			// https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas
 			assert.NotNil(t, q["sv"])                    // SignedVersion
-			assert.Equal(t, []string{"b"}, q["ss"])      // SignedServices (blob)
-			assert.Equal(t, []string{"o"}, q["srt"])     // SignedResourcesType (object)
+			assert.Equal(t, []string{"b"}, q["sr"])      // SignedResource (blob)
 			assert.NotNil(t, q["st"])                    // SignedStart
 			assert.NotNil(t, q["se"])                    // SignedExpiry
 			assert.NotNil(t, q["sig"])                   // Signature

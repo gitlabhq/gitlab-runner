@@ -30,6 +30,38 @@ func (_m *MockAdapter) GetDownloadURL() *url.URL {
 	return r0
 }
 
+// GetGoCloudURL provides a mock function with given fields:
+func (_m *MockAdapter) GetGoCloudURL() *url.URL {
+	ret := _m.Called()
+
+	var r0 *url.URL
+	if rf, ok := ret.Get(0).(func() *url.URL); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*url.URL)
+		}
+	}
+
+	return r0
+}
+
+// GetUploadEnv provides a mock function with given fields:
+func (_m *MockAdapter) GetUploadEnv() map[string]string {
+	ret := _m.Called()
+
+	var r0 map[string]string
+	if rf, ok := ret.Get(0).(func() map[string]string); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]string)
+		}
+	}
+
+	return r0
+}
+
 // GetUploadHeaders provides a mock function with given fields:
 func (_m *MockAdapter) GetUploadHeaders() http.Header {
 	ret := _m.Called()

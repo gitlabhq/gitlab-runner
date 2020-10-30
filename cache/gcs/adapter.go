@@ -36,6 +36,14 @@ func (a *gcsAdapter) GetUploadHeaders() http.Header {
 	return nil
 }
 
+func (a *gcsAdapter) GetGoCloudURL() *url.URL {
+	return nil
+}
+
+func (a *gcsAdapter) GetUploadEnv() map[string]string {
+	return nil
+}
+
 func (a *gcsAdapter) presignURL(method string, contentType string) *url.URL {
 	err := a.credentialsResolver.Resolve()
 	if err != nil {

@@ -14,6 +14,9 @@ type Adapter interface {
 	GetDownloadURL() *url.URL
 	GetUploadURL() *url.URL
 	GetUploadHeaders() http.Header
+
+	GetGoCloudURL() *url.URL
+	GetUploadEnv() map[string]string
 }
 
 type Factory func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error)

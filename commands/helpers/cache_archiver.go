@@ -2,8 +2,11 @@ package helpers
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,17 +19,22 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
+
+	"gocloud.dev/blob"
+	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
 )
 
 type CacheArchiverCommand struct {
 	fileArchiver
 	retryHelper
-	File    string   `long:"file" description:"The path to file"`
-	URL     string   `long:"url" description:"URL of remote cache resource"`
-	Timeout int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
-	Headers []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
+	File       string   `long:"file" description:"The path to file"`
+	URL        string   `long:"url" description:"URL of remote cache resource (pre-signed URL)"`
+	GoCloudURL string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
+	Timeout    int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
+	Headers    []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
 
 	client *CacheClient
+	mux    *blob.URLMux
 }
 
 func (c *CacheArchiverCommand) getClient() *CacheClient {
@@ -38,8 +46,6 @@ func (c *CacheArchiverCommand) getClient() *CacheClient {
 }
 
 func (c *CacheArchiverCommand) upload(_ int) error {
-	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.CleanURL(c.URL))
-
 	file, err := os.Open(c.File)
 	if err != nil {
 		return err
@@ -50,6 +56,16 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	if err != nil {
 		return err
 	}
+
+	if c.GoCloudURL != "" {
+		return c.handleGoCloudURL(file)
+	}
+
+	return c.handlePresignedURL(fi, file)
+}
+
+func (c *CacheArchiverCommand) handlePresignedURL(fi os.FileInfo, file io.Reader) error {
+	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.CleanURL(c.URL))
 
 	req, err := http.NewRequest(http.MethodPut, c.URL, file)
 	if err != nil {
@@ -66,6 +82,52 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 	defer func() { _ = resp.Body.Close() }()
 
 	return retryOnServerError(resp)
+}
+
+func (c *CacheArchiverCommand) handleGoCloudURL(file io.Reader) error {
+	logrus.Infoln("Uploading", filepath.Base(c.File), "to", url_helpers.CleanURL(c.GoCloudURL))
+
+	if c.mux == nil {
+		c.mux = blob.DefaultURLMux()
+	}
+
+	ctx, cancelWrite := context.WithCancel(context.Background())
+	defer cancelWrite()
+
+	u, err := url.Parse(c.GoCloudURL)
+	if err != nil {
+		return err
+	}
+
+	objectName := strings.TrimLeft(u.Path, "/")
+	if objectName == "" {
+		return fmt.Errorf("no object name provided")
+	}
+
+	b, err := c.mux.OpenBucket(ctx, c.GoCloudURL)
+	if err != nil {
+		return err
+	}
+	defer b.Close()
+
+	writer, err := b.NewWriter(ctx, objectName, nil)
+	if err != nil {
+		return err
+	}
+
+	if _, err = io.Copy(writer, file); err != nil {
+		cancelWrite()
+		if writerErr := writer.Close(); writerErr != nil {
+			logrus.WithError(writerErr).Error("error closing Go cloud upload after copy failure")
+		}
+		return err
+	}
+
+	if err := writer.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *CacheArchiverCommand) createZipFile(filename string) error {
@@ -129,7 +191,7 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	}
 
 	// Upload archive if needed
-	if c.URL != "" {
+	if c.URL != "" || c.GoCloudURL != "" {
 		err := c.doRetry(c.upload)
 		if err != nil {
 			logrus.Fatalln(err)
