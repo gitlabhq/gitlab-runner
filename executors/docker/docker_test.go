@@ -1843,14 +1843,38 @@ func TestGetServiceDefinitions(t *testing.T) {
 		"all services with proper name and alias": {
 			services: []common.Service{
 				{
-					Name:  "name",
-					Alias: "alias",
+					Name:       "name",
+					Alias:      "alias",
+					Command:    []string{"executable", "param1", "param2"},
+					Entrypoint: []string{"executable", "param3", "param4"},
+				},
+				{
+					Name:    "name2",
+					Alias:   "alias2",
+					Command: []string{"executable", "param1", "param2"},
+				},
+				{
+					Name:       "name3",
+					Alias:      "alias3",
+					Entrypoint: []string{"executable", "param3", "param4"},
 				},
 			},
 			expectedServices: common.Services{
 				{
-					Name:  "name",
-					Alias: "alias",
+					Name:       "name",
+					Alias:      "alias",
+					Command:    []string{"executable", "param1", "param2"},
+					Entrypoint: []string{"executable", "param3", "param4"},
+				},
+				{
+					Name:    "name2",
+					Alias:   "alias2",
+					Command: []string{"executable", "param1", "param2"},
+				},
+				{
+					Name:       "name3",
+					Alias:      "alias3",
+					Entrypoint: []string{"executable", "param3", "param4"},
 				},
 			},
 		},
