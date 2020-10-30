@@ -1,13 +1,37 @@
-# Install your own container registry and cache server
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+---
 
-When using the Runner in [autoscale mode](../configuration/autoscale.md), it
-is advised to set up a personal container registry and a cache server.
+# Speed up job execution
 
-## Install a proxy container registry
+You can improve performance of your jobs by caching your images and dependencies.
 
-1. Login to a dedicated machine where the container registry proxy will be running
+## Use a proxy for containers
+
+You can speed up the time it takes to download Docker images by using:
+
+- The GitLab Dependency Proxy or 
+- A mirror of the DockerHub Registry
+
+### GitLab Dependency Proxy
+
+To more quickly access container images, you can
+[use the Dependency Proxy](https://docs.gitlab.com/ee/user/packages/dependency_proxy/)
+to proxy container images.
+
+### Docker Hub Registry mirror
+
+You can also speed up the time it takes for your jobs to access container images by mirroring Docker Hub.
+
+#### Use a Docker Hub Registry mirror
+
+To create a Docker Hub Registry mirror:
+
+1. Log in to a dedicated machine where the proxy container registry will run.
 1. Make sure that [Docker Engine](https://docs.docker.com/install/) is installed
-   on that machine
+   on that machine.
 1. Create a new container registry:
 
    ```shell
@@ -18,7 +42,7 @@ is advised to set up a personal container registry and a cache server.
    ```
 
    You can modify the port number (`6000`) to expose the registry on a
-   different port
+   different port.
 
 1. Check the IP address of the server:
 
@@ -26,26 +50,50 @@ is advised to set up a personal container registry and a cache server.
    hostname --ip-address
    ```
 
-   You should preferably choose the private networking IP address. The private
-   networking is usually the fastest solution for internal communication
-   between machines of a single provider (DigitalOcean, AWS, Azure, etc)
-   Usually the private networking is also not accounted to your monthly
+   You should choose the private network IP address. The private
+   network is usually the fastest solution for internal communication
+   between machines on a single provider, like DigitalOcean, AWS, or Azure.
+   Usually, storage on a private network is not applied against your monthly
    bandwidth limit.
 
-1. Docker registry will be accessible under `MY_REGISTRY_IP:6000`
+The Docker Hub registry is accessible under `MY_REGISTRY_IP:6000`.
 
-You can now proceed and
-[configure `config.toml`](../configuration/autoscale.md#distributed-container-registry-mirroring)
+You can now [configure `config.toml`](../configuration/autoscale.md#distributed-container-registry-mirroring)
 to use the new registry server.
 
-## Install your own cache server
+## Use a distributed cache
 
-If you don't want to use a SaaS S3 server, you can install your own
-S3-compatible caching server:
+You can speed up the time it takes to download language dependencies by
+using a distributed [cache](https://docs.gitlab.com/ee/ci/yaml/#cache).
 
-1. Login to a dedicated machine where the cache server will be running
+To specify a distributed cache, you set up the cache server and then
+[configure runner to use that cache server](../configuration/advanced-configuration.md#the-runnerscache-section).
+
+If you are using autoscaling, learn more about the distributed runners
+[cache feature](../configuration/autoscale.md#distributed-runners-caching).
+
+The following cache servers are supported:
+
+- [AWS S3](#use-aws-s3)
+- [MinIO](#use-minio) or other S3-compatible cache server
+- [Google Cloud Storage](#use-google-cloud-storage)
+- [Azure Blob storage](#use-azure-blob-storage)
+
+Learn more about GitLab CI/CD [cache dependencies and best practices](https://docs.gitlab.com/ee/ci/caching/index.html).
+
+### Use AWS S3
+
+To use AWS S3 as a distributed cache,
+[edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscaches3-section) to point
+to the S3 location and provide credentials for connecting.
+
+### Use MinIO
+
+Instead of using AWS S3, you can create your own cache storage.
+
+1. Log in to a dedicated machine where the cache server will run.
 1. Make sure that [Docker Engine](https://docs.docker.com/install/) is installed
-   on that machine
+   on that machine.
 1. Start [MinIO](https://min.io), a simple S3-compatible server written in Go:
 
    ```shell
@@ -55,7 +103,8 @@ S3-compatible caching server:
            minio/minio:latest server /export
    ```
 
-   You can modify the port `9005` to expose the cache server on different port
+   You can modify the port `9005` to expose the cache server on a
+   different port.
 
 1. Check the IP address of the server:
 
@@ -63,7 +112,7 @@ S3-compatible caching server:
    hostname --ip-address
    ```
 
-1. Your cache server will be available at `MY_CACHE_IP:9005`
+1. Your cache server will be available at `MY_CACHE_IP:9005`.
 1. Create a bucket that will be used by the Runner:
 
    ```shell
@@ -80,6 +129,18 @@ S3-compatible caching server:
    sudo cat /export/.minio.sys/config/config.json | grep Key
    ```
 
-You can now proceed and
+You can now
 [configure `config.toml`](../configuration/autoscale.md#distributed-runners-caching)
 to use the new cache server.
+
+### Use Google Cloud Storage
+
+To use Google Cloud Platform as a distributed cache,
+[edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscachegcs-section) to point
+to the GCP location and provide credentials for connecting.
+
+### Use Azure Blob storage
+
+To use Azure Blob storage as a distributed cache,
+[edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscacheazure-section) to point
+to the Azure location and provide credentials for connecting.

@@ -29,7 +29,7 @@ func TestDockerLinuxSetter(t *testing.T) {
 	volumeName, setter, client, cleanup := setupTestDockerLinuxSetter(t)
 	defer cleanup()
 
-	err := setter.Set(context.Background(), volumeName)
+	err := setter.Set(context.Background(), volumeName, map[string]string{})
 	assert.NoError(t, err)
 
 	config := &container.Config{

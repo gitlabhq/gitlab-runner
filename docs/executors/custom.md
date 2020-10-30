@@ -434,8 +434,3 @@ NOTE: **Note:**
 We strongly suggest using `SYSTEM_FAILURE_EXIT_CODE` to exit
 instead of a hard coded value since it can change in any release, making
 your binary/script future proof.
-
-## Driver examples
-
-A set of example drivers using the Custom executor can be found in the
-[examples page](custom_examples/index.md).

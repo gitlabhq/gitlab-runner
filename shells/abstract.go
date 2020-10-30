@@ -735,12 +735,19 @@ func (b *AbstractShell) writeArchiveCacheOnFailureScript(w ShellWriter, info com
 }
 
 func (b *AbstractShell) writeCleanupFileVariablesScript(w ShellWriter, info common.ShellScriptInfo) error {
+	skipCleanupFileVariables := true
+
 	for _, variable := range info.Build.GetAllVariables() {
 		if !variable.File {
 			continue
 		}
 
+		skipCleanupFileVariables = false
 		w.RmFile(w.TmpFile(variable.Key))
+	}
+
+	if skipCleanupFileVariables {
+		return common.ErrSkipBuildStage
 	}
 
 	return nil

@@ -172,7 +172,7 @@ func (m *manager) createHostBasedCacheVolume(destination string) error {
 func (m *manager) createCacheVolume(ctx context.Context, destination string) (string, error) {
 	destination, err := m.absolutePath(destination)
 	if err != nil {
-		return "", fmt.Errorf("defining absolute path:%w", err)
+		return "", fmt.Errorf("defining absolute path: %w", err)
 	}
 
 	err = m.managedVolumes.Add(destination)
@@ -192,7 +192,7 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) (st
 	}
 
 	if m.permissionSetter != nil {
-		err = m.permissionSetter.Set(ctx, v.Name)
+		err = m.permissionSetter.Set(ctx, v.Name, m.labeler.Labels(map[string]string{"type": "cache-init"}))
 		if err != nil {
 			return "", fmt.Errorf("set volume permissions: %w", err)
 		}

@@ -197,7 +197,7 @@ func TestAccessLevelSetting(t *testing.T) {
 
 			if testCase.failureExpected {
 				assert.EqualError(t, err, "command error: Given access-level is not valid. "+
-					"Please refer to gitlab-runner register -h for the correct options.")
+					"Refer to gitlab-runner register -h for the correct options.")
 				assert.NotContains(t, output, "Runner registered successfully.")
 
 				return

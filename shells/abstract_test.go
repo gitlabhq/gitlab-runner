@@ -970,6 +970,26 @@ func TestSkipBuildStage(t *testing.T) {
 				},
 			},
 		},
+		common.BuildStageCleanupFileVariables: {
+			"don't skip if file artifact defined": {
+				common.JobResponse{
+					Variables: common.JobVariables{
+						{
+							Key:      "FILE_VARIABLE",
+							Value:    "CONTENTS",
+							Public:   true,
+							Internal: true,
+							File:     true,
+						},
+					},
+				},
+				common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						URL: "https://example.com",
+					},
+				},
+			},
+		},
 	}
 
 	shell := AbstractShell{}
@@ -996,9 +1016,15 @@ func TestSkipBuildStage(t *testing.T) {
 						err,
 					)
 
-					// stages with bare minimum requirements should not be skipped
-					build.JobResponse = tc.JobResponse
-					build.Runner = &tc.Runner
+					// stages with bare minimum requirements should not be skipped.
+					build = &common.Build{
+						JobResponse: tc.JobResponse,
+						Runner:      &tc.Runner,
+					}
+					info = common.ShellScriptInfo{
+						RunnerCommand: "gitlab-runner-helper",
+						Build:         build,
+					}
 					err = shell.writeScript(&BashWriter{}, stage, info)
 					assert.NoError(t, err, "stage %v should not have been skipped", stage)
 				})

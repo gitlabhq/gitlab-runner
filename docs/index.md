@@ -5,31 +5,141 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
 ---
 
-# GitLab Runner Docs
+# GitLab Runner
 
-GitLab Runner is the open source project that is used to run your jobs and
-send the results back to GitLab. It is used in conjunction with [GitLab CI/CD](https://about.gitlab.com/stages-devops-lifecycle/continuous-integration/),
-the open-source continuous integration service included with GitLab that
-coordinates the jobs.
+GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
-## Requirements
+You can choose to [**install**](install/index.md) the GitLab Runner application
+on infrastructure that you own or manage. If you do, you should install
+GitLab Runner on a machine that's separate from the one that hosts the GitLab instance.
 
-GitLab Runner is written in [Go](https://golang.org) and can be run as a single binary. No
-language specific requirements are needed.
+GitLab Runner is open-source and written in [Go](https://golang.org). It can be run
+as a single binary; no language-specific requirements are needed. 
 
-It is designed to run on the GNU/Linux, macOS, and Windows operating systems.
-Other operating systems might work as long as you can compile a Go
+You can install GitLab Runner on several different supported operating systems.
+Other operating systems may also work, as long as you can compile a Go
 binary on them.
 
-If you want to [use Docker](executors/docker.md), install the latest version.
-GitLab Runner requires a minimum of Docker `v1.13.0`.
+GitLab Runner can also run inside a Docker container or be deployed into a Kubernetes cluster.
+
+View some [best practices](best_practice/index.md) for how to use and administer GitLab Runner.
+
+## GitLab Runner versions
+
+GitLab Runner should be the same version as GitLab. Older runners may still work
+with newer GitLab versions, and vice versa. However, features may be not available or work properly
+if a version difference exists.
+
+Backward compatibility is guaranteed between minor version updates. However, sometimes minor
+version updates of GitLab can introduce new features that require GitLab Runner to be on the same minor
+version.
+
+## Runner registration
+
+After you install the application, you [**register**](register/index.md)
+individual runners. Runners are the agents that run the CI/CD jobs that come from GitLab.
+
+When you register a runner, you are setting up communication between your
+GitLab instance and the machine where GitLab Runner is installed.
+
+Runners usually process jobs on the same machine where you installed GitLab Runner.
+However, you can also have a runner process jobs in a container,
+in a Kubernetes cluster, or in auto-scaled instances in the cloud.
+
+### Executors
+
+When you register a runner, you must choose an executor.
+
+An [**executor**](executors/README.md) determines the environment each job runs in.
+
+For example:
+
+- If you want your CI/CD job to run PowerShell commands, you might install GitLab
+  Runner on a Windows server and then register a runner that uses the shell executor.
+- If you want your CI/CD job to run commands in a custom Docker container,
+  you might install GitLab Runner on a Linux server and register a runner that uses
+  the Docker executor.
+
+These are only a few of the possible configurations. You can install GitLab Runner
+on a virtual machine and have it use another virtual machine as an executor.
+
+When you install GitLab Runner in a Docker container and choose the
+[Docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html)
+to run your jobs, it's sometimes referred to as a "Docker-in-Docker" configuration.
+
+### Who has access to runners in the GitLab UI
+
+Before you register a runner, you should determine if everyone in GitLab
+should have access to it, or if you want to limit it to a specific GitLab group or project.
+
+There are three types of runners, based on who you want to have access:
+
+- [Shared runners](https://docs.gitlab.com/ee/ci/runners/README.html#shared-runners) are for use by all projects
+- [Group runners](https://docs.gitlab.com/ee/ci/runners/README.html#group-runners) are for all projects and subgroups in a group
+- [Specific runners](https://docs.gitlab.com/ee/ci/runners/README.html#specific-runners) are for individual projects
+
+When you register a runner, you specify a token for the GitLab instance, group, or project.
+This is how the runner knows which projects it's available for.
+
+### Tags
+
+When you register a runner, you can add [**tags**](https://docs.gitlab.com/ee/ci/yaml/README.html#tags) to it.
+
+When a CI/CD job runs, it knows which runner to use by looking at the assigned tags.
+
+For example, if a runner has the `ruby` tag, you would add this code to
+your project's `.gitlab-ci.yml` file:
+
+```yaml
+job:
+  tags:
+    - ruby
+```
+
+When the job runs, it uses the runner with the `ruby` tag.
+
+## Configuring runners
+
+You can [**configure**](configuration/advanced-configuration.md)
+the runner by editing the `config.toml` file. This is a file that is installed during the runner installation process.
+
+In this file you can edit settings for a specific runner, or for all runners.
+
+You can specify settings like logging and cache. You can set concurrency,
+memory, CPU limits, and more.
+
+## Monitoring runners
+
+You can use Prometheus to [**monitor**](monitoring/README.md) your runners.
+You can view things like the number of currently-running jobs and how
+much CPU your runners are using.
+
+## Use a runner to run your job
+
+After a runner is configured and available for your project, your
+[CI/CD](https://docs.gitlab.com/ee/ci/README.html) jobs can use the runner.
+
+Specify the name of the runner or its tags in your
+[`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html) file.
+Then, when you commit to your repository, the pipeline runs, and
+the runner's executor processes the commands.
+
+## Runners on GitLab.com
+
+If you use GitLab.com, GitLab [manages runners for you](https://docs.gitlab.com/ee/user/gitlab_com/index.html#shared-runners).
+These runners are enabled for all projects, though
+[you can disable them](https://docs.gitlab.com/ee/ci/runners/README.html#disable-shared-runners).
+
+If you don't want to use runners managed by GitLab, you can install GitLab Runner and
+register your own runners on GitLab.com.
 
 ## Features
 
-- Allows:
-  - Running multiple jobs concurrently.
-  - Using multiple tokens with multiple servers (even per-project).
-  - Limiting number of concurrent jobs per-token.
+GitLab Runner has the following features.
+
+- Run multiple jobs concurrently.
+- Use multiple tokens with multiple servers (even per-project).
+- Limit the number of concurrent jobs per-token.
 - Jobs can be run:
   - Locally.
   - Using Docker containers.
@@ -47,105 +157,19 @@ GitLab Runner requires a minimum of Docker `v1.13.0`.
 - Embedded Prometheus metrics HTTP server.
 - Referee workers to monitor and pass Prometheus metrics and other job-specific data to GitLab.
 
-## Compatibility with GitLab versions
-
-The GitLab Runner version should be in sync with the GitLab version. Older runners may still work
-with newer GitLab versions (and vice versa). However, features may be not available or work properly
-if there's a version difference.
-
-Backward compatibility is guaranteed between minor version updates. However, be aware that minor
-version updates of GitLab can introduce new features that require the Runner to be on the same minor
-version.
-
-## Install GitLab Runner
-
-GitLab Runner can be [installed](install/index.md) and used on GNU/Linux, macOS, FreeBSD, and Windows.
-You can install it using Docker, download the binary manually or use the
-repository for rpm/deb packages that GitLab offers. Below you can find
-information on the different installation methods:
-
-- [Install using GitLab's repository for Debian/Ubuntu/CentOS/RedHat (preferred)](install/linux-repository.md).
-- [Install on GNU/Linux manually (advanced)](install/linux-manually.md).
-- [Install on macOS](install/osx.md).
-- [Install on Windows](install/windows.md).
-- [Install as a Docker service](install/docker.md).
-- [Install in autoscaling mode using Docker machine](executors/docker_machine.md).
-- [Install on FreeBSD](install/freebsd.md).
-- [Install on Kubernetes](install/kubernetes.md).
-- [Install the nightly binary manually (development)](install/bleeding-edge.md).
-
-## Register GitLab Runner
-
-Once GitLab Runner is installed, you need to register it with GitLab.
-
-Learn how to [register a GitLab Runner](register/index.md).
-
-## Using GitLab Runner
-
-- See the [commands documentation](commands/README.md).
-- See [best practice documentation](best_practice/index.md).
-
-## Selecting the executor
-
-GitLab Runner implements a number of [executors](executors/README.md) that can be used to run your
-builds in different scenarios. If you are not sure what to select, read the
-[I am not sure](executors/README.md#i-am-not-sure) section.
-Visit the [compatibility chart](executors/README.md#compatibility-chart) to find
-out what features each executor supports and what not.
-
-To jump into the specific documentation of each executor, see:
-
-- [Shell](executors/shell.md).
-- [Docker](executors/docker.md).
-- [Docker Machine and Docker Machine SSH (autoscaling)](executors/docker_machine.md).
-- [Parallels](executors/parallels.md).
-- [VirtualBox](executors/virtualbox.md).
-- [SSH](executors/ssh.md).
-- [Kubernetes](executors/kubernetes.md).
-
-No development of new executors is planned and we are not accepting
-contributions for new ones. Please check
-[CONTRIBUTION.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CONTRIBUTING.md#contributing-a-new-executors)
-for details.
-
-## Configuring GitLab Runner
-
-See information on [configuring GitLab Runner](configuration/index.md), and:
-
-- [Advanced configuration options](configuration/advanced-configuration.md): Learn how to use the [TOML](https://github.com/toml-lang/toml) configuration file that GitLab Runner uses.
-- [Use self-signed certificates](configuration/tls-self-signed.md): Configure certificates that are used to verify TLS peer when connecting to the GitLab server.
-- [Autoscaling using Docker machine](configuration/autoscale.md): Execute jobs on machines that are created on demand using Docker machine.
-- [Autoscaling GitLab Runner on AWS](configuration/runner_autoscale_aws/index.md)
-- [The init system of GitLab Runner](configuration/init.md): Learn how the Runner installs its init service files based on your operating system.
-- [Supported shells](shells/index.md): Learn what shell script generators are supported that allow to execute builds on different systems.
-- [Security considerations](security/index.md): Be aware of potential security implications when running your jobs with GitLab Runner.
-- [Runner monitoring](monitoring/README.md): Learn how to monitor the Runner's behavior.
-- [Cleanup the Docker images automatically](https://gitlab.com/gitlab-org/gitlab-runner-docker-cleanup): A simple Docker application that automatically garbage collects the GitLab Runner caches and images when running low on disk space.
-- [Configure GitLab Runner to run behind a proxy](configuration/proxy.md): Learn how to set up a Linux proxy and configure GitLab Runner. Especially useful for the Docker executor.
-- [Feature Flags](configuration/feature-flags.md): Learn how to use feature flags to get access to features in beta stage or to enable breaking changes before the full deprecation and replacement is handled.
-- [Configure Session Server](configuration/advanced-configuration.md#the-session_server-section): Learn how to configure a session server for interacting with jobs the Runner is responsible for.
-
 ## Troubleshooting
 
-Read the [FAQ](faq/README.md) for troubleshooting common issues.
-
-## Release process
-
-The description of release process of the GitLab Runner project can be
-found in
-[PROCESS.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/PROCESS.md)
+Learn how to [troubleshoot](faq/README.md) common issues.
 
 ## Contributing
 
-Contributions are welcome, see [`CONTRIBUTING.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CONTRIBUTING.md) for more details.
+Contributions are welcome. See [`CONTRIBUTING.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CONTRIBUTING.md)
+and the [development documentation](development/README.md) for details.
 
-## Development
-
-See the [development documentation](development/README.md) to hack on GitLab
-Runner.
-
-If you're a reviewer of GitLab Runner project, then please take a moment to read the
+If you're a reviewer of GitLab Runner project, take a moment to read the
 [Reviewing GitLab Runner](development/reviewing-gitlab-runner.md) document.
+
+You can also review [the release process for the GitLab Runner project](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/PROCESS.md).
 
 ## Changelog
 
@@ -153,4 +177,4 @@ See the [CHANGELOG](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CHAN
 
 ## License
 
-This code is distributed under the MIT license, see the [LICENSE](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/LICENSE) file.
+This code is distributed under the MIT license. View the [LICENSE](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/LICENSE) file.
