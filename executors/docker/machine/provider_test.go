@@ -332,80 +332,122 @@ func TestMachineReuse(t *testing.T) {
 	// Create a machine with an idle state. Then try to create additional ones.
 	// while the creation of the all subsequent ones are blocked use the first one,
 	// making sure that the whole process works
-	testConcurrentCreates := func(n int) {
-		machineGrowthConfig := &common.RunnerConfig{
-			RunnerSettings: common.RunnerSettings{
-				Machine: &common.DockerMachine{
-					MachineName:   "growth-temp-%s",
-					MaxGrowthRate: n,
-					IdleTime:      5,
-				},
+	machineGrowthConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:   "growth-temp-%s",
+				MaxGrowthRate: 1,
+				IdleTime:      5,
 			},
-		}
+		},
+	}
 
-		p := newMachineProvider("docker+machine", "docker")
+	p := newMachineProvider("docker+machine", "docker")
 
-		machineMock := &docker.MockMachine{}
-		defer machineMock.AssertExpectations(t)
-		p.machine = machineMock
+	machineMock := &docker.MockMachine{}
+	defer machineMock.AssertExpectations(t)
+	p.machine = machineMock
 
-		var blockCreatingMachineWg sync.WaitGroup
-		blockCreatingMachineWg.Add(n)
+	var blockCreatingMachineWg sync.WaitGroup
+	blockCreatingMachineWg.Add(1)
 
-		var createdMachineDetails *machineDetails
+	var createdMachineDetails *machineDetails
 
-		machineMock.On("Create", mock.Anything, mock.Anything).
-			Return(nil).
-			Once()
+	machineMock.On("Create", mock.Anything, mock.Anything).
+		Return(nil).
+		Once()
 
-		machineMock.On("Create", mock.Anything, mock.Anything).
-			Run(func(args mock.Arguments) {
-				// Free the previously created machine after the useMachine call has already happened.
-				// The useMachine call tries to create a new machine at first because a free one doesn't exist
-				// however it's blocked by blockCreatingMachineWg, thus it's waiting for us to release a new one.
-				// If useMachine never returns because it can't find a machine then that's a bug.
+	machineMock.On("Create", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			// Free the previously created machine after the useMachine call has already happened.
+			// The useMachine call tries to create a new machine at first because a free one doesn't exist
+			// however it's blocked by blockCreatingMachineWg, thus it's waiting for us to release a new one.
+			// If useMachine never returns because it can't find a machine then that's a bug.
+			time.AfterFunc(time.Second, func() {
 				p.Release(machineGrowthConfig, createdMachineDetails)
+			})
 
-				blockCreatingMachineWg.Wait()
-			}).
-			Return(nil)
+			blockCreatingMachineWg.Wait()
+		}).
+		Return(nil).
+		Once()
 
-		machineMock.On("CanConnect", mock.Anything, mock.Anything).
-			Return(true)
+	machineMock.On("CanConnect", mock.Anything, mock.Anything).
+		Return(true).
+		Once()
 
-		createdMachineDetails, errCh := p.create(machineGrowthConfig, machineStateUsed)
-		require.NotNil(t, createdMachineDetails)
-		require.NoError(t, <-errCh)
+	createdMachineDetails, errCh := p.create(machineGrowthConfig, machineStateUsed)
+	require.NotNil(t, createdMachineDetails)
+	require.NoError(t, <-errCh)
 
-		machineMock.On("List").Return([]string{createdMachineDetails.Name}, nil)
+	machineMock.On("List").Return([]string{createdMachineDetails.Name}, nil)
 
-		for i := 0; i < n; i++ {
+	usedMachineDetails, err := p.useMachine(machineGrowthConfig)
+	require.NoError(t, err)
+	require.Equal(t, createdMachineDetails, usedMachineDetails)
+}
+
+func TestMachineReuseWithContention(t *testing.T) {
+	// Create machines while trying to reuse them with a contention.
+	// Make sure that there are no deadlocks, data races and that machines
+	// are provided to the caller.
+	machineGrowthConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:   "growth-temp-%s",
+				MaxGrowthRate: 10,
+				IdleTime:      5,
+			},
+		},
+	}
+
+	p := newMachineProvider("docker+machine", "docker")
+
+	machineMock := &docker.MockMachine{}
+	defer machineMock.AssertExpectations(t)
+	p.machine = machineMock
+
+	var listLock sync.Mutex
+	list := make([]string, 0)
+
+	listCall := machineMock.On("List").Return([]string{}, nil)
+	machineMock.On("Create", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			name := args.String(1)
+
+			listLock.Lock()
+			list = append(list, name)
+			listCopy := make([]string, len(list))
+			copy(listCopy, list)
+			listCall.Return(listCopy, nil).Maybe()
+			listLock.Unlock()
+		}).
+		Return(nil)
+
+	machineMock.On("CanConnect", mock.Anything, mock.Anything).
+		Return(true).
+		Maybe()
+
+	const N = 500
+	var wg sync.WaitGroup
+	wg.Add(N)
+
+	startCh := make(chan struct{})
+	for i := 0; i < N; i++ {
+		go func() {
+			defer wg.Done()
+			<-startCh
+
 			usedMachineDetails, err := p.useMachine(machineGrowthConfig)
-			require.Equal(t, createdMachineDetails, usedMachineDetails)
 			require.NoError(t, err)
-		}
-
-		for i := 0; i < n; i++ {
-			blockCreatingMachineWg.Done()
-		}
+			require.NotNil(t, usedMachineDetails)
+			p.Release(machineGrowthConfig, usedMachineDetails)
+		}()
 	}
 
-	tests := map[string]struct {
-		concurrency int
-	}{
-		"1 additional machine": {
-			concurrency: 1,
-		},
-		"500 additional machines": {
-			concurrency: 500,
-		},
-	}
-
-	for tn, test := range tests {
-		t.Run(tn, func(t *testing.T) {
-			testConcurrentCreates(test.concurrency)
-		})
-	}
+	close(startCh)
+	wg.Wait()
+	assert.NotEmpty(t, list)
 }
 
 func TestMachineTestRetry(t *testing.T) {

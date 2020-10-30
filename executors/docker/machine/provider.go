@@ -32,6 +32,15 @@ type machineProvider struct {
 }
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
+	details := m.ensureDetails(name)
+	if acquire {
+		details = m.tryAcquireMachineDetails(details)
+	}
+
+	return details
+}
+
+func (m *machineProvider) ensureDetails(name string) *machineDetails {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -47,13 +56,6 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 			State:     machineStateIdle,
 		}
 		m.details[name] = details
-	}
-
-	if acquire {
-		if details.isUsed() {
-			return nil
-		}
-		details.State = machineStateAcquired
 	}
 
 	return details
@@ -120,17 +122,19 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 			details.Used = time.Now()
 			m.lock.Unlock()
 			creationTime := time.Since(started)
+			m.lock.RLock()
 			logrus.WithField("duration", creationTime).
 				WithField("name", details.Name).
 				WithField("now", time.Now()).
 				WithField("retries", details.RetryCount).
 				Infoln("Machine created")
+			m.lock.RUnlock()
 			m.totalActions.WithLabelValues("created").Inc()
 			m.creationHistogram.Observe(creationTime.Seconds())
 
 			// Signal that a new machine is available. When there's contention, there's no guarantee between the
-			// ordering of reading from errCh and the availability signal.
-			coordinator.signalMachineAvailable()
+			// ordering of reading from errCh and the availability check.
+			coordinator.addAvailableMachine()
 		}
 		errCh <- err
 	})
@@ -159,28 +163,12 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 	return nil
 }
 
-func (m *machineProvider) prepareCreatedMachine(newMachineDetails *machineDetails, err error) (*machineDetails, error) {
-	m.lock.Lock()
-	if err == nil && newMachineDetails.canBeUsed() {
-		newMachineDetails.State = machineStateAcquired
-		m.lock.Unlock()
-	} else {
-		m.lock.Unlock()
-		newMachineDetails = nil
-		if err == nil {
-			// We're unlucky; the machine was snapped up by another job.
-			err = errors.New("unable to create new machine")
-		}
-	}
-
-	return newMachineDetails, err
-}
-
 func (m *machineProvider) findFreeExistingMachine(config *common.RunnerConfig) (*machineDetails, error) {
 	machines, err := m.loadMachines(config)
 	if err != nil {
 		return nil, err
 	}
+
 	return m.findFreeMachine(true, machines...), nil
 }
 
@@ -190,25 +178,65 @@ func (m *machineProvider) useMachine(config *common.RunnerConfig) (*machineDetai
 		return details, err
 	}
 
+	return m.createAndAcquireMachine(config)
+}
+
+func (m *machineProvider) createAndAcquireMachine(config *common.RunnerConfig) (*machineDetails, error) {
 	coordinator, err := m.runnerMachinesCoordinator(config)
 	if err != nil {
 		return nil, err
 	}
 
-	newMachineDetails, errCh := m.create(config, machineStateIdle)
-
+	newDetails, errCh := m.create(config, machineStateIdle)
 	// Use either a free machine, or the created machine; whichever comes first. There's no guarantee that the created
 	// machine can be used by us because between the time the machine is created, and the acquisition of the machine,
 	// another goroutine may have found it via findFreeMachine and acquired it.
-	for details == nil {
+	var details *machineDetails
+	for details == nil && err == nil {
 		select {
 		case err = <-errCh:
-			return m.prepareCreatedMachine(newMachineDetails, err)
+			if err != nil {
+				return nil, err
+			}
+
+			details = m.tryAcquireMachineDetails(newDetails)
 		case <-coordinator.availableMachineSignal():
-			details, err = m.findFreeExistingMachine(config)
+			// Even though the signal is fired and we are *almost* sure that
+			// there's a machine available, let's use the getAvailableMachine
+			// method so that the internal counter is synchonized with what
+			// we are actually doing and so that we can be sure that no other
+			// goroutine that didn't accept the signal and instead used the ticker
+			// hasn't already snatched a machine
+			details, err = m.tryGetFreeExistingMachineFromCoordinator(config, coordinator)
+		case <-time.After(time.Second):
+			details, err = m.tryGetFreeExistingMachineFromCoordinator(config, coordinator)
 		}
 	}
+
 	return details, err
+}
+
+func (m *machineProvider) tryGetFreeExistingMachineFromCoordinator(
+	config *common.RunnerConfig,
+	coordinator *runnerMachinesCoordinator,
+) (*machineDetails, error) {
+	if coordinator.getAvailableMachine() {
+		return m.findFreeExistingMachine(config)
+	}
+
+	return nil, nil
+}
+
+func (m *machineProvider) tryAcquireMachineDetails(details *machineDetails) *machineDetails {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if details.isUsed() {
+		return nil
+	}
+
+	details.State = machineStateAcquired
+	return details
 }
 
 func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
@@ -510,10 +538,12 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 		return
 	}
 
+	m.lock.Lock()
 	// Mark last used time when is Used
 	if details.State == machineStateUsed {
 		details.Used = time.Now()
 	}
+	m.lock.Unlock()
 
 	// Remove machine if we already used it
 	if config != nil && config.Machine != nil &&
@@ -523,7 +553,9 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 			return
 		}
 	}
+	m.lock.Lock()
 	details.State = machineStateIdle
+	m.lock.Unlock()
 
 	// Signal pending builds that a new machine is available.
 	if err := m.signalRelease(config); err != nil {
@@ -536,9 +568,11 @@ func (m *machineProvider) signalRelease(config *common.RunnerConfig) error {
 	if err != nil && err != errNoConfig {
 		return err
 	}
-	if err != errNoConfig {
-		coordinator.signalMachineAvailable()
+
+	if err != errNoConfig && coordinator != nil {
+		coordinator.addAvailableMachine()
 	}
+
 	return nil
 }
 

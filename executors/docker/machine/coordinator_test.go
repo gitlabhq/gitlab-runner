@@ -73,7 +73,7 @@ func TestRunnerMachinesCoordinator_WaitForGrowthCapacity(t *testing.T) {
 func TestRunnerMachinesCoordinator_SignalMachineAvailable(t *testing.T) {
 	t.Run("does not block", func(t *testing.T) {
 		coordinator := newRunnerMachinesCoordinator()
-		coordinator.signalMachineAvailable()
+		coordinator.addAvailableMachine()
 	})
 
 	t.Run("frees a waiting machine", func(t *testing.T) {
@@ -82,11 +82,13 @@ func TestRunnerMachinesCoordinator_SignalMachineAvailable(t *testing.T) {
 
 		go func() {
 			readyToReceiveSignal <- struct{}{}
-			time.Sleep(1 * time.Second)
-			coordinator.signalMachineAvailable()
+			time.Sleep(time.Second)
+			coordinator.addAvailableMachine()
 		}()
 
 		<-readyToReceiveSignal
-		<-coordinator.availableMachineSignal()
+		for !coordinator.getAvailableMachine() {
+			time.Sleep(time.Second)
+		}
 	})
 }
