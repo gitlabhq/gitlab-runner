@@ -235,7 +235,7 @@ func (e *executor) getCIJobServicesEnv() string {
 
 	servicesSerialized, err := json.Marshal(services)
 	if err != nil {
-		e.Warningln("Unable to create CI_JOB_SERVICES json:", err)
+		e.Warningln("Unable to serialize CI_JOB_SERVICES json:", err)
 	}
 
 	return fmt.Sprintf(
