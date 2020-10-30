@@ -321,6 +321,7 @@ following options:
 |------------|---------|----------|-------------|
 | name       | string  | yes      | The name of the volume |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | host_path  | string  | no       | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
 | read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
 
@@ -335,6 +336,7 @@ can be configured with following options:
 | name       | string  | yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 
 ### ConfigMap volumes
 
@@ -346,6 +348,7 @@ that is defined in Kubernetes cluster and mount it inside of the container.
 | name       | string  | yes      | The name of the volume and at the same time the name of _configMap_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _configMap_ volume, each key from selected _configMap_ will be changed into a file
@@ -369,6 +372,7 @@ a _secret_ that is defined in Kubernetes cluster and mount it inside of the cont
 | name       | string  | yes      | The name of the volume and at the same time the name of _secret_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _secret_ volume each key from selected _secret_ will be changed into a file
@@ -390,6 +394,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 |------------|---------|----------|-------------|
 | name       | string  | yes      | The name of the volume |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | medium     | String  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
 
 ## Using Security Context
