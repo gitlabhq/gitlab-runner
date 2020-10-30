@@ -1,3 +1,10 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+comments: false
+---
+
 # Registering runners
 
 Registering a runner is the process that binds the runner with a GitLab instance.
@@ -18,7 +25,7 @@ Before registering a runner, you need to first:
 
 NOTE: **Note:**
 When registering a GitLab Runner on GitLab.com, the `gitlab-ci coordinator URL`
-is `https://gitlab.com`. 
+is `https://gitlab.com`.
 
 ## Docker
 
