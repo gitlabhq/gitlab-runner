@@ -586,6 +586,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -594,6 +595,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -602,6 +604,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -610,6 +613,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -618,6 +622,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 		})
 	}
 
