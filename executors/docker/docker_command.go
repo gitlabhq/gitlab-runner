@@ -10,9 +10,12 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/user"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 type commandExecutor struct {
@@ -134,7 +137,108 @@ func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) 
 		return nil, err
 	}
 
+	err = s.changeFilesOwnership()
+	if err != nil {
+		return nil, err
+	}
+
 	return s.buildContainer, nil
+}
+
+func (s *commandExecutor) changeFilesOwnership() error {
+	if !s.isUmaskDisabled() {
+		return nil
+	}
+
+	dockerExec := exec.NewDocker(s.client, s.waiter, s.Build.Log())
+	inspect := user.NewInspect(s.client, dockerExec)
+	imageSHA := s.buildContainer.Image
+	imageName := s.Build.Image.Name
+
+	log := s.Build.Log().WithFields(logrus.Fields{
+		"imageSHA":  imageSHA,
+		"imageName": imageName,
+	})
+	log.Debug("Checking if image runs with root user")
+
+	usesRoot, err := inspect.IsRoot(s.Context, imageSHA)
+	if err != nil {
+		return fmt.Errorf("checking if image %q runs as root: %w", imageName, err)
+	}
+
+	if usesRoot {
+		log.Debug("Image uses root user")
+		return nil
+	}
+
+	log.Debug("Image doesn't use root user")
+
+	containerLog := log.WithField("container", s.buildContainer.ID)
+	containerLog.Debug("Getting the UID of the container")
+
+	uid, err := inspect.UID(s.Context, s.buildContainer.ID)
+	if err != nil {
+		return fmt.Errorf("checking %q image's UID: %w", imageSHA, err)
+	}
+
+	containerLog.Debugf("Container UID=%d", uid)
+	containerLog.Debug("Getting the GID of the container")
+
+	gid, err := inspect.UID(s.Context, s.buildContainer.ID)
+	if err != nil {
+		return fmt.Errorf("checking %q image's GID: %w", imageSHA, err)
+	}
+
+	containerLog.Debugf("Container GID=%d", gid)
+
+	if uid == 0 {
+		return nil
+	}
+
+	return s.executeChown(dockerExec, uid, gid)
+}
+
+func (s *commandExecutor) executeChown(dockerExec exec.Docker, uid int, gid int) error {
+	c, err := s.requestNewPredefinedContainer()
+	if err != nil {
+		return fmt.Errorf("requesting new predefined container: %w", err)
+	}
+
+	err = s.executeChownOnDir(c, dockerExec, uid, gid, s.Build.FullProjectDir())
+	if err != nil {
+		return err
+	}
+
+	err = s.executeChownOnDir(c, dockerExec, uid, gid, s.Build.TmpProjectDir())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *commandExecutor) executeChownOnDir(
+	c *types.ContainerJSON,
+	dockerExec exec.Docker,
+	uid int,
+	gid int,
+	dir string,
+) error {
+	s.Println(fmt.Sprintf("Changing ownership of files at %q to %d:%d", dir, uid, gid))
+
+	input := bytes.NewBufferString(fmt.Sprintf("chown -RP -- %d:%d %q", uid, gid, dir))
+	output := new(bytes.Buffer)
+
+	err := dockerExec.Exec(s.Context, c.ID, input, output)
+
+	log := s.Build.Log().WithField("updatedDir", dir)
+	log.WithField("output", output.String()).Debug("Changing ownership of files")
+
+	if err != nil {
+		log.WithError(err).Error("Failed to change ownership of files")
+	}
+
+	return nil
 }
 
 func (s *commandExecutor) GetMetricsSelector() string {
