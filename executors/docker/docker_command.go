@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/docker/docker/api/types"
+	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -52,7 +53,25 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	if err != nil {
 		return err
 	}
+
+	if s.isUmaskDisabled() {
+		s.Println("Not using umask - FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR is set!")
+	}
+
 	return nil
+}
+
+func (s *commandExecutor) isUmaskDisabled() bool {
+	// Not usable with docker-windows executor
+	if s.AbstractExecutor.ExecutorOptions.Metadata[metadataOSType] == osTypeWindows {
+		return false
+	}
+
+	if !s.Build.IsFeatureFlagOn(featureflags.DisableUmaskForDockerExecutor) {
+		return false
+	}
+
+	return true
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
@@ -108,12 +127,20 @@ func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON,
 		Name: prebuildImage.ID,
 	}
 
-	containerJSON, err := s.createContainer("predefined", buildImage, s.helperImageInfo.Cmd, []string{prebuildImage.ID})
+	containerJSON, err := s.createContainer("predefined", buildImage, s.getHelperImageCmd(), []string{prebuildImage.ID})
 	if err != nil {
 		return nil, err
 	}
 
 	return containerJSON, err
+}
+
+func (s *commandExecutor) getHelperImageCmd() []string {
+	if s.isUmaskDisabled() {
+		return []string{"/bin/bash"}
+	}
+
+	return s.helperImageInfo.Cmd
 }
 
 func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
