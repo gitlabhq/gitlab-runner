@@ -1518,9 +1518,23 @@ func TestPrepare(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Host: "test-server",
 						Services: []common.Service{
-							{Name: "test-service-k8s"},
+							{Name: "test-service-k8s", Alias: "alias"},
 							{Name: "test-service-k8s2"},
 							{Name: ""},
+							{
+								Name:    "test-service-k8s3",
+								Command: []string{"executable", "param1", "param2"},
+							},
+							{
+								Name:       "test-service-k8s4",
+								Entrypoint: []string{"executable", "param3", "param4"},
+							},
+							{
+								Name:       "test-service-k8s5",
+								Alias:      "alias5",
+								Command:    []string{"executable", "param1", "param2"},
+								Entrypoint: []string{"executable", "param3", "param4"},
+							},
 						},
 					},
 				},
@@ -1537,6 +1551,7 @@ func TestPrepare(t *testing.T) {
 					Services: common.Services{
 						{
 							Name:       "test-service",
+							Alias:      "test-alias",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
 						},
@@ -1555,13 +1570,29 @@ func TestPrepare(t *testing.T) {
 					},
 					Services: common.Services{
 						{
-							Name: "test-service-k8s",
+							Name:  "test-service-k8s",
+							Alias: "alias",
 						},
 						{
 							Name: "test-service-k8s2",
 						},
 						{
+							Name:    "test-service-k8s3",
+							Command: []string{"executable", "param1", "param2"},
+						},
+						{
+							Name:       "test-service-k8s4",
+							Entrypoint: []string{"executable", "param3", "param4"},
+						},
+						{
+							Name:       "test-service-k8s5",
+							Alias:      "alias5",
+							Command:    []string{"executable", "param1", "param2"},
+							Entrypoint: []string{"executable", "param3", "param4"},
+						},
+						{
 							Name:       "test-service",
+							Alias:      "test-alias",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
 						},

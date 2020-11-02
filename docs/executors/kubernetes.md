@@ -446,11 +446,11 @@ check_interval = 30
 
 ## Using services
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470) in GitLab Runner 12.5.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470) in GitLab Runner 12.5.
+> - [Introduced support for `alias`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4829) in GitLab Runner 12.9
+> - [Introduced support for `command` and `entrypoint`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173) in GitLab Runner 13.6.
 
 Define a list of [services](https://docs.gitlab.com/ee/ci/services/).
-
-Service aliases are supported since [GitLab Runner 12.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4829).
 
 ```toml
 concurrent = 1
@@ -465,8 +465,10 @@ check_interval = 30
         name = "postgres:12-alpine"
         alias = "db1"
       [[runners.kubernetes.services]]
-        name = "percona:latest"
-        alias = "db2"
+        name = "registry.example.com/svc1"
+        alias = "svc1"
+        entrypoint = ["entrypoint.sh"]
+        command = ["executable","param1","param2"]
 ```
 
 ## Using Affinity

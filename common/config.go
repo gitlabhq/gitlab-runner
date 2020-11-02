@@ -363,15 +363,20 @@ type NodeSelectorRequirement struct {
 	Values   []string `toml:"values,omitempty" json:"values"`
 }
 
+//nolint:lll
 type Service struct {
-	Name  string `toml:"name" long:"name" description:"The image path for the service"`
-	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+	Name       string   `toml:"name" long:"name" description:"The image path for the service"`
+	Alias      string   `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+	Command    []string `toml:"command" long:"command" description:"Command or script that should be used as the container’s command. Syntax is similar to https://docs.docker.com/engine/reference/builder/#cmd"`
+	Entrypoint []string `toml:"entrypoint" long:"entrypoint" description:"Command or script that should be executed as the container’s entrypoint. syntax is similar to https://docs.docker.com/engine/reference/builder/#entrypoint"`
 }
 
 func (s *Service) ToImageDefinition() Image {
 	return Image{
-		Name:  s.Name,
-		Alias: s.Alias,
+		Name:       s.Name,
+		Alias:      s.Alias,
+		Command:    s.Command,
+		Entrypoint: s.Entrypoint,
 	}
 }
 
