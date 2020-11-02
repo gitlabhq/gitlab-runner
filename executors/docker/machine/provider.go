@@ -17,6 +17,7 @@ type machineProvider struct {
 	name        string
 	machine     docker.Machine
 	details     machinesDetails
+	runners     runnersDetails
 	lock        sync.RWMutex
 	acquireLock sync.Mutex
 	// provider stores a real executor that is used to start run the builds
@@ -31,6 +32,15 @@ type machineProvider struct {
 }
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
+	details := m.ensureDetails(name)
+	if acquire {
+		details = m.tryAcquireMachineDetails(details)
+	}
+
+	return details
+}
+
+func (m *machineProvider) ensureDetails(name string) *machineDetails {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -48,27 +58,47 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 		m.details[name] = details
 	}
 
-	if acquire {
-		if details.isUsed() {
-			return nil
-		}
-		details.State = machineStateAcquired
+	return details
+}
+
+var errNoConfig = errors.New("no runner config specified")
+
+func (m *machineProvider) runnerMachinesCoordinator(config *common.RunnerConfig) (*runnerMachinesCoordinator, error) {
+	if config == nil {
+		return nil, errNoConfig
 	}
 
-	return details
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	details, ok := m.runners[config.GetToken()]
+	if !ok {
+		details = newRunnerMachinesCoordinator()
+		m.runners[config.GetToken()] = details
+	}
+
+	return details, nil
 }
 
 func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
 	name := newMachineName(config)
 	details := m.machineDetails(name, true)
+	m.lock.Lock()
 	details.State = machineStateCreating
 	details.UsedCount = 0
 	details.RetryCount = 0
 	details.LastSeen = time.Now()
+	m.lock.Unlock()
 	errCh := make(chan error, 1)
 
-	// Create machine asynchronously
-	go func() {
+	// Create machine with the required configuration asynchronously
+	coordinator, err := m.runnerMachinesCoordinator(config)
+	if err != nil {
+		errCh <- err
+		return nil, errCh
+	}
+
+	go coordinator.waitForGrowthCapacity(config.Machine.MaxGrowthRate, func() {
 		started := time.Now()
 		err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 		for i := 0; i < 3 && err != nil; i++ {
@@ -87,19 +117,27 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 				Errorln("Machine creation failed")
 			_ = m.remove(details.Name, "Failed to create")
 		} else {
+			m.lock.Lock()
 			details.State = state
 			details.Used = time.Now()
+			m.lock.Unlock()
 			creationTime := time.Since(started)
+			m.lock.RLock()
 			logrus.WithField("duration", creationTime).
 				WithField("name", details.Name).
 				WithField("now", time.Now()).
 				WithField("retries", details.RetryCount).
 				Infoln("Machine created")
+			m.lock.RUnlock()
 			m.totalActions.WithLabelValues("created").Inc()
 			m.creationHistogram.Observe(creationTime.Seconds())
+
+			// Signal that a new machine is available. When there's contention, there's no guarantee between the
+			// ordering of reading from errCh and the availability check.
+			coordinator.addAvailableMachine()
 		}
 		errCh <- err
-	}()
+	})
 
 	return details, errCh
 }
@@ -125,18 +163,80 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 	return nil
 }
 
-func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
+func (m *machineProvider) findFreeExistingMachine(config *common.RunnerConfig) (*machineDetails, error) {
 	machines, err := m.loadMachines(config)
 	if err != nil {
-		return
+		return nil, err
 	}
-	details = m.findFreeMachine(true, machines...)
-	if details == nil {
-		var errCh chan error
-		details, errCh = m.create(config, machineStateAcquired)
-		err = <-errCh
+
+	return m.findFreeMachine(true, machines...), nil
+}
+
+func (m *machineProvider) useMachine(config *common.RunnerConfig) (*machineDetails, error) {
+	details, err := m.findFreeExistingMachine(config)
+	if err != nil || details != nil {
+		return details, err
 	}
-	return
+
+	return m.createAndAcquireMachine(config)
+}
+
+func (m *machineProvider) createAndAcquireMachine(config *common.RunnerConfig) (*machineDetails, error) {
+	coordinator, err := m.runnerMachinesCoordinator(config)
+	if err != nil {
+		return nil, err
+	}
+
+	newDetails, errCh := m.create(config, machineStateIdle)
+	// Use either a free machine, or the created machine; whichever comes first. There's no guarantee that the created
+	// machine can be used by us because between the time the machine is created, and the acquisition of the machine,
+	// another goroutine may have found it via findFreeMachine and acquired it.
+	var details *machineDetails
+	for details == nil && err == nil {
+		select {
+		case err = <-errCh:
+			if err != nil {
+				return nil, err
+			}
+
+			details = m.tryAcquireMachineDetails(newDetails)
+		case <-coordinator.availableMachineSignal():
+			// Even though the signal is fired and we are *almost* sure that
+			// there's a machine available, let's use the getAvailableMachine
+			// method so that the internal counter is synchonized with what
+			// we are actually doing and so that we can be sure that no other
+			// goroutine that didn't accept the signal and instead used the ticker
+			// hasn't already snatched a machine
+			details, err = m.tryGetFreeExistingMachineFromCoordinator(config, coordinator)
+		case <-time.After(time.Second):
+			details, err = m.tryGetFreeExistingMachineFromCoordinator(config, coordinator)
+		}
+	}
+
+	return details, err
+}
+
+func (m *machineProvider) tryGetFreeExistingMachineFromCoordinator(
+	config *common.RunnerConfig,
+	coordinator *runnerMachinesCoordinator,
+) (*machineDetails, error) {
+	if coordinator.getAvailableMachine() {
+		return m.findFreeExistingMachine(config)
+	}
+
+	return nil, nil
+}
+
+func (m *machineProvider) tryAcquireMachineDetails(details *machineDetails) *machineDetails {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if details.isUsed() {
+		return nil
+	}
+
+	details.State = machineStateAcquired
+	return details
 }
 
 func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
@@ -291,6 +391,10 @@ func (m *machineProvider) createMachines(config *common.RunnerConfig, data *mach
 			// Limit maximum number of machines
 			break
 		}
+		if data.Creating >= config.Machine.MaxGrowthRate && config.Machine.MaxGrowthRate > 0 {
+			// Prevent excessive growth in the number of machines
+			break
+		}
 		m.create(config, machineStateIdle)
 		data.Creating++
 	}
@@ -366,6 +470,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 		WithField("runner", config.ShortDescription()).
 		WithField("minIdleCount", config.Machine.GetIdleCount()).
 		WithField("maxMachines", config.Limit).
+		WithField("maxMachineCreate", config.Machine.MaxGrowthRate).
 		WithField("time", time.Now()).
 		Debugln("Docker Machine Details")
 	machinesData.writeDebugInformation()
@@ -429,22 +534,46 @@ func (m *machineProvider) Use(
 func (m *machineProvider) Release(config *common.RunnerConfig, data common.ExecutorData) {
 	// Release machine
 	details, ok := data.(*machineDetails)
-	if ok {
-		// Mark last used time when is Used
-		if details.State == machineStateUsed {
-			details.Used = time.Now()
-		}
-
-		// Remove machine if we already used it
-		if config != nil && config.Machine != nil &&
-			config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
-			err := m.remove(details.Name, "Too many builds")
-			if err == nil {
-				return
-			}
-		}
-		details.State = machineStateIdle
+	if !ok {
+		return
 	}
+
+	m.lock.Lock()
+	// Mark last used time when is Used
+	if details.State == machineStateUsed {
+		details.Used = time.Now()
+	}
+	m.lock.Unlock()
+
+	// Remove machine if we already used it
+	if config != nil && config.Machine != nil &&
+		config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
+		err := m.remove(details.Name, "Too many builds")
+		if err == nil {
+			return
+		}
+	}
+	m.lock.Lock()
+	details.State = machineStateIdle
+	m.lock.Unlock()
+
+	// Signal pending builds that a new machine is available.
+	if err := m.signalRelease(config); err != nil {
+		return
+	}
+}
+
+func (m *machineProvider) signalRelease(config *common.RunnerConfig) error {
+	coordinator, err := m.runnerMachinesCoordinator(config)
+	if err != nil && err != errNoConfig {
+		return err
+	}
+
+	if err != errNoConfig && coordinator != nil {
+		coordinator.addAvailableMachine()
+	}
+
+	return nil
 }
 
 func (m *machineProvider) CanCreate() bool {
@@ -474,6 +603,7 @@ func newMachineProvider(name, executor string) *machineProvider {
 	return &machineProvider{
 		name:     name,
 		details:  make(machinesDetails),
+		runners:  make(runnersDetails),
 		machine:  docker.NewMachineCommand(),
 		provider: provider,
 		totalActions: prometheus.NewCounterVec(

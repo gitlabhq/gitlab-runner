@@ -119,6 +119,8 @@ type DockerConfig struct {
 
 //nolint:lll
 type DockerMachine struct {
+	MaxGrowthRate int `toml:"MaxGrowthRate,omitzero" long:"max-growth-rate" env:"MACHINE_MAX_GROWTH_RATE" description:"Maximum machines being provisioned concurrently, set to 0 for unlimited"`
+
 	IdleCount      int      `long:"idle-nodes" env:"MACHINE_IDLE_COUNT" description:"Maximum idle machines"`
 	IdleTime       int      `toml:"IdleTime,omitzero" long:"idle-time" env:"MACHINE_IDLE_TIME" description:"Minimum time after node can be destroyed"`
 	MaxBuilds      int      `toml:"MaxBuilds,omitzero" long:"max-builds" env:"MACHINE_MAX_BUILDS" description:"Maximum number of builds processed by machine"`

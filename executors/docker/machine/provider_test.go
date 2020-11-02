@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -326,6 +328,128 @@ func TestMachineUse(t *testing.T) {
 	assert.Error(t, err, "fails to create a new machine")
 }
 
+func TestMachineReuse(t *testing.T) {
+	// Create a machine with an idle state. Then try to create additional ones.
+	// while the creation of the all subsequent ones are blocked use the first one,
+	// making sure that the whole process works
+	machineGrowthConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:   "growth-temp-%s",
+				MaxGrowthRate: 1,
+				IdleTime:      5,
+			},
+		},
+	}
+
+	p := newMachineProvider("docker+machine", "docker")
+
+	machineMock := &docker.MockMachine{}
+	defer machineMock.AssertExpectations(t)
+	p.machine = machineMock
+
+	var blockCreatingMachineWg sync.WaitGroup
+	blockCreatingMachineWg.Add(1)
+
+	var createdMachineDetails *machineDetails
+
+	machineMock.On("Create", mock.Anything, mock.Anything).
+		Return(nil).
+		Once()
+
+	machineMock.On("Create", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			// Free the previously created machine after the useMachine call has already happened.
+			// The useMachine call tries to create a new machine at first because a free one doesn't exist
+			// however it's blocked by blockCreatingMachineWg, thus it's waiting for us to release a new one.
+			// If useMachine never returns because it can't find a machine then that's a bug.
+			time.AfterFunc(time.Second, func() {
+				p.Release(machineGrowthConfig, createdMachineDetails)
+			})
+
+			blockCreatingMachineWg.Wait()
+		}).
+		Return(nil).
+		Once()
+
+	machineMock.On("CanConnect", mock.Anything, mock.Anything).
+		Return(true).
+		Once()
+
+	createdMachineDetails, errCh := p.create(machineGrowthConfig, machineStateUsed)
+	require.NotNil(t, createdMachineDetails)
+	require.NoError(t, <-errCh)
+
+	machineMock.On("List").Return([]string{createdMachineDetails.Name}, nil)
+
+	usedMachineDetails, err := p.useMachine(machineGrowthConfig)
+	require.NoError(t, err)
+	require.Equal(t, createdMachineDetails, usedMachineDetails)
+}
+
+func TestMachineReuseWithContention(t *testing.T) {
+	// Create machines while trying to reuse them with a contention.
+	// Make sure that there are no deadlocks, data races and that machines
+	// are provided to the caller.
+	machineGrowthConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:   "growth-temp-%s",
+				MaxGrowthRate: 10,
+				IdleTime:      5,
+			},
+		},
+	}
+
+	p := newMachineProvider("docker+machine", "docker")
+
+	machineMock := &docker.MockMachine{}
+	defer machineMock.AssertExpectations(t)
+	p.machine = machineMock
+
+	var listLock sync.Mutex
+	list := make([]string, 0)
+
+	listCall := machineMock.On("List").Return([]string{}, nil)
+	machineMock.On("Create", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			name := args.String(1)
+
+			listLock.Lock()
+			list = append(list, name)
+			listCopy := make([]string, len(list))
+			copy(listCopy, list)
+			listCall.Return(listCopy, nil).Maybe()
+			listLock.Unlock()
+		}).
+		Return(nil)
+
+	machineMock.On("CanConnect", mock.Anything, mock.Anything).
+		Return(true).
+		Maybe()
+
+	const N = 500
+	var wg sync.WaitGroup
+	wg.Add(N)
+
+	startCh := make(chan struct{})
+	for i := 0; i < N; i++ {
+		go func() {
+			defer wg.Done()
+			<-startCh
+
+			usedMachineDetails, err := p.useMachine(machineGrowthConfig)
+			require.NoError(t, err)
+			require.NotNil(t, usedMachineDetails)
+			p.Release(machineGrowthConfig, usedMachineDetails)
+		}()
+	}
+
+	close(startCh)
+	wg.Wait()
+	assert.NotEmpty(t, list)
+}
+
 func TestMachineTestRetry(t *testing.T) {
 	provisionRetryInterval = 0
 
@@ -337,6 +461,88 @@ func TestMachineTestRetry(t *testing.T) {
 	d1, err := p.retryUseMachine(machineSecondFail)
 	assert.NoError(t, err, "after replying the same test scenario and using retry it succeeds")
 	assert.Equal(t, machineStateAcquired, d1.State)
+}
+
+func TestMachineAcquireGrowthCapacity(t *testing.T) {
+	p, _ := testMachineProvider()
+
+	tests := map[string]struct {
+		maxGrowthCapacity int
+		concurrency       int
+
+		expectedMaxConcurrentCalls int
+	}{
+		"growth capacity 3 concurrency 1": {
+			maxGrowthCapacity: 3,
+			concurrency:       1,
+
+			expectedMaxConcurrentCalls: 1,
+		},
+		"growth capacity 3 concurrency 15": {
+			maxGrowthCapacity: 3,
+			concurrency:       15,
+
+			expectedMaxConcurrentCalls: 3,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			machineMock := docker.MockMachine{}
+			defer machineMock.AssertExpectations(t)
+			p.machine = &machineMock
+
+			var wg sync.WaitGroup
+			var concurrentCalls, maxConcurrentCalls int32
+			var maxConcurrentCallsLock sync.Mutex
+
+			machineMock.On("Create", mock.Anything, mock.Anything).
+				Run(func(mock.Arguments) {
+					defer atomic.AddInt32(&concurrentCalls, -1)
+					cc := atomic.AddInt32(&concurrentCalls, 1)
+
+					maxConcurrentCallsLock.Lock()
+					if cc > maxConcurrentCalls {
+						maxConcurrentCalls = cc
+					}
+					maxConcurrentCallsLock.Unlock()
+
+					// simulate a network call in order to allow some goroutines to get in
+					// line, otherwise we will never get past 1 concurrent call
+					time.Sleep(300 * time.Millisecond)
+				}).
+				Return(nil)
+
+			signal := make(chan struct{})
+			for i := 0; i < tt.concurrency; i++ {
+				wg.Add(1)
+				go func() {
+					<-signal
+					_, errCh := p.create(&common.RunnerConfig{
+						Limit:             tt.concurrency,
+						RunnerCredentials: common.RunnerCredentials{},
+						RunnerSettings: common.RunnerSettings{
+							Machine: &common.DockerMachine{
+								IdleCount:     tt.concurrency,
+								MachineName:   "test",
+								MaxGrowthRate: tt.maxGrowthCapacity,
+							},
+						},
+					}, machineStateIdle)
+
+					<-errCh
+					wg.Done()
+				}()
+			}
+
+			// wait for all goroutines to fire up and line up for the signal in order to have a fair race
+			// to the Create method
+			close(signal)
+			wg.Wait()
+
+			assert.Equal(t, tt.expectedMaxConcurrentCalls, int(maxConcurrentCalls))
+		})
+	}
 }
 
 func TestMachineAcquireAndRelease(t *testing.T) {
