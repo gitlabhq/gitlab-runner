@@ -52,48 +52,6 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	return nil
 }
 
-func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON, error) {
-	prebuildImage, err := s.getPrebuiltImage()
-	if err != nil {
-		return nil, err
-	}
-
-	buildImage := common.Image{
-		Name: prebuildImage.ID,
-	}
-
-	containerJSON, err := s.createContainer("predefined", buildImage, s.helperImageInfo.Cmd, []string{prebuildImage.ID})
-	if err != nil {
-		return nil, err
-	}
-
-	return containerJSON, err
-}
-
-func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if s.buildContainer != nil {
-		_, inspectErr := s.client.ContainerInspect(s.Context, s.buildContainer.ID)
-		if inspectErr == nil {
-			return s.buildContainer, nil
-		}
-
-		if !docker.IsErrNotFound(inspectErr) {
-			s.Warningln("Failed to inspect build container", s.buildContainer.ID, inspectErr.Error())
-		}
-	}
-
-	var err error
-	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildContainer, nil
-}
-
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	maxAttempts, err := s.Build.GetExecutorJobSectionAttempts()
 	if err != nil {
@@ -135,6 +93,48 @@ func (s *commandExecutor) getContainer(cmd common.ExecutorCommand) (*types.Conta
 	}
 
 	return s.requestBuildContainer()
+}
+
+func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON, error) {
+	prebuildImage, err := s.getPrebuiltImage()
+	if err != nil {
+		return nil, err
+	}
+
+	buildImage := common.Image{
+		Name: prebuildImage.ID,
+	}
+
+	containerJSON, err := s.createContainer("predefined", buildImage, s.helperImageInfo.Cmd, []string{prebuildImage.ID})
+	if err != nil {
+		return nil, err
+	}
+
+	return containerJSON, err
+}
+
+func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.buildContainer != nil {
+		_, inspectErr := s.client.ContainerInspect(s.Context, s.buildContainer.ID)
+		if inspectErr == nil {
+			return s.buildContainer, nil
+		}
+
+		if !docker.IsErrNotFound(inspectErr) {
+			s.Warningln("Failed to inspect build container", s.buildContainer.ID, inspectErr.Error())
+		}
+	}
+
+	var err error
+	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.buildContainer, nil
 }
 
 func (s *commandExecutor) GetMetricsSelector() string {
