@@ -24,6 +24,17 @@ to proxy container images.
 ### Docker Hub Registry mirror
 
 You can also speed up the time it takes for your jobs to access container images by mirroring Docker Hub.
+This results in the [Registry as a pull through cache](https://docs.docker.com/registry/recipes/mirror/).
+In addition to speeding up job execution, a mirror can make your infrastructure
+more resilient to Docker Hub outages and Docker Hub rate limits.
+
+When the Docker daemon is [configured to use the mirror](https://docs.docker.com/registry/recipes/mirror/#configure-the-docker-daemon)
+it automatically checks for the image on your running instance of the mirror. If it's not available, it
+pulls the image from the public Docker registry and stores it locally before handing it back to you.
+
+The next request for the same image pulls from your local registry.
+
+More detail on how it works can be found [here](https://docs.docker.com/registry/recipes/mirror/#how-does-it-work).
 
 #### Use a Docker Hub Registry mirror
 
