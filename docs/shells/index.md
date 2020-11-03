@@ -1,3 +1,10 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+comments: false
+---
+
 # Shells supported by GitLab Runner
 
 GitLab Runner implements a few shell script generators that allow to execute

@@ -11,6 +11,7 @@ import (
 
 type testAdapter struct {
 	objectName string
+	useGoCloud bool
 }
 
 func (t *testAdapter) GetDownloadURL() *url.URL {
@@ -28,6 +29,22 @@ func (t *testAdapter) GetUploadHeaders() http.Header {
 	return headers
 }
 
+func (t *testAdapter) GetGoCloudURL() *url.URL {
+	if t.useGoCloud {
+		u, _ := url.Parse("gocloud://test")
+		return u
+	}
+
+	return nil
+}
+
+func (t *testAdapter) GetUploadEnv() map[string]string {
+	return map[string]string{
+		"FIRST_VAR":  "123",
+		"SECOND_VAR": "456",
+	}
+}
+
 func (t *testAdapter) getURL(operation string) *url.URL {
 	return &url.URL{
 		Scheme: "test",
@@ -40,9 +57,16 @@ func New(_ *common.CacheConfig, _ time.Duration, objectName string) (cache.Adapt
 	return &testAdapter{objectName: objectName}, nil
 }
 
+func NewGoCloudAdapter(_ *common.CacheConfig, _ time.Duration, objectName string) (cache.Adapter, error) {
+	return &testAdapter{objectName: objectName, useGoCloud: true}, nil
+}
+
 func init() {
-	err := cache.Factories().Register("test", New)
-	if err != nil {
+	if err := cache.Factories().Register("test", New); err != nil {
+		panic(err)
+	}
+
+	if err := cache.Factories().Register("goCloudTest", NewGoCloudAdapter); err != nil {
 		panic(err)
 	}
 }

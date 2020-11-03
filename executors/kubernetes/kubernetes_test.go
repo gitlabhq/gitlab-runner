@@ -301,12 +301,45 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "docker", MountPath: "/var/run/docker.sock", HostPath: "/var/run/docker.sock"},
+								{Name: "host-path", MountPath: "/path/two", HostPath: "/path/one"},
+								{
+									Name:      "host-subpath",
+									MountPath: "/subpath",
+									HostPath:  "/path/one",
+									SubPath:   "subpath",
+								},
+							},
+							Secrets: []common.KubernetesSecret{
+								{Name: "Secret", MountPath: "/path/to/whatever"},
+								{
+									Name:      "Secret-subpath",
+									MountPath: "/path/to/whatever",
+									SubPath:   "secret-subpath",
+								},
 							},
 							PVCs: []common.KubernetesPVC{
 								{Name: "PVC", MountPath: "/path/to/whatever"},
+								{
+									Name:      "PVC-subpath",
+									MountPath: "/path/to/whatever",
+									SubPath:   "PVC-subpath",
+								},
+							},
+							ConfigMaps: []common.KubernetesConfigMap{
+								{Name: "ConfigMap", MountPath: "/path/to/whatever"},
+								{
+									Name:      "ConfigMap-subpath",
+									MountPath: "/path/to/whatever",
+									SubPath:   "ConfigMap-subpath",
+								},
 							},
 							EmptyDirs: []common.KubernetesEmptyDir{
 								{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
+								{
+									Name:      "emptyDir-subpath",
+									MountPath: "/subpath",
+									SubPath:   "empty-subpath",
+								},
 							},
 						},
 					},
@@ -318,8 +351,16 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 			Expected: []api.VolumeMount{
 				{Name: "repo"},
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
+				{Name: "host-path", MountPath: "/path/two"},
+				{Name: "host-subpath", MountPath: "/subpath", SubPath: "subpath"},
+				{Name: "Secret", MountPath: "/path/to/whatever"},
+				{Name: "Secret-subpath", MountPath: "/path/to/whatever", SubPath: "secret-subpath"},
 				{Name: "PVC", MountPath: "/path/to/whatever"},
+				{Name: "PVC-subpath", MountPath: "/path/to/whatever", SubPath: "PVC-subpath"},
+				{Name: "ConfigMap", MountPath: "/path/to/whatever"},
+				{Name: "ConfigMap-subpath", MountPath: "/path/to/whatever", SubPath: "ConfigMap-subpath"},
 				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
+				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
 			},
 		},
 		"custom volumes with read-only settings": {
@@ -418,18 +459,48 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "docker", MountPath: "/var/run/docker.sock"},
 								{Name: "host-path", MountPath: "/path/two", HostPath: "/path/one"},
+								{
+									Name:      "host-subpath",
+									MountPath: "/subpath",
+									HostPath:  "/path/one",
+									SubPath:   "subpath",
+								},
 							},
 							PVCs: []common.KubernetesPVC{
 								{Name: "PVC", MountPath: "/path/to/whatever"},
+								{
+									Name:      "PVC-subpath",
+									MountPath: "/subpath",
+									SubPath:   "subpath",
+								},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
 								{Name: "ConfigMap", MountPath: "/path/to/config", Items: map[string]string{"key_1": "/path/to/key_1"}},
+								{
+									Name:      "ConfigMap-subpath",
+									MountPath: "/subpath",
+									Items:     map[string]string{"key_1": "/path/to/key_1"},
+									SubPath:   "subpath",
+								},
 							},
 							Secrets: []common.KubernetesSecret{
 								{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true, Items: map[string]string{"secret_1": "/path/to/secret_1"}},
+								{
+									Name:      "secret-subpath",
+									MountPath: "/subpath",
+									ReadOnly:  true,
+									Items:     map[string]string{"secret_1": "/path/to/secret_1"},
+									SubPath:   "subpath",
+								},
 							},
 							EmptyDirs: []common.KubernetesEmptyDir{
 								{Name: "emptyDir", MountPath: "/path/to/empty/dir", Medium: "Memory"},
+								{
+									Name:      "emptyDir-subpath",
+									MountPath: "/subpath",
+									Medium:    "Memory",
+									SubPath:   "subpath",
+								},
 							},
 						},
 					},
@@ -442,8 +513,11 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 				{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
 				{Name: "host-path", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
+				{Name: "host-subpath", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
 				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
+				{Name: "PVC-subpath", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC-subpath"}}},
 				{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
+				{Name: "emptyDir-subpath", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
 				{
 					Name: "ConfigMap",
 					VolumeSource: api.VolumeSource{
@@ -454,10 +528,28 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 					},
 				},
 				{
+					Name: "ConfigMap-subpath",
+					VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap-subpath"},
+							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
+						},
+					},
+				},
+				{
 					Name: "secret",
 					VolumeSource: api.VolumeSource{
 						Secret: &api.SecretVolumeSource{
 							SecretName: "secret",
+							Items:      []api.KeyToPath{{Key: "secret_1", Path: "/path/to/secret_1"}},
+						},
+					},
+				},
+				{
+					Name: "secret-subpath",
+					VolumeSource: api.VolumeSource{
+						Secret: &api.SecretVolumeSource{
+							SecretName: "secret-subpath",
 							Items:      []api.KeyToPath{{Key: "secret_1", Path: "/path/to/secret_1"}},
 						},
 					},
@@ -1426,9 +1518,23 @@ func TestPrepare(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						Host: "test-server",
 						Services: []common.Service{
-							{Name: "test-service-k8s"},
+							{Name: "test-service-k8s", Alias: "alias"},
 							{Name: "test-service-k8s2"},
 							{Name: ""},
+							{
+								Name:    "test-service-k8s3",
+								Command: []string{"executable", "param1", "param2"},
+							},
+							{
+								Name:       "test-service-k8s4",
+								Entrypoint: []string{"executable", "param3", "param4"},
+							},
+							{
+								Name:       "test-service-k8s5",
+								Alias:      "alias5",
+								Command:    []string{"executable", "param1", "param2"},
+								Entrypoint: []string{"executable", "param3", "param4"},
+							},
 						},
 					},
 				},
@@ -1445,6 +1551,7 @@ func TestPrepare(t *testing.T) {
 					Services: common.Services{
 						{
 							Name:       "test-service",
+							Alias:      "test-alias",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
 						},
@@ -1463,13 +1570,29 @@ func TestPrepare(t *testing.T) {
 					},
 					Services: common.Services{
 						{
-							Name: "test-service-k8s",
+							Name:  "test-service-k8s",
+							Alias: "alias",
 						},
 						{
 							Name: "test-service-k8s2",
 						},
 						{
+							Name:    "test-service-k8s3",
+							Command: []string{"executable", "param1", "param2"},
+						},
+						{
+							Name:       "test-service-k8s4",
+							Entrypoint: []string{"executable", "param3", "param4"},
+						},
+						{
+							Name:       "test-service-k8s5",
+							Alias:      "alias5",
+							Command:    []string{"executable", "param1", "param2"},
+							Entrypoint: []string{"executable", "param3", "param4"},
+						},
+						{
 							Name:       "test-service",
+							Alias:      "test-alias",
 							Entrypoint: []string{"/init", "run"},
 							Command:    []string{"application", "--debug"},
 						},
@@ -1816,6 +1939,67 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				secrets := []api.LocalObjectReference{{Name: "docker-registry-credentials"}}
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
+			},
+		},
+		"uses default security context flags for containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					assert.Empty(
+						t,
+						c.SecurityContext.Privileged,
+						"Container security context Privileged should be empty",
+					)
+					assert.Nil(
+						t,
+						c.SecurityContext.AllowPrivilegeEscalation,
+						"Container security context AllowPrivilegeEscalation should be empty",
+					)
+				}
+			},
+		},
+		"configures security context flags for un-privileged containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:                "default",
+						Privileged:               false,
+						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(false),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					require.NotNil(t, c.SecurityContext.Privileged)
+					assert.False(t, *c.SecurityContext.Privileged)
+					require.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation)
+					assert.False(t, *c.SecurityContext.AllowPrivilegeEscalation)
+				}
+			},
+		},
+		"configures security context flags for privileged containers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:                "default",
+						Privileged:               true,
+						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(true),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				for _, c := range pod.Spec.Containers {
+					require.NotNil(t, c.SecurityContext.Privileged)
+					assert.True(t, *c.SecurityContext.Privileged)
+					require.NotNil(t, c.SecurityContext.AllowPrivilegeEscalation)
+					assert.True(t, *c.SecurityContext.AllowPrivilegeEscalation)
+				}
 			},
 		},
 		"configures helper container": {

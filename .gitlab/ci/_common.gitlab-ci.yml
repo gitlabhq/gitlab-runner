@@ -14,7 +14,10 @@ variables:
   GIT_LFS_VERSION: "2.11.0"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
-  SAST_DEFAULT_ANALYZERS: "gosec,secrets"
+  # We're overriding rules for the jobs that we want to run.
+  # This will disable all other rules.
+  SAST_DISABLED: "true"
+  DEPENDENCY_SCANNING_DISABLED: "true"
 
 default:
   image: $CI_IMAGE

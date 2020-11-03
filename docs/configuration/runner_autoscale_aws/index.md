@@ -320,16 +320,6 @@ check_interval = 0
     IdleCount = 1
     IdleTime = 1800
     MaxBuilds = 100
-    [[runners.machine.autoscaling]]
-      Periods = ["* * 9-17 * * mon-fri *"]
-      IdleCount = 50
-      IdleTime = 3600
-      Timezone = "UTC"
-    [[runners.machine.autoscaling]]
-      Periods = ["* * * * * sat,sun *"]
-      IdleCount = 5
-      IdleTime = 60
-      Timezone = "UTC"
     MachineDriver = "amazonec2"
     MachineName = "gitlab-docker-machine-%s"
     MachineOptions = [
@@ -343,6 +333,16 @@ check_interval = 0
       "amazonec2-security-group=docker-machine-scaler",
       "amazonec2-instance-type=m4.2xlarge",
     ]
+    [[runners.machine.autoscaling]]
+      Periods = ["* * 9-17 * * mon-fri *"]
+      IdleCount = 50
+      IdleTime = 3600
+      Timezone = "UTC"
+    [[runners.machine.autoscaling]]
+      Periods = ["* * * * * sat,sun *"]
+      IdleCount = 5
+      IdleTime = 60
+      Timezone = "UTC"
 ```
 
 ## Cutting down costs with Amazon EC2 Spot instances

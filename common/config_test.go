@@ -345,6 +345,26 @@ func TestService_ToImageDefinition(t *testing.T) {
 			service:       Service{Name: "name", Alias: "alias"},
 			expectedImage: Image{Name: "name", Alias: "alias"},
 		},
+		"command specified": {
+			service:       Service{Name: "name", Command: []string{"executable", "param1", "param2"}},
+			expectedImage: Image{Name: "name", Command: []string{"executable", "param1", "param2"}},
+		},
+		"entrypoint specified": {
+			service:       Service{Name: "name", Entrypoint: []string{"executable", "param3", "param4"}},
+			expectedImage: Image{Name: "name", Entrypoint: []string{"executable", "param3", "param4"}},
+		},
+		"command and entrypoint specified": {
+			service: Service{
+				Name:       "name",
+				Command:    []string{"executable", "param1", "param2"},
+				Entrypoint: []string{"executable", "param3", "param4"},
+			},
+			expectedImage: Image{
+				Name:       "name",
+				Command:    []string{"executable", "param1", "param2"},
+				Entrypoint: []string{"executable", "param3", "param4"},
+			},
+		},
 	}
 
 	for tn, tt := range tests {

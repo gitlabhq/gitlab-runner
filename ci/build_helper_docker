@@ -45,8 +45,8 @@ if [ ! -f "$binary_file" ]; then
     exit 1
 fi
 
-cp "$binary_file" dockerfiles/runner-helper/gitlab-runner-helper
-chmod +x dockerfiles/runner-helper/gitlab-runner-helper
+cp "$binary_file" dockerfiles/runner-helper/binaries/gitlab-runner-helper
+chmod +x dockerfiles/runner-helper/binaries/gitlab-runner-helper
 
 os=$(_docker version -f '{{.Server.Os}}')
 platform="${os}/${platform_arch}"

@@ -119,6 +119,8 @@ type DockerConfig struct {
 
 //nolint:lll
 type DockerMachine struct {
+	MaxGrowthRate int `toml:"MaxGrowthRate,omitzero" long:"max-growth-rate" env:"MACHINE_MAX_GROWTH_RATE" description:"Maximum machines being provisioned concurrently, set to 0 for unlimited"`
+
 	IdleCount      int      `long:"idle-nodes" env:"MACHINE_IDLE_COUNT" description:"Maximum idle machines"`
 	IdleTime       int      `toml:"IdleTime,omitzero" long:"idle-time" env:"MACHINE_IDLE_TIME" description:"Minimum time after node can be destroyed"`
 	MaxBuilds      int      `toml:"MaxBuilds,omitzero" long:"max-builds" env:"MACHINE_MAX_BUILDS" description:"Maximum number of builds processed by machine"`
@@ -211,6 +213,7 @@ type KubernetesConfig struct {
 	Namespace                                         string                       `toml:"namespace" json:"namespace" long:"namespace" env:"KUBERNETES_NAMESPACE" description:"Namespace to run Kubernetes jobs in"`
 	NamespaceOverwriteAllowed                         string                       `toml:"namespace_overwrite_allowed" json:"namespace_overwrite_allowed" long:"namespace_overwrite_allowed" env:"KUBERNETES_NAMESPACE_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_NAMESPACE_OVERWRITE' value"`
 	Privileged                                        bool                         `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
+	AllowPrivilegeEscalation                          *bool                        `toml:"allow_privilege_escalation,omitzero" json:"allow_privilege_escalation" long:"allow-privilege-escalation" env:"KUBERNETES_ALLOW_PRIVILEGE_ESCALATION" description:"Run all containers with the security context allowPrivilegeEscalation flag enabled. When empty, it does not define the allowPrivilegeEscalation flag in the container SecurityContext and allows Kubernetes to use the default privilege escalation behavior."`
 	CPULimit                                          string                       `toml:"cpu_limit,omitempty" json:"cpu_limit" long:"cpu-limit" env:"KUBERNETES_CPU_LIMIT" description:"The CPU allocation given to build containers"`
 	CPULimitOverwriteMaxAllowed                       string                       `toml:"cpu_limit_overwrite_max_allowed,omitempty" json:"cpu_limit_overwrite_max_allowed" long:"cpu-limit-overwrite-max-allowed" env:"KUBERNETES_CPU_LIMIT_OVERWRITE_MAX_ALLOWED" description:"If set, the max amount the cpu limit can be set to. Used with the KUBERNETES_CPU_LIMIT variable in the build."`
 	CPURequest                                        string                       `toml:"cpu_request,omitempty" json:"cpu_request" long:"cpu-request" env:"KUBERNETES_CPU_REQUEST" description:"The CPU allocation requested for build containers"`
@@ -280,20 +283,25 @@ type KubernetesVolumes struct {
 type KubernetesConfigMap struct {
 	Name      string            `toml:"name" json:"name" description:"The name of the volume and ConfigMap to use"`
 	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	SubPath   string            `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	ReadOnly  bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	Items     map[string]string `toml:"items,omitempty" description:"Key-to-path mapping for keys from the config map that should be used."`
 }
 
+//nolint:lll
 type KubernetesHostPath struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
 	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	SubPath   string `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	HostPath  string `toml:"host_path,omitempty" description:"Path from the host that should be mounted as a volume"`
 }
 
+//nolint:lll
 type KubernetesPVC struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume and PVC to use"`
 	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	SubPath   string `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 }
 
@@ -301,13 +309,16 @@ type KubernetesPVC struct {
 type KubernetesSecret struct {
 	Name      string            `toml:"name" json:"name" description:"The name of the volume and Secret to use"`
 	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	SubPath   string            `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	ReadOnly  bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	Items     map[string]string `toml:"items,omitempty" description:"Key-to-path mapping for keys from the secret that should be used."`
 }
 
+//nolint:lll
 type KubernetesEmptyDir struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume and EmptyDir to use"`
 	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	SubPath   string `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	Medium    string `toml:"medium,omitempty" description:"Set to 'Memory' to have a tmpfs"`
 }
 
@@ -352,15 +363,20 @@ type NodeSelectorRequirement struct {
 	Values   []string `toml:"values,omitempty" json:"values"`
 }
 
+//nolint:lll
 type Service struct {
-	Name  string `toml:"name" long:"name" description:"The image path for the service"`
-	Alias string `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+	Name       string   `toml:"name" long:"name" description:"The image path for the service"`
+	Alias      string   `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+	Command    []string `toml:"command" long:"command" description:"Command or script that should be used as the container’s command. Syntax is similar to https://docs.docker.com/engine/reference/builder/#cmd"`
+	Entrypoint []string `toml:"entrypoint" long:"entrypoint" description:"Command or script that should be executed as the container’s entrypoint. syntax is similar to https://docs.docker.com/engine/reference/builder/#entrypoint"`
 }
 
 func (s *Service) ToImageDefinition() Image {
 	return Image{
-		Name:  s.Name,
-		Alias: s.Alias,
+		Name:       s.Name,
+		Alias:      s.Alias,
+		Command:    s.Command,
+		Entrypoint: s.Entrypoint,
 	}
 }
 

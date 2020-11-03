@@ -4,12 +4,13 @@ include:
 - template: Security/SAST.gitlab-ci.yml
 - template: Security/License-Scanning.gitlab-ci.yml
 
-.merge_request_pipelines_rules: &merge_request_pipelines_rules
-- if: $CI_MERGE_REQUEST_ID
-- if: $CI_COMMIT_BRANCH == "master" && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
-- if: $CI_COMMIT_REF_NAME =~ /\A[0-9]+-[0-9]+-stable\z/ && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
-- if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/ && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
-- if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+?\z/ && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+.merge_request_pipelines_rules:
+  rules: &merge_request_pipelines_rules
+  - if: $CI_MERGE_REQUEST_ID
+  - if: $CI_COMMIT_BRANCH == "master" && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
+  - if: $CI_COMMIT_REF_NAME =~ /\A[0-9]+-[0-9]+-stable\z/ && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
+  - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/ && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
+  - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+?\z/ && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
 
 # Overriding 'Dependency-Scanning.gitlab-ci.yml' template, because
 # we need to replace the rules with our own, the same
@@ -21,6 +22,8 @@ gemnasium-dependency_scanning:
 # we need to replace the rules with our own, the same
 # as in `.merge_request_pipelines` template.
 license_scanning:
+  variables:
+    LICENSE_FINDER_CLI_OPTS: '--decisions-file=.gitlab/dependency_decisions.yml'
   rules: *merge_request_pipelines_rules
 
 # Overriding 'SAST.gitlab-ci.yml' template, because
@@ -30,7 +33,7 @@ gosec-sast:
   rules: *merge_request_pipelines_rules
 
 docs lint:
-  image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint:vale-2.3.4-markdownlint-0.23.2"
+  image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint:ruby-2.7.2-alpine-3.12-vale-2.4.3-markdownlint-0.24.0"
   stage: test
   extends:
   - .merge_request_pipelines
@@ -149,7 +152,9 @@ unit test with race:
     TESTFLAGS: "-cover -race"
 
 fuzz variable mask:
-  extends: .fuzz_base
+  extends:
+  - .fuzz_base
+  - .merge_request_pipelines_rules
   image: golang:1.13
   stage: test
   script:

@@ -1,3 +1,10 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+comments: false
+---
+
 # Security of running jobs
 
 When using GitLab Runner you should be aware of potential security implications

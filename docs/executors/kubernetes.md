@@ -63,79 +63,69 @@ on the cluster.
 
 The following keywords help to define the behavior of the Runner within Kubernetes:
 
-- `namespace`: Namespace in which to run Kubernetes Pods
-- `namespace_overwrite_allowed`: Regular expression to validate the contents of
-  the namespace overwrite environment variable (documented below). When empty,
-  it disables the namespace overwrite feature
-- `privileged`: Run containers with the privileged flag
-- `cpu_limit`: The CPU allocation given to build containers
-- `cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature
-- `memory_limit`: The amount of memory allocated to build containers
-- `memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature
-- `ephemeral_storage_limit`: The ephemeral storage limit for build containers
-- `ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature
-- `service_cpu_limit`: The CPU allocation given to build service containers
-- `service_cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for service containers. When empty, it disables the cpu limit overwrite feature
-- `service_memory_limit`: The amount of memory allocated to build service containers
-- `service_memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature
-- `service_ephemeral_storage_limit`: The ephemeral storage limit given to service containers
-- `service_ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature
-- `helper_cpu_limit`: The CPU allocation given to build helper containers
-- `helper_cpu_limit_overwrite_max_allowed`: The max amount the CPU allocation can be written to for helper containers. When empty, it disables the cpu limit overwrite feature
-- `helper_memory_limit`: The amount of memory allocated to build helper containers
-- `helper_memory_limit_overwrite_max_allowed`: The max amount the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature
-- `helper_ephemeral_storage_limit`: The ephemeral storage limit given to helper containers
-- `helper_ephemeral_storage_limit_overwrite_max_allowed`: The max amount the ephemeral storage limit can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature
-- `cpu_request`: The CPU allocation requested for build containers
-- `cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for build containers. When empty, it disables the cpu request overwrite feature
-- `memory_request`: The amount of memory requested from build containers
-- `memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature
-- `ephemeral_storage_request`: The ephemeral storage request given to build containers
-- `ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for build containers. When empty, it disables the ephemeral storage request overwrite feature
-- `service_cpu_request`: The CPU allocation requested for build service containers
-- `service_cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for service containers. When empty, it disables the cpu request overwrite feature
-- `service_memory_request`: The amount of memory requested for build service containers
-- `service_memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature
-- `service_ephemeral_storage_request`: The ephemeral storage request given to service containers
-- `service_ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature
-- `helper_cpu_request`: The CPU allocation requested for build helper containers
-- `helper_cpu_request_overwrite_max_allowed`: The max amount the CPU allocation request can be written to for helper containers. When empty, it disables the cpu request overwrite feature
-- `helper_memory_request`: The amount of memory requested for build helper containers
-- `helper_memory_request_overwrite_max_allowed`: The max amount the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature
-- `helper_ephemeral_storage_request`: The ephemeral storage request given to helper containers
-- `helper_ephemeral_storage_request_overwrite_max_allowed`: The max amount the ephemeral storage request can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature
-- `pull_policy`: specify the image pull policy: `never`, `if-not-present`, `always`. The cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) will be used if not set.
-  - See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
-- `node_selector`: A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs
-- `node_tolerations`: A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration.
-- `image_pull_secrets`: A array of secrets that are used to authenticate Docker image pulling
-- `helper_image`: (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts.
-- `terminationGracePeriodSeconds`: Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal
-- `poll_interval`: How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3).
-- `poll_timeout`: The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180).
-- `pod_labels`: A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion.
-- `pod_annotations`: A set of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build.
-- `pod_annotations_overwrite_allowed`: Regular expression to validate the contents of
-  the pod annotations overwrite environment variable. When empty,
-  it disables the pod annotations overwrite feature
-- `pod_security_context`: Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context)
-- `service_account`: default service account job/executor pods use to talk to Kubernetes API
-- `service_account_overwrite_allowed`: Regular expression to validate the contents of
-  the service account overwrite environment variable. When empty,
-  it disables the service account overwrite feature
-- `bearer_token`: Default bearer token used to launch build pods.
-- `bearer_token_overwrite_allowed`: Boolean to allow projects to specify a bearer token that will be used to create the build pod.
-- `volumes`: configured through the configuration file, the list of volumes that will be mounted in the build container. [Read more about using volumes](#using-volumes)
-- `services`:
-  [Since GitLab Runner
-  12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of
-  [services](https://docs.gitlab.com/ee/ci/services/) attached to the build
-  container using the [sidecar
-  pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar).
-  Read more about [using services](#using-services).
-- `affinity`: Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity).      
-- `cap_add`: Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration).
-- `cap_drop`: Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration).
+| Keyword | Description |
+|---------|-------------|
+| `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
+| `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation) behavior. |
+| `bearer_token` | Default bearer token used to launch build pods. |
+| `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
+| `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
+| `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
+| `cpu_limit` | The CPU allocation given to build containers. |
+| `cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature. |
+| `cpu_request` | The CPU allocation requested for build containers. |
+| `cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for build containers. When empty, it disables the cpu request overwrite feature. |
+| `ephemeral_storage_limit` | The ephemeral storage limit for build containers. |
+| `ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature. |
+| `ephemeral_storage_request` | The ephemeral storage request given to build containers. |
+| `ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for build containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `helper_cpu_limit` | The CPU allocation given to build helper containers. |
+| `helper_cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for helper containers. When empty, it disables the cpu limit overwrite feature. |
+| `helper_cpu_request` | The CPU allocation requested for build helper containers. |
+| `helper_cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for helper containers. When empty, it disables the cpu request overwrite feature. |
+| `helper_ephemeral_storage_limit` | The ephemeral storage limit given to helper containers. |
+| `helper_ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `helper_ephemeral_storage_request` | The ephemeral storage request given to helper containers. |
+| `helper_ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `helper_image` | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
+| `helper_memory_limit` | The amount of memory allocated to build helper containers. |
+| `helper_memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature. |
+| `helper_memory_request` | The amount of memory requested for build helper containers. |
+| `helper_memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature. |
+| `image_pull_secrets` | A array of secrets that are used to authenticate Docker image pulling. |
+| `memory_limit` | The amount of memory allocated to build containers. |
+| `memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature. |
+| `memory_request` | The amount of memory requested from build containers. |
+| `memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature. |
+| `namespace` | Namespace in which to run Kubernetes Pods. |
+| `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
+| `node_selector` | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. |
+| `node_tolerations` | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration. |
+| `pod_annotations` | A set of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
+| `pod_annotations_overwrite_allowed` | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
+| `pod_labels` | A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. |
+| `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context). |
+| `poll_interval` | How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3). |
+| `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180). |
+| `privileged` | Run containers with the privileged flag. |
+| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. The cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) will be used if not set. See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). |
+| `service_account` | Default service account job/executor pods use to talk to Kubernetes API. |
+| `service_account_overwrite_allowed` | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
+| `service_cpu_limit` | The CPU allocation given to build service containers. |
+| `service_cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for service containers. When empty, it disables the cpu limit overwrite feature. |
+| `service_cpu_request` | The CPU allocation requested for build service containers. |
+| `service_cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for service containers. When empty, it disables the cpu request overwrite feature. |
+| `service_ephemeral_storage_limit` | The ephemeral storage limit given to service containers. |
+| `service_ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `service_ephemeral_storage_request` | The ephemeral storage request given to service containers. |
+| `service_ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `service_memory_limit` | The amount of memory allocated to build service containers. |
+| `service_memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature. |
+| `service_memory_request` | The amount of memory requested for build service containers. |
+| `service_memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature. |
+| `services` | [Since GitLab Runner 12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#using-services). |
+| `terminationGracePeriodSeconds` | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. |
+| `volumes` | Configured through the configuration file, the list of volumes that will be mounted in the build container. [Read more about using volumes](#using-volumes). |
 
 ### Configuring executor Service Account
 
@@ -331,6 +321,7 @@ following options:
 |------------|---------|----------|-------------|
 | name       | string  | yes      | The name of the volume |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | host_path  | string  | no       | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
 | read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
 
@@ -345,6 +336,7 @@ can be configured with following options:
 | name       | string  | yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 
 ### ConfigMap volumes
 
@@ -356,6 +348,7 @@ that is defined in Kubernetes cluster and mount it inside of the container.
 | name       | string  | yes      | The name of the volume and at the same time the name of _configMap_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _configMap_ volume, each key from selected _configMap_ will be changed into a file
@@ -379,6 +372,7 @@ a _secret_ that is defined in Kubernetes cluster and mount it inside of the cont
 | name       | string  | yes      | The name of the volume and at the same time the name of _secret_ that should be used |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _secret_ volume each key from selected _secret_ will be changed into a file
@@ -400,6 +394,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 |------------|---------|----------|-------------|
 | name       | string  | yes      | The name of the volume |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
+| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | medium     | String  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
 
 ## Using Security Context
@@ -451,11 +446,11 @@ check_interval = 30
 
 ## Using services
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470) in GitLab Runner 12.5.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470) in GitLab Runner 12.5.
+> - [Introduced support for `alias`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4829) in GitLab Runner 12.9
+> - [Introduced support for `command` and `entrypoint`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173) in GitLab Runner 13.6.
 
 Define a list of [services](https://docs.gitlab.com/ee/ci/services/).
-
-Service aliases are supported since [GitLab Runner 12.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4829).
 
 ```toml
 concurrent = 1
@@ -470,8 +465,10 @@ check_interval = 30
         name = "postgres:12-alpine"
         alias = "db1"
       [[runners.kubernetes.services]]
-        name = "percona:latest"
-        alias = "db2"
+        name = "registry.example.com/svc1"
+        alias = "svc1"
+        entrypoint = ["entrypoint.sh"]
+        command = ["executable","param1","param2"]
 ```
 
 ## Using Affinity

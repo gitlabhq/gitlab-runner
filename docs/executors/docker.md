@@ -181,7 +181,7 @@ The Docker executor divides the job into multiple steps:
 The special Docker image is based on [Alpine Linux](https://alpinelinux.org/) and contains all the tools
 required to run the prepare, pre-job, and post-job steps, like the Git and the
 Runner binaries for supporting caching and artifacts. You can find the definition of
-this special image [in the official Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles/build).
+this special image [in the official Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
 
 ## The `image` keyword
 
@@ -274,8 +274,8 @@ When a job starts, a bridge network is created (similarly to `docker
 network create <network>`). Upon creation, the service container(s) and the
 build job container are connected to this network.
 
-Both the build job container and the service container(s) will be able to
-resolve each others' hostnames (and aliases). This functionality is
+Both the build job container, and the service container(s) will be able to
+resolve each other's hostnames (and aliases). This functionality is
 [provided by Docker](https://docs.docker.com/network/bridge/#differences-between-user-defined-bridges-and-the-default-bridge).
 
 The build container is resolvable via the `build` alias as well as it's GitLab assigned hostname.
@@ -482,14 +482,14 @@ The `volumes` directive supports two types of storage:
 
 1. `<path>` - **the dynamic storage**. The `<path>` is persistent between subsequent
    runs of the same concurrent job for that project. The data is attached to a
-   custom cache container: `runner-<short-token>-project-<id>-concurrent-<job-id>-cache-<unique-id>`.
+   custom cache volume: `runner-<short-token>-project-<id>-concurrent-<concurrency-id>-cache-<md5-of-path>`.
 1. `<host-path>:<path>[:<mode>]` - **the host-bound storage**. The `<path>` is
-   bind to `<host-path>` on the host system. The optional `<mode>` can specify
+   bound to `<host-path>` on the host system. The optional `<mode>` can specify
    that this storage is read-only or read-write (default).
 
 ### The persistent storage for builds
 
-If you make the `/builds` to be **the host-bound storage**, your builds will be stored in:
+If you make the `/builds` directory **a host-bound storage**, your builds will be stored in:
 `/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`, where:
 
 - `<short-token>` is a shortened version of the Runner's token (first 8 letters)
@@ -498,7 +498,7 @@ If you make the `/builds` to be **the host-bound storage**, your builds will be 
 
 ## The privileged mode
 
-The Docker executor supports a number of options that allows to fine tune the
+The Docker executor supports a number of options that allows fine-tuning of the
 build container. One of these options is the [`privileged` mode](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
 
 ### Use Docker-in-Docker with privileged mode
@@ -533,7 +533,7 @@ build:
 
 The Docker executor doesn't overwrite the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime).
 
-That means that if your image defines the `ENTRYPOINT` and doesn't allow to run
+That means that if your image defines the `ENTRYPOINT` and doesn't allow running
 scripts with `CMD`, the image will not work with the Docker executor.
 
 With the use of `ENTRYPOINT` it is possible to create special Docker image that
@@ -657,7 +657,7 @@ pull images from remote registries.
 
 This pull policy should not be used if your builds use images that
 are updated frequently and need to be used in most recent versions.
-In such situation, the network load reduction created by this policy may
+In such a situation, the network load reduction created by this policy may
 be less worthy than the necessity of the very frequent deletion of local
 copies of images.
 

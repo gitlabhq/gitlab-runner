@@ -2,48 +2,42 @@ package common
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 type fakeJobTrace struct {
+	*MockJobTrace
 	buffer *bytes.Buffer
-}
-
-func (fjt *fakeJobTrace) Success()                                       {}
-func (fjt *fakeJobTrace) Fail(err error, failureReason JobFailureReason) {}
-func (fjt *fakeJobTrace) SetCancelFunc(context.CancelFunc)               {}
-func (fjt *fakeJobTrace) Cancel() bool                                   { return false }
-func (fjt *fakeJobTrace) SetAbortFunc(context.CancelFunc)                {}
-func (fjt *fakeJobTrace) Abort() bool                                    { return false }
-func (fjt *fakeJobTrace) SetFailuresCollector(fc FailuresCollector)      {}
-func (fjt *fakeJobTrace) SetMasked(masked []string)                      {}
-func (fjt *fakeJobTrace) IsStdout() bool                                 { return false }
-
-func (fjt *fakeJobTrace) Write(p []byte) (n int, err error) {
-	return fjt.buffer.Write(p)
 }
 
 func (fjt *fakeJobTrace) Read() string {
 	return fjt.buffer.String()
 }
 
-func newFakeJobTrace() *fakeJobTrace {
-	fjt := &fakeJobTrace{
-		buffer: bytes.NewBuffer([]byte{}),
+func newFakeJobTrace() fakeJobTrace {
+	e := new(MockJobTrace)
+	buf := new(bytes.Buffer)
+
+	e.On("IsStdout").Return(false).Maybe()
+	call := e.On("Write", mock.Anything).Maybe()
+
+	call.RunFn = func(args mock.Arguments) {
+		n, err := buf.Write(args.Get(0).([]byte))
+		call.ReturnArguments = mock.Arguments{n, err}
 	}
 
-	return fjt
+	return fakeJobTrace{
+		MockJobTrace: e,
+		buffer:       buf,
+	}
 }
 
 func newBuildLogger(testName string, jt JobTrace) BuildLogger {
-	return BuildLogger{
-		log:   jt,
-		entry: logrus.WithField("test", testName),
-	}
+	return NewBuildLogger(jt, logrus.WithField("test", testName))
 }
 
 func runOnHijackedLogrusOutput(t *testing.T, handler func(t *testing.T, output *bytes.Buffer)) {
@@ -59,6 +53,8 @@ func runOnHijackedLogrusOutput(t *testing.T, handler func(t *testing.T, output *
 func TestLogLineWithoutSecret(t *testing.T) {
 	runOnHijackedLogrusOutput(t, func(t *testing.T, output *bytes.Buffer) {
 		jt := newFakeJobTrace()
+		defer jt.AssertExpectations(t)
+
 		l := newBuildLogger("log-line-without-secret", jt)
 
 		l.Errorln("Fatal: Get http://localhost/?id=123")
@@ -70,6 +66,8 @@ func TestLogLineWithoutSecret(t *testing.T) {
 func TestLogLineWithSecret(t *testing.T) {
 	runOnHijackedLogrusOutput(t, func(t *testing.T, output *bytes.Buffer) {
 		jt := newFakeJobTrace()
+		defer jt.AssertExpectations(t)
+
 		l := newBuildLogger("log-line-with-secret", jt)
 
 		l.Errorln("Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234")
@@ -84,4 +82,45 @@ func TestLogLineWithSecret(t *testing.T) {
 			`Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234`,
 		)
 	})
+}
+
+func TestLogPrinters(t *testing.T) {
+	tests := map[string]struct {
+		entry     *logrus.Entry
+		assertion func(t *testing.T, output string)
+	}{
+		"null writer": {
+			entry: nil,
+			assertion: func(t *testing.T, output string) {
+				assert.Empty(t, output)
+			},
+		},
+		"with entry": {
+			entry: logrus.WithField("printer", "test"),
+			assertion: func(t *testing.T, output string) {
+				assert.Contains(t, output, "print\n")
+				assert.Contains(t, output, "info\n")
+				assert.Contains(t, output, "WARNING: warning\n")
+				assert.Contains(t, output, "ERROR: softerror\n")
+				assert.Contains(t, output, "ERROR: error\n")
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			trace := newFakeJobTrace()
+			defer trace.AssertExpectations(t)
+
+			logger := NewBuildLogger(trace, tc.entry)
+
+			logger.Println("print")
+			logger.Infoln("info")
+			logger.Warningln("warning")
+			logger.SoftErrorln("softerror")
+			logger.Errorln("error")
+
+			tc.assertion(t, trace.Read())
+		})
+	}
 }

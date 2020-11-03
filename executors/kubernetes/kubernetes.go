@@ -471,6 +471,7 @@ func (s *executor) buildContainer(
 	containerCommand ...string,
 ) api.Container {
 	privileged := false
+	var allowPrivilegeEscalation *bool
 	containerPorts := make([]api.ContainerPort, len(imageDefinition.Ports))
 	proxyPorts := make([]proxy.Port, len(imageDefinition.Ports))
 
@@ -494,6 +495,7 @@ func (s *executor) buildContainer(
 
 	if s.Config.Kubernetes != nil {
 		privileged = s.Config.Kubernetes.Privileged
+		allowPrivilegeEscalation = s.Config.Kubernetes.AllowPrivilegeEscalation
 	}
 
 	command, args := s.getCommandAndArgs(imageDefinition, containerCommand...)
@@ -512,7 +514,8 @@ func (s *executor) buildContainer(
 		Ports:        containerPorts,
 		VolumeMounts: s.getVolumeMounts(),
 		SecurityContext: &api.SecurityContext{
-			Privileged: &privileged,
+			Privileged:               &privileged,
+			AllowPrivilegeEscalation: allowPrivilegeEscalation,
 			Capabilities: getCapabilities(
 				GetDefaultCapDrop(),
 				s.Config.Kubernetes.CapAdd,
@@ -586,6 +589,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -594,6 +598,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -602,6 +607,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -610,6 +616,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -618,6 +625,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
 		})
 	}
 

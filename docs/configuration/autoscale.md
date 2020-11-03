@@ -81,12 +81,21 @@ are no machines in _Idle_ state.
 
 ## Autoscaling algorithm and parameters
 
-The autoscaling algorithm is based on three main parameters: `IdleCount`,
-`IdleTime` and `limit`.
+The autoscaling algorithm is based on these parameters:
+
+- `IdleCount`
+- `IdleTime`
+- `MaxGrowthRate`
+- `limit`
 
 We say that each machine that does not run a job is in _Idle_ state. When
 GitLab Runner is in autoscale mode, it monitors all machines and ensures that
 there is always an `IdleCount` of machines in _Idle_ state.
+
+If there is an insufficient number of _Idle_ machines, GitLab Runner
+starts provisioning new machines, subject to the `MaxGrowthRate` limit.
+Requests for machines above the `MaxGrowthRate` value are put on hold
+until the number of machines being created falls below `MaxGrowthRate`.
 
 At the same time, GitLab Runner is checking the duration of the _Idle_ state of
 each machine. If the time exceeds the `IdleTime` value, the machine is
@@ -104,6 +113,7 @@ autoscale parameters:
   # (...)
   executor = "docker+machine"
   [runners.machine]
+    MaxGrowthRate = 1
     IdleCount = 2
     IdleTime = 1800
     # (...)
@@ -115,11 +125,15 @@ At the beginning, when no jobs are queued, GitLab Runner starts two machines
 
 Now, let's assume that 5 jobs are queued in GitLab CI. The first 2 jobs are
 sent to the _Idle_ machines of which we have two. GitLab Runner now notices that
-the number of _Idle_ is less than `IdleCount` (`0 < 2`), so it starts 2 new
-machines. Then, the next 2 jobs from the queue are sent to those newly created
-machines. Again, the number of _Idle_ machines is less than `IdleCount`, so
-GitLab Runner starts 2 new machines and the last queued job is sent to one of
-the _Idle_ machines.
+the number of _Idle_ is less than `IdleCount` (`0 < 2`), so it starts new
+machines. These machines are provisioned sequentially, to prevent exceeding the
+`MaxGrowthRate`.
+
+The remaining 3 jobs are assigned to the first machine that is ready. As an
+optimization, this can be a machine that was busy, but has now completed its job,
+or it can be a newly provisioned machine. For the sake of this example, let us
+assume that provisioning is fast, and the provisioning of new machines completed
+before any of the earlier jobs completed.
 
 We now have 1 _Idle_ machine, so GitLab Runner starts another 1 new machine to
 satisfy `IdleCount`. Because there are no new jobs in queue, those two
@@ -320,7 +334,7 @@ the `OffPeakPeriods` pattern is fulfilled then it switches back to
 ## Distributed runners caching
 
 NOTE: **Note:**
-Read how to [install your own cache server](../install/registry_and_cache_servers.md#install-your-own-cache-server).
+Read how to [install your own cache server](../install/registry_and_cache_servers.md#use-a-distributed-cache).
 
 To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/README.html#cache)
 where selected directories and/or files are saved and shared between subsequent
@@ -368,9 +382,6 @@ set `Path` to separate caches between Runners when cache sharing is enabled.
 
 ## Distributed container registry mirroring
 
-NOTE: **Note:**
-Read how to [install a container registry](../install/registry_and_cache_servers.md#install-a-proxy-container-registry).
-
 To speed up jobs executed inside of Docker containers, you can use the [Docker
 registry mirroring service](https://docs.docker.com/registry/). This will provide a proxy between your
 Docker machines and all used registries. Images will be downloaded once by the
@@ -398,6 +409,8 @@ the configuration in `config.toml`:
 Where `10.11.12.13:12345` is the IP address and port where your registry mirror
 is listening for connections from the Docker service. It must be accessible for
 each host created by Docker Machine.
+
+Read more about how to [install a container registry](../install/registry_and_cache_servers.md#use-a-proxy-for-containers).
 
 ## A complete example of `config.toml`
 

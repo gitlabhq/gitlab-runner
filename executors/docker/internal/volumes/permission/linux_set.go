@@ -38,13 +38,13 @@ func NewDockerLinuxSetter(c docker.Client, logger logrus.FieldLogger, helperImag
 // 755, so everyone can read from it but only root can write to it. This
 // prevents images that don't have root user to fail to write to mounted
 // volumes.
-func (d *dockerLinuxSetter) Set(ctx context.Context, volumeName string) error {
+func (d *dockerLinuxSetter) Set(ctx context.Context, volumeName string, labels map[string]string) error {
 	d.logger = d.logger.WithFields(logrus.Fields{
 		"volume_name": volumeName,
 		"context":     "set_volume_permission",
 	})
 
-	containerID, err := d.createContainer(ctx, volumeName)
+	containerID, err := d.createContainer(ctx, volumeName, labels)
 	if err != nil {
 		return fmt.Errorf("create permission container for volume %q: %w", volumeName, err)
 	}
@@ -66,12 +66,17 @@ func (d *dockerLinuxSetter) Set(ctx context.Context, volumeName string) error {
 	return nil
 }
 
-func (d *dockerLinuxSetter) createContainer(ctx context.Context, volumeName string) (string, error) {
+func (d *dockerLinuxSetter) createContainer(
+	ctx context.Context,
+	volumeName string,
+	labels map[string]string,
+) (string, error) {
 	volumeBinding := fmt.Sprintf("%s:%s", volumeName, dstMount)
 
 	config := &container.Config{
-		Image: d.helperImage.ID,
-		Cmd:   []string{"gitlab-runner-helper", "cache-init", dstMount},
+		Image:  d.helperImage.ID,
+		Cmd:    []string{"gitlab-runner-helper", "cache-init", dstMount},
+		Labels: labels,
 	}
 
 	hostConfig := &container.HostConfig{

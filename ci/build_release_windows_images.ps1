@@ -27,6 +27,8 @@ $InformationPreference = "Continue"
 # - $Env:DOCKER_HUB_PASSWORD - The password we want to login with for docker hub.
 # - $Env:PUSH_TO_DOCKER_HUB - If set to true, it will login to the registry and
 #   push the tags.
+# - $Env:SKIP_CLEANUP - By default this PowerShell script will delete the image
+#   it just build.
 # ---------------------------------------------------------------------------
 $imagesBasePath = "dockerfiles\runner-helper\Dockerfile.x86_64"
 
@@ -146,8 +148,8 @@ Try
     }
 
     Main
-} 
-Finally 
+}
+Finally
 {
     if (-not (Test-Path env:SKIP_CLEANUP))
     {
