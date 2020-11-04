@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/gitlab-runner
 
-go 1.13
+go 1.16
 
 require (
 	cloud.google.com/go/storage v1.12.0

@@ -228,7 +228,7 @@ fuzz variable mask:
   extends:
   - .fuzz_base
   - .rules:merge_request_pipelines:no_docs
-  image: golang:1.13
+  image: golang:1.16.7
   stage: test
   variables:
     COVFUZZ_SEED_CORPUS: './helpers/trace/testdata/corpus'
@@ -319,7 +319,7 @@ git 1.8.3.1:
     CGO_ENABLED: 0
   before_script:
   - yum install -y -q git make patch && git version
-  - curl https://storage.googleapis.com/golang/go1.13.8.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+  - curl https://storage.googleapis.com/golang/go1.16.7.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
   - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx -C /usr/bin
   - git-lfs install --skip-repo
   - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
