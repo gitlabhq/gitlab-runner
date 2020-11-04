@@ -44,7 +44,7 @@ ready to [install the Runner](#installing-gitlab-runner-using-the-helm-chart).
 
 ### Additional configuration
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 The rest of the configuration is
 [documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository.
@@ -200,25 +200,25 @@ runners:
 
   ## Default container image to use for builds when none is specified
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # image: ubuntu:16.04
 
   ## Specify one or more imagePullSecrets
   ##
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # imagePullSecrets: []
 
   ## Specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # imagePullPolicy: ""
 
   ## Defines number of concurrent requests for new job from GitLab
   ## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # requestConcurrency: 1
 
   ## Specify whether the runner should be locked to a specific project: true, false. Defaults to true.
@@ -251,7 +251,7 @@ runners:
   ## commands. Please read the docs before turning this on:
   ## ref: https://docs.gitlab.com/runner/executors/kubernetes.html#using-dockerdind
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # privileged: false
 
   ## The name of the secret containing runner-token and runner-registration-token
@@ -259,18 +259,18 @@ runners:
 
   ## Namespace to run Kubernetes jobs in (defaults to the same namespace of this release)
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # namespace:
 
   ## The amount of time, in seconds, that needs to pass before the runner will
   ## timeout attempting to connect to the container it has just created.
   ## ref: https://docs.gitlab.com/runner/executors/kubernetes.html
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # pollTimeout: 180
 
   ## Set maximum build log size in kilobytes, by default set to 4096 (4MB)
   ## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # outputLimit: 4096
 
   ## Distributed runners caching
@@ -308,20 +308,20 @@ runners:
   ## ref: https://kubernetes.io/docs/concepts/configuration/secret/
   cache: {}
     ## General settings
-    ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+    ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
     # cacheType: s3
     # cachePath: "gitlab_runner"
     # cacheShared: true
 
     ## S3 settings
-    ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+    ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
     # s3ServerAddress: s3.amazonaws.com
     # s3BucketName:
     # s3BucketLocation:
     # s3CacheInsecure: false
 
     ## GCS settings
-    ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+    ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
     # gcsBucketName:
 
     ## S3 the name of the secret.
@@ -334,7 +334,7 @@ runners:
 
   ## Build Container specific configuration
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   builds: {}
     # cpuLimit: 200m
     # cpuLimitOverwriteMaxAllowed: 400m
@@ -347,7 +347,7 @@ runners:
 
   ## Service Container specific configuration
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   services: {}
     # cpuLimit: 200m
     # memoryLimit: 256Mi
@@ -356,7 +356,7 @@ runners:
 
   ## Helper Container specific configuration
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   helpers: {}
     # cpuLimit: 200m
     # memoryLimit: 256Mi
@@ -366,7 +366,7 @@ runners:
 
   ## Helper container security context configuration
   ## Refer to https://docs.gitlab.com/runner/executors/kubernetes.html#using-security-context
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # pod_security_context:
   #   run_as_non_root: true
   #   run_as_user: 100
@@ -380,28 +380,28 @@ runners:
 
   ## If Gitlab is not reachable through $CI_SERVER_URL
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # cloneUrl:
 
   ## Specify node labels for CI job pods assignment
   ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # nodeSelector: {}
 
   ## Specify node tolerations for CI job pods assignment
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # nodeTolerations: {}
 
   ## Specify pod labels for CI job pods
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # podLabels: {}
 
   ## Specify annotations for job pods, useful for annotations such as iam.amazonaws.com/role
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # podAnnotations: {}
 
   ## Configure environment variables that will be injected to the pods that are created while
@@ -413,7 +413,7 @@ runners:
   ##
   ## ref: https://docs.gitlab.com/runner/commands/#gitlab-runner-register
   ##
-  ## DEPRECATED: See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222
+  ## DEPRECATED: See https://docs.gitlab.com/runner/install/kubernetes.html#using-configuration-template
   # env:
   #   NAME: VALUE
 
@@ -512,7 +512,7 @@ podLabels: {}
 
 ### Using configuration template
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 It's now possible to use a [configuration template file](../register/index.md#runners-configuration-template-file)
 to configure the runner. The configuration template allows users to configure any field on the Runner,
@@ -530,7 +530,7 @@ runners:
 
 ### Migrating to the new configuration template
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 Since many of the fields accepted by the `values.yaml` file will be removed with the introduction of version `1.0` of the
 Helm Chart, migrating away from them in a timely manner is recommended.
