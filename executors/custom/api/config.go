@@ -12,6 +12,8 @@ type ConfigExecOutput struct {
 	CacheDir  *string `json:"cache_dir,omitempty"`
 
 	BuildsDirIsShared *bool `json:"builds_dir_is_shared,omitempty"`
+
+	JobEnv *map[string]string `json:"job_env,omitempty"`
 }
 
 // DriverInfo wraps the information about Custom Executor driver details

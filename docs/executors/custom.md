@@ -136,6 +136,9 @@ cat << EOS
   "driver": {
     "name": "test driver",
     "version": "v0.0.1"
+  },
+  "job_env" : {
+    "CUSTOM_ENVIRONMENT": "example"
   }
 }
 EOS
@@ -153,6 +156,7 @@ times.
 | `hostname` | string | ✗ | ✓ | The hostname to associate with job's "metadata" stored by Runner. If undefined, the hostname is not set. |
 | `driver.name` | string | ✗ | ✓ | The user-defined name for the driver. Printed with the `Using custom executor...` line. If undefined, no information about driver is printed. |
 | `driver.version` | string | ✗ | ✓ | The user-defined version for the drive. Printed with the `Using custom executor...` line. If undefined, only the name information is printed. |
+| `job_env` | object | ✗ | ✓ |  Name-value pairs that will be made available through environment variables to all subsequent stages of the job. |
 
 The `STDERR` of the executable will print to the job log.
 

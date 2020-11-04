@@ -41,8 +41,9 @@ type executorTestCase struct {
 		args []string,
 		options process.CommandOptions,
 	)
-	assertOutput  func(t *testing.T, output string)
-	expectedError string
+	assertOutput   func(t *testing.T, output string)
+	assertExecutor func(t *testing.T, e *executor)
+	expectedError  string
 }
 
 func getRunnerConfig(custom *common.CustomConfig) common.RunnerConfig {
@@ -268,6 +269,9 @@ func TestExecutor_Prepare(t *testing.T) {
 				assert.Equal(t, "/builds/project-0", b.BuildDir)
 				assert.Equal(t, "/cache/project-0", b.CacheDir)
 			},
+			assertExecutor: func(t *testing.T, e *executor) {
+				assert.Nil(t, e.jobEnv)
+			},
 		},
 		"custom executor set with ConfigExec with undefined builds_dir": {
 			config: getRunnerConfig(&common.CustomConfig{
@@ -420,6 +424,75 @@ func TestExecutor_Prepare(t *testing.T) {
 			},
 			expectedError: "test-error",
 		},
+		"custom executor set with valid job_env": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+			}),
+			commandStdoutContent: `{
+				"builds_dir": "/some/build/directory",
+				"job_env": {
+					"FOO": "Hello",
+					"BAR": "World"
+				}
+			}`,
+			commandErr: nil,
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
+				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
+			},
+			assertBuild: func(t *testing.T, b *common.Build) {
+				assert.Equal(t, "/some/build/directory/project-0", b.BuildDir)
+			},
+			assertExecutor: func(t *testing.T, e *executor) {
+				assert.Len(t, e.jobEnv, 2)
+				require.Contains(t, e.jobEnv, "FOO")
+				assert.Equal(t, "Hello", e.jobEnv["FOO"])
+				require.Contains(t, e.jobEnv, "BAR")
+				assert.Equal(t, "World", e.jobEnv["BAR"])
+			},
+		},
+		"custom executor set with valid job_env, verify variable order and prefix": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:     "run-executable",
+				ConfigExec:  "config-executable",
+				PrepareExec: "prepare-executable",
+				PrepareArgs: []string{"test"},
+			}),
+			commandStdoutContent: `{
+				"builds_dir": "/some/build/directory",
+				"job_env": {
+					"FOO": "Hello"
+				}
+			}`,
+			commandErr: nil,
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
+				if executable != "prepare-executable" {
+					return
+				}
+
+				require.True(t, len(options.Env) >= 2, "options.Env must contain 2 elements or more")
+				assert.Equal(t, "FOO=Hello", options.Env[0], "first env var must be FOO")
+				assert.True(
+					t,
+					strings.HasPrefix(options.Env[1], "CUSTOM_ENV_"),
+					"must be followed by CUSTOM_ENV_* variables",
+				)
+			},
+		},
 	}
 
 	for testName, tt := range tests {
@@ -433,6 +506,10 @@ func TestExecutor_Prepare(t *testing.T) {
 
 			if tt.assertBuild != nil {
 				tt.assertBuild(t, e.Build)
+			}
+
+			if tt.assertExecutor != nil {
+				tt.assertExecutor(t, e)
 			}
 
 			if tt.expectedError == "" {
@@ -511,6 +588,32 @@ func TestExecutor_Cleanup(t *testing.T) {
 				assert.Contains(t, output, "WARNING: Cleanup script failed: test-error")
 			},
 		},
+		"custom executor set with valid job_env, verify variable order and prefix": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:     "bash",
+				CleanupExec: "echo",
+				CleanupArgs: []string{"test"},
+			}),
+			adjustExecutor: func(t *testing.T, e *executor) {
+				e.jobEnv = map[string]string{"FOO": "Hello"}
+			},
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
+				require.True(t, len(options.Env) >= 2, "options.Env must contain 2 elements or more")
+				assert.Equal(t, "FOO=Hello", options.Env[0], "first env var must be FOO")
+				assert.True(
+					t,
+					strings.HasPrefix(options.Env[1], "CUSTOM_ENV_"),
+					"must be followed by CUSTOM_ENV_* variables",
+				)
+			},
+		},
 	}
 
 	for testName, tt := range tests {
@@ -518,6 +621,11 @@ func TestExecutor_Cleanup(t *testing.T) {
 			defer mockCommandFactory(t, tt)()
 
 			e, out := prepareExecutorForCleanup(t, tt)
+
+			if tt.adjustExecutor != nil {
+				tt.adjustExecutor(t, e)
+			}
+
 			e.Cleanup()
 
 			assertOutput(t, tt, out)
@@ -579,6 +687,30 @@ func TestExecutor_Run(t *testing.T) {
 				assert.Equal(t, tt.config.Custom.RunExec, executable)
 			},
 			expectedError: "test-error",
+		},
+		"custom executor set with valid job_env, verify variable order and prefix": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec: "bash",
+			}),
+			adjustExecutor: func(t *testing.T, e *executor) {
+				e.jobEnv = map[string]string{"FOO": "Hello"}
+			},
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				options process.CommandOptions,
+			) {
+				require.True(t, len(options.Env) >= 2, "options.Env must contain 2 elements or more")
+				assert.Equal(t, "FOO=Hello", options.Env[0], "first env var must be FOO")
+				assert.True(
+					t,
+					strings.HasPrefix(options.Env[1], "CUSTOM_ENV_"),
+					"must be followed by CUSTOM_ENV_* variables",
+				)
+			},
 		},
 	}
 

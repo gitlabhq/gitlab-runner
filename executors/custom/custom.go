@@ -52,6 +52,10 @@ func (c *ConfigExecOutput) InjectInto(executor *executor) {
 	}
 
 	executor.driverInfo = c.Driver
+
+	if c.JobEnv != nil {
+		executor.jobEnv = *c.JobEnv
+	}
 }
 
 type executor struct {
@@ -61,6 +65,8 @@ type executor struct {
 	tempDir string
 
 	driverInfo *api.DriverInfo
+
+	jobEnv map[string]string
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -200,6 +206,11 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 		Logger:              logger,
 		GracefulKillTimeout: e.config.GetGracefulKillTimeout(),
 		ForceKillTimeout:    e.config.GetForceKillTimeout(),
+	}
+
+	// Append job_env defined variable first to avoid overwriting any CI/CD or predefined variables.
+	for k, v := range e.jobEnv {
+		cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	for _, variable := range e.Build.GetAllVariables() {
