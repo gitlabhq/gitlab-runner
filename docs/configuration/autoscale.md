@@ -334,7 +334,7 @@ the `OffPeakPeriods` pattern is fulfilled then it switches back to
 ## Distributed runners caching
 
 NOTE: **Note:**
-Read how to [install your own cache server](../install/registry_and_cache_servers.md#use-a-distributed-cache).
+Read how to [use a distributed cache](../configuration/speed_up_job_execution.md#use-a-distributed-cache).
 
 To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/README.html#cache)
 where selected directories and/or files are saved and shared between subsequent
@@ -410,7 +410,7 @@ Where `10.11.12.13:12345` is the IP address and port where your registry mirror
 is listening for connections from the Docker service. It must be accessible for
 each host created by Docker Machine.
 
-Read more about how to [install a container registry](../install/registry_and_cache_servers.md#use-a-proxy-for-containers).
+Read more about how to [use a proxy for containers](../configuration/speed_up_job_execution.md#use-a-proxy-for-containers).
 
 ## A complete example of `config.toml`
 
