@@ -44,7 +44,7 @@ ready to [install the Runner](#installing-gitlab-runner-using-the-helm-chart).
 
 ### Additional configuration
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](https://docs.gitlab.com/runner/register/#runners-configuration-template-file) in Helm Chart 0.23.0. See See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
 
 The rest of the configuration is
 [documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository.
@@ -512,7 +512,7 @@ podLabels: {}
 
 ### Using configuration template
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](https://docs.gitlab.com/runner/register/#runners-configuration-template-file) in Helm Chart 0.23.0. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
 
 It's now possible to use a [configuration template file](../register/index.md#runners-configuration-template-file)
 to configure the runner. The configuration template allows users to configure any field on the Runner,
@@ -530,7 +530,7 @@ runners:
 
 ### Migrating to the new configuration template
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](https://docs.gitlab.com/runner/register/#runners-configuration-template-file) in Helm Chart 0.23.0. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222.
 
 Since many of the fields accepted by the `values.yaml` file will be removed with the introduction of version `1.0` of the
 Helm Chart, migrating away from them in a timely manner is recommended.
