@@ -1419,3 +1419,113 @@ func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {
 	err = buildtest.RunBuild(t, &build)
 	assert.NoError(t, err)
 }
+
+func TestChownAndUmaskUsage(t *testing.T) {
+	// On Windows we don't have the chown/umask problem so no need
+	// for doing the tests. Especially that the test is specific for
+	// Unix like platform
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping unix test on windows")
+	}
+
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	// nolint:lll
+	umaskUsedUserNotChanged := func(t *testing.T, output string) {
+		assert.NotContains(t, output, "Changing ownership of files")
+		assert.Regexp(t, `drwxrwxrwx\s+[0-9]+\s+root\s+root\s+[0-9a-zA-Z: ]+\s+director`, output, "directory permissions changed by umask, user root")
+		assert.Regexp(t, `-rwxrwxrwx\s+[0-9]+\s+root\s+root\s+[0-9a-zA-Z: ]+\s+executable-file`, output, "executable-file permissions changed by umask, user root")
+		assert.Regexp(t, `-rw-rw-rw-\s+[0-9]+\s+root\s+root\s+[0-9a-zA-Z: ]+\s+regular-file`, output, "regular-file permissions changed by umask, user root")
+	}
+	// nolint:lll
+	umaskNotUsedUserNotChanged := func(t *testing.T, output string) {
+		assert.NotContains(t, output, "Changing ownership of files")
+		assert.Regexp(t, `drwxr-xr-x\s+[0-9]+\s+root\s+root\s+[0-9a-zA-Z: ]+\s+director`, output, "directory permissions not changed by umask, user root")
+		assert.Regexp(t, `-rwxr-xr-x\s+[0-9]+\s+root\s+root\s+[0-9a-zA-Z: ]+\s+executable-file`, output, "executable-file permissions not changed by umask, user root")
+		assert.Regexp(t, `-rw-r--r--\s+[0-9]+\s+root\s+root\s+[0-9a-zA-Z: ]+\s+regular-file`, output, "regular-file permissions not changed by umask, user root")
+	}
+	// nolint:lll
+	umaskNotUsedUserChanged := func(t *testing.T, output string) {
+		assert.Contains(t, output, "Changing ownership of files")
+		assert.Regexp(t, `drwxr-xr-x\s+[0-9]+\s+alpine\s+alpine\s+[0-9a-zA-Z: ]+\s+director`, output, "directory permissions not changed by umask, user alpine")
+		assert.Regexp(t, `-rwxr-xr-x\s+[0-9]+\s+alpine\s+alpine\s+[0-9a-zA-Z: ]+\s+executable-file`, output, "executable-file permissions not changed by umask, user alpine")
+		assert.Regexp(t, `-rw-r--r--\s+[0-9]+\s+alpine\s+alpine\s+[0-9a-zA-Z: ]+\s+regular-file`, output, "regular-file permissions not changed by umask, user alpine")
+	}
+
+	gitInfo := common.GitInfo{
+		RepoURL:   "https://gitlab.com/gitlab-org/ci-cd/tests/file-permissions.git",
+		Sha:       "050d238e16c5962fc16e49ab1b6be1be39778b6c",
+		BeforeSha: "0000000000000000000000000000000000000000",
+		Ref:       "master",
+		RefType:   common.RefTypeBranch,
+		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
+	}
+
+	tests := map[string]struct {
+		ffValue      string
+		testImage    string
+		assertOutput func(t *testing.T, output string)
+	}{
+		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR not set on root image": {
+			ffValue:      "",
+			testImage:    common.TestAlpineImage,
+			assertOutput: umaskUsedUserNotChanged,
+		},
+		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR set explicitly to false on root image": {
+			ffValue:      "false",
+			testImage:    common.TestAlpineImage,
+			assertOutput: umaskUsedUserNotChanged,
+		},
+		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR set to true on root image": {
+			ffValue:      "true",
+			testImage:    common.TestAlpineImage,
+			assertOutput: umaskNotUsedUserNotChanged,
+		},
+		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR not set on non-root image": {
+			ffValue:      "",
+			testImage:    common.TestAlpineNoRootImage,
+			assertOutput: umaskUsedUserNotChanged,
+		},
+		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR set explicitly to false on non-root image": {
+			ffValue:      "false",
+			testImage:    common.TestAlpineNoRootImage,
+			assertOutput: umaskUsedUserNotChanged,
+		},
+		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR set to true on non-root image": {
+			ffValue:      "true",
+			testImage:    common.TestAlpineNoRootImage,
+			assertOutput: umaskNotUsedUserChanged,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			jobResponse, err := common.GetRemoteBuildResponse("ls -l")
+			require.NoError(t, err)
+
+			jobResponse.GitInfo = gitInfo
+			jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
+				Key:   featureflags.DisableUmaskForDockerExecutor,
+				Value: tt.ffValue,
+			})
+
+			build := &common.Build{
+				JobResponse: jobResponse,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker: &common.DockerConfig{
+							Image:      tt.testImage,
+							PullPolicy: common.PullPolicyIfNotPresent,
+						},
+					},
+				},
+			}
+
+			output := runTestJobWithOutput(t, build)
+			fmt.Println(output)
+
+			tt.assertOutput(t, output)
+		})
+	}
+}
