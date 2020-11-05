@@ -80,36 +80,38 @@ func TestArtifactsDownloader(t *testing.T) {
 	os.Remove(artifactsTestArchivedFile)
 
 	for testName, testCase := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			network := &testNetwork{
-				downloadState: testCase.downloadState,
-			}
-			cmd := ArtifactsDownloaderCommand{
-				JobCredentials: downloaderCredentials,
-				DirectDownload: testCase.directDownload,
-				network:        network,
-				retryHelper: retryHelper{
-					Retry: 2,
-				},
-			}
+		OnEachZipArchiver(t, func(t *testing.T) {
+			t.Run(testName, func(t *testing.T) {
+				network := &testNetwork{
+					downloadState: testCase.downloadState,
+				}
+				cmd := ArtifactsDownloaderCommand{
+					JobCredentials: downloaderCredentials,
+					DirectDownload: testCase.directDownload,
+					network:        network,
+					retryHelper: retryHelper{
+						Retry: 2,
+					},
+				}
 
-			// file is cleaned after running test
-			defer os.Remove(artifactsTestArchivedFile)
+				// file is cleaned after running test
+				defer os.Remove(artifactsTestArchivedFile)
 
-			if testCase.expectedSuccess {
-				require.NotPanics(t, func() {
-					cmd.Execute(nil)
-				})
+				if testCase.expectedSuccess {
+					require.NotPanics(t, func() {
+						cmd.Execute(nil)
+					})
 
-				assert.FileExists(t, artifactsTestArchivedFile)
-			} else {
-				require.Panics(t, func() {
-					cmd.Execute(nil)
-				})
-			}
+					assert.FileExists(t, artifactsTestArchivedFile)
+				} else {
+					require.Panics(t, func() {
+						cmd.Execute(nil)
+					})
+				}
 
-			assert.Equal(t, testCase.expectedDirectDownloadCalled, network.directDownloadCalled)
-			assert.Equal(t, testCase.expectedDownloadCalled, network.downloadCalled)
+				assert.Equal(t, testCase.expectedDirectDownloadCalled, network.directDownloadCalled)
+				assert.Equal(t, testCase.expectedDownloadCalled, network.downloadCalled)
+			})
 		})
 	}
 }

@@ -19,43 +19,47 @@ const cacheExtractorArchive = "archive.zip"
 const cacheExtractorTestArchivedFile = "archive_file"
 
 func TestCacheExtractorValidArchive(t *testing.T) {
-	file, err := os.Create(cacheExtractorArchive)
-	assert.NoError(t, err)
-	defer file.Close()
-	defer os.Remove(file.Name())
-	defer os.Remove(cacheExtractorTestArchivedFile)
+	OnEachZipExtractor(t, func(t *testing.T) {
+		file, err := os.Create(cacheExtractorArchive)
+		assert.NoError(t, err)
+		defer file.Close()
+		defer os.Remove(file.Name())
+		defer os.Remove(cacheExtractorTestArchivedFile)
 
-	archive := zip.NewWriter(file)
-	_, err = archive.Create(cacheExtractorTestArchivedFile)
-	assert.NoError(t, err)
+		archive := zip.NewWriter(file)
+		_, err = archive.Create(cacheExtractorTestArchivedFile)
+		assert.NoError(t, err)
 
-	archive.Close()
+		archive.Close()
 
-	_, err = os.Stat(cacheExtractorTestArchivedFile)
-	assert.Error(t, err)
+		_, err = os.Stat(cacheExtractorTestArchivedFile)
+		assert.Error(t, err)
 
-	cmd := CacheExtractorCommand{
-		File: cacheExtractorArchive,
-	}
-	assert.NotPanics(t, func() {
-		cmd.Execute(nil)
+		cmd := CacheExtractorCommand{
+			File: cacheExtractorArchive,
+		}
+		assert.NotPanics(t, func() {
+			cmd.Execute(nil)
+		})
+
+		_, err = os.Stat(cacheExtractorTestArchivedFile)
+		assert.NoError(t, err)
 	})
-
-	_, err = os.Stat(cacheExtractorTestArchivedFile)
-	assert.NoError(t, err)
 }
 
 func TestCacheExtractorForInvalidArchive(t *testing.T) {
-	removeHook := helpers.MakeFatalToPanic()
-	defer removeHook()
-	writeTestFile(t, cacheExtractorArchive)
-	defer os.Remove(cacheExtractorArchive)
+	OnEachZipExtractor(t, func(t *testing.T) {
+		removeHook := helpers.MakeFatalToPanic()
+		defer removeHook()
+		writeTestFile(t, cacheExtractorArchive)
+		defer os.Remove(cacheExtractorArchive)
 
-	cmd := CacheExtractorCommand{
-		File: cacheExtractorArchive,
-	}
-	assert.Panics(t, func() {
-		cmd.Execute(nil)
+		cmd := CacheExtractorCommand{
+			File: cacheExtractorArchive,
+		}
+		assert.Panics(t, func() {
+			cmd.Execute(nil)
+		})
 	})
 }
 

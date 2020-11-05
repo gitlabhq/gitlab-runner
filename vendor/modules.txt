@@ -210,9 +210,10 @@ github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
 # github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
 github.com/kardianos/osext
-# github.com/klauspost/compress v1.10.5
+# github.com/klauspost/compress v1.11.2
 github.com/klauspost/compress/flate
-# github.com/klauspost/pgzip v1.2.3
+github.com/klauspost/compress/zip
+# github.com/klauspost/pgzip v1.2.5
 github.com/klauspost/pgzip
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
@@ -278,6 +279,11 @@ github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
 # github.com/ryanuber/go-glob v1.0.0
 github.com/ryanuber/go-glob
+# github.com/saracen/fastzip v0.1.3
+github.com/saracen/fastzip
+github.com/saracen/fastzip/internal/filepool
+# github.com/saracen/zipextra v0.0.0-20191018034721-f8fcc2e1b58e
+github.com/saracen/zipextra
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/test
@@ -366,9 +372,9 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
+# golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
+# golang.org/x/sys v0.0.0-20201101102859-da207088b7d1 => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix

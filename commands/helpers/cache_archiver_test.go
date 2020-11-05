@@ -25,33 +25,35 @@ const cacheArchiverArchive = "archive.zip"
 const cacheArchiverTestArchivedFile = "archive_file"
 
 func TestCacheArchiverIsUpToDate(t *testing.T) {
-	writeTestFile(t, cacheArchiverTestArchivedFile)
-	defer os.Remove(cacheArchiverTestArchivedFile)
+	OnEachZipArchiver(t, func(t *testing.T) {
+		writeTestFile(t, cacheArchiverTestArchivedFile)
+		defer os.Remove(cacheArchiverTestArchivedFile)
 
-	defer os.Remove(cacheArchiverArchive)
-	cmd := CacheArchiverCommand{
-		File: cacheArchiverArchive,
-		fileArchiver: fileArchiver{
-			Paths: []string{
-				cacheArchiverTestArchivedFile,
+		defer os.Remove(cacheArchiverArchive)
+		cmd := CacheArchiverCommand{
+			File: cacheArchiverArchive,
+			fileArchiver: fileArchiver{
+				Paths: []string{
+					cacheArchiverTestArchivedFile,
+				},
 			},
-		},
-	}
-	cmd.Execute(nil)
-	fi, _ := os.Stat(cacheArchiverArchive)
-	cmd.Execute(nil)
-	fi2, _ := os.Stat(cacheArchiverArchive)
-	assert.Equal(t, fi.ModTime(), fi2.ModTime(), "archive is up to date")
+		}
+		cmd.Execute(nil)
+		fi, _ := os.Stat(cacheArchiverArchive)
+		cmd.Execute(nil)
+		fi2, _ := os.Stat(cacheArchiverArchive)
+		assert.Equal(t, fi.ModTime(), fi2.ModTime(), "archive is up to date")
 
-	// We need to wait one second, since the FS doesn't save milliseconds
-	time.Sleep(time.Second)
+		// We need to wait one second, since the FS doesn't save milliseconds
+		time.Sleep(time.Second)
 
-	err := os.Chtimes(cacheArchiverTestArchivedFile, time.Now(), time.Now())
-	assert.NoError(t, err)
+		err := os.Chtimes(cacheArchiverTestArchivedFile, time.Now(), time.Now())
+		assert.NoError(t, err)
 
-	cmd.Execute(nil)
-	fi3, _ := os.Stat(cacheArchiverArchive)
-	assert.NotEqual(t, fi.ModTime(), fi3.ModTime(), "archive should get updated")
+		cmd.Execute(nil)
+		fi3, _ := os.Stat(cacheArchiverArchive)
+		assert.NotEqual(t, fi.ModTime(), fi3.ModTime(), "archive should get updated")
+	})
 }
 
 func TestCacheArchiverForIfNoFileDefined(t *testing.T) {

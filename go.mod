@@ -37,8 +37,7 @@ require (
 	github.com/imdario/mergo v0.3.7
 	github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
 	github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
-	github.com/klauspost/compress v1.10.5 // indirect
-	github.com/klauspost/pgzip v1.2.3
+	github.com/klauspost/pgzip v1.2.5
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pty v1.1.1
 	github.com/markelog/trie v0.0.0-20171230083431-098fa99650c0
@@ -55,6 +54,7 @@ require (
 	github.com/prometheus/common v0.6.0
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sanity-io/litter v1.2.0 // indirect
+	github.com/saracen/fastzip v0.1.3
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/pflag v1.0.1-0.20171106142849-4c012f6dcd95 // indirect
@@ -67,8 +67,8 @@ require (
 	gocloud.dev v0.20.0
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
-	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+	golang.org/x/sys v0.0.0-20201101102859-da207088b7d1
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/ini.v1 v1.52.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8
@@ -81,6 +81,8 @@ require (
 	k8s.io/utils v0.0.0-20190923111123-69764acb6e8e // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
+
+replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 
 replace github.com/docker/docker v1.4.2-0.20190822180741-9552f2b2fdde => github.com/docker/engine v1.4.2-0.20190822180741-9552f2b2fdde
 
