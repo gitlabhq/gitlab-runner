@@ -60,7 +60,7 @@ runners:
         image = "ubuntu:16.04"
 ```
 
-The rest of the configuration [is documented in the values.yaml](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
+The rest of the configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
 
 ### Migrating to the new configuration template
 
@@ -121,7 +121,7 @@ cache:
     secretName: s3access
 ```
 
-Read more about the caching in Helm Chart in [values.yaml](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml). 
+Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml). 
 
 ### Enabling RBAC support
 
