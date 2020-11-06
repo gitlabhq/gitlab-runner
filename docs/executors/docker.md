@@ -597,8 +597,7 @@ limitless.
 ## How pull policies work
 
 When using the `docker` or `docker+machine` executors, you can set the
-`pull_policy` parameter which defines how the Runner will work when pulling
-Docker images (for both `image` and `services` keywords).
+`pull_policy` parameter in the runner `config.toml` file as described in the configuration docs [Docker section](../configuration/advanced-configuration.md#the-runnersdocker-section). This parameter defines how the runner works when pulling Docker images (for both `image` and `services` keywords).
 
 If you don't set any value for the `pull_policy` parameter, then
 Runner will use the `always` pull policy as the default value.
