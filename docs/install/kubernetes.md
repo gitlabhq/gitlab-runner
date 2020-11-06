@@ -47,7 +47,7 @@ ready to [install the Runner](#installing-gitlab-runner-using-the-helm-chart).
 > [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 You can use a [configuration template file](../register/index.md#runners-configuration-template-file)
-to configure the runner. The configuration template allows users to configure any field on the Runner,
+to configure the runner. You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
 
 Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository:
@@ -66,19 +66,20 @@ The rest of the configuration [is documented in the `values.yaml`](https://gitla
 
 > [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
-Since many of the fields accepted by the `values.yaml` file will be removed with the introduction of version `1.0` of the
-Helm Chart, migrating away from them in a timely manner is recommended.
+Many of the fields accepted by the `values.yaml` file will be removed with the introduction of
+Helm Chart version 1.0. We recommend migrating away from them as soon as possible.
+These fields are marked with a `DEPRECATED:` comment above them.
 
 All the configuration options supported by the Kubernetes executor are listed in [the Kubernetes executor docs](../executors/kubernetes.md#the-keywords).
-For many of the fields the old naming in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#the-keywords).
-For some, a bit of renaming will be needed. As an example, if you have been using `helper CPU limits` before:
+For many of the fields, the old name in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#the-keywords).
+For some, you must rename them. For example, if you are using `helpers` to set CPU limits:
 
 ```yaml
 helpers:
     cpuLimit: 200m
 ``` 
 
-Now, they can be set as `helper_cpu_limit`:
+Now you can set them as `helper_cpu_limit`:
 
 ```yaml
 runners:
@@ -98,7 +99,7 @@ to avoid conflicts.
 
 ### Using cache with configuration template
 
-To use cache with your configuration template you need to set `cache.secretName` in `values.yaml` and
+To use cache with your configuration template, set `cache.secretName` in `values.yaml` and
 set the other settings for [the cache](../configuration/advanced-configuration.md#the-runnerscache-section) in the `runners.config`:
 
 ```yaml
