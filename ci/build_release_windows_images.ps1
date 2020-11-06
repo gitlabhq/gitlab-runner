@@ -29,6 +29,15 @@ $InformationPreference = "Continue"
 #   push the tags.
 # - $Env:SKIP_CLEANUP - By default this PowerShell script will delete the image
 #   it just build.
+# - $Env:DOCKER_HUB_NAMESPACE - Usually empty and only set for development, to
+#   use your own namespace instead of `gitlab`.
+# - $Env:CI_REGISTRY_IMAGE - Image name to push to GitLab registry. Usually set
+#   by CI.
+# - $Env:CI_REGISTRY - The GitLab registry name. Usually set by CI.
+# - $Env:CI_REGISTRY_USER - The user used to login CI_REGISTRY. Usually set by
+#   CI.
+# - $Env:CI_REGISTRY_PASSWORD - The password used to login CI_REGISTRY. Usually
+#   set by CI.
 # ---------------------------------------------------------------------------
 $imagesBasePath = "dockerfiles\runner-helper\Dockerfile.x86_64"
 
@@ -38,23 +47,36 @@ function Main
 
     Build-Image $tag
 
-    if (-not ($Env:PUSH_TO_DOCKER_HUB -eq "true"))
+    if ($Env:PUSH_TO_DOCKER_HUB -eq "true")
     {
-        '$Env:PUSH_TO_DOCKER_HUB is not true, done'
-        return
+        $namespace = DockerHub-Namespace
+
+        Connect-Registry $Env:DOCKER_HUB_USER $Env:DOCKER_HUB_PASSWORD
+        Push-Tag $namespace $tag
+
+        if ($Env:IS_LATEST -eq "true")
+        {
+            Add-LatestTag $namespace $tag
+            Push-Latest $namespace
+        }
+
+        Disconnect-Registry
     }
 
-    Connect-Registry
-
-    Push-Tag $tag
-
-    if ($Env:IS_LATEST -eq "true")
+    if ($Env:PUBLISH_IMAGES -eq "true")
     {
-        Add-LatestTag $tag
-        Push-Latest
-    }
+        Connect-Registry $Env:CI_REGISTRY_USER $Env:CI_REGISTRY_PASSWORD $Env:CI_REGISTRY
 
-    Disconnect-Registry
+        Push-Tag "${Env:CI_REGISTRY_IMAGE}" $tag
+
+        if ($Env:IS_LATEST -eq "true")
+        {
+            Add-LatestTag $Env:CI_REGISTRY_IMAGE $tag
+            Push-Latest $Env:CI_REGISTRY_IMAGE
+        }
+
+        Disconnect-Registry $env:CI_REGISTRY
+    }
 }
 
 function Get-Tag
@@ -68,6 +90,7 @@ function Build-Image($tag)
 {
     $windowsFlavor = $env:WINDOWS_VERSION.Substring(0, $env:WINDOWS_VERSION.length -4)
     $windowsVersion = $env:WINDOWS_VERSION.Substring($env:WINDOWS_VERSION.length -4)
+    $dockerHubNamespace = DockerHub-Namespace
 
     Write-Information "Build image for x86_64_${env:WINDOWS_VERSION}"
 
@@ -84,60 +107,75 @@ function Build-Image($tag)
         '--build-arg', "GIT_LFS_256_CHECKSUM=$Env:GIT_LFS_256_CHECKSUM"
     )
 
-    & 'docker' build -t "gitlab/gitlab-runner-helper:$tag" --force-rm --no-cache $buildArgs -f $dockerFile $context
+    $imageNames = @(
+        '-t', "$dockerHubNamespace/gitlab-runner-helper:$tag",
+        '-t', "$Env:CI_REGISTRY_IMAGE/gitlab-runner-helper:$tag"
+    )
+
+    & 'docker' build $imageNames --force-rm --no-cache $buildArgs -f $dockerFile $context
     if ($LASTEXITCODE -ne 0) {
         throw ("Failed to build docker image" )
     }
 }
 
-function Push-Tag($tag)
+function Push-Tag($namespace, $tag)
 {
     Write-Information "Push $tag"
 
-    & 'docker' push gitlab/gitlab-runner-helper:$tag
+    & 'docker' push ${namespace}/gitlab-runner-helper:$tag
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to push docker image gitlab/gitlab-runner-helper:$tag" )
+        throw ("Failed to push docker image ${namespace}/gitlab-runner-helper:$tag" )
     }
 }
 
-function Add-LatestTag($tag)
+function Add-LatestTag($namespace, $tag)
 {
     Write-Information "Tag $tag as latest"
 
-    & 'docker' tag "gitlab/gitlab-runner-helper:$tag" "gitlab/gitlab-runner-helper:x86_64-latest-$Env:WINDOWS_VERSION"
+    & 'docker' tag "${namespace}/gitlab-runner-helper:$tag" "${namespace}/gitlab-runner-helper:x86_64-latest-$Env:WINDOWS_VERSION"
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to tag gitlab/gitlab-runner-helper:$tag as latest image" )
+        throw ("Failed to tag ${namespace}/gitlab-runner-helper:$tag as latest image" )
     }
 }
 
-function Push-Latest()
+function Push-Latest($namespace)
 {
     Write-Information "Push latest tag"
 
-    & 'docker' push "gitlab/gitlab-runner-helper:x86_64-latest-$Env:WINDOWS_VERSION"
+    & 'docker' push "${namespace}/gitlab-runner-helper:x86_64-latest-$Env:WINDOWS_VERSION"
     if ($LASTEXITCODE -ne 0) {
         throw ("Failed to push image to registry" )
     }
 }
 
-function Connect-Registry
+function Connect-Registry($username, $password, $registry)
 {
-    Write-Information 'Login docker hub'
+    Write-Information "Login registry $registry"
 
-    & 'docker' login --username $Env:DOCKER_HUB_USER --password $Env:DOCKER_HUB_PASSWORD
+    & 'docker' login --username $username --password $password $registry
     if ($LASTEXITCODE -ne 0) {
         throw ("Failed to login Docker hub" )
     }
 }
 
-function Disconnect-Registry
+function Disconnect-Registry($registry)
 {
-    Write-Information 'Logout register'
+    Write-Information "Logout registry $registry"
 
-    & 'docker' logout
+    & 'docker' logout $registry
     if ($LASTEXITCODE -ne 0) {
         throw ("Failed to logout from Docker hub" )
     }
+}
+
+function DockerHub-Namespace
+{
+    if(-not (Test-Path env:DOCKER_HUB_NAMESPACE))
+    {
+        return "gitlab"
+    }
+
+    return $Env:DOCKER_HUB_NAMESPACE
 }
 
 Try
@@ -155,10 +193,12 @@ Finally
     {
         Write-Information "Cleaning up the build image"
         $tag = Get-Tag
+        $dockerHubNamespace = DockerHub-Namespace
 
         # We don't really care if these fail or not, clean up shouldn't fail
         # the pipelines.
-        & 'docker' rmi -f gitlab/gitlab-runner-helper:$tag
+        & 'docker' rmi -f $dockerHubNamespace/gitlab-runner-helper:$tag
+        & 'docker' rmi -f $Env:CI_REGISTRY_IMAGE/gitlab-runner-helper:$tag
         & 'docker' image prune -f
     }
 }
