@@ -2803,135 +2803,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"e2e-az1", "e2e-az2"}, requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Values)
 			},
 		},
-		"supports services as host aliases": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
-			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
-						Name:  "test-service",
-						Alias: "svc-alias",
-					},
-					{
-						Name: "docker:dind",
-					},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 4)
-				require.Len(t, pod.Spec.HostAliases, 1)
-
-				assert.Equal(t, []api.HostAlias{
-					{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"test-service", "svc-alias", "docker"},
-					},
-				}, pod.Spec.HostAliases)
-			},
-		},
-		"supports services as kubernetes host aliases with simple docker image syntax": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
-			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
-						Name: "docker:dind",
-					},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				assert.Len(t, pod.Spec.Containers, 3)
-				require.Len(t, pod.Spec.HostAliases, 1)
-
-				assert.Equal(t, []api.HostAlias{
-					{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"docker"},
-					},
-				}, pod.Spec.HostAliases)
-			},
-		},
-		"ignores non RFC1123 service aliases": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
-			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
-						Name:  "test-service",
-						Alias: "INVALID_ALIAS",
-					},
-					{
-						Name: "docker:dind",
-					},
-				},
-			},
-			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
-				var expected *invalidHostAliasDNSError
-				assert.ErrorAs(t, err, &expected)
-				assert.True(t, expected.Is(err))
-				errMsg := err.Error()
-				assert.Contains(t, errMsg, "is invalid DNS")
-				assert.Contains(t, errMsg, "INVALID_ALIAS")
-				assert.Contains(t, errMsg, "test-service")
-			},
-		},
-		"ignores services with ports": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
-			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
-						Name:  "test-service",
-						Alias: "alias",
-					},
-					{
-						Name: "docker:dind",
-						Ports: []common.Port{{
-							Number:   0,
-							Protocol: "",
-							Name:     "",
-						}},
-					},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				// the second time this fn is called is to create the proxy service
-				if pod.Kind == "Service" {
-					return
-				}
-
-				require.Len(t, pod.Spec.Containers, 4)
-
-				require.Len(t, pod.Spec.HostAliases, 1)
-				assert.Equal(t, []api.HostAlias{
-					{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"test-service", "alias"},
-					},
-				}, pod.Spec.HostAliases)
-			},
-		},
-		"allows setting extra hosts aliases using ExtraHosts": {
+		"supports services and setting extra hosts using HostAliases": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2949,9 +2821,37 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "svc-alias",
+					},
+					{
+						Name: "docker:dind",
+					},
+					{
+						Name: "service-with-port:dind",
+						Ports: []common.Port{{
+							Number:   0,
+							Protocol: "",
+							Name:     "",
+						}},
+					},
+				},
+			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				require.Len(t, pod.Spec.HostAliases, 2)
+				// the second time this fn is called is to create the proxy service
+				if pod.Kind == "Service" {
+					return
+				}
+
+				require.Len(t, pod.Spec.HostAliases, 3)
 				assert.Equal(t, []api.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"test-service", "svc-alias", "docker"},
+					},
 					{
 						IP:        "127.0.0.1",
 						Hostnames: []string{"redis"},
@@ -2963,75 +2863,6 @@ func TestSetupBuildPod(t *testing.T) {
 				}, pod.Spec.HostAliases)
 			},
 		},
-		"supports services and setting extra hosts for 127.0.0.1 using ExtraHosts": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-						HostAliases: []common.KubernetesHostAliases{
-							{
-								IP:        "127.0.0.1",
-								Hostnames: []string{"redis"},
-							},
-						},
-					},
-				},
-			},
-			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
-						Name:  "test-service",
-						Alias: "alias",
-					},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				require.Len(t, pod.Spec.HostAliases, 1)
-				assert.Equal(t, []api.HostAlias{
-					{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"redis", "test-service", "alias"},
-					},
-				}, pod.Spec.HostAliases)
-			},
-		},
-		"supports services and setting extra hosts using ExtraHosts": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-						HostAliases: []common.KubernetesHostAliases{
-							{
-								IP:        "8.8.8.8",
-								Hostnames: []string{"google"},
-							},
-						},
-					},
-				},
-			},
-			Options: &kubernetesOptions{
-				Services: common.Services{
-					{
-						Name:  "test-service",
-						Alias: "alias",
-					},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				require.Len(t, pod.Spec.HostAliases, 2)
-				assert.Equal(t, []api.HostAlias{
-					{
-						IP:        "8.8.8.8",
-						Hostnames: []string{"google"},
-					},
-					{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"test-service", "alias"},
-					},
-				}, pod.Spec.HostAliases)
-			},
-		},
-
 		"no host aliases when feature is not supported in kubernetes": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{

@@ -410,15 +410,12 @@ func TestConfigParse(t *testing.T) {
 
 func TestKubernetesHostAliases(t *testing.T) {
 	tests := map[string]struct {
-		config         KubernetesConfig
-		validateConfig func(t *testing.T, hostAliases []api.HostAlias)
-		expectedErr    string
+		config              KubernetesConfig
+		expectedHostAliases []api.HostAlias
 	}{
 		"parse Kubernetes HostAliases with empty list": {
-			config: KubernetesConfig{},
-			validateConfig: func(t *testing.T, hostAliases []api.HostAlias) {
-				assert.Empty(t, hostAliases)
-			},
+			config:              KubernetesConfig{},
+			expectedHostAliases: nil,
 		},
 		"parse Kubernetes HostAliases with unique ips": {
 			config: KubernetesConfig{
@@ -433,18 +430,15 @@ func TestKubernetesHostAliases(t *testing.T) {
 					},
 				},
 			},
-			validateConfig: func(t *testing.T, hostAliases []api.HostAlias) {
-				require.Equal(t, 2, len(hostAliases))
-				assert.Equal(t, []api.HostAlias{
-					{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"web1", "web2"},
-					},
-					{
-						IP:        "192.168.1.1",
-						Hostnames: []string{"web14", "web15"},
-					},
-				}, hostAliases)
+			expectedHostAliases: []api.HostAlias{
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web1", "web2"},
+				},
+				{
+					IP:        "192.168.1.1",
+					Hostnames: []string{"web14", "web15"},
+				},
 			},
 		},
 		"parse Kubernetes HostAliases with duplicated ip": {
@@ -460,14 +454,15 @@ func TestKubernetesHostAliases(t *testing.T) {
 					},
 				},
 			},
-			validateConfig: func(t *testing.T, hostAliases []api.HostAlias) {
-				require.Equal(t, 1, len(hostAliases))
-				assert.Equal(t, []api.HostAlias{
-					{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"web1", "web2", "web14", "web15"},
-					},
-				}, hostAliases)
+			expectedHostAliases: []api.HostAlias{
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web1", "web2"},
+				},
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web14", "web15"},
+				},
 			},
 		},
 		"parse Kubernetes HostAliases with duplicated hostname": {
@@ -483,23 +478,22 @@ func TestKubernetesHostAliases(t *testing.T) {
 					},
 				},
 			},
-			validateConfig: func(t *testing.T, hostAliases []api.HostAlias) {
-				require.Equal(t, 1, len(hostAliases))
-				assert.Equal(t, []api.HostAlias{
-					{
-						IP:        "127.0.0.1",
-						Hostnames: []string{"web1", "web2", "web15"},
-					},
-				}, hostAliases)
+			expectedHostAliases: []api.HostAlias{
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web1", "web1", "web2"},
+				},
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web1", "web15"},
+				},
 			},
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			if tt.validateConfig != nil {
-				tt.validateConfig(t, tt.config.GetHostAliases())
-			}
+			assert.Equal(t, tt.expectedHostAliases, tt.config.GetHostAliases())
 		})
 	}
 }

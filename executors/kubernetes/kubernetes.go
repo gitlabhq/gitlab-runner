@@ -24,7 +24,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -843,26 +842,7 @@ func (s *executor) setupCredentials() error {
 	return nil
 }
 
-type invalidHostAliasDNSError struct {
-	service common.Image
-	inner   error
-}
-
-func (e *invalidHostAliasDNSError) Error() string {
-	return fmt.Sprintf(
-		"provided host alias %s for service %s is invalid DNS. %s",
-		e.service.Alias,
-		e.service.Name,
-		e.inner,
-	)
-}
-
-func (e *invalidHostAliasDNSError) Is(err error) bool {
-	_, ok := err.(*invalidHostAliasDNSError)
-	return ok
-}
-
-func (s *executor) prepareHostAliases() ([]api.HostAlias, error) {
+func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 	supportsHostAliases, err := s.featureChecker.IsHostAliasSupported()
 	switch {
 	case errors.Is(err, &badVersionError{}):
@@ -874,98 +854,7 @@ func (s *executor) prepareHostAliases() ([]api.HostAlias, error) {
 		return nil, nil
 	}
 
-	return s.createHostAliases()
-}
-
-func getHostAliasEntry(hostAliases []api.HostAlias, ip string) *api.HostAlias {
-	localhostIdx := -1
-	for idx := range hostAliases {
-		if hostAliases[idx].IP == ip {
-			localhostIdx = idx
-			break
-		}
-	}
-	if localhostIdx < 0 {
-		return nil
-	}
-	return &hostAliases[localhostIdx]
-}
-
-func (s *executor) createHostAliases() ([]api.HostAlias, error) {
-	servicesHostAlias, err := s.createServicesHostAlias()
-	if err != nil {
-		return nil, err
-	}
-
-	hostAliases := s.Config.Kubernetes.GetHostAliases()
-
-	if servicesHostAlias == nil {
-		return hostAliases, nil
-	}
-
-	// if localhost IP is also defined in configuration then use it to avoid duplicating localhost entry
-	localhostEntry := getHostAliasEntry(hostAliases, servicesHostAlias.IP)
-	if localhostEntry != nil {
-		// append aliases to already existing "127.0.0.1" host alias
-		localhostEntry.Hostnames = append(localhostEntry.Hostnames, servicesHostAlias.Hostnames...)
-	} else {
-		// no entry found for "127.0.0.1", add new entry
-		hostAliases = append(hostAliases, *servicesHostAlias)
-	}
-	return hostAliases, nil
-}
-
-func getServiceHostnames(service common.Image) ([]string, error) {
-	var hostnames []string
-
-	// Services with ports are coming from .gitlab-webide.yml
-	// they are used for ports mapping and their aliases are in no way validated
-	// so we ignore them. Check out https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1170
-	// for details
-	if len(service.Ports) > 0 {
-		return hostnames, nil
-	}
-
-	serviceMeta := services.SplitNameAndVersion(service.Name)
-	for _, alias := range serviceMeta.Aliases {
-		// For backward compatibility reasons a non DNS1123 compliant alias might be generated,
-		// this will be removed in https://gitlab.com/gitlab-org/gitlab-runner/issues/6100
-		err := dns.ValidateDNS1123Subdomain(alias)
-		if err == nil {
-			hostnames = append(hostnames, alias)
-		}
-	}
-
-	if service.Alias != "" {
-		err := dns.ValidateDNS1123Subdomain(service.Alias)
-		if err != nil {
-			return nil, &invalidHostAliasDNSError{service: service, inner: err}
-		}
-
-		hostnames = append(hostnames, service.Alias)
-	}
-
-	return hostnames, nil
-}
-
-func (s *executor) createServicesHostAlias() (*api.HostAlias, error) {
-	servicesHostAlias := api.HostAlias{IP: "127.0.0.1"}
-
-	for _, service := range s.options.Services {
-		hostnames, err := getServiceHostnames(service)
-		if err != nil {
-			return nil, err
-		}
-
-		servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, hostnames...)
-	}
-
-	// no service hostnames to add to aliases
-	if len(servicesHostAlias.Hostnames) == 0 {
-		return nil, nil
-	}
-
-	return &servicesHostAlias, nil
+	return createHostAliases(s.options.Services, s.Config.Kubernetes.GetHostAliases())
 }
 
 func (s *executor) setupBuildPod(initContainers []api.Container) error {
@@ -1005,7 +894,7 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
 	}
 
-	hostAliases, err := s.prepareHostAliases()
+	hostAliases, err := s.getHostAliases()
 	if err != nil {
 		return err
 	}

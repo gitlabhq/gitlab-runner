@@ -788,11 +788,8 @@ func (c *PreferredSchedulingTerm) GetPreferredSchedulingTerm() api.PreferredSche
 	}
 }
 
-func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
-	kubernetesHostAliases := deduplicateKubernetesHostAliases(c.HostAliases)
-
-	var hostAliases []api.HostAlias
-	for _, hostAlias := range kubernetesHostAliases {
+func (c *KubernetesConfig) GetHostAliases() (hostAliases []api.HostAlias) {
+	for _, hostAlias := range c.HostAliases {
 		hostAliases = append(
 			hostAliases,
 			api.HostAlias{
@@ -802,37 +799,6 @@ func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
 		)
 	}
 
-	return hostAliases
-}
-
-// Remove IP duplicates from slice while keeping order and deduplicate the merged hostnames slices
-func deduplicateKubernetesHostAliases(elements []KubernetesHostAliases) (nodups []KubernetesHostAliases) {
-	kubernetesHostAliases := make(map[string]int)
-
-	for _, element := range elements {
-		if idx, ok := kubernetesHostAliases[element.IP]; ok {
-			hostAlias := &nodups[idx]
-			hostAlias.Hostnames = append(hostAlias.Hostnames, element.Hostnames...)
-			hostAlias.Hostnames = deduplicateStrings(hostAlias.Hostnames)
-		} else {
-			idx = len(nodups)
-			nodups = append(nodups, element)
-			kubernetesHostAliases[element.IP] = idx
-		}
-	}
-
-	return
-}
-
-// Remove duplicates from slice while keeping order. Only first occurrence is retained.
-func deduplicateStrings(elements []string) (nodups []string) {
-	encountered := make(map[string]bool)
-	for _, element := range elements {
-		if !encountered[element] {
-			nodups = append(nodups, element)
-			encountered[element] = true
-		}
-	}
 	return
 }
 

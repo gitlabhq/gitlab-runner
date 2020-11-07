@@ -494,7 +494,7 @@ check_interval = 30
 
 ## Adding extra host aliases
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab 13.6.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab 13.7.
 
 This feature is available in Kubernetes 1.7+.
 
