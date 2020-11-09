@@ -14,8 +14,12 @@ import (
 func Test_windowsInfo_create(t *testing.T) {
 	revision := "4011f186"
 
-	for _, shell := range []string{"powershell", "pwsh"} {
-		powershellCmdLine := append([]string{shell}, powerShellCmdArgs...)
+	for _, shell := range []string{"", "powershell", "pwsh"} {
+		expectedPowershellCmdLine := []string{shell}
+		if shell == "" {
+			expectedPowershellCmdLine[0] = "powershell"
+		}
+		expectedPowershellCmdLine = append(expectedPowershellCmdLine, powerShellCmdArgs...)
 
 		tests := []struct {
 			operatingSystem string
@@ -36,7 +40,7 @@ func Test_windowsInfo_create(t *testing.T) {
 						baseImage1809,
 					),
 					IsSupportingLocalImport: false,
-					Cmd:                     powershellCmdLine,
+					Cmd:                     expectedPowershellCmdLine,
 				},
 				expectedErr: nil,
 			},
@@ -52,7 +56,7 @@ func Test_windowsInfo_create(t *testing.T) {
 						baseImage1809,
 					),
 					IsSupportingLocalImport: false,
-					Cmd:                     powershellCmdLine,
+					Cmd:                     expectedPowershellCmdLine,
 				},
 				expectedErr: nil,
 			},
@@ -68,7 +72,7 @@ func Test_windowsInfo_create(t *testing.T) {
 						baseImage1903,
 					),
 					IsSupportingLocalImport: false,
-					Cmd:                     powershellCmdLine,
+					Cmd:                     expectedPowershellCmdLine,
 				},
 				expectedErr: nil,
 			},
@@ -84,7 +88,7 @@ func Test_windowsInfo_create(t *testing.T) {
 						baseImage1909,
 					),
 					IsSupportingLocalImport: false,
-					Cmd:                     powershellCmdLine,
+					Cmd:                     expectedPowershellCmdLine,
 				},
 				expectedErr: nil,
 			},
