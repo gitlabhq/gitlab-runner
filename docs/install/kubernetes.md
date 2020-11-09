@@ -44,94 +44,85 @@ ready to [install the Runner](#installing-gitlab-runner-using-the-helm-chart).
 
 ### Additional configuration
 
-The rest of the configuration is
-[documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository.
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
-Here is a snippet of the important settings:
+You can use a [configuration template file](../register/index.md#runners-configuration-template-file)
+to configure the runner. You can use the configuration template to configure any field on the runner,
+without having the Helm chart be aware of specific runner configuration options.
+
+Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository:
 
 ```yaml
-## The GitLab Server URL (with protocol) that want to register the runner against
-## ref: https://docs.gitlab.com/runner/commands/README.html#gitlab-runner-register
-##
-gitlabUrl: https://gitlab.example.com/
-
-## The registration token for adding new Runners to the GitLab server. This must
-## be retrieved from your GitLab instance.
-## ref: https://docs.gitlab.com/ee/ci/runners/
-##
-runnerRegistrationToken: ""
-
-## Set the certsSecretName in order to pass custom certificates for GitLab Runner to use
-## Provide resource name for a Kubernetes Secret Object in the same namespace,
-## this is used to populate the /etc/gitlab-runner/certs directory
-## ref: https://docs.gitlab.com/runner/configuration/tls-self-signed.html#supported-options-for-self-signed-certificates
-##
-#certsSecretName:
-
-## Configure the maximum number of concurrent jobs
-## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section
-##
-concurrent: 10
-
-## Defines in seconds how often to check GitLab for a new builds
-## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section
-##
-checkInterval: 30
-
-## For RBAC support:
-rbac:
-  create: false
-
-  ## Run the gitlab-bastion container with the ability to deploy/manage containers of jobs
-  ## cluster-wide or only within namespace
-  clusterWideAccess: false
-
-  ## If RBAC is disabled in this Helm chart, use the following Kubernetes Service Account name.
-  ##
-  # serviceAccountName: default
-
-## Configuration for the Pods that the runner launches for each new job
-##
 runners:
-  ## Default container image to use for builds when none is specified
-  ##
-  image: ubuntu:18.04
-
-  ## Run all containers with the privileged flag enabled
-  ## This will allow the docker:stable-dind image to run if you need to run Docker
-  ## commands. Please read the docs before turning this on:
-  ## ref: https://docs.gitlab.com/runner/executors/kubernetes.html#using-docker-dind
-  ##
-  privileged: false
-
-  ## Namespace to run Kubernetes jobs in (defaults to 'default')
-  ##
-  # namespace:
-
-  ## Build Container specific configuration
-  ##
-  builds:
-    # cpuLimit: 200m
-    # memoryLimit: 256Mi
-    cpuRequests: 100m
-    memoryRequests: 128Mi
-
-  ## Service Container specific configuration
-  ##
-  services:
-    # cpuLimit: 200m
-    # memoryLimit: 256Mi
-    cpuRequests: 100m
-    memoryRequests: 128Mi
-
-  ## Helper Container specific configuration
-  ##
-  helpers:
-    # cpuLimit: 200m
-    # memoryLimit: 256Mi
-    cpuRequests: 100m
-    memoryRequests: 128Mi
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:16.04"
 ```
+
+The rest of the configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
+
+### Migrating to the new configuration template
+
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
+
+Many of the fields accepted by the `values.yaml` file will be removed with the introduction of
+Helm Chart version 1.0. We recommend migrating away from them as soon as possible.
+These fields are marked with a `DEPRECATED:` comment above them.
+
+All the configuration options supported by the Kubernetes executor are listed in [the Kubernetes executor docs](../executors/kubernetes.md#the-keywords).
+For many of the fields, the old name in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#the-keywords).
+For some, you must rename them. For example, if you are using `helpers` to set CPU limits:
+
+```yaml
+helpers:
+    cpuLimit: 200m
+``` 
+
+Now you can set them as `helper_cpu_limit`:
+
+```yaml
+runners:
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:16.04"
+        helper_cpu_limit: "200m"
+
+## helpers:
+##    cpuLimit: 200m
+```
+
+NOTE: **Note:**
+Make sure to comment or remove the old configuration values from your `values.yaml` file
+to avoid conflicts.
+
+### Using cache with configuration template
+
+To use cache with your configuration template, set `cache.secretName` in `values.yaml` and
+set the other settings for [the cache](../configuration/advanced-configuration.md#the-runnerscache-section) in the `runners.config`:
+
+```yaml
+runners:
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:16.04"
+        [runners.cache]
+          Type = "s3"
+          Path = "runner"
+          Shared = true
+          [runners.cache.s3]
+            ServerAddress = "s3.amazonaws.com"
+            BucketName = "my_bucket_name"
+            BucketLocation = "eu-west-1"
+            Insecure = false
+
+cache:
+    secretName: s3access
+```
+
+Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml). 
 
 ### Enabling RBAC support
 
