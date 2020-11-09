@@ -20,7 +20,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
 1. Create a folder somewhere in your system, ex.: `C:\GitLab-Runner`.
 1. Download the binary for [x86](https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-386.exe) or [amd64](https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-amd64.exe) and put it into the folder you
-   created. Rename the binary to `gitlab-runner.exe`.
+   created. The following assumes you have renamed the binary to `gitlab-runner.exe` (optional).
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged
    release](bleeding-edge.md#download-any-other-tagged-release).
