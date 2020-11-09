@@ -18,10 +18,6 @@ driver](custom_examples/libvirt.md).
 
 Below are some current limitations when using the Custom executor:
 
-- No support for
-  [`services`](https://docs.gitlab.com/ee/ci/yaml/#services). See
-  [#4358](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) for
-  more details.
 - No [Interactive Web
   Terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/) support.
 
