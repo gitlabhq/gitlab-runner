@@ -3,6 +3,7 @@ package custom
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -815,6 +816,178 @@ func TestExecutor_Env(t *testing.T) {
 			config:               runnerConfig,
 			adjustExecutor:       adjustExecutorFactory("image:$nothing_to_expand"),
 			assertCommandFactory: assertCommandFactory("image:"),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			defer mockCommandFactory(t, tt)()
+
+			e, options, _ := prepareExecutor(t, tt)
+			e.Config = *options.Config
+			e.Build = options.Build
+			e.Trace = options.Trace
+			e.BuildLogger = common.NewBuildLogger(e.Trace, e.Build.Log())
+			if tt.adjustExecutor != nil {
+				tt.adjustExecutor(t, e)
+			}
+
+			err := e.Prepare(options)
+			assert.NoError(t, err)
+
+			err = e.Run(common.ExecutorCommand{
+				Context: context.Background(),
+			})
+			assert.NoError(t, err)
+
+			e.Cleanup()
+		})
+	}
+}
+
+func TestExecutor_ServicesEnv(t *testing.T) {
+	const CIJobServicesEnv = "CI_JOB_SERVICES"
+
+	runnerConfig := getRunnerConfig(&common.CustomConfig{
+		RunExec:     "bash",
+		PrepareExec: "echo",
+		CleanupExec: "bash",
+	})
+
+	adjustExecutorServices := func(services common.Services) func(t *testing.T, e *executor) {
+		return func(t *testing.T, e *executor) {
+			e.Build.Services = services
+		}
+	}
+
+	assertEnvValue := func(expectedServices []jsonService) func(
+		t *testing.T,
+		tt executorTestCase,
+		ctx context.Context,
+		executable string,
+		args []string,
+		options process.CommandOptions,
+	) {
+		return func(
+			t *testing.T,
+			tt executorTestCase,
+			ctx context.Context,
+			executable string,
+			args []string,
+			options process.CommandOptions,
+		) {
+			for _, env := range options.Env {
+				pair := strings.Split(env, "=")
+				if pair[0] == CIJobServicesEnv {
+					expectedServicesSerialized, _ := json.Marshal(expectedServices)
+
+					assert.Equal(t, string(expectedServicesSerialized), pair[1])
+					break
+				}
+			}
+		}
+	}
+
+	assertEmptyEnv := func() func(
+		t *testing.T,
+		tt executorTestCase,
+		ctx context.Context,
+		executable string,
+		args []string,
+		options process.CommandOptions,
+	) {
+		return func(
+			t *testing.T,
+			tt executorTestCase,
+			ctx context.Context,
+			executable string,
+			args []string,
+			options process.CommandOptions,
+		) {
+			for _, env := range options.Env {
+				pair := strings.Split(env, "=")
+				if pair[0] == CIJobServicesEnv {
+					assert.Equal(t, "", pair[1])
+					break
+				}
+			}
+		}
+	}
+
+	tests := map[string]executorTestCase{
+		"returns only name when service name is the only definition": {
+			config: runnerConfig,
+			adjustExecutor: adjustExecutorServices(common.Services{
+				{
+					Name: "ruby:latest",
+				},
+			}),
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:       "ruby:latest",
+						Alias:      "",
+						Entrypoint: nil,
+						Command:    nil,
+					},
+				},
+			),
+		},
+		"returns full service definition": {
+			config: runnerConfig,
+			adjustExecutor: adjustExecutorServices(common.Services{
+				{
+					Name:       "ruby:latest",
+					Alias:      "henk-ruby",
+					Entrypoint: []string{"path", "to", "entrypoint"},
+					Command:    []string{"path", "to", "command"},
+				},
+			}),
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:       "ruby:latest",
+						Alias:      "henk-ruby",
+						Entrypoint: []string{"path", "to", "entrypoint"},
+						Command:    []string{"path", "to", "command"},
+					},
+				},
+			),
+		},
+		"returns both simple and full service definitions": {
+			config: runnerConfig,
+			adjustExecutor: adjustExecutorServices(common.Services{
+				{
+					Name:       "python:latest",
+					Alias:      "henk-python",
+					Entrypoint: []string{"entrypoint.sh"},
+					Command:    []string{"command --test"},
+				},
+				{
+					Name: "python:alpine",
+				},
+			}),
+			assertCommandFactory: assertEnvValue(
+				[]jsonService{
+					{
+						Name:       "python:latest",
+						Alias:      "henk-python",
+						Entrypoint: []string{"entrypoint.sh"},
+						Command:    []string{"command --test"},
+					},
+					{
+						Name:       "python:alpine",
+						Alias:      "",
+						Entrypoint: nil,
+						Command:    nil,
+					},
+				},
+			),
+		},
+		"does not create env CI_JOB_SERVICES": {
+			config:               runnerConfig,
+			adjustExecutor:       adjustExecutorServices(common.Services{}),
+			assertCommandFactory: assertEmptyEnv(),
 		},
 	}
 
