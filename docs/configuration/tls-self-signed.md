@@ -111,7 +111,7 @@ To install the certificate:
            volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
         ```
 
-1. **Linux-only**: Use the mapped file (e.g `ca.crt`) in a [`pre_build_script`](./advanced-configuration.md#the-runners-section) that:
+1. **Linux-only**: Use the mapped file (e.g `ca.crt`) in a [`pre_build_script`](advanced-configuration.md#the-runners-section) that:
     1. Copies it to `/usr/local/share/ca-certificates/ca.crt` inside the Docker container.
     1. Installs it by running `update-ca-certificates --fresh`. For example (commands
        vary based on the distribution you're using):

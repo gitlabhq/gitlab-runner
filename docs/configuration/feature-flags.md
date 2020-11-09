@@ -45,7 +45,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_DIRECT_DOWNLOAD` | `true` | ✗ |  | When set to `true` Runner tries to direct-download all artifacts instead of proxying through GitLab on a first try. Enabling might result in a download failures due to problem validating TLS certificate of Object Storage if it is enabled by GitLab |
 | `FF_SKIP_NOOP_BUILD_STAGES` | `true` | ✗ |  | When set to `false` all build stages are executed even if running them has no effect |
 | `FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL` | `false` | ✓ | 14.0 | Use the old process termination that was used prior to GitLab 13.1 where only `SIGKILL` was sent |
-| `FF_RESET_HELPER_IMAGE_ENTRYPOINT` | `true` | ✓ | 14.0 | Enables adding an ENTRYPOINT layer for Helper images imported from local Docker archives by the `docker` executor, in order to enable [importing of user certificate roots](./tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages) |
+| `FF_RESET_HELPER_IMAGE_ENTRYPOINT` | `true` | ✓ | 14.0 | Enables adding an ENTRYPOINT layer for Helper images imported from local Docker archives by the `docker` executor, in order to enable [importing of user certificate roots](tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages) |
 | `FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER` | `true` | ✓ | 14.0 | Enables the use of Go Cloud to write cache archives to object storage. This mode is only used by Azure Blob storage. |
 | `FF_USE_FASTZIP` | `false` | ✗ |  | Fastzip is a performant archiver for cache/artifact archiving and extraction |
 
