@@ -86,7 +86,7 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "14.0",
 		Description: "Enables adding an ENTRYPOINT layer for Helper images imported from local Docker archives " +
 			"by the `docker` executor, in order to enable [importing of user certificate roots]" +
-			"(./tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages)",
+			"(tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages)",
 	},
 	{
 		Name:            UseGoCloudWithCacheArchiver,
