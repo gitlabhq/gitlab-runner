@@ -111,6 +111,33 @@ The stages run in the following sequence:
 1. `run_exec`
 1. `cleanup_exec`
 
+## Services 
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) in GitLab Runner 13.6
+
+[Services](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#what-is-a-service) are exposed as a JSON array
+as `CI_JOB_SERVICES`.
+
+Example:
+
+```yaml
+custom:
+  script:
+    - echo $CI_JOB_SERVICES
+  services:
+    - redis:latest
+    - name: my-postgres:9.4
+      alias: pg
+      entrypoint: ["path", "to", "entrypoint"]
+      command: ["path", "to", "cmd"]
+```
+
+The example above will print:
+
+```json
+[{"name":"redis:latest","alias":"","entrypoint":null,"command":null},{"name":"my-postgres:9.4","alias":"pg","entrypoint":["path","to","entrypoint"],"command":["path","to","cmd"]}]
+```
+
 ### Config
 
 The Config stage is executed by `config_exec`.
