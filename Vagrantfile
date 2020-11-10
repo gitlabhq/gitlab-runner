@@ -9,9 +9,16 @@ unless Vagrant.has_plugin?('vagrant-reload')
   exec "vagrant #{ARGV.join(' ')}"
 end
 
+def get_vm_box_version()
+  # We're pinning to this specific version due to recent Docker versions (above 19.03.05) being broken
+  # (see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27115)
+  '2020.04.15'
+end
+
 Vagrant.configure('2') do |config|
   config.vm.define 'windows_server', primary: true do |cfg|
     cfg.vm.box = 'StefanScherer/windows_2019_docker'
+    cfg.vm.box_version = get_vm_box_version()
     cfg.vm.communicator = 'winrm'
 
     cfg.vm.synced_folder '.', 'C:\GitLab-Runner'
@@ -30,6 +37,7 @@ Vagrant.configure('2') do |config|
 
   config.vm.define 'windows_10', autostart: false do |cfg|
     cfg.vm.box = 'StefanScherer/windows_10'
+    cfg.vm.box_version = get_vm_box_version()
     cfg.vm.communicator = 'winrm'
 
     cfg.vm.synced_folder '.', 'C:\GitLab-Runner'
