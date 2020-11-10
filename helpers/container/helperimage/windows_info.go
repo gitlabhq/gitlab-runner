@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 const (
@@ -20,8 +21,7 @@ var helperImages = map[string]string{
 	windows.V1909: baseImage1909,
 }
 
-var powerShellCmd = []string{
-	"PowerShell",
+var powerShellCmdArgs = []string{
 	"-NoProfile",
 	"-NoLogo",
 	"-InputFormat",
@@ -43,12 +43,17 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 		return Info{}, fmt.Errorf("detecting base image: %w", err)
 	}
 
+	shell := cfg.Shell
+	if cfg.Shell == "" {
+		// TODO: Replace with shells.SNPwsh in 14.0 in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26419
+		shell = shells.SNPowershell
+	}
 	return Info{
 		Architecture:            windowsSupportedArchitecture,
 		Name:                    name,
 		Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage),
 		IsSupportingLocalImport: false,
-		Cmd:                     powerShellCmd,
+		Cmd:                     append([]string{shell}, powerShellCmdArgs...),
 	}, nil
 }
 

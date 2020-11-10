@@ -34,6 +34,7 @@ type Config struct {
 	OSType          string
 	Architecture    string
 	OperatingSystem string
+	Shell           string // Currently only used by the Docker executor on the Windows platform
 }
 
 type creator interface {

@@ -33,6 +33,7 @@
     PUBLISH_IMAGES: "true"
     GIT_256_CHECKSUM: "bdb8c1560eca39f4d99b07705006c00d94a3f8612501046a0f89353afc5307fa"
     GIT_LFS_256_CHECKSUM: "ca05b0b9bd39d99665045776a5d0d5c7bfa2605a6118c2f489bfd40c2c3e4f2c"
+    PWSH_256_CHECKSUM: "ad3b4a868d1b7e47a1048e1eb20f7f782d9b95d5066d79a25d02ccc4dd14e79f"
   dependencies:
   - 'helper images'
   - 'binaries windows/386 windows/amd64'

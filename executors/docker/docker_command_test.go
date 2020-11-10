@@ -153,15 +153,18 @@ func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) 
 func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 	executor := "docker"
 	image := common.TestAlpineImage
+	shell := "bash"
 
 	if runtime.GOOS == "windows" {
 		executor = "docker-windows"
+		shell = "powershell"
 		image = getWindowsImage(t)
 	}
 
 	return &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Executor: executor,
+			Shell:    shell,
 			Docker: &common.DockerConfig{
 				Image:      image,
 				PullPolicy: common.PullPolicyIfNotPresent,

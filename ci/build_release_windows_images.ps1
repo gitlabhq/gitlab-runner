@@ -39,7 +39,7 @@ $InformationPreference = "Continue"
 # - $Env:CI_REGISTRY_PASSWORD - The password used to login CI_REGISTRY. Usually
 #   set by CI.
 # ---------------------------------------------------------------------------
-$imagesBasePath = "dockerfiles\runner-helper\Dockerfile.x86_64"
+$imagesBasePath = "dockerfiles/runner-helper/Dockerfile.x86_64"
 
 function Main
 {
@@ -95,11 +95,13 @@ function Build-Image($tag)
     Write-Information "Build image for x86_64_${env:WINDOWS_VERSION}"
 
     $dockerFile = "${imagesBasePath}_${windowsFlavor}"
-    $context = "dockerfiles\runner-helper"
+    $context = "dockerfiles/runner-helper"
     New-Item -ItemType Directory -Force -Path $context\binaries
-    Copy-Item -Path "out\binaries\gitlab-runner-helper\gitlab-runner-helper.x86_64-windows.exe" -Destination "$context\binaries"
+    Copy-Item -Path "out\binaries\gitlab-runner-helper\gitlab-runner-helper.x86_64-windows.exe" -Destination "$context/binaries"
     $buildArgs = @(
         '--build-arg', "BASE_IMAGE_TAG=mcr.microsoft.com/windows/${windowsFlavor}:${windowsVersion}-amd64",
+        '--build-arg', "PWSH_VERSION=$Env:PWSH_VERSION",
+        '--build-arg', "PWSH_256_CHECKSUM=$Env:PWSH_256_CHECKSUM",
         '--build-arg', "GIT_VERSION=$Env:GIT_VERSION",
         '--build-arg', "GIT_VERSION_BUILD=$Env:GIT_VERSION_BUILD",
         '--build-arg', "GIT_256_CHECKSUM=$Env:GIT_256_CHECKSUM"

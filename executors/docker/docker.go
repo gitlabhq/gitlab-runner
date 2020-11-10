@@ -996,6 +996,7 @@ func (e *executor) connectDocker() error {
 		OSType:          e.info.OSType,
 		Architecture:    e.info.Architecture,
 		OperatingSystem: e.info.OperatingSystem,
+		Shell:           e.Config.Shell,
 	})
 	e.waiter = wait.NewDockerKillWaiter(e.client)
 

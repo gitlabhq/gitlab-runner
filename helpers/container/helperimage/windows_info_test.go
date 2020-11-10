@@ -13,69 +13,108 @@ import (
 
 func Test_windowsInfo_create(t *testing.T) {
 	revision := "4011f186"
-	tests := []struct {
-		operatingSystem string
-		expectedInfo    Info
-		expectedErr     error
-	}{
-		{
-			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
-			expectedInfo: Info{
-				Architecture:            windowsSupportedArchitecture,
-				Name:                    name,
-				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1809),
-				IsSupportingLocalImport: false,
-				Cmd:                     powerShellCmd,
-			},
-			expectedErr: nil,
-		},
-		{
-			operatingSystem: "Windows Server Datacenter Version 1809 (OS Build 1803.590)",
-			expectedInfo: Info{
-				Architecture:            windowsSupportedArchitecture,
-				Name:                    name,
-				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1809),
-				IsSupportingLocalImport: false,
-				Cmd:                     powerShellCmd,
-			},
-			expectedErr: nil,
-		},
-		{
-			operatingSystem: "Windows Server Datacenter Version 1903 (OS Build 18362.592)",
-			expectedInfo: Info{
-				Architecture:            windowsSupportedArchitecture,
-				Name:                    name,
-				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1903),
-				IsSupportingLocalImport: false,
-				Cmd:                     powerShellCmd,
-			},
-			expectedErr: nil,
-		},
-		{
-			operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
-			expectedInfo: Info{
-				Architecture:            windowsSupportedArchitecture,
-				Name:                    name,
-				Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage1909),
-				IsSupportingLocalImport: false,
-				Cmd:                     powerShellCmd,
-			},
-			expectedErr: nil,
-		},
-		{
-			operatingSystem: "some random string",
-			expectedErr:     windows.NewUnsupportedWindowsVersionError("some random string"),
-		},
-	}
 
-	for _, test := range tests {
-		t.Run(test.operatingSystem, func(t *testing.T) {
-			w := new(windowsInfo)
+	for _, shell := range []string{"", "powershell", "pwsh"} {
+		expectedPowershellCmdLine := []string{shell}
+		if shell == "" {
+			expectedPowershellCmdLine[0] = "powershell"
+		}
+		expectedPowershellCmdLine = append(expectedPowershellCmdLine, powerShellCmdArgs...)
 
-			image, err := w.Create(revision, Config{OperatingSystem: test.operatingSystem})
+		tests := []struct {
+			operatingSystem string
+			shell           string
 
-			assert.Equal(t, test.expectedInfo, image)
-			assert.True(t, errors.Is(err, test.expectedErr), "expected err %T, but got %T", test.expectedErr, err)
+			expectedInfo Info
+			expectedErr  error
+		}{
+			{
+				operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         name,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage1809,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+			{
+				operatingSystem: "Windows Server Datacenter Version 1809 (OS Build 1803.590)",
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         name,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage1809,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+			{
+				operatingSystem: "Windows Server Datacenter Version 1903 (OS Build 18362.592)",
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         name,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage1903,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+			{
+				operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         name,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage1909,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+			{
+				operatingSystem: "some random string",
+				expectedErr:     windows.NewUnsupportedWindowsVersionError("some random string"),
+			},
+		}
+
+		t.Run(shell, func(t *testing.T) {
+			for _, test := range tests {
+				t.Run(test.operatingSystem, func(t *testing.T) {
+					w := new(windowsInfo)
+
+					image, err := w.Create(revision, Config{OperatingSystem: test.operatingSystem, Shell: shell})
+
+					assert.Equal(t, test.expectedInfo, image)
+					assert.True(
+						t,
+						errors.Is(err, test.expectedErr),
+						"expected err %T, but got %T",
+						test.expectedErr,
+						err,
+					)
+				})
+			}
 		})
 	}
 }
