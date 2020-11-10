@@ -1,3 +1,35 @@
+## v13.6.0-rc1 (2020-11-10)
+
+### New features
+
+- Expose custom executor services with $CI_JOB_SERVICES !1827 (Jovan Marić @jovanmaric)
+- Add PowerShell Core to Windows Runner helper image !2492
+
+### Maintenance
+
+- Expose ci job services as custom !2550
+- Publish helper images to registry.gitlab.com !2540
+- Fix TestBuildCancel from timing out !2468
+- Teach artifact/cache commands about the archive interface !2467
+- Implement archiver/extractor interface !2195
+- Manage driver defined job variables in custom executor !2032 (Paul Bryant @paulbry)
+
+### Documentation changes
+
+- More Vale rules updates !2552
+- Clarify windows install instructions !2549
+- synchronize Vale rules and fix !2547
+- Add reference to config.toml for setting docker image pull policy - docs !2545
+- Remove extra parentheses !2542 (Ben Bodenmiller @bbodenmiller)
+- Docs: Rename and redirect docs/install/registry_and_cache_servers.md !2535
+- Elaborate on Docker mirror, and link to docker doc !2526
+- Added docs for using a configuration template in the helm chart !2503
+- Add missing supported architectures for Runner helper !2490
+- Provide a full list of metrics available for GitLab runners in the documentation !2479
+- Clarify how service_account in toml is used !2476 (Ben Bodenmiller @bbodenmiller)
+- Introduce usage of Runner Manager terminology !2474
+- Update Kubernetes' documentation to include ephemeral storage requests/limits !2457
+
 ## v13.5.0 (2020-10-20)
 
 ### New features
