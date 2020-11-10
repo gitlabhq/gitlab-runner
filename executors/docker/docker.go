@@ -101,7 +101,7 @@ func init() {
 	if err != nil {
 		logrus.Errorln(
 			"Docker executor: unable to detect gitlab-runner folder, "+
-				"prebuilt image helpers will be loaded from DockerHub.",
+				"prebuilt image helpers will be loaded from remote registry.",
 			err,
 		)
 	}
@@ -291,7 +291,11 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 		return loadedImage, nil
 	}
 
-	// Fallback to getting image from DockerHub
+	if !e.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage) {
+		e.Warningln(helperimage.DockerHubWarningMessage)
+	}
+
+	// Fall back to getting image from registry
 	e.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
 	return e.getDockerImage(e.helperImageInfo.String())
 }
@@ -992,12 +996,6 @@ func (e *executor) connectDocker() error {
 		return err
 	}
 
-	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
-		OSType:          e.info.OSType,
-		Architecture:    e.info.Architecture,
-		OperatingSystem: e.info.OperatingSystem,
-		Shell:           e.Config.Shell,
-	})
 	e.waiter = wait.NewDockerKillWaiter(e.client)
 
 	return err
@@ -1118,6 +1116,11 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
+	e.helperImageInfo, err = e.prepareHelperImage()
+	if err != nil {
+		return err
+	}
+
 	err = e.prepareBuildsDir(options)
 	if err != nil {
 		return err
@@ -1144,6 +1147,16 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 	return nil
+}
+
+func (e *executor) prepareHelperImage() (helperimage.Info, error) {
+	return helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:          e.info.OSType,
+		Architecture:    e.info.Architecture,
+		OperatingSystem: e.info.OperatingSystem,
+		Shell:           e.Config.Shell,
+		GitLabRegistry:  e.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
+	})
 }
 
 func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {

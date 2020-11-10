@@ -50,7 +50,7 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 	}
 	return Info{
 		Architecture:            windowsSupportedArchitecture,
-		Name:                    name,
+		Name:                    imageName(cfg.GitLabRegistry),
 		Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage),
 		IsSupportingLocalImport: false,
 		Cmd:                     append([]string{shell}, powerShellCmdArgs...),

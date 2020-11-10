@@ -1138,6 +1138,20 @@ func TestCleanup(t *testing.T) {
 }
 
 func TestPrepare(t *testing.T) {
+	helperImageTag := "latest"
+	// common.REVISION is overridden at build time.
+	if common.REVISION != "HEAD" {
+		helperImageTag = common.REVISION
+	}
+
+	defaultHelperImage := helperimage.Info{
+		Architecture:            "x86_64",
+		Name:                    helperimage.DockerHubName,
+		Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
+		IsSupportingLocalImport: true,
+		Cmd:                     []string{"gitlab-runner-build"},
+	}
+
 	tests := []struct {
 		Name  string
 		Error string
@@ -1198,7 +1212,8 @@ func TestPrepare(t *testing.T) {
 					serviceRequests: api.ResourceList{},
 					helperRequests:  api.ResourceList{},
 				},
-				pullPolicy: "IfNotPresent",
+				pullPolicy:      "IfNotPresent",
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{
@@ -1263,6 +1278,7 @@ func TestPrepare(t *testing.T) {
 					helperLimits:    mustCreateResourceList(t, "50m", "100Mi", "300Mi"),
 					helperRequests:  mustCreateResourceList(t, "0.5m", "42Mi", "99Mi"),
 				},
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{
@@ -1375,6 +1391,7 @@ func TestPrepare(t *testing.T) {
 					helperLimits:    mustCreateResourceList(t, "50m", "100Mi", "300Mi"),
 					helperRequests:  mustCreateResourceList(t, "0.5m", "42Mi", "32Mi"),
 				},
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{
@@ -1418,6 +1435,7 @@ func TestPrepare(t *testing.T) {
 					buildRequests:   api.ResourceList{},
 					helperRequests:  api.ResourceList{},
 				},
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{
@@ -1454,6 +1472,7 @@ func TestPrepare(t *testing.T) {
 					buildRequests:   api.ResourceList{},
 					helperRequests:  api.ResourceList{},
 				},
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{
@@ -1508,6 +1527,7 @@ func TestPrepare(t *testing.T) {
 					buildRequests:   api.ResourceList{},
 					helperRequests:  api.ResourceList{},
 				},
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{
@@ -1607,6 +1627,96 @@ func TestPrepare(t *testing.T) {
 					buildRequests:   api.ResourceList{},
 					helperRequests:  api.ResourceList{},
 				},
+				helperImageInfo: defaultHelperImage,
+			},
+		},
+		{
+			Name:         "Docker Hub helper image",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				helperImageInfo: defaultHelperImage,
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
+			},
+		},
+		{
+			Name:         "GitLab registry helper image",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: common.JobVariables{
+						common.JobVariable{
+							Key:      featureflags.GitLabRegistryHelperImage,
+							Value:    "true",
+							Public:   false,
+							Internal: false,
+							File:     false,
+							Masked:   false,
+							Raw:      false,
+						},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				helperImageInfo: helperimage.Info{
+					Architecture:            "x86_64",
+					Name:                    helperimage.GitLabRegistryName,
+					Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
+					IsSupportingLocalImport: true,
+					Cmd:                     []string{"gitlab-runner-build"},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 			},
 		},
 	}
@@ -1639,9 +1749,6 @@ func TestPrepare(t *testing.T) {
 			// base AbstractExecutor's Prepare method
 			e.AbstractExecutor = executors.AbstractExecutor{}
 
-			// TODO: Improve this so we don't have to nil-ify the kubeClient.
-			// It currently contains some moving parts that are failing, meaning
-			// we'll need to mock _something_
 			e.kubeClient = nil
 			e.kubeConfig = nil
 			e.featureChecker = nil
@@ -3627,6 +3734,48 @@ func TestGenerateScripts(t *testing.T) {
 			scripts, err := e.generateScripts(m)
 			assert.ErrorIs(t, err, tt.expectedErr)
 			assert.Equal(t, tt.expectedScripts, scripts)
+		})
+	}
+}
+
+func TestHelperImageRegistryLogs(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	for _, tt := range []bool{true, false} {
+		t.Run(fmt.Sprintf("%s is %t", featureflags.GitLabRegistryHelperImage, tt), func(t *testing.T) {
+			successfulBuild, err := common.GetRemoteSuccessfulBuild()
+			require.NoError(t, err)
+			build := &common.Build{
+				JobResponse: successfulBuild,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "kubernetes",
+						Kubernetes: &common.KubernetesConfig{
+							Image:      "alpine:3.12",
+							PullPolicy: common.PullPolicyAlways,
+						},
+					},
+				},
+			}
+			setBuildFeatureFlag(build, featureflags.GitLabRegistryHelperImage, tt)
+
+			trace := bytes.Buffer{}
+			err = build.Run(&common.Config{}, &common.Trace{Writer: &trace})
+			require.NoError(t, err)
+
+			if !tt {
+				assert.Contains(
+					t,
+					trace.String(),
+					helperimage.DockerHubWarningMessage,
+				)
+				return
+			}
+			assert.NotContains(
+				t,
+				trace.String(),
+				helperimage.DockerHubWarningMessage,
+			)
 		})
 	}
 }

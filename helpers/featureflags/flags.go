@@ -14,6 +14,7 @@ const (
 	ResetHelperImageEntrypoint           string = "FF_RESET_HELPER_IMAGE_ENTRYPOINT"
 	UseGoCloudWithCacheArchiver          string = "FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER"
 	UseFastzip                           string = "FF_USE_FASTZIP"
+	GitLabRegistryHelperImage            string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
 )
 
 type FeatureFlag struct {
@@ -102,6 +103,14 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description:     "Fastzip is a performant archiver for cache/artifact archiving and extraction",
+	},
+	{
+		Name:            GitLabRegistryHelperImage,
+		DefaultValue:    "false",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "Use GitLab Runner helper image for the Docker and " +
+			"Kubernetes executors from `registry.gitlab.com` instead of Docker Hub",
 	},
 }
 

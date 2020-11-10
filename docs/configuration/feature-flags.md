@@ -48,6 +48,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_RESET_HELPER_IMAGE_ENTRYPOINT` | `true` | ✓ | 14.0 | Enables adding an ENTRYPOINT layer for Helper images imported from local Docker archives by the `docker` executor, in order to enable [importing of user certificate roots](tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages) |
 | `FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER` | `true` | ✓ | 14.0 | Enables the use of Go Cloud to write cache archives to object storage. This mode is only used by Azure Blob storage. |
 | `FF_USE_FASTZIP` | `false` | ✗ |  | Fastzip is a performant archiver for cache/artifact archiving and extraction |
+| `FF_GITLAB_REGISTRY_HELPER_IMAGE` | `false` | ✗ |  | Use GitLab Runner helper image for the Docker and Kubernetes executors from `registry.gitlab.com` instead of Docker Hub |
 
 <!-- feature_flags_list_end -->
 

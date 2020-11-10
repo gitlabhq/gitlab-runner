@@ -12,7 +12,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/jpillora/backoff"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -163,6 +162,11 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("connecting to Kubernetes: %w", err)
 	}
 
+	s.helperImageInfo, err = s.prepareHelperImage()
+	if err != nil {
+		return fmt.Errorf("prepare helper image: %w", err)
+	}
+
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
 
 	s.Println("Using Kubernetes executor with image", s.options.Image.Name, "...")
@@ -171,6 +175,18 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	return nil
+}
+
+func (s *executor) prepareHelperImage() (helperimage.Info, error) {
+	if !s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage) {
+		s.Warningln(helperimage.DockerHubWarningMessage)
+	}
+
+	return helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:         helperimage.OSTypeLinux,
+		Architecture:   "amd64",
+		GitLabRegistry: s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
+	})
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
@@ -1290,19 +1306,10 @@ func (s *executor) checkDefaults() error {
 }
 
 func newExecutor() *executor {
-	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
-		OSType:       helperimage.OSTypeLinux,
-		Architecture: "amd64",
-	})
-	if err != nil {
-		logrus.WithError(err).Fatal("Failed to set up helper image for kubernetes executor")
-	}
-
 	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
 		},
-		helperImageInfo:         helperImageInfo,
 		remoteProcessTerminated: make(chan shells.TrapCommandExitStatus),
 	}
 
