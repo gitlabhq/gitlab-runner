@@ -220,18 +220,17 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 		cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	for _, variable := range e.Build.GetAllVariables() {
+	variables := append(e.Build.GetAllVariables(), e.getCIJobServicesEnv())
+	for _, variable := range variables {
 		cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("CUSTOM_ENV_%s=%s", variable.Key, variable.Value))
 	}
-
-	cmdOpts.Env = append(cmdOpts.Env, e.getCIJobServicesEnv())
 
 	return commandFactory(ctx, opts.executable, opts.args, cmdOpts)
 }
 
-func (e *executor) getCIJobServicesEnv() string {
+func (e *executor) getCIJobServicesEnv() common.JobVariable {
 	if len(e.Build.Services) == 0 {
-		return "CI_JOB_SERVICES="
+		return common.JobVariable{Key: "CI_JOB_SERVICES"}
 	}
 
 	var services []jsonService
@@ -249,11 +248,10 @@ func (e *executor) getCIJobServicesEnv() string {
 		e.Warningln("Unable to serialize CI_JOB_SERVICES json:", err)
 	}
 
-	return fmt.Sprintf(
-		"%s=%s",
-		"CI_JOB_SERVICES",
-		servicesSerialized,
-	)
+	return common.JobVariable{
+		Key:   "CI_JOB_SERVICES",
+		Value: string(servicesSerialized),
+	}
 }
 
 func (e *executor) Run(cmd common.ExecutorCommand) error {

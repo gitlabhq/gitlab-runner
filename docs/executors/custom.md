@@ -18,10 +18,6 @@ driver](custom_examples/libvirt.md).
 
 Below are some current limitations when using the Custom executor:
 
-- No support for
-  [`services`](https://docs.gitlab.com/ee/ci/yaml/#services). See
-  [#4358](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) for
-  more details.
 - No [Interactive Web
   Terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/) support.
 
@@ -101,7 +97,7 @@ environment variables available to them:
   variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
 - All environment variables provided by the Custom Runner host system.
 - All services and their [available settings](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services).
-  Exposed in JSON format as `CI_JOB_SERVICES`.
+  Exposed in JSON format as `CUSTOM_ENV_CI_JOB_SERVICES`.
 
 Both CI/CD environment variables and predefined variables are prefixed
 with `CUSTOM_ENV_` to prevent conflicts with system environment
@@ -114,6 +110,33 @@ The stages run in the following sequence:
 1. `prepare_exec`
 1. `run_exec`
 1. `cleanup_exec`
+
+### Services
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) in GitLab Runner 13.6
+
+[Services](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#what-is-a-service) are exposed as a JSON array
+as `CUSTOM_ENV_CI_JOB_SERVICES`.
+
+Example:
+
+```yaml
+custom:
+  script:
+    - echo $CUSTOM_ENV_CI_JOB_SERVICES
+  services:
+    - redis:latest
+    - name: my-postgres:9.4
+      alias: pg
+      entrypoint: ["path", "to", "entrypoint"]
+      command: ["path", "to", "cmd"]
+```
+
+The example above will set `CUSTOM_ENV_CI_JOB_SERVICES` environment variable with the following value:
+
+```json
+[{"name":"redis:latest","alias":"","entrypoint":null,"command":null},{"name":"my-postgres:9.4","alias":"pg","entrypoint":["path","to","entrypoint"],"command":["path","to","cmd"]}]
+```
 
 ### Config
 

@@ -846,7 +846,7 @@ func TestExecutor_Env(t *testing.T) {
 }
 
 func TestExecutor_ServicesEnv(t *testing.T) {
-	const CIJobServicesEnv = "CI_JOB_SERVICES"
+	const CIJobServicesEnv = "CUSTOM_ENV_CI_JOB_SERVICES"
 
 	runnerConfig := getRunnerConfig(&common.CustomConfig{
 		RunExec:     "bash",
