@@ -21,6 +21,22 @@ const (
 	SNPowershell = "powershell"
 )
 
+var (
+	PowershellCmdArgs = []string{
+		"-NoProfile",
+		"-NoLogo",
+		"-InputFormat",
+		"text",
+		"-OutputFormat",
+		"text",
+		"-NonInteractive",
+		"-ExecutionPolicy",
+		"Bypass",
+		"-Command",
+		"-",
+	}
+)
+
 type PowerShell struct {
 	AbstractShell
 	Shell string

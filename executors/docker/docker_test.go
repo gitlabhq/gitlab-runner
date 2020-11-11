@@ -38,6 +38,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 func TestMain(m *testing.M) {
@@ -1941,6 +1942,7 @@ func TestLocalHelperImage(t *testing.T) {
 	tests := map[string]struct {
 		jobVariables     common.JobVariables
 		helperImageInfo  helperimage.Info
+		shell            string
 		clientAssertions func(*docker.MockClient)
 		expectedImage    *types.ImageInspect
 	}{
@@ -2101,6 +2103,43 @@ func TestLocalHelperImage(t *testing.T) {
 			},
 			expectedImage: nil,
 		},
+		"Powershell image is used when shell is pwsh": {
+			helperImageInfo: defaultHelperImageInfo,
+			shell:           shells.SNPwsh,
+			clientAssertions: func(c *docker.MockClient) {
+				c.On(
+					"ImageImportBlocking",
+					mock.Anything,
+					mock.MatchedBy(func(source types.ImageImportSource) bool {
+						return assert.IsType(t, new(os.File), source.Source) &&
+							assert.Equal(
+								t,
+								"prebuilt-x86_64-pwsh.tar.xz",
+								path.Base((source.Source.(*os.File)).Name()),
+							)
+					}),
+					helperimage.DockerHubName,
+					mock.Anything,
+				).Return(nil)
+
+				imageInspect := types.ImageInspect{
+					RepoTags: []string{
+						dockerHubHelperImage,
+					},
+				}
+
+				c.On(
+					"ImageInspectWithRaw",
+					mock.Anything,
+					dockerHubHelperImage,
+				).Return(imageInspect, []byte{}, nil)
+			},
+			expectedImage: &types.ImageInspect{
+				RepoTags: []string{
+					dockerHubHelperImage,
+				},
+			},
+		},
 	}
 
 	for tn, tt := range tests {
@@ -2113,6 +2152,12 @@ func TestLocalHelperImage(t *testing.T) {
 					Build: &common.Build{
 						JobResponse: common.JobResponse{
 							Variables: tt.jobVariables,
+						},
+					},
+
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Shell: tt.shell,
 						},
 					},
 				},
@@ -2138,6 +2183,7 @@ func createFakePrebuiltImages(t *testing.T, architecture string) func() {
 	PrebuiltImagesPaths = []string{tempImgDir}
 	for _, fakeImgName := range []string{
 		fmt.Sprintf("prebuilt-%s.tar.xz", architecture),
+		fmt.Sprintf("prebuilt-%s-pwsh.tar.xz", architecture),
 	} {
 		fakeLocalImage, err := os.Create(path.Join(tempImgDir, fakeImgName))
 		require.NoError(t, err)

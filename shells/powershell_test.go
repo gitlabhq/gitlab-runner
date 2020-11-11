@@ -115,6 +115,11 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			executor:         dockerWindowsExecutor,
 			expectedPassFile: false,
 		},
+		"pwsh on docker": {
+			shell:            SNPwsh,
+			executor:         "docker",
+			expectedPassFile: false,
+		},
 		"pwsh on shell": {
 			shell:            SNPwsh,
 			executor:         "shell",

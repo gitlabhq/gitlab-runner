@@ -6,10 +6,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 func Test_linuxInfo_create(t *testing.T) {
-	for _, shell := range []string{"sh", "bash"} {
+	for _, shell := range []string{"sh", "bash", shells.SNPwsh} {
+		expectedTagSuffix := ""
+		expectedCmd := bashCmd
+		if shell == shells.SNPwsh {
+			expectedTagSuffix = "-pwsh"
+			expectedCmd = getPowerShellCmd(shell)
+		}
+
 		tests := map[string]struct {
 			shell          string
 			dockerArch     string
@@ -24,9 +33,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				expectedInfo: Info{
 					Architecture:            getExpectedArch(),
 					Name:                    DockerHubName,
-					Tag:                     fmt.Sprintf("%s-2923a43", getExpectedArch()),
+					Tag:                     fmt.Sprintf("%s-2923a43%s", getExpectedArch(), expectedTagSuffix),
 					IsSupportingLocalImport: true,
-					Cmd:                     bashCmd,
+					Cmd:                     expectedCmd,
 				},
 			},
 			"Docker runs on armv6l": {
@@ -36,9 +45,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				expectedInfo: Info{
 					Architecture:            "arm",
 					Name:                    DockerHubName,
-					Tag:                     "arm-2923a43",
+					Tag:                     "arm-2923a43" + expectedTagSuffix,
 					IsSupportingLocalImport: true,
-					Cmd:                     bashCmd,
+					Cmd:                     expectedCmd,
 				},
 			},
 			"Docker runs on amd64": {
@@ -48,9 +57,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				expectedInfo: Info{
 					Architecture:            "x86_64",
 					Name:                    DockerHubName,
-					Tag:                     "x86_64-2923a43",
+					Tag:                     "x86_64-2923a43" + expectedTagSuffix,
 					IsSupportingLocalImport: true,
-					Cmd:                     bashCmd,
+					Cmd:                     expectedCmd,
 				},
 			},
 			"Docker runs on arm64": {
@@ -60,9 +69,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				expectedInfo: Info{
 					Architecture:            "arm64",
 					Name:                    DockerHubName,
-					Tag:                     "arm64-2923a43",
+					Tag:                     "arm64-2923a43" + expectedTagSuffix,
 					IsSupportingLocalImport: true,
-					Cmd:                     bashCmd,
+					Cmd:                     expectedCmd,
 				},
 			},
 			"Docker runs on s390x": {
@@ -72,9 +81,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				expectedInfo: Info{
 					Architecture:            "s390x",
 					Name:                    DockerHubName,
-					Tag:                     "s390x-2923a43",
+					Tag:                     "s390x-2923a43" + expectedTagSuffix,
 					IsSupportingLocalImport: true,
-					Cmd:                     bashCmd,
+					Cmd:                     expectedCmd,
 				},
 			},
 			"Configured architecture is unknown": {
@@ -84,9 +93,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				expectedInfo: Info{
 					Architecture:            "some-random-arch",
 					Name:                    DockerHubName,
-					Tag:                     "some-random-arch-2923a43",
+					Tag:                     "some-random-arch-2923a43" + expectedTagSuffix,
 					IsSupportingLocalImport: true,
-					Cmd:                     bashCmd,
+					Cmd:                     expectedCmd,
 				},
 			},
 			"GitLab registry configured": {
@@ -96,9 +105,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				expectedInfo: Info{
 					Architecture:            "x86_64",
 					Name:                    GitLabRegistryName,
-					Tag:                     "x86_64-2923a43",
+					Tag:                     "x86_64-2923a43" + expectedTagSuffix,
 					IsSupportingLocalImport: true,
-					Cmd:                     bashCmd,
+					Cmd:                     expectedCmd,
 				},
 			},
 		}
