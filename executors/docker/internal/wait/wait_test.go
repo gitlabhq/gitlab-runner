@@ -120,8 +120,9 @@ func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
 }
 
 func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
+	exitCode := 1
 	failedContainer := container.ContainerWaitOKBody{
-		StatusCode: 1,
+		StatusCode: int64(exitCode),
 	}
 
 	mClient := new(docker.MockClient)
@@ -138,4 +139,5 @@ func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
 
 	var buildError *common.BuildError
 	assert.ErrorAs(t, err, &buildError)
+	assert.True(t, buildError.ExitCode == exitCode, "expected exit code %v, but got %v", exitCode, buildError.ExitCode)
 }

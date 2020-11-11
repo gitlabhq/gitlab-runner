@@ -41,9 +41,9 @@ func (_m *MockJobTrace) Cancel() bool {
 	return r0
 }
 
-// Fail provides a mock function with given fields: err, failureReason
-func (_m *MockJobTrace) Fail(err error, failureReason JobFailureReason) {
-	_m.Called(err, failureReason)
+// Fail provides a mock function with given fields: err, failureData
+func (_m *MockJobTrace) Fail(err error, failureData JobFailureData) {
+	_m.Called(err, failureData)
 }
 
 // IsStdout provides a mock function with given fields:

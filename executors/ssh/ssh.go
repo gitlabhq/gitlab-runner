@@ -53,8 +53,9 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		Command:     s.BuildShell.GetCommandWithArguments(),
 		Stdin:       cmd.Script,
 	})
-	if _, ok := err.(*ssh.ExitError); ok {
-		err = &common.BuildError{Inner: err}
+	if exitError, ok := err.(*ssh.ExitError); ok {
+		exitCode := exitError.ExitCode()
+		err = &common.BuildError{Inner: err, ExitCode: exitCode}
 	}
 	return err
 }

@@ -247,8 +247,10 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
-	assert.IsType(t, &common.BuildError{}, err)
+	var buildError *common.BuildError
+	assert.ErrorAs(t, err, &buildError)
 	assert.Contains(t, err.Error(), "command terminated with exit code 1")
+	assert.Equal(t, 1, buildError.ExitCode)
 }
 
 func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
@@ -3583,15 +3585,15 @@ type FakeBuildTrace struct {
 	testWriter
 }
 
-func (f FakeBuildTrace) Success()                                              {}
-func (f FakeBuildTrace) Fail(err error, failureReason common.JobFailureReason) {}
-func (f FakeBuildTrace) Notify(func())                                         {}
-func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)           {}
-func (f FakeBuildTrace) Cancel() bool                                          { return false }
-func (f FakeBuildTrace) SetAbortFunc(cancelFunc context.CancelFunc)            {}
-func (f FakeBuildTrace) Abort() bool                                           { return false }
-func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)      {}
-func (f FakeBuildTrace) SetMasked(masked []string)                             {}
+func (f FakeBuildTrace) Success()                                          {}
+func (f FakeBuildTrace) Fail(err error, failureData common.JobFailureData) {}
+func (f FakeBuildTrace) Notify(func())                                     {}
+func (f FakeBuildTrace) SetCancelFunc(cancelFunc context.CancelFunc)       {}
+func (f FakeBuildTrace) Cancel() bool                                      { return false }
+func (f FakeBuildTrace) SetAbortFunc(cancelFunc context.CancelFunc)        {}
+func (f FakeBuildTrace) Abort() bool                                       { return false }
+func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)  {}
+func (f FakeBuildTrace) SetMasked(masked []string)                         {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }

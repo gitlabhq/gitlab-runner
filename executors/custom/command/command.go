@@ -90,7 +90,7 @@ func (c *command) waitForCommand() {
 		exitCode := getExitCode(eerr)
 		switch {
 		case exitCode == BuildFailureExitCode:
-			err = &common.BuildError{Inner: eerr}
+			err = &common.BuildError{Inner: eerr, ExitCode: exitCode}
 		case exitCode != SystemFailureExitCode:
 			err = &ErrUnknownFailure{Inner: eerr, ExitCode: exitCode}
 		}

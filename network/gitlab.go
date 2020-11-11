@@ -384,6 +384,7 @@ func (n *GitLabClient) UpdateJob(
 		FailureReason: jobInfo.FailureReason,
 		Checksum:      jobInfo.Output.Checksum, // deprecated
 		Output:        jobInfo.Output,
+		ExitCode:      jobInfo.ExitCode,
 	}
 
 	statusCode, statusText, response := n.doJSON(

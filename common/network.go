@@ -455,6 +455,7 @@ type UpdateJobRequest struct {
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
 	Checksum      string           `json:"checksum,omitempty"` // deprecated
 	Output        JobTraceOutput   `json:"output,omitempty"`
+	ExitCode      int              `json:"exit_code,omitempty"`
 }
 
 type JobTraceOutput struct {
@@ -497,6 +498,7 @@ type UpdateJobInfo struct {
 	State         JobState
 	FailureReason JobFailureReason
 	Output        JobTraceOutput
+	ExitCode      int
 }
 
 type ArtifactsOptions struct {
@@ -513,7 +515,7 @@ type FailuresCollector interface {
 type JobTrace interface {
 	io.Writer
 	Success()
-	Fail(err error, failureReason JobFailureReason)
+	Fail(err error, failureData JobFailureData)
 	SetCancelFunc(cancelFunc context.CancelFunc)
 	Cancel() bool
 	SetAbortFunc(abortFunc context.CancelFunc)

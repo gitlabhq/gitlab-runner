@@ -59,6 +59,7 @@ func TestCommand_Run(t *testing.T) {
 		process           *os.Process
 		expectedError     string
 		expectedErrorType interface{}
+		expectedExitCode  int
 	}{
 		"error on cmd start()": {
 			cmdStartErr:   errors.New("test-error"),
@@ -69,6 +70,7 @@ func TestCommand_Run(t *testing.T) {
 			getExitCode:       func(err *exec.ExitError) int { return BuildFailureExitCode },
 			expectedError:     "exit status 0",
 			expectedErrorType: &common.BuildError{},
+			expectedExitCode:  BuildFailureExitCode,
 		},
 		"command ends with a system failure": {
 			cmdWaitErr:        &exec.ExitError{ProcessState: &os.ProcessState{}},
@@ -141,6 +143,13 @@ func TestCommand_Run(t *testing.T) {
 			assert.EqualError(t, err, tt.expectedError)
 			if tt.expectedErrorType != nil {
 				assert.IsType(t, tt.expectedErrorType, err)
+			}
+
+			if tt.expectedExitCode != 0 {
+				var buildError *common.BuildError
+				if errors.As(err, &buildError) {
+					assert.Equal(t, tt.expectedExitCode, buildError.ExitCode)
+				}
 			}
 		})
 	}

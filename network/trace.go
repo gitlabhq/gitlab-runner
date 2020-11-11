@@ -32,13 +32,14 @@ type clientJobTrace struct {
 	maxTracePatchSize int
 
 	failuresCollector common.FailuresCollector
+	exitCode          int
 }
 
 func (c *clientJobTrace) Success() {
-	c.complete(nil, "")
+	c.complete(nil, common.JobFailureData{})
 }
 
-func (c *clientJobTrace) complete(err error, failureReason common.JobFailureReason) {
+func (c *clientJobTrace) complete(err error, failureData common.JobFailureData) {
 	c.lock.Lock()
 
 	if c.state != common.Running {
@@ -49,15 +50,15 @@ func (c *clientJobTrace) complete(err error, failureReason common.JobFailureReas
 	if err == nil {
 		c.state = common.Success
 	} else {
-		c.setFailure(failureReason)
+		c.setFailure(failureData)
 	}
 
 	c.lock.Unlock()
 	c.finish()
 }
 
-func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {
-	c.complete(err, failureReason)
+func (c *clientJobTrace) Fail(err error, failureData common.JobFailureData) {
+	c.complete(err, failureData)
 }
 
 func (c *clientJobTrace) Write(data []byte) (n int, err error) {
@@ -139,11 +140,12 @@ func (c *clientJobTrace) IsStdout() bool {
 	return false
 }
 
-func (c *clientJobTrace) setFailure(reason common.JobFailureReason) {
+func (c *clientJobTrace) setFailure(data common.JobFailureData) {
 	c.state = common.Failed
-	c.failureReason = reason
+	c.failureReason = data.Reason
+	c.exitCode = data.ExitCode
 	if c.failuresCollector != nil {
-		c.failuresCollector.RecordFailure(reason, c.config.ShortDescription())
+		c.failuresCollector.RecordFailure(data.Reason, c.config.ShortDescription())
 	}
 }
 
@@ -334,6 +336,7 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 			Checksum: c.checksum(),
 			Bytesize: c.bytesize(),
 		},
+		ExitCode: c.exitCode,
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)

@@ -358,7 +358,7 @@ func TestJobFailure(t *testing.T) {
 	executor.On("Cleanup").Once()
 
 	// Set up a failing a build script
-	thrownErr := &BuildError{Inner: errors.New("test error")}
+	thrownErr := &BuildError{Inner: errors.New("test error"), ExitCode: 1}
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
 	executor.On("Run", mock.Anything).Return(thrownErr).Times(3)
@@ -385,7 +385,7 @@ func TestJobFailure(t *testing.T) {
 	trace.On("SetCancelFunc", mock.Anything).Once()
 	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetMasked", mock.Anything).Once()
-	trace.On("Fail", thrownErr, ScriptFailure).Once()
+	trace.On("Fail", thrownErr, JobFailureData{Reason: ScriptFailure, ExitCode: 1}).Once()
 
 	err = build.Run(&Config{}, trace)
 
@@ -420,7 +420,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	trace.On("SetCancelFunc", mock.Anything).Once()
 	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetMasked", mock.Anything).Once()
-	trace.On("Fail", mock.Anything, JobExecutionTimeout).Run(func(arguments mock.Arguments) {
+	trace.On("Fail", mock.Anything, JobFailureData{Reason: JobExecutionTimeout}).Run(func(arguments mock.Arguments) {
 		assert.Error(t, arguments.Get(0).(error))
 	}).Once()
 

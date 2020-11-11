@@ -182,6 +182,7 @@ func TestBuildBuildFailure(t *testing.T) {
 		assert.Error(t, err)
 		var buildErr *common.BuildError
 		assert.ErrorAs(t, err, &buildErr)
+		assert.Equal(t, command.BuildFailureExitCode, buildErr.ExitCode)
 	})
 }
 
@@ -225,6 +226,7 @@ func TestBuildUnknownFailure(t *testing.T) {
 		assert.Error(t, err)
 		var errUnknownFailure *command.ErrUnknownFailure
 		assert.ErrorAs(t, err, &errUnknownFailure)
+		assert.Equal(t, 255, errUnknownFailure.ExitCode)
 	})
 }
 
