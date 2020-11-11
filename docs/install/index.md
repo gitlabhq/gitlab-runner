@@ -22,9 +22,9 @@ Runner officially supports the following operating systems:
 
 You can find information on the different installation methods below.
 
-<!--You can also view installation instructions in GitLab by going to your project's
+You can also view installation instructions in GitLab by going to your project's
 **Settings > CI / CD**, expanding the **Runners** section, and clicking
-**Show Runner installation instructions**.-->
+**Show runner installation instructions**.
 
 ## Repositories
 
