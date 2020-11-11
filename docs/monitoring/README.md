@@ -51,7 +51,7 @@ $ curl -s http://localhost:9252/metrics | grep -E "# HELP"
 # HELP gitlab_runner_autoscaling_machine_creation_duration_seconds Histogram of machine creation time.
 # HELP gitlab_runner_autoscaling_machine_states The current number of machines per state in this provider.
 # HELP gitlab_runner_concurrent The current value of concurrent setting
-# HELP gitlab_runner_errors_total The  number of catched errors.
+# HELP gitlab_runner_errors_total The number of caught errors.
 # HELP gitlab_runner_limit The current value of concurrent setting
 # HELP gitlab_runner_request_concurrency The current number of concurrent requests for a new job
 # HELP gitlab_runner_request_concurrency_exceeded_total Counter tracking exceeding of request concurrency
