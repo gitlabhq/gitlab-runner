@@ -120,6 +120,11 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			executor:         "docker",
 			expectedPassFile: false,
 		},
+		"pwsh on kubernetes": {
+			shell:            SNPwsh,
+			executor:         "kubernetes",
+			expectedPassFile: false,
+		},
 		"pwsh on shell": {
 			shell:            SNPwsh,
 			executor:         "shell",
