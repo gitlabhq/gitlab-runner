@@ -940,8 +940,8 @@ func (e *executor) verifyAllowedImage(image, optionName string, allowedImages, i
 	}
 
 	e.Println(
-		"Please check runner's configuration: " +
-			"http://doc.gitlab.com/ci/docker/using_docker_images.html#overwrite-image-and-services")
+		"Please check runner's configuration allowed_images and allowed_services: " +
+			"https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runnersdocker-section")
 	return errors.New("invalid image")
 }
 
