@@ -515,29 +515,18 @@ for more details.
 
 **Compatibility table - features based on `.gitlab-ci.yml`**
 
+The following features are supported. If a feature is not listed in this table, it is not supported.
+
 | GitLab CI feature | Available with `exec` | Comments |
 |-------------------|-----------------------|----------|
-| image             | yes                   | extended configuration (`name`, `entrypoint`) are also supported |
-| services          | yes                   | extended configuration (`name`, `alias`, `entrypoint`, `command`) are also supported |
-| stages            | no                    | `exec` can only run one job, independently from others |
-| before_script     | yes                   | supports both global and job-level `before_script` |
-| after_script      | partially             | global `after_script` is not supported, only job-level `after_script`; only commands are taken in consideration, `when` is hardcoded to `always` |
-| variables         | yes                   | Supports default (partially), global and job-level variables; default variables are pre-set as can be seen in <https://gitlab.com/gitlab-org/gitlab-runner/blob/master/helpers/gitlab_ci_yaml_parser/parser.go#L147> |
-| artifacts         | no                    |          |
-| cache             | partially             | Regarding the specific configuration it may or may not work as expected |
-| cache:policy      | no                    |          |
-| environment       | no                    |          |
-| only              | no                    |          |
-| except            | no                    |          |
-| `allow_failure`   | no                    | `exec` just exits with the result of job; it's callers responsibility to decide if failure is OK or not |
-| tags              | no                    |          |
-| when              | no                    |          |
-| dependencies      | no                    |          |
-| coverage          | no                    |          |
-| retry             | no                    |          |
-| hidden keys       | no                    | If explicitly asked to run, `exec` tries to run the job |
-| YAML features     | yes                   | Anchors (`&`), aliases (`*`), map merging (`<<`) are part of YAML specification and are handled by the parser |
-| pages             | partially             | Job's script is executed if explicitly asked, but it doesn't affect pages state, which is managed by GitLab |
+| `image`             | yes                   | Extended configuration (`name`, `entrypoint`) are also supported. |
+| `services`          | yes                   | Extended configuration (`name`, `alias`, `entrypoint`, `command`) are also supported. |
+| `before_script`     | yes                   | Supports both global and job-level `before_script`. |
+| `after_script`      | partially             | Global `after_script` is not supported. Only job-level `after_script`; only commands are taken into consideration, `when` is hardcoded to `always`. |
+| `variables`         | yes                   | Supports default (partially), global and job-level variables; default variables are pre-set as can be seen in <https://gitlab.com/gitlab-org/gitlab-runner/blob/master/helpers/gitlab_ci_yaml_parser/parser.go#L147>. |
+| `cache`             | partially             | Regarding the specific configuration it may or may not work as expected. |
+| YAML features       | yes                   | Anchors (`&`), aliases (`*`), map merging (`<<`) are part of YAML specification and are handled by the parser. |
+| `pages`             | partially             | Job's script is executed if explicitly asked, but it doesn't affect pages state, which is managed by GitLab. |
 
 **Compatibility table - features based on variables**
 
@@ -547,7 +536,7 @@ for more details.
 | GIT_CHECKOUT               | yes                   |          |
 | GIT_SUBMODULE_STRATEGY     | yes                   |          |
 | GET_SOURCES_ATTEMPTS       | yes                   |          |
-| ARTIFACT_DOWNLOAD_ATTEMPTS | no                    | artifacts are not supported |
+| ARTIFACT_DOWNLOAD_ATTEMPTS | no                    | Artifacts are not supported. |
 | RESTORE_CACHE_ATTEMPTS     | yes                   |          |
 | GIT_DEPTH                  | yes                   |          |
 
@@ -558,7 +547,7 @@ for more details.
 | Secret Variables  | no                    |          |
 | triggers          | no                    |          |
 | schedules         | no                    |          |
-| job timeout       | no                    | hardcoded to 1 hour |
+| job timeout       | no                    | Hardcoded to 1 hour. |
 | `[ci skip]`       | no                    |          |
 
 **Other requirements and limitations**
