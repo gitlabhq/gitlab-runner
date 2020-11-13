@@ -9,6 +9,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
@@ -303,6 +304,90 @@ func TestConfigParse(t *testing.T) {
 			validateConfig: func(t *testing.T, config *Config) {
 				assert.Nil(t, config.Runners[0].GracefulKillTimeout)
 				assert.Nil(t, config.Runners[0].ForceKillTimeout)
+			},
+		},
+		"setting DNS policy to none": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						dns_policy = 'none'
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				dnsPolicy, err := config.Runners[0].Kubernetes.DNSPolicy.Get()
+				assert.NoError(t, err)
+				assert.Equal(t, api.DNSNone, dnsPolicy)
+			},
+		},
+		"setting DNS policy to default": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						dns_policy = 'default'
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				dnsPolicy, err := config.Runners[0].Kubernetes.DNSPolicy.Get()
+				assert.NoError(t, err)
+				assert.Equal(t, api.DNSDefault, dnsPolicy)
+			},
+		},
+		"setting DNS policy to cluster-first": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						dns_policy = 'cluster-first'
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				dnsPolicy, err := config.Runners[0].Kubernetes.DNSPolicy.Get()
+				assert.NoError(t, err)
+				assert.Equal(t, api.DNSClusterFirst, dnsPolicy)
+			},
+		},
+		"setting DNS policy to cluster-first-with-host-net": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						dns_policy = 'cluster-first-with-host-net'
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				dnsPolicy, err := config.Runners[0].Kubernetes.DNSPolicy.Get()
+				assert.NoError(t, err)
+				assert.Equal(t, api.DNSClusterFirstWithHostNet, dnsPolicy)
+			},
+		},
+		"fail setting DNS policy to invalid value": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						dns_policy = 'some-invalid-policy'
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				dnsPolicy, err := config.Runners[0].Kubernetes.DNSPolicy.Get()
+				assert.Error(t, err)
+				assert.Empty(t, dnsPolicy)
+			},
+		},
+		"fail setting DNS policy to empty value returns default value": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						dns_policy = ''
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				dnsPolicy, err := config.Runners[0].Kubernetes.DNSPolicy.Get()
+				assert.NoError(t, err)
+				assert.Equal(t, api.DNSClusterFirst, dnsPolicy)
 			},
 		},
 	}

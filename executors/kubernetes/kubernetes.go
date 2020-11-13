@@ -1001,6 +1001,7 @@ func (s *executor) preparePodConfig(
 			ImagePullSecrets:              imagePullSecrets,
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
 			Affinity:                      s.Config.Kubernetes.GetAffinity(),
+			DNSPolicy:                     s.getDNSPolicy(),
 		},
 	}
 
@@ -1009,6 +1010,14 @@ func (s *executor) preparePodConfig(
 	}
 
 	return pod
+}
+
+func (s *executor) getDNSPolicy() api.DNSPolicy {
+	dnsPolicy, err := s.Config.Kubernetes.DNSPolicy.Get()
+	if err != nil {
+		s.Warningln(fmt.Sprintf("falling back to cluster's default policy: %v", err))
+	}
+	return dnsPolicy
 }
 
 func (s *executor) getHelperImage() string {

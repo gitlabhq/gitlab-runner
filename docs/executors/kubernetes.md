@@ -126,6 +126,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
 | `services` | [Since GitLab Runner 12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#using-services). |
 | `terminationGracePeriodSeconds` | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. |
 | `volumes` | Configured through the configuration file, the list of volumes that will be mounted in the build container. [Read more about using volumes](#using-volumes). |
+| `dns_policy` | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) will be used if not set. |
 
 ### Configuring executor Service Account
 
@@ -256,6 +257,7 @@ concurrent = 4
     helper_memory_limit = "100Mi"
     poll_interval = 5
     poll_timeout = 3600
+    dns_policy = "cluster-first"
     [runners.kubernetes.node_selector]
       gitlab = "true"
     [runners.kubernetes.node_tolerations]
