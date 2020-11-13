@@ -12,7 +12,7 @@ You can improve performance of your jobs by caching your images and dependencies
 
 You can speed up the time it takes to download Docker images by using:
 
-- The GitLab Dependency Proxy or 
+- The GitLab Dependency Proxy or
 - A mirror of the DockerHub Registry
 
 ### GitLab Dependency Proxy
