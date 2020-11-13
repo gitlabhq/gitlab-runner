@@ -121,10 +121,13 @@ func Exist(vmName string) bool {
 	return err == nil
 }
 
-func CreateOsVM(vmName string, templateName string, templateSnapshot string) error {
+func CreateOsVM(vmName string, templateName string, templateSnapshot string, baseFolder string) error {
 	args := []string{"clonevm", vmName, "--mode", "machine", "--name", templateName, "--register"}
 	if templateSnapshot != "" {
 		args = append(args, "--snapshot", templateSnapshot, "--options", "link")
+	}
+	if baseFolder != "" {
+		args = append(args, "--basefolder", baseFolder)
 	}
 	_, err := VBoxManage(args...)
 	return err

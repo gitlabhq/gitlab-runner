@@ -497,6 +497,7 @@ your `PATH` environment variable on Windows hosts:
 | --------- | ----------- |
 | `base_name`         | name of VirtualBox VM which will be cloned |
 | `base_snapshot`     | name or UUID of a specific snapshot of the VM from which to create a linked clone. If this is empty or omitted, the current snapshot will be used. If there is no current snapshot, one will be created unless `disable_snapshots` is true, in which case a full clone of the base VM will be made. |
+| `base_folder`       | folder in which to save the new VM. If this is empty or omitted, the default VM folder will be used. |
 | `disable_snapshots` | if disabled the VMs will be destroyed after build |
 
 Example:

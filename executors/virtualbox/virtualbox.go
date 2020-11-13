@@ -111,7 +111,7 @@ func (s *executor) createVM(vmName string) (err error) {
 			s.Debugln("Creating testing VM from VM", baseImage, "snapshot", baseSnapshot, "...")
 		}
 
-		err = vbox.CreateOsVM(baseImage, vmName, baseSnapshot)
+		err = vbox.CreateOsVM(baseImage, vmName, baseSnapshot, s.Config.VirtualBox.BaseFolder)
 		if err != nil {
 			return err
 		}
