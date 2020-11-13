@@ -3028,6 +3028,84 @@ func TestSetupBuildPod(t *testing.T) {
 				assertContainerCap(pod.Spec.Containers[3])
 			},
 		},
+		"support setting DNS policy to empty string": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						DNSPolicy: "",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, api.DNSClusterFirst, pod.Spec.DNSPolicy)
+			},
+		},
+		"support setting DNS policy to none": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						DNSPolicy: common.DNSPolicyNone,
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, api.DNSNone, pod.Spec.DNSPolicy)
+			},
+		},
+		"support setting DNS policy to default": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						DNSPolicy: common.DNSPolicyDefault,
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, api.DNSDefault, pod.Spec.DNSPolicy)
+			},
+		},
+		"support setting DNS policy to cluster-first": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						DNSPolicy: common.DNSPolicyClusterFirst,
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, api.DNSClusterFirst, pod.Spec.DNSPolicy)
+			},
+		},
+		"support setting DNS policy to cluster-first-with-host-net": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						DNSPolicy: common.DNSPolicyClusterFirstWithHostNet,
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, api.DNSClusterFirstWithHostNet, pod.Spec.DNSPolicy)
+			},
+		},
+		"fail setting DNS policy to invalid value": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						DNSPolicy: "some-invalid-policy",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Empty(t, pod.Spec.DNSPolicy)
+			},
+		},
 	}
 
 	for testName, test := range tests {

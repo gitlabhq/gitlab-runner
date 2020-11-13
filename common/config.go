@@ -32,6 +32,11 @@ const (
 	PullPolicyAlways       = "always"
 	PullPolicyNever        = "never"
 	PullPolicyIfNotPresent = "if-not-present"
+
+	DNSPolicyNone                    KubernetesDNSPolicy = "none"
+	DNSPolicyDefault                 KubernetesDNSPolicy = "default"
+	DNSPolicyClusterFirst            KubernetesDNSPolicy = "cluster-first"
+	DNSPolicyClusterFirstWithHostNet KubernetesDNSPolicy = "cluster-first-with-host-net"
 )
 
 // InvalidTimePeriodsError represents that the time period specified is not valid.
@@ -198,7 +203,31 @@ func (p KubernetesPullPolicy) Get() (KubernetesPullPolicy, error) {
 	case p == PullPolicyIfNotPresent:
 		return "IfNotPresent", nil
 	}
-	return "", fmt.Errorf("unsupported kubernetes-pull-policy: %v", p)
+	return "", fmt.Errorf("unsupported kubernetes-pull-policy %q", p)
+}
+
+type KubernetesDNSPolicy string
+
+// Get returns one of the predefined values in kubernetes notation or an error if the value is not matched.
+// If the DNSPolicy is a blank string, returns the k8s default ("ClusterFirst")
+func (p KubernetesDNSPolicy) Get() (api.DNSPolicy, error) {
+	const defaultPolicy = api.DNSClusterFirst
+
+	switch p {
+	case "":
+		logrus.Debugf("DNSPolicy string is blank, using %q as default", defaultPolicy)
+		return defaultPolicy, nil
+	case DNSPolicyNone:
+		return api.DNSNone, nil
+	case DNSPolicyDefault:
+		return api.DNSDefault, nil
+	case DNSPolicyClusterFirst:
+		return api.DNSClusterFirst, nil
+	case DNSPolicyClusterFirstWithHostNet:
+		return api.DNSClusterFirstWithHostNet, nil
+	}
+
+	return "", fmt.Errorf("unsupported kubernetes-dns-policy: %q", p)
 }
 
 //nolint:lll
@@ -269,6 +298,7 @@ type KubernetesConfig struct {
 	Services                                          []Service                    `toml:"services,omitempty" json:"services" description:"Add service that is started with container"`
 	CapAdd                                            []string                     `toml:"cap_add" json:"cap_add" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                                           []string                     `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
+	DNSPolicy                                         KubernetesDNSPolicy          `toml:"dns_policy,omitempty" json:"dns_policy" long:"dns-policy" env:"KUBERNETES_DNS_POLICY" description:"How Kubernetes should try to resolve DNS from the created pods. If unset, Kubernetes will use the default 'ClusterFirst'. Valid values are: none, default, cluster-first, cluster-first-with-host-net"`
 }
 
 type KubernetesVolumes struct {
