@@ -77,7 +77,7 @@ For some, you must rename them. For example, if you are using `helpers` to set C
 ```yaml
 helpers:
     cpuLimit: 200m
-``` 
+```
 
 Now you can set them as `helper_cpu_limit`:
 
@@ -122,7 +122,7 @@ cache:
     secretName: s3access
 ```
 
-Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml). 
+Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
 
 ### Enabling RBAC support
 

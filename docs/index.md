@@ -14,7 +14,7 @@ on infrastructure that you own or manage. If you do, you should install
 GitLab Runner on a machine that's separate from the one that hosts the GitLab instance.
 
 GitLab Runner is open-source and written in [Go](https://golang.org). It can be run
-as a single binary; no language-specific requirements are needed. 
+as a single binary; no language-specific requirements are needed.
 
 You can install GitLab Runner on several different supported operating systems.
 Other operating systems may also work, as long as you can compile a Go
