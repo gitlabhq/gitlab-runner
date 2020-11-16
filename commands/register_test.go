@@ -755,3 +755,78 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 		})
 	}
 }
+
+func TestUnregisterOnFailure(t *testing.T) {
+	tests := map[string]struct {
+		leaveRunner           bool
+		registrationFails     bool
+		expectsLeftRegistered bool
+	}{
+		"registration succeeds, runner left registered": {
+			leaveRunner:           false,
+			registrationFails:     false,
+			expectsLeftRegistered: true,
+		},
+		"registration fails, LeaveRunner is false, runner is unregistered": {
+			leaveRunner:           false,
+			registrationFails:     true,
+			expectsLeftRegistered: false,
+		},
+		"registration fails, LeaveRunner is true, runner left registered": {
+			leaveRunner:           true,
+			registrationFails:     true,
+			expectsLeftRegistered: true,
+		},
+	}
+
+	for testName, testCase := range tests {
+		t.Run(testName, func(t *testing.T) {
+			network := new(common.MockNetwork)
+			defer network.AssertExpectations(t)
+
+			const token = "test-runner-token"
+			network.On("RegisterRunner", mock.Anything, mock.Anything).
+				Return(&common.RegisterRunnerResponse{
+					Token: token,
+				}).
+				Once()
+			if !testCase.expectsLeftRegistered {
+				credsMocker := mock.MatchedBy(func(credentials common.RunnerCredentials) bool {
+					return credentials.Token == token
+				})
+				network.On("UnregisterRunner", credsMocker).
+					Return(true).
+					Once()
+			}
+
+			var arguments []string
+			if testCase.leaveRunner {
+				arguments = append(arguments, "--leave-runner")
+			}
+
+			answers := []string{"https://gitlab.com/", token, "description", ""}
+			if testCase.registrationFails {
+				defer func() { _ = recover() }()
+			} else {
+				answers = append(answers, "custom") // should not result in more answers required
+			}
+			cmd := newRegisterCommand()
+			cmd.reader = bufio.NewReader(strings.NewReader(strings.Join(answers, "\n") + "\n"))
+			cmd.network = network
+
+			app := cli.NewApp()
+			app.Commands = []cli.Command{
+				{
+					Name:   "register",
+					Action: cmd.Execute,
+					Flags:  clihelpers.GetFlagsFromStruct(cmd),
+				},
+			}
+
+			err := app.Run(append([]string{"runner", "register"}, arguments...))
+
+			assert.False(t, testCase.registrationFails)
+			assert.NoError(t, err)
+		})
+	}
+}
