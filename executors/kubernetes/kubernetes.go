@@ -818,10 +818,12 @@ func (s *executor) setupCredentials() error {
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
-	s.credentials, err = s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Create(&secret)
+	creds, err := s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Create(&secret)
 	if err != nil {
 		return err
 	}
+
+	s.credentials = creds
 	return nil
 }
 
