@@ -83,8 +83,10 @@ help:
 	# make development_setup - setup needed environment for tests
 	# make runner-bin-host - build executable for your arch and OS
 	# make runner-and-helper-bin-host - build executable for your arch and OS, including docker dependencies
+	# make runner-and-helper-bin-linux - build executable for all supported architectures for linux OS, including docker dependencies
 	# make runner-and-helper-bin - build executable for all supported platforms, including docker dependencies
 	# make helper-dockerarchive - build Runner Helper docker dependencies for all supported platforms
+	# make helper-dockerarchive-host - build Runner Helper docker dependencies for your oarch and OS
 	#
 	# Testing commands:
 	# make test - run project tests
