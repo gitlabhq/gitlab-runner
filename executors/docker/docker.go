@@ -311,7 +311,11 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 			dockerPrebuiltImagesPath,
 			"prebuilt-"+architecture+prebuiltImageExtension,
 		)
-		image, err := e.loadPrebuiltImage(dockerPrebuiltImageFilePath, prebuiltImageName, e.helperImageInfo.Tag)
+		image, err := e.loadPrebuiltImage(
+			dockerPrebuiltImageFilePath,
+			e.helperImageInfo.Name,
+			e.helperImageInfo.Tag,
+		)
 		if err != nil {
 			e.Debugln("Failed to load prebuilt image from:", dockerPrebuiltImageFilePath, "error:", err)
 			continue
