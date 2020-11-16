@@ -188,6 +188,12 @@ Example of dotfiles that are known to cause failure:
 - `.condarc`
 - `.rvmrc`
 
+SELinux can also be the culprit of this error. You can confirm this by looking at the SELinux audit log:
+
+```shell
+sealert -a /var/log/audit/audit.log
+```
+
 ## Windows troubleshooting
 
 The following relate to Runner troubleshooting on Windows.
