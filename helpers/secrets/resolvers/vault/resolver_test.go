@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -111,7 +110,7 @@ func TestResolver_Resolve(t *testing.T) {
 			value, err := r.Resolve()
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 

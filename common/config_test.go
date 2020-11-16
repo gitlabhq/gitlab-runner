@@ -1,7 +1,6 @@
 package common
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -618,7 +617,7 @@ func TestDockerMachine(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			err := tt.config.CompilePeriods()
 			if tt.expectedErr != nil {
-				assert.True(t, errors.Is(err, tt.expectedErr))
+				assert.ErrorIs(t, err, tt.expectedErr)
 				return
 			}
 			assert.NoError(t, err, "should not return err on good period compile")

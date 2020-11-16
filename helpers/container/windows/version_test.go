@@ -1,7 +1,6 @@
 package windows
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,7 +43,7 @@ func TestVersion(t *testing.T) {
 			version, err := Version(tt.operatingSystem)
 
 			assert.Equal(t, tt.expectedVersion, version)
-			assert.True(t, errors.Is(err, tt.expectedErr), "expected err %T, but got %T", tt.expectedErr, err)
+			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
 }

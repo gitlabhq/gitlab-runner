@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -25,7 +24,7 @@ func TestNewReadLogsCommandFileNotExist(t *testing.T) {
 	}
 
 	err := cmd.readLogs()
-	assert.True(t, errors.Is(err, errWaitingFileTimeout), "expected err %T, but got %T", errWaitingFileTimeout, err)
+	assert.ErrorIs(t, err, errWaitingFileTimeout)
 }
 
 func TestNewReadLogsCommandNoAttempts(t *testing.T) {
@@ -33,7 +32,7 @@ func TestNewReadLogsCommandNoAttempts(t *testing.T) {
 	cmd.WaitFileTimeout = 0
 
 	err := cmd.execute()
-	assert.True(t, errors.Is(err, errNoAttemptsToOpenFile), "expected err %T, but got %T", errNoAttemptsToOpenFile, err)
+	assert.ErrorIs(t, err, errNoAttemptsToOpenFile)
 }
 
 func TestNewReadLogsCommandFileSeekToInvalidLocation(t *testing.T) {
@@ -47,7 +46,7 @@ func TestNewReadLogsCommandFileSeekToInvalidLocation(t *testing.T) {
 
 	err := cmd.execute()
 	var expectedErr *os.PathError
-	assert.True(t, errors.As(err, &expectedErr), "expected err %T, but got %T", expectedErr, err)
+	assert.ErrorAs(t, err, &expectedErr)
 }
 
 func setupTestFile(t *testing.T) (*os.File, func()) {
@@ -104,7 +103,7 @@ func TestNewReadLogsCommandLines(t *testing.T) {
 
 	err := cmd.readLogs()
 	var expectedErr *os.PathError
-	assert.True(t, errors.As(err, &expectedErr), "expected err %T, but got %T", expectedErr, err)
+	assert.ErrorAs(t, err, &expectedErr)
 }
 
 func appendToFile(t *testing.T, f *os.File, lines []string) {
@@ -168,7 +167,7 @@ func TestNewReadLogsCommandWriteLinesWithDelay(t *testing.T) {
 
 	err := cmd.readLogs()
 	var expectedErr *os.PathError
-	assert.True(t, errors.As(err, &expectedErr), "expected err %T, but got %T", expectedErr, err)
+	assert.ErrorAs(t, err, &expectedErr)
 }
 
 func TestSplitLinesAccordingToBufferSize(t *testing.T) {
@@ -208,7 +207,7 @@ func TestSplitLinesAccordingToBufferSize(t *testing.T) {
 
 	err := cmd.readLogs()
 	var expectedErr *os.PathError
-	assert.True(t, errors.As(err, &expectedErr), "expected err %T, but got %T", expectedErr, err)
+	assert.ErrorAs(t, err, &expectedErr)
 }
 
 func TestSeek(t *testing.T) {
@@ -244,5 +243,5 @@ func TestSeek(t *testing.T) {
 
 	err := cmd.readLogs()
 	var expectedErr *os.PathError
-	assert.True(t, errors.As(err, &expectedErr), "expected err %T, but got %T", expectedErr, err)
+	assert.ErrorAs(t, err, &expectedErr)
 }

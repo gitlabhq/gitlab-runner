@@ -309,7 +309,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 	err := build.Run(&Config{}, &Trace{Writer: os.Stdout})
 
 	expectedErr := new(BuildError)
-	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
+	assert.ErrorIs(t, err, expectedErr)
 }
 
 func TestPrepareEnvironmentFailure(t *testing.T) {
@@ -346,7 +346,7 @@ func TestPrepareEnvironmentFailure(t *testing.T) {
 	}
 
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	assert.True(t, errors.Is(err, testErr))
+	assert.ErrorIs(t, err, testErr)
 }
 
 func TestJobFailure(t *testing.T) {
@@ -390,7 +390,7 @@ func TestJobFailure(t *testing.T) {
 	err = build.Run(&Config{}, trace)
 
 	expectedErr := new(BuildError)
-	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
+	assert.ErrorIs(t, err, expectedErr)
 }
 
 func TestJobFailureOnExecutionTimeout(t *testing.T) {
@@ -427,7 +427,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	err := build.Run(&Config{}, trace)
 
 	expectedErr := &BuildError{FailureReason: JobExecutionTimeout}
-	assert.True(t, errors.Is(err, expectedErr), "expected: %#v, got: %#v", expectedErr, err)
+	assert.ErrorIs(t, err, expectedErr)
 }
 
 func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
@@ -1605,7 +1605,7 @@ func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
 			}
 
 			attempts, err := build.GetExecutorJobSectionAttempts()
-			assert.True(t, errors.Is(err, tt.expectedErr))
+			assert.ErrorIs(t, err, tt.expectedErr)
 			assert.Equal(t, tt.expectedAttempts, attempts)
 		})
 	}
@@ -1788,7 +1788,7 @@ func TestSecretsResolving(t *testing.T) {
 			assert.Equal(t, tt.expectedVariables, build.secretsVariables)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 			assert.NoError(t, err)

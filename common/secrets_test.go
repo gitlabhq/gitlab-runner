@@ -1,7 +1,6 @@
 package common
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -133,7 +132,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 
 			r, err := newSecretsResolver(logger, registry)
 			if tt.expectedResolverCreationError != nil {
-				assert.True(t, errors.As(err, &tt.expectedResolverCreationError))
+				assert.ErrorAs(t, err, &tt.expectedResolverCreationError)
 				return
 			}
 			require.NoError(t, err)
@@ -141,7 +140,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			variables, err := r.Resolve(tt.secrets)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 

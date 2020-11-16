@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -111,7 +110,7 @@ func TestGetConfigForImage(t *testing.T) {
 			assertResult: func(result *RegistryInfo, err error) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
-				assert.True(t, errors.Is(err, errPathTraversal), "expected: %T, got: %T", errPathTraversal, err)
+				assert.ErrorIs(t, err, errPathTraversal)
 			},
 		},
 		"registry2 from file only overrides credential helper with path traversal attempt": {
@@ -125,7 +124,7 @@ func TestGetConfigForImage(t *testing.T) {
 			assertResult: func(result *RegistryInfo, err error) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
-				assert.True(t, errors.Is(err, errPathTraversal), "expected: %T, got: %T", errPathTraversal, err)
+				assert.ErrorIs(t, err, errPathTraversal)
 			},
 		},
 		"missing credentials, file only": {
@@ -230,7 +229,7 @@ func TestGetConfigForImage(t *testing.T) {
 			assertResult: func(result *RegistryInfo, err error) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
-				assert.True(t, errors.Is(err, errPathTraversal), "expected: %T, got: %T", errPathTraversal, err)
+				assert.ErrorIs(t, err, errPathTraversal)
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credentials helper with path traversal entry": {
@@ -244,7 +243,7 @@ func TestGetConfigForImage(t *testing.T) {
 			assertResult: func(result *RegistryInfo, err error) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
-				assert.True(t, errors.Is(err, errPathTraversal), "expected: %T, got: %T", errPathTraversal, err)
+				assert.ErrorIs(t, err, errPathTraversal)
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credentials helper with path traversal entry and falls back to config file": {
@@ -258,7 +257,7 @@ func TestGetConfigForImage(t *testing.T) {
 			assertResult: func(result *RegistryInfo, err error) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
-				assert.True(t, errors.Is(err, errPathTraversal), "expected: %T, got: %T", errPathTraversal, err)
+				assert.ErrorIs(t, err, errPathTraversal)
 			},
 		},
 		"DOCKER_AUTH_CONFIG overrides credentials helper with path traversal entry and another valid entry": {
@@ -269,7 +268,7 @@ func TestGetConfigForImage(t *testing.T) {
 			assertResult: func(result *RegistryInfo, err error) {
 				// path traversal element will cause an error to be returned
 				assert.Nil(t, result)
-				assert.True(t, errors.Is(err, errPathTraversal), "expected: %T, got: %T", errPathTraversal, err)
+				assert.ErrorIs(t, err, errPathTraversal)
 			},
 		},
 	}
@@ -595,7 +594,7 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 
 			configFile, authConfigs, err := readDockerConfigsFromHomeDir("")
 
-			assert.True(t, errors.Is(err, test.expectedError), "expected err %T, but got %T", test.expectedError, err)
+			assert.ErrorIs(t, err, test.expectedError)
 			assert.Equal(t, expectedConfigFile, configFile)
 			assert.Equal(t, test.expectedAuthConfigs, authConfigs, "Configs should be equal")
 		})

@@ -1,7 +1,6 @@
 package secret_engines
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,15 +35,15 @@ func TestOperationNotSupportedError_Is(t *testing.T) {
 	e := new(vault.MockSecretEngine)
 	e.On("EngineName").Return("test-engine")
 
-	assert.True(t, errors.Is(NewUnsupportedGetOperationErr(e), NewUnsupportedGetOperationErr(e)))
-	assert.False(t, errors.Is(NewUnsupportedGetOperationErr(e), new(OperationNotSupportedError)))
-	assert.False(t, errors.Is(NewUnsupportedGetOperationErr(e), assert.AnError))
+	assert.ErrorIs(t, NewUnsupportedGetOperationErr(e), NewUnsupportedGetOperationErr(e))
+	assert.NotErrorIs(t, NewUnsupportedGetOperationErr(e), new(OperationNotSupportedError))
+	assert.NotErrorIs(t, NewUnsupportedGetOperationErr(e), assert.AnError)
 
-	assert.True(t, errors.Is(NewUnsupportedPutOperationErr(e), NewUnsupportedPutOperationErr(e)))
-	assert.False(t, errors.Is(NewUnsupportedPutOperationErr(e), new(OperationNotSupportedError)))
-	assert.False(t, errors.Is(NewUnsupportedPutOperationErr(e), assert.AnError))
+	assert.ErrorIs(t, NewUnsupportedPutOperationErr(e), NewUnsupportedPutOperationErr(e))
+	assert.NotErrorIs(t, NewUnsupportedPutOperationErr(e), new(OperationNotSupportedError))
+	assert.NotErrorIs(t, NewUnsupportedPutOperationErr(e), assert.AnError)
 
-	assert.True(t, errors.Is(NewUnsupportedDeleteOperationErr(e), NewUnsupportedDeleteOperationErr(e)))
-	assert.False(t, errors.Is(NewUnsupportedDeleteOperationErr(e), new(OperationNotSupportedError)))
-	assert.False(t, errors.Is(NewUnsupportedDeleteOperationErr(e), assert.AnError))
+	assert.ErrorIs(t, NewUnsupportedDeleteOperationErr(e), NewUnsupportedDeleteOperationErr(e))
+	assert.NotErrorIs(t, NewUnsupportedDeleteOperationErr(e), new(OperationNotSupportedError))
+	assert.NotErrorIs(t, NewUnsupportedDeleteOperationErr(e), assert.AnError)
 }

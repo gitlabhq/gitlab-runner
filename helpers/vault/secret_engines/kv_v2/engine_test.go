@@ -1,7 +1,6 @@
 package kv_v2
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,7 +121,7 @@ func TestEngine_Get(t *testing.T) {
 			e := NewEngine(clientMock, enginePath)
 			result, err := e.Get(path)
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 			assert.NoError(t, err)
@@ -180,7 +179,7 @@ func TestEngine_Put(t *testing.T) {
 			e := NewEngine(clientMock, enginePath)
 			err := e.Put(path, data)
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 			assert.NoError(t, err)
@@ -231,7 +230,7 @@ func TestEngine_Delete(t *testing.T) {
 			e := NewEngine(clientMock, enginePath)
 			err := e.Delete(path)
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 			assert.NoError(t, err)

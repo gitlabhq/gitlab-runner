@@ -69,7 +69,7 @@ func TestDockerWaiter_Wait(t *testing.T) {
 			waiter := NewDockerKillWaiter(mClient)
 
 			err := waiter.Wait(context.Background(), "id")
-			assert.True(t, errors.Is(err, tt.expectedErr), "expected err %T, but got %T", tt.expectedErr, err)
+			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
 }
@@ -116,7 +116,7 @@ func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
 	waiter := NewDockerKillWaiter(mClient)
 
 	err := waiter.Wait(ctx, "id")
-	assert.True(t, errors.Is(err, context.Canceled), "expected err %T, but got %T", context.Canceled, err)
+	assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
@@ -137,5 +137,5 @@ func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
 	err := waiter.Wait(context.Background(), "id")
 
 	var buildError *common.BuildError
-	assert.True(t, errors.As(err, &buildError), "expected err %T, but got %T", buildError, err)
+	assert.ErrorAs(t, err, &buildError)
 }

@@ -2,7 +2,6 @@ package docker
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -44,7 +43,7 @@ func TestEventStreamError(t *testing.T) {
 	err := client.ImagePullBlocking(ctx, "test", types.ImagePullOptions{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "stream error")
-	assert.True(t, errors.As(new(jsonmessage.JSONError), &err))
+	assert.ErrorAs(t, new(jsonmessage.JSONError), &err)
 }
 
 func TestWrapError(t *testing.T) {

@@ -1,7 +1,6 @@
 package auth_methods
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -84,7 +83,7 @@ func TestGetFactory(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			factory, err := GetFactory(tt.engineName)
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				assert.Nil(t, factory)
 				return
 			}

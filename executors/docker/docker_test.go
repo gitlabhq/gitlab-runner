@@ -1693,10 +1693,10 @@ func TestDockerCreateNetwork(t *testing.T) {
 			defer closureFn()
 
 			err := e.createBuildNetwork()
-			assert.True(t, errors.Is(test.expectedBuildError, err))
+			assert.ErrorIs(t, err, test.expectedBuildError)
 
 			err = e.cleanupNetwork(context.Background())
-			assert.True(t, errors.Is(test.expectedCleanError, err))
+			assert.ErrorIs(t, err, test.expectedCleanError)
 		})
 	}
 }

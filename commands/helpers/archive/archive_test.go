@@ -1,7 +1,6 @@
 package archive_test
 
 import (
-	"errors"
 	"io/ioutil"
 	"testing"
 
@@ -30,13 +29,7 @@ func TestDefaultRegistration(t *testing.T) {
 			if tc.hasArchiver {
 				assert.NoError(t, err)
 			} else {
-				assert.True(
-					t,
-					errors.Is(err, archive.ErrUnsupportedArchiveFormat),
-					"expected: %#v, got: %#v",
-					archive.ErrUnsupportedArchiveFormat,
-					err,
-				)
+				assert.ErrorIs(t, err, archive.ErrUnsupportedArchiveFormat)
 			}
 
 			_, err = archive.NewExtractor(tn, nil, 0, "")
@@ -44,13 +37,7 @@ func TestDefaultRegistration(t *testing.T) {
 			if tc.hasExtractor {
 				assert.NoError(t, err)
 			} else {
-				assert.True(
-					t,
-					errors.Is(err, archive.ErrUnsupportedArchiveFormat),
-					"expected: %#v, got: %#v",
-					archive.ErrUnsupportedArchiveFormat,
-					err,
-				)
+				assert.ErrorIs(t, err, archive.ErrUnsupportedArchiveFormat)
 			}
 		})
 	}

@@ -191,7 +191,7 @@ func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string,
 
 			if tt.errExpected {
 				var buildErr *common.BuildError
-				assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+				assert.ErrorAs(t, err, &buildErr)
 				return
 			}
 			assert.NoError(t, err)
@@ -222,7 +222,7 @@ func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, f
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	var buildError *common.BuildError
-	assert.True(t, errors.As(err, &buildError))
+	assert.ErrorAs(t, err, &buildError)
 	assert.Equal(t, common.JobExecutionTimeout, buildError.FailureReason)
 }
 
@@ -716,7 +716,7 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 			if test.expectedErr {
 				var buildErr *common.BuildError
-				assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
+				assert.ErrorAs(t, err, &buildErr)
 				return
 			}
 
@@ -770,7 +770,7 @@ func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string,
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	var buildErr *common.BuildError
-	assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
+	assert.ErrorAs(t, err, &buildErr)
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
@@ -794,7 +794,7 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	var buildErr *common.BuildError
-	assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
+	assert.ErrorAs(t, err, &buildErr)
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
@@ -2771,7 +2771,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
 				var expected *invalidHostAliasDNSError
-				assert.True(t, errors.As(err, &expected))
+				assert.ErrorAs(t, err, &expected)
 				assert.True(t, expected.Is(err))
 				errMsg := err.Error()
 				assert.Contains(t, errMsg, "is invalid DNS")
@@ -2864,7 +2864,7 @@ func TestSetupBuildPod(t *testing.T) {
 				e.featureChecker = mockFc
 			},
 			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
-				assert.True(t, errors.Is(err, testErr))
+				assert.ErrorIs(t, err, testErr)
 			},
 		},
 		"check host aliases version error": {
@@ -3254,7 +3254,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 				err := <-errCh
 				require.Error(t, err)
 				var phaseErr *podPhaseError
-				assert.True(t, errors.As(err, &phaseErr))
+				assert.ErrorAs(t, err, &phaseErr)
 				assert.Equal(t, api.PodFailed, phaseErr.phase)
 			},
 		},
@@ -3273,7 +3273,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 				err := <-errCh
 				require.Error(t, err)
 				var statusErr *kubeerrors.StatusError
-				assert.True(t, errors.As(err, &statusErr))
+				assert.ErrorAs(t, err, &statusErr)
 				assert.Equal(t, int32(http.StatusNotFound), statusErr.ErrStatus.Code)
 			},
 		},
@@ -3439,7 +3439,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 	assert.Equal(t, pod.Namespace, s.namespace)
 
 	err := s.Stream(context.Background(), int64(offset), output)
-	assert.True(t, errors.Is(err, abortErr))
+	assert.ErrorIs(t, err, abortErr)
 }
 
 type FakeReadCloser struct {
@@ -3489,12 +3489,12 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			assert.Equal(
-				t,
-				tt.expectedIsResult,
-				errors.Is(tt.err, new(commandTerminatedError)),
-				"commandTerminatedError.Is incorrect result",
-			)
+			if tt.expectedIsResult {
+				assert.ErrorIs(t, tt.err, new(commandTerminatedError))
+				return
+			}
+
+			assert.NotErrorIs(t, tt.err, new(commandTerminatedError))
 		})
 	}
 }
@@ -3581,7 +3581,7 @@ func TestGenerateScripts(t *testing.T) {
 			defer m.AssertExpectations(t)
 
 			scripts, err := e.generateScripts(m)
-			assert.True(t, errors.Is(err, tt.expectedErr), "expected err %T, but got %T", tt.expectedErr, err)
+			assert.ErrorIs(t, err, tt.expectedErr)
 			assert.Equal(t, tt.expectedScripts, scripts)
 		})
 	}

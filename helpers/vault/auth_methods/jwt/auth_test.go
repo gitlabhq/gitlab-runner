@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,7 +48,7 @@ func TestNewMethod(t *testing.T) {
 			a, err := NewMethod("", tt.providedData)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -152,7 +151,7 @@ func TestJWTAuth_Authenticate_Token(t *testing.T) {
 
 			err = auth.Authenticate(clientMock)
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 			assert.NoError(t, err)

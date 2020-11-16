@@ -445,6 +445,7 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
+github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.6.2-0.20200720104044-95a9d909e987 h1:wOj2vCGJ1qTx8t2UJOx4dfAofj9Jiaci2l++SGkwqAg=
 github.com/stretchr/testify v1.6.2-0.20200720104044-95a9d909e987/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0 h1:vWFdUhOO5Mw8vldT2ZRasKiGurX0mrUGZqDHyJB526Y=

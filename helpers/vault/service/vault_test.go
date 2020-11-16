@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -102,7 +101,7 @@ func TestNewVault(t *testing.T) {
 			service, err := NewVault(testURL, authMock)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -218,7 +217,7 @@ func TestDefaultVault_GetField(t *testing.T) {
 			data, err := service.GetField(engineMock, secretMock)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -313,7 +312,7 @@ func TestDefaultVault_Put(t *testing.T) {
 			err := service.Put(engineMock, secretMock, secretData)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -403,7 +402,7 @@ func TestDefaultVault_Delete(t *testing.T) {
 			err := service.Delete(engineMock, secretMock)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
