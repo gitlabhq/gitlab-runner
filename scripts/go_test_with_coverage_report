@@ -33,7 +33,7 @@ prepareTestCommands() {
 
     [[ ! -f ${testsDefinitions} ]] || rm ${testsDefinitions}
 
-    for pkg in ${OUR_PACKAGES}; do
+    for pkg in $(go list ./...); do
         local testIndex=0
         local runTests=()
 

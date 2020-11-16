@@ -35,9 +35,6 @@ COMMON_PACKAGE_NAMESPACE = $(PKG)/common
 BUILD_DIR := $(CURDIR)
 TARGET_DIR := $(BUILD_DIR)/out
 
-# Packages in vendor/ are included in ./...
-# https://github.com/golang/go/issues/11659
-export OUR_PACKAGES ?= $(subst _$(BUILD_DIR),$(PKG),$(shell go list ./... | grep -v '/vendor/'))
 export MAIN_PACKAGE ?= gitlab.com/gitlab-org/gitlab-runner
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
@@ -124,13 +121,18 @@ lint-docs:
 	@scripts/lint-docs
 
 check_race_conditions:
-	@./scripts/check_race_conditions $(OUR_PACKAGES)
+	@./scripts/check_race_conditions
 
 .PHONY: test
 test: helper-dockerarchive-host development_setup simple-test
 
+simple-test: TEST_PKG ?= $(shell go list ./...)
 simple-test:
-	go test $(OUR_PACKAGES) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
+	go test $(TEST_PKG) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
+
+git1.7-test: export TEST_PKG = gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
+git1.7-test:
+	$(MAKE) simple-test
 
 parallel_test_prepare:
 	# Preparing test commands
@@ -322,16 +324,19 @@ development_setup:
 
 check_modules:
 	# Check if there is any difference in vendor/
+	@git checkout HEAD -- vendor/*
 	@git status -sb vendor/ > /tmp/vendor-$${CI_JOB_ID}-before
 	@go mod vendor
 	@git status -sb vendor/ > /tmp/vendor-$${CI_JOB_ID}-after
 	@diff -U0 /tmp/vendor-$${CI_JOB_ID}-before /tmp/vendor-$${CI_JOB_ID}-after
 
 	# check go.sum
+	@git checkout HEAD -- go.sum
 	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-before
 	@go mod tidy
 	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-after
 	@diff -U0 /tmp/gosum-$${CI_JOB_ID}-before /tmp/gosum-$${CI_JOB_ID}-after
+
 
 # development tools
 $(GOX):
