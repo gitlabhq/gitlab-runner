@@ -299,6 +299,19 @@ type KubernetesConfig struct {
 	CapAdd                                            []string                     `toml:"cap_add" json:"cap_add" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                                           []string                     `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
 	DNSPolicy                                         KubernetesDNSPolicy          `toml:"dns_policy,omitempty" json:"dns_policy" long:"dns-policy" env:"KUBERNETES_DNS_POLICY" description:"How Kubernetes should try to resolve DNS from the created pods. If unset, Kubernetes will use the default 'ClusterFirst'. Valid values are: none, default, cluster-first, cluster-first-with-host-net"`
+	DNSConfig                                         KubernetesDNSConfig          `toml:"dns_config" json:"dns_config" description:"Pod DNS config"`
+}
+
+//nolint:lll
+type KubernetesDNSConfig struct {
+	Nameservers []string                    `toml:"nameservers" description:"A list of IP addresses that will be used as DNS servers for the Pod."`
+	Options     []KubernetesDNSConfigOption `toml:"options" description:"An optional list of objects where each object may have a name property (required) and a value property (optional)."`
+	Searches    []string                    `toml:"searches" description:"A list of DNS search domains for hostname lookup in the Pod."`
+}
+
+type KubernetesDNSConfigOption struct {
+	Name  string  `toml:"name"`
+	Value *string `toml:"value,omitempty"`
 }
 
 type KubernetesVolumes struct {
@@ -696,6 +709,26 @@ func (c *KubernetesConfig) GetAffinity() *api.Affinity {
 	}
 
 	return &affinity
+}
+
+func (c *KubernetesConfig) GetDNSConfig() *api.PodDNSConfig {
+	if len(c.DNSConfig.Nameservers) == 0 && len(c.DNSConfig.Searches) == 0 && len(c.DNSConfig.Options) == 0 {
+		return nil
+	}
+
+	var config api.PodDNSConfig
+
+	config.Nameservers = c.DNSConfig.Nameservers
+	config.Searches = c.DNSConfig.Searches
+
+	for _, opt := range c.DNSConfig.Options {
+		config.Options = append(config.Options, api.PodDNSConfigOption{
+			Name:  opt.Name,
+			Value: opt.Value,
+		})
+	}
+
+	return &config
 }
 
 //nolint:lll

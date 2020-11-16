@@ -1887,6 +1887,7 @@ func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Res
 func TestSetupBuildPod(t *testing.T) {
 	version, _ := testVersionAndCodec()
 	testErr := errors.New("fail")
+	ndotsValue := "2"
 
 	tests := map[string]setupBuildPodTestDef{
 		"passes node selector setting": {
@@ -3039,6 +3040,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Equal(t, api.DNSClusterFirst, pod.Spec.DNSPolicy)
+				assert.Nil(t, pod.Spec.DNSConfig)
 			},
 		},
 		"support setting DNS policy to none": {
@@ -3065,6 +3067,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Equal(t, api.DNSDefault, pod.Spec.DNSPolicy)
+				assert.Nil(t, pod.Spec.DNSConfig)
 			},
 		},
 		"support setting DNS policy to cluster-first": {
@@ -3078,6 +3081,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Equal(t, api.DNSClusterFirst, pod.Spec.DNSPolicy)
+				assert.Nil(t, pod.Spec.DNSConfig)
 			},
 		},
 		"support setting DNS policy to cluster-first-with-host-net": {
@@ -3091,6 +3095,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Equal(t, api.DNSClusterFirstWithHostNet, pod.Spec.DNSPolicy)
+				assert.Nil(t, pod.Spec.DNSConfig)
 			},
 		},
 		"fail setting DNS policy to invalid value": {
@@ -3104,6 +3109,45 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Empty(t, pod.Spec.DNSPolicy)
+				assert.Nil(t, pod.Spec.DNSConfig)
+			},
+		},
+		"support setting pod DNS config": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+						DNSConfig: common.KubernetesDNSConfig{
+							Nameservers: []string{"1.2.3.4"},
+							Searches:    []string{"ns1.svc.cluster-domain.example", "my.dns.search.suffix"},
+							Options: []common.KubernetesDNSConfigOption{
+								{Name: "ndots", Value: &ndotsValue},
+								{Name: "edns0"},
+							},
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.DNSConfig)
+
+				assert.Equal(t, []string{"1.2.3.4"}, pod.Spec.DNSConfig.Nameservers)
+				assert.Equal(
+					t,
+					[]string{
+						"ns1.svc.cluster-domain.example",
+						"my.dns.search.suffix",
+					},
+					pod.Spec.DNSConfig.Searches,
+				)
+
+				options := pod.Spec.DNSConfig.Options
+				require.Len(t, options, 2)
+				assert.Equal(t, "ndots", options[0].Name)
+				assert.Equal(t, "edns0", options[1].Name)
+				require.NotNil(t, options[0].Value)
+				assert.Equal(t, ndotsValue, *options[0].Value)
+				assert.Nil(t, options[1].Value)
 			},
 		},
 	}
