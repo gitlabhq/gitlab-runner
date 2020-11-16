@@ -1004,6 +1004,7 @@ func (s *executor) preparePodConfig(
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
 			Affinity:                      s.Config.Kubernetes.GetAffinity(),
 			DNSPolicy:                     s.getDNSPolicy(),
+			DNSConfig:                     s.Config.Kubernetes.GetDNSConfig(),
 		},
 	}
 

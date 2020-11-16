@@ -127,6 +127,7 @@ The following keywords help to define the behavior of the Runner within Kubernet
 | `terminationGracePeriodSeconds` | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. |
 | `volumes` | Configured through the configuration file, the list of volumes that will be mounted in the build container. [Read more about using volumes](#using-volumes). |
 | `dns_policy` | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) will be used if not set. |
+| `dns_config` | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#pods-dns-config). |
 
 ### Configuring executor Service Account
 
@@ -397,7 +398,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | name       | string  | yes      | The name of the volume |
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| medium     | String  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
+| medium     | string  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
 
 ## Using Security Context
 
@@ -522,6 +523,52 @@ concurrent = 1
                 "e2e-az2"
               ]
 ```
+
+## Pod's DNS Config
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6562) in GitLab Runner 13.7.
+
+[Pod's DNS Config](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config) gives users more control on the DNS settings of the created build Pods.
+
+```toml
+concurrent = 1
+check_interval = 30
+[[runners]]
+  name = "myRunner"
+  url = "https://gitlab.example.com"
+  token = "__REDACTED__"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    image = "alpine:latest"
+    [dns_config]
+      nameservers = [
+        "1.2.3.4",
+      ]
+      searches = [
+        "ns1.svc.cluster-domain.example",
+        "my.dns.search.suffix",
+      ]
+
+      [[dns_config.options]]
+        name = "ndots"
+        value = "2"
+
+      [[dns_config.options]]
+        name = "edns0"
+```
+
+| Option       | Type                        | Required | Description |
+|--------------|-----------------------------|----------|-------------|
+| nameservers  | `string` list               | no       | A list of IP addresses that will be used as DNS servers for the Pod |
+| options      | `KubernetesDNSConfigOption` | no       | A optional list of objects where each object may have a name property (required) and a value property (optional) |
+| searches     | `string` list               | no       | A list of DNS search domains for hostname lookup in the Pod |
+
+### KubernetesDNSConfigOption
+
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| name         | `string`  | yes      | Configuration option name  |
+| value        | `*string` | no       | Configuration option value |
 
 ## Capabilities configuration
 
