@@ -62,6 +62,7 @@ func NewServer(
 
 	tlsConfig := tls.Config{
 		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	// We separate out the listener creation here so that we can return an error
