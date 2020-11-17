@@ -322,7 +322,7 @@ func (s *executor) buildLogPermissionsInitContainer() api.Container {
 
 	return api.Container{
 		Name:            "change-logs-permissions",
-		Image:           "busybox",
+		Image:           s.helperImageInfo.String(),
 		Command:         []string{"sh", "-c", chmod},
 		VolumeMounts:    s.getVolumeMounts(),
 		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
