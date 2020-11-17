@@ -159,7 +159,7 @@ func (n *client) addTLSAuth(tlsConfig *tls.Config) {
 func (n *client) createTransport() {
 	// create reference TLS config
 	tlsConfig := tls.Config{
-		MinVersion:         tls.VersionTLS10,
+		MinVersion:         tls.VersionTLS12,
 		InsecureSkipVerify: n.skipVerify,
 	}
 
