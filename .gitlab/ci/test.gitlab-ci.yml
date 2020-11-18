@@ -6,6 +6,8 @@ include:
 
 .merge_request_pipelines_rules:
   rules: &merge_request_pipelines_rules
+  - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
+    when: never
   - if: $CI_MERGE_REQUEST_ID
   - if: $CI_COMMIT_BRANCH == "master" && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
   - if: $CI_COMMIT_REF_NAME =~ /\A[0-9]+-[0-9]+-stable\z/ && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
