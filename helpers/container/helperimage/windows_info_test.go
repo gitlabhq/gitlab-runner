@@ -1,7 +1,6 @@
 package helperimage
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
@@ -106,13 +105,7 @@ func Test_windowsInfo_create(t *testing.T) {
 					image, err := w.Create(revision, Config{OperatingSystem: test.operatingSystem, Shell: shell})
 
 					assert.Equal(t, test.expectedInfo, image)
-					assert.True(
-						t,
-						errors.Is(err, test.expectedErr),
-						"expected err %T, but got %T",
-						test.expectedErr,
-						err,
-					)
+					assert.ErrorIs(t, err, test.expectedErr)
 				})
 			}
 		})
@@ -134,6 +127,6 @@ func Test_windowsInfo_baseImage_NoSupportedVersion(t *testing.T) {
 	w := new(windowsInfo)
 	_, err := w.baseImage(unsupportedVersion)
 	var unsupportedErr *windows.UnsupportedWindowsVersionError
-	require.True(t, errors.As(err, &unsupportedErr), "expected err %T, but got %T", unsupportedErr, err)
+	require.ErrorAs(t, err, &unsupportedErr)
 	assert.Equal(t, unsupportedVersion, unsupportedErr.Version)
 }

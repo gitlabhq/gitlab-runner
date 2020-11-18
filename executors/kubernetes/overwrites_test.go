@@ -459,7 +459,7 @@ func TestOverwrites(t *testing.T) {
 			)
 
 			values, err := createOverwrites(test.Config, variables, logger)
-			assert.True(t, errors.Is(err, test.Error), "expected err %T, but got %T", test.Error, err)
+			assert.ErrorIs(t, err, test.Error)
 			assert.Equal(t, test.Expected, values)
 		})
 	}

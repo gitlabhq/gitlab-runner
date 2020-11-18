@@ -1,7 +1,6 @@
 package shells
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -874,7 +873,7 @@ func TestWriteUserScript(t *testing.T) {
 			shell := AbstractShell{}
 
 			err := shell.writeUserScript(mockShellWriter, info, tt.buildStage)
-			assert.True(t, errors.Is(err, tt.expectedErr), "expected: %v, got: %v", tt.expectedErr, err)
+			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
 }
@@ -1100,13 +1099,7 @@ func TestSkipBuildStage(t *testing.T) {
 
 					// empty stages should always be skipped
 					err := shell.writeScript(&BashWriter{}, stage, info)
-					assert.True(
-						t,
-						errors.Is(err, common.ErrSkipBuildStage),
-						"expected err %T, but got %T",
-						common.ErrSkipBuildStage,
-						err,
-					)
+					assert.ErrorIs(t, err, common.ErrSkipBuildStage)
 
 					// stages with bare minimum requirements should not be skipped.
 					build = &common.Build{

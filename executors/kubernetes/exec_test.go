@@ -303,7 +303,7 @@ func TestAttachErrorGettingPod(t *testing.T) {
 		Config:        clientConfig,
 	}
 
-	assert.True(t, errors.Is(opts.Run(), err))
+	assert.ErrorIs(t, opts.Run(), err)
 }
 
 func TestAttachPodNotRunning(t *testing.T) {

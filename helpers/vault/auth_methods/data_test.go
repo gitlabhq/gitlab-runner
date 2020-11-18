@@ -1,7 +1,6 @@
 package auth_methods
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,20 +15,18 @@ func TestMissingRequiredConfigurationKeyError_Error(t *testing.T) {
 }
 
 func TestMissingRequiredConfigurationKeyError_Is(t *testing.T) {
-	assert.True(
+	assert.ErrorIs(
 		t,
-		errors.Is(
-			NewMissingRequiredConfigurationKeyError("test-key"),
-			NewMissingRequiredConfigurationKeyError("test-key"),
-		),
+		NewMissingRequiredConfigurationKeyError("test-key"),
+		NewMissingRequiredConfigurationKeyError("test-key"),
 	)
-	assert.False(
+	assert.NotErrorIs(
 		t,
-		errors.Is(NewMissingRequiredConfigurationKeyError("test-key"), new(MissingRequiredConfigurationKeyError)),
+		NewMissingRequiredConfigurationKeyError("test-key"), new(MissingRequiredConfigurationKeyError),
 	)
-	assert.False(
+	assert.NotErrorIs(
 		t,
-		errors.Is(NewMissingRequiredConfigurationKeyError("test-key"), assert.AnError),
+		NewMissingRequiredConfigurationKeyError("test-key"), assert.AnError,
 	)
 }
 
@@ -99,7 +96,7 @@ func TestData_Filter(t *testing.T) {
 			data, err := tt.data.Filter(requiredKeys, allowedKeys)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.Is(err, tt.expectedError))
+				assert.ErrorIs(t, err, tt.expectedError)
 				return
 			}
 

@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -31,7 +30,7 @@ func TestUnwrapAPIResponseError(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			err := unwrapAPIResponseError(tt.err)
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -46,16 +45,14 @@ func TestUnwrappedAPIResponseError_Error(t *testing.T) {
 }
 
 func TestUnwrappedAPIResponseError_Is(t *testing.T) {
-	assert.True(
+	assert.ErrorIs(
 		t,
-		errors.Is(
-			newUnwrappedAPIResponseError(-1, []string{"test1", "test2"}),
-			newUnwrappedAPIResponseError(-1, []string{"test1", "test2"}),
-		),
+		newUnwrappedAPIResponseError(-1, []string{"test1", "test2"}),
+		newUnwrappedAPIResponseError(-1, []string{"test1", "test2"}),
 	)
-	assert.False(
+	assert.NotErrorIs(
 		t,
-		errors.Is(newUnwrappedAPIResponseError(-1, []string{"test1", "test2"}), new(unwrappedAPIResponseError)),
+		newUnwrappedAPIResponseError(-1, []string{"test1", "test2"}), new(unwrappedAPIResponseError),
 	)
-	assert.False(t, errors.Is(newUnwrappedAPIResponseError(-1, []string{"test1", "test2"}), assert.AnError))
+	assert.NotErrorIs(t, newUnwrappedAPIResponseError(-1, []string{"test1", "test2"}), assert.AnError)
 }

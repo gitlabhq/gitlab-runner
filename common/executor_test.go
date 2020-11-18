@@ -32,7 +32,12 @@ func TestBuildErrorIs(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			assert.Equal(t, tt.is, errors.Is(tt.err, tt.target))
+			if tt.is {
+				assert.ErrorIs(t, tt.err, tt.target)
+				return
+			}
+
+			assert.NotErrorIs(t, tt.err, tt.target)
 		})
 	}
 }

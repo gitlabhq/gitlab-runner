@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,23 +16,19 @@ func TestFactoryAlreadyRegisteredError_Error(t *testing.T) {
 }
 
 func TestFactoryAlreadyRegisteredError_Is(t *testing.T) {
-	assert.True(
+	assert.ErrorIs(
 		t,
-		errors.Is(
-			NewFactoryAlreadyRegisteredError("engine", "test-engine"),
-			NewFactoryAlreadyRegisteredError("engine", "test-engine"),
-		),
+		NewFactoryAlreadyRegisteredError("engine", "test-engine"),
+		NewFactoryAlreadyRegisteredError("engine", "test-engine"),
 	)
-	assert.False(
+	assert.NotErrorIs(
 		t,
-		errors.Is(
-			NewFactoryAlreadyRegisteredError("engine", "test-engine"),
-			new(FactoryAlreadyRegisteredError),
-		),
+		NewFactoryAlreadyRegisteredError("engine", "test-engine"),
+		new(FactoryAlreadyRegisteredError),
 	)
-	assert.False(
+	assert.NotErrorIs(
 		t,
-		errors.Is(NewFactoryAlreadyRegisteredError("engine", "test-engine"), assert.AnError),
+		NewFactoryAlreadyRegisteredError("engine", "test-engine"), assert.AnError,
 	)
 }
 
@@ -46,23 +41,19 @@ func TestFactoryNotRegisteredError_Error(t *testing.T) {
 }
 
 func TestFactoryNotRegisteredError_Is(t *testing.T) {
-	assert.True(
+	assert.ErrorIs(
 		t,
-		errors.Is(
-			NewFactoryNotRegisteredError("engine", "test-engine"),
-			NewFactoryNotRegisteredError("engine", "test-engine"),
-		),
+		NewFactoryNotRegisteredError("engine", "test-engine"),
+		NewFactoryNotRegisteredError("engine", "test-engine"),
 	)
-	assert.False(
+	assert.NotErrorIs(
 		t,
-		errors.Is(
-			NewFactoryNotRegisteredError("engine", "test-engine"),
-			new(FactoryNotRegisteredError),
-		),
+		NewFactoryNotRegisteredError("engine", "test-engine"),
+		new(FactoryNotRegisteredError),
 	)
-	assert.False(
+	assert.NotErrorIs(
 		t,
-		errors.Is(NewFactoryNotRegisteredError("engine", "test-engine"), assert.AnError),
+		NewFactoryNotRegisteredError("engine", "test-engine"), assert.AnError,
 	)
 }
 
@@ -95,7 +86,7 @@ func TestFactoryRegistry_Register(t *testing.T) {
 			err = registry.Register(tt.secondFactoryName, fakeEntry{})
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 			assert.NoError(t, err)
@@ -132,7 +123,7 @@ func TestFactoryRegistry_Get(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			factory, err := registry.Get(tt.factoryName)
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				assert.Nil(t, factory)
 				return
 			}

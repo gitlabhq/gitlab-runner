@@ -233,7 +233,7 @@ func TestInspectNetwork(t *testing.T) {
 			inspectResponse, err := m.Inspect(context.Background())
 
 			assert.Equal(t, testCase.expectedResponse, inspectResponse)
-			assert.True(t, errors.Is(err, testCase.expectedErr))
+			assert.ErrorIs(t, err, testCase.expectedErr)
 		})
 	}
 }
@@ -297,7 +297,7 @@ func TestCleanupNetwork(t *testing.T) {
 			}
 
 			err := m.Cleanup(context.Background())
-			assert.True(t, errors.Is(err, testCase.expectErr))
+			assert.ErrorIs(t, err, testCase.expectErr)
 		})
 	}
 }

@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -60,7 +59,7 @@ func TestSecretResult_TokenID(t *testing.T) {
 
 			token, err := r.TokenID()
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 			assert.Equal(t, tt.expectedToken, token)

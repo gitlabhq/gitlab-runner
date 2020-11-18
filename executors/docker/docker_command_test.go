@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/md5"
 	"crypto/sha1"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -131,7 +130,7 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 
 			if tt.errExpected {
 				var buildErr *common.BuildError
-				assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+				assert.ErrorAs(t, err, &buildErr)
 				assert.Contains(t, err.Error(), "exit code 1")
 				return
 			}
@@ -271,7 +270,7 @@ func TestDockerCommandUsingCustomClonePath(t *testing.T) {
 			err := buildtest.RunBuild(t, &build)
 			if test.expectedErr {
 				var buildErr *common.BuildError
-				assert.True(t, errors.As(err, &buildErr), "expected err %T, but got %T", buildErr, err)
+				assert.ErrorAs(t, err, &buildErr)
 				return
 			}
 

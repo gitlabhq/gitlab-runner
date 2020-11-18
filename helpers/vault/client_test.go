@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -73,7 +72,7 @@ func TestNewClient(t *testing.T) {
 			c, err := NewClient(serverURL)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -126,7 +125,7 @@ func TestDefaultClient_Authenticate(t *testing.T) {
 
 			err := c.Authenticate(authMethodMock)
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -180,7 +179,7 @@ func TestDefaultClient_Write(t *testing.T) {
 			res, err := c.Write("path/to/write", data)
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -234,7 +233,7 @@ func TestDefaultClient_Read(t *testing.T) {
 			res, err := c.Read("path/to/read")
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 
@@ -288,7 +287,7 @@ func TestDefaultClient_Delete(t *testing.T) {
 			err := c.Delete("path/to/delete")
 
 			if tt.expectedError != nil {
-				assert.True(t, errors.As(err, &tt.expectedError))
+				assert.ErrorAs(t, err, &tt.expectedError)
 				return
 			}
 

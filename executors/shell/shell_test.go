@@ -121,7 +121,7 @@ func TestExecutor_Run(t *testing.T) {
 				}
 
 				err := executor.Run(cmd)
-				assert.True(t, errors.Is(err, tt.expectedErr), "expected %T, got %T", tt.expectedErr, err)
+				assert.ErrorIs(t, err, tt.expectedErr)
 			})
 		})
 	}
@@ -191,6 +191,6 @@ func TestProcessTermination_Legacy(t *testing.T) {
 
 		err := executor.Run(cmd)
 		var buildErr *common.BuildError
-		assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+		assert.ErrorAs(t, err, &buildErr)
 	})
 }

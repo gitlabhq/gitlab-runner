@@ -1,7 +1,6 @@
 package helperimage
 
 import (
-	stderrors "errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,13 +30,7 @@ func TestGetInfo(t *testing.T) {
 		t.Run(test.osType, func(t *testing.T) {
 			_, err := Get(headRevision, Config{OSType: test.osType, OperatingSystem: test.version})
 
-			assert.True(
-				t,
-				stderrors.Is(err, test.expectedError),
-				"expected err %T, but got %T",
-				test.expectedError,
-				err,
-			)
+			assert.ErrorIs(t, err, test.expectedError)
 		})
 	}
 }

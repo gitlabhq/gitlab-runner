@@ -2,7 +2,6 @@ package shell_test
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -192,7 +191,7 @@ func TestMultistepBuild(t *testing.T) {
 
 				if tt.errExpected {
 					var buildErr *common.BuildError
-					assert.True(t, errors.As(err, &buildErr), "expected %T, got %T", buildErr, err)
+					assert.ErrorAs(t, err, &buildErr)
 					return
 				}
 				assert.NoError(t, err)
@@ -1346,11 +1345,7 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 
 				_, err := os.Stat(variableFile)
 				assert.Error(t, err)
-				assert.True(
-					t,
-					errors.Is(err, os.ErrNotExist),
-					`Expected that os.Stat on the variable file will return the "doesn't exist" error`,
-				)
+				assert.ErrorIs(t, err, os.ErrNotExist)
 			})
 		})
 	}

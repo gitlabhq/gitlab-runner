@@ -111,7 +111,7 @@ func TestOSKillWait_KillAndWait(t *testing.T) {
 				return
 			}
 
-			assert.True(t, errors.Is(testCase.expectedError, err))
+			assert.ErrorIs(t, testCase.expectedError, err)
 		})
 	}
 }

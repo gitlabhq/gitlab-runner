@@ -128,7 +128,7 @@ func TestKubernetesLogStreamProviderLogStream(t *testing.T) {
 	s.waitLogFileTimeout = waitFileTimeout
 
 	err := s.Stream(context.Background(), int64(offset), output)
-	assert.True(t, errors.Is(err, abortErr))
+	assert.ErrorIs(t, err, abortErr)
 }
 
 func TestReadLogsBrokenReader(t *testing.T) {
@@ -136,7 +136,7 @@ func TestReadLogsBrokenReader(t *testing.T) {
 	output := make(chan string)
 	err := proc.readLogs(context.Background(), newBrokenReader(new(brokenReaderError)), output)
 
-	assert.True(t, errors.Is(err, new(brokenReaderError)))
+	assert.ErrorIs(t, err, new(brokenReaderError))
 }
 
 func TestProcessedOffsetSet(t *testing.T) {
@@ -438,7 +438,7 @@ func TestScanHandlesStreamError(t *testing.T) {
 			line, more := <-ch
 			assert.Empty(t, line)
 			assert.False(t, more)
-			assert.True(t, errors.Is(scanner.Err(), tt.expectedError))
+			assert.ErrorIs(t, scanner.Err(), tt.expectedError)
 		})
 	}
 }
