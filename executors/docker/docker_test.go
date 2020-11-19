@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -2065,6 +2066,348 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			assert.Equal(t, test.expectedEnvironment, environment)
 
 			assert.Equal(t, test.expectedErr, err)
+		})
+	}
+}
+
+func TestHelperImageRegistry(t *testing.T) {
+	dockerOS := helperimage.OSTypeLinux
+	if runtime.GOOS == helperimage.OSTypeWindows {
+		dockerOS = runtime.GOOS
+	}
+
+	tests := map[string]struct {
+		build *common.Build
+		// We only validate the name because we only care if the right image is
+		// used. We don't want to end up having this test as a "spellcheck" to
+		// make sure tags and commands are generated correctly since that is
+		// done at a unit level already and we would be duplicating internal
+		// logic and leaking abstractions.
+		expectedHelperImageName string
+	}{
+		"Docker Hub helper image": {
+			build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test",
+					},
+				},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Docker: &common.DockerConfig{},
+					},
+				},
+			},
+			expectedHelperImageName: helperimage.DockerHubName,
+		},
+		"GitLab Registry helper image": {
+			build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test",
+					},
+					Variables: common.JobVariables{
+						common.JobVariable{
+							Key:      featureflags.GitLabRegistryHelperImage,
+							Value:    "true",
+							Public:   false,
+							Internal: false,
+							File:     false,
+							Masked:   false,
+							Raw:      false,
+						},
+					},
+				},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Docker: &common.DockerConfig{},
+					},
+				},
+			},
+			expectedHelperImageName: helperimage.GitLabRegistryName,
+		},
+		"helper image overridden still use default helper image in prepare": {
+			build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test",
+					},
+				},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Docker: &common.DockerConfig{
+							HelperImage: "private.registry.com/helper",
+						},
+					},
+				},
+			},
+			// We expect the default image to still be chosen since the check of
+			// the override happens at a later stage.
+			expectedHelperImageName: helperimage.DockerHubName,
+		},
+		"helper image overridden still use registry.gitlab.com helper image in prepare": {
+			build: &common.Build{
+				JobResponse: common.JobResponse{
+					Variables: common.JobVariables{
+						common.JobVariable{
+							Key:   featureflags.GitLabRegistryHelperImage,
+							Value: "true",
+						},
+					},
+					Image: common.Image{
+						Name: "test",
+					},
+				},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Docker: &common.DockerConfig{
+							HelperImage: "private.registry.com/helper",
+						},
+					},
+				},
+			},
+			// We expect the registry.gitlab.com image to still be chosen since
+			// the check of the override happens at a later stage.
+			expectedHelperImageName: helperimage.GitLabRegistryName,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executors.ExecutorOptions{
+						Metadata: map[string]string{
+							metadataOSType: dockerOS,
+						},
+					},
+				},
+				volumeParser: parser.NewLinuxParser(),
+			}
+
+			prepareOptions := common.ExecutorPrepareOptions{
+				Config: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						BuildsDir: "/tmp",
+						CacheDir:  "/tmp",
+						Shell:     "bash",
+						Docker:    tt.build.Runner.Docker,
+					},
+				},
+				Build:   tt.build,
+				Context: context.Background(),
+			}
+
+			err := e.Prepare(prepareOptions)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expectedHelperImageName, e.helperImageInfo.Name)
+		})
+	}
+}
+
+func TestLocalHelperImage(t *testing.T) {
+	// Docker Windows doesn't support docker import, only docker load which we
+	// do not yet support
+	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26678
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
+	dockerHubHelperImage := fmt.Sprintf("%s:%s", helperimage.DockerHubName, "localimageimport")
+	gitlabRegistryHelperImage := fmt.Sprintf("%s:%s", helperimage.GitLabRegistryName, "localimageimport")
+	defaultHelperImageInfo := helperimage.Info{
+		Architecture:            "x86_64",
+		Name:                    helperimage.DockerHubName,
+		Tag:                     "localimageimport",
+		IsSupportingLocalImport: true,
+	}
+
+	tests := map[string]struct {
+		jobVariables     common.JobVariables
+		helperImageInfo  helperimage.Info
+		clientAssertions func(*docker.MockClient)
+		expectedImage    *types.ImageInspect
+	}{
+		"doesn't support local import": {
+			helperImageInfo: helperimage.Info{
+				Architecture:            "x86_64",
+				Name:                    "nosupport",
+				Tag:                     "localimageimport",
+				IsSupportingLocalImport: false,
+			},
+			clientAssertions: func(c *docker.MockClient) {},
+			expectedImage:    nil,
+		},
+		"Docker import using Docker Hub name": {
+			helperImageInfo: defaultHelperImageInfo,
+			clientAssertions: func(c *docker.MockClient) {
+				c.On(
+					"ImageImportBlocking",
+					mock.Anything,
+					mock.Anything,
+					helperimage.DockerHubName,
+					mock.Anything,
+				).Return(nil)
+
+				imageInspect := types.ImageInspect{
+					RepoTags: []string{
+						dockerHubHelperImage,
+					},
+				}
+
+				c.On(
+					"ImageInspectWithRaw",
+					mock.Anything,
+					dockerHubHelperImage,
+				).Return(imageInspect, []byte{}, nil)
+			},
+			expectedImage: &types.ImageInspect{
+				RepoTags: []string{
+					dockerHubHelperImage,
+				},
+			},
+		},
+		"Docker import using registry.gitlab.com name": {
+			helperImageInfo: helperimage.Info{
+				Architecture:            "x86_64",
+				Name:                    helperimage.GitLabRegistryName,
+				Tag:                     "localimageimport",
+				IsSupportingLocalImport: true,
+			},
+			clientAssertions: func(c *docker.MockClient) {
+				c.On(
+					"ImageImportBlocking",
+					mock.Anything,
+					mock.Anything,
+					helperimage.GitLabRegistryName,
+					mock.Anything,
+				).Return(nil)
+
+				imageInspect := types.ImageInspect{
+					RepoTags: []string{
+						gitlabRegistryHelperImage,
+					},
+				}
+
+				c.On(
+					"ImageInspectWithRaw",
+					mock.Anything,
+					gitlabRegistryHelperImage,
+				).Return(imageInspect, []byte{}, nil)
+			},
+			expectedImage: &types.ImageInspect{
+				RepoTags: []string{
+					gitlabRegistryHelperImage,
+				},
+			},
+		},
+		"entrypoint added": {
+			helperImageInfo: defaultHelperImageInfo,
+			clientAssertions: func(c *docker.MockClient) {
+				c.On(
+					"ImageImportBlocking",
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+					types.ImageImportOptions{
+						Tag: "localimageimport",
+						Changes: []string{
+							`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`,
+						},
+					},
+				).Return(nil)
+
+				c.On(
+					"ImageInspectWithRaw",
+					mock.Anything,
+					mock.Anything,
+				).Return(types.ImageInspect{}, []byte{}, nil)
+			},
+			expectedImage: &types.ImageInspect{},
+		},
+		"entrypoint not added when feature flag turned off": {
+			jobVariables: common.JobVariables{
+				common.JobVariable{
+					Key:   featureflags.ResetHelperImageEntrypoint,
+					Value: "false",
+				},
+			},
+			helperImageInfo: defaultHelperImageInfo,
+			clientAssertions: func(c *docker.MockClient) {
+				c.On(
+					"ImageImportBlocking",
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+					types.ImageImportOptions{
+						Tag:     "localimageimport",
+						Changes: nil,
+					},
+				).Return(nil)
+
+				c.On(
+					"ImageInspectWithRaw",
+					mock.Anything,
+					mock.Anything,
+				).Return(types.ImageInspect{}, []byte{}, nil)
+			},
+			expectedImage: &types.ImageInspect{},
+		},
+		"nil is returned if error on import": {
+			helperImageInfo: defaultHelperImageInfo,
+			clientAssertions: func(c *docker.MockClient) {
+				c.On(
+					"ImageImportBlocking",
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Return(errors.New("error"))
+			},
+			expectedImage: nil,
+		},
+		"nil is returned if error on inspect": {
+			helperImageInfo: defaultHelperImageInfo,
+			clientAssertions: func(c *docker.MockClient) {
+				c.On(
+					"ImageImportBlocking",
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Return(nil)
+
+				c.On(
+					"ImageInspectWithRaw",
+					mock.Anything,
+					mock.Anything,
+				).Return(types.ImageInspect{}, []byte{}, errors.New("error"))
+			},
+			expectedImage: nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			c := new(docker.MockClient)
+			defer c.AssertExpectations(t)
+
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							Variables: tt.jobVariables,
+						},
+					},
+				},
+				client:          c,
+				volumeParser:    parser.NewLinuxParser(),
+				helperImageInfo: tt.helperImageInfo,
+			}
+
+			tt.clientAssertions(c)
+
+			image := e.getLocalHelperImage()
+			assert.Equal(t, tt.expectedImage, image)
 		})
 	}
 }

@@ -845,6 +845,25 @@ doesn't allow loading the `gitlab-runner-helper` image from a local archive. In 
 the helper image from Docker Hub, from GitLab's official repository `gitlab/gitlab-runner-helper` by using the Runner's
 revision and architecture for defining which tag should be downloaded.
 
+### Migrating helper image to `registry.gitlab.com`
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27196) in GitLab Runner 13.7.
+
+The helper image is currently hosted in [Docker
+Hub](https://hub.docker.com/r/gitlab/gitlab-runner-helper). With the new [Docker
+Hub limits](https://docs.docker.com/docker-hub/download-rate-limit/) we are
+migrating the helper image to
+[`registry.gitlab.com`](https://gitlab.com/gitlab-org/gitlab-runner/container_registry/1472754).
+
+By default, the helper image is pulled from Docker Hub. If the
+`FF_GITLAB_REGISTRY_HELPER_IMAGE` [feature flag](feature-flags.md) is enabled
+the runner will pull the image from
+[`registry.gitlab.com`](https://gitlab.com/gitlab-org/gitlab-runner/container_registry/1472754)
+where the limits don't apply. You can enable the feature flag for a [specific
+pipeline](feature-flags.md#enable-feature-flag-in-pipeline-configuration) or in
+the [runner](feature-flags.md#enable-feature-flag-for-runner) which will enable
+the behavior for every job that runner executes.
+
 ### Overriding the helper image
 
 In some cases, you may need to override the helper image. There are many reasons for doing this:

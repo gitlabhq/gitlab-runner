@@ -23,15 +23,15 @@ func Test_windowsInfo_create(t *testing.T) {
 		tests := []struct {
 			operatingSystem string
 			shell           string
-
-			expectedInfo Info
-			expectedErr  error
+			gitlabRegistry  bool
+			expectedInfo    Info
+			expectedErr     error
 		}{
 			{
 				operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
-					Name:         name,
+					Name:         DockerHubName,
 					Tag: fmt.Sprintf(
 						"%s-%s-%s",
 						windowsSupportedArchitecture,
@@ -47,7 +47,7 @@ func Test_windowsInfo_create(t *testing.T) {
 				operatingSystem: "Windows Server Datacenter Version 1809 (OS Build 1803.590)",
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
-					Name:         name,
+					Name:         DockerHubName,
 					Tag: fmt.Sprintf(
 						"%s-%s-%s",
 						windowsSupportedArchitecture,
@@ -63,7 +63,7 @@ func Test_windowsInfo_create(t *testing.T) {
 				operatingSystem: "Windows Server Datacenter Version 1903 (OS Build 18362.592)",
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
-					Name:         name,
+					Name:         DockerHubName,
 					Tag: fmt.Sprintf(
 						"%s-%s-%s",
 						windowsSupportedArchitecture,
@@ -79,7 +79,7 @@ func Test_windowsInfo_create(t *testing.T) {
 				operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
-					Name:         name,
+					Name:         DockerHubName,
 					Tag: fmt.Sprintf(
 						"%s-%s-%s",
 						windowsSupportedArchitecture,
@@ -92,6 +92,24 @@ func Test_windowsInfo_create(t *testing.T) {
 				expectedErr: nil,
 			},
 			{
+				operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
+				gitlabRegistry:  true,
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         GitLabRegistryName,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage1909,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+
+			{
 				operatingSystem: "some random string",
 				expectedErr:     windows.NewUnsupportedWindowsVersionError("some random string"),
 			},
@@ -102,7 +120,14 @@ func Test_windowsInfo_create(t *testing.T) {
 				t.Run(test.operatingSystem, func(t *testing.T) {
 					w := new(windowsInfo)
 
-					image, err := w.Create(revision, Config{OperatingSystem: test.operatingSystem, Shell: shell})
+					image, err := w.Create(
+						revision,
+						Config{
+							OperatingSystem: test.operatingSystem,
+							Shell:           shell,
+							GitLabRegistry:  test.gitlabRegistry,
+						},
+					)
 
 					assert.Equal(t, test.expectedInfo, image)
 					assert.ErrorIs(t, err, test.expectedErr)

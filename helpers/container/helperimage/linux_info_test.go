@@ -11,10 +11,11 @@ import (
 func Test_linuxInfo_create(t *testing.T) {
 	for _, shell := range []string{"sh", "bash"} {
 		tests := map[string]struct {
-			shell        string
-			dockerArch   string
-			revision     string
-			expectedInfo Info
+			shell          string
+			dockerArch     string
+			revision       string
+			gitlabRegistry bool
+			expectedInfo   Info
 		}{
 			"When dockerArch not specified we fallback to runtime arch": {
 				shell:      shell,
@@ -22,7 +23,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            getExpectedArch(),
-					Name:                    name,
+					Name:                    DockerHubName,
 					Tag:                     fmt.Sprintf("%s-2923a43", getExpectedArch()),
 					IsSupportingLocalImport: true,
 					Cmd:                     bashCmd,
@@ -34,7 +35,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "arm",
-					Name:                    name,
+					Name:                    DockerHubName,
 					Tag:                     "arm-2923a43",
 					IsSupportingLocalImport: true,
 					Cmd:                     bashCmd,
@@ -46,7 +47,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "x86_64",
-					Name:                    name,
+					Name:                    DockerHubName,
 					Tag:                     "x86_64-2923a43",
 					IsSupportingLocalImport: true,
 					Cmd:                     bashCmd,
@@ -58,7 +59,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "arm64",
-					Name:                    name,
+					Name:                    DockerHubName,
 					Tag:                     "arm64-2923a43",
 					IsSupportingLocalImport: true,
 					Cmd:                     bashCmd,
@@ -70,7 +71,7 @@ func Test_linuxInfo_create(t *testing.T) {
 				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "s390x",
-					Name:                    name,
+					Name:                    DockerHubName,
 					Tag:                     "s390x-2923a43",
 					IsSupportingLocalImport: true,
 					Cmd:                     bashCmd,
@@ -82,8 +83,20 @@ func Test_linuxInfo_create(t *testing.T) {
 				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "some-random-arch",
-					Name:                    name,
+					Name:                    DockerHubName,
 					Tag:                     "some-random-arch-2923a43",
+					IsSupportingLocalImport: true,
+					Cmd:                     bashCmd,
+				},
+			},
+			"GitLab registry configured": {
+				dockerArch:     "amd64",
+				revision:       "2923a43",
+				gitlabRegistry: true,
+				expectedInfo: Info{
+					Architecture:            "x86_64",
+					Name:                    GitLabRegistryName,
+					Tag:                     "x86_64-2923a43",
 					IsSupportingLocalImport: true,
 					Cmd:                     bashCmd,
 				},
@@ -95,7 +108,14 @@ func Test_linuxInfo_create(t *testing.T) {
 				t.Run(name, func(t *testing.T) {
 					l := new(linuxInfo)
 
-					image, err := l.Create(test.revision, Config{Architecture: test.dockerArch})
+					image, err := l.Create(
+						test.revision,
+						Config{
+							Architecture:   test.dockerArch,
+							Shell:          shell,
+							GitLabRegistry: test.gitlabRegistry,
+						},
+					)
 
 					assert.NoError(t, err)
 					assert.Equal(t, test.expectedInfo, image)

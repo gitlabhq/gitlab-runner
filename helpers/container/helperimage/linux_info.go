@@ -24,7 +24,7 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 
 	return Info{
 		Architecture:            arch,
-		Name:                    name,
+		Name:                    imageName(cfg.GitLabRegistry),
 		Tag:                     fmt.Sprintf("%s-%s", arch, revision),
 		IsSupportingLocalImport: true,
 		Cmd:                     bashCmd,
