@@ -26,6 +26,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
@@ -807,62 +808,9 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 }
 
 func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
-	options := types.ContainerAttachOptions{
-		Stream: true,
-		Stdin:  true,
-		Stdout: true,
-		Stderr: true,
-	}
+	dockerExec := exec.NewDocker(e.client, e.waiter, e.Build.Log())
 
-	e.Debugln("Attaching to container", id, "...")
-	hijacked, err := e.client.ContainerAttach(ctx, id, options)
-	if err != nil {
-		return err
-	}
-	defer hijacked.Close()
-
-	e.Debugln("Starting container", id, "...")
-	err = e.client.ContainerStart(ctx, id, types.ContainerStartOptions{})
-	if err != nil {
-		return err
-	}
-
-	// Copy any output to the build trace
-	stdoutErrCh := make(chan error)
-	go func() {
-		_, errCopy := stdcopy.StdCopy(e.Trace, e.Trace, hijacked.Reader)
-		stdoutErrCh <- errCopy
-	}()
-
-	// Write the input to the container and close its STDIN to get it to finish
-	stdinErrCh := make(chan error)
-	go func() {
-		_, errCopy := io.Copy(hijacked.Conn, input)
-		_ = hijacked.CloseWrite()
-		if errCopy != nil {
-			stdinErrCh <- errCopy
-		}
-	}()
-
-	// Wait until either:
-	// - the job is aborted/cancelled/deadline exceeded
-	// - stdin has an error
-	// - stdout returns an error or nil, indicating the stream has ended and
-	//   the container has exited
-	select {
-	case <-ctx.Done():
-		err = errors.New("aborted")
-	case err = <-stdinErrCh:
-	case err = <-stdoutErrCh:
-	}
-
-	if err != nil {
-		e.Debugln("Container", id, "finished with", err)
-	}
-
-	// Kill and wait for exit.
-	// Containers are stopped so that they can be reused by the job.
-	return e.waiter.KillWait(ctx, id)
+	return dockerExec.Exec(ctx, id, input, e.Trace)
 }
 
 func (e *executor) removeContainer(ctx context.Context, id string) error {
