@@ -329,6 +329,7 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 		State:         state,
 		FailureReason: c.failureReason,
 		Checksum:      c.checksum(),
+		Bytesize:      c.bytesize(),
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
