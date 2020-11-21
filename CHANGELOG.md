@@ -1,18 +1,29 @@
-## v13.6.0-rc1 (2020-11-10)
+## v13.6.0 (2020-11-21)
 
 ### New features
 
+- Add labels to cache-init docker container !2412
 - Expose custom executor services with $CI_JOB_SERVICES !1827 (Jovan Marić @jovanmaric)
-- Add PowerShell Core to Windows Runner helper image !2492
 
 ### Maintenance
 
 - Expose ci job services as custom !2550
 - Publish helper images to registry.gitlab.com !2540
+- Allow user to define command and entrypoint to services from config !2525
+- Consolidate helper exe location for Dockerfile build !2501
+- Fix Azure cache uploads using Go Cloud !2500
+- Fix definition of security related jobs !2499
+- Move doc/dependency_decisions.yml file to a better place !2485
 - Fix TestBuildCancel from timing out !2468
 - Teach artifact/cache commands about the archive interface !2467
+- Improve build logging testing !2465
+- Skip CleanupFileVariables stage if no file variables !2456
+- Change in interactive --url question to match docs !2431
+- Added SubPath support to Kubernetes volume definitions !2424 (Matt Mikitka @mmikitka)
+- Add fastzip archiver/extractor !2210
 - Implement archiver/extractor interface !2195
 - Manage driver defined job variables in custom executor !2032 (Paul Bryant @paulbry)
+- Update doc about release windows image script !1561
 
 ### Documentation changes
 
@@ -22,13 +33,27 @@
 - Add reference to config.toml for setting docker image pull policy - docs !2545
 - Remove extra parentheses !2542 (Ben Bodenmiller @bbodenmiller)
 - Docs: Rename and redirect docs/install/registry_and_cache_servers.md !2535
+- Add stage / group metadata to docs pages !2528
+- Add mention that registry mirror is started as HTTP not HTTPS !2527
 - Elaborate on Docker mirror, and link to docker doc !2526
+- Docs: Redirected custom executor index page !2522
+- Docs: Changed bullets to a table !2517
 - Added docs for using a configuration template in the helm chart !2503
+- Update vale rules !2502
+- Use latest docs linting image !2497
+- Docs: Updated top-level page !2496
+- Update link to runner helper image in documentation !2494 (botayhard @botayhard)
+- Change mention of custom cache containers to volumes !2491
 - Add missing supported architectures for Runner helper !2490
+- Update [runners.machine] section in Autoscaling GitLab Runner on AWS EC2 documentation !2480
 - Provide a full list of metrics available for GitLab runners in the documentation !2479
 - Clarify how service_account in toml is used !2476 (Ben Bodenmiller @bbodenmiller)
 - Introduce usage of Runner Manager terminology !2474
+- Docs: Revamp Runner home page !2472
 - Update Kubernetes' documentation to include ephemeral storage requests/limits !2457
+- Add kubernetes runners allowPrivilegeEscalation security context configuration !2430 (Horatiu Eugen Vlad @hvlad)
+- Update Runner registry and cache documentation page !2386
+- Cap maximum Docker Machine provisioning rate !1038 (Joel Low @lowjoel)
 
 ## v13.5.0 (2020-10-20)
 
